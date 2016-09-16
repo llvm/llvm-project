@@ -160,8 +160,7 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
-  const MCSymbol *Sym =
-      TLOF.getCFIPersonalitySymbol(P, *Asm->Mang, Asm->TM, MMI);
+  const MCSymbol *Sym = TLOF.getCFIPersonalitySymbol(P, Asm->TM, MMI);
   Asm->OutStreamer->EmitCFIPersonality(Sym, PerEncoding);
 
   // Provide LSDA information.

@@ -113,10 +113,8 @@ IsGlobalInSmallSectionImpl(const GlobalValue *GV,
       GV->getParent()->getDataLayout().getTypeAllocSize(Ty));
 }
 
-MCSection *
-MipsTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
-                                             SectionKind Kind, Mangler &Mang,
-                                             const TargetMachine &TM) const {
+MCSection *MipsTargetObjectFile::SelectSectionForGlobal(
+    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
   // TODO: Could also support "weak" symbols as well with ".gnu.linkonce.s.*"
   // sections?
 
@@ -127,7 +125,7 @@ MipsTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, Mang,TM);
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, TM);
 }
 
 /// Return true if this constant should be placed into small data section.

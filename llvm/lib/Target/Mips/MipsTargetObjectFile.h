@@ -32,7 +32,6 @@ class MipsTargetMachine;
                                     const TargetMachine &TM) const;
 
     MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
-                                      Mangler &Mang,
                                       const TargetMachine &TM) const override;
 
     /// Return true if this constant should be placed into small data section.
