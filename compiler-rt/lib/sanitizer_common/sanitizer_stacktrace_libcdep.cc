@@ -85,6 +85,7 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
 }  // namespace __sanitizer
 
 extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_symbolize_pc(__sanitizer::uptr pc,
                               const char *fmt, char *out_buf,
                               __sanitizer::uptr out_buf_size) {

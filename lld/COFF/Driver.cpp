@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Config.h"
 #include "Driver.h"
+#include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "PDB.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"

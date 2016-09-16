@@ -330,6 +330,8 @@ endif()
 # headers
 add_compile_flags_if_supported(-nostdinc++)
 
+add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+
 # Warning flags ===============================================================
 add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 add_compile_flags_if_supported(
@@ -342,7 +344,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wno-covered-switch-default)
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     add_compile_flags_if_supported(
-        -Wno-attributes # FIXME: Fix -Wattribute warnings.
         -Wno-literal-suffix
         -Wno-c++14-compat)
 endif()

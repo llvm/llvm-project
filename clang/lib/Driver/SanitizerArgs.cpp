@@ -608,6 +608,12 @@ static void addIncludeLinkerOption(const ToolChain &TC,
 void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             types::ID InputType) const {
+  // NVPTX doesn't currently support sanitizers.  Bailing out here means that
+  // e.g. -fsanitize=address applies only to host code, which is what we want
+  // for now.
+  if (TC.getTriple().isNVPTX())
+    return;
+
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.
   // Do it even if Sanitizers.empty() since some forms of coverage don't require
   // sanitizers.

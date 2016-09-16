@@ -1040,6 +1040,7 @@ uptr __sanitizer_update_counter_bitset_and_clear_counters(u8 *bitset) {
   return coverage_data.Update8bitCounterBitsetAndClearCounters(bitset);
 }
 // Default empty implementations (weak). Users should redefine them.
+#if !SANITIZER_WINDOWS  // weak does not work on Windows.
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void __sanitizer_cov_trace_cmp() {}
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
@@ -1058,4 +1059,11 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void __sanitizer_cov_trace_div8() {}
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void __sanitizer_cov_trace_gep() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_pc_guard() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_pc_indir() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_pc_guard_init() {}
+#endif  // !SANITIZER_WINDOWS
 } // extern "C"

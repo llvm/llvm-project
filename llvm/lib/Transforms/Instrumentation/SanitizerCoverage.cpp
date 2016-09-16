@@ -521,7 +521,7 @@ void SanitizerCoverageModule::InjectCoverageForIndirectCalls(
         *F.getParent(), Ty, false, GlobalValue::PrivateLinkage,
         Constant::getNullValue(Ty), "__sancov_gen_callee_cache");
     CalleeCache->setAlignment(CacheAlignment);
-    if (Options.TracePC)
+    if (Options.TracePC || Options.TracePCGuard)
       IRB.CreateCall(SanCovTracePCIndir,
                      IRB.CreatePointerCast(Callee, IntptrTy));
     else

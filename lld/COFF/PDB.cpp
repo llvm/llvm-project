@@ -7,21 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Driver.h"
+#include "PDB.h"
 #include "Error.h"
-#include "Symbols.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include <memory>
 
+using namespace lld;
 using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 
 const int BlockSize = 4096;
 
-void lld::coff::createPDB(StringRef Path) {
+void coff::createPDB(StringRef Path) {
   // Create a file.
   size_t FileSize = BlockSize * 3;
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
