@@ -104,6 +104,8 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  bool GetDescription(lldb::SBStream &description, bool include_locations);
+
   static bool EventIsBreakpointEvent(const lldb::SBEvent &event);
 
   static lldb::BreakpointEventType
@@ -151,6 +153,8 @@ public:
   size_t GetSize() const;
 
   SBBreakpoint GetBreakpointAtIndex(size_t idx);
+
+  SBBreakpoint  FindBreakpointByID(lldb::break_id_t);
 
   void Append(const SBBreakpoint &sb_file);
 

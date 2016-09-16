@@ -449,14 +449,20 @@ size_t SBBreakpoint::GetNumLocations() const {
 }
 
 bool SBBreakpoint::GetDescription(SBStream &s) {
+  return GetDescription(s, true);
+}
+
+bool SBBreakpoint::GetDescription(SBStream &s, bool include_locations) {
   if (m_opaque_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         m_opaque_sp->GetTarget().GetAPIMutex());
     s.Printf("SBBreakpoint: id = %i, ", m_opaque_sp->GetID());
     m_opaque_sp->GetResolverDescription(s.get());
     m_opaque_sp->GetFilterDescription(s.get());
-    const size_t num_locations = m_opaque_sp->GetNumLocations();
-    s.Printf(", locations = %" PRIu64, (uint64_t)num_locations);
+    if (include_locations) {
+      const size_t num_locations = m_opaque_sp->GetNumLocations();
+      s.Printf(", locations = %" PRIu64, (uint64_t)num_locations);
+    }
     return true;
   }
   s.Printf("No value");
@@ -702,6 +708,18 @@ public:
     return target_sp->GetBreakpointList().FindBreakpointByID(bp_id);
   }
 
+  BreakpointSP FindBreakpointByID(lldb::break_id_t desired_id) {
+    TargetSP target_sp = m_target_wp.lock();
+    if (!target_sp)
+      return BreakpointSP();
+
+    for (lldb::break_id_t &break_id : m_break_ids) {
+      if (break_id == desired_id)
+        return target_sp->GetBreakpointList().FindBreakpointByID(break_id);
+    }
+    return BreakpointSP();
+  }
+
   bool Append(Breakpoint &bkpt) {
     TargetSP target_sp = m_target_wp.lock();
     if (!target_sp)
@@ -769,6 +787,13 @@ SBBreakpoint SBBreakpointList::GetBreakpointAtIndex(size_t idx) {
     return SBBreakpoint();
 
   BreakpointSP bkpt_sp = m_opaque_sp->GetBreakpointAtIndex(idx);
+  return SBBreakpoint(bkpt_sp);
+}
+
+SBBreakpoint SBBreakpointList::FindBreakpointByID(lldb::break_id_t id) {
+  if (!m_opaque_sp)
+    return SBBreakpoint();
+  BreakpointSP bkpt_sp = m_opaque_sp->FindBreakpointByID(id);
   return SBBreakpoint(bkpt_sp);
 }
 

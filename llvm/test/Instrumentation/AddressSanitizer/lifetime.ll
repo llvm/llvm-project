@@ -1,7 +1,6 @@
 ; Test handling of llvm.lifetime intrinsics.
 ; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
 ; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-instrument-dynamic-allocas=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DYNAMIC
-; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-skip-ambiguous-lifetime-allocas=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-AMBIGUOUS
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -95,49 +94,6 @@ define void @lifetime() sanitize_address {
   ; Memory is unpoisoned at function exit (only once).
   ; CHECK: store i64 0, i64* %{{[0-9]+}}
   ; CHECK-NEXT: ret void
-  ret void
-}
-
-; Case of lifetime depends on how we get into the block.
-define void @ambiguous_lifetime(i1 %x) sanitize_address {
-  ; CHECK-LABEL: define void @ambiguous_lifetime
-
-entry:
-  ; Regular variable lifetime intrinsics.
-  %i = alloca i8, align 4  ; Good
-  %j = alloca i8, align 4  ; Bad
-
-  call void @llvm.lifetime.start(i64 1, i8* %i)
-  ; CHECK: store i8 1, i8* %{{[0-9]+}}
-  ; CHECK-NEXT: call void @llvm.lifetime.start
-
-  br i1 %x, label %bb0, label %bb1
-
-bb0:
-  ; CHECK-LABEL: bb0:
-
-  call void @llvm.lifetime.start(i64 1, i8* %j)
-  ; CHECK-DEFAULT-NOT: store i8 1, i8* %{{[0-9]+}}
-  ; CHECK-AMBIGUOUS: store i8 1, i8* %{{[0-9]+}}
-  ; CHECK-NEXT: call void @llvm.lifetime.start
-
-  br label %bb1
-
-bb1:
-  ; CHECK-LABEL: bb1:
-
-  store volatile i8 0, i8* %i
-  store volatile i8 0, i8* %j
-
-  call void @llvm.lifetime.end(i64 1, i8* %i)
-  ; CHECK: store i8 -8, i8* %{{[0-9]+}}
-  ; CHECK-NEXT: call void @llvm.lifetime.end
-
-  call void @llvm.lifetime.end(i64 1, i8* %j)
-  ; CHECK-DEFAULT-NOT: store i8 -8, i8* %{{[0-9]+}}
-  ; CHECK-AMBIGUOUS: store i8 -8, i8* %{{[0-9]+}}
-  ; CHECK-NEXT: call void @llvm.lifetime.end
-
   ret void
 }
 

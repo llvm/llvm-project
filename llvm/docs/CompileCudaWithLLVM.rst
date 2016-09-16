@@ -132,8 +132,8 @@ Standard library support
 In clang and nvcc, most of the C++ standard library is not supported on the
 device side.
 
-``math.h`` and ``cmath``
-------------------------
+``<math.h>`` and ``<cmath>``
+----------------------------
 
 In clang, ``math.h`` and ``cmath`` are available and `pass
 <https://github.com/llvm-mirror/test-suite/blob/master/External/CUDA/math_h.cu>`_
@@ -161,8 +161,8 @@ available.
     std::sinf(0.);  // nvcc - no such function
   }
 
-``std::complex``
-----------------
+``<std::complex>``
+------------------
 
 nvcc does not officially support ``std::complex``.  It's an error to use
 ``std::complex`` in ``__device__`` code, but it often works in ``__host__
@@ -182,6 +182,12 @@ implicitly ``__host__ __device__`` (this corresponds to nvcc's
 ``constexpr``, so you can use these with clang.  (nvcc does not currently
 support C++14.)
 
+``<algorithm>``
+---------------
+
+In C++14, many useful functions from ``<algorithm>`` (notably, ``std::min`` and
+``std::max``) become constexpr.  You can therefore use these in device code,
+when compiling with clang.
 
 Detecting clang vs NVCC from code
 =================================

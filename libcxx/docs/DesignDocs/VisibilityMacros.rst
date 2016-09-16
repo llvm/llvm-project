@@ -84,8 +84,9 @@ Visibility Macros
 **_LIBCPP_EXCEPTION_ABI**
   Mark the member functions, typeinfo, and vtable of the type as being exported
   by the libc++ library. This macro must be applied to all *exception types*.
-  Exception types must be defined directly in namespace `std` and not the
-  versioning namespace.
+  Exception types should be defined directly in namespace `std` and not the
+  versioning namespace. This allows throwing and catching some exception types
+  between libc++ and libstdc++.
 
 Links
 =====

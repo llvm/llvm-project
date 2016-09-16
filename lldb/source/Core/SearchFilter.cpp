@@ -37,7 +37,7 @@ const char *SearchFilter::FilterTyToName(enum FilterTy type) {
 }
 
 SearchFilter::FilterTy SearchFilter::NameToFilterTy(const char *name) {
-  for (size_t i = 0; i < LastKnownFilterType; i++) {
+  for (size_t i = 0; i <= LastKnownFilterType; i++) {
     if (strcmp(name, g_ty_to_name[i]) == 0)
       return (FilterTy)i;
   }
@@ -163,8 +163,13 @@ SearchFilter::WrapOptionsDict(StructuredData::DictionarySP options_dict_sp) {
 void SearchFilter::SerializeFileSpecList(
     StructuredData::DictionarySP &options_dict_sp, OptionNames name,
     FileSpecList &file_list) {
-  StructuredData::ArraySP module_array_sp(new StructuredData::Array());
   size_t num_modules = file_list.GetSize();
+
+  // Don't serialize empty lists.
+  if (num_modules == 0)
+    return;
+
+  StructuredData::ArraySP module_array_sp(new StructuredData::Array());
   for (size_t i = 0; i < num_modules; i++) {
     module_array_sp->AddItem(StructuredData::StringSP(
         new StructuredData::String(file_list.GetFileSpecAtIndex(i).GetPath())));
@@ -630,22 +635,19 @@ SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
   StructuredData::Array *modules_array;
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
                                                  modules_array);
-  if (!success) {
-    error.SetErrorString("SFBM::CFSD: Could not find the module list key.");
-    return nullptr;
-  }
-
-  size_t num_modules = modules_array->GetSize();
   FileSpecList modules;
-  for (size_t i = 0; i < num_modules; i++) {
-    std::string module;
-    success = modules_array->GetItemAtIndexAsString(i, module);
-    if (!success) {
-      error.SetErrorStringWithFormat(
-          "SFBM::CFSD: filter module item %zu not a string.", i);
-      return nullptr;
+  if (success) {
+    size_t num_modules = modules_array->GetSize();
+    for (size_t i = 0; i < num_modules; i++) {
+      std::string module;
+      success = modules_array->GetItemAtIndexAsString(i, module);
+      if (!success) {
+        error.SetErrorStringWithFormat(
+            "SFBM::CFSD: filter module item %zu not a string.", i);
+        return nullptr;
+      }
+      modules.Append(FileSpec(module.c_str(), false));
     }
-    modules.Append(FileSpec(module.c_str(), false));
   }
 
   return SearchFilterSP(
@@ -694,29 +696,26 @@ SearchFilterByModuleListAndCU::~SearchFilterByModuleListAndCU() = default;
 
 lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
     Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
-  StructuredData::Array *modules_array;
+  StructuredData::Array *modules_array = nullptr;
   SearchFilterSP result_sp;
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
                                                  modules_array);
-  if (!success) {
-    error.SetErrorString("SFBM::CFSD: Could not find the module list key.");
-    return result_sp;
-  }
-
-  size_t num_modules = modules_array->GetSize();
   FileSpecList modules;
-  for (size_t i = 0; i < num_modules; i++) {
-    std::string module;
-    success = modules_array->GetItemAtIndexAsString(i, module);
-    if (!success) {
-      error.SetErrorStringWithFormat(
-          "SFBM::CFSD: filter module item %zu not a string.", i);
-      return result_sp;
+  if (success) {
+    size_t num_modules = modules_array->GetSize();
+    for (size_t i = 0; i < num_modules; i++) {
+      std::string module;
+      success = modules_array->GetItemAtIndexAsString(i, module);
+      if (!success) {
+        error.SetErrorStringWithFormat(
+            "SFBM::CFSD: filter module item %zu not a string.", i);
+        return result_sp;
+      }
+      modules.Append(FileSpec(module.c_str(), false));
     }
-    modules.Append(FileSpec(module.c_str(), false));
   }
 
-  StructuredData::Array *cus_array;
+  StructuredData::Array *cus_array = nullptr;
   success =
       data_dict.GetValueForKeyAsArray(GetKey(OptionNames::CUList), cus_array);
   if (!success) {
@@ -728,7 +727,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
   FileSpecList cus;
   for (size_t i = 0; i < num_cus; i++) {
     std::string cu;
-    success = modules_array->GetItemAtIndexAsString(i, cu);
+    success = cus_array->GetItemAtIndexAsString(i, cu);
     if (!success) {
       error.SetErrorStringWithFormat(
           "SFBM::CFSD: filter cu item %zu not a string.", i);
