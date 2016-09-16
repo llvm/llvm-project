@@ -37,9 +37,6 @@ class TestSwiftCrossModuleExtension(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(
-        oslist=["macosx"],
-        bugnumber="https://bugs.swift.org/browse/SR-1525")
     def test_cross_module_extension(self):
         """Test that we correctly find private extension decls across modules"""
         self.buildAll()
