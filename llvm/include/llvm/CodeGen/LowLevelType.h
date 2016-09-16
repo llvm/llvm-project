@@ -14,7 +14,6 @@
 /// size and the number of vector lanes (if any). Accordingly, there are 4
 /// possible valid type-kinds:
 ///
-///    * `unsized` for labels etc
 ///    * `sN` for scalars and aggregates
 ///    * `<N x sM>` for vectors, which must have at least 2 elements.
 ///    * `pN` for pointers
@@ -46,7 +45,6 @@ public:
     Scalar,
     Pointer,
     Vector,
-    Unsized,
   };
 
   /// Get a low-level scalar or aggregate "bag of bits".
@@ -74,11 +72,6 @@ public:
     return LLT{Vector, NumElements, ScalarTy.getSizeInBits()};
   }
 
-  /// Get an unsized but valid low-level type (e.g. for a label).
-  static LLT unsized() {
-    return LLT{Unsized, 0, 0};
-  }
-
   explicit LLT(TypeKind Kind, uint16_t NumElements, unsigned SizeInBits)
     : SizeInBits(SizeInBits), ElementsOrAddrSpace(NumElements), Kind(Kind) {
     assert((Kind != Vector || ElementsOrAddrSpace > 1) &&
@@ -98,10 +91,6 @@ public:
 
   bool isVector() const { return Kind == Vector; }
 
-  bool isSized() const {
-    return Kind == Scalar || Kind == Vector || Kind == Pointer;
-  }
-
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
   uint16_t getNumElements() const {
@@ -111,14 +100,12 @@ public:
 
   /// Returns the total size of the type. Must only be called on sized types.
   unsigned getSizeInBits() const {
-    assert(isSized() && "attempt to get size of unsized type");
     if (isPointer() || isScalar())
       return SizeInBits;
     return SizeInBits * ElementsOrAddrSpace;
   }
 
   unsigned getScalarSizeInBits() const {
-    assert(isSized() && "cannot get size of this type");
     return SizeInBits;
   }
 
@@ -137,7 +124,7 @@ public:
   /// size of the scalar type involved. For example `s32` will become `s16`,
   /// `<2 x s32>` will become `<2 x s16>`.
   LLT halfScalarSize() const {
-    assert(isSized() && getScalarSizeInBits() > 1 &&
+    assert(!isPointer() && getScalarSizeInBits() > 1 &&
            getScalarSizeInBits() % 2 == 0 && "cannot half size of this type");
     return LLT{Kind, ElementsOrAddrSpace, SizeInBits / 2};
   }
@@ -146,7 +133,7 @@ public:
   /// size of the scalar type involved. For example `s32` will become `s64`,
   /// `<2 x s32>` will become `<2 x s64>`.
   LLT doubleScalarSize() const {
-    assert(isSized() && "cannot change size of this type");
+    assert(!isPointer() && "cannot change size of this type");
     return LLT{Kind, ElementsOrAddrSpace, SizeInBits * 2};
   }
 
@@ -169,6 +156,7 @@ public:
   /// a vector type. For example `<2 x s32>` will become `<4 x s32>`. Doubling
   /// the number of elements in sN produces <2 x sN>.
   LLT doubleElements() const {
+    assert(!isPointer() && "cannot double elements in pointer");
     return LLT{Vector, static_cast<uint16_t>(ElementsOrAddrSpace * 2),
                SizeInBits};
   }

@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// This file defines a 'dot-cfg' analysis pass, which emits the
+// cfg.<fnname>.dot file for each function in the program, with a graph of the
+// CFG for that function.
+//
 // This file defines external functions that can be called to explicitly
 // instantiate the CFG printer.
 //
@@ -19,9 +23,34 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/GraphWriter.h"
 
 namespace llvm {
+class CFGViewerPass
+    : public PassInfoMixin<CFGViewerPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class CFGOnlyViewerPass
+    : public PassInfoMixin<CFGOnlyViewerPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class CFGPrinterPass
+    : public PassInfoMixin<CFGPrinterPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class CFGOnlyPrinterPass
+    : public PassInfoMixin<CFGOnlyPrinterPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 template<>
 struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
 
@@ -152,8 +181,8 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
 
 namespace llvm {
   class FunctionPass;
-  FunctionPass *createCFGPrinterPass ();
-  FunctionPass *createCFGOnlyPrinterPass ();
+  FunctionPass *createCFGPrinterLegacyPassPass ();
+  FunctionPass *createCFGOnlyPrinterLegacyPassPass ();
 } // End llvm namespace
 
 #endif

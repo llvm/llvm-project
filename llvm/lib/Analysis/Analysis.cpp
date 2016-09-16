@@ -30,10 +30,10 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeCallGraphPrinterLegacyPassPass(Registry);
   initializeCallGraphViewerPass(Registry);
   initializeCostModelAnalysisPass(Registry);
-  initializeCFGViewerPass(Registry);
-  initializeCFGPrinterPass(Registry);
-  initializeCFGOnlyViewerPass(Registry);
-  initializeCFGOnlyPrinterPass(Registry);
+  initializeCFGViewerLegacyPassPass(Registry);
+  initializeCFGPrinterLegacyPassPass(Registry);
+  initializeCFGOnlyViewerLegacyPassPass(Registry);
+  initializeCFGOnlyPrinterLegacyPassPass(Registry);
   initializeCFLAndersAAWrapperPassPass(Registry);
   initializeCFLSteensAAWrapperPassPass(Registry);
   initializeDependenceAnalysisWrapperPassPass(Registry);

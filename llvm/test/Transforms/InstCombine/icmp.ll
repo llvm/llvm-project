@@ -171,12 +171,9 @@ define i1 @test17(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test17vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test17vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, %x
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SHL]], <i32 8, i32 8>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %x, <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i32> <i32 1, i32 1>, %x
@@ -196,12 +193,9 @@ define i1 @test17a(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test17a_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test17a_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, %x
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SHL]], <i32 7, i32 7>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %x, <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i32> <i32 1, i32 1>, %x
@@ -221,12 +215,9 @@ define i1 @test18_eq(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test18_eq_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test18_eq_vec(
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i32> <i32 8, i32 8>, %x
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SH]], <i32 1, i32 1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %x, <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sh = lshr <2 x i32> <i32 8, i32 8>, %x
@@ -246,12 +237,9 @@ define i1 @test18_ne(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test18_ne_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test18_ne_vec(
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i32> <i32 8, i32 8>, %x
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SH]], <i32 1, i32 1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %x, <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sh = lshr <2 x i32> <i32 8, i32 8>, %x
@@ -271,12 +259,9 @@ define i1 @test19(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test19vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test19vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, %x
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SHL]], <i32 8, i32 8>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %x, <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i32> <i32 1, i32 1>, %x
@@ -306,12 +291,9 @@ define i1 @test20(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test20vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test20vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, %x
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SHL]], <i32 8, i32 8>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %x, <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i32> <i32 1, i32 1>, %x
@@ -331,12 +313,9 @@ define i1 @test20a(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test20a_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test20a_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, %x
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SHL]], <i32 7, i32 7>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> %x, <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i32> <i32 1, i32 1>, %x
@@ -2215,6 +2194,16 @@ define i1 @shl_ap1_zero_ap2_non_zero_2(i32 %a) {
   ret i1 %cmp
 }
 
+define <2 x i1> @shl_ap1_zero_ap2_non_zero_2_vec(<2 x i32> %a) {
+; CHECK-LABEL: @shl_ap1_zero_ap2_non_zero_2_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %a, <i32 29, i32 29>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 4, i32 4>, %a
+  %cmp = icmp eq <2 x i32> %shl, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
 define i1 @shl_ap1_zero_ap2_non_zero_4(i32 %a) {
 ; CHECK-LABEL: @shl_ap1_zero_ap2_non_zero_4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %a, 30
@@ -2334,6 +2323,16 @@ define i1 @f1(i64 %a, i64 %b) {
   ret i1 %v
 }
 
+define <2 x i1> @f1_vec(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @f1_vec(
+; CHECK-NEXT:    [[V:%.*]] = icmp sge <2 x i64> %a, %b
+; CHECK-NEXT:    ret <2 x i1> [[V]]
+;
+  %t = sub nsw <2 x i64> %a, %b
+  %v = icmp sgt <2 x i64> %t, <i64 -1, i64 -1>
+  ret <2 x i1> %v
+}
+
 define i1 @f2(i64 %a, i64 %b) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:    [[V:%.*]] = icmp sgt i64 %a, %b
@@ -2342,6 +2341,16 @@ define i1 @f2(i64 %a, i64 %b) {
   %t = sub nsw i64 %a, %b
   %v = icmp sgt i64 %t, 0
   ret i1 %v
+}
+
+define <2 x i1> @f2_vec(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @f2_vec(
+; CHECK-NEXT:    [[V:%.*]] = icmp sgt <2 x i64> %a, %b
+; CHECK-NEXT:    ret <2 x i1> [[V]]
+;
+  %t = sub nsw <2 x i64> %a, %b
+  %v = icmp sgt <2 x i64> %t, zeroinitializer
+  ret <2 x i1> %v
 }
 
 define i1 @f3(i64 %a, i64 %b) {
@@ -2354,6 +2363,16 @@ define i1 @f3(i64 %a, i64 %b) {
   ret i1 %v
 }
 
+define <2 x i1> @f3_vec(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @f3_vec(
+; CHECK-NEXT:    [[V:%.*]] = icmp slt <2 x i64> %a, %b
+; CHECK-NEXT:    ret <2 x i1> [[V]]
+;
+  %t = sub nsw <2 x i64> %a, %b
+  %v = icmp slt <2 x i64> %t, zeroinitializer
+  ret <2 x i1> %v
+}
+
 define i1 @f4(i64 %a, i64 %b) {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:    [[V:%.*]] = icmp sle i64 %a, %b
@@ -2362,6 +2381,16 @@ define i1 @f4(i64 %a, i64 %b) {
   %t = sub nsw i64 %a, %b
   %v = icmp sle i64 %t, 0
   ret i1 %v
+}
+
+define <2 x i1> @f4_vec(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @f4_vec(
+; CHECK-NEXT:    [[V:%.*]] = icmp sle <2 x i64> %a, %b
+; CHECK-NEXT:    ret <2 x i1> [[V]]
+;
+  %t = sub nsw <2 x i64> %a, %b
+  %v = icmp slt <2 x i64> %t, <i64 1, i64 1>
+  ret <2 x i1> %v
 }
 
 define i32 @f5(i8 %a, i8 %b) {

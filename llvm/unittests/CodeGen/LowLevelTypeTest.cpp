@@ -43,7 +43,6 @@ TEST(LowLevelTypeTest, Scalar) {
     for (const LLT TestTy : {Ty, HalfTy, DoubleTy}) {
       ASSERT_TRUE(TestTy.isValid());
       ASSERT_TRUE(TestTy.isScalar());
-      ASSERT_TRUE(TestTy.isSized());
 
       ASSERT_FALSE(TestTy.isPointer());
       ASSERT_FALSE(TestTy.isVector());
@@ -101,7 +100,6 @@ TEST(LowLevelTypeTest, Vector) {
       // Test kind.
       for (const LLT TestTy : {VTy, HalfSzTy, DoubleSzTy, DoubleEltTy}) {
         ASSERT_TRUE(TestTy.isValid());
-        ASSERT_TRUE(TestTy.isSized());
         ASSERT_TRUE(TestTy.isVector());
 
         ASSERT_FALSE(TestTy.isScalar());
@@ -111,7 +109,6 @@ TEST(LowLevelTypeTest, Vector) {
       // Test halving elements to a scalar.
       {
         ASSERT_TRUE(HalfEltIfEvenTy.isValid());
-        ASSERT_TRUE(HalfEltIfEvenTy.isSized());
         ASSERT_FALSE(HalfEltIfEvenTy.isPointer());
         if (Elts > 2) {
           ASSERT_TRUE(HalfEltIfEvenTy.isVector());
@@ -178,7 +175,6 @@ TEST(LowLevelTypeTest, Pointer) {
     // Test kind.
     ASSERT_TRUE(Ty.isValid());
     ASSERT_TRUE(Ty.isPointer());
-    ASSERT_TRUE(Ty.isSized());
 
     ASSERT_FALSE(Ty.isScalar());
     ASSERT_FALSE(Ty.isVector());
@@ -201,24 +197,8 @@ TEST(LowLevelTypeTest, Invalid) {
 
   ASSERT_FALSE(Ty.isValid());
   ASSERT_FALSE(Ty.isScalar());
-  ASSERT_FALSE(Ty.isSized());
   ASSERT_FALSE(Ty.isPointer());
   ASSERT_FALSE(Ty.isVector());
 }
 
-TEST(LowLevelTypeTest, Unsized) {
-  LLVMContext C;
-  DataLayout DL("");
-
-  const LLT Ty = LLT::unsized();
-
-  ASSERT_TRUE(Ty.isValid());
-  ASSERT_FALSE(Ty.isScalar());
-  ASSERT_FALSE(Ty.isSized());
-  ASSERT_FALSE(Ty.isPointer());
-  ASSERT_FALSE(Ty.isVector());
-
-  Type *IRTy = Type::getLabelTy(C);
-  EXPECT_EQ(Ty, LLT(*IRTy, DL));
-}
 }

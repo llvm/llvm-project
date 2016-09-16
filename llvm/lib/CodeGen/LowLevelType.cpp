@@ -35,7 +35,7 @@ LLT::LLT(Type &Ty, const DataLayout &DL) {
     ElementsOrAddrSpace = 1;
     assert(SizeInBits != 0 && "invalid zero-sized type");
   } else {
-    Kind = Unsized;
+    Kind = Invalid;
     SizeInBits = ElementsOrAddrSpace = 0;
   }
 }
@@ -45,10 +45,9 @@ void LLT::print(raw_ostream &OS) const {
     OS << "<" << ElementsOrAddrSpace << " x s" << SizeInBits << ">";
   else if (isPointer())
     OS << "p" << getAddressSpace();
-  else if (isSized())
+  else if (isValid()) {
+    assert(isScalar() && "unexpected type");
     OS << "s" << getScalarSizeInBits();
-  else if (isValid())
-    OS << "unsized";
-  else
+  } else
     llvm_unreachable("trying to print an invalid type");
 }

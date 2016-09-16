@@ -321,11 +321,9 @@ MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
                                                 unsigned Res, unsigned Op0,
                                                 unsigned Op1) {
 #ifndef NDEBUG
-  assert((MRI->getType(Op0).isScalar() || MRI->getType(Op0).isVector()) &&
-         "invalid operand type");
   assert(MRI->getType(Op0) == MRI->getType(Op0) && "type mismatch");
   assert(CmpInst::isIntPredicate(Pred) && "invalid predicate");
-  if (MRI->getType(Op0).isScalar())
+  if (MRI->getType(Op0).isScalar() || MRI->getType(Op0).isPointer())
     assert(MRI->getType(Res).isScalar() && "type mismatch");
   else
     assert(MRI->getType(Res).isVector() &&

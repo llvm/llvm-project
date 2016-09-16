@@ -139,6 +139,8 @@ FUNCTION_PASS("consthoist", ConstantHoistingPass())
 FUNCTION_PASS("correlated-propagation", CorrelatedValuePropagationPass())
 FUNCTION_PASS("dce", DCEPass())
 FUNCTION_PASS("dse", DSEPass())
+FUNCTION_PASS("dot-cfg", CFGPrinterPass())
+FUNCTION_PASS("dot-cfg-only", CFGOnlyPrinterPass())
 FUNCTION_PASS("early-cse", EarlyCSEPass(/*UseMemorySSA=*/false))
 FUNCTION_PASS("early-cse-memssa", EarlyCSEPass(/*UseMemorySSA=*/true))
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
@@ -190,6 +192,8 @@ FUNCTION_PASS("verify<domtree>", DominatorTreeVerifierPass())
 FUNCTION_PASS("verify<loops>", LoopVerifierPass())
 FUNCTION_PASS("verify<memoryssa>", MemorySSAVerifierPass())
 FUNCTION_PASS("verify<regions>", RegionInfoVerifierPass())
+FUNCTION_PASS("view-cfg", CFGViewerPass())
+FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 #undef FUNCTION_PASS
 
 #ifndef LOOP_ANALYSIS
