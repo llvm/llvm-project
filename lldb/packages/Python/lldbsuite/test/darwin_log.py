@@ -326,8 +326,8 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
                     "QSetLogging:bitmask=LOG_DARWIN_LOG;")
 
     def darwin_log_available(self):
-        match = self.expect("plugin structured-data darwin-log status",
-                            patterns=[r"Availability: ([\S]+)"])
+        match = self.match("plugin structured-data darwin-log status",
+                           patterns=[r"Availability: ([\S]+)"])
         return match is not None and (match.group(1) == "available")
 
     def do_test(self, enable_options, settings_commands=None,
