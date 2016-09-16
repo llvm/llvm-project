@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS
 set(TracePCTests
   SimpleTest
   CounterTest
+  CallerCalleeTest
   )
 
 foreach(Test ${TracePCTests})

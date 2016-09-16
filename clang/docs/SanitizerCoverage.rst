@@ -323,8 +323,8 @@ and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`__.
 
 Tracing PCs with guards
 =======================
-Another *experimental* feature that tries to combine `trace-pc`,
-`8bit-counters` and boolean coverage
+Another *experimental* feature that tries to combine the functionality of `trace-pc`,
+`8bit-counters` and boolean coverage.
 
 With ``-fsanitize-coverage=trace-pc-guard`` the compiler will insert the following code
 on every edge:
@@ -337,6 +337,9 @@ on every edge:
 Every edge will have its own 1-byte `guard_variable`.
 All such guard variables will reside in a dedicated section
 (i.e. they essentially form an array).
+
+Similarly to `trace-pc,indirect-calls`, with `trace-pc-guards,indirect-calls`
+``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
 
 The compler will also insert a module constructor that will call
 

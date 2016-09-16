@@ -73,6 +73,12 @@ size_t TracePC::UpdateCounterMap(ValueBitMap *Map) {
   return Delta;
 }
 
+void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
+  const uintptr_t kBits = 12;
+  const uintptr_t kMask = (1 << kBits) - 1;
+  CounterMap.AddValue((Caller & kMask) | ((Callee & kMask) << kBits));
+}
+
 } // namespace fuzzer
 
 extern "C" {
@@ -85,5 +91,11 @@ void __sanitizer_cov_trace_pc_guard(uint8_t *Guard) {
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_pc_guard_init(uint8_t *Start, uint8_t *Stop) {
   fuzzer::TPC.HandleInit(Start, Stop);
+}
+
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_pc_indir(uintptr_t Callee) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  fuzzer::TPC.HandleCallerCallee(PC, Callee);
 }
 }

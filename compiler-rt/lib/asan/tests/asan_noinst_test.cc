@@ -26,6 +26,8 @@
 #include <vector>
 #include <limits>
 
+using namespace __sanitizer;
+
 // ATTENTION!
 // Please don't call intercepted functions (including malloc() and friends)
 // in this test. The static runtime library is linked explicitly (without

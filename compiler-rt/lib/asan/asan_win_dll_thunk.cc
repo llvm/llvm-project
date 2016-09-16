@@ -30,6 +30,8 @@ void *__stdcall GetProcAddress(void *module, const char *proc_name);
 void abort();
 }
 
+using namespace __sanitizer;
+
 static uptr getRealProcAddressOrDie(const char *name) {
   uptr ret =
       __interception::InternalGetProcAddress((void *)GetModuleHandleA(0), name);
@@ -327,6 +329,9 @@ INTERFACE_FUNCTION(__sanitizer_cov_trace_div4)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_div8)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_gep)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_switch)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_pc_guard)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_pc_indir)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_pc_init)
 INTERFACE_FUNCTION(__sanitizer_cov_with_check)
 INTERFACE_FUNCTION(__sanitizer_get_allocated_size)
 INTERFACE_FUNCTION(__sanitizer_get_coverage_guards)

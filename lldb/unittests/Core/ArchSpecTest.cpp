@@ -11,6 +11,8 @@
 
 #include "lldb/Core/ArchSpec.h"
 
+#include "llvm/Support/MachO.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -93,3 +95,42 @@ TEST(ArchSpecTest, TestParseMachCPUDashSubtypeTripleExtra) {
   EXPECT_FALSE(ParseMachCPUDashSubtypeTriple("12-10.10", AS));
 }
 
+TEST(ArchSpecTest, TestSetTriple) {
+  ArchSpec AS;
+
+  // Various flavors of valid triples.
+  EXPECT_TRUE(AS.SetTriple("12-10-apple-darwin"));
+  EXPECT_EQ(llvm::MachO::CPU_TYPE_ARM, AS.GetMachOCPUType());
+  EXPECT_EQ(10, AS.GetMachOCPUSubType());
+  EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
+                  .consume_front("armv7f-apple-darwin"));
+  EXPECT_EQ(ArchSpec::eCore_arm_armv7f, AS.GetCore());
+
+  AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("18.100-apple-darwin"));
+  EXPECT_EQ(llvm::MachO::CPU_TYPE_POWERPC, AS.GetMachOCPUType());
+  EXPECT_EQ(100, AS.GetMachOCPUSubType());
+  EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
+                  .consume_front("powerpc-apple-darwin"));
+  EXPECT_EQ(ArchSpec::eCore_ppc_ppc970, AS.GetCore());
+
+  AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("i686-pc-windows"));
+  EXPECT_EQ(llvm::Triple::x86, AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::PC, AS.GetTriple().getVendor());
+  EXPECT_EQ(llvm::Triple::Win32, AS.GetTriple().getOS());
+  EXPECT_TRUE(
+      llvm::StringRef(AS.GetTriple().str()).consume_front("i686-pc-windows"));
+  EXPECT_STREQ("i686", AS.GetArchitectureName());
+  EXPECT_EQ(ArchSpec::eCore_x86_32_i686, AS.GetCore());
+
+  // Various flavors of invalid triples.
+  AS = ArchSpec();
+  EXPECT_FALSE(AS.SetTriple("unknown-unknown-unknown"));
+
+  AS = ArchSpec();
+  EXPECT_FALSE(AS.SetTriple("unknown"));
+
+  AS = ArchSpec();
+  EXPECT_FALSE(AS.SetTriple(""));
+}

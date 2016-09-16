@@ -467,11 +467,14 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
     }
   }
 
+  uintX_t HeaderSize =
+      Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  if (HeaderSize > MinVA)
+    fatal("Not enough space for ELF and program headers");
+
   // ELF and Program headers need to be right before the first section in
   // memory. Set their addresses accordingly.
-  MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
-                        Out<ELFT>::ProgramHeaders->getSize(),
-                    Target->PageSize);
+  MinVA = alignDown(MinVA - HeaderSize, Target->PageSize);
   Out<ELFT>::ElfHeader->setVA(MinVA);
   Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
 }

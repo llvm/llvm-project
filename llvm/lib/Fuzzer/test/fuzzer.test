@@ -32,7 +32,8 @@ COUNTERS: NEW {{.*}} bits: {{[1-9]*}}
 COUNTERS: NEW {{.*}} bits: {{[1-9]*}}
 COUNTERS: BINGO
 
-RUN: not LLVMFuzzer-CallerCalleeTest                     -cross_over=0 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-CallerCalleeTest                     -cross_over=0 -max_len=6 -seed=1 -max_total_time=15 2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-CallerCalleeTest-TracePC             -cross_over=0 -max_len=6 -seed=1 -max_total_time=15 2>&1 | FileCheck %s
 # This one is flaky, may actually find the goal even w/o use_indir_calls.
 # LLVMFuzzer-CallerCalleeTest  -use_indir_calls=0 -cross_over=0 -max_len=6 -seed=1 -runs=1000000 2>&1 | FileCheck %s  --check-prefix=Done1000000
 

@@ -360,6 +360,7 @@ class TracePC {
  public:
   void HandleTrace(uint8_t *guard, uintptr_t PC);
   void HandleInit(uint8_t *start, uint8_t *stop);
+  void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   size_t GetTotalCoverage() { return TotalCoverage; }
   void SetUseCounters(bool UC) { UseCounters = UC; }
   size_t UpdateCounterMap(ValueBitMap *Map);

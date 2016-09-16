@@ -555,33 +555,27 @@ FindArchDefinitionEntry(const ArchDefinition *def, ArchSpec::Core core) {
 //===----------------------------------------------------------------------===//
 // Constructors and destructors.
 
-ArchSpec::ArchSpec()
-    : m_triple(), m_core(kCore_invalid), m_byte_order(eByteOrderInvalid),
-      m_flags(0), m_distribution_id() {}
+ArchSpec::ArchSpec() {}
 
-ArchSpec::ArchSpec(const char *triple_cstr, Platform *platform)
-    : m_triple(), m_core(kCore_invalid), m_byte_order(eByteOrderInvalid),
-      m_flags(0), m_distribution_id() {
+ArchSpec::ArchSpec(const char *triple_cstr, Platform *platform) {
   if (triple_cstr)
     SetTriple(triple_cstr, platform);
 }
 
-ArchSpec::ArchSpec(const char *triple_cstr)
-    : m_triple(), m_core(kCore_invalid), m_byte_order(eByteOrderInvalid),
-      m_flags(0), m_distribution_id() {
+ArchSpec::ArchSpec(llvm::StringRef triple_str, Platform *platform) {
+  SetTriple(triple_str, platform);
+}
+
+ArchSpec::ArchSpec(const char *triple_cstr) {
   if (triple_cstr)
     SetTriple(triple_cstr);
 }
 
-ArchSpec::ArchSpec(const llvm::Triple &triple)
-    : m_triple(), m_core(kCore_invalid), m_byte_order(eByteOrderInvalid),
-      m_flags(0), m_distribution_id() {
-  SetTriple(triple);
-}
+ArchSpec::ArchSpec(llvm::StringRef triple_str) { SetTriple(triple_str); }
 
-ArchSpec::ArchSpec(ArchitectureType arch_type, uint32_t cpu, uint32_t subtype)
-    : m_triple(), m_core(kCore_invalid), m_byte_order(eByteOrderInvalid),
-      m_flags(0), m_distribution_id() {
+ArchSpec::ArchSpec(const llvm::Triple &triple) { SetTriple(triple); }
+
+ArchSpec::ArchSpec(ArchitectureType arch_type, uint32_t cpu, uint32_t subtype) {
   SetArchitecture(arch_type, cpu, subtype);
 }
 
@@ -857,99 +851,104 @@ bool lldb_private::ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, Arc
 }
 
 bool ArchSpec::SetTriple(const char *triple_cstr) {
-  if (triple_cstr && triple_cstr[0]) {
-    llvm::StringRef triple_stref(triple_cstr);
-
-    if (ParseMachCPUDashSubtypeTriple(triple_stref, *this))
-      return true;
-
-    if (triple_stref.startswith(LLDB_ARCH_DEFAULT)) {
-      // Special case for the current host default architectures...
-      if (triple_stref.equals(LLDB_ARCH_DEFAULT_32BIT))
-        *this = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-      else if (triple_stref.equals(LLDB_ARCH_DEFAULT_64BIT))
-        *this = HostInfo::GetArchitecture(HostInfo::eArchKind64);
-      else if (triple_stref.equals(LLDB_ARCH_DEFAULT))
-        *this = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-    } else {
-      std::string normalized_triple_sstr(llvm::Triple::normalize(triple_stref));
-      triple_stref = normalized_triple_sstr;
-      SetTriple(llvm::Triple(triple_stref));
-    }
-  } else
-    Clear();
-  return IsValid();
+  llvm::StringRef str(triple_cstr ? triple_cstr : "");
+  return SetTriple(str);
 }
 
 bool ArchSpec::SetTriple(const char *triple_cstr, Platform *platform) {
-  if (triple_cstr && triple_cstr[0]) {
-    if (ParseMachCPUDashSubtypeTriple(triple_cstr, *this))
-      return true;
+  llvm::StringRef str(triple_cstr ? triple_cstr : "");
+  return SetTriple(str, platform);
+}
 
-    llvm::StringRef triple_stref(triple_cstr);
-    if (triple_stref.startswith(LLDB_ARCH_DEFAULT)) {
-      // Special case for the current host default architectures...
-      if (triple_stref.equals(LLDB_ARCH_DEFAULT_32BIT))
-        *this = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-      else if (triple_stref.equals(LLDB_ARCH_DEFAULT_64BIT))
-        *this = HostInfo::GetArchitecture(HostInfo::eArchKind64);
-      else if (triple_stref.equals(LLDB_ARCH_DEFAULT))
-        *this = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-    } else {
-      ArchSpec raw_arch(triple_cstr);
-
-      std::string normalized_triple_sstr(llvm::Triple::normalize(triple_stref));
-      triple_stref = normalized_triple_sstr;
-      llvm::Triple normalized_triple(triple_stref);
-
-      const bool os_specified = normalized_triple.getOSName().size() > 0;
-      const bool vendor_specified =
-          normalized_triple.getVendorName().size() > 0;
-      const bool env_specified =
-          normalized_triple.getEnvironmentName().size() > 0;
-
-      // If we got an arch only, then default the vendor, os, environment
-      // to match the platform if one is supplied
-      if (!(os_specified || vendor_specified || env_specified)) {
-        if (platform) {
-          // If we were given a platform, use the platform's system
-          // architecture. If this is not available (might not be
-          // connected) use the first supported architecture.
-          ArchSpec compatible_arch;
-          if (platform->IsCompatibleArchitecture(raw_arch, false,
-                                                 &compatible_arch)) {
-            if (compatible_arch.IsValid()) {
-              const llvm::Triple &compatible_triple =
-                  compatible_arch.GetTriple();
-              if (!vendor_specified)
-                normalized_triple.setVendor(compatible_triple.getVendor());
-              if (!os_specified)
-                normalized_triple.setOS(compatible_triple.getOS());
-              if (!env_specified &&
-                  compatible_triple.getEnvironmentName().size())
-                normalized_triple.setEnvironment(
-                    compatible_triple.getEnvironment());
-            }
-          } else {
-            *this = raw_arch;
-            return IsValid();
-          }
-        } else {
-          // No platform specified, fall back to the host system for
-          // the default vendor, os, and environment.
-          llvm::Triple host_triple(llvm::sys::getDefaultTargetTriple());
-          if (!vendor_specified)
-            normalized_triple.setVendor(host_triple.getVendor());
-          if (!vendor_specified)
-            normalized_triple.setOS(host_triple.getOS());
-          if (!env_specified && host_triple.getEnvironmentName().size())
-            normalized_triple.setEnvironment(host_triple.getEnvironment());
-        }
-      }
-      SetTriple(normalized_triple);
-    }
-  } else
+bool ArchSpec::SetTriple(llvm::StringRef triple) {
+  if (triple.empty()) {
     Clear();
+    return false;
+  }
+
+  if (ParseMachCPUDashSubtypeTriple(triple, *this))
+    return true;
+
+  if (triple.startswith(LLDB_ARCH_DEFAULT)) {
+    // Special case for the current host default architectures...
+    if (triple.equals(LLDB_ARCH_DEFAULT_32BIT))
+      *this = HostInfo::GetArchitecture(HostInfo::eArchKind32);
+    else if (triple.equals(LLDB_ARCH_DEFAULT_64BIT))
+      *this = HostInfo::GetArchitecture(HostInfo::eArchKind64);
+    else if (triple.equals(LLDB_ARCH_DEFAULT))
+      *this = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
+  } else {
+    SetTriple(llvm::Triple(llvm::Triple::normalize(triple)));
+  }
+  return IsValid();
+}
+
+bool ArchSpec::SetTriple(llvm::StringRef triple, Platform *platform) {
+  if (triple.empty()) {
+    Clear();
+    return false;
+  }
+  if (ParseMachCPUDashSubtypeTriple(triple, *this))
+    return true;
+
+  if (triple.startswith(LLDB_ARCH_DEFAULT)) {
+    // Special case for the current host default architectures...
+    if (triple.equals(LLDB_ARCH_DEFAULT_32BIT))
+      *this = HostInfo::GetArchitecture(HostInfo::eArchKind32);
+    else if (triple.equals(LLDB_ARCH_DEFAULT_64BIT))
+      *this = HostInfo::GetArchitecture(HostInfo::eArchKind64);
+    else if (triple.equals(LLDB_ARCH_DEFAULT))
+      *this = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
+    return IsValid();
+  }
+
+  ArchSpec raw_arch(triple);
+
+  llvm::Triple normalized_triple(llvm::Triple::normalize(triple));
+
+  const bool os_specified = !normalized_triple.getOSName().empty();
+  const bool vendor_specified = !normalized_triple.getVendorName().empty();
+  const bool env_specified = !normalized_triple.getEnvironmentName().empty();
+
+  if (os_specified || vendor_specified || env_specified) {
+    SetTriple(normalized_triple);
+    return IsValid();
+  }
+
+  // We got an arch only.  If there is no platform, fallback to the host system
+  // for defaults.
+  if (!platform) {
+    llvm::Triple host_triple(llvm::sys::getDefaultTargetTriple());
+    if (!vendor_specified)
+      normalized_triple.setVendor(host_triple.getVendor());
+    if (!vendor_specified)
+      normalized_triple.setOS(host_triple.getOS());
+    if (!env_specified && host_triple.getEnvironmentName().size())
+      normalized_triple.setEnvironment(host_triple.getEnvironment());
+    SetTriple(normalized_triple);
+    return IsValid();
+  }
+
+  // If we were given a platform, use the platform's system architecture. If
+  // this is not available (might not be connected) use the first supported
+  // architecture.
+  ArchSpec compatible_arch;
+  if (!platform->IsCompatibleArchitecture(raw_arch, false, &compatible_arch)) {
+    *this = raw_arch;
+    return IsValid();
+  }
+
+  if (compatible_arch.IsValid()) {
+    const llvm::Triple &compatible_triple = compatible_arch.GetTriple();
+    if (!vendor_specified)
+      normalized_triple.setVendor(compatible_triple.getVendor());
+    if (!os_specified)
+      normalized_triple.setOS(compatible_triple.getOS());
+    if (!env_specified && compatible_triple.hasEnvironment())
+      normalized_triple.setEnvironment(compatible_triple.getEnvironment());
+  }
+
+  SetTriple(normalized_triple);
   return IsValid();
 }
 

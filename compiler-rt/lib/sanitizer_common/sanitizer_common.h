@@ -834,16 +834,16 @@ void AvoidCVE_2016_2143();
 INLINE void AvoidCVE_2016_2143() {}
 #endif
 
+struct StackDepotStats {
+  uptr n_uniq_ids;
+  uptr allocated;
+};
+
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,
                           __sanitizer::LowLevelAllocator &alloc) {
   return alloc.Allocate(size);
 }
-
-struct StackDepotStats {
-  uptr n_uniq_ids;
-  uptr allocated;
-};
 
 #endif  // SANITIZER_COMMON_H

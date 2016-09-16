@@ -625,7 +625,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
       }
 
       if (!isa<IntToPtrInst>(V) && !isa<PtrToIntInst>(V) &&
-          !isa<GEPOperator>(V) && !isa<PHINode>(V))
+          !isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
         // We've found some value that we can't explore which is different from
         // the base. Therefore we can't do this transformation.
         return false;
@@ -1173,12 +1173,12 @@ Instruction *InstCombiner::foldICmpAddOpConst(Instruction &ICI,
   return new ICmpInst(ICmpInst::ICMP_SLT, X, ConstantExpr::getSub(SMax, C));
 }
 
-/// Handle "(icmp eq/ne (ashr/lshr const2, A), const1)" ->
-/// (icmp eq/ne A, Log2(const2/const1)) ->
-/// (icmp eq/ne A, Log2(const2) - Log2(const1)).
-Instruction *InstCombiner::foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
-                                             ConstantInt *CI1,
-                                             ConstantInt *CI2) {
+/// Handle "(icmp eq/ne (ashr/lshr AP2, A), AP1)" ->
+/// (icmp eq/ne A, Log2(AP2/AP1)) ->
+/// (icmp eq/ne A, Log2(AP2) - Log2(AP1)).
+Instruction *InstCombiner::foldICmpShrConstConst(ICmpInst &I, Value *A,
+                                                 const APInt &AP1,
+                                                 const APInt &AP2) {
   assert(I.isEquality() && "Cannot fold icmp gt/lt");
 
   auto getICmp = [&I](CmpInst::Predicate Pred, Value *LHS, Value *RHS) {
@@ -1187,13 +1187,11 @@ Instruction *InstCombiner::foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
     return new ICmpInst(Pred, LHS, RHS);
   };
 
-  const APInt &AP1 = CI1->getValue();
-  const APInt &AP2 = CI2->getValue();
-
   // Don't bother doing any work for cases which InstSimplify handles.
   if (AP2 == 0)
     return nullptr;
-  bool IsAShr = isa<AShrOperator>(Op);
+
+  bool IsAShr = isa<AShrOperator>(I.getOperand(0));
   if (IsAShr) {
     if (AP2.isAllOnesValue())
       return nullptr;
@@ -1235,11 +1233,11 @@ Instruction *InstCombiner::foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
   return replaceInstUsesWith(I, TorF);
 }
 
-/// Handle "(icmp eq/ne (shl const2, A), const1)" ->
-/// (icmp eq/ne A, TrailingZeros(const1) - TrailingZeros(const2)).
-Instruction *InstCombiner::foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,
-                                               ConstantInt *CI1,
-                                               ConstantInt *CI2) {
+/// Handle "(icmp eq/ne (shl AP2, A), AP1)" ->
+/// (icmp eq/ne A, TrailingZeros(AP1) - TrailingZeros(AP2)).
+Instruction *InstCombiner::foldICmpShlConstConst(ICmpInst &I, Value *A,
+                                                 const APInt &AP1,
+                                                 const APInt &AP2) {
   assert(I.isEquality() && "Cannot fold icmp gt/lt");
 
   auto getICmp = [&I](CmpInst::Predicate Pred, Value *LHS, Value *RHS) {
@@ -1248,9 +1246,6 @@ Instruction *InstCombiner::foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,
     return new ICmpInst(Pred, LHS, RHS);
   };
 
-  const APInt &AP1 = CI1->getValue();
-  const APInt &AP2 = CI2->getValue();
-
   // Don't bother doing any work for cases which InstSimplify handles.
   if (AP2 == 0)
     return nullptr;
@@ -1258,8 +1253,9 @@ Instruction *InstCombiner::foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,
   unsigned AP2TrailingZeros = AP2.countTrailingZeros();
 
   if (!AP1 && AP2TrailingZeros != 0)
-    return getICmp(I.ICMP_UGE, A,
-                   ConstantInt::get(A->getType(), AP2.getBitWidth() - AP2TrailingZeros));
+    return getICmp(
+        I.ICMP_UGE, A,
+        ConstantInt::get(A->getType(), AP2.getBitWidth() - AP2TrailingZeros));
 
   if (AP1 == AP2)
     return getICmp(I.ICMP_EQ, A, ConstantInt::getNullValue(A->getType()));
@@ -1412,21 +1408,6 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
   ConstantInt *CI = dyn_cast<ConstantInt>(Cmp.getOperand(1));
   if (!CI)
     return nullptr;
-
-  if (Cmp.isEquality()) {
-    ConstantInt *CI2;
-    if (match(X, m_AShr(m_ConstantInt(CI2), m_Value(A))) ||
-        match(X, m_LShr(m_ConstantInt(CI2), m_Value(A)))) {
-      // (icmp eq/ne (ashr/lshr const2, A), const1)
-      if (Instruction *Inst = foldICmpCstShrConst(Cmp, X, A, CI, CI2))
-        return Inst;
-    }
-    if (match(X, m_Shl(m_ConstantInt(CI2), m_Value(A)))) {
-      // (icmp eq/ne (shl const2, A), const1)
-      if (Instruction *Inst = foldICmpCstShlConst(Cmp, X, A, CI, CI2))
-        return Inst;
-    }
-  }
 
   // Canonicalize icmp instructions based on dominating conditions.
   BasicBlock *Parent = Cmp.getParent();
@@ -1913,6 +1894,10 @@ static Instruction *foldICmpShlOne(ICmpInst &Cmp, Instruction *Shl,
 Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
                                                BinaryOperator *Shl,
                                                const APInt *C) {
+  const APInt *ShiftVal;
+  if (Cmp.isEquality() && match(Shl->getOperand(0), m_APInt(ShiftVal)))
+    return foldICmpShlConstConst(Cmp, Shl->getOperand(1), *C, *ShiftVal);
+
   const APInt *ShiftAmt;
   if (!match(Shl->getOperand(1), m_APInt(ShiftAmt)))
     return foldICmpShlOne(Cmp, Shl, C);
@@ -1994,6 +1979,10 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
   CmpInst::Predicate Pred = Cmp.getPredicate();
   if (Cmp.isEquality() && Shr->isExact() && Shr->hasOneUse() && *C == 0)
     return new ICmpInst(Pred, X, Cmp.getOperand(1));
+
+  const APInt *ShiftVal;
+  if (Cmp.isEquality() && match(Shr->getOperand(0), m_APInt(ShiftVal)))
+    return foldICmpShrConstConst(Cmp, Shr->getOperand(1), *C, *ShiftVal);
 
   const APInt *ShiftAmt;
   if (!match(Shr->getOperand(1), m_APInt(ShiftAmt)))

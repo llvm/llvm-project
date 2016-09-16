@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_COFF_STRINGS_H
-#define LLD_COFF_STRINGS_H
+#ifndef LLD_ELF_STRINGS_H
+#define LLD_ELF_STRINGS_H
 
 #include "lld/Core/LLVM.h"
 #include "llvm/Support/Regex.h"

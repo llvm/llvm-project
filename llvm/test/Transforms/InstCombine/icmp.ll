@@ -2194,6 +2194,16 @@ define i1 @shl_ap1_zero_ap2_non_zero_2(i32 %a) {
   ret i1 %cmp
 }
 
+define <2 x i1> @shl_ap1_zero_ap2_non_zero_2_vec(<2 x i32> %a) {
+; CHECK-LABEL: @shl_ap1_zero_ap2_non_zero_2_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %a, <i32 29, i32 29>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 4, i32 4>, %a
+  %cmp = icmp eq <2 x i32> %shl, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
 define i1 @shl_ap1_zero_ap2_non_zero_4(i32 %a) {
 ; CHECK-LABEL: @shl_ap1_zero_ap2_non_zero_4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %a, 30

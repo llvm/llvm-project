@@ -27,6 +27,7 @@ extern const XRaySledEntry __start_xray_instr_map[] __attribute__((weak));
 extern const XRaySledEntry __stop_xray_instr_map[] __attribute__((weak));
 }
 
+using namespace __sanitizer;
 using namespace __xray;
 
 // When set to 'true' this means the XRay runtime has been initialised. We use
