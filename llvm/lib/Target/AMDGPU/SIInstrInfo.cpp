@@ -1812,6 +1812,21 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (isSOPK(MI)) {
+    int64_t Imm = getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
+    if (sopkIsZext(MI)) {
+      if (!isUInt<16>(Imm)) {
+        ErrInfo = "invalid immediate for SOPK instruction";
+        return false;
+      }
+    } else {
+      if (!isInt<16>(Imm)) {
+        ErrInfo = "invalid immediate for SOPK instruction";
+        return false;
+      }
+    }
+  }
+
   if (Desc.getOpcode() == AMDGPU::V_MOVRELS_B32_e32 ||
       Desc.getOpcode() == AMDGPU::V_MOVRELS_B32_e64 ||
       Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||

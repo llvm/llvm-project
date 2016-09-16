@@ -1034,8 +1034,6 @@ def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
-let hasSideEffects = 1 in {
-
 // Dummy terminator instruction to use after control flow instructions
 // replaced with exec mask operations.
 def SI_MASK_BRANCH : PseudoInstSI <
@@ -1054,12 +1052,18 @@ def SI_IF: CFPseudoInstSI <
   [(set i64:$dst, (int_amdgcn_if i1:$vcc, bb:$target))], 1, 1> {
   let Constraints = "";
   let Size = 8;
+  let mayStore = 1;
+  let mayLoad = 1;
+  let hasSideEffects = 1;
 }
 
 def SI_ELSE : CFPseudoInstSI <
   (outs SReg_64:$dst), (ins SReg_64:$src, brtarget:$target, i1imm:$execfix), [], 1, 1> {
   let Constraints = "$src = $dst";
   let Size = 12;
+  let mayStore = 1;
+  let mayLoad = 1;
+  let hasSideEffects = 1;
 }
 
 def SI_LOOP : CFPseudoInstSI <
@@ -1067,6 +1071,9 @@ def SI_LOOP : CFPseudoInstSI <
   [(int_amdgcn_loop i64:$saved, bb:$target)], 1, 1> {
   let Size = 8;
   let isBranch = 1;
+  let hasSideEffects = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 } // End isBranch = 1, isTerminator = 1
@@ -1075,24 +1082,35 @@ def SI_END_CF : CFPseudoInstSI <
   (outs), (ins SReg_64:$saved),
   [(int_amdgcn_end_cf i64:$saved)], 1, 1> {
   let Size = 4;
+  let isAsCheapAsAMove = 1;
+  let isReMaterializable = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
 }
 
 def SI_BREAK : CFPseudoInstSI <
   (outs SReg_64:$dst), (ins SReg_64:$src),
   [(set i64:$dst, (int_amdgcn_break i64:$src))], 1> {
   let Size = 4;
+  let isAsCheapAsAMove = 1;
+  let isReMaterializable = 1;
 }
 
 def SI_IF_BREAK : CFPseudoInstSI <
   (outs SReg_64:$dst), (ins SReg_64:$vcc, SReg_64:$src),
   [(set i64:$dst, (int_amdgcn_if_break i1:$vcc, i64:$src))]> {
   let Size = 4;
+  let isAsCheapAsAMove = 1;
+  let isReMaterializable = 1;
 }
 
 def SI_ELSE_BREAK : CFPseudoInstSI <
   (outs SReg_64:$dst), (ins SReg_64:$src0, SReg_64:$src1),
   [(set i64:$dst, (int_amdgcn_else_break i64:$src0, i64:$src1))]> {
   let Size = 4;
+  let isAsCheapAsAMove = 1;
+  let isReMaterializable = 1;
 }
 
 let Uses = [EXEC], Defs = [EXEC,VCC] in {
@@ -1110,7 +1128,6 @@ def SI_KILL_TERMINATOR : SPseudoInstSI <
 
 } // End Uses = [EXEC], Defs = [EXEC,VCC]
 
-} // End mayLoad = 1, mayStore = 1, hasSideEffects = 1
 
 def SI_PS_LIVE : PseudoInstSI <
   (outs SReg_64:$dst), (ins),

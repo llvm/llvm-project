@@ -1246,6 +1246,12 @@ function(add_llvm_tool_symlink name dest)
 
   set(output_path "${LLVM_RUNTIME_OUTPUT_INTDIR}/${name}${CMAKE_EXECUTABLE_SUFFIX}")
 
+  set(target_name ${name})
+  if(TARGET ${name})
+    set(target_name ${name}-link)
+  endif()
+
+
   if(ARG_ALWAYS_GENERATE)
     set_property(DIRECTORY APPEND PROPERTY
       ADDITIONAL_MAKE_CLEAN_FILES ${dest_binary})
@@ -1255,8 +1261,8 @@ function(add_llvm_tool_symlink name dest)
     add_custom_command(OUTPUT ${output_path}
                      COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${dest_binary}" "${output_path}"
                      DEPENDS ${dest})
-    add_custom_target(${name} ALL DEPENDS ${output_path})
-    set_target_properties(${name} PROPERTIES FOLDER Tools)
+    add_custom_target(${target_name} ALL DEPENDS ${output_path})
+    set_target_properties(${target_name} PROPERTIES FOLDER Tools)
 
     # Make sure the parent tool is a toolchain tool, otherwise exclude this tool
     list(FIND LLVM_TOOLCHAIN_TOOLS ${dest} LLVM_IS_${dest}_TOOLCHAIN_TOOL)

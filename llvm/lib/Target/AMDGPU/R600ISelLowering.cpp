@@ -1512,9 +1512,11 @@ SDValue R600TargetLowering::LowerFormalArguments(
 
   SmallVector<ISD::InputArg, 8> LocalIns;
 
-  getOriginalFunctionArgs(DAG, MF.getFunction(), Ins, LocalIns);
-
-  AnalyzeFormalArguments(CCInfo, LocalIns);
+  if (AMDGPU::isShader(CallConv)) {
+    AnalyzeFormalArguments(CCInfo, Ins);
+  } else {
+    analyzeFormalArgumentsCompute(CCInfo, Ins);
+  }
 
   for (unsigned i = 0, e = Ins.size(); i < e; ++i) {
     CCValAssign &VA = ArgLocs[i];

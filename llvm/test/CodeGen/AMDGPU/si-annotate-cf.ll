@@ -92,7 +92,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; SI: s_cmp_gt_i32
 ; SI-NEXT: s_cbranch_scc0 [[ENDPGM:BB[0-9]+_[0-9]+]]
 
-; SI: s_cmp_gt_i32
+; SI: s_cmpk_gt_i32
 ; SI-NEXT: s_cbranch_scc1 [[ENDPGM]]
 
 ; SI: [[INFLOOP:BB[0-9]+_[0-9]+]]

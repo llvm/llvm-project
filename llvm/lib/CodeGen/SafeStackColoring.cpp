@@ -214,10 +214,12 @@ void StackColoring::calculateLiveIntervals() {
       unsigned AllocaNo = It.second.AllocaNo;
 
       if (IsStart) {
-        assert(!Started.test(AllocaNo));
-        Started.set(AllocaNo);
-        Ended.reset(AllocaNo);
-        Start[AllocaNo] = InstNo;
+        assert(!Started.test(AllocaNo) || Start[AllocaNo] == BBStart);
+        if (!Started.test(AllocaNo)) {
+          Started.set(AllocaNo);
+          Ended.reset(AllocaNo);
+          Start[AllocaNo] = InstNo;
+        }
       } else {
         assert(!Ended.test(AllocaNo));
         if (Started.test(AllocaNo)) {
