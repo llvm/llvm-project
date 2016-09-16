@@ -18,6 +18,9 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "dfsan_platform.h"
 
+using __sanitizer::uptr;
+using __sanitizer::u16;
+
 // Copy declarations from public sanitizer/dfsan_interface.h header here.
 typedef u16 dfsan_label;
 

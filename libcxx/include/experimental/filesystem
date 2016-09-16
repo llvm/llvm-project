@@ -1115,6 +1115,8 @@ public:
 
 private:
     friend class path;
+
+    inline _LIBCPP_INLINE_VISIBILITY
     friend bool operator==(const iterator&, const iterator&);
 
     _LIBCPP_FUNC_VIS iterator& __increment();
@@ -1901,6 +1903,7 @@ public:
     { return __increment(&__ec); }
 
 private:
+    inline _LIBCPP_INLINE_VISIBILITY
     friend bool operator==(const directory_iterator& __lhs,
                            const directory_iterator& __rhs) _NOEXCEPT;
 
@@ -2050,6 +2053,7 @@ private:
     _LIBCPP_FUNC_VIS
     void __pop(error_code* __ec=nullptr);
 
+    inline _LIBCPP_INLINE_VISIBILITY
     friend bool operator==(const recursive_directory_iterator&,
                            const recursive_directory_iterator&) _NOEXCEPT;
 
@@ -2059,9 +2063,9 @@ private:
 };                                     // class recursive_directory_iterator
 
 
-_LIBCPP_INLINE_VISIBILITY
-inline bool operator==(const recursive_directory_iterator& __lhs,
-                        const recursive_directory_iterator& __rhs) _NOEXCEPT
+inline _LIBCPP_INLINE_VISIBILITY
+bool operator==(const recursive_directory_iterator& __lhs,
+                const recursive_directory_iterator& __rhs) _NOEXCEPT
 {
     return __lhs.__imp_ == __rhs.__imp_;
 }
