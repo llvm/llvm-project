@@ -102,7 +102,7 @@ void IRObjectFile::CollectAsmUndefinedRefs(
     uint32_t Res = BasicSymbolRef::SF_None;
     switch (Value) {
     case RecordStreamer::NeverSeen:
-      llvm_unreachable("foo");
+      llvm_unreachable("NeverSeen should have been replaced earlier");
     case RecordStreamer::DefinedGlobal:
       Res |= BasicSymbolRef::SF_Global;
       break;

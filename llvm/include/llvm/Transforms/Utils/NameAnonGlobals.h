@@ -1,4 +1,4 @@
-//===-- NameAnonFunctions.h - Anonymous Function Naming Pass ----*- C++ -*-===//
+//===-- NameAnonGlobals.h - Anonymous Global Naming Pass ----*- C++ -*-=======//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,25 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements naming anonymous function to make sure they can be
+// This file implements naming anonymous globals to make sure they can be
 // referred to by ThinLTO.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_NAMEANONFUNCTIONS_H
-#define LLVM_TRANSFORMS_UTILS_NAMEANONFUNCTIONS_H
+#ifndef LLVM_TRANSFORMS_UTILS_NAMEANONGLOBALSS_H
+#define LLVM_TRANSFORMS_UTILS_NAMEANONGLOBALSS_H
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
-/// Simple pass that provides a name to every anonymous function.
-class NameAnonFunctionPass : public PassInfoMixin<NameAnonFunctionPass> {
+/// Simple pass that provides a name to every anonymous globals.
+class NameAnonGlobalPass : public PassInfoMixin<NameAnonGlobalPass> {
 public:
-  NameAnonFunctionPass() {}
+  NameAnonGlobalPass() {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 }
 
-#endif // LLVM_TRANSFORMS_UTILS_NAMEANONFUNCTIONS_H
+#endif // LLVM_TRANSFORMS_UTILS_NAMEANONGLOBALS_H

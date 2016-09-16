@@ -439,6 +439,14 @@ static DecodeStatus DecodeINSVE_DF(MCInst &MI, InsnType insn, uint64_t Address,
                                    const void *Decoder);
 
 template <typename InsnType>
+static DecodeStatus DecodeDAHIDATIMMR6(MCInst &MI, InsnType insn, uint64_t Address,
+                                   const void *Decoder);
+
+template <typename InsnType>
+static DecodeStatus DecodeDAHIDATI(MCInst &MI, InsnType insn, uint64_t Address,
+                                   const void *Decoder);
+
+template <typename InsnType>
 static DecodeStatus
 DecodeAddiGroupBranch(MCInst &MI, InsnType insn, uint64_t Address,
                       const void *Decoder);
@@ -591,6 +599,34 @@ static DecodeStatus DecodeINSVE_DF(MCInst &MI, InsnType insn, uint64_t Address,
     return MCDisassembler::Fail;
   // $n2
   MI.addOperand(MCOperand::createImm(0));
+
+  return MCDisassembler::Success;
+}
+
+template <typename InsnType>
+static DecodeStatus DecodeDAHIDATIMMR6(MCInst &MI, InsnType insn, uint64_t Address,
+                               const void *Decoder) {
+  InsnType Rt = fieldFromInstruction(insn, 16, 5);
+  InsnType Imm = fieldFromInstruction(insn, 0, 16);
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID,
+                                       Rt)));
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID,
+                                       Rt)));
+  MI.addOperand(MCOperand::createImm(Imm));
+
+  return MCDisassembler::Success;
+}
+
+template <typename InsnType>
+static DecodeStatus DecodeDAHIDATI(MCInst &MI, InsnType insn, uint64_t Address,
+                               const void *Decoder) {
+  InsnType Rt = fieldFromInstruction(insn, 21, 5);
+  InsnType Imm = fieldFromInstruction(insn, 0, 16);
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID,
+                                       Rt)));
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID,
+                                       Rt)));
+  MI.addOperand(MCOperand::createImm(Imm));
 
   return MCDisassembler::Success;
 }

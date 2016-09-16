@@ -151,7 +151,7 @@ void LanaiAsmPrinter::emitCallInstruction(const MachineInstr *MI) {
   assert((MI->getOpcode() == Lanai::CALL || MI->getOpcode() == Lanai::CALLR) &&
          "Unsupported call function");
 
-  LanaiMCInstLower MCInstLowering(OutContext, *Mang, *this);
+  LanaiMCInstLower MCInstLowering(OutContext, *this);
   MCSubtargetInfo STI = getSubtargetInfo();
   // Insert save rca instruction immediately before the call.
   // TODO: We should generate a pc-relative mov instruction here instead
@@ -188,7 +188,7 @@ void LanaiAsmPrinter::emitCallInstruction(const MachineInstr *MI) {
 }
 
 void LanaiAsmPrinter::customEmitInstruction(const MachineInstr *MI) {
-  LanaiMCInstLower MCInstLowering(OutContext, *Mang, *this);
+  LanaiMCInstLower MCInstLowering(OutContext, *this);
   MCSubtargetInfo STI = getSubtargetInfo();
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);

@@ -56,6 +56,12 @@ class LLVM_LIBRARY_VISIBILITY ARMAsmPrinter : public AsmPrinter {
   /// -1 if uninitialized, 0 if conflicting goals
   int OptimizationGoals;
 
+  /// List of globals that have had their storage promoted to a constant
+  /// pool. This lives between calls to runOnMachineFunction and collects
+  /// data from every MachineFunction. It is used during doFinalization
+  /// when all non-function globals are emitted.
+  SmallPtrSet<const GlobalVariable*,2> PromotedGlobals;
+
 public:
   explicit ARMAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer);
@@ -90,7 +96,8 @@ public:
   void EmitStartOfAsmFile(Module &M) override;
   void EmitEndOfAsmFile(Module &M) override;
   void EmitXXStructor(const DataLayout &DL, const Constant *CV) override;
-
+  void EmitGlobalVariable(const GlobalVariable *GV) override;
+  
   // lowerOperand - Convert a MachineOperand into the equivalent MCOperand.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 

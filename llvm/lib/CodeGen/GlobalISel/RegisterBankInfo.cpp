@@ -390,7 +390,7 @@ void RegisterBankInfo::PartialMapping::dump() const {
 bool RegisterBankInfo::PartialMapping::verify() const {
   assert(RegBank && "Register bank not set");
   assert(Length && "Empty mapping");
-  assert((StartIdx < getHighBitIdx()) && "Overflow, switch to APInt?");
+  assert((StartIdx <= getHighBitIdx()) && "Overflow, switch to APInt?");
   // Check if the minimum width fits into RegBank.
   assert(RegBank->getSize() >= Length && "Register bank too small for Mask");
   return true;
