@@ -3271,8 +3271,17 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
     Diag(TheCall->getArg(1)->getLocStart(),
          diag::warn_second_arg_of_va_start_not_last_named_param);
   else if (IsCRegister || Type->isReferenceType() ||
-           Type->isPromotableIntegerType() ||
-           Type->isSpecificBuiltinType(BuiltinType::Float)) {
+           Type->isSpecificBuiltinType(BuiltinType::Float) || [=] {
+             // Promotable integers are UB, but enumerations need a bit of
+             // extra checking to see what their promotable type actually is.
+             if (!Type->isPromotableIntegerType())
+               return false;
+             if (!Type->isEnumeralType())
+               return true;
+             const EnumDecl *ED = Type->getAs<EnumType>()->getDecl();
+             return !(ED &&
+                      Context.typesAreCompatible(ED->getPromotionType(), Type));
+           }()) {
     unsigned Reason = 0;
     if (Type->isReferenceType())  Reason = 1;
     else if (IsCRegister)         Reason = 2;
