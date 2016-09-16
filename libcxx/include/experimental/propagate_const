@@ -123,8 +123,14 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS_V2
 
 template <class _Tp>
 class propagate_const;
-template <class _Up> _LIBCPP_CONSTEXPR const _Up& get_underlying(const propagate_const<_Up>& __pu) _NOEXCEPT;
-template <class _Up> _LIBCPP_CONSTEXPR _Up& get_underlying(propagate_const<_Up>& __pu) _NOEXCEPT;
+
+template <class _Up>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+const _Up& get_underlying(const propagate_const<_Up>& __pu) _NOEXCEPT;
+
+template <class _Up>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+_Up& get_underlying(propagate_const<_Up>& __pu) _NOEXCEPT;
 
 template <class _Tp>
 class propagate_const
@@ -462,14 +468,12 @@ _LIBCPP_CONSTEXPR void swap(propagate_const<_Tp>& __pc1, propagate_const<_Tp>& _
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR const _Tp& get_underlying(const propagate_const<_Tp>& __pt) _NOEXCEPT
 {
   return __pt.__t_;
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR _Tp& get_underlying(propagate_const<_Tp>& __pt) _NOEXCEPT
 {
   return __pt.__t_;

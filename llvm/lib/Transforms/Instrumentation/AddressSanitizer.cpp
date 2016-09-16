@@ -183,10 +183,6 @@ static cl::opt<bool> ClExperimentalPoisoning(
     "asan-experimental-poisoning",
     cl::desc("Enable experimental red zones and scope poisoning"), cl::Hidden,
     cl::init(true));
-static cl::opt<bool> ClSkipAmbiguousLifetimeAllocas(
-    "asan-skip-ambiguous-lifetime-allocas",
-    cl::desc("Disabled lifetime check for allocas with ambiguous lifetime"),
-    cl::Hidden, cl::init(true));
 // This flag may need to be replaced with -f[no]asan-globals.
 static cl::opt<bool> ClGlobals("asan-globals",
                                cl::desc("Handle global objects"), cl::Hidden,
@@ -836,79 +832,6 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   PHINode *createPHI(IRBuilder<> &IRB, Value *Cond, Value *ValueIfTrue,
                      Instruction *ThenTerm, Value *ValueIfFalse);
 };
-
-// Performs depth-first search on the control flow graph of block and checks if
-// we can get into the same block with different lifetime state.
-class AllocaLifetimeChecker {
-  // Contains values of the last lifetime intrinsics in the block.
-  // true: llvm.lifetime.start, false: llvm.lifetime.end
-  DenseMap<const BasicBlock *, bool> Markers;
-  // Contains the lifetime state we detected doing depth-first search on the
-  // control flow graph. We expect all future hits will have the same value.
-  // true: llvm.lifetime.start, false: llvm.lifetime.end
-  DenseMap<const BasicBlock *, bool> InboundState;
-  bool Processed = false;
-  bool CollisionDetected = false;
-
-  bool FindCollision(const std::pair<const BasicBlock *, bool> &BlockState) {
-    auto Ins = InboundState.insert(BlockState);
-    if (!Ins.second) {
-      // Already there. Return collision if they are different.
-      return BlockState.second != Ins.first->second;
-    }
-
-    // Use marker for successors if block contains any.
-    auto M = Markers.find(BlockState.first);
-    bool NewState = (M != Markers.end() ? M->second : BlockState.second);
-    for (const BasicBlock *SB : successors(BlockState.first))
-      // We may get into EHPad with any lifetime state, so ignore them.
-      if (!SB->isEHPad() && FindCollision({SB, NewState}))
-        return true;
-
-    return false;
-  }
-
-public:
-  // Assume that markers of the same block will be added in the same order as
-  // the order of corresponding intrinsics, so in the end we will keep only
-  // value of the last intrinsic.
-  void AddMarker(const BasicBlock *BB, bool start) {
-    assert(!Processed);
-    Markers[BB] = start;
-  }
-
-  bool HasAmbiguousLifetime() {
-    if (!Processed) {
-      Processed = true;
-      const Function *F = Markers.begin()->first->getParent();
-      CollisionDetected = FindCollision({&F->getEntryBlock(), false});
-    }
-    return CollisionDetected;
-  }
-};
-
-// Removes allocas for which exists at least one block simultaneously
-// reachable in both states: allocas is inside the scope, and alloca is outside
-// of the scope. We don't have enough information to validate access to such
-// variable, so we just remove such allocas from lifetime analysis.
-// This is workaround for PR28267.
-void removeAllocasWithAmbiguousLifetime(
-    SmallVectorImpl<FunctionStackPoisoner::AllocaPoisonCall> &PoisonCallVec) {
-  if (!ClSkipAmbiguousLifetimeAllocas)
-    return;
-  DenseMap<const AllocaInst *, AllocaLifetimeChecker> Checkers;
-  for (const auto &APC : PoisonCallVec)
-    Checkers[APC.AI].AddMarker(APC.InsBefore->getParent(), !APC.DoPoison);
-
-  auto IsAmbiguous =
-      [&Checkers](const FunctionStackPoisoner::AllocaPoisonCall &APC) {
-        return Checkers[APC.AI].HasAmbiguousLifetime();
-      };
-
-  PoisonCallVec.erase(
-      std::remove_if(PoisonCallVec.begin(), PoisonCallVec.end(), IsAmbiguous),
-      PoisonCallVec.end());
-}
 
 } // anonymous namespace
 
@@ -2197,8 +2120,6 @@ void FunctionStackPoisoner::processDynamicAllocas() {
     return;
   }
 
-  removeAllocasWithAmbiguousLifetime(DynamicAllocaPoisonCallVec);
-
   // Insert poison calls for lifetime intrinsics for dynamic allocas.
   for (const auto &APC : DynamicAllocaPoisonCallVec) {
     assert(APC.InsBefore);
@@ -2225,8 +2146,6 @@ void FunctionStackPoisoner::processStaticAllocas() {
     assert(StaticAllocaPoisonCallVec.empty());
     return;
   }
-
-  removeAllocasWithAmbiguousLifetime(StaticAllocaPoisonCallVec);
 
   int StackMallocIdx = -1;
   DebugLoc EntryDebugLocation;
