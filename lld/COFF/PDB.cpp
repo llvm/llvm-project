@@ -9,7 +9,16 @@
 
 #include "PDB.h"
 #include "Error.h"
+#include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFileBuilder.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include <memory>
@@ -19,36 +28,45 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 
+static ExitOnError ExitOnErr;
+
 const int BlockSize = 4096;
 
 void coff::createPDB(StringRef Path) {
   // Create a file.
-  size_t FileSize = BlockSize * 3;
-  ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(Path, FileSize);
+  size_t FileSize = BlockSize * 10;
+  auto BufferOrErr = FileOutputBuffer::create(Path, FileSize);
   if (auto EC = BufferOrErr.getError())
     fatal(EC, "failed to open " + Path);
-  std::unique_ptr<FileOutputBuffer> Buffer = std::move(*BufferOrErr);
+  auto FileByteStream =
+      llvm::make_unique<msf::FileBufferByteStream>(std::move(*BufferOrErr));
 
-  // Write the file header.
-  uint8_t *Buf = Buffer->getBufferStart();
-  auto *SB = reinterpret_cast<msf::SuperBlock *>(Buf);
-  memcpy(SB->MagicBytes, msf::Magic, sizeof(msf::Magic));
-  SB->BlockSize = BlockSize;
+  // Create the superblock.
+  msf::SuperBlock SB;
+  memcpy(SB.MagicBytes, msf::Magic, sizeof(msf::Magic));
+  SB.BlockSize = 4096;
+  SB.FreeBlockMapBlock = 2;
+  SB.NumBlocks = 10;
+  SB.NumDirectoryBytes = 0;
+  SB.Unknown1 = 0;
+  SB.BlockMapAddr = 9;
 
-  // FreeBlockMap is a page number containing free page map bitmap.
-  // Set a dummy value for now.
-  SB->FreeBlockMapBlock = 1;
+  BumpPtrAllocator Alloc;
+  pdb::PDBFileBuilder Builder(Alloc);
+  ExitOnErr(Builder.initialize(SB));
+  ExitOnErr(Builder.getMsfBuilder().setDirectoryBlocksHint({8}));
 
-  SB->NumBlocks = FileSize / BlockSize;
+  ExitOnErr(Builder.getMsfBuilder().addStream(1, {4}));
+  ExitOnErr(Builder.getMsfBuilder().addStream(1, {5}));
+  ExitOnErr(Builder.getMsfBuilder().addStream(1, {6}));
 
-  // Root directory is empty, containing only the length field.
-  SB->NumDirectoryBytes = 4;
+  // Add an empty IPI stream.
+  Builder.getInfoBuilder();
 
-  // Root directory is on page 1.
-  SB->BlockMapAddr = 1;
+  // Add an empty TPI stream.
+  auto &TpiBuilder = Builder.getTpiBuilder();
+  TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
   // Write the root directory. Root stream is on page 2.
-  write32le(Buf + BlockSize, 2);
-  Buffer->commit();
+  ExitOnErr(Builder.commit(*FileByteStream));
 }

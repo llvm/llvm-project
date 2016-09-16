@@ -1401,7 +1401,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.DoubleTy;
 
     if (S.getLangOpts().OpenCL &&
-        !((S.getLangOpts().OpenCLVersion >= 120) ||
+        !((S.getLangOpts().OpenCLVersion >= 120 
+           && S.Context.getTargetInfo().getSupportedOpenCLOpts().cl_khr_fp64) ||
           S.getOpenCLOptions().cl_khr_fp64)) {
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_requires_extension)
           << Result << "cl_khr_fp64";

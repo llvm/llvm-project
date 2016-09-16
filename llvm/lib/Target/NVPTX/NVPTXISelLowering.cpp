@@ -4576,9 +4576,7 @@ NVPTXTargetObjectFile::~NVPTXTargetObjectFile() {
   delete static_cast<NVPTXSection *>(DwarfMacinfoSection);
 }
 
-MCSection *
-NVPTXTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
-                                              SectionKind Kind, Mangler &Mang,
-                                              const TargetMachine &TM) const {
+MCSection *NVPTXTargetObjectFile::SelectSectionForGlobal(
+    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
   return getDataSection();
 }

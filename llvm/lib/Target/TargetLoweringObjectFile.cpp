@@ -43,11 +43,13 @@ using namespace llvm;
 void TargetLoweringObjectFile::Initialize(MCContext &ctx,
                                           const TargetMachine &TM) {
   Ctx = &ctx;
+  Mang = new Mangler();
   InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(),
                        TM.getCodeModel(), *Ctx);
 }
 
 TargetLoweringObjectFile::~TargetLoweringObjectFile() {
+  delete Mang;
 }
 
 static bool isSuitableForBSS(const GlobalVariable *GV, bool NoZerosInBSS) {
@@ -101,21 +103,20 @@ static bool IsNullTerminatedString(const Constant *C) {
 }
 
 MCSymbol *TargetLoweringObjectFile::getSymbolWithGlobalValueBase(
-    const GlobalValue *GV, StringRef Suffix, Mangler &Mang,
-    const TargetMachine &TM) const {
+    const GlobalValue *GV, StringRef Suffix, const TargetMachine &TM) const {
   assert(!Suffix.empty());
 
   SmallString<60> NameStr;
   NameStr += GV->getParent()->getDataLayout().getPrivateGlobalPrefix();
-  TM.getNameWithPrefix(NameStr, GV, Mang);
+  TM.getNameWithPrefix(NameStr, GV, *Mang);
   NameStr.append(Suffix.begin(), Suffix.end());
   return Ctx->getOrCreateSymbol(NameStr);
 }
 
 MCSymbol *TargetLoweringObjectFile::getCFIPersonalitySymbol(
-    const GlobalValue *GV, Mangler &Mang, const TargetMachine &TM,
+    const GlobalValue *GV, const TargetMachine &TM,
     MachineModuleInfo *MMI) const {
-  return TM.getSymbol(GV, Mang);
+  return TM.getSymbol(GV, *Mang);
 }
 
 void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
@@ -230,21 +231,18 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
 /// This method computes the appropriate section to emit the specified global
 /// variable or function definition.  This should not be passed external (or
 /// available externally) globals.
-MCSection *
-TargetLoweringObjectFile::SectionForGlobal(const GlobalValue *GV,
-                                           SectionKind Kind, Mangler &Mang,
-                                           const TargetMachine &TM) const {
+MCSection *TargetLoweringObjectFile::SectionForGlobal(
+    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
   // Select section name.
   if (GV->hasSection())
-    return getExplicitSectionGlobal(GV, Kind, Mang, TM);
-
+    return getExplicitSectionGlobal(GV, Kind, TM);
 
   // Use default section depending on the 'type' of global
-  return SelectSectionForGlobal(GV, Kind, Mang, TM);
+  return SelectSectionForGlobal(GV, Kind, TM);
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
-    const Function &F, Mangler &Mang, const TargetMachine &TM) const {
+    const Function &F, const TargetMachine &TM) const {
   unsigned Align = 0;
   return getSectionForConstant(F.getParent()->getDataLayout(),
                                SectionKind::getReadOnly(), /*C=*/nullptr,
@@ -284,11 +282,10 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
 /// reference to the specified global variable from exception
 /// handling information.
 const MCExpr *TargetLoweringObjectFile::getTTypeGlobalReference(
-    const GlobalValue *GV, unsigned Encoding, Mangler &Mang,
-    const TargetMachine &TM, MachineModuleInfo *MMI,
-    MCStreamer &Streamer) const {
+    const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
+    MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   const MCSymbolRefExpr *Ref =
-      MCSymbolRefExpr::create(TM.getSymbol(GV, Mang), getContext());
+      MCSymbolRefExpr::create(TM.getSymbol(GV, *Mang), getContext());
 
   return getTTypeReference(Ref, Encoding, Streamer);
 }
@@ -320,7 +317,7 @@ const MCExpr *TargetLoweringObjectFile::getDebugThreadLocalSymbol(const MCSymbol
 }
 
 void TargetLoweringObjectFile::getNameWithPrefix(
-    SmallVectorImpl<char> &OutName, const GlobalValue *GV, Mangler &Mang,
+    SmallVectorImpl<char> &OutName, const GlobalValue *GV,
     const TargetMachine &TM) const {
-  Mang.getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/false);
+  Mang->getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/false);
 }

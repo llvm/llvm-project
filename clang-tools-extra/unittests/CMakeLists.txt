@@ -6,7 +6,6 @@ function(add_extra_unittest test_dirname)
 endfunction()
 
 add_subdirectory(clang-apply-replacements)
-add_subdirectory(clang-rename)
 add_subdirectory(clang-query)
 add_subdirectory(clang-tidy)
 add_subdirectory(include-fixer)
