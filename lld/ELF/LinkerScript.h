@@ -105,8 +105,8 @@ struct InputSectionDescription : BaseCommand {
   llvm::Regex FileRe;
   SortKind SortOuter = SortNone;
   SortKind SortInner = SortNone;
-  llvm::Regex ExcludedFileRe;
-  llvm::Regex SectionRe;
+  // Pairs of section regex and files excluded.
+  std::vector<std::pair<llvm::Regex, llvm::Regex>> SectionsVec;
 };
 
 struct AssertCommand : BaseCommand {

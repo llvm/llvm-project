@@ -30,15 +30,14 @@ AArch64_MachoTargetObjectFile::AArch64_MachoTargetObjectFile()
 }
 
 const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
-    const GlobalValue *GV, unsigned Encoding, Mangler &Mang,
-    const TargetMachine &TM, MachineModuleInfo *MMI,
-    MCStreamer &Streamer) const {
+    const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
+    MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   // On Darwin, we can reference dwarf symbols with foo@GOT-., which
   // is an indirect pc-relative reference. The default implementation
   // won't reference using the GOT, so we need this target-specific
   // version.
   if (Encoding & (DW_EH_PE_indirect | DW_EH_PE_pcrel)) {
-    const MCSymbol *Sym = TM.getSymbol(GV, Mang);
+    const MCSymbol *Sym = TM.getSymbol(GV, getMangler());
     const MCExpr *Res =
         MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
     MCSymbol *PCSym = getContext().createTempSymbol();
@@ -48,13 +47,13 @@ const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
   }
 
   return TargetLoweringObjectFileMachO::getTTypeGlobalReference(
-      GV, Encoding, Mang, TM, MMI, Streamer);
+      GV, Encoding, TM, MMI, Streamer);
 }
 
 MCSymbol *AArch64_MachoTargetObjectFile::getCFIPersonalitySymbol(
-    const GlobalValue *GV, Mangler &Mang, const TargetMachine &TM,
+    const GlobalValue *GV, const TargetMachine &TM,
     MachineModuleInfo *MMI) const {
-  return TM.getSymbol(GV, Mang);
+  return TM.getSymbol(GV, getMangler());
 }
 
 const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(

@@ -97,6 +97,13 @@ void ARMAsmPrinter::EmitXXStructor(const DataLayout &DL, const Constant *CV) {
   OutStreamer->EmitValue(E, Size);
 }
 
+void ARMAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+  if (PromotedGlobals.count(GV))
+    // The global was promoted into a constant pool. It should not be emitted.
+    return;
+  AsmPrinter::EmitGlobalVariable(GV);
+}
+
 /// runOnMachineFunction - This uses the EmitInstruction()
 /// method to print assembly for each instruction.
 ///
@@ -109,6 +116,12 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   const Function* F = MF.getFunction();
   const TargetMachine& TM = MF.getTarget();
 
+  // Collect all globals that had their storage promoted to a constant pool.
+  // Functions are emitted before variables, so this accumulates promoted
+  // globals from all functions in PromotedGlobals.
+  for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
+    PromotedGlobals.insert(GV);
+  
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
   if (F->hasFnAttribute(Attribute::OptimizeNone))
@@ -543,11 +556,11 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
     raw_string_ostream OS(Flags);
 
     for (const auto &Function : M)
-      TLOF.emitLinkerFlagsForGlobal(OS, &Function, *Mang);
+      TLOF.emitLinkerFlagsForGlobal(OS, &Function);
     for (const auto &Global : M.globals())
-      TLOF.emitLinkerFlagsForGlobal(OS, &Global, *Mang);
+      TLOF.emitLinkerFlagsForGlobal(OS, &Global);
     for (const auto &Alias : M.aliases())
-      TLOF.emitLinkerFlagsForGlobal(OS, &Alias, *Mang);
+      TLOF.emitLinkerFlagsForGlobal(OS, &Alias);
 
     OS.flush();
 

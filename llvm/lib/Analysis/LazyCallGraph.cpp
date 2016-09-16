@@ -9,6 +9,7 @@
 
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/InstVisitor.h"
@@ -801,7 +802,13 @@ void LazyCallGraph::RefSCC::insertOutgoingEdge(Node &SourceN, Node &TargetN,
 
 SmallVector<LazyCallGraph::RefSCC *, 1>
 LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
-  assert(G->lookupRefSCC(TargetN) == this && "Target must be in this SCC.");
+  assert(G->lookupRefSCC(TargetN) == this && "Target must be in this RefSCC.");
+  RefSCC &SourceC = *G->lookupRefSCC(SourceN);
+  assert(&SourceC != this && "Source must not be in this RefSCC.");
+  assert(SourceC.isDescendantOf(*this) &&
+         "Source must be a descendant of the Target.");
+
+  SmallVector<RefSCC *, 1> DeletedRefSCCs;
 
 #ifndef NDEBUG
   // In a debug build, verify the RefSCC is valid to start with and when this
@@ -810,110 +817,94 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
   auto VerifyOnExit = make_scope_exit([&]() { verify(); });
 #endif
 
-  // We store the RefSCCs found to be connected in postorder so that we can use
-  // that when merging. We also return this to the caller to allow them to
-  // invalidate information pertaining to these RefSCCs.
-  SmallVector<RefSCC *, 1> Connected;
+  int SourceIdx = G->RefSCCIndices[&SourceC];
+  int TargetIdx = G->RefSCCIndices[this];
+  assert(SourceIdx < TargetIdx &&
+         "Postorder list doesn't see edge as incoming!");
 
-  RefSCC &SourceC = *G->lookupRefSCC(SourceN);
-  assert(&SourceC != this && "Source must not be in this SCC.");
-  assert(SourceC.isDescendantOf(*this) &&
-         "Source must be a descendant of the Target.");
-
-  // The algorithm we use for merging SCCs based on the cycle introduced here
-  // is to walk the RefSCC inverted DAG formed by the parent sets. The inverse
-  // graph has the same cycle properties as the actual DAG of the RefSCCs, and
-  // when forming RefSCCs lazily by a DFS, the bottom of the graph won't exist
-  // in many cases which should prune the search space.
-  //
-  // FIXME: We can get this pruning behavior even after the incremental RefSCC
-  // formation by leaving behind (conservative) DFS numberings in the nodes,
-  // and pruning the search with them. These would need to be cleverly updated
-  // during the removal of intra-SCC edges, but could be preserved
-  // conservatively.
-  //
-  // FIXME: This operation currently creates ordering stability problems
-  // because we don't use stably ordered containers for the parent SCCs.
-
-  // The set of RefSCCs that are connected to the parent, and thus will
-  // participate in the merged connected component.
-  SmallPtrSet<RefSCC *, 8> ConnectedSet;
-  ConnectedSet.insert(this);
-
-  // We build up a DFS stack of the parents chains.
-  SmallVector<std::pair<RefSCC *, parent_iterator>, 8> DFSStack;
-  SmallPtrSet<RefSCC *, 8> Visited;
-  int ConnectedDepth = -1;
-  DFSStack.push_back({&SourceC, SourceC.parent_begin()});
-  do {
-    auto DFSPair = DFSStack.pop_back_val();
-    RefSCC *C = DFSPair.first;
-    parent_iterator I = DFSPair.second;
-    auto E = C->parent_end();
-
-    while (I != E) {
-      RefSCC &Parent = *I++;
-
-      // If we have already processed this parent SCC, skip it, and remember
-      // whether it was connected so we don't have to check the rest of the
-      // stack. This also handles when we reach a child of the 'this' SCC (the
-      // callee) which terminates the search.
-      if (ConnectedSet.count(&Parent)) {
-        assert(ConnectedDepth < (int)DFSStack.size() &&
-               "Cannot have a connected depth greater than the DFS depth!");
-        ConnectedDepth = DFSStack.size();
-        continue;
+  // Compute the RefSCCs which (transitively) reach the source. We do this by
+  // working backwards from the source using the parent set in each RefSCC,
+  // skipping any RefSCCs that don't fall in the postorder range. This has the
+  // advantage of walking the sparser parent edge (in high fan-out graphs) but
+  // more importantly this removes examining all forward edges in all RefSCCs
+  // within the postorder range which aren't in fact connected. Only connected
+  // RefSCCs (and their edges) are visited here.
+  auto ComputeSourceConnectedSet = [&](SmallPtrSetImpl<RefSCC *> &Set) {
+    Set.insert(&SourceC);
+    SmallVector<RefSCC *, 4> Worklist;
+    Worklist.push_back(&SourceC);
+    do {
+      RefSCC &RC = *Worklist.pop_back_val();
+      for (RefSCC &ParentRC : RC.parents()) {
+        // Skip any RefSCCs outside the range of source to target in the
+        // postorder sequence.
+        int ParentIdx = G->getRefSCCIndex(ParentRC);
+        assert(ParentIdx > SourceIdx && "Parent cannot precede source in postorder!");
+        if (ParentIdx > TargetIdx)
+          continue;
+        if (Set.insert(&ParentRC).second)
+          // First edge connecting to this parent, add it to our worklist.
+          Worklist.push_back(&ParentRC);
       }
-      if (Visited.count(&Parent))
-        continue;
+    } while (!Worklist.empty());
+  };
 
-      // We fully explore the depth-first space, adding nodes to the connected
-      // set only as we pop them off, so "recurse" by rotating to the parent.
-      DFSStack.push_back({C, I});
-      C = &Parent;
-      I = C->parent_begin();
-      E = C->parent_end();
-    }
+  // Use a normal worklist to find which SCCs the target connects to. We still
+  // bound the search based on the range in the postorder list we care about,
+  // but because this is forward connectivity we just "recurse" through the
+  // edges.
+  auto ComputeTargetConnectedSet = [&](SmallPtrSetImpl<RefSCC *> &Set) {
+    Set.insert(this);
+    SmallVector<RefSCC *, 4> Worklist;
+    Worklist.push_back(this);
+    do {
+      RefSCC &RC = *Worklist.pop_back_val();
+      for (SCC &C : RC)
+        for (Node &N : C)
+          for (Edge &E : N) {
+            assert(E.getNode() && "Must have formed a node!");
+            RefSCC &EdgeRC = *G->lookupRefSCC(*E.getNode());
+            if (G->getRefSCCIndex(EdgeRC) <= SourceIdx)
+              // Not in the postorder sequence between source and target.
+              continue;
 
-    // If we've found a connection anywhere below this point on the stack (and
-    // thus up the parent graph from the caller), the current node needs to be
-    // added to the connected set now that we've processed all of its parents.
-    if ((int)DFSStack.size() == ConnectedDepth) {
-      --ConnectedDepth; // We're finished with this connection.
-      bool Inserted = ConnectedSet.insert(C).second;
-      (void)Inserted;
-      assert(Inserted && "Cannot insert a refSCC multiple times!");
-      Connected.push_back(C);
-    } else {
-      // Otherwise remember that its parents don't ever connect.
-      assert(ConnectedDepth < (int)DFSStack.size() &&
-             "Cannot have a connected depth greater than the DFS depth!");
-      Visited.insert(C);
-    }
-  } while (!DFSStack.empty());
+            if (Set.insert(&EdgeRC).second)
+              Worklist.push_back(&EdgeRC);
+          }
+    } while (!Worklist.empty());
+  };
+
+  // Use a generic helper to update the postorder sequence of RefSCCs and return
+  // a range of any RefSCCs connected into a cycle by inserting this edge. This
+  // routine will also take care of updating the indices into the postorder
+  // sequence.
+  iterator_range<SmallVectorImpl<RefSCC *>::iterator> MergeRange =
+      updatePostorderSequenceForEdgeInsertion(
+          SourceC, *this, G->PostOrderRefSCCs, G->RefSCCIndices,
+          ComputeSourceConnectedSet, ComputeTargetConnectedSet);
+
+  // Build a set so we can do fast tests for whether a merge is occuring.
+  SmallPtrSet<RefSCC *, 16> MergeSet(MergeRange.begin(), MergeRange.end());
 
   // Now that we have identified all of the SCCs which need to be merged into
   // a connected set with the inserted edge, merge all of them into this SCC.
-  // We walk the newly connected RefSCCs in the reverse postorder of the parent
-  // DAG walk above and merge in each of their SCC postorder lists. This
-  // ensures a merged postorder SCC list.
   SmallVector<SCC *, 16> MergedSCCs;
   int SCCIndex = 0;
-  for (RefSCC *C : reverse(Connected)) {
-    assert(C != this &&
-           "This RefSCC should terminate the DFS without being reached.");
+  for (RefSCC *RC : MergeRange) {
+    assert(RC != this && "We're merging into the target RefSCC, so it "
+                         "shouldn't be in the range.");
 
     // Merge the parents which aren't part of the merge into the our parents.
-    for (RefSCC *ParentC : C->Parents)
-      if (!ConnectedSet.count(ParentC))
-        Parents.insert(ParentC);
-    C->Parents.clear();
+    for (RefSCC *ParentRC : RC->Parents)
+      if (!MergeSet.count(ParentRC))
+        Parents.insert(ParentRC);
+    RC->Parents.clear();
 
     // Walk the inner SCCs to update their up-pointer and walk all the edges to
     // update any parent sets.
     // FIXME: We should try to find a way to avoid this (rather expensive) edge
     // walk by updating the parent sets in some other manner.
-    for (SCC &InnerC : *C) {
+    for (SCC &InnerC : *RC) {
       InnerC.OuterRefSCC = this;
       SCCIndices[&InnerC] = SCCIndex++;
       for (Node &N : InnerC) {
@@ -922,9 +913,9 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
           assert(E.getNode() &&
                  "Cannot have a null node within a visited SCC!");
           RefSCC &ChildRC = *G->lookupRefSCC(*E.getNode());
-          if (ConnectedSet.count(&ChildRC))
+          if (MergeSet.count(&ChildRC))
             continue;
-          ChildRC.Parents.erase(C);
+          ChildRC.Parents.erase(RC);
           ChildRC.Parents.insert(this);
         }
       }
@@ -933,18 +924,27 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
     // Now merge in the SCCs. We can actually move here so try to reuse storage
     // the first time through.
     if (MergedSCCs.empty())
-      MergedSCCs = std::move(C->SCCs);
+      MergedSCCs = std::move(RC->SCCs);
     else
-      MergedSCCs.append(C->SCCs.begin(), C->SCCs.end());
-    C->SCCs.clear();
+      MergedSCCs.append(RC->SCCs.begin(), RC->SCCs.end());
+    RC->SCCs.clear();
+    DeletedRefSCCs.push_back(RC);
   }
 
-  // Finally append our original SCCs to the merged list and move it into
-  // place.
+  // Append our original SCCs to the merged list and move it into place.
   for (SCC &InnerC : *this)
     SCCIndices[&InnerC] = SCCIndex++;
   MergedSCCs.append(SCCs.begin(), SCCs.end());
   SCCs = std::move(MergedSCCs);
+
+  // Remove the merged away RefSCCs from the post order sequence.
+  for (RefSCC *RC : MergeRange)
+    G->RefSCCIndices.erase(RC);
+  int IndexOffset = MergeRange.end() - MergeRange.begin();
+  auto EraseEnd =
+      G->PostOrderRefSCCs.erase(MergeRange.begin(), MergeRange.end());
+  for (RefSCC *RC : make_range(EraseEnd, G->PostOrderRefSCCs.end()))
+    G->RefSCCIndices[RC] -= IndexOffset;
 
   // At this point we have a merged RefSCC with a post-order SCCs list, just
   // connect the nodes to form the new edge.
@@ -954,7 +954,7 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
   // invalidate any data they have associated with those SCCs. Note that these
   // SCCs are no longer in an interesting state (they are totally empty) but
   // the pointers will remain stable for the life of the graph itself.
-  return Connected;
+  return DeletedRefSCCs;
 }
 
 void LazyCallGraph::RefSCC::removeOutgoingEdge(Node &SourceN, Node &TargetN) {
@@ -1217,6 +1217,25 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
   // RefSCCs in the order they occured in the original SCCs container.
   for (int i = 1; i < PostOrderNumber; ++i)
     Result.push_back(G->createRefSCC(*G));
+
+  // Insert the resulting postorder sequence into the global graph postorder
+  // sequence before the current RefSCC in that sequence. The idea being that
+  // this RefSCC is the target of the reference edge removed, and thus has
+  // a direct or indirect edge to every other RefSCC formed and so must be at
+  // the end of any postorder traversal.
+  //
+  // FIXME: It'd be nice to change the APIs so that we returned an iterator
+  // range over the global postorder sequence and generally use that sequence
+  // rather than building a separate result vector here.
+  if (!Result.empty()) {
+    int Idx = G->getRefSCCIndex(*this);
+    G->PostOrderRefSCCs.insert(G->PostOrderRefSCCs.begin() + Idx,
+                               Result.begin(), Result.end());
+    for (int i : seq<int>(Idx, G->PostOrderRefSCCs.size()))
+      G->RefSCCIndices[G->PostOrderRefSCCs[i]] = i;
+    assert(G->PostOrderRefSCCs[G->getRefSCCIndex(*this)] == this &&
+           "Failed to update this RefSCC's index after insertion!");
+  }
 
   for (SCC *C : SCCs) {
     auto PostOrderI = PostOrderMapping.find(&*C->begin());
@@ -1486,14 +1505,14 @@ void LazyCallGraph::connectRefSCC(RefSCC &RC) {
     LeafRefSCCs.push_back(&RC);
 }
 
-LazyCallGraph::RefSCC *LazyCallGraph::getNextRefSCCInPostOrder() {
+bool LazyCallGraph::buildNextRefSCCInPostOrder() {
   if (DFSStack.empty()) {
     Node *N;
     do {
       // If we've handled all candidate entry nodes to the SCC forest, we're
       // done.
       if (RefSCCEntryNodes.empty())
-        return nullptr;
+        return false;
 
       N = &get(*RefSCCEntryNodes.pop_back_val());
     } while (N->DFSNumber != 0);
@@ -1575,9 +1594,14 @@ LazyCallGraph::RefSCC *LazyCallGraph::getNextRefSCCInPostOrder() {
     PendingRefSCCStack.erase(RefSCCNodes.end().base(),
                              PendingRefSCCStack.end());
 
-    // We return the new node here. This essentially suspends the DFS walk
-    // until another RefSCC is requested.
-    return NewRC;
+    // Push the new node into the postorder list and return true indicating we
+    // successfully grew the postorder sequence by one.
+    bool Inserted =
+        RefSCCIndices.insert({NewRC, PostOrderRefSCCs.size()}).second;
+    (void)Inserted;
+    assert(Inserted && "Cannot already have this RefSCC in the index map!");
+    PostOrderRefSCCs.push_back(NewRC);
+    return true;
   }
 }
 

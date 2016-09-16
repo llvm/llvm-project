@@ -730,27 +730,39 @@ public:
     struct IsAtEndT {};
 
     LazyCallGraph *G;
-    RefSCC *C;
+    RefSCC *RC;
 
-    // Build the begin iterator for a node.
-    postorder_ref_scc_iterator(LazyCallGraph &G) : G(&G) {
-      C = G.getNextRefSCCInPostOrder();
-    }
+    /// Build the begin iterator for a node.
+    postorder_ref_scc_iterator(LazyCallGraph &G) : G(&G), RC(getRC(G, 0)) {}
 
-    // Build the end iterator for a node. This is selected purely by overload.
+    /// Build the end iterator for a node. This is selected purely by overload.
     postorder_ref_scc_iterator(LazyCallGraph &G, IsAtEndT /*Nonce*/)
-        : G(&G), C(nullptr) {}
+        : G(&G), RC(nullptr) {}
+
+    /// Get the post-order RefSCC at the given index of the postorder walk,
+    /// populating it if necessary.
+    static RefSCC *getRC(LazyCallGraph &G, int Index) {
+      if (Index == (int)G.PostOrderRefSCCs.size())
+        if (!G.buildNextRefSCCInPostOrder())
+          // We're at the end.
+          return nullptr;
+
+      assert(Index < (int)G.PostOrderRefSCCs.size() &&
+             "Built the next post-order RefSCC without growing list!");
+      return G.PostOrderRefSCCs[Index];
+    }
 
   public:
     bool operator==(const postorder_ref_scc_iterator &Arg) const {
-      return G == Arg.G && C == Arg.C;
+      return G == Arg.G && RC == Arg.RC;
     }
 
-    reference operator*() const { return *C; }
+    reference operator*() const { return *RC; }
 
     using iterator_facade_base::operator++;
     postorder_ref_scc_iterator &operator++() {
-      C = G->getNextRefSCCInPostOrder();
+      assert(RC && "Cannot increment the end iterator!");
+      RC = getRC(*G, G->RefSCCIndices.find(RC)->second + 1);
       return *this;
     }
   };
@@ -897,6 +909,15 @@ private:
   /// Allocator that holds all the call graph RefSCCs.
   SpecificBumpPtrAllocator<RefSCC> RefSCCBPA;
 
+  /// The post-order sequence of RefSCCs.
+  ///
+  /// This list is lazily formed the first time we walk the graph.
+  SmallVector<RefSCC *, 16> PostOrderRefSCCs;
+
+  /// A map from RefSCC to the index for it in the postorder sequence of
+  /// RefSCCs.
+  DenseMap<RefSCC *, int> RefSCCIndices;
+
   /// The leaf RefSCCs of the graph.
   ///
   /// These are all of the RefSCCs which have no children.
@@ -944,8 +965,24 @@ private:
   /// and updates the root leaf list.
   void connectRefSCC(RefSCC &RC);
 
-  /// Retrieve the next node in the post-order RefSCC walk of the call graph.
-  RefSCC *getNextRefSCCInPostOrder();
+  /// Get the index of a RefSCC within the postorder traversal.
+  ///
+  /// Requires that this RefSCC is a valid one in the (perhaps partial)
+  /// postorder traversed part of the graph.
+  int getRefSCCIndex(RefSCC &RC) {
+    auto IndexIt = RefSCCIndices.find(&RC);
+    assert(IndexIt != RefSCCIndices.end() && "RefSCC doesn't have an index!");
+    assert(PostOrderRefSCCs[IndexIt->second] == &RC &&
+           "Index does not point back at RC!");
+    return IndexIt->second;
+  }
+
+  /// Builds the next node in the post-order RefSCC walk of the call graph and
+  /// appends it to the \c PostOrderRefSCCs vector.
+  ///
+  /// Returns true if a new RefSCC was successfully constructed, and false if
+  /// there are no more RefSCCs to build in the graph.
+  bool buildNextRefSCCInPostOrder();
 };
 
 inline LazyCallGraph::Edge::Edge() : Value() {}

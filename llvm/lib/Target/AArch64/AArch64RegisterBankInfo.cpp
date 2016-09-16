@@ -157,7 +157,6 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
 void AArch64RegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   switch (OpdMapper.getMI().getOpcode()) {
-  case TargetOpcode::G_ADD:
   case TargetOpcode::G_OR: {
     // Those ID must match getInstrAlternativeMappings.
     assert((OpdMapper.getInstrMapping().getID() == 1 ||
@@ -187,7 +186,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   else
     BankID = AArch64::GPRRegBankID;
 
-  Mapping = InstructionMapping{1, 1, MI.getNumOperands()};
+  Mapping = InstructionMapping{DefaultMappingID, 1, MI.getNumOperands()};
   int Size = Ty.isValid() ? Ty.getSizeInBits() : 0;
   for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx)
     Mapping.setOperandMapping(Idx, Size, getRegBank(BankID));

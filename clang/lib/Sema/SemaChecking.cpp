@@ -3882,7 +3882,7 @@ static void sumOffsets(llvm::APSInt &Offset, llvm::APSInt Addend,
   // possible.
   if (Ov) {
     assert(BitWidth <= UINT_MAX / 2 && "index (intermediate) result too big");
-    Offset.sext(2 * BitWidth);
+    Offset = Offset.sext(2 * BitWidth);
     sumOffsets(Offset, Addend, BinOpKind, AddendIsRight);
     return;
   }

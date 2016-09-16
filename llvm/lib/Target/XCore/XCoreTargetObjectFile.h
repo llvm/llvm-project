@@ -26,11 +26,9 @@ static const unsigned CodeModelLargeSize = 256;
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
     MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
-                                        Mangler &Mang,
                                         const TargetMachine &TM) const override;
 
     MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
-                                      Mangler &Mang,
                                       const TargetMachine &TM) const override;
 
     MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,

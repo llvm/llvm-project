@@ -167,7 +167,7 @@ namespace destructor_tests {
 
 // PR5620
 void f0() __attribute__((__noreturn__));
-void f1(void (*)()); 
+void f1(void (*)());
 void f2() { f1(f0); }
 
 // Taking the address of a noreturn function

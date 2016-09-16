@@ -19,15 +19,15 @@ namespace llvm {
   /// x86-64.
   class X86_64MachoTargetObjectFile : public TargetLoweringObjectFileMachO {
   public:
-    const MCExpr *
-    getTTypeGlobalReference(const GlobalValue *GV, unsigned Encoding,
-                            Mangler &Mang, const TargetMachine &TM,
-                            MachineModuleInfo *MMI,
-                            MCStreamer &Streamer) const override;
+    const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,
+                                          unsigned Encoding,
+                                          const TargetMachine &TM,
+                                          MachineModuleInfo *MMI,
+                                          MCStreamer &Streamer) const override;
 
     // getCFIPersonalitySymbol - The symbol that gets passed to
     // .cfi_personality.
-    MCSymbol *getCFIPersonalitySymbol(const GlobalValue *GV, Mangler &Mang,
+    MCSymbol *getCFIPersonalitySymbol(const GlobalValue *GV,
                                       const TargetMachine &TM,
                                       MachineModuleInfo *MMI) const override;
 
@@ -59,7 +59,6 @@ namespace llvm {
   class X86WindowsTargetObjectFile : public TargetLoweringObjectFileCOFF {
     const MCExpr *
     lowerRelativeReference(const GlobalValue *LHS, const GlobalValue *RHS,
-                           Mangler &Mang,
                            const TargetMachine &TM) const override;
 
     /// \brief Given a mergeable constant with the specified size and relocation

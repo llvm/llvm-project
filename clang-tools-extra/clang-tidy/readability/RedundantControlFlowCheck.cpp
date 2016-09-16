@@ -83,7 +83,7 @@ void RedundantControlFlowCheck::issueDiagnostic(
         dyn_cast<Stmt>(*Previous)->getLocEnd(), tok::semi, SM,
         Result.Context->getLangOpts(),
         /*SkipTrailingWhitespaceAndNewLine=*/true);
-  else
+  if (!Start.isValid())
     Start = StmtRange.getBegin();
   auto RemovedRange = CharSourceRange::getCharRange(
       Start,

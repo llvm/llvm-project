@@ -4,18 +4,21 @@
 
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
-# CHECK-NEXT:   BlockSize:       4096
-# CHECK-NEXT:   FreeBlockMap:    1
-# CHECK-NEXT:   NumBlocks:       3
-# CHECK-NEXT:   NumDirectoryBytes: 4
-# CHECK-NEXT:   Unknown1:        0
-# CHECK-NEXT:   BlockMapAddr:    1
-# CHECK-NEXT:   NumDirectoryBlocks: 1
-# CHECK-NEXT:   DirectoryBlocks: [ 2 ]
-# CHECK-NEXT:   NumStreams:      0
-# CHECK-NEXT:   FileSize:        12288
-# CHECK-NEXT:   StreamSizes:     [  ]
+# CHECK-NEXT:     BlockSize:       4096
+# CHECK-NEXT:     FreeBlockMap:    2
+# CHECK-NEXT:     NumBlocks:       10
+# CHECK-NEXT:     NumDirectoryBytes: 28
+# CHECK-NEXT:     Unknown1:        0
+# CHECK-NEXT:     BlockMapAddr:    9
+# CHECK-NEXT:     NumDirectoryBlocks: 1
+# CHECK-NEXT:     DirectoryBlocks: [ 8 ]
+# CHECK-NEXT:     NumStreams:      3
+# CHECK-NEXT:     FileSize:        40960
+# CHECK-NEXT:   StreamSizes:     [ 1, 48, 56 ]
 # CHECK-NEXT:   StreamMap:
+# CHECK-NEXT:     - Stream:          [ 4 ]
+# CHECK-NEXT:     - Stream:          [ 5 ]
+# CHECK-NEXT:     - Stream:          [ 6 ]
 
 --- !COFF
 header:
