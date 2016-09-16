@@ -902,7 +902,9 @@ namespace clang {
       /// \brief An AdjustedType record.
       TYPE_ADJUSTED              = 42,
       /// \brief A PipeType record.
-      TYPE_PIPE                  = 43
+      TYPE_PIPE                  = 43,
+      /// \brief An ObjCTypeParamType record.
+      TYPE_OBJC_TYPE_PARAM       = 44
     };
 
     /// \brief The type IDs for special types constructed by semantic

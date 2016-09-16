@@ -1034,6 +1034,8 @@ DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPE(PackExpansionType, { TRY_TO(TraverseType(T->getPattern())); })
 
+DEF_TRAVERSE_TYPE(ObjCTypeParamType, {})
+
 DEF_TRAVERSE_TYPE(ObjCInterfaceType, {})
 
 DEF_TRAVERSE_TYPE(ObjCObjectType, {
@@ -1264,6 +1266,8 @@ DEF_TRAVERSE_TYPELOC(DependentTemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPELOC(PackExpansionType,
                      { TRY_TO(TraverseTypeLoc(TL.getPatternLoc())); })
+
+DEF_TRAVERSE_TYPELOC(ObjCTypeParamType, {})
 
 DEF_TRAVERSE_TYPELOC(ObjCInterfaceType, {})
 

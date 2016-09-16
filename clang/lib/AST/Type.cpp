@@ -531,6 +531,18 @@ bool Type::isObjCInertUnsafeUnretainedType() const {
   }
 }
 
+ObjCTypeParamType::ObjCTypeParamType(const ObjCTypeParamDecl *D,
+                                     QualType can,
+                                     ArrayRef<ObjCProtocolDecl *> protocols)
+  : Type(ObjCTypeParam, can, can->isDependentType(),
+         can->isInstantiationDependentType(),
+         can->isVariablyModifiedType(),
+         /*ContainsUnexpandedParameterPack=*/false),
+    OTPDecl(const_cast<ObjCTypeParamDecl*>(D))
+{
+  initialize(protocols);
+}
+
 ObjCObjectType::ObjCObjectType(QualType Canonical, QualType Base,
                                ArrayRef<QualType> typeArgs,
                                ArrayRef<ObjCProtocolDecl *> protocols,
@@ -879,6 +891,7 @@ public:
   }
 
   TRIVIAL_TYPE_CLASS(Typedef)
+  TRIVIAL_TYPE_CLASS(ObjCTypeParam)
 
   QualType VisitAdjustedType(const AdjustedType *T) { 
     QualType originalType = recurse(T->getOriginalType());
@@ -3206,6 +3219,20 @@ void ObjCObjectTypeImpl::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getBaseType(), getTypeArgsAsWritten(),
           llvm::makeArrayRef(qual_begin(), getNumProtocols()),
           isKindOfTypeAsWritten());
+}
+
+void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
+                                const ObjCTypeParamDecl *OTPDecl,
+                                ArrayRef<ObjCProtocolDecl *> protocols) {
+  ID.AddPointer(OTPDecl);
+  ID.AddInteger(protocols.size());
+  for (auto proto : protocols)
+    ID.AddPointer(proto);
+}
+
+void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID) {
+  Profile(ID, getDecl(),
+          llvm::makeArrayRef(qual_begin(), getNumProtocols()));
 }
 
 namespace {

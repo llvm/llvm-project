@@ -1839,6 +1839,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
+  case Type::ObjCTypeParam:
   case Type::Atomic:
   case Type::Pipe:
     llvm_unreachable("type is illegal as a nested name specifier");

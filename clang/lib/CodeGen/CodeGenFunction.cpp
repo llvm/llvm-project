@@ -1692,6 +1692,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::Enum:
     case Type::Elaborated:
     case Type::TemplateSpecialization:
+    case Type::ObjCTypeParam:
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:

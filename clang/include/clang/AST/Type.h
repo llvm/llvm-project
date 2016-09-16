@@ -88,6 +88,7 @@ namespace clang {
   class ObjCInterfaceDecl;
   class ObjCProtocolDecl;
   class ObjCMethodDecl;
+  class ObjCTypeParamDecl;
   class UnresolvedUsingTypenameDecl;
   class Expr;
   class Stmt;
@@ -4751,6 +4752,49 @@ public:
   }
 };
 
+/// Represents a type parameter type in Objective C. It can take
+/// a list of protocols.
+class ObjCTypeParamType : public Type,
+                          public ObjCProtocolQualifiers<ObjCTypeParamType>,
+                          public llvm::FoldingSetNode {
+  friend class ASTContext;
+  friend class ObjCProtocolQualifiers<ObjCTypeParamType>;
+
+  /// The number of protocols stored on this type.
+  unsigned NumProtocols : 6;
+
+  ObjCTypeParamDecl *OTPDecl;
+  /// The protocols are stored after the ObjCTypeParamType node. In the
+  /// canonical type, the list of protocols are sorted alphabetically
+  /// and uniqued.
+  ObjCProtocolDecl **getProtocolStorageImpl();
+  /// Return the number of qualifying protocols in this interface type,
+  /// or 0 if there are none.
+  unsigned getNumProtocolsImpl() const {
+    return NumProtocols;
+  }
+  void setNumProtocolsImpl(unsigned N) {
+    NumProtocols = N;
+  }
+  ObjCTypeParamType(const ObjCTypeParamDecl *D,
+                    QualType can,
+                    ArrayRef<ObjCProtocolDecl *> protocols);
+public:
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getCanonicalTypeInternal(); }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == ObjCTypeParam;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID);
+  static void Profile(llvm::FoldingSetNodeID &ID,
+                      const ObjCTypeParamDecl *OTPDecl,
+                      ArrayRef<ObjCProtocolDecl *> protocols);
+
+  ObjCTypeParamDecl *getDecl() const { return OTPDecl; }
+};
+
 /// Represents a class type in Objective C.
 ///
 /// Every Objective C type is a combination of a base type, a set of
@@ -4956,6 +5000,11 @@ inline QualType *ObjCObjectType::getTypeArgStorage() {
 inline ObjCProtocolDecl **ObjCObjectType::getProtocolStorageImpl() {
     return reinterpret_cast<ObjCProtocolDecl**>(
              getTypeArgStorage() + ObjCObjectTypeBits.NumTypeArgs);
+}
+
+inline ObjCProtocolDecl **ObjCTypeParamType::getProtocolStorageImpl() {
+    return reinterpret_cast<ObjCProtocolDecl**>(
+             static_cast<ObjCTypeParamType*>(this)+1);
 }
 
 /// Interfaces are the core concept in Objective-C for object oriented design.
