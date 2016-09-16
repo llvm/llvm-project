@@ -179,6 +179,7 @@ void template_return(T check) {
 // CHECK-FIXES: {{^}}  if (check < T(0)) {{{$}}
 // CHECK-FIXES-NEXT: {{^    return;$}}
 // CHECK-FIXES-NEXT: {{^ *}$}}
+// CHECK-FIXES-NEXT: {{^ *}$}}
 
 template <>
 void template_return(int check) {
@@ -190,6 +191,7 @@ void template_return(int check) {
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
 // CHECK-FIXES: {{^}}  if (check < 0) {{{$}}
 // CHECK-FIXES-NEXT: {{^    return;$}}
+// CHECK-FIXES-NEXT: {{^ *}$}}
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 template <typename T>
