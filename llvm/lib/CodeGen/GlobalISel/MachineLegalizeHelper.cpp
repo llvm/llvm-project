@@ -281,6 +281,13 @@ MachineLegalizeHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_GEP: {
+    assert(TypeIdx == 1 && "unable to legalize pointer of GEP");
+    unsigned OffsetExt = MRI.createGenericVirtualRegister(WideTy);
+    MIRBuilder.buildSExt(OffsetExt, MI.getOperand(2).getReg());
+    MI.getOperand(2).setReg(OffsetExt);
+    return Legalized;
+  }
   }
 }
 

@@ -21,6 +21,7 @@ add_lld_library(lldCOFF
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Core
+  DebugInfoPDB
   LTO
   LibDriver
   Object

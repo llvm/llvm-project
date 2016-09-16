@@ -42,6 +42,7 @@ public:
   InfoStreamBuilder &getInfoBuilder();
   DbiStreamBuilder &getDbiBuilder();
   TpiStreamBuilder &getTpiBuilder();
+  TpiStreamBuilder &getIpiBuilder();
 
   Expected<std::unique_ptr<PDBFile>>
   build(std::unique_ptr<msf::WritableStream> PdbFileBuffer);
@@ -57,6 +58,7 @@ private:
   std::unique_ptr<InfoStreamBuilder> Info;
   std::unique_ptr<DbiStreamBuilder> Dbi;
   std::unique_ptr<TpiStreamBuilder> Tpi;
+  std::unique_ptr<TpiStreamBuilder> Ipi;
 };
 }
 }

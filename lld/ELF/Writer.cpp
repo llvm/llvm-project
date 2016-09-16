@@ -307,7 +307,9 @@ template <class ELFT> static void reportUndefined(SymbolBody *Sym) {
       Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
     return;
 
-  std::string Msg = "undefined symbol: " + Sym->getName().str();
+  std::string Msg = "undefined symbol: ";
+  Msg += Config->Demangle ? demangle(Sym->getName()) : Sym->getName().str();
+
   if (Sym->File)
     Msg += " in " + getFilename(Sym->File);
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)

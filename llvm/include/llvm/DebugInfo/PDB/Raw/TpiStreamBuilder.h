@@ -45,7 +45,7 @@ struct TpiStreamHeader;
 
 class TpiStreamBuilder {
 public:
-  explicit TpiStreamBuilder(msf::MSFBuilder &Msf);
+  explicit TpiStreamBuilder(msf::MSFBuilder &Msf, uint32_t StreamIdx);
   ~TpiStreamBuilder();
 
   TpiStreamBuilder(const TpiStreamBuilder &) = delete;
@@ -77,6 +77,7 @@ private:
   std::unique_ptr<msf::ByteStream> HashValueStream;
 
   const TpiStreamHeader *Header;
+  uint32_t Idx;
 };
 }
 }

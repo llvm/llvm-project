@@ -50,8 +50,8 @@ static bool unsupportedBinOp(const MachineInstr &I,
                              const MachineRegisterInfo &MRI,
                              const AArch64RegisterInfo &TRI) {
   LLT Ty = MRI.getType(I.getOperand(0).getReg());
-  if (!Ty.isSized()) {
-    DEBUG(dbgs() << "Generic binop should be sized\n");
+  if (!Ty.isValid()) {
+    DEBUG(dbgs() << "Generic binop register should be typed\n");
     return true;
   }
 
@@ -220,9 +220,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return false;
   }
 
-  const LLT Ty = I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg())
-                                         : LLT::unsized();
-  assert(Ty.isValid() && "Generic instruction doesn't have a type");
+  LLT Ty =
+      I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg()) : LLT{};
 
   switch (I.getOpcode()) {
   case TargetOpcode::G_BR: {

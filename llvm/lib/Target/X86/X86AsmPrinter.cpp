@@ -627,11 +627,11 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     raw_string_ostream FlagsOS(Flags);
 
     for (const auto &Function : M)
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Function, *Mang);
+      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Function);
     for (const auto &Global : M.globals())
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Global, *Mang);
+      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Global);
     for (const auto &Alias : M.aliases())
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Alias, *Mang);
+      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Alias);
 
     FlagsOS.flush();
 

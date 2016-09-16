@@ -367,7 +367,7 @@ unsigned RegisterBankInfo::getSizeInBits(unsigned Reg,
     RC = TRI.getMinimalPhysRegClass(Reg);
   } else {
     LLT Ty = MRI.getType(Reg);
-    unsigned RegSize = Ty.isSized() ? Ty.getSizeInBits() : 0;
+    unsigned RegSize = Ty.isValid() ? Ty.getSizeInBits() : 0;
     // If Reg is not a generic register, query the register class to
     // get its size.
     if (RegSize)

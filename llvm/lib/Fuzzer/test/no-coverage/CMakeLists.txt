@@ -26,4 +26,4 @@ set_target_properties(AFLDriverTest
     )
 
 # Propagate value into parent directory
-set(TestBinaries ${TestBinaries} PARENT_SCOPE)
+set(TestBinaries ${TestBinaries} AFLDriverTest PARENT_SCOPE)

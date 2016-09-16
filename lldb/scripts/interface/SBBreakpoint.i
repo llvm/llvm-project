@@ -221,6 +221,9 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
+    bool 
+    GetDescription(lldb::SBStream &description, bool include_locations);
+
     bool
     operator == (const lldb::SBBreakpoint& rhs);
            
@@ -276,6 +279,9 @@ public:
   
   SBBreakpoint
   GetBreakpointAtIndex(size_t idx);
+  
+  SBBreakpoint
+  FindBreakpointByID(lldb::break_id_t);
 
   void Append(const SBBreakpoint &sb_bkpt);
 

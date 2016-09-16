@@ -274,7 +274,7 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   PM.add(createBarrierNoopPass());
 
   if (CFGPrinter)
-    PM.add(llvm::createCFGPrinterPass());
+    PM.add(llvm::createCFGPrinterLegacyPassPass());
 
   if (Target == TARGET_GPU) {
     // Invariant load hoisting not yet supported by GPU code generation.

@@ -453,16 +453,41 @@ void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
   Fixups.clear();
   raw_svector_ostream OS(Contents);
 
-  // Write down each range where the variable is defined.
+  // Compute all the sizes up front.
+  SmallVector<std::pair<unsigned, unsigned>, 4> GapAndRangeSizes;
+  const MCSymbol *LastLabel = nullptr;
   for (std::pair<const MCSymbol *, const MCSymbol *> Range : Frag.getRanges()) {
+    unsigned GapSize =
+        LastLabel ? computeLabelDiff(Layout, LastLabel, Range.first) : 0;
     unsigned RangeSize = computeLabelDiff(Layout, Range.first, Range.second);
+    GapAndRangeSizes.push_back({GapSize, RangeSize});
+    LastLabel = Range.second;
+  }
+
+  // Write down each range where the variable is defined.
+  for (size_t I = 0, E = Frag.getRanges().size(); I != E;) {
+    // If the range size of multiple consecutive ranges is under the max,
+    // combine the ranges and emit some gaps.
+    const MCSymbol *RangeBegin = Frag.getRanges()[I].first;
+    unsigned RangeSize = GapAndRangeSizes[I].second;
+    size_t J = I + 1;
+    for (; J != E; ++J) {
+      unsigned GapAndRangeSize = GapAndRangeSizes[J].first + GapAndRangeSizes[J].second;
+      if (RangeSize + GapAndRangeSize > MaxDefRange)
+        break;
+      RangeSize += GapAndRangeSize;
+    }
+    unsigned NumGaps = J - I - 1;
+
+    support::endian::Writer<support::little> LEWriter(OS);
+
     unsigned Bias = 0;
     // We must split the range into chunks of MaxDefRange, this is a fundamental
     // limitation of the file format.
     do {
       uint16_t Chunk = std::min((uint32_t)MaxDefRange, RangeSize);
 
-      const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Range.first, Ctx);
+      const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(RangeBegin, Ctx);
       const MCBinaryExpr *BE =
           MCBinaryExpr::createAdd(SRE, MCConstantExpr::create(Bias, Ctx), Ctx);
       MCValue Res;
@@ -473,8 +498,8 @@ void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
       StringRef FixedSizePortion = Frag.getFixedSizePortion();
       // Our record is a fixed sized prefix and a LocalVariableAddrRange that we
       // are artificially constructing.
-      size_t RecordSize =
-          FixedSizePortion.size() + sizeof(LocalVariableAddrRange);
+      size_t RecordSize = FixedSizePortion.size() +
+                          sizeof(LocalVariableAddrRange) + 4 * NumGaps;
       // Write out the recrod size.
       support::endian::Writer<support::little>(OS).write<uint16_t>(RecordSize);
       // Write out the fixed size prefix.
@@ -487,12 +512,25 @@ void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
       Fixups.push_back(MCFixup::create(Contents.size(), BE, FK_SecRel_2));
       Contents.resize(Contents.size() + 2); // Fixup for section index.
       // Write down the range's extent.
-      support::endian::Writer<support::little>(OS).write<uint16_t>(Chunk);
+      LEWriter.write<uint16_t>(Chunk);
 
       // Move on to the next range.
       Bias += Chunk;
       RangeSize -= Chunk;
     } while (RangeSize > 0);
+
+    // Emit the gaps afterwards.
+    assert((NumGaps == 0 || Bias < MaxDefRange) &&
+           "large ranges should not have gaps");
+    unsigned GapStartOffset = GapAndRangeSizes[I].second;
+    for (++I; I != J; ++I) {
+      unsigned GapSize, RangeSize;
+      assert(I < GapAndRangeSizes.size());
+      std::tie(GapSize, RangeSize) = GapAndRangeSizes[I];
+      LEWriter.write<uint16_t>(GapStartOffset);
+      LEWriter.write<uint16_t>(RangeSize);
+      GapStartOffset += GapSize + RangeSize;
+    }
   }
 }
 

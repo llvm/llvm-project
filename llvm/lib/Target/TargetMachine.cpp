@@ -208,7 +208,7 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
     return;
   }
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
-  TLOF->getNameWithPrefix(Name, GV, Mang, *this);
+  TLOF->getNameWithPrefix(Name, GV, *this);
 }
 
 MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV, Mangler &Mang) const {

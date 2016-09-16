@@ -43,6 +43,12 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
       setAction({BinOp, Ty}, Legal);
   }
 
+  setAction({G_GEP, p0}, Legal);
+  setAction({G_GEP, 1, s64}, Legal);
+
+  for (auto Ty : {s1, s8, s16, s32})
+    setAction({G_GEP, 1, Ty}, WidenScalar);
+
   for (auto BinOp : {G_LSHR, G_ASHR, G_SDIV, G_UDIV}) {
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
@@ -95,6 +101,7 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   setAction({G_ICMP, s1}, Legal);
   setAction({G_ICMP, 1, s32}, Legal);
   setAction({G_ICMP, 1, s64}, Legal);
+  setAction({G_ICMP, 1, p0}, Legal);
 
   for (auto Ty : {s1, s8, s16}) {
     setAction({G_ICMP, 1, Ty}, WidenScalar);
@@ -149,7 +156,6 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   }
 
   // Control-flow
-  setAction({G_BR, LLT::unsized()}, Legal);
   setAction({G_BRCOND, s32}, Legal);
   for (auto Ty : {s1, s8, s16})
     setAction({G_BRCOND, Ty}, WidenScalar);
