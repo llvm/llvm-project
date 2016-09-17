@@ -129,9 +129,10 @@ bool SymbolFile::SymbolContextShouldBeExcluded(const SymbolContext &sc,
   return false;
 }
 
-lldb::DataBufferSP SymbolFile::GetASTData(lldb::LanguageType language) {
+std::vector<lldb::DataBufferSP>
+SymbolFile::GetASTData(lldb::LanguageType language) {
   // SymbolFile subclasses must add this functionality
-  return lldb::DataBufferSP();
+  return std::vector<lldb::DataBufferSP>();
 }
 
 uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,

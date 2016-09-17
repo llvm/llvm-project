@@ -10,6 +10,8 @@
 #ifndef liblldb_SymbolFile_h_
 #define liblldb_SymbolFile_h_
 
+#include <vector>
+
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -223,15 +225,26 @@ public:
   virtual bool ForceInlineSourceFileCheck();
 
   //------------------------------------------------------------------
-  // Symbol files can store AST data for any language that wants to
-  // store the native AST format supported by the current compiler.
-  // This information is often only usable by a compiler that is in
-  // sync with the compiler sources that were used to build LLDB so
-  // any data should be versioned appropriately so the compiler can
-  // try to load the data and know if the data will be able to be
-  // used.
+  /// Retrieve all the AST data blobs from the SymbolFile.
+  ///
+  /// Symbol files can store AST data for any language that wants to
+  /// store the native AST format supported by the current compiler.
+  /// This information is often only usable by a compiler that is in
+  /// sync with the compiler sources that were used to build LLDB so
+  /// any data should be versioned appropriately so the compiler can
+  /// try to load the data and know if the data will be able to be
+  /// used.
+  ///
+  /// @param[in] language
+  ///   The language for which AST data is being requested.
+  ///   A given file can contain ASTs for more than one language.
+  ///
+  /// @return
+  ///   Zero or more buffers, each of which contain the raw data
+  ///   of an AST in the requested language.
   //------------------------------------------------------------------
-  virtual lldb::DataBufferSP GetASTData(lldb::LanguageType language);
+  virtual std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language);
 
   // Used for the REPL to limit source file ranges that are valid within "file".
   // Since

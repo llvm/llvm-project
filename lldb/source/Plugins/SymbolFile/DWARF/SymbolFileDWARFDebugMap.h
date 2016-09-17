@@ -122,7 +122,8 @@ public:
                   uint32_t type_mask,
                   lldb_private::TypeList &type_list) override;
 
-  lldb::DataBufferSP GetASTData(lldb::LanguageType language) override;
+  std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language) override;
 
   //------------------------------------------------------------------
   // PluginInterface protocol
