@@ -25,3 +25,18 @@
 # RUN:  }" > %t4.script
 # RUN: ld.lld -shared -o %t4 --script %t4.script %t1.o
 # RUN: llvm-readobj %t4 > /dev/null
+
+# RUN: echo "SECTIONS {     \
+# RUN:   .foo : { *(.foo) } \
+# RUN: } \
+# RUN: ASSERT(SIZEOF(.foo) == 8, \"true\");" > %t5.script
+# RUN: ld.lld -shared -o %t5 --script %t5.script %t1.o
+# RUN: llvm-readobj %t5 > /dev/null
+
+## Even without SECTIONS block we still use section names
+## in expressions
+# RUN: echo "ASSERT(SIZEOF(.foo) == 8, \"true\");" > %t5.script
+# RUN: ld.lld -shared -o %t5 --script %t5.script %t1.o
+# RUN: llvm-readobj %t5 > /dev/null
+.section .foo, "a"
+ .quad 0

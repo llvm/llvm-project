@@ -66,6 +66,27 @@
 # SORTED_ALIGNMENT-NEXT:  0180 44000000 00000000 01000000 00000000
 # SORTED_ALIGNMENT-NEXT:  0190 55000000 00000000
 
+## SORT_NONE itself does not sort anything.
+# RUN: echo "SECTIONS { .aaa : { *(SORT_NONE(.aaa.*)) } }" > %t6.script
+# RUN: ld.lld -o %t7 --script %t6.script %t2.o %t1.o
+# RUN: llvm-objdump -s %t7 | FileCheck -check-prefix=UNSORTED %s
+
+## Check --sort-section alignment option.
+# RUN: echo "SECTIONS { .aaa : { *(.aaa.*) } }" > %t7.script
+# RUN: ld.lld --sort-section alignment -o %t8 --script %t7.script %t1.o %t2.o
+# RUN: llvm-objdump -s %t8 | FileCheck -check-prefix=SORTED_ALIGNMENT %s
+
+## Check --sort-section name option.
+# RUN: echo "SECTIONS { .aaa : { *(.aaa.*) } }" > %t8.script
+# RUN: ld.lld --sort-section name -o %t9 --script %t8.script %t1.o %t2.o
+# RUN: llvm-objdump -s %t9 | FileCheck -check-prefix=SORTED_B %s
+
+## SORT_NONE disables the --sort-section.
+# RUN: echo "SECTIONS { .aaa : { *(SORT_NONE(.aaa.*)) } }" > %t9.script
+# RUN: ld.lld --sort-section name -o %t10 --script %t9.script %t2.o %t1.o
+# RUN: llvm-objdump -s %t10 | FileCheck -check-prefix=UNSORTED %s
+
+
 .global _start
 _start:
  nop

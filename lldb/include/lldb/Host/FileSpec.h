@@ -80,6 +80,7 @@ public:
   ///
   /// @see FileSpec::SetFile (const char *path, bool resolve)
   //------------------------------------------------------------------
+  // TODO: Convert this constructor to use a StringRef.
   explicit FileSpec(const char *path, bool resolve_path,
                     PathSyntax syntax = ePathSyntaxHostNative);
 

@@ -160,6 +160,8 @@ def shared: F<"shared">, HelpText<"Build a shared object">;
 
 def soname: J<"soname=">, HelpText<"Set DT_SONAME">;
 
+def sort_section: S<"sort-section">, HelpText<"Specifies sections sorting rule when linkerscript is used">;
+
 def start_lib: F<"start-lib">,
   HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 

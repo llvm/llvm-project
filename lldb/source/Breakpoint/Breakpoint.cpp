@@ -764,7 +764,7 @@ size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 bool Breakpoint::AddName(const char *new_name, Error &error) {
   if (!new_name)
     return false;
-  if (!BreakpointID::StringIsBreakpointName(new_name, error)) {
+  if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(new_name), error)) {
     error.SetErrorStringWithFormat("input name \"%s\" not a breakpoint name.",
                                    new_name);
     return false;

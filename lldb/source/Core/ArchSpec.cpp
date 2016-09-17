@@ -1030,6 +1030,9 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
             m_triple.setOS(llvm::Triple::OSType::Solaris);
             break;
           }
+        } else if (arch_type == eArchTypeCOFF && os == llvm::Triple::Win32) {
+          m_triple.setVendor(llvm::Triple::PC);
+          m_triple.setOS(llvm::Triple::Win32);
         } else {
           m_triple.setVendor(llvm::Triple::UnknownVendor);
           m_triple.setOS(llvm::Triple::UnknownOS);

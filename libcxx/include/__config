@@ -560,9 +560,15 @@ namespace std {
 #define _LIBCPP_TYPE_VIS_ONLY
 #define _LIBCPP_FUNC_VIS_ONLY
 #define _LIBCPP_ENUM_VIS
-#define _LIBCPP_INLINE_VISIBILITY __forceinline
-#define _LIBCPP_ALWAYS_INLINE     __forceinline
-#define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __forceinline
+#if defined(_LIBCPP_MSVC)
+# define _LIBCPP_INLINE_VISIBILITY __forceinline
+# define _LIBCPP_ALWAYS_INLINE     __forceinline
+# define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __forceinline
+#else
+# define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__always_inline__))
+# define _LIBCPP_ALWAYS_INLINE     __attribute__ ((__always_inline__))
+# define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__ ((__always_inline__))
+#endif
 #endif // _WIN32
 
 #ifndef _LIBCPP_HIDDEN

@@ -143,6 +143,7 @@ public:
   // about:
 
   static lldb::LanguageType GetLanguageTypeFromString(const char *string);
+  static lldb::LanguageType GetLanguageTypeFromString(llvm::StringRef string);
 
   static const char *GetNameForLanguageType(lldb::LanguageType language);
 

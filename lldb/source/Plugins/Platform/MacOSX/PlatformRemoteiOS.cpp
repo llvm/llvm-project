@@ -34,16 +34,11 @@ PlatformRemoteiOS::SDKDirectoryInfo::SDKDirectoryInfo(
     const lldb_private::FileSpec &sdk_dir)
     : directory(sdk_dir), build(), version_major(0), version_minor(0),
       version_update(0), user_cached(false) {
-  const char *dirname_cstr = sdk_dir.GetFilename().GetCString();
-  const char *pos = Args::StringToVersion(dirname_cstr, version_major,
-                                          version_minor, version_update);
-
-  if (pos && pos[0] == ' ' && pos[1] == '(') {
-    const char *build_start = pos + 2;
-    const char *end_paren = strchr(build_start, ')');
-    if (end_paren && build_start < end_paren)
-      build.SetCStringWithLength(build_start, end_paren - build_start);
-  }
+  llvm::StringRef dirname_str = sdk_dir.GetFilename().GetStringRef();
+  llvm::StringRef build_str;
+  std::tie(version_major, version_minor, version_update, build_str) =
+      ParseVersionBuildDir(dirname_str);
+  build.SetString(build_str);
 }
 
 //------------------------------------------------------------------

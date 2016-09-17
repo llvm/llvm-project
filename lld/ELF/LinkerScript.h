@@ -10,15 +10,18 @@
 #ifndef LLD_ELF_LINKER_SCRIPT_H
 #define LLD_ELF_LINKER_SCRIPT_H
 
+#include "Config.h"
 #include "Strings.h"
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include <functional>
+#include <list>
 
 namespace lld {
 namespace elf {
@@ -26,6 +29,7 @@ class DefinedCommon;
 class ScriptParser;
 class SymbolBody;
 template <class ELFT> class InputSectionBase;
+template <class ELFT> class InputSection;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
 class InputSectionData;
@@ -70,7 +74,6 @@ struct SymbolAssignment : BaseCommand {
   bool Provide = false;
   bool Hidden = false;
   bool IsAbsolute;
-  InputSectionData *GoesAfter = nullptr;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -95,7 +98,12 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
-enum SortKind { SortNone, SortByPriority, SortByName, SortByAlignment };
+// This struct reprents one section match pattern in SECTIONS() command.
+// It can optionally have negative match pattern for EXCLUDED_FILE command.
+struct SectionPattern {
+  llvm::Regex ExcludedFileRe;
+  llvm::Regex SectionRe;
+};
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
@@ -103,10 +111,13 @@ struct InputSectionDescription : BaseCommand {
         FileRe(compileGlobPatterns({FilePattern})) {}
   static bool classof(const BaseCommand *C);
   llvm::Regex FileRe;
-  SortKind SortOuter = SortNone;
-  SortKind SortInner = SortNone;
-  llvm::Regex ExcludedFileRe;
-  llvm::Regex SectionRe;
+  SortSectionPolicy SortOuter = SortSectionPolicy::Default;
+  SortSectionPolicy SortInner = SortSectionPolicy::Default;
+
+  // Pairs of section regex and files excluded.
+  std::vector<SectionPattern> SectionPatterns;
+
+  std::vector<InputSectionData *> Sections;
 };
 
 struct AssertCommand : BaseCommand {
@@ -138,8 +149,6 @@ public:
 
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
-  // Used to create symbol assignments outside SECTIONS command.
-  std::vector<std::unique_ptr<SymbolAssignment>> Assignments;
   // Used to assign addresses to sections.
   std::vector<std::unique_ptr<BaseCommand>> Commands;
 
@@ -164,7 +173,7 @@ template <class ELFT> class LinkerScript final : public LinkerScriptBase {
 public:
   LinkerScript();
   ~LinkerScript();
-  void createAssignments();
+  void processCommands(OutputSectionFactory<ELFT> &Factory);
   void createSections(OutputSectionFactory<ELFT> &Factory);
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();
@@ -173,6 +182,7 @@ public:
   ArrayRef<uint8_t> getFiller(StringRef Name);
   Expr getLma(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
+  void assignOffsets(OutputSectionCommand *Cmd);
   void assignAddresses();
   int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
@@ -185,9 +195,10 @@ public:
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
 private:
-  std::vector<InputSectionBase<ELFT> *>
-  getInputSections(const InputSectionDescription *);
+  void computeInputSections(InputSectionDescription *);
 
+  void addSection(OutputSectionFactory<ELFT> &Factory,
+                  InputSectionBase<ELFT> *Sec, StringRef Name);
   void discard(ArrayRef<InputSectionBase<ELFT> *> V);
 
   std::vector<InputSectionBase<ELFT> *>
@@ -201,6 +212,14 @@ private:
   size_t getPhdrIndex(StringRef PhdrName);
 
   uintX_t Dot;
+  OutputSectionBase<ELFT> *CurOutSec = nullptr;
+  uintX_t ThreadBssOffset = 0;
+  void switchTo(OutputSectionBase<ELFT> *Sec);
+  void flush();
+  void output(InputSection<ELFT> *Sec);
+  void process(BaseCommand &Base);
+  llvm::DenseSet<OutputSectionBase<ELFT> *> AlreadyOutputOS;
+  llvm::DenseSet<InputSectionData *> AlreadyOutputIS;
 };
 
 // Variable template is a C++14 feature, so we can't template

@@ -107,14 +107,21 @@ bool BreakpointID::ParseCanonicalReference(const char *input,
   return false;
 }
 
-bool BreakpointID::StringIsBreakpointName(const char *name, Error &error) {
+bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Error &error) {
   error.Clear();
-
-  if (name && (name[0] >= 'A' && name[0] <= 'z')) {
-    if (strcspn(name, ".- ") != strlen(name)) {
-      error.SetErrorStringWithFormat("invalid breakpoint name: \"%s\"", name);
-    }
-    return true;
-  } else
+  if (str.empty())
     return false;
+
+  // First character must be a letter or _
+  if (!isalpha(str[0]) && str[0] != '_')
+    return false;
+
+  // Cannot contain ., -, or space.
+  if (str.find_first_of(".- ") != llvm::StringRef::npos) {
+    error.SetErrorStringWithFormat("invalid breakpoint name: \"%s\"",
+                                   str.str().c_str());
+    return false;
+  }
+
+  return true;
 }

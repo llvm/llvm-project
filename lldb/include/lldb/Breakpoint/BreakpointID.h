@@ -17,6 +17,8 @@
 
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/StringRef.h"
+
 namespace lldb_private {
 
 //----------------------------------------------------------------------
@@ -87,7 +89,7 @@ public:
   ///     \b true if the name is a breakpoint name (as opposed to an ID or
   ///     range) false otherwise.
   //------------------------------------------------------------------
-  static bool StringIsBreakpointName(const char *name, Error &error);
+  static bool StringIsBreakpointName(llvm::StringRef str, Error &error);
 
   //------------------------------------------------------------------
   /// Takes a breakpoint ID and the breakpoint location id and returns

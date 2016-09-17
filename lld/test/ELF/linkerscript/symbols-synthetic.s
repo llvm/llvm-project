@@ -29,19 +29,6 @@
 # RUN: ld.lld -o %t1 --eh-frame-hdr --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=SIMPLE %s
 
-# The script below contains symbols in the middle of .eh_frame_hdr section.
-# We don't support this.
-# RUN: echo "SECTIONS { \
-# RUN:          .eh_frame_hdr : { \
-# RUN:             PROVIDE_HIDDEN(_begin_sec = .); \
-# RUN:             __eh_frame_hdr_start = .; \
-# RUN:             *(.eh_frame_hdr) \
-# RUN:             PROVIDE_HIDDEN(_end_sec_abs = ABSOLUTE(.)); \
-# RUN:             *(.eh_frame_hdr) } \
-# RUN:             PROVIDE_HIDDEN(_end_sec = .); \
-# RUN:         }" > %t.script
-# RUN: not ld.lld -o %t1 --eh-frame-hdr --script %t.script %t 2>&1 | FileCheck --check-prefix=ERROR %s
-
 # Check that the following script is processed without errors
 # RUN: echo "SECTIONS { \
 # RUN:          .eh_frame_hdr : { \
@@ -69,7 +56,6 @@
 # SIMPLE-NEXT: 0000000000001010         *ABS*             00000000 __eh_frame_hdr_start2
 # SIMPLE-NEXT: 0000000000001018         .eh_frame_hdr     00000000 __eh_frame_hdr_end
 # SIMPLE-NEXT: 0000000000001020         *ABS*             00000000 __eh_frame_hdr_end2
-# ERROR: section '.eh_frame_hdr' supports only start and end symbols
 
 .global _start
 _start:

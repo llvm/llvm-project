@@ -131,7 +131,7 @@
         LLVM_EXTENSION BNDR_OFFSET(i), eEncodingVector, eFormatVectorOfUInt64, \
         {dwarf_##reg##i##_i386, dwarf_##reg##i##_i386, LLDB_INVALID_REGNUM,    \
          LLDB_INVALID_REGNUM, lldb_##reg##i##_i386 },                          \
-         NULL, NULL                                                            \
+         NULL, NULL, NULL, 0                                                   \
   }
 
 #define DEFINE_BNDC(name, i)                                                   \
@@ -141,7 +141,7 @@
            eFormatVectorOfUInt8,                                               \
            {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,     \
             LLDB_INVALID_REGNUM, lldb_##name##_i386 },                         \
-            NULL, NULL                                                         \
+            NULL, NULL, NULL, 0                                                \
   }
 
 #define DEFINE_DR(reg, i)                                                      \
