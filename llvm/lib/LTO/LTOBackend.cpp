@@ -41,6 +41,12 @@
 using namespace llvm;
 using namespace lto;
 
+LLVM_ATTRIBUTE_NORETURN void reportOpenError(StringRef Path, Twine Msg) {
+  errs() << "failed to open " << Path << ": " << Msg << '\n';
+  errs().flush();
+  exit(1);
+}
+
 Error Config::addSaveTemps(std::string OutputFileName,
                            bool UseInputModulePath) {
   ShouldDiscardValueNames = false;
@@ -71,13 +77,10 @@ Error Config::addSaveTemps(std::string OutputFileName,
       std::string Path = PathPrefix + "." + PathSuffix + ".bc";
       std::error_code EC;
       raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
-      if (EC) {
-        // Because -save-temps is a debugging feature, we report the error
-        // directly and exit.
-        llvm::errs() << "failed to open " << Path << ": " << EC.message()
-                     << '\n';
-        exit(1);
-      }
+      // Because -save-temps is a debugging feature, we report the error
+      // directly and exit.
+      if (EC)
+        reportOpenError(Path, EC.message());
       WriteBitcodeToFile(&M, OS, /*ShouldPreserveUseListOrder=*/false);
       return true;
     };
@@ -94,12 +97,10 @@ Error Config::addSaveTemps(std::string OutputFileName,
     std::string Path = OutputFileName + "index.bc";
     std::error_code EC;
     raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
-    if (EC) {
-      // Because -save-temps is a debugging feature, we report the error
-      // directly and exit.
-      llvm::errs() << "failed to open " << Path << ": " << EC.message() << '\n';
-      exit(1);
-    }
+    // Because -save-temps is a debugging feature, we report the error
+    // directly and exit.
+    if (EC)
+      reportOpenError(Path, EC.message());
     WriteIndexToFile(Index, OS);
     return true;
   };
