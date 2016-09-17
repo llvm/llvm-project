@@ -235,6 +235,8 @@ void FormatTokenLexer::handleTemplateStrings() {
     return;
   }
   if (BacktickToken->is(tok::r_brace)) {
+    if (StateStack.size() == 1)
+      return;
     StateStack.pop();
     if (StateStack.top() != LexerState::TEMPLATE_STRING)
       return;
