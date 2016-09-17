@@ -297,6 +297,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
         for (InputSectionBase<ELFT> *S : V)
           S->OutSec = nullptr;
         Opt.Commands.erase(Iter);
+        --I;
         continue;
       }
 
