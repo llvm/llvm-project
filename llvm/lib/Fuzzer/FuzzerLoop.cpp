@@ -170,6 +170,8 @@ Fuzzer::Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options)
     PcBuffer = new uintptr_t[PcBufferLen];
     EF->__sanitizer_set_coverage_pc_buffer(PcBuffer, PcBufferLen);
   }
+  if (Options.Verbosity)
+    TPC.PrintModuleInfo();
 }
 
 Fuzzer::~Fuzzer() { }
@@ -735,6 +737,7 @@ size_t Fuzzer::ChooseUnitIdxToMutate() {
 void Fuzzer::ResetCoverage() {
   ResetEdgeCoverage();
   MaxCoverage.Reset();
+  TPC.Reset();
   PrepareCounters(&MaxCoverage);
 }
 

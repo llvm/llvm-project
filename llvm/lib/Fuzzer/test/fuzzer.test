@@ -49,3 +49,7 @@ OOB: is located 0 bytes to the right of 3-byte region
 
 RUN: not LLVMFuzzer-InitializeTest 2>&1 | FileCheck %s
 
+RUN: not LLVMFuzzer-DSOTest 2>&1 | FileCheck %s --check-prefix=DSO
+DSO: INFO: Loaded 3 modules
+DSO: BINGO
+

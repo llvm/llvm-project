@@ -98,6 +98,13 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
+// This struct reprents one section match pattern in SECTIONS() command.
+// It can optionally have negative match pattern for EXCLUDED_FILE command.
+struct SectionPattern {
+  llvm::Regex ExcludedFileRe;
+  llvm::Regex SectionRe;
+};
+
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
       : BaseCommand(InputSectionKind),
@@ -106,8 +113,13 @@ struct InputSectionDescription : BaseCommand {
   llvm::Regex FileRe;
   SortSectionPolicy SortOuter = SortSectionPolicy::Default;
   SortSectionPolicy SortInner = SortSectionPolicy::Default;
-  // Pairs of section regex and files excluded.
-  std::list<std::pair<llvm::Regex, llvm::Regex>> SectionsVec;
+
+  // Input sections that matches at lesat one of SectionPatterns
+  // will be associated with this InputSectionDescription.
+  // We use std::list instead of std::vector because SectionPattern
+  // do not support move assignment.
+  std::list<SectionPattern> SectionPatterns;
+
   std::vector<InputSectionData *> Sections;
 };
 

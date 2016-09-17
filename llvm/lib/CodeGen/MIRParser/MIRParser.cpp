@@ -552,7 +552,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     const yaml::StringValue &Name = Object.Name;
     if (!Name.Value.empty()) {
       Alloca = dyn_cast_or_null<AllocaInst>(
-          F.getValueSymbolTable().lookup(Name.Value));
+          F.getValueSymbolTable()->lookup(Name.Value));
       if (!Alloca)
         return error(Name.SourceRange.Start,
                      "alloca instruction named '" + Name.Value +
@@ -829,6 +829,14 @@ std::unique_ptr<MIRParser>
 llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
                       LLVMContext &Context) {
   auto Filename = Contents->getBufferIdentifier();
+  if (Context.shouldDiscardValueNames()) {
+    Context.diagnose(DiagnosticInfoMIRParser(
+        DS_Error,
+        SMDiagnostic(
+            Filename, SourceMgr::DK_Error,
+            "Can't read MIR with a Context that discards named Values")));
+    return nullptr;
+  }
   return llvm::make_unique<MIRParser>(
       llvm::make_unique<MIRParserImpl>(std::move(Contents), Filename, Context));
 }

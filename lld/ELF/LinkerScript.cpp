@@ -109,10 +109,10 @@ bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   return false;
 }
 
-static bool fileMatches(const llvm::Regex &FileRe,
-                        const llvm::Regex &ExcludedFileRe, StringRef Filename) {
-  return const_cast<Regex &>(FileRe).match(Filename) &&
-         !const_cast<Regex &>(ExcludedFileRe).match(Filename);
+// We need to use const_cast because match() is not a const function.
+// This function encapsulates that ugliness.
+static bool match(const Regex &Re, StringRef S) {
+  return const_cast<Regex &>(Re).match(S);
 }
 
 static bool comparePriority(InputSectionData *A, InputSectionData *B) {
@@ -165,20 +165,23 @@ static bool matchConstraints(ArrayRef<InputSectionBase<ELFT> *> Sections,
 // Compute and remember which sections the InputSectionDescription matches.
 template <class ELFT>
 void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
-  for (const std::pair<llvm::Regex, llvm::Regex> &V : I->SectionsVec) {
+  // Collects all sections that satisfy constraints of I
+  // and attach them to I.
+  for (SectionPattern &Pat : I->SectionPatterns) {
     for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-      if (fileMatches(I->FileRe, V.first, sys::path::filename(F->getName()))) {
-        Regex &Re = const_cast<Regex &>(V.second);
-        for (InputSectionBase<ELFT> *S : F->getSections())
-          if (!isDiscarded(S) && !S->OutSec && Re.match(S->Name))
-            I->Sections.push_back(S);
+      StringRef Filename = sys::path::filename(F->getName());
+      if (!match(I->FileRe, Filename) || match(Pat.ExcludedFileRe, Filename))
+        continue;
 
-        if (Re.match("COMMON"))
-          I->Sections.push_back(CommonInputSection<ELFT>::X);
-      }
+      for (InputSectionBase<ELFT> *S : F->getSections())
+        if (!isDiscarded(S) && !S->OutSec && match(Pat.SectionRe, S->Name))
+          I->Sections.push_back(S);
+      if (match(Pat.SectionRe, "COMMON"))
+        I->Sections.push_back(CommonInputSection<ELFT>::X);
     }
   }
 
+  // Sort for SORT() commands.
   if (I->SortInner != SortSectionPolicy::Default)
     std::stable_sort(I->Sections.begin(), I->Sections.end(),
                      getComparator(I->SortInner));
@@ -1062,19 +1065,19 @@ static void selectSortKind(InputSectionDescription *Cmd) {
 // a following form: ((EXCLUDE_FILE(file_pattern+))? section_pattern+)+
 // Example: *(.foo.1 EXCLUDE_FILE (*a.o) .foo.2 EXCLUDE_FILE (*b.o) .foo.3)
 void ScriptParser::readSectionExcludes(InputSectionDescription *Cmd) {
-  llvm::Regex ExcludeFileRe;
+  Regex ExcludeFileRe;
   std::vector<StringRef> V;
 
   while (!Error) {
     if (skip(")")) {
-      Cmd->SectionsVec.push_back(
+      Cmd->SectionPatterns.push_back(
           {std::move(ExcludeFileRe), compileGlobPatterns(V)});
       return;
     }
 
     if (skip("EXCLUDE_FILE")) {
       if (!V.empty()) {
-        Cmd->SectionsVec.push_back(
+        Cmd->SectionPatterns.push_back(
             {std::move(ExcludeFileRe), compileGlobPatterns(V)});
         V.clear();
       }
@@ -1102,10 +1105,10 @@ ScriptParser::readInputSectionRules(StringRef FilePattern) {
     if (K2 != SortSectionPolicy::Default) {
       Cmd->SortInner = K2;
       expect("(");
-      Cmd->SectionsVec.push_back({llvm::Regex(), readFilePatterns()});
+      Cmd->SectionPatterns.push_back({Regex(), readFilePatterns()});
       expect(")");
     } else {
-      Cmd->SectionsVec.push_back({llvm::Regex(), readFilePatterns()});
+      Cmd->SectionPatterns.push_back({Regex(), readFilePatterns()});
     }
     expect(")");
     selectSortKind(Cmd);
@@ -1126,8 +1129,8 @@ ScriptParser::readInputSectionDescription(StringRef Tok) {
     StringRef FilePattern = next();
     InputSectionDescription *Cmd = readInputSectionRules(FilePattern);
     expect(")");
-    for (std::pair<llvm::Regex, llvm::Regex> &Regex : Cmd->SectionsVec)
-      Opt.KeptSections.push_back(&Regex.second);
+    for (SectionPattern &Pat : Cmd->SectionPatterns)
+      Opt.KeptSections.push_back(&Pat.SectionRe);
     return Cmd;
   }
   return readInputSectionRules(Tok);
