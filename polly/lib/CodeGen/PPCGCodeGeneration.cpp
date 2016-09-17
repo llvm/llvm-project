@@ -379,6 +379,15 @@ private:
   /// @returns The Assembly string of the kernel.
   std::string finalizeKernelFunction();
 
+  /// Finalize the generation of the kernel arguments.
+  ///
+  /// This function ensures that not-read-only scalars used in a kernel are
+  /// stored back to the global memory location they ared backed up with before
+  /// the kernel terminates.
+  ///
+  /// @params Kernel The kernel to finalize kernel arguments for.
+  void finalizeKernelArguments(ppcg_kernel *Kernel);
+
   /// Create code that allocates memory to store arrays on device.
   void allocateDeviceArrays();
 
@@ -1085,16 +1094,23 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
       DevArray = Builder.CreateGEP(DevArray, Builder.CreateNeg(Offset));
       DevArray = Builder.CreatePointerCast(DevArray, Builder.getInt8PtrTy());
     }
-
-    Instruction *Param = new AllocaInst(
-        Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
-        EntryBlock->getTerminator());
-    Builder.CreateStore(DevArray, Param);
     Value *Slot = Builder.CreateGEP(
         Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
-    Value *ParamTyped =
-        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
-    Builder.CreateStore(ParamTyped, Slot);
+
+    if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      Value *ValPtr = BlockGen.getOrCreateAlloca(SAI);
+      Value *ValPtrCast =
+          Builder.CreatePointerCast(ValPtr, Builder.getInt8PtrTy());
+      Builder.CreateStore(ValPtrCast, Slot);
+    } else {
+      Instruction *Param = new AllocaInst(
+          Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
+          EntryBlock->getTerminator());
+      Builder.CreateStore(DevArray, Param);
+      Value *ParamTyped =
+          Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+      Builder.CreateStore(ParamTyped, Slot);
+    }
     Index++;
   }
 
@@ -1191,13 +1207,13 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
 
   create(isl_ast_node_copy(Kernel->tree));
 
+  finalizeKernelArguments(Kernel);
   Function *F = Builder.GetInsertBlock()->getParent();
   addCUDAAnnotations(F->getParent(), BlockDimX, BlockDimY, BlockDimZ);
   clearDominators(F);
   clearScalarEvolution(F);
   clearLoops(F);
 
-  Builder.SetInsertPoint(&HostInsertPoint);
   IDToValue = HostIDs;
 
   ValueMap = std::move(HostValueMap);
@@ -1210,9 +1226,10 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
     S.invalidateScopArrayInfo(BasePtr, ScopArrayInfo::MK_Array);
   LocalArrays.clear();
 
+  std::string ASMString = finalizeKernelFunction();
+  Builder.SetInsertPoint(&HostInsertPoint);
   Value *Parameters = createLaunchParameters(Kernel, F, SubtreeValues);
 
-  std::string ASMString = finalizeKernelFunction();
   std::string Name = "kernel_" + std::to_string(Kernel->id);
   Value *KernelString = Builder.CreateGlobalStringPtr(ASMString, Name);
   Value *NameString = Builder.CreateGlobalStringPtr(Name, Name + "_name");
@@ -1255,7 +1272,13 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     if (!ppcg_kernel_requires_array_argument(Kernel, i))
       continue;
 
-    Args.push_back(Builder.getInt8PtrTy());
+    if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+      Args.push_back(SAI->getElementType());
+    } else {
+      Args.push_back(Builder.getInt8PtrTy());
+    }
   }
 
   int NumHostIters = isl_space_dim(Kernel->space, isl_dim_set);
@@ -1382,15 +1405,62 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
       continue;
     }
 
+    Value *Val = &*Arg;
+
+    if (!gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      Type *TypePtr = SAI->getElementType()->getPointerTo();
+      Value *TypedArgPtr = Builder.CreatePointerCast(Val, TypePtr);
+      Val = Builder.CreateLoad(TypedArgPtr);
+    }
+
     Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
-    Value *ArgPtr = &*Arg;
-    Type *TypePtr = SAI->getElementType()->getPointerTo();
-    Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
-    Value *Val = Builder.CreateLoad(TypedArgPtr);
     Builder.CreateStore(Val, Alloca);
 
     Arg++;
   }
+}
+
+void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
+  auto *FN = Builder.GetInsertBlock()->getParent();
+  auto Arg = FN->arg_begin();
+
+  bool StoredScalar = false;
+  for (long i = 0; i < Kernel->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    isl_id_free(Id);
+
+    if (SAI->getNumberOfDimensions() > 0) {
+      Arg++;
+      continue;
+    }
+
+    if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      Arg++;
+      continue;
+    }
+
+    Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
+    Value *ArgPtr = &*Arg;
+    Type *TypePtr = SAI->getElementType()->getPointerTo();
+    Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
+    Value *Val = Builder.CreateLoad(Alloca);
+    Builder.CreateStore(Val, TypedArgPtr);
+    StoredScalar = true;
+
+    Arg++;
+  }
+
+  if (StoredScalar)
+    /// In case more than one thread contains scalar stores, the generated
+    /// code might be incorrect, if we only store at the end of the kernel.
+    /// To support this case we need to store these scalars back at each
+    /// memory store or at least before each kernel barrier.
+    if (Kernel->n_block != 0 || Kernel->n_grid != 0)
+      BuildSuccessful = 0;
 }
 
 void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
@@ -1938,7 +2008,8 @@ public:
       PPCGArray.n_ref = 0;
       PPCGArray.refs = nullptr;
       PPCGArray.accessed = true;
-      PPCGArray.read_only_scalar = false;
+      PPCGArray.read_only_scalar =
+          Array->isReadOnly() && Array->getNumberOfDimensions() == 0;
       PPCGArray.has_compound_element = false;
       PPCGArray.local = false;
       PPCGArray.declare_local = false;

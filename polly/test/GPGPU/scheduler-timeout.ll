@@ -32,22 +32,20 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CODE-NEXT:# host
 ; CODE-NEXT: {
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (4096) * (4096) * sizeof(float), cudaMemcpyHostToDevice));
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_alpha, &MemRef_alpha, sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_B, MemRef_B, (4096) * (4096) * sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_D, MemRef_D, (4096) * (4096) * sizeof(float), cudaMemcpyHostToDevice));
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_beta, &MemRef_beta, sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_C, MemRef_C, (4096) * (4096) * sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(16, 32);
 ; CODE-NEXT:     dim3 k0_dimGrid(128, 128);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_tmp, dev_MemRef_A, dev_MemRef_alpha, dev_MemRef_B);
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_tmp, dev_MemRef_A, MemRef_alpha, dev_MemRef_B);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
 ; CODE:   {
 ; CODE-NEXT:     dim3 k1_dimBlock(16, 32);
 ; CODE-NEXT:     dim3 k1_dimGrid(128, 128);
-; CODE-NEXT:     kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_tmp, dev_MemRef_D, dev_MemRef_beta, dev_MemRef_C);
+; CODE-NEXT:     kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_tmp, dev_MemRef_D, MemRef_beta, dev_MemRef_C);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
