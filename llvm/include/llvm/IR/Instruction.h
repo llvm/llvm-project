@@ -232,12 +232,12 @@ public:
   /// Retrieve the raw weight values of a conditional branch or select.
   /// Returns true on success with profile weights filled in.
   /// Returns false if no metadata or invalid metadata was found.
-  bool extractProfMetadata(uint64_t &TrueVal, uint64_t &FalseVal);
+  bool extractProfMetadata(uint64_t &TrueVal, uint64_t &FalseVal) const;
 
   /// Retrieve total raw weight values of a branch.
   /// Returns true on success with profile total weights filled in.
   /// Returns false if no metadata was found.
-  bool extractProfTotalWeight(uint64_t &TotalVal);
+  bool extractProfTotalWeight(uint64_t &TotalVal) const;
 
   /// Set the debug location information for this instruction.
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }

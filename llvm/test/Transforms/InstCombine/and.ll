@@ -414,3 +414,14 @@ define i32 @test34(i32 %A, i32 %B) {
   ret i32 %tmp.4
 }
 
+; FIXME: This test should only need -instsimplify (ValueTracking / computeKnownBits), not -instcombine.
+
+define <2 x i32> @PR24942(<2 x i32> %x) {
+; CHECK-LABEL: @PR24942(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %lshr = lshr <2 x i32> %x, <i32 31, i32 31>
+  %and = and <2 x i32> %lshr, <i32 2, i32 2>
+  ret <2 x i32> %and
+}
+

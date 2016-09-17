@@ -1343,7 +1343,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        ushll v1.16b, v25.16b, #6
 // CHECK-ERROR:                 ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        sshll2 v0.2d, v3.8s, #15
 // CHECK-ERROR:                      ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -2114,13 +2114,13 @@
         saddl2 v0.8h, v1.16h, v2.16b
         saddl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        saddl2 v0.4s, v1.8s, v2.8h
 // CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        saddl2 v0.8h, v1.16h, v2.16b
 // CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        saddl2 v0.2d, v1.4d, v2.4s
 // CHECK-ERROR:                      ^
 
@@ -2142,23 +2142,19 @@
         uaddl2 v0.4s, v1.8s, v2.8h
         uaddl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        uaddl2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        uaddl2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        uaddl2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
+// CHECK-ERROR-NEXT:        uaddl2 v0.8h, v1.16h, v2.16b
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
+// CHECK-ERROR-NEXT:        uaddl2 v0.4s, v1.8s, v2.8h
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
+// CHECK-ERROR-NEXT:        uaddl2 v0.2d, v1.4d, v2.4s
 
         ssubl v0.8h, v1.8h, v2.8b
         ssubl v0.4s, v1.4s, v2.4h
         ssubl v0.2d, v1.2d, v2.2s
 
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        ssubl v0.8h, v1.8h, v2.8b
-// CHECK-ERROR:                        ^
+// CHECK-ERROR: [[@LINE-4]]:22: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:        ssubl v0.8h, v1.8h, v2.8b
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        ssubl v0.4s, v1.4s, v2.4h
 // CHECK-ERROR:                        ^
@@ -2170,13 +2166,13 @@
         ssubl2 v0.4s, v1.8s, v2.8h
         ssubl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        ssubl2 v0.8h, v1.16h, v2.16b
 // CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        ssubl2 v0.4s, v1.8s, v2.8h
 // CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        ssubl2 v0.2d, v1.4d, v2.4s
 // CHECK-ERROR:                      ^
 
@@ -2198,15 +2194,12 @@
         usubl2 v0.4s, v1.8s, v2.8h
         usubl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        usubl2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        usubl2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        usubl2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         sabal v0.8h, v1.8h, v2.8b
         sabal v0.4s, v1.4s, v2.4h
@@ -2226,13 +2219,13 @@
         sabal2 v0.4s, v1.8s, v2.8h
         sabal2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        sabal2 v0.8h, v1.16h, v2.16b
 // CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        sabal2 v0.4s, v1.8s, v2.8h
 // CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:        sabal2 v0.2d, v1.4d, v2.4s
 // CHECK-ERROR:                      ^
 
@@ -2254,15 +2247,12 @@
         uabal2 v0.4s, v1.8s, v2.8h
         uabal2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        uabal2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        uabal2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        uabal2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         sabdl v0.8h, v1.8h, v2.8b
         sabdl v0.4s, v1.4s, v2.4h
@@ -2282,15 +2272,12 @@
         sabdl2 v0.4s, v1.8s, v2.8h
         sabdl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        sabdl2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        sabdl2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        sabdl2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         uabdl v0.8h, v1.8h, v2.8b
         uabdl v0.4s, v1.4s, v2.4h
@@ -2310,15 +2297,12 @@
         uabdl2 v0.4s, v1.8s, v2.8h
         uabdl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        uabdl2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        uabdl2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        uabdl2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         smlal v0.8h, v1.8h, v2.8b
         smlal v0.4s, v1.4s, v2.4h
@@ -2338,71 +2322,56 @@
         smlal2 v0.4s, v1.8s, v2.8h
         smlal2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smlal2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smlal2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smlal2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         umlal v0.8h, v1.8h, v2.8b
         umlal v0.4s, v1.4s, v2.4h
         umlal v0.2d, v1.2d, v2.2s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:22: error: invalid operand for instruction
 // CHECK-ERROR:        umlal v0.8h, v1.8h, v2.8b
-// CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:22: error: invalid operand for instruction
 // CHECK-ERROR:        umlal v0.4s, v1.4s, v2.4h
-// CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:22: error: invalid operand for instruction
 // CHECK-ERROR:        umlal v0.2d, v1.2d, v2.2s
-// CHECK-ERROR:                        ^
 
         umlal2 v0.8h, v1.16h, v2.16b
         umlal2 v0.4s, v1.8s, v2.8h
         umlal2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umlal2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umlal2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umlal2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         smlsl v0.8h, v1.8h, v2.8b
         smlsl v0.4s, v1.4s, v2.4h
         smlsl v0.2d, v1.2d, v2.2s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:22: error: invalid operand for instruction
 // CHECK-ERROR:        smlsl v0.8h, v1.8h, v2.8b
-// CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:22: error: invalid operand for instruction
 // CHECK-ERROR:        smlsl v0.4s, v1.4s, v2.4h
-// CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:22: error: invalid operand for instruction
 // CHECK-ERROR:        smlsl v0.2d, v1.2d, v2.2s
-// CHECK-ERROR:                        ^
 
         smlsl2 v0.8h, v1.16h, v2.16b
         smlsl2 v0.4s, v1.8s, v2.8h
         smlsl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smlsl2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smlsl2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smlsl2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         umlsl v0.8h, v1.8h, v2.8b
         umlsl v0.4s, v1.4s, v2.4h
@@ -2422,15 +2391,12 @@
         umlsl2 v0.4s, v1.8s, v2.8h
         umlsl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umlsl2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umlsl2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umlsl2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         smull v0.8h, v1.8h, v2.8b
         smull v0.4s, v1.4s, v2.4h
@@ -2450,15 +2416,12 @@
         smull2 v0.4s, v1.8s, v2.8h
         smull2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smull2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smull2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        smull2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
         umull v0.8h, v1.8h, v2.8b
         umull v0.4s, v1.4s, v2.4h
@@ -2478,15 +2441,12 @@
         umull2 v0.4s, v1.8s, v2.8h
         umull2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umull2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umull2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        umull2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                      ^
 
 //------------------------------------------------------------------------------
 // Long - Variant 2
@@ -2505,12 +2465,10 @@
         sqdmlal2 v0.4s, v1.8s, v2.8h
         sqdmlal2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-3]]:25: error: invalid vector kind qualifier
 // CHECK-ERROR:        sqdmlal2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:25: error: invalid vector kind qualifier
 // CHECK-ERROR:        sqdmlal2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                        ^
 
         // Mismatched vector types
         sqdmlal v0.8h, v1.8b, v2.8b
@@ -2536,12 +2494,10 @@
         sqdmlsl2 v0.4s, v1.8s, v2.8h
         sqdmlsl2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-3]]:25: error: invalid vector kind qualifier
 // CHECK-ERROR:        sqdmlsl2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:25: error: invalid vector kind qualifier
 // CHECK-ERROR:        sqdmlsl2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                        ^
 
         // Mismatched vector types
         sqdmlsl v0.8h, v1.8b, v2.8b
@@ -2568,12 +2524,10 @@
         sqdmull2 v0.4s, v1.8s, v2.8h
         sqdmull2 v0.2d, v1.4d, v2.4s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-3]]:25: error: invalid vector kind qualifier
 // CHECK-ERROR:        sqdmull2 v0.4s, v1.8s, v2.8h
-// CHECK-ERROR:                        ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:25: error: invalid vector kind qualifier
 // CHECK-ERROR:        sqdmull2 v0.2d, v1.4d, v2.4s
-// CHECK-ERROR:                        ^
 
         // Mismatched vector types
         sqdmull v0.8h, v1.8b, v2.8b
@@ -2616,16 +2570,12 @@
 
 
         pmull2 v0.8h, v1.16h, v2.16b
-
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-1]]:23: error: invalid vector kind qualifier
 // CHECK-ERROR:        pmull2 v0.8h, v1.16h, v2.16b
-// CHECK-ERROR:                      ^
 
         pmull2 v0.q, v1.2d, v2.2d
-        
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-1]]:16: error: invalid vector kind qualifier
 // CHECK-ERROR:        pmull2 v0.q, v1.2d, v2.2d
-// CHECK-ERROR:                  ^
 
         // Mismatched vector types
         pmull2 v0.4s, v1.8h v2.8h
@@ -2662,15 +2612,12 @@
         saddw2 v0.4s, v1.4s, v2.8s
         saddw2 v0.2d, v1.2d, v2.4d
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        saddw2 v0.8h, v1.8h, v2.16h
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        saddw2 v0.4s, v1.4s, v2.8s
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        saddw2 v0.2d, v1.2d, v2.4d
-// CHECK-ERROR:                             ^
 
         uaddw v0.8h, v1.8h, v2.8h
         uaddw v0.4s, v1.4s, v2.4s
@@ -2690,15 +2637,12 @@
         uaddw2 v0.4s, v1.4s, v2.8s
         uaddw2 v0.2d, v1.2d, v2.4d
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        uaddw2 v0.8h, v1.8h, v2.16h
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        uaddw2 v0.4s, v1.4s, v2.8s
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        uaddw2 v0.2d, v1.2d, v2.4d
-// CHECK-ERROR:                             ^
 
         ssubw v0.8h, v1.8h, v2.8h
         ssubw v0.4s, v1.4s, v2.4s
@@ -2718,15 +2662,12 @@
         ssubw2 v0.4s, v1.4s, v2.8s
         ssubw2 v0.2d, v1.2d, v2.4d
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        ssubw2 v0.8h, v1.8h, v2.16h
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        ssubw2 v0.4s, v1.4s, v2.8s
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        ssubw2 v0.2d, v1.2d, v2.4d
-// CHECK-ERROR:                             ^
 
         usubw v0.8h, v1.8h, v2.8h
         usubw v0.4s, v1.4s, v2.4s
@@ -2746,15 +2687,12 @@
         usubw2 v0.4s, v1.4s, v2.8s
         usubw2 v0.2d, v1.2d, v2.4d
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        usubw2 v0.8h, v1.8h, v2.16h
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        usubw2 v0.4s, v1.4s, v2.8s
-// CHECK-ERROR:                             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:30: error: invalid vector kind qualifier
 // CHECK-ERROR:        usubw2 v0.2d, v1.2d, v2.4d
-// CHECK-ERROR:                             ^
 
 //------------------------------------------------------------------------------
 // Narrow
@@ -2764,15 +2702,12 @@
         addhn v0.4h, v1.4s, v2.4h
         addhn v0.2s, v1.2d, v2.2s
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-4]]:29: error: invalid vector kind qualifier
 // CHECK-ERROR:        addhn v0.8b, v1.8h, v2.8d
-// CHECK-ERROR:                            ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-5]]:29: error: invalid operand for instruction
 // CHECK-ERROR:        addhn v0.4h, v1.4s, v2.4h
-// CHECK-ERROR:                               ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: [[@LINE-6]]:29: error: invalid operand for instruction
 // CHECK-ERROR:        addhn v0.2s, v1.2d, v2.2s
-// CHECK-ERROR:                               ^
 
         addhn2 v0.16b, v1.8h, v2.8b
         addhn2 v0.8h, v1.4s, v2.4h
@@ -4479,10 +4414,10 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         dup v1.16b, d2
 // CHECK-ERROR:                     ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:         dup v11.8s, w16
 // CHECK-ERROR:             ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: invalid vector kind qualifier
 // CHECK-ERROR:         dup v17.4d, w28
 // CHECK-ERROR:             ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -6458,416 +6393,257 @@
 //----------------------------------------------------------------------
 
         uzp1 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         uzp1 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp1 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp1 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
 
         uzp2 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         uzp2 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp2 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp2 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
 
         zip1 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         zip1 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip1 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip1 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
 
+\
         zip2 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         zip2 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip2 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip2 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
 
         trn1 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         trn1 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn1 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn1 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
 
         trn2 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         trn2 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn2 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn2 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.1d, v1.1d, v2.1d
-
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
 //----------------------------------------------------------------------
 // Permutation with 3 vectors
 //----------------------------------------------------------------------
 
         uzp1 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         uzp1 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp1 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp1 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp1 v0.1d, v1.1d, v2.1d
-
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp1 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
         uzp2 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         uzp2 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp2 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         uzp2 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         uzp2 v0.1d, v1.1d, v2.1d
-
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         uzp2 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
         zip1 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         zip1 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip1 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip1 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip1 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip1 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
+
+
 
         zip2 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         zip2 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip2 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         zip2 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         zip2 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         zip2 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
+
 
         trn1 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         trn1 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn1 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn1 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn1 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn1 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
 
         trn2 v0.16b, v1.8b, v2.8b
+// CHECK-ERROR: [[@LINE-1]]:22: error: invalid operand for instruction
         trn2 v0.8b, v1.4b, v2.4b
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn2 v0.8h, v1.4h, v2.4h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.4h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.4s, v1.2s, v2.2s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.2s, v1.1s, v2.1s
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:28: error: invalid vector kind qualifier
         trn2 v0.2d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:21: error: invalid operand for instruction
         trn2 v0.1d, v1.1d, v2.1d
+// CHECK-ERROR: [[@LINE-1]]:14: error: invalid operand for instruction
 
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.16b, v1.8b, v2.8b
-// CHECK-ERROR:                      ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.8b, v1.4b, v2.4b
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.8h, v1.4h, v2.4h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.4h, v1.2h, v2.2h
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.4s, v1.2s, v2.2s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.2s, v1.1s, v2.1s
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.2d, v1.1d, v2.1d
-// CHECK-ERROR:                     ^
-// CHECK-ERROR:  error: invalid operand for instruction
-// CHECK-ERROR:         trn2 v0.1d, v1.1d, v2.1d
-// CHECK-ERROR:                 ^
+
 
 //----------------------------------------------------------------------
 // Floating Point  multiply (scalar, by element)

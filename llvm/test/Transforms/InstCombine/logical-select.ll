@@ -366,11 +366,11 @@ define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
   ret i4 %or
 }
 
-; Inverted 'and' constants mean this is a select.
+; Inverted 'and' constants mean this is a select which is canonicalized to a shuffle.
 
 define <4 x i32> @vec_sel_consts(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_sel_consts(
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> %a, <4 x i32> %b
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %and1 = and <4 x i32> %a, <i32 -1, i32 0, i32 0, i32 -1>
@@ -379,11 +379,9 @@ define <4 x i32> @vec_sel_consts(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %or
 }
 
-; The select condition constant is always derived from the first operand of the 'or'.
-
 define <3 x i129> @vec_sel_consts_weird(<3 x i129> %a, <3 x i129> %b) {
 ; CHECK-LABEL: @vec_sel_consts_weird(
-; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> <i1 false, i1 true, i1 false>, <3 x i129> %b, <3 x i129> %a
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i129> %b, <3 x i129> %a, <3 x i32> <i32 3, i32 1, i32 5>
 ; CHECK-NEXT:    ret <3 x i129> [[TMP1]]
 ;
   %and1 = and <3 x i129> %a, <i129 -1, i129 0, i129 -1>

@@ -124,9 +124,17 @@ createTargetMachine(Config &Conf, StringRef TheTriple,
 
 static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
                                  std::string PipelineDesc,
+                                 std::string AAPipelineDesc,
                                  bool DisableVerify) {
   PassBuilder PB(TM);
   AAManager AA;
+
+  // Parse a custom AA pipeline if asked to.
+  if (!AAPipelineDesc.empty())
+    if (!PB.parseAAPipeline(AA, AAPipelineDesc))
+      report_fatal_error("unable to parse AA pipeline description: " +
+                         AAPipelineDesc);
+
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
@@ -185,7 +193,8 @@ bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   if (Conf.OptPipeline.empty())
     runOldPMPasses(Conf, Mod, TM, IsThinLto);
   else
-    runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.DisableVerify);
+    runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
+                         Conf.DisableVerify);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 

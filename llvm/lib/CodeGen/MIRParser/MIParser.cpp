@@ -364,7 +364,7 @@ bool MIParser::parseBasicBlockDefinition(
 
   if (!Name.empty()) {
     BB = dyn_cast_or_null<BasicBlock>(
-        MF.getFunction()->getValueSymbolTable().lookup(Name));
+        MF.getFunction()->getValueSymbolTable()->lookup(Name));
     if (!BB)
       return error(Loc, Twine("basic block '") + Name +
                             "' is not defined in the function '" +
@@ -1383,7 +1383,7 @@ bool MIParser::parseIRBlock(BasicBlock *&BB, const Function &F) {
   switch (Token.kind()) {
   case MIToken::NamedIRBlock: {
     BB = dyn_cast_or_null<BasicBlock>(
-        F.getValueSymbolTable().lookup(Token.stringValue()));
+        F.getValueSymbolTable()->lookup(Token.stringValue()));
     if (!BB)
       return error(Twine("use of undefined IR block '") + Token.range() + "'");
     break;
@@ -1729,7 +1729,7 @@ bool MIParser::parseOperandsOffset(MachineOperand &Op) {
 bool MIParser::parseIRValue(const Value *&V) {
   switch (Token.kind()) {
   case MIToken::NamedIRValue: {
-    V = MF.getFunction()->getValueSymbolTable().lookup(Token.stringValue());
+    V = MF.getFunction()->getValueSymbolTable()->lookup(Token.stringValue());
     break;
   }
   case MIToken::IRValue: {

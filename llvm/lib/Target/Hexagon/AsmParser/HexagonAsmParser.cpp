@@ -114,7 +114,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo, bool MatchingInlineAsm) override;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op, unsigned Kind) override;
-  void OutOfRange(SMLoc IDLoc, long long Val, long long Max);
+  bool OutOfRange(SMLoc IDLoc, long long Val, long long Max);
   int processInstruction(MCInst &Inst, OperandVector const &Operands,
                          SMLoc IDLoc);
 
@@ -637,60 +637,63 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
     uint64_t Err = Check.getError();
     if (Err != HexagonMCErrInfo::CHECK_SUCCESS) {
       if (HexagonMCErrInfo::CHECK_ERROR_BRANCHES & Err)
-        Error(IDLoc,
-              "unconditional branch cannot precede another branch in packet");
+        return Error(
+            IDLoc,
+            "unconditional branch cannot precede another branch in packet");
 
       if (HexagonMCErrInfo::CHECK_ERROR_NEWP & Err ||
           HexagonMCErrInfo::CHECK_ERROR_NEWV & Err)
-        Error(IDLoc, "register `" + R +
-                         "' used with `.new' "
-                         "but not validly modified in the same packet");
+        return Error(IDLoc, "register `" + R +
+                                "' used with `.new' "
+                                "but not validly modified in the same packet");
 
       if (HexagonMCErrInfo::CHECK_ERROR_REGISTERS & Err)
-        Error(IDLoc, "register `" + R + "' modified more than once");
+        return Error(IDLoc, "register `" + R + "' modified more than once");
 
       if (HexagonMCErrInfo::CHECK_ERROR_READONLY & Err)
-        Error(IDLoc, "cannot write to read-only register `" + R + "'");
+        return Error(IDLoc, "cannot write to read-only register `" + R + "'");
 
       if (HexagonMCErrInfo::CHECK_ERROR_LOOP & Err)
-        Error(IDLoc, "loop-setup and some branch instructions "
-                     "cannot be in the same packet");
+        return Error(IDLoc, "loop-setup and some branch instructions "
+                            "cannot be in the same packet");
 
       if (HexagonMCErrInfo::CHECK_ERROR_ENDLOOP & Err) {
         Twine N(HexagonMCInstrInfo::isInnerLoop(MCB) ? '0' : '1');
-        Error(IDLoc, "packet marked with `:endloop" + N + "' " +
+        return Error(IDLoc,
+                     "packet marked with `:endloop" + N + "' " +
                          "cannot contain instructions that modify register " +
                          "`" + R + "'");
       }
 
       if (HexagonMCErrInfo::CHECK_ERROR_SOLO & Err)
-        Error(IDLoc,
-              "instruction cannot appear in packet with other instructions");
+        return Error(
+            IDLoc,
+            "instruction cannot appear in packet with other instructions");
 
       if (HexagonMCErrInfo::CHECK_ERROR_NOSLOTS & Err)
-        Error(IDLoc, "too many slots used in packet");
+        return Error(IDLoc, "too many slots used in packet");
 
       if (Err & HexagonMCErrInfo::CHECK_ERROR_SHUFFLE) {
         uint64_t Erm = Check.getShuffleError();
 
         if (HexagonShuffler::SHUFFLE_ERROR_INVALID == Erm)
-          Error(IDLoc, "invalid instruction packet");
+          return Error(IDLoc, "invalid instruction packet");
         else if (HexagonShuffler::SHUFFLE_ERROR_STORES == Erm)
-          Error(IDLoc, "invalid instruction packet: too many stores");
+          return Error(IDLoc, "invalid instruction packet: too many stores");
         else if (HexagonShuffler::SHUFFLE_ERROR_LOADS == Erm)
-          Error(IDLoc, "invalid instruction packet: too many loads");
+          return Error(IDLoc, "invalid instruction packet: too many loads");
         else if (HexagonShuffler::SHUFFLE_ERROR_BRANCHES == Erm)
-          Error(IDLoc, "too many branches in packet");
+          return Error(IDLoc, "too many branches in packet");
         else if (HexagonShuffler::SHUFFLE_ERROR_NOSLOTS == Erm)
-          Error(IDLoc, "invalid instruction packet: out of slots");
+          return Error(IDLoc, "invalid instruction packet: out of slots");
         else if (HexagonShuffler::SHUFFLE_ERROR_SLOTS == Erm)
-          Error(IDLoc, "invalid instruction packet: slot error");
+          return Error(IDLoc, "invalid instruction packet: slot error");
         else if (HexagonShuffler::SHUFFLE_ERROR_ERRATA2 == Erm)
-          Error(IDLoc, "v60 packet violation");
+          return Error(IDLoc, "v60 packet violation");
         else if (HexagonShuffler::SHUFFLE_ERROR_STORE_LOAD_CONFLICT == Erm)
-          Error(IDLoc, "slot 0 instruction does not allow slot 1 store");
+          return Error(IDLoc, "slot 0 instruction does not allow slot 1 store");
         else
-          Error(IDLoc, "unknown error in instruction packet");
+          return Error(IDLoc, "unknown error in instruction packet");
       }
     }
 
@@ -1508,7 +1511,8 @@ unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
-void HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
+// FIXME: Calls to OutOfRange shoudl propagate failure up to parseStatement.
+bool HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
   std::string errStr;
   raw_string_ostream ES(errStr);
   ES << "value " << Val << "(" << format_hex(Val, 0) << ") out of range: ";
@@ -1516,7 +1520,7 @@ void HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
     ES << "0-" << Max;
   else
     ES << Max << "-" << (-Max - 1);
-  Error(IDLoc, ES.str().c_str());
+  return Parser.printError(IDLoc, ES.str().c_str());
 }
 
 int HexagonAsmParser::processInstruction(MCInst &Inst,

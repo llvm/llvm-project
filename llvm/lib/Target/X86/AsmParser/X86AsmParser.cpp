@@ -659,20 +659,15 @@ private:
     }
   };
 
-  bool Error(SMLoc L, const Twine &Msg,
-             ArrayRef<SMRange> Ranges = None,
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = None,
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
-    if (MatchingInlineAsm) return true;
-    return Parser.Error(L, Msg, Ranges);
-  }
-
-  bool ErrorAndEatStatement(SMLoc L, const Twine &Msg,
-          ArrayRef<SMRange> Ranges = None,
-          bool MatchingInlineAsm = false) {
-    MCAsmParser &Parser = getParser();
-    Parser.eatToEndOfStatement();
-    return Error(L, Msg, Ranges, MatchingInlineAsm);
+    if (MatchingInlineAsm) {
+      if (!getLexer().isAtStartOfStatement())
+        Parser.eatToEndOfStatement();
+      return false;
+    }
+    return Parser.Error(L, Msg, Range);
   }
 
   std::nullptr_t ErrorOperand(SMLoc Loc, StringRef Msg) {
@@ -1895,13 +1890,11 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
       if(getLexer().is(AsmToken::Integer)) {
         // Parse memory broadcasting ({1to<NUM>}).
         if (getLexer().getTok().getIntVal() != 1)
-          return !ErrorAndEatStatement(getLexer().getLoc(),
-                                       "Expected 1to<NUM> at this point");
+          return !TokError("Expected 1to<NUM> at this point");
         Parser.Lex();  // Eat "1" of 1to8
         if (!getLexer().is(AsmToken::Identifier) ||
             !getLexer().getTok().getIdentifier().startswith("to"))
-          return !ErrorAndEatStatement(getLexer().getLoc(),
-                                       "Expected 1to<NUM> at this point");
+          return !TokError("Expected 1to<NUM> at this point");
         // Recognize only reasonable suffixes.
         const char *BroadcastPrimitive =
           StringSwitch<const char*>(getLexer().getTok().getIdentifier())
@@ -1911,12 +1904,10 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
             .Case("to16", "{1to16}")
             .Default(nullptr);
         if (!BroadcastPrimitive)
-          return !ErrorAndEatStatement(getLexer().getLoc(),
-                                       "Invalid memory broadcast primitive.");
+          return !TokError("Invalid memory broadcast primitive.");
         Parser.Lex();  // Eat "toN" of 1toN
         if (!getLexer().is(AsmToken::RCurly))
-          return !ErrorAndEatStatement(getLexer().getLoc(),
-                                       "Expected } at this point");
+          return !TokError("Expected } at this point");
         Parser.Lex();  // Eat "}"
         Operands.push_back(X86Operand::CreateToken(BroadcastPrimitive,
                                                    consumedToken));
@@ -1929,8 +1920,7 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
         if (std::unique_ptr<X86Operand> Op = ParseOperand()) {
           Operands.push_back(std::move(Op));
           if (!getLexer().is(AsmToken::RCurly))
-            return !ErrorAndEatStatement(getLexer().getLoc(),
-                                         "Expected } at this point");
+            return !TokError("Expected } at this point");
           Operands.push_back(X86Operand::CreateToken("}", consumeToken()));
 
           // Parse "zeroing non-masked" semantic {z}
@@ -1938,12 +1928,10 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
             Operands.push_back(X86Operand::CreateToken("{z}", consumeToken()));
             if (!getLexer().is(AsmToken::Identifier) ||
                 getLexer().getTok().getIdentifier() != "z")
-              return !ErrorAndEatStatement(getLexer().getLoc(),
-                                           "Expected z at this point");
+              return !TokError("Expected z at this point");
             Parser.Lex();  // Eat the z
             if (!getLexer().is(AsmToken::RCurly))
-              return !ErrorAndEatStatement(getLexer().getLoc(),
-                                           "Expected } at this point");
+              return !TokError("Expected } at this point");
             Parser.Lex();  // Eat the }
           }
         }
@@ -2287,7 +2275,6 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         if (!HandleAVX512Operand(Operands, *Operands.back()))
           return true;
       } else {
-         Parser.eatToEndOfStatement();
          return true;
       }
       // check for comma and eat it
@@ -2303,8 +2290,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         isParsingIntelSyntax() && isParsingInlineAsm() &&
         (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
     if (getLexer().isNot(AsmToken::EndOfStatement) && !CurlyAsEndOfStatement)
-      return ErrorAndEatStatement(getLexer().getLoc(),
-                                  "unexpected token in argument list");
+      return TokError("unexpected token in argument list");
    }
 
   // Consume the EndOfStatement or the prefix separator Slash
@@ -2570,7 +2556,6 @@ void X86AsmParser::MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op,
 bool X86AsmParser::ErrorMissingFeature(SMLoc IDLoc, uint64_t ErrorInfo,
                                        bool MatchingInlineAsm) {
   assert(ErrorInfo && "Unknown missing feature!");
-  ArrayRef<SMRange> EmptyRanges = None;
   SmallString<126> Msg;
   raw_svector_ostream OS(Msg);
   OS << "instruction requires:";
@@ -2580,7 +2565,7 @@ bool X86AsmParser::ErrorMissingFeature(SMLoc IDLoc, uint64_t ErrorInfo,
       OS << ' ' << getSubtargetFeatureName(ErrorInfo & Mask);
     Mask <<= 1;
   }
-  return Error(IDLoc, OS.str(), EmptyRanges, MatchingInlineAsm);
+  return Error(IDLoc, OS.str(), SMRange(), MatchingInlineAsm);
 }
 
 bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -2591,7 +2576,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   assert(!Operands.empty() && "Unexpect empty operand list!");
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
   assert(Op.isToken() && "Leading operand should always be a mnemonic!");
-  ArrayRef<SMRange> EmptyRanges = None;
+  SMRange EmptyRange = None;
 
   // First, handle aliases that expand to multiple instructions.
   MatchFPUWaitAlias(IDLoc, Op, Operands, Out, MatchingInlineAsm);
@@ -2698,7 +2683,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
       OS << "'" << Base << MatchChars[i] << "'";
     }
     OS << ")";
-    Error(IDLoc, OS.str(), EmptyRanges, MatchingInlineAsm);
+    Error(IDLoc, OS.str(), EmptyRange, MatchingInlineAsm);
     return true;
   }
 
@@ -2708,17 +2693,15 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // mnemonic was invalid.
   if (std::count(std::begin(Match), std::end(Match), Match_MnemonicFail) == 4) {
     if (!WasOriginallyInvalidOperand) {
-      SMRange OpRange = Op.getLocRange();
-      ArrayRef<SMRange> Ranges = MatchingInlineAsm ? EmptyRanges : OpRange;
       return Error(IDLoc, "invalid instruction mnemonic '" + Base + "'",
-                   Ranges, MatchingInlineAsm);
+                   Op.getLocRange(), MatchingInlineAsm);
     }
 
     // Recover location info for the operand if we know which was the problem.
     if (ErrorInfo != ~0ULL) {
       if (ErrorInfo >= Operands.size())
-        return Error(IDLoc, "too few operands for instruction",
-                     EmptyRanges, MatchingInlineAsm);
+        return Error(IDLoc, "too few operands for instruction", EmptyRange,
+                     MatchingInlineAsm);
 
       X86Operand &Operand = (X86Operand &)*Operands[ErrorInfo];
       if (Operand.getStartLoc().isValid()) {
@@ -2728,7 +2711,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
       }
     }
 
-    return Error(IDLoc, "invalid operand for instruction", EmptyRanges,
+    return Error(IDLoc, "invalid operand for instruction", EmptyRange,
                  MatchingInlineAsm);
   }
 
@@ -2745,13 +2728,13 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // operand failure.
   if (std::count(std::begin(Match), std::end(Match),
                  Match_InvalidOperand) == 1) {
-    return Error(IDLoc, "invalid operand for instruction", EmptyRanges,
+    return Error(IDLoc, "invalid operand for instruction", EmptyRange,
                  MatchingInlineAsm);
   }
 
   // If all of these were an outright failure, report it in a useless way.
   Error(IDLoc, "unknown use of instruction mnemonic without a size suffix",
-        EmptyRanges, MatchingInlineAsm);
+        EmptyRange, MatchingInlineAsm);
   return true;
 }
 
@@ -2764,7 +2747,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
   assert(Op.isToken() && "Leading operand should always be a mnemonic!");
   StringRef Mnemonic = Op.getToken();
-  ArrayRef<SMRange> EmptyRanges = None;
+  SMRange EmptyRange = None;
 
   // First, handle aliases that expand to multiple instructions.
   MatchFPUWaitAlias(IDLoc, Op, Operands, Out, MatchingInlineAsm);
@@ -2836,10 +2819,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   // If it's a bad mnemonic, all results will be the same.
   if (Match.back() == Match_MnemonicFail) {
-    ArrayRef<SMRange> Ranges =
-        MatchingInlineAsm ? EmptyRanges : Op.getLocRange();
     return Error(IDLoc, "invalid instruction mnemonic '" + Mnemonic + "'",
-                 Ranges, MatchingInlineAsm);
+                 Op.getLocRange(), MatchingInlineAsm);
   }
 
   // If exactly one matched, then we treat that as a successful match (and the
@@ -2862,11 +2843,9 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   } else if (NumSuccessfulMatches > 1) {
     assert(UnsizedMemOp &&
            "multiple matches only possible with unsized memory operands");
-    SMRange OpRange = UnsizedMemOp->getLocRange();
-    ArrayRef<SMRange> Ranges = MatchingInlineAsm ? EmptyRanges : OpRange;
     return Error(UnsizedMemOp->getStartLoc(),
                  "ambiguous operand size for instruction '" + Mnemonic + "\'",
-                 Ranges, MatchingInlineAsm);
+                 UnsizedMemOp->getLocRange(), MatchingInlineAsm);
   }
 
   // If one instruction matched with a missing feature, report this as a
@@ -2882,12 +2861,12 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // operand failure.
   if (std::count(std::begin(Match), std::end(Match),
                  Match_InvalidOperand) == 1) {
-    return Error(IDLoc, "invalid operand for instruction", EmptyRanges,
+    return Error(IDLoc, "invalid operand for instruction", EmptyRange,
                  MatchingInlineAsm);
   }
 
   // If all of these were an outright failure, report it in a useless way.
-  return Error(IDLoc, "unknown instruction mnemonic", EmptyRanges,
+  return Error(IDLoc, "unknown instruction mnemonic", EmptyRange,
                MatchingInlineAsm);
 }
 
