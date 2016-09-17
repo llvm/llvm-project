@@ -114,7 +114,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (HasStackObjects || MaySpill)
     PrivateSegmentWaveByteOffset = true;
 
-  if (ST.isAmdHsaOS()) {
+  if (ST.isAmdCodeObjectV2()) {
     if (HasStackObjects || MaySpill)
       PrivateSegmentBuffer = true;
 

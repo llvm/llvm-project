@@ -2504,7 +2504,7 @@ bool LLParser::PerFunctionState::FinishFunction() {
 Value *LLParser::PerFunctionState::GetVal(const std::string &Name, Type *Ty,
                                           LocTy Loc) {
   // Look this name up in the normal function symbol table.
-  Value *Val = F.getValueSymbolTable().lookup(Name);
+  Value *Val = F.getValueSymbolTable()->lookup(Name);
 
   // If this is a forward reference for the value, see if we already created a
   // forward ref record.
@@ -2922,7 +2922,7 @@ bool LLParser::ParseValID(ValID &ID, PerFunctionState *PFS) {
         return Error(Label.Loc, "cannot take address of numeric label after "
                                 "the function is defined");
       BB = dyn_cast_or_null<BasicBlock>(
-          F->getValueSymbolTable().lookup(Label.StrVal));
+          F->getValueSymbolTable()->lookup(Label.StrVal));
       if (!BB)
         return Error(Label.Loc, "referenced value is not a basic block");
     }
@@ -6507,7 +6507,7 @@ bool LLParser::ParseUseListOrderBB() {
     return Error(Label.Loc, "invalid numeric label in uselistorder_bb");
   if (Label.Kind != ValID::t_LocalName)
     return Error(Label.Loc, "expected basic block name in uselistorder_bb");
-  Value *V = F->getValueSymbolTable().lookup(Label.StrVal);
+  Value *V = F->getValueSymbolTable()->lookup(Label.StrVal);
   if (!V)
     return Error(Label.Loc, "invalid basic block in uselistorder_bb");
   if (!isa<BasicBlock>(V))

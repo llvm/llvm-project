@@ -105,7 +105,9 @@ available_targets = {
   'nvptx64--nvidiacl' : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
 }
 
-default_targets = ['nvptx--nvidiacl', 'nvptx64--nvidiacl', 'r600--', 'amdgcn--', 'amdgcn--amdhsa']
+available_targets['amdgcn-mesa-mesa3d'] = available_targets['amdgcn--']
+
+default_targets = ['nvptx--nvidiacl', 'nvptx64--nvidiacl', 'r600--', 'amdgcn--', 'amdgcn--amdhsa', 'amdgcn-mesa-mesa3d']
 
 targets = args
 if not targets:
@@ -167,6 +169,8 @@ for target in targets:
   for arch in archs:
     subdirs.append("%s-%s-%s" % (arch, t_vendor, t_os))
     subdirs.append("%s-%s" % (arch, t_os))
+    if t_os == 'mesa3d':
+        subdirs.append('amdgcn-amdhsa')
     subdirs.append(arch)
     if arch == 'amdgcn' or arch == 'r600':
         subdirs.append('amdgpu')

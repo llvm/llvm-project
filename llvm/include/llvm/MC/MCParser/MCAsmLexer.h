@@ -144,6 +144,7 @@ protected: // Can only create subclasses.
   const char *TokStart;
   bool SkipSpace;
   bool AllowAtInIdentifier;
+  bool IsAtStartOfStatement;
 
   MCAsmLexer();
 
@@ -163,6 +164,8 @@ public:
   /// the main input file has been reached.
   const AsmToken &Lex() {
     assert(!CurTok.empty());
+    // Mark if we parsing out a EndOfStatement.
+    IsAtStartOfStatement = CurTok.front().getKind() == AsmToken::EndOfStatement;
     CurTok.erase(CurTok.begin());
     // LexToken may generate multiple tokens via UnLex but will always return
     // the first one. Place returned value at head of CurTok vector.
@@ -174,8 +177,11 @@ public:
   }
 
   void UnLex(AsmToken const &Token) {
+    IsAtStartOfStatement = false;
     CurTok.insert(CurTok.begin(), Token);
   }
+
+  bool isAtStartOfStatement() { return IsAtStartOfStatement; }
 
   virtual StringRef LexUntilEndOfStatement() = 0;
 

@@ -12,12 +12,15 @@
 
 // C Includes
 // C++ Includes
-#include <string>
 
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 #include "lldb/Host/FileSpec.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <string>
+#include <tuple>
 
 class PlatformDarwin : public PlatformPOSIX {
 public:
@@ -88,6 +91,9 @@ public:
 
   lldb_private::Error
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
+
+  static std::tuple<uint32_t, uint32_t, uint32_t, llvm::StringRef>
+  ParseVersionBuildDir(llvm::StringRef str);
 
 protected:
   void ReadLibdispatchOffsetsAddress(lldb_private::Process *process);

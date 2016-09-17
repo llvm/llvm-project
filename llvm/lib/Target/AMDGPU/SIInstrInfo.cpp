@@ -1812,6 +1812,21 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (isSOPK(MI)) {
+    int64_t Imm = getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
+    if (sopkIsZext(MI)) {
+      if (!isUInt<16>(Imm)) {
+        ErrInfo = "invalid immediate for SOPK instruction";
+        return false;
+      }
+    } else {
+      if (!isInt<16>(Imm)) {
+        ErrInfo = "invalid immediate for SOPK instruction";
+        return false;
+      }
+    }
+  }
+
   if (Desc.getOpcode() == AMDGPU::V_MOVRELS_B32_e32 ||
       Desc.getOpcode() == AMDGPU::V_MOVRELS_B32_e64 ||
       Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||
@@ -1915,6 +1930,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) {
   case AMDGPU::S_CMP_GE_U32: return AMDGPU::V_CMP_GE_U32_e32;
   case AMDGPU::S_CMP_LT_U32: return AMDGPU::V_CMP_LT_U32_e32;
   case AMDGPU::S_CMP_LE_U32: return AMDGPU::V_CMP_LE_U32_e32;
+  case AMDGPU::S_CMP_EQ_U64: return AMDGPU::V_CMP_EQ_U64_e32;
+  case AMDGPU::S_CMP_LG_U64: return AMDGPU::V_CMP_NE_U64_e32;
   case AMDGPU::S_BCNT1_I32_B32: return AMDGPU::V_BCNT_U32_B32_e64;
   case AMDGPU::S_FF1_I32_B32: return AMDGPU::V_FFBL_B32_e32;
   case AMDGPU::S_FLBIT_I32_B32: return AMDGPU::V_FFBH_U32_e32;

@@ -947,6 +947,42 @@ static Instruction *foldSelectExtConst(InstCombiner::BuilderTy &Builder,
   return new ZExtInst(Select, SI.getType());
 }
 
+/// Try to transform a vector select with a constant condition vector into a
+/// shuffle for easier combining with other shuffles and insert/extract.
+static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
+  Value *CondVal = SI.getCondition();
+  Constant *CondC;
+  if (!CondVal->getType()->isVectorTy() || !match(CondVal, m_Constant(CondC)))
+    return nullptr;
+
+  unsigned NumElts = CondVal->getType()->getVectorNumElements();
+  SmallVector<Constant *, 16> Mask;
+  Mask.reserve(NumElts);
+  Type *Int32Ty = Type::getInt32Ty(CondVal->getContext());
+  for (unsigned i = 0; i != NumElts; ++i) {
+    Constant *Elt = CondC->getAggregateElement(i);
+    if (!Elt)
+      return nullptr;
+
+    if (Elt->isOneValue()) {
+      // If the select condition element is true, choose from the 1st vector.
+      Mask.push_back(ConstantInt::get(Int32Ty, i));
+    } else if (Elt->isNullValue()) {
+      // If the select condition element is false, choose from the 2nd vector.
+      Mask.push_back(ConstantInt::get(Int32Ty, i + NumElts));
+    } else if (isa<UndefValue>(Elt)) {
+      // If the select condition element is undef, the shuffle mask is undef.
+      Mask.push_back(UndefValue::get(Int32Ty));
+    } else {
+      // Bail out on a constant expression.
+      return nullptr;
+    }
+  }
+
+  return new ShuffleVectorInst(SI.getTrueValue(), SI.getFalseValue(),
+                               ConstantVector::get(Mask));
+}
+
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -956,6 +992,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Value *V =
           SimplifySelectInst(CondVal, TrueVal, FalseVal, DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(SI, V);
+
+  if (Instruction *I = canonicalizeSelectToShuffle(SI))
+    return I;
 
   if (SelType->getScalarType()->isIntegerTy(1) &&
       TrueVal->getType() == CondVal->getType()) {

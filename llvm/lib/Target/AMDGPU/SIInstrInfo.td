@@ -1193,7 +1193,7 @@ class VOP <string opName> {
   string OpName = opName;
 }
 
-class VOP2_REV <string revOp, bit isOrig> {
+class Commutable_REV <string revOp, bit isOrig> {
   string RevOp = revOp;
   bit IsOrig = isOrig;
 }
@@ -1325,7 +1325,7 @@ multiclass VOP2SI_m <vop2 op, string opName, VOPProfile p, list<dag> pattern,
                      string revOp> {
 
   def "" : VOP2_Pseudo <p.Outs32, p.Ins32, pattern, opName>,
-           VOP2_REV<revOp#"_e32", !eq(revOp, opName)>;
+           Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
 
   def _si : VOP2_Real_si <opName, op, p.Outs32, p.Ins32, p.Asm32>;
 }
@@ -1334,7 +1334,7 @@ multiclass VOP2_m <vop2 op, string opName, VOPProfile p, list <dag> pattern,
                    string revOp> {
 
   def "" : VOP2_Pseudo <p.Outs32, p.Ins32, pattern, opName>,
-           VOP2_REV<revOp#"_e32", !eq(revOp, opName)>;
+           Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
 
   def _si : VOP2_Real_si <opName, op, p.Outs32, p.Ins32, p.Asm32>;
 
@@ -1523,7 +1523,7 @@ multiclass VOP3_2_m <vop op, dag outs, dag ins, string asm,
                      bit HasMods = 1> {
 
   def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
-           VOP2_REV<revOp#"_e64", !eq(revOp, opName)>;
+           Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
   def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<1, 0, HasMods>;
@@ -1537,7 +1537,7 @@ multiclass VOP3SI_2_m <vop op, dag outs, dag ins, string asm,
                      bit HasMods = 1> {
 
   def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
-           VOP2_REV<revOp#"_e64", !eq(revOp, opName)>;
+           Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
   def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<1, 0, HasMods>;
@@ -1578,7 +1578,7 @@ multiclass VOP3_C_m <vop op, dag outs, dag ins, string asm,
                      string revOp, list<SchedReadWrite> sched> {
 
   def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
-           VOP2_REV<revOp#"_e64", !eq(revOp, opName)> {
+           Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
     let Defs = !if(defExec, [EXEC], []);
     let SchedRW = sched;
   }
@@ -1829,7 +1829,7 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
                    string revOpName = "", string asm = opName#"_e32 "#op_asm,
                    string alias_asm = opName#" "#op_asm> {
   def "" : VOPC_Pseudo <ins, pattern, opName>,
-           VOP2_REV<revOpName#"_e32", !eq(revOpName, opName)> {
+           Commutable_REV<revOpName#"_e32", !eq(revOpName, opName)> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = sched;
     let isConvergent = DefExec;
@@ -2106,7 +2106,7 @@ def getMaskedMIMGOp : InstrMapping {
 
 // Maps an commuted opcode to its original version
 def getCommuteOrig : InstrMapping {
-  let FilterClass = "VOP2_REV";
+  let FilterClass = "Commutable_REV";
   let RowFields = ["RevOp"];
   let ColFields = ["IsOrig"];
   let KeyCol = ["0"];
@@ -2115,30 +2115,12 @@ def getCommuteOrig : InstrMapping {
 
 // Maps an original opcode to its commuted version
 def getCommuteRev : InstrMapping {
-  let FilterClass = "VOP2_REV";
+  let FilterClass = "Commutable_REV";
   let RowFields = ["RevOp"];
   let ColFields = ["IsOrig"];
   let KeyCol = ["1"];
   let ValueCols = [["0"]];
 }
-
-def getCommuteCmpOrig : InstrMapping {
-  let FilterClass = "VOP2_REV";
-  let RowFields = ["RevOp"];
-  let ColFields = ["IsOrig"];
-  let KeyCol = ["0"];
-  let ValueCols = [["1"]];
-}
-
-// Maps an original opcode to its commuted version
-def getCommuteCmpRev : InstrMapping {
-  let FilterClass = "VOP2_REV";
-  let RowFields = ["RevOp"];
-  let ColFields = ["IsOrig"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
-}
-
 
 def getMCOpcodeGen : InstrMapping {
   let FilterClass = "SIMCInstr";
@@ -2147,6 +2129,15 @@ def getMCOpcodeGen : InstrMapping {
   let KeyCol = [!cast<string>(SIEncodingFamily.NONE)];
   let ValueCols = [[!cast<string>(SIEncodingFamily.SI)],
                    [!cast<string>(SIEncodingFamily.VI)]];
+}
+
+// Get equivalent SOPK instruction.
+def getSOPKOp : InstrMapping {
+  let FilterClass = "SOPKInstTable";
+  let RowFields = ["BaseCmpOp"];
+  let ColFields = ["IsSOPK"];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
 }
 
 def getAddr64Inst : InstrMapping {

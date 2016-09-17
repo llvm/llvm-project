@@ -148,12 +148,15 @@ bool SIAnnotateControlFlow::doInitialization(Module &M) {
 
   Break = M.getOrInsertFunction(
     BreakIntrinsic, Int64, Int64, (Type *)nullptr);
+  cast<Function>(Break)->setDoesNotAccessMemory();
 
   IfBreak = M.getOrInsertFunction(
     IfBreakIntrinsic, Int64, Boolean, Int64, (Type *)nullptr);
+  cast<Function>(IfBreak)->setDoesNotAccessMemory();;
 
   ElseBreak = M.getOrInsertFunction(
     ElseBreakIntrinsic, Int64, Int64, Int64, (Type *)nullptr);
+  cast<Function>(ElseBreak)->setDoesNotAccessMemory();
 
   Loop = M.getOrInsertFunction(
     LoopIntrinsic, Boolean, Int64, (Type *)nullptr);

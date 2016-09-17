@@ -26,7 +26,7 @@ using namespace llvm;
 
 ValueSymbolTable *BasicBlock::getValueSymbolTable() {
   if (Function *F = getParent())
-    return &F->getValueSymbolTable();
+    return F->getValueSymbolTable();
   return nullptr;
 }
 

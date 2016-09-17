@@ -221,7 +221,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
-  if (ST.isAmdHsaOS()) {
+  if (ST.isAmdCodeObjectV2()) {
     PreloadedPrivateBufferReg = TRI->getPreloadedValue(
       MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
   }
@@ -240,7 +240,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
   MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
 
-  if (ST.isAmdHsaOS()) {
+  if (ST.isAmdCodeObjectV2()) {
     MRI.addLiveIn(PreloadedPrivateBufferReg);
     MBB.addLiveIn(PreloadedPrivateBufferReg);
   }
@@ -265,7 +265,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       .addReg(PreloadedScratchWaveOffsetReg, RegState::Kill);
   }
 
-  if (ST.isAmdHsaOS()) {
+  if (ST.isAmdCodeObjectV2()) {
     // Insert copies from argument register.
     assert(
       !TRI->isSubRegisterEq(PreloadedPrivateBufferReg, ScratchRsrcReg) &&

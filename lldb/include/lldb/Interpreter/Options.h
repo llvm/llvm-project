@@ -188,6 +188,7 @@ public:
   /// @see Args::ParseOptions (Options&)
   /// @see man getopt_long_only
   //------------------------------------------------------------------
+  // TODO: Make this function take a StringRef.
   virtual Error SetOptionValue(uint32_t option_idx, const char *option_arg,
                                ExecutionContext *execution_context) = 0;
 

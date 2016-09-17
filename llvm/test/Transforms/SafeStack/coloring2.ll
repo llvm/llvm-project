@@ -474,6 +474,45 @@ entry:
   ret i32 %z3
 }
 
+define void @end_loop() safestack {
+; CHECK-LABEL: define void @end_loop()
+entry:
+; CHECK:        %[[USP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+; CHECK-NEXT:   getelementptr i8, i8* %[[USP]], i32 -16
+  %x = alloca i8, align 4
+  call void @llvm.lifetime.start(i64 4, i8* %x) nounwind
+  br label %l2
+
+l2:
+  call void @capture8(i8* %x)
+  call void @llvm.lifetime.end(i64 4, i8* %x) nounwind
+  br label %l2
+}
+
+; Check that @x and @y get distinct stack slots => @x lifetime does not break
+; when control re-enters l2.
+define void @start_loop() safestack {
+; CHECK-LABEL: define void @start_loop()
+entry:
+; CHECK:        %[[USP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+; CHECK-NEXT:   getelementptr i8, i8* %[[USP]], i32 -16
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+  call void @llvm.lifetime.start(i64 4, i8* %x) nounwind
+  br label %l2
+
+l2:
+; CHECK:   getelementptr i8, i8* %[[USP]], i32 -8
+  call void @llvm.lifetime.start(i64 4, i8* %y) nounwind
+  call void @capture8(i8* %y)
+  call void @llvm.lifetime.end(i64 4, i8* %y) nounwind
+
+; CHECK:   getelementptr i8, i8* %[[USP]], i32 -4
+  call void @llvm.lifetime.start(i64 4, i8* %x) nounwind
+  call void @capture8(i8* %x)
+  br label %l2
+}
+
 declare void @llvm.lifetime.start(i64, i8* nocapture)
 declare void @llvm.lifetime.end(i64, i8* nocapture)
 declare void @capture8(i8*)

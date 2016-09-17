@@ -42,6 +42,9 @@ enum class StripPolicy { None, All, Debug };
 // For --unresolved-symbols.
 enum class UnresolvedPolicy { NoUndef, ReportError, Warn, Ignore };
 
+// For --sort-section and linkerscript sorting rules.
+enum class SortSectionPolicy { Default, None, Alignment, Name, Priority };
+
 struct SymbolVersion {
   llvm::StringRef Name;
   bool IsExternCpp;
@@ -124,6 +127,7 @@ struct Configuration {
   bool ZOrigin;
   bool ZRelro;
   DiscardPolicy Discard;
+  SortSectionPolicy SortSection;
   StripPolicy Strip = StripPolicy::None;
   UnresolvedPolicy UnresolvedSymbols;
   BuildIdKind BuildId = BuildIdKind::None;

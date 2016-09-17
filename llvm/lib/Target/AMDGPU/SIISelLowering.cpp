@@ -685,9 +685,6 @@ SDValue SITargetLowering::LowerFormalArguments(
   }
 
   if (!AMDGPU::isShader(CallConv)) {
-    getOriginalFunctionArgs(DAG, DAG.getMachineFunction().getFunction(), Ins,
-                            Splits);
-
     assert(Info->hasWorkGroupIDX() && Info->hasWorkItemIDX());
   } else {
     assert(!Info->hasPrivateSegmentBuffer() && !Info->hasDispatchPtr() &&
@@ -735,7 +732,10 @@ SDValue SITargetLowering::LowerFormalArguments(
     CCInfo.AllocateReg(FlatScratchInitReg);
   }
 
-  AnalyzeFormalArguments(CCInfo, Splits);
+  if (!AMDGPU::isShader(CallConv))
+    analyzeFormalArgumentsCompute(CCInfo, Ins);
+  else
+    AnalyzeFormalArguments(CCInfo, Splits);
 
   SmallVector<SDValue, 16> Chains;
 
@@ -752,7 +752,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (VA.isMemLoc()) {
       VT = Ins[i].VT;
-      EVT MemVT = Splits[i].VT;
+      EVT MemVT = VA.getLocVT();
       const unsigned Offset = Subtarget->getExplicitKernelArgOffset() +
                               VA.getLocMemOffset();
       // The first 36 bytes of the input buffer contains information about
@@ -872,12 +872,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (HasStackObjects)
     Info->setHasNonSpillStackObjects(true);
 
-  if (ST.isAmdHsaOS()) {
+  if (ST.isAmdCodeObjectV2()) {
     // TODO: Assume we will spill without optimizations.
     if (HasStackObjects) {
       // If we have stack objects, we unquestionably need the private buffer
-      // resource. For the HSA ABI, this will be the first 4 user SGPR
-      // inputs. We can reserve those and use them directly.
+      // resource. For the Code Object V2 ABI, this will be the first 4 user
+      // SGPR inputs. We can reserve those and use them directly.
 
       unsigned PrivateSegmentBufferReg = TRI->getPreloadedValue(
         MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
@@ -1643,20 +1643,30 @@ SDValue SITargetLowering::LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
 }
 
 bool SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
-  if (Intr->getOpcode() != ISD::INTRINSIC_W_CHAIN)
-    return false;
-
-  switch (cast<ConstantSDNode>(Intr->getOperand(1))->getZExtValue()) {
-  default: return false;
-  case AMDGPUIntrinsic::amdgcn_if:
-  case AMDGPUIntrinsic::amdgcn_else:
-  case AMDGPUIntrinsic::amdgcn_break:
-  case AMDGPUIntrinsic::amdgcn_if_break:
-  case AMDGPUIntrinsic::amdgcn_else_break:
-  case AMDGPUIntrinsic::amdgcn_loop:
-  case AMDGPUIntrinsic::amdgcn_end_cf:
-    return true;
+  if (Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+    switch (cast<ConstantSDNode>(Intr->getOperand(1))->getZExtValue()) {
+    case AMDGPUIntrinsic::amdgcn_if:
+    case AMDGPUIntrinsic::amdgcn_else:
+    case AMDGPUIntrinsic::amdgcn_end_cf:
+    case AMDGPUIntrinsic::amdgcn_loop:
+      return true;
+    default:
+      return false;
+    }
   }
+
+  if (Intr->getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
+    switch (cast<ConstantSDNode>(Intr->getOperand(0))->getZExtValue()) {
+    case AMDGPUIntrinsic::amdgcn_break:
+    case AMDGPUIntrinsic::amdgcn_if_break:
+    case AMDGPUIntrinsic::amdgcn_else_break:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  return false;
 }
 
 void SITargetLowering::createDebuggerPrologueStackObjects(
@@ -1708,29 +1718,49 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
     Target = BR->getOperand(1);
   }
 
+  // FIXME: This changes the types of the intrinsics instead of introducing new
+  // nodes with the correct types.
+  // e.g. llvm.amdgcn.loop
+
+  // eg: i1,ch = llvm.amdgcn.loop t0, TargetConstant:i32<6271>, t3
+  // =>     t9: ch = llvm.amdgcn.loop t0, TargetConstant:i32<6271>, t3, BasicBlock:ch<bb1 0x7fee5286d088>
+
   if (!isCFIntrinsic(Intr)) {
     // This is a uniform branch so we don't need to legalize.
     return BRCOND;
   }
+
+  bool HaveChain = Intr->getOpcode() == ISD::INTRINSIC_VOID ||
+                   Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN;
 
   assert(!SetCC ||
         (SetCC->getConstantOperandVal(1) == 1 &&
          cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get() ==
                                                              ISD::SETNE));
 
-  // Build the result and
-  ArrayRef<EVT> Res(Intr->value_begin() + 1, Intr->value_end());
-
   // operands of the new intrinsic call
   SmallVector<SDValue, 4> Ops;
-  Ops.push_back(BRCOND.getOperand(0));
-  Ops.append(Intr->op_begin() + 1, Intr->op_end());
+  if (HaveChain)
+    Ops.push_back(BRCOND.getOperand(0));
+
+  Ops.append(Intr->op_begin() + (HaveChain ?  1 : 0), Intr->op_end());
   Ops.push_back(Target);
+
+  ArrayRef<EVT> Res(Intr->value_begin() + 1, Intr->value_end());
 
   // build the new intrinsic call
   SDNode *Result = DAG.getNode(
     Res.size() > 1 ? ISD::INTRINSIC_W_CHAIN : ISD::INTRINSIC_VOID, DL,
     DAG.getVTList(Res), Ops).getNode();
+
+  if (!HaveChain) {
+    SDValue Ops[] =  {
+      SDValue(Result, 0),
+      BRCOND.getOperand(0)
+    };
+
+    Result = DAG.getMergeValues(Ops, DL).getNode();
+  }
 
   if (BR) {
     // Give the branch instruction our target
@@ -1994,7 +2024,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_dispatch_ptr:
   case Intrinsic::amdgcn_queue_ptr: {
-    if (!Subtarget->isAmdHsaOS()) {
+    if (!Subtarget->isAmdCodeObjectV2()) {
       DiagnosticInfoUnsupported BadIntrin(
           *MF.getFunction(), "unsupported hsa intrinsic without hsa target",
           DL.getDebugLoc());

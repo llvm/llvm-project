@@ -216,7 +216,7 @@ define <4 x float> @test_select(float %f, float %g) {
 ; CHECK-LABEL: @test_select(
 ; CHECK-NEXT:    [[A0:%.*]] = insertelement <4 x float> undef, float %f, i32 0
 ; CHECK-NEXT:    [[A3:%.*]] = insertelement <4 x float> [[A0]], float 3.000000e+00, i32 3
-; CHECK-NEXT:    [[RET:%.*]] = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> [[A3]], <4 x float> <float undef, float 4.000000e+00, float 5.000000e+00, float undef>
+; CHECK-NEXT:    [[RET:%.*]] = shufflevector <4 x float> [[A3]], <4 x float> <float undef, float 4.000000e+00, float 5.000000e+00, float undef>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[RET]]
 ;
   %a0 = insertelement <4 x float> undef, float %f, i32 0
@@ -231,10 +231,12 @@ define <4 x float> @test_select(float %f, float %g) {
   ret <4 x float> %ret
 }
 
-; Check that instcombine doesn't wrongly fold the select statement into a ret <2 x i64> %v
+; Check that instcombine doesn't wrongly fold away the select completely.
+; TODO: Should this be an insertelement rather than a shuffle?
+
 define <2 x i64> @PR24922(<2 x i64> %v) {
 ; CHECK-LABEL: @PR24922(
-; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> <i1 false, i1 true>, <2 x i64> %v, <2 x i64> <i64 0, i64 undef>
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x i64> %v, <2 x i64> <i64 0, i64 undef>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    ret <2 x i64> [[RESULT]]
 ;
   %result = select <2 x i1> <i1 icmp eq (i64 extractelement (<2 x i64> bitcast (<4 x i32> <i32 15, i32 15, i32 15, i32 15> to <2 x i64>), i64 0), i64 0), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer

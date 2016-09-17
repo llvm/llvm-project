@@ -17,8 +17,9 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-MCAsmParser::MCAsmParser() : TargetParser(nullptr), ShowParsedOperands(0) {
-}
+MCAsmParser::MCAsmParser()
+    : TargetParser(nullptr), ShowParsedOperands(0), HadError(false),
+      PendingErrors() {}
 
 MCAsmParser::~MCAsmParser() {
 }
@@ -84,8 +85,18 @@ bool MCAsmParser::check(bool P, SMLoc Loc, const Twine &Msg) {
   return false;
 }
 
-bool MCAsmParser::TokError(const Twine &Msg, ArrayRef<SMRange> Ranges) {
-  Error(getLexer().getLoc(), Msg, Ranges);
+bool MCAsmParser::TokError(const Twine &Msg, SMRange Range) {
+  return Error(getLexer().getLoc(), Msg, Range);
+}
+
+bool MCAsmParser::Error(SMLoc L, const Twine &Msg, SMRange Range) {
+  HadError = true;
+
+  MCPendingError PErr;
+  PErr.Loc = L;
+  Msg.toVector(PErr.Msg);
+  PErr.Range = Range;
+  PendingErrors.push_back(PErr);
   return true;
 }
 

@@ -168,7 +168,8 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       is_range = true;
       range_start.assign(current_arg, range_start_len);
       range_end = current_arg + range_end_pos;
-    } else if (BreakpointID::StringIsBreakpointName(current_arg, error)) {
+    } else if (BreakpointID::StringIsBreakpointName(
+                   llvm::StringRef(current_arg), error)) {
       if (!error.Success()) {
         new_args.Clear();
         result.AppendError(error.AsCString());

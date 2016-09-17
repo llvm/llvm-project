@@ -1194,8 +1194,8 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                                      // "version" key instead of
                                      // "os_version"...
           {
-            Args::StringToVersion(value.str().c_str(), m_os_version_major,
-                                  m_os_version_minor, m_os_version_update);
+            Args::StringToVersion(value, m_os_version_major, m_os_version_minor,
+                                  m_os_version_update);
             if (m_os_version_major != UINT32_MAX)
               ++num_keys_decoded;
           } else if (name.equals("watchpoint_exceptions_received")) {

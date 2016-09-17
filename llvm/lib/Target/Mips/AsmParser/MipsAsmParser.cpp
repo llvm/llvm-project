@@ -924,9 +924,11 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(getFGR32Reg()));
     // FIXME: We ought to do this for -integrated-as without -via-file-asm too.
+    // FIXME: This should propagate failure up to parseStatement.
     if (!AsmParser.useOddSPReg() && RegIdx.Index & 1)
-      AsmParser.Error(StartLoc, "-mno-odd-spreg prohibits the use of odd FPU "
-                                "registers");
+      AsmParser.getParser().printError(
+          StartLoc, "-mno-odd-spreg prohibits the use of odd FPU "
+                    "registers");
   }
 
   void addFGRH32AsmRegOperands(MCInst &Inst, unsigned N) const {
@@ -1860,7 +1862,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           if (MemOffset < -32768 || MemOffset > 32767) {
             // Offset can't exceed 16bit value.
             expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad(), true);
-            return false;
+            return getParser().hasPendingError();
           }
         } else if (Op.isExpr()) {
           const MCExpr *Expr = Op.getExpr();
@@ -1870,11 +1872,11 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
             if (SR->getKind() == MCSymbolRefExpr::VK_None) {
               // Expand symbol.
               expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad(), false);
-              return false;
+              return getParser().hasPendingError();
             }
           } else if (!isEvaluated(Expr)) {
             expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad(), false);
-            return false;
+            return getParser().hasPendingError();
           }
         }
       }
@@ -2466,6 +2468,7 @@ bool MipsAsmParser::expandLoadAddress(unsigned DstReg, unsigned BaseReg,
     Error(IDLoc, "la used to load 64-bit address");
     // Continue as if we had 'dla' instead.
     Is32BitAddress = false;
+    return true;
   }
 
   // dla requires 64-bit addresses.
@@ -2692,9 +2695,9 @@ bool MipsAsmParser::expandUncondBranchMMPseudo(MCInst &Inst, SMLoc IDLoc,
         Inst.setOpcode(hasMips32r6() ? Mips::BC16_MMR6 : Mips::B16_MM);
     } else {
       if (!isInt<17>(Offset.getImm()))
-        Error(IDLoc, "branch target out of range");
+        return Error(IDLoc, "branch target out of range");
       if (OffsetToAlignment(Offset.getImm(), 1LL << 1))
-        Error(IDLoc, "branch to misaligned address");
+        return Error(IDLoc, "branch to misaligned address");
       Inst.clear();
       Inst.setOpcode(Mips::BEQ_MM);
       Inst.addOperand(MCOperand::createReg(Mips::ZERO));
@@ -3302,8 +3305,7 @@ bool MipsAsmParser::expandUlh(MCInst &Inst, bool Signed, SMLoc IDLoc,
   MipsTargetStreamer &TOut = getTargetStreamer();
 
   if (hasMips32r6() || hasMips64r6()) {
-    Error(IDLoc, "instruction not supported on mips32r6 or mips64r6");
-    return false;
+    return Error(IDLoc, "instruction not supported on mips32r6 or mips64r6");
   }
 
   warnIfNoMacro(IDLoc);
@@ -3380,10 +3382,8 @@ bool MipsAsmParser::expandUlw(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                               const MCSubtargetInfo *STI) {
   MipsTargetStreamer &TOut = getTargetStreamer();
 
-  if (hasMips32r6() || hasMips64r6()) {
-    Error(IDLoc, "instruction not supported on mips32r6 or mips64r6");
-    return false;
-  }
+  if (hasMips32r6() || hasMips64r6())
+    return Error(IDLoc, "instruction not supported on mips32r6 or mips64r6");
 
   const MCOperand &DstRegOp = Inst.getOperand(0);
   assert(DstRegOp.isReg() && "expected register operand kind");
@@ -4817,12 +4817,10 @@ bool MipsAsmParser::parseParenSuffix(StringRef Name, OperandVector &Operands) {
     Parser.Lex();
     if (parseOperand(Operands, Name)) {
       SMLoc Loc = getLexer().getLoc();
-      Parser.eatToEndOfStatement();
       return Error(Loc, "unexpected token in argument list");
     }
     if (Parser.getTok().isNot(AsmToken::RParen)) {
       SMLoc Loc = getLexer().getLoc();
-      Parser.eatToEndOfStatement();
       return Error(Loc, "unexpected token, expected ')'");
     }
     Operands.push_back(
@@ -4847,12 +4845,10 @@ bool MipsAsmParser::parseBracketSuffix(StringRef Name,
     Parser.Lex();
     if (parseOperand(Operands, Name)) {
       SMLoc Loc = getLexer().getLoc();
-      Parser.eatToEndOfStatement();
       return Error(Loc, "unexpected token in argument list");
     }
     if (Parser.getTok().isNot(AsmToken::RBrac)) {
       SMLoc Loc = getLexer().getLoc();
-      Parser.eatToEndOfStatement();
       return Error(Loc, "unexpected token, expected ']'");
     }
     Operands.push_back(
@@ -4872,7 +4868,6 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Check if we have valid mnemonic
   if (!mnemonicIsValid(Name, 0)) {
-    Parser.eatToEndOfStatement();
     return Error(NameLoc, "unknown instruction");
   }
   // First operand in MCInst is instruction mnemonic.
@@ -4883,7 +4878,6 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // Read the first operand.
     if (parseOperand(Operands, Name)) {
       SMLoc Loc = getLexer().getLoc();
-      Parser.eatToEndOfStatement();
       return Error(Loc, "unexpected token in argument list");
     }
     if (getLexer().is(AsmToken::LBrac) && parseBracketSuffix(Name, Operands))
@@ -4895,7 +4889,6 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       // Parse and remember the operand.
       if (parseOperand(Operands, Name)) {
         SMLoc Loc = getLexer().getLoc();
-        Parser.eatToEndOfStatement();
         return Error(Loc, "unexpected token in argument list");
       }
       // Parse bracket and parenthesis suffixes before we iterate
@@ -4909,7 +4902,6 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     SMLoc Loc = getLexer().getLoc();
-    Parser.eatToEndOfStatement();
     return Error(Loc, "unexpected token in argument list");
   }
   Parser.Lex(); // Consume the EndOfStatement.
@@ -4919,9 +4911,7 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 // FIXME: Given that these have the same name, these should both be
 // consistent on affecting the Parser.
 bool MipsAsmParser::reportParseError(Twine ErrorMsg) {
-  MCAsmParser &Parser = getParser();
   SMLoc Loc = getLexer().getLoc();
-  Parser.eatToEndOfStatement();
   return Error(Loc, ErrorMsg);
 }
 
@@ -5422,7 +5412,6 @@ bool MipsAsmParser::eatComma(StringRef ErrorStr) {
   MCAsmParser &Parser = getParser();
   if (getLexer().isNot(AsmToken::Comma)) {
     SMLoc Loc = getLexer().getLoc();
-    Parser.eatToEndOfStatement();
     return Error(Loc, ErrorStr);
   }
 
@@ -5531,7 +5520,6 @@ bool MipsAsmParser::parseDirectiveCPSetup() {
   MipsOperand &FuncRegOpnd = static_cast<MipsOperand &>(*TmpReg[0]);
   if (!FuncRegOpnd.isGPRAsmReg()) {
     reportParseError(FuncRegOpnd.getStartLoc(), "invalid register");
-    Parser.eatToEndOfStatement();
     return false;
   }
 
@@ -5550,7 +5538,6 @@ bool MipsAsmParser::parseDirectiveCPSetup() {
     if (Parser.parseExpression(OffsetExpr) ||
         !OffsetExpr->evaluateAsAbsolute(OffsetVal)) {
       reportParseError(ExprLoc, "expected save register or stack offset");
-      Parser.eatToEndOfStatement();
       return false;
     }
 
@@ -5560,7 +5547,6 @@ bool MipsAsmParser::parseDirectiveCPSetup() {
     MipsOperand &SaveOpnd = static_cast<MipsOperand &>(*TmpReg[0]);
     if (!SaveOpnd.isGPRAsmReg()) {
       reportParseError(SaveOpnd.getStartLoc(), "invalid register");
-      Parser.eatToEndOfStatement();
       return false;
     }
     Save = SaveOpnd.getGPR32Reg();
@@ -5848,9 +5834,8 @@ bool MipsAsmParser::parseDirectiveOption() {
   AsmToken Tok = Parser.getTok();
   // At the moment only identifiers are supported.
   if (Tok.isNot(AsmToken::Identifier)) {
-    Error(Parser.getTok().getLoc(), "unexpected token, expected identifier");
-    Parser.eatToEndOfStatement();
-    return false;
+    return Error(Parser.getTok().getLoc(),
+                 "unexpected token, expected identifier");
   }
 
   StringRef Option = Tok.getIdentifier();
@@ -5862,9 +5847,8 @@ bool MipsAsmParser::parseDirectiveOption() {
     getTargetStreamer().emitDirectiveOptionPic0();
     Parser.Lex();
     if (Parser.getTok().isNot(AsmToken::EndOfStatement)) {
-      Error(Parser.getTok().getLoc(),
-            "unexpected token, expected end of statement");
-      Parser.eatToEndOfStatement();
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
     }
     return false;
   }
@@ -5876,9 +5860,8 @@ bool MipsAsmParser::parseDirectiveOption() {
     getTargetStreamer().emitDirectiveOptionPic2();
     Parser.Lex();
     if (Parser.getTok().isNot(AsmToken::EndOfStatement)) {
-      Error(Parser.getTok().getLoc(),
-            "unexpected token, expected end of statement");
-      Parser.eatToEndOfStatement();
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
     }
     return false;
   }
@@ -5969,8 +5952,7 @@ bool MipsAsmParser::parseDirectiveModule() {
     return false; // parseDirectiveModule has finished successfully.
   } else if (Option == "nooddspreg") {
     if (!isABI_O32()) {
-      Error(L, "'.module nooddspreg' requires the O32 ABI");
-      return false;
+      return Error(L, "'.module nooddspreg' requires the O32 ABI");
     }
 
     setModuleFeatureBits(Mips::FeatureNoOddSPReg, "nooddspreg");
@@ -6431,8 +6413,6 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
     if (Parser.getTok().isNot(AsmToken::EndOfStatement)) {
       Error(Parser.getTok().getLoc(), 
             "unexpected token, expected end of statement");
-      // Clear line
-      Parser.eatToEndOfStatement();
     }
     return false;
   }
