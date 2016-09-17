@@ -1667,6 +1667,24 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
   return FindSDKInXcodeForModules(sdk_type, sdks_spec);
 }
 
+std::tuple<uint32_t, uint32_t, uint32_t, llvm::StringRef>
+PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
+  uint32_t major, minor, update;
+  llvm::StringRef build;
+  llvm::StringRef version_str;
+  llvm::StringRef build_str;
+  std::tie(version_str, build_str) = dir.split(' ');
+  if (Args::StringToVersion(version_str, major, minor, update) ||
+      build_str.empty()) {
+    if (build_str.consume_front("(")) {
+      size_t pos = build_str.find(')');
+      build = build_str.slice(0, pos);
+    }
+  }
+
+  return std::make_tuple(major, minor, update, build);
+}
+
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     Target *target, std::vector<std::string> &options, SDKType sdk_type) {
   const std::vector<std::string> apple_arguments = {
@@ -1783,14 +1801,11 @@ bool PlatformDarwin::GetOSVersion(uint32_t &major, uint32_t &minor,
         const char *env_cstr = env.GetArgumentAtIndex(i);
         if (env_cstr) {
           llvm::StringRef env_str(env_cstr);
-          if (env_str.startswith(k_runtime_version)) {
-            llvm::StringRef version_str(
-                env_str.substr(k_runtime_version.size()));
-            Args::StringToVersion(version_str.data(), major, minor, update);
-            if (major != UINT32_MAX)
+          if (env_str.consume_front(k_runtime_version)) {
+            if (Args::StringToVersion(env_str, major, minor, update))
               return true;
-          } else if (env_str.startswith(k_dyld_root_path)) {
-            dyld_root_path = env_str.substr(k_dyld_root_path.size()).str();
+          } else if (env_str.consume_front(k_dyld_root_path)) {
+            dyld_root_path = env_str;
           }
         }
       }
@@ -1801,8 +1816,7 @@ bool PlatformDarwin::GetOSVersion(uint32_t &major, uint32_t &minor,
         std::string product_version;
         if (system_version_plist.GetValueAsString("ProductVersion",
                                                   product_version)) {
-          Args::StringToVersion(product_version.c_str(), major, minor, update);
-          return major != UINT32_MAX;
+          return Args::StringToVersion(product_version, major, minor, update);
         }
       }
     }

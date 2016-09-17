@@ -569,5 +569,81 @@ endif:
   ret void
 }
 
+; GCN-LABEL: {{^}}br_scc_eq_i64_inline_imm:
+; VI: s_cmp_eq_u64 s{{\[[0-9]+:[0-9]+\]}}, 4
+
+; SI: v_cmp_eq_i64_e64
+define void @br_scc_eq_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
+entry:
+  %cmp0 = icmp eq i64 %cond, 4
+  br i1 %cmp0, label %endif, label %if
+
+if:
+  call void asm sideeffect "", ""()
+  br label %endif
+
+endif:
+  store volatile i32 1, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}br_scc_eq_i64_simm16:
+; VI-DAG: s_movk_i32 s[[K_LO:[0-9]+]], 0x4d2
+; VI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0
+; VI: s_cmp_eq_u64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
+
+; SI: v_cmp_eq_i64_e32
+define void @br_scc_eq_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
+entry:
+  %cmp0 = icmp eq i64 %cond, 1234
+  br i1 %cmp0, label %endif, label %if
+
+if:
+  call void asm sideeffect "", ""()
+  br label %endif
+
+endif:
+  store volatile i32 1, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}br_scc_ne_i64_inline_imm:
+; VI: s_cmp_lg_u64 s{{\[[0-9]+:[0-9]+\]}}, 4
+
+; SI: v_cmp_ne_i64_e64
+define void @br_scc_ne_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
+entry:
+  %cmp0 = icmp ne i64 %cond, 4
+  br i1 %cmp0, label %endif, label %if
+
+if:
+  call void asm sideeffect "", ""()
+  br label %endif
+
+endif:
+  store volatile i32 1, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}br_scc_ne_i64_simm16:
+; VI-DAG: s_movk_i32 s[[K_LO:[0-9]+]], 0x4d2
+; VI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0
+; VI: s_cmp_lg_u64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
+
+; SI: v_cmp_ne_i64_e32
+define void @br_scc_ne_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
+entry:
+  %cmp0 = icmp ne i64 %cond, 1234
+  br i1 %cmp0, label %endif, label %if
+
+if:
+  call void asm sideeffect "", ""()
+  br label %endif
+
+endif:
+  store volatile i32 1, i32 addrspace(1)* %out
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

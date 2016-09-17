@@ -92,6 +92,7 @@ public:
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
+      llvm::StringRef option_strref(option_arg ? option_arg : "");
 
       switch (short_option) {
       case 'a': {
@@ -245,10 +246,11 @@ public:
         m_func_name_type_mask |= eFunctionNameTypeAuto;
         break;
 
-      case 'N':
-        if (BreakpointID::StringIsBreakpointName(option_arg, error))
+      case 'N': {
+        if (BreakpointID::StringIsBreakpointName(option_strref, error))
           m_breakpoint_names.push_back(option_arg);
         break;
+      }
 
       case 'R': {
         lldb::addr_t tmp_offset_addr;
@@ -1785,12 +1787,13 @@ public:
                        ExecutionContext *execution_context) override {
     Error error;
     const int short_option = g_breakpoint_name_options[option_idx].short_option;
+    llvm::StringRef option_strref(option_value ? option_value : "");
 
     switch (short_option) {
     case 'N':
-      if (BreakpointID::StringIsBreakpointName(option_value, error) &&
+      if (BreakpointID::StringIsBreakpointName(option_strref, error) &&
           error.Success())
-        m_name.SetValueFromString(option_value);
+        m_name.SetValueFromString(option_strref);
       break;
 
     case 'B':

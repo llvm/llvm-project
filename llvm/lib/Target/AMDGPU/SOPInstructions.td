@@ -630,6 +630,14 @@ class SOPC_CMP_32<bits<7> op, string opName,
   let isCommutable = 1;
 }
 
+class SOPC_CMP_64<bits<7> op, string opName,
+                  PatLeaf cond = COND_NULL, string revOp = opName>
+  : SOPC_Helper<op, SSrc_b64, i64, opName, cond>,
+    Commutable_REV<revOp, !eq(revOp, opName)> {
+  let isCompare = 1;
+  let isCommutable = 1;
+}
+
 class SOPC_32<bits<7> op, string opName, list<dag> pattern = []>
   : SOPC_Base<op, SSrc_b32, SSrc_b32, opName, pattern>;
 
@@ -655,6 +663,10 @@ def S_BITCMP0_B64 : SOPC_64_32 <0x0e, "s_bitcmp0_b64">;
 def S_BITCMP1_B64 : SOPC_64_32 <0x0f, "s_bitcmp1_b64">;
 def S_SETVSKIP : SOPC_32 <0x10, "s_setvskip">;
 
+let SubtargetPredicate = isVI in {
+def S_CMP_EQ_U64 : SOPC_CMP_64 <0x12, "s_cmp_eq_u64", COND_EQ>;
+def S_CMP_LG_U64 : SOPC_CMP_64 <0x13, "s_cmp_lg_u64", COND_NE>;
+}
 
 //===----------------------------------------------------------------------===//
 // SOPP Instructions

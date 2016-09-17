@@ -765,37 +765,27 @@ char Args::StringToChar(llvm::StringRef s, char fail_value, bool *success_ptr) {
   return s[0];
 }
 
-const char *Args::StringToVersion(const char *s, uint32_t &major,
-                                  uint32_t &minor, uint32_t &update) {
+bool Args::StringToVersion(llvm::StringRef string, uint32_t &major,
+                           uint32_t &minor, uint32_t &update) {
   major = UINT32_MAX;
   minor = UINT32_MAX;
   update = UINT32_MAX;
 
-  if (s && s[0]) {
-    char *pos = nullptr;
-    unsigned long uval32 = ::strtoul(s, &pos, 0);
-    if (pos == s)
-      return s;
-    major = uval32;
-    if (*pos == '\0') {
-      return pos; // Decoded major and got end of string
-    } else if (*pos == '.') {
-      const char *minor_cstr = pos + 1;
-      uval32 = ::strtoul(minor_cstr, &pos, 0);
-      if (pos == minor_cstr)
-        return pos; // Didn't get any digits for the minor version...
-      minor = uval32;
-      if (*pos == '.') {
-        const char *update_cstr = pos + 1;
-        uval32 = ::strtoul(update_cstr, &pos, 0);
-        if (pos == update_cstr)
-          return pos;
-        update = uval32;
-      }
-      return pos;
-    }
-  }
-  return nullptr;
+  if (string.empty())
+    return false;
+
+  llvm::StringRef major_str, minor_str, update_str;
+
+  std::tie(major_str, minor_str) = string.split('.');
+  std::tie(minor_str, update_str) = minor_str.split('.');
+  if (major_str.getAsInteger(10, major))
+    return false;
+  if (!minor_str.empty() && minor_str.getAsInteger(10, minor))
+    return false;
+  if (!update_str.empty() && update_str.getAsInteger(10, update))
+    return false;
+
+  return true;
 }
 
 const char *Args::GetShellSafeArgument(const FileSpec &shell,

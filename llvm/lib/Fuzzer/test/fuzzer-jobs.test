@@ -9,7 +9,7 @@ RUN: rm -f fuzz-{0,1}.log
 RUN: LLVMFuzzer-EmptyTest -max_total_time=4 -jobs=2 -workers=2 FuzzerJobsTestCORPUS > %t-fuzzer-jobs-test.log 2>&1 & export FUZZER_PID=$!
 # Wait a short while to give time for the child processes
 # to start fuzzing
-RUN: sleep 1
+RUN: sleep 2
 # If the instances are running in parallel they should have created their log
 # files by now.
 RUN: ls fuzz-0.log

@@ -151,3 +151,5 @@ TEST(ArgsTest, StringToScriptLanguage) {
                                          &success));
   EXPECT_FALSE(success);
 }
+
+TEST(ArgsTest, StringToVersion) {}

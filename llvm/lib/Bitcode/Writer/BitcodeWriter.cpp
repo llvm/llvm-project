@@ -3003,7 +3003,8 @@ void ModuleBitcodeWriter::writeFunction(
     }
 
   // Emit names for all the instructions etc.
-  writeValueSymbolTable(F.getValueSymbolTable());
+  if (auto *Symtab = F.getValueSymbolTable())
+    writeValueSymbolTable(*Symtab);
 
   if (NeedsMetadataAttachment)
     writeFunctionMetadataAttachment(F);

@@ -60,8 +60,17 @@ void coff::createPDB(StringRef Path) {
   ExitOnErr(Builder.getMsfBuilder().addStream(1, {5}));
   ExitOnErr(Builder.getMsfBuilder().addStream(1, {6}));
 
-  // Add an empty IPI stream.
-  Builder.getInfoBuilder();
+  // Add an Info stream.
+  auto &InfoBuilder = Builder.getInfoBuilder();
+  InfoBuilder.setAge(1);
+
+  // Should be a random number, 0 for now.
+  InfoBuilder.setGuid({});
+
+  // Should be the current time, but set 0 for reproducibilty.
+  InfoBuilder.setSignature(0);
+
+  InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
 
   // Add an empty TPI stream.
   auto &TpiBuilder = Builder.getTpiBuilder();

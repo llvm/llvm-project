@@ -1,6 +1,6 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s | FileCheck --check-prefix=GCN %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=GCN %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=SICI %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICI %s
 
 //===----------------------------------------------------------------------===//
 // SOPC Instructions
@@ -56,3 +56,11 @@ s_bitcmp1_b64 s[2:3], s4
 
 s_setvskip s3, s5
 // GCN: s_setvskip s3, s5 ; encoding: [0x03,0x05,0x10,0xbf]
+
+s_cmp_eq_u64 s[0:1], s[2:3]
+// VI: s_cmp_eq_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x12,0xbf]
+// NOSICI: error: instruction not supported on this GPU
+
+s_cmp_lg_u64 s[0:1], s[2:3]
+// VI: s_cmp_lg_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x13,0xbf]
+// NOSICI: error: instruction not supported on this GPU

@@ -46,4 +46,4 @@ entry:
 ; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD-NOT: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC_GUARD: ret void
-; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard_init(i8* bitcast (i8** @__start___sancov_guards to i8*), i8* bitcast (i8** @__stop___sancov_guards to i8*))
+; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard_init(i64* bitcast (i64** @__start___sancov_guards to i64*), i64* bitcast (i64** @__stop___sancov_guards to i64*))

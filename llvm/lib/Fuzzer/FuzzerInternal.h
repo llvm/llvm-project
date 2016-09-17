@@ -358,8 +358,8 @@ private:
 // See TracePC.cpp
 class TracePC {
  public:
-  void HandleTrace(uint8_t *guard, uintptr_t PC);
-  void HandleInit(uint8_t *start, uint8_t *stop);
+  void HandleTrace(uint64_t *guard, uintptr_t PC);
+  void HandleInit(uint64_t *start, uint64_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   size_t GetTotalCoverage() { return TotalCoverage; }
   void SetUseCounters(bool UC) { UseCounters = UC; }
@@ -374,6 +374,17 @@ class TracePC {
     return Res;
   }
 
+  void Reset() {
+    TotalCoverage = 0;
+    TotalCounterBits = 0;
+    NumNewPCs = 0;
+    CounterMap.Reset();
+    TotalCoverageMap.Reset();
+    ResetGuards();
+  }
+
+  void PrintModuleInfo();
+
 private:
   bool UseCounters = false;
   size_t TotalCoverage = 0;
@@ -384,7 +395,16 @@ private:
   size_t NumNewPCs = 0;
   void AddNewPC(uintptr_t PC) { NewPCs[(NumNewPCs++) % kMaxNewPCs] = PC; }
 
-  uint8_t *Start, *Stop;
+  void ResetGuards();
+
+  struct Module {
+    uint64_t *Start, *Stop;
+  };
+
+  Module Modules[4096];
+  size_t NumModules = 0;
+  size_t NumGuards = 0;
+
   ValueBitMap CounterMap;
   ValueBitMap TotalCoverageMap;
 };

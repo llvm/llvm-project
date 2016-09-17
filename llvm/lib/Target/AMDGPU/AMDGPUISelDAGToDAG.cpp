@@ -38,18 +38,6 @@ class R600InstrInfo;
 
 namespace {
 
-static bool isCBranchSCC(const SDNode *N) {
-  assert(N->getOpcode() == ISD::BRCOND);
-  if (!N->hasOneUse())
-    return false;
-
-  SDValue Cond = N->getOperand(1);
-  if (Cond.getOpcode() == ISD::CopyToReg)
-    Cond = Cond.getOperand(2);
-  return Cond.getOpcode() == ISD::SETCC &&
-         Cond.getOperand(0).getValueType() == MVT::i32 && Cond.hasOneUse();
-}
-
 /// AMDGPU specific code to select AMDGPU machine instructions for
 /// SelectionDAG operations.
 class AMDGPUDAGToDAGISel : public SelectionDAGISel {
@@ -150,6 +138,7 @@ private:
                    uint32_t Offset, uint32_t Width);
   void SelectS_BFEFromShifts(SDNode *N);
   void SelectS_BFE(SDNode *N);
+  bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
   void SelectATOMIC_CMP_SWAP(SDNode *N);
 
@@ -1335,6 +1324,32 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
   }
 
   SelectCode(N);
+}
+
+bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
+  assert(N->getOpcode() == ISD::BRCOND);
+  if (!N->hasOneUse())
+    return false;
+
+  SDValue Cond = N->getOperand(1);
+  if (Cond.getOpcode() == ISD::CopyToReg)
+    Cond = Cond.getOperand(2);
+
+  if (Cond.getOpcode() != ISD::SETCC || !Cond.hasOneUse())
+    return false;
+
+  MVT VT = Cond.getOperand(0).getSimpleValueType();
+  if (VT == MVT::i32)
+    return true;
+
+  if (VT == MVT::i64) {
+    auto ST = static_cast<const SISubtarget *>(Subtarget);
+
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    return (CC == ISD::SETEQ || CC == ISD::SETNE) && ST->hasScalarCompareEq64();
+  }
+
+  return false;
 }
 
 void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {

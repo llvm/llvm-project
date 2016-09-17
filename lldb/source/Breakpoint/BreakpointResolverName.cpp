@@ -98,7 +98,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
   bool success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::LanguageName), language_name);
   if (success) {
-    language = Language::GetLanguageTypeFromString(language_name.c_str());
+    language = Language::GetLanguageTypeFromString(language_name);
     if (language == eLanguageTypeUnknown) {
       error.SetErrorStringWithFormat("BRN::CFSD: Unknown language: %s.",
                                      language_name.c_str());

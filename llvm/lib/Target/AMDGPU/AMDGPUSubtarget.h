@@ -488,6 +488,10 @@ public:
     return Has16BitInsts;
   }
 
+  bool hasScalarCompareEq64() const {
+    return getGeneration() >= VOLCANIC_ISLANDS;
+  }
+
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }
