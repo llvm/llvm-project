@@ -1253,6 +1253,9 @@ TEST_F(FormatTestJS, NestedTemplateStrings) {
   verifyFormat(
       "var x = `<ul>${xs.map(x => `<li>${x}</li>`).join('\\n')}</ul>`;");
   verifyFormat("var x = `he${({text: 'll'}.text)}o`;");
+
+  // Crashed at some point.
+  verifyFormat("}");
 }
 
 TEST_F(FormatTestJS, TaggedTemplateStrings) {
