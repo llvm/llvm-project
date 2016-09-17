@@ -278,6 +278,11 @@ return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
+def frameindex_to_targetframeindex : SDNodeXForm<frameindex, [{
+  auto FI = cast<FrameIndexSDNode>(N);
+  return CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i32);
+}]>;
+
 // Copied from the AArch64 backend:
 def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
 return CurDAG->getTargetConstant(
