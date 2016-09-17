@@ -1320,12 +1320,8 @@ ObjCTypeParamDecl *ObjCTypeParamDecl::Create(ASTContext &ctx, DeclContext *dc,
                                              IdentifierInfo *name,
                                              SourceLocation colonLoc,
                                              TypeSourceInfo *boundInfo) {
-  auto *TPDecl =
-    new (ctx, dc) ObjCTypeParamDecl(ctx, dc, variance, varianceLoc, index,
-                                    nameLoc, name, colonLoc, boundInfo);
-  QualType TPType = ctx.getObjCTypeParamType(TPDecl, {});
-  TPDecl->setTypeForDecl(TPType.getTypePtr());
-  return TPDecl;
+  return new (ctx, dc) ObjCTypeParamDecl(ctx, dc, variance, varianceLoc, index,
+                                         nameLoc, name, colonLoc, boundInfo);
 }
 
 ObjCTypeParamDecl *ObjCTypeParamDecl::CreateDeserialized(ASTContext &ctx,

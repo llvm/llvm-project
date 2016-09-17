@@ -1157,20 +1157,6 @@ TypeResult Sema::actOnObjCTypeArgsAndProtocolQualifiers(
     ResultTL = ObjCObjectPointerTL.getPointeeLoc();
   }
 
-  if (auto OTPTL = ResultTL.getAs<ObjCTypeParamTypeLoc>()) {
-    // Protocol qualifier information.
-    if (OTPTL.getNumProtocols() > 0) {
-      assert(OTPTL.getNumProtocols() == Protocols.size());
-      OTPTL.setProtocolLAngleLoc(ProtocolLAngleLoc);
-      OTPTL.setProtocolRAngleLoc(ProtocolRAngleLoc);
-      for (unsigned i = 0, n = Protocols.size(); i != n; ++i)
-        OTPTL.setProtocolLoc(i, ProtocolLocs[i]);
-    }
-
-    // We're done. Return the completed type to the parser.
-    return CreateParsedType(Result, ResultTInfo);
-  }
-
   auto ObjCObjectTL = ResultTL.castAs<ObjCObjectTypeLoc>();
 
   // Type argument information.
@@ -5901,6 +5887,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   // For the context-sensitive keywords/Objective-C property
   // attributes, require that the type be a single-level pointer.
   if (isContextSensitive) {
+    // Make sure that the pointee isn't itself a pointer type.
     QualType pointeeType = desugared->getPointeeType();
     if (pointeeType->isAnyPointerType() ||
         pointeeType->isObjCObjectPointerType() ||
@@ -5924,13 +5911,6 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
 }
 
 bool Sema::checkObjCKindOfType(QualType &type, SourceLocation loc) {
-  if (isa<ObjCTypeParamType>(type)) {
-    // Build the attributed type to record where __kindof occurred.
-    type = Context.getAttributedType(AttributedType::attr_objc_kindof,
-                                     type, type);
-    return false;
-  }
-
   // Find out if it's an Objective-C object or object pointer type;
   const ObjCObjectPointerType *ptrType = type->getAs<ObjCObjectPointerType>();
   const ObjCObjectType *objType = ptrType ? ptrType->getObjectType() 
