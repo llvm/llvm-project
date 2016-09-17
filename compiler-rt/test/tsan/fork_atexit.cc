@@ -7,7 +7,7 @@
 #include <sys/wait.h>
 
 void foo() {
-  printf("CHILD ATEXIT\n");
+  fprintf(stderr, "CHILD ATEXIT\n");
 }
 
 void *worker(void *unused) {

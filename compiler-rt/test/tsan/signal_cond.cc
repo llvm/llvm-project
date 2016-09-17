@@ -14,7 +14,7 @@ pthread_cond_t cond;
 
 void sig_handler(int sig) {
   (void)sig;
-  write(1, "SIGNAL\n", sizeof("SIGNAL\n") - 1);
+  write(2, "SIGNAL\n", sizeof("SIGNAL\n") - 1);
   barrier_wait(&barrier);
 }
 
