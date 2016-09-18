@@ -1877,27 +1877,18 @@ static void printFaultMaps(const ObjectFile *Obj) {
   outs() << FMP;
 }
 
-static void printPrivateFileHeaders(const ObjectFile *o) {
+static void printPrivateFileHeaders(const ObjectFile *o, bool onlyFirst) {
   if (o->isELF())
-    printELFFileHeader(o);
-  else if (o->isCOFF())
-    printCOFFFileHeader(o);
-  else if (o->isMachO()) {
+    return printELFFileHeader(o);
+  if (o->isCOFF())
+    return printCOFFFileHeader(o);
+  if (o->isMachO()) {
     printMachOFileHeader(o);
-    printMachOLoadCommands(o);
-  } else
-    report_fatal_error("Invalid/Unsupported object file format");
-}
-
-static void printFirstPrivateFileHeader(const ObjectFile *o) {
-  if (o->isELF())
-    printELFFileHeader(o);
-  else if (o->isCOFF())
-    printCOFFFileHeader(o);
-  else if (o->isMachO())
-    printMachOFileHeader(o);
-  else
-    report_fatal_error("Invalid/Unsupported object file format");
+    if (!onlyFirst)
+      printMachOLoadCommands(o);
+    return;
+  }
+  report_fatal_error("Invalid/Unsupported object file format");
 }
 
 static void DumpObject(const ObjectFile *o, const Archive *a = nullptr) {
@@ -1924,10 +1915,8 @@ static void DumpObject(const ObjectFile *o, const Archive *a = nullptr) {
     PrintSymbolTable(o, ArchiveName);
   if (UnwindInfo)
     PrintUnwindInfo(o);
-  if (PrivateHeaders)
-    printPrivateFileHeaders(o);
-  if (FirstPrivateHeader)
-    printFirstPrivateFileHeader(o);
+  if (PrivateHeaders || FirstPrivateHeader)
+    printPrivateFileHeaders(o, FirstPrivateHeader);
   if (ExportsTrie)
     printExportsTrie(o);
   if (Rebase)

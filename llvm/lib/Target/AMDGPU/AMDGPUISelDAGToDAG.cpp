@@ -51,10 +51,10 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void Select(SDNode *N) override;
   const char *getPassName() const override;
-  void PreprocessISelDAG() override;
   void PostprocessISelDAG() override;
 
 private:
+  SDValue foldFrameIndex(SDValue N) const;
   bool isInlineImmediate(const SDNode *N) const;
   bool FoldOperand(SDValue &Src, SDValue &Sel, SDValue &Neg, SDValue &Abs,
                    const R600InstrInfo *TII);
@@ -902,6 +902,12 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
   return SelectMUBUFAddr64(Addr, SRsrc, VAddr, SOffset, Offset, GLC, SLC, TFE);
 }
 
+SDValue AMDGPUDAGToDAGISel::foldFrameIndex(SDValue N) const {
+  if (auto FI = dyn_cast<FrameIndexSDNode>(N))
+    return CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
+  return N;
+}
+
 bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
                                             SDValue &VAddr, SDValue &SOffset,
                                             SDValue &ImmOffset) const {
@@ -921,14 +927,14 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
     // Offsets in vaddr must be positive.
     ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
     if (isLegalMUBUFImmOffset(C1)) {
-      VAddr = N0;
+      VAddr = foldFrameIndex(N0);
       ImmOffset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
       return true;
     }
   }
 
   // (node)
-  VAddr = Addr;
+  VAddr = foldFrameIndex(Addr);
   ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i16);
   return true;
 }
@@ -1514,62 +1520,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods0Clamp0OMod(SDValue In, SDValue &Src,
                                                    SDValue &Omod) const {
   Clamp = Omod = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i32);
   return SelectVOP3Mods(In, Src, SrcMods);
-}
-
-void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
-  MachineFrameInfo &MFI = CurDAG->getMachineFunction().getFrameInfo();
-
-  // Handle the perverse case where a frame index is being stored. We don't
-  // want to see multiple frame index operands on the same instruction since
-  // it complicates things and violates some assumptions about frame index
-  // lowering.
-  for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
-       I != E; ++I) {
-    SDValue FI = CurDAG->getTargetFrameIndex(I, MVT::i32);
-
-    // It's possible that we have a frame index defined in the function that
-    // isn't used in this block.
-    if (FI.use_empty())
-      continue;
-
-    // Skip over the AssertZext inserted during lowering.
-    SDValue EffectiveFI = FI;
-    auto It = FI->use_begin();
-    if (It->getOpcode() == ISD::AssertZext && FI->hasOneUse()) {
-      EffectiveFI = SDValue(*It, 0);
-      It = EffectiveFI->use_begin();
-    }
-
-    for (auto It = EffectiveFI->use_begin(); !It.atEnd(); ) {
-      SDUse &Use = It.getUse();
-      SDNode *User = Use.getUser();
-      unsigned OpIdx = It.getOperandNo();
-      ++It;
-
-      if (MemSDNode *M = dyn_cast<MemSDNode>(User)) {
-        unsigned PtrIdx = M->getOpcode() == ISD::STORE ? 2 : 1;
-        if (OpIdx == PtrIdx)
-          continue;
-
-        unsigned OpN = M->getNumOperands();
-        SDValue NewOps[8];
-
-        assert(OpN < array_lengthof(NewOps));
-        for (unsigned Op = 0; Op != OpN; ++Op) {
-          if (Op != OpIdx) {
-            NewOps[Op] = M->getOperand(Op);
-            continue;
-          }
-
-          MachineSDNode *Mov = CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32,
-                                                      SDLoc(M), MVT::i32, FI);
-          NewOps[Op] = SDValue(Mov, 0);
-        }
-
-        CurDAG->UpdateNodeOperands(M, makeArrayRef(NewOps, OpN));
-      }
-    }
-  }
 }
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {

@@ -1210,8 +1210,8 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
-      (ins vgpr_class:$vdata, i32imm:$vaddr, SReg_128:$scratch_rsrc,
-           SReg_32:$scratch_offset, i32imm:$offset)> {
+      (ins vgpr_class:$vdata, i32imm:$vaddr, SReg_128:$srsrc,
+           SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -1220,7 +1220,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
 
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
-      (ins i32imm:$vaddr, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset,
+      (ins i32imm:$vaddr, SReg_128:$srsrc, SReg_32:$soffset,
            i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
@@ -1579,6 +1579,11 @@ def : Pat <
 def : Pat <
   (f32 fpimm:$imm),
   (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : Pat <
+ (i32 frameindex:$fi),
+ (V_MOV_B32_e32 (i32 (frameindex_to_targetframeindex $fi)))
 >;
 
 def : Pat <

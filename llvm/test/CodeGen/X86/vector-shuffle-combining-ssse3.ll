@@ -380,3 +380,19 @@ define <16 x i8> @combine_unpckl_arg1_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
   %2 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %1, <16 x i8> <i8 1, i8 -1, i8 -1, i8 -1, i8 1, i8 -1, i8 -1, i8 -1, i8 1, i8 -1, i8 -1, i8 -1, i8 1, i8 -1, i8 -1, i8 -1>)
   ret <16 x i8> %2
 }
+
+define <16 x i8> @constant_fold_pshufb() {
+; SSE-LABEL: constant_fold_pshufb:
+; SSE:       # BB#0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1],zero,zero,zero,xmm0[u,u],zero,zero,xmm0[15],zero,zero,zero,zero,zero,xmm0[7,6]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: constant_fold_pshufb:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1],zero,zero,zero,xmm0[u,u],zero,zero,xmm0[15],zero,zero,zero,zero,zero,xmm0[7,6]
+; AVX-NEXT:    retq
+  %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>, <16 x i8> <i8 1, i8 -1, i8 -1, i8 -1, i8 undef, i8 undef, i8 -1, i8 -1, i8 15, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 7, i8 6>)
+  ret <16 x i8> %1
+}

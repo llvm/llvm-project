@@ -2783,44 +2783,35 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
   // Handle consecutive loads/stores.
   GetElementPtrInst *Gep = getGEPInstruction(Ptr);
   if (ConsecutiveStride) {
-    if (Gep && Legal->isInductionVariable(Gep->getPointerOperand())) {
-      setDebugLocFromInst(Builder, Gep);
-      auto *FirstBasePtr = getScalarValue(Gep->getPointerOperand(), 0, 0);
-
-      // Create the new GEP with the new induction variable.
-      GetElementPtrInst *Gep2 = cast<GetElementPtrInst>(Gep->clone());
-      Gep2->setOperand(0, FirstBasePtr);
-      Gep2->setName("gep.indvar.base");
-      Ptr = Builder.Insert(Gep2);
-    } else if (Gep) {
-      setDebugLocFromInst(Builder, Gep);
-      assert(PSE.getSE()->isLoopInvariant(PSE.getSCEV(Gep->getPointerOperand()),
-                                          OrigLoop) &&
-             "Base ptr must be invariant");
-      // The last index does not have to be the induction. It can be
-      // consecutive and be a function of the index. For example A[I+1];
+    if (Gep) {
       unsigned NumOperands = Gep->getNumOperands();
-      unsigned InductionOperand = getGEPInductionOperand(Gep);
-      // Create the new GEP with the new induction variable.
+#ifndef NDEBUG
+      // The original GEP that identified as a consecutive memory access
+      // should have only one loop-variant operand.
+      unsigned NumOfLoopVariantOps = 0;
+      for (unsigned i = 0; i < NumOperands; ++i)
+        if (!PSE.getSE()->isLoopInvariant(PSE.getSCEV(Gep->getOperand(i)),
+                                          OrigLoop))
+          NumOfLoopVariantOps++;
+      assert(NumOfLoopVariantOps == 1 &&
+             "Consecutive GEP should have only one loop-variant operand");
+#endif
       GetElementPtrInst *Gep2 = cast<GetElementPtrInst>(Gep->clone());
+      Gep2->setName("gep.indvar");
 
-      for (unsigned i = 0; i < NumOperands; ++i) {
-        Value *GepOperand = Gep->getOperand(i);
-        Instruction *GepOperandInst = dyn_cast<Instruction>(GepOperand);
-
-        // Update last index or loop invariant instruction anchored in loop.
-        if (i == InductionOperand ||
-            (GepOperandInst && OrigLoop->contains(GepOperandInst))) {
-          assert((i == InductionOperand ||
-                  PSE.getSE()->isLoopInvariant(PSE.getSCEV(GepOperandInst),
-                                               OrigLoop)) &&
-                 "Must be last index or loop invariant");
-
-          Gep2->setOperand(i, getScalarValue(GepOperand, 0, 0));
-          Gep2->setName("gep.indvar.idx");
-        }
-      }
+      // A new GEP is created for a 0-lane value of the first unroll iteration.
+      // The GEPs for the rest of the unroll iterations are computed below as an
+      // offset from this GEP.
+      for (unsigned i = 0; i < NumOperands; ++i)
+        // We can apply getScalarValue() for all GEP indices. It returns an
+        // original value for loop-invariant operand and 0-lane for consecutive
+        // operand.
+        Gep2->setOperand(i, getScalarValue(Gep->getOperand(i),
+                                           0, /* First unroll iteration */
+                                           0  /* 0-lane of the vector */ ));
+      setDebugLocFromInst(Builder, Gep);
       Ptr = Builder.Insert(Gep2);
+
     } else { // No GEP
       // Use the induction element ptr.
       assert(isa<PHINode>(Ptr) && "Invalid induction ptr");
