@@ -88,3 +88,15 @@ bool fooTemplatePadding2(int x) {
     return templatePaddingFunc<XX, X>();
   return true;
 }
+
+// Test that we don't crash on member functions of template instantiations.
+
+template<typename T>
+struct A {
+  void foo(T t) {}
+};
+
+void fooTestInstantiation() {
+  A<int> a;
+  a.foo(1);
+}
