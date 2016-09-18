@@ -12,7 +12,7 @@
 // CHECK:      Name: foobar3
 // CHECK-NEXT: Value: 0x8003
 
-// CHECK:      Name: foobar
+// CHECK:      Name: foobar4
 // CHECK-NEXT: Value: 0x8004
 
 .data
@@ -24,4 +24,4 @@
 // RUN: echo "SECTIONS { . = SEGMENT_START(\"foobar\", foo); }" > %t.script
 // RUN: not ld.lld %t.o %t.script -shared -o %t2.so 2>&1 \
 // RUN: | FileCheck --check-prefix=ERR %s
-// ERR: integer expected
+// ERR: symbol not found: foo

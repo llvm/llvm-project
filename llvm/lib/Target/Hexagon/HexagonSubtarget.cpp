@@ -264,6 +264,10 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
   MachineInstr &SrcInst = *Src->getInstr();
   MachineInstr &DstInst = *Dst->getInstr();
 
+  // Ignore Boundary SU nodes as these have null instructions.
+  if (Dst->isBoundaryNode())
+    return false;
+
   if (SrcInst.isPHI() || DstInst.isPHI())
     return false;
 

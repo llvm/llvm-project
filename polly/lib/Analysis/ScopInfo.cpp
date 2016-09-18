@@ -196,6 +196,18 @@ __isl_give isl_space *ScopArrayInfo::getSpace() const {
   return Space;
 }
 
+bool ScopArrayInfo::isReadOnly() {
+  isl_union_set *WriteSet = isl_union_map_range(S.getWrites());
+  isl_space *Space = getSpace();
+  WriteSet = isl_union_set_intersect(
+      WriteSet, isl_union_set_from_set(isl_set_universe(Space)));
+
+  bool IsReadOnly = isl_union_set_is_empty(WriteSet);
+  isl_union_set_free(WriteSet);
+
+  return IsReadOnly;
+}
+
 void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementType == ElementType)
     return;

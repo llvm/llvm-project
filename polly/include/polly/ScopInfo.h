@@ -357,6 +357,9 @@ public:
   /// Get the space of this array access.
   __isl_give isl_space *getSpace() const;
 
+  /// If the array is read only
+  bool isReadOnly();
+
 private:
   void addDerivedSAI(ScopArrayInfo *DerivedSAI) {
     DerivedSAIs.insert(DerivedSAI);

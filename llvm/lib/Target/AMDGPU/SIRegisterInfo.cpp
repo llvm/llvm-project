@@ -488,9 +488,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                          Size, Align);
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::SI_SPILL_V32_SAVE))
                   .addReg(TmpReg, RegState::Kill)         // src
-                  .addFrameIndex(Index)                   // frame_idx
-                  .addReg(MFI->getScratchRSrcReg())       // scratch_rsrc
-                  .addReg(MFI->getScratchWaveOffsetReg()) // scratch_offset
+                  .addFrameIndex(Index)                   // vaddr
+                  .addReg(MFI->getScratchRSrcReg())       // srrsrc
+                  .addReg(MFI->getScratchWaveOffsetReg()) // soffset
                   .addImm(i * 4)                          // offset
                   .addMemOperand(MMO);
         }
@@ -546,9 +546,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               PtrInfo, MachineMemOperand::MOLoad, Size, Align);
 
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::SI_SPILL_V32_RESTORE), TmpReg)
-                  .addFrameIndex(Index)                   // frame_idx
-                  .addReg(MFI->getScratchRSrcReg())       // scratch_rsrc
-                  .addReg(MFI->getScratchWaveOffsetReg()) // scratch_offset
+                  .addFrameIndex(Index)                   // vaddr
+                  .addReg(MFI->getScratchRSrcReg())       // srsrc
+                  .addReg(MFI->getScratchWaveOffsetReg()) // soffset
                   .addImm(i * 4)                          // offset
                   .addMemOperand(MMO);
           BuildMI(*MBB, MI, DL,
@@ -576,8 +576,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V32_SAVE:
       buildScratchLoadStore(MI, AMDGPU::BUFFER_STORE_DWORD_OFFSET,
             TII->getNamedOperand(*MI, AMDGPU::OpName::vdata),
-            TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_rsrc)->getReg(),
-            TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_offset)->getReg(),
+            TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc)->getReg(),
+            TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg(),
             FrameInfo.getObjectOffset(Index) +
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(), RS);
       MI->eraseFromParent();
@@ -591,8 +591,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V512_RESTORE: {
       buildScratchLoadStore(MI, AMDGPU::BUFFER_LOAD_DWORD_OFFSET,
             TII->getNamedOperand(*MI, AMDGPU::OpName::vdata),
-            TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_rsrc)->getReg(),
-            TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_offset)->getReg(),
+            TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc)->getReg(),
+            TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg(),
             FrameInfo.getObjectOffset(Index) +
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(), RS);
       MI->eraseFromParent();
