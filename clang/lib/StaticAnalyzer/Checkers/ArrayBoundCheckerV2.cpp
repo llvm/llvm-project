@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallString.h"
@@ -81,6 +82,42 @@ static SVal computeExtentBegin(SValBuilder &svalBuilder,
     }
 }
 
+// TODO: once the constraint manager is smart enough to handle non simplified
+// symbolic expressions remove this function. Note that this can not be used in
+// the constraint manager as is, since this does not handle overflows. It is
+// safe to assume, however, that memory offsets will not overflow.
+static std::pair<NonLoc, nonloc::ConcreteInt>
+getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
+                     SValBuilder &svalBuilder) {
+  Optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
+  if (SymVal && SymVal->isExpression()) {
+    if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
+      llvm::APSInt constant =
+          APSIntType(extent.getValue()).convert(SIE->getRHS());
+      switch (SIE->getOpcode()) {
+      case BO_Mul:
+        // The constant should never be 0 here, since it the result of scaling
+        // based on the size of a type which is never 0.
+        if ((extent.getValue() % constant) != 0)
+          return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
+        else
+          return getSimplifiedOffsets(
+              nonloc::SymbolVal(SIE->getLHS()),
+              svalBuilder.makeIntVal(extent.getValue() / constant),
+              svalBuilder);
+      case BO_Add:
+        return getSimplifiedOffsets(
+            nonloc::SymbolVal(SIE->getLHS()),
+            svalBuilder.makeIntVal(extent.getValue() - constant), svalBuilder);
+      default:
+        break;
+      }
+    }
+  }
+
+  return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
+}
+
 void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
                                         const Stmt* LoadS,
                                         CheckerContext &checkerContext) const {
@@ -104,6 +141,8 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   if (!rawOffset.getRegion())
     return;
 
+  NonLoc rawOffsetVal = rawOffset.getByteOffset();
+
   // CHECK LOWER BOUND: Is byteOffset < extent begin?
   //  If so, we are doing a load/store
   //  before the first valid offset in the memory region.
@@ -111,9 +150,17 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   SVal extentBegin = computeExtentBegin(svalBuilder, rawOffset.getRegion());
 
   if (Optional<NonLoc> NV = extentBegin.getAs<NonLoc>()) {
-    SVal lowerBound =
-        svalBuilder.evalBinOpNN(state, BO_LT, rawOffset.getByteOffset(), *NV,
-                                svalBuilder.getConditionType());
+    if (NV->getAs<nonloc::ConcreteInt>()) {
+      std::pair<NonLoc, nonloc::ConcreteInt> simplifiedOffsets =
+          getSimplifiedOffsets(rawOffset.getByteOffset(),
+                               NV->castAs<nonloc::ConcreteInt>(),
+                               svalBuilder);
+      rawOffsetVal = simplifiedOffsets.first;
+      *NV = simplifiedOffsets.second;
+    }
+
+    SVal lowerBound = svalBuilder.evalBinOpNN(state, BO_LT, rawOffsetVal, *NV,
+                                              svalBuilder.getConditionType());
 
     Optional<NonLoc> lowerBoundToCheck = lowerBound.getAs<NonLoc>();
     if (!lowerBoundToCheck)
@@ -142,10 +189,18 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     if (!extentVal.getAs<NonLoc>())
       break;
 
-    SVal upperbound
-      = svalBuilder.evalBinOpNN(state, BO_GE, rawOffset.getByteOffset(),
-                                extentVal.castAs<NonLoc>(),
-                                svalBuilder.getConditionType());
+    if (extentVal.getAs<nonloc::ConcreteInt>()) {
+      std::pair<NonLoc, nonloc::ConcreteInt> simplifiedOffsets =
+          getSimplifiedOffsets(rawOffset.getByteOffset(),
+                               extentVal.castAs<nonloc::ConcreteInt>(),
+                               svalBuilder);
+      rawOffsetVal = simplifiedOffsets.first;
+      extentVal = simplifiedOffsets.second;
+    }
+
+    SVal upperbound = svalBuilder.evalBinOpNN(state, BO_GE, rawOffsetVal,
+                                              extentVal.castAs<NonLoc>(),
+                                              svalBuilder.getConditionType());
 
     Optional<NonLoc> upperboundToCheck = upperbound.getAs<NonLoc>();
     if (!upperboundToCheck)
@@ -157,13 +212,13 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
 
     // If we are under constrained and the index variables are tainted, report.
     if (state_exceedsUpperBound && state_withinUpperBound) {
-      if (state->isTainted(rawOffset.getByteOffset()))
+      if (state->isTainted(rawOffset.getByteOffset())) {
         reportOOB(checkerContext, state_exceedsUpperBound, OOB_Tainted);
         return;
-    }
-
-    // If we are constrained enough to definitely exceed the upper bound, report.
-    if (state_exceedsUpperBound) {
+      }
+    } else if (state_exceedsUpperBound) {
+      // If we are constrained enough to definitely exceed the upper bound,
+      // report.
       assert(!state_withinUpperBound);
       reportOOB(checkerContext, state_exceedsUpperBound, OOB_Excedes);
       return;
