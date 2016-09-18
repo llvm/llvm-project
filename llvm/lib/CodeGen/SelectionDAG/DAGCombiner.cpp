@@ -12330,10 +12330,10 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
                   DAG.getConstant(HalfValBitSize / 8, DL, Ptr.getValueType()));
   // Higher value store.
   SDValue St1 =
-      DAG.getStore(Chain, DL, Hi, Ptr,
+      DAG.getStore(St0, DL, Hi, Ptr,
                    ST->getPointerInfo().getWithOffset(HalfValBitSize / 8),
                    Alignment / 2, MMOFlags, AAInfo);
-  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, St0, St1);
+  return St1;
 }
 
 SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {

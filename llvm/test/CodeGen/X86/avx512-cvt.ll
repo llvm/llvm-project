@@ -924,7 +924,7 @@ define <16 x float> @uitofp_16i8(<16 x i8>%a) {
 ; ALL-LABEL: uitofp_16i8:
 ; ALL:       ## BB#0:
 ; ALL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; ALL-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; ALL-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = uitofp <16 x i8> %a to <16 x float>
   ret <16 x float>%b
@@ -934,7 +934,7 @@ define <16 x float> @uitofp_16i16(<16 x i16>%a) {
 ; ALL-LABEL: uitofp_16i16:
 ; ALL:       ## BB#0:
 ; ALL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; ALL-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; ALL-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = uitofp <16 x i16> %a to <16 x float>
   ret <16 x float>%b
@@ -1036,9 +1036,8 @@ define <4 x float> @uitofp_4i1_float(<4 x i32> %a) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
-; KNL-NEXT:    vpsrld $31, %xmm0, %xmm0
-; KNL-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; KNL-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: uitofp_4i1_float:
@@ -1059,8 +1058,7 @@ define <4 x double> @uitofp_4i1_double(<4 x i32> %a) {
 ; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    vpsrld $31, %xmm0, %xmm0
-; KNL-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: uitofp_4i1_double:
@@ -1113,12 +1111,7 @@ define <2 x double> @uitofp_2i1_double(<2 x i32> %a) {
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; KNL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
-; KNL-NEXT:    vpsrlq $63, %xmm0, %xmm0
-; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm1
-; KNL-NEXT:    vmovq %xmm0, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm0
-; KNL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: uitofp_2i1_double:

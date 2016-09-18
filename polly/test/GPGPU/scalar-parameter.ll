@@ -268,14 +268,14 @@ bb7:                                              ; preds = %bb1
 
 ; IR-LABEL: @i8
 
-; IR: %1 = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_A)
-; IR-NEXT: %2 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
-; IR-NEXT: store i8* %1, i8** %polly_launch_0_param_0
-; IR-NEXT: %3 = bitcast i8** %polly_launch_0_param_0 to i8*
-; IR-NEXT: store i8* %3, i8** %2
+; IR: [[REGA:%.+]] = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_A)
+; IR-NEXT: [[REGB:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; IR-NEXT: store i8* [[REGA:%.+]], i8** %polly_launch_0_param_0
+; IR-NEXT: [[REGC:%.+]] = bitcast i8** %polly_launch_0_param_0 to i8*
+; IR-NEXT: store i8* [[REGC]], i8** [[REGB]]
 ; IR-NEXT: store i8 %b, i8* %polly_launch_0_param_1
-; IR-NEXT: %4 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
-; IR-NEXT: store i8* %polly_launch_0_param_1, i8** %4
+; IR-NEXT: [[REGD:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT: store i8* %polly_launch_0_param_1, i8** [[REGD]]
 
 ; CODE: Code
 ; CODE-NEXT: ====
