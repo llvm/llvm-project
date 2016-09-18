@@ -5,7 +5,7 @@
 // CHECK:      [[CLASS:@.*]]        = external global %struct._class_t
 // CHECK:      [[NSVALUE:@.*]]      = {{.*}}[[CLASS]]{{.*}}
 // CHECK:      [[RANGE_STR:.*]]     = {{.*}}_NSRange=QQ{{.*}}
-// CHECK:      [[METH:@.*]]         = private global{{.*}}valueWithBytes:objCType:{{.*}}
+// CHECK:      [[METH:@.*]]         = private unnamed_addr constant {{.*}}valueWithBytes:objCType:{{.*}}
 // CHECK:      [[VALUE_SEL:@.*]]    = {{.*}}[[METH]]{{.*}}
 // CHECK:      [[POINT_STR:.*]]     = {{.*}}_NSPoint=dd{{.*}}
 // CHECK:      [[SIZE_STR:.*]]      = {{.*}}_NSSize=dd{{.*}}

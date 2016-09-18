@@ -13,8 +13,8 @@ void f0(A *a) {
   a.y += a1;
 }
 
-// CHECK-LP64: private global [13 x i8] c"COMPLEX_PROP
-// CHECK-LP64: private global [17 x i8] c"setCOMPLEX_PROP
+// CHECK-LP64: private unnamed_addr constant [13 x i8] c"COMPLEX_PROP
+// CHECK-LP64: private unnamed_addr constant [17 x i8] c"setCOMPLEX_PROP
 
 // rdar: // 7351147
 @interface B

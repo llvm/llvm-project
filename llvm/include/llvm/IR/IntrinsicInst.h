@@ -361,6 +361,17 @@ namespace llvm {
     }
   };
 
+  class InstrProfIncrementInstStep : public InstrProfIncrementInst {
+  public:
+    static inline bool classof(const IntrinsicInst *I) {
+      return I->getIntrinsicID() == Intrinsic::instrprof_increment_step;
+    }
+    static inline bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+    Value *getStep() const { return const_cast<Value *>(getArgOperand(4)); }
+  };
+
   /// This represents the llvm.instrprof_value_profile intrinsic.
   class InstrProfValueProfileInst : public IntrinsicInst {
   public:

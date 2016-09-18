@@ -59,9 +59,9 @@ id Test16877359() {
 // CHECK: @"OBJC_CLASS_$_MySecretNamespace.Message" = global %struct._class_t
 // CHECK: @"OBJC_METACLASS_$_MySecretNamespace.Message" = global %struct._class_t
 
-// CHECK: private global [42 x i8] c"T@\22MySecretNamespace.Message\22,&,V_msgProp\00"
-// CHECK: private global [76 x i8] c"T@\22MySecretNamespace.Message<MySecretNamespace.Protocol3>\22,&,V_msgProtoProp\00"
-// CHECK: private global [50 x i8] c"T@\22<MySecretNamespace.Protocol3>\22,&,V_idProtoProp\00"
+// CHECK: private unnamed_addr constant [42 x i8] c"T@\22MySecretNamespace.Message\22,&,V_msgProp\00"
+// CHECK: private unnamed_addr constant [76 x i8] c"T@\22MySecretNamespace.Message<MySecretNamespace.Protocol3>\22,&,V_msgProtoProp\00"
+// CHECK: private unnamed_addr constant [50 x i8] c"T@\22<MySecretNamespace.Protocol3>\22,&,V_idProtoProp\00"
 
 // CHECK: @"OBJC_CLASS_$_foo" = external global %struct._class_t
 // CHECK: define internal i8* @"\01-[Message MyMethod]"

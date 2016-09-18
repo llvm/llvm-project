@@ -17636,7 +17636,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       SDValue PassThru = Op.getOperand(2);
       SDValue Mask = Op.getOperand(3);
       SDValue RoundingMode;
-      // We allways add rounding mode to the Node.
+      // We always add rounding mode to the Node.
       // If the rounding mode is not specified, we add the
       // "current direction" mode.
       if (Op.getNumOperands() == 4)
