@@ -135,6 +135,17 @@ void f14() {
 
 void bar(int*);
 
+struct s3 gets3() {
+  struct s3 s;
+  return s;
+}
+
+void accessArrayFieldNoCrash() {
+  bar(gets3().a);
+  bar((gets3().a));
+  bar(((gets3().a)));  
+}
+
 // Test if the array is correctly invalidated.
 void f15() {
   int a[10];
