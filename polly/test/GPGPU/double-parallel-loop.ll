@@ -89,7 +89,27 @@
 ; CODE-NEXT:   Stmt_bb5(32 * b0 + t0, 32 * b1 + t1 + 16 * c3);
 
 ; IR: polly.split_new_and_old:
-; IR-NEXT:    br i1 true, label %polly.start, label %bb2
+; IR-NEXT:   %0 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 1, i64 1024)
+; IR-NEXT:   %.obit = extractvalue { i64, i1 } %0, 1
+; IR-NEXT:   %polly.overflow.state = or i1 false, %.obit
+; IR-NEXT:   %.res = extractvalue { i64, i1 } %0, 0
+; IR-NEXT:   %1 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %.res, i64 1024)
+; IR-NEXT:   %.obit1 = extractvalue { i64, i1 } %1, 1
+; IR-NEXT:   %polly.overflow.state2 = or i1 %polly.overflow.state, %.obit1
+; IR-NEXT:   %.res3 = extractvalue { i64, i1 } %1, 0
+; IR-NEXT:   %2 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 7, i64 %.res3)
+; IR-NEXT:   %.obit4 = extractvalue { i64, i1 } %2, 1
+; IR-NEXT:   %polly.overflow.state5 = or i1 %polly.overflow.state2, %.obit4
+; IR-NEXT:   %.res6 = extractvalue { i64, i1 } %2, 0
+; IR-NEXT:   %3 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 0, i64 %.res6)
+; IR-NEXT:   %.obit7 = extractvalue { i64, i1 } %3, 1
+; IR-NEXT:   %polly.overflow.state8 = or i1 %polly.overflow.state5, %.obit7
+; IR-NEXT:   %.res9 = extractvalue { i64, i1 } %3, 0
+; IR-NEXT:   %4 = icmp sge i64 %.res9, 2621440
+; IR-NEXT:   %5 = and i1 true, %4
+; IR-NEXT:   %polly.rtc.overflown = xor i1 %polly.overflow.state8, true
+; IR-NEXT:   %polly.rtc.result = and i1 %5, %polly.rtc.overflown
+; IR-NEXT:   br i1 %polly.rtc.result, label %polly.start, label %bb2
 
 ; IR: polly.start:
 ; IR-NEXT: br label %polly.acc.initialize
@@ -105,7 +125,7 @@
 ; IR-NEXT:    [[ParamTyped:%.*]] = bitcast i8** %polly_launch_0_param_0 to i8*
 ; IR-NEXT:    store i8* [[ParamTyped]], i8** [[ParamSlot]]
 ; IR-NEXT:    call i8* @polly_getKernel
-; IR-NEXT:    call void @polly_launchKernel(i8* %5, i32 32, i32 32, i32 32, i32 16, i32 1, i8* %polly_launch_0_params_i8ptr)
+; IR-NEXT:    call void @polly_launchKernel(i8* %11, i32 32, i32 32, i32 32, i32 16, i32 1, i8* %polly_launch_0_params_i8ptr)
 ; IR-NEXT:    call void @polly_freeKernel
 ; IR-NEXT:    [[HostPtr2:%.*]] = bitcast [1024 x float]* %A to i8*
 ; IR-NEXT:    call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_A, i8* [[HostPtr2]], i64 4194304)
