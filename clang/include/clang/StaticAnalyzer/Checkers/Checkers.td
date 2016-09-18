@@ -634,6 +634,10 @@ def LLVMConventionsChecker : Checker<"Conventions">,
 
 let ParentPackage = Debug in {
 
+def AnalysisOrderChecker : Checker<"AnalysisOrder">,
+  HelpText<"Print callbacks that are called during analysis in order">,
+  DescFile<"AnalysisOrder.cpp">;
+
 def DominatorsTreeDumper : Checker<"DumpDominators">,
   HelpText<"Print the dominance tree for a given CFG">,
   DescFile<"DebugCheckers.cpp">;
