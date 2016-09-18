@@ -151,6 +151,7 @@ class Replacements {
 
  public:
   typedef ReplacementsImpl::const_iterator const_iterator;
+  typedef ReplacementsImpl::const_reverse_iterator const_reverse_iterator;
 
   Replacements() = default;
 
@@ -192,6 +193,10 @@ class Replacements {
   const_iterator begin() const { return Replaces.begin(); }
 
   const_iterator end() const { return Replaces.end(); }
+
+  const_reverse_iterator rbegin() const  { return Replaces.rbegin(); }
+
+  const_reverse_iterator rend() const { return Replaces.rend(); }
 
   bool operator==(const Replacements &RHS) const {
     return Replaces == RHS.Replaces;
