@@ -34,3 +34,57 @@ bool fooPtr1(int x) {
     return funcPtr(1);
   return true;
 }
+
+// Test that we respect the template arguments of function templates
+
+template<typename T, unsigned N>
+bool templateFunc() { unsigned i = N; return false; }
+
+bool fooTemplate1(int x) {
+  if (x > 0)
+    return false;
+  else if (x < 0)
+    return templateFunc<int, 1>();
+  return true;
+}
+
+bool fooTemplate2(int x) {
+  if (x > 0)
+    return false;
+  else if (x < 0)
+    return templateFunc<long, 1>();
+  return true;
+}
+
+bool fooTemplate3(int x) {
+  if (x > 0)
+    return false;
+  else if (x < 0)
+    return templateFunc<long, 2>();
+  return true;
+}
+
+// Test that we don't just concatenate the template arguments into a string
+// without having any padding between them (e.g. foo<X, XX>() != foo<XX, X>()).
+
+class X {};
+class XX {};
+
+template<typename T1, typename T2>
+bool templatePaddingFunc() { return false; }
+
+bool fooTemplatePadding1(int x) {
+  if (x > 0)
+    return false;
+  else if (x < 0)
+    return templatePaddingFunc<X, XX>();
+  return true;
+}
+
+bool fooTemplatePadding2(int x) {
+  if (x > 0)
+    return false;
+  else if (x < 0)
+    return templatePaddingFunc<XX, X>();
+  return true;
+}
