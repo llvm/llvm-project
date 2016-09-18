@@ -88,8 +88,11 @@ class VariablePattern {
   struct VariableOccurence {
     /// The index of the associated VarDecl in the Variables vector.
     size_t KindID;
+    /// The source range in the code where the variable was referenced.
+    SourceRange Range;
 
-    VariableOccurence(size_t KindID) : KindID(KindID) {}
+    VariableOccurence(size_t KindID, SourceRange Range)
+        : KindID(KindID), Range(Range) {}
   };
 
   /// All occurences of referenced variables in the order of appearance.
@@ -100,19 +103,20 @@ class VariablePattern {
 
   /// \brief Adds a new variable referenced to this pattern.
   /// \param VarDecl The declaration of the variable that is referenced.
-  void addVariableOccurence(const VarDecl *VarDecl) {
+  /// \param Range The SourceRange where this variable is referenced.
+  void addVariableOccurence(const VarDecl *VarDecl, SourceRange Range) {
     // First check if we already reference this variable
     for (size_t KindIndex = 0; KindIndex < Variables.size(); ++KindIndex) {
       if (Variables[KindIndex] == VarDecl) {
         // If yes, add a new occurence that points to the existing entry in
         // the Variables vector.
-        Occurences.emplace_back(KindIndex);
+        Occurences.emplace_back(KindIndex, Range);
         return;
       }
     }
     // If this variable wasn't already referenced, add it to the list of
     // referenced variables and add a occurence that points to this new entry.
-    Occurences.emplace_back(Variables.size());
+    Occurences.emplace_back(Variables.size(), Range);
     Variables.push_back(VarDecl);
   }
 
@@ -127,7 +131,7 @@ class VariablePattern {
     // Check if S is a reference to a variable. If yes, add it to the pattern.
     if (auto D = dyn_cast<DeclRefExpr>(S)) {
       if (auto VD = dyn_cast<VarDecl>(D->getDecl()->getCanonicalDecl()))
-        addVariableOccurence(VD);
+        addVariableOccurence(VD, D->getSourceRange());
     }
 
     // Recursively check all children of the given statement.
@@ -144,33 +148,93 @@ public:
       addVariables(S);
   }
 
-  /// \brief Compares this pattern with the given one.
+  /// \brief Counts the differences between this pattern and the given one.
   /// \param Other The given VariablePattern to compare with.
-  /// \return Returns true if and only if the references variables in this
-  ///         object follow the same pattern than the ones in the given
-  ///         VariablePattern.
+  /// \param FirstMismatch Output parameter that will be filled with information
+  ///        about the first difference between the two patterns. This parameter
+  ///        can be a nullptr, in which case it will be ignored.
+  /// \return Returns the number of differences between the pattern this object
+  ///         is following and the given VariablePattern.
   ///
-  /// For example, the following statements all have the same pattern:
+  /// For example, the following statements all have the same pattern and this
+  /// function would return zero:
   ///
   ///   if (a < b) return a; return b;
   ///   if (x < y) return x; return y;
   ///   if (u2 < u1) return u2; return u1;
   ///
-  /// but the following statement has a different pattern (note the changed
-  /// variables in the return statements).
+  /// But the following statement has a different pattern (note the changed
+  /// variables in the return statements) and would have two differences when
+  /// compared with one of the statements above.
   ///
   ///   if (a < b) return b; return a;
   ///
   /// This function should only be called if the related statements of the given
   /// pattern and the statements of this objects are clones of each other.
-  bool comparePattern(const VariablePattern &Other) {
+  unsigned countPatternDifferences(
+      const VariablePattern &Other,
+      CloneDetector::SuspiciousClonePair *FirstMismatch = nullptr) {
+    unsigned NumberOfDifferences = 0;
+
     assert(Other.Occurences.size() == Occurences.size());
     for (unsigned i = 0; i < Occurences.size(); ++i) {
-      if (Occurences[i].KindID != Other.Occurences[i].KindID) {
-        return false;
-      }
+      auto ThisOccurence = Occurences[i];
+      auto OtherOccurence = Other.Occurences[i];
+      if (ThisOccurence.KindID == OtherOccurence.KindID)
+        continue;
+
+      ++NumberOfDifferences;
+
+      // If FirstMismatch is not a nullptr, we need to store information about
+      // the first difference between the two patterns.
+      if (FirstMismatch == nullptr)
+        continue;
+
+      // Only proceed if we just found the first difference as we only store
+      // information about the first difference.
+      if (NumberOfDifferences != 1)
+        continue;
+
+      const VarDecl *FirstSuggestion = nullptr;
+      // If there is a variable available in the list of referenced variables
+      // which wouldn't break the pattern if it is used in place of the
+      // current variable, we provide this variable as the suggested fix.
+      if (OtherOccurence.KindID < Variables.size())
+        FirstSuggestion = Variables[OtherOccurence.KindID];
+
+      // Store information about the first clone.
+      FirstMismatch->FirstCloneInfo =
+          CloneDetector::SuspiciousClonePair::SuspiciousCloneInfo(
+              Variables[ThisOccurence.KindID], ThisOccurence.Range,
+              FirstSuggestion);
+
+      // Same as above but with the other clone. We do this for both clones as
+      // we don't know which clone is the one containing the unintended
+      // pattern error.
+      const VarDecl *SecondSuggestion = nullptr;
+      if (ThisOccurence.KindID < Other.Variables.size())
+        SecondSuggestion = Other.Variables[ThisOccurence.KindID];
+
+      // Store information about the second clone.
+      FirstMismatch->SecondCloneInfo =
+          CloneDetector::SuspiciousClonePair::SuspiciousCloneInfo(
+              Variables[ThisOccurence.KindID], OtherOccurence.Range,
+              SecondSuggestion);
+
+      // SuspiciousClonePair guarantees that the first clone always has a
+      // suggested variable associated with it. As we know that one of the two
+      // clones in the pair always has suggestion, we swap the two clones
+      // in case the first clone has no suggested variable which means that
+      // the second clone has a suggested variable and should be first.
+      if (!FirstMismatch->FirstCloneInfo.Suggestion)
+        std::swap(FirstMismatch->FirstCloneInfo,
+                  FirstMismatch->SecondCloneInfo);
+
+      // This ensures that we always have at least one suggestion in a pair.
+      assert(FirstMismatch->FirstCloneInfo.Suggestion);
     }
-    return true;
+
+    return NumberOfDifferences;
   }
 };
 }
@@ -251,8 +315,26 @@ public:
   //--- Calls --------------------------------------------------------------//
   DEF_ADD_DATA(CallExpr, {
     // Function pointers don't have a callee and we just skip hashing it.
-    if (S->getDirectCallee())
-      addData(S->getDirectCallee()->getQualifiedNameAsString());
+    if (const FunctionDecl *D = S->getDirectCallee()) {
+      // If the function is a template instantiation, we also need to handle
+      // the template arguments as they are no included in the qualified name.
+      if (D->isTemplateInstantiation()) {
+        auto Args = D->getTemplateSpecializationArgs();
+        std::string ArgString;
+
+        // Print all template arguments into ArgString
+        llvm::raw_string_ostream OS(ArgString);
+        for (unsigned i = 0; i < Args->size(); ++i) {
+          Args->get(i).print(Context.getLangOpts(), OS);
+          // Add a padding character so that 'foo<X, XX>()' != 'foo<XX, X>()'.
+          OS << '\n';
+        }
+        OS.flush();
+
+        addData(ArgString);
+      }
+      addData(D->getQualifiedNameAsString());
+    }
   })
 
   //--- Exceptions ---------------------------------------------------------//
@@ -529,7 +611,8 @@ static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
     // and assign them to our new clone group.
     auto I = UnassignedSequences.begin(), E = UnassignedSequences.end();
     while (I != E) {
-      if (VariablePattern(*I).comparePattern(PrototypeFeatures)) {
+
+      if (VariablePattern(*I).countPatternDifferences(PrototypeFeatures) == 0) {
         FilteredGroup.Sequences.push_back(*I);
         I = UnassignedSequences.erase(I);
         continue;
@@ -546,11 +629,15 @@ static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
 }
 
 void CloneDetector::findClones(std::vector<CloneGroup> &Result,
-                               unsigned MinGroupComplexity) {
+                               unsigned MinGroupComplexity,
+                               bool CheckPatterns) {
   // Add every valid clone group that fulfills the complexity requirement.
   for (const CloneGroup &Group : CloneGroups) {
     if (Group.isValid() && Group.Complexity >= MinGroupComplexity) {
-      createCloneGroups(Result, Group);
+      if (CheckPatterns)
+        createCloneGroups(Result, Group);
+      else
+        Result.push_back(Group);
     }
   }
 
@@ -578,5 +665,39 @@ void CloneDetector::findClones(std::vector<CloneGroup> &Result,
   // reverse iterate over it to get the desired order.
   for (auto I = IndexesToRemove.rbegin(); I != IndexesToRemove.rend(); ++I) {
     Result.erase(Result.begin() + *I);
+  }
+}
+
+void CloneDetector::findSuspiciousClones(
+    std::vector<CloneDetector::SuspiciousClonePair> &Result,
+    unsigned MinGroupComplexity) {
+  std::vector<CloneGroup> Clones;
+  // Reuse the normal search for clones but specify that the clone groups don't
+  // need to have a common referenced variable pattern so that we can manually
+  // search for the kind of pattern errors this function is supposed to find.
+  findClones(Clones, MinGroupComplexity, false);
+
+  for (const CloneGroup &Group : Clones) {
+    for (unsigned i = 0; i < Group.Sequences.size(); ++i) {
+      VariablePattern PatternA(Group.Sequences[i]);
+
+      for (unsigned j = i + 1; j < Group.Sequences.size(); ++j) {
+        VariablePattern PatternB(Group.Sequences[j]);
+
+        CloneDetector::SuspiciousClonePair ClonePair;
+        // For now, we only report clones which break the variable pattern just
+        // once because multiple differences in a pattern are an indicator that
+        // those differences are maybe intended (e.g. because it's actually
+        // a different algorithm).
+        // TODO: In very big clones even multiple variables can be unintended,
+        // so replacing this number with a percentage could better handle such
+        // cases. On the other hand it could increase the false-positive rate
+        // for all clones if the percentage is too high.
+        if (PatternA.countPatternDifferences(PatternB, &ClonePair) == 1) {
+          Result.push_back(ClonePair);
+          break;
+        }
+      }
+    }
   }
 }
