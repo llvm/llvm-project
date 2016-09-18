@@ -91,15 +91,6 @@ void CloneChecker::reportClones(SourceManager &SM, AnalysisManager &Mgr,
                                                "Related code clone is here.");
 
   for (CloneDetector::CloneGroup &Group : CloneGroups) {
-    // For readability reasons we sort the clones by line numbers.
-    std::sort(Group.Sequences.begin(), Group.Sequences.end(),
-              [&SM](const StmtSequence &LHS, const StmtSequence &RHS) {
-                return SM.isBeforeInTranslationUnit(LHS.getStartLoc(),
-                                                    RHS.getStartLoc()) &&
-                       SM.isBeforeInTranslationUnit(LHS.getEndLoc(),
-                                                    RHS.getEndLoc());
-              });
-
     // We group the clones by printing the first as a warning and all others
     // as a note.
     DiagEngine.Report(Group.Sequences.front().getStartLoc(), WarnID);
