@@ -358,8 +358,8 @@ private:
 // See TracePC.cpp
 class TracePC {
  public:
-  void HandleTrace(uint64_t *guard, uintptr_t PC);
-  void HandleInit(uint64_t *start, uint64_t *stop);
+  void HandleTrace(uintptr_t *guard, uintptr_t PC);
+  void HandleInit(uintptr_t *start, uintptr_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   size_t GetTotalCoverage() { return TotalCoverage; }
   void SetUseCounters(bool UC) { UseCounters = UC; }
@@ -398,12 +398,15 @@ private:
   void ResetGuards();
 
   struct Module {
-    uint64_t *Start, *Stop;
+    uintptr_t *Start, *Stop;
   };
 
   Module Modules[4096];
   size_t NumModules = 0;
   size_t NumGuards = 0;
+
+  static const size_t kNumCounters = 1 << 14;
+  uint8_t Counters[kNumCounters];
 
   ValueBitMap CounterMap;
   ValueBitMap TotalCoverageMap;

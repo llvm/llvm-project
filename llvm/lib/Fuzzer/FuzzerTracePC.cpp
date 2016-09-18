@@ -17,39 +17,35 @@
 namespace fuzzer {
 
 TracePC TPC;
+const size_t TracePC::kNumCounters;
 
-void TracePC::HandleTrace(uint64_t *Guard, uintptr_t PC) {
-  const uint64_t kBit63 = 1ULL << 63;
-  uint64_t Value = *Guard;
-  if (Value & kBit63) return;
-  // Printf("   >> %16zx %p\n", Value, Guard);
+void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
+  uintptr_t Idx = *Guard;
+  if (!Idx) return;
   if (UseCounters) {
-    uint64_t Counter = Value & 0xff;
+    uint8_t Counter = Counters[Idx % kNumCounters];
     if (Counter == 0) {
-      size_t Idx = Value >> 32;
       if (TotalCoverageMap.AddValue(Idx)) {
         TotalCoverage++;
         AddNewPC(PC);
       }
     }
-    if (Counter < 255)
-      Value++;
+    if (Counter < 128)
+      Counters[Idx % kNumCounters] = Counter + 1;
     else
-      Value |= kBit63;
+      *Guard = 0;
   } else {
-    Value |= kBit63;
+    *Guard = 0;
     TotalCoverage++;
     AddNewPC(PC);
   }
-  // Printf("   << %16zx\n", Value);
-  *Guard = Value;
 }
 
-void TracePC::HandleInit(uint64_t *Start, uint64_t *Stop) {
+void TracePC::HandleInit(uintptr_t *Start, uintptr_t *Stop) {
   if (Start == Stop || *Start) return;
   assert(NumModules < sizeof(Modules) / sizeof(Modules[0]));
-  for (uint64_t *P = Start; P < Stop; P++)
-    *P = (++NumGuards) << 32;
+  for (uintptr_t *P = Start; P < Stop; P++)
+    *P = ++NumGuards;
   Modules[NumModules].Start = Start;
   Modules[NumModules].Stop = Stop;
   NumModules++;
@@ -63,30 +59,29 @@ void TracePC::PrintModuleInfo() {
 }
 
 void TracePC::ResetGuards() {
+  uintptr_t N = 0;
   for (size_t M = 0; M < NumModules; M++)
-    for (uint64_t *X = Modules[M].Start; X < Modules[M].Stop; X++)
-      *X = (*X >> 32) << 32;
+    for (uintptr_t *X = Modules[M].Start; X < Modules[M].Stop; X++)
+      *X = ++N;
+  assert(N == NumGuards);
 }
 
 void TracePC::FinalizeTrace() {
   if (UseCounters && TotalCoverage) {
-    for (size_t M = 0; M < NumModules; M++) {
-      for (uint64_t *X = Modules[M].Start; X < Modules[M].Stop; X++) {
-        uint64_t Value = *X & 0xff;
-        uint64_t Idx = *X >> 32;
-        if (Value >= 1) {
-          unsigned Bit = 0;
-          /**/ if (Value >= 128) Bit = 7;
-          else if (Value >= 32) Bit = 6;
-          else if (Value >= 16) Bit = 5;
-          else if (Value >= 8) Bit = 4;
-          else if (Value >= 4) Bit = 3;
-          else if (Value >= 3) Bit = 2;
-          else if (Value >= 2) Bit = 1;
-          CounterMap.AddValue(Idx * 8 + Bit);
-        }
-        *X = Idx << 32;
-      }
+    for (size_t Idx = 1, N = std::min(kNumCounters, NumGuards); Idx < N;
+         Idx++) {
+      uint8_t Counter = Counters[Idx];
+      if (!Counter) continue;
+      Counters[Idx] = 0;
+      unsigned Bit = 0;
+      /**/ if (Counter >= 128) Bit = 7;
+      else if (Counter >= 32) Bit = 6;
+      else if (Counter >= 16) Bit = 5;
+      else if (Counter >= 8) Bit = 4;
+      else if (Counter >= 4) Bit = 3;
+      else if (Counter >= 3) Bit = 2;
+      else if (Counter >= 2) Bit = 1;
+      CounterMap.AddValue(Idx * 8 + Bit);
     }
   }
 }
@@ -109,13 +104,13 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 
 extern "C" {
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc_guard(uint64_t *Guard) {
+void __sanitizer_cov_trace_pc_guard(uintptr_t *Guard) {
   uintptr_t PC = (uintptr_t)__builtin_return_address(0);
   fuzzer::TPC.HandleTrace(Guard, PC);
 }
 
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc_guard_init(uint64_t *Start, uint64_t *Stop) {
+void __sanitizer_cov_trace_pc_guard_init(uintptr_t *Start, uintptr_t *Stop) {
   fuzzer::TPC.HandleInit(Start, Stop);
 }
 
