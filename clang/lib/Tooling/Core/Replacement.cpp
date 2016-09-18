@@ -83,11 +83,8 @@ bool operator<(const Replacement &LHS, const Replacement &RHS) {
   if (LHS.getOffset() != RHS.getOffset())
     return LHS.getOffset() < RHS.getOffset();
 
-  // Apply longer replacements first, specifically so that deletions are
-  // executed before insertions. It is (hopefully) never the intention to
-  // delete parts of newly inserted code.
   if (LHS.getLength() != RHS.getLength())
-    return LHS.getLength() > RHS.getLength();
+    return LHS.getLength() < RHS.getLength();
 
   if (LHS.getFilePath() != RHS.getFilePath())
     return LHS.getFilePath() < RHS.getFilePath();
@@ -407,9 +404,7 @@ unsigned Replacements::getShiftedCodePosition(unsigned Position) const {
 
 bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite) {
   bool Result = true;
-  for (Replacements::const_iterator I = Replaces.begin(),
-                                    E = Replaces.end();
-       I != E; ++I) {
+  for (auto I = Replaces.rbegin(), E = Replaces.rend(); I != E; ++I) {
     if (I->isApplicable()) {
       Result = I->apply(Rewrite) && Result;
     } else {
@@ -436,8 +431,7 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
       "<stdin>", 0, llvm::MemoryBuffer::getMemBuffer(Code, "<stdin>"));
   FileID ID = SourceMgr.createFileID(Files.getFile("<stdin>"), SourceLocation(),
                                      clang::SrcMgr::C_User);
-  for (Replacements::const_iterator I = Replaces.begin(), E = Replaces.end();
-       I != E; ++I) {
+  for (auto I = Replaces.rbegin(), E = Replaces.rend(); I != E; ++I) {
     Replacement Replace("<stdin>", I->getOffset(), I->getLength(),
                         I->getReplacementText());
     if (!Replace.apply(Rewrite))

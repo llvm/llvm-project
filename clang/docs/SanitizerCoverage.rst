@@ -331,10 +331,10 @@ on every edge:
 
 .. code-block:: none
 
-   if (guard_variable >= 0)
+   if (guard_variable)
      __sanitizer_cov_trace_pc_guard(&guard_variable)
 
-Every edge will have its own 8-byte `guard_variable`.
+Every edge will have its own `guard_variable` (uintptr_t).
 
 The compler will also insert a module constructor that will call
 
@@ -342,7 +342,7 @@ The compler will also insert a module constructor that will call
 
    // The guards are [start, stop).
    // This function may be called multiple times with the same values of start/stop.
-   __sanitizer_cov_trace_pc_guard_init(uint64_t *start, uint64_t *stop);
+   __sanitizer_cov_trace_pc_guard_init(uintptr_t *start, uintptr_t *stop);
 
 Similarly to `trace-pc,indirect-calls`, with `trace-pc-guards,indirect-calls`
 ``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
