@@ -2418,12 +2418,7 @@ CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
   // FIXME: This will crash the analyzer if an allocation comes from an
   // implicit call (ex: a destructor call).
   // (Currently there are no such allocations in Cocoa, though.)
-  const Stmt *AllocStmt = nullptr;
-  ProgramPoint P = AllocNode->getLocation();
-  if (Optional<CallExitEnd> Exit = P.getAs<CallExitEnd>())
-    AllocStmt = Exit->getCalleeContext()->getCallSite();
-  else
-    AllocStmt = P.castAs<PostStmt>().getStmt();
+  const Stmt *AllocStmt = PathDiagnosticLocation::getStmt(AllocNode);
   assert(AllocStmt && "Cannot find allocation statement");
 
   PathDiagnosticLocation AllocLocation =
