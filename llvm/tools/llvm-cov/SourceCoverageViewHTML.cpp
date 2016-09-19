@@ -334,12 +334,11 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
   AddCoverageTripleToColumn(FCS.FunctionCoverage.Executed,
                             FCS.FunctionCoverage.NumFunctions,
                             FCS.FunctionCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(
-      FCS.LineCoverage.NumLines - FCS.LineCoverage.NotCovered,
-      FCS.LineCoverage.NumLines, FCS.LineCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(
-      FCS.RegionCoverage.NumRegions - FCS.RegionCoverage.NotCovered,
-      FCS.RegionCoverage.NumRegions, FCS.RegionCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.LineCoverage.Covered, FCS.LineCoverage.NumLines,
+                            FCS.LineCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.RegionCoverage.Covered,
+                            FCS.RegionCoverage.NumRegions,
+                            FCS.RegionCoverage.getPercentCovered());
 
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
 }
