@@ -26,7 +26,8 @@ public:
 
   void closeViewFile(OwnedStream OS) override;
 
-  Error createIndexFile(ArrayRef<StringRef> SourceFiles) override;
+  Error createIndexFile(ArrayRef<StringRef> SourceFiles,
+                        const coverage::CoverageMapping &Coverage) override;
 
   CoveragePrinterText(const CoverageViewOptions &Opts)
       : CoveragePrinter(Opts) {}
@@ -38,7 +39,7 @@ class SourceCoverageViewText : public SourceCoverageView {
 
   void renderViewFooter(raw_ostream &OS) override;
 
-  void renderSourceName(raw_ostream &OS) override;
+  void renderSourceName(raw_ostream &OS, bool WholeFile) override;
 
   void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) override;
 
@@ -69,6 +70,11 @@ class SourceCoverageViewText : public SourceCoverageView {
 
   void renderRegionMarkers(raw_ostream &OS, CoverageSegmentArray Segments,
                            unsigned ViewDepth) override;
+
+  void renderTitle(raw_ostream &OS, StringRef Title) override;
+
+  void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
+                         unsigned IndentLevel) override;
 
 public:
   SourceCoverageViewText(StringRef SourceName, const MemoryBuffer &File,
