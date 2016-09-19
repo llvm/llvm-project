@@ -253,7 +253,7 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
   assert((ShiftVal == 0 || ShiftVal == 12) &&
          "unexpected shift value for add/sub immediate");
   if (MO.isImm())
-    return MO.getImm() | (ShiftVal == 0 ? 0 : (1 << 12));
+    return MO.getImm() | (ShiftVal == 0 ? 0 : (1 << ShiftVal));
   assert(MO.isExpr() && "Unable to encode MCOperand!");
   const MCExpr *Expr = MO.getExpr();
 
@@ -263,7 +263,7 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
 
   ++MCNumFixups;
 
-  return 0;
+  return ShiftVal == 0 ? 0 : (1 << ShiftVal);
 }
 
 /// getCondBranchTargetOpValue - Return the encoded value for a conditional

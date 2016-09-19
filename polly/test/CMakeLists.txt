@@ -142,7 +142,7 @@ else (NOT DEFINED LLVM_MAIN_SRC_DIR)
   endif ()
 
   # Run polly-check-format as part of polly-check only if we are compiling with
-  # clang, so clang-format is availbale.
+  # clang, so clang-format is available.
   # if (TARGET clang-format) would be preferable, but this target is only added
   # after Polly, i.e. there is no such target yet at this point. The CMake cache
   # entry LLVM_TOOL_CLANG_BUILD will only be defined after clang has been

@@ -32,6 +32,7 @@ class BranchInst;
 class Instruction;
 class CallInst;
 class DbgDeclareInst;
+class DbgValueInst;
 class StoreInst;
 class LoadInst;
 class Value;
@@ -47,6 +48,8 @@ class DominatorTree;
 class LazyValueInfo;
 
 template<typename T> class SmallVectorImpl;
+
+typedef SmallVector<DbgValueInst *, 1> DbgValueList;
 
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
@@ -263,12 +266,20 @@ bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
 bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      LoadInst *LI, DIBuilder &Builder);
 
+/// Inserts a llvm.dbg.value intrinsic after a phi of an alloca'd value
+/// that has an associated llvm.dbg.decl intrinsic.
+bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+                                     PHINode *LI, DIBuilder &Builder);
+
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
 /// llvm.dbg.value intrinsics.
 bool LowerDbgDeclare(Function &F);
 
 /// Finds the llvm.dbg.declare intrinsic corresponding to an alloca, if any.
 DbgDeclareInst *FindAllocaDbgDeclare(Value *V);
+
+/// Finds the llvm.dbg.value intrinsics corresponding to an alloca, if any.
+void FindAllocaDbgValues(DbgValueList &DbgValues, Value *V);
 
 /// Replaces llvm.dbg.declare instruction when the address it describes
 /// is replaced with a new value. If Deref is true, an additional DW_OP_deref is
