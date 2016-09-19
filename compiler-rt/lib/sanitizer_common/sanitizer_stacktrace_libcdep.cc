@@ -106,8 +106,8 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_symbolize_data(uptr data_addr, const char *fmt, char *out_buf,
-                                uptr out_buf_size) {
+void __sanitizer_symbolize_global(uptr data_addr, const char *fmt,
+                                  char *out_buf, uptr out_buf_size) {
   if (!out_buf_size) return;
   out_buf[0] = 0;
   DataInfo DI;
