@@ -430,6 +430,10 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     if (!MBB.getParent()->getFunction()->optForMinSize())
       return false;
 
+    if (!MI->hasOneMemOperand() ||
+        (*MI->memoperands_begin())->getAlignment() < 4)
+      return false;
+
     // We're creating a completely different type of load/store - LDM from LDR.
     // For this reason we can't reuse the logic at the end of this function; we
     // have to implement the MI building here.

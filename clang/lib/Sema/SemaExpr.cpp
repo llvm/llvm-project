@@ -828,18 +828,8 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
   // double.
   const BuiltinType *BTy = Ty->getAs<BuiltinType>();
   if (BTy && (BTy->getKind() == BuiltinType::Half ||
-              BTy->getKind() == BuiltinType::Float)) {
-    if (getLangOpts().OpenCL &&
-        !((getLangOpts().OpenCLVersion >= 120 &&
-           Context.getTargetInfo()
-               .getSupportedOpenCLOpts()
-               .cl_khr_fp64) ||
-          getOpenCLOptions().cl_khr_fp64)) {
-        E = ImpCastExprToType(E, Context.FloatTy, CK_FloatingCast).get();
-    } else {
-      E = ImpCastExprToType(E, Context.DoubleTy, CK_FloatingCast).get();
-    }
-  }
+              BTy->getKind() == BuiltinType::Float))
+    E = ImpCastExprToType(E, Context.DoubleTy, CK_FloatingCast).get();
 
   // C++ performs lvalue-to-rvalue conversion as a default argument
   // promotion, even on class types, but note:
@@ -3416,14 +3406,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       if (getLangOpts().SinglePrecisionConstants) {
         Res = ImpCastExprToType(Res, Context.FloatTy, CK_FloatingCast).get();
       } else if (getLangOpts().OpenCL &&
-                 !((getLangOpts().OpenCLVersion >= 120 &&
-                    Context.getTargetInfo()
-                        .getSupportedOpenCLOpts()
-                        .cl_khr_fp64) ||
+                 !((getLangOpts().OpenCLVersion >= 120) ||
                    getOpenCLOptions().cl_khr_fp64)) {
-        // Impose single-precision float type when:
-        //  - in CL 1.2 or above and cl_khr_fp64 is not supported, or
-        //  - in CL 1.1 or below and cl_khr_fp64 is not enabled.
         Diag(Tok.getLocation(), diag::warn_double_const_requires_fp64);
         Res = ImpCastExprToType(Res, Context.FloatTy, CK_FloatingCast).get();
       }
