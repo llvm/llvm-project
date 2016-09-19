@@ -34,23 +34,6 @@
 #pragma section(".CRT$XTY", long, read)  // NOLINT
 
 ////////////////////////////////////////////////////////////////////////////////
-// Define a copy of __asan_option_detect_stack_use_after_return that should be
-// used when linking an MD runtime with a set of object files on Windows.
-//
-// The ASan MD runtime dllexports '__asan_option_detect_stack_use_after_return',
-// so normally we would just dllimport it.  Unfortunately, the dllimport
-// attribute adds __imp_ prefix to the symbol name of a variable.
-// Since in general we don't know if a given TU is going to be used
-// with a MT or MD runtime and we don't want to use ugly __imp_ names on Windows
-// just to work around this issue, let's clone the variable that is constant
-// after initialization anyways.
-extern "C" {
-__declspec(dllimport) int __asan_should_detect_stack_use_after_return();
-int __asan_option_detect_stack_use_after_return =
-    __asan_should_detect_stack_use_after_return();
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // For some reason, the MD CRT doesn't call the C/C++ terminators during on DLL
 // unload or on exit.  ASan relies on LLVM global_dtors to call
 // __asan_unregister_globals on these events, which unfortunately doesn't work
