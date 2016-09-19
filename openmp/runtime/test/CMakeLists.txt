@@ -40,13 +40,10 @@ if(${LIBOMP_STANDALONE_BUILD})
     "Compiler to use for testing OpenMP library")
   set(LIBOMP_TEST_OPENMP_FLAG -fopenmp CACHE STRING
     "OpenMP compiler flag to use for testing OpenMP library")
-  set(LIBOMP_LLVM_LIT_EXECUTABLE "" CACHE STRING
-    "Path to llvm-lit")
-  find_program(LIT_EXECUTABLE
+  find_program(LIBOMP_LLVM_LIT_EXECUTABLE
     NAMES llvm-lit lit.py
-    HINTS ${LIBOMP_LLVM_LIT_EXECUTABLE}
     PATHS ${OPENMP_LLVM_TOOLS_DIR})
-  if(NOT LIT_EXECUTABLE)
+  if(NOT LIBOMP_LLVM_LIT_EXECUTABLE)
     libomp_say("Cannot find llvm-lit.")
     libomp_say("Please put llvm-lit in your PATH, set LIBOMP_LLVM_LIT_EXECUTABLE to its full path or point OPENMP_LLVM_TOOLS_DIR to its directory")
     libomp_warning_say("The check-libomp target will not be available!")
@@ -71,7 +68,7 @@ if(${LIBOMP_STANDALONE_BUILD})
     "Default options for lit")
   separate_arguments(LIBOMP_LIT_ARGS)
   add_custom_target(check-libomp
-    COMMAND ${PYTHON_EXECUTABLE} ${LIT_EXECUTABLE} ${LIBOMP_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${PYTHON_EXECUTABLE} ${LIBOMP_LLVM_LIT_EXECUTABLE} ${LIBOMP_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS omp
     COMMENT "Running libomp tests"
     ${cmake_3_2_USES_TERMINAL}

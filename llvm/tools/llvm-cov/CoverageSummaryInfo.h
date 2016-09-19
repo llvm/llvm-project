@@ -61,33 +61,27 @@ struct LineCoverageInfo {
   /// \brief The number of lines that weren't executed.
   size_t NotCovered;
 
-  /// \brief The number of lines that aren't code.
-  size_t NonCodeLines;
-
   /// \brief The total number of lines in a function/file.
   size_t NumLines;
 
-  LineCoverageInfo()
-      : Covered(0), NotCovered(0), NonCodeLines(0), NumLines(0) {}
+  LineCoverageInfo() : Covered(0), NotCovered(0), NumLines(0) {}
 
-  LineCoverageInfo(size_t Covered, size_t NumNonCodeLines, size_t NumLines)
-      : Covered(Covered), NotCovered(NumLines - NumNonCodeLines - Covered),
-        NonCodeLines(NumNonCodeLines), NumLines(NumLines) {}
+  LineCoverageInfo(size_t Covered, size_t NumLines)
+      : Covered(Covered), NotCovered(NumLines - Covered), NumLines(NumLines) {}
 
   LineCoverageInfo &operator+=(const LineCoverageInfo &RHS) {
     Covered += RHS.Covered;
     NotCovered += RHS.NotCovered;
-    NonCodeLines += RHS.NonCodeLines;
     NumLines += RHS.NumLines;
     return *this;
   }
 
-  bool isFullyCovered() const { return Covered == (NumLines - NonCodeLines); }
+  bool isFullyCovered() const { return Covered == NumLines; }
 
   double getPercentCovered() const {
-    if (NumLines - NonCodeLines == 0)
+    if (NumLines == 0)
       return 0.0;
-    return double(Covered) / double(NumLines - NonCodeLines) * 100.0;
+    return double(Covered) / double(NumLines) * 100.0;
   }
 };
 

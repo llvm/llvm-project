@@ -121,6 +121,16 @@ TEST_F(SortImportsTestJS, Comments) {
              "import {sym} from 'b';  // from //foo:bar\n"
              "// A very important import follows.\n"
              "import {sym} from 'a';  /* more comments */\n");
+  verifySort("import {sym} from 'a';\n"
+             "import {sym} from 'b';\n"
+             "\n"
+             "/** Comment on variable. */\n"
+             "const x = 1;\n",
+             "import {sym} from 'b';\n"
+             "import {sym} from 'a';\n"
+             "\n"
+             "/** Comment on variable. */\n"
+             "const x = 1;\n");
 }
 
 TEST_F(SortImportsTestJS, SortStar) {

@@ -67,7 +67,7 @@ FunctionCoverageSummary::get(const coverage::FunctionRecord &Function) {
   return FunctionCoverageSummary(
       Function.Name, Function.ExecutionCount,
       RegionCoverageInfo(CoveredRegions, NumCodeRegions),
-      LineCoverageInfo(CoveredLines, 0, NumLines));
+      LineCoverageInfo(CoveredLines, NumLines));
 }
 
 void FunctionCoverageSummary::update(const FunctionCoverageSummary &Summary) {
