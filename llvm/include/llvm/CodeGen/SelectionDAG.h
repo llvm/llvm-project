@@ -655,11 +655,6 @@ public:
     return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
   }
 
-  /// Return a splat ISD::BUILD_VECTOR node, but with Op's SDLoc.
-  SDValue getSplatBuildVector(EVT VT, SDValue Op) {
-    return getSplatBuildVector(VT, SDLoc(Op), Op);
-  }
-
   /// \brief Returns an ISD::VECTOR_SHUFFLE node semantically equivalent to
   /// the shuffle node in input but with swapped operands.
   ///
