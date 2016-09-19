@@ -1,0 +1,7 @@
+CHECK: COVERAGE:
+CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:13
+CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:14
+CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:16
+CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:18
+CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:19
+RUN: not LLVMFuzzer-NullDerefTest-TracePC -print_coverage=1 2>&1 | FileCheck %s

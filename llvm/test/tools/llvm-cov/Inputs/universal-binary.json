@@ -30,6 +30,7 @@
 // CHECK-SAME: "totals":{
 // CHECK-SAME: "lines":{"count":1,"covered":1,"percent":100,"noncode":0},
 // CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "instantiations":{"count":1,"covered":1,"percent":100},
 // CHECK-SAME: "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}
 
 // Close the export object, data array, and root object

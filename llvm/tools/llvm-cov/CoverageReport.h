@@ -35,9 +35,9 @@ public:
   void renderFunctionReports(ArrayRef<StringRef> Files, raw_ostream &OS);
 
   /// Prepare file reports for the files specified in \p Files.
-  std::vector<FileCoverageSummary>
-  prepareFileReports(FileCoverageSummary &Totals,
-                     ArrayRef<StringRef> Files) const;
+  static std::vector<FileCoverageSummary>
+  prepareFileReports(const coverage::CoverageMapping &Coverage,
+                     FileCoverageSummary &Totals, ArrayRef<StringRef> Files);
 
   /// Render file reports for every unique file in the coverage mapping.
   void renderFileReports(raw_ostream &OS) const;

@@ -13,6 +13,7 @@
 
 #include "CoverageReport.h"
 #include "RenderingSupport.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
@@ -85,18 +86,18 @@ Column column(StringRef Str, unsigned Width, const T &Value) {
 }
 
 // Specify the default column widths.
-size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10, 12, 18, 10};
+size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10,
+                              16, 16, 10, 12, 18, 10};
 size_t FunctionReportColumns[] = {25, 10, 8, 8, 10, 8, 8};
 
 /// \brief Adjust column widths to fit long file paths and function names.
-void adjustColumnWidths(const coverage::CoverageMapping &CM) {
-  for (StringRef Filename : CM.getUniqueSourceFiles()) {
+void adjustColumnWidths(ArrayRef<StringRef> Files,
+                        ArrayRef<StringRef> Functions) {
+  for (StringRef Filename : Files)
     FileReportColumns[0] = std::max(FileReportColumns[0], Filename.size());
-    for (const auto &F : CM.getCoveredFunctions(Filename)) {
-      FunctionReportColumns[0] =
-          std::max(FunctionReportColumns[0], F.Name.size());
-    }
-  }
+  for (StringRef Funcname : Functions)
+    FunctionReportColumns[0] =
+        std::max(FunctionReportColumns[0], Funcname.size());
 }
 
 /// \brief Prints a horizontal divider long enough to cover the given column
@@ -140,6 +141,8 @@ void CoverageReport::render(const FileCoverageSummary &File,
       determineCoveragePercentageColor(File.RegionCoverage);
   auto FuncCoverageColor =
       determineCoveragePercentageColor(File.FunctionCoverage);
+  auto InstantiationCoverageColor =
+      determineCoveragePercentageColor(File.InstantiationCoverage);
   auto LineCoverageColor = determineCoveragePercentageColor(File.LineCoverage);
   SmallString<256> FileName = File.Name;
   sys::path::remove_dots(FileName, /*remove_dot_dots=*/true);
@@ -163,11 +166,20 @@ void CoverageReport::render(const FileCoverageSummary &File,
                 File.FunctionCoverage.getPercentCovered())
       << '%';
   OS << format("%*u", FileReportColumns[7],
+               (unsigned)File.InstantiationCoverage.NumFunctions);
+  OS << format("%*u", FileReportColumns[8],
+               (unsigned)(File.InstantiationCoverage.NumFunctions -
+                          File.InstantiationCoverage.Executed));
+  Options.colored_ostream(OS, InstantiationCoverageColor)
+      << format("%*.2f", FileReportColumns[9] - 1,
+                File.InstantiationCoverage.getPercentCovered())
+      << '%';
+  OS << format("%*u", FileReportColumns[10],
                (unsigned)File.LineCoverage.NumLines);
   Options.colored_ostream(OS, LineCoverageColor) << format(
-      "%*u", FileReportColumns[8], (unsigned)File.LineCoverage.NotCovered);
+      "%*u", FileReportColumns[11], (unsigned)File.LineCoverage.NotCovered);
   Options.colored_ostream(OS, LineCoverageColor)
-      << format("%*.2f", FileReportColumns[9] - 1,
+      << format("%*.2f", FileReportColumns[12] - 1,
                 File.LineCoverage.getPercentCovered())
       << '%';
   OS << "\n";
@@ -205,13 +217,20 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
 
 void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
                                            raw_ostream &OS) {
-  adjustColumnWidths(Coverage);
   bool isFirst = true;
   for (StringRef Filename : Files) {
+    auto Functions = Coverage.getCoveredFunctions(Filename);
+
     if (isFirst)
       isFirst = false;
     else
       OS << "\n";
+
+    std::vector<StringRef> Funcnames;
+    for (const auto &F : Functions)
+      Funcnames.emplace_back(F.Name);
+    adjustColumnWidths({}, Funcnames);
+
     OS << "File '" << Filename << "':\n";
     OS << column("Name", FunctionReportColumns[0])
        << column("Regions", FunctionReportColumns[1], Column::RightAlignment)
@@ -224,7 +243,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
     renderDivider(FunctionReportColumns, OS);
     OS << "\n";
     FunctionCoverageSummary Totals("TOTAL");
-    for (const auto &F : Coverage.getCoveredFunctions(Filename)) {
+    for (const auto &F : Functions) {
       FunctionCoverageSummary Function = FunctionCoverageSummary::get(F);
       ++Totals.ExecutionCount;
       Totals.RegionCoverage += Function.RegionCoverage;
@@ -240,8 +259,9 @@ void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
 }
 
 std::vector<FileCoverageSummary>
-CoverageReport::prepareFileReports(FileCoverageSummary &Totals,
-                                   ArrayRef<StringRef> Files) const {
+CoverageReport::prepareFileReports(const coverage::CoverageMapping &Coverage,
+                                   FileCoverageSummary &Totals,
+                                   ArrayRef<StringRef> Files) {
   std::vector<FileCoverageSummary> FileReports;
   unsigned LCP = 0;
   if (Files.size() > 1)
@@ -249,11 +269,28 @@ CoverageReport::prepareFileReports(FileCoverageSummary &Totals,
 
   for (StringRef Filename : Files) {
     FileCoverageSummary Summary(Filename.drop_front(LCP));
+
+    // Map source locations to aggregate function coverage summaries.
+    DenseMap<std::pair<unsigned, unsigned>, FunctionCoverageSummary> Summaries;
+
     for (const auto &F : Coverage.getCoveredFunctions(Filename)) {
       FunctionCoverageSummary Function = FunctionCoverageSummary::get(F);
-      Summary.addFunction(Function);
-      Totals.addFunction(Function);
+      auto StartLoc = F.CountedRegions[0].startLoc();
+
+      auto UniquedSummary = Summaries.insert({StartLoc, Function});
+      if (!UniquedSummary.second)
+        UniquedSummary.first->second.update(Function);
+
+      Summary.addInstantiation(Function);
+      Totals.addInstantiation(Function);
     }
+
+    for (const auto &UniquedSummary : Summaries) {
+      const FunctionCoverageSummary &FCS = UniquedSummary.second;
+      Summary.addFunction(FCS);
+      Totals.addFunction(FCS);
+    }
+
     FileReports.push_back(Summary);
   }
 
@@ -267,7 +304,14 @@ void CoverageReport::renderFileReports(raw_ostream &OS) const {
 
 void CoverageReport::renderFileReports(raw_ostream &OS,
                                        ArrayRef<StringRef> Files) const {
-  adjustColumnWidths(Coverage);
+  FileCoverageSummary Totals("TOTAL");
+  auto FileReports = prepareFileReports(Coverage, Totals, Files);
+
+  std::vector<StringRef> Filenames;
+  for (const FileCoverageSummary &FCS : FileReports)
+    Filenames.emplace_back(FCS.Name);
+  adjustColumnWidths(Filenames, {});
+
   OS << column("Filename", FileReportColumns[0])
      << column("Regions", FileReportColumns[1], Column::RightAlignment)
      << column("Missed Regions", FileReportColumns[2], Column::RightAlignment)
@@ -275,14 +319,15 @@ void CoverageReport::renderFileReports(raw_ostream &OS,
      << column("Functions", FileReportColumns[4], Column::RightAlignment)
      << column("Missed Functions", FileReportColumns[5], Column::RightAlignment)
      << column("Executed", FileReportColumns[6], Column::RightAlignment)
-     << column("Lines", FileReportColumns[7], Column::RightAlignment)
-     << column("Missed Lines", FileReportColumns[8], Column::RightAlignment)
-     << column("Cover", FileReportColumns[9], Column::RightAlignment) << "\n";
+     << column("Instantiations", FileReportColumns[7], Column::RightAlignment)
+     << column("Missed Insts.", FileReportColumns[8], Column::RightAlignment)
+     << column("Executed", FileReportColumns[9], Column::RightAlignment)
+     << column("Lines", FileReportColumns[10], Column::RightAlignment)
+     << column("Missed Lines", FileReportColumns[11], Column::RightAlignment)
+     << column("Cover", FileReportColumns[12], Column::RightAlignment) << "\n";
   renderDivider(FileReportColumns, OS);
   OS << "\n";
 
-  FileCoverageSummary Totals("TOTAL");
-  auto FileReports = prepareFileReports(Totals, Files);
   for (const FileCoverageSummary &FCS : FileReports)
     render(FCS, OS);
 

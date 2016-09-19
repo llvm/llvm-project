@@ -287,8 +287,8 @@ void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {
 static void emitColumnLabelsForIndex(raw_ostream &OS) {
   SmallVector<std::string, 4> Columns;
   Columns.emplace_back(tag("td", "Filename", "column-entry-left"));
-  for (const char *Label :
-       {"Function Coverage", "Line Coverage", "Region Coverage"})
+  for (const char *Label : {"Function Coverage", "Instantiation Coverage",
+                            "Line Coverage", "Region Coverage"})
     Columns.emplace_back(tag("td", Label, "column-entry"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
@@ -334,12 +334,14 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
   AddCoverageTripleToColumn(FCS.FunctionCoverage.Executed,
                             FCS.FunctionCoverage.NumFunctions,
                             FCS.FunctionCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(
-      FCS.LineCoverage.NumLines - FCS.LineCoverage.NotCovered,
-      FCS.LineCoverage.NumLines, FCS.LineCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(
-      FCS.RegionCoverage.NumRegions - FCS.RegionCoverage.NotCovered,
-      FCS.RegionCoverage.NumRegions, FCS.RegionCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.InstantiationCoverage.Executed,
+                            FCS.InstantiationCoverage.NumFunctions,
+                            FCS.InstantiationCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.LineCoverage.Covered, FCS.LineCoverage.NumLines,
+                            FCS.LineCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.RegionCoverage.Covered,
+                            FCS.RegionCoverage.NumRegions,
+                            FCS.RegionCoverage.getPercentCovered());
 
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
 }
@@ -373,11 +375,11 @@ Error CoveragePrinterHTML::createIndexFile(
     OSRef << tag(CreatedTimeTag, escape(Opts.CreatedTimeStr, Opts));
 
   // Emit a table containing links to reports for each file in the covmapping.
-  CoverageReport Report(Opts, Coverage);
   OSRef << BeginCenteredDiv << BeginTable;
   emitColumnLabelsForIndex(OSRef);
   FileCoverageSummary Totals("TOTALS");
-  auto FileReports = Report.prepareFileReports(Totals, SourceFiles);
+  auto FileReports =
+      CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
   for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
     emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
   emitFileSummary(OSRef, "Totals", Totals, /*IsTotals=*/true);
@@ -620,7 +622,7 @@ void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
   }
 
   renderLinePrefix(OS, ViewDepth);
-  OS << tag("td", tag("pre", "Line No.")) << tag("td", tag("pre", "Count"))
+  OS << tag("td", tag("pre", "Line")) << tag("td", tag("pre", "Count"))
      << SourceLabel;
   renderLineSuffix(OS, ViewDepth);
 }

@@ -977,10 +977,18 @@ def PATCHABLE_FUNCTION_ENTER : Instruction {
 def PATCHABLE_RET : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
-  let AsmString = "# XRay Function Exit.";
+  let AsmString = "# XRay Function Patchable RET.";
   let usesCustomInserter = 1;
   let hasSideEffects = 1;
   let isReturn = 1;
+}
+def PATCHABLE_FUNCTION_EXIT : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let AsmString = "# XRay Function Exit.";
+  let usesCustomInserter = 1;
+  let hasSideEffects = 0; // FIXME: is this correct?
+  let isReturn = 0; // Original return instruction will follow
 }
 def PATCHABLE_TAIL_CALL : Instruction {
   let OutOperandList = (outs unknown:$dst);

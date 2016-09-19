@@ -3603,7 +3603,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isFloatingPoint() &&
            N1.getValueType().isFloatingPoint() &&
            VT.bitsLE(N1.getValueType()) &&
-           N2C && "Invalid FP_ROUND!");
+           N2C && (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
+           "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
   case ISD::AssertSext:
