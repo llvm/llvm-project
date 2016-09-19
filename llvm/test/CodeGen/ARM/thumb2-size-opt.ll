@@ -98,3 +98,16 @@ false:
   store i32* %next, i32** %addr2
   ret i32 %res
 }
+
+; ldm instructions fault on misaligned accesses so we mustn't convert
+; this post-indexed ldr into one.
+define i32* @misaligned_post(i32* %src, i32* %dest) minsize {
+; CHECK-LABEL: misaligned_post:
+; CHECK: ldr [[VAL:.*]], [r0], #4
+; CHECK: str [[VAL]], [r1]
+
+  %val = load i32, i32* %src, align 1
+  store i32 %val, i32* %dest
+  %next = getelementptr i32, i32* %src, i32 1
+  ret i32* %next
+}
