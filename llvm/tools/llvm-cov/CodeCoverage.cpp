@@ -730,7 +730,7 @@ int CodeCoverageTool::report(int argc, const char **argv,
   if (!Coverage)
     return 1;
 
-  CoverageReport Report(ViewOpts, std::move(Coverage));
+  CoverageReport Report(ViewOpts, *Coverage.get());
   if (SourceFiles.empty())
     Report.renderFileReports(llvm::outs());
   else
