@@ -473,21 +473,17 @@ void SourceCoverageViewHTML::renderLine(
 
   unsigned LCol = 1;
   auto Snip = [&](unsigned Start, unsigned Len) {
-    assert(Start + Len <= Line.size() && "Snippet extends past the EOL");
     Snippets.push_back(Line.substr(Start, Len));
     LCol += Len;
   };
 
   Snip(LCol - 1, Segments.empty() ? 0 : (Segments.front()->Col - 1));
 
-  for (unsigned I = 1, E = Segments.size(); I < E; ++I) {
-    assert(LCol == Segments[I - 1]->Col && "Snippet start position is wrong");
+  for (unsigned I = 1, E = Segments.size(); I < E; ++I)
     Snip(LCol - 1, Segments[I]->Col - LCol);
-  }
 
   // |Line| + 1 is needed to avoid underflow when, e.g |Line| = 0 and LCol = 1.
   Snip(LCol - 1, Line.size() + 1 - LCol);
-  assert(LCol == Line.size() + 1 && "Final snippet doesn't reach the EOL");
 
   // 2. Escape all of the snippets.
 
