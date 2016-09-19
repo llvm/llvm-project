@@ -71,6 +71,26 @@ Visibility Macros
   However since `_LIBCPP_TYPE_VIS_ONLY` is the same as `_LIBCPP_TYPE_VIS` the
   visibility is already correct. The macro has an empty definition with GCC.
 
+  **Windows Behavior**: `extern template` and `dllexport` are fundamentally
+  incompatible *on a template class* on Windows; the former suppresses
+  instantiation, while the latter forces it. Specifying both on the same
+  declaration makes the template class be instantiated, which is not desirable
+  inside headers. This macro therefore expands to `dllimport` outside of libc++
+  but nothing inside of it (rather than expanding to `dllexport`); instead, the
+  explicit instantiations themselves are marked as exported. Note that this
+  applies *only* to extern template *classes*. Extern template *functions* obey
+  regular import/export semantics, and applying `dllexport` directly to the
+  extern template declaration is the correct thing to do for them.
+
+**_LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS**
+  Mark the member functions, typeinfo, and vtable of an explicit instantiation
+  of a class template as being exported by the libc++ library. This attribute
+  must be specified on all template class explicit instantiations.
+
+  It is only necessary to mark the explicit instantiation itself (as opposed to
+  the extern template declaration) as exported on Windows, as discussed above.
+  On all other platforms, this macro has an empty definition.
+
 **_LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY**
   Mark a member function of a class template as hidden and inline except when
   building the libc++ library where it marks the symbol as being exported by

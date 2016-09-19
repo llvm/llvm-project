@@ -109,12 +109,6 @@ bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   return false;
 }
 
-// We need to use const_cast because match() is not a const function.
-// This function encapsulates that ugliness.
-static bool match(const Regex &Re, StringRef S) {
-  return const_cast<Regex &>(Re).match(S);
-}
-
 static bool comparePriority(InputSectionData *A, InputSectionData *B) {
   return getPriority(A->Name) < getPriority(B->Name);
 }
@@ -170,13 +164,13 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
   for (SectionPattern &Pat : I->SectionPatterns) {
     for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
       StringRef Filename = sys::path::filename(F->getName());
-      if (!match(I->FileRe, Filename) || match(Pat.ExcludedFileRe, Filename))
+      if (!I->FileRe.match(Filename) || Pat.ExcludedFileRe.match(Filename))
         continue;
 
       for (InputSectionBase<ELFT> *S : F->getSections())
-        if (!isDiscarded(S) && !S->OutSec && match(Pat.SectionRe, S->Name))
+        if (!isDiscarded(S) && !S->OutSec && Pat.SectionRe.match(S->Name))
           I->Sections.push_back(S);
-      if (match(Pat.SectionRe, "COMMON"))
+      if (Pat.SectionRe.match("COMMON"))
         I->Sections.push_back(CommonInputSection<ELFT>::X);
     }
   }
@@ -278,7 +272,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
     }
     if (auto *Cmd = dyn_cast<AssertCommand>(Base1.get())) {
       // If we don't have SECTIONS then output sections have already been
-      // created by Writer<EFLT>. The LinkerScript<ELFT>::assignAddresses
+      // created by Writer<ELFT>. The LinkerScript<ELFT>::assignAddresses
       // will not be called, so ASSERT should be evaluated now.
       if (!Opt.HasSections)
         Cmd->Expression(0);
@@ -297,6 +291,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
         for (InputSectionBase<ELFT> *S : V)
           S->OutSec = nullptr;
         Opt.Commands.erase(Iter);
+        --I;
         continue;
       }
 
@@ -446,8 +441,8 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
     switchTo(Base);
     Dot += CurOutSec->getSize();
   }
-  for (auto I = E, E = Cmd->Commands.end(); I != E; ++I)
-    process(**I);
+  std::for_each(E, Cmd->Commands.end(),
+                [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
 }
 
 template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
@@ -1064,6 +1059,10 @@ static void selectSortKind(InputSectionDescription *Cmd) {
 // Method reads a list of sequence of excluded files and section globs given in
 // a following form: ((EXCLUDE_FILE(file_pattern+))? section_pattern+)+
 // Example: *(.foo.1 EXCLUDE_FILE (*a.o) .foo.2 EXCLUDE_FILE (*b.o) .foo.3)
+// The semantics of that is next:
+// * Include .foo.1 from every file.
+// * Include .foo.2 from every file but a.o
+// * Include .foo.3 from every file but b.o
 void ScriptParser::readSectionExcludes(InputSectionDescription *Cmd) {
   Regex ExcludeFileRe;
   std::vector<StringRef> V;
@@ -1426,11 +1425,9 @@ Expr ScriptParser::readPrimary() {
     expect("(");
     next();
     expect(",");
-    uint64_t Val;
-    if (next().getAsInteger(0, Val))
-      setError("integer expected");
+    Expr E = readExpr();
     expect(")");
-    return [=](uint64_t Dot) { return Val; };
+    return [=](uint64_t Dot) { return E(Dot); };
   }
   if (Tok == "DATA_SEGMENT_ALIGN") {
     expect("(");

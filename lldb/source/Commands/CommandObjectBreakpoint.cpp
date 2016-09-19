@@ -172,7 +172,7 @@ public:
 
       case 'h': {
         bool success;
-        m_catch_bp = Args::StringToBoolean(option_arg, true, &success);
+        m_catch_bp = Args::StringToBoolean(option_strref, true, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "Invalid boolean value for on-catch option: '%s'", option_arg);
@@ -192,7 +192,7 @@ public:
       case 'K': {
         bool success;
         bool value;
-        value = Args::StringToBoolean(option_arg, true, &success);
+        value = Args::StringToBoolean(option_strref, true, &success);
         if (value)
           m_skip_prologue = eLazyBoolYes;
         else
@@ -223,7 +223,7 @@ public:
       case 'm': {
         bool success;
         bool value;
-        value = Args::StringToBoolean(option_arg, true, &success);
+        value = Args::StringToBoolean(option_strref, true, &success);
         if (value)
           m_move_to_nearest_code = eLazyBoolYes;
         else
@@ -265,8 +265,8 @@ public:
         break;
 
       case 'O':
-        m_exception_extra_args.AppendArgument("-O");
-        m_exception_extra_args.AppendArgument(option_arg);
+        m_exception_extra_args.AppendArgument(llvm::StringRef("-O"));
+        m_exception_extra_args.AppendArgument(option_strref);
         break;
 
       case 'p':
@@ -304,7 +304,7 @@ public:
 
       case 'w': {
         bool success;
-        m_throw_bp = Args::StringToBoolean(option_arg, true, &success);
+        m_throw_bp = Args::StringToBoolean(option_strref, true, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "Invalid boolean value for on-throw option: '%s'", option_arg);
@@ -861,7 +861,8 @@ public:
         break;
       case 'o': {
         bool value, success;
-        value = Args::StringToBoolean(option_arg, false, &success);
+        value = Args::StringToBoolean(
+            llvm::StringRef::withNullAsEmpty(option_arg), false, &success);
         if (success) {
           m_one_shot_passed = true;
           m_one_shot = value;

@@ -88,7 +88,8 @@ bool HostInfoMacOSX::GetOSVersion(uint32_t &major, uint32_t &minor,
       NSString *version_value = [version_info objectForKey:@"ProductVersion"];
       const char *version_str = [version_value UTF8String];
       if (version_str)
-        Args::StringToVersion(version_str, g_major, g_minor, g_update);
+        Args::StringToVersion(llvm::StringRef(version_str), g_major, g_minor,
+                              g_update);
     }
   }
 

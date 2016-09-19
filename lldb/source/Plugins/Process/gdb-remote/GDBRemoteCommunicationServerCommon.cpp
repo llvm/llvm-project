@@ -946,7 +946,8 @@ GDBRemoteCommunicationServerCommon::Handle_QEnvironment(
   packet.SetFilePos(::strlen("QEnvironment:"));
   const uint32_t bytes_left = packet.GetBytesLeft();
   if (bytes_left > 0) {
-    m_process_launch_info.GetEnvironmentEntries().AppendArgument(packet.Peek());
+    m_process_launch_info.GetEnvironmentEntries().AppendArgument(
+        llvm::StringRef::withNullAsEmpty(packet.Peek()));
     return SendOKResponse();
   }
   return SendErrorResponse(12);
@@ -960,7 +961,7 @@ GDBRemoteCommunicationServerCommon::Handle_QEnvironmentHexEncoded(
   if (bytes_left > 0) {
     std::string str;
     packet.GetHexByteString(str);
-    m_process_launch_info.GetEnvironmentEntries().AppendArgument(str.c_str());
+    m_process_launch_info.GetEnvironmentEntries().AppendArgument(str);
     return SendOKResponse();
   }
   return SendErrorResponse(12);
@@ -1032,8 +1033,7 @@ GDBRemoteCommunicationServerCommon::Handle_A(StringExtractorGDBRemote &packet) {
                 if (arg_idx == 0)
                   m_process_launch_info.GetExecutableFile().SetFile(arg.c_str(),
                                                                     false);
-                m_process_launch_info.GetArguments().AppendArgument(
-                    arg.c_str());
+                m_process_launch_info.GetArguments().AppendArgument(arg);
                 if (log)
                   log->Printf("LLGSPacketHandler::%s added arg %d: \"%s\"",
                               __FUNCTION__, actual_arg_index, arg.c_str());

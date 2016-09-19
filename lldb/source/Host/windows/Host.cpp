@@ -273,7 +273,7 @@ Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       if (!str_sp)
         continue;
 
-      launch_info.GetArguments().AppendArgument(str_sp->GetValue().c_str());
+      launch_info.GetArguments().AppendArgument(str_sp->GetValue());
     }
   }
 

@@ -1333,7 +1333,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
     std::string alias_name_str = alias_name;
     if ((cmd_args.GetArgumentCount() == 0) ||
         (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0))
-      cmd_args.Unshift(alias_name);
+      cmd_args.Unshift(alias_name_str);
 
     result_str.Printf("%s", alias_cmd_obj->GetCommandName());
 
@@ -1760,7 +1760,7 @@ int CommandInterpreter::HandleCompletionMatches(
         look_for_subcommand = true;
         num_command_matches = 0;
         matches.DeleteStringAtIndex(0);
-        parsed_line.AppendArgument("");
+        parsed_line.AppendArgument(llvm::StringRef());
         cursor_index++;
         cursor_char_position = 0;
       }
@@ -1842,7 +1842,8 @@ int CommandInterpreter::HandleCompletion(
         partial_parsed_line.GetArgumentAtIndex(cursor_index);
     if (cursor_char_position == 0 ||
         current_elem[cursor_char_position - 1] != ' ') {
-      parsed_line.InsertArgumentAtIndex(cursor_index + 1, "", '\0');
+      parsed_line.InsertArgumentAtIndex(cursor_index + 1, llvm::StringRef(),
+                                        '\0');
       cursor_index++;
       cursor_char_position = 0;
     }
@@ -1952,7 +1953,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
   // Make sure that the alias name is the 0th element in cmd_args
   std::string alias_name_str = alias_name;
   if (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0)
-    cmd_args.Unshift(alias_name);
+    cmd_args.Unshift(alias_name_str);
 
   Args new_args(alias_cmd_obj->GetCommandName());
   if (new_args.GetArgumentCount() == 2)
@@ -1987,21 +1988,23 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
                                                             // this above, make
                                                             // sure we don't
                                                             // insert it twice
-          new_args.AppendArgument(value.c_str());
+                                                            new_args
+                                                                .AppendArgument(
+                                                                    value);
       } else {
         if (value_type != OptionParser::eOptionalArgument)
-          new_args.AppendArgument(option.c_str());
+          new_args.AppendArgument(option);
         if (value.compare("<no-argument>") != 0) {
           int index = GetOptionArgumentPosition(value.c_str());
           if (index == 0) {
             // value was NOT a positional argument; must be a real value
             if (value_type != OptionParser::eOptionalArgument)
-              new_args.AppendArgument(value.c_str());
+              new_args.AppendArgument(value);
             else {
               char buffer[255];
               ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
                          value.c_str());
-              new_args.AppendArgument(buffer);
+              new_args.AppendArgument(llvm::StringRef(buffer));
             }
 
           } else if (static_cast<size_t>(index) >=
@@ -2023,12 +2026,13 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
             }
 
             if (value_type != OptionParser::eOptionalArgument)
-              new_args.AppendArgument(cmd_args.GetArgumentAtIndex(index));
+              new_args.AppendArgument(llvm::StringRef::withNullAsEmpty(
+                  cmd_args.GetArgumentAtIndex(index)));
             else {
               char buffer[255];
               ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
                          cmd_args.GetArgumentAtIndex(index));
-              new_args.AppendArgument(buffer);
+              new_args.AppendArgument(llvm::StringRef(buffer));
             }
             used[index] = true;
           }
@@ -2038,7 +2042,8 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
 
     for (size_t j = 0; j < cmd_args.GetArgumentCount(); ++j) {
       if (!used[j] && !wants_raw_input)
-        new_args.AppendArgument(cmd_args.GetArgumentAtIndex(j));
+        new_args.AppendArgument(
+            llvm::StringRef(cmd_args.GetArgumentAtIndex(j)));
     }
 
     cmd_args.Clear();

@@ -116,7 +116,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     // ParseOptions calls getopt_long_only, which always skips the zero'th item
     // in the array and starts at position 1,
     // so we need to push a dummy value into position zero.
-    args.Unshift("dummy_string");
+    args.Unshift(llvm::StringRef("dummy_string"));
     const bool require_validation = true;
     error = args.ParseOptions(*options, &exe_ctx,
                               GetCommandInterpreter().GetPlatform(true),
@@ -296,14 +296,13 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
     if (cur_options != nullptr) {
       // Re-insert the dummy command name string which will have been
       // stripped off:
-      input.Unshift("dummy-string");
+      input.Unshift(llvm::StringRef("dummy-string"));
       cursor_index++;
 
       // I stick an element on the end of the input, because if the last element
-      // is
-      // option that requires an argument, getopt_long_only will freak out.
+      // is option that requires an argument, getopt_long_only will freak out.
 
-      input.AppendArgument("<FAKE-VALUE>");
+      input.AppendArgument(llvm::StringRef("<FAKE-VALUE>"));
 
       input.ParseArgsForCompletion(*cur_options, opt_element_vector,
                                    cursor_index);
@@ -1001,7 +1000,8 @@ bool CommandObjectParsed::Execute(const char *args_string,
       const char *tmp_str = cmd_args.GetArgumentAtIndex(i);
       if (tmp_str[0] == '`') // back-quote
         cmd_args.ReplaceArgumentAtIndex(
-            i, m_interpreter.ProcessEmbeddedScriptCommands(tmp_str));
+            i, llvm::StringRef::withNullAsEmpty(
+                   m_interpreter.ProcessEmbeddedScriptCommands(tmp_str)));
     }
 
     if (CheckRequirements(result)) {

@@ -1067,31 +1067,31 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     char arg_cstr[PATH_MAX];
 
     // Start args with "debugserver /file/path -r --"
-    debugserver_args.AppendArgument(debugserver_path);
+    debugserver_args.AppendArgument(llvm::StringRef(debugserver_path));
 
 #if !defined(__APPLE__)
     // First argument to lldb-server must be mode in which to run.
-    debugserver_args.AppendArgument("gdbserver");
+    debugserver_args.AppendArgument(llvm::StringRef("gdbserver"));
 #endif
 
     // If a url is supplied then use it
     if (url)
-      debugserver_args.AppendArgument(url);
+      debugserver_args.AppendArgument(llvm::StringRef(url));
 
     if (pass_comm_fd >= 0) {
       StreamString fd_arg;
       fd_arg.Printf("--fd=%i", pass_comm_fd);
-      debugserver_args.AppendArgument(fd_arg.GetData());
+      debugserver_args.AppendArgument(fd_arg.GetString());
       // Send "pass_comm_fd" down to the inferior so it can use it to
       // communicate back with this process
       launch_info.AppendDuplicateFileAction(pass_comm_fd, pass_comm_fd);
     }
 
     // use native registers, not the GDB registers
-    debugserver_args.AppendArgument("--native-regs");
+    debugserver_args.AppendArgument(llvm::StringRef("--native-regs"));
 
     if (launch_info.GetLaunchInSeparateProcessGroup()) {
-      debugserver_args.AppendArgument("--setsid");
+      debugserver_args.AppendArgument(llvm::StringRef("--setsid"));
     }
 
     llvm::SmallString<PATH_MAX> named_pipe_path;
@@ -1123,8 +1123,9 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
                         __FUNCTION__, error.AsCString());
           return error;
         }
-        debugserver_args.AppendArgument("--named-pipe");
-        debugserver_args.AppendArgument(named_pipe_path.c_str());
+        debugserver_args.AppendArgument(llvm::StringRef("--named-pipe"));
+        debugserver_args.AppendArgument(
+            llvm::StringRef(named_pipe_path.c_str()));
 #else
         // Binding to port zero, we need to figure out what port it ends up
         // using using an unnamed pipe...
@@ -1137,8 +1138,8 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
           return error;
         }
         int write_fd = socket_pipe.GetWriteFileDescriptor();
-        debugserver_args.AppendArgument("--pipe");
-        debugserver_args.AppendArgument(llvm::to_string(write_fd).c_str());
+        debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
+        debugserver_args.AppendArgument(llvm::to_string(write_fd));
         launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
 #endif
       } else {
@@ -1164,8 +1165,8 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
           // Send the host and port down that debugserver and specify an option
           // so that it connects back to the port we are listening to in this
           // process
-          debugserver_args.AppendArgument("--reverse-connect");
-          debugserver_args.AppendArgument(port_cstr);
+          debugserver_args.AppendArgument(llvm::StringRef("--reverse-connect"));
+          debugserver_args.AppendArgument(llvm::StringRef(port_cstr));
           if (port)
             *port = port_;
         } else {
@@ -1182,7 +1183,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     if (env_debugserver_log_file) {
       ::snprintf(arg_cstr, sizeof(arg_cstr), "--log-file=%s",
                  env_debugserver_log_file);
-      debugserver_args.AppendArgument(arg_cstr);
+      debugserver_args.AppendArgument(llvm::StringRef(arg_cstr));
     }
 
 #if defined(__APPLE__)
@@ -1191,7 +1192,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     if (env_debugserver_log_flags) {
       ::snprintf(arg_cstr, sizeof(arg_cstr), "--log-flags=%s",
                  env_debugserver_log_flags);
-      debugserver_args.AppendArgument(arg_cstr);
+      debugserver_args.AppendArgument(llvm::StringRef(arg_cstr));
     }
 #else
     const char *env_debugserver_log_channels =
@@ -1199,7 +1200,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     if (env_debugserver_log_channels) {
       ::snprintf(arg_cstr, sizeof(arg_cstr), "--log-channels=%s",
                  env_debugserver_log_channels);
-      debugserver_args.AppendArgument(arg_cstr);
+      debugserver_args.AppendArgument(llvm::StringRef(arg_cstr));
     }
 #endif
 
@@ -1215,7 +1216,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
       has_env_var = extra_arg != nullptr;
 
       if (has_env_var) {
-        debugserver_args.AppendArgument(extra_arg);
+        debugserver_args.AppendArgument(llvm::StringRef(extra_arg));
         if (log)
           log->Printf("GDBRemoteCommunication::%s adding env var %s contents "
                       "to stub command line (%s)",
@@ -1224,7 +1225,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     } while (has_env_var);
 
     if (inferior_args && inferior_args->GetArgumentCount() > 0) {
-      debugserver_args.AppendArgument("--");
+      debugserver_args.AppendArgument(llvm::StringRef("--"));
       debugserver_args.AppendArguments(*inferior_args);
     }
 
@@ -1232,7 +1233,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     StringList env;
     if (Host::GetEnvironment(env)) {
       for (size_t i = 0; i < env.GetSize(); ++i)
-        launch_info.GetEnvironmentEntries().AppendArgument(env[i].c_str());
+        launch_info.GetEnvironmentEntries().AppendArgument(env[i]);
     }
 
     // Close STDIN, STDOUT and STDERR.

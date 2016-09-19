@@ -318,7 +318,8 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 'e': {
         bool success = false;
-        m_stop_on_error = Args::StringToBoolean(option_arg, false, &success);
+        m_stop_on_error = Args::StringToBoolean(
+            llvm::StringRef::withNullAsEmpty(option_arg), false, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "invalid value for stop-on-error: \"%s\"", option_arg);

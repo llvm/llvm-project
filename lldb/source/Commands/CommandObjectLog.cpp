@@ -387,8 +387,9 @@ protected:
       }
       if (strcasecmp(sub_command, "increment") == 0) {
         bool success;
-        bool increment =
-            Args::StringToBoolean(args.GetArgumentAtIndex(1), false, &success);
+        bool increment = Args::StringToBoolean(
+            llvm::StringRef::withNullAsEmpty(args.GetArgumentAtIndex(1)), false,
+            &success);
         if (success) {
           Timer::SetQuiet(!increment);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

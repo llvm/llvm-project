@@ -5,6 +5,7 @@ function(add_extra_unittest test_dirname)
   add_unittest(ExtraToolsUnitTests ${test_dirname} ${ARGN})
 endfunction()
 
+add_subdirectory(change-namespace)
 add_subdirectory(clang-apply-replacements)
 add_subdirectory(clang-query)
 add_subdirectory(clang-tidy)

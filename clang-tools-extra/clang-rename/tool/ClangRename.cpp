@@ -222,7 +222,7 @@ int main(int argc, const char **argv) {
     Tool.applyAllReplacements(Rewrite);
     for (const auto &File : Files) {
       const auto *Entry = FileMgr.getFile(File);
-      auto ID = Sources.translateFile(Entry);
+      const auto ID = Sources.getOrCreateFileID(Entry, SrcMgr::C_User);
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }

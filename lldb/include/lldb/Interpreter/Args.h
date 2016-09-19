@@ -179,12 +179,54 @@ public:
   /// @return
   ///     The NULL terminated C string of the copy of \a arg_cstr.
   //------------------------------------------------------------------
-  // TODO: Convert this function to use a StringRef.
-  const char *AppendArgument(const char *arg_cstr, char quote_char = '\0');
+  llvm::StringRef AppendArgument(llvm::StringRef arg_str,
+                                 char quote_char = '\0');
 
   void AppendArguments(const Args &rhs);
 
   void AppendArguments(const char **argv);
+
+  // Delete const char* versions of StringRef functions.  Normally this would
+  // not be necessary, as const char * is implicitly convertible to StringRef.
+  // However, since the use of const char* is so pervasive, and since StringRef
+  // will assert if you try to construct one from nullptr, this allows the
+  // compiler to catch instances of the function being invoked with a
+  // const char *, allowing us to replace them with explicit conversions at each
+  // call-site.  This ensures that no callsites slip through the cracks where
+  // we would be trying to implicitly convert from nullptr, since it will force
+  // us to evaluate and explicitly convert each one.
+  //
+  // Once StringRef use becomes more pervasive, there will be fewer
+  // implicit conversions because we will be using StringRefs across the whole
+  // pipeline, so we won't have to have this "glue" that converts between the
+  // two, and at that point it becomes easy to just make sure you don't pass
+  // nullptr into the function on the odd occasion that you do pass a
+  // const char *.
+  // Call-site fixing methodology:
+  //   1. If you know the string cannot be null (e.g. it's a const char[], or
+  //      it's been checked for null), use llvm::StringRef(ptr).
+  //   2. If you don't know if it can be null (e.g. it's returned from a
+  //      function whose semantics are unclear), use
+  //      llvm::StringRef::withNullAsEmpty(ptr).
+  //   3. If it's .c_str() of a std::string, just pass the std::string directly.
+  //   4. If it's .str().c_str() of a StringRef, just pass the StringRef
+  //      directly.
+  void ReplaceArgumentAtIndex(size_t, const char *, char = '\0') = delete;
+  void AppendArgument(const char *arg_str, char quote_char = '\0') = delete;
+  void InsertArgumentAtIndex(size_t, const char *, char = '\0') = delete;
+  static bool StringToBoolean(const char *, bool, bool *) = delete;
+  static lldb::ScriptLanguage
+  StringToScriptLanguage(const char *, lldb::ScriptLanguage, bool *) = delete;
+  static lldb::Encoding
+  StringToEncoding(const char *,
+                   lldb::Encoding = lldb::eEncodingInvalid) = delete;
+  static uint32_t StringToGenericRegister(const char *) = delete;
+  static bool StringToVersion(const char *, uint32_t &, uint32_t &,
+                              uint32_t &) = delete;
+  const char *Unshift(const char *, char = '\0') = delete;
+  void AddOrReplaceEnvironmentVariable(const char *, const char *) = delete;
+  bool ContainsEnvironmentVariable(const char *,
+                                   size_t * = nullptr) const = delete;
 
   //------------------------------------------------------------------
   /// Insert the argument value at index \a idx to \a arg_cstr.
@@ -201,8 +243,8 @@ public:
   /// @return
   ///     The NULL terminated C string of the copy of \a arg_cstr.
   //------------------------------------------------------------------
-  const char *InsertArgumentAtIndex(size_t idx, const char *arg_cstr,
-                                    char quote_char = '\0');
+  llvm::StringRef InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
+                                        char quote_char = '\0');
 
   //------------------------------------------------------------------
   /// Replaces the argument value at index \a idx to \a arg_cstr
@@ -221,8 +263,8 @@ public:
   ///     The NULL terminated C string of the copy of \a arg_cstr if
   ///     \a idx was a valid index, NULL otherwise.
   //------------------------------------------------------------------
-  const char *ReplaceArgumentAtIndex(size_t idx, const char *arg_cstr,
-                                     char quote_char = '\0');
+  llvm::StringRef ReplaceArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
+                                         char quote_char = '\0');
 
   //------------------------------------------------------------------
   /// Deletes the argument value at index
@@ -275,7 +317,7 @@ public:
   /// @return
   ///     A pointer to the copy of \a arg_cstr that was made.
   //------------------------------------------------------------------
-  const char *Unshift(const char *arg_cstr, char quote_char = '\0');
+  llvm::StringRef Unshift(llvm::StringRef arg_str, char quote_char = '\0');
 
   //------------------------------------------------------------------
   /// Parse the arguments in the contained arguments.
@@ -359,9 +401,6 @@ public:
                                       const char *s, lldb::addr_t fail_value,
                                       Error *error);
 
-  static bool StringToBoolean(const char *s, bool fail_value,
-    bool *success_ptr);
-
   static bool StringToBoolean(llvm::StringRef s, bool fail_value,
                               bool *success_ptr);
 
@@ -383,14 +422,8 @@ public:
                                                       // the format character
 
   static lldb::Encoding
-  StringToEncoding(const char *s,
-                   lldb::Encoding fail_value = lldb::eEncodingInvalid);
-
-  static lldb::Encoding
   StringToEncoding(llvm::StringRef s,
                    lldb::Encoding fail_value = lldb::eEncodingInvalid);
-
-  static uint32_t StringToGenericRegister(const char *s);
 
   static uint32_t StringToGenericRegister(llvm::StringRef s);
 
@@ -434,8 +467,8 @@ public:
   /// already in the list, it replaces the first such occurrence
   /// with the new value.
   //------------------------------------------------------------------
-  void AddOrReplaceEnvironmentVariable(const char *env_var_name,
-                                       const char *new_value);
+  void AddOrReplaceEnvironmentVariable(llvm::StringRef env_var_name,
+                                       llvm::StringRef new_value);
 
   /// Return whether a given environment variable exists.
   ///
@@ -455,7 +488,7 @@ public:
   ///     true if the specified env var name exists in the list in
   ///     either of the above-mentioned formats; otherwise, false.
   //------------------------------------------------------------------
-  bool ContainsEnvironmentVariable(const char *env_var_name,
+  bool ContainsEnvironmentVariable(llvm::StringRef env_var_name,
                                    size_t *argument_index = nullptr) const;
 
 protected:

@@ -215,7 +215,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
             StreamString canonical_id_str;
             BreakpointID::GetCanonicalReference(&canonical_id_str, bp_id,
                                                 bp_loc->GetID());
-            new_args.AppendArgument(canonical_id_str.GetData());
+            new_args.AppendArgument(canonical_id_str.GetString());
           }
         }
       }
@@ -309,7 +309,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
               StreamString canonical_id_str;
               BreakpointID::GetCanonicalReference(&canonical_id_str, cur_bp_id,
                                                   bp_loc->GetID());
-              new_args.AppendArgument(canonical_id_str.GetData());
+              new_args.AppendArgument(canonical_id_str.GetString());
             }
           }
         } else if ((cur_bp_id == end_bp_id) &&
@@ -321,19 +321,19 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
               StreamString canonical_id_str;
               BreakpointID::GetCanonicalReference(&canonical_id_str, cur_bp_id,
                                                   bp_loc->GetID());
-              new_args.AppendArgument(canonical_id_str.GetData());
+              new_args.AppendArgument(canonical_id_str.GetString());
             }
           }
         } else {
           StreamString canonical_id_str;
           BreakpointID::GetCanonicalReference(&canonical_id_str, cur_bp_id,
                                               LLDB_INVALID_BREAK_ID);
-          new_args.AppendArgument(canonical_id_str.GetData());
+          new_args.AppendArgument(canonical_id_str.GetString());
         }
       }
     } else // else is_range was false
     {
-      new_args.AppendArgument(current_arg);
+      new_args.AppendArgument(llvm::StringRef::withNullAsEmpty(current_arg));
     }
   }
 
@@ -345,7 +345,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
           StreamString canonical_id_str;
           BreakpointID::GetCanonicalReference(
               &canonical_id_str, bkpt_sp->GetID(), LLDB_INVALID_BREAK_ID);
-          new_args.AppendArgument(canonical_id_str.GetData());
+          new_args.AppendArgument(canonical_id_str.GetString());
         }
       }
     }
