@@ -88,6 +88,10 @@ namespace llvm {
     /*implicit*/ StringRef(const std::string &Str)
       : Data(Str.data()), Length(Str.length()) {}
 
+    static StringRef withNullAsEmpty(const char *data) {
+      return StringRef(data ? data : "");
+    }
+
     /// @}
     /// @name Iterators
     /// @{
