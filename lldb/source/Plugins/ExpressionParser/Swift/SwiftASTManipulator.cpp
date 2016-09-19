@@ -20,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTWalker.h"
+#include "swift/AST/ArchetypeBuilder.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/DiagnosticsFrontend.h"
@@ -1548,7 +1549,10 @@ SwiftASTManipulator::GetTypesForResultFixup(uint32_t language_flags) {
                   type_parameter->getSuperclass().getPointer());
 
           if (name_alias_type) {
-            ret.Wrapper_archetype = type_parameter->getArchetype();
+            // FIXME: What if the generic parameter is concrete?
+            ret.Wrapper_archetype = swift::ArchetypeBuilder::mapTypeIntoContext(
+                extension_decl, type_parameter->getDeclaredInterfaceType())
+                    ->castTo<swift::ArchetypeType>();
             ret.context_alias = name_alias_type;
             ret.context_real = name_alias_type->getSinglyDesugaredType();
           }
