@@ -78,10 +78,9 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 public:
   SourceCoverageViewHTML(StringRef SourceName, const MemoryBuffer &File,
                          const CoverageViewOptions &Options,
-                         coverage::CoverageData &&CoverageInfo,
-                         bool FunctionView)
-      : SourceCoverageView(SourceName, File, Options, std::move(CoverageInfo),
-                           FunctionView) {}
+                         coverage::CoverageData &&CoverageInfo)
+      : SourceCoverageView(SourceName, File, Options, std::move(CoverageInfo)) {
+  }
 };
 
 } // namespace llvm

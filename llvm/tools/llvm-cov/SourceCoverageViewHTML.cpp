@@ -341,12 +341,10 @@ void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
 void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile,
                                               unsigned FirstUncoveredLineNo) {
   OS << BeginSourceNameDiv;
-  // Render the source name for the view.
-  OS << tag("pre", escape(getNativeSourceName(), getOptions()));
+  std::string ViewInfo = escape(
+      WholeFile ? getVerboseSourceName() : getSourceName(), getOptions());
+  OS << tag("pre", ViewInfo);
   if (WholeFile) {
-    // Render the object file name for the view.
-    OS << tag("pre",
-              escape("Binary: " + getOptions().ObjectFilename, getOptions()));
     // Render the "Go to first unexecuted line" link for the view.
     if (FirstUncoveredLineNo != 0) { // The file is not fully covered
       std::string LinkText =
