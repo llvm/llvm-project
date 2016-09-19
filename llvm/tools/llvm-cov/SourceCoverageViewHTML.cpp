@@ -287,8 +287,8 @@ void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {
 static void emitColumnLabelsForIndex(raw_ostream &OS) {
   SmallVector<std::string, 4> Columns;
   Columns.emplace_back(tag("td", "Filename", "column-entry-left"));
-  for (const char *Label :
-       {"Function Coverage", "Line Coverage", "Region Coverage"})
+  for (const char *Label : {"Function Coverage", "Instantiation Coverage",
+                            "Line Coverage", "Region Coverage"})
     Columns.emplace_back(tag("td", Label, "column-entry"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
@@ -334,6 +334,9 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
   AddCoverageTripleToColumn(FCS.FunctionCoverage.Executed,
                             FCS.FunctionCoverage.NumFunctions,
                             FCS.FunctionCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.InstantiationCoverage.Executed,
+                            FCS.InstantiationCoverage.NumFunctions,
+                            FCS.InstantiationCoverage.getPercentCovered());
   AddCoverageTripleToColumn(FCS.LineCoverage.Covered, FCS.LineCoverage.NumLines,
                             FCS.LineCoverage.getPercentCovered());
   AddCoverageTripleToColumn(FCS.RegionCoverage.Covered,
