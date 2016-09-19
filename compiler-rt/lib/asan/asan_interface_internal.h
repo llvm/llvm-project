@@ -31,6 +31,10 @@ extern "C" {
   // before any instrumented code is executed and before any call to malloc.
   SANITIZER_INTERFACE_ATTRIBUTE void __asan_init();
 
+  // This function should be called by a loaded instrumented module.
+  SANITIZER_INTERFACE_ATTRIBUTE void __asan_init_from_dll(
+      int *detect_stack_use_after_return, uptr *shadow_memory_dynamic_address);
+
   // This function exists purely to get a linker/loader error when using
   // incompatible versions of instrumentation and runtime library. Please note
   // that __asan_version_mismatch_check is a macro that is replaced with
@@ -171,6 +175,9 @@ extern "C" {
 
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   /* OPTIONAL */ const char* __asan_default_options();
+
+  SANITIZER_INTERFACE_ATTRIBUTE
+  extern uptr __asan_shadow_memory_dynamic_address;
 
   // Global flag, copy of ASAN_OPTIONS=detect_stack_use_after_return
   SANITIZER_INTERFACE_ATTRIBUTE

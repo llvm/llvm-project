@@ -42,14 +42,6 @@ class VOP3e_vi <bits<10> op> : VOP3a_vi <op> {
   let Inst{7-0} = vdst;
 }
 
-// Encoding used for VOPC instructions encoded as VOP3
-// Differs from VOP3e by destination name (sdst) as VOPC doesn't have vector dst
-class VOP3ce_vi <bits<10> op> : VOP3a_vi <op> {
-  bits<8> sdst;
-
-  let Inst{7-0} = sdst;
-}
-
 class VOP3be_vi <bits<10> op> : Enc64 {
   bits<8> vdst;
   bits<2> src0_modifiers;
@@ -174,19 +166,6 @@ class VOP2_SDWAe <bits<6> op> : VOP_SDWAe {
   let Inst{24-17} = vdst;
   let Inst{30-25} = op;
   let Inst{31} = 0x0; // encoding
-}
-
-class VOPC_SDWAe <bits<8> op> : VOP_SDWAe {
-  bits<8> src1;
-
-  let Inst{8-0} = 0xf9; // sdwa
-  let Inst{16-9} = src1;
-  let Inst{24-17} = op;
-  let Inst{31-25} = 0x3e; // encoding
-
-  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
-  let Inst{42-40} = 0x6;
-  let Inst{44-43} = 0x2;
 }
 
 class EXPe_vi : EXPe {

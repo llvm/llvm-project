@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple spir-unknown-unknown
 
+kernel void half_arg(half x) { } // expected-error{{declaring function parameter of type 'half' is not allowed; did you forget * ?}}
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 
@@ -11,7 +13,8 @@
 
 kernel void bool_arg(bool x) { } // expected-error{{'bool' cannot be used as the type of a kernel parameter}}
 
-kernel void half_arg(half x) { } // expected-error{{'half' cannot be used as the type of a kernel parameter}}
+// half kernel argument is allowed when cl_khr_fp16 is enabled.
+kernel void half_arg(half x) { }
 
 typedef struct ContainsBool // expected-note{{within field of type 'ContainsBool' declared here}}
 {
