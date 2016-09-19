@@ -24,9 +24,9 @@ int main(int argc, char ** argv) {
 
 // Test html output.
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata -filename-equivalence %s
-// RUN: FileCheck -check-prefixes=HTML,HTML-FILE,HTML-HEADER -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
+// RUN: FileCheck -check-prefixes=HTML,HTML-FILE,HTML-HEADER,HTML-UNCOVEREDLINE -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata -project-title "Test Suite" -filename-equivalence %s
-// RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FILE,HTML-HEADER -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
+// RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FILE,HTML-HEADER,HTML-UNCOVEREDLINE -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML-TITLE,HTML -input-file %t.dir/index.html %s
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata  -project-title "Test Suite" -filename-equivalence -name=main %s
 // RUN: FileCheck -check-prefixes=HTML-FUNCTION,HTML-HEADER -input-file %t.dir/functions.html %s
@@ -41,6 +41,7 @@ int main(int argc, char ** argv) {
 // HTML-FILE: <pre>Binary:
 // HTML-FILE: showProjectSummary.covmapping</pre>
 // HTML-FUNCTION: <pre>Function: main</pre>
+// HTML-UNCOVEREDLINE: <a href='#L8'>Go to first unexecuted line</a>
 // HTML-HEADER: <tr><td><span><pre>Line No.</pre></span></td>
 // HTML-HEADER: <td><span><pre>Count</pre></span></td>
 // HTML-HEADER: <td><span><pre>Source</pre></span></td>

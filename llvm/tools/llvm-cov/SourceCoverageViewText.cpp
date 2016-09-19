@@ -63,7 +63,8 @@ void SourceCoverageViewText::renderViewHeader(raw_ostream &) {}
 
 void SourceCoverageViewText::renderViewFooter(raw_ostream &) {}
 
-void SourceCoverageViewText::renderSourceName(raw_ostream &OS, bool WholeFile) {
+void SourceCoverageViewText::renderSourceName(raw_ostream &OS, bool WholeFile,
+                                              unsigned FirstUncoveredLineNo) {
   getOptions().colored_ostream(OS, raw_ostream::CYAN) << getSourceName()
                                                       << ":\n";
   if (WholeFile) {
