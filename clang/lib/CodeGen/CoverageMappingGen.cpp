@@ -432,7 +432,8 @@ struct CounterCoverageMappingBuilder
           SourceLocation NestedLoc = getStartOfFileOrMacro(EndLoc);
           assert(SM.isWrittenInSameFile(NestedLoc, EndLoc));
 
-          SourceRegions.emplace_back(Region.getCounter(), NestedLoc, EndLoc);
+          if (!isRegionAlreadyAdded(NestedLoc, EndLoc))
+            SourceRegions.emplace_back(Region.getCounter(), NestedLoc, EndLoc);
 
           EndLoc = getPreciseTokenLocEnd(getIncludeOrExpansionLoc(EndLoc));
           if (EndLoc.isInvalid())
