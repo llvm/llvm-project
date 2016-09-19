@@ -47,17 +47,8 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include <stack>
 
-/// \brief Major version of the JSON Coverage Export Format.
-#define LLVM_COVERAGE_EXPORT_JSON_MAJOR 1
-
-/// \brief Minor version of the JSON Coverage Export Format.
-#define LLVM_COVERAGE_EXPORT_JSON_MINOR 0
-
-/// \brief Patch version of the JSON Coverage Export Format.
-#define LLVM_COVERAGE_EXPORT_JSON_PATCH 0
-
 /// \brief The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "1.0.0"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "1.1.0"
 
 /// \brief Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -377,7 +368,6 @@ class CoverageExporterJson {
     emitDictElement("count", Summary.LineCoverage.NumLines);
     emitDictElement("covered", Summary.LineCoverage.Covered);
     emitDictElement("percent", Summary.LineCoverage.getPercentCovered());
-    emitDictElement("noncode", Summary.LineCoverage.NonCodeLines);
     // End Line Coverage Summary.
     emitDictEnd();
 
