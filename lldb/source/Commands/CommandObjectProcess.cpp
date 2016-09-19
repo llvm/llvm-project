@@ -212,7 +212,7 @@ protected:
 
     if (target_settings_argv0) {
       m_options.launch_info.GetArguments().AppendArgument(
-          target_settings_argv0);
+          llvm::StringRef(target_settings_argv0));
       m_options.launch_info.SetExecutableFile(
           exe_module_sp->GetPlatformFileSpec(), false);
     } else {
@@ -760,12 +760,13 @@ public:
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
+      auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 's':
         bool tmp_result;
         bool success;
-        tmp_result = Args::StringToBoolean(option_arg, false, &success);
+        tmp_result = Args::StringToBoolean(option_strref, false, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid boolean option: \"%s\"",
                                          option_arg);
@@ -1458,7 +1459,7 @@ public:
   bool VerifyCommandOptionValue(const std::string &option, int &real_value) {
     bool okay = true;
     bool success = false;
-    bool tmp_value = Args::StringToBoolean(option.c_str(), false, &success);
+    bool tmp_value = Args::StringToBoolean(option, false, &success);
 
     if (success && tmp_value)
       real_value = 1;

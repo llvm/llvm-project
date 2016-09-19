@@ -246,7 +246,7 @@ bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
 }
 
 void SleepSeconds(int Seconds) {
-  std::this_thread::sleep_for(std::chrono::seconds(Seconds));
+  sleep(Seconds);  // Use C API to avoid coverage from instrumented libc++.
 }
 
 int GetPid() { return getpid(); }

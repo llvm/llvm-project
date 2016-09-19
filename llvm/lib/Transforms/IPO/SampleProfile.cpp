@@ -638,14 +638,19 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
     bool LocalChanged = false;
     SmallVector<Instruction *, 10> CIS;
     for (auto &BB : F) {
+      bool Hot = false;
+      SmallVector<Instruction *, 10> Candidates;
       for (auto &I : BB.getInstList()) {
         const FunctionSamples *FS = nullptr;
         if ((isa<CallInst>(I) || isa<InvokeInst>(I)) &&
             (FS = findCalleeFunctionSamples(I))) {
-
+          Candidates.push_back(&I);
           if (callsiteIsHot(Samples, FS))
-            CIS.push_back(&I);
+            Hot = true;
         }
+      }
+      if (Hot) {
+        CIS.insert(CIS.begin(), Candidates.begin(), Candidates.end());
       }
     }
     for (auto I : CIS) {

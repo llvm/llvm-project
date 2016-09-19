@@ -78,6 +78,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
     ExecutionContext *execution_context) {
   Error error;
 
+  auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
   const int short_option = g_option_table[option_idx].short_option;
 
   switch (short_option) {
@@ -91,7 +92,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
   case 'a': {
     bool success;
     bool result;
-    result = Args::StringToBoolean(option_arg, true, &success);
+    result = Args::StringToBoolean(option_strref, true, &success);
     if (!success)
       error.SetErrorStringWithFormat(
           "invalid all-threads value setting: \"%s\"", option_arg);
@@ -101,7 +102,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'i': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_strref, true, &success);
     if (success)
       ignore_breakpoints = tmp_value;
     else
@@ -112,7 +113,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'j': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_strref, true, &success);
     if (success)
       allow_jit = tmp_value;
     else
@@ -134,7 +135,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'u': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_strref, true, &success);
     if (success)
       unwind_on_error = tmp_value;
     else
@@ -168,7 +169,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'X': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_strref, true, &success);
     if (success)
       auto_apply_fixits = tmp_value ? eLazyBoolYes : eLazyBoolNo;
     else

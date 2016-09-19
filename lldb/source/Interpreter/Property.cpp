@@ -54,7 +54,7 @@ Property::Property(const PropertyDefinition &definition)
     // default value.
     if (definition.default_cstr_value)
       m_value_sp.reset(new OptionValueBoolean(Args::StringToBoolean(
-          definition.default_cstr_value, false, nullptr)));
+          llvm::StringRef(definition.default_cstr_value), false, nullptr)));
     else
       m_value_sp.reset(
           new OptionValueBoolean(definition.default_uint_value != 0));

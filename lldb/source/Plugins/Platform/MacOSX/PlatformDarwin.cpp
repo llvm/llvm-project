@@ -1886,7 +1886,7 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
     // we get os_log and NSLog messages mirrored to the target process
     // stderr.
     if (!env_vars.ContainsEnvironmentVariable("OS_ACTIVITY_DT_MODE"))
-      env_vars.AppendArgument("OS_ACTIVITY_DT_MODE=enable");
+      env_vars.AppendArgument(llvm::StringRef("OS_ACTIVITY_DT_MODE=enable"));
   }
 
   // Let our parent class do the real launching.

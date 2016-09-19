@@ -4158,8 +4158,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             alt_name.SetString(value);
           } else if (name == "encoding") {
             encoding_set = true;
-            reg_info.encoding =
-                Args::StringToEncoding(value.data(), eEncodingUint);
+            reg_info.encoding = Args::StringToEncoding(value, eEncodingUint);
           } else if (name == "format") {
             format_set = true;
             Format format = eFormatInvalid;
@@ -4198,7 +4197,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
                 StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
           } else if (name == "generic") {
             reg_info.kinds[eRegisterKindGeneric] =
-                Args::StringToGenericRegister(value.data());
+                Args::StringToGenericRegister(value);
           } else if (name == "value_regnums") {
             SplitCommaSeparatedRegisterNumberString(value, value_regs, 0);
           } else if (name == "invalidate_regnums") {

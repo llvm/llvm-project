@@ -961,8 +961,8 @@ void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
 CallStackFrame::CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
                                const FunctionDecl *Callee, const LValue *This,
                                APValue *Arguments)
-    : Info(Info), Caller(Info.CurrentCall), CallLoc(CallLoc), Callee(Callee),
-      Index(Info.NextCallIndex++), This(This), Arguments(Arguments) {
+    : Info(Info), Caller(Info.CurrentCall), Callee(Callee), This(This),
+      Arguments(Arguments), CallLoc(CallLoc), Index(Info.NextCallIndex++) {
   Info.CurrentCall = this;
   ++Info.CallStackDepth;
 }

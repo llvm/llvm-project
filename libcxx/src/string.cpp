@@ -20,10 +20,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template class __basic_string_common<true>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __basic_string_common<true>;
 
-template class basic_string<char>;
-template class basic_string<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_string<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_string<wchar_t>;
 
 template
     string
