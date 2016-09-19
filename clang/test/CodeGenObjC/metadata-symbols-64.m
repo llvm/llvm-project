@@ -5,9 +5,9 @@
 // CHECK: @_objc_empty_vtable = external global
 // CHECK: @"OBJC_CLASS_$_A" = global
 // CHECK: @"OBJC_METACLASS_$_A" = global {{.*}} section "__DATA, __objc_data", align 8
-// CHECK: @OBJC_CLASS_NAME_{{[0-9]*}} = private global {{.*}} section "__TEXT,__objc_classname,cstring_literals", align 1
-// CHECK: @OBJC_METH_VAR_NAME_{{[0-9]*}} = private global {{.*}} section "__TEXT,__objc_methname,cstring_literals", align 1
-// CHECK: @OBJC_METH_VAR_TYPE_{{[0-9]*}} = private global {{.*}} section "__TEXT,__objc_methtype,cstring_literals", align 1
+// CHECK: @OBJC_CLASS_NAME_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__objc_classname,cstring_literals", align 1
+// CHECK: @OBJC_METH_VAR_NAME_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__objc_methname,cstring_literals", align 1
+// CHECK: @OBJC_METH_VAR_TYPE_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__objc_methtype,cstring_literals", align 1
 // CHECK: @"\01l_OBJC_$_CLASS_METHODS_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_PROTOCOL_INSTANCE_METHODS_P" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_PROTOCOL_CLASS_METHODS_P" = private global {{.*}} section "__DATA, __objc_const", align 8
@@ -17,7 +17,7 @@
 // CHECK: @"\01l_OBJC_METACLASS_RO_$_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_INSTANCE_METHODS_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_INSTANCE_VARIABLES_A" = private global {{.*}} section "__DATA, __objc_const", align 8
-// CHECK: @OBJC_PROP_NAME_ATTR_{{[0-9]*}} = private global {{.*}} section "__TEXT,__cstring,cstring_literals", align 1
+// CHECK: @OBJC_PROP_NAME_ATTR_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__cstring,cstring_literals", align 1
 // CHECK: @"\01l_OBJC_$_PROP_LIST_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_CLASS_RO_$_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_CATEGORY_INSTANCE_METHODS_A_$_Cat" = private global {{.*}} section "__DATA, __objc_const", align 8

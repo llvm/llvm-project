@@ -14,8 +14,8 @@ typedef struct {} Z;
 -(void)foo:(Z)a: (char*)b : (Z)c : (double) d {}
 @end
 
-// CHECK: private global [14 x i8] c"v16@0:8{?=}16
-// CHECK: private global [26 x i8] c"v32@0:8{?=}16*16{?=}24d24
+// CHECK: private unnamed_addr constant [14 x i8] c"v16@0:8{?=}16
+// CHECK: private unnamed_addr constant [26 x i8] c"v32@0:8{?=}16*16{?=}24d24
 
 
 // rdar://13190095
@@ -34,7 +34,7 @@ typedef BABugExample BABugExampleRedefinition;
 @synthesize property = _property;
 @end
 
-// CHECK: private global [24 x i8] c"^{BABugExample=@}16
+// CHECK: private unnamed_addr constant [24 x i8] c"^{BABugExample=@}16
 
 // rdar://14408244
 @class SCNCamera;
@@ -52,7 +52,7 @@ typedef struct
     C3DCameraStorage _storage;
 }
 @end
-// CHECK: private global [39 x i8] c"{?=\22presentationInstance\22^{SCNCamera}}\00"
+// CHECK: private unnamed_addr constant [39 x i8] c"{?=\22presentationInstance\22^{SCNCamera}}\00"
 
 // rdar://16655340
 int i;

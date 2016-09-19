@@ -293,14 +293,19 @@ private:
         // of the import that immediately follows them by using the previously
         // set Start.
         Start = Line->First->Tok.getLocation();
-      if (!Current)
-        continue; // Only comments on this line.
+      if (!Current) {
+        // Only comments on this line. Could be the first non-import line.
+        FirstNonImportLine = Line;
+        continue;
+      }
       JsModuleReference Reference;
       Reference.Range.setBegin(Start);
       if (!parseModuleReference(Keywords, Reference)) {
-        FirstNonImportLine = Line;
+        if (!FirstNonImportLine)
+          FirstNonImportLine = Line; // if no comment before.
         break;
       }
+      FirstNonImportLine = nullptr;
       AnyImportAffected = AnyImportAffected || Line->Affected;
       Reference.Range.setEnd(LineEnd->Tok.getEndLoc());
       DEBUG({

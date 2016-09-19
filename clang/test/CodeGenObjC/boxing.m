@@ -53,17 +53,17 @@ typedef signed char BOOL;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
-// CHECK: [[WithIntMeth:@.*]] = private global [15 x i8] c"numberWithInt:\00"
+// CHECK: [[WithIntMeth:@.*]] = private unnamed_addr constant [15 x i8] c"numberWithInt:\00"
 // CHECK: [[WithIntSEL:@.*]] = private externally_initialized global i8* getelementptr inbounds ([15 x i8], [15 x i8]* [[WithIntMeth]]
-// CHECK: [[WithCharMeth:@.*]] = private global [16 x i8] c"numberWithChar:\00"
+// CHECK: [[WithCharMeth:@.*]] = private unnamed_addr constant [16 x i8] c"numberWithChar:\00"
 // CHECK: [[WithCharSEL:@.*]] = private externally_initialized global i8* getelementptr inbounds ([16 x i8], [16 x i8]* [[WithCharMeth]]
-// CHECK: [[WithBoolMeth:@.*]] = private global [16 x i8] c"numberWithBool:\00"
+// CHECK: [[WithBoolMeth:@.*]] = private unnamed_addr constant [16 x i8] c"numberWithBool:\00"
 // CHECK: [[WithBoolSEL:@.*]] = private externally_initialized global i8* getelementptr inbounds ([16 x i8], [16 x i8]* [[WithBoolMeth]]
-// CHECK: [[WithIntegerMeth:@.*]] = private global [19 x i8] c"numberWithInteger:\00"
+// CHECK: [[WithIntegerMeth:@.*]] = private unnamed_addr constant [19 x i8] c"numberWithInteger:\00"
 // CHECK: [[WithIntegerSEL:@.*]] = private externally_initialized global i8* getelementptr inbounds ([19 x i8], [19 x i8]* [[WithIntegerMeth]]
-// CHECK: [[WithUnsignedIntegerMeth:@.*]] = private global [27 x i8] c"numberWithUnsignedInteger:\00"
+// CHECK: [[WithUnsignedIntegerMeth:@.*]] = private unnamed_addr constant [27 x i8] c"numberWithUnsignedInteger:\00"
 // CHECK: [[WithUnsignedIntegerSEL:@.*]] = private externally_initialized global i8* getelementptr inbounds ([27 x i8], [27 x i8]* [[WithUnsignedIntegerMeth]]
-// CHECK: [[stringWithUTF8StringMeth:@.*]] = private global [22 x i8] c"stringWithUTF8String:\00"
+// CHECK: [[stringWithUTF8StringMeth:@.*]] = private unnamed_addr constant [22 x i8] c"stringWithUTF8String:\00"
 // CHECK: [[stringWithUTF8StringSEL:@.*]] = private externally_initialized global i8* getelementptr inbounds ([22 x i8], [22 x i8]* [[stringWithUTF8StringMeth]]
 
 int main() {

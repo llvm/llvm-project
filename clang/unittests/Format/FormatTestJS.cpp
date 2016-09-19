@@ -774,6 +774,18 @@ TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {
                                       "String");
   verifyFormat("function f(@Foo bar) {}", "function f(@Foo\n"
                                           "  bar) {}");
+  verifyFormat("a = true\n"
+               "return 1",
+               "a = true\n"
+               "  return   1");
+  verifyFormat("a = 's'\n"
+               "return 1",
+               "a = 's'\n"
+               "  return   1");
+  verifyFormat("a = null\n"
+               "return 1",
+               "a = null\n"
+               "  return   1");
 }
 
 TEST_F(FormatTestJS, ClosureStyleCasts) {
@@ -1430,6 +1442,12 @@ TEST_F(FormatTestJS, Conditional) {
                "  field = true ? 1 : 2;\n"
                "  method(a = true ? 1 : 2) {}\n"
                "}");
+}
+
+TEST_F(FormatTestJS, ImportComments) {
+  verifyFormat("import {x} from 'x';  // from some location",
+               getGoogleJSStyleWithColumns(25));
+  verifyFormat("// taze: x from 'location'", getGoogleJSStyleWithColumns(10));
 }
 
 } // end namespace tooling

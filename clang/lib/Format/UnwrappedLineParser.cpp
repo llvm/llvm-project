@@ -681,7 +681,9 @@ static bool mustBeJSIdent(const AdditionalKeywords &Keywords,
 
 static bool mustBeJSIdentOrValue(const AdditionalKeywords &Keywords,
                                  const FormatToken *FormatTok) {
-  return FormatTok->Tok.isLiteral() || mustBeJSIdent(Keywords, FormatTok);
+  return FormatTok->Tok.isLiteral() ||
+         FormatTok->isOneOf(tok::kw_true, tok::kw_false) ||
+         mustBeJSIdent(Keywords, FormatTok);
 }
 
 // isJSDeclOrStmt returns true if |FormatTok| starts a declaration or statement
