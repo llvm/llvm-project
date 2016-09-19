@@ -12,9 +12,9 @@ int main(int argc, char ** argv) {
 }
 
 // Test console output.
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefixes=TEXT,TEXT-FILE,TEXT-HEADER,TEXT-FOOTER %s
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -filename-equivalence %s | FileCheck -check-prefixes=TEXT-TITLE,TEXT,TEXT-FILE,TEXT-HEADER,TEXT-FOOTER %s
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -name=main -filename-equivalence %s | FileCheck -check-prefixes=TEXT-FUNCTION,TEXT-HEADER,TEXT-FOOTER %s
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefixes=TEXT,TEXT-FILE,TEXT-HEADER %s
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -filename-equivalence %s | FileCheck -check-prefixes=TEXT-TITLE,TEXT,TEXT-FILE,TEXT-HEADER %s
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -name=main -filename-equivalence %s | FileCheck -check-prefixes=TEXT-FUNCTION,TEXT-HEADER %s
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile=%t.profdata -o %t.dir -filename-equivalence %s
 // RUN: FileCheck -check-prefixes=TEXT-FOOTER -input-file=%t.dir/index.txt %s
 // TEXT-TITLE: Test Suite
@@ -27,12 +27,12 @@ int main(int argc, char ** argv) {
 
 // Test html output.
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata -filename-equivalence %s
-// RUN: FileCheck -check-prefixes=HTML,HTML-FILE,HTML-HEADER,HTML-FOOTER -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
+// RUN: FileCheck -check-prefixes=HTML,HTML-FILE,HTML-HEADER -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata -project-title "Test Suite" -filename-equivalence %s
-// RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FILE,HTML-HEADER,HTML-FOOTER -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
+// RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FILE,HTML-HEADER -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FOOTER -input-file %t.dir/index.html %s
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata  -project-title "Test Suite" -filename-equivalence -name=main %s
-// RUN: FileCheck -check-prefixes=HTML-FUNCTION,HTML-HEADER,HTML-FOOTER -input-file %t.dir/functions.html %s
+// RUN: FileCheck -check-prefixes=HTML-FUNCTION,HTML-HEADER -input-file %t.dir/functions.html %s
 // HTML-TITLE: <h1>Test Suite</h1>
 // HTML: <h2>Coverage Report</h2>
 // HTML: <h4>Created:{{.*}}</h4>
