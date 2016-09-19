@@ -59,6 +59,13 @@ void RenderSourceLocation(InternalScopedString *buffer, const char *file,
 void RenderModuleLocation(InternalScopedString *buffer, const char *module,
                           uptr offset, const char *strip_path_prefix);
 
+// Same as RenderFrame, but for data section (global variables).
+// Accepts %s, %l from above.
+// Also accepts:
+//   %g - name of the global variable.
+void RenderData(InternalScopedString *buffer, const char *format,
+                const DataInfo *DI, const char *strip_path_prefix = "");
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_STACKTRACE_PRINTER_H

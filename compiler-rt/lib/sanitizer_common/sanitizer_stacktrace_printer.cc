@@ -116,6 +116,35 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
   }
 }
 
+void RenderData(InternalScopedString *buffer, const char *format,
+                const DataInfo *DI, const char *strip_path_prefix) {
+  for (const char *p = format; *p != '\0'; p++) {
+    if (*p != '%') {
+      buffer->append("%c", *p);
+      continue;
+    }
+    p++;
+    switch (*p) {
+      case '%':
+        buffer->append("%%");
+        break;
+      case 's':
+        buffer->append("%s", StripPathPrefix(DI->file, strip_path_prefix));
+        break;
+      case 'l':
+        buffer->append("%d", DI->line);
+        break;
+      case 'g':
+        buffer->append("%s", DI->name);
+        break;
+      default:
+        Report("Unsupported specifier in stack frame format: %c (0x%zx)!\n", *p,
+               *p);
+        Die();
+    }
+  }
+}
+
 void RenderSourceLocation(InternalScopedString *buffer, const char *file,
                           int line, int column, bool vs_style,
                           const char *strip_path_prefix) {
