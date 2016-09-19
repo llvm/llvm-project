@@ -540,6 +540,8 @@ public:
   }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 
+  virtual bool isXRaySupported() const override;
+
   bool isAPCS_ABI() const;
   bool isAAPCS_ABI() const;
   bool isAAPCS16_ABI() const;

@@ -17931,6 +17931,31 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
                                               Src1, Src2, Src3, Src4),
                                   Mask, PassThru, Subtarget, DAG);
     }
+    case CVTPD2PS: {
+      SDValue Src = Op.getOperand(1);
+      SDValue PassThru = Op.getOperand(2);
+      SDValue Mask = Op.getOperand(3);
+      // We add rounding mode to the Node when
+      //   - RM Opcode is specified and
+      //   - RM is not "current direction".
+      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
+      if (IntrWithRoundingModeOpcode != 0) {
+        SDValue Rnd = Op.getOperand(4);
+        unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
+        if (Round != X86::STATIC_ROUNDING::CUR_DIRECTION) {
+          return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
+                                      dl, Op.getValueType(),
+                                      Src, Rnd),
+                                      Mask, PassThru, Subtarget, DAG);
+        }
+      }
+      assert(IntrData->Opc0 == ISD::FP_ROUND && "Unexpected opcode!");
+      // ISD::FP_ROUND has a second argument that indicates if the truncation
+      // does not change the value. Set it to 0 since it can change.
+      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src,
+                                              DAG.getIntPtrConstant(0, dl)),
+                                  Mask, PassThru, Subtarget, DAG);
+    }
     case FPCLASS: {
       // FPclass intrinsics with mask
        SDValue Src1 = Op.getOperand(1);

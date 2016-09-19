@@ -139,6 +139,10 @@ struct FunctionCoverageSummary {
   /// mapping record.
   static FunctionCoverageSummary
   get(const coverage::FunctionRecord &Function);
+
+  /// \brief Update the summary with information from another instantiation
+  /// of this function.
+  void update(const FunctionCoverageSummary &Summary);
 };
 
 /// \brief A summary of file's code coverage.
@@ -147,6 +151,7 @@ struct FileCoverageSummary {
   RegionCoverageInfo RegionCoverage;
   LineCoverageInfo LineCoverage;
   FunctionCoverageInfo FunctionCoverage;
+  FunctionCoverageInfo InstantiationCoverage;
 
   FileCoverageSummary(StringRef Name) : Name(Name) {}
 
@@ -154,6 +159,10 @@ struct FileCoverageSummary {
     RegionCoverage += Function.RegionCoverage;
     LineCoverage += Function.LineCoverage;
     FunctionCoverage.addFunction(/*Covered=*/Function.ExecutionCount > 0);
+  }
+
+  void addInstantiation(const FunctionCoverageSummary &Function) {
+    InstantiationCoverage.addFunction(/*Covered=*/Function.ExecutionCount > 0);
   }
 };
 

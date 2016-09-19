@@ -112,7 +112,7 @@ protected:
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) const;
   ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB) const;
-  const FunctionSamples *findCalleeFunctionSamples(const CallInst &I) const;
+  const FunctionSamples *findCalleeFunctionSamples(const Instruction &I) const;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineHotFunctions(Function &F);
   void printEdgeWeight(raw_ostream &OS, Edge E);
@@ -210,6 +210,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
   }
+
 private:
   SampleProfileLoader SampleLoader;
 };
@@ -466,12 +467,12 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
   if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst))
     return std::error_code();
 
-  // If a call instruction is inlined in profile, but not inlined here,
+  // If a call/invoke instruction is inlined in profile, but not inlined here,
   // it means that the inlined callsite has no sample, thus the call
   // instruction should have 0 count.
-  const CallInst *CI = dyn_cast<CallInst>(&Inst);
-  if (CI && findCalleeFunctionSamples(*CI))
-    return 0; 
+  bool IsCall = isa<CallInst>(Inst) || isa<InvokeInst>(Inst);
+  if (IsCall && findCalleeFunctionSamples(Inst))
+    return 0;
 
   const DILocation *DIL = DLoc;
   unsigned Lineno = DLoc.getLine();
@@ -513,9 +514,11 @@ SampleProfileLoader::getBlockWeight(const BasicBlock *BB) const {
   DenseMap<uint64_t, uint64_t> CM;
   for (auto &I : BB->getInstList()) {
     const ErrorOr<uint64_t> &R = getInstWeight(I);
-    if (R) CM[R.get()]++;
+    if (R)
+      CM[R.get()]++;
   }
-  if (CM.size() == 0) return std::error_code();
+  if (CM.size() == 0)
+    return std::error_code();
   uint64_t W = 0, C = 0;
   for (const auto &C_W : CM) {
     if (C_W.second == W) {
@@ -552,18 +555,18 @@ bool SampleProfileLoader::computeBlockWeights(Function &F) {
 
 /// \brief Get the FunctionSamples for a call instruction.
 ///
-/// The FunctionSamples of a call instruction \p Inst is the inlined
+/// The FunctionSamples of a call/invoke instruction \p Inst is the inlined
 /// instance in which that call instruction is calling to. It contains
 /// all samples that resides in the inlined instance. We first find the
 /// inlined instance in which the call instruction is from, then we
 /// traverse its children to find the callsite with the matching
-/// location and callee function name.
+/// location.
 ///
-/// \param Inst Call instruction to query.
+/// \param Inst Call/Invoke instruction to query.
 ///
 /// \returns The FunctionSamples pointer to the inlined instance.
 const FunctionSamples *
-SampleProfileLoader::findCalleeFunctionSamples(const CallInst &Inst) const {
+SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
   const DILocation *DIL = Inst.getDebugLoc();
   if (!DIL) {
     return nullptr;
@@ -612,7 +615,6 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return FS;
 }
 
-
 /// \brief Iteratively inline hot callsites of a function.
 ///
 /// Iteratively traverse all callsites of the function \p F, and find if
@@ -632,20 +634,27 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       Function &F) -> AssumptionCache & { return ACT->getAssumptionCache(F); };
   while (true) {
     bool LocalChanged = false;
-    SmallVector<CallInst *, 10> CIS;
+    SmallVector<Instruction *, 10> CIS;
     for (auto &BB : F) {
       for (auto &I : BB.getInstList()) {
-        CallInst *CI = dyn_cast<CallInst>(&I);
-        if (CI && callsiteIsHot(Samples, findCalleeFunctionSamples(*CI)))
-          CIS.push_back(CI);
+        const FunctionSamples *FS = nullptr;
+        if ((isa<CallInst>(I) || isa<InvokeInst>(I)) &&
+            (FS = findCalleeFunctionSamples(I))) {
+
+          if (callsiteIsHot(Samples, FS))
+            CIS.push_back(&I);
+        }
       }
     }
-    for (auto CI : CIS) {
+    for (auto I : CIS) {
       InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
-      Function *CalledFunction = CI->getCalledFunction();
-      DebugLoc DLoc = CI->getDebugLoc();
-      uint64_t NumSamples = findCalleeFunctionSamples(*CI)->getTotalSamples();
-      if (InlineFunction(CI, IFI)) {
+      CallInst *CI = dyn_cast<CallInst>(I);
+      InvokeInst *II = dyn_cast<InvokeInst>(I);
+      Function *CalledFunction =
+          (CI == nullptr ? II->getCalledFunction() : CI->getCalledFunction());
+      DebugLoc DLoc = I->getDebugLoc();
+      uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
+      if ((CI && InlineFunction(CI, IFI)) || (II && InlineFunction(II, IFI))) {
         LocalChanged = true;
         emitOptimizationRemark(Ctx, DEBUG_TYPE, F, DLoc,
                                Twine("inlined hot callee '") +
@@ -1067,7 +1076,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           if (!dyn_cast<IntrinsicInst>(&I)) {
             SmallVector<uint32_t, 1> Weights;
             Weights.push_back(BlockWeights[BB]);
-            CI->setMetadata(LLVMContext::MD_prof, 
+            CI->setMetadata(LLVMContext::MD_prof,
                             MDB.createBranchWeights(Weights));
           }
         }
@@ -1308,7 +1317,7 @@ bool SampleProfileLoader::runOnModule(Module &M) {
 }
 
 bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
-  // FIXME: pass in AssumptionCache correctly for the new pass manager. 
+  // FIXME: pass in AssumptionCache correctly for the new pass manager.
   SampleLoader.setACT(&getAnalysis<AssumptionCacheTracker>());
   return SampleLoader.runOnModule(M);
 }

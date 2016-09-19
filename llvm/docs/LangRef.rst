@@ -9730,7 +9730,7 @@ format that can be written out by a compiler runtime and consumed via
 the ``llvm-profdata`` tool.
 
 '``llvm.instrprof_increment_step``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
