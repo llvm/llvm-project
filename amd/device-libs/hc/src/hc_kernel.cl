@@ -2,6 +2,7 @@
 #include "irif.h"
 
 #define ATTR __attribute__((always_inline, const))
+#define ATTR2 __attribute__((always_inline))
 
 ATTR long
 amp_get_global_id(int dim)
@@ -75,14 +76,16 @@ hc_get_group_size(int dim)
   return __ockl_get_local_size(dim);
 }
 
-void hc_barrier(int n)
+ATTR2 void
+hc_barrier(int n)
 {
   __llvm_amdgcn_s_waitcnt(0);
   __llvm_amdgcn_s_dcache_wb();
   __llvm_amdgcn_s_barrier();
 }
 
-void amp_barrier(int n)
+ATTR2 void
+amp_barrier(int n)
 {
   hc_barrier(n);
 }
