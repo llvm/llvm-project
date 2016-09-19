@@ -395,21 +395,11 @@ void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
   OS << EndTable << EndCenteredDiv;
 }
 
-void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile,
-                                              unsigned FirstUncoveredLineNo) {
+void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
   OS << BeginSourceNameDiv;
   std::string ViewInfo = escape(
       WholeFile ? getVerboseSourceName() : getSourceName(), getOptions());
   OS << tag("pre", ViewInfo);
-  if (WholeFile) {
-    // Render the "Go to first unexecuted line" link for the view.
-    if (FirstUncoveredLineNo != 0) { // The file is not fully covered
-      std::string LinkText =
-          escape("Go to first unexecuted line", getOptions());
-      std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
-      OS << tag("pre", a(LinkTarget, LinkText));
-    }
-  }
   OS << EndSourceNameDiv;
 }
 
@@ -608,10 +598,21 @@ void SourceCoverageViewHTML::renderCellInTitle(raw_ostream &OS,
 }
 
 void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
+                                               unsigned FirstUncoveredLineNo,
                                                unsigned ViewDepth) {
+  std::string SourceLabel;
+  if (FirstUncoveredLineNo == 0) {
+    SourceLabel = tag("td", tag("pre", "Source"));
+  } else {
+    std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
+    SourceLabel =
+        tag("td", tag("pre", "Source (" +
+                                 a(LinkTarget, "jump to first uncovered line") +
+                                 ")"));
+  }
+
   renderLinePrefix(OS, ViewDepth);
-  OS << tag("td", tag("span", tag("pre", escape("Line No.", getOptions()))))
-     << tag("td", tag("span", tag("pre", escape("Count", getOptions()))))
-     << tag("td", tag("span", tag("pre", escape("Source", getOptions()))));
+  OS << tag("td", tag("pre", "Line No.")) << tag("td", tag("pre", "Count"))
+     << SourceLabel;
   renderLineSuffix(OS, ViewDepth);
 }
