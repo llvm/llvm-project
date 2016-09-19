@@ -29,6 +29,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Utils.h"
 
+#include "llvm/ADT/SmallString.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -1057,9 +1059,9 @@ protected:
       Module *exe_module = target->GetExecutableModulePointer();
       if (exe_module) {
         m_options.launch_info.GetExecutableFile() = exe_module->GetFileSpec();
-        char exe_path[PATH_MAX];
-        if (m_options.launch_info.GetExecutableFile().GetPath(exe_path,
-                                                              sizeof(exe_path)))
+        llvm::SmallString<PATH_MAX> exe_path;
+        m_options.launch_info.GetExecutableFile().GetPath(exe_path);
+        if (!exe_path.empty())
           m_options.launch_info.GetArguments().AppendArgument(exe_path);
         m_options.launch_info.GetArchitecture() = exe_module->GetArchitecture();
       }

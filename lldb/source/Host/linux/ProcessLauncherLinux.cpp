@@ -36,7 +36,7 @@ static void FixupEnvironment(Args &env) {
   for (const char **args = env.GetConstArgumentVector(); *args; ++args)
     if (::strncmp(path, *args, path_len) == 0)
       return;
-  env.AppendArgument("PATH=/system/bin");
+  env.AppendArgument(llvm::StringRef("PATH=/system/bin"));
 #endif
 }
 

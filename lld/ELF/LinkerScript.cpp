@@ -109,12 +109,6 @@ bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   return false;
 }
 
-// We need to use const_cast because match() is not a const function.
-// This function encapsulates that ugliness.
-static bool match(const Regex &Re, StringRef S) {
-  return const_cast<Regex &>(Re).match(S);
-}
-
 static bool comparePriority(InputSectionData *A, InputSectionData *B) {
   return getPriority(A->Name) < getPriority(B->Name);
 }
@@ -170,13 +164,13 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
   for (SectionPattern &Pat : I->SectionPatterns) {
     for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
       StringRef Filename = sys::path::filename(F->getName());
-      if (!match(I->FileRe, Filename) || match(Pat.ExcludedFileRe, Filename))
+      if (!I->FileRe.match(Filename) || Pat.ExcludedFileRe.match(Filename))
         continue;
 
       for (InputSectionBase<ELFT> *S : F->getSections())
-        if (!isDiscarded(S) && !S->OutSec && match(Pat.SectionRe, S->Name))
+        if (!isDiscarded(S) && !S->OutSec && Pat.SectionRe.match(S->Name))
           I->Sections.push_back(S);
-      if (match(Pat.SectionRe, "COMMON"))
+      if (Pat.SectionRe.match("COMMON"))
         I->Sections.push_back(CommonInputSection<ELFT>::X);
     }
   }
@@ -447,8 +441,8 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
     switchTo(Base);
     Dot += CurOutSec->getSize();
   }
-  for (auto I = E, E = Cmd->Commands.end(); I != E; ++I)
-    process(**I);
+  std::for_each(E, Cmd->Commands.end(),
+                [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
 }
 
 template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {

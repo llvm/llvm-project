@@ -157,6 +157,7 @@ public:
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
+      auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'c': {
@@ -181,7 +182,7 @@ public:
       case 'e': {
         bool success;
         m_extended_backtrace =
-            Args::StringToBoolean(option_arg, false, &success);
+            Args::StringToBoolean(option_strref, false, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "invalid boolean value for option '%c'", short_option);
@@ -315,11 +316,13 @@ public:
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
+      auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'a': {
         bool success;
-        bool avoid_no_debug = Args::StringToBoolean(option_arg, true, &success);
+        bool avoid_no_debug =
+            Args::StringToBoolean(option_strref, true, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "invalid boolean value for option '%c'", short_option);
@@ -331,7 +334,8 @@ public:
 
       case 'A': {
         bool success;
-        bool avoid_no_debug = Args::StringToBoolean(option_arg, true, &success);
+        bool avoid_no_debug =
+            Args::StringToBoolean(option_strref, true, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "invalid boolean value for option '%c'", short_option);
@@ -1441,11 +1445,12 @@ public:
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
+      auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'x': {
         bool success;
-        bool tmp_value = Args::StringToBoolean(option_arg, false, &success);
+        bool tmp_value = Args::StringToBoolean(option_strref, false, &success);
         if (success)
           m_from_expression = tmp_value;
         else {

@@ -13,8 +13,8 @@
 # CHECK-NEXT:     SHF_TLS
 # CHECK-NEXT:     SHF_WRITE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x190
-# CHECK-NEXT:   Offset: 0x190
+# CHECK-NEXT:   Address: 0x[[ADDR:.*]]
+# CHECK-NEXT:   Offset: 0x[[ADDR]]
 # CHECK-NEXT:   Size: 4
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
@@ -29,7 +29,7 @@
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:     SHF_WRITE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x190
+# CHECK-NEXT:   Address: 0x[[ADDR]]
 
         .section foo,"awT",@nobits
         .long   0

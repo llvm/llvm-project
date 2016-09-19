@@ -310,14 +310,8 @@ namespace {
     /// Parent - The caller of this stack frame.
     CallStackFrame *Caller;
 
-    /// CallLoc - The location of the call expression for this call.
-    SourceLocation CallLoc;
-
     /// Callee - The function which was called.
     const FunctionDecl *Callee;
-
-    /// Index - The call index of this call.
-    unsigned Index;
 
     /// This - The binding for the this pointer in this call, if any.
     const LValue *This;
@@ -332,6 +326,12 @@ namespace {
     typedef MapTy::const_iterator temp_iterator;
     /// Temporaries - Temporary lvalues materialized within this stack frame.
     MapTy Temporaries;
+
+    /// CallLoc - The location of the call expression for this call.
+    SourceLocation CallLoc;
+
+    /// Index - The call index of this call.
+    unsigned Index;
 
     CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
                    const FunctionDecl *Callee, const LValue *This,
@@ -961,8 +961,8 @@ void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
 CallStackFrame::CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
                                const FunctionDecl *Callee, const LValue *This,
                                APValue *Arguments)
-    : Info(Info), Caller(Info.CurrentCall), CallLoc(CallLoc), Callee(Callee),
-      Index(Info.NextCallIndex++), This(This), Arguments(Arguments) {
+    : Info(Info), Caller(Info.CurrentCall), Callee(Callee), This(This),
+      Arguments(Arguments), CallLoc(CallLoc), Index(Info.NextCallIndex++) {
   Info.CurrentCall = this;
   ++Info.CallStackDepth;
 }

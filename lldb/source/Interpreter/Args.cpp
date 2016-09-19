@@ -362,23 +362,23 @@ const char *Args::Unshift(const char *arg_cstr, char quote_char) {
 void Args::AppendArguments(const Args &rhs) {
   const size_t rhs_argc = rhs.GetArgumentCount();
   for (size_t i = 0; i < rhs_argc; ++i)
-    AppendArgument(rhs.GetArgumentAtIndex(i),
+    AppendArgument(llvm::StringRef(rhs.GetArgumentAtIndex(i)),
                    rhs.GetArgumentQuoteCharAtIndex(i));
 }
 
 void Args::AppendArguments(const char **argv) {
   if (argv) {
     for (uint32_t i = 0; argv[i]; ++i)
-      AppendArgument(argv[i]);
+      AppendArgument(llvm::StringRef::withNullAsEmpty(argv[i]));
   }
 }
 
-const char *Args::AppendArgument(const char *arg_cstr, char quote_char) {
-  return InsertArgumentAtIndex(GetArgumentCount(), arg_cstr, quote_char);
+llvm::StringRef Args::AppendArgument(llvm::StringRef arg_str, char quote_char) {
+  return InsertArgumentAtIndex(GetArgumentCount(), arg_str, quote_char);
 }
 
-const char *Args::InsertArgumentAtIndex(size_t idx, const char *arg_cstr,
-                                        char quote_char) {
+llvm::StringRef Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
+                                            char quote_char) {
   // Since we are using a std::list to hold onto the copied C string and
   // we don't have direct access to the elements, we have to iterate to
   // find the value.
@@ -387,7 +387,7 @@ const char *Args::InsertArgumentAtIndex(size_t idx, const char *arg_cstr,
   for (pos = m_args.begin(); i > 0 && pos != end; ++pos)
     --i;
 
-  pos = m_args.insert(pos, arg_cstr);
+  pos = m_args.insert(pos, arg_str);
 
   if (idx >= m_args_quote_char.size()) {
     m_args_quote_char.resize(idx + 1);
@@ -399,8 +399,9 @@ const char *Args::InsertArgumentAtIndex(size_t idx, const char *arg_cstr,
   return GetArgumentAtIndex(idx);
 }
 
-const char *Args::ReplaceArgumentAtIndex(size_t idx, const char *arg_cstr,
-                                         char quote_char) {
+llvm::StringRef Args::ReplaceArgumentAtIndex(size_t idx,
+                                             llvm::StringRef arg_str,
+                                             char quote_char) {
   // Since we are using a std::list to hold onto the copied C string and
   // we don't have direct access to the elements, we have to iterate to
   // find the value.
@@ -410,7 +411,7 @@ const char *Args::ReplaceArgumentAtIndex(size_t idx, const char *arg_cstr,
     --i;
 
   if (pos != end) {
-    pos->assign(arg_cstr);
+    pos->assign(arg_str);
     assert(idx < m_argv.size() - 1);
     m_argv[idx] = pos->c_str();
     if (idx >= m_args_quote_char.size())
@@ -732,11 +733,6 @@ const char *Args::StripSpaces(std::string &s, bool leading, bool trailing,
   return s.c_str();
 }
 
-bool Args::StringToBoolean(const char *s, bool fail_value,
-  bool *success_ptr) {
-  return StringToBoolean(llvm::StringRef(s ? s : ""), fail_value, success_ptr);
-}
-
 bool Args::StringToBoolean(llvm::StringRef ref, bool fail_value,
                            bool *success_ptr) {
   if (success_ptr)
@@ -915,13 +911,6 @@ Error Args::StringToFormat(const char *s, lldb::Format &format,
   return error;
 }
 
-lldb::Encoding Args::StringToEncoding(const char *s,
-                                      lldb::Encoding fail_value) {
-  if (!s)
-    return fail_value;
-  return StringToEncoding(llvm::StringRef(s), fail_value);
-}
-
 lldb::Encoding Args::StringToEncoding(llvm::StringRef s,
                                       lldb::Encoding fail_value) {
   return llvm::StringSwitch<lldb::Encoding>(s)
@@ -930,12 +919,6 @@ lldb::Encoding Args::StringToEncoding(llvm::StringRef s,
       .Case("ieee754", eEncodingIEEE754)
       .Case("vector", eEncodingVector)
       .Default(fail_value);
-}
-
-uint32_t Args::StringToGenericRegister(const char *s) {
-  if (!s)
-    return LLDB_INVALID_REGNUM;
-  return StringToGenericRegister(llvm::StringRef(s));
 }
 
 uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
@@ -1015,13 +998,13 @@ void Args::AddOrReplaceEnvironmentVariable(const char *env_var_name,
 
     // Check if the name matches the given env_var_name.
     if (strncmp(env_var_name, arg_value, equal_p - arg_value) == 0) {
-      ReplaceArgumentAtIndex(i, stream.GetString().c_str());
+      ReplaceArgumentAtIndex(i, stream.GetString());
       return;
     }
   }
 
   // We didn't find it.  Append it instead.
-  AppendArgument(stream.GetString().c_str());
+  AppendArgument(stream.GetString());
 }
 
 bool Args::ContainsEnvironmentVariable(const char *env_var_name,
@@ -1239,7 +1222,7 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
           if (pos != std::string::npos)
             raw_input_string.erase(pos, strlen(tmp_arg));
         }
-        ReplaceArgumentAtIndex(idx, "");
+        ReplaceArgumentAtIndex(idx, llvm::StringRef());
         if ((long_options[long_options_index].definition->option_has_arg !=
              OptionParser::eNoArgument) &&
             (OptionParser::GetOptionArgument() != nullptr) &&
@@ -1252,7 +1235,7 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
             if (pos != std::string::npos)
               raw_input_string.erase(pos, strlen(tmp_arg));
           }
-          ReplaceArgumentAtIndex(idx + 1, "");
+          ReplaceArgumentAtIndex(idx + 1, llvm::StringRef());
         }
       }
     }

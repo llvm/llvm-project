@@ -85,7 +85,7 @@ size_t OptionValueDictionary::GetArgs(Args &args) const {
     StreamString strm;
     strm.Printf("%s=", pos->first.GetCString());
     pos->second->DumpValue(nullptr, strm, eDumpOptionValue | eDumpOptionRaw);
-    args.AppendArgument(strm.GetString().c_str());
+    args.AppendArgument(strm.GetString());
   }
   return args.GetArgumentCount();
 }

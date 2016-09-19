@@ -210,7 +210,7 @@ int CommandObjectMultiword::HandleCompletion(Args &input, int &cursor_index,
           matches.DeleteStringAtIndex(0);
           input.Shift();
           cursor_char_position = 0;
-          input.AppendArgument("");
+          input.AppendArgument(llvm::StringRef());
           return cmd_obj->HandleCompletion(
               input, cursor_index, cursor_char_position, match_start_point,
               max_return_elements, word_complete, matches);

@@ -85,6 +85,8 @@ Error OptionGroupValueObjectDisplay::SetOptionValue(
   const int short_option = g_option_table[option_idx].short_option;
   bool success = false;
 
+  auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
+
   switch (short_option) {
   case 'd': {
     int32_t result;
@@ -141,13 +143,13 @@ Error OptionGroupValueObjectDisplay::SetOptionValue(
     break;
 
   case 'S':
-    use_synth = Args::StringToBoolean(option_arg, true, &success);
+    use_synth = Args::StringToBoolean(option_strref, true, &success);
     if (!success)
       error.SetErrorStringWithFormat("invalid synthetic-type '%s'", option_arg);
     break;
 
   case 'V':
-    run_validator = Args::StringToBoolean(option_arg, true, &success);
+    run_validator = Args::StringToBoolean(option_strref, true, &success);
     if (!success)
       error.SetErrorStringWithFormat("invalid validate '%s'", option_arg);
     break;
