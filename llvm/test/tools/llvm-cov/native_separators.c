@@ -18,7 +18,3 @@
 // HTML: <pre>\tmp\native_separators.c (Binary: native_separators.covmapping)</pre>
 
 int main() {}
-
-// RUN: llvm-cov show %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -filename-equivalence %s -o %t.dir
-// RUN: FileCheck -check-prefixes=TEXT -input-file=%t.dir/coverage/tmp/native_separators.c.txt %s
-// TEXT: \tmp\native_separators.c (Binary: native_separators.covmapping)
