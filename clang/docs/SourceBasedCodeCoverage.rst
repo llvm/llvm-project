@@ -125,24 +125,24 @@ region counts (even in macro expansions):
 
 .. code-block:: none
 
-       20|    1|#define BAR(x) ((x) || (x))
+        1|   20|#define BAR(x) ((x) || (x))
                                ^20     ^2
         2|    2|template <typename T> void foo(T x) {
-       22|    3|  for (unsigned I = 0; I < 10; ++I) { BAR(I); }
+        3|   22|  for (unsigned I = 0; I < 10; ++I) { BAR(I); }
                                        ^22     ^20  ^20^20
-        2|    4|}
+        4|    2|}
     ------------------
     | void foo<int>(int):
-    |      1|    2|template <typename T> void foo(T x) {
-    |     11|    3|  for (unsigned I = 0; I < 10; ++I) { BAR(I); }
+    |      2|    1|template <typename T> void foo(T x) {
+    |      3|   11|  for (unsigned I = 0; I < 10; ++I) { BAR(I); }
     |                                     ^11     ^10  ^10^10
-    |      1|    4|}
+    |      4|    1|}
     ------------------
     | void foo<float>(int):
-    |      1|    2|template <typename T> void foo(T x) {
-    |     11|    3|  for (unsigned I = 0; I < 10; ++I) { BAR(I); }
+    |      2|    1|template <typename T> void foo(T x) {
+    |      3|   11|  for (unsigned I = 0; I < 10; ++I) { BAR(I); }
     |                                     ^11     ^10  ^10^10
-    |      1|    4|}
+    |      4|    1|}
     ------------------
 
 It's possible to generate a file-level summary of coverage statistics (instead
@@ -176,6 +176,26 @@ A few final notes:
   .. code-block:: console
 
       % llvm-profdata merge -sparse foo1.profraw foo2.profdata -o foo3.profdata
+
+Interpreting reports
+====================
+
+There are four statistics tracked in a coverage summary:
+
+* Function coverage is the percentage of functions which have been executed at
+  least once. A function is treated as having been executed if any of its
+  instantiations are executed.
+
+* Instantiation coverage is the percentage of function instantiations which
+  have been executed at least once.
+
+* Line coverage is the percentage of code lines which have been executed at
+  least once.
+
+* Region coverage is the percentage of code regions which have been executed at
+  least once. A code region may span multiple lines (e.g a large function with
+  no control flow). However, it's also possible for a single line to contain
+  multiple code regions (e.g some short-circuited logic).
 
 Format compatibility guarantees
 ===============================

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
 //
-// CHECK: @OBJC_METH_VAR_TYPE_.34 = private global [16 x i8] c"v12@0:4[3[4@]]8\00"
+// CHECK: @OBJC_METH_VAR_TYPE_.34 = private unnamed_addr constant [16 x i8] c"v12@0:4[3[4@]]8\00"
 
 @class Int1;
 
