@@ -259,8 +259,9 @@ void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
 }
 
 std::vector<FileCoverageSummary>
-CoverageReport::prepareFileReports(FileCoverageSummary &Totals,
-                                   ArrayRef<StringRef> Files) const {
+CoverageReport::prepareFileReports(const coverage::CoverageMapping &Coverage,
+                                   FileCoverageSummary &Totals,
+                                   ArrayRef<StringRef> Files) {
   std::vector<FileCoverageSummary> FileReports;
   unsigned LCP = 0;
   if (Files.size() > 1)
@@ -304,7 +305,7 @@ void CoverageReport::renderFileReports(raw_ostream &OS) const {
 void CoverageReport::renderFileReports(raw_ostream &OS,
                                        ArrayRef<StringRef> Files) const {
   FileCoverageSummary Totals("TOTAL");
-  auto FileReports = prepareFileReports(Totals, Files);
+  auto FileReports = prepareFileReports(Coverage, Totals, Files);
 
   std::vector<StringRef> Filenames;
   for (const FileCoverageSummary &FCS : FileReports)

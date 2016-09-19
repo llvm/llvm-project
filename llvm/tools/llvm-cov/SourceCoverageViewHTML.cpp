@@ -375,11 +375,11 @@ Error CoveragePrinterHTML::createIndexFile(
     OSRef << tag(CreatedTimeTag, escape(Opts.CreatedTimeStr, Opts));
 
   // Emit a table containing links to reports for each file in the covmapping.
-  CoverageReport Report(Opts, Coverage);
   OSRef << BeginCenteredDiv << BeginTable;
   emitColumnLabelsForIndex(OSRef);
   FileCoverageSummary Totals("TOTALS");
-  auto FileReports = Report.prepareFileReports(Totals, SourceFiles);
+  auto FileReports =
+      CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
   for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
     emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
   emitFileSummary(OSRef, "Totals", Totals, /*IsTotals=*/true);
