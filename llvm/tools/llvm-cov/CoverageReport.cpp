@@ -106,8 +106,8 @@ void renderDivider(ArrayRef<size_t> ColumnWidths, raw_ostream &OS) {
     OS << '-';
 }
 
-/// \brief Return the color which correponds to the coverage
-/// percentage of a certain metric.
+/// \brief Return the color which correponds to the coverage percentage of a
+/// certain metric.
 template <typename T>
 raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
   if (Info.isFullyCovered())
@@ -121,65 +121,67 @@ raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
 namespace llvm {
 
 void CoverageReport::render(const FileCoverageSummary &File, raw_ostream &OS) {
+  auto FileCoverageColor =
+      determineCoveragePercentageColor(File.RegionCoverage);
+  auto FuncCoverageColor =
+      determineCoveragePercentageColor(File.FunctionCoverage);
+  auto LineCoverageColor = determineCoveragePercentageColor(File.LineCoverage);
   OS << column(File.Name, FileReportColumns[0], Column::NoTrim)
      << format("%*u", FileReportColumns[1],
                (unsigned)File.RegionCoverage.NumRegions);
-  Options.colored_ostream(OS, File.RegionCoverage.isFullyCovered()
-                                  ? raw_ostream::GREEN
-                                  : raw_ostream::RED)
-      << format("%*u", FileReportColumns[2], (unsigned)File.RegionCoverage.NotCovered);
-  Options.colored_ostream(OS,
-                          determineCoveragePercentageColor(File.RegionCoverage))
+  Options.colored_ostream(OS, FileCoverageColor) << format(
+      "%*u", FileReportColumns[2], (unsigned)File.RegionCoverage.NotCovered);
+  Options.colored_ostream(OS, FileCoverageColor)
       << format("%*.2f", FileReportColumns[3] - 1,
-                File.RegionCoverage.getPercentCovered()) << '%';
+                File.RegionCoverage.getPercentCovered())
+      << '%';
   OS << format("%*u", FileReportColumns[4],
                (unsigned)File.FunctionCoverage.NumFunctions);
   OS << format("%*u", FileReportColumns[5],
                (unsigned)(File.FunctionCoverage.NumFunctions -
                           File.FunctionCoverage.Executed));
-  Options.colored_ostream(
-      OS, determineCoveragePercentageColor(File.FunctionCoverage))
+  Options.colored_ostream(OS, FuncCoverageColor)
       << format("%*.2f", FileReportColumns[6] - 1,
-                File.FunctionCoverage.getPercentCovered()) << '%';
+                File.FunctionCoverage.getPercentCovered())
+      << '%';
   OS << format("%*u", FileReportColumns[7],
                (unsigned)File.LineCoverage.NumLines);
-  Options.colored_ostream(OS, File.LineCoverage.isFullyCovered()
-                                  ? raw_ostream::GREEN
-                                  : raw_ostream::RED)
-      << format("%*u", FileReportColumns[8],
-                (unsigned)File.LineCoverage.NotCovered);
-  Options.colored_ostream(OS,
-                          determineCoveragePercentageColor(File.LineCoverage))
+  Options.colored_ostream(OS, LineCoverageColor) << format(
+      "%*u", FileReportColumns[8], (unsigned)File.LineCoverage.NotCovered);
+  Options.colored_ostream(OS, LineCoverageColor)
       << format("%*.2f", FileReportColumns[9] - 1,
-                File.LineCoverage.getPercentCovered()) << '%';
+                File.LineCoverage.getPercentCovered())
+      << '%';
   OS << "\n";
 }
 
 void CoverageReport::render(const FunctionCoverageSummary &Function,
                             raw_ostream &OS) {
+  auto FuncCoverageColor =
+      determineCoveragePercentageColor(Function.RegionCoverage);
+  auto LineCoverageColor =
+      determineCoveragePercentageColor(Function.LineCoverage);
   OS << column(Function.Name, FunctionReportColumns[0], Column::RightTrim)
      << format("%*u", FunctionReportColumns[1],
                (unsigned)Function.RegionCoverage.NumRegions);
-  Options.colored_ostream(OS, Function.RegionCoverage.isFullyCovered()
-                                  ? raw_ostream::GREEN
-                                  : raw_ostream::RED)
+  Options.colored_ostream(OS, FuncCoverageColor)
       << format("%*u", FunctionReportColumns[2],
                 (unsigned)Function.RegionCoverage.NotCovered);
   Options.colored_ostream(
       OS, determineCoveragePercentageColor(Function.RegionCoverage))
       << format("%*.2f", FunctionReportColumns[3] - 1,
-                Function.RegionCoverage.getPercentCovered()) << '%';
+                Function.RegionCoverage.getPercentCovered())
+      << '%';
   OS << format("%*u", FunctionReportColumns[4],
                (unsigned)Function.LineCoverage.NumLines);
-  Options.colored_ostream(OS, Function.LineCoverage.isFullyCovered()
-                                  ? raw_ostream::GREEN
-                                  : raw_ostream::RED)
+  Options.colored_ostream(OS, LineCoverageColor)
       << format("%*u", FunctionReportColumns[5],
                 (unsigned)Function.LineCoverage.NotCovered);
   Options.colored_ostream(
       OS, determineCoveragePercentageColor(Function.LineCoverage))
       << format("%*.2f", FunctionReportColumns[6] - 1,
-                Function.LineCoverage.getPercentCovered()) << '%';
+                Function.LineCoverage.getPercentCovered())
+      << '%';
   OS << "\n";
 }
 
@@ -226,13 +228,11 @@ void CoverageReport::renderFileReports(raw_ostream &OS) {
      << column("Missed Regions", FileReportColumns[2], Column::RightAlignment)
      << column("Cover", FileReportColumns[3], Column::RightAlignment)
      << column("Functions", FileReportColumns[4], Column::RightAlignment)
-     << column("Missed Functions", FileReportColumns[5],
-               Column::RightAlignment)
+     << column("Missed Functions", FileReportColumns[5], Column::RightAlignment)
      << column("Executed", FileReportColumns[6], Column::RightAlignment)
      << column("Lines", FileReportColumns[7], Column::RightAlignment)
      << column("Missed Lines", FileReportColumns[8], Column::RightAlignment)
-     << column("Cover", FileReportColumns[9], Column::RightAlignment)
-     << "\n";
+     << column("Cover", FileReportColumns[9], Column::RightAlignment) << "\n";
   renderDivider(FileReportColumns, OS);
   OS << "\n";
 
