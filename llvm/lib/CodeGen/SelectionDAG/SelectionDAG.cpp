@@ -1980,10 +1980,6 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 /// SignBitIsZero - Return true if the sign bit of Op is known to be zero.  We
 /// use this predicate to simplify operations downstream.
 bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
-  // This predicate is not safe for vector operations.
-  if (Op.getValueType().isVector())
-    return false;
-
   unsigned BitWidth = Op.getScalarValueSizeInBits();
   return MaskedValueIsZero(Op, APInt::getSignBit(BitWidth), Depth);
 }
@@ -3607,7 +3603,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isFloatingPoint() &&
            N1.getValueType().isFloatingPoint() &&
            VT.bitsLE(N1.getValueType()) &&
-           N2C && "Invalid FP_ROUND!");
+           N2C && (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
+           "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
   case ISD::AssertSext:

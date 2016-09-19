@@ -1,10 +1,26 @@
 RUN: llvm-profdata merge %S/Inputs/hideUnexecutedSubviews.proftext -o %t.profdata
 
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -filename-equivalence %S/showTemplateInstantiations.cpp | FileCheck %s
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -filename-equivalence %S/showTemplateInstantiations.cpp | FileCheck -check-prefix=FILE %s
 
 RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -format html -o %t.html.dir -filename-equivalence %S/showTemplateInstantiations.cpp
-RUN: FileCheck %s -input-file %t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html
+RUN: FileCheck -check-prefix=FILE %s -input-file %t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html
 
-CHECK: Unexecuted instantiation: _Z4funcIbEiT_
-CHECK: Unexecuted instantiation: _Z4funcIiEiT_
-CHECK-NOT: Unexecuted instantiation
+FILE: Unexecuted instantiation: _Z4funcIbEiT_
+FILE: Unexecuted instantiation: _Z4funcIiEiT_
+FILE-NOT: Unexecuted instantiation
+
+RUN: FileCheck -check-prefix=INDEX %s -input-file %t.html.dir/index.html
+
+INDEX: <td class='column-entry-left'>Filename</td>
+INDEX: <td class='column-entry'>Function Coverage</td>
+INDEX: <td class='column-entry'>Instantiation Coverage</td>
+INDEX: <td class='column-entry'>Line Coverage</td>
+INDEX: <td class='column-entry'>Region Coverage</td>
+INDEX: <td class='column-entry-red'>
+INDEX: 50.00% (1/2)
+INDEX: <td class='column-entry-red'>
+INDEX: 33.33% (1/3)
+INDEX: <td class='column-entry-red'>
+INDEX: 41.67% (5/12)
+INDEX: <td class='column-entry-red'>
+INDEX: 20.00% (1/5)

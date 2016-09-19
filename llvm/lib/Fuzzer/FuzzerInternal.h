@@ -108,6 +108,7 @@ void PrintHexArray(const uint8_t *Data, size_t Size,
 void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter = "");
 void PrintASCII(const Unit &U, const char *PrintAfter = "");
 void PrintASCII(const Word &W, const char *PrintAfter = "");
+void PrintPC(const char *SymbolizedFMT, const char *FallbackFMT, uintptr_t PC);
 std::string Hash(const Unit &U);
 void SetTimer(int Seconds);
 void SetSigSegvHandler();
@@ -243,6 +244,7 @@ struct FuzzingOptions {
   bool OutputCSV = false;
   bool PrintNewCovPcs = false;
   bool PrintFinalStats = false;
+  bool PrintCoverage = false;
   bool DetectLeaks = true;
   bool TruncateUnits = false;
   bool PruneCorpus = true;
@@ -385,6 +387,8 @@ class TracePC {
 
   void PrintModuleInfo();
 
+  void PrintCoverage();
+
 private:
   bool UseCounters = false;
   size_t TotalCoverage = 0;
@@ -407,6 +411,9 @@ private:
 
   static const size_t kNumCounters = 1 << 14;
   uint8_t Counters[kNumCounters];
+
+  static const size_t kNumPCs = 1 << 20;
+  uintptr_t PCs[kNumPCs];
 
   ValueBitMap CounterMap;
   ValueBitMap TotalCoverageMap;

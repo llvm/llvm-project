@@ -18,6 +18,7 @@ namespace fuzzer {
 
 TracePC TPC;
 const size_t TracePC::kNumCounters;
+const size_t TracePC::kNumPCs;
 
 void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
   uintptr_t Idx = *Guard;
@@ -25,6 +26,7 @@ void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
   if (UseCounters) {
     uint8_t Counter = Counters[Idx % kNumCounters];
     if (Counter == 0) {
+      PCs[Idx] = PC;
       if (TotalCoverageMap.AddValue(Idx)) {
         TotalCoverage++;
         AddNewPC(PC);
@@ -38,6 +40,7 @@ void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
     *Guard = 0;
     TotalCoverage++;
     AddNewPC(PC);
+    PCs[Idx] = PC;
   }
 }
 
@@ -98,6 +101,14 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   const uintptr_t kBits = 12;
   const uintptr_t kMask = (1 << kBits) - 1;
   CounterMap.AddValue((Caller & kMask) | ((Callee & kMask) << kBits));
+}
+
+void TracePC::PrintCoverage() {
+  Printf("COVERAGE:\n");
+  for (size_t i = 0; i < std::min(NumGuards, kNumPCs); i++) {
+    if (PCs[i])
+      PrintPC("COVERED: %p %F %L\n", "COVERED: %p\n", PCs[i]);
+  }
 }
 
 } // namespace fuzzer

@@ -2600,3 +2600,13 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
 AsmPrinterHandler::~AsmPrinterHandler() {}
 
 void AsmPrinterHandler::markFunctionEnd() {}
+
+void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
+  SledKind Kind) {
+  auto Fn = MI.getParent()->getParent()->getFunction();
+  auto Attr = Fn->getFnAttribute("function-instrument");
+  bool AlwaysInstrument =
+    Attr.isStringAttribute() && Attr.getValueAsString() == "xray-always";
+  Sleds.emplace_back(
+    XRayFunctionEntry{ Sled, CurrentFnSym, Kind, AlwaysInstrument, Fn });
+}
