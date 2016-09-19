@@ -157,14 +157,6 @@ class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let VALU = 1;
 }
 
-class VOPCCommon <dag ins, string asm, list<dag> pattern> :
-    VOPAnyCommon <(outs), ins, asm, pattern> {
-
-  let VOPC = 1;
-  let Size = 4;
-  let Defs = [VCC];
-}
-
 class VOP1Common <dag outs, dag ins, string asm, list<dag> pattern> :
     VOPAnyCommon <outs, ins, asm, pattern> {
 
@@ -284,14 +276,6 @@ class VOP3e <bits<9> op> : VOP3a <op> {
   let Inst{7-0} = vdst;
 }
 
-// Encoding used for VOPC instructions encoded as VOP3
-// Differs from VOP3e by destination name (sdst) as VOPC doesn't have vector dst
-class VOP3ce <bits<9> op> : VOP3a <op> {
-  bits<8> sdst;
-
-  let Inst{7-0} = sdst;
-}
-
 class VOP3be <bits<9> op> : Enc64 {
   bits<8> vdst;
   bits<2> src0_modifiers;
@@ -314,16 +298,6 @@ class VOP3be <bits<9> op> : Enc64 {
   let Inst{61} = src0_modifiers{0};
   let Inst{62} = src1_modifiers{0};
   let Inst{63} = src2_modifiers{0};
-}
-
-class VOPCe <bits<8> op> : Enc32 {
-  bits<9> src0;
-  bits<8> src1;
-
-  let Inst{8-0} = src0;
-  let Inst{16-9} = src1;
-  let Inst{24-17} = op;
-  let Inst{31-25} = 0x3e;
 }
 
 class VINTRPe <bits<2> op> : Enc32 {
@@ -405,9 +379,6 @@ class VOP2 <bits<6> op, dag outs, dag ins, string asm, list<dag> pattern> :
     VOP2Common <outs, ins, asm, pattern>, VOP2e<op> {
   let isCodeGenOnly = 0;
 }
-
-class VOPC <bits<8> op, dag ins, string asm, list<dag> pattern> :
-    VOPCCommon <ins, asm, pattern>, VOPCe <op>;
 
 class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
     InstSI <outs, ins, asm, pattern> {

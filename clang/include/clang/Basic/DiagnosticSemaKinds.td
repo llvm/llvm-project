@@ -659,7 +659,8 @@ def err_object_cannot_be_passed_returned_by_value : Error<
 def err_parameters_retval_cannot_have_fp16_type : Error<
   "%select{parameters|function return value}0 cannot have __fp16 type; did you forget * ?">;
 def err_opencl_half_load_store : Error<
-  "%select{loading directly from|assigning directly to}0 pointer to type %1 is not allowed">;
+  "%select{loading directly from|assigning directly to}0 pointer to type %1 requires "
+  "cl_khr_fp16. Use vector data %select{load|store}0 builtin functions instead">;
 def err_opencl_cast_to_half : Error<"casting to type %0 is not allowed">;
 def err_opencl_half_declaration : Error<
   "declaring variable of type %0 is not allowed">;
