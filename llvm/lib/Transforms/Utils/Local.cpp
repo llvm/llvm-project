@@ -1053,6 +1053,24 @@ static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
   return false;
 }
 
+/// See if there is a dbg.value intrinsic for DIVar for the PHI node.
+static bool PhiHasDebugValue(DILocalVariable *DIVar, 
+                             DIExpression *DIExpr,
+                             PHINode *APN) {
+  // Since we can't guarantee that the original dbg.declare instrinsic
+  // is removed by LowerDbgDeclare(), we need to make sure that we are
+  // not inserting the same dbg.value intrinsic over and over.
+  DbgValueList DbgValues;
+  FindAllocaDbgValues(DbgValues, APN);
+  for (auto DVI : DbgValues) {
+    assert (DVI->getValue() == APN);
+    assert (DVI->getOffset() == 0);
+    if ((DVI->getVariable() == DIVar) && (DVI->getExpression() == DIExpr))
+      return true;
+  }
+  return false;
+}
+
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
 bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
@@ -1117,6 +1135,23 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
       LI, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
   DbgValue->insertAfter(LI);
+  return true;
+}
+
+/// Inserts a llvm.dbg.value intrinsic after a phi 
+/// that has an associated llvm.dbg.decl intrinsic.
+bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+                                           PHINode *APN, DIBuilder &Builder) {
+  auto *DIVar = DDI->getVariable();
+  auto *DIExpr = DDI->getExpression();
+  assert(DIVar && "Missing variable");
+
+  if (PhiHasDebugValue(DIVar, DIExpr, APN))
+    return true;
+
+  Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
+      APN, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
+  DbgValue->insertBefore(&*APN->getParent()->getFirstInsertionPt());
   return true;
 }
 
@@ -1185,6 +1220,16 @@ DbgDeclareInst *llvm::FindAllocaDbgDeclare(Value *V) {
           return DDI;
 
   return nullptr;
+}
+
+/// FindAllocaDbgValues - Finds the llvm.dbg.value intrinsics describing the
+/// alloca 'V', if any.
+void llvm::FindAllocaDbgValues(DbgValueList &DbgValues, Value *V) {
+  if (auto *L = LocalAsMetadata::getIfExists(V))
+    if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L))
+      for (User *U : MDV->users())
+        if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(U))
+          DbgValues.push_back(DVI);
 }
 
 static void DIExprAddDeref(SmallVectorImpl<uint64_t> &Expr) {

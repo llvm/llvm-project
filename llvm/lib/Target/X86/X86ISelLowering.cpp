@@ -349,7 +349,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // Special handling for half-precision floating point conversions.
   // If we don't have F16C support, then lower half float conversions
   // into library calls.
-  if (Subtarget.useSoftFloat() || !Subtarget.hasF16C()) {
+  if (Subtarget.useSoftFloat() ||
+      (!Subtarget.hasF16C() && !Subtarget.hasVLX())) {
     setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
   }
@@ -13871,14 +13872,14 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDLoc dl(Op);
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
-  if (Op.getSimpleValueType().isVector())
-    return lowerUINT_TO_FP_vec(Op, DAG);
-
   // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
   // optimize it to a SINT_TO_FP when the sign bit is known zero. Perform
   // the optimization here.
   if (DAG.SignBitIsZero(N0))
     return DAG.getNode(ISD::SINT_TO_FP, dl, Op.getValueType(), N0);
+
+  if (Op.getSimpleValueType().isVector())
+    return lowerUINT_TO_FP_vec(Op, DAG);
 
   MVT SrcVT = N0.getSimpleValueType();
   MVT DstVT = Op.getSimpleValueType();
@@ -17636,7 +17637,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       SDValue PassThru = Op.getOperand(2);
       SDValue Mask = Op.getOperand(3);
       SDValue RoundingMode;
-      // We allways add rounding mode to the Node.
+      // We always add rounding mode to the Node.
       // If the rounding mode is not specified, we add the
       // "current direction" mode.
       if (Op.getNumOperands() == 4)
@@ -17929,6 +17930,31 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
 
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
                                               Src1, Src2, Src3, Src4),
+                                  Mask, PassThru, Subtarget, DAG);
+    }
+    case CVTPD2PS: {
+      SDValue Src = Op.getOperand(1);
+      SDValue PassThru = Op.getOperand(2);
+      SDValue Mask = Op.getOperand(3);
+      // We add rounding mode to the Node when
+      //   - RM Opcode is specified and
+      //   - RM is not "current direction".
+      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
+      if (IntrWithRoundingModeOpcode != 0) {
+        SDValue Rnd = Op.getOperand(4);
+        unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
+        if (Round != X86::STATIC_ROUNDING::CUR_DIRECTION) {
+          return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
+                                      dl, Op.getValueType(),
+                                      Src, Rnd),
+                                      Mask, PassThru, Subtarget, DAG);
+        }
+      }
+      assert(IntrData->Opc0 == ISD::FP_ROUND && "Unexpected opcode!");
+      // ISD::FP_ROUND has a second argument that indicates if the truncation
+      // does not change the value. Set it to 0 since it can change.
+      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src,
+                                              DAG.getIntPtrConstant(0, dl)),
                                   Mask, PassThru, Subtarget, DAG);
     }
     case FPCLASS: {
@@ -31203,6 +31229,12 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
 
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
+
+  // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
+  // optimize it to a SINT_TO_FP when the sign bit is known zero. Perform
+  // the optimization here.
+  if (DAG.SignBitIsZero(Op0))
+    return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, Op0);
 
   return SDValue();
 }

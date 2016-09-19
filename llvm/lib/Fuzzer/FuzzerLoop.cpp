@@ -329,6 +329,8 @@ void Fuzzer::PrintStats(const char *Where, const char *End) {
 }
 
 void Fuzzer::PrintFinalStats() {
+  if (Options.PrintCoverage)
+    TPC.PrintCoverage();
   if (!Options.PrintFinalStats) return;
   size_t ExecPerSec = execPerSec();
   Printf("stat::number_of_executed_units: %zd\n", TotalNumberOfRuns);
@@ -560,15 +562,8 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
 }
 
 void Fuzzer::PrintOneNewPC(uintptr_t PC) {
-  if (EF->__sanitizer_symbolize_pc) {
-    char PcDescr[1024];
-    EF->__sanitizer_symbolize_pc(reinterpret_cast<void*>(PC),
-                                 "%p %F %L", PcDescr, sizeof(PcDescr));
-    PcDescr[sizeof(PcDescr) - 1] = 0;  // Just in case.
-    Printf("\tNEW_PC: %s\n", PcDescr);
-  } else {
-    Printf("\tNEW_PC: %p\n", PC);
-  }
+  PrintPC("\tNEW_PC: %p %F %L\n",
+          "\tNEW_PC: %p\n", PC);
 }
 
 void Fuzzer::PrintNewPCs() {

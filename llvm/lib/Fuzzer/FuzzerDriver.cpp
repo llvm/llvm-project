@@ -425,6 +425,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       !DoPlainRun || Flags.minimize_crash_internal_step;
   Options.PrintNewCovPcs = Flags.print_pcs;
   Options.PrintFinalStats = Flags.print_final_stats;
+  Options.PrintCoverage = Flags.print_coverage;
   Options.TruncateUnits = Flags.truncate_units;
   Options.PruneCorpus = Flags.prune_corpus;
 

@@ -8,6 +8,7 @@ define void @test1(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setne %al
+; CHECK-NEXT:  # implicit-def: %EDI
 ; CHECK-NEXT:    movb %al, %dil
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k0
@@ -29,6 +30,7 @@ define void @test2(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setne %al
+; CHECK-NEXT:  # implicit-def: %EDI
 ; CHECK-NEXT:    movb %al, %dil
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k0

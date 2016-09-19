@@ -193,6 +193,8 @@ public:
 #include "ARMGenDAGISel.inc"
 
 private:
+  void transferMemOperands(SDNode *Src, SDNode *Dst);
+
   /// Indexed (pre/post inc/dec) load matching code for ARM.
   bool tryARMIndexedLoad(SDNode *N);
   bool tryT1IndexedLoad(SDNode *N);
@@ -1471,6 +1473,12 @@ static inline SDValue getAL(SelectionDAG *CurDAG, const SDLoc &dl) {
   return CurDAG->getTargetConstant((uint64_t)ARMCC::AL, dl, MVT::i32);
 }
 
+void ARMDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
+  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
+  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+}
+
 bool ARMDAGToDAGISel::tryARMIndexedLoad(SDNode *N) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   ISD::MemIndexedMode AM = LD->getAddressingMode();
@@ -1529,16 +1537,20 @@ bool ARMDAGToDAGISel::tryARMIndexedLoad(SDNode *N) {
       SDValue Base = LD->getBasePtr();
       SDValue Ops[]= { Base, AMOpc, getAL(CurDAG, SDLoc(N)),
                        CurDAG->getRegister(0, MVT::i32), Chain };
-      ReplaceNode(N, CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32,
-                                            MVT::i32, MVT::Other, Ops));
+      SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32, MVT::i32,
+                                           MVT::Other, Ops);
+      transferMemOperands(N, New);
+      ReplaceNode(N, New);
       return true;
     } else {
       SDValue Chain = LD->getChain();
       SDValue Base = LD->getBasePtr();
       SDValue Ops[]= { Base, Offset, AMOpc, getAL(CurDAG, SDLoc(N)),
                        CurDAG->getRegister(0, MVT::i32), Chain };
-      ReplaceNode(N, CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32,
-                                            MVT::i32, MVT::Other, Ops));
+      SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32, MVT::i32,
+                                           MVT::Other, Ops);
+      transferMemOperands(N, New);
+      ReplaceNode(N, New);
       return true;
     }
   }
@@ -1566,8 +1578,10 @@ bool ARMDAGToDAGISel::tryT1IndexedLoad(SDNode *N) {
   SDValue Base = LD->getBasePtr();
   SDValue Ops[]= { Base, getAL(CurDAG, SDLoc(N)),
                    CurDAG->getRegister(0, MVT::i32), Chain };
-  ReplaceNode(N, CurDAG->getMachineNode(ARM::tLDR_postidx, SDLoc(N), MVT::i32, MVT::i32,
-                                        MVT::Other, Ops));
+  SDNode *New = CurDAG->getMachineNode(ARM::tLDR_postidx, SDLoc(N), MVT::i32,
+                                       MVT::i32, MVT::Other, Ops);
+  transferMemOperands(N, New);
+  ReplaceNode(N, New);
   return true;
 }
 
@@ -1612,8 +1626,10 @@ bool ARMDAGToDAGISel::tryT2IndexedLoad(SDNode *N) {
     SDValue Base = LD->getBasePtr();
     SDValue Ops[]= { Base, Offset, getAL(CurDAG, SDLoc(N)),
                      CurDAG->getRegister(0, MVT::i32), Chain };
-    ReplaceNode(N, CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32, MVT::i32,
-                                          MVT::Other, Ops));
+    SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32, MVT::i32,
+                                         MVT::Other, Ops);
+    transferMemOperands(N, New);
+    ReplaceNode(N, New);
     return true;
   }
 

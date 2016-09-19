@@ -9,31 +9,12 @@
 ;
 
 define float @cvt_i16_to_f32(i16 %a0) nounwind {
-; AVX1-LABEL: cvt_i16_to_f32:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    movswl %di, %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_i16_to_f32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    movswl %di, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_i16_to_f32:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    movswl %di, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_i16_to_f32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    movzwl %di, %edi
-; AVX512VL-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; ALL-LABEL: cvt_i16_to_f32:
+; ALL:       # BB#0:
+; ALL-NEXT:    movswl %di, %eax
+; ALL-NEXT:    vmovd %eax, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    retq
   %1 = bitcast i16 %a0 to half
   %2 = fpext half %1 to float
   ret float %2
@@ -123,39 +104,29 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_4i16_to_4f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $64, %rsp
-; AVX512VL-NEXT:    vpmovdw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
-; AVX512VL-NEXT:    movl %ebp, %r14d
-; AVX512VL-NEXT:    shrl $16, %r14d
-; AVX512VL-NEXT:    movq %rbp, %rbx
-; AVX512VL-NEXT:    shrq $32, %rbx
-; AVX512VL-NEXT:    movq %rbp, %rdi
-; AVX512VL-NEXT:    shrq $48, %rdi
-; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r14d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    addq $64, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    movq %rax, %rdx
+; AVX512VL-NEXT:    movswl %ax, %esi
+; AVX512VL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    shrq $48, %rdx
+; AVX512VL-NEXT:    movswl %dx, %edx
+; AVX512VL-NEXT:    vmovd %edx, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %esi, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX512VL-NEXT:    retq
   %1 = bitcast <4 x i16> %a0 to <4 x half>
   %2 = fpext <4 x half> %1 to <4 x float>
@@ -243,40 +214,30 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_4f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $64, %rsp
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
-; AVX512VL-NEXT:    movl %ebp, %r14d
-; AVX512VL-NEXT:    shrl $16, %r14d
-; AVX512VL-NEXT:    movq %rbp, %rbx
-; AVX512VL-NEXT:    shrq $32, %rbx
-; AVX512VL-NEXT:    movq %rbp, %rdi
-; AVX512VL-NEXT:    shrq $48, %rdi
-; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r14d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    addq $64, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    movq %rax, %rdx
+; AVX512VL-NEXT:    movswl %ax, %esi
+; AVX512VL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    shrq $48, %rdx
+; AVX512VL-NEXT:    movswl %dx, %edx
+; AVX512VL-NEXT:    vmovd %edx, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %esi, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX512VL-NEXT:    retq
   %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = bitcast <4 x i16> %1 to <4 x half>
@@ -434,72 +395,51 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_8f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %r13
-; AVX512VL-NEXT:    pushq %r12
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $136, %rsp
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %r15
-; AVX512VL-NEXT:    movl %r15d, %eax
-; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    movq %r15, %r12
-; AVX512VL-NEXT:    shrq $32, %r12
-; AVX512VL-NEXT:    movq %r15, %r13
-; AVX512VL-NEXT:    shrq $48, %r13
-; AVX512VL-NEXT:    vmovq %xmm0, %r14
-; AVX512VL-NEXT:    movl %r14d, %ebp
-; AVX512VL-NEXT:    shrl $16, %ebp
-; AVX512VL-NEXT:    movq %r14, %rbx
-; AVX512VL-NEXT:    shrq $32, %rbx
-; AVX512VL-NEXT:    movq %r14, %rdi
-; AVX512VL-NEXT:    shrq $48, %rdi
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VL-NEXT:    movq %rdx, %r8
+; AVX512VL-NEXT:    movq %rdx, %r10
+; AVX512VL-NEXT:    movswl %dx, %r9d
+; AVX512VL-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<kill>
+; AVX512VL-NEXT:    shrl $16, %edx
+; AVX512VL-NEXT:    shrq $32, %r8
+; AVX512VL-NEXT:    shrq $48, %r10
+; AVX512VL-NEXT:    vmovq %xmm0, %rdi
+; AVX512VL-NEXT:    movq %rdi, %rax
+; AVX512VL-NEXT:    movq %rdi, %rsi
+; AVX512VL-NEXT:    movswl %di, %ecx
 ; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r14w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r13d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r12w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r15w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%rsp), %edi # 4-byte Reload
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1,2],mem[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    addq $136, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r12
-; AVX512VL-NEXT:    popq %r13
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    shrl $16, %edi
+; AVX512VL-NEXT:    shrq $32, %rax
+; AVX512VL-NEXT:    shrq $48, %rsi
+; AVX512VL-NEXT:    movswl %si, %esi
+; AVX512VL-NEXT:    vmovd %esi, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl %di, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %ecx, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    movswl %r10w, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm4
+; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
+; AVX512VL-NEXT:    movswl %r8w, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm5
+; AVX512VL-NEXT:    vcvtph2ps %xmm5, %xmm5
+; AVX512VL-NEXT:    movswl %dx, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm6
+; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
+; AVX512VL-NEXT:    vmovd %r9d, %xmm7
+; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm7
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm5 = xmm6[0,1],xmm5[0],xmm6[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm5[0,1,2],xmm4[0]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm4, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = bitcast <8 x i16> %a0 to <8 x half>
   %2 = fpext <8 x half> %1 to <8 x float>
@@ -795,139 +735,98 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_16i16_to_16f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %r13
-; AVX512VL-NEXT:    pushq %r12
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $264, %rsp # imm = 0x108
-; AVX512VL-NEXT:    vextracti32x4 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX512VL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) # 8-byte Spill
-; AVX512VL-NEXT:    movl %ecx, %eax
-; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    movq %rcx, %rax
-; AVX512VL-NEXT:    shrq $32, %rax
-; AVX512VL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) # 8-byte Spill
+; AVX512VL-NEXT:    vextracti32x4 $1, %ymm0, %xmm10
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    movq %rax, %rcx
 ; AVX512VL-NEXT:    shrq $48, %rcx
-; AVX512VL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) # 8-byte Spill
-; AVX512VL-NEXT:    vmovq %xmm1, %rcx
-; AVX512VL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) # 8-byte Spill
-; AVX512VL-NEXT:    movl %ecx, %eax
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm8
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm9
+; AVX512VL-NEXT:    movswl %ax, %ecx
+; AVX512VL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    movq %rcx, %rax
-; AVX512VL-NEXT:    shrq $32, %rax
-; AVX512VL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) # 8-byte Spill
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm11
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512VL-NEXT:    vmovd %ecx, %xmm12
+; AVX512VL-NEXT:    movq %rax, %rcx
 ; AVX512VL-NEXT:    shrq $48, %rcx
-; AVX512VL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) # 8-byte Spill
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %r15
-; AVX512VL-NEXT:    movl %r15d, %eax
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm13
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm14
+; AVX512VL-NEXT:    movswl %ax, %ecx
+; AVX512VL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    movq %r15, %r13
-; AVX512VL-NEXT:    shrq $32, %r13
-; AVX512VL-NEXT:    movq %r15, %rbx
-; AVX512VL-NEXT:    shrq $48, %rbx
-; AVX512VL-NEXT:    vmovq %xmm0, %rbp
-; AVX512VL-NEXT:    movl %ebp, %r14d
-; AVX512VL-NEXT:    shrl $16, %r14d
-; AVX512VL-NEXT:    movq %rbp, %r12
-; AVX512VL-NEXT:    shrq $32, %r12
-; AVX512VL-NEXT:    movq %rbp, %rdi
-; AVX512VL-NEXT:    shrq $48, %rdi
-; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r12w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r14d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r13w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r15w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%rsp), %edi # 4-byte Reload
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rdi # 8-byte Reload
-; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax # 8-byte Reload
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax # 8-byte Reload
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%rsp), %edi # 4-byte Reload
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rdi # 8-byte Reload
-; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax # 8-byte Reload
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax # 8-byte Reload
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%rsp), %edi # 4-byte Reload
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1,2],mem[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1,2],mem[0]
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm2, %xmm2 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm2, %xmm2 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm2, %xmm2 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm2 = xmm2[0,1,2],mem[0]
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm15
+; AVX512VL-NEXT:    vmovq %xmm10, %rax
+; AVX512VL-NEXT:    vmovd %ecx, %xmm16
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    shrq $48, %rcx
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm17
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm18
+; AVX512VL-NEXT:    movswl %ax, %ecx
+; AVX512VL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm19
+; AVX512VL-NEXT:    vpextrq $1, %xmm10, %rax
+; AVX512VL-NEXT:    vmovd %ecx, %xmm10
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    shrq $48, %rcx
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm20
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm21
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    shrl $16, %ecx
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm22
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm8, %xmm8
+; AVX512VL-NEXT:    vcvtph2ps %xmm9, %xmm9
+; AVX512VL-NEXT:    vcvtph2ps %xmm11, %xmm11
+; AVX512VL-NEXT:    vcvtph2ps %xmm12, %xmm12
+; AVX512VL-NEXT:    vcvtph2ps %xmm13, %xmm13
+; AVX512VL-NEXT:    vcvtph2ps %xmm14, %xmm14
+; AVX512VL-NEXT:    vcvtph2ps %xmm15, %xmm15
+; AVX512VL-NEXT:    vcvtph2ps %xmm16, %xmm16
+; AVX512VL-NEXT:    vcvtph2ps %xmm17, %xmm4
+; AVX512VL-NEXT:    vcvtph2ps %xmm18, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm19, %xmm5
+; AVX512VL-NEXT:    vcvtph2ps %xmm10, %xmm7
+; AVX512VL-NEXT:    vcvtph2ps %xmm20, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm21, %xmm6
+; AVX512VL-NEXT:    vcvtph2ps %xmm22, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm6[0],xmm1[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm3[0]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm7[0],xmm5[0],xmm7[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1],xmm0[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm16[0],xmm15[0],xmm16[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm14[0],xmm1[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm13[0]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm12[0],xmm11[0],xmm12[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm9[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm8[0]
 ; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %ymm2, %ymm1
 ; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    addq $264, %rsp # imm = 0x108
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r12
-; AVX512VL-NEXT:    popq %r13
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
-; AVX512VL-NEXT:    popq %rbp
 ; AVX512VL-NEXT:    retq
   %1 = bitcast <16 x i16> %a0 to <16 x half>
   %2 = fpext <16 x half> %1 to <16 x float>
@@ -939,31 +838,12 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ;
 
 define float @load_cvt_i16_to_f32(i16* %a0) nounwind {
-; AVX1-LABEL: load_cvt_i16_to_f32:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    movswl (%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_cvt_i16_to_f32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    movswl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: load_cvt_i16_to_f32:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    movswl (%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: load_cvt_i16_to_f32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    movzwl (%rdi), %edi
-; AVX512VL-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; ALL-LABEL: load_cvt_i16_to_f32:
+; ALL:       # BB#0:
+; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    retq
   %1 = load i16, i16* %a0
   %2 = bitcast i16 %1 to half
   %3 = fpext half %2 to float
@@ -971,88 +851,24 @@ define float @load_cvt_i16_to_f32(i16* %a0) nounwind {
 }
 
 define <4 x float> @load_cvt_4i16_to_4f32(<4 x i16>* %a0) nounwind {
-; AVX1-LABEL: load_cvt_4i16_to_4f32:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    movswl 6(%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    movswl 4(%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    movswl (%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm2
-; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX1-NEXT:    movswl 2(%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm3
-; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_cvt_4i16_to_4f32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    movswl 6(%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    movswl 4(%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    movswl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX2-NEXT:    movswl 2(%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm3
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: load_cvt_4i16_to_4f32:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    movswl 6(%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    movswl 4(%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    movswl (%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm2
-; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    movswl 2(%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm3
-; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: load_cvt_4i16_to_4f32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $48, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    movzwl 6(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 4(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl (%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 2(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 (%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    addq $48, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: load_cvt_4i16_to_4f32:
+; ALL:       # BB#0:
+; ALL-NEXT:    movswl 6(%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    movswl 4(%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm2
+; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; ALL-NEXT:    movswl 2(%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm3
+; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; ALL-NEXT:    retq
   %1 = load <4 x i16>, <4 x i16>* %a0
   %2 = bitcast <4 x i16> %1 to <4 x half>
   %3 = fpext <4 x half> %2 to <4 x float>
@@ -1140,41 +956,31 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $64, %rsp
 ; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
-; AVX512VL-NEXT:    movl %ebp, %r14d
-; AVX512VL-NEXT:    shrl $16, %r14d
-; AVX512VL-NEXT:    movq %rbp, %rbx
-; AVX512VL-NEXT:    shrq $32, %rbx
-; AVX512VL-NEXT:    movq %rbp, %rdi
-; AVX512VL-NEXT:    shrq $48, %rdi
-; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r14d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    addq $64, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    movq %rax, %rdx
+; AVX512VL-NEXT:    movswl %ax, %esi
+; AVX512VL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    shrq $48, %rdx
+; AVX512VL-NEXT:    movswl %dx, %edx
+; AVX512VL-NEXT:    vmovd %edx, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %esi, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX512VL-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1291,48 +1097,37 @@ define <8 x float> @load_cvt_8i16_to_8f32(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_8f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $112, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    movzwl 6(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 4(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl (%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 2(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 14(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 12(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 8(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 10(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 (%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1,2],mem[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    addq $112, %rsp
-; AVX512VL-NEXT:    popq %rbx
+; AVX512VL-NEXT:    movswl 6(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    movswl 4(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl (%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    movswl 2(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    movswl 14(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm4
+; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
+; AVX512VL-NEXT:    movswl 12(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm5
+; AVX512VL-NEXT:    vcvtph2ps %xmm5, %xmm5
+; AVX512VL-NEXT:    movswl 8(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm6
+; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
+; AVX512VL-NEXT:    movswl 10(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm7
+; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm7
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm5 = xmm6[0,1],xmm5[0],xmm6[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm5[0,1,2],xmm4[0]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm4, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = bitcast <8 x i16> %1 to <8 x half>
@@ -1542,88 +1337,69 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_16i16_to_16f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $240, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    movzwl 6(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 4(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl (%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 2(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 14(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 12(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 8(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 10(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 22(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 20(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 16(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 18(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 30(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 28(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 24(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 26(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 (%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm0 = xmm0[0,1,2],mem[0]
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1,2],mem[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm1 = xmm1[0,1,2],mem[0]
-; AVX512VL-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vinsertps $16, {{[0-9]+}}(%rsp), %xmm2, %xmm2 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX512VL-NEXT:    vinsertps $32, {{[0-9]+}}(%rsp), %xmm2, %xmm2 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX512VL-NEXT:    vinsertps $48, {{[0-9]+}}(%rsp), %xmm2, %xmm2 # 16-byte Folded Reload
-; AVX512VL-NEXT:    # xmm2 = xmm2[0,1,2],mem[0]
+; AVX512VL-NEXT:    movswl 6(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm8
+; AVX512VL-NEXT:    movswl 4(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm9
+; AVX512VL-NEXT:    movswl (%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm10
+; AVX512VL-NEXT:    movswl 2(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm11
+; AVX512VL-NEXT:    movswl 14(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm4
+; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm12
+; AVX512VL-NEXT:    movswl 12(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm5
+; AVX512VL-NEXT:    vcvtph2ps %xmm5, %xmm13
+; AVX512VL-NEXT:    movswl 8(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm6
+; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm14
+; AVX512VL-NEXT:    movswl 10(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm7
+; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm15
+; AVX512VL-NEXT:    movswl 22(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    movswl 20(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl 16(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    movswl 18(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    movswl 30(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm4
+; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
+; AVX512VL-NEXT:    movswl 28(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm5
+; AVX512VL-NEXT:    vcvtph2ps %xmm5, %xmm5
+; AVX512VL-NEXT:    movswl 24(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm6
+; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
+; AVX512VL-NEXT:    movswl 26(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm7
+; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm7
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm5 = xmm6[0,1],xmm5[0],xmm6[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm5[0,1,2],xmm4[0]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm4, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm14[0],xmm15[0],xmm14[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm13[0],xmm1[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm12[0]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm10[0],xmm11[0],xmm10[2,3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm9[0],xmm2[3]
+; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm8[0]
 ; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %ymm2, %ymm1
 ; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    addq $240, %rsp
-; AVX512VL-NEXT:    popq %rbx
 ; AVX512VL-NEXT:    retq
   %1 = load <16 x i16>, <16 x i16>* %a0
   %2 = bitcast <16 x i16> %1 to <16 x half>
@@ -1636,38 +1412,13 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ;
 
 define double @cvt_i16_to_f64(i16 %a0) nounwind {
-; AVX1-LABEL: cvt_i16_to_f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    movswl %di, %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_i16_to_f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    movswl %di, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_i16_to_f64:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    movswl %di, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_i16_to_f64:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    movzwl %di, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    popq %rax
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: cvt_i16_to_f64:
+; ALL:       # BB#0:
+; ALL-NEXT:    movswl %di, %eax
+; ALL-NEXT:    vmovd %eax, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    retq
   %1 = bitcast i16 %a0 to half
   %2 = fpext half %1 to double
   ret double %2
@@ -1727,23 +1478,18 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_2i16_to_2f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $32, %rsp
-; AVX512VL-NEXT:    vpmovqw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; AVX512VL-NEXT:    movl %eax, %ebx
-; AVX512VL-NEXT:    shrl $16, %ebx
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; AVX512VL-NEXT:    vpmovqw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; AVX512VL-NEXT:    movswl %ax, %ecx
+; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %ecx, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    addq $32, %rsp
-; AVX512VL-NEXT:    popq %rbx
 ; AVX512VL-NEXT:    retq
   %1 = bitcast <2 x i16> %a0 to <2 x half>
   %2 = fpext <2 x half> %1 to <2 x double>
@@ -1843,43 +1589,32 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_4i16_to_4f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $64, %rsp
-; AVX512VL-NEXT:    vpmovdw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %r14
-; AVX512VL-NEXT:    shrq $48, %r14
-; AVX512VL-NEXT:    movq %rax, %rbx
-; AVX512VL-NEXT:    shrq $32, %rbx
-; AVX512VL-NEXT:    movl %eax, %ebp
-; AVX512VL-NEXT:    shrl $16, %ebp
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r14d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    movl %eax, %edx
+; AVX512VL-NEXT:    movswl %ax, %esi
+; AVX512VL-NEXT:    shrq $48, %rax
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    shrl $16, %edx
+; AVX512VL-NEXT:    movswl %dx, %edx
+; AVX512VL-NEXT:    vmovd %edx, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %esi, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    addq $64, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = bitcast <4 x i16> %a0 to <4 x half>
   %2 = fpext <4 x half> %1 to <4 x double>
@@ -1934,24 +1669,19 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_2f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $32, %rsp
 ; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; AVX512VL-NEXT:    vpmovqw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; AVX512VL-NEXT:    movl %eax, %ebx
-; AVX512VL-NEXT:    shrl $16, %ebx
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; AVX512VL-NEXT:    vpmovqw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; AVX512VL-NEXT:    movswl %ax, %ecx
+; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %ecx, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    addq $32, %rsp
-; AVX512VL-NEXT:    popq %rbx
 ; AVX512VL-NEXT:    retq
   %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <2 x i32> <i32 0, i32 1>
   %2 = bitcast <2 x i16> %1 to <2 x half>
@@ -2049,44 +1779,33 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_4f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $64, %rsp
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %r14
-; AVX512VL-NEXT:    shrq $48, %r14
-; AVX512VL-NEXT:    movq %rax, %rbx
-; AVX512VL-NEXT:    shrq $32, %rbx
-; AVX512VL-NEXT:    movl %eax, %ebp
-; AVX512VL-NEXT:    shrl $16, %ebp
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r14d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    movl %eax, %edx
+; AVX512VL-NEXT:    movswl %ax, %esi
+; AVX512VL-NEXT:    shrq $48, %rax
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    shrl $16, %edx
+; AVX512VL-NEXT:    movswl %dx, %edx
+; AVX512VL-NEXT:    vmovd %edx, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %esi, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    addq $64, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = bitcast <4 x i16> %1 to <4 x half>
@@ -2260,81 +1979,57 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_8f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %r13
-; AVX512VL-NEXT:    pushq %r12
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $136, %rsp
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %r13
-; AVX512VL-NEXT:    movq %r13, %rax
-; AVX512VL-NEXT:    shrq $48, %rax
-; AVX512VL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) # 8-byte Spill
-; AVX512VL-NEXT:    movq %r13, %r12
-; AVX512VL-NEXT:    shrq $32, %r12
-; AVX512VL-NEXT:    movl %r13d, %r15d
-; AVX512VL-NEXT:    shrl $16, %r15d
-; AVX512VL-NEXT:    vmovq %xmm0, %rax
-; AVX512VL-NEXT:    movq %rax, %rbx
-; AVX512VL-NEXT:    shrq $48, %rbx
-; AVX512VL-NEXT:    movq %rax, %r14
-; AVX512VL-NEXT:    shrq $32, %r14
-; AVX512VL-NEXT:    movl %eax, %ebp
-; AVX512VL-NEXT:    shrl $16, %ebp
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r14w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r13w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r15d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %r12w, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rdi # 8-byte Reload
-; AVX512VL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm3 # 16-byte Reload
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VL-NEXT:    movq %rdx, %r8
+; AVX512VL-NEXT:    movl %edx, %r10d
+; AVX512VL-NEXT:    movswl %dx, %r9d
+; AVX512VL-NEXT:    shrq $48, %rdx
+; AVX512VL-NEXT:    shrq $32, %r8
+; AVX512VL-NEXT:    shrl $16, %r10d
+; AVX512VL-NEXT:    vmovq %xmm0, %rdi
+; AVX512VL-NEXT:    movq %rdi, %rax
+; AVX512VL-NEXT:    movl %edi, %esi
+; AVX512VL-NEXT:    movswl %di, %ecx
+; AVX512VL-NEXT:    shrq $48, %rdi
+; AVX512VL-NEXT:    shrq $32, %rax
+; AVX512VL-NEXT:    shrl $16, %esi
+; AVX512VL-NEXT:    movswl %si, %esi
+; AVX512VL-NEXT:    vmovd %esi, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %ecx, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    movswl %di, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    movswl %r10w, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm4
+; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
+; AVX512VL-NEXT:    vmovd %r9d, %xmm5
+; AVX512VL-NEXT:    vcvtph2ps %xmm5, %xmm5
+; AVX512VL-NEXT:    movswl %r8w, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm6
+; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
+; AVX512VL-NEXT:    movswl %dx, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm7
+; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm7
+; AVX512VL-NEXT:    vcvtss2sd %xmm7, %xmm7, %xmm7
+; AVX512VL-NEXT:    vcvtss2sd %xmm6, %xmm6, %xmm6
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm6[0],xmm7[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm5, %xmm5, %xmm5
+; AVX512VL-NEXT:    vcvtss2sd %xmm4, %xmm4, %xmm4
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm4 = xmm5[0],xmm4[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm6, %ymm4, %ymm4
 ; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %ymm2, %ymm1
-; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    addq $136, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r12
-; AVX512VL-NEXT:    popq %r13
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
   %1 = bitcast <8 x i16> %a0 to <8 x half>
   %2 = fpext <8 x half> %1 to <8 x double>
@@ -2346,38 +2041,13 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ;
 
 define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
-; AVX1-LABEL: load_cvt_i16_to_f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    movswl (%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_cvt_i16_to_f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    movswl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: load_cvt_i16_to_f64:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    movswl (%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: load_cvt_i16_to_f64:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    movzwl (%rdi), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    popq %rax
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: load_cvt_i16_to_f64:
+; ALL:       # BB#0:
+; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    retq
   %1 = load i16, i16* %a0
   %2 = bitcast i16 %1 to half
   %3 = fpext half %2 to double
@@ -2385,62 +2055,18 @@ define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
 }
 
 define <2 x double> @load_cvt_2i16_to_2f64(<2 x i16>* %a0) nounwind {
-; AVX1-LABEL: load_cvt_2i16_to_2f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    movswl (%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    movswl 2(%rdi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_cvt_2i16_to_2f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    movswl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    movswl 2(%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: load_cvt_2i16_to_2f64:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    movswl (%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    movswl 2(%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: load_cvt_2i16_to_2f64:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $16, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    movzwl (%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 2(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    addq $16, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: load_cvt_2i16_to_2f64:
+; ALL:       # BB#0:
+; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    movswl 2(%rdi), %eax
+; ALL-NEXT:    vmovd %eax, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; ALL-NEXT:    retq
   %1 = load <2 x i16>, <2 x i16>* %a0
   %2 = bitcast <2 x i16> %1 to <2 x half>
   %3 = fpext <2 x half> %2 to <2 x double>
@@ -2519,32 +2145,25 @@ define <4 x double> @load_cvt_4i16_to_4f64(<4 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_4i16_to_4f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $48, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    movzwl (%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 2(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 4(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 6(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; AVX512VL-NEXT:    movswl (%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    movswl 2(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl 4(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    movswl 6(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    addq $48, %rsp
-; AVX512VL-NEXT:    popq %rbx
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = load <4 x i16>, <4 x i16>* %a0
   %2 = bitcast <4 x i16> %1 to <4 x half>
@@ -2642,45 +2261,34 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $64, %rsp
 ; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %r14
-; AVX512VL-NEXT:    shrq $48, %r14
-; AVX512VL-NEXT:    movq %rax, %rbx
-; AVX512VL-NEXT:    shrq $32, %rbx
-; AVX512VL-NEXT:    movl %eax, %ebp
-; AVX512VL-NEXT:    shrl $16, %ebp
-; AVX512VL-NEXT:    movzwl %ax, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %ebp, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl %bx, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movl %r14d, %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX512VL-NEXT:    movq %rax, %rcx
+; AVX512VL-NEXT:    movl %eax, %edx
+; AVX512VL-NEXT:    movswl %ax, %esi
+; AVX512VL-NEXT:    shrq $48, %rax
+; AVX512VL-NEXT:    shrq $32, %rcx
+; AVX512VL-NEXT:    shrl $16, %edx
+; AVX512VL-NEXT:    movswl %dx, %edx
+; AVX512VL-NEXT:    vmovd %edx, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %esi, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl %cx, %ecx
+; AVX512VL-NEXT:    vmovd %ecx, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    addq $64, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2819,56 +2427,45 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_8f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $112, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    movzwl (%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 2(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 4(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 6(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 8(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 10(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 12(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    movzwl 14(%rbx), %edi
-; AVX512VL-NEXT:    callq __gnu_h2f_ieee
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm3 # 16-byte Reload
+; AVX512VL-NEXT:    movswl (%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    movswl 2(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm1
+; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    movswl 4(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    movswl 6(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    movswl 8(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm4
+; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
+; AVX512VL-NEXT:    movswl 10(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm5
+; AVX512VL-NEXT:    vcvtph2ps %xmm5, %xmm5
+; AVX512VL-NEXT:    movswl 12(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm6
+; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
+; AVX512VL-NEXT:    movswl 14(%rdi), %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm7
+; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm7
+; AVX512VL-NEXT:    vcvtss2sd %xmm7, %xmm7, %xmm7
+; AVX512VL-NEXT:    vcvtss2sd %xmm6, %xmm6, %xmm6
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm6[0],xmm7[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm5, %xmm5, %xmm5
+; AVX512VL-NEXT:    vcvtss2sd %xmm4, %xmm4, %xmm4
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm4 = xmm4[0],xmm5[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm6, %ymm4, %ymm4
 ; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %ymm2, %ymm1
-; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    addq $112, %rsp
-; AVX512VL-NEXT:    popq %rbx
+; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = bitcast <8 x i16> %1 to <8 x half>
@@ -2881,139 +2478,41 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ;
 
 define i16 @cvt_f32_to_i16(float %a0) nounwind {
-; AVX1-LABEL: cvt_f32_to_i16:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_f32_to_i16:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_f32_to_i16:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_f32_to_i16:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    jmp __gnu_f2h_ieee # TAILCALL
+; ALL-LABEL: cvt_f32_to_i16:
+; ALL:       # BB#0:
+; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; ALL-NEXT:    vmovd %xmm0, %eax
+; ALL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; ALL-NEXT:    retq
   %1 = fptrunc float %a0 to half
   %2 = bitcast half %1 to i16
   ret i16 %2
 }
 
 define <4 x i16> @cvt_4f32_to_4i16(<4 x float> %a0) nounwind {
-; AVX1-LABEL: cvt_4f32_to_4i16:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %ecx
-; AVX1-NEXT:    movzwl %cx, %ecx
-; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %edx
-; AVX1-NEXT:    movzwl %dx, %edx
-; AVX1-NEXT:    orl %eax, %edx
-; AVX1-NEXT:    shlq $32, %rdx
-; AVX1-NEXT:    orq %rcx, %rdx
-; AVX1-NEXT:    vmovq %rdx, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_4f32_to_4i16:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %ecx
-; AVX2-NEXT:    movzwl %cx, %ecx
-; AVX2-NEXT:    orl %eax, %ecx
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %edx
-; AVX2-NEXT:    movzwl %dx, %edx
-; AVX2-NEXT:    orl %eax, %edx
-; AVX2-NEXT:    shlq $32, %rdx
-; AVX2-NEXT:    orq %rcx, %rdx
-; AVX2-NEXT:    vmovq %rdx, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_4f32_to_4i16:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, %ecx
-; AVX512F-NEXT:    movzwl %cx, %ecx
-; AVX512F-NEXT:    orl %eax, %ecx
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, %edx
-; AVX512F-NEXT:    movzwl %dx, %edx
-; AVX512F-NEXT:    orl %eax, %edx
-; AVX512F-NEXT:    shlq $32, %rdx
-; AVX512F-NEXT:    orq %rcx, %rdx
-; AVX512F-NEXT:    vmovq %rdx, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_4f32_to_4i16:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $24, %rsp
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %r14d
-; AVX512VL-NEXT:    orl %ebx, %r14d
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    orl %ebx, %eax
-; AVX512VL-NEXT:    shlq $32, %rax
-; AVX512VL-NEXT:    orq %r14, %rax
-; AVX512VL-NEXT:    vmovq %rax, %xmm0
-; AVX512VL-NEXT:    addq $24, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: cvt_4f32_to_4i16:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; ALL-NEXT:    vmovd %xmm1, %eax
+; ALL-NEXT:    shll $16, %eax
+; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; ALL-NEXT:    vmovd %xmm1, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
+; ALL-NEXT:    orl %eax, %ecx
+; ALL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; ALL-NEXT:    vmovd %xmm1, %eax
+; ALL-NEXT:    shll $16, %eax
+; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; ALL-NEXT:    vmovd %xmm0, %edx
+; ALL-NEXT:    movzwl %dx, %edx
+; ALL-NEXT:    orl %eax, %edx
+; ALL-NEXT:    shlq $32, %rdx
+; ALL-NEXT:    orq %rcx, %rdx
+; ALL-NEXT:    vmovq %rdx, %xmm0
+; ALL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
   ret <4 x i16> %2
@@ -3097,37 +2596,29 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_4f32_to_8i16_undef:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $24, %rsp
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %r14d
-; AVX512VL-NEXT:    orl %ebx, %r14d
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %ecx
+; AVX512VL-NEXT:    movzwl %cx, %ecx
+; AVX512VL-NEXT:    orl %eax, %ecx
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    orl %ebx, %eax
-; AVX512VL-NEXT:    shlq $32, %rax
-; AVX512VL-NEXT:    orq %r14, %rax
-; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %edx
+; AVX512VL-NEXT:    movzwl %dx, %edx
+; AVX512VL-NEXT:    orl %eax, %edx
+; AVX512VL-NEXT:    shlq $32, %rdx
+; AVX512VL-NEXT:    orq %rcx, %rdx
+; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512VL-NEXT:    addq $24, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
@@ -3213,39 +2704,31 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_4f32_to_8i16_zero:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $24, %rsp
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %r14d
-; AVX512VL-NEXT:    orl %ebx, %r14d
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %ecx
+; AVX512VL-NEXT:    movzwl %cx, %ecx
+; AVX512VL-NEXT:    orl %eax, %ecx
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    orl %ebx, %eax
-; AVX512VL-NEXT:    shlq $32, %rax
-; AVX512VL-NEXT:    orq %r14, %rax
-; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %edx
+; AVX512VL-NEXT:    movzwl %dx, %edx
+; AVX512VL-NEXT:    orl %eax, %edx
+; AVX512VL-NEXT:    shlq $32, %rdx
+; AVX512VL-NEXT:    orq %rcx, %rdx
+; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512VL-NEXT:    addq $24, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
@@ -3396,62 +2879,48 @@ define <8 x i16> @cvt_8f32_to_8i16(<8 x float> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_8f32_to_8i16:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $32, %rsp
-; AVX512VL-NEXT:    vmovdqu64 %ymm0, (%rsp) # 32-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %r15d
-; AVX512VL-NEXT:    orl %ebx, %r15d
-; AVX512VL-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %r14d
-; AVX512VL-NEXT:    orl %ebx, %r14d
-; AVX512VL-NEXT:    shlq $32, %r14
-; AVX512VL-NEXT:    orq %r15, %r14
-; AVX512VL-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %r15d
-; AVX512VL-NEXT:    orl %ebx, %r15d
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    shll $16, %ebx
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %ecx
+; AVX512VL-NEXT:    movzwl %cx, %ecx
+; AVX512VL-NEXT:    orl %eax, %ecx
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %edx
+; AVX512VL-NEXT:    shll $16, %edx
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
 ; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    orl %ebx, %eax
+; AVX512VL-NEXT:    orl %edx, %eax
 ; AVX512VL-NEXT:    shlq $32, %rax
-; AVX512VL-NEXT:    orq %r15, %rax
-; AVX512VL-NEXT:    vmovq %rax, %xmm0
-; AVX512VL-NEXT:    vmovq %r14, %xmm1
+; AVX512VL-NEXT:    orq %rcx, %rax
+; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %ecx
+; AVX512VL-NEXT:    shll $16, %ecx
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %edx
+; AVX512VL-NEXT:    movzwl %dx, %edx
+; AVX512VL-NEXT:    orl %ecx, %edx
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %ecx
+; AVX512VL-NEXT:    shll $16, %ecx
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %esi
+; AVX512VL-NEXT:    movzwl %si, %esi
+; AVX512VL-NEXT:    orl %ecx, %esi
+; AVX512VL-NEXT:    shlq $32, %rsi
+; AVX512VL-NEXT:    orq %rdx, %rsi
+; AVX512VL-NEXT:    vmovq %rsi, %xmm0
+; AVX512VL-NEXT:    vmovq %rax, %xmm1
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    addq $32, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <8 x float> %a0 to <8 x half>
   %2 = bitcast <8 x half> %1 to <8 x i16>
@@ -3663,115 +3132,70 @@ define <16 x i16> @cvt_16f32_to_16i16(<16 x float> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: cvt_16f32_to_16i16:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %r13
-; AVX512VL-NEXT:    pushq %r12
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $136, %rsp
-; AVX512VL-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp) # 64-byte Spill
-; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm2
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpinsrw $1, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vextractf32x4 $1, %ymm1, %xmm2
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm1
+; AVX512VL-NEXT:    vpinsrw $3, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpinsrw $4, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm2[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpinsrw $5, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpinsrw $6, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm2
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpinsrw $1, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm1
 ; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovdqa64 (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovupd {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovupd {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512VL-NEXT:    vmovupd %ymm0, {{[0-9]+}}(%rsp) # 32-byte Spill
-; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    movl %eax, {{[0-9]+}}(%rsp) # 4-byte Spill
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %r13w
-; AVX512VL-NEXT:    vmovdqa64 (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bx
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bp
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %r14w
-; AVX512VL-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %r15w
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %r12w
-; AVX512VL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
-; AVX512VL-NEXT:    vmovd %r12d, %xmm0
-; AVX512VL-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpinsrw $2, %r15d, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpinsrw $3, %r14d, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpinsrw $4, %ebp, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpinsrw $5, %ebx, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpinsrw $6, %r13d, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpinsrw $7, {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 4-byte Folded Reload
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%rsp), %eax # 4-byte Reload
-; AVX512VL-NEXT:    vmovd %eax, %xmm1
-; AVX512VL-NEXT:    vpinsrw $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 4-byte Folded Reload
-; AVX512VL-NEXT:    vpinsrw $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 4-byte Folded Reload
-; AVX512VL-NEXT:    vpinsrw $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 4-byte Folded Reload
-; AVX512VL-NEXT:    vpinsrw $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 4-byte Folded Reload
-; AVX512VL-NEXT:    vpinsrw $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 4-byte Folded Reload
-; AVX512VL-NEXT:    vpinsrw $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 4-byte Folded Reload
-; AVX512VL-NEXT:    vpinsrw $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 4-byte Folded Reload
-; AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    addq $136, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r12
-; AVX512VL-NEXT:    popq %r13
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrw $2, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpinsrw $3, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrw $4, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrw $5, %eax, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrw $6, %eax, %xmm3, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm0
+; AVX512VL-NEXT:    vinserti32x4 $1, %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <16 x float> %a0 to <16 x half>
   %2 = bitcast <16 x half> %1 to <16 x i16>
@@ -3783,35 +3207,12 @@ define <16 x i16> @cvt_16f32_to_16i16(<16 x float> %a0) nounwind {
 ;
 
 define void @store_cvt_f32_to_i16(float %a0, i16* %a1) nounwind {
-; AVX1-LABEL: store_cvt_f32_to_i16:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    movw %ax, (%rdi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: store_cvt_f32_to_i16:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    movw %ax, (%rdi)
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: store_cvt_f32_to_i16:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    movw %ax, (%rdi)
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: store_cvt_f32_to_i16:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, (%rbx)
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: store_cvt_f32_to_i16:
+; ALL:       # BB#0:
+; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; ALL-NEXT:    vmovd %xmm0, %eax
+; ALL-NEXT:    movw %ax, (%rdi)
+; ALL-NEXT:    retq
   %1 = fptrunc float %a0 to half
   %2 = bitcast half %1 to i16
   store i16 %2, i16* %a1
@@ -3819,95 +3220,24 @@ define void @store_cvt_f32_to_i16(float %a0, i16* %a1) nounwind {
 }
 
 define void @store_cvt_4f32_to_4i16(<4 x float> %a0, <4 x i16>* %a1) nounwind {
-; AVX1-LABEL: store_cvt_4f32_to_4i16:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %eax
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %ecx
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %edx
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %esi
-; AVX1-NEXT:    movw %si, (%rdi)
-; AVX1-NEXT:    movw %dx, 6(%rdi)
-; AVX1-NEXT:    movw %cx, 4(%rdi)
-; AVX1-NEXT:    movw %ax, 2(%rdi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: store_cvt_4f32_to_4i16:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %ecx
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %edx
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %esi
-; AVX2-NEXT:    movw %si, (%rdi)
-; AVX2-NEXT:    movw %dx, 6(%rdi)
-; AVX2-NEXT:    movw %cx, 4(%rdi)
-; AVX2-NEXT:    movw %ax, 2(%rdi)
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: store_cvt_4f32_to_4i16:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, %ecx
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, %edx
-; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, %esi
-; AVX512F-NEXT:    movw %si, (%rdi)
-; AVX512F-NEXT:    movw %dx, 6(%rdi)
-; AVX512F-NEXT:    movw %cx, 4(%rdi)
-; AVX512F-NEXT:    movw %ax, 2(%rdi)
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: store_cvt_4f32_to_4i16:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $24, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r14d
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r15d
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %ebp
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, (%rbx)
-; AVX512VL-NEXT:    movw %bp, 6(%rbx)
-; AVX512VL-NEXT:    movw %r15w, 4(%rbx)
-; AVX512VL-NEXT:    movw %r14w, 2(%rbx)
-; AVX512VL-NEXT:    addq $24, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
-; AVX512VL-NEXT:    popq %rbp
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: store_cvt_4f32_to_4i16:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; ALL-NEXT:    vmovd %xmm1, %eax
+; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; ALL-NEXT:    vmovd %xmm1, %ecx
+; ALL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; ALL-NEXT:    vmovd %xmm1, %edx
+; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; ALL-NEXT:    vmovd %xmm0, %esi
+; ALL-NEXT:    movw %si, (%rdi)
+; ALL-NEXT:    movw %dx, 6(%rdi)
+; ALL-NEXT:    movw %cx, 4(%rdi)
+; ALL-NEXT:    movw %ax, 2(%rdi)
+; ALL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
   store <4 x i16> %2, <4 x i16>* %a1
@@ -3995,41 +3325,30 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ;
 ; AVX512VL-LABEL: store_cvt_4f32_to_8i16_undef:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $16, %rsp
-; AVX512VL-NEXT:    movq %rdi, %r14
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bp
-; AVX512VL-NEXT:    shll $16, %ebp
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %ebx
-; AVX512VL-NEXT:    orl %ebp, %ebx
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bp
-; AVX512VL-NEXT:    shll $16, %ebp
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %ecx
+; AVX512VL-NEXT:    movzwl %cx, %ecx
+; AVX512VL-NEXT:    orl %eax, %ecx
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    orl %ebp, %eax
-; AVX512VL-NEXT:    shlq $32, %rax
-; AVX512VL-NEXT:    orq %rbx, %rax
-; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %edx
+; AVX512VL-NEXT:    movzwl %dx, %edx
+; AVX512VL-NEXT:    orl %eax, %edx
+; AVX512VL-NEXT:    shlq $32, %rdx
+; AVX512VL-NEXT:    orq %rcx, %rdx
+; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512VL-NEXT:    vmovdqa32 %xmm0, (%r14)
-; AVX512VL-NEXT:    addq $16, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vmovdqa32 %xmm0, (%rdi)
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
@@ -4119,43 +3438,32 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ;
 ; AVX512VL-LABEL: store_cvt_4f32_to_8i16_zero:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $16, %rsp
-; AVX512VL-NEXT:    movq %rdi, %r14
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bp
-; AVX512VL-NEXT:    shll $16, %ebp
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %ebx
-; AVX512VL-NEXT:    orl %ebp, %ebx
-; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, %bp
-; AVX512VL-NEXT:    shll $16, %ebp
-; AVX512VL-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %ecx
+; AVX512VL-NEXT:    movzwl %cx, %ecx
+; AVX512VL-NEXT:    orl %eax, %ecx
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    shll $16, %eax
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movzwl %ax, %eax
-; AVX512VL-NEXT:    orl %ebp, %eax
-; AVX512VL-NEXT:    shlq $32, %rax
-; AVX512VL-NEXT:    orq %rbx, %rax
-; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %edx
+; AVX512VL-NEXT:    movzwl %dx, %edx
+; AVX512VL-NEXT:    orl %eax, %edx
+; AVX512VL-NEXT:    shlq $32, %rdx
+; AVX512VL-NEXT:    orq %rcx, %rdx
+; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512VL-NEXT:    vmovdqa32 %xmm0, (%r14)
-; AVX512VL-NEXT:    addq $16, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vmovdqa32 %xmm0, (%rdi)
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
@@ -4274,63 +3582,37 @@ define void @store_cvt_8f32_to_8i16(<8 x float> %a0, <8 x i16>* %a1) nounwind {
 ;
 ; AVX512VL-LABEL: store_cvt_8f32_to_8i16:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %r13
-; AVX512VL-NEXT:    pushq %r12
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $72, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    vmovdqu64 %ymm0, {{[0-9]+}}(%rsp) # 32-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r12d
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r13d
-; AVX512VL-NEXT:    vmovapd {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %ebp
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r14d
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r15d
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, 8(%rbx)
-; AVX512VL-NEXT:    movw %r15w, (%rbx)
-; AVX512VL-NEXT:    movw %r14w, 14(%rbx)
-; AVX512VL-NEXT:    movw %bp, 12(%rbx)
-; AVX512VL-NEXT:    movw %r13w, 10(%rbx)
-; AVX512VL-NEXT:    movw %r12w, 6(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 4(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 2(%rbx)
-; AVX512VL-NEXT:    addq $72, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r12
-; AVX512VL-NEXT:    popq %r13
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %r8d
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %r9d
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovd %xmm1, %r10d
+; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %xmm2, %r11d
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovd %xmm2, %ecx
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %edx
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %esi
+; AVX512VL-NEXT:    movw %si, 8(%rdi)
+; AVX512VL-NEXT:    movw %dx, (%rdi)
+; AVX512VL-NEXT:    movw %cx, 14(%rdi)
+; AVX512VL-NEXT:    movw %ax, 12(%rdi)
+; AVX512VL-NEXT:    movw %r11w, 10(%rdi)
+; AVX512VL-NEXT:    movw %r10w, 6(%rdi)
+; AVX512VL-NEXT:    movw %r9w, 4(%rdi)
+; AVX512VL-NEXT:    movw %r8w, 2(%rdi)
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <8 x float> %a0 to <8 x half>
   %2 = bitcast <8 x half> %1 to <8 x i16>
@@ -4542,114 +3824,69 @@ define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwin
 ;
 ; AVX512VL-LABEL: store_cvt_16f32_to_16i16:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %r13
-; AVX512VL-NEXT:    pushq %r12
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    subq $200, %rsp
-; AVX512VL-NEXT:    movq %rdi, %rbx
-; AVX512VL-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp) # 64-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovupd {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
+; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; AVX512VL-NEXT:    vextractf32x4 $1, %ymm2, %xmm3
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm3, %xmm4
+; AVX512VL-NEXT:    vmovd %xmm4, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm4
+; AVX512VL-NEXT:    movw %ax, 24(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm4, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm4
+; AVX512VL-NEXT:    movw %ax, 16(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm4, %eax
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm4
+; AVX512VL-NEXT:    movw %ax, 8(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm4, %eax
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm4 = xmm3[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; AVX512VL-NEXT:    movw %ax, (%rdi)
+; AVX512VL-NEXT:    vmovd %xmm4, %eax
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm3[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; AVX512VL-NEXT:    movw %ax, 30(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm4, %eax
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm3[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; AVX512VL-NEXT:    movw %ax, 28(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm3, %eax
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm3 = xmm2[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; AVX512VL-NEXT:    movw %ax, 26(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm3, %eax
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; AVX512VL-NEXT:    movw %ax, 22(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm3, %eax
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovapd {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovupd {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512VL-NEXT:    vmovupd %ymm0, {{[0-9]+}}(%rsp) # 32-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX512VL-NEXT:    vmovapd {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r14d
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r15d
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
-; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r12d
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %r13d
-; AVX512VL-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movl %eax, %ebp
-; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; AVX512VL-NEXT:    callq __gnu_f2h_ieee
-; AVX512VL-NEXT:    movw %ax, 24(%rbx)
-; AVX512VL-NEXT:    movw %bp, 16(%rbx)
-; AVX512VL-NEXT:    movw %r13w, 8(%rbx)
-; AVX512VL-NEXT:    movw %r12w, (%rbx)
-; AVX512VL-NEXT:    movw %r15w, 30(%rbx)
-; AVX512VL-NEXT:    movw %r14w, 28(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 26(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 22(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 20(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 18(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 14(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 12(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 10(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 6(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 4(%rbx)
-; AVX512VL-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # 2-byte Folded Reload
-; AVX512VL-NEXT:    movw %ax, 2(%rbx)
-; AVX512VL-NEXT:    addq $200, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r12
-; AVX512VL-NEXT:    popq %r13
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
-; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    movw %ax, 20(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    movw %ax, 18(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512VL-NEXT:    movw %ax, 14(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm1, %eax
+; AVX512VL-NEXT:    movw %ax, 12(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    movw %ax, 10(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    movw %ax, 6(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm3, %eax
+; AVX512VL-NEXT:    movw %ax, 4(%rdi)
+; AVX512VL-NEXT:    vmovd %xmm4, %eax
+; AVX512VL-NEXT:    movw %ax, 2(%rdi)
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <16 x float> %a0 to <16 x half>
   %2 = bitcast <16 x half> %1 to <16 x i16>

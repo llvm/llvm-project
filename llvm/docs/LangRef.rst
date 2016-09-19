@@ -9704,6 +9704,37 @@ structures and the code to increment the appropriate value, in a
 format that can be written out by a compiler runtime and consumed via
 the ``llvm-profdata`` tool.
 
+'``llvm.instrprof_increment_step``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof_increment_step(i8* <name>, i64 <hash>,
+                                                  i32 <num-counters>,
+                                                  i32 <index>, i64 <step>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof_increment_step``' intrinsic is an extension to
+the '``llvm.instrprof_increment``' intrinsic with an additional fifth
+argument to specify the step of the increment.
+
+Arguments:
+""""""""""
+The first four arguments are the same as '``llvm.instrprof_increment``'
+instrinsic.
+
+The last argument specifies the value of the increment of the counter variable.
+
+Semantics:
+""""""""""
+See description of '``llvm.instrprof_increment``' instrinsic.
+
+
 '``llvm.instrprof_value_profile``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

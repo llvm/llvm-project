@@ -21,6 +21,11 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCInstBuilder.h"
+#include "llvm/MC/MCStreamer.h"
 using namespace llvm;
 
 
@@ -149,4 +154,93 @@ void llvm::LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
       OutMI.addOperand(MCOp);
     }
   }
+}
+
+void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
+{
+  if (MI.getParent()->getParent()->getInfo<ARMFunctionInfo>()
+    ->isThumbFunction())
+  {
+    MI.emitError("An attempt to perform XRay instrumentation for a"
+      " Thumb function (not supported). Detected when emitting a sled.");
+    return;
+  }
+  static const int8_t NoopsInSledCount = 6;
+  // We want to emit the following pattern:
+  //
+  // .Lxray_sled_N:
+  //   ALIGN
+  //   B #20
+  //   ; 6 NOP instructions (24 bytes)
+  // .tmpN
+  //
+  // We need the 24 bytes (6 instructions) because at runtime, we'd be patching
+  // over the full 28 bytes (7 instructions) with the following pattern:
+  //
+  //   PUSH{ r0, lr }
+  //   MOVW r0, #<lower 16 bits of function ID>
+  //   MOVT r0, #<higher 16 bits of function ID>
+  //   MOVW ip, #<lower 16 bits of address of __xray_FunctionEntry/Exit>
+  //   MOVT ip, #<higher 16 bits of address of __xray_FunctionEntry/Exit>
+  //   BLX ip
+  //   POP{ r0, lr }
+  //
+  OutStreamer->EmitCodeAlignment(4);
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->EmitLabel(CurSled);
+  auto Target = OutContext.createTempSymbol();
+
+  // Emit "B #20" instruction, which jumps over the next 24 bytes (because
+  // register pc is 8 bytes ahead of the jump instruction by the moment CPU
+  // is executing it).
+  // By analogy to ARMAsmPrinter::emitPseudoExpansionLowering() |case ARM::B|.
+  // It is not clear why |addReg(0)| is needed (the last operand).
+  EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::Bcc).addImm(20)
+    .addImm(ARMCC::AL).addReg(0));
+
+  MCInst Noop;
+  Subtarget->getInstrInfo()->getNoopForElfTarget(Noop);
+  for (int8_t I = 0; I < NoopsInSledCount; I++)
+  {
+    OutStreamer->EmitInstruction(Noop, getSubtargetInfo());
+  }
+
+  OutStreamer->EmitLabel(Target);
+  recordSled(CurSled, MI, Kind);
+}
+
+void ARMAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)
+{
+  EmitSled(MI, SledKind::FUNCTION_ENTER);
+}
+
+void ARMAsmPrinter::LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI)
+{
+  EmitSled(MI, SledKind::FUNCTION_EXIT);
+}
+
+void ARMAsmPrinter::EmitXRayTable()
+{
+  if (Sleds.empty())
+    return;
+  if (Subtarget->isTargetELF()) {
+    auto *Section = OutContext.getELFSection(
+      "xray_instr_map", ELF::SHT_PROGBITS,
+      ELF::SHF_ALLOC | ELF::SHF_GROUP | ELF::SHF_MERGE, 0,
+      CurrentFnSym->getName());
+    auto PrevSection = OutStreamer->getCurrentSectionOnly();
+    OutStreamer->SwitchSection(Section);
+    for (const auto &Sled : Sleds) {
+      OutStreamer->EmitSymbolValue(Sled.Sled, 4);
+      OutStreamer->EmitSymbolValue(CurrentFnSym, 4);
+      auto Kind = static_cast<uint8_t>(Sled.Kind);
+      OutStreamer->EmitBytes(
+        StringRef(reinterpret_cast<const char *>(&Kind), 1));
+      OutStreamer->EmitBytes(
+        StringRef(reinterpret_cast<const char *>(&Sled.AlwaysInstrument), 1));
+      OutStreamer->EmitZeros(6);
+    }
+    OutStreamer->SwitchSection(PrevSection);
+  }
+  Sleds.clear();
 }

@@ -107,6 +107,13 @@ StringRef InstrProfiling::getCoverageSection() const {
   return getInstrProfCoverageSectionName(isMachO());
 }
 
+static InstrProfIncrementInst *castToIncrementInst(Instruction *Instr) {
+  InstrProfIncrementInst *Inc = dyn_cast<InstrProfIncrementInstStep>(Instr);
+  if (Inc)
+    return Inc;
+  return dyn_cast<InstrProfIncrementInst>(Instr);
+}
+
 bool InstrProfiling::run(Module &M) {
   bool MadeChange = false;
 
@@ -138,7 +145,8 @@ bool InstrProfiling::run(Module &M) {
     for (BasicBlock &BB : F)
       for (auto I = BB.begin(), E = BB.end(); I != E;) {
         auto Instr = I++;
-        if (auto *Inc = dyn_cast<InstrProfIncrementInst>(Instr)) {
+        InstrProfIncrementInst *Inc = castToIncrementInst(&*Instr);
+        if (Inc) {
           lowerIncrement(Inc);
           MadeChange = true;
         } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(Instr)) {
@@ -214,6 +222,14 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
+static Value *getIncrementStep(InstrProfIncrementInst *Inc,
+                               IRBuilder<> &Builder) {
+  auto *IncWithStep = dyn_cast<InstrProfIncrementInstStep>(Inc);
+  if (IncWithStep)
+    return IncWithStep->getStep();
+  return Builder.getInt64(1);
+}
+
 void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   GlobalVariable *Counters = getOrCreateRegionCounters(Inc);
 
@@ -221,7 +237,7 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   uint64_t Index = Inc->getIndex()->getZExtValue();
   Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters, 0, Index);
   Value *Count = Builder.CreateLoad(Addr, "pgocount");
-  Count = Builder.CreateAdd(Count, Builder.getInt64(1));
+  Count = Builder.CreateAdd(Count, getIncrementStep(Inc, Builder));
   Inc->replaceAllUsesWith(Builder.CreateStore(Count, Addr));
   Inc->eraseFromParent();
 }

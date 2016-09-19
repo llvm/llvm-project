@@ -469,9 +469,9 @@ define i16@test_int_x86_avx512_mask_fpclass_ps_512(<16 x float> %x0, i16 %x1) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ps_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vfpclassps $4, %zmm0, %k0 {%k1}
-; CHECK-NEXT:    kmovw %k0, %ecx
 ; CHECK-NEXT:    vfpclassps $4, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    vfpclassps $4, %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
