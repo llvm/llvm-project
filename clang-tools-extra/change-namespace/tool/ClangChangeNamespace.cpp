@@ -30,6 +30,7 @@
 //    } // namespace x
 
 #include "ChangeNamespace.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"

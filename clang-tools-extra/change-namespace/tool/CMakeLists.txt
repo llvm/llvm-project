@@ -4,6 +4,7 @@ add_clang_executable(clang-change-namespace
   ClangChangeNamespace.cpp
   )
 target_link_libraries(clang-change-namespace
+  clangASTMatchers
   clangBasic
   clangChangeNamespace
   clangFormat

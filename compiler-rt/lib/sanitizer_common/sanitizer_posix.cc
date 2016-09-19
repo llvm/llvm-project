@@ -358,6 +358,11 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
   return SignalContext(context, addr, pc, sp, bp, is_memory_access, write_flag);
 }
 
+uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
+  CHECK("FindAvailableMemoryRange is not available" && 0);
+  return 0;
+}
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_POSIX

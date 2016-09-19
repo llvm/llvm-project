@@ -28,7 +28,7 @@ void SymbolizeCaller() {
 
 void SymbolizeData() {
   char data[100];
-  __sanitizer_symbolize_data(&GLOBAL_VAR_ABC, "%g %s:%l", data, sizeof(data));
+  __sanitizer_symbolize_global(&GLOBAL_VAR_ABC, "%g %s:%l", data, sizeof(data));
   printf("GLOBAL: %s\n", data);
 }
 
