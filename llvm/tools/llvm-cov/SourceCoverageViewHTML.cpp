@@ -568,7 +568,7 @@ void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
                                                unsigned ViewDepth) {
   renderLinePrefix(OS, ViewDepth);
   OS << tag("td", tag("span", tag("pre", escape("Line No.", getOptions()))))
-     << tag("td", tag("span", tag("pre", escape("Count No.", getOptions()))))
+     << tag("td", tag("span", tag("pre", escape("Count", getOptions()))))
      << tag("td", tag("span", tag("pre", escape("Source", getOptions()))));
   renderLineSuffix(OS, ViewDepth);
 }
