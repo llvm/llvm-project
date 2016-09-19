@@ -16,6 +16,7 @@
 
 #include "scudo_allocator.h"
 #include "scudo_utils.h"
+#include "scudo_allocator_secondary.h"
 
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
@@ -44,7 +45,7 @@ struct AP {
 
 typedef SizeClassAllocator64<AP> PrimaryAllocator;
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
-typedef LargeMmapAllocator<> SecondaryAllocator;
+typedef ScudoLargeMmapAllocator SecondaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator, AllocatorCache, SecondaryAllocator>
   ScudoAllocator;
 
@@ -348,7 +349,7 @@ struct Allocator {
     } else {
       SpinMutexLock l(&FallbackMutex);
       Ptr = BackendAllocator.Allocate(&FallbackAllocatorCache, NeededSize,
-                               MinAlignment);
+                                      MinAlignment);
     }
     if (!Ptr)
       return BackendAllocator.ReturnNullOrDie();

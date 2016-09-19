@@ -305,8 +305,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
 
     std::string encoding_str;
     if (reg_info_dict->GetValueForKeyAsString("encoding", encoding_str))
-      reg_info.encoding =
-          Args::StringToEncoding(encoding_str.c_str(), eEncodingUint);
+      reg_info.encoding = Args::StringToEncoding(encoding_str, eEncodingUint);
     else
       reg_info_dict->GetValueForKeyAsInteger("encoding", reg_info.encoding,
                                              eEncodingUint);
@@ -337,7 +336,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     std::string generic_str;
     if (reg_info_dict->GetValueForKeyAsString("generic", generic_str))
       reg_info.kinds[lldb::eRegisterKindGeneric] =
-          Args::StringToGenericRegister(generic_str.c_str());
+          Args::StringToGenericRegister(generic_str);
     else
       reg_info_dict->GetValueForKeyAsInteger(
           "generic", reg_info.kinds[lldb::eRegisterKindGeneric],

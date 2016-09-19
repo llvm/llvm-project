@@ -90,11 +90,14 @@ private:
 template <class ELFT>
 StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
   StringRef Name = S->Name;
-  for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
-                      ".init_array.", ".fini_array.", ".ctors.", ".dtors.",
-                      ".tbss.", ".gcc_except_table.", ".tdata.", ".ARM.exidx."})
-    if (Name.startswith(V))
-      return V.drop_back();
+  for (StringRef V :
+       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
+        ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
+        ".gcc_except_table.", ".tdata.", ".ARM.exidx."}) {
+    StringRef Prefix = V.drop_back();
+    if (Name.startswith(V) || Name == Prefix)
+      return Prefix;
+  }
   return Name;
 }
 
@@ -653,22 +656,22 @@ void Writer<ELFT>::forEachRelSec(
     std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
         Fn) {
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-    for (InputSectionBase<ELFT> *C : F->getSections()) {
-      if (isDiscarded(C))
+    for (InputSectionBase<ELFT> *IS : F->getSections()) {
+      if (isDiscarded(IS))
         continue;
       // Scan all relocations. Each relocation goes through a series
       // of tests to determine if it needs special treatment, such as
       // creating GOT, PLT, copy relocations, etc.
       // Note that relocations for non-alloc sections are directly
       // processed by InputSection::relocateNonAlloc.
-      if (!(C->getSectionHdr()->sh_flags & SHF_ALLOC))
+      if (!(IS->getSectionHdr()->sh_flags & SHF_ALLOC))
         continue;
-      if (auto *S = dyn_cast<InputSection<ELFT>>(C)) {
+      if (auto *S = dyn_cast<InputSection<ELFT>>(IS)) {
         for (const Elf_Shdr *RelSec : S->RelocSections)
           Fn(*S, *RelSec);
         continue;
       }
-      if (auto *S = dyn_cast<EhInputSection<ELFT>>(C))
+      if (auto *S = dyn_cast<EhInputSection<ELFT>>(IS))
         if (S->RelocSection)
           Fn(*S, *S->RelocSection);
     }
@@ -677,17 +680,17 @@ void Writer<ELFT>::forEachRelSec(
 
 template <class ELFT> void Writer<ELFT>::createSections() {
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-    for (InputSectionBase<ELFT> *C : F->getSections()) {
-      if (isDiscarded(C)) {
-        reportDiscarded(C);
+    for (InputSectionBase<ELFT> *IS : F->getSections()) {
+      if (isDiscarded(IS)) {
+        reportDiscarded(IS);
         continue;
       }
       OutputSectionBase<ELFT> *Sec;
       bool IsNew;
-      std::tie(Sec, IsNew) = Factory.create(C, getOutputSectionName(C));
+      std::tie(Sec, IsNew) = Factory.create(IS, getOutputSectionName(IS));
       if (IsNew)
         OutputSections.push_back(Sec);
-      Sec->addSection(C);
+      Sec->addSection(IS);
     }
   }
 
@@ -821,9 +824,9 @@ template <class ELFT> bool Writer<ELFT>::needsGot() {
 
 // This function add Out<ELFT>::* sections to OutputSections.
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
-  auto Add = [&](OutputSectionBase<ELFT> *C) {
-    if (C)
-      OutputSections.push_back(C);
+  auto Add = [&](OutputSectionBase<ELFT> *OS) {
+    if (OS)
+      OutputSections.push_back(OS);
   };
 
   // A core file does not usually contain unmodified segments except

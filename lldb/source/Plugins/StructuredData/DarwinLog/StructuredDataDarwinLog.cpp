@@ -429,6 +429,7 @@ public:
     Error error;
 
     const int short_option = m_getopt_table[option_idx].val;
+    auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
     switch (short_option) {
     case 'a':
       m_include_any_process = true;
@@ -442,7 +443,7 @@ public:
       break;
 
     case 'b':
-      m_broadcast_events = Args::StringToBoolean(option_arg, true, nullptr);
+      m_broadcast_events = Args::StringToBoolean(option_strref, true, nullptr);
       break;
 
     case 'c':
@@ -458,7 +459,7 @@ public:
       break;
 
     case 'e':
-      m_echo_to_stderr = Args::StringToBoolean(option_arg, false, nullptr);
+      m_echo_to_stderr = Args::StringToBoolean(option_strref, false, nullptr);
       break;
 
     case 'f':
@@ -469,12 +470,12 @@ public:
       break;
 
     case 'l':
-      m_live_stream = Args::StringToBoolean(option_arg, false, nullptr);
+      m_live_stream = Args::StringToBoolean(option_strref, false, nullptr);
       break;
 
     case 'n':
       m_filter_fall_through_accepts =
-          Args::StringToBoolean(option_arg, true, nullptr);
+          Args::StringToBoolean(option_strref, true, nullptr);
       break;
 
     case 'r':

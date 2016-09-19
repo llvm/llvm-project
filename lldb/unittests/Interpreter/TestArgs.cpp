@@ -57,7 +57,7 @@ TEST(ArgsTest, TestAppendArg) {
   Args args;
   args.SetCommandString("first_arg");
   EXPECT_EQ(1u, args.GetArgumentCount());
-  args.AppendArgument("second_arg");
+  args.AppendArgument(llvm::StringRef("second_arg"));
   EXPECT_EQ(2u, args.GetArgumentCount());
   EXPECT_STREQ(args.GetArgumentAtIndex(0), "first_arg");
   EXPECT_STREQ(args.GetArgumentAtIndex(1), "second_arg");
@@ -65,41 +65,39 @@ TEST(ArgsTest, TestAppendArg) {
 
 TEST(ArgsTest, StringToBoolean) {
   bool success = false;
-  EXPECT_TRUE(Args::StringToBoolean("true", false, nullptr));
-  EXPECT_TRUE(Args::StringToBoolean("on", false, nullptr));
-  EXPECT_TRUE(Args::StringToBoolean("yes", false, nullptr));
-  EXPECT_TRUE(Args::StringToBoolean("1", false, nullptr));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("true"), false, nullptr));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("on"), false, nullptr));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("yes"), false, nullptr));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("1"), false, nullptr));
 
-  EXPECT_TRUE(Args::StringToBoolean("true", false, &success));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("true"), false, &success));
   EXPECT_TRUE(success);
-  EXPECT_TRUE(Args::StringToBoolean("on", false, &success));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("on"), false, &success));
   EXPECT_TRUE(success);
-  EXPECT_TRUE(Args::StringToBoolean("yes", false, &success));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("yes"), false, &success));
   EXPECT_TRUE(success);
-  EXPECT_TRUE(Args::StringToBoolean("1", false, &success));
-  EXPECT_TRUE(success);
-
-  EXPECT_FALSE(Args::StringToBoolean("false", true, nullptr));
-  EXPECT_FALSE(Args::StringToBoolean("off", true, nullptr));
-  EXPECT_FALSE(Args::StringToBoolean("no", true, nullptr));
-  EXPECT_FALSE(Args::StringToBoolean("0", true, nullptr));
-
-  EXPECT_FALSE(Args::StringToBoolean("false", true, &success));
-  EXPECT_TRUE(success);
-  EXPECT_FALSE(Args::StringToBoolean("off", true, &success));
-  EXPECT_TRUE(success);
-  EXPECT_FALSE(Args::StringToBoolean("no", true, &success));
-  EXPECT_TRUE(success);
-  EXPECT_FALSE(Args::StringToBoolean("0", true, &success));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("1"), false, &success));
   EXPECT_TRUE(success);
 
-  EXPECT_FALSE(Args::StringToBoolean("10", false, &success));
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("false"), true, nullptr));
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("off"), true, nullptr));
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("no"), true, nullptr));
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("0"), true, nullptr));
+
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("false"), true, &success));
+  EXPECT_TRUE(success);
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("off"), true, &success));
+  EXPECT_TRUE(success);
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("no"), true, &success));
+  EXPECT_TRUE(success);
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("0"), true, &success));
+  EXPECT_TRUE(success);
+
+  EXPECT_FALSE(Args::StringToBoolean(llvm::StringRef("10"), false, &success));
   EXPECT_FALSE(success);
-  EXPECT_TRUE(Args::StringToBoolean("10", true, &success));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("10"), true, &success));
   EXPECT_FALSE(success);
-  EXPECT_TRUE(Args::StringToBoolean("", true, &success));
-  EXPECT_FALSE(success);
-  EXPECT_TRUE(Args::StringToBoolean(nullptr, true, &success));
+  EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef(""), true, &success));
   EXPECT_FALSE(success);
 }
 
@@ -124,30 +122,32 @@ TEST(ArgsTest, StringToScriptLanguage) {
   bool success = false;
 
   EXPECT_EQ(lldb::eScriptLanguageDefault,
-            Args::StringToScriptLanguage("default", lldb::eScriptLanguageNone,
-                                         nullptr));
+            Args::StringToScriptLanguage(llvm::StringRef("default"),
+                                         lldb::eScriptLanguageNone, nullptr));
   EXPECT_EQ(lldb::eScriptLanguagePython,
-            Args::StringToScriptLanguage("python", lldb::eScriptLanguageNone,
-                                         nullptr));
+            Args::StringToScriptLanguage(llvm::StringRef("python"),
+                                         lldb::eScriptLanguageNone, nullptr));
   EXPECT_EQ(lldb::eScriptLanguageNone,
-            Args::StringToScriptLanguage("none", lldb::eScriptLanguagePython,
-                                         nullptr));
+            Args::StringToScriptLanguage(llvm::StringRef("none"),
+                                         lldb::eScriptLanguagePython, nullptr));
 
   EXPECT_EQ(lldb::eScriptLanguageDefault,
-            Args::StringToScriptLanguage("default", lldb::eScriptLanguageNone,
-                                         &success));
+            Args::StringToScriptLanguage(llvm::StringRef("default"),
+                                         lldb::eScriptLanguageNone, &success));
   EXPECT_TRUE(success);
   EXPECT_EQ(lldb::eScriptLanguagePython,
-            Args::StringToScriptLanguage("python", lldb::eScriptLanguageNone,
-                                         &success));
+            Args::StringToScriptLanguage(llvm::StringRef("python"),
+                                         lldb::eScriptLanguageNone, &success));
   EXPECT_TRUE(success);
   EXPECT_EQ(lldb::eScriptLanguageNone,
-            Args::StringToScriptLanguage("none", lldb::eScriptLanguagePython,
+            Args::StringToScriptLanguage(llvm::StringRef("none"),
+                                         lldb::eScriptLanguagePython,
                                          &success));
   EXPECT_TRUE(success);
 
   EXPECT_EQ(lldb::eScriptLanguagePython,
-            Args::StringToScriptLanguage("invalid", lldb::eScriptLanguagePython,
+            Args::StringToScriptLanguage(llvm::StringRef("invalid"),
+                                         lldb::eScriptLanguagePython,
                                          &success));
   EXPECT_FALSE(success);
 }

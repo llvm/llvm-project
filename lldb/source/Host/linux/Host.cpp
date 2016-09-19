@@ -323,7 +323,7 @@ static bool GetProcessAndStatInfo(lldb::pid_t pid,
   char *next_var = (char *)buf_sp->GetBytes();
   char *end_buf = next_var + buf_sp->GetByteSize();
   while (next_var < end_buf && 0 != *next_var) {
-    info_env.AppendArgument(next_var);
+    info_env.AppendArgument(llvm::StringRef(next_var));
     next_var += strlen(next_var) + 1;
   }
 
@@ -340,7 +340,7 @@ static bool GetProcessAndStatInfo(lldb::pid_t pid,
     char *next_arg = cmd + strlen(cmd) + 1;
     end_buf = cmd + buf_sp->GetByteSize();
     while (next_arg < end_buf && 0 != *next_arg) {
-      info_args.AppendArgument(next_arg);
+      info_args.AppendArgument(llvm::StringRef(next_arg));
       next_arg += strlen(next_arg) + 1;
     }
   }

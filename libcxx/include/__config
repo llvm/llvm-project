@@ -85,6 +85,13 @@
 #define __is_identifier(__x) 1
 #endif
 
+// Need to detect which libc we're using if we're on Linux.
+#if defined(__linux__)
+#include <features.h>
+#if !defined(__GLIBC_PREREQ)
+#define __GLIBC_PREREQ(a, b) 0
+#endif // !defined(__GLIBC_PREREQ)
+#endif // defined(__linux__)
 
 #ifdef __LITTLE_ENDIAN__
 #if __LITTLE_ENDIAN__
@@ -333,12 +340,9 @@ typedef __char32_t char32_t;
 #if defined(__FreeBSD__)
 #define _LIBCPP_HAS_QUICK_EXIT
 #define _LIBCPP_HAS_C11_FEATURES
-#elif defined(__ANDROID__)
-#define _LIBCPP_HAS_QUICK_EXIT
 #elif defined(__linux__)
 #if !defined(_LIBCPP_HAS_MUSL_LIBC)
-# include <features.h>
-#if __GLIBC_PREREQ(2, 15)
+#if __GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
 #define _LIBCPP_HAS_QUICK_EXIT
 #endif
 #if __GLIBC_PREREQ(2, 17)
@@ -547,15 +551,20 @@ namespace std {
 // only really useful for a DLL. _LIBCPP_DLL should be a compiler builtin define ideally...
 #if defined(_LIBCPP_DLL) && defined(cxx_EXPORTS)
 # define _LIBCPP_DLL_VIS __declspec(dllexport)
+# define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
+# define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS _LIBCPP_DLL_VIS
 #elif defined(_LIBCPP_DLL)
 # define _LIBCPP_DLL_VIS __declspec(dllimport)
+# define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DLL_VIS
+# define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #else
 # define _LIBCPP_DLL_VIS
+# define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
+# define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #endif
 #define _LIBCPP_TYPE_VIS            _LIBCPP_DLL_VIS
 #define _LIBCPP_FUNC_VIS            _LIBCPP_DLL_VIS
 #define _LIBCPP_EXCEPTION_ABI       _LIBCPP_DLL_VIS
-#define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DLL_VIS
 #define _LIBCPP_HIDDEN
 #define _LIBCPP_TYPE_VIS_ONLY
 #define _LIBCPP_FUNC_VIS_ONLY
@@ -613,6 +622,10 @@ namespace std {
 #  else
 #    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
 #  endif
+#endif
+
+#ifndef _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+#  define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #endif
 
 #ifndef _LIBCPP_INLINE_VISIBILITY
@@ -759,7 +772,7 @@ template <unsigned> struct __static_assert_check {};
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
-#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(_NEWLIB_VERSION)
+#if !defined(_WIN32) && !defined(__BIONIC__) && !defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_CATOPEN 1
 #endif
 #endif
@@ -885,7 +898,8 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_STDOUT
 #endif
 
-#if defined(__ANDROID__) || defined(__CloudABI__) || defined(_LIBCPP_HAS_MUSL_LIBC)
+#if defined(__BIONIC__) || defined(__CloudABI__) ||                            \
+    defined(_LIBCPP_HAS_MUSL_LIBC)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 

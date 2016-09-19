@@ -2504,7 +2504,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
 
     // Emit type/value pairs for varargs params.
     if (FTy->isVarArg()) {
-      for (unsigned i = FTy->getNumParams(), e = I.getNumOperands()-3;
+      for (unsigned i = FTy->getNumParams(), e = II->getNumArgOperands();
            i != e; ++i)
         pushValueAndType(I.getOperand(i), InstID, Vals); // vararg
     }

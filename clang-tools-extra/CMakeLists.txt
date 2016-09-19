@@ -7,6 +7,7 @@ add_subdirectory(clang-tidy)
 add_subdirectory(clang-tidy-vs)
 endif()
 
+add_subdirectory(change-namespace)
 add_subdirectory(clang-query)
 add_subdirectory(include-fixer)
 add_subdirectory(pp-trace)

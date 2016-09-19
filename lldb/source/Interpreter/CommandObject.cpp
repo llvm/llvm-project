@@ -300,10 +300,9 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
       cursor_index++;
 
       // I stick an element on the end of the input, because if the last element
-      // is
-      // option that requires an argument, getopt_long_only will freak out.
+      // is option that requires an argument, getopt_long_only will freak out.
 
-      input.AppendArgument("<FAKE-VALUE>");
+      input.AppendArgument(llvm::StringRef("<FAKE-VALUE>"));
 
       input.ParseArgsForCompletion(*cur_options, opt_element_vector,
                                    cursor_index);
@@ -1001,7 +1000,8 @@ bool CommandObjectParsed::Execute(const char *args_string,
       const char *tmp_str = cmd_args.GetArgumentAtIndex(i);
       if (tmp_str[0] == '`') // back-quote
         cmd_args.ReplaceArgumentAtIndex(
-            i, m_interpreter.ProcessEmbeddedScriptCommands(tmp_str));
+            i, llvm::StringRef::withNullAsEmpty(
+                   m_interpreter.ProcessEmbeddedScriptCommands(tmp_str)));
     }
 
     if (CheckRequirements(result)) {

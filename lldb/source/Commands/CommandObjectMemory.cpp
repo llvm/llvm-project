@@ -1478,7 +1478,8 @@ protected:
         break;
 
       case eFormatBoolean:
-        uval64 = Args::StringToBoolean(value_str, false, &success);
+        uval64 = Args::StringToBoolean(
+            llvm::StringRef::withNullAsEmpty(value_str), false, &success);
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid boolean string value.\n", value_str);

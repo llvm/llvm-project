@@ -102,7 +102,7 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
 
           cstr = data.GetCStr(&offset);
           if (cstr)
-            proc_args.AppendArgument(cstr);
+            proc_args.AppendArgument(llvm::StringRef(cstr));
           else
             return true;
         }
