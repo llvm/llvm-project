@@ -374,6 +374,13 @@ Error CoveragePrinterHTML::createIndexFile(
   if (Opts.hasCreatedTime())
     OSRef << tag(CreatedTimeTag, escape(Opts.CreatedTimeStr, Opts));
 
+  // Emit a link to some documentation.
+  OSRef << tag("p", "Click " +
+                        a("http://clang.llvm.org/docs/"
+                          "SourceBasedCodeCoverage.html#interpreting-reports",
+                          "here") +
+                        " for information about interpreting this report.");
+
   // Emit a table containing links to reports for each file in the covmapping.
   OSRef << BeginCenteredDiv << BeginTable;
   emitColumnLabelsForIndex(OSRef);

@@ -1421,15 +1421,15 @@ def : Pat<(v8f32 (vselect (v8i1 VK8WM:$mask), (v8f32 VR256X:$src1),
                             (v8f32 VR256X:$src2))),
             (EXTRACT_SUBREG
               (v16f32 (VBLENDMPSZrrk (COPY_TO_REGCLASS VK8WM:$mask, VK16WM),
-            (v16f32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm)),
-            (v16f32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)))), sub_ymm)>;
+            (v16f32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
+            (v16f32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)))), sub_ymm)>;
 
 def : Pat<(v8i32 (vselect (v8i1 VK8WM:$mask), (v8i32 VR256X:$src1),
                             (v8i32 VR256X:$src2))),
             (EXTRACT_SUBREG
                 (v16i32 (VPBLENDMDZrrk (COPY_TO_REGCLASS VK8WM:$mask, VK16WM),
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm)),
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)))), sub_ymm)>;
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)))), sub_ymm)>;
 }
 //===----------------------------------------------------------------------===//
 // Compare Instructions
@@ -1636,13 +1636,13 @@ defm VPCMPGTQ : avx512_icmp_packed_rmb_vl<0x37, "vpcmpgtq", X86pcmpgtm,
 let Predicates = [HasAVX512, NoVLX] in {
 def : Pat<(v8i1 (X86pcmpgtm (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
             (COPY_TO_REGCLASS (VPCMPGTDZrr
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)),
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm))), VK8)>;
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))), VK8)>;
 
 def : Pat<(v8i1 (X86pcmpeqm (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
             (COPY_TO_REGCLASS (VPCMPEQDZrr
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)),
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm))), VK8)>;
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))), VK8)>;
 }
 
 multiclass avx512_icmp_cc<bits<8> opc, string Suffix, SDNode OpNode,
@@ -1897,18 +1897,18 @@ defm VCMPPS : avx512_vcmp<avx512vl_f32_info>,
 
 def : Pat<(v8i1 (X86cmpm (v8f32 VR256X:$src1), (v8f32 VR256X:$src2), imm:$cc)),
           (COPY_TO_REGCLASS (VCMPPSZrri
-            (v16f32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)),
-            (v16f32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm)),
+            (v16f32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+            (v16f32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
             imm:$cc), VK8)>;
 def : Pat<(v8i1 (X86cmpm (v8i32 VR256X:$src1), (v8i32 VR256X:$src2), imm:$cc)),
           (COPY_TO_REGCLASS (VPCMPDZrri
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)),
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
             imm:$cc), VK8)>;
 def : Pat<(v8i1 (X86cmpmu (v8i32 VR256X:$src1), (v8i32 VR256X:$src2), imm:$cc)),
           (COPY_TO_REGCLASS (VPCMPUDZrri
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)),
-            (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
             imm:$cc), VK8)>;
 
 // ----------------------------------------------------------------
@@ -2097,7 +2097,7 @@ def : Pat<(i8 (bitconvert (v8i1 VK8:$src))),
 def : Pat<(i32 (zext (i16 (bitconvert (v16i1 VK16:$src))))),
           (KMOVWrk VK16:$src)>;
 def : Pat<(i32 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
-          (i32 (SUBREG_TO_REG (i64 0),
+          (i32 (INSERT_SUBREG (IMPLICIT_DEF),
                 (i16 (COPY_TO_REGCLASS VK16:$src, GR16)), sub_16bit))>;
 
 def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
@@ -2105,7 +2105,7 @@ def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
 def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
           (KMOVBrk VK8:$src)>, Requires<[HasDQI]>;
 def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
-          (i32 (SUBREG_TO_REG (i64 0),
+          (i32 (INSERT_SUBREG (IMPLICIT_DEF),
                 (i8 (COPY_TO_REGCLASS VK8:$src, GR8)), sub_8bit))>;
 
 def : Pat<(v32i1 (bitconvert (i32 GR32:$src))),
@@ -2194,12 +2194,14 @@ let Predicates = [HasAVX512] in {
 
   def : Pat<(i1 (trunc (i8 GR8:$src))),
        (COPY_TO_REGCLASS
-        (KMOVWkr (AND32ri8 (SUBREG_TO_REG (i32 0), GR8:$src, sub_8bit), (i32 1))),
+        (KMOVWkr (AND32ri8 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                          GR8:$src, sub_8bit), (i32 1))),
        VK1)>;
 
   def : Pat<(i1 (trunc (i16 GR16:$src))),
        (COPY_TO_REGCLASS
-        (KMOVWkr (AND32ri8 (SUBREG_TO_REG (i32 0), $src, sub_16bit), (i32 1))),
+        (KMOVWkr (AND32ri8 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                          GR16:$src, sub_16bit), (i32 1))),
        VK1)>;
 
   def : Pat<(i32 (zext VK1:$src)),
@@ -2221,7 +2223,7 @@ let Predicates = [HasAVX512] in {
              (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), sub_32bit), (i64 1))>;
 
   def : Pat<(i64 (anyext VK1:$src)),
-            (SUBREG_TO_REG (i64 0),
+            (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
              (i32 (COPY_TO_REGCLASS VK1:$src, GR32)), sub_32bit)>;
 
   def : Pat<(i16 (zext VK1:$src)),
@@ -6188,27 +6190,33 @@ defm VCVTUQQ2PS : avx512_cvtqq2ps<0x7A, "vcvtuqq2ps", uint_to_fp,
 let Predicates = [HasAVX512, NoVLX] in {
 def : Pat<(v8i32 (fp_to_uint (v8f32 VR256X:$src1))),
           (EXTRACT_SUBREG (v16i32 (VCVTTPS2UDQZrr
-           (v16f32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)))), sub_ymm)>;
+           (v16f32 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
 
 def : Pat<(v4i32 (fp_to_uint (v4f32 VR128X:$src1))),
           (EXTRACT_SUBREG (v16i32 (VCVTTPS2UDQZrr
-           (v16f32 (SUBREG_TO_REG (i32 0), VR128X:$src1, sub_xmm)))), sub_xmm)>;
+           (v16f32 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR128X:$src1, sub_xmm)))), sub_xmm)>;
 
 def : Pat<(v4i32 (fp_to_uint (v4f64 VR256X:$src1))),
           (EXTRACT_SUBREG (v8i32 (VCVTTPD2UDQZrr
-           (v8f64 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)))), sub_xmm)>;
+           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
+                                 VR256X:$src1, sub_ymm)))), sub_xmm)>;
 
 def : Pat<(v8f32 (uint_to_fp (v8i32 VR256X:$src1))),
           (EXTRACT_SUBREG (v16f32 (VCVTUDQ2PSZrr
-           (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)))), sub_ymm)>;
+           (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
 
 def : Pat<(v4f32 (uint_to_fp (v4i32 VR128X:$src1))),
           (EXTRACT_SUBREG (v16f32 (VCVTUDQ2PSZrr
-           (v16i32 (SUBREG_TO_REG (i32 0), VR128X:$src1, sub_xmm)))), sub_xmm)>;
+           (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR128X:$src1, sub_xmm)))), sub_xmm)>;
 
 def : Pat<(v4f64 (uint_to_fp (v4i32 VR128X:$src1))),
           (EXTRACT_SUBREG (v8f64 (VCVTUDQ2PDZrr
-           (v8i32 (SUBREG_TO_REG (i32 0), VR128X:$src1, sub_xmm)))), sub_ymm)>;
+           (v8i32 (INSERT_SUBREG (IMPLICIT_DEF),
+                                 VR128X:$src1, sub_xmm)))), sub_ymm)>;
 }
 
 let Predicates = [HasAVX512] in {
@@ -6293,6 +6301,26 @@ let Predicates = [HasAVX512] in {
     defm VCVTPS2PHZ128 : avx512_cvtps2ph<v8i16x_info, v4f32x_info, f128mem>,
                         EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
   }
+}
+
+// Patterns for  matching conversions from float to half-float and vice versa.
+let Predicates = [HasVLX] in {
+  // Use MXCSR.RC for rounding instead of explicitly specifying the default
+  // rounding mode (Nearest-Even, encoded as 0). Both are equivalent in the
+  // configurations we support (the default). However, falling back to MXCSR is
+  // more consistent with other instructions, which are always controlled by it.
+  // It's encoded as 0b100.
+  def : Pat<(fp_to_f16 FR32X:$src),
+            (i16 (EXTRACT_SUBREG (VMOVPDI2DIZrr (VCVTPS2PHZ128rr
+              (COPY_TO_REGCLASS FR32X:$src, VR128X), 4)), sub_16bit))>;
+
+  def : Pat<(f16_to_fp GR16:$src),
+            (f32 (COPY_TO_REGCLASS (VCVTPH2PSZ128rr
+              (COPY_TO_REGCLASS (MOVSX32rr16 GR16:$src), VR128X)), FR32X)) >;
+
+  def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32X:$src))),
+            (f32 (COPY_TO_REGCLASS (VCVTPH2PSZ128rr
+              (VCVTPS2PHZ128rr (COPY_TO_REGCLASS FR32X:$src, VR128X), 4)), FR32X)) >;
 }
 
 //  Unordered/Ordered scalar fp compare with Sea and set EFLAGS
@@ -6931,17 +6959,17 @@ defm VPMOVUSWB  : avx512_trunc_sat_wb<0x10, "us",  X86vtruncus>;
 let Predicates = [HasAVX512, NoVLX] in {
 def: Pat<(v8i16 (X86vtrunc (v8i32 VR256X:$src))),
          (v8i16 (EXTRACT_SUBREG
-                 (v16i16 (VPMOVDWZrr (v16i32 (SUBREG_TO_REG (i32 0),
+                 (v16i16 (VPMOVDWZrr (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),
                                           VR256X:$src, sub_ymm)))), sub_xmm))>;
 def: Pat<(v4i32 (X86vtrunc (v4i64 VR256X:$src))),
          (v4i32 (EXTRACT_SUBREG
-                 (v8i32 (VPMOVQDZrr (v8i64 (SUBREG_TO_REG (i32 0),
+                 (v8i32 (VPMOVQDZrr (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                            VR256X:$src, sub_ymm)))), sub_xmm))>;
 }
 
 let Predicates = [HasBWI, NoVLX] in {
 def: Pat<(v16i8 (X86vtrunc (v16i16 VR256X:$src))),
-         (v16i8 (EXTRACT_SUBREG  (VPMOVWBZrr (v32i16 (SUBREG_TO_REG (i32 0),
+         (v16i8 (EXTRACT_SUBREG (VPMOVWBZrr (v32i16 (INSERT_SUBREG (IMPLICIT_DEF),
                                             VR256X:$src, sub_ymm))), sub_xmm))>;
 }
 

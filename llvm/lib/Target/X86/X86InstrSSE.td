@@ -8227,7 +8227,7 @@ let Predicates = [HasF16C] in {
 }
 
 // Patterns for  matching conversions from float to half-float and vice versa.
-let Predicates = [HasF16C] in {
+let Predicates = [HasF16C, NoVLX] in {
   // Use MXCSR.RC for rounding instead of explicitly specifying the default
   // rounding mode (Nearest-Even, encoded as 0). Both are equivalent in the
   // configurations we support (the default). However, falling back to MXCSR is
@@ -8362,20 +8362,24 @@ let Predicates = [HasAVX2, NoVLX] in {
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI], AddedComplexity = 20 in {
   def : Pat<(v16i8 (X86VBroadcast GR8:$src)),
         (VPBROADCASTBrr (COPY_TO_REGCLASS
-                         (i32 (SUBREG_TO_REG (i32 0), GR8:$src, sub_8bit)),
+                         (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                             GR8:$src, sub_8bit)),
                          VR128))>;
   def : Pat<(v32i8 (X86VBroadcast GR8:$src)),
         (VPBROADCASTBYrr (COPY_TO_REGCLASS
-                          (i32 (SUBREG_TO_REG (i32 0), GR8:$src, sub_8bit)),
+                          (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                              GR8:$src, sub_8bit)),
                           VR128))>;
 
   def : Pat<(v8i16 (X86VBroadcast GR16:$src)),
         (VPBROADCASTWrr (COPY_TO_REGCLASS
-                         (i32 (SUBREG_TO_REG (i32 0), GR16:$src, sub_16bit)),
+                         (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                             GR16:$src, sub_16bit)),
                          VR128))>;
   def : Pat<(v16i16 (X86VBroadcast GR16:$src)),
         (VPBROADCASTWYrr (COPY_TO_REGCLASS
-                          (i32 (SUBREG_TO_REG (i32 0), GR16:$src, sub_16bit)),
+                          (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                              GR16:$src, sub_16bit)),
                           VR128))>;
 }
 let Predicates = [HasAVX2, NoVLX], AddedComplexity = 20 in {
