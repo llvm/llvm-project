@@ -122,9 +122,12 @@ bool ValueObjectVariable::UpdateValue() {
       m_value.SetContext(Value::eContextTypeVariable, variable);
     } else {
       CompilerType var_type(GetCompilerTypeImpl());
-      if (var_type.IsValid() &&
-          !SwiftASTContext::IsPossibleZeroSizeType(var_type))
-        m_error.SetErrorString("empty constant data");
+      if (var_type.IsValid()) {
+        if (SwiftASTContext::IsPossibleZeroSizeType(var_type))
+          m_value.SetCompilerType(var_type);
+        else
+          m_error.SetErrorString("empty constant data");
+      }
     }
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::eContextTypeInvalid, NULL);
