@@ -1116,12 +1116,8 @@ void Verifier::visitDIGlobalVariable(const DIGlobalVariable &N) {
 
   AssertDI(N.getTag() == dwarf::DW_TAG_variable, "invalid tag", &N);
   AssertDI(!N.getName().empty(), "missing global variable name", &N);
-  if (auto *V = N.getRawVariable()) {
-    AssertDI(isa<ConstantAsMetadata>(V) &&
-                 !isa<Function>(cast<ConstantAsMetadata>(V)->getValue()),
-             "invalid global varaible ref", &N, V);
-    visitConstantExprsRecursively(cast<ConstantAsMetadata>(V)->getValue());
-  }
+  if (auto *V = N.getRawExpr())
+    AssertDI(isa<DIExpression>(V), "invalid expression location", &N, V);
   if (auto *Member = N.getRawStaticDataMemberDeclaration()) {
     AssertDI(isa<DIDerivedType>(Member),
              "invalid static data member declaration", &N, Member);

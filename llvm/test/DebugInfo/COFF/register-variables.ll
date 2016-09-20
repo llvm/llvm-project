@@ -192,7 +192,7 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
-@x = internal global i32 0, align 4
+@x = internal global i32 0, align 4, !dbg !23
 
 ; Function Attrs: nounwind uwtable
 define void @f(i32 %p) #0 !dbg !4 {
@@ -261,7 +261,7 @@ attributes #3 = { nounwind }
 !20 = !DILocalVariable(name: "a", arg: 1, scope: !16, file: !1, line: 4, type: !7)
 !21 = !DILocalVariable(name: "b", scope: !16, file: !1, line: 5, type: !7)
 !22 = !{!23}
-!23 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !24, isLocal: false, isDefinition: true, variable: i32* @x)
+!23 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !24, isLocal: false, isDefinition: true)
 !24 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)
 !25 = !{i32 2, !"CodeView", i32 1}
 !26 = !{i32 2, !"Debug Info Version", i32 3}

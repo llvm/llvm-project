@@ -21,7 +21,7 @@ target triple = "x86_64-apple-macosx"
 
 %struct.PackedBits = type <{ i8, i32 }>
 
-@s = common global %struct.PackedBits zeroinitializer, align 1
+@s = common global %struct.PackedBits zeroinitializer, align 1, !dbg !4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!14, !15, !16}
@@ -31,7 +31,7 @@ target triple = "x86_64-apple-macosx"
 !1 = !DIFile(filename: "bitfield.c", directory: "/Volumes/Data/llvm")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, variable: %struct.PackedBits* @s)
+!4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true)
 !5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "PackedBits", file: !1, line: 3, size: 40, align: 8, elements: !6)
 !6 = !{!7, !9, !13}
 

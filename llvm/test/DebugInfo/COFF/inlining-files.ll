@@ -44,7 +44,7 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
-@x = common global i32 0, align 4
+@x = common global i32 0, align 4, !dbg !9
 
 ; Function Attrs: norecurse nounwind uwtable
 define void @f() #0 !dbg !4 {
@@ -84,7 +84,7 @@ attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-
 !6 = !{null}
 !7 = distinct !DISubprogram(name: "file_change", scope: !1, file: !1, line: 2, type: !5, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !8 = !{!9}
-!9 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !10, isLocal: false, isDefinition: true, variable: i32* @x)
+!9 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !10, isLocal: false, isDefinition: true)
 !10 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !11)
 !11 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !12 = !{i32 2, !"CodeView", i32 1}

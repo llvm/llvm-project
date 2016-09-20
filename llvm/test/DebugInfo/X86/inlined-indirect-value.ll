@@ -19,8 +19,8 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@x = common global i32 0, align 4
-@y = common global i32 0, align 4
+@x = common global i32 0, align 4, !dbg !10
+@y = common global i32 0, align 4, !dbg !12
 
 define i32 @main() !dbg !4 {
 ; CHECK: .loc 1 {{[89]}}
@@ -58,9 +58,9 @@ select.end:                                       ; preds = %entry, %select.mid
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !8 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 3, type: !5, isLocal: true, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, variables: !2)
 !9 = !{!10, !12}
-!10 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !11, isLocal: false, isDefinition: true, variable: i32* @x)
+!10 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !11, isLocal: false, isDefinition: true)
 !11 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)
-!12 = !DIGlobalVariable(name: "y", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, variable: i32* @y)
+!12 = !DIGlobalVariable(name: "y", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true)
 !13 = !{i32 2, !"Dwarf Version", i32 4}
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !16 = !DILocation(line: 4, column: 9, scope: !17, inlinedAt: !18)

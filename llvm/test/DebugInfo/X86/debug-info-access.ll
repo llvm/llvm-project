@@ -91,9 +91,9 @@ target triple = "x86_64-apple-macosx10.10.0"
 %class.B = type { i8 }
 %union.U = type { i32 }
 
-@a = global %struct.A zeroinitializer, align 1
-@b = global %class.B zeroinitializer, align 1
-@u = global %union.U zeroinitializer, align 4
+@a = global %struct.A zeroinitializer, align 1, !dbg !35
+@b = global %class.B zeroinitializer, align 1, !dbg !36
+@u = global %union.U zeroinitializer, align 4, !dbg !37
 
 ; Function Attrs: nounwind ssp uwtable
 define void @_Z4freev() #0 !dbg !30 {
@@ -140,9 +140,9 @@ attributes #0 = { nounwind ssp uwtable }
 !32 = !DISubroutineType(types: !33)
 !33 = !{null}
 !34 = !{!35, !36, !37}
-!35 = !DIGlobalVariable(name: "a", line: 37, isLocal: false, isDefinition: true, scope: null, file: !31, type: !4, variable: %struct.A* @a)
-!36 = !DIGlobalVariable(name: "b", line: 38, isLocal: false, isDefinition: true, scope: null, file: !31, type: !12, variable: %class.B* @b)
-!37 = !DIGlobalVariable(name: "u", line: 39, isLocal: false, isDefinition: true, scope: null, file: !31, type: !22, variable: %union.U* @u)
+!35 = !DIGlobalVariable(name: "a", line: 37, isLocal: false, isDefinition: true, scope: null, file: !31, type: !4)
+!36 = !DIGlobalVariable(name: "b", line: 38, isLocal: false, isDefinition: true, scope: null, file: !31, type: !12)
+!37 = !DIGlobalVariable(name: "u", line: 39, isLocal: false, isDefinition: true, scope: null, file: !31, type: !22)
 !38 = !{i32 2, !"Dwarf Version", i32 2}
 !39 = !{i32 2, !"Debug Info Version", i32 3}
 !40 = !{!"clang version 3.6.0 "}
