@@ -52,8 +52,8 @@ slgi_##T##N(__local T##N *dst, const __global T##N *src, size_t n, size_t j, eve
 { \
     BODY(i,i*j); \
 } \
-extern AATTR(S(lgi_##T##N)) event_t async_work_group_strided_copy(__local u##T##N *, const __global u##T##N *, size_t, size_t, event_t); \
-extern AATTR(S(lgi_##T##N)) event_t async_work_group_strided_copy(__local T##N *, const __global T##N *, size_t, size_t, event_t);
+extern AATTR(S(slgi_##T##N)) event_t async_work_group_strided_copy(__local u##T##N *, const __global u##T##N *, size_t, size_t, event_t); \
+extern AATTR(S(slgi_##T##N)) event_t async_work_group_strided_copy(__local T##N *, const __global T##N *, size_t, size_t, event_t);
 
 #define GENI(T) \
     GENIN(16,T) \
