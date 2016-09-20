@@ -63,19 +63,25 @@ static bool isExitBlock(BasicBlock *BB,
 bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     DominatorTree &DT, LoopInfo &LI) {
   SmallVector<Use *, 16> UsesToRewrite;
-  SmallVector<BasicBlock *, 8> ExitBlocks;
   SmallSetVector<PHINode *, 16> PHIsToRemove;
   PredIteratorCache PredCache;
   bool Changed = false;
 
+  // Cache the Loop ExitBlocks across this loop.  We expect to get a lot of
+  // instructions within the same loops, computing the exit blocks is
+  // expensive, and we're not mutating the loop structure.
+  SmallDenseMap<Loop*, SmallVector<BasicBlock *,1>> LoopExitBlocks;
+
   while (!Worklist.empty()) {
     UsesToRewrite.clear();
-    ExitBlocks.clear();
 
     Instruction *I = Worklist.pop_back_val();
     BasicBlock *InstBB = I->getParent();
     Loop *L = LI.getLoopFor(InstBB);
-    L->getExitBlocks(ExitBlocks);
+    if (!LoopExitBlocks.count(L))   
+      L->getExitBlocks(LoopExitBlocks[L]);
+    assert(LoopExitBlocks.count(L));
+    const SmallVectorImpl<BasicBlock *> &ExitBlocks = LoopExitBlocks[L];
 
     if (ExitBlocks.empty())
       continue;

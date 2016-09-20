@@ -801,9 +801,8 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
 }
 
 static void
-mergeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
-                              MachineBasicBlock &MBBCommon) {
-  // Merge MMOs from memory operations in the common block.
+mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
+                MachineBasicBlock &MBBCommon) {
   MachineBasicBlock *MBB = MBBIStartPos->getParent();
   // Note CommonTailLen does not necessarily matches the size of
   // the common BB nor all its instructions because of debug
@@ -833,8 +832,18 @@ mergeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
            "Reached BB end within common tail length!");
     assert(MBBICommon->isIdenticalTo(*MBBI) && "Expected matching MIIs!");
 
+    // Merge MMOs from memory operations in the common block.
     if (MBBICommon->mayLoad() || MBBICommon->mayStore())
       MBBICommon->setMemRefs(MBBICommon->mergeMemRefsWith(*MBBI));
+    // Drop undef flags if they aren't present in all merged instructions.
+    for (unsigned I = 0, E = MBBICommon->getNumOperands(); I != E; ++I) {
+      MachineOperand &MO = MBBICommon->getOperand(I);
+      if (MO.isReg() && MO.isUndef()) {
+        const MachineOperand &OtherMO = MBBI->getOperand(I);
+        if (!OtherMO.isUndef())
+          MO.setIsUndef(false);
+      }
+    }
 
     ++MBBI;
     ++MBBICommon;
@@ -952,8 +961,8 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
         continue;
       DEBUG(dbgs() << "BB#" << SameTails[i].getBlock()->getNumber()
                    << (i == e-1 ? "" : ", "));
-      // Merge MMOs from memory operations as needed.
-      mergeMMOsFromMemoryOperations(SameTails[i].getTailStartPos(), *MBB);
+      // Merge operations (MMOs, undef flags)
+      mergeOperations(SameTails[i].getTailStartPos(), *MBB);
       // Hack the end off BB i, making it jump to BB commonTailIndex instead.
       ReplaceTailWithBranchTo(SameTails[i].getTailStartPos(), MBB);
       // BB i is no longer a predecessor of SuccBB; remove it from the worklist.

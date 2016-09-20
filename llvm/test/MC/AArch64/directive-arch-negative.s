@@ -30,3 +30,8 @@
 # CHECK: 	aese v0.8h, v1.8h
 # CHECK:	^
 
+	.arch armv8.1-a+noras
+	esb
+
+# CHECK: error: instruction requires: ras
+# CHECK:         esb

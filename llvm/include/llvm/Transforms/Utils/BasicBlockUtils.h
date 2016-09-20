@@ -230,8 +230,8 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
                                        BasicBlock *Pred);
 
 /// Split the containing block at the specified instruction - everything before
-/// and including SplitBefore stays in the old basic block, and everything after
-/// SplitBefore is moved to a new block. The two blocks are connected by a
+/// SplitBefore stays in the old basic block, and the rest of the instructions
+/// in the BB are moved to a new block. The two blocks are connected by a
 /// conditional branch (with value of Cmp being the condition).
 /// Before:
 ///   Head

@@ -12,8 +12,8 @@
 ; CHECK:   edge for.body3 -> if.else probability is 0x65a95a96 / 0x80000000 = 79.42%
 ; CHECK:   edge for.inc -> for.inc12 probability is 0x000fdc50 / 0x80000000 = 0.05%
 ; CHECK:   edge for.inc -> for.body3 probability is 0x7ff023b0 / 0x80000000 = 99.95%
-; CHECK:   edge for.inc12 -> for.end14 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK:   edge for.inc12 -> for.cond1.preheader probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:   edge for.inc12 -> for.end14 probability is 0x04000000 / 0x80000000 = 3.12%
+; CHECK:   edge for.inc12 -> for.cond1.preheader probability is 0x7c000000 / 0x80000000 = 96.88%
 
 ; Original C++ test case.
 ;
@@ -88,7 +88,7 @@ for.body3:                                        ; preds = %for.inc, %for.cond1
   %call5 = tail call i32 @rand() #3, !dbg !16
   %rem6 = srem i32 %call5, 100, !dbg !16
   %cmp7 = icmp slt i32 %rem6, 10, !dbg !16
-  br i1 %cmp7, label %if.then, label %if.else, !dbg !16, !prof !17
+  br i1 %cmp7, label %if.then, label %if.else, !dbg !16
 
 if.then:                                          ; preds = %for.body3
   %mul = mul nsw i32 %j.023, 300, !dbg !18
@@ -107,13 +107,13 @@ for.inc:                                          ; preds = %if.then, %if.else
   %S.2 = fadd double %S.122, %call8.pn, !dbg !18
   %inc = add nsw i32 %j.023, 1, !dbg !20
   %exitcond = icmp eq i32 %j.023, 5999, !dbg !14
-  br i1 %exitcond, label %for.inc12, label %for.body3, !dbg !14, !prof !21
+  br i1 %exitcond, label %for.inc12, label %for.body3, !dbg !14
 
 for.inc12:                                        ; preds = %for.inc
   %S.2.lcssa = phi double [ %S.2, %for.inc ]
   %inc13 = add nsw i32 %i.025, 1, !dbg !22
   %exitcond26 = icmp eq i32 %i.025, 9999, !dbg !12
-  br i1 %exitcond26, label %for.end14, label %for.cond1.preheader, !dbg !12, !prof !23
+  br i1 %exitcond26, label %for.end14, label %for.cond1.preheader, !dbg !12
 
 for.end14:                                        ; preds = %for.inc12
   %S.2.lcssa.lcssa = phi double [ %S.2.lcssa, %for.inc12 ]
@@ -148,13 +148,10 @@ declare i32 @printf(i8* nocapture readonly, ...) #1
 !14 = !DILocation(line: 20, column: 5, scope: !13)
 !15 = !DILocation(line: 21, column: 15, scope: !13)
 !16 = !DILocation(line: 22, column: 11, scope: !13)
-!17 = !{!"branch_weights", i32 534, i32 2064}
 !18 = !DILocation(line: 23, column: 14, scope: !13)
 !19 = !DILocation(line: 25, column: 14, scope: !13)
 !20 = !DILocation(line: 20, column: 28, scope: !13)
-!21 = !{!"branch_weights", i32 0, i32 1075}
 !22 = !DILocation(line: 19, column: 26, scope: !13)
-!23 = !{!"branch_weights", i32 0, i32 534}
 !24 = !DILocation(line: 27, column: 3, scope: !13)
 !25 = !DILocation(line: 28, column: 3, scope: !13)
 !26 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !4)
