@@ -151,15 +151,17 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    CodeModel::Model CM, CodeGenOpt::Level OL)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM), CM, OL),
-      TLOF(createTLOF(getTargetTriple())),
-      Subtarget(TT, CPU, FS, *this, Options.StackAlignmentOverride) {
+      TLOF(createTLOF(getTargetTriple())) {
   // Windows stack unwinder gets confused when execution flow "falls through"
   // after a call to 'noreturn' function.
   // To prevent that, we emit a trap for 'unreachable' IR instructions.
   // (which on X86, happens to be the 'ud2' instruction)
   // On PS4, the "return address" of a 'noreturn' call must still be within
   // the calling function, and TrapUnreachable is an easy way to get that.
-  if (Subtarget.isTargetWin64() || Subtarget.isTargetPS4())
+  // The check here for 64-bit windows is a bit icky, but as we're unlikely
+  // to ever want to mix 32 and 64-bit windows code in a single module
+  // this should be fine.
+  if ((TT.isOSWindows() && TT.getArch() == Triple::x86_64) || TT.isPS4())
     this->Options.TrapUnreachable = true;
 
   // By default (and when -ffast-math is on), enable estimate codegen for

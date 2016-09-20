@@ -151,6 +151,11 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
 
 
 static unsigned getELFSectionType(StringRef Name, SectionKind K) {
+  // Use SHT_NOTE for section whose name starts with ".note" to allow
+  // emitting ELF notes from C variable declaration.
+  // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77609
+  if (Name.startswith(".note"))
+    return ELF::SHT_NOTE;
 
   if (Name == ".init_array")
     return ELF::SHT_INIT_ARRAY;

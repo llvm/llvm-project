@@ -33,6 +33,7 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
 
 void MachineIRBuilder::setMBB(MachineBasicBlock &MBB, bool Beginning) {
   this->MBB = &MBB;
+  this->MI = nullptr;
   Before = Beginning;
   assert(&getMF() == MBB.getParent() &&
          "Basic block is in a different function");
@@ -274,7 +275,7 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<unsigned> Results,
 MachineInstrBuilder
 MachineIRBuilder::buildSequence(unsigned Res,
                                 ArrayRef<unsigned> Ops,
-                                ArrayRef<unsigned> Indices) {
+                                ArrayRef<uint64_t> Indices) {
 #ifndef NDEBUG
   assert(Ops.size() == Indices.size() && "incompatible args");
   assert(!Ops.empty() && "invalid trivial sequence");

@@ -6114,13 +6114,18 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
           return error("Invalid record");
         break;
       case bitc::GLOBALVAL_SUMMARY_BLOCK_ID:
-        assert(VSTOffset > 0 && "Expected non-zero VST offset");
         assert(!SeenValueSymbolTable &&
                "Already read VST when parsing summary block?");
-        if (std::error_code EC =
-                parseValueSymbolTable(VSTOffset, ValueIdToLinkageMap))
-          return EC;
-        SeenValueSymbolTable = true;
+        // We might not have a VST if there were no values in the
+        // summary. An empty summary block generated when we are
+        // performing ThinLTO compiles so we don't later invoke
+        // the regular LTO process on them.
+        if (VSTOffset > 0) {
+          if (std::error_code EC =
+                  parseValueSymbolTable(VSTOffset, ValueIdToLinkageMap))
+            return EC;
+          SeenValueSymbolTable = true;
+        }
         SeenGlobalValSummary = true;
         if (std::error_code EC = parseEntireSummary())
           return EC;

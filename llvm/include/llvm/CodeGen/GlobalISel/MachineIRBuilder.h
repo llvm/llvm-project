@@ -363,7 +363,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildSequence(unsigned Res,
                                     ArrayRef<unsigned> Ops,
-                                    ArrayRef<unsigned> Indices);
+                                    ArrayRef<uint64_t> Indices);
 
   void addUsesWithIndices(MachineInstrBuilder MIB) {}
 

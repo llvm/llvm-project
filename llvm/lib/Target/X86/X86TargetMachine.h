@@ -24,8 +24,6 @@ class StringRef;
 
 class X86TargetMachine final : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  X86Subtarget Subtarget;
-
   mutable StringMap<std::unique_ptr<X86Subtarget>> SubtargetMap;
 
 public:

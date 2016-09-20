@@ -191,6 +191,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitTypeInformation();
 
+  void emitCompilerInformation();
+
   void emitInlineeLinesSubsection();
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);

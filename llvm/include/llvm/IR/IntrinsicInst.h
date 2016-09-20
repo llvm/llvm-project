@@ -359,6 +359,7 @@ namespace llvm {
     ConstantInt *getIndex() const {
       return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
     }
+    Value *getStep() const;
   };
 
   class InstrProfIncrementInstStep : public InstrProfIncrementInst {
@@ -369,7 +370,6 @@ namespace llvm {
     static inline bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
     }
-    Value *getStep() const { return const_cast<Value *>(getArgOperand(4)); }
   };
 
   /// This represents the llvm.instrprof_value_profile intrinsic.

@@ -100,7 +100,6 @@
 ; OBJ:   Magic: 0x4
 ; OBJ:   Subsection [
 ; OBJ:     SubSectionType: Symbols (0xF1)
-; OBJ:     SubSectionSize: 0x15
 ; OBJ:     DataSym {
 ; OBJ:       DataOffset: ?comdat@?$A@X@@2HB+0x0
 ; OBJ:       Type: const int (0x1000)

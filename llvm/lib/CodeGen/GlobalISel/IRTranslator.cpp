@@ -399,7 +399,6 @@ bool IRTranslator::translateCall(const User &U) {
   const Function *F = CI.getCalledFunction();
 
   if (!F || !F->isIntrinsic()) {
-    // FIXME: handle multiple return values.
     unsigned Res = CI.getType()->isVoidTy() ? 0 : getOrCreateVReg(CI);
     SmallVector<unsigned, 8> Args;
     for (auto &Arg: CI.arg_operands())
