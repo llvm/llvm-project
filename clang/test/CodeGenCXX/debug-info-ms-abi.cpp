@@ -11,14 +11,21 @@ struct Foo {
 Foo f;
 Foo::Nested n;
 
+// CHECK: ![[Nested:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Nested",
+// CHECK-SAME: identifier: ".?AUNested@Foo@@"
+
 // CHECK: ![[Foo:[^ ]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Foo",
 // CHECK-SAME: elements: ![[elements:[0-9]+]]
 // CHECK-SAME: identifier: ".?AUFoo@@"
 
-// CHECK: ![[elements]] = !{![[vptr:[0-9]+]], ![[Nested:[0-9]+]], ![[f:[0-9]+]], ![[g:[0-9]+]], ![[h:[0-9]+]]}
+// CHECK: ![[elements]] = !{![[vshape:[0-9]+]], ![[vptr:[0-9]+]], ![[Nested]], ![[f:[0-9]+]], ![[g:[0-9]+]], ![[h:[0-9]+]]}
 
-// CHECK: ![[Nested]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Nested",
-// CHECK-SAME: identifier: ".?AUNested@Foo@@"
+// CHECK: ![[vshape]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__vtbl_ptr_type", baseType: null, size: 96)
+
+// CHECK: ![[vptr]] = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$Foo",
+// CHECK-SAME: baseType: ![[vptr_ty:[0-9]+]],
+
+// CHECK: ![[vptr_ty]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[vshape]], size: 32
 
 // CHECK: ![[f]] = !DISubprogram(name: "f",
 // CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 0,
