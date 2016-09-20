@@ -1881,11 +1881,12 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
   // specifically want it unset.
   const char *disable_env_var = "IDE_DISABLED_OS_ACTIVITY_DT_MODE";
   auto &env_vars = launch_info.GetEnvironmentEntries();
-  if (!env_vars.ContainsEnvironmentVariable(disable_env_var)) {
+  if (!env_vars.ContainsEnvironmentVariable(llvm::StringRef(disable_env_var))) {
     // We want to make sure that OS_ACTIVITY_DT_MODE is set so that
     // we get os_log and NSLog messages mirrored to the target process
     // stderr.
-    if (!env_vars.ContainsEnvironmentVariable("OS_ACTIVITY_DT_MODE"))
+    if (!env_vars.ContainsEnvironmentVariable(
+            llvm::StringRef("OS_ACTIVITY_DT_MODE")))
       env_vars.AppendArgument(llvm::StringRef("OS_ACTIVITY_DT_MODE=enable"));
   }
 

@@ -566,8 +566,8 @@ public:
   // Other methods.
   //===--------------------------------------------------------------------===//
 
-  /// isIdenticalTo - Return true if this operand is identical to the specified
-  /// operand. Note: This method ignores isKill and isDead properties.
+  /// Returns true if this operand is identical to the specified operand except
+  /// for liveness related flags (isKill, isUndef and isDead).
   bool isIdenticalTo(const MachineOperand &Other) const;
 
   /// \brief MachineOperand hash_value overload.

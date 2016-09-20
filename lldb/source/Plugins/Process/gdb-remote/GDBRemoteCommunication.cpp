@@ -1123,8 +1123,9 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
                         __FUNCTION__, error.AsCString());
           return error;
         }
-        debugserver_args.AppendArgument("--named-pipe");
-        debugserver_args.AppendArgument(named_pipe_path.c_str());
+        debugserver_args.AppendArgument(llvm::StringRef("--named-pipe"));
+        debugserver_args.AppendArgument(
+            llvm::StringRef(named_pipe_path.c_str()));
 #else
         // Binding to port zero, we need to figure out what port it ends up
         // using using an unnamed pipe...
@@ -1191,7 +1192,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     if (env_debugserver_log_flags) {
       ::snprintf(arg_cstr, sizeof(arg_cstr), "--log-flags=%s",
                  env_debugserver_log_flags);
-      debugserver_args.AppendArgument(arg_cstr);
+      debugserver_args.AppendArgument(llvm::StringRef(arg_cstr));
     }
 #else
     const char *env_debugserver_log_channels =

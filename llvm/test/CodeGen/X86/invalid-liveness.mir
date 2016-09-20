@@ -1,0 +1,31 @@
+# RUN: not llc -march=x86 -run-pass liveintervals -o - %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+--- |
+  define void @func() { ret void }
+...
+---
+# Liveness calculation should detect that we do not have a definition for vreg0
+# on all paths; In this example a def for vreg0 is missing when jumping from
+# bb.0 to bb.3.
+#
+# CHECK: Use of %vreg0 does not have a corresponding definition on every path
+# CHECK: ERROR: Use not jointly dominated by defs.
+name: func
+registers:
+  - { id: 0, class: gr32 }
+body: |
+  bb.0:
+    successors: %bb.2, %bb.3
+    JG_1 %bb.2, implicit %eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    successors: %bb.3
+    %0 = IMPLICIT_DEF
+    JMP_1 %bb.3
+
+  bb.3:
+    %eax = COPY %0
+    RETQ %eax
+...

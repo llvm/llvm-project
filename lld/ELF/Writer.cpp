@@ -102,7 +102,8 @@ StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
-  if (!Config->PrintGcSections || !IS || IS->Live)
+  if (!Config->PrintGcSections || !IS || IS == &InputSection<ELFT>::Discarded ||
+      IS->Live)
     return;
   errs() << "removing unused section from '" << IS->Name << "' in file '"
          << IS->getFile()->getName() << "'\n";

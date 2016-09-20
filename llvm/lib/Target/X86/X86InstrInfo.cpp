@@ -4704,11 +4704,31 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
   else if (X86::VR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MMX_MOVQ64rr;
-  else if (X86::VR128XRegClass.contains(DestReg, SrcReg))
-    Opc = HasVLX ? X86::VMOVAPSZ128rr : HasAVX ? X86::VMOVAPSrr : X86::MOVAPSrr;
-  else if (X86::VR256XRegClass.contains(DestReg, SrcReg))
-    Opc = HasVLX ? X86::VMOVAPSZ256rr : X86::VMOVAPSYrr;
-  else if (X86::VR512RegClass.contains(DestReg, SrcReg))
+  else if (X86::VR128XRegClass.contains(DestReg, SrcReg)) {
+    if (HasVLX)
+      Opc = X86::VMOVAPSZ128rr;
+    else if (X86::VR128RegClass.contains(DestReg, SrcReg))
+      Opc = HasAVX ? X86::VMOVAPSrr : X86::MOVAPSrr;
+    else {
+      // If this an extended register and we don't have VLX we need to use a
+      // 512-bit move.
+      Opc = X86::VMOVAPSZrr;
+      DestReg = get512BitSuperRegister(DestReg);
+      SrcReg = get512BitSuperRegister(SrcReg);
+    }
+  } else if (X86::VR256XRegClass.contains(DestReg, SrcReg)) {
+    if (HasVLX)
+      Opc = X86::VMOVAPSZ256rr;
+    else if (X86::VR256RegClass.contains(DestReg, SrcReg))
+      Opc = X86::VMOVAPSYrr;
+    else {
+      // If this an extended register and we don't have VLX we need to use a
+      // 512-bit move.
+      Opc = X86::VMOVAPSZrr;
+      DestReg = get512BitSuperRegister(DestReg);
+      SrcReg = get512BitSuperRegister(SrcReg);
+    }
+  } else if (X86::VR512RegClass.contains(DestReg, SrcReg))
     Opc = X86::VMOVAPSZrr;
   // All KMASK RegClasses hold the same k registers, can be tested against anyone.
   else if (X86::VK16RegClass.contains(DestReg, SrcReg))

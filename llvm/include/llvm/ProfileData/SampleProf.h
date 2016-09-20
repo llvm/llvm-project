@@ -222,6 +222,21 @@ public:
       return ret->second.getSamples();
   }
 
+  /// Return the total number of call target samples collected at a given
+  /// location. Each location is specified by \p LineOffset and
+  /// \p Discriminator. If the location is not found in profile, return error.
+  ErrorOr<uint64_t> findCallSamplesAt(uint32_t LineOffset,
+                                      uint32_t Discriminator) const {
+    const auto &ret = BodySamples.find(LineLocation(LineOffset, Discriminator));
+    if (ret == BodySamples.end())
+      return std::error_code();
+    uint64_t T = 0;
+    for (const auto &t_c : ret->second.getCallTargets()) {
+      T += t_c.second;
+    }
+    return T;
+  }
+
   /// Return the function samples at the given callsite location.
   FunctionSamples &functionSamplesAt(const LineLocation &Loc) {
     return CallsiteSamples[Loc];

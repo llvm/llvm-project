@@ -1333,7 +1333,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
     std::string alias_name_str = alias_name;
     if ((cmd_args.GetArgumentCount() == 0) ||
         (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0))
-      cmd_args.Unshift(alias_name);
+      cmd_args.Unshift(alias_name_str);
 
     result_str.Printf("%s", alias_cmd_obj->GetCommandName());
 
@@ -1953,7 +1953,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
   // Make sure that the alias name is the 0th element in cmd_args
   std::string alias_name_str = alias_name;
   if (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0)
-    cmd_args.Unshift(alias_name);
+    cmd_args.Unshift(alias_name_str);
 
   Args new_args(alias_cmd_obj->GetCommandName());
   if (new_args.GetArgumentCount() == 2)

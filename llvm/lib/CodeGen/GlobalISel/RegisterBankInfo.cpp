@@ -513,8 +513,8 @@ RegisterBankInfo::OperandsMapper::OperandsMapper(
     MachineRegisterInfo &MRI)
     : MRI(MRI), MI(MI), InstrMapping(InstrMapping) {
   unsigned NumOpds = MI.getNumOperands();
-  OpToNewVRegIdx.reset(new int[NumOpds]);
-  std::fill(&OpToNewVRegIdx[0], &OpToNewVRegIdx[NumOpds],
+  OpToNewVRegIdx.resize(NumOpds);
+  std::fill(OpToNewVRegIdx.begin(), OpToNewVRegIdx.end(),
             OperandsMapper::DontKnowIdx);
   assert(InstrMapping.verify(MI) && "Invalid mapping for MI");
 }

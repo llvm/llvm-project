@@ -1,9 +1,14 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 add_clang_executable(clang-change-namespace
   ClangChangeNamespace.cpp
   )
 target_link_libraries(clang-change-namespace
+  clangAST
   clangASTMatchers
   clangBasic
   clangChangeNamespace
