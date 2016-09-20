@@ -6,7 +6,8 @@
 // RUN:       .arm_caller : { *(.arm_caller) } \
 // RUN:       .thumb_caller : { *(.thumb_caller) } \
 // RUN:       .R_ARM_JUMP24_callee_2 : { *(.R_ARM_JUMP24_callee_high) } \
-// RUN:       .R_ARM_THM_JUMP_callee_2 : { *(.R_ARM_THM_JUMP_callee_high) } } " > %t.script
+// RUN:       .R_ARM_THM_JUMP_callee_2 : { *(.R_ARM_THM_JUMP_callee_high) } \
+// RUN:       .got.plt 0x1894 : {  }  } " > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2 2>&1
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB -check-prefix=CHECK-ABS-THUMB %s
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM -check-prefix=CHECK-ABS-ARM %s
