@@ -9,7 +9,7 @@
 # RUN: ld.lld -o %t1 --script %t1.script %tfirst.o %tsecond.o
 # RUN: llvm-objdump -s %t1 | FileCheck --check-prefix=FIRSTSECOND %s
 # FIRSTSECOND:      Contents of section .foo:
-# FIRSTSECOND-NEXT:   0120 01000000 00000000 11000000 00000000
+# FIRSTSECOND-NEXT:   01000000 00000000 11000000 00000000
 
 # RUN: echo "SECTIONS { .foo : { \
 # RUN:   KEEP(*second.o(.foo)) \
@@ -17,7 +17,7 @@
 # RUN: ld.lld -o %t2 --script %t2.script %tfirst.o %tsecond.o
 # RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SECONDFIRST %s
 # SECONDFIRST:      Contents of section .foo:
-# SECONDFIRST-NEXT:   0120 11000000 00000000 01000000 00000000
+# SECONDFIRST-NEXT:   11000000 00000000 01000000 00000000
 
 ## Now the same tests but without KEEP. Checking that file name inside
 ## KEEP is parsed fine.

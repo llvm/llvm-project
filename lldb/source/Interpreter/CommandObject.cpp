@@ -116,7 +116,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     // ParseOptions calls getopt_long_only, which always skips the zero'th item
     // in the array and starts at position 1,
     // so we need to push a dummy value into position zero.
-    args.Unshift("dummy_string");
+    args.Unshift(llvm::StringRef("dummy_string"));
     const bool require_validation = true;
     error = args.ParseOptions(*options, &exe_ctx,
                               GetCommandInterpreter().GetPlatform(true),
@@ -296,7 +296,7 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
     if (cur_options != nullptr) {
       // Re-insert the dummy command name string which will have been
       // stripped off:
-      input.Unshift("dummy-string");
+      input.Unshift(llvm::StringRef("dummy-string"));
       cursor_index++;
 
       // I stick an element on the end of the input, because if the last element

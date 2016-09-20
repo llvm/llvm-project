@@ -6303,7 +6303,7 @@ let Predicates = [HasAVX512] in {
   }
 }
 
-// Patterns for  matching conversions from float to half-float and vice versa.
+// Patterns for matching conversions from float to half-float and vice versa.
 let Predicates = [HasVLX] in {
   // Use MXCSR.RC for rounding instead of explicitly specifying the default
   // rounding mode (Nearest-Even, encoded as 0). Both are equivalent in the
@@ -6321,6 +6321,35 @@ let Predicates = [HasVLX] in {
   def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32X:$src))),
             (f32 (COPY_TO_REGCLASS (VCVTPH2PSZ128rr
               (VCVTPS2PHZ128rr (COPY_TO_REGCLASS FR32X:$src, VR128X), 4)), FR32X)) >;
+}
+
+// Patterns for matching float to half-float conversion when AVX512 is supported
+// but F16C isn't. In that case we have to use 512-bit vectors.
+let Predicates = [HasAVX512, NoVLX, NoF16C] in {
+  def : Pat<(fp_to_f16 FR32X:$src),
+            (i16 (EXTRACT_SUBREG
+                  (VMOVPDI2DIZrr
+                   (v8i16 (EXTRACT_SUBREG
+                    (VCVTPS2PHZrr
+                     (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
+                      (v4f32 (COPY_TO_REGCLASS FR32X:$src, VR128X)),
+                      sub_xmm), 4), sub_xmm))), sub_16bit))>;
+
+  def : Pat<(f16_to_fp GR16:$src),
+            (f32 (COPY_TO_REGCLASS
+                  (v4f32 (EXTRACT_SUBREG
+                   (VCVTPH2PSZrr
+                    (INSERT_SUBREG (v16i16 (IMPLICIT_DEF)),
+                     (v8i16 (COPY_TO_REGCLASS (MOVSX32rr16 GR16:$src), VR128X)),
+                     sub_xmm)), sub_xmm)), FR32X))>;
+
+  def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32X:$src))),
+            (f32 (COPY_TO_REGCLASS
+                  (v4f32 (EXTRACT_SUBREG
+                          (VCVTPH2PSZrr
+                           (VCVTPS2PHZrr (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
+                            (v4f32 (COPY_TO_REGCLASS FR32X:$src, VR128X)),
+                            sub_xmm), 4)), sub_xmm)), FR32X))>;
 }
 
 //  Unordered/Ordered scalar fp compare with Sea and set EFLAGS

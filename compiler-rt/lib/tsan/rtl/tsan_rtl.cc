@@ -292,7 +292,7 @@ static void CheckShadowMapping() {
     if (beg ==end)
       continue;
     VPrintf(3, "checking shadow region %p-%p\n", beg, end);
-    for (uptr p0 = beg; p0 <= end; p0 += (end - beg) / 4) {
+    for (uptr p0 = beg; p0 <= end; p0 += (end - beg) / 16) {
       for (int x = -1; x <= 1; x++) {
         const uptr p = p0 + x;
         if (p < beg || p >= end)

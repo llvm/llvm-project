@@ -17,7 +17,9 @@
 #include "AArch64ISelLowering.h"
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
@@ -30,29 +32,6 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
-bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                      const Value *Val, unsigned VReg) const {
-  MachineFunction &MF = MIRBuilder.getMF();
-  const Function &F = *MF.getFunction();
-
-  MachineInstrBuilder MIB = MIRBuilder.buildInstr(AArch64::RET_ReallyLR);
-  assert(MIB.getInstr() && "Unable to build a return instruction?!");
-
-  assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
-  if (VReg) {
-    MIRBuilder.setInstr(*MIB.getInstr(), /* Before */ true);
-    const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
-    CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-
-    handleAssignments(MIRBuilder, AssignFn, Val->getType(), VReg,
-                      [&](MachineIRBuilder &MIRBuilder, Type *Ty,
-                          unsigned ValReg, unsigned PhysReg) {
-                        MIRBuilder.buildCopy(PhysReg, ValReg);
-                        MIB.addUse(PhysReg, RegState::Implicit);
-                      });
-  }
-  return true;
-}
 
 bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                             CCAssignFn *AssignFn,
@@ -107,36 +86,130 @@ bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
+void AArch64CallLowering::splitToValueTypes(
+    unsigned Reg, Type *Ty, SmallVectorImpl<unsigned> &SplitRegs,
+    SmallVectorImpl<Type *> &SplitTys, const DataLayout &DL,
+    MachineRegisterInfo &MRI, SplitArgTy SplitArg) const {
+  const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
+  LLVMContext &Ctx = Ty->getContext();
+
+  SmallVector<EVT, 4> SplitVTs;
+  SmallVector<uint64_t, 4> Offsets;
+  ComputeValueVTs(TLI, DL, Ty, SplitVTs, &Offsets, 0);
+
+  if (SplitVTs.size() == 1) {
+    // No splitting to do, just forward the input directly.
+    SplitTys.push_back(Ty);
+    SplitRegs.push_back(Reg);
+    return;
+  }
+
+  unsigned FirstRegIdx = SplitRegs.size();
+  for (auto SplitVT : SplitVTs) {
+    Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
+    SplitRegs.push_back(MRI.createGenericVirtualRegister(LLT{*SplitTy, DL}));
+    SplitTys.push_back(SplitTy);
+  }
+
+  SmallVector<uint64_t, 4> BitOffsets;
+  for (auto Offset : Offsets)
+    BitOffsets.push_back(Offset * 8);
+
+  SplitArg(ArrayRef<unsigned>(&SplitRegs[FirstRegIdx], SplitRegs.end()),
+           BitOffsets);
+}
+
+bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
+                                      const Value *Val, unsigned VReg) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = *MF.getFunction();
+
+  MachineInstrBuilder MIB = MIRBuilder.buildInstr(AArch64::RET_ReallyLR);
+  assert(MIB.getInstr() && "Unable to build a return instruction?!");
+
+  assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
+  if (VReg) {
+    MIRBuilder.setInstr(*MIB.getInstr(), /* Before */ true);
+    const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
+    CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    auto &DL = F.getParent()->getDataLayout();
+
+    SmallVector<Type *, 8> SplitTys;
+    SmallVector<unsigned, 8> SplitRegs;
+    splitToValueTypes(VReg, Val->getType(), SplitRegs, SplitTys, DL, MRI,
+                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
+                        MIRBuilder.buildExtract(Regs, Offsets, VReg);
+                      });
+
+    return handleAssignments(MIRBuilder, AssignFn, SplitTys, SplitRegs,
+                             [&](MachineIRBuilder &MIRBuilder, Type *Ty,
+                                 unsigned ValReg, unsigned PhysReg) {
+                               MIRBuilder.buildCopy(PhysReg, ValReg);
+                               MIB.addUse(PhysReg, RegState::Implicit);
+                             });
+  }
+  return true;
+}
+
 bool AArch64CallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function::ArgumentListType &Args,
     ArrayRef<unsigned> VRegs) const {
   MachineFunction &MF = MIRBuilder.getMF();
+  MachineBasicBlock &MBB = MIRBuilder.getMBB();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = *MF.getFunction();
+  auto &DL = F.getParent()->getDataLayout();
 
-  SmallVector<Type *, 8> ArgTys;
-  for (auto &Arg : Args)
-    ArgTys.push_back(Arg.getType());
+  SmallVector<MachineInstr *, 8> Seqs;
+  SmallVector<Type *, 8> SplitTys;
+  SmallVector<unsigned, 8> SplitRegs;
+  unsigned i = 0;
+  for (auto &Arg : Args) {
+    splitToValueTypes(VRegs[i], Arg.getType(), SplitRegs, SplitTys, DL, MRI,
+                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
+                        MIRBuilder.buildSequence(VRegs[i], Regs, Offsets);
+                      });
+    ++i;
+  }
+
+  if (!MBB.empty())
+    MIRBuilder.setInstr(*MBB.begin());
 
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
 
-  return handleAssignments(MIRBuilder, AssignFn, ArgTys, VRegs,
-                           [](MachineIRBuilder &MIRBuilder, Type *Ty,
-                              unsigned ValReg, unsigned PhysReg) {
-                             MIRBuilder.getMBB().addLiveIn(PhysReg);
-                             MIRBuilder.buildCopy(ValReg, PhysReg);
-                           });
+  bool Res = handleAssignments(MIRBuilder, AssignFn, SplitTys, SplitRegs,
+                               [](MachineIRBuilder &MIRBuilder, Type *Ty,
+                                  unsigned ValReg, unsigned PhysReg) {
+                                 MIRBuilder.getMBB().addLiveIn(PhysReg);
+                                 MIRBuilder.buildCopy(ValReg, PhysReg);
+                               });
+
+  // Move back to the end of the basic block.
+  MIRBuilder.setMBB(MBB);
+
+  return Res;
 }
 
 bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
-                                    const MachineOperand &Callee,
-                                    ArrayRef<Type *> ResTys,
-                                    ArrayRef<unsigned> ResRegs,
-                                    ArrayRef<Type *> ArgTys,
+                                    const MachineOperand &Callee, Type *ResTy,
+                                    unsigned ResReg, ArrayRef<Type *> ArgTys,
                                     ArrayRef<unsigned> ArgRegs) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  auto &DL = F.getParent()->getDataLayout();
+
+  SmallVector<Type *, 8> SplitTys;
+  SmallVector<unsigned, 8> SplitRegs;
+  for (unsigned i = 0; i < ArgTys.size(); ++i) {
+    splitToValueTypes(ArgRegs[i], ArgTys[i], SplitRegs, SplitTys, DL, MRI,
+                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
+                        MIRBuilder.buildExtract(Regs, Offsets, ArgRegs[i]);
+                      });
+  }
 
   // Find out which ABI gets to decide where things go.
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
@@ -146,7 +219,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // And finally we can do the actual assignments. For a call we need to keep
   // track of the registers used because they'll be implicit uses of the BL.
   SmallVector<unsigned, 8> PhysRegs;
-  handleAssignments(MIRBuilder, CallAssignFn, ArgTys, ArgRegs,
+  handleAssignments(MIRBuilder, CallAssignFn, SplitTys, SplitRegs,
                     [&](MachineIRBuilder &MIRBuilder, Type *Ty, unsigned ValReg,
                         unsigned PhysReg) {
                       MIRBuilder.buildCopy(PhysReg, ValReg);
@@ -168,13 +241,27 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // symmetry with the arugments, the physical register must be an
   // implicit-define of the call instruction.
   CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-  if (!ResRegs.empty())
-    handleAssignments(MIRBuilder, RetAssignFn, ResTys, ResRegs,
+  if (ResReg) {
+    SplitTys.clear();
+    SplitRegs.clear();
+
+    SmallVector<uint64_t, 8> RegOffsets;
+    splitToValueTypes(ResReg, ResTy, SplitRegs, SplitTys, DL, MRI,
+                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
+                        std::copy(Offsets.begin(), Offsets.end(),
+                                  std::back_inserter(RegOffsets));
+                      });
+
+    handleAssignments(MIRBuilder, RetAssignFn, SplitTys, SplitRegs,
                       [&](MachineIRBuilder &MIRBuilder, Type *Ty,
                           unsigned ValReg, unsigned PhysReg) {
                         MIRBuilder.buildCopy(ValReg, PhysReg);
                         MIB.addDef(PhysReg, RegState::Implicit);
                       });
+
+    if (!RegOffsets.empty())
+      MIRBuilder.buildSequence(ResReg, SplitRegs, RegOffsets);
+  }
 
   return true;
 }

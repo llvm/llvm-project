@@ -1091,7 +1091,7 @@ EnableOptionsSP ParseAutoEnableOptions(Error &error, Debugger &debugger) {
   // ParseOptions calls getopt_long_only, which always skips the zero'th item in
   // the array and starts at position 1,
   // so we need to push a dummy value into position zero.
-  args.Unshift("dummy_string");
+  args.Unshift(llvm::StringRef("dummy_string"));
   bool require_validation = false;
   error = args.ParseOptions(*options_sp.get(), &exe_ctx, PlatformSP(),
                             require_validation);
@@ -1547,14 +1547,15 @@ Error StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
     // Here we need to strip out any OS_ACTIVITY_DT_MODE setting to prevent
     // echoing of os_log()/NSLog() to stderr in the target program.
     size_t argument_index;
-    if (env_vars.ContainsEnvironmentVariable("OS_ACTIVITY_DT_MODE",
-                                             &argument_index))
+    if (env_vars.ContainsEnvironmentVariable(
+            llvm::StringRef("OS_ACTIVITY_DT_MODE"), &argument_index))
       env_vars.DeleteArgumentAtIndex(argument_index);
 
     // We will also set the env var that tells any downstream launcher
     // from adding OS_ACTIVITY_DT_MODE.
-    env_vars.AddOrReplaceEnvironmentVariable("IDE_DISABLED_OS_ACTIVITY_DT_MODE",
-                                             "1");
+    env_vars.AddOrReplaceEnvironmentVariable(
+        llvm::StringRef("IDE_DISABLED_OS_ACTIVITY_DT_MODE"),
+        llvm::StringRef("1"));
   }
 
   // Set the OS_ACTIVITY_MODE env var appropriately to enable/disable
@@ -1568,9 +1569,8 @@ Error StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
     env_var_value = "";
 
   if (env_var_value) {
-    const char *env_var_name = "OS_ACTIVITY_MODE";
     launch_info.GetEnvironmentEntries().AddOrReplaceEnvironmentVariable(
-        env_var_name, env_var_value);
+        llvm::StringRef("OS_ACTIVITY_MODE"), llvm::StringRef(env_var_value));
   }
 
   return error;

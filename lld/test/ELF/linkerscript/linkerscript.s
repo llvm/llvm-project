@@ -25,29 +25,29 @@
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" libxyz.a )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script 2>/dev/null
 # RUN: ld.lld -o %t2 %t.script -L%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" =libxyz.a )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script  2>/dev/null
 # RUN: ld.lld -o %t2 %t.script --sysroot=%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" -lxyz )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script  2>/dev/null
 # RUN: ld.lld -o %t2 %t.script -L%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" libxyz.a )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script  2>/dev/null
 # RUN: ld.lld -o %t2 %t.script -L%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" /libxyz.a )" > %t.script
 # RUN: echo "GROUP(\"%t\" /libxyz.a )" > %t.dir/xyz.script
-# RUN: not ld.lld -o %t2 %t.script
-# RUN: not ld.lld -o %t2 %t.script --sysroot=%t.dir
+# RUN: not ld.lld -o %t2 %t.script 2>/dev/null
+# RUN: not ld.lld -o %t2 %t.script --sysroot=%t.dir  2>/dev/null
 # RUN: ld.lld -o %t2 %t.dir/xyz.script --sysroot=%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 

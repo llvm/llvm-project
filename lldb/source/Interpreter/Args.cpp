@@ -352,11 +352,11 @@ void Args::Shift() {
   }
 }
 
-const char *Args::Unshift(const char *arg_cstr, char quote_char) {
-  m_args.push_front(arg_cstr);
+llvm::StringRef Args::Unshift(llvm::StringRef arg_str, char quote_char) {
+  m_args.push_front(arg_str);
   m_argv.insert(m_argv.begin(), m_args.front().c_str());
   m_args_quote_char.insert(m_args_quote_char.begin(), quote_char);
-  return GetArgumentAtIndex(0);
+  return llvm::StringRef::withNullAsEmpty(GetArgumentAtIndex(0));
 }
 
 void Args::AppendArguments(const Args &rhs) {
@@ -972,72 +972,42 @@ void Args::LongestCommonPrefix(std::string &common_prefix) {
   }
 }
 
-void Args::AddOrReplaceEnvironmentVariable(const char *env_var_name,
-                                           const char *new_value) {
-  if (!env_var_name || !new_value)
+void Args::AddOrReplaceEnvironmentVariable(llvm::StringRef env_var_name,
+                                           llvm::StringRef new_value) {
+  if (env_var_name.empty() || new_value.empty())
     return;
 
   // Build the new entry.
-  StreamString stream;
-  stream << env_var_name;
-  stream << '=';
-  stream << new_value;
-  stream.Flush();
+  std::string var_string(env_var_name);
+  var_string += "=";
+  var_string += new_value;
 
-  // Find the environment variable if present and replace it.
-  for (size_t i = 0; i < GetArgumentCount(); ++i) {
-    // Get the env var value.
-    const char *arg_value = GetArgumentAtIndex(i);
-    if (!arg_value)
-      continue;
-
-    // Find the name of the env var: before the first =.
-    auto equal_p = strchr(arg_value, '=');
-    if (!equal_p)
-      continue;
-
-    // Check if the name matches the given env_var_name.
-    if (strncmp(env_var_name, arg_value, equal_p - arg_value) == 0) {
-      ReplaceArgumentAtIndex(i, stream.GetString());
-      return;
-    }
+  size_t index = 0;
+  if (ContainsEnvironmentVariable(env_var_name, &index)) {
+    ReplaceArgumentAtIndex(index, var_string);
+    return;
   }
 
   // We didn't find it.  Append it instead.
-  AppendArgument(stream.GetString());
+  AppendArgument(var_string);
 }
 
-bool Args::ContainsEnvironmentVariable(const char *env_var_name,
+bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
                                        size_t *argument_index) const {
   // Validate args.
-  if (!env_var_name)
+  if (env_var_name.empty())
     return false;
 
   // Check each arg to see if it matches the env var name.
   for (size_t i = 0; i < GetArgumentCount(); ++i) {
-    // Get the arg value.
-    const char *argument_value = GetArgumentAtIndex(i);
-    if (!argument_value)
-      continue;
+    auto arg_value = llvm::StringRef::withNullAsEmpty(GetArgumentAtIndex(0));
 
-    // Check if we are the "{env_var_name}={env_var_value}" style.
-    const char *equal_p = strchr(argument_value, '=');
-    if (equal_p) {
-      if (strncmp(env_var_name, argument_value, equal_p - argument_value) ==
-          0) {
-        // We matched.
-        if (argument_index)
-          *argument_index = i;
-        return true;
-      }
-    } else {
-      // We're a simple {env_var_name}-style entry.
-      if (strcmp(argument_value, env_var_name) == 0) {
-        // We matched.
-        if (argument_index)
-          *argument_index = i;
-        return true;
-      }
+    llvm::StringRef name, value;
+    std::tie(name, value) = arg_value.split('=');
+    if (name == env_var_name && !value.empty()) {
+      if (argument_index)
+        *argument_index = i;
+      return true;
     }
   }
 

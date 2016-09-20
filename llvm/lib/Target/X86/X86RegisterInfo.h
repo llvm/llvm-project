@@ -137,6 +137,9 @@ public:
   unsigned getSlotSize() const { return SlotSize; }
 };
 
+//get512BitRegister - X86 utility - returns 512-bit super register
+unsigned get512BitSuperRegister(unsigned Reg);
+
 } // End llvm namespace
 
 #endif

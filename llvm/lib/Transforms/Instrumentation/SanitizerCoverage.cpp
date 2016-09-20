@@ -669,6 +669,8 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto GuardVar = new GlobalVariable(
         *F.getParent(), Int64Ty, false, GlobalVariable::LinkOnceODRLinkage,
         Constant::getNullValue(Int64Ty), "__sancov_guard." + F.getName());
+    if (auto Comdat = F.getComdat())
+      GuardVar->setComdat(Comdat);
     // TODO: add debug into to GuardVar.
     GuardVar->setSection(SanCovTracePCGuardSection);
     auto GuardPtr = IRB.CreatePointerCast(GuardVar, IntptrPtrTy);

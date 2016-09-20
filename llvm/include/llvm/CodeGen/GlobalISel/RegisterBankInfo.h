@@ -109,7 +109,8 @@ public:
     /// Cost of this mapping.
     unsigned Cost;
     /// Mapping of all the operands.
-    std::unique_ptr<ValueMapping[]> OperandsMapping;
+    /// Note: Use a SmallVector to avoid heap allocation in most cases.
+    SmallVector<ValueMapping, 8> OperandsMapping;
     /// Number of operands.
     unsigned NumOperands;
 
@@ -131,7 +132,7 @@ public:
         : ID(ID), Cost(Cost), NumOperands(NumOperands) {
       assert(getID() != InvalidMappingID &&
              "Use the default constructor for invalid mapping");
-      OperandsMapping.reset(new ValueMapping[getNumOperands()]);
+      OperandsMapping.resize(getNumOperands());
     }
 
     /// Default constructor.

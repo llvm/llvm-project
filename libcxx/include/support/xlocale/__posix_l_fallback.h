@@ -124,11 +124,11 @@ inline _LIBCPP_ALWAYS_INLINE int tolower_l(int c, locale_t) {
   return ::tolower(c);
 }
 
-inline _LIBCPP_ALWAYS_INLINE int towupper_l(int c, locale_t) {
+inline _LIBCPP_ALWAYS_INLINE wint_t towupper_l(wint_t c, locale_t) {
   return ::towupper(c);
 }
 
-inline _LIBCPP_ALWAYS_INLINE int towlower_l(int c, locale_t) {
+inline _LIBCPP_ALWAYS_INLINE wint_t towlower_l(wint_t c, locale_t) {
   return ::towlower(c);
 }
 

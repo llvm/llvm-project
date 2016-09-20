@@ -546,8 +546,12 @@ protected:
         //     .cfi_def_cfa_register %rbp
         //
         HasFP = true;
-        assert(MRI.getLLVMRegNum(Inst.getRegister(), true) ==
-               (Is64Bit ? X86::RBP : X86::EBP) && "Invalid frame pointer!");
+
+        // If the frame pointer is other than esp/rsp, we do not have a way to
+        // generate a compact unwinding representation, so bail out.
+        if (MRI.getLLVMRegNum(Inst.getRegister(), true) !=
+            (Is64Bit ? X86::RBP : X86::EBP))
+          return 0;
 
         // Reset the counts.
         memset(SavedRegs, 0, sizeof(SavedRegs));
