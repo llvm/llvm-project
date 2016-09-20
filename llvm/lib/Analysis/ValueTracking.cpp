@@ -2833,11 +2833,17 @@ Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
       break;
 
     if (GEPOperator *GEP = dyn_cast<GEPOperator>(Ptr)) {
-      APInt GEPOffset(BitWidth, 0);
+      // If one of the values we have visited is an addrspacecast, then
+      // the pointer type of this GEP may be different from the type
+      // of the Ptr parameter which was passed to this function.  This
+      // means when we construct GEPOffset, we need to use the size
+      // of GEP's pointer type rather than the size of the original
+      // pointer type.
+      APInt GEPOffset(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
       if (!GEP->accumulateConstantOffset(DL, GEPOffset))
         break;
 
-      ByteOffset += GEPOffset;
+      ByteOffset += GEPOffset.getSExtValue();
 
       Ptr = GEP->getPointerOperand();
     } else if (Operator::getOpcode(Ptr) == Instruction::BitCast ||
