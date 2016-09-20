@@ -49,10 +49,17 @@ F(T x, T y) \
     WRAPNT(2,F,T) \
     WRAP1T(F,T)
 
+#if !defined USE_CLP
 #define WRAP(F) \
     WRAPT(F,float) \
     WRAPT(F,double) \
     WRAPT(F,half)
+#else
+#define WRAP(F) \
+    WRAP1T(F,float) \
+    WRAP1T(F,double) \
+    WRAP1T(F,half)
+#endif
 
 WRAP(atan2)
 WRAP(atan2pi)

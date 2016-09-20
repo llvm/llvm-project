@@ -5,9 +5,15 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+// For trigs
+extern int __half_red(float, __private float *);
+extern float __half_scr(float, __private float *);
+extern float __half_tr(float, int);
+
 #define IATTR __attribute__((always_inline, overloadable))
 #define CATTR __attribute__((always_inline, overloadable, const))
 
+#if !defined USE_CLP
 #define LISTU2(F) F(x.s0), F(x.s1)
 #define LISTU3(F) F(x.s0), F(x.s1), F(x.s2)
 #define LISTU4(F) LISTU2(F), F(x.s2), F(x.s3)
@@ -50,12 +56,6 @@ F(float##N x, float##N y) \
     EXPBN(3,F) \
     EXPBN(2,F)
 
-// For trigs
-extern int __half_red(float, __private float *);
-extern float __half_scr(float, __private float *);
-extern float __half_tr(float, int);
-
-
 EXPB(half_divide)
 EXPB(half_powr)
 EXPU(half_cos)
@@ -70,6 +70,7 @@ EXPU(half_rsqrt)
 EXPU(half_sin)
 EXPU(half_sqrt)
 EXPU(half_tan)
+#endif // !USE_CLP
 
 CATTR float
 half_divide(float x, float y)

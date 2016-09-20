@@ -18,6 +18,7 @@
 
 #define ATTR __attribute__((always_inline, overloadable, const))
 
+#if !defined USE_CLP
 #define LISTU2(F) F(x.s0), F(x.s1)
 #define LISTU3(F) F(x.s0), F(x.s1), F(x.s2)
 #define LISTU4(F) LISTU2(F), F(x.s2), F(x.s3)
@@ -75,6 +76,7 @@ EXPU(native_recip)
 EXPU(native_rsqrt)
 EXPU(native_sin)
 EXPU(native_sqrt)
+#endif // !USE_CLP
 
 ATTR float
 native_divide(float x, float y)

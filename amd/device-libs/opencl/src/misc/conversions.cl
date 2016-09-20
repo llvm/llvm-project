@@ -23,10 +23,7 @@ extern __attribute__((const)) uint __cvt_f16_rtz_f64(double);
 #define C(A,B) _C(A,B)
 
 
-#if defined USE_CLP
-#define NOP(TO,TI,S,R)
-#define CAST(TO,TI,S,R)
-#else
+#if !defined USE_CLP
 #define NOPN(N,TO,TI,S,R) ATTR TO##N convert_##TO##N##S##R(TO##N x) { return x; }
 
 #define NOP(TO,TI,S,R) \
@@ -53,6 +50,9 @@ extern __attribute__((const)) uint __cvt_f16_rtz_f64(double);
     CASTN(3,TO,TI,S,R) \
     CASTN(2,TO,TI,S,R) \
     CASTN(,TO,TI,S,R)
+#else
+#define NOP(TO,TI,S,R)
+#define CAST(TO,TI,S,R)
 #endif
 
 #define char_short_lb CHAR_MIN
