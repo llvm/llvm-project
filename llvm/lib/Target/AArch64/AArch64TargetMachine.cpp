@@ -167,29 +167,6 @@ static std::string computeDataLayout(const Triple &TT, bool LittleEndian) {
   return "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
 }
 
-// Helper function to set up the defaults for reciprocals.
-static void initReciprocals(AArch64TargetMachine& TM, AArch64Subtarget& ST)
-{
-  // For the estimates, convergence is quadratic, so essentially the number of
-  // digits is doubled after each iteration. ARMv8, the minimum architected
-  // accuracy of the initial estimate is 2^-8.  Therefore, the number of extra
-  // steps to refine the result for float (23 mantissa bits) and for double
-  // (52 mantissa bits) are 2 and 3, respectively.
-  unsigned ExtraStepsF = 2,
-           ExtraStepsD = ExtraStepsF + 1;
-  bool UseRsqrt = ST.useRSqrt();
-
-  TM.Options.Reciprocals.setDefaults("sqrtf", UseRsqrt, ExtraStepsF);
-  TM.Options.Reciprocals.setDefaults("sqrtd", UseRsqrt, ExtraStepsD);
-  TM.Options.Reciprocals.setDefaults("vec-sqrtf", UseRsqrt, ExtraStepsF);
-  TM.Options.Reciprocals.setDefaults("vec-sqrtd", UseRsqrt, ExtraStepsD);
-
-  TM.Options.Reciprocals.setDefaults("divf", false, ExtraStepsF);
-  TM.Options.Reciprocals.setDefaults("divd", false, ExtraStepsD);
-  TM.Options.Reciprocals.setDefaults("vec-divf", false, ExtraStepsF);
-  TM.Options.Reciprocals.setDefaults("vec-divd", false, ExtraStepsD);
-}
-
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
   // AArch64 Darwin is always PIC.
@@ -214,8 +191,7 @@ AArch64TargetMachine::AArch64TargetMachine(
     : LLVMTargetMachine(T, computeDataLayout(TT, LittleEndian), TT, CPU, FS,
                         Options, getEffectiveRelocModel(TT, RM), CM, OL),
       TLOF(createTLOF(getTargetTriple())),
-      Subtarget(TT, CPU, FS, *this, LittleEndian) {
-  initReciprocals(*this, Subtarget);
+      isLittle(LittleEndian) {
   initAsmInfo();
 }
 
@@ -263,7 +239,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = llvm::make_unique<AArch64Subtarget>(TargetTriple, CPU, FS, *this,
-                                            Subtarget.isLittleEndian());
+                                            isLittle);
 #ifndef LLVM_BUILD_GLOBAL_ISEL
    GISelAccessor *GISel = new GISelAccessor();
 #else

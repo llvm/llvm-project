@@ -1026,7 +1026,9 @@ public:
                                           bool AddToUsed);
 
   llvm::GlobalVariable *CreateCStringLiteral(StringRef Name,
-                                             ObjCLabelType LabelType);
+                                             ObjCLabelType LabelType,
+                                             bool ForceNonFragileABI = false,
+                                             bool NullTerminate = true);
 
 protected:
   CodeGen::RValue EmitMessageSend(CodeGen::CodeGenFunction &CGF,
@@ -2586,10 +2588,9 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
     }
   }
 
-  llvm::GlobalVariable *Entry = CreateMetadataVar(
-      "OBJC_CLASS_NAME_",
-      llvm::ConstantDataArray::getString(VMContext, BitMap, false),
-      "__TEXT,__objc_classname,cstring_literals", CharUnits::One(), true);
+  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::ClassName,
+                                     /*ForceNonFragileABI=*/true,
+                                     /*NullTerminate=*/false);
   return getConstantGEP(VMContext, Entry, 0, 0);
 }
 
@@ -3661,7 +3662,9 @@ llvm::GlobalVariable *CGObjCCommonMac::CreateMetadataVar(Twine Name,
 }
 
 llvm::GlobalVariable *
-CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type) {
+CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
+                                      bool ForceNonFragileABI,
+                                      bool NullTerminate) {
   StringRef Label;
   switch (Type) {
   case ObjCLabelType::ClassName:     Label = "OBJC_CLASS_NAME_"; break;
@@ -3670,26 +3673,29 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type) {
   case ObjCLabelType::PropertyName:  Label = "OBJC_PROP_NAME_ATTR_"; break;
   }
 
+  bool NonFragile = ForceNonFragileABI || isNonFragileABI();
+
   StringRef Section;
   switch (Type) {
   case ObjCLabelType::ClassName:
-    Section = isNonFragileABI() ? "__TEXT,__objc_classname,cstring_literals"
-                                : "__TEXT,__cstring,cstring_literals";
+    Section = NonFragile ? "__TEXT,__objc_classname,cstring_literals"
+                         : "__TEXT,__cstring,cstring_literals";
     break;
   case ObjCLabelType::MethodVarName:
-    Section = isNonFragileABI() ? "__TEXT,__objc_methname,cstring_literals"
-                                : "__TEXT,__cstring,cstring_literals";
+    Section = NonFragile ? "__TEXT,__objc_methname,cstring_literals"
+                         : "__TEXT,__cstring,cstring_literals";
     break;
   case ObjCLabelType::MethodVarType:
-    Section = isNonFragileABI() ? "__TEXT,__objc_methtype,cstring_literals"
-                                : "__TEXT,__cstring,cstring_literals";
+    Section = NonFragile ? "__TEXT,__objc_methtype,cstring_literals"
+                         : "__TEXT,__cstring,cstring_literals";
     break;
   case ObjCLabelType::PropertyName:
     Section = "__TEXT,__cstring,cstring_literals";
     break;
   }
 
-  llvm::Constant *Value = llvm::ConstantDataArray::getString(VMContext, Name);
+  llvm::Constant *Value =
+      llvm::ConstantDataArray::getString(VMContext, Name, NullTerminate);
   llvm::GlobalVariable *GV =
       new llvm::GlobalVariable(CGM.getModule(), Value->getType(),
                                /*isConstant=*/true,

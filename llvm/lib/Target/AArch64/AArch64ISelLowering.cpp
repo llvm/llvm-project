@@ -953,8 +953,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::ST4LANEpost:       return "AArch64ISD::ST4LANEpost";
   case AArch64ISD::SMULL:             return "AArch64ISD::SMULL";
   case AArch64ISD::UMULL:             return "AArch64ISD::UMULL";
-  case AArch64ISD::FRSQRTE:           return "AArch64ISD::FRSQRTE";
-  case AArch64ISD::FRECPE:            return "AArch64ISD::FRECPE";
   }
   return nullptr;
 }
@@ -4584,46 +4582,6 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
 //===----------------------------------------------------------------------===//
 //                          AArch64 Optimization Hooks
 //===----------------------------------------------------------------------===//
-
-/// getEstimate - Return the appropriate estimate DAG for either the reciprocal
-/// or the reciprocal square root.
-static SDValue getEstimate(const AArch64Subtarget &ST,
-  const AArch64TargetLowering::DAGCombinerInfo &DCI, unsigned Opcode,
-  const SDValue &Operand, unsigned &ExtraSteps) {
-  if (!ST.hasNEON())
-    return SDValue();
-
-  EVT VT = Operand.getValueType();
-  if (VT != MVT::f64 && VT != MVT::v1f64 && VT != MVT::v2f64 &&
-      VT != MVT::f32 && VT != MVT::v1f32 &&
-      VT != MVT::v2f32 && VT != MVT::v4f32 &&
-      (!ST.hasFullFP16() ||
-       (VT != MVT::f16 && VT != MVT::v4f16 && VT != MVT::v8f16)))
-    return SDValue();
-
-  std::string RecipOp;
-  RecipOp = Opcode == (AArch64ISD::FRECPE) ? "div": "sqrt";
-  RecipOp = ((VT.isVector()) ? "vec-": "") + RecipOp;
-  RecipOp += (VT.getScalarType() == MVT::f64) ? "d": "f";
-
-  TargetRecip Recips = DCI.DAG.getTarget().Options.Reciprocals;
-  if (!Recips.isEnabled(RecipOp))
-    return SDValue();
-
-  ExtraSteps = Recips.getRefinementSteps(RecipOp);
-  return DCI.DAG.getNode(Opcode, SDLoc(Operand), VT, Operand);
-}
-
-SDValue AArch64TargetLowering::getRecipEstimate(SDValue Operand,
-  DAGCombinerInfo &DCI, unsigned &ExtraSteps) const {
-  return getEstimate(*Subtarget, DCI, AArch64ISD::FRECPE, Operand, ExtraSteps);
-}
-
-SDValue AArch64TargetLowering::getRsqrtEstimate(SDValue Operand,
-  DAGCombinerInfo &DCI, unsigned &ExtraSteps, bool &UseOneConst) const {
-  UseOneConst = true;
-  return getEstimate(*Subtarget, DCI, AArch64ISD::FRSQRTE, Operand, ExtraSteps);
-}
 
 //===----------------------------------------------------------------------===//
 //                          AArch64 Inline Assembly Support

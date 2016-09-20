@@ -128,6 +128,8 @@ public:
 
   uint32_t GetPluginVersion() override;
 
+  bool IsWindowsSubsystem();
+
 protected:
   bool NeedsEndianSwap() const;
 

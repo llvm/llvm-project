@@ -66,8 +66,8 @@ pointer.
 
 .. _ubsan-checks:
 
-Availablle checks
-=================
+Available checks
+================
 
 Available checks are:
 

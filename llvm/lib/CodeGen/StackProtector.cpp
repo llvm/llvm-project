@@ -236,11 +236,6 @@ bool StackProtector::RequiresStackProtector() {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         if (AI->isArrayAllocation()) {
-          // SSP-Strong: Enable protectors for any call to alloca, regardless
-          // of size.
-          if (Strong)
-            return true;
-
           if (const auto *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
             if (CI->getLimitedValue(SSPBufferSize) >= SSPBufferSize) {
               // A call to alloca with size >= SSPBufferSize requires

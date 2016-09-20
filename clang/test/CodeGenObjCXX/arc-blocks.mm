@@ -2,7 +2,7 @@
 
 // CHECK: [[A:.*]] = type { i64, [10 x i8*] }
 
-// CHECK: [[LAYOUT0:@.*]] = private global [3 x i8] c" 9\00"
+// CHECK: [[LAYOUT0:@.*]] = private unnamed_addr constant [3 x i8] c" 9\00"
 
 // rdar://13045269
 // If a __block variable requires extended layout information *and*

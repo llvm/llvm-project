@@ -967,7 +967,8 @@ void SelectInstVisitor::annotateOneSelectInst(SelectInst &SI) {
   // False Count
   SCounts[1] = (TotalCount > SCounts[0] ? TotalCount - SCounts[0] : 0);
   uint64_t MaxCount = std::max(SCounts[0], SCounts[1]);
-  setProfMetadata(F.getParent(), &SI, SCounts, MaxCount);
+  if (MaxCount)
+    setProfMetadata(F.getParent(), &SI, SCounts, MaxCount);
 }
 
 void SelectInstVisitor::visitSelectInst(SelectInst &SI) {

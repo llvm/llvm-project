@@ -108,8 +108,6 @@ static const char *getSparcAsmModeForCPU(StringRef Name,
   }
 }
 
-/// CheckPreprocessingOptions - Perform some validation of preprocessing
-/// arguments that is shared with gcc.
 static void CheckPreprocessingOptions(const Driver &D, const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_C, options::OPT_CC)) {
     if (!Args.hasArg(options::OPT_E) && !Args.hasArg(options::OPT__SLASH_P) &&
@@ -121,8 +119,6 @@ static void CheckPreprocessingOptions(const Driver &D, const ArgList &Args) {
   }
 }
 
-/// CheckCodeGenerationOptions - Perform some validation of code generation
-/// arguments that is shared with gcc.
 static void CheckCodeGenerationOptions(const Driver &D, const ArgList &Args) {
   // In gcc, only ARM checks this, but it seems reasonable to check universally.
   if (Args.hasArg(options::OPT_static))

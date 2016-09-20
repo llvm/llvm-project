@@ -546,7 +546,7 @@ struct Version {
 // Takes a StringRef like "clang 4.0.0.0 (other nonsense 123)" and parses out
 // the version number.
 static Version parseVersion(StringRef Name) {
-  Version V = {0};
+  Version V = {{0}};
   int N = 0;
   for (const char C : Name) {
     if (isdigit(C)) {
@@ -614,11 +614,11 @@ void CodeViewDebug::emitCompilerInformation() {
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
   // guarantees it'll be big enough without really lying about the version.
-  Version BackVer = {
+  Version BackVer = {{
       1000 * LLVM_VERSION_MAJOR +
       10 * LLVM_VERSION_MINOR +
       LLVM_VERSION_PATCH,
-      0, 0, 0 };
+      0, 0, 0 }};
   OS.AddComment("Backend version");
   for (int N = 0; N < 4; ++N)
     OS.EmitIntValue(BackVer.Part[N], 2);

@@ -25,6 +25,7 @@
 # RUN:             *(.eh_frame_hdr) \
 # RUN:             __eh_frame_hdr_end = .; \
 # RUN:             __eh_frame_hdr_end2 = ABSOLUTE(ALIGN(0x10)); } \
+# RUN:          .eh_frame : { } \
 # RUN:       }" > %t.script
 # RUN: ld.lld -o %t1 --eh-frame-hdr --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=SIMPLE %s
