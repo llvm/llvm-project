@@ -5,8 +5,9 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-
 #if !defined NO_BLIT
+
+static const uint SplitCount = 3;
 
 __attribute__((always_inline)) void
 __amd_copyBufferToImage(
@@ -441,17 +442,24 @@ __amd_fillImage(
 
     coords += origin;
 
-    // Check components
-    switch (type) {
-    case 0:
-        write_imagef(image, coords, patternFLOAT4);
-        break;
-    case 1:
-        write_imagei(image, coords, patternINT4);
-        break;
-    case 2:
-        write_imageui(image, coords, patternUINT4);
-        break;
+    int SizeX = get_global_size(0);
+    int AdjustedSizeX = size.x + origin.x;
+
+    for (uint i = 0; i < SplitCount; ++i) {
+        // Check components
+        switch (type) {
+        case 0:
+            write_imagef(image, coords, patternFLOAT4);
+            break;
+        case 1:
+            write_imagei(image, coords, patternINT4);
+            break;
+        case 2:
+            write_imageui(image, coords, patternUINT4);
+            break;
+        }
+        coords.x += SizeX;
+        if (coords.x >= AdjustedSizeX) return;
     }
 }
 
