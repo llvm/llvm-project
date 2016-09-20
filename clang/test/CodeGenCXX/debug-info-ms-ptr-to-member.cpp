@@ -23,7 +23,6 @@ int Incomplete::**ppmd;
 void (Incomplete::**ppmf)();
 
 // CHECK: distinct !DIGlobalVariable(name: "pmd_a", {{.*}} type: ![[pmd_a:[^, ]*]], {{.*}})
-// CHECK: ![[pmd_a]] = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !{{.*}}, size: 32, flags: DIFlagSingleInheritance, {{.*}})
 // CHECK: distinct !DIGlobalVariable(name: "pmd_b", {{.*}} type: ![[pmd_b:[^, ]*]], {{.*}})
 // CHECK: ![[pmd_b]] = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !{{.*}}, size: 32, flags: DIFlagMultipleInheritance, {{.*}})
 // CHECK: distinct !DIGlobalVariable(name: "pmd_c", {{.*}} type: ![[pmd_c:[^, ]*]], {{.*}})
@@ -50,3 +49,5 @@ void (Incomplete::**ppmf)();
 // CHECK: distinct !DIGlobalVariable(name: "ppmf", {{.*}} type: ![[ppmf:[^, ]*]], {{.*}})
 // CHECK: ![[ppmf]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[ppmf2:[^ ]*]], size: 64, align: 64)
 // CHECK: ![[ppmf2]] = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !{{[0-9]*}}, extraData: !{{[0-9]*}}){{$}}
+
+// CHECK: ![[pmd_a]] = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !{{.*}}, size: 32, flags: DIFlagSingleInheritance, {{.*}})
