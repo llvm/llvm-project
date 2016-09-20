@@ -14,8 +14,8 @@
 # TEXTORPHAN:      Sections:
 # TEXTORPHAN-NEXT: Idx Name
 # TEXTORPHAN-NEXT:   0
-# TEXTORPHAN-NEXT:   1 .writable
-# TEXTORPHAN-NEXT:   2 .text
+# TEXTORPHAN-NEXT:   1 .text
+# TEXTORPHAN-NEXT:   2 .writable
 
 # WRITABLEORPHAN:      Sections:
 # WRITABLEORPHAN-NEXT: Idx Name

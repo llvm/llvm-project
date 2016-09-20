@@ -24,8 +24,8 @@
 # RUN: llvm-readobj -s %t2 | FileCheck %s
 
 # CHECK:       Section {
-# CHECK:         Index: 4
-# CHECK-NEXT:    Name: .got
+# CHECK:         Index:
+# CHECK:         Name: .got
 # CHECK-NEXT:    Type: SHT_PROGBITS
 # CHECK-NEXT:    Flags [
 # CHECK-NEXT:      SHF_ALLOC
@@ -40,7 +40,7 @@
 # CHECK-NEXT:    EntrySize:
 # CHECK-NEXT:  }
 # CHECK-NEXT:  Section {
-# CHECK-NEXT:    Index: 5
+# CHECK-NEXT:    Index:
 # CHECK-NEXT:    Name: .got.plt
 # CHECK-NEXT:    Type: SHT_PROGBITS
 # CHECK-NEXT:    Flags [

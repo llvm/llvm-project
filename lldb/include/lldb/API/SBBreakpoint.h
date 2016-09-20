@@ -88,6 +88,10 @@ public:
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 
+  void SetCommandLineCommands(SBStringList &commands);
+
+  bool GetCommandLineCommands(SBStringList &commands);
+
   SBError SetScriptCallbackBody(const char *script_body_text);
 
   bool AddName(const char *new_name);
@@ -154,7 +158,7 @@ public:
 
   SBBreakpoint GetBreakpointAtIndex(size_t idx);
 
-  SBBreakpoint  FindBreakpointByID(lldb::break_id_t);
+  SBBreakpoint FindBreakpointByID(lldb::break_id_t);
 
   void Append(const SBBreakpoint &sb_file);
 

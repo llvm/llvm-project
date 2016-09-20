@@ -34,15 +34,34 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
-std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Prefix(
+    ConstString p)
+    : m_prefix(p) {}
+
+bool NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Match(
+    ConstString class_name) {
+  return class_name.GetStringRef().startswith(m_prefix.GetStringRef());
+}
+
+NSDictionary_Additionals::AdditionalFormatterMatching::Full::Full(ConstString n)
+    : m_name(n) {}
+
+bool NSDictionary_Additionals::AdditionalFormatterMatching::Full::Match(
+    ConstString class_name) {
+  return (class_name == m_name);
+}
+
+NSDictionary_Additionals::AdditionalFormatters<
+    CXXFunctionSummaryFormat::Callback> &
 NSDictionary_Additionals::GetAdditionalSummaries() {
-  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> g_map;
+  static AdditionalFormatters<CXXFunctionSummaryFormat::Callback> g_map;
   return g_map;
 }
 
-std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> &
+NSDictionary_Additionals::AdditionalFormatters<
+    CXXSyntheticChildren::CreateFrontEndCallback> &
 NSDictionary_Additionals::GetAdditionalSynthetics() {
-  static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback>
+  static AdditionalFormatters<CXXSyntheticChildren::CreateFrontEndCallback>
       g_map;
   return g_map;
 }
@@ -265,11 +284,11 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
    }*/
   else {
     auto &map(NSDictionary_Additionals::GetAdditionalSummaries());
-    auto iter = map.find(class_name), end = map.end();
-    if (iter != end)
-      return iter->second(valobj, stream, options);
-    else
-      return false;
+    for (auto &candidate : map) {
+      if (candidate.first && candidate.first->Match(class_name))
+        return candidate.second(valobj, stream, options);
+    }
+    return false;
   }
 
   std::string prefix, suffix;
@@ -331,9 +350,10 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
     return (new NSDictionary1SyntheticFrontEnd(valobj_sp));
   } else {
     auto &map(NSDictionary_Additionals::GetAdditionalSynthetics());
-    auto iter = map.find(class_name), end = map.end();
-    if (iter != end)
-      return iter->second(synth, valobj_sp);
+    for (auto &candidate : map) {
+      if (candidate.first && candidate.first->Match((class_name)))
+        return candidate.second(synth, valobj_sp);
+    }
   }
 
   return nullptr;

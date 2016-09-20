@@ -944,6 +944,21 @@ void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
   }
 }
 
+bool ObjectFilePECOFF::IsWindowsSubsystem() {
+  switch (m_coff_header_opt.subsystem) {
+  case llvm::COFF::IMAGE_SUBSYSTEM_NATIVE:
+  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI:
+  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI:
+  case llvm::COFF::IMAGE_SUBSYSTEM_NATIVE_WINDOWS:
+  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI:
+  case llvm::COFF::IMAGE_SUBSYSTEM_XBOX:
+  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool ObjectFilePECOFF::GetArchitecture(ArchSpec &arch) {
   uint16_t machine = m_coff_header.machine;
   switch (machine) {
@@ -954,7 +969,9 @@ bool ObjectFilePECOFF::GetArchitecture(ArchSpec &arch) {
   case llvm::COFF::IMAGE_FILE_MACHINE_ARM:
   case llvm::COFF::IMAGE_FILE_MACHINE_ARMNT:
   case llvm::COFF::IMAGE_FILE_MACHINE_THUMB:
-    arch.SetArchitecture(eArchTypeCOFF, machine, LLDB_INVALID_CPUTYPE);
+    arch.SetArchitecture(eArchTypeCOFF, machine, LLDB_INVALID_CPUTYPE,
+                         IsWindowsSubsystem() ? llvm::Triple::Win32
+                                              : llvm::Triple::UnknownOS);
     return true;
   default:
     break;

@@ -15,7 +15,7 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .out:
-# CHECK-NEXT: 0120 aa222222 22bb2222 22222222 2222
+# CHECK-NEXT: aa222222 22bb2222 22222222 2222
 
 .text
 .globl _start

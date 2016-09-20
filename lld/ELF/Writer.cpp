@@ -102,7 +102,8 @@ StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
-  if (!Config->PrintGcSections || !IS || IS->Live)
+  if (!Config->PrintGcSections || !IS || IS == &InputSection<ELFT>::Discarded ||
+      IS->Live)
     return;
   errs() << "removing unused section from '" << IS->Name << "' in file '"
          << IS->getFile()->getName() << "'\n";
@@ -450,14 +451,19 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
   if (AIsAlloc != BIsAlloc)
     return AIsAlloc;
 
-  int Comp = Script<ELFT>::X->compareSections(A->getName(), B->getName());
-  if (Comp != 0)
-    return Comp < 0;
+  // If  A and B are mentioned in linker script, use that order.
+  int AIndex = Script<ELFT>::X->getSectionIndex(A->getName());
+  int BIndex = Script<ELFT>::X->getSectionIndex(B->getName());
+  bool AInScript = AIndex != INT_MAX;
+  bool BInScript = BIndex != INT_MAX;
+  if (AInScript && BInScript)
+    return AIndex < BIndex;
 
-  // We don't have any special requirements for the relative order of
-  // two non allocatable sections.
+  // We don't have any special requirements for the relative order of two non
+  // allocatable sections.
+  // Just put linker script sections first to satisfy strict weak ordering.
   if (!AIsAlloc)
-    return false;
+    return AInScript;
 
   // We want the read only sections first so that they go in the PT_LOAD
   // covering the program headers at the start of the file.
@@ -506,7 +512,8 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
     return getPPC64SectionRank(A->getName()) <
            getPPC64SectionRank(B->getName());
 
-  return false;
+  // Just put linker script sections first to satisfy strict weak ordering.
+  return AInScript;
 }
 
 template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
@@ -943,6 +950,17 @@ template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
   return true;
 }
 
+// Linker scripts are responsible for aligning addresses. Unfortunately, most
+// linker scripts are designed for creating two PT_LOADs only, one RX and one
+// RW. This means that there is no alignment in the RO to RX transition and we
+// cannot create a PT_LOAD there.
+template <class ELFT>
+static typename ELFT::uint computeFlags(typename ELFT::uint F) {
+  if (ScriptConfig->HasSections && !(F & PF_W))
+    return F | PF_X;
+  return F;
+}
+
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT>
@@ -965,7 +983,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   }
 
   // Add the first PT_LOAD segment for regular output sections.
-  uintX_t Flags = PF_R;
+  uintX_t Flags = computeFlags<ELFT>(PF_R);
   Phdr *Load = AddHdr(PT_LOAD, Flags);
   Load->add(Out<ELFT>::ElfHeader);
   Load->add(Out<ELFT>::ProgramHeaders);
@@ -978,7 +996,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
       break;
 
     // If we meet TLS section then we create TLS header
-    // and put all TLS sections inside for futher use when
+    // and put all TLS sections inside for further use when
     // assign addresses.
     if (Sec->getFlags() & SHF_TLS)
       TlsHdr.add(Sec);
@@ -991,7 +1009,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     // Therefore, we need to create a new phdr when the next section has
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
-    uintX_t NewFlags = Sec->getPhdrFlags();
+    uintX_t NewFlags = computeFlags<ELFT>(Sec->getPhdrFlags());
     if (Script<ELFT>::X->getLma(Sec->getName()) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
