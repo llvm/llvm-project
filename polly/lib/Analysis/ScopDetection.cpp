@@ -297,56 +297,10 @@ bool ScopDetection::addOverApproximatedRegion(Region *AR,
   // All loops in the region have to be overapproximated too if there
   // are accesses that depend on the iteration count.
 
-  BoxedLoopsSetTy ARBoxedLoopsSet;
-
   for (BasicBlock *BB : AR->blocks()) {
     Loop *L = LI->getLoopFor(BB);
-    if (AR->contains(L)) {
+    if (AR->contains(L))
       Context.BoxedLoopsSet.insert(L);
-      ARBoxedLoopsSet.insert(L);
-    }
-  }
-
-  // Reject if the surrounding loop does not entirely contain the nonaffine
-  // subregion.
-  // This can happen because a region can contain BBs that have no path to the
-  // exit block (Infinite loops, UnreachableInst), but such blocks are never
-  // part of a loop.
-  //
-  // _______________
-  // | Loop Header | <-----------.
-  // ---------------             |
-  //        |                    |
-  // _______________       ______________
-  // | RegionEntry |-----> | RegionExit |----->
-  // ---------------       --------------
-  //        |
-  // _______________
-  // | EndlessLoop | <--.
-  // ---------------    |
-  //       |            |
-  //       \------------/
-  //
-  // In the example above, the loop (LoopHeader,RegionEntry,RegionExit) is
-  // neither entirely contained in the region RegionEntry->RegionExit
-  // (containing RegionEntry,EndlessLoop) nor is the region entirely contained
-  // in the loop.
-  // The block EndlessLoop is contained is in the region because
-  // Region::contains tests whether it is not dominated by RegionExit. This is
-  // probably to not having to query the PostdominatorTree.
-  // Instead of an endless loop, a dead end can also be formed by
-  // UnreachableInst. This case is already caught by isErrorBlock(). We hence
-  // only have to test whether there is an endless loop not contained in the
-  // surrounding loop.
-  BasicBlock *BBEntry = AR->getEntry();
-  Loop *L = LI->getLoopFor(BBEntry);
-  while (L && AR->contains(L))
-    L = L->getParentLoop();
-  if (L) {
-    for (const auto *ARBoxedLoop : ARBoxedLoopsSet)
-      if (!L->contains(ARBoxedLoop))
-        return invalid<ReportLoopOverlapWithNonAffineSubRegion>(
-            Context, /*Assert=*/true, L, AR);
   }
 
   return (AllowNonAffineSubLoops || Context.BoxedLoopsSet.empty());
@@ -1057,18 +1011,23 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
   return invalid<ReportUnknownInst>(Context, /*Assert=*/true, &Inst);
 }
 
+/// Check whether @p L has exiting blocks.
+///
+/// @param L The loop of interest
+///
+/// @return True if the loop has exiting blocks, false otherwise.
+static bool hasExitingBlocks(Loop *L) {
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  return !ExitingBlocks.empty();
+}
+
 bool ScopDetection::canUseISLTripCount(Loop *L,
                                        DetectionContext &Context) const {
   // Ensure the loop has valid exiting blocks as well as latches, otherwise we
   // need to overapproximate it as a boxed loop.
   SmallVector<BasicBlock *, 4> LoopControlBlocks;
   L->getExitingBlocks(LoopControlBlocks);
-
-  // Loops without exiting blocks cannot be handled by the schedule generation
-  // as it depends on a region covering that is not given.
-  if (LoopControlBlocks.empty())
-    return false;
-
   L->getLoopLatches(LoopControlBlocks);
   for (BasicBlock *ControlBB : LoopControlBlocks) {
     if (!isValidCFG(*ControlBB, true, false, Context))
@@ -1080,6 +1039,38 @@ bool ScopDetection::canUseISLTripCount(Loop *L,
 }
 
 bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) const {
+  // Loops that contain part but not all of the blocks of a region cannot be
+  // handled by the schedule generation. Such loop constructs can happen
+  // because a region can contain BBs that have no path to the exit block
+  // (Infinite loops, UnreachableInst), but such blocks are never part of a
+  // loop.
+  //
+  // _______________
+  // | Loop Header | <-----------.
+  // ---------------             |
+  //        |                    |
+  // _______________       ______________
+  // | RegionEntry |-----> | RegionExit |----->
+  // ---------------       --------------
+  //        |
+  // _______________
+  // | EndlessLoop | <--.
+  // ---------------    |
+  //       |            |
+  //       \------------/
+  //
+  // In the example above, the loop (LoopHeader,RegionEntry,RegionExit) is
+  // neither entirely contained in the region RegionEntry->RegionExit
+  // (containing RegionEntry,EndlessLoop) nor is the region entirely contained
+  // in the loop.
+  // The block EndlessLoop is contained in the region because Region::contains
+  // tests whether it is not dominated by RegionExit. This is probably to not
+  // having to query the PostdominatorTree. Instead of an endless loop, a dead
+  // end can also be formed by an UnreachableInst. This case is already caught
+  // by isErrorBlock(). We hence only have to reject endless loops here.
+  if (!hasExitingBlocks(L))
+    return invalid<ReportLoopHasNoExit>(Context, /*Assert=*/true, L);
+
   if (canUseISLTripCount(L, Context))
     return true;
 

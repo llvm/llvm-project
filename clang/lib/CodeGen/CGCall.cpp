@@ -29,6 +29,7 @@
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/CallSite.h"
@@ -2905,10 +2906,6 @@ static bool isProvablyNull(llvm::Value *addr) {
   return isa<llvm::ConstantPointerNull>(addr);
 }
 
-static bool isProvablyNonNull(llvm::Value *addr) {
-  return isa<llvm::AllocaInst>(addr);
-}
-
 /// Emit the actual writing-back of a writeback.
 static void emitWriteback(CodeGenFunction &CGF,
                           const CallArgList::Writeback &writeback) {
@@ -2921,7 +2918,7 @@ static void emitWriteback(CodeGenFunction &CGF,
 
   // If the argument wasn't provably non-null, we need to null check
   // before doing the store.
-  bool provablyNonNull = isProvablyNonNull(srcAddr.getPointer());
+  bool provablyNonNull = llvm::isKnownNonNull(srcAddr.getPointer());
   if (!provablyNonNull) {
     llvm::BasicBlock *writebackBB = CGF.createBasicBlock("icr.writeback");
     contBB = CGF.createBasicBlock("icr.done");
@@ -3061,7 +3058,7 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   // If the address is *not* known to be non-null, we need to switch.
   llvm::Value *finalArgument;
 
-  bool provablyNonNull = isProvablyNonNull(srcAddr.getPointer());
+  bool provablyNonNull = llvm::isKnownNonNull(srcAddr.getPointer());
   if (provablyNonNull) {
     finalArgument = temp.getPointer();
   } else {

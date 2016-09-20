@@ -35,6 +35,5 @@ bool CallLowering::lowerCall(
   else
     Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  return lowerCall(MIRBuilder, Callee, CI.getType(),
-                   ResReg ? ResReg : ArrayRef<unsigned>(), ArgTys, ArgRegs);
+  return lowerCall(MIRBuilder, Callee, CI.getType(), ResReg, ArgTys, ArgRegs);
 }

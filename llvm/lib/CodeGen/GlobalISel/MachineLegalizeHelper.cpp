@@ -135,7 +135,8 @@ MachineLegalizeHelper::narrowScalar(MachineInstr &MI, unsigned TypeIdx,
 
     MIRBuilder.setInstr(MI);
 
-    SmallVector<unsigned, 2> Src1Regs, Src2Regs, DstRegs, Indexes;
+    SmallVector<unsigned, 2> Src1Regs, Src2Regs, DstRegs;
+    SmallVector<uint64_t, 2> Indexes;
     extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
     extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
 
@@ -333,7 +334,8 @@ MachineLegalizeHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
 
     MIRBuilder.setInstr(MI);
 
-    SmallVector<unsigned, 2> Src1Regs, Src2Regs, DstRegs, Indexes;
+    SmallVector<unsigned, 2> Src1Regs, Src2Regs, DstRegs;
+    SmallVector<uint64_t, 2> Indexes;
     extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
     extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
 

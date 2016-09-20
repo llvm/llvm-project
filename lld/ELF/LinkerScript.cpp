@@ -446,6 +446,29 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
 }
 
 template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
+  // It is common practice to use very generic linker scripts. So for any
+  // given run some of the output sections in the script will be empty.
+  // We could create corresponding empty output sections, but that would
+  // clutter the output.
+  // We instead remove trivially empty sections. The bfd linker seems even
+  // more aggressive at removing them.
+  auto Pos = std::remove_if(
+      Opt.Commands.begin(), Opt.Commands.end(),
+      [&](const std::unique_ptr<BaseCommand> &Base) {
+        auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
+        if (!Cmd)
+          return false;
+        std::vector<OutputSectionBase<ELFT> *> Secs =
+            findSections(*Cmd, *OutputSections);
+        if (!Secs.empty())
+          return false;
+        for (const std::unique_ptr<BaseCommand> &I : Cmd->Commands)
+          if (!isa<InputSectionDescription>(I.get()))
+            return false;
+        return true;
+      });
+  Opt.Commands.erase(Pos, Opt.Commands.end());
+
   // Orphan sections are sections present in the input files which
   // are not explicitly placed into the output file by the linker script.
   // We place orphan sections at end of file.

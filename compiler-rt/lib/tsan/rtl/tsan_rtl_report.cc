@@ -38,6 +38,10 @@ void TsanCheckFailed(const char *file, int line, const char *cond,
   // on the other hand there is no sense in processing interceptors
   // since we are going to die soon.
   ScopedIgnoreInterceptors ignore;
+#ifndef SANITIZER_GO
+  cur_thread()->ignore_sync++;
+  cur_thread()->ignore_reads_and_writes++;
+#endif
   Printf("FATAL: ThreadSanitizer CHECK failed: "
          "%s:%d \"%s\" (0x%zx, 0x%zx)\n",
          file, line, cond, (uptr)v1, (uptr)v2);
