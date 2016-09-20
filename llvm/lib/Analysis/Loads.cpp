@@ -91,7 +91,10 @@ static bool isDereferenceableAndAlignedPointer(
     // then the GEP (== Base + Offset == k_0 * Align + k_1 * Align) is also
     // aligned to Align bytes.
 
-    return isDereferenceableAndAlignedPointer(Base, Align, Offset + Size, DL,
+    // Offset and Size may have different bit widths if we have visited an
+    // addrspacecast, so we can't do arithmetic directly on the APInt values.
+    return isDereferenceableAndAlignedPointer(Base, Align,
+                                              Offset + Size.getSExtValue(), DL,
                                               CtxI, DT, Visited);
   }
 
