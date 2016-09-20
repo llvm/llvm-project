@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops -analyze  -polly-detect < %s 2>&1 | FileCheck %s --check-prefix=REJECTLOOPOVERLAPREGION
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops=false -analyze  -polly-detect < %s 2>&1 | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops -analyze  -polly-detect < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops=false -analyze  -polly-detect < %s 2>&1 | FileCheck %s
 
 ; void func (int param0, int N, int *A)
 ; {
@@ -11,18 +11,7 @@
 ;      A[i] = 2;
 ; }
 
-; If we reject non-affine region and loop will be reported:
-;
-; REJECTLOOPOVERLAPREGION: remark: ReportLoopOverlapWithNonAffineRegion.c:3:3: The following errors keep this region from being a Scop.
-; REJECTLOOPOVERLAPREGION: remark: ReportLoopOverlapWithNonAffineRegion.c:3:3: Loop overlaps with nonaffine subregion.
-; REJECTLOOPOVERLAPREGION: remark: ReportLoopOverlapWithNonAffineRegion.c:7:7: Failed to derive an affine function from the loop bounds.
-; REJECTLOOPOVERLAPREGION: remark: ReportLoopOverlapWithNonAffineRegion.c:7:7: Invalid Scop candidate ends here.
-;
-; If we reject non-affine loops the non-affine loop bound will be reported:
-;
-; REJECTNONAFFINELOOPS: remark: ReportLoopOverlapWithNonAffineRegion.c:7:7: The following errors keep this region from being a Scop.
-; REJECTNONAFFINELOOPS: remark: ReportLoopOverlapWithNonAffineRegion.c:7:7: Failed to derive an affine function from the loop bounds.
-; REJECTNONAFFINELOOPS: remark: ReportLoopOverlapWithNonAffineRegion.c:7:7: Invalid Scop candidate ends here.
+; CHECK: remark: ReportLoopHasNoExit.c:7:7: Loop cannot be handled because it has no exit.
 
 
 
@@ -95,7 +84,7 @@ attributes #1 = { nounwind readnone }
 !llvm.ident = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "ReportLoopOverlapWithNonAffineRegion.c", directory: "test/ScopDetectionDiagnostics/")
+!1 = !DIFile(filename: "ReportLoopHasNoExit.c", directory: "test/ScopDetectionDiagnostics/")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}

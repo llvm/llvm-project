@@ -8,10 +8,10 @@
 # RUN: llvm-objdump -section-headers %t.out | \
 # RUN:   FileCheck %s
 # CHECK:      Sections:
-# CHECK-NEXT:  Idx Name          Size      Address          Type
-# CHECK-NEXT:    0               00000000 0000000000000000
-# CHECK-NEXT:    1 .text         00000004 0000000000000120 TEXT DATA
-# CHECK-NEXT:    2 aabc          00000004 0000000000000124 TEXT DATA
+# CHECK-NEXT:  Idx Name          Size
+# CHECK-NEXT:    0               00000000
+# CHECK-NEXT:    1 .text         00000004
+# CHECK-NEXT:    2 aabc          00000004
 
 .text
 .section .abc,"ax",@progbits

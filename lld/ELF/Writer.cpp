@@ -944,6 +944,17 @@ template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
   return true;
 }
 
+// Linker scripts are responsible for aligning addresses. Unfortunately, most
+// linker scripts are designed for creating two PT_LOADs only, one RX and one
+// RW. This means that there is no alignment in the RO to RX transition and we
+// cannot create a PT_LOAD there.
+template <class ELFT>
+static typename ELFT::uint computeFlags(typename ELFT::uint F) {
+  if (ScriptConfig->HasSections && !(F & PF_W))
+    return F | PF_X;
+  return F;
+}
+
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT>
@@ -966,7 +977,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   }
 
   // Add the first PT_LOAD segment for regular output sections.
-  uintX_t Flags = PF_R;
+  uintX_t Flags = computeFlags<ELFT>(PF_R);
   Phdr *Load = AddHdr(PT_LOAD, Flags);
   Load->add(Out<ELFT>::ElfHeader);
   Load->add(Out<ELFT>::ProgramHeaders);
@@ -979,7 +990,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
       break;
 
     // If we meet TLS section then we create TLS header
-    // and put all TLS sections inside for futher use when
+    // and put all TLS sections inside for further use when
     // assign addresses.
     if (Sec->getFlags() & SHF_TLS)
       TlsHdr.add(Sec);
@@ -992,7 +1003,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     // Therefore, we need to create a new phdr when the next section has
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
-    uintX_t NewFlags = Sec->getPhdrFlags();
+    uintX_t NewFlags = computeFlags<ELFT>(Sec->getPhdrFlags());
     if (Script<ELFT>::X->getLma(Sec->getName()) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;

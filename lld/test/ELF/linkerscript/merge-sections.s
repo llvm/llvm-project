@@ -12,8 +12,8 @@
 # CHECK-NEXT:     SHF_MERGE
 # CHECK-NEXT:     SHF_STRINGS
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x1C8
-# CHECK-NEXT:   Offset: 0x1C8
+# CHECK-NEXT:   Address: 0x[[ADDR1:.*]]
+# CHECK-NEXT:   Offset: 0x[[ADDR1]]
 # CHECK-NEXT:   Size: 4
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
@@ -28,8 +28,8 @@
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:     SHF_MERGE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x1CC
-# CHECK-NEXT:   Offset: 0x1CC
+# CHECK-NEXT:   Address: 0x
+# CHECK-NEXT:   Offset: 0x
 # CHECK-NEXT:   Size: 1
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
@@ -44,20 +44,30 @@
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:     SHF_MERGE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x1CE
-# CHECK-NEXT:   Offset: 0x1CE
+# CHECK-NEXT:   Address: 0x
+# CHECK-NEXT:   Offset: 0x
 # CHECK-NEXT:   Size: 2
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 2
 # CHECK-NEXT:   EntrySize: 2
+# CHECK-NEXT: }
+# CHECK-NEXT: Section {
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Name:
+# CHECK-NEXT:   Type:
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x[[ADDR2:.*]]
+# CHECK-NEXT:   Offset: 0x[[ADDR2]]
 
 
 # CHECK:      Name: begin
-# CHECK-NEXT: Value: 0x1C8
+# CHECK-NEXT: Value: 0x[[ADDR1]]
 
 # CHECK:      Name: end
-# CHECK-NEXT: Value: 0x1D0
+# CHECK-NEXT: Value: 0x[[ADDR2]]
 
 .section        .foo.1a,"aMS",@progbits,1
 .asciz "foo"

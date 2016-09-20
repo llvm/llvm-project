@@ -7,7 +7,7 @@
 # RUN: echo "SECTIONS {.text : {*(.text.*)} text_end = .;}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=SIMPLE %s
-# SIMPLE: 0000000000000121         *ABS*    00000000 text_end
+# SIMPLE:                               *ABS*    00000000 text_end
 
 # The symbol is not referenced. Don't provide it.
 # RUN: echo "SECTIONS { PROVIDE(newsym = 1);}" > %t.script
