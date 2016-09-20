@@ -4177,7 +4177,7 @@ bool LLParser::ParseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(type, MDField, );                                                   \
   OPTIONAL(isLocal, MDBoolField, );                                            \
   OPTIONAL(isDefinition, MDBoolField, (true));                                 \
-  OPTIONAL(variable, MDConstant, );                                            \
+  OPTIONAL(expr, MDField, );                                                   \
   OPTIONAL(declaration, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
@@ -4185,7 +4185,7 @@ bool LLParser::ParseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
   Result = GET_OR_DISTINCT(DIGlobalVariable,
                            (Context, scope.Val, name.Val, linkageName.Val,
                             file.Val, line.Val, type.Val, isLocal.Val,
-                            isDefinition.Val, variable.Val, declaration.Val));
+                            isDefinition.Val, expr.Val, declaration.Val));
   return false;
 }
 

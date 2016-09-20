@@ -36,7 +36,7 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
-@x = common global i32 0, align 4
+@x = common global i32 0, align 4, !dbg !15
 
 ; Function Attrs: nounwind uwtable
 define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 !dbg !4 {
@@ -89,7 +89,7 @@ attributes #3 = { nounwind }
 !12 = !DILocalVariable(name: "argv", arg: 2, scope: !4, file: !1, line: 4, type: !8)
 !13 = !DILocalVariable(name: "argc", arg: 1, scope: !4, file: !1, line: 4, type: !7)
 !14 = !{!15}
-!15 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !16, isLocal: false, isDefinition: true, variable: i32* @x)
+!15 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !16, isLocal: false, isDefinition: true)
 !16 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)
 !17 = !{i32 2, !"Dwarf Version", i32 4}
 !18 = !{i32 2, !"Debug Info Version", i32 3}

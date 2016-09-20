@@ -39,8 +39,8 @@ target triple = "aarch64-apple-ios"
 %struct.A = type { i8, i8*, i8 }
 %struct.B = type { i8 }
 
-@a = global i64 0, align 8
-@b = global i32* null, align 8
+@a = global i64 0, align 8, !dbg !41
+@b = global i32* null, align 8, !dbg !42
 
 define void @_Z3f131A(%struct.A* nocapture readonly %p1) #0 !dbg !25 {
 entry:
@@ -200,8 +200,8 @@ attributes #5 = { builtin }
 !38 = !DILocalVariable(name: "c", line: 19, scope: !34, file: !26, type: !4)
 !39 = !DILocalVariable(name: "d", line: 20, scope: !34, file: !26, type: !14)
 !40 = !{!41, !42}
-!41 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !26, type: !20, variable: i64* @a)
-!42 = !DIGlobalVariable(name: "b", line: 7, isLocal: false, isDefinition: true, scope: null, file: !26, type: !12, variable: i32** @b)
+!41 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !26, type: !20)
+!42 = !DIGlobalVariable(name: "b", line: 7, isLocal: false, isDefinition: true, scope: null, file: !26, type: !12)
 !43 = !{i32 2, !"Dwarf Version", i32 2}
 !44 = !{i32 2, !"Debug Info Version", i32 3}
 !45 = !{!"clang version 3.7.0 "}

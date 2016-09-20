@@ -1854,6 +1854,159 @@ public:
   }
 };
 
+/// \brief DWARF expression.
+///
+/// This is (almost) a DWARF expression that modifies the location of a
+/// variable, or the location of a single piece of a variable, or (when using
+/// DW_OP_stack_value) is the constant variable value.
+///
+/// FIXME: Instead of DW_OP_plus taking an argument, this should use DW_OP_const
+/// and have DW_OP_plus consume the topmost elements on the stack.
+///
+/// TODO: Co-allocate the expression elements.
+/// TODO: Separate from MDNode, or otherwise drop Distinct and Temporary
+/// storage types.
+class DIExpression : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  std::vector<uint64_t> Elements;
+
+  DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
+      : MDNode(C, DIExpressionKind, Storage, None),
+        Elements(Elements.begin(), Elements.end()) {}
+  ~DIExpression() = default;
+
+  static DIExpression *getImpl(LLVMContext &Context,
+                               ArrayRef<uint64_t> Elements, StorageType Storage,
+                               bool ShouldCreate = true);
+
+  TempDIExpression cloneImpl() const {
+    return getTemporary(getContext(), getElements());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
+
+  TempDIExpression clone() const { return cloneImpl(); }
+
+  ArrayRef<uint64_t> getElements() const { return Elements; }
+
+  unsigned getNumElements() const { return Elements.size(); }
+  uint64_t getElement(unsigned I) const {
+    assert(I < Elements.size() && "Index out of range");
+    return Elements[I];
+  }
+
+  /// Return whether this is a piece of an aggregate variable.
+  bool isBitPiece() const;
+
+  /// Return the offset of this piece in bits.
+  uint64_t getBitPieceOffset() const;
+
+  /// Return the size of this piece in bits.
+  uint64_t getBitPieceSize() const;
+
+  typedef ArrayRef<uint64_t>::iterator element_iterator;
+  element_iterator elements_begin() const { return getElements().begin(); }
+  element_iterator elements_end() const { return getElements().end(); }
+
+  /// A lightweight wrapper around an expression operand.
+  ///
+  /// TODO: Store arguments directly and change \a DIExpression to store a
+  /// range of these.
+  class ExprOperand {
+    const uint64_t *Op;
+
+  public:
+    explicit ExprOperand(const uint64_t *Op) : Op(Op) {}
+
+    const uint64_t *get() const { return Op; }
+
+    /// Get the operand code.
+    uint64_t getOp() const { return *Op; }
+
+    /// Get an argument to the operand.
+    ///
+    /// Never returns the operand itself.
+    uint64_t getArg(unsigned I) const { return Op[I + 1]; }
+
+    unsigned getNumArgs() const { return getSize() - 1; }
+
+    /// Return the size of the operand.
+    ///
+    /// Return the number of elements in the operand (1 + args).
+    unsigned getSize() const;
+  };
+
+  /// An iterator for expression operands.
+  class expr_op_iterator
+      : public std::iterator<std::input_iterator_tag, ExprOperand> {
+    ExprOperand Op;
+
+  public:
+    explicit expr_op_iterator(element_iterator I) : Op(I) {}
+
+    element_iterator getBase() const { return Op.get(); }
+    const ExprOperand &operator*() const { return Op; }
+    const ExprOperand *operator->() const { return &Op; }
+
+    expr_op_iterator &operator++() {
+      increment();
+      return *this;
+    }
+    expr_op_iterator operator++(int) {
+      expr_op_iterator T(*this);
+      increment();
+      return T;
+    }
+
+    /// Get the next iterator.
+    ///
+    /// \a std::next() doesn't work because this is technically an
+    /// input_iterator, but it's a perfectly valid operation.  This is an
+    /// accessor to provide the same functionality.
+    expr_op_iterator getNext() const { return ++expr_op_iterator(*this); }
+
+    bool operator==(const expr_op_iterator &X) const {
+      return getBase() == X.getBase();
+    }
+    bool operator!=(const expr_op_iterator &X) const {
+      return getBase() != X.getBase();
+    }
+
+  private:
+    void increment() { Op = ExprOperand(getBase() + Op.getSize()); }
+  };
+
+  /// Visit the elements via ExprOperand wrappers.
+  ///
+  /// These range iterators visit elements through \a ExprOperand wrappers.
+  /// This is not guaranteed to be a valid range unless \a isValid() gives \c
+  /// true.
+  ///
+  /// \pre \a isValid() gives \c true.
+  /// @{
+  expr_op_iterator expr_op_begin() const {
+    return expr_op_iterator(elements_begin());
+  }
+  expr_op_iterator expr_op_end() const {
+    return expr_op_iterator(elements_end());
+  }
+  /// @}
+
+  bool isValid() const;
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIExpressionKind;
+  }
+
+  /// Is the first element a DW_OP_deref?.
+  bool startsWithDeref() const {
+    return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
+  }
+};
+
 /// \brief Global variables.
 ///
 /// TODO: Remove DisplayName.  It's always equal to Name.
@@ -1874,26 +2027,25 @@ class DIGlobalVariable : public DIVariable {
   static DIGlobalVariable *
   getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
           StringRef LinkageName, DIFile *File, unsigned Line, DITypeRef Type,
-          bool IsLocalToUnit, bool IsDefinition, Constant *Variable,
+          bool IsLocalToUnit, bool IsDefinition, DIExpression *Expr,
           DIDerivedType *StaticDataMemberDeclaration, StorageType Storage,
           bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
-                   IsLocalToUnit, IsDefinition,
-                   Variable ? ConstantAsMetadata::get(Variable) : nullptr,
+                   IsLocalToUnit, IsDefinition, Expr,
                    StaticDataMemberDeclaration, Storage, ShouldCreate);
   }
   static DIGlobalVariable *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
-          bool IsLocalToUnit, bool IsDefinition, Metadata *Variable,
+          bool IsLocalToUnit, bool IsDefinition, Metadata *Expr,
           Metadata *StaticDataMemberDeclaration, StorageType Storage,
           bool ShouldCreate = true);
 
   TempDIGlobalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
                         getFile(), getLine(), getType(), isLocalToUnit(),
-                        isDefinition(), getVariable(),
+                        isDefinition(), getExpr(),
                         getStaticDataMemberDeclaration());
   }
 
@@ -1901,17 +2053,17 @@ public:
   DEFINE_MDNODE_GET(DIGlobalVariable,
                     (DIScope * Scope, StringRef Name, StringRef LinkageName,
                      DIFile *File, unsigned Line, DITypeRef Type,
-                     bool IsLocalToUnit, bool IsDefinition, Constant *Variable,
+                     bool IsLocalToUnit, bool IsDefinition, DIExpression *Expr,
                      DIDerivedType *StaticDataMemberDeclaration),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-                     IsDefinition, Variable, StaticDataMemberDeclaration))
+                     IsDefinition, Expr, StaticDataMemberDeclaration))
   DEFINE_MDNODE_GET(DIGlobalVariable,
                     (Metadata * Scope, MDString *Name, MDString *LinkageName,
                      Metadata *File, unsigned Line, Metadata *Type,
-                     bool IsLocalToUnit, bool IsDefinition, Metadata *Variable,
+                     bool IsLocalToUnit, bool IsDefinition, Metadata *Expr,
                      Metadata *StaticDataMemberDeclaration),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-                     IsDefinition, Variable, StaticDataMemberDeclaration))
+                     IsDefinition, Expr, StaticDataMemberDeclaration))
 
   TempDIGlobalVariable clone() const { return cloneImpl(); }
 
@@ -1919,17 +2071,18 @@ public:
   bool isDefinition() const { return IsDefinition; }
   StringRef getDisplayName() const { return getStringOperand(4); }
   StringRef getLinkageName() const { return getStringOperand(5); }
-  Constant *getVariable() const {
-    if (auto *C = cast_or_null<ConstantAsMetadata>(getRawVariable()))
-      return dyn_cast<Constant>(C->getValue());
-    return nullptr;
+  DIExpression *getExpr() const {
+    return cast_or_null<DIExpression>(getRawExpr());
+  }
+  void replaceExpr(DIExpression *E) {
+    replaceOperandWith(6, E);
   }
   DIDerivedType *getStaticDataMemberDeclaration() const {
     return cast_or_null<DIDerivedType>(getRawStaticDataMemberDeclaration());
   }
 
   MDString *getRawLinkageName() const { return getOperandAs<MDString>(5); }
-  Metadata *getRawVariable() const { return getOperand(6); }
+  Metadata *getRawExpr() const { return getOperand(6); }
   Metadata *getRawStaticDataMemberDeclaration() const { return getOperand(7); }
 
   static bool classof(const Metadata *MD) {
@@ -2014,158 +2167,6 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILocalVariableKind;
-  }
-};
-
-/// \brief DWARF expression.
-///
-/// This is (almost) a DWARF expression that modifies the location of a
-/// variable or (or the location of a single piece of a variable).
-///
-/// FIXME: Instead of DW_OP_plus taking an argument, this should use DW_OP_const
-/// and have DW_OP_plus consume the topmost elements on the stack.
-///
-/// TODO: Co-allocate the expression elements.
-/// TODO: Separate from MDNode, or otherwise drop Distinct and Temporary
-/// storage types.
-class DIExpression : public MDNode {
-  friend class LLVMContextImpl;
-  friend class MDNode;
-
-  std::vector<uint64_t> Elements;
-
-  DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
-      : MDNode(C, DIExpressionKind, Storage, None),
-        Elements(Elements.begin(), Elements.end()) {}
-  ~DIExpression() = default;
-
-  static DIExpression *getImpl(LLVMContext &Context,
-                               ArrayRef<uint64_t> Elements, StorageType Storage,
-                               bool ShouldCreate = true);
-
-  TempDIExpression cloneImpl() const {
-    return getTemporary(getContext(), getElements());
-  }
-
-public:
-  DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
-
-  TempDIExpression clone() const { return cloneImpl(); }
-
-  ArrayRef<uint64_t> getElements() const { return Elements; }
-
-  unsigned getNumElements() const { return Elements.size(); }
-  uint64_t getElement(unsigned I) const {
-    assert(I < Elements.size() && "Index out of range");
-    return Elements[I];
-  }
-
-  /// \brief Return whether this is a piece of an aggregate variable.
-  bool isBitPiece() const;
-
-  /// \brief Return the offset of this piece in bits.
-  uint64_t getBitPieceOffset() const;
-
-  /// \brief Return the size of this piece in bits.
-  uint64_t getBitPieceSize() const;
-
-  typedef ArrayRef<uint64_t>::iterator element_iterator;
-  element_iterator elements_begin() const { return getElements().begin(); }
-  element_iterator elements_end() const { return getElements().end(); }
-
-  /// \brief A lightweight wrapper around an expression operand.
-  ///
-  /// TODO: Store arguments directly and change \a DIExpression to store a
-  /// range of these.
-  class ExprOperand {
-    const uint64_t *Op;
-
-  public:
-    explicit ExprOperand(const uint64_t *Op) : Op(Op) {}
-
-    const uint64_t *get() const { return Op; }
-
-    /// \brief Get the operand code.
-    uint64_t getOp() const { return *Op; }
-
-    /// \brief Get an argument to the operand.
-    ///
-    /// Never returns the operand itself.
-    uint64_t getArg(unsigned I) const { return Op[I + 1]; }
-
-    unsigned getNumArgs() const { return getSize() - 1; }
-
-    /// \brief Return the size of the operand.
-    ///
-    /// Return the number of elements in the operand (1 + args).
-    unsigned getSize() const;
-  };
-
-  /// \brief An iterator for expression operands.
-  class expr_op_iterator
-      : public std::iterator<std::input_iterator_tag, ExprOperand> {
-    ExprOperand Op;
-
-  public:
-    explicit expr_op_iterator(element_iterator I) : Op(I) {}
-
-    element_iterator getBase() const { return Op.get(); }
-    const ExprOperand &operator*() const { return Op; }
-    const ExprOperand *operator->() const { return &Op; }
-
-    expr_op_iterator &operator++() {
-      increment();
-      return *this;
-    }
-    expr_op_iterator operator++(int) {
-      expr_op_iterator T(*this);
-      increment();
-      return T;
-    }
-
-    /// \brief Get the next iterator.
-    ///
-    /// \a std::next() doesn't work because this is technically an
-    /// input_iterator, but it's a perfectly valid operation.  This is an
-    /// accessor to provide the same functionality.
-    expr_op_iterator getNext() const { return ++expr_op_iterator(*this); }
-
-    bool operator==(const expr_op_iterator &X) const {
-      return getBase() == X.getBase();
-    }
-    bool operator!=(const expr_op_iterator &X) const {
-      return getBase() != X.getBase();
-    }
-
-  private:
-    void increment() { Op = ExprOperand(getBase() + Op.getSize()); }
-  };
-
-  /// \brief Visit the elements via ExprOperand wrappers.
-  ///
-  /// These range iterators visit elements through \a ExprOperand wrappers.
-  /// This is not guaranteed to be a valid range unless \a isValid() gives \c
-  /// true.
-  ///
-  /// \pre \a isValid() gives \c true.
-  /// @{
-  expr_op_iterator expr_op_begin() const {
-    return expr_op_iterator(elements_begin());
-  }
-  expr_op_iterator expr_op_end() const {
-    return expr_op_iterator(elements_end());
-  }
-  /// @}
-
-  bool isValid() const;
-
-  static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DIExpressionKind;
-  }
-
-  /// \brief Is the first element a DW_OP_deref?.
-  bool startsWithDeref() const {
-    return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
   }
 };
 

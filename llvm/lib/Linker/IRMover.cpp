@@ -465,7 +465,7 @@ class IRLinker {
 
   Error linkModuleFlagsMetadata();
 
-  void linkGlobalInit(GlobalVariable &Dst, GlobalVariable &Src);
+  void linkGlobalVariable(GlobalVariable &Dst, GlobalVariable &Src);
   Error linkFunctionBody(Function &Dst, Function &Src);
   void linkAliasBody(GlobalAlias &Dst, GlobalAlias &Src);
   Error linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src);
@@ -942,7 +942,9 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
 
 /// Update the initializers in the Dest module now that all globals that may be
 /// referenced are in Dest.
-void IRLinker::linkGlobalInit(GlobalVariable &Dst, GlobalVariable &Src) {
+void IRLinker::linkGlobalVariable(GlobalVariable &Dst, GlobalVariable &Src) {
+  Dst.copyMetadata(&Src, 0);
+
   // Figure out what the initializer looks like in the dest module.
   Mapper.scheduleMapGlobalInitializer(Dst, *Src.getInitializer());
 }
@@ -985,7 +987,7 @@ Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   if (auto *F = dyn_cast<Function>(&Src))
     return linkFunctionBody(cast<Function>(Dst), *F);
   if (auto *GVar = dyn_cast<GlobalVariable>(&Src)) {
-    linkGlobalInit(cast<GlobalVariable>(Dst), *GVar);
+    linkGlobalVariable(cast<GlobalVariable>(Dst), *GVar);
     return Error::success();
   }
   linkAliasBody(cast<GlobalAlias>(Dst), cast<GlobalAlias>(Src));
@@ -1341,6 +1343,12 @@ IRMover::IRMover(Module &M) : Composite(M) {
       IdentifiedStructTypes.addOpaque(Ty);
     else
       IdentifiedStructTypes.addNonOpaque(Ty);
+  }
+  // Self-map metadatas in the destination module. This is needed when
+  // DebugTypeODRUniquing is enabled on the LLVMContext, since metadata in the
+  // destination module may be reached from the source module.
+  for (auto *MD : StructTypes.getVisitedMetadata()) {
+    SharedMDs[MD].reset(const_cast<MDNode *>(MD));
   }
 }
 

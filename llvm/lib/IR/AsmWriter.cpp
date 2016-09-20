@@ -1845,7 +1845,7 @@ static void writeDIGlobalVariable(raw_ostream &Out, const DIGlobalVariable *N,
   Printer.printMetadata("type", N->getRawType());
   Printer.printBool("isLocal", N->isLocalToUnit());
   Printer.printBool("isDefinition", N->isDefinition());
-  Printer.printMetadata("variable", N->getRawVariable());
+  Printer.printMetadata("expr", N->getExpr());
   Printer.printMetadata("declaration", N->getRawStaticDataMemberDeclaration());
   Out << ")";
 }

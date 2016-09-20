@@ -12,8 +12,8 @@
 %class.A = type { i32 }
 %class.B = type { i32 }
 
-@a = global %class.A zeroinitializer, align 4
-@b = global %class.B zeroinitializer, align 4
+@a = global %class.A zeroinitializer, align 4, !dbg !5
+@b = global %class.B zeroinitializer, align 4, !dbg !17
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!29}
@@ -21,7 +21,7 @@
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 (trunk 153413) (llvm/trunk 153428)", isOptimized: false, emissionKind: FullDebug, file: !28, enums: !1, retainedTypes: !1, globals: !3, imports:  !1)
 !1 = !{}
 !3 = !{!5, !17}
-!5 = !DIGlobalVariable(name: "a", line: 10, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7, variable: %class.A* @a)
+!5 = !DIGlobalVariable(name: "a", line: 10, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7)
 !6 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo/tmp")
 !7 = !DICompositeType(tag: DW_TAG_class_type, name: "A", line: 1, size: 32, align: 32, file: !28, elements: !8)
 !8 = !{!9, !11}
@@ -31,7 +31,7 @@
 !12 = !DISubroutineType(types: !13)
 !13 = !{null, !14}
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial, baseType: !7)
-!17 = !DIGlobalVariable(name: "b", line: 11, isLocal: false, isDefinition: true, scope: null, file: !6, type: !18, variable: %class.B* @b)
+!17 = !DIGlobalVariable(name: "b", line: 11, isLocal: false, isDefinition: true, scope: null, file: !6, type: !18)
 !18 = !DICompositeType(tag: DW_TAG_class_type, name: "B", line: 5, size: 32, align: 32, file: !28, elements: !19)
 !19 = !{!20, !21, !27}
 !20 = !DIDerivedType(tag: DW_TAG_member, name: "b", line: 7, size: 32, align: 32, flags: DIFlagPrivate, file: !28, scope: !18, baseType: !10)

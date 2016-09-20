@@ -79,7 +79,7 @@ $"\01??_8B@@7B@" = comdat any
 
 $"\01??_8C@@7B@" = comdat any
 
-@"\01?d@@3UD@@A" = global %struct.D zeroinitializer, align 8
+@"\01?d@@3UD@@A" = global %struct.D zeroinitializer, align 8, !dbg !4
 @"\01??_8D@@7BB@@@" = linkonce_odr unnamed_addr constant [2 x i32] [i32 0, i32 40], comdat
 @"\01??_8D@@7BC@@@" = linkonce_odr unnamed_addr constant [2 x i32] [i32 0, i32 24], comdat
 @"\01??_7D@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (void (%struct.D*)* @"\01?f@D@@UEAAXXZ" to i8*)], comdat
@@ -226,7 +226,7 @@ attributes #4 = { nounwind }
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "d", linkageName: "\01?d@@3UD@@A", scope: !0, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true, variable: %struct.D* @"\01?d@@3UD@@A")
+!4 = distinct !DIGlobalVariable(name: "d", linkageName: "\01?d@@3UD@@A", scope: !0, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true)
 !5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "D", file: !1, line: 4, size: 448, align: 64, elements: !6, vtableHolder: !5, identifier: ".?AUD@@")
 !6 = !{!7, !21, !27, !28, !29}
 !7 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !5, baseType: !8, offset: 64)

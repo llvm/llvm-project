@@ -1478,6 +1478,13 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
     NewGlobal->copyAttributesFrom(G);
     NewGlobal->setAlignment(MinRZ);
 
+    // Transfer the debug info.  The payload starts at offset zero so we can
+    // copy the debug info over as is.
+    SmallVector<DIGlobalVariable *, 1> GVs;
+    G->getDebugInfo(GVs);
+    for (auto *GV : GVs)
+      NewGlobal->addDebugInfo(GV);
+
     Value *Indices2[2];
     Indices2[0] = IRB.getInt32(0);
     Indices2[1] = IRB.getInt32(0);

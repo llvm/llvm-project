@@ -493,6 +493,8 @@ public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
                  uint64_t Address, raw_ostream &OS, StringRef Annot,
                  MCSubtargetInfo const &STI, SourcePrinter *SP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, "");
     if (!MI) {
       printLead(Bytes, Address, OS);
       OS << " <unknown>";
@@ -513,6 +515,8 @@ public:
     while(!HeadTail.first.empty()) {
       OS << Separator;
       Separator = "\n";
+      if (SP && (PrintSource || PrintLines))
+        SP->printSourceLine(OS, Address, "");
       printLead(Bytes, Address, OS);
       OS << Preamble;
       Preamble = "   ";

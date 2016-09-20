@@ -103,7 +103,7 @@ source_filename = "t.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.24210"
 
-@"\01?x@@3HC" = global i32 0, align 4
+@"\01?x@@3HC" = global i32 0, align 4, !dbg !4
 
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @main() local_unnamed_addr #0 !dbg !11 {
@@ -137,7 +137,7 @@ attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "x", linkageName: "\01?x@@3HC", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: i32* @"\01?x@@3HC")
+!4 = distinct !DIGlobalVariable(name: "x", linkageName: "\01?x@@3HC", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true)
 !5 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !6)
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !{i32 2, !"CodeView", i32 1}

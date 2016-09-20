@@ -552,6 +552,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   switch (getOp()) {
   case dwarf::DW_OP_bit_piece:
     return 3;
+  case dwarf::DW_OP_constu:
   case dwarf::DW_OP_plus:
   case dwarf::DW_OP_minus:
     return 2;
@@ -571,8 +572,11 @@ bool DIExpression::isValid() const {
     default:
       return false;
     case dwarf::DW_OP_bit_piece:
-      // Piece expressions must be at the end.
+    case dwarf::DW_OP_stack_value:
+      // We only support bit piece and stack value expressions which appear at
+      // the end.
       return I->get() + I->getSize() == E->get();
+    case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
     case dwarf::DW_OP_deref:
