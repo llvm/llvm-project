@@ -736,6 +736,15 @@ continue:
 }
 
 define i1 @bug27873(i64 %c1, i1 %c2) {
+; CHECK-LABEL: bug27873:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl $160, %ecx
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    mulq %rcx
+; CHECK-NEXT:    seto %al
+; CHECK-NEXT:    orb %sil, %al
+; CHECK-NEXT:    retq
+;
 ; KNL-LABEL: bug27873:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    andl $1, %esi
@@ -744,6 +753,7 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ; KNL-NEXT:    movq %rdi, %rax
 ; KNL-NEXT:    mulq %rcx
 ; KNL-NEXT:    seto %al
+; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax

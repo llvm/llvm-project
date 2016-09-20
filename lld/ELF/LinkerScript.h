@@ -21,7 +21,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include <functional>
-#include <list>
 
 namespace lld {
 namespace elf {
@@ -101,6 +100,15 @@ struct OutputSectionCommand : BaseCommand {
 // This struct represents one section match pattern in SECTIONS() command.
 // It can optionally have negative match pattern for EXCLUDED_FILE command.
 struct SectionPattern {
+  SectionPattern(llvm::Regex &&Re1, llvm::Regex &&Re2)
+      : ExcludedFileRe(std::forward<llvm::Regex>(Re1)),
+        SectionRe(std::forward<llvm::Regex>(Re2)) {}
+
+  SectionPattern(SectionPattern &&Other) {
+    std::swap(ExcludedFileRe, Other.ExcludedFileRe);
+    std::swap(SectionRe, Other.SectionRe);
+  }
+
   llvm::Regex ExcludedFileRe;
   llvm::Regex SectionRe;
 };
@@ -116,9 +124,7 @@ struct InputSectionDescription : BaseCommand {
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
-  // We use std::list instead of std::vector because SectionPattern
-  // do not support move assignment.
-  std::list<SectionPattern> SectionPatterns;
+  std::vector<SectionPattern> SectionPatterns;
 
   std::vector<InputSectionData *> Sections;
 };

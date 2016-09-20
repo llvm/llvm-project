@@ -1073,7 +1073,7 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                            StoreInst *SI, DIBuilder &Builder) {
   auto *DIVar = DDI->getVariable();
   auto *DIExpr = DDI->getExpression();
@@ -1114,19 +1114,18 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   } else if (!LdStHasDebugValue(DIVar, DIExpr, SI))
     Builder.insertDbgValueIntrinsic(SI->getOperand(0), 0, DIVar, DIExpr,
                                     DDI->getDebugLoc(), SI);
-  return true;
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                            LoadInst *LI, DIBuilder &Builder) {
   auto *DIVar = DDI->getVariable();
   auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
 
   if (LdStHasDebugValue(DIVar, DIExpr, LI))
-    return true;
+    return;
 
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
@@ -1135,24 +1134,22 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
       LI, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
   DbgValue->insertAfter(LI);
-  return true;
 }
 
 /// Inserts a llvm.dbg.value intrinsic after a phi 
 /// that has an associated llvm.dbg.decl intrinsic.
-bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                            PHINode *APN, DIBuilder &Builder) {
   auto *DIVar = DDI->getVariable();
   auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
 
   if (PhiHasDebugValue(DIVar, DIExpr, APN))
-    return true;
+    return;
 
   Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
       APN, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
   DbgValue->insertBefore(&*APN->getParent()->getFirstInsertionPt());
-  return true;
 }
 
 /// Determine whether this alloca is either a VLA or an array.

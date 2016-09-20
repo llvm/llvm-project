@@ -8,8 +8,3 @@
 # CHECK: 	aesd	v0.16b, v2.16b
 # CHECK:        eor     v0.16b, v0.16b, v2.16b
 
-	.arch armv8.1-a+ras
-	esb
-
-# CHECK: 	esb
-

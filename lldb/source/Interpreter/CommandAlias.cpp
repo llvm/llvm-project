@@ -41,7 +41,7 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
     ExecutionContext exe_ctx =
         cmd_obj_sp->GetCommandInterpreter().GetExecutionContext();
     options->NotifyOptionParsingStarting(&exe_ctx);
-    args.Unshift("dummy_arg");
+    args.Unshift(llvm::StringRef("dummy_arg"));
     args.ParseAliasOptions(*options, result, option_arg_vector, options_string);
     args.Shift();
     if (result.Succeeded())

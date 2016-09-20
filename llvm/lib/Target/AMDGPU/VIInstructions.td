@@ -75,14 +75,6 @@ defm V_MIN_I16 : VOP2Inst <vop2<0,0x32>, "v_min_i16", VOP_I16_I16_I16>;
 } // End isCommutable = 1
 defm V_LDEXP_F16 : VOP2Inst <vop2<0,0x33>, "v_ldexp_f16", VOP_F16_F16_I16>;
 
-//===----------------------------------------------------------------------===//
-// VOP3 Instructions
-//===----------------------------------------------------------------------===//
-let isCommutable = 1 in {
-    defm V_MAD_F16 : VOP3Inst <vop3<0, 0x1ea>, "v_mad_f16", VOP_F16_F16_F16_F16>;
-    defm V_MAD_U16 : VOP3Inst <vop3<0, 0x1eb>, "v_mad_u16", VOP_I16_I16_I16_I16>;
-    defm V_MAD_I16 : VOP3Inst <vop3<0, 0x1ec>, "v_mad_i16", VOP_I16_I16_I16_I16>;
-}
 } // let DisableSIDecoder = 1
 
 // Aliases to simplify matching of floating-point instructions that

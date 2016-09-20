@@ -350,7 +350,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // If we don't have F16C support, then lower half float conversions
   // into library calls.
   if (Subtarget.useSoftFloat() ||
-      (!Subtarget.hasF16C() && !Subtarget.hasVLX())) {
+      (!Subtarget.hasF16C() && !Subtarget.hasAVX512())) {
     setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
   }
@@ -14635,22 +14635,22 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   LLVMContext *Context = DAG.getContext();
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
+  SDValue Mag = Op.getOperand(0);
+  SDValue Sign = Op.getOperand(1);
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
-  MVT SrcVT = Op1.getSimpleValueType();
+  MVT SignVT = Sign.getSimpleValueType();
   bool IsF128 = (VT == MVT::f128);
 
-  // If second operand is smaller, extend it first.
-  if (SrcVT.bitsLT(VT)) {
-    Op1 = DAG.getNode(ISD::FP_EXTEND, dl, VT, Op1);
-    SrcVT = VT;
+  // If the sign operand is smaller, extend it first.
+  if (SignVT.bitsLT(VT)) {
+    Sign = DAG.getNode(ISD::FP_EXTEND, dl, VT, Sign);
+    SignVT = VT;
   }
   // And if it is bigger, shrink it first.
-  if (SrcVT.bitsGT(VT)) {
-    Op1 = DAG.getNode(ISD::FP_ROUND, dl, VT, Op1, DAG.getIntPtrConstant(1, dl));
-    SrcVT = VT;
+  if (SignVT.bitsGT(VT)) {
+    Sign = DAG.getNode(ISD::FP_ROUND, dl, VT, Sign, DAG.getIntPtrConstant(1, dl));
+    SignVT = VT;
   }
 
   // At this point the operands and the result should have the same
@@ -14669,7 +14669,7 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
 
   // First, clear all bits but the sign bit from the second operand (sign).
   CV[0] = ConstantFP::get(*Context,
-                          APFloat(Sem, APInt::getHighBitsSet(SizeInBits, 1)));
+                          APFloat(Sem, APInt::getSignBit(SizeInBits)));
   Constant *C = ConstantVector::get(CV);
   auto PtrVT = TLI.getPointerTy(DAG.getDataLayout());
   SDValue CPIdx = DAG.getConstantPool(C, PtrVT, 16);
@@ -14678,46 +14678,46 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
   // scalar FP logic instructions in SSE. This allows load folding of the
   // constants into the logic instructions.
   MVT LogicVT = (VT == MVT::f64) ? MVT::v2f64 : (IsF128 ? MVT::f128 : MVT::v4f32);
-  SDValue Mask1 =
+  SDValue SignMask =
       DAG.getLoad(LogicVT, dl, DAG.getEntryNode(), CPIdx,
                   MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
                   /* Alignment = */ 16);
   if (!IsF128)
-    Op1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Op1);
-  SDValue SignBit = DAG.getNode(X86ISD::FAND, dl, LogicVT, Op1, Mask1);
+    Sign = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Sign);
+  SDValue SignBit = DAG.getNode(X86ISD::FAND, dl, LogicVT, Sign, SignMask);
 
   // Next, clear the sign bit from the first operand (magnitude).
   // If it's a constant, we can clear it here.
-  if (ConstantFPSDNode *Op0CN = dyn_cast<ConstantFPSDNode>(Op0)) {
+  if (ConstantFPSDNode *Op0CN = dyn_cast<ConstantFPSDNode>(Mag)) {
     APFloat APF = Op0CN->getValueAPF();
     // If the magnitude is a positive zero, the sign bit alone is enough.
     if (APF.isPosZero())
       return IsF128 ? SignBit :
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SrcVT, SignBit,
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SignVT, SignBit,
                       DAG.getIntPtrConstant(0, dl));
     APF.clearSign();
     CV[0] = ConstantFP::get(*Context, APF);
   } else {
-    CV[0] = ConstantFP::get(
-        *Context,
-        APFloat(Sem, APInt::getLowBitsSet(SizeInBits, SizeInBits - 1)));
+    CV[0] = ConstantFP::get(*Context,
+                            APFloat(Sem, ~APInt::getSignBit(SizeInBits)));
   }
   C = ConstantVector::get(CV);
   CPIdx = DAG.getConstantPool(C, PtrVT, 16);
-  SDValue Val =
+  SDValue MagMask =
       DAG.getLoad(LogicVT, dl, DAG.getEntryNode(), CPIdx,
                   MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
                   /* Alignment = */ 16);
   // If the magnitude operand wasn't a constant, we need to AND out the sign.
-  if (!isa<ConstantFPSDNode>(Op0)) {
+  SDValue MagBits = MagMask;
+  if (!isa<ConstantFPSDNode>(Mag)) {
     if (!IsF128)
-      Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Op0);
-    Val = DAG.getNode(X86ISD::FAND, dl, LogicVT, Op0, Val);
+      Mag = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Mag);
+    MagBits = DAG.getNode(X86ISD::FAND, dl, LogicVT, Mag, MagMask);
   }
   // OR the magnitude value with the sign bit.
-  Val = DAG.getNode(X86ISD::FOR, dl, LogicVT, Val, SignBit);
-  return IsF128 ? Val :
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SrcVT, Val,
+  SDValue Or = DAG.getNode(X86ISD::FOR, dl, LogicVT, MagBits, SignBit);
+  return IsF128 ? Or :
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SignVT, Or,
                   DAG.getIntPtrConstant(0, dl));
 }
 
@@ -20867,9 +20867,12 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
     SDValue Sum = DAG.getNode(X86ISD::UMUL, DL, VTs, LHS, RHS);
 
     SDValue SetCC =
-      DAG.getNode(X86ISD::SETCC, DL, N->getValueType(1),
+      DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
                   DAG.getConstant(X86::COND_O, DL, MVT::i32),
                   SDValue(Sum.getNode(), 2));
+
+    if (N->getValueType(1) == MVT::i1)
+      SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
 
     return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
   }
@@ -20880,9 +20883,12 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   SDValue Sum = DAG.getNode(BaseOp, DL, VTs, LHS, RHS);
 
   SDValue SetCC =
-    DAG.getNode(X86ISD::SETCC, DL, N->getValueType(1),
+    DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
                 DAG.getConstant(Cond, DL, MVT::i32),
                 SDValue(Sum.getNode(), 1));
+
+  if (N->getValueType(1) == MVT::i1)
+    SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
 
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
