@@ -177,6 +177,13 @@ A few final notes:
 
       % llvm-profdata merge -sparse foo1.profraw foo2.profdata -o foo3.profdata
 
+Exporting coverage data
+=======================
+
+Coverage data can be exported into JSON using the ``llvm-cov export``
+sub-command. There is a comprehensive reference which defines the structure of
+the exported data at a high level in the llvm-cov source code.
+
 Interpreting reports
 ====================
 
@@ -187,15 +194,23 @@ There are four statistics tracked in a coverage summary:
   instantiations are executed.
 
 * Instantiation coverage is the percentage of function instantiations which
-  have been executed at least once.
+  have been executed at least once. Template functions and static inline
+  functions from headers are two kinds of functions which may have multiple
+  instantiations.
 
 * Line coverage is the percentage of code lines which have been executed at
-  least once.
+  least once. Only executable lines within function bodies are considered to be
+  code lines, so e.g coverage for macro definitions in a header might not be
+  included.
 
 * Region coverage is the percentage of code regions which have been executed at
   least once. A code region may span multiple lines (e.g a large function with
   no control flow). However, it's also possible for a single line to contain
-  multiple code regions (e.g some short-circuited logic).
+  multiple code regions or even nested code regions (e.g "return x || y && z").
+
+Of these four statistics, function coverage is usually the least granular while
+region coverage is the most granular. The project-wide totals for each
+statistic are listed in the summary.
 
 Format compatibility guarantees
 ===============================
@@ -212,6 +227,11 @@ Format compatibility guarantees
 * There is a third format in play: the format of the coverage mappings emitted
   into instrumented binaries. Tools must retain **backwards** compatibility
   with these formats. These formats are not forwards-compatible.
+
+* The JSON coverage export format has a (major, minor, patch) version triple.
+  Only a major version increment indicates a backwards-incompatible change. A
+  minor version increment is for added functionality, and patch version
+  increments are for bugfixes.
 
 Using the profiling runtime without static initializers
 =======================================================
@@ -237,6 +257,18 @@ without using static initializers, do this manually:
   out a profile. This function returns 0 when it succeeds, and a non-zero value
   otherwise. Calling this function multiple times appends profile data to an
   existing on-disk raw profile.
+
+Collecting coverage reports for the llvm project
+================================================
+
+To prepare a coverage report for llvm (and any of its sub-projects), add
+``-DLLVM_BUILD_INSTRUMENTED_COVERAGE=On`` to the cmake configuration. Raw
+profiles will be written to ``$BUILD_DIR/profiles/``. To prepare an html
+report, run ``llvm/utils/prepare-code-coverage-artifact.py``.
+
+To specify an alternate directory for raw profiles, use
+``-DLLVM_PROFILE_DATA_DIR``. To change the size of the profile merge pool, use
+``-DLLVM_PROFILE_MERGE_POOL_SIZE``.
 
 Drawbacks and limitations
 =========================
