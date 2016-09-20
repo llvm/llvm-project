@@ -10,7 +10,6 @@
 ; CHECK:     }
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
-; CHECK:     SubSectionSize: 0xC
 ; CHECK:     UDT {
 ; CHECK:       Type: wchar_t (0x71)
 ; CHECK:       UDTName: XYZ

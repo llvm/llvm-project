@@ -1809,74 +1809,33 @@ static void findLiveReferences(
 }
 
 // Helper function for the "rematerializeLiveValues". It walks use chain
-// starting from the "CurrentValue" until it meets "BaseValue". Only "simple"
-// values are visited (currently it is GEP's and casts). Returns true if it
-// successfully reached "BaseValue" and false otherwise.
-// Fills "ChainToBase" array with all visited values. "BaseValue" is not
-// recorded.
-static bool findRematerializableChainToBasePointer(
+// starting from the "CurrentValue" until it reaches the root of the chain, i.e.
+// the base or a value it cannot process. Only "simple" values are processed
+// (currently it is GEP's and casts). The returned root is  examined by the
+// callers of findRematerializableChainToBasePointer.  Fills "ChainToBase" array
+// with all visited values.
+static Value* findRematerializableChainToBasePointer(
   SmallVectorImpl<Instruction*> &ChainToBase,
-  Value *CurrentValue, Value *BaseValue) {
-
-  // We have found a base value
-  if (CurrentValue == BaseValue) {
-    return true;
-  }
-
-  // Check for same values, when both BaseValue and CurrentValue are phi nodes.
-  // PHI nodes that have the same incoming values, and belonging to the same
-  // basic blocks are essentially the same SSA value.  Such an example of same
-  // BaseValue, CurrentValue phis is created by findBasePointer, when a phi has
-  // incoming values with different base pointers. This phi is marked as
-  // conflict, and hence an additional phi with the same incoming values get
-  // generated. We need to identify the BaseValue (.base version of phi) and
-  // CurrentValue (the phi node itself) as the same, so that we can
-  // rematerialize the gep and casts below. This is a workaround for the
-  // deficieny in the findBasePointer algorithm.
-  if (PHINode *CurrentPhi = dyn_cast<PHINode>(CurrentValue))
-    if (PHINode *BasePhi = dyn_cast<PHINode>(BaseValue)) {
-      auto PhiNum = CurrentPhi->getNumIncomingValues();
-      if (PhiNum != BasePhi->getNumIncomingValues() ||
-          CurrentPhi->getParent() != BasePhi->getParent())
-        return false;
-      // Map of incoming values and their corresponding basic blocks of
-      // CurrentPhi.
-      SmallDenseMap<Value *, BasicBlock *, 8> CurrentIncomingValues;
-      for (unsigned i = 0; i < PhiNum; i++)
-        CurrentIncomingValues[CurrentPhi->getIncomingValue(i)] =
-            CurrentPhi->getIncomingBlock(i);
-
-      // Both current and base PHIs should have same incoming values and
-      // the same basic blocks corresponding to the incoming values.
-      for (unsigned i = 0; i < PhiNum; i++) {
-        auto CIVI = CurrentIncomingValues.find(BasePhi->getIncomingValue(i));
-        if (CIVI == CurrentIncomingValues.end())
-          return false;
-        BasicBlock *CurrentIncomingBB = CIVI->second;
-        if (CurrentIncomingBB != BasePhi->getIncomingBlock(i))
-          return false;
-      }
-      return true;
-    }
+  Value *CurrentValue) {
 
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(CurrentValue)) {
     ChainToBase.push_back(GEP);
     return findRematerializableChainToBasePointer(ChainToBase,
-                                                  GEP->getPointerOperand(),
-                                                  BaseValue);
+                                                  GEP->getPointerOperand());
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(CurrentValue)) {
     if (!CI->isNoopCast(CI->getModule()->getDataLayout()))
-      return false;
+      return CI;
 
     ChainToBase.push_back(CI);
     return findRematerializableChainToBasePointer(ChainToBase,
-                                                  CI->getOperand(0), BaseValue);
+                                                  CI->getOperand(0));
   }
 
-  // Not supported instruction in the chain
-  return false;
+  // We have reached the root of the chain, which is either equal to the base or
+  // is the first unsupported value along the use chain.
+  return CurrentValue;
 }
 
 // Helper function for the "rematerializeLiveValues". Compute cost of the use
@@ -1913,6 +1872,34 @@ chainToBasePointerCost(SmallVectorImpl<Instruction*> &Chain,
   return Cost;
 }
 
+static bool AreEquivalentPhiNodes(PHINode &OrigRootPhi, PHINode &AlternateRootPhi) {
+
+  unsigned PhiNum = OrigRootPhi.getNumIncomingValues();
+  if (PhiNum != AlternateRootPhi.getNumIncomingValues() ||
+      OrigRootPhi.getParent() != AlternateRootPhi.getParent())
+    return false;
+  // Map of incoming values and their corresponding basic blocks of
+  // OrigRootPhi.
+  SmallDenseMap<Value *, BasicBlock *, 8> CurrentIncomingValues;
+  for (unsigned i = 0; i < PhiNum; i++)
+    CurrentIncomingValues[OrigRootPhi.getIncomingValue(i)] =
+        OrigRootPhi.getIncomingBlock(i);
+
+  // Both current and base PHIs should have same incoming values and
+  // the same basic blocks corresponding to the incoming values.
+  for (unsigned i = 0; i < PhiNum; i++) {
+    auto CIVI =
+        CurrentIncomingValues.find(AlternateRootPhi.getIncomingValue(i));
+    if (CIVI == CurrentIncomingValues.end())
+      return false;
+    BasicBlock *CurrentIncomingBB = CIVI->second;
+    if (CurrentIncomingBB != AlternateRootPhi.getIncomingBlock(i))
+      return false;
+  }
+  return true;
+
+}
+
 // From the statepoint live set pick values that are cheaper to recompute then
 // to relocate. Remove this values from the live set, rematerialize them after
 // statepoint and record them in "Info" structure. Note that similar to
@@ -1930,16 +1917,38 @@ static void rematerializeLiveValues(CallSite CS,
     // For each live pointer find it's defining chain
     SmallVector<Instruction *, 3> ChainToBase;
     assert(Info.PointerToBase.count(LiveValue));
-    bool FoundChain =
+    Value *RootOfChain =
       findRematerializableChainToBasePointer(ChainToBase,
-                                             LiveValue,
-                                             Info.PointerToBase[LiveValue]);
+                                             LiveValue);
+
     // Nothing to do, or chain is too long
-    if (!FoundChain ||
-        ChainToBase.size() == 0 ||
+    if ( ChainToBase.size() == 0 ||
         ChainToBase.size() > ChainLengthThreshold)
       continue;
 
+    // Handle the scenario where the RootOfChain is not equal to the
+    // Base Value, but they are essentially the same phi values.
+    if (RootOfChain != Info.PointerToBase[LiveValue]) {
+      PHINode *OrigRootPhi = dyn_cast<PHINode>(RootOfChain);
+      PHINode *AlternateRootPhi = dyn_cast<PHINode>(Info.PointerToBase[LiveValue]);
+      if (!OrigRootPhi || !AlternateRootPhi)
+        continue;
+      // PHI nodes that have the same incoming values, and belonging to the same
+      // basic blocks are essentially the same SSA value.  When the original phi
+      // has incoming values with different base pointers, the original phi is
+      // marked as conflict, and an additional `AlternateRootPhi` with the same
+      // incoming values get generated by the findBasePointer function. We need
+      // to identify the newly generated AlternateRootPhi (.base version of phi)
+      // and RootOfChain (the original phi node itself) are the same, so that we
+      // can rematerialize the gep and casts. This is a workaround for the
+      // deficieny in the findBasePointer algorithm.
+      if (!AreEquivalentPhiNodes(*OrigRootPhi, *AlternateRootPhi))
+        continue;
+      // Now that the phi nodes are proved to be the same, assert that
+      // findBasePointer's newly generated AlternateRootPhi is present in the
+      // liveset of the call.
+      assert(Info.LiveSet.count(AlternateRootPhi));
+    }
     // Compute cost of this chain
     unsigned Cost = chainToBasePointerCost(ChainToBase, TTI);
     // TODO: We can also account for cases when we will be able to remove some

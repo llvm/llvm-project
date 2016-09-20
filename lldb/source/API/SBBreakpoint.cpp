@@ -448,6 +448,31 @@ size_t SBBreakpoint::GetNumLocations() const {
   return num_locs;
 }
 
+void SBBreakpoint::SetCommandLineCommands(SBStringList &commands) {
+  if (!m_opaque_sp)
+    return;
+  if (commands.GetSize() == 0)
+    return;
+
+  std::lock_guard<std::recursive_mutex> guard(
+      m_opaque_sp->GetTarget().GetAPIMutex());
+  std::unique_ptr<BreakpointOptions::CommandData> cmd_data_up(
+      new BreakpointOptions::CommandData(*commands));
+
+  m_opaque_sp->GetOptions()->SetCommandDataCallback(cmd_data_up);
+}
+
+bool SBBreakpoint::GetCommandLineCommands(SBStringList &commands) {
+  if (!m_opaque_sp)
+    return false;
+  StringList command_list;
+  bool has_commands =
+      m_opaque_sp->GetOptions()->GetCommandLineCallbacks(command_list);
+  if (has_commands)
+    commands.AppendList(command_list);
+  return has_commands;
+}
+
 bool SBBreakpoint::GetDescription(SBStream &s) {
   return GetDescription(s, true);
 }

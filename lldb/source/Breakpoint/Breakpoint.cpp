@@ -41,6 +41,9 @@ const ConstString &Breakpoint::GetEventIdentifier() {
   return g_identifier;
 }
 
+const char *Breakpoint::g_option_names[static_cast<uint32_t>(
+    Breakpoint::OptionNames::LastOptionName)]{"Names", "Hardware"};
+
 //----------------------------------------------------------------------
 // Breakpoint constructor
 //----------------------------------------------------------------------
@@ -80,6 +83,19 @@ StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
       new StructuredData::Dictionary());
   StructuredData::DictionarySP breakpoint_contents_sp(
       new StructuredData::Dictionary());
+
+  if (!m_name_list.empty()) {
+    StructuredData::ArraySP names_array_sp(new StructuredData::Array());
+    for (auto name : m_name_list) {
+      names_array_sp->AddItem(
+          StructuredData::StringSP(new StructuredData::String(name)));
+    }
+    breakpoint_contents_sp->AddItem(Breakpoint::GetKey(OptionNames::Names),
+                                    names_array_sp);
+  }
+
+  breakpoint_contents_sp->AddBooleanItem(
+      Breakpoint::GetKey(OptionNames::Hardware), m_hardware);
 
   StructuredData::ObjectSP resolver_dict_sp(
       m_resolver_sp->SerializeToStructuredData());
@@ -172,11 +188,31 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
       return result_sp;
     }
   }
+
+  bool hardware = false;
+  success = breakpoint_dict->GetValueForKeyAsBoolean(
+      Breakpoint::GetKey(OptionNames::Hardware), hardware);
+
   result_sp =
-      target.CreateBreakpoint(filter_sp, resolver_sp, false, false, true);
+      target.CreateBreakpoint(filter_sp, resolver_sp, false, hardware, true);
+
   if (result_sp && options_up) {
     result_sp->m_options_up = std::move(options_up);
   }
+
+  StructuredData::Array *names_array;
+  success = breakpoint_dict->GetValueForKeyAsArray(
+      Breakpoint::GetKey(OptionNames::Names), names_array);
+  if (success && names_array) {
+    size_t num_names = names_array->GetSize();
+    for (size_t i = 0; i < num_names; i++) {
+      std::string name;
+      Error error;
+      success = names_array->GetItemAtIndexAsString(i, name);
+      result_sp->AddName(name.c_str(), error);
+    }
+  }
+
   return result_sp;
 }
 

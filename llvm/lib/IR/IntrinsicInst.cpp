@@ -25,6 +25,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -82,4 +83,13 @@ int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
       (Name.startswith(NameFound) && Name[NameFound.size()] == '.'))
     return LastLow - NameTable.begin();
   return -1;
+}
+
+Value *InstrProfIncrementInst::getStep() const {
+  if (InstrProfIncrementInstStep::classof(this)) {
+    return const_cast<Value *>(getArgOperand(4));
+  }
+  const Module *M = getModule();
+  LLVMContext &Context = M->getContext();
+  return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }

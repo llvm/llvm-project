@@ -46,7 +46,6 @@
 ; CHECK:   Magic: 0x4
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
-; CHECK:     SubSectionSize: 0x4D
 ; CHECK:     ProcStart {
 ; CHECK:       PtrParent: 0x0
 ; CHECK:       PtrEnd: 0x0

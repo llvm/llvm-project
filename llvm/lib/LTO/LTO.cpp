@@ -713,6 +713,16 @@ Error LTO::runThinLTO(AddOutputFn AddOutput, bool HasRegularLTO) {
       ModuleToDefinedGVSummaries(ThinLTO.ModuleMap.size());
   ThinLTO.CombinedIndex.collectDefinedGVSummariesPerModule(
       ModuleToDefinedGVSummaries);
+  // Create entries for any modules that didn't have any GV summaries
+  // (either they didn't have any GVs to start with, or we suppressed
+  // generation of the summaries because they e.g. had inline assembly
+  // uses that couldn't be promoted/renamed on export). This is so
+  // InProcessThinBackend::start can still launch a backend thread, which
+  // is passed the map of summaries for the module, without any special
+  // handling for this case.
+  for (auto &Mod : ThinLTO.ModuleMap)
+    if (!ModuleToDefinedGVSummaries.count(Mod.first))
+      ModuleToDefinedGVSummaries.try_emplace(Mod.first);
 
   StringMap<FunctionImporter::ImportMapTy> ImportLists(
       ThinLTO.ModuleMap.size());

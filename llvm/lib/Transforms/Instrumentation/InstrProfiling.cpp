@@ -222,14 +222,6 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
-static Value *getIncrementStep(InstrProfIncrementInst *Inc,
-                               IRBuilder<> &Builder) {
-  auto *IncWithStep = dyn_cast<InstrProfIncrementInstStep>(Inc);
-  if (IncWithStep)
-    return IncWithStep->getStep();
-  return Builder.getInt64(1);
-}
-
 void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   GlobalVariable *Counters = getOrCreateRegionCounters(Inc);
 
@@ -237,7 +229,7 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   uint64_t Index = Inc->getIndex()->getZExtValue();
   Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters, 0, Index);
   Value *Count = Builder.CreateLoad(Addr, "pgocount");
-  Count = Builder.CreateAdd(Count, getIncrementStep(Inc, Builder));
+  Count = Builder.CreateAdd(Count, Inc->getStep());
   Inc->replaceAllUsesWith(Builder.CreateStore(Count, Addr));
   Inc->eraseFromParent();
 }

@@ -187,10 +187,6 @@ enum NodeType : unsigned {
   SMULL,
   UMULL,
 
-  // Reciprocal estimates.
-  FRECPE,
-  FRSQRTE,
-
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,
@@ -521,11 +517,6 @@ private:
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         std::vector<SDNode *> *Created) const override;
-  SDValue getRsqrtEstimate(SDValue Operand, DAGCombinerInfo &DCI,
-                           unsigned &RefinementSteps,
-                           bool &UseOneConstNR) const override;
-  SDValue getRecipEstimate(SDValue Operand, DAGCombinerInfo &DCI,
-                           unsigned &RefinementSteps) const override;
   unsigned combineRepeatedFPDivisors() const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;

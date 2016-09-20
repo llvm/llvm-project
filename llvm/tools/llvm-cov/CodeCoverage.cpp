@@ -236,12 +236,13 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   for (const auto *Function : Coverage.getInstantiations(SourceFile)) {
     std::unique_ptr<SourceCoverageView> SubView{nullptr};
 
+    StringRef Funcname = getSymbolForHumans(Function->Name);
+
     if (Function->ExecutionCount > 0) {
       auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
       auto SubViewExpansions = SubViewCoverage.getExpansions();
       SubView = SourceCoverageView::create(
-          getSymbolForHumans(Function->Name), SourceBuffer.get(), ViewOpts,
-          std::move(SubViewCoverage));
+          Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
       attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
     }
 
@@ -250,7 +251,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
     for (const auto &CR : Function->CountedRegions)
       if (CR.FileID == FileID)
         Line = std::max(CR.LineEnd, Line);
-    View->addInstantiation(Function->Name, Line, std::move(SubView));
+    View->addInstantiation(Funcname, Line, std::move(SubView));
   }
   return View;
 }

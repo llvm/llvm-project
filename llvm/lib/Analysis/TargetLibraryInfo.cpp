@@ -847,10 +847,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc::stat64:
   case LibFunc::lstat64:
   case LibFunc::statvfs64:
-    return (NumParams >= 1 && FTy.getParamType(0)->isPointerTy() &&
+    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy());
   case LibFunc::dunder_isoc99_sscanf:
-    return (NumParams >= 1 && FTy.getParamType(0)->isPointerTy() &&
+    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy());
   case LibFunc::fopen64:
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&

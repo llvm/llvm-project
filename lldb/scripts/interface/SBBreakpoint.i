@@ -200,6 +200,10 @@ public:
     SBError
     SetScriptCallbackBody (const char *script_body_text);
     
+    void SetCommandLineCommands(SBStringList &commands);
+
+    bool GetCommandLineCommands(SBStringList &commands);
+    
     bool
     AddName (const char *new_name);
 

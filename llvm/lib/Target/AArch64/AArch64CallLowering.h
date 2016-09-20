@@ -35,13 +35,21 @@ class AArch64CallLowering: public CallLowering {
                             ArrayRef<unsigned> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, const MachineOperand &Callee,
-                 ArrayRef<Type *> ResTys, ArrayRef<unsigned> ResRegs,
-                 ArrayRef<Type *> ArgTys,
+                 Type *ResTy, unsigned ResReg, ArrayRef<Type *> ArgTys,
                  ArrayRef<unsigned> ArgRegs) const override;
 
 private:
   typedef std::function<void(MachineIRBuilder &, Type *, unsigned, unsigned)>
       AssignFnTy;
+
+  typedef std::function<void(ArrayRef<unsigned>, ArrayRef<uint64_t>)>
+      SplitArgTy;
+
+  void splitToValueTypes(unsigned Reg, Type *Ty,
+                         SmallVectorImpl<unsigned> &SplitRegs,
+                         SmallVectorImpl<Type *> &SplitTys,
+                         const DataLayout &DL, MachineRegisterInfo &MRI,
+                         SplitArgTy SplitArg) const;
 
   bool handleAssignments(MachineIRBuilder &MIRBuilder, CCAssignFn *AssignFn,
                          ArrayRef<Type *> ArgsTypes, ArrayRef<unsigned> ArgRegs,

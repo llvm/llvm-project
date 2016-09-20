@@ -1500,16 +1500,14 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
 }
 
 static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
-  Type *ITy = Op0->getType();
-  ICmpInst::Predicate Pred0, Pred1;
-  ConstantInt *CI1, *CI2;
-  Value *V;
-
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true))
     return X;
 
   // Look for this pattern: (icmp V, C0) & (icmp V, C1)).
+  Type *ITy = Op0->getType();
+  ICmpInst::Predicate Pred0, Pred1;
   const APInt *C0, *C1;
+  Value *V;
   if (match(Op0, m_ICmp(Pred0, m_Value(V), m_APInt(C0))) &&
       match(Op1, m_ICmp(Pred1, m_Specific(V), m_APInt(C1)))) {
     // Make a constant range that's the intersection of the two icmp ranges.
@@ -1520,6 +1518,8 @@ static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
       return getFalse(ITy);
   }
 
+  // FIXME: Use m_APInt to allow vector splat matches.
+  ConstantInt *CI1, *CI2;
   if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_ConstantInt(CI1)),
                          m_ConstantInt(CI2))))
     return nullptr;
@@ -1685,16 +1685,16 @@ Value *llvm::SimplifyAndInst(Value *Op0, Value *Op1, const DataLayout &DL,
 /// Simplify (or (icmp ...) (icmp ...)) to true when we can tell that the union
 /// contains all possible values.
 static Value *SimplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  ConstantInt *CI1, *CI2;
-  Value *V;
-
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false))
     return X;
 
+  // FIXME: Use m_APInt to allow vector splat matches.
+  ICmpInst::Predicate Pred0, Pred1;
+  ConstantInt *CI1, *CI2;
+  Value *V;
   if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_ConstantInt(CI1)),
                          m_ConstantInt(CI2))))
-   return nullptr;
+    return nullptr;
 
   if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Specific(CI1))))
     return nullptr;

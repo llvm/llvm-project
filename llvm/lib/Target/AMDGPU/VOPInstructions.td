@@ -100,6 +100,49 @@ class VOP3a_viNew <bits<10> op, VOPProfile P> : VOP3aNew<P> {
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
 }
 
+class VOP3e_siNew <bits<9> op, VOPProfile P> : VOP3a_siNew <op, P> {
+  bits<8> vdst;
+  let Inst{7-0} = vdst;
+}
+
+class VOP3e_viNew <bits<10> op, VOPProfile P> : VOP3a_viNew <op, P> {
+  bits<8> vdst;
+  let Inst{7-0} = vdst;
+}
+
+class VOP3beNew <VOPProfile P> : Enc64 {
+  bits<8> vdst;
+  bits<2> src0_modifiers;
+  bits<9> src0;
+  bits<2> src1_modifiers;
+  bits<9> src1;
+  bits<2> src2_modifiers;
+  bits<9> src2;
+  bits<7> sdst;
+  bits<2> omod;
+
+  let Inst{7-0}   = vdst;
+  let Inst{14-8}  = sdst;
+  let Inst{31-26} = 0x34; //encoding
+  let Inst{40-32} = !if(P.HasSrc0, src0, 0);
+  let Inst{49-41} = !if(P.HasSrc1, src1, 0);
+  let Inst{58-50} = !if(P.HasSrc2, src2, 0);
+  let Inst{60-59} = !if(P.HasOMod, omod, 0);
+  let Inst{61}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0);
+  let Inst{62}    = !if(P.HasSrc1Mods, src1_modifiers{0}, 0);
+  let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0);
+}
+
+class VOP3be_siNew <bits<9> op, VOPProfile P> : VOP3beNew<P> {
+  let Inst{25-17} = op;
+}
+
+class VOP3be_viNew <bits<10> op, VOPProfile P> : VOP3beNew<P> {
+  bits<1> clamp;
+  let Inst{25-16} = op;
+  let Inst{15}    = !if(P.HasClamp, clamp, 0);
+}
+
 class VOP_SDWAeNew<VOPProfile P> : Enc64 {
   bits<8> src0;
   bits<3> src0_sel;
@@ -128,3 +171,4 @@ class VOP_SDWAeNew<VOPProfile P> : Enc64 {
 }
 
 include "VOPCInstructions.td"
+include "VOP3Instructions.td"

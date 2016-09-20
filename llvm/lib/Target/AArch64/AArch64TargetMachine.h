@@ -46,7 +46,7 @@ public:
   }
 
 private:
-  AArch64Subtarget Subtarget;
+  bool isLittle;
 };
 
 // AArch64 little endian target machine.

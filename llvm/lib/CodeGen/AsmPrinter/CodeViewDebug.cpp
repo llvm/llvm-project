@@ -504,6 +504,131 @@ void CodeViewDebug::emitTypeInformation() {
       });
 }
 
+namespace {
+
+static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
+  switch (DWLang) {
+  case dwarf::DW_LANG_C:
+  case dwarf::DW_LANG_C89:
+  case dwarf::DW_LANG_C99:
+  case dwarf::DW_LANG_C11:
+  case dwarf::DW_LANG_ObjC:
+    return SourceLanguage::C;
+  case dwarf::DW_LANG_C_plus_plus:
+  case dwarf::DW_LANG_C_plus_plus_03:
+  case dwarf::DW_LANG_C_plus_plus_11:
+  case dwarf::DW_LANG_C_plus_plus_14:
+    return SourceLanguage::Cpp;
+  case dwarf::DW_LANG_Fortran77:
+  case dwarf::DW_LANG_Fortran90:
+  case dwarf::DW_LANG_Fortran03:
+  case dwarf::DW_LANG_Fortran08:
+    return SourceLanguage::Fortran;
+  case dwarf::DW_LANG_Pascal83:
+    return SourceLanguage::Pascal;
+  case dwarf::DW_LANG_Cobol74:
+  case dwarf::DW_LANG_Cobol85:
+    return SourceLanguage::Cobol;
+  case dwarf::DW_LANG_Java:
+    return SourceLanguage::Java;
+  default:
+    // There's no CodeView representation for this language, and CV doesn't
+    // have an "unknown" option for the language field, so we'll use MASM,
+    // as it's very low level.
+    return SourceLanguage::Masm;
+  }
+}
+
+struct Version {
+  int Part[4];
+};
+
+// Takes a StringRef like "clang 4.0.0.0 (other nonsense 123)" and parses out
+// the version number.
+static Version parseVersion(StringRef Name) {
+  Version V = {{0}};
+  int N = 0;
+  for (const char C : Name) {
+    if (isdigit(C)) {
+      V.Part[N] *= 10;
+      V.Part[N] += C - '0';
+    } else if (C == '.') {
+      ++N;
+      if (N >= 4)
+        return V;
+    } else if (N > 0)
+      return V;
+  }
+  return V;
+}
+
+static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
+  switch (Type) {
+    case Triple::ArchType::x86:
+      return CPUType::Pentium3;
+    case Triple::ArchType::x86_64:
+      return CPUType::X64;
+    case Triple::ArchType::thumb:
+      return CPUType::Thumb;
+    default:
+      report_fatal_error("target architecture doesn't map to a CodeView "
+                         "CPUType");
+  }
+}
+
+}  // anonymous namespace
+
+void CodeViewDebug::emitCompilerInformation() {
+  MCContext &Context = MMI->getContext();
+  MCSymbol *CompilerBegin = Context.createTempSymbol(),
+           *CompilerEnd = Context.createTempSymbol();
+  OS.AddComment("Record length");
+  OS.emitAbsoluteSymbolDiff(CompilerEnd, CompilerBegin, 2);
+  OS.EmitLabel(CompilerBegin);
+  OS.AddComment("Record kind: S_COMPILE3");
+  OS.EmitIntValue(SymbolKind::S_COMPILE3, 2);
+  uint32_t Flags = 0;
+
+  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  const MDNode *Node = *CUs->operands().begin();
+  const auto *CU = cast<DICompileUnit>(Node);
+
+  // The low byte of the flags indicates the source language.
+  Flags = MapDWLangToCVLang(CU->getSourceLanguage());
+  // TODO:  Figure out which other flags need to be set.
+
+  OS.AddComment("Flags and language");
+  OS.EmitIntValue(Flags, 4);
+
+  OS.AddComment("CPUType");
+  CPUType CPU =
+      mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
+  OS.EmitIntValue(static_cast<uint64_t>(CPU), 2);
+
+  StringRef CompilerVersion = CU->getProducer();
+  Version FrontVer = parseVersion(CompilerVersion);
+  OS.AddComment("Frontend version");
+  for (int N = 0; N < 4; ++N)
+    OS.EmitIntValue(FrontVer.Part[N], 2);
+
+  // Some Microsoft tools, like Binscope, expect a backend version number of at
+  // least 8.something, so we'll coerce the LLVM version into a form that
+  // guarantees it'll be big enough without really lying about the version.
+  Version BackVer = {{
+      1000 * LLVM_VERSION_MAJOR +
+      10 * LLVM_VERSION_MINOR +
+      LLVM_VERSION_PATCH,
+      0, 0, 0 }};
+  OS.AddComment("Backend version");
+  for (int N = 0; N < 4; ++N)
+    OS.EmitIntValue(BackVer.Part[N], 2);
+
+  OS.AddComment("Null-terminated compiler version string");
+  emitNullTerminatedSymbolName(OS, CompilerVersion);
+
+  OS.EmitLabel(CompilerEnd);
+}
+
 void CodeViewDebug::emitInlineeLinesSubsection() {
   if (InlinedSubprograms.empty())
     return;
@@ -1971,6 +2096,8 @@ MCSymbol *CodeViewDebug::beginCVSubsection(ModuleSubstreamKind Kind) {
   OS.AddComment("Subsection size");
   OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
   OS.EmitLabel(BeginLabel);
+  if (Kind == ModuleSubstreamKind::Symbols)
+    emitCompilerInformation();
   return EndLabel;
 }
 

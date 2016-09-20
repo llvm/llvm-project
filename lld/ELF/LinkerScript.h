@@ -193,7 +193,6 @@ public:
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignOffsets(OutputSectionCommand *Cmd);
   void assignAddresses();
-  int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
   uint64_t getOutputSectionAddress(StringRef Name) override;
   uint64_t getOutputSectionSize(StringRef Name) override;
@@ -202,6 +201,8 @@ public:
   uint64_t getSymbolValue(StringRef S) override;
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
+
+  int getSectionIndex(StringRef Name);
 
 private:
   void computeInputSections(InputSectionDescription *);
@@ -216,7 +217,6 @@ private:
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
 
-  int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(StringRef PhdrName);
 

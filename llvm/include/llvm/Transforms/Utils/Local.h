@@ -258,17 +258,17 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      StoreInst *SI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      LoadInst *LI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic after a phi of an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      PHINode *LI, DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
