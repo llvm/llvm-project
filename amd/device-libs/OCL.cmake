@@ -8,6 +8,7 @@
 set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 set (LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump")
 
+set (BC_EXT .amdgcn.bc)
 set (CMAKE_OCL_COMPILER_ENV_VAR OCLC)
 set (CMAKE_OCL_OUTPUT_EXTENTION .bc)
 set (CMAKE_OCL_OUTPUT_EXTENTION_REPLACE 1)
@@ -67,20 +68,20 @@ endmacro(clang_opencl_bc_lib)
 
 macro(prepare_builtins name)
   add_custom_command(
-    OUTPUT ${name}.bc
-    COMMAND $<TARGET_FILE:prepare-builtins> ${name}.lib.bc -o ${name}.bc
+    OUTPUT ${name}${BC_EXT}
+    COMMAND $<TARGET_FILE:prepare-builtins> ${name}.lib.bc -o ${name}${BC_EXT}
     DEPENDS prepare-builtins ${name}_lib_bc
   )
   add_custom_target(${name}_bc ALL
-    DEPENDS ${name}.bc
+    DEPENDS ${name}${BC_EXT}
   )
-  set(TARGET_FILE_${name} ${CMAKE_CURRENT_BINARY_DIR}/${name}.bc CACHE INTERNAL "")
+  set(TARGET_FILE_${name} ${CMAKE_CURRENT_BINARY_DIR}/${name}${BC_EXT} CACHE INTERNAL "")
 endmacro(prepare_builtins)
 
 macro(clang_opencl_bc_builtins_lib name dir)
   clang_opencl_bc_lib(${name} ${dir} ${ARGN})
   prepare_builtins(${name})
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.bc DESTINATION lib)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}${BC_EXT} DESTINATION lib)
 endmacro(clang_opencl_bc_builtins_lib)
 
 macro(clang_opencl_code name dir)
