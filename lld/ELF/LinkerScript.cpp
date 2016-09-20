@@ -156,6 +156,12 @@ static bool matchConstraints(ArrayRef<InputSectionBase<ELFT> *> Sections,
   });
 }
 
+static void sortSections(std::vector<InputSectionData *> &Sections,
+                         SortSectionPolicy K) {
+  if (K != SortSectionPolicy::Default && K != SortSectionPolicy::None)
+    std::stable_sort(Sections.begin(), Sections.end(), getComparator(K));
+}
+
 // Compute and remember which sections the InputSectionDescription matches.
 template <class ELFT>
 void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
@@ -175,13 +181,24 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
     }
   }
 
-  // Sort for SORT() commands.
-  if (I->SortInner != SortSectionPolicy::Default)
-    std::stable_sort(I->Sections.begin(), I->Sections.end(),
-                     getComparator(I->SortInner));
-  if (I->SortOuter != SortSectionPolicy::Default)
-    std::stable_sort(I->Sections.begin(), I->Sections.end(),
-                     getComparator(I->SortOuter));
+  // Sort sections as instructed by SORT-family commands and --sort-section
+  // option. Because SORT-family commands can be nested at most two depth
+  // (e.g. SORT_BY_NAME(SORT_BY_ALIGNMENT(.text.*))) and because the command
+  // line option is respected even if a SORT command is given, the exact
+  // behavior we have here is a bit complicated. Here are the rules.
+  //
+  // 1. If two SORT commands are given, --sort-section is ignored.
+  // 2. If one SORT command is given, and if it is not SORT_NONE,
+  //    --sort-section is handled as an inner SORT command.
+  // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
+  // 4. If no SORT command is given, sort according to --sort-section.
+  if (I->SortOuter != SortSectionPolicy::None) {
+    if (I->SortInner == SortSectionPolicy::Default)
+      sortSections(I->Sections, Config->SortSection);
+    else
+      sortSections(I->Sections, I->SortInner);
+    sortSections(I->Sections, I->SortOuter);
+  }
 
   // We do not add duplicate input sections, so mark them with a dummy output
   // section for now.
@@ -1058,27 +1075,6 @@ SortSectionPolicy ScriptParser::readSortKind() {
   return SortSectionPolicy::Default;
 }
 
-static void selectSortKind(InputSectionDescription *Cmd) {
-  if (Cmd->SortOuter == SortSectionPolicy::None) {
-    Cmd->SortOuter = SortSectionPolicy::Default;
-    return;
-  }
-
-  if (Cmd->SortOuter != SortSectionPolicy::Default) {
-    // If the section sorting command in linker script is nested, the command
-    // line option will be ignored.
-    if (Cmd->SortInner != SortSectionPolicy::Default)
-      return;
-    // If the section sorting command in linker script isn't nested, the
-    // command line option will make the section sorting command to be treated
-    // as nested sorting command.
-    Cmd->SortInner = Config->SortSection;
-    return;
-  }
-  // If sorting rule not specified, use command line option.
-  Cmd->SortOuter = Config->SortSection;
-}
-
 // Method reads a list of sequence of excluded files and section globs given in
 // a following form: ((EXCLUDE_FILE(file_pattern+))? section_pattern+)+
 // Example: *(.foo.1 EXCLUDE_FILE (*a.o) .foo.2 EXCLUDE_FILE (*b.o) .foo.3)
@@ -1133,11 +1129,9 @@ ScriptParser::readInputSectionRules(StringRef FilePattern) {
       Cmd->SectionPatterns.push_back({Regex(), readFilePatterns()});
     }
     expect(")");
-    selectSortKind(Cmd);
     return Cmd;
   }
 
-  selectSortKind(Cmd);
   readSectionExcludes(Cmd);
   return Cmd;
 }

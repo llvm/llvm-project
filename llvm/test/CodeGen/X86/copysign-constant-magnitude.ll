@@ -1,105 +1,156 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-macosx10.10.0 < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.10.0"
 
-define void @test_copysign_const_magnitude_d(double %X) {
-; CHECK: [[SIGNMASK:L.+]]:
+; The assertions are *enhanced* from update_test_checks.ll to include
+; the constant load values because those are important. 
+
+; CHECK:        [[SIGNMASK1:L.+]]:
 ; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
 ; CHECK-NEXT:   .quad 0                       ## double 0
-; CHECK: [[ZERO:L.+]]:
-; CHECK-NEXT:   .space 16
-; CHECK: [[ONE:L.+]]:
-; CHECK-NEXT:   .quad 4607182418800017408     ## double 1
-; CHECK-NEXT:   .quad 0                       ## double 0
-; CHECK-LABEL: test_copysign_const_magnitude_d:
 
-; CHECK: id
-  %iX = call double @id_d(double %X)
-
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-  %d0 = call double @copysign(double 0.000000e+00, double %iX)
-
-; CHECK-NEXT: id
-  %id0 = call double @id_d(double %d0)
-
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orps [[ZERO]](%rip), %xmm0
-  %dn0 = call double @copysign(double -0.000000e+00, double %id0)
-
-; CHECK-NEXT: id
-  %idn0 = call double @id_d(double %dn0)
-
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orps [[ONE]](%rip), %xmm0
-  %d1 = call double @copysign(double 1.000000e+00, double %idn0)
-
-; CHECK-NEXT: id
-  %id1 = call double @id_d(double %d1)
-
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orps [[ONE]](%rip), %xmm0
-  %dn1 = call double @copysign(double -1.000000e+00, double %id1)
-
-; CHECK-NEXT: id
-  %idn1 = call double @id_d(double %dn1)
-
-; CHECK: retq
-  ret void
+define double @mag_pos0_double(double %x) nounwind {
+; CHECK-LABEL: mag_pos0_double:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK1]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call double @copysign(double 0.0, double %x)
+  ret double %y
 }
 
-define void @test_copysign_const_magnitude_f(float %X) {
-; CHECK: [[SIGNMASK:L.+]]:
-; CHECK-NEXT:   .long	2147483648              ## float -0
-; CHECK-NEXT:   .long	0                       ## float 0
-; CHECK-NEXT:   .long	0                       ## float 0
-; CHECK-NEXT:   .long	0                       ## float 0
-; CHECK: [[ZERO:L.+]]:
+; CHECK:        [[SIGNMASK2:L.+]]:
+; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0                       ## double 0
+; CHECK:        [[ZERO2:L.+]]:
 ; CHECK-NEXT:   .space 16
-; CHECK: [[ONE:L.+]]:
-; CHECK-NEXT:   .long	1065353216              ## float 1
-; CHECK-NEXT:   .long	0                       ## float 0
-; CHECK-NEXT:   .long	0                       ## float 0
-; CHECK-NEXT:   .long	0                       ## float 0
-; CHECK-LABEL: test_copysign_const_magnitude_f:
 
-; CHECK: id
-  %iX = call float @id_f(float %X)
+define double @mag_neg0_double(double %x) nounwind {
+; CHECK-LABEL: mag_neg0_double:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK2]](%rip), %xmm0
+; CHECK-NEXT:    orps [[ZERO2]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call double @copysign(double -0.0, double %x)
+  ret double %y
+}
 
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-  %d0 = call float @copysignf(float 0.000000e+00, float %iX)
+; CHECK:        [[SIGNMASK3:L.+]]:
+; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0                       ## double 0
+; CHECK:        [[ONE3:L.+]]:
+; CHECK-NEXT:   .quad 4607182418800017408     ## double 1
+; CHECK-NEXT:   .quad 0                       ## double 0
 
-; CHECK-NEXT: id
-  %id0 = call float @id_f(float %d0)
+define double @mag_pos1_double(double %x) nounwind {
+; CHECK-LABEL: mag_pos1_double:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK3]](%rip), %xmm0
+; CHECK-NEXT:    orps [[ONE3]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call double @copysign(double 1.0, double %x)
+  ret double %y
+}
 
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orps [[ZERO]](%rip), %xmm0
-  %dn0 = call float @copysignf(float -0.000000e+00, float %id0)
+; CHECK:        [[SIGNMASK4:L.+]]:
+; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0                       ## double 0
+; CHECK:        [[ONE4:L.+]]:
+; CHECK-NEXT:   .quad 4607182418800017408     ## double 1
+; CHECK-NEXT:   .quad 0                       ## double 0
 
-; CHECK-NEXT: id
-  %idn0 = call float @id_f(float %dn0)
+define double @mag_neg1_double(double %x) nounwind {
+; CHECK-LABEL: mag_neg1_double:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK4]](%rip), %xmm0
+; CHECK-NEXT:    orps [[ONE4]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call double @copysign(double -1.0, double %x)
+  ret double %y
+}
 
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orps [[ONE]](%rip), %xmm0
-  %d1 = call float @copysignf(float 1.000000e+00, float %idn0)
+; CHECK:       [[SIGNMASK5:L.+]]:
+; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
 
-; CHECK-NEXT: id
-  %id1 = call float @id_f(float %d1)
+define float @mag_pos0_float(float %x) nounwind {
+; CHECK-LABEL: mag_pos0_float:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK5]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call float @copysignf(float 0.0, float %x)
+  ret float %y
+}
 
-; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orps [[ONE]](%rip), %xmm0
-  %dn1 = call float @copysignf(float -1.000000e+00, float %id1)
+; CHECK:       [[SIGNMASK6:L.+]]:
+; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK:        [[ZERO6:L.+]]:
+; CHECK-NEXT:  .space  16
 
-; CHECK-NEXT: id
-  %idn1 = call float @id_f(float %dn1)
+define float @mag_neg0_float(float %x) nounwind {
+; CHECK-LABEL: mag_neg0_float:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK6]](%rip), %xmm0
+; CHECK-NEXT:    orps [[ZERO6]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call float @copysignf(float -0.0, float %x)
+  ret float %y
+}
 
-; CHECK: retq
-  ret void
+; CHECK:       [[SIGNMASK7:L.+]]:
+; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK:        [[ONE7:L.+]]:
+; CHECK-NEXT:  .long 1065353216              ## float 1
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+
+define float @mag_pos1_float(float %x) nounwind {
+; CHECK-LABEL: mag_pos1_float:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK7]](%rip), %xmm0
+; CHECK-NEXT:    orps [[ONE7]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call float @copysignf(float 1.0, float %x)
+  ret float %y
+}
+
+; CHECK:       [[SIGNMASK8:L.+]]:
+; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK:        [[ONE8:L.+]]:
+; CHECK-NEXT:  .long 1065353216              ## float 1
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+; CHECK-NEXT:  .long 0                       ## float 0
+
+define float @mag_neg1_float(float %x) nounwind {
+; CHECK-LABEL: mag_neg1_float:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andps [[SIGNMASK8]](%rip), %xmm0
+; CHECK-NEXT:    orps [[ONE8]](%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %y = call float @copysignf(float -1.0, float %x)
+  ret float %y
 }
 
 declare double @copysign(double, double) nounwind readnone
 declare float @copysignf(float, float) nounwind readnone
 
-; Dummy identity functions, so we always have xmm0, and prevent optimizations.
-declare double @id_d(double)
-declare float @id_f(float)

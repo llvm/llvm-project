@@ -60,11 +60,10 @@
 # RUN: ld.lld -o %t2 %t.script %t
 # RUN: llvm-readobj %t2 > /dev/null
 
+# The entry symbol should not cause an undefined error.
 # RUN: echo "ENTRY(_wrong_label)" > %t.script
-# RUN: not ld.lld -o %t2 %t.script %t > %t.log 2>&1
-# RUN: FileCheck -check-prefix=ERR-ENTRY %s < %t.log
-
-# ERR-ENTRY: undefined symbol: _wrong_label
+# RUN: ld.lld -o %t2 %t.script %t
+# RUN: ld.lld --entry=abc -o %t2 %t
 
 # -e has precedence over linker script's ENTRY.
 # RUN: echo "ENTRY(_label)" > %t.script

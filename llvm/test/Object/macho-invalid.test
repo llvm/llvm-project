@@ -262,3 +262,24 @@ INVALID-DYLDINFO-EXPORT_OFF-EXPORT_SIZE: macho-invalid-dyldinfo-export_off-expor
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-more-than-one  2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-MORE-THAN-ONE %s
 INVALID-DYLDINFO-MORE-THAN-ONE: macho-invalid-dyldinfo-more-than-one': truncated or malformed object (more than one LC_DYLD_INFO and or LC_DYLD_INFO_ONLY command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-small  2>&1 | FileCheck -check-prefix INVALID-DYLIB-SMALL %s
+INVALID-DYLIB-SMALL: macho-invalid-dylib-small': truncated or malformed object (load command 0 LC_LOAD_DYLIB cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-name_offset-toobig  2>&1 | FileCheck -check-prefix INVALID-DYLIB-NAME_OFFSET-TOOBIG %s
+INVALID-DYLIB-NAME_OFFSET-TOOBIG: macho-invalid-dylib-name_offset-toobig': truncated or malformed object (load command 0 LC_LOAD_WEAK_DYLIB name.offset field extends past the end of the load command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-name_toobig  2>&1 | FileCheck -check-prefix INVALID-DYLIB-NAME_TOOBIG %s
+INVALID-DYLIB-NAME_TOOBIG: macho-invalid-dylib-name_toobig': truncated or malformed object (load command 0 LC_LAZY_LOAD_DYLIB library name extends past the end of the load command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-name_offset-toosmall  2>&1 | FileCheck -check-prefix INVALID-DYLIB-NAME_OFFSET-TOOSMALL %s
+INVALID-DYLIB-NAME_OFFSET-TOOSMALL: macho-invalid-dylib-name_offset-toosmall': truncated or malformed object (load command 0 LC_LOAD_UPWARD_DYLIB name.offset field too small, not past the end of the dylib_command struct)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-id-more-than-one  2>&1 | FileCheck -check-prefix INVALID-DYLIB-ID-MORE-THAN-ONE %s
+INVALID-DYLIB-ID-MORE-THAN-ONE: macho-invalid-dylib-id-more-than-one': truncated or malformed object (more than one LC_ID_DYLIB command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-wrong-filetype  2>&1 | FileCheck -check-prefix INVALID-DYLIB-WRONG-FILETYPE %s
+INVALID-DYLIB-WRONG-FILETYPE: macho-invalid-dylib-wrong-filetype': truncated or malformed object (LC_ID_DYLIB load command in non-dynamic library file type)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-no-id  2>&1 | FileCheck -check-prefix INVALID-DYLIB-NO-ID %s
+INVALID-DYLIB-NO-ID: macho-invalid-dylib-no-id': truncated or malformed object (no LC_ID_DYLIB load command in dynamic library filetype)

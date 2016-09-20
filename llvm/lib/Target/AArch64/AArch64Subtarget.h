@@ -82,7 +82,6 @@ protected:
   bool UseAlternateSExtLoadCVTF32Pattern = false;
   bool HasMacroOpFusion = false;
   bool DisableLatencySchedHeuristic = false;
-  bool UseRSqrt = false;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 3;
   uint16_t CacheLineSize = 0;
@@ -191,7 +190,6 @@ public:
     return UseAlternateSExtLoadCVTF32Pattern;
   }
   bool hasMacroOpFusion() const { return HasMacroOpFusion; }
-  bool useRSqrt() const { return UseRSqrt; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const {
     return VectorInsertExtractBaseCost;

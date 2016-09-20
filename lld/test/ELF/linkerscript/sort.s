@@ -86,6 +86,10 @@
 # RUN: ld.lld --sort-section name -o %t10 --script %t9.script %t2.o %t1.o
 # RUN: llvm-objdump -s %t10 | FileCheck -check-prefix=UNSORTED %s
 
+## SORT_NONE as a inner sort directive.
+# RUN: echo "SECTIONS { .aaa : { *(SORT_BY_NAME(SORT_NONE(.aaa.*))) } }" > %t10.script
+# RUN: ld.lld -o %t11 --script %t10.script %t2.o %t1.o
+# RUN: llvm-objdump -s %t11 | FileCheck -check-prefix=SORTED_A %s
 
 .global _start
 _start:
