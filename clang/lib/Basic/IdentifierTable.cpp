@@ -42,7 +42,6 @@ IdentifierInfo::IdentifierInfo() {
   NeedsHandleIdentifier = false;
   IsFromAST = false;
   ChangedAfterLoad = false;
-  FEChangedAfterLoad = false;
   RevertedTokenID = false;
   OutOfDate = false;
   IsModulesImport = false;
