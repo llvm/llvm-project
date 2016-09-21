@@ -513,24 +513,16 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
 /// \returns the weight for \p BB.
 ErrorOr<uint64_t>
 SampleProfileLoader::getBlockWeight(const BasicBlock *BB) const {
-  DenseMap<uint64_t, uint64_t> CM;
+  uint64_t Max = 0;
+  bool HasWeight = false;
   for (auto &I : BB->getInstList()) {
     const ErrorOr<uint64_t> &R = getInstWeight(I);
-    if (R)
-      CM[R.get()]++;
-  }
-  if (CM.size() == 0)
-    return std::error_code();
-  uint64_t W = 0, C = 0;
-  for (const auto &C_W : CM) {
-    if (C_W.second == W) {
-      C = std::max(C, C_W.first);
-    } else if (C_W.second > W) {
-      C = C_W.first;
-      W = C_W.second;
+    if (R) {
+      Max = std::max(Max, R.get());
+      HasWeight = true;
     }
   }
-  return C;
+  return HasWeight ? ErrorOr<uint64_t>(Max) : std::error_code();
 }
 
 /// \brief Compute and store the weights of every basic block.

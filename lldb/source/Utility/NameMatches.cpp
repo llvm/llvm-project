@@ -36,8 +36,8 @@ bool lldb_private::NameMatches(const char *name, NameMatchType match_type,
     case eNameMatchEndsWith:
       return name_sref.endswith(match_sref);
     case eNameMatchRegularExpression: {
-      RegularExpression regex(match);
-      return regex.Execute(name);
+      RegularExpression regex(match_sref);
+      return regex.Execute(name_sref);
     } break;
     }
   }

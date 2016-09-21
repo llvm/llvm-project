@@ -2281,11 +2281,28 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   assert(ScalarIVTy->isIntegerTy() && ScalarIVTy == Step->getType() &&
          "Val and Step should have the same integer type");
 
+  auto scalarUserIsUniform = [&](User *U) -> bool {
+    auto *I = cast<Instruction>(U);
+    return !OrigLoop->contains(I) || !Legal->isScalarAfterVectorization(I) ||
+           Legal->isUniformAfterVectorization(I);
+  };
+
+  // Determine the number of scalars we need to generate for each unroll
+  // iteration. If EntryVal is uniform or all it's scalar users are uniform, we
+  // only need to generate the first lane. Otherwise, we generate all VF
+  // values. We are essentially determining if the induction variable has no
+  // "multi-scalar" (non-uniform scalar) users.
+  unsigned Lanes =
+      Legal->isUniformAfterVectorization(cast<Instruction>(EntryVal)) ||
+              all_of(EntryVal->users(), scalarUserIsUniform)
+          ? 1
+          : VF;
+
   // Compute the scalar steps and save the results in VectorLoopValueMap.
   ScalarParts Entry(UF);
   for (unsigned Part = 0; Part < UF; ++Part) {
     Entry[Part].resize(VF);
-    for (unsigned Lane = 0; Lane < VF; ++Lane) {
+    for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
       auto *StartIdx = ConstantInt::get(ScalarIVTy, VF * Part + Lane);
       auto *Mul = Builder.CreateMul(StartIdx, Step);
       auto *Add = Builder.CreateAdd(ScalarIV, Mul);
@@ -2332,6 +2349,9 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
     // Initialize a new vector map entry.
     VectorParts Entry(UF);
 
+    // If we've scalarized a value, that value should be an instruction.
+    auto *I = cast<Instruction>(V);
+
     // If we aren't vectorizing, we can just copy the scalar map values over to
     // the vector map.
     if (VF == 1) {
@@ -2340,9 +2360,12 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
       return VectorLoopValueMap.initVector(V, Entry);
     }
 
-    // Get the last scalarized instruction. This corresponds to the instruction
-    // we created for the last vector lane on the last unroll iteration.
-    auto *LastInst = cast<Instruction>(getScalarValue(V, UF - 1, VF - 1));
+    // Get the last scalar instruction we generated for V. If the value is
+    // known to be uniform after vectorization, this corresponds to lane zero
+    // of the last unroll iteration. Otherwise, the last instruction is the one
+    // we created for the last vector lane of the last unroll iteration.
+    unsigned LastLane = Legal->isUniformAfterVectorization(I) ? 0 : VF - 1;
+    auto *LastInst = cast<Instruction>(getScalarValue(V, UF - 1, LastLane));
 
     // Set the insert point after the last scalarized instruction. This ensures
     // the insertelement sequence will directly follow the scalar definitions.
@@ -2350,15 +2373,24 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
     auto NewIP = std::next(BasicBlock::iterator(LastInst));
     Builder.SetInsertPoint(&*NewIP);
 
-    // However, if we are vectorizing, we need to construct the vector values
-    // using insertelement instructions. Since the resulting vectors are stored
-    // in VectorLoopValueMap, we will only generate the insertelements once.
+    // However, if we are vectorizing, we need to construct the vector values.
+    // If the value is known to be uniform after vectorization, we can just
+    // broadcast the scalar value corresponding to lane zero for each unroll
+    // iteration. Otherwise, we construct the vector values using insertelement
+    // instructions. Since the resulting vectors are stored in
+    // VectorLoopValueMap, we will only generate the insertelements once.
     for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *Insert = UndefValue::get(VectorType::get(V->getType(), VF));
-      for (unsigned Width = 0; Width < VF; ++Width)
-        Insert = Builder.CreateInsertElement(
-            Insert, getScalarValue(V, Part, Width), Builder.getInt32(Width));
-      Entry[Part] = Insert;
+      Value *VectorValue = nullptr;
+      if (Legal->isUniformAfterVectorization(I)) {
+        VectorValue = getBroadcastInstrs(getScalarValue(V, Part, 0));
+      } else {
+        VectorValue = UndefValue::get(VectorType::get(V->getType(), VF));
+        for (unsigned Lane = 0; Lane < VF; ++Lane)
+          VectorValue = Builder.CreateInsertElement(
+              VectorValue, getScalarValue(V, Part, Lane),
+              Builder.getInt32(Lane));
+      }
+      Entry[Part] = VectorValue;
     }
     Builder.restoreIP(OldIP);
     return VectorLoopValueMap.initVector(V, Entry);
@@ -2377,6 +2409,9 @@ Value *InnerLoopVectorizer::getScalarValue(Value *V, unsigned Part,
   // already be scalar.
   if (OrigLoop->isLoopInvariant(V))
     return V;
+
+  assert(Lane > 0 ? !Legal->isUniformAfterVectorization(cast<Instruction>(V))
+                  : true && "Uniform values only have lane zero");
 
   // If the value from the original loop has not been vectorized, it is
   // represented by UF x VF scalar values in the new loop. Return the requested
@@ -2884,16 +2919,21 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
   if (IfPredicateInstr)
     Cond = createBlockInMask(Instr->getParent());
 
+  // Determine the number of scalars we need to generate for each unroll
+  // iteration. If the instruction is uniform, we only need to generate the
+  // first lane. Otherwise, we generate all VF values.
+  unsigned Lanes = Legal->isUniformAfterVectorization(Instr) ? 1 : VF;
+
   // For each vector unroll 'part':
   for (unsigned Part = 0; Part < UF; ++Part) {
     Entry[Part].resize(VF);
     // For each scalar that we create:
-    for (unsigned Width = 0; Width < VF; ++Width) {
+    for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
 
       // Start if-block.
       Value *Cmp = nullptr;
       if (IfPredicateInstr) {
-        Cmp = Builder.CreateExtractElement(Cond[Part], Builder.getInt32(Width));
+        Cmp = Builder.CreateExtractElement(Cond[Part], Builder.getInt32(Lane));
         Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Cmp,
                                  ConstantInt::get(Cmp->getType(), 1));
       }
@@ -2905,7 +2945,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
       // Replace the operands of the cloned instructions with their scalar
       // equivalents in the new loop.
       for (unsigned op = 0, e = Instr->getNumOperands(); op != e; ++op) {
-        auto *NewOp = getScalarValue(Instr->getOperand(op), Part, Width);
+        auto *NewOp = getScalarValue(Instr->getOperand(op), Part, Lane);
         Cloned->setOperand(op, NewOp);
       }
       addNewMetadata(Cloned, Instr);
@@ -2914,7 +2954,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
       Builder.Insert(Cloned);
 
       // Add the cloned scalar to the scalar map entry.
-      Entry[Part][Width] = Cloned;
+      Entry[Part][Lane] = Cloned;
 
       // If we just cloned a new assumption, add it the assumption cache.
       if (auto *II = dyn_cast<IntrinsicInst>(Cloned))
@@ -4398,12 +4438,16 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
     // This is the normalized GEP that starts counting at zero.
     Value *PtrInd = Induction;
     PtrInd = Builder.CreateSExtOrTrunc(PtrInd, II.getStep()->getType());
+    // Determine the number of scalars we need to generate for each unroll
+    // iteration. If the instruction is uniform, we only need to generate the
+    // first lane. Otherwise, we generate all VF values.
+    unsigned Lanes = Legal->isUniformAfterVectorization(P) ? 1 : VF;
     // These are the scalar results. Notice that we don't generate vector GEPs
     // because scalar GEPs result in better code.
     ScalarParts Entry(UF);
     for (unsigned Part = 0; Part < UF; ++Part) {
       Entry[Part].resize(VF);
-      for (unsigned Lane = 0; Lane < VF; ++Lane) {
+      for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
         Constant *Idx = ConstantInt::get(PtrInd->getType(), Lane + Part * VF);
         Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
         Value *SclrGep = II.transform(Builder, GlobalIdx, PSE.getSE(), DL);

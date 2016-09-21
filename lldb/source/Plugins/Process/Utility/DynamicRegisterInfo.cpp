@@ -125,9 +125,9 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
         // LSBIT - the least significant bit at which the current register value
         // ends at
         static RegularExpression g_bitfield_regex(
-            "([A-Za-z_][A-Za-z0-9_]*)\\[([0-9]+):([0-9]+)\\]");
+            llvm::StringRef("([A-Za-z_][A-Za-z0-9_]*)\\[([0-9]+):([0-9]+)\\]"));
         RegularExpression::Match regex_match(3);
-        if (g_bitfield_regex.Execute(slice_str.c_str(), &regex_match)) {
+        if (g_bitfield_regex.Execute(slice_str, &regex_match)) {
           llvm::StringRef reg_name_str;
           std::string msbit_str;
           std::string lsbit_str;

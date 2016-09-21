@@ -2198,7 +2198,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
     GetObjectFile()->GetModule()->LogMessage(
         log, "SymbolFileDWARF::FindGlobalVariables (regex=\"%s\", append=%u, "
              "max_matches=%u, variables)",
-        regex.GetText(), append, max_matches);
+        regex.GetText().str().c_str(), append, max_matches);
   }
 
   DWARFDebugInfo *info = DebugInfo();
@@ -2252,7 +2252,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
           GetObjectFile()->GetModule()->ReportErrorIfModifyDetected(
               "the DWARF debug information has been modified (.apple_names "
               "accelerator table had bad die 0x%8.8x for regex '%s')\n",
-              die_ref.die_offset, regex.GetText());
+              die_ref.die_offset, regex.GetText().str().c_str());
         }
       }
     }
@@ -2673,7 +2673,7 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
                                         SymbolContextList &sc_list) {
   Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "SymbolFileDWARF::FindFunctions (regex = '%s')",
-                     regex.GetText());
+                     regex.GetText().str().c_str());
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
@@ -2681,7 +2681,7 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
     GetObjectFile()->GetModule()->LogMessage(
         log,
         "SymbolFileDWARF::FindFunctions (regex=\"%s\", append=%u, sc_list)",
-        regex.GetText(), append);
+        regex.GetText().str().c_str(), append);
   }
 
   // If we aren't appending the results to this list, then clear the list

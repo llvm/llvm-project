@@ -73,6 +73,9 @@ private:
   void fixTypeLoc(const ast_matchers::MatchFinder::MatchResult &Result,
                   SourceLocation Start, SourceLocation End, TypeLoc Type);
 
+  void fixUsingShadowDecl(const ast_matchers::MatchFinder::MatchResult &Result,
+                          const UsingDecl *UsingDeclaration);
+
   // Information about moving an old namespace.
   struct MoveNamespace {
     // The start offset of the namespace block being moved in the original

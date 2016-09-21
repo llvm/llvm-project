@@ -1964,8 +1964,9 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
   // Find all the global variables from the script rs modules
   VariableList variable_list;
   for (auto module_sp : m_rsmodules)
-    module_sp->m_module->FindGlobalVariables(RegularExpression("."), true,
-                                             UINT32_MAX, variable_list);
+    module_sp->m_module->FindGlobalVariables(
+        RegularExpression(llvm::StringRef(".")), true, UINT32_MAX,
+        variable_list);
 
   // Iterate over all the global variables looking for one with a matching type
   // to the Element.
@@ -3741,15 +3742,16 @@ public:
       RegularExpression regex;
       RegularExpression::Match regex_match(3);
 
+      llvm::StringRef id_ref = llvm::StringRef::withNullAsEmpty(id_cstr);
       bool matched = false;
-      if (regex.Compile("^([0-9]+),([0-9]+),([0-9]+)$") &&
-          regex.Execute(id_cstr, &regex_match))
+      if (regex.Compile(llvm::StringRef("^([0-9]+),([0-9]+),([0-9]+)$")) &&
+          regex.Execute(id_ref, &regex_match))
         matched = true;
-      else if (regex.Compile("^([0-9]+),([0-9]+)$") &&
-               regex.Execute(id_cstr, &regex_match))
+      else if (regex.Compile(llvm::StringRef("^([0-9]+),([0-9]+)$")) &&
+               regex.Execute(id_ref, &regex_match))
         matched = true;
-      else if (regex.Compile("^([0-9]+)$") &&
-               regex.Execute(id_cstr, &regex_match))
+      else if (regex.Compile(llvm::StringRef("^([0-9]+)$")) &&
+               regex.Execute(id_ref, &regex_match))
         matched = true;
       for (uint32_t i = 0; i < 3; i++) {
         std::string group;

@@ -382,9 +382,11 @@ Error Variable::GetValuesForVariableExpressionPath(
     } break;
 
     default: {
-      static RegularExpression g_regex("^([A-Za-z_:][A-Za-z_0-9:]*)(.*)");
+      static RegularExpression g_regex(
+          llvm::StringRef("^([A-Za-z_:][A-Za-z_0-9:]*)(.*)"));
       RegularExpression::Match regex_match(1);
-      if (g_regex.Execute(variable_expr_path, &regex_match)) {
+      if (g_regex.Execute(llvm::StringRef::withNullAsEmpty(variable_expr_path),
+                          &regex_match)) {
         std::string variable_name;
         if (regex_match.GetMatchAtIndex(variable_expr_path, 1, variable_name)) {
           variable_list.Clear();

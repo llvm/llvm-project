@@ -194,7 +194,7 @@ TEST(ClangMove, MoveHeaderOnly) {
   Spec.OldHeader = "foo.h";
   Spec.NewHeader = "new_foo.h";
   auto Results = runClangMoveOnCode(Spec);
-  EXPECT_EQ(2, Results.size());
+  EXPECT_EQ(2u, Results.size());
   EXPECT_EQ(ExpectedTestHeader, Results[Spec.OldHeader]);
   EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
 }
@@ -205,7 +205,7 @@ TEST(ClangMove, MoveCCOnly) {
   Spec.OldCC = "foo.cc";
   Spec.NewCC = "new_foo.cc";
   auto Results = runClangMoveOnCode(Spec);
-  EXPECT_EQ(2, Results.size());
+  EXPECT_EQ(2u, Results.size());
   EXPECT_EQ(ExpectedTestCC, Results[Spec.OldCC]);
   EXPECT_EQ(ExpectedNewCC, Results[Spec.NewCC]);
 }
@@ -218,7 +218,7 @@ TEST(ClangMove, MoveNonExistClass) {
   Spec.NewHeader = "new_foo.h";
   Spec.NewCC = "new_foo.cc";
   auto Results = runClangMoveOnCode(Spec);
-  EXPECT_EQ(0, Results.size());
+  EXPECT_EQ(0u, Results.size());
 }
 
 } // namespace

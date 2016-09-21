@@ -697,7 +697,7 @@ protected:
       if (typeCS) {
         if (m_command_options.m_regex) {
           RegularExpressionSP typeRX(new RegularExpression());
-          if (!typeRX->Compile(typeCS.GetCString())) {
+          if (!typeRX->Compile(typeCS.GetStringRef())) {
             result.AppendError(
                 "regex format error (maybe this is not really a regex?)");
             result.SetStatus(eReturnStatusFailed);
@@ -1102,10 +1102,10 @@ protected:
     if (m_options.m_category_regex.OptionWasSet()) {
       category_regex.reset(new RegularExpression());
       if (!category_regex->Compile(
-              m_options.m_category_regex.GetCurrentValue())) {
+              m_options.m_category_regex.GetCurrentValueAsRef())) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'",
-            m_options.m_category_regex.GetCurrentValue());
+            m_options.m_category_regex.GetCurrentValueAsRef().str().c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
@@ -1114,7 +1114,7 @@ protected:
     if (argc == 1) {
       const char *arg = command.GetArgumentAtIndex(0);
       formatter_regex.reset(new RegularExpression());
-      if (!formatter_regex->Compile(arg)) {
+      if (!formatter_regex->Compile(llvm::StringRef::withNullAsEmpty(arg))) {
         result.AppendErrorWithFormat("syntax error in regular expression '%s'",
                                      arg);
         result.SetStatus(eReturnStatusFailed);
@@ -1137,9 +1137,9 @@ protected:
                       const FormatterSharedPointer &format_sp) -> bool {
           if (formatter_regex) {
             bool escape = true;
-            if (0 == strcmp(name.AsCString(), formatter_regex->GetText())) {
+            if (name.GetStringRef() == formatter_regex->GetText()) {
               escape = false;
-            } else if (formatter_regex->Execute(name.AsCString())) {
+            } else if (formatter_regex->Execute(name.GetStringRef())) {
               escape = false;
             }
 
@@ -1159,7 +1159,7 @@ protected:
                           const FormatterSharedPointer &format_sp) -> bool {
           if (formatter_regex) {
             bool escape = true;
-            if (0 == strcmp(regex_sp->GetText(), formatter_regex->GetText())) {
+            if (regex_sp->GetText() == formatter_regex->GetText()) {
               escape = false;
             } else if (formatter_regex->Execute(regex_sp->GetText())) {
               escape = false;
@@ -1170,7 +1170,8 @@ protected:
           }
 
           any_printed = true;
-          result.GetOutputStream().Printf("%s: %s\n", regex_sp->GetText(),
+          result.GetOutputStream().Printf("%s: %s\n",
+                                          regex_sp->GetText().str().c_str(),
                                           format_sp->GetDescription().c_str());
           return true;
         });
@@ -1191,9 +1192,11 @@ protected:
               const lldb::TypeCategoryImplSP &category) -> bool {
             if (category_regex) {
               bool escape = true;
-              if (0 == strcmp(category->GetName(), category_regex->GetText())) {
+              if (category->GetName() == category_regex->GetText()) {
                 escape = false;
-              } else if (category_regex->Execute(category->GetName())) {
+              } else if (category_regex->Execute(
+                             llvm::StringRef::withNullAsEmpty(
+                                 category->GetName()))) {
                 escape = false;
               }
 
@@ -1693,7 +1696,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
 
   if (type == eRegexSummary) {
     RegularExpressionSP typeRX(new RegularExpression());
-    if (!typeRX->Compile(type_name.GetCString())) {
+    if (!typeRX->Compile(type_name.GetStringRef())) {
       if (error)
         error->SetErrorString(
             "regex format error (maybe this is not really a regex?)");
@@ -2242,7 +2245,7 @@ protected:
     if (argc == 1) {
       regex.reset(new RegularExpression());
       const char *arg = command.GetArgumentAtIndex(0);
-      if (!regex->Compile(arg)) {
+      if (!regex->Compile(llvm::StringRef::withNullAsEmpty(arg))) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'", arg);
         result.SetStatus(eReturnStatusFailed);
@@ -2259,9 +2262,10 @@ protected:
         [&regex, &result](const lldb::TypeCategoryImplSP &category_sp) -> bool {
           if (regex) {
             bool escape = true;
-            if (0 == strcmp(category_sp->GetName(), regex->GetText())) {
+            if (regex->GetText() == category_sp->GetName()) {
               escape = false;
-            } else if (regex->Execute(category_sp->GetName())) {
+            } else if (regex->Execute(llvm::StringRef::withNullAsEmpty(
+                           category_sp->GetName()))) {
               escape = false;
             }
 
@@ -2510,7 +2514,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
 
   if (type == eRegexSynth) {
     RegularExpressionSP typeRX(new RegularExpression());
-    if (!typeRX->Compile(type_name.GetCString())) {
+    if (!typeRX->Compile(type_name.GetStringRef())) {
       if (error)
         error->SetErrorString(
             "regex format error (maybe this is not really a regex?)");
@@ -2652,7 +2656,7 @@ private:
 
     if (type == eRegexFilter) {
       RegularExpressionSP typeRX(new RegularExpression());
-      if (!typeRX->Compile(type_name.GetCString())) {
+      if (!typeRX->Compile(type_name.GetStringRef())) {
         if (error)
           error->SetErrorString(
               "regex format error (maybe this is not really a regex?)");

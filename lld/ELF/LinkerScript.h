@@ -99,6 +99,7 @@ struct OutputSectionCommand : BaseCommand {
 
 // This struct represents one section match pattern in SECTIONS() command.
 // It can optionally have negative match pattern for EXCLUDED_FILE command.
+// Also it may be surrounded with SORT() command, so contains sorting rules.
 struct SectionPattern {
   SectionPattern(llvm::Regex &&Re1, llvm::Regex &&Re2)
       : ExcludedFileRe(std::forward<llvm::Regex>(Re1)),
@@ -107,10 +108,14 @@ struct SectionPattern {
   SectionPattern(SectionPattern &&Other) {
     std::swap(ExcludedFileRe, Other.ExcludedFileRe);
     std::swap(SectionRe, Other.SectionRe);
+    std::swap(SortOuter, Other.SortOuter);
+    std::swap(SortInner, Other.SortInner);
   }
 
   llvm::Regex ExcludedFileRe;
   llvm::Regex SectionRe;
+  SortSectionPolicy SortOuter;
+  SortSectionPolicy SortInner;
 };
 
 struct InputSectionDescription : BaseCommand {
@@ -119,8 +124,6 @@ struct InputSectionDescription : BaseCommand {
         FileRe(compileGlobPatterns({FilePattern})) {}
   static bool classof(const BaseCommand *C);
   llvm::Regex FileRe;
-  SortSectionPolicy SortOuter = SortSectionPolicy::Default;
-  SortSectionPolicy SortInner = SortSectionPolicy::Default;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.

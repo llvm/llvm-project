@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HashedNameToDIE.h"
+#include "llvm/ADT/StringRef.h"
 
 void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
                                       DIEArray &die_offsets) {
@@ -469,7 +470,7 @@ DWARFMappedHash::MemoryTable::AppendHashDataForRegularExpression(
   if (count > 0 &&
       m_data.ValidOffsetForDataOfSize(*hash_data_offset_ptr,
                                       min_total_hash_data_size)) {
-    const bool match = regex.Execute(strp_cstr);
+    const bool match = regex.Execute(llvm::StringRef(strp_cstr));
 
     if (!match && m_header.header_data.HashDataHasFixedByteSize()) {
       // If the regex doesn't match and we have fixed size data,

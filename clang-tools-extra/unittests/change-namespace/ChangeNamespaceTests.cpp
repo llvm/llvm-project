@@ -229,6 +229,91 @@ TEST_F(ChangeNamespaceTest, MoveFunctions) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, FixUsingShadowDecl) {
+  std::string Code = "namespace na {\n"
+                     "namespace nc {\n"
+                     "class SAME {};\n"
+                     "}\n"
+                     "namespace nd {\n"
+                     "class SAME {};\n"
+                     "}\n"
+                     "namespace nb {\n"
+                     "using nc::SAME;\n"
+                     "using YO = nc::SAME;\n"
+                     "typedef nc::SAME IDENTICAL;\n"
+                     "void f(nd::SAME Same) {}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+
+  std::string Expected = "namespace na {\n"
+                         "namespace nc {\n"
+                         "class SAME {};\n"
+                         "}\n"
+                         "namespace nd {\n"
+                         "class SAME {};\n"
+                         "}\n"
+                         "\n"
+                         "} // namespace na\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "using ::na::nc::SAME;\n"
+                         "using YO = na::nc::SAME;\n"
+                         "typedef na::nc::SAME IDENTICAL;\n"
+                         "void f(na::nd::SAME Same) {}\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, TypeInNestedNameSpecifier) {
+  std::string Code =
+      "namespace na {\n"
+      "class C_A {\n"
+      "public:\n"
+      "  class Nested {\n"
+      "    public:\n"
+      "      static int NestedX;\n"
+      "      static void nestedFunc() {}\n"
+      "  };\n"
+      "};\n"
+      "namespace nb {\n"
+      "class C_X {\n"
+      "  C_A na;\n"
+      "  C_A::Nested nested;\n"
+      "  void f() {\n"
+      "    C_A::Nested::nestedFunc();\n"
+      "    int X = C_A::Nested::NestedX;\n"
+      "  }\n"
+      "};\n"
+      "}  // namespace nb\n"
+      "}  // namespace na\n";
+  std::string Expected =
+      "namespace na {\n"
+      "class C_A {\n"
+      "public:\n"
+      "  class Nested {\n"
+      "    public:\n"
+      "      static int NestedX;\n"
+      "      static void nestedFunc() {}\n"
+      "  };\n"
+      "};\n"
+      "\n"
+      "}  // namespace na\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "class C_X {\n"
+      "  na::C_A na;\n"
+      "  na::C_A::Nested nested;\n"
+      "  void f() {\n"
+      "    na::C_A::Nested::nestedFunc();\n"
+      "    int X = na::C_A::Nested::NestedX;\n"
+      "  }\n"
+      "};\n"
+      "}  // namespace y\n"
+      "}  // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

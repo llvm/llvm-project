@@ -312,7 +312,7 @@ private:
     }
 
     // Instantiate the regex so we can report any errors.
-    auto regex = RegularExpression(op_arg.c_str());
+    auto regex = RegularExpression(op_arg);
     if (!regex.IsValid()) {
       char error_text[256];
       error_text[0] = '\0';
