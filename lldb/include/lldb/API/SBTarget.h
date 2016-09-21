@@ -666,6 +666,10 @@ public:
 
   lldb::SBBreakpoint FindBreakpointByID(break_id_t break_id);
 
+  // Finds all breakpoints by name, returning the list in bkpt_list.  Returns
+  // false if the name is not a valid breakpoint name, true otherwise.
+  bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
+
   bool EnableAllBreakpoints();
 
   bool DisableAllBreakpoints();

@@ -10,6 +10,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerInternal.h"
+#include "FuzzerMutate.h"
+#include "FuzzerTracePC.h"
+#include "FuzzerRandom.h"
+
 #include <algorithm>
 #include <cstring>
 #include <memory>

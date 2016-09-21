@@ -11,6 +11,8 @@
 
 #include "FuzzerInterface.h"
 #include "FuzzerInternal.h"
+#include "FuzzerMutate.h"
+#include "FuzzerRandom.h"
 
 #include <algorithm>
 #include <atomic>

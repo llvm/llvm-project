@@ -613,7 +613,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.BreakBeforeTernaryOperators = false;
-    GoogleStyle.CommentPragmas = "(taze:|@(export|requirecss|return|see|visibility)) ";
+    GoogleStyle.CommentPragmas =
+        "(taze:|@(export|requirecss|return|returns|see|visibility)) ";
     GoogleStyle.MaxEmptyLinesToKeep = 3;
     GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
     GoogleStyle.SpacesInContainerLiterals = false;

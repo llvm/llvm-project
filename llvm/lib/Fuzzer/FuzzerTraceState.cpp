@@ -72,6 +72,9 @@
 
 #include "FuzzerDFSan.h"
 #include "FuzzerInternal.h"
+#include "FuzzerDictionary.h"
+#include "FuzzerMutate.h"
+#include "FuzzerRandom.h"
 
 #include <algorithm>
 #include <cstring>
@@ -236,7 +239,7 @@ public:
           Printf("AutoDict:\n");
           for (auto &I : CountedUnits) {
             Printf("   %zd ", I.first);
-            PrintASCII(I.second);
+            PrintASCII(I.second.data(), I.second.size());
             Printf("\n");
           }
         }

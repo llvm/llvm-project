@@ -16014,8 +16014,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     if (SSECC != 8) {
       if (Subtarget.hasAVX512()) {
-        SDValue Cmp = DAG.getNode(X86ISD::FSETCC, DL, MVT::i1, CondOp0, CondOp1,
-                                  DAG.getConstant(SSECC, DL, MVT::i8));
+        SDValue Cmp = DAG.getNode(X86ISD::FSETCCM, DL, MVT::i1, CondOp0,
+                                  CondOp1, DAG.getConstant(SSECC, DL, MVT::i8));
         return DAG.getNode(X86ISD::SELECT, DL, VT, Cmp, Op1, Op2);
       }
 
@@ -17510,7 +17510,7 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
   case X86ISD::VTRUNC:
   case X86ISD::VTRUNCS:
   case X86ISD::VTRUNCUS:
-  case ISD::FP_TO_FP16:
+  case X86ISD::CVTPS2PH:
     // We can't use ISD::VSELECT here because it is not always "Legal"
     // for the destination type. For example vpmovqb require only AVX512
     // and vselect that can operate on byte element type require BWI
@@ -17541,7 +17541,8 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
   // The mask should be of type MVT::i1
   SDValue IMask = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, Mask);
 
-  if (Op.getOpcode() == X86ISD::FSETCC)
+  if (Op.getOpcode() == X86ISD::FSETCCM ||
+      Op.getOpcode() == X86ISD::FSETCCM_RND)
     return DAG.getNode(ISD::AND, dl, VT, Op, IMask);
   if (Op.getOpcode() == X86ISD::VFPCLASS ||
       Op.getOpcode() == X86ISD::VFPCLASSS)
@@ -17645,13 +17646,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
           DAG.getConstant(X86::STATIC_ROUNDING::CUR_DIRECTION, dl, MVT::i32);
       else
         RoundingMode = Op.getOperand(4);
-      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
-      if (IntrWithRoundingModeOpcode != 0)
-        if (cast<ConstantSDNode>(RoundingMode)->getZExtValue() !=
-            X86::STATIC_ROUNDING::CUR_DIRECTION)
-          return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
-                                      dl, Op.getValueType(), Src, RoundingMode),
-                                      Mask, PassThru, Subtarget, DAG);
+      assert(IntrData->Opc1 == 0 && "Unexpected second opcode!");
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src,
                                               RoundingMode),
                                   Mask, PassThru, Subtarget, DAG);
@@ -18114,10 +18109,10 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       SDValue FCmp;
       if (cast<ConstantSDNode>(Sae)->getZExtValue() ==
           X86::STATIC_ROUNDING::CUR_DIRECTION)
-        FCmp = DAG.getNode(X86ISD::FSETCC, dl, MVT::i1, LHS, RHS,
+        FCmp = DAG.getNode(X86ISD::FSETCCM, dl, MVT::i1, LHS, RHS,
                                   DAG.getConstant(CondVal, dl, MVT::i8));
       else
-        FCmp = DAG.getNode(X86ISD::FSETCC, dl, MVT::i1, LHS, RHS,
+        FCmp = DAG.getNode(X86ISD::FSETCCM_RND, dl, MVT::i1, LHS, RHS,
                                   DAG.getConstant(CondVal, dl, MVT::i8), Sae);
       // AnyExt just uses KMOVW %kreg, %r32; ZeroExt emits "and $1, %reg"
       return DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, FCmp);
@@ -22440,6 +22435,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::SETCC:              return "X86ISD::SETCC";
   case X86ISD::SETCC_CARRY:        return "X86ISD::SETCC_CARRY";
   case X86ISD::FSETCC:             return "X86ISD::FSETCC";
+  case X86ISD::FSETCCM:            return "X86ISD::FSETCCM";
+  case X86ISD::FSETCCM_RND:        return "X86ISD::FSETCCM_RND";
   case X86ISD::CMOV:               return "X86ISD::CMOV";
   case X86ISD::BRCOND:             return "X86ISD::BRCOND";
   case X86ISD::RET_FLAG:           return "X86ISD::RET_FLAG";
@@ -22665,6 +22662,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::MULTISHIFT:         return "X86ISD::MULTISHIFT";
   case X86ISD::SCALAR_FP_TO_SINT_RND: return "X86ISD::SCALAR_FP_TO_SINT_RND";
   case X86ISD::SCALAR_FP_TO_UINT_RND: return "X86ISD::SCALAR_FP_TO_UINT_RND";
+  case X86ISD::CVTPS2PH:           return "X86ISD::CVTPS2PH";
+  case X86ISD::CVTPH2PS:           return "X86ISD::CVTPH2PS";
   }
   return nullptr;
 }
@@ -28484,7 +28483,7 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
           // See X86ATTInstPrinter.cpp:printSSECC().
           unsigned x86cc = (cc0 == X86::COND_E) ? 0 : 4;
           if (Subtarget.hasAVX512()) {
-            SDValue FSetCC = DAG.getNode(X86ISD::FSETCC, DL, MVT::i1, CMP00,
+            SDValue FSetCC = DAG.getNode(X86ISD::FSETCCM, DL, MVT::i1, CMP00,
                                          CMP01,
                                          DAG.getConstant(x86cc, DL, MVT::i8));
             if (N->getValueType(0) != MVT::i1)
