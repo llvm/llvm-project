@@ -13,8 +13,14 @@
      defined(__s390x__) || defined(__sparc64__) || defined(__alpha__) || \
      defined(__ia64__) || defined(__m68k__)) && __GLIBC_PREREQ(2, 21)
 typedef uint64_t semval_t;
+#define GET_SEM_VALUE(V) (V)
 #else
 typedef unsigned semval_t;
+#if __GLIBC_PREREQ(2, 21)
+#define GET_SEM_VALUE(V) ((V) >> 1)
+#else
+#define GET_SEM_VALUE(V) (V)
+#endif
 #endif
 
 void my_sem_init(bool priv, int value, semval_t *a, unsigned char *b) {
@@ -34,10 +40,10 @@ int main() {
   unsigned char b;
 
   my_sem_init(false, 42, &a, &b);
-  assert(a == 42);
+  assert(GET_SEM_VALUE(a) == 42);
   assert(b != 0xAB);
 
   my_sem_init(true, 43, &a, &b);
-  assert(a == 43);
+  assert(GET_SEM_VALUE(a) == 43);
   assert(b != 0xAB);
 }
