@@ -663,17 +663,6 @@ template <class ELFT> int LinkerScript<ELFT>::getSectionIndex(StringRef Name) {
   return INT_MAX;
 }
 
-// A compartor to sort output sections. Returns -1 or 1 if
-// A or B are mentioned in linker script. Otherwise, returns 0.
-template <class ELFT>
-int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
-  int I = getSectionIndex(A);
-  int J = getSectionIndex(B);
-  if (I == INT_MAX && J == INT_MAX)
-    return 0;
-  return I < J ? -1 : 1;
-}
-
 template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
   return !Opt.PhdrsCommands.empty();
 }

@@ -9,8 +9,8 @@
 # BASE: Sections:
 # BASE-NEXT: Idx Name          Size
 # BASE-NEXT:   0               00000000
-# BASE-NEXT:   1 .writable     00000004
-# BASE-NEXT:   2 .readable     00000004
+# BASE:   .writable     00000004
+# BASE:   .readable     00000004
 
 # RUN: echo "SECTIONS { \
 # RUN:  .foo : ONLY_IF_RO { *(.foo.*) } \
@@ -22,11 +22,10 @@
 # NO1: Sections:
 # NO1-NEXT: Idx Name          Size
 # NO1-NEXT: 0               00000000
-# NO1-NEXT: 1 .writable     00000004
-# NO1-NEXT: 2 .readable     00000004
-# NO1-NEXT: 3 .text         00000001
-# NO1-NEXT: 4 .foo.2        00000004
-# NO1-NEXT: 5 .foo.1        00000004
+# NO1:  .writable     00000004
+# NO1:  .readable     00000004
+# NO1:  .foo.2        00000004
+# NO1:  .foo.1        00000004
 
 .global _start
 _start:

@@ -265,7 +265,7 @@ public:
   virtual bool targetSchedulesPostRAScheduling() const { return false; };
 
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
-                         Mangler &Mang) const;
+                         Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
   MCSymbol *getSymbol(const GlobalValue *GV, Mangler &Mang) const;
 
   /// True if the target uses physical regs at Prolog/Epilog insertion

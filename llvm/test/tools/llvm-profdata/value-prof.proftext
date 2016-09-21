@@ -66,4 +66,7 @@ foo2:20000
 #ICSUM: Total Number of Indirect Call Sites : 3
 #ICSUM: Total Number of Sites With Values : 2
 #ICSUM: Total Number of Profiled Values : 3
+#ICSUM:	NumTargets, SiteCount
+#ICSUM	1, 1
+#ICSUM	2, 1
 

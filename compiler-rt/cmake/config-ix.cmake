@@ -92,7 +92,7 @@ set(COMPILER_RT_SUPPORTED_ARCH)
 # platform. We use the results of these tests to build only the various target
 # runtime libraries supported by our current compilers cross-compiling
 # abilities.
-set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.c)
+set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.cc)
 file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main() { printf(\"hello, world\"); }\n")
 
 # Add $arch as supported with no additional flags.
@@ -277,7 +277,7 @@ if(APPLE)
           DARWIN_${platform}sim_ARCHS
           ${toolchain_arches})
         message(STATUS "${platform} Simulator supported arches: ${DARWIN_${platform}sim_ARCHS}")
-        if(DARWIN_${platform}_ARCHS)
+        if(DARWIN_${platform}sim_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform}sim)
           list(APPEND PROFILE_SUPPORTED_OS ${platform}sim)
           if(DARWIN_${platform}_SYSROOT_INTERNAL)

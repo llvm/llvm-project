@@ -661,6 +661,14 @@ SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
 SBBreakpoint
 SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
                                      uint32_t line, lldb::addr_t offset) {
+  SBFileSpecList empty_list;
+  return BreakpointCreateByLocation(sb_file_spec, line, offset, empty_list);
+}
+
+SBBreakpoint
+SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
+                                     uint32_t line, lldb::addr_t offset,
+                                     SBFileSpecList &sb_module_list) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBreakpoint sb_bp;
@@ -673,9 +681,13 @@ SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
     const bool internal = false;
     const bool hardware = false;
     const LazyBool move_to_nearest_code = eLazyBoolCalculate;
-    *sb_bp = target_sp->CreateBreakpoint(NULL, *sb_file_spec, line, offset,
-                                         check_inlines, skip_prologue, internal,
-                                         hardware, move_to_nearest_code);
+    const FileSpecList *module_list = nullptr;
+    if (sb_module_list.GetSize() > 0) {
+      module_list = sb_module_list.get();
+    }
+    *sb_bp = target_sp->CreateBreakpoint(
+        module_list, *sb_file_spec, line, offset, check_inlines, skip_prologue,
+        internal, hardware, move_to_nearest_code);
   }
 
   if (log) {
@@ -1065,6 +1077,23 @@ SBBreakpoint SBTarget::FindBreakpointByID(break_id_t bp_id) {
         static_cast<void *>(sb_breakpoint.get()));
 
   return sb_breakpoint;
+}
+
+bool SBTarget::FindBreakpointsByName(const char *name,
+                                     SBBreakpointList &bkpts) {
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+    BreakpointList bkpt_list(false);
+    bool is_valid =
+        target_sp->GetBreakpointList().FindBreakpointsByName(name, bkpt_list);
+    if (!is_valid)
+      return false;
+    for (BreakpointSP bkpt_sp : bkpt_list.Breakpoints()) {
+      bkpts.AppendByID(bkpt_sp->GetID());
+    }
+  }
+  return true;
 }
 
 bool SBTarget::EnableAllBreakpoints() {

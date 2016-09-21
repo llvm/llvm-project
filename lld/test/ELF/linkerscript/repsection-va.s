@@ -6,9 +6,10 @@
 # RUN: llvm-objdump -section-headers %t1 | FileCheck %s
 # CHECK:      Sections:
 # CHECK-NEXT: Idx Name          Size      Address          Type
-# CHECK-NEXT:   0               00000000 0000000000000000
-# CHECK-NEXT:   1 .foo          00000008 0000000000000158 DATA
-# CHECK-NEXT:   2 .text         00000001 0000000000000160 TEXT DATA
+# CHECK-NOT: .foo
+# CHECK:  .foo          00000008 {{.*}} DATA
+# CHECK-NOT: .foo
+
 
 .global _start
 _start:

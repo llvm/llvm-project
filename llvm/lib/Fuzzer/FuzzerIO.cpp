@@ -9,7 +9,7 @@
 // IO functions.
 //===----------------------------------------------------------------------===//
 #include "FuzzerExtFunctions.h"
-#include "FuzzerInternal.h"
+#include "FuzzerDefs.h"
 #include <iterator>
 #include <fstream>
 #include <dirent.h>
@@ -30,7 +30,7 @@ bool IsFile(const std::string &Path) {
   return S_ISREG(St.st_mode);
 }
 
-static long GetEpoch(const std::string &Path) {
+long GetEpoch(const std::string &Path) {
   struct stat St;
   if (stat(Path.c_str(), &St))
     return 0;  // Can't stat, be conservative.

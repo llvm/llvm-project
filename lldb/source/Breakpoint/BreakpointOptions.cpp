@@ -66,26 +66,39 @@ std::unique_ptr<BreakpointOptions::CommandData>
 BreakpointOptions::CommandData::CreateFromStructuredData(
     const StructuredData::Dictionary &options_dict, Error &error) {
   std::string script_source;
-  CommandData *data = new CommandData();
+  std::unique_ptr<CommandData> data_up(new CommandData());
+  bool found_something = false;
+
   bool success = options_dict.GetValueForKeyAsBoolean(
-      GetKey(OptionNames::StopOnError), data->stop_on_error);
+      GetKey(OptionNames::StopOnError), data_up->stop_on_error);
+
+  if (success)
+    found_something = true;
 
   success = options_dict.GetValueForKeyAsString(
-      GetKey(OptionNames::ScriptSource), data->script_source);
+      GetKey(OptionNames::ScriptSource), data_up->script_source);
+
+  if (success)
+    found_something = true;
 
   StructuredData::Array *user_source;
   success = options_dict.GetValueForKeyAsArray(GetKey(OptionNames::UserSource),
                                                user_source);
   if (success) {
+    found_something = true;
     size_t num_elems = user_source->GetSize();
     for (size_t i = 0; i < num_elems; i++) {
       std::string elem_string;
       success = user_source->GetItemAtIndexAsString(i, elem_string);
       if (success)
-        data->user_source.AppendString(elem_string);
+        data_up->user_source.AppendString(elem_string);
     }
   }
-  return std::unique_ptr<BreakpointOptions::CommandData>(data);
+
+  if (found_something)
+    return data_up;
+  else
+    return std::unique_ptr<BreakpointOptions::CommandData>();
 }
 
 const char *BreakpointOptions::g_option_names
@@ -200,13 +213,13 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
     return nullptr;
   }
 
-  std::unique_ptr<CommandData> cmd_data;
+  std::unique_ptr<CommandData> cmd_data_up;
   StructuredData::Dictionary *cmds_dict;
   success = options_dict.GetValueForKeyAsDictionary(
       CommandData::GetSerializationKey(), cmds_dict);
   if (success && cmds_dict) {
     Error cmds_error;
-    cmd_data = CommandData::CreateFromStructuredData(*cmds_dict, cmds_error);
+    cmd_data_up = CommandData::CreateFromStructuredData(*cmds_dict, cmds_error);
     if (cmds_error.Fail()) {
       error.SetErrorStringWithFormat(
           "Failed to deserialize breakpoint command options: %s.",
@@ -217,7 +230,8 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
 
   auto bp_options = llvm::make_unique<BreakpointOptions>(
       condition_text.c_str(), enabled, ignore_count, one_shot);
-  bp_options->SetCommandDataCallback(std::move(cmd_data));
+  if (cmd_data_up.get())
+    bp_options->SetCommandDataCallback(cmd_data_up);
   return bp_options;
 }
 
@@ -304,6 +318,20 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
 
 bool BreakpointOptions::HasCallback() const {
   return m_callback != BreakpointOptions::NullCallback;
+}
+
+bool BreakpointOptions::GetCommandLineCallbacks(StringList &command_list) {
+  if (!HasCallback())
+    return false;
+  if (!m_baton_is_command_baton)
+    return false;
+
+  auto cmd_baton = std::static_pointer_cast<CommandBaton>(m_callback_baton_sp);
+  CommandData *data = cmd_baton->getItem();
+  if (!data)
+    return false;
+  command_list = data->user_source;
+  return true;
 }
 
 void BreakpointOptions::SetCondition(const char *condition) {
@@ -418,7 +446,7 @@ void BreakpointOptions::CommandBaton::GetDescription(
 }
 
 void BreakpointOptions::SetCommandDataCallback(
-    std::unique_ptr<CommandData> cmd_data) {
+    std::unique_ptr<CommandData> &cmd_data) {
   auto baton_sp = std::make_shared<CommandBaton>(std::move(cmd_data));
   SetCallback(BreakpointOptions::BreakpointOptionsCallbackFunction, baton_sp);
 }

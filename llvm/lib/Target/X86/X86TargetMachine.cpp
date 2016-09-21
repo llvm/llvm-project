@@ -151,8 +151,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    CodeModel::Model CM, CodeGenOpt::Level OL)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM), CM, OL),
-      TLOF(createTLOF(getTargetTriple())),
-      Subtarget(TT, CPU, FS, *this, Options.StackAlignmentOverride) {
+      TLOF(createTLOF(getTargetTriple())) {
   // Windows stack unwinder gets confused when execution flow "falls through"
   // after a call to 'noreturn' function.
   // To prevent that, we emit a trap for 'unreachable' IR instructions.

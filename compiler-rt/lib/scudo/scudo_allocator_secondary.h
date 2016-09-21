@@ -42,7 +42,7 @@ class ScudoLargeMmapAllocator {
     uptr Ptr = MapBeg + sizeof(SecondaryHeader);
     // TODO(kostyak): add a random offset to Ptr.
     CHECK_GT(Ptr + Size, MapBeg);
-    CHECK_LE(Ptr + Size, MapEnd);
+    CHECK_LT(Ptr + Size, MapEnd);
     SecondaryHeader *Header = getHeader(Ptr);
     Header->MapBeg = MapBeg - PageSize;
     Header->MapSize = MapSize + 2 * PageSize;
@@ -78,7 +78,8 @@ class ScudoLargeMmapAllocator {
 
   uptr GetActuallyAllocatedSize(void *Ptr) {
     SecondaryHeader *Header = getHeader(Ptr);
-    uptr MapEnd = Header->MapBeg + Header->MapSize;
+    // Deduct PageSize as MapEnd includes the trailing guard page.
+    uptr MapEnd = Header->MapBeg + Header->MapSize - PageSize;
     return MapEnd - reinterpret_cast<uptr>(Ptr);
   }
 

@@ -10,6 +10,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerInternal.h"
+#include "FuzzerMutate.h"
+#include "FuzzerTracePC.h"
+#include "FuzzerRandom.h"
+
 #include <algorithm>
 #include <cstring>
 #include <memory>
@@ -172,6 +176,8 @@ Fuzzer::Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options)
   }
   if (Options.Verbosity)
     TPC.PrintModuleInfo();
+  if (!Options.OutputCorpus.empty() && Options.Reload)
+    EpochOfLastReadOfOutputCorpus = GetEpoch(Options.OutputCorpus);
 }
 
 Fuzzer::~Fuzzer() { }
@@ -340,13 +346,6 @@ void Fuzzer::PrintFinalStats() {
   Printf("stat::peak_rss_mb:              %zd\n", GetPeakRSSMb());
 }
 
-size_t Fuzzer::MaxUnitSizeInCorpus() const {
-  size_t Res = 0;
-  for (auto &X : Corpus)
-    Res = std::max(Res, X.size());
-  return Res;
-}
-
 void Fuzzer::SetMaxLen(size_t MaxLen) {
   assert(Options.MaxLen == 0); // Can only reset MaxLen from 0 to non-0.
   assert(MaxLen);
@@ -354,25 +353,25 @@ void Fuzzer::SetMaxLen(size_t MaxLen) {
   Printf("INFO: -max_len is not provided, using %zd\n", Options.MaxLen);
 }
 
+void Fuzzer::ReadDir(const std::string &Path, long *Epoch, size_t MaxSize) {
+  Printf("Loading corpus: %s\n", Path.c_str());
+  std::vector<Unit> V;
+  ReadDirToVectorOfUnits(Path.c_str(), &V, Epoch, MaxSize);
+  for (auto &U : V)
+    Corpus.push_back(U);
+}
 
 void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
-  if (Options.OutputCorpus.empty())
-    return;
+  if (Options.OutputCorpus.empty() || !Options.Reload) return;
   std::vector<Unit> AdditionalCorpus;
   ReadDirToVectorOfUnits(Options.OutputCorpus.c_str(), &AdditionalCorpus,
                          &EpochOfLastReadOfOutputCorpus, MaxSize);
-  if (Corpus.empty()) {
-    Corpus = AdditionalCorpus;
-    return;
-  }
-  if (!Options.Reload)
-    return;
   if (Options.Verbosity >= 2)
     Printf("Reload: read %zd new units.\n", AdditionalCorpus.size());
   for (auto &X : AdditionalCorpus) {
     if (X.size() > MaxSize)
       X.resize(MaxSize);
-    if (UnitHashesAddedToCorpus.insert(Hash(X)).second) {
+    if (!Corpus.HasUnit(X)) {
       if (RunOne(X)) {
         Corpus.push_back(X);
         UpdateCorpusDistribution();
@@ -390,51 +389,22 @@ void Fuzzer::ShuffleCorpus(UnitVector *V) {
     });
 }
 
-// Tries random prefixes of corpus items.
-void Fuzzer::TruncateUnits(std::vector<Unit> *NewCorpus) {
-  std::vector<double> Fractions = {0.25, 0.5, 0.75, 1.0};
-
-  size_t TruncInputs = 0;
-  for (double Fraction : Fractions) {
-    for (const auto &U : Corpus) {
-      uint64_t S = MD.GetRand()(U.size() * Fraction);
-      if (!S || !RunOne(U.data(), S))
-        continue;
-      TruncInputs++;
-      Unit U1(U.begin(), U.begin() + S);
-      NewCorpus->push_back(U1);
-    }
-  }
-  if (TruncInputs)
-    Printf("\tINFO   TRUNC %zd units added to in-memory corpus\n", TruncInputs);
-}
-
-void Fuzzer::ShuffleAndMinimize() {
-  PrintStats("READ  ");
-  std::vector<Unit> NewCorpus;
+void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
+  Printf("#0\tREAD units: %zd\n", InitialCorpus->size());
   if (Options.ShuffleAtStartUp)
-    ShuffleCorpus(&Corpus);
+    ShuffleCorpus(InitialCorpus);
 
-  if (Options.TruncateUnits) {
-    ResetCoverage();
-    TruncateUnits(&NewCorpus);
-    ResetCoverage();
-  }
-
-  for (const auto &U : Corpus) {
+  for (const auto &U : *InitialCorpus) {
     bool NewCoverage = RunOne(U);
     if (!Options.PruneCorpus || NewCoverage) {
-      NewCorpus.push_back(U);
+      Corpus.push_back(U);
       if (Options.Verbosity >= 2)
         Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
     }
     TryDetectingAMemoryLeak(U.data(), U.size(),
                             /*DuringInitialCorpusExecution*/ true);
   }
-  Corpus = NewCorpus;
   UpdateCorpusDistribution();
-  for (auto &X : Corpus)
-    UnitHashesAddedToCorpus.insert(Hash(X));
   PrintStats("INITED");
   if (Corpus.empty()) {
     Printf("ERROR: no interesting inputs were found. "
@@ -540,16 +510,6 @@ void Fuzzer::WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix) {
     Printf("Base64: %s\n", Base64(U).c_str());
 }
 
-void Fuzzer::SaveCorpus() {
-  if (Options.OutputCorpus.empty())
-    return;
-  for (const auto &U : Corpus)
-    WriteToFile(U, DirPlusFile(Options.OutputCorpus, Hash(U)));
-  if (Options.Verbosity)
-    Printf("Written corpus of %zd files to %s\n", Corpus.size(),
-           Options.OutputCorpus.c_str());
-}
-
 void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
   if (!Options.PrintNEW)
     return;
@@ -584,7 +544,6 @@ void Fuzzer::PrintNewPCs() {
 void Fuzzer::ReportNewCoverage(const Unit &U) {
   Corpus.push_back(U);
   UpdateCorpusDistribution();
-  UnitHashesAddedToCorpus.insert(Hash(U));
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
@@ -599,6 +558,7 @@ void Fuzzer::ReportNewCoverage(const Unit &U) {
 UnitVector Fuzzer::FindExtraUnits(const UnitVector &Initial,
                                   const UnitVector &Extra) {
   UnitVector Res = Extra;
+  UnitVector Tmp;
   size_t OldSize = Res.size();
   for (int Iter = 0; Iter < 10; Iter++) {
     ShuffleCorpus(&Res);
@@ -607,18 +567,18 @@ UnitVector Fuzzer::FindExtraUnits(const UnitVector &Initial,
     for (auto &U : Initial)
       RunOne(U);
 
-    Corpus.clear();
+    Tmp.clear();
     for (auto &U : Res)
       if (RunOne(U))
-        Corpus.push_back(U);
+        Tmp.push_back(U);
 
     char Stat[7] = "MIN   ";
     Stat[3] = '0' + Iter;
     PrintStats(Stat);
 
-    size_t NewSize = Corpus.size();
+    size_t NewSize = Tmp.size();
     assert(NewSize <= OldSize);
-    Res.swap(Corpus);
+    Res.swap(Tmp);
 
     if (NewSize + 5 >= OldSize)
       break;
@@ -734,54 +694,6 @@ void Fuzzer::ResetCoverage() {
   MaxCoverage.Reset();
   TPC.Reset();
   PrepareCounters(&MaxCoverage);
-}
-
-// Experimental search heuristic: drilling.
-// - Read, shuffle, execute and minimize the corpus.
-// - Choose one random unit.
-// - Reset the coverage.
-// - Start fuzzing as if the chosen unit was the only element of the corpus.
-// - When done, reset the coverage again.
-// - Merge the newly created corpus into the original one.
-void Fuzzer::Drill() {
-  // The corpus is already read, shuffled, and minimized.
-  assert(!Corpus.empty());
-  Options.PrintNEW = false; // Don't print NEW status lines when drilling.
-
-  Unit U = ChooseUnitToMutate();
-
-  ResetCoverage();
-
-  std::vector<Unit> SavedCorpus;
-  SavedCorpus.swap(Corpus);
-  Corpus.push_back(U);
-  UpdateCorpusDistribution();
-  assert(Corpus.size() == 1);
-  RunOne(U);
-  PrintStats("DRILL ");
-  std::string SavedOutputCorpusPath; // Don't write new units while drilling.
-  SavedOutputCorpusPath.swap(Options.OutputCorpus);
-  Loop();
-
-  ResetCoverage();
-
-  PrintStats("REINIT");
-  SavedOutputCorpusPath.swap(Options.OutputCorpus);
-  for (auto &U : SavedCorpus)
-    RunOne(U);
-  PrintStats("MERGE ");
-  Options.PrintNEW = true;
-  size_t NumMerged = 0;
-  for (auto &U : Corpus) {
-    if (RunOne(U)) {
-      PrintStatusForNewUnit(U);
-      NumMerged++;
-      WriteToOutputCorpus(U);
-    }
-  }
-  PrintStats("MERGED");
-  if (NumMerged && Options.Verbosity)
-    Printf("Drilling discovered %zd new units\n", NumMerged);
 }
 
 void Fuzzer::Loop() {

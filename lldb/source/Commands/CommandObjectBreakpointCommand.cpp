@@ -219,7 +219,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
       auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
       cmd_data->user_source.SplitIntoLines(line.c_str(), line.size());
-      bp_options->SetCommandDataCallback(std::move(cmd_data));
+      bp_options->SetCommandDataCallback(cmd_data);
     }
   }
 
@@ -251,7 +251,7 @@ are no syntax errors may indicate that a function was declared but never called.
       cmd_data->script_source.assign(oneliner);
       cmd_data->stop_on_error = m_options.m_stop_on_error;
 
-      bp_options->SetCommandDataCallback(std::move(cmd_data));
+      bp_options->SetCommandDataCallback(cmd_data);
     }
   }
 

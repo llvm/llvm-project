@@ -589,6 +589,10 @@ public:
     BreakpointCreateByLocation (const lldb::SBFileSpec &file_spec, uint32_t line, lldb::addr_t offset);
 
     lldb::SBBreakpoint
+    BreakpointCreateByLocation (const lldb::SBFileSpec &file_spec, uint32_t line, 
+                                lldb::addr_t offset, SBFileSpecList &module_list);
+
+    lldb::SBBreakpoint
     BreakpointCreateByName (const char *symbol_name, const char *module_name = NULL);
 
     lldb::SBBreakpoint
@@ -703,6 +707,9 @@ public:
 
     lldb::SBBreakpoint
     FindBreakpointByID (break_id_t break_id);
+
+  
+    bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
 
     bool
     EnableAllBreakpoints ();

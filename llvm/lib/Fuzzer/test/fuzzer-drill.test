@@ -1,8 +1,0 @@
-CHECK: BINGO
-RUN: rm -rf FourIndependentBranchesTestCORPUS
-RUN: mkdir FourIndependentBranchesTestCORPUS
-RUN:     LLVMFuzzer-FourIndependentBranchesTest -seed=1 -runs=100000 FourIndependentBranchesTestCORPUS
-RUN: not LLVMFuzzer-FourIndependentBranchesTest         -runs=100000 -drill=1 -jobs=200 FourIndependentBranchesTestCORPUS 2>&1 | FileCheck %s
-RUN: rm -rf FourIndependentBranchesTestCORPUS
-
-

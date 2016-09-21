@@ -564,6 +564,10 @@ public:
   BreakpointCreateByLocation(const lldb::SBFileSpec &file_spec, uint32_t line,
                              lldb::addr_t offset);
 
+  lldb::SBBreakpoint
+  BreakpointCreateByLocation(const lldb::SBFileSpec &file_spec, uint32_t line,
+                             lldb::addr_t offset, SBFileSpecList &module_list);
+
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
@@ -661,6 +665,10 @@ public:
   bool BreakpointDelete(break_id_t break_id);
 
   lldb::SBBreakpoint FindBreakpointByID(break_id_t break_id);
+
+  // Finds all breakpoints by name, returning the list in bkpt_list.  Returns
+  // false if the name is not a valid breakpoint name, true otherwise.
+  bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
 
   bool EnableAllBreakpoints();
 

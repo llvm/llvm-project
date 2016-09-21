@@ -6,13 +6,13 @@
 # RUN: llvm-readobj -t %t1 | FileCheck %s
 
 # CHECK:      Name: foo1
-# CHECK-NEXT: Value: 0x200
+# CHECK-NEXT: Value: 0x288
 
 # CHECK:      Name: foo2
-# CHECK-NEXT: Value: 0x208
+# CHECK-NEXT: Value: 0x290
 
 # CHECK:      Name: foo3
-# CHECK-NEXT: Value: 0x20C
+# CHECK-NEXT: Value: 0x294
 
 .section .foo.1,"a"
  .long 1

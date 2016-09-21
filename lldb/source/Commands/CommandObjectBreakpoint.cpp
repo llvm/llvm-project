@@ -249,6 +249,9 @@ public:
       case 'N': {
         if (BreakpointID::StringIsBreakpointName(option_strref, error))
           m_breakpoint_names.push_back(option_arg);
+        else
+          error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
+                                         option_arg);
         break;
       }
 
@@ -622,10 +625,17 @@ protected:
         bp->GetOptions()->SetCondition(m_options.m_condition.c_str());
 
       if (!m_options.m_breakpoint_names.empty()) {
-        Error error; // We don't need to check the error here, since the option
-                     // parser checked it...
-        for (auto name : m_options.m_breakpoint_names)
-          bp->AddName(name.c_str(), error);
+        Error name_error;
+        for (auto name : m_options.m_breakpoint_names) {
+          bp->AddName(name.c_str(), name_error);
+          if (name_error.Fail()) {
+            result.AppendErrorWithFormat("Invalid breakpoint name: %s",
+                                         name.c_str());
+            target->RemoveBreakpointByID(bp->GetID());
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+          }
+        }
       }
 
       bp->SetOneShot(m_options.m_one_shot);
