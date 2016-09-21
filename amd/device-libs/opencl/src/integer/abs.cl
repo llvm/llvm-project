@@ -68,6 +68,6 @@ abs(u##T x) \
     LGENN(2,T) \
     LGEN1(T)
 
-GEN(int)
-GEN(long)
+LGEN(int)
+LGEN(long)
 
