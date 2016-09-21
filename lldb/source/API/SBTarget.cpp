@@ -1079,6 +1079,23 @@ SBBreakpoint SBTarget::FindBreakpointByID(break_id_t bp_id) {
   return sb_breakpoint;
 }
 
+bool SBTarget::FindBreakpointsByName(const char *name,
+                                     SBBreakpointList &bkpts) {
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+    BreakpointList bkpt_list(false);
+    bool is_valid =
+        target_sp->GetBreakpointList().FindBreakpointsByName(name, bkpt_list);
+    if (!is_valid)
+      return false;
+    for (BreakpointSP bkpt_sp : bkpt_list.Breakpoints()) {
+      bkpts.AppendByID(bkpt_sp->GetID());
+    }
+  }
+  return true;
+}
+
 bool SBTarget::EnableAllBreakpoints() {
   TargetSP target_sp(GetSP());
   if (target_sp) {
