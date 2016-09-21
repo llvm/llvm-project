@@ -42,7 +42,7 @@ CATTR uint
 OCKL_MANGLE_U32(bitalign)(uint a, uint b, uint c)
 {
     // TODO check that this results in v_alignbit_b32
-    return (uint)((((ulong)a << 32) | (ulong)b) >> c);
+    return (uint)((((ulong)a << 32) | (ulong)b) >> (c & 0x1fU));
 }
 
 CATTR uint
