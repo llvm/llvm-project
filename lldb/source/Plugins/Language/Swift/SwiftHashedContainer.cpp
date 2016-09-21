@@ -275,7 +275,12 @@ std::unique_ptr<SwiftHashedContainerBufferHandler>
 SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
     ValueObject &valobj, lldb::addr_t storage_ptr, bool fail_on_no_children,
     NativeCreatorFunction Native) {
-#if 0
+
+  CompilerType valobj_type(valobj.GetCompilerType());
+  lldb::TemplateArgumentKind kind;
+  CompilerType key_type = valobj_type.GetTemplateArgument(0, kind);
+  CompilerType value_type = valobj_type.GetTemplateArgument(1, kind);
+  
     static ConstString g_Native("native");
     static ConstString g_nativeStorage("nativeStorage");
     static ConstString g_buffer("buffer");
@@ -285,9 +290,10 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
     ProcessSP process_sp(valobj.GetProcessSP());
     if (!process_sp)
         return nullptr;
-    
-    ValueObjectSP native_sp(valobj.GetChildAtNamePath( {g_Native, g_nativeStorage, g_buffer} ));
-    if (!native_sp)
+
+    ValueObjectSP native_sp(valobj.GetChildAtNamePath( {g_nativeStorage} ));
+    ValueObjectSP native_buffer_sp(valobj.GetChildAtNamePath( {g_nativeStorage, g_buffer} ));
+    if (!native_sp || !native_buffer_sp)
     {
         if (fail_on_no_children)
             return nullptr;
@@ -300,25 +306,25 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
             if (swift_ast_ctx)
             {
                 CompilerType element_type(swift_ast_ctx->GetTypeFromMangledTypename("_TtGSqTPs9AnyObject_PS____", error));
-                auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(Native(valobj, native_storage_ptr, element_type));
+                auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(Native(native_sp, key_type, value_type));
                 if (handler && handler->IsValid())
                     return handler;
             }
             return nullptr;
         }
     }
+
     CompilerType child_type(native_sp->GetCompilerType());
-    lldb::TemplateArgumentKind kind;
     CompilerType element_type(child_type.GetTemplateArgument(1, kind));
     if (element_type.IsValid() == false || kind != lldb::eTemplateArgumentKindType)
         return nullptr;
     lldb::addr_t native_storage_ptr = process_sp->ReadPointerFromMemory(storage_ptr + 2*process_sp->GetAddressByteSize(), error);
     if (error.Fail() || native_storage_ptr == LLDB_INVALID_ADDRESS)
         return nullptr;
-    auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(Native(valobj, native_storage_ptr, element_type));
+    auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(Native(native_sp, key_type, value_type));
     if (handler && handler->IsValid())
         return handler;
-#endif
+
   return nullptr;
 }
 

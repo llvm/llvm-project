@@ -132,6 +132,6 @@ ConstString SwiftDictionaryNativeBufferHandler::GetMangledStorageTypeName() {
 
 ConstString SwiftDictionaryNativeBufferHandler::GetDemangledStorageTypeName() {
   static ConstString g_name(
-      "Swift._NativeDictionaryStorageOwner with unmangled suffix");
+      "Swift._NativeDictionaryStorageOwner");
   return g_name;
 }
