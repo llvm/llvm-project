@@ -1,8 +1,0 @@
-# Test truncate_units option.
-RUN: rm -rf FuzzerTruncateTestCORPUS
-RUN: mkdir FuzzerTruncateTestCORPUS
-RUN: echo "01234567890123456789012345678901234567890" > FuzzerTruncateTestCORPUS/unit1
-RUN: LLVMFuzzer-EmptyTest -seed=1 -runs=0 -truncate_units=1 ./FuzzerTruncateTestCORPUS 2>&1 | FileCheck %s
-RUN: rm -rf FuzzerTruncateTestCORPUS
-
-CHECK: INFO   TRUNC 1 units added

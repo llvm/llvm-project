@@ -107,6 +107,17 @@ public:
   //------------------------------------------------------------------
   typedef enum { Exact, Regexp, Glob } MatchType;
 
+private:
+  enum class OptionNames : uint32_t { Names = 0, Hardware, LastOptionName };
+
+  static const char
+      *g_option_names[static_cast<uint32_t>(OptionNames::LastOptionName)];
+
+  static const char *GetKey(OptionNames enum_value) {
+    return g_option_names[static_cast<uint32_t>(enum_value)];
+  }
+
+public:
   class BreakpointEventData : public EventData {
   public:
     BreakpointEventData(lldb::BreakpointEventType sub_type,

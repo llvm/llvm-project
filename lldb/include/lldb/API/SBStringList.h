@@ -43,8 +43,11 @@ public:
 protected:
   friend class SBCommandInterpreter;
   friend class SBDebugger;
+  friend class SBBreakpoint;
 
   SBStringList(const lldb_private::StringList *lldb_strings);
+
+  void AppendList(const lldb_private::StringList &strings);
 
   const lldb_private::StringList *operator->() const;
 

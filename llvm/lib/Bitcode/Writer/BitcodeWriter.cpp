@@ -3345,12 +3345,14 @@ static const uint64_t INDEX_VERSION = 1;
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
 void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
-  if (Index->begin() == Index->end())
-    return;
-
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 4);
 
   Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
+
+  if (Index->begin() == Index->end()) {
+    Stream.ExitBlock();
+    return;
+  }
 
   // Abbrev for FS_PERMODULE.
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();

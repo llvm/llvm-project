@@ -314,6 +314,7 @@ private:
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
 
 public:
+  std::vector<Instruction *> IndirectCallSites;
   SelectInstVisitor SIVisitor;
   std::string FuncName;
   GlobalVariable *FuncNameVar;
@@ -347,6 +348,7 @@ public:
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
     NumOfPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
+    IndirectCallSites = findIndirectCallSites(Func);
 
     FuncName = getPGOFuncName(F);
     computeCFGHash();
@@ -395,7 +397,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   }
   JC.update(Indexes);
   FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
-                 (uint64_t)findIndirectCallSites(F).size() << 48 |
+                 (uint64_t)IndirectCallSites.size() << 48 |
                  (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
 }
 
@@ -550,7 +552,7 @@ static void instrumentOneFunc(
     return;
 
   unsigned NumIndirectCallSites = 0;
-  for (auto &I : findIndirectCallSites(F)) {
+  for (auto &I : FuncInfo.IndirectCallSites) {
     CallSite CS(I);
     Value *Callee = CS.getCalledValue();
     DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
@@ -1002,7 +1004,7 @@ void PGOUseFunc::annotateIndirectCallSites() {
   createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
   unsigned IndirectCallSiteIndex = 0;
-  auto IndirectCallSites = findIndirectCallSites(F);
+  auto &IndirectCallSites = FuncInfo.IndirectCallSites;
   unsigned NumValueSites =
       ProfileRecord.getNumValueSites(IPVK_IndirectCallTarget);
   if (NumValueSites != IndirectCallSites.size()) {

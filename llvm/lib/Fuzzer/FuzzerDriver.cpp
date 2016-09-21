@@ -426,7 +426,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PrintNewCovPcs = Flags.print_pcs;
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.PrintCoverage = Flags.print_coverage;
-  Options.TruncateUnits = Flags.truncate_units;
   Options.PruneCorpus = Flags.prune_corpus;
 
   if (Flags.use_value_profile)
@@ -495,25 +494,26 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   size_t TemporaryMaxLen = Options.MaxLen ? Options.MaxLen : kMaxSaneLen;
 
-  F.RereadOutputCorpus(TemporaryMaxLen);
-  for (auto &inp : *Inputs)
-    if (inp != Options.OutputCorpus)
-      F.ReadDir(inp, nullptr, TemporaryMaxLen);
+  UnitVector InitialCorpus;
+  for (auto &Inp : *Inputs) {
+    Printf("Loading corpus dir: %s\n", Inp.c_str());
+    ReadDirToVectorOfUnits(Inp.c_str(), &InitialCorpus, nullptr, TemporaryMaxLen);
+  }
 
-  if (Options.MaxLen == 0)
-    F.SetMaxLen(
-        std::min(std::max(kMinDefaultLen, F.MaxUnitSizeInCorpus()), kMaxSaneLen));
+  if (Options.MaxLen == 0) {
+    size_t MaxLen = 0;
+    for (auto &U : InitialCorpus)
+      MaxLen = std::max(U.size(), MaxLen);
+    F.SetMaxLen(std::min(std::max(kMinDefaultLen, MaxLen), kMaxSaneLen));
+  }
 
-  if (F.CorpusSize() == 0) {
-    F.AddToCorpus(Unit());  // Can't fuzz empty corpus, so add an empty input.
+  if (InitialCorpus.empty()) {
+    InitialCorpus.push_back(Unit());
     if (Options.Verbosity)
       Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
   }
-  F.ShuffleAndMinimize();
-  if (Flags.drill)
-    F.Drill();
-  else
-    F.Loop();
+  F.ShuffleAndMinimize(&InitialCorpus);
+  F.Loop();
 
   if (Flags.verbosity)
     Printf("Done %d runs in %zd second(s)\n", F.getTotalNumberOfRuns(),

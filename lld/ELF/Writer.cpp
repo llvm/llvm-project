@@ -451,14 +451,19 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
   if (AIsAlloc != BIsAlloc)
     return AIsAlloc;
 
-  int Comp = Script<ELFT>::X->compareSections(A->getName(), B->getName());
-  if (Comp != 0)
-    return Comp < 0;
+  // If  A and B are mentioned in linker script, use that order.
+  int AIndex = Script<ELFT>::X->getSectionIndex(A->getName());
+  int BIndex = Script<ELFT>::X->getSectionIndex(B->getName());
+  bool AInScript = AIndex != INT_MAX;
+  bool BInScript = BIndex != INT_MAX;
+  if (AInScript && BInScript)
+    return AIndex < BIndex;
 
-  // We don't have any special requirements for the relative order of
-  // two non allocatable sections.
+  // We don't have any special requirements for the relative order of two non
+  // allocatable sections.
+  // Just put linker script sections first to satisfy strict weak ordering.
   if (!AIsAlloc)
-    return false;
+    return AInScript;
 
   // We want the read only sections first so that they go in the PT_LOAD
   // covering the program headers at the start of the file.
@@ -507,7 +512,8 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
     return getPPC64SectionRank(A->getName()) <
            getPPC64SectionRank(B->getName());
 
-  return false;
+  // Just put linker script sections first to satisfy strict weak ordering.
+  return AInScript;
 }
 
 template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {

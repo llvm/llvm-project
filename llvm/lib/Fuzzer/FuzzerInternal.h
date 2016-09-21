@@ -89,6 +89,7 @@ private:
 typedef FixedWord<27> Word; // 28 bytes.
 
 bool IsFile(const std::string &Path);
+long GetEpoch(const std::string &Path);
 std::string FileToString(const std::string &Path);
 Unit FileToVector(const std::string &Path, size_t MaxSize = 0);
 void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
@@ -246,8 +247,42 @@ struct FuzzingOptions {
   bool PrintFinalStats = false;
   bool PrintCoverage = false;
   bool DetectLeaks = true;
-  bool TruncateUnits = false;
   bool PruneCorpus = true;
+};
+
+struct InputInfo {
+  Unit U;  // The actual input data.
+};
+
+class InputCorpus {
+ public:
+  InputCorpus() {
+    Corpus.reserve(1 << 14);  // Avoid too many resizes.
+  }
+  size_t size() const { return Corpus.size(); }
+  bool empty() const { return Corpus.empty(); }
+  const Unit &operator[] (size_t Idx) const { return Corpus[Idx].U; }
+  void Append(const std::vector<Unit> &V) {
+    for (auto &U : V)
+      push_back(U);
+  }
+  void push_back(const Unit &U) {
+    auto H = Hash(U);
+    if (!Hashes.insert(H).second) return;
+    InputInfo II;
+    II.U = U;
+    Corpus.push_back(II);
+  }
+
+  typedef const std::vector<InputInfo>::const_iterator ConstIter;
+  ConstIter begin() const { return Corpus.begin(); }
+  ConstIter end() const { return Corpus.end(); }
+
+  bool HasUnit(const Unit &U) { return Hashes.count(Hash(U)); }
+
+ private:
+  std::unordered_set<std::string> Hashes;
+  std::vector<InputInfo> Corpus;
 };
 
 class MutationDispatcher {
@@ -316,7 +351,7 @@ public:
   void ClearAutoDictionary();
   void PrintRecommendedDictionary();
 
-  void SetCorpus(const std::vector<Unit> *Corpus) { this->Corpus = Corpus; }
+  void SetCorpus(const InputCorpus *Corpus) { this->Corpus = Corpus; }
 
   Random &GetRand() { return Rand; }
 
@@ -350,7 +385,7 @@ private:
   Dictionary PersistentAutoDictionary;
   std::vector<Mutator> CurrentMutatorSequence;
   std::vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
-  const std::vector<Unit> *Corpus = nullptr;
+  const InputCorpus *Corpus = nullptr;
   std::vector<uint8_t> MutateInPlaceHere;
 
   std::vector<Mutator> Mutators;
@@ -458,21 +493,13 @@ public:
   }
   size_t ChooseUnitIdxToMutate();
   const Unit &ChooseUnitToMutate() { return Corpus[ChooseUnitIdxToMutate()]; };
-  void TruncateUnits(std::vector<Unit> *NewCorpus);
   void Loop();
-  void Drill();
-  void ShuffleAndMinimize();
+  void ShuffleAndMinimize(UnitVector *V);
   void InitializeTraceState();
   void AssignTaintLabels(uint8_t *Data, size_t Size);
   size_t CorpusSize() const { return Corpus.size(); }
-  size_t MaxUnitSizeInCorpus() const;
-  void ReadDir(const std::string &Path, long *Epoch, size_t MaxSize) {
-    Printf("Loading corpus: %s\n", Path.c_str());
-    ReadDirToVectorOfUnits(Path.c_str(), &Corpus, Epoch, MaxSize);
-  }
+  void ReadDir(const std::string &Path, long *Epoch, size_t MaxSize);
   void RereadOutputCorpus(size_t MaxSize);
-  // Save the current corpus to OutputCorpus.
-  void SaveCorpus();
 
   size_t secondsSinceProcessStartUp() {
     return duration_cast<seconds>(system_clock::now() - ProcessStartTime)
@@ -561,8 +588,7 @@ private:
   bool HasMoreMallocsThanFrees = false;
   size_t NumberOfLeakDetectionAttempts = 0;
 
-  std::vector<Unit> Corpus;
-  std::unordered_set<std::string> UnitHashesAddedToCorpus;
+  InputCorpus Corpus;
 
   std::piecewise_constant_distribution<double> CorpusDistribution;
   UserCallback CB;

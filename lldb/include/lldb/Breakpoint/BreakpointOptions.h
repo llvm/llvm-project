@@ -36,6 +36,9 @@ public:
   struct CommandData {
     CommandData() : user_source(), script_source(), stop_on_error(true) {}
 
+    CommandData(const StringList &user_source)
+        : user_source(user_source), script_source(), stop_on_error(true) {}
+
     ~CommandData() = default;
 
     static const char *GetSerializationKey() { return "BKPTCMDData"; }
@@ -178,6 +181,18 @@ public:
   void SetCallback(BreakpointHitCallback callback,
                    const BreakpointOptions::CommandBatonSP &command_baton_sp,
                    bool synchronous = false);
+
+  //------------------------------------------------------------------
+  /// Returns the command line commands for the callback on this breakpoint.
+  ///
+  /// @param[out] command_list
+  ///    The commands will be appended to this list.
+  ///
+  /// @return
+  ///    \btrue if the command callback is a command-line callback,
+  ///    \bfalse otherwise.
+  //------------------------------------------------------------------
+  bool GetCommandLineCallbacks(StringList &command_list);
 
   //------------------------------------------------------------------
   /// Remove the callback from this option set.
@@ -335,10 +350,10 @@ public:
   //------------------------------------------------------------------
   /// Set a callback based on BreakpointOptions::CommandData.
   /// @param[in] cmd_data
-  ///     A new'ed CommandData object.  The breakpoint will take ownership
-  ///     of this object.
+  ///     A UP holding the new'ed CommandData object.
+  ///     The breakpoint will take ownership of pointer held by this object.
   //------------------------------------------------------------------
-  void SetCommandDataCallback(std::unique_ptr<CommandData> cmd_data);
+  void SetCommandDataCallback(std::unique_ptr<CommandData> &cmd_data);
 
 protected:
   //------------------------------------------------------------------

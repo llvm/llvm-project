@@ -277,7 +277,7 @@ if(APPLE)
           DARWIN_${platform}sim_ARCHS
           ${toolchain_arches})
         message(STATUS "${platform} Simulator supported arches: ${DARWIN_${platform}sim_ARCHS}")
-        if(DARWIN_${platform}_ARCHS)
+        if(DARWIN_${platform}sim_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform}sim)
           list(APPEND PROFILE_SUPPORTED_OS ${platform}sim)
           if(DARWIN_${platform}_SYSROOT_INTERNAL)
