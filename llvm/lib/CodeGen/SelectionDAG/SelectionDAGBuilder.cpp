@@ -5835,6 +5835,11 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (isTailCall && !isInTailCallPosition(CS, DAG.getTarget()))
     isTailCall = false;
 
+  // Disable tail calls if there is an swifterror argument. Targets have not
+  // been updated to support tail calls.
+  if (TLI.supportSwiftError() && SwiftErrorVal)
+    isTailCall = false;
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
