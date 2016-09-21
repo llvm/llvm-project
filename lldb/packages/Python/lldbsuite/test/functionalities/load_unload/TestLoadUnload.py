@@ -158,6 +158,10 @@ class LoadUnloadTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
+        # Shut off ANSI color usage so we don't get ANSI escape sequences
+        # mixed in with stop locations.
+        self.dbg.SetUseColor(False)
+
         if self.platformIsDarwin():
             dylibName = 'libloadunload_d.dylib'
             dsymName = 'libloadunload_d.dylib.dSYM'

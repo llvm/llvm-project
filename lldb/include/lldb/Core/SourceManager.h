@@ -32,12 +32,14 @@ public:
 
   public:
     File(const FileSpec &file_spec, Target *target);
+    File(const FileSpec &file_spec, lldb::DebuggerSP debugger_sp);
     ~File();
 
     void UpdateIfNeeded();
 
-    size_t DisplaySourceLines(uint32_t line, uint32_t context_before,
-                              uint32_t context_after, Stream *s);
+    size_t DisplaySourceLines(uint32_t line, uint32_t column,
+                              uint32_t context_before, uint32_t context_after,
+                              Stream *s);
     void FindLinesMatchingRegex(RegularExpression &regex, uint32_t start_line,
                                 uint32_t end_line,
                                 std::vector<uint32_t> &match_lines);
@@ -76,6 +78,10 @@ public:
     lldb::DataBufferSP m_data_sp;
     typedef std::vector<uint32_t> LineOffsets;
     LineOffsets m_offsets;
+    lldb::DebuggerWP m_debugger_wp;
+
+  private:
+    void CommonInitializer(const FileSpec &file_spec, Target *target);
   };
 #endif // SWIG
 
@@ -114,14 +120,16 @@ public:
 
   FileSP GetLastFile() { return m_last_file_sp; }
 
-  size_t DisplaySourceLinesWithLineNumbers(
-      const FileSpec &file, uint32_t line, uint32_t context_before,
-      uint32_t context_after, const char *current_line_cstr, Stream *s,
-      const SymbolContextList *bp_locs = nullptr);
+  size_t
+  DisplaySourceLinesWithLineNumbers(const FileSpec &file, uint32_t line,
+                                    uint32_t column, uint32_t context_before,
+                                    uint32_t context_after,
+                                    const char *current_line_cstr, Stream *s,
+                                    const SymbolContextList *bp_locs = nullptr);
 
   // This variant uses the last file we visited.
   size_t DisplaySourceLinesWithLineNumbersUsingLastFile(
-      uint32_t start_line, uint32_t count, uint32_t curr_line,
+      uint32_t start_line, uint32_t count, uint32_t curr_line, uint32_t column,
       const char *current_line_cstr, Stream *s,
       const SymbolContextList *bp_locs = nullptr);
 

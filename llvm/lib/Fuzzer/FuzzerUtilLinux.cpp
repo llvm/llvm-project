@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 // Misc utils for Linux.
 //===----------------------------------------------------------------------===//
-#include "FuzzerInternal.h"
+#include "FuzzerDefs.h"
 #if LIBFUZZER_LINUX
 #include <stdlib.h>
 namespace fuzzer {

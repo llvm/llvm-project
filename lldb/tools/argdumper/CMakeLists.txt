@@ -1,4 +1,4 @@
-add_lldb_executable(lldb-argdumper
+add_lldb_executable(lldb-argdumper INCLUDE_IN_FRAMEWORK
   argdumper.cpp
   )
 

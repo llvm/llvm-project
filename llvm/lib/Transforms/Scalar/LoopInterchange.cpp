@@ -111,62 +111,59 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       Instruction *Dst = cast<Instruction>(*J);
       if (Src == Dst)
         continue;
+      // Ignore Input dependencies.
       if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
         continue;
+      // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst, true)) {
-        DEBUG(dbgs() << "Found Dependency between Src and Dst\n"
+        assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+        DEBUG(StringRef DepType =
+                  D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
+              dbgs() << "Found " << DepType
+                     << " dependency between Src and Dst\n"
                      << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
-        if (D->isFlow()) {
-          // TODO: Handle Flow dependence.Check if it is sufficient to populate
-          // the Dependence Matrix with the direction reversed.
-          DEBUG(dbgs() << "Flow dependence not handled\n");
-          return false;
+        unsigned Levels = D->getLevels();
+        char Direction;
+        for (unsigned II = 1; II <= Levels; ++II) {
+          const SCEV *Distance = D->getDistance(II);
+          const SCEVConstant *SCEVConst =
+              dyn_cast_or_null<SCEVConstant>(Distance);
+          if (SCEVConst) {
+            const ConstantInt *CI = SCEVConst->getValue();
+            if (CI->isNegative())
+              Direction = '<';
+            else if (CI->isZero())
+              Direction = '=';
+            else
+              Direction = '>';
+            Dep.push_back(Direction);
+          } else if (D->isScalar(II)) {
+            Direction = 'S';
+            Dep.push_back(Direction);
+          } else {
+            unsigned Dir = D->getDirection(II);
+            if (Dir == Dependence::DVEntry::LT ||
+                Dir == Dependence::DVEntry::LE)
+              Direction = '<';
+            else if (Dir == Dependence::DVEntry::GT ||
+                     Dir == Dependence::DVEntry::GE)
+              Direction = '>';
+            else if (Dir == Dependence::DVEntry::EQ)
+              Direction = '=';
+            else
+              Direction = '*';
+            Dep.push_back(Direction);
+          }
         }
-        if (D->isAnti()) {
-          DEBUG(dbgs() << "Found Anti dependence\n");
-          unsigned Levels = D->getLevels();
-          char Direction;
-          for (unsigned II = 1; II <= Levels; ++II) {
-            const SCEV *Distance = D->getDistance(II);
-            const SCEVConstant *SCEVConst =
-                dyn_cast_or_null<SCEVConstant>(Distance);
-            if (SCEVConst) {
-              const ConstantInt *CI = SCEVConst->getValue();
-              if (CI->isNegative())
-                Direction = '<';
-              else if (CI->isZero())
-                Direction = '=';
-              else
-                Direction = '>';
-              Dep.push_back(Direction);
-            } else if (D->isScalar(II)) {
-              Direction = 'S';
-              Dep.push_back(Direction);
-            } else {
-              unsigned Dir = D->getDirection(II);
-              if (Dir == Dependence::DVEntry::LT ||
-                  Dir == Dependence::DVEntry::LE)
-                Direction = '<';
-              else if (Dir == Dependence::DVEntry::GT ||
-                       Dir == Dependence::DVEntry::GE)
-                Direction = '>';
-              else if (Dir == Dependence::DVEntry::EQ)
-                Direction = '=';
-              else
-                Direction = '*';
-              Dep.push_back(Direction);
-            }
-          }
-          while (Dep.size() != Level) {
-            Dep.push_back('I');
-          }
+        while (Dep.size() != Level) {
+          Dep.push_back('I');
+        }
 
-          DepMatrix.push_back(Dep);
-          if (DepMatrix.size() > MaxMemInstrCount) {
-            DEBUG(dbgs() << "Cannot handle more than " << MaxMemInstrCount
-                         << " dependencies inside loop\n");
-            return false;
-          }
+        DepMatrix.push_back(Dep);
+        if (DepMatrix.size() > MaxMemInstrCount) {
+          DEBUG(dbgs() << "Cannot handle more than " << MaxMemInstrCount
+                       << " dependencies inside loop\n");
+          return false;
         }
       }
     }

@@ -527,6 +527,7 @@ class SettingsCommandTestCase(TestBase):
                              "stop-disassembly-display",
                              "stop-line-count-after",
                              "stop-line-count-before",
+                             "stop-show-column",
                              "term-width",
                              "thread-format",
                              "use-external-editor",

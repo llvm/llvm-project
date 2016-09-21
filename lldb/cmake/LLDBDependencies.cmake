@@ -209,8 +209,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 if ( NOT LLDB_DISABLE_PYTHON )
-  set(LLDB_WRAP_PYTHON ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp)
-
   set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
   if (CLANG_CL)
     set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES COMPILE_FLAGS -Wno-unused-function)

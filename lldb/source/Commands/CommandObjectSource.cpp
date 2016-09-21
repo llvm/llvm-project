@@ -896,8 +896,10 @@ protected:
 
       result.AppendMessageWithFormat("File: %s\n",
                                      start_file.GetPath().c_str());
+      // We don't care about the column here.
+      const uint32_t column = 0;
       return target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-          start_file, line_no, 0, m_options.num_lines, "",
+          start_file, line_no, 0, m_options.num_lines, column, "",
           &result.GetOutputStream(), GetBreakpointLocations());
     } else {
       result.AppendErrorWithFormat(
@@ -1150,8 +1152,13 @@ protected:
           size_t lines_to_back_up =
               m_options.num_lines >= 10 ? 5 : m_options.num_lines / 2;
 
+          const uint32_t column =
+              (m_interpreter.GetDebugger().GetStopShowColumn() !=
+               eStopShowColumnNone)
+                  ? sc.line_entry.column
+                  : 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit, sc.line_entry.line, lines_to_back_up,
+              sc.comp_unit, sc.line_entry.line, lines_to_back_up, column,
               m_options.num_lines - lines_to_back_up, "->",
               &result.GetOutputStream(), GetBreakpointLocations());
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1187,12 +1194,14 @@ protected:
         } else
           m_breakpoint_locations.Clear();
 
+        const uint32_t column = 0;
         if (target->GetSourceManager()
                 .DisplaySourceLinesWithLineNumbersUsingLastFile(
                     m_options.start_line, // Line to display
                     m_options.num_lines,  // Lines after line to
                     UINT32_MAX,           // Don't mark "line"
-                    "",                   // Don't mark "line"
+                    column,
+                    "", // Don't mark "line"
                     &result.GetOutputStream(), GetBreakpointLocations())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
         }
@@ -1269,10 +1278,10 @@ protected:
 
           if (m_options.num_lines == 0)
             m_options.num_lines = 10;
-
+          const uint32_t column = 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit, m_options.start_line, 0, m_options.num_lines, "",
-              &result.GetOutputStream(), GetBreakpointLocations());
+              sc.comp_unit, m_options.start_line, 0, m_options.num_lines,
+              column, "", &result.GetOutputStream(), GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
