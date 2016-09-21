@@ -10,13 +10,21 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstring>
+#include <unordered_set>
 
-#include "FuzzerInternal.h"
-
+#include "FuzzerCorpus.h"
+#include "FuzzerDefs.h"
+#include "FuzzerExtFunctions.h"
+#include "FuzzerMutate.h"
+#include "FuzzerOptions.h"
 
 namespace fuzzer {
 
 const size_t Dictionary::kMaxDictSize;
+
+static void PrintASCII(const Word &W, const char *PrintAfter) {
+  PrintASCII(W.data(), W.size(), PrintAfter);
+}
 
 MutationDispatcher::MutationDispatcher(Random &Rand,
                                        const FuzzingOptions &Options)
