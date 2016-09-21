@@ -106,6 +106,10 @@ namespace llvm {
       /// 0s or 1s.  Generally DTRT for C/C++ with NaNs.
       FSETCC,
 
+      /// X86 FP SETCC, similar to above, but with output as an i1 mask and
+      /// with optional rounding mode.
+      FSETCCM, FSETCCM_RND,
+
       /// X86 conditional moves. Operand 0 and operand 1 are the two values
       /// to select from. Operand 2 is the condition code, and operand 3 is the
       /// flag operand produced by a CMP or TEST instruction. It also writes a
@@ -538,6 +542,9 @@ namespace llvm {
 
       // ERI instructions.
       RSQRT28, RCP28, EXP2,
+
+      // Conversions between float and half-float.
+      CVTPS2PH, CVTPH2PS,
 
       // Compare and swap.
       LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,

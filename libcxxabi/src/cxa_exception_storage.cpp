@@ -15,7 +15,7 @@
 
 #include "config.h"
 
-#if LIBCXXABI_HAS_NO_THREADS
+#if defined(_LIBCXXABI_HAS_NO_THREADS)
 
 namespace __cxxabiv1 {
 extern "C" {

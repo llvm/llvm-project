@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerInternal.h"
+#include "FuzzerTracePC.h"
 
 namespace fuzzer {
 
