@@ -203,3 +203,19 @@ void f18_test() {
 }
 // A18::operator A[abi:A][abi:B]() but GCC adds the same tags twice!
 // CHECK-DAG: define linkonce_odr {{.+}} @_ZN3A18cv1AB1AB1BEv(
+
+namespace N19 {
+  class A {};
+  class __attribute__((abi_tag("B"))) B {};
+  class D {};
+  class F {};
+
+  template<typename T, B F(T, D)>
+  class C {};
+
+  B foo(A, D);
+}
+void f19_test(N19::C<N19::A,  &N19::foo>, N19::F, N19::D) {
+}
+// f19_test(N19::C<N19::A, &N19::foo[abi:B]>, N19::F, N19::D)
+// CHECK-DAG: define void @_Z8f19_testN3N191CINS_1AEXadL_ZNS_3fooB1BES1_NS_1DEEEEENS_1FES2_(
