@@ -40,6 +40,24 @@ LLT::LLT(Type &Ty, const DataLayout &DL) {
   }
 }
 
+LLT::LLT(MVT VT) {
+  if (VT.isVector()) {
+    SizeInBits = VT.getVectorElementType().getSizeInBits();
+    ElementsOrAddrSpace = VT.getVectorNumElements();
+    Kind = ElementsOrAddrSpace == 1 ? Scalar : Vector;
+  } else if (VT.isValid()) {
+    // Aggregates are no different from real scalars as far as GlobalISel is
+    // concerned.
+    Kind = Scalar;
+    SizeInBits = VT.getSizeInBits();
+    ElementsOrAddrSpace = 1;
+    assert(SizeInBits != 0 && "invalid zero-sized type");
+  } else {
+    Kind = Invalid;
+    SizeInBits = ElementsOrAddrSpace = 0;
+  }
+}
+
 void LLT::print(raw_ostream &OS) const {
   if (isVector())
     OS << "<" << ElementsOrAddrSpace << " x s" << SizeInBits << ">";

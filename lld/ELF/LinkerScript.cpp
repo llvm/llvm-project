@@ -156,10 +156,10 @@ static bool matchConstraints(ArrayRef<InputSectionBase<ELFT> *> Sections,
   });
 }
 
-static void sortSections(std::vector<InputSectionData *> &Sections,
+static void sortSections(InputSectionData **Begin, InputSectionData **End,
                          SortSectionPolicy K) {
   if (K != SortSectionPolicy::Default && K != SortSectionPolicy::None)
-    std::stable_sort(Sections.begin(), Sections.end(), getComparator(K));
+    std::stable_sort(Begin, End, getComparator(K));
 }
 
 // Compute and remember which sections the InputSectionDescription matches.
@@ -168,6 +168,7 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
   // Collects all sections that satisfy constraints of I
   // and attach them to I.
   for (SectionPattern &Pat : I->SectionPatterns) {
+    size_t SizeBefore = I->Sections.size();
     for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
       StringRef Filename = sys::path::filename(F->getName());
       if (!I->FileRe.match(Filename) || Pat.ExcludedFileRe.match(Filename))
@@ -179,25 +180,27 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
       if (Pat.SectionRe.match("COMMON"))
         I->Sections.push_back(CommonInputSection<ELFT>::X);
     }
-  }
 
-  // Sort sections as instructed by SORT-family commands and --sort-section
-  // option. Because SORT-family commands can be nested at most two depth
-  // (e.g. SORT_BY_NAME(SORT_BY_ALIGNMENT(.text.*))) and because the command
-  // line option is respected even if a SORT command is given, the exact
-  // behavior we have here is a bit complicated. Here are the rules.
-  //
-  // 1. If two SORT commands are given, --sort-section is ignored.
-  // 2. If one SORT command is given, and if it is not SORT_NONE,
-  //    --sort-section is handled as an inner SORT command.
-  // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
-  // 4. If no SORT command is given, sort according to --sort-section.
-  if (I->SortOuter != SortSectionPolicy::None) {
-    if (I->SortInner == SortSectionPolicy::Default)
-      sortSections(I->Sections, Config->SortSection);
-    else
-      sortSections(I->Sections, I->SortInner);
-    sortSections(I->Sections, I->SortOuter);
+    // Sort sections as instructed by SORT-family commands and --sort-section
+    // option. Because SORT-family commands can be nested at most two depth
+    // (e.g. SORT_BY_NAME(SORT_BY_ALIGNMENT(.text.*))) and because the command
+    // line option is respected even if a SORT command is given, the exact
+    // behavior we have here is a bit complicated. Here are the rules.
+    //
+    // 1. If two SORT commands are given, --sort-section is ignored.
+    // 2. If one SORT command is given, and if it is not SORT_NONE,
+    //    --sort-section is handled as an inner SORT command.
+    // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
+    // 4. If no SORT command is given, sort according to --sort-section.
+    InputSectionData **Begin = I->Sections.data() + SizeBefore;
+    InputSectionData **End = I->Sections.data() + I->Sections.size();
+    if (Pat.SortOuter != SortSectionPolicy::None) {
+      if (Pat.SortInner == SortSectionPolicy::Default)
+        sortSections(Begin, End, Config->SortSection);
+      else
+        sortSections(Begin, End, Pat.SortInner);
+      sortSections(Begin, End, Pat.SortOuter);
+    }
   }
 
   // We do not add duplicate input sections, so mark them with a dummy output
@@ -453,10 +456,11 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
     process(**I);
   flush();
   for (OutputSectionBase<ELFT> *Base : Sections) {
-    if (!AlreadyOutputOS.insert(Base).second)
+    if (AlreadyOutputOS.count(Base))
       continue;
     switchTo(Base);
     Dot += CurOutSec->getSize();
+    flush();
   }
   std::for_each(E, Cmd->Commands.end(),
                 [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
@@ -768,7 +772,7 @@ private:
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   Regex readFilePatterns();
-  void readSectionExcludes(InputSectionDescription *Cmd);
+  std::vector<SectionPattern> readInputSectionsList();
   InputSectionDescription *readInputSectionRules(StringRef FilePattern);
   unsigned readPhdrType();
   SortSectionPolicy readSortKind();
@@ -1071,57 +1075,63 @@ SortSectionPolicy ScriptParser::readSortKind() {
 // * Include .foo.1 from every file.
 // * Include .foo.2 from every file but a.o
 // * Include .foo.3 from every file but b.o
-void ScriptParser::readSectionExcludes(InputSectionDescription *Cmd) {
-  Regex ExcludeFileRe;
-  std::vector<StringRef> V;
-
-  while (!Error) {
-    if (skip(")")) {
-      Cmd->SectionPatterns.push_back(
-          {std::move(ExcludeFileRe), compileGlobPatterns(V)});
-      return;
-    }
-
+std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
+  std::vector<SectionPattern> Ret;
+  while (!Error && peek() != ")") {
+    Regex ExcludeFileRe;
     if (skip("EXCLUDE_FILE")) {
-      if (!V.empty()) {
-        Cmd->SectionPatterns.push_back(
-            {std::move(ExcludeFileRe), compileGlobPatterns(V)});
-        V.clear();
-      }
-
       expect("(");
       ExcludeFileRe = readFilePatterns();
-      continue;
     }
 
-    V.push_back(next());
+    std::vector<StringRef> V;
+    while (!Error && peek() != ")" && peek() != "EXCLUDE_FILE")
+      V.push_back(next());
+
+    if (!V.empty())
+      Ret.push_back({std::move(ExcludeFileRe), compileGlobPatterns(V)});
+    else
+      setError("section pattern is expected");
   }
+  return Ret;
 }
 
+// Section pattern grammar can have complex expressions, for example:
+// *(SORT(.foo.* EXCLUDE_FILE (*file1.o) .bar.*) .bar.* SORT(.zed.*))
+// Generally is a sequence of globs and excludes that may be wrapped in a SORT()
+// commands, like: SORT(glob0) glob1 glob2 SORT(glob4)
+// This methods handles wrapping sequences of excluded files and section globs
+// into SORT() if that needed and reads them all.
 InputSectionDescription *
 ScriptParser::readInputSectionRules(StringRef FilePattern) {
   auto *Cmd = new InputSectionDescription(FilePattern);
   expect("(");
-
-  // Read SORT().
-  SortSectionPolicy K1 = readSortKind();
-  if (K1 != SortSectionPolicy::Default) {
-    Cmd->SortOuter = K1;
-    expect("(");
-    SortSectionPolicy K2 = readSortKind();
-    if (K2 != SortSectionPolicy::Default) {
-      Cmd->SortInner = K2;
+  while (!HasError && !skip(")")) {
+    SortSectionPolicy Outer = readSortKind();
+    SortSectionPolicy Inner = SortSectionPolicy::Default;
+    std::vector<SectionPattern> V;
+    if (Outer != SortSectionPolicy::Default) {
       expect("(");
-      Cmd->SectionPatterns.push_back({Regex(), readFilePatterns()});
+      Inner = readSortKind();
+      if (Inner != SortSectionPolicy::Default) {
+        expect("(");
+        V = readInputSectionsList();
+        expect(")");
+      } else {
+        V = readInputSectionsList();
+      }
       expect(")");
     } else {
-      Cmd->SectionPatterns.push_back({Regex(), readFilePatterns()});
+      V = readInputSectionsList();
     }
-    expect(")");
-    return Cmd;
-  }
 
-  readSectionExcludes(Cmd);
+    for (SectionPattern &Pat : V) {
+      Pat.SortInner = Inner;
+      Pat.SortOuter = Outer;
+    }
+
+    std::move(V.begin(), V.end(), std::back_inserter(Cmd->SectionPatterns));
+  }
   return Cmd;
 }
 

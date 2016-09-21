@@ -461,9 +461,18 @@ static void AsanInitInternal() {
 
   ReplaceSystemMalloc();
 
-  __asan_shadow_memory_dynamic_address = 0;
+  // Set the shadow memory address to uninitialized.
+  __asan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
+
   uptr shadow_start = kLowShadowBeg;
-  if (shadow_start == 0) {
+  // Detect if a dynamic shadow address must used and find a available location
+  // when necessary. When dynamic address is used, the macro |kLowShadowBeg|
+  // expands to |__asan_shadow_memory_dynamic_address| which is
+  // |kDefaultShadowSentinel|.
+  if (shadow_start == kDefaultShadowSentinel) {
+    __asan_shadow_memory_dynamic_address = 0;
+    CHECK_EQ(0, kLowShadowBeg);
+
     uptr granularity = GetMmapGranularity();
     uptr alignment = 8 * granularity;
     uptr left_padding = granularity;
@@ -473,6 +482,7 @@ static void AsanInitInternal() {
     CHECK_NE((uptr)0, shadow_start);
     CHECK(IsAligned(shadow_start, alignment));
   }
+  // Update the shadow memory address (potentially) used by instrumentation.
   __asan_shadow_memory_dynamic_address = shadow_start;
 
   if (kLowShadowBeg)

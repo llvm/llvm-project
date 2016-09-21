@@ -123,7 +123,7 @@ public:
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
   size_t PrintfAsRawHex8(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+      __attribute__((__format__(__printf__, 2, 3)));
 
   //------------------------------------------------------------------
   /// Format a C string from a printf style format and variable

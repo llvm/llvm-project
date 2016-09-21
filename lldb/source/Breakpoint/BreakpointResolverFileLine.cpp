@@ -150,7 +150,7 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
   s.Printf("for %s:%d ", m_file_spec.GetFilename().AsCString("<Unknown>"),
            m_line_number);
 
-  SetSCMatchesByLine(filter, sc_list, m_skip_prologue, s.GetData());
+  SetSCMatchesByLine(filter, sc_list, m_skip_prologue, s.GetString());
 
   return Searcher::eCallbackReturnContinue;
 }

@@ -236,7 +236,9 @@ protected:
   /// so, and then set
   /// breakpoint locations in this breakpoint for all the resultant addresses.
   void SetSCMatchesByLine(SearchFilter &filter, SymbolContextList &sc_list,
-                          bool skip_prologue, const char *log_ident);
+                          bool skip_prologue, llvm::StringRef log_ident);
+  void SetSCMatchesByLine(SearchFilter &, SymbolContextList &, bool,
+                          const char *) = delete;
 
   lldb::BreakpointLocationSP AddLocation(Address loc_addr,
                                          bool *new_location = NULL);

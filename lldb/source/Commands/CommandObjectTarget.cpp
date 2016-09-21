@@ -807,7 +807,7 @@ protected:
         size_t matches = 0;
         bool use_var_name = false;
         if (m_option_variable.use_regex) {
-          RegularExpression regex(arg);
+          RegularExpression regex(llvm::StringRef::withNullAsEmpty(arg));
           if (!regex.IsValid()) {
             result.GetErrorStream().Printf(
                 "error: invalid regular expression: '%s'\n", arg);
@@ -941,7 +941,8 @@ protected:
               } else if (sc.module_sp) {
                 // Get all global variables for this module
                 lldb_private::RegularExpression all_globals_regex(
-                    "."); // Any global with at least one character
+                    llvm::StringRef(
+                        ".")); // Any global with at least one character
                 VariableList variable_list;
                 sc.module_sp->FindGlobalVariables(all_globals_regex, append,
                                                   UINT32_MAX, variable_list);
@@ -1517,7 +1518,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         ConstString symbol_name(name);
         uint32_t num_matches = 0;
         if (name_is_regex) {
-          RegularExpression name_regexp(name);
+          RegularExpression name_regexp(symbol_name.GetStringRef());
           num_matches = symtab->AppendSymbolIndexesMatchingRegExAndType(
               name_regexp, eSymbolTypeAny, match_indexes);
         } else {
@@ -1579,7 +1580,7 @@ static size_t LookupFunctionInModule(CommandInterpreter &interpreter,
     const bool append = true;
     size_t num_matches = 0;
     if (name_is_regex) {
-      RegularExpression function_name_regex(name);
+      RegularExpression function_name_regex((llvm::StringRef(name)));
       num_matches = module->FindFunctions(function_name_regex, include_symbols,
                                           include_inlines, append, sc_list);
     } else {

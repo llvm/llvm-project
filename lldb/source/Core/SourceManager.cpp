@@ -464,7 +464,7 @@ void SourceManager::File::FindLinesMatchingRegex(
     std::string buffer;
     if (!GetLine(line_no, buffer))
       break;
-    if (regex.Execute(buffer.c_str())) {
+    if (regex.Execute(buffer)) {
       match_lines.push_back(line_no);
     }
   }

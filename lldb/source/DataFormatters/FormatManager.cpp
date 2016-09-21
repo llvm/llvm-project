@@ -1003,9 +1003,9 @@ void FormatManager::LoadSystemFormatters() {
       new StringSummaryFormat(string_array_flags, "${var%s}"));
 
   lldb::RegularExpressionSP any_size_char_arr(
-      new RegularExpression("char \\[[0-9]+\\]"));
+      new RegularExpression(llvm::StringRef("char \\[[0-9]+\\]")));
   lldb::RegularExpressionSP any_size_wchar_arr(
-      new RegularExpression("wchar_t \\[[0-9]+\\]"));
+      new RegularExpression(llvm::StringRef("wchar_t \\[[0-9]+\\]")));
 
   TypeCategoryImpl::SharedPointer sys_category_sp =
       GetCategory(m_system_category_name);

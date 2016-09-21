@@ -109,9 +109,10 @@ MachineLegalizeHelper::libcall(MachineInstr &MI) {
     const char *Name =
         TLI.getLibcallName(Size == 64 ? RTLIB::REM_F64 : RTLIB::REM_F32);
 
-    CLI.lowerCall(MIRBuilder, MachineOperand::CreateES(Name), Ty,
-                  MI.getOperand(0).getReg(), {Ty, Ty},
-                  {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
+    CLI.lowerCall(
+        MIRBuilder, MachineOperand::CreateES(Name),
+        {MI.getOperand(0).getReg(), Ty},
+        {{MI.getOperand(1).getReg(), Ty}, {MI.getOperand(2).getReg(), Ty}});
     MI.eraseFromParent();
     return Legalized;
   }

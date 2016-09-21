@@ -1398,7 +1398,7 @@ size_t Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
   Timer scoped_timer(
       LLVM_PRETTY_FUNCTION,
       "Module::FindSymbolsMatchingRegExAndType (regex = %s, type = %i)",
-      regex.GetText(), symbol_type);
+      regex.GetText().str().c_str(), symbol_type);
   const size_t initial_size = sc_list.GetSize();
   SymbolVendor *sym_vendor = GetSymbolVendor();
   if (sym_vendor) {

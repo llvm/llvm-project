@@ -270,7 +270,7 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
 
   SmallVector<unsigned, 8> UnusedArgs;
   for (Argument &Arg : Fn.args()) {
-    if (Arg.use_empty() && !Arg.hasByValOrInAllocaAttr())
+    if (!Arg.hasSwiftErrorAttr() && Arg.use_empty() && !Arg.hasByValOrInAllocaAttr())
       UnusedArgs.push_back(Arg.getArgNo());
   }
 

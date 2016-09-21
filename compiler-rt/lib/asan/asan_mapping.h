@@ -125,6 +125,7 @@
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
 
 static const u64 kDefaultShadowScale = 3;
+static const u64 kDefaultShadowSentinel = ~(uptr)0;
 static const u64 kDefaultShadowOffset32 = 1ULL << 29;  // 0x20000000
 static const u64 kDefaultShadowOffset64 = 1ULL << 44;
 static const u64 kDefaultShort64bitShadowOffset = 0x7FFF8000;  // < 2G.

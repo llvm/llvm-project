@@ -22,7 +22,7 @@ namespace lldb_private {
 class OptionValueRegex : public OptionValue {
 public:
   OptionValueRegex(const char *value = nullptr)
-      : OptionValue(), m_regex(value) {}
+      : OptionValue(), m_regex(llvm::StringRef::withNullAsEmpty(value)) {}
 
   ~OptionValueRegex() override = default;
 
@@ -56,7 +56,7 @@ public:
 
   void SetCurrentValue(const char *value) {
     if (value && value[0])
-      m_regex.Compile(value);
+      m_regex.Compile(llvm::StringRef(value));
     else
       m_regex.Clear();
   }

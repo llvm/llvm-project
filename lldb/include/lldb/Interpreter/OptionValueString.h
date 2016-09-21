@@ -110,8 +110,10 @@ public:
   }
 
   const char *GetCurrentValue() const { return m_current_value.c_str(); }
+  llvm::StringRef GetCurrentValueAsRef() const { return m_current_value; }
 
   const char *GetDefaultValue() const { return m_default_value.c_str(); }
+  llvm::StringRef GetDefaultValueAsRef() const { return m_default_value; }
 
   Error SetCurrentValue(const char *value);
 

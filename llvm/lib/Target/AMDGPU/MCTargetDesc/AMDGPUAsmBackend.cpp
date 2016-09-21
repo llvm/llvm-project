@@ -23,24 +23,6 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUMCObjectWriter : public MCObjectWriter {
-public:
-  AMDGPUMCObjectWriter(raw_pwrite_stream &OS) : MCObjectWriter(OS, true) {}
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {
-    //XXX: Implement if necessary.
-  }
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, bool &IsPCRel,
-                        uint64_t &FixedValue) override {
-    assert(!"Not implemented");
-  }
-
-  void writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
-
-};
-
 class AMDGPUAsmBackend : public MCAsmBackend {
 public:
   AMDGPUAsmBackend(const Target &T)
@@ -72,13 +54,6 @@ public:
 };
 
 } //End anonymous namespace
-
-void AMDGPUMCObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
-  for (MCAssembler::iterator I = Asm.begin(), E = Asm.end(); I != E; ++I) {
-    Asm.writeSectionData(&*I, Layout);
-  }
-}
 
 static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {

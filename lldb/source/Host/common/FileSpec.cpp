@@ -1422,15 +1422,15 @@ void FileSpec::RemoveLastPathComponent() {
 //------------------------------------------------------------------
 bool FileSpec::IsSourceImplementationFile() const {
   ConstString extension(GetFileNameExtension());
-  if (extension) {
-    static RegularExpression g_source_file_regex(
-        "^([cC]|[mM]|[mM][mM]|[cC][pP][pP]|[cC]\\+\\+|[cC][xX][xX]|[cC][cC]|["
-        "cC][pP]|[sS]|[aA][sS][mM]|[fF]|[fF]77|[fF]90|[fF]95|[fF]03|[fF][oO]["
-        "rR]|[fF][tT][nN]|[fF][pP][pP]|[aA][dD][aA]|[aA][dD][bB]|[aA][dD][sS])"
-        "$");
-    return g_source_file_regex.Execute(extension.GetCString());
-  }
-  return false;
+  if (!extension)
+    return false;
+
+  static RegularExpression g_source_file_regex(llvm::StringRef(
+      "^([cC]|[mM]|[mM][mM]|[cC][pP][pP]|[cC]\\+\\+|[cC][xX][xX]|[cC][cC]|["
+      "cC][pP]|[sS]|[aA][sS][mM]|[fF]|[fF]77|[fF]90|[fF]95|[fF]03|[fF][oO]["
+      "rR]|[fF][tT][nN]|[fF][pP][pP]|[aA][dD][aA]|[aA][dD][bB]|[aA][dD][sS])"
+      "$"));
+  return g_source_file_regex.Execute(extension.GetStringRef());
 }
 
 bool FileSpec::IsRelative() const {

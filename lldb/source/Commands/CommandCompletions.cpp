@@ -511,7 +511,7 @@ CommandCompletions::SymbolCompleter::SymbolCompleter(
     pos = regex_str.insert(pos, '\\');
     pos = find_if(pos + 2, regex_str.end(), regex_chars);
   }
-  m_regex.Compile(regex_str.c_str());
+  m_regex.Compile(regex_str);
 }
 
 Searcher::Depth CommandCompletions::SymbolCompleter::GetDepth() {

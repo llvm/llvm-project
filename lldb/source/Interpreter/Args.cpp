@@ -608,6 +608,8 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
                                    Error *error_ptr) {
   bool error_set = false;
   if (s && s[0]) {
+    llvm::StringRef sref = s;
+
     char *end = nullptr;
     lldb::addr_t addr = ::strtoull(s, &end, 0);
     if (*end == '\0') {
@@ -662,10 +664,10 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
           // Since the compiler can't handle things like "main + 12" we should
           // try to do this for now. The compiler doesn't like adding offsets
           // to function pointer types.
-          static RegularExpression g_symbol_plus_offset_regex(
-              "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
+          static RegularExpression g_symbol_plus_offset_regex(llvm::StringRef(
+              "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$"));
           RegularExpression::Match regex_match(3);
-          if (g_symbol_plus_offset_regex.Execute(s, &regex_match)) {
+          if (g_symbol_plus_offset_regex.Execute(sref, &regex_match)) {
             uint64_t offset = 0;
             bool add = true;
             std::string name;
