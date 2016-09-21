@@ -14,7 +14,6 @@
 
 #define ATTR __attribute__((always_inline, overloadable))
 
-#define int_suf _f32
 #define float_suf _f32
 #define double_suf _f64
 #define half_suf _f16
@@ -28,33 +27,33 @@
 #define LIST16(F,T) LIST8(F,T), ONAME(F,T)(x.s8), ONAME(F,T)(x.s9), ONAME(F,T)(x.sa), ONAME(F,T)(x.sb), \
                                 ONAME(F,T)(x.sc), ONAME(F,T)(x.sd), ONAME(F,T)(x.se), ONAME(F,T)(x.sf)
 
-#define WRAPN(N,F,OT,IT) \
+#define WRAPN(N,F,OT,IT,ST) \
 ATTR OT##N \
 F(IT##N x) \
 { \
-    return (OT##N) ( LIST##N(F,OT) ); \
+    return (OT##N) ( LIST##N(F,ST) ); \
 }
 
-#define WRAP1(F,OT,IT) \
+#define WRAP1(F,OT,IT,ST) \
 ATTR OT \
 F(IT x) \
 { \
-    return ONAME(F,OT)(x); \
+    return ONAME(F,ST)(x); \
 }
 
-#define WRAP(F,OT,IT) \
-    WRAPN(16,F,OT,IT) \
-    WRAPN(8,F,OT,IT) \
-    WRAPN(4,F,OT,IT) \
-    WRAPN(3,F,OT,IT) \
-    WRAPN(2,F,OT,IT) \
-    WRAP1(F,OT,IT)
+#define WRAP(F,OT,IT,ST) \
+    WRAPN(16,F,OT,IT,ST) \
+    WRAPN(8,F,OT,IT,ST) \
+    WRAPN(4,F,OT,IT,ST) \
+    WRAPN(3,F,OT,IT,ST) \
+    WRAPN(2,F,OT,IT,ST) \
+    WRAP1(F,OT,IT,ST)
 
-WRAP(ilogb,int,float)
-WRAP(ilogb,int,double)
-WRAP(ilogb,int,half)
+WRAP(ilogb,int,float,float)
+WRAP(ilogb,int,double,double)
+WRAP(ilogb,int,half,half)
 
-WRAP(nan,float,uint)
-WRAP(nan,double,ulong)
-WRAP(nan,half,ushort)
+WRAP(nan,float,uint,float)
+WRAP(nan,double,ulong,double)
+WRAP(nan,half,ushort,half)
 
