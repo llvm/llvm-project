@@ -383,3 +383,15 @@ handler:
   call void @free(i8* %tmp)
   ret float 1.0
 }
+
+; Check that we don't blow up on tail calling swifterror argument functions.
+define float @tailcallswifterror(%swift_error** swifterror %error_ptr_ref) {
+entry:
+  %0 = tail call float @tailcallswifterror(%swift_error** swifterror %error_ptr_ref)
+  ret float %0
+}
+define swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %error_ptr_ref) {
+entry:
+  %0 = tail call swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %error_ptr_ref)
+  ret float %0
+}
