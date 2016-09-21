@@ -71,19 +71,27 @@ void SwiftLanguage::Initialize() {
                                 CreateInstance);
 
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
-      .emplace(g_NSDictionaryClass1,
-               lldb_private::formatters::swift::Dictionary_SummaryProvider);
-  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
-      .emplace(
-          g_NSDictionaryClass1,
-          lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator);
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetFullMatch(g_NSDictionaryClass1),
+                  lldb_private::formatters::swift::Dictionary_SummaryProvider});
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
-      .emplace(g_NSDictionaryClass2,
-               lldb_private::formatters::swift::Dictionary_SummaryProvider);
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetFullMatch(g_NSDictionaryClass2),
+                  lldb_private::formatters::swift::Dictionary_SummaryProvider});
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
-      .emplace(
-          g_NSDictionaryClass2,
-          lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator);
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetFullMatch(g_NSDictionaryClass1),
+                  lldb_private::formatters::swift::
+                      DictionarySyntheticFrontEndCreator});
+  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetFullMatch(g_NSDictionaryClass2),
+                  lldb_private::formatters::swift::
+                      DictionarySyntheticFrontEndCreator});
 
   lldb_private::formatters::NSSet_Additionals::GetAdditionalSummaries().emplace(
       g_NSSetClass1, lldb_private::formatters::swift::Set_SummaryProvider);
@@ -128,15 +136,6 @@ void SwiftLanguage::Terminate() {
   static ConstString g_NSStringClass2("_TtCSs19_NSContiguousString");
   static ConstString g_NSStringClass3("_TtCs19_NSContiguousString");
   static ConstString g_NSArrayClass1("_TtCs21_SwiftDeferredNSArray");
-
-  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
-      .erase(g_NSDictionaryClass1);
-  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
-      .erase(g_NSDictionaryClass1);
-  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
-      .erase(g_NSDictionaryClass2);
-  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
-      .erase(g_NSDictionaryClass2);
 
   lldb_private::formatters::NSSet_Additionals::GetAdditionalSummaries().erase(
       g_NSSetClass1);
