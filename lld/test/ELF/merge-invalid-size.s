@@ -3,5 +3,8 @@
 // RUN: not ld.lld %t.o -o %t.so 2>&1 | FileCheck %s
 // CHECK: SHF_MERGE section size must be a multiple of sh_entsize
 
-        .section	.foo,"aM",@progbits,4
-        .short 42
+// Test that we accept a zero sh_entsize.
+// RUN: ld.lld %p/Inputs/invalid-shentsize-zero.elf -o %t2
+
+.section .foo,"aM",@progbits,4
+.short 42

@@ -184,15 +184,23 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   if (Sec.sh_size == 0)
     return false;
 
+  // Check for sh_entsize. The ELF spec is not clear about the zero
+  // sh_entsize. It says that "the member [sh_entsize] contains 0 if
+  // the section does not hold a table of fixed-size entries". We know
+  // that Rust 1.13 produces a string mergeable section with a zero
+  // sh_entsize. Here we just accept it rather than being picky about it.
+  uintX_t EntSize = Sec.sh_entsize;
+  if (EntSize == 0)
+    return false;
+  if (Sec.sh_size % EntSize)
+    fatal(getFilename(this) +
+          ": SHF_MERGE section size must be a multiple of sh_entsize");
+
   uintX_t Flags = Sec.sh_flags;
   if (!(Flags & SHF_MERGE))
     return false;
   if (Flags & SHF_WRITE)
     fatal(getFilename(this) + ": writable SHF_MERGE section is not supported");
-  uintX_t EntSize = Sec.sh_entsize;
-  if (!EntSize || Sec.sh_size % EntSize)
-    fatal(getFilename(this) +
-          ": SHF_MERGE section size must be a multiple of sh_entsize");
 
   // Don't try to merge if the alignment is larger than the sh_entsize and this
   // is not SHF_STRINGS.

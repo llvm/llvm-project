@@ -708,6 +708,9 @@ public:
     lldb::SBBreakpoint
     FindBreakpointByID (break_id_t break_id);
 
+  
+    bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
+
     bool
     EnableAllBreakpoints ();
 
