@@ -405,12 +405,14 @@ public:
   CXXNameMangler(CXXNameMangler &Outer, raw_ostream &Out_)
       : Context(Outer.Context), Out(Out_), NullOut(false),
         Structor(Outer.Structor), StructorType(Outer.StructorType),
-        SeqID(Outer.SeqID), AbiTagsRoot(AbiTags) {}
+        SeqID(Outer.SeqID), AbiTagsRoot(AbiTags),
+        Substitutions(Outer.Substitutions) {}
 
   CXXNameMangler(CXXNameMangler &Outer, llvm::raw_null_ostream &Out_)
       : Context(Outer.Context), Out(Out_), NullOut(true),
         Structor(Outer.Structor), StructorType(Outer.StructorType),
-        SeqID(Outer.SeqID), AbiTagsRoot(AbiTags) {}
+        SeqID(Outer.SeqID), AbiTagsRoot(AbiTags),
+        Substitutions(Outer.Substitutions) {}
 
 #if MANGLE_CHECKER
   ~CXXNameMangler() {
@@ -458,6 +460,8 @@ private:
   void addSubstitution(QualType T);
   void addSubstitution(TemplateName Template);
   void addSubstitution(uintptr_t Ptr);
+  // Destructive copy substitutions from other mangler.
+  void extendSubstitutions(CXXNameMangler* Other);
 
   void mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
                               bool recursive = false);
@@ -685,6 +689,10 @@ void CXXNameMangler::mangleFunctionEncoding(const FunctionDecl *FD) {
   // Output name with implicit tags and function encoding from temporary buffer.
   mangleNameWithAbiTags(FD, &AdditionalAbiTags);
   Out << FunctionEncodingStream.str().substr(EncodingPositionStart);
+
+  // Function encoding could create new substitutions so we have to add
+  // temp mangled substitutions to main mangler.
+  extendSubstitutions(&FunctionEncodingMangler);
 }
 
 void CXXNameMangler::mangleFunctionEncodingBareType(const FunctionDecl *FD) {
@@ -4424,6 +4432,14 @@ void CXXNameMangler::addSubstitution(TemplateName Template) {
 void CXXNameMangler::addSubstitution(uintptr_t Ptr) {
   assert(!Substitutions.count(Ptr) && "Substitution already exists!");
   Substitutions[Ptr] = SeqID++;
+}
+
+void CXXNameMangler::extendSubstitutions(CXXNameMangler* Other) {
+  assert(Other->SeqID >= SeqID && "Must be superset of substitutions!");
+  if (Other->SeqID > SeqID) {
+    Substitutions.swap(Other->Substitutions);
+    SeqID = Other->SeqID;
+  }
 }
 
 CXXNameMangler::AbiTagList
