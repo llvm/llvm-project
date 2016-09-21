@@ -453,10 +453,11 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
     process(**I);
   flush();
   for (OutputSectionBase<ELFT> *Base : Sections) {
-    if (!AlreadyOutputOS.insert(Base).second)
+    if (AlreadyOutputOS.count(Base))
       continue;
     switchTo(Base);
     Dot += CurOutSec->getSize();
+    flush();
   }
   std::for_each(E, Cmd->Commands.end(),
                 [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
@@ -1072,30 +1073,24 @@ SortSectionPolicy ScriptParser::readSortKind() {
 // * Include .foo.2 from every file but a.o
 // * Include .foo.3 from every file but b.o
 void ScriptParser::readSectionExcludes(InputSectionDescription *Cmd) {
-  Regex ExcludeFileRe;
-  std::vector<StringRef> V;
-
-  while (!Error) {
-    if (skip(")")) {
-      Cmd->SectionPatterns.push_back(
-          {std::move(ExcludeFileRe), compileGlobPatterns(V)});
-      return;
-    }
-
+  while (!Error && peek() != ")") {
+    Regex ExcludeFileRe;
     if (skip("EXCLUDE_FILE")) {
-      if (!V.empty()) {
-        Cmd->SectionPatterns.push_back(
-            {std::move(ExcludeFileRe), compileGlobPatterns(V)});
-        V.clear();
-      }
-
       expect("(");
       ExcludeFileRe = readFilePatterns();
-      continue;
     }
 
-    V.push_back(next());
+    std::vector<StringRef> V;
+    while (!Error && peek() != ")" && peek() != "EXCLUDE_FILE")
+      V.push_back(next());
+
+    if (!V.empty())
+      Cmd->SectionPatterns.push_back(
+          {std::move(ExcludeFileRe), compileGlobPatterns(V)});
+    else
+      setError("section pattern is expected");
   }
+  expect(")");
 }
 
 InputSectionDescription *

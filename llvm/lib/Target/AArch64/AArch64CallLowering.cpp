@@ -35,8 +35,7 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
 
 bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                             CCAssignFn *AssignFn,
-                                            ArrayRef<Type *> ArgTypes,
-                                            ArrayRef<unsigned> ArgRegs,
+                                            ArrayRef<ArgInfo> Args,
                                             AssignFnTy AssignValToReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
@@ -44,80 +43,89 @@ bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
 
-  unsigned NumArgs = ArgTypes.size();
-  auto CurTy = ArgTypes.begin();
-  for (unsigned i = 0; i != NumArgs; ++i, ++CurTy) {
-    MVT CurVT = MVT::getVT(*CurTy);
-    if (AssignFn(i, CurVT, CurVT, CCValAssign::Full, ISD::ArgFlagsTy(), CCInfo))
+  unsigned NumArgs = Args.size();
+  for (unsigned i = 0; i != NumArgs; ++i) {
+    MVT CurVT = MVT::getVT(Args[i].Ty);
+    if (AssignFn(i, CurVT, CurVT, CCValAssign::Full, Args[i].Flags, CCInfo))
       return false;
   }
-  assert(ArgLocs.size() == ArgTypes.size() &&
-         "We have a different number of location and args?!");
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (unsigned i = 0, e = Args.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
 
     // FIXME: Support non-register argument.
     if (!VA.isRegLoc())
       return false;
 
-    switch (VA.getLocInfo()) {
-    default:
-      //  Unknown loc info!
-      return false;
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      // We don't care about bitcast.
-      break;
-    case CCValAssign::AExt:
-      // Existing high bits are fine for anyext (whatever they are).
-      break;
-    case CCValAssign::SExt:
-    case CCValAssign::ZExt:
-      // Zero/Sign extend the register.
-      // FIXME: Not yet implemented
-      return false;
-    }
-
     // Everything checks out, tell the caller where we've decided this
     // parameter/return value should go.
-    AssignValToReg(MIRBuilder, ArgTypes[i], ArgRegs[i], VA.getLocReg());
+    AssignValToReg(MIRBuilder, Args[i].Ty, Args[i].Reg, VA);
   }
   return true;
 }
 
-void AArch64CallLowering::splitToValueTypes(
-    unsigned Reg, Type *Ty, SmallVectorImpl<unsigned> &SplitRegs,
-    SmallVectorImpl<Type *> &SplitTys, const DataLayout &DL,
-    MachineRegisterInfo &MRI, SplitArgTy SplitArg) const {
+void AArch64CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
+                                            SmallVectorImpl<ArgInfo> &SplitArgs,
+                                            const DataLayout &DL,
+                                            MachineRegisterInfo &MRI,
+                                            SplitArgTy PerformArgSplit) const {
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
-  LLVMContext &Ctx = Ty->getContext();
+  LLVMContext &Ctx = OrigArg.Ty->getContext();
 
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
-  ComputeValueVTs(TLI, DL, Ty, SplitVTs, &Offsets, 0);
+  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
 
   if (SplitVTs.size() == 1) {
     // No splitting to do, just forward the input directly.
-    SplitTys.push_back(Ty);
-    SplitRegs.push_back(Reg);
+    SplitArgs.push_back(OrigArg);
     return;
   }
 
-  unsigned FirstRegIdx = SplitRegs.size();
+  unsigned FirstRegIdx = SplitArgs.size();
   for (auto SplitVT : SplitVTs) {
+    // FIXME: set split flags if they're actually used (e.g. i128 on AAPCS).
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
-    SplitRegs.push_back(MRI.createGenericVirtualRegister(LLT{*SplitTy, DL}));
-    SplitTys.push_back(SplitTy);
+    SplitArgs.push_back(
+        ArgInfo{MRI.createGenericVirtualRegister(LLT{*SplitTy, DL}), SplitTy,
+                OrigArg.Flags});
   }
 
   SmallVector<uint64_t, 4> BitOffsets;
   for (auto Offset : Offsets)
     BitOffsets.push_back(Offset * 8);
 
-  SplitArg(ArrayRef<unsigned>(&SplitRegs[FirstRegIdx], SplitRegs.end()),
-           BitOffsets);
+  SmallVector<unsigned, 8> SplitRegs;
+  for (auto I = &SplitArgs[FirstRegIdx]; I != SplitArgs.end(); ++I)
+    SplitRegs.push_back(I->Reg);
+
+  PerformArgSplit(SplitRegs, BitOffsets);
 }
+
+static void copyToPhysReg(MachineIRBuilder &MIRBuilder, unsigned ValReg,
+                          CCValAssign &VA, MachineRegisterInfo &MRI) {
+  LLT LocTy{VA.getLocVT()};
+  switch (VA.getLocInfo()) {
+  default: break;
+  case CCValAssign::AExt:
+    assert(!VA.getLocVT().isVector() && "unexpected vector extend");
+    // Otherwise, it's a nop.
+    break;
+  case CCValAssign::SExt: {
+    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    MIRBuilder.buildSExt(NewReg, ValReg);
+    ValReg = NewReg;
+    break;
+  }
+  case CCValAssign::ZExt: {
+    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    MIRBuilder.buildZExt(NewReg, ValReg);
+    ValReg = NewReg;
+    break;
+  }
+  }
+  MIRBuilder.buildCopy(VA.getLocReg(), ValReg);
+}
+
 
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val, unsigned VReg) const {
@@ -135,38 +143,40 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     MachineRegisterInfo &MRI = MF.getRegInfo();
     auto &DL = F.getParent()->getDataLayout();
 
-    SmallVector<Type *, 8> SplitTys;
-    SmallVector<unsigned, 8> SplitRegs;
-    splitToValueTypes(VReg, Val->getType(), SplitRegs, SplitTys, DL, MRI,
+    ArgInfo OrigArg{VReg, Val->getType()};
+    setArgFlags(OrigArg, AttributeSet::ReturnIndex, DL, F);
+
+    SmallVector<ArgInfo, 8> SplitArgs;
+    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                       [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
                         MIRBuilder.buildExtract(Regs, Offsets, VReg);
                       });
 
-    return handleAssignments(MIRBuilder, AssignFn, SplitTys, SplitRegs,
+    return handleAssignments(MIRBuilder, AssignFn, SplitArgs,
                              [&](MachineIRBuilder &MIRBuilder, Type *Ty,
-                                 unsigned ValReg, unsigned PhysReg) {
-                               MIRBuilder.buildCopy(PhysReg, ValReg);
-                               MIB.addUse(PhysReg, RegState::Implicit);
+                                 unsigned ValReg, CCValAssign &VA) {
+                               copyToPhysReg(MIRBuilder, ValReg, VA, MRI);
+                               MIB.addUse(VA.getLocReg(), RegState::Implicit);
                              });
   }
   return true;
 }
 
-bool AArch64CallLowering::lowerFormalArguments(
-    MachineIRBuilder &MIRBuilder, const Function::ArgumentListType &Args,
-    ArrayRef<unsigned> VRegs) const {
+bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
+                                               const Function &F,
+                                               ArrayRef<unsigned> VRegs) const {
+  auto &Args = F.getArgumentList();
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const Function &F = *MF.getFunction();
   auto &DL = F.getParent()->getDataLayout();
 
-  SmallVector<MachineInstr *, 8> Seqs;
-  SmallVector<Type *, 8> SplitTys;
-  SmallVector<unsigned, 8> SplitRegs;
+  SmallVector<ArgInfo, 8> SplitArgs;
   unsigned i = 0;
   for (auto &Arg : Args) {
-    splitToValueTypes(VRegs[i], Arg.getType(), SplitRegs, SplitTys, DL, MRI,
+    ArgInfo OrigArg{VRegs[i], Arg.getType()};
+    setArgFlags(OrigArg, i + 1, DL, F);
+    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                       [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
                         MIRBuilder.buildSequence(VRegs[i], Regs, Offsets);
                       });
@@ -180,34 +190,36 @@ bool AArch64CallLowering::lowerFormalArguments(
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
 
-  bool Res = handleAssignments(MIRBuilder, AssignFn, SplitTys, SplitRegs,
-                               [](MachineIRBuilder &MIRBuilder, Type *Ty,
-                                  unsigned ValReg, unsigned PhysReg) {
-                                 MIRBuilder.getMBB().addLiveIn(PhysReg);
-                                 MIRBuilder.buildCopy(ValReg, PhysReg);
-                               });
+  if (!handleAssignments(MIRBuilder, AssignFn, SplitArgs,
+                         [](MachineIRBuilder &MIRBuilder, Type *Ty,
+                            unsigned ValReg, CCValAssign &VA) {
+                           // FIXME: a sign/zeroext loc actually gives
+                           // us an optimization hint. We should use it.
+                           MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
+                           MIRBuilder.buildCopy(ValReg, VA.getLocReg());
+                         }))
+    return false;
 
   // Move back to the end of the basic block.
   MIRBuilder.setMBB(MBB);
 
-  return Res;
+  return true;
 }
 
 bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
-                                    const MachineOperand &Callee, Type *ResTy,
-                                    unsigned ResReg, ArrayRef<Type *> ArgTys,
-                                    ArrayRef<unsigned> ArgRegs) const {
+                                    const MachineOperand &Callee,
+                                    const ArgInfo &OrigRet,
+                                    ArrayRef<ArgInfo> OrigArgs) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
 
-  SmallVector<Type *, 8> SplitTys;
-  SmallVector<unsigned, 8> SplitRegs;
-  for (unsigned i = 0; i < ArgTys.size(); ++i) {
-    splitToValueTypes(ArgRegs[i], ArgTys[i], SplitRegs, SplitTys, DL, MRI,
+  SmallVector<ArgInfo, 8> SplitArgs;
+  for (auto &OrigArg : OrigArgs) {
+    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                       [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
-                        MIRBuilder.buildExtract(Regs, Offsets, ArgRegs[i]);
+                        MIRBuilder.buildExtract(Regs, Offsets, OrigArg.Reg);
                       });
   }
 
@@ -219,12 +231,13 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // And finally we can do the actual assignments. For a call we need to keep
   // track of the registers used because they'll be implicit uses of the BL.
   SmallVector<unsigned, 8> PhysRegs;
-  handleAssignments(MIRBuilder, CallAssignFn, SplitTys, SplitRegs,
-                    [&](MachineIRBuilder &MIRBuilder, Type *Ty, unsigned ValReg,
-                        unsigned PhysReg) {
-                      MIRBuilder.buildCopy(PhysReg, ValReg);
-                      PhysRegs.push_back(PhysReg);
-                    });
+  if (!handleAssignments(MIRBuilder, CallAssignFn, SplitArgs,
+                         [&](MachineIRBuilder &MIRBuilder, Type *Ty,
+                             unsigned ValReg, CCValAssign &VA) {
+                           copyToPhysReg(MIRBuilder, ValReg, VA, MRI);
+                           PhysRegs.push_back(VA.getLocReg());
+                         }))
+    return false;
 
   // Now we can build the actual call instruction.
   auto MIB = MIRBuilder.buildInstr(Callee.isReg() ? AArch64::BLR : AArch64::BL);
@@ -241,26 +254,31 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // symmetry with the arugments, the physical register must be an
   // implicit-define of the call instruction.
   CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-  if (ResReg) {
-    SplitTys.clear();
-    SplitRegs.clear();
+  if (OrigRet.Reg) {
+    SplitArgs.clear();
 
     SmallVector<uint64_t, 8> RegOffsets;
-    splitToValueTypes(ResReg, ResTy, SplitRegs, SplitTys, DL, MRI,
+    SmallVector<unsigned, 8> SplitRegs;
+    splitToValueTypes(OrigRet, SplitArgs, DL, MRI,
                       [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
                         std::copy(Offsets.begin(), Offsets.end(),
                                   std::back_inserter(RegOffsets));
+                        std::copy(Regs.begin(), Regs.end(),
+                                  std::back_inserter(SplitRegs));
                       });
 
-    handleAssignments(MIRBuilder, RetAssignFn, SplitTys, SplitRegs,
+    if (!handleAssignments(MIRBuilder, RetAssignFn, SplitArgs,
                       [&](MachineIRBuilder &MIRBuilder, Type *Ty,
-                          unsigned ValReg, unsigned PhysReg) {
-                        MIRBuilder.buildCopy(ValReg, PhysReg);
-                        MIB.addDef(PhysReg, RegState::Implicit);
-                      });
+                          unsigned ValReg, CCValAssign &VA) {
+                             // FIXME: a sign/zeroext loc actually gives
+                             // us an optimization hint. We should use it.
+                             MIRBuilder.buildCopy(ValReg, VA.getLocReg());
+                             MIB.addDef(VA.getLocReg(), RegState::Implicit);
+                           }))
+      return false;
 
     if (!RegOffsets.empty())
-      MIRBuilder.buildSequence(ResReg, SplitRegs, RegOffsets);
+      MIRBuilder.buildSequence(OrigRet.Reg, SplitRegs, RegOffsets);
   }
 
   return true;

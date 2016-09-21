@@ -12,7 +12,7 @@
 #include "abort_message.h"
 #include "config.h"
 
-#if !LIBCXXABI_HAS_NO_THREADS
+#ifndef _LIBCXXABI_HAS_NO_THREADS
 #  include <pthread.h>
 #endif
 #include <stdint.h>
@@ -50,7 +50,7 @@ void set_initialized(guard_type* guard_object) {
 }
 #endif
 
-#if LIBCXXABI_HAS_NO_THREADS || (defined(__APPLE__) && !defined(__arm__))
+#if defined(_LIBCXXABI_HAS_NO_THREADS) || (defined(__APPLE__) && !defined(__arm__))
 #ifdef __arm__
 
 // Test the lowest bit.
@@ -68,7 +68,7 @@ bool is_initialized(guard_type* guard_object) {
 #endif
 #endif
 
-#if !LIBCXXABI_HAS_NO_THREADS
+#ifndef _LIBCXXABI_HAS_NO_THREADS
 pthread_mutex_t guard_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  guard_cv  = PTHREAD_COND_INITIALIZER;
 #endif
@@ -172,22 +172,7 @@ set_lock(uint32_t& x, lock_type y)
 extern "C"
 {
 
-#if LIBCXXABI_HAS_NO_THREADS
-_LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type *guard_object) {
-    return !is_initialized(guard_object);
-}
-
-_LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *guard_object) {
-    *guard_object = 0;
-    set_initialized(guard_object);
-}
-
-_LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *guard_object) {
-    *guard_object = 0;
-}
-
-#else // !LIBCXXABI_HAS_NO_THREADS
-
+#ifndef _LIBCXXABI_HAS_NO_THREADS
 _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type *guard_object) {
     char* initialized = (char*)guard_object;
     if (pthread_mutex_lock(&guard_mut))
@@ -250,7 +235,22 @@ _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *guard_object) {
         abort_message("__cxa_guard_abort failed to broadcast condition variable");
 }
 
-#endif // !LIBCXXABI_HAS_NO_THREADS
+#else // _LIBCXXABI_HAS_NO_THREADS
+
+_LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type *guard_object) {
+    return !is_initialized(guard_object);
+}
+
+_LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *guard_object) {
+    *guard_object = 0;
+    set_initialized(guard_object);
+}
+
+_LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *guard_object) {
+    *guard_object = 0;
+}
+
+#endif // !_LIBCXXABI_HAS_NO_THREADS
 
 }  // extern "C"
 

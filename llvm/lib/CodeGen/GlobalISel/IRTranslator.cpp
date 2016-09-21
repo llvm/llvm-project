@@ -556,8 +556,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<unsigned, 8> VRegArgs;
   for (const Argument &Arg: F.args())
     VRegArgs.push_back(getOrCreateVReg(Arg));
-  bool Succeeded =
-      CLI->lowerFormalArguments(MIRBuilder, F.getArgumentList(), VRegArgs);
+  bool Succeeded = CLI->lowerFormalArguments(MIRBuilder, F, VRegArgs);
   if (!Succeeded) {
     if (!TPC->isGlobalISelAbortEnabled()) {
       MIRBuilder.getMF().getProperties().set(

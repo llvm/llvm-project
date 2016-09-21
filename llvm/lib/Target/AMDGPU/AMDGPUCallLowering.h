@@ -27,10 +27,8 @@ class AMDGPUCallLowering: public CallLowering {
 
   bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
                    unsigned VReg) const override;
-  bool
-  lowerFormalArguments(MachineIRBuilder &MIRBuilder,
-                       const Function::ArgumentListType &Args,
-                       ArrayRef<unsigned> VRegs) const override;
+  bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
+                            ArrayRef<unsigned> VRegs) const override;
 };
 } // End of namespace llvm;
 #endif

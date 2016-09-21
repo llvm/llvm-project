@@ -47,7 +47,7 @@ class Configuration(LibcxxConfiguration):
         else:
             self.cxx.compile_flags += ['-fno-exceptions', '-DLIBCXXABI_HAS_NO_EXCEPTIONS']
         if not self.get_lit_bool('enable_threads', True):
-            self.cxx.compile_flags += ['-DLIBCXXABI_HAS_NO_THREADS=1']
+            self.cxx.compile_flags += ['-D_LIBCXXABI_HAS_NO_THREADS']
         super(Configuration, self).configure_compile_flags()    
     
     def configure_compile_flags_header_includes(self):
