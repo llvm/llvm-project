@@ -9,6 +9,7 @@
 #include "ockl.h"
 
 #define CATTR __attribute__((always_inline, const))
+#define AS_UCHAR4(X) __builtin_astype(X, uchar4)
 
 CATTR uint
 OCKL_MANGLE_U32(bfm)(uint w, uint s)
@@ -188,28 +189,28 @@ OCKL_MANGLE_U32(sadw)(uint a, uint b, uint c)
 CATTR float
 OCKL_MANGLE_F32(unpack0)(uint a)
 {
-    uchar4 v = as_uchar4(a);
+    uchar4 v = AS_UCHAR4(a);
     return (float)v.s0;
 }
 
 CATTR float
 OCKL_MANGLE_F32(unpack1)(uint a)
 {
-    uchar4 v = as_uchar4(a);
+    uchar4 v = AS_UCHAR4(a);
     return (float)v.s1;
 }
 
 CATTR float
 OCKL_MANGLE_F32(unpack2)(uint a)
 {
-    uchar4 v = as_uchar4(a);
+    uchar4 v = AS_UCHAR4(a);
     return (float)v.s2;
 }
 
 CATTR float
 OCKL_MANGLE_F32(unpack3)(uint a)
 {
-    uchar4 v = as_uchar4(a);
+    uchar4 v = AS_UCHAR4(a);
     return (float)v.s3;
 }
 
