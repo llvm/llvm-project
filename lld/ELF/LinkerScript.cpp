@@ -138,22 +138,17 @@ getComparator(SortSectionPolicy K) {
   }
 }
 
-static bool checkConstraint(uint64_t Flags, ConstraintKind Kind) {
-  bool RO = (Kind == ConstraintKind::ReadOnly);
-  bool RW = (Kind == ConstraintKind::ReadWrite);
-  bool Writable = Flags & SHF_WRITE;
-  return !(RO && Writable) && !(RW && !Writable);
-}
-
 template <class ELFT>
 static bool matchConstraints(ArrayRef<InputSectionBase<ELFT> *> Sections,
                              ConstraintKind Kind) {
   if (Kind == ConstraintKind::NoConstraint)
     return true;
-  return llvm::all_of(Sections, [=](InputSectionData *Sec2) {
+  bool IsRW = llvm::any_of(Sections, [=](InputSectionData *Sec2) {
     auto *Sec = static_cast<InputSectionBase<ELFT> *>(Sec2);
-    return checkConstraint(Sec->getSectionHdr()->sh_flags, Kind);
+    return Sec->getSectionHdr()->sh_flags & SHF_WRITE;
   });
+  return (IsRW && Kind == ConstraintKind::ReadWrite) ||
+         (!IsRW && Kind == ConstraintKind::ReadOnly);
 }
 
 static void sortSections(InputSectionData **Begin, InputSectionData **End,

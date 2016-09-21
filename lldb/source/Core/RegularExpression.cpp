@@ -102,7 +102,7 @@ bool RegularExpression::Compile(llvm::StringRef str) {
 //---------------------------------------------------------------------
 bool RegularExpression::Execute(llvm::StringRef str, Match *match) const {
   int err = 1;
-  if (!str.empty() && m_comp_err == 0) {
+  if (m_comp_err == 0) {
     // Argument to regexec must be null-terminated.
     std::string reg_str = str;
     if (match) {

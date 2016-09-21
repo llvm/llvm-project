@@ -289,6 +289,9 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
         func_decl_file == prologue_end_line.original_file) {
       decl_line.file = func_decl_file;
       decl_line.line = func_decl_line;
+      // TODO do we care about column on these entries?  If so, we need to
+      // plumb that through GetStartLineSourceInfo.
+      decl_line.column = 0;
     }
   }
   return decl_line;
@@ -448,6 +451,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
               SourceLine this_line;
               this_line.file = sc.line_entry.file;
               this_line.line = sc.line_entry.line;
+              this_line.column = sc.line_entry.column;
               if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, this_line) ==
                   false)
                 AddLineToSourceLineTables(this_line, source_lines_seen);
@@ -613,7 +617,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
             line_highlight = "**";
           }
           source_manager.DisplaySourceLinesWithLineNumbers(
-              ln.file, ln.line, 0, 0, line_highlight, &strm);
+              ln.file, ln.line, ln.column, 0, 0, line_highlight, &strm);
         }
         if (source_lines_to_display.print_source_context_end_eol)
           strm.EOL();

@@ -1855,7 +1855,8 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
                   m_sc.line_entry.file, m_sc.line_entry.line,
-                  source_lines_before, source_lines_after, "->", &strm);
+                  m_sc.line_entry.column, source_lines_before,
+                  source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.

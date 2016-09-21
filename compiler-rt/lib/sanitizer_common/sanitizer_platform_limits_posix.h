@@ -20,7 +20,7 @@
 
 #if SANITIZER_FREEBSD
 // FreeBSD's dlopen() returns a pointer to an Obj_Entry structure that
-// incroporates the map structure.
+// incorporates the map structure.
 # define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
     ((link_map*)((handle) == nullptr ? nullptr : ((char*)(handle) + 544)))
 #else

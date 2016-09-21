@@ -214,7 +214,7 @@ class AddressDescription {
     }
     UNREACHABLE("AddressInformation kind is invalid");
   }
-  void Print() const {
+  void Print(const char *bug_descr = nullptr) const {
     switch (data.kind) {
       case kAddressKindWild:
         Printf("Address %p is a wild pointer.\n", data.addr);
@@ -226,7 +226,8 @@ class AddressDescription {
       case kAddressKindStack:
         return data.stack.Print();
       case kAddressKindGlobal:
-        return data.global.Print();
+        // initialization-order-fiasco has a special Print()
+        return data.global.Print(bug_descr);
     }
     UNREACHABLE("AddressInformation kind is invalid");
   }

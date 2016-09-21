@@ -914,7 +914,7 @@ def warn_pragma_pack_malformed : Warning<
 // - #pragma intrinsic
 def warn_pragma_intrinsic_builtin : Warning<
   "%0 is not a recognized builtin%select{|; consider including <intrin.h> to access non-builtin intrinsics}1">,
-  InGroup<IgnoredPragmas>;
+  InGroup<IgnoredPragmaIntrinsic>;
 // - #pragma unused
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
