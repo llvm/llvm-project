@@ -394,7 +394,6 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
       Constant *PrintfAllocFn
         = M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
       Function *Afn = dyn_cast<Function>(PrintfAllocFn);
-      Afn->setCallingConv(llvm::CallingConv::SPIR_FUNC);
       DEBUG(dbgs() << "inserting printf_alloc decl, an extern @ pre-link:");
       DEBUG(dbgs() << *Afn);
 
@@ -420,7 +419,6 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
       alloc_args.push_back(sumC);
       CallInst *pcall = CallInst::Create( Afn, alloc_args,
                                          "printf_alloc_fn", CI);
-      pcall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
 
       //
       // Insert code to split basicblock with a

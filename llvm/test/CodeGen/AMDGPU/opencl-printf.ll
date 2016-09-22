@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=amdgcn--amdhsa -amdgpu-printf-runtime-binding -mcpu=fiji -S < %s | FileCheck %s
 ; CHECK-LABEL: entry
-; CHECK: call spir_func i8 addrspace(1)* @__printf_alloc
+; CHECK: call i8 addrspace(1)* @__printf_alloc
 ; CHECK-LABEL: entry.split
 ; CHECK: icmp ne i8 addrspace(1)* %printf_alloc_fn, null
 ; CHECK: %PrintBuffID = getelementptr i8, i8 addrspace(1)* %printf_alloc_fn, i32 0
