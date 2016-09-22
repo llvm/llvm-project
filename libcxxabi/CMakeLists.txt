@@ -326,7 +326,7 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
                         " is also set to ON.")
   endif()
-  add_definitions(-DLIBCXXABI_HAS_NO_THREADS=1)
+  add_definitions(-D_LIBCXXABI_HAS_NO_THREADS)
 endif()
 
 if (LIBCXXABI_HAS_PTHREAD_API)

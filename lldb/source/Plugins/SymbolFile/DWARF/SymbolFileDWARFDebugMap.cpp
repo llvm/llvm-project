@@ -1020,7 +1020,7 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
                                                 SymbolContextList &sc_list) {
   Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "SymbolFileDWARFDebugMap::FindFunctions (regex = '%s')",
-                     regex.GetText());
+                     regex.GetText().str().c_str());
 
   uint32_t initial_size = 0;
   if (append)

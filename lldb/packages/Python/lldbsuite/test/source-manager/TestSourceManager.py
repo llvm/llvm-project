@@ -10,7 +10,7 @@ o test_modify_source_file_while_debugging:
 """
 
 from __future__ import print_function
-
+import re
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -18,19 +18,37 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+def ansi_underline_surround_regex(inner_regex_text):
+    # return re.compile(r"\[4m%s\[0m" % inner_regex_text)
+    return "4.+\033\\[4m%s\033\\[0m" % inner_regex_text
+
+
 class SourceManagerTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+
+    SOURCE_FILE = 'main.c'
+
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.line = line_number('main.c', '// Set break point at this line.')
+        self.line = line_number(self.SOURCE_FILE, '// Set break point at this line.')
 
-    @add_test_categories(['pyapi'])
-    def test_display_source_python(self):
-        """Test display of source using the SBSourceManager API."""
+    def get_expected_stop_column_number(self):
+        """Return the 1-based column number of the first non-whitespace
+        character in the breakpoint source line."""
+        stop_line = get_line(self.SOURCE_FILE, self.line)
+        # The number of spaces that must be skipped to get to the first non-
+        # whitespace character --- where we expect the debugger breakpoint
+        # column to be --- is equal to the number of characters that get
+        # stripped off the front when we lstrip it, plus one to specify
+        # the character column after the initial whitespace.
+        return len(stop_line) - len(stop_line.lstrip()) + 1
+
+    def do_display_source_python_api(self, use_color, column_marker_regex):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -39,24 +57,32 @@ class SourceManagerTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Launch the process, and do not stop at the entry point.
+        args = None
+        envp = None
         process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+            args, envp, self.get_process_working_directory())
+        self.assertIsNotNone(process)
 
         #
         # Exercise Python APIs to display source lines.
         #
+
+        # Setup whether we should use ansi escape sequences, including color
+        # and styles such as underline.
+        self.dbg.SetUseColor(use_color)
 
         # Create the filespec for 'main.c'.
         filespec = lldb.SBFileSpec('main.c', False)
         source_mgr = self.dbg.GetSourceManager()
         # Use a string stream as the destination.
         stream = lldb.SBStream()
-        source_mgr.DisplaySourceLinesWithLineNumbers(filespec,
-                                                     self.line,
-                                                     2,  # context before
-                                                     2,  # context after
-                                                     "=>",  # prefix for current line
-                                                     stream)
+        column = self.get_expected_stop_column_number()
+        context_before = 2
+        context_after = 2
+        current_line_prefix = "=>"
+        source_mgr.DisplaySourceLinesWithLineNumbersAndColumn(
+            filespec, self.line, column, context_before, context_after,
+            current_line_prefix, stream)
 
         #    2
         #    3    int main(int argc, char const *argv[]) {
@@ -65,11 +91,27 @@ class SourceManagerTestCase(TestBase):
         #    6    }
         self.expect(stream.GetData(), "Source code displayed correctly",
                     exe=False,
-                    patterns=['=> %d.*Hello world' % self.line])
+                    patterns=['=> %d.*Hello world' % self.line,
+                              column_marker_regex])
 
         # Boundary condition testings for SBStream().  LLDB should not crash!
         stream.Print(None)
         stream.RedirectToFile(None, True)
+
+    @add_test_categories(['pyapi'])
+    def test_display_source_python_dumb_terminal(self):
+        """Test display of source using the SBSourceManager API, using a
+        dumb terminal and thus no color support (the default)."""
+        use_color = False
+        self.do_display_source_python_api(use_color, r"\s+\^")
+
+    @add_test_categories(['pyapi'])
+    def test_display_source_python_ansi_terminal(self):
+        """Test display of source using the SBSourceManager API, using a
+        dumb terminal and thus no color support (the default)."""
+        use_color = True
+        underline_regex = ansi_underline_surround_regex(r".")
+        self.do_display_source_python_api(use_color, underline_regex)
 
     def test_move_and_then_display_source(self):
         """Test that target.source-map settings work by moving main.c to hidden/main.c."""

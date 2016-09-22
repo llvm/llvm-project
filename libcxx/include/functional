@@ -212,6 +212,13 @@ template <class F> unspecified not_fn(F&& f); // C++17
 template<class T> struct is_bind_expression;
 template<class T> struct is_placeholder;
 
+    // See C++14 20.9.9, Function object binders
+template <class T> constexpr bool is_bind_expression_v
+  = is_bind_expression<T>::value; // C++17
+template <class T> constexpr int is_placeholder_v
+  = is_placeholder<T>::value; // C++17
+
+
 template<class Fn, class... BoundArgs>
   unspecified bind(Fn&&, BoundArgs&&...);
 template<class R, class Fn, class... BoundArgs>
@@ -1970,9 +1977,19 @@ template<class _Tp> struct __is_bind_expression : public false_type {};
 template<class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_bind_expression
     : public __is_bind_expression<typename remove_cv<_Tp>::type> {};
 
+#if _LIBCPP_STD_VER > 14
+template <class _Tp>
+constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
+#endif
+
 template<class _Tp> struct __is_placeholder : public integral_constant<int, 0> {};
 template<class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_placeholder
     : public __is_placeholder<typename remove_cv<_Tp>::type> {};
+
+#if _LIBCPP_STD_VER > 14
+template <class _Tp>
+constexpr size_t is_placeholder_v = is_placeholder<_Tp>::value;
+#endif
 
 namespace placeholders
 {

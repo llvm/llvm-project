@@ -428,15 +428,16 @@ protected:
   struct SourceLine {
     FileSpec file;
     uint32_t line;
+    uint32_t column;
 
-    SourceLine() : file(), line(LLDB_INVALID_LINE_NUMBER) {}
+    SourceLine() : file(), line(LLDB_INVALID_LINE_NUMBER), column(0) {}
 
     bool operator==(const SourceLine &rhs) const {
-      return file == rhs.file && line == rhs.line;
+      return file == rhs.file && line == rhs.line && rhs.column == column;
     }
 
     bool operator!=(const SourceLine &rhs) const {
-      return file != rhs.file || line != rhs.line;
+      return file != rhs.file || line != rhs.line || column != rhs.column;
     }
 
     bool IsValid() const { return line != LLDB_INVALID_LINE_NUMBER; }
@@ -486,6 +487,7 @@ protected:
     SourceLine sl;
     sl.file = line.file;
     sl.line = line.line;
+    sl.column = line.column;
     return ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, sl);
   };
 

@@ -57,7 +57,8 @@ AddressSanitizerRuntime::~AddressSanitizerRuntime() { Deactivate(); }
 const RegularExpression &
 AddressSanitizerRuntime::GetPatternForRuntimeLibrary() {
   // FIXME: This shouldn't include the "dylib" suffix.
-  static RegularExpression regex("libclang_rt.asan_(.*)_dynamic\\.dylib");
+  static RegularExpression regex(
+      llvm::StringRef("libclang_rt.asan_(.*)_dynamic\\.dylib"));
   return regex;
 }
 

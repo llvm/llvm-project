@@ -117,17 +117,11 @@ private:
   uint32_t m_fctrl_offset_in_userarea;
 
   // Private member methods.
-  bool HasFXSAVE() const;
-
-  bool HasXSAVE() const;
-
   bool IsCPUFeatureAvailable(RegSet feature_code) const;
 
   bool IsRegisterSetAvailable(uint32_t set_index) const;
 
   bool IsGPR(uint32_t reg_index) const;
-
-  XStateType GetXStateType() const;
 
   bool IsFPR(uint32_t reg_index) const;
 

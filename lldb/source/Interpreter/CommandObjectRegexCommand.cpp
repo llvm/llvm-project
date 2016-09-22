@@ -89,7 +89,8 @@ bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
                                                 const char *command_cstr) {
   m_entries.resize(m_entries.size() + 1);
   // Only add the regular expression if it compiles
-  if (m_entries.back().regex.Compile(re_cstr)) {
+  if (m_entries.back().regex.Compile(
+          llvm::StringRef::withNullAsEmpty(re_cstr))) {
     m_entries.back().command.assign(command_cstr);
     return true;
   }

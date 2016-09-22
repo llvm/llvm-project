@@ -16,11 +16,6 @@
 
 #include <unistd.h>
 
-// Set this in the CXXFLAGS when you need it
-#if !defined(LIBCXXABI_HAS_NO_THREADS)
-#  define LIBCXXABI_HAS_NO_THREADS 0
-#endif
-
 // Set this in the CXXFLAGS when you need it, because otherwise we'd have to
 // #if !defined(__linux__) && !defined(__APPLE__) && ...
 // and so-on for *every* platform.

@@ -1,5 +1,4 @@
-//===-- BreakpointResolverFileRegex.cpp --------------------------*- C++
-//-*-===//
+//===-- BreakpointResolverFileRegex.cpp -------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -48,7 +47,7 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
     error.SetErrorString("BRFR::CFSD: Couldn't find regex entry.");
     return nullptr;
   }
-  RegularExpression regex(regex_string.c_str());
+  RegularExpression regex(regex_string);
 
   bool exact_match;
   success = options_dict.GetValueForKeyAsBoolean(
@@ -163,8 +162,8 @@ Searcher::Depth BreakpointResolverFileRegex::GetDepth() {
 }
 
 void BreakpointResolverFileRegex::GetDescription(Stream *s) {
-  s->Printf("source regex = \"%s\", exact_match = %d", m_regex.GetText(),
-            m_exact_match);
+  s->Printf("source regex = \"%s\", exact_match = %d",
+            m_regex.GetText().str().c_str(), m_exact_match);
 }
 
 void BreakpointResolverFileRegex::Dump(Stream *s) const {}

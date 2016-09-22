@@ -625,6 +625,11 @@ struct _LIBCPP_TYPE_VIS_ONLY uses_allocator
 {
 };
 
+#if _LIBCPP_STD_VER > 14
+template <class _Tp, class _Alloc>
+constexpr size_t uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
+#endif
+
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
 // allocator construction

@@ -547,8 +547,9 @@ protected:
              ++idx) {
           if (m_option_variable.use_regex) {
             const size_t regex_start_index = regex_var_list.GetSize();
-            RegularExpression regex(name_cstr);
-            if (regex.Compile(name_cstr)) {
+            llvm::StringRef name_str(name_cstr);
+            RegularExpression regex(name_str);
+            if (regex.Compile(name_str)) {
               size_t num_matches = 0;
               const size_t num_new_regex_vars =
                   variable_list->AppendVariablesIfUnique(regex, regex_var_list,

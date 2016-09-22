@@ -20,8 +20,6 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 
-#include <cpuid.h>
-
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
@@ -664,9 +662,9 @@ Error NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
 
   ::memcpy(dst, &m_gpr_x86_64, GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
-  if (GetXStateType() == XStateType::FXSAVE)
+  if (m_xstate_type == XStateType::FXSAVE)
     ::memcpy(dst, &m_fpr.xstate.fxsave, sizeof(m_fpr.xstate.fxsave));
-  else if (GetXStateType() == XStateType::XSAVE) {
+  else if (m_xstate_type == XStateType::XSAVE) {
     lldb::ByteOrder byte_order = GetByteOrder();
 
     if (IsCPUFeatureAvailable(RegSet::avx)) {
@@ -756,16 +754,16 @@ Error NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
     return error;
 
   src += GetRegisterInfoInterface().GetGPRSize();
-  if (GetXStateType() == XStateType::FXSAVE)
+  if (m_xstate_type == XStateType::FXSAVE)
     ::memcpy(&m_fpr.xstate.fxsave, src, sizeof(m_fpr.xstate.fxsave));
-  else if (GetXStateType() == XStateType::XSAVE)
+  else if (m_xstate_type == XStateType::XSAVE)
     ::memcpy(&m_fpr.xstate.xsave, src, sizeof(m_fpr.xstate.xsave));
 
   error = WriteFPR();
   if (error.Fail())
     return error;
 
-  if (GetXStateType() == XStateType::XSAVE) {
+  if (m_xstate_type == XStateType::XSAVE) {
     lldb::ByteOrder byte_order = GetByteOrder();
 
     if (IsCPUFeatureAvailable(RegSet::avx)) {
@@ -801,58 +799,28 @@ Error NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
   return error;
 }
 
-bool NativeRegisterContextLinux_x86_64::HasFXSAVE() const {
-  unsigned int rax, rbx, rcx, rdx;
-
-  // Check if FXSAVE is enabled.
-  if (!__get_cpuid(1, &rax, &rbx, &rcx, &rdx))
-    return false;
-  if ((rdx & bit_FXSAVE) == bit_FXSAVE) {
-    m_xstate_type = XStateType::FXSAVE;
-    if (const_cast<NativeRegisterContextLinux_x86_64 *>(this)->ReadFPR().Fail())
-      return false;
-    return true;
-  }
-  return false;
-}
-
-bool NativeRegisterContextLinux_x86_64::HasXSAVE() const {
-  unsigned int rax, rbx, rcx, rdx;
-
-  // Check if XSAVE is enabled.
-  if (!__get_cpuid(1, &rax, &rbx, &rcx, &rdx))
-    return false;
-  if ((rcx & bit_OSXSAVE) == bit_OSXSAVE) {
-    m_xstate_type = XStateType::XSAVE;
-    if (const_cast<NativeRegisterContextLinux_x86_64 *>(this)->ReadFPR().Fail())
-      return false;
-    return true;
-  }
-  return false;
-}
-
 bool NativeRegisterContextLinux_x86_64::IsCPUFeatureAvailable(
     RegSet feature_code) const {
-  unsigned int rax, rbx, rcx, rdx;
-
-  // Check if XSAVE is enabled.
-  if (!HasXSAVE())
-    return false;
-
-  __get_cpuid(1, &rax, &rbx, &rcx, &rdx);
-  switch (feature_code) {
-  case RegSet::avx: // Check if CPU has AVX and if there is kernel support, by reading in the XCR0 area of XSAVE.
-    if (((rcx & bit_AVX) != 0) && ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_AVX) == mask_XSTATE_AVX))
-      return true;
-  case RegSet::mpx: // Check if CPU has MPX and if there is kernel support, by reading in the XCR0 area of XSAVE.
-    if (__get_cpuid_max(0, NULL) > 7) {
-      __cpuid_count(7, 0, rax, rbx, rcx, rdx);
-      if (((rbx & bit_MPX) != 0) && ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_MPX) == mask_XSTATE_MPX))
-        return true;
-    }
-  default:
-    return false;
+  if (m_xstate_type == XStateType::Invalid) {
+    if (const_cast<NativeRegisterContextLinux_x86_64 *>(this)->ReadFPR().Fail())
+      return false;
   }
+  switch (feature_code) {
+  case RegSet::gpr:
+  case RegSet::fpu:
+    return true;
+  case RegSet::avx: // Check if CPU has AVX and if there is kernel support, by
+                    // reading in the XCR0 area of XSAVE.
+    if ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_AVX) == mask_XSTATE_AVX)
+      return true;
+     break;
+  case RegSet::mpx: // Check if CPU has MPX and if there is kernel support, by
+                    // reading in the XCR0 area of XSAVE.
+    if ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_MPX) == mask_XSTATE_MPX)
+      return true;
+    break;
+  }
+  return false;
 }
 
 bool NativeRegisterContextLinux_x86_64::IsRegisterSetAvailable(
@@ -867,25 +835,13 @@ bool NativeRegisterContextLinux_x86_64::IsRegisterSetAvailable(
     return IsCPUFeatureAvailable(RegSet::avx);
   case RegSet::mpx:
     return IsCPUFeatureAvailable(RegSet::mpx);
-  default:
-    return false;
   }
+  return false;
 }
 
 bool NativeRegisterContextLinux_x86_64::IsGPR(uint32_t reg_index) const {
   // GPRs come first.
   return reg_index <= m_reg_info.last_gpr;
-}
-
-NativeRegisterContextLinux_x86_64::XStateType
-NativeRegisterContextLinux_x86_64::GetXStateType() const {
-  if (m_xstate_type == XStateType::Invalid) {
-    if (HasXSAVE())
-      m_xstate_type = XStateType::XSAVE;
-    else if (HasFXSAVE())
-      m_xstate_type = XStateType::FXSAVE;
-  }
-  return m_xstate_type;
 }
 
 bool NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index) const {
@@ -894,30 +850,15 @@ bool NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index) const {
 }
 
 Error NativeRegisterContextLinux_x86_64::WriteFPR() {
-  const XStateType fpr_type = GetXStateType();
-  const lldb_private::ArchSpec &target_arch =
-      GetRegisterInfoInterface().GetTargetArchitecture();
-  switch (fpr_type) {
+  switch (m_xstate_type) {
   case XStateType::FXSAVE:
-    // For 32-bit inferiors on x86_32/x86_64 architectures,
-    // FXSAVE area can be written using PTRACE_SETREGSET ptrace api
-    // For 64-bit inferiors on x86_64 architectures,
-    // FXSAVE area can be written using PTRACE_SETFPREGS ptrace api
-    switch (target_arch.GetMachine()) {
-    case llvm::Triple::x86:
       return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
                               NT_PRXFPREG);
-    case llvm::Triple::x86_64:
-      return NativeRegisterContextLinux::WriteFPR();
-    default:
-      assert(false && "Unhandled target architecture.");
-      break;
-    }
   case XStateType::XSAVE:
     return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
                             NT_X86_XSTATE);
   default:
-    return Error("Unrecognized FPR type");
+    return Error("Unrecognized FPR type.");
   }
 }
 
@@ -983,8 +924,7 @@ bool NativeRegisterContextLinux_x86_64::CopyYMMtoXSTATE(
 }
 
 void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
-  const XStateType xstate_type = GetXStateType();
-  switch (xstate_type) {
+  switch (m_xstate_type) {
   case XStateType::FXSAVE:
     return &m_fpr.xstate.fxsave;
   case XStateType::XSAVE:
@@ -995,8 +935,7 @@ void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
 }
 
 size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
-  const XStateType xstate_type = GetXStateType();
-  switch (xstate_type) {
+  switch (m_xstate_type) {
   case XStateType::FXSAVE:
     return sizeof(m_fpr.xstate.fxsave);
   case XStateType::XSAVE:
@@ -1007,29 +946,23 @@ size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
 }
 
 Error NativeRegisterContextLinux_x86_64::ReadFPR() {
-  const XStateType xstate_type = GetXStateType();
-  const lldb_private::ArchSpec &target_arch =
-      GetRegisterInfoInterface().GetTargetArchitecture();
-  switch (xstate_type) {
-  case XStateType::FXSAVE:
-    // For 32-bit inferiors on x86_32/x86_64 architectures,
-    // FXSAVE area can be read using PTRACE_GETREGSET ptrace api
-    // For 64-bit inferiors on x86_64 architectures,
-    // FXSAVE area can be read using PTRACE_GETFPREGS ptrace api
-    switch (target_arch.GetMachine()) {
-    case llvm::Triple::x86:
-      return ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_PRXFPREG);
-    case llvm::Triple::x86_64:
-      return NativeRegisterContextLinux::ReadFPR();
-    default:
-      assert(false && "Unhandled target architecture.");
-      break;
+  Error error;
+
+  // Probe XSAVE and if it is not supported fall back to FXSAVE.
+  if (m_xstate_type != XStateType::FXSAVE) {
+    error =
+        ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
+    if (!error.Fail()) {
+      m_xstate_type = XStateType::XSAVE;
+      return error;
     }
-  case XStateType::XSAVE:
-    return ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
-  default:
-    return Error("Unrecognized FPR type");
   }
+  error = ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_PRXFPREG);
+  if (!error.Fail()) {
+    m_xstate_type = XStateType::FXSAVE;
+    return error;
+  }
+  return Error("Unrecognized FPR type.");
 }
 
 bool NativeRegisterContextLinux_x86_64::IsMPX(uint32_t reg_index) const {

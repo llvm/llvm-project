@@ -999,16 +999,18 @@ void DWARFCompileUnit::ParseProducerInfo() {
     const char *producer_cstr = die->GetAttributeValueAsString(
         m_dwarf2Data, this, DW_AT_producer, NULL);
     if (producer_cstr) {
-      RegularExpression llvm_gcc_regex("^4\\.[012]\\.[01] \\(Based on Apple "
-                                       "Inc\\. build [0-9]+\\) \\(LLVM build "
-                                       "[\\.0-9]+\\)$");
-      if (llvm_gcc_regex.Execute(producer_cstr)) {
+      RegularExpression llvm_gcc_regex(
+          llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
+                          "Inc\\. build [0-9]+\\) \\(LLVM build "
+                          "[\\.0-9]+\\)$"));
+      if (llvm_gcc_regex.Execute(llvm::StringRef(producer_cstr))) {
         m_producer = eProducerLLVMGCC;
       } else if (strstr(producer_cstr, "clang")) {
         static RegularExpression g_clang_version_regex(
-            "clang-([0-9]+)\\.([0-9]+)\\.([0-9]+)");
+            llvm::StringRef("clang-([0-9]+)\\.([0-9]+)\\.([0-9]+)"));
         RegularExpression::Match regex_match(3);
-        if (g_clang_version_regex.Execute(producer_cstr, &regex_match)) {
+        if (g_clang_version_regex.Execute(llvm::StringRef(producer_cstr),
+                                          &regex_match)) {
           std::string str;
           if (regex_match.GetMatchAtIndex(producer_cstr, 1, str))
             m_producer_version_major =
