@@ -231,7 +231,6 @@ ChangeNamespaceTool::ChangeNamespaceTool(
 }
 
 // FIXME: handle the following symbols:
-//   - Function references.
 //   - Variable references.
 void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Match old namespace blocks.
@@ -283,6 +282,22 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                              hasDeclaration(DeclMatcher.bind("from_decl"))))))
                          .bind("nested_specifier_loc"),
                      this);
+
+  // Handle function.
+  // Only handle functions that are defined in a namespace excluding static
+  // methods (qualified by nested specifier) and functions defined in the global
+  // namespace.
+  // Note that the matcher does not exclude calls to out-of-line static method
+  // definitions, so we need to exclude them in the callback handler.
+  auto FuncMatcher = functionDecl(
+      hasParent(namespaceDecl()),
+      unless(anyOf(IsInMovedNs, hasAncestor(namespaceDecl(isAnonymous())),
+                   hasAncestor(cxxRecordDecl()))));
+  Finder->addMatcher(
+      decl(forEachDescendant(callExpr(callee(FuncMatcher)).bind("call")),
+           IsInMovedNs)
+          .bind("dc"),
+      this);
 }
 
 void ChangeNamespaceTool::run(
@@ -301,11 +316,26 @@ void ChangeNamespaceTool::run(
     SourceLocation Start = Specifier->getBeginLoc();
     SourceLocation End = EndLocationForType(Specifier->getTypeLoc());
     fixTypeLoc(Result, Start, End, Specifier->getTypeLoc());
-  } else {
-    const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type");
-    assert(TLoc != nullptr && "Expecting callback for TypeLoc");
+  } else if (const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type")) {
     fixTypeLoc(Result, startLocationForType(*TLoc), EndLocationForType(*TLoc),
                *TLoc);
+  } else {
+    const auto* Call = Result.Nodes.getNodeAs<clang::CallExpr>("call");
+    assert(Call != nullptr &&"Expecting callback for CallExpr.");
+    const clang::FunctionDecl* Func = Call->getDirectCallee();
+    assert(Func != nullptr);
+    // Ignore out-of-line static methods since they will be handled by nested
+    // name specifiers.
+    if (Func->getCanonicalDecl()->getStorageClass() ==
+            clang::StorageClass::SC_Static &&
+        Func->isOutOfLine())
+      return;
+    std::string Name = Func->getQualifiedNameAsString();
+    const clang::Decl *Context = Result.Nodes.getNodeAs<clang::Decl>("dc");
+    assert(Context && "Empty decl context.");
+    clang::SourceRange CalleeRange = Call->getCallee()->getSourceRange();
+    replaceQualifiedSymbolInDeclContext(Result, Context, CalleeRange.getBegin(),
+                                        CalleeRange.getEnd(), Name);
   }
 }
 

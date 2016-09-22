@@ -373,7 +373,9 @@ template <class ELFT> void LinkerScript<ELFT>::output(InputSection<ELFT> *S) {
   // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
   CurOutSec->setSize(Pos - CurOutSec->getVA());
 
-  if (!IsTbss)
+  if (IsTbss)
+    ThreadBssOffset = Pos - Dot;
+  else
     Dot = Pos;
 }
 

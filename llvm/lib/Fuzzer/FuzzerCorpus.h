@@ -26,6 +26,9 @@ struct InputInfo {
   // Stats.
   uintptr_t NumExecutedMutations = 0;
   uintptr_t NumSuccessfullMutations = 0;
+
+  // A set of features (PCIDs, etc) that were first found with this unit.
+  std::vector<uintptr_t> Features;
 };
 
 class InputCorpus {
@@ -36,13 +39,15 @@ class InputCorpus {
   size_t size() const { return Inputs.size(); }
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx].U; }
-  void AddToCorpus(const Unit &U) {
-    auto H = Hash(U);
-    if (!Hashes.insert(H).second) return;
-    InputInfo II;
+  void AddToCorpus(const Unit &U, uintptr_t *Features, size_t NumFeatures) {
+    uint8_t Hash[kSHA1NumBytes];
+    ComputeSHA1(U.data(), U.size(), Hash);
+    if (!Hashes.insert(Sha1ToString(Hash)).second) return;
+    Inputs.push_back(InputInfo());
+    InputInfo &II = Inputs.back();
     II.U = U;
-    memcpy(II.Sha1, H.data(), kSHA1NumBytes);
-    Inputs.push_back(II);
+    II.Features.insert(II.Features.begin(), Features, Features + NumFeatures);
+    memcpy(II.Sha1, Hash, kSHA1NumBytes);
     UpdateCorpusDistribution();
   }
 
@@ -67,9 +72,10 @@ class InputCorpus {
   void PrintStats() {
     for (size_t i = 0; i < Inputs.size(); i++) {
       const auto &II = Inputs[i];
-      Printf("  [%zd %s]\tsz: %zd\truns: %zd\tsucc: %zd\n", i,
+      Printf("  [%zd %s]\tsz: %zd\truns: %zd\tsucc: %zd\tfea: %zd\n", i,
              Sha1ToString(II.Sha1).c_str(), II.U.size(),
-             II.NumExecutedMutations, II.NumSuccessfullMutations);
+             II.NumExecutedMutations, II.NumSuccessfullMutations,
+             II.Features.size());
     }
   }
 

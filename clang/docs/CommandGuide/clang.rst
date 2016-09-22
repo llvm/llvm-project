@@ -328,7 +328,7 @@ Code Generation Options
   model can be overridden with the tls_model attribute. The compiler will try
   to choose a more efficient model if possible.
 
-.. option:: -flto[=full,thin], -emit-llvm
+.. option:: -flto, -flto=full, -flto=thin, -emit-llvm
 
   Generate output files in LLVM formats, suitable for link time optimization.
   When used with :option:`-S` this generates LLVM intermediate language

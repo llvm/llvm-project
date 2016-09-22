@@ -1,17 +1,27 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O2 -mtriple=powerpc64-unknown-linux-gnu < %s > %t
-; RUN: grep lxvw4x < %t | count 3
-; RUN: grep lxvd2x < %t | count 3
-; RUN: grep stxvw4x < %t | count 3
-; RUN: grep stxvd2x < %t | count 3
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O0 -fast-isel=1 -mtriple=powerpc64-unknown-linux-gnu < %s > %t
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O2 \
+; RUN:   -mtriple=powerpc64-unknown-linux-gnu < %s > %t
 ; RUN: grep lxvw4x < %t | count 3
 ; RUN: grep lxvd2x < %t | count 3
 ; RUN: grep stxvw4x < %t | count 3
 ; RUN: grep stxvd2x < %t | count 3
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O2 -mtriple=powerpc64le-unknown-linux-gnu < %s > %t
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O0 -fast-isel=1 \
+; RUN:   -mtriple=powerpc64-unknown-linux-gnu < %s > %t
+; RUN: grep lxvw4x < %t | count 3
+; RUN: grep lxvd2x < %t | count 3
+; RUN: grep stxvw4x < %t | count 3
+; RUN: grep stxvd2x < %t | count 3
+
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O2 \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s > %t
 ; RUN: grep lxvd2x < %t | count 6
 ; RUN: grep stxvd2x < %t | count 6
+
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O2 \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s > %t
+; RUN: grep lxvx < %t | count 6
+; RUN: grep stxvx < %t | count 6
+
 
 @vsi = global <4 x i32> <i32 -1, i32 2, i32 -3, i32 4>, align 16
 @vui = global <4 x i32> <i32 0, i32 1, i32 2, i32 3>, align 16

@@ -68,7 +68,7 @@ void Fuzzer::ResetCounters() {
   }
   if (EF->__sanitizer_get_coverage_pc_buffer_pos)
     PcBufferPos = EF->__sanitizer_get_coverage_pc_buffer_pos();
-  TPC.GetNewPCsAndFlush();
+  TPC.ResetNewPCIDs();
 }
 
 void Fuzzer::PrepareCounters(Fuzzer::Coverage *C) {
@@ -111,7 +111,6 @@ bool Fuzzer::RecordMaxCoverage(Fuzzer::Coverage *C) {
       Res = true;
       C->CounterBitmapBits += CounterDelta;
     }
-
   }
 
   size_t NewVPMapBits = VPMapMergeFromCurrent(C->VPMap);
@@ -369,7 +368,9 @@ void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
       X.resize(MaxSize);
     if (!Corpus.HasUnit(X)) {
       if (RunOne(X)) {
-        Corpus.AddToCorpus(X);
+        uintptr_t *NewPCIDs;
+        size_t NumNewPCIDs = TPC.GetNewPCIDs(&NewPCIDs);
+        Corpus.AddToCorpus(X, NewPCIDs, NumNewPCIDs);
         PrintStats("RELOAD");
       }
     }
@@ -392,7 +393,9 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
   for (const auto &U : *InitialCorpus) {
     bool NewCoverage = RunOne(U);
     if (!Options.PruneCorpus || NewCoverage) {
-      Corpus.AddToCorpus(U);
+      uintptr_t *NewPCIDs;
+      size_t NumNewPCIDs = TPC.GetNewPCIDs(&NewPCIDs);
+      Corpus.AddToCorpus(U, NewPCIDs, NumNewPCIDs);
       if (Options.Verbosity >= 2)
         Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
     }
@@ -420,13 +423,12 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   ExecuteCallback(Data, Size);
   bool Res = UpdateMaxCoverage();
 
-  auto UnitStopTime = system_clock::now();
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
       secondsSinceProcessStartUp() >= 2)
     PrintStats("pulse ");
-  if (TimeOfUnit > TimeOfLongestUnitInSeconds &&
+  if (TimeOfUnit > TimeOfLongestUnitInSeconds * 1.1 &&
       TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
     Printf("Slowest unit: %zd s:\n", TimeOfLongestUnitInSeconds);
@@ -444,7 +446,6 @@ size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
 void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   assert(InFuzzingThread());
   LazyAllocateCurrentUnitData();
-  UnitStartTime = system_clock::now();
   // We copy the contents of Unit into a separate heap buffer
   // so that we reliably find buffer overflows in it.
   uint8_t *DataCopy = new uint8_t[Size];
@@ -454,12 +455,14 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   AssignTaintLabels(DataCopy, Size);
   CurrentUnitSize = Size;
   AllocTracer.Start();
+  UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
   int Res = CB(DataCopy, Size);
+  UnitStopTime = system_clock::now();
   (void)Res;
+  assert(Res == 0);
   HasMoreMallocsThanFrees = AllocTracer.Stop();
   CurrentUnitSize = 0;
-  assert(Res == 0);
   delete[] DataCopy;
 }
 
@@ -522,15 +525,17 @@ void Fuzzer::PrintNewPCs() {
       PrintOneNewPC(PcBuffer[I]);
     }
   }
-  uintptr_t *PCs;
-  if (size_t NumNewPCs = TPC.GetNewPCsAndFlush(&PCs))
-    for (size_t i = 0; i < NumNewPCs; i++)
-      PrintOneNewPC(PCs[i]);
+  uintptr_t *PCIDs;
+  if (size_t NumNewPCIDs = TPC.GetNewPCIDs(&PCIDs))
+    for (size_t i = 0; i < NumNewPCIDs; i++)
+      PrintOneNewPC(TPC.GetPCbyPCID(PCIDs[i]));
 }
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   II->NumSuccessfullMutations++;
-  Corpus.AddToCorpus(U);
+  uintptr_t *NewPCIDs;
+  size_t NumNewPCIDs = TPC.GetNewPCIDs(&NewPCIDs);
+  Corpus.AddToCorpus(U, NewPCIDs, NumNewPCIDs);
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
@@ -651,13 +656,15 @@ void Fuzzer::MutateAndTestOne() {
   assert(Size <= Options.MaxLen && "Oversized Unit");
   memcpy(CurrentUnitData, U.data(), Size);
 
+  size_t MaxLen = Options.MaxLen;
+
   for (int i = 0; i < Options.MutateDepth; i++) {
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
       break;
     size_t NewSize = 0;
-    NewSize = MD.Mutate(CurrentUnitData, Size, Options.MaxLen);
+    NewSize = MD.Mutate(CurrentUnitData, Size, MaxLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
-    assert(NewSize <= Options.MaxLen && "Mutator return overisized unit");
+    assert(NewSize <= MaxLen && "Mutator return overisized unit");
     Size = NewSize;
     if (i == 0)
       StartTraceRecording();

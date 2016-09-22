@@ -346,7 +346,7 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   for (size_t I = 0; I < U.size(); I++) {
     std::copy(U.begin(), U.begin() + I, X.begin());
     std::copy(U.begin() + I + 1, U.end(), X.begin() + I);
-    Corpus->AddToCorpus(X);
+    Corpus->AddToCorpus(X, nullptr, 0);
   }
   F->SetMaxLen(U.size() - 1);
   F->Loop();

@@ -12,12 +12,16 @@
 // struct is_placeholder
 
 #include <functional>
+#include "test_macros.h"
 
 template <int Expected, class T>
 void
 test(const T&)
 {
     static_assert(std::is_placeholder<T>::value == Expected, "");
+#if TEST_STD_VER > 14
+    static_assert(std::is_placeholder_v<T> == Expected, "");
+#endif
 }
 
 struct C {};
