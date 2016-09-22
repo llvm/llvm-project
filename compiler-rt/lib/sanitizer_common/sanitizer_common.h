@@ -98,9 +98,6 @@ void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type);
 bool MprotectNoAccess(uptr addr, uptr size);
 bool MprotectReadOnly(uptr addr, uptr size);
 
-// Find an available address space.
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding);
-
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
 void ReleaseMemoryToOS(uptr addr, uptr size);
