@@ -571,7 +571,8 @@ TEST(StringRefTest, getAsInteger) {
 
 
 static const char* BadStrings[] = {
-    "18446744073709551617"  // value just over max
+    ""                      // empty string
+  , "18446744073709551617"  // value just over max
   , "123456789012345678901" // value way too large
   , "4t23v"                 // illegal decimal characters
   , "0x123W56"              // illegal hex characters

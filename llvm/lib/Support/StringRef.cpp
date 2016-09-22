@@ -351,6 +351,9 @@ size_t StringRef::count(StringRef Str) const {
 }
 
 static unsigned GetAutoSenseRadix(StringRef &Str) {
+  if (Str.empty())
+    return 10;
+
   if (Str.startswith("0x") || Str.startswith("0X")) {
     Str = Str.substr(2);
     return 16;
