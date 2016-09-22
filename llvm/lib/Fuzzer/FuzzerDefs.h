@@ -14,6 +14,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -42,6 +43,7 @@ class DictionaryEntry;
 class MutationDispatcher;
 struct FuzzingOptions;
 class InputCorpus;
+struct InputInfo;
 struct ExternalFunctions;
 
 // Global interface to functions that may or may not be available.
@@ -91,7 +93,7 @@ size_t GetPeakRSSMb();
 static const int kSHA1NumBytes = 20;
 // Computes SHA1 hash of 'Len' bytes in 'Data', writes kSHA1NumBytes to 'Out'.
 void ComputeSHA1(const uint8_t *Data, size_t Len, uint8_t *Out);
-std::string Sha1ToString(uint8_t Sha1[kSHA1NumBytes]);
+std::string Sha1ToString(const uint8_t Sha1[kSHA1NumBytes]);
 
 // Changes U to contain only ASCII (isprint+isspace) characters.
 // Returns true iff U has been changed.

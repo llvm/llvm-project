@@ -126,7 +126,6 @@ public:
   bool parseRegisterFlag(unsigned &Flags);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
-  bool parseSize(unsigned &Size);
   bool parseRegisterOperand(MachineOperand &Dest,
                             Optional<unsigned> &TiedDefIdx, bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
@@ -881,17 +880,6 @@ bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after 'tied-def'");
   if (getUnsigned(TiedDefIdx))
-    return true;
-  lex();
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-  return false;
-}
-
-bool MIParser::parseSize(unsigned &Size) {
-  if (Token.isNot(MIToken::IntegerLiteral))
-    return error("expected an integer literal for the size");
-  if (getUnsigned(Size))
     return true;
   lex();
   if (expectAndConsume(MIToken::rparen))

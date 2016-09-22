@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Target/TargetCallingConv.h"
 
 namespace llvm {
 // Forward declarations.
@@ -39,7 +40,21 @@ class CallLowering {
     const XXXTargetLowering *getTLI() const {
     return static_cast<const XXXTargetLowering *>(TLI);
   }
- public:
+
+  struct ArgInfo {
+    unsigned Reg;
+    Type *Ty;
+    ISD::ArgFlagsTy Flags;
+
+    ArgInfo(unsigned Reg, Type *Ty, ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{})
+        : Reg(Reg), Ty(Ty), Flags(Flags) {}
+  };
+
+  template <typename FuncInfoTy>
+  void setArgFlags(ArgInfo &Arg, unsigned OpNum, const DataLayout &DL,
+                   const FuncInfoTy &FuncInfo) const;
+
+public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
   virtual ~CallLowering() {}
 
@@ -62,10 +77,9 @@ class CallLowering {
   /// lowering.
   ///
   /// \return True if the lowering succeeded, false otherwise.
-  virtual bool
-  lowerFormalArguments(MachineIRBuilder &MIRBuilder,
-                       const Function::ArgumentListType &Args,
-                       ArrayRef<unsigned> VRegs) const {
+  virtual bool lowerFormalArguments(MachineIRBuilder &MIRBuilder,
+                                    const Function &F,
+                                    ArrayRef<unsigned> VRegs) const {
     return false;
   }
 
@@ -88,9 +102,8 @@ class CallLowering {
   ///
   /// \return true if the lowering succeeded, false otherwise.
   virtual bool lowerCall(MachineIRBuilder &MIRBuilder,
-                         const MachineOperand &Callee, Type * ResTy,
-                         unsigned ResReg, ArrayRef<Type *> ArgTys,
-                         ArrayRef<unsigned> ArgRegs) const {
+                         const MachineOperand &Callee, const ArgInfo &OrigRet,
+                         ArrayRef<ArgInfo> OrigArgs) const {
     return false;
   }
 

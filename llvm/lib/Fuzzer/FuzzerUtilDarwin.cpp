@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 // Misc utils for Darwin.
 //===----------------------------------------------------------------------===//
-#include "FuzzerInternal.h"
+#include "FuzzerDefs.h"
 #if LIBFUZZER_APPLE
 #include <mutex>
 #include <signal.h>

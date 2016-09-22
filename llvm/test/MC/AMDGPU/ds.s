@@ -1,6 +1,11 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=SICI
-// RUN: llvm-mc -arch=amdgcn -mcpu=SI  -show-encoding %s | FileCheck %s --check-prefix=SICI
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=SI --check-prefix=SICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti  -show-encoding %s | FileCheck %s --check-prefix=SI --check-prefix=SICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire  -show-encoding %s | FileCheck %s --check-prefix=CI --check-prefix=SICI
 // RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
+
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti  -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire  -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOCI --check-prefix=NOSICI
 
 //===----------------------------------------------------------------------===//
 // Checks for 16-bit Offsets
@@ -53,6 +58,10 @@ ds_read2_b32 v[8:9], v2 offset1:8
 ds_add_u32 v2, v4
 // SICI: ds_add_u32 v2, v4 ; encoding: [0x00,0x00,0x00,0xd8,0x02,0x04,0x00,0x00]
 // VI:   ds_add_u32 v2, v4 ; encoding: [0x00,0x00,0x00,0xd8,0x02,0x04,0x00,0x00]
+
+ds_add_f32 v2, v4
+// NOSICI: error: instruction not supported on this GPU
+// VI:   ds_add_f32 v2, v4 ; encoding: [0x00,0x00,0x2a,0xd8,0x02,0x04,0x00,0x00]
 
 ds_sub_u32 v2, v4
 // SICI: ds_sub_u32 v2, v4 ; encoding: [0x00,0x00,0x04,0xd8,0x02,0x04,0x00,0x00]
@@ -161,6 +170,10 @@ ds_write_b16 v2, v4
 ds_add_rtn_u32 v8, v2, v4
 // SICI: ds_add_rtn_u32 v8, v2, v4 ; encoding: [0x00,0x00,0x80,0xd8,0x02,0x04,0x00,0x08]
 // VI:   ds_add_rtn_u32 v8, v2, v4 ; encoding: [0x00,0x00,0x40,0xd8,0x02,0x04,0x00,0x08]
+
+ds_add_rtn_f32 v8, v2, v4
+// NOSICI: error: instruction not supported on this GPU
+// VI:   ds_add_rtn_f32 v8, v2, v4 ; encoding: [0x00,0x00,0x6a,0xd8,0x02,0x04,0x00,0x08]
 
 ds_sub_rtn_u32 v8, v2, v4
 // SICI: ds_sub_rtn_u32 v8, v2, v4 ; encoding: [0x00,0x00,0x84,0xd8,0x02,0x04,0x00,0x08]

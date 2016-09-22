@@ -767,6 +767,16 @@ namespace X86II {
     return (reg == X86::SPL || reg == X86::BPL ||
             reg == X86::SIL || reg == X86::DIL);
   }
+
+  /// isKMasked - Is this a masked instruction.
+  inline bool isKMasked(uint64_t TSFlags) {
+    return (TSFlags & X86II::EVEX_K) != 0;
+  }
+
+  /// isKMergedMasked - Is this a merge masked instruction.
+  inline bool isKMergeMasked(uint64_t TSFlags) {
+    return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
+  }
 }
 
 } // end namespace llvm;

@@ -101,3 +101,43 @@ define i64 @test_arr_call([4 x i64]* %addr) {
   %val = extractvalue [4 x i64] %res, 1
   ret i64 %val
 }
+
+
+; CHECK-LABEL: name: test_abi_exts_call
+; CHECK: [[VAL:%[0-9]+]](s8) = G_LOAD
+; CHECK: %w0 = COPY [[VAL]]
+; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0
+; CHECK: [[SVAL:%[0-9]+]](s32) = G_SEXT [[VAL]](s8)
+; CHECK: %w0 = COPY [[SVAL]](s32)
+; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0
+; CHECK: [[ZVAL:%[0-9]+]](s32) = G_ZEXT [[VAL]](s8)
+; CHECK: %w0 = COPY [[ZVAL]](s32)
+; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0
+declare void @take_char(i8)
+define void @test_abi_exts_call(i8* %addr) {
+  %val = load i8, i8* %addr
+  call void @take_char(i8 %val)
+  call void @take_char(i8 signext %val)
+  call void @take_char(i8 zeroext %val)
+  ret void
+}
+
+; CHECK-LABEL: name: test_abi_sext_ret
+; CHECK: [[VAL:%[0-9]+]](s8) = G_LOAD
+; CHECK: [[SVAL:%[0-9]+]](s32) = G_SEXT [[VAL]](s8)
+; CHECK: %w0 = COPY [[SVAL]](s32)
+; CHECK: RET_ReallyLR implicit %w0
+define signext i8 @test_abi_sext_ret(i8* %addr) {
+  %val = load i8, i8* %addr
+  ret i8 %val
+}
+
+; CHECK-LABEL: name: test_abi_zext_ret
+; CHECK: [[VAL:%[0-9]+]](s8) = G_LOAD
+; CHECK: [[SVAL:%[0-9]+]](s32) = G_ZEXT [[VAL]](s8)
+; CHECK: %w0 = COPY [[SVAL]](s32)
+; CHECK: RET_ReallyLR implicit %w0
+define zeroext i8 @test_abi_zext_ret(i8* %addr) {
+  %val = load i8, i8* %addr
+  ret i8 %val
+}

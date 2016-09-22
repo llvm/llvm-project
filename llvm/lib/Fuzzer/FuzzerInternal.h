@@ -17,16 +17,13 @@
 #include <chrono>
 #include <climits>
 #include <cstdlib>
-#include <random>
 #include <string.h>
-#include <unordered_set>
 
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerInterface.h"
 #include "FuzzerOptions.h"
 #include "FuzzerValueBitMap.h"
-#include "FuzzerCorpus.h"  // TODO(kcc): remove this from here.
 
 namespace fuzzer {
 
@@ -65,20 +62,13 @@ public:
     size_t VPMapBits;
   };
 
-  Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options);
+  Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
+         FuzzingOptions Options);
   ~Fuzzer();
-  void AddToCorpus(const Unit &U) {
-    Corpus.push_back(U);
-    UpdateCorpusDistribution();
-  }
-  size_t ChooseUnitIdxToMutate();
-  const Unit &ChooseUnitToMutate() { return Corpus[ChooseUnitIdxToMutate()]; };
   void Loop();
   void ShuffleAndMinimize(UnitVector *V);
   void InitializeTraceState();
   void AssignTaintLabels(uint8_t *Data, size_t Size);
-  size_t CorpusSize() const { return Corpus.size(); }
-  void ReadDir(const std::string &Path, long *Epoch, size_t MaxSize);
   void RereadOutputCorpus(size_t MaxSize);
 
   size_t secondsSinceProcessStartUp() {
@@ -119,11 +109,10 @@ private:
   void CrashCallback();
   void InterruptCallback();
   void MutateAndTestOne();
-  void ReportNewCoverage(const Unit &U);
+  void ReportNewCoverage(InputInfo *II, const Unit &U);
   void PrintNewPCs();
   void PrintOneNewPC(uintptr_t PC);
   bool RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
-  void RunOneAndUpdateCorpus(const uint8_t *Data, size_t Size);
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n");
@@ -131,10 +120,6 @@ private:
   void ShuffleCorpus(UnitVector *V);
   void TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
                                bool DuringInitialCorpusExecution);
-
-  // Updates the probability distribution for the units in the corpus.
-  // Must be called whenever the corpus or unit weights are changed.
-  void UpdateCorpusDistribution();
 
   bool UpdateMaxCoverage();
 
@@ -168,14 +153,13 @@ private:
   bool HasMoreMallocsThanFrees = false;
   size_t NumberOfLeakDetectionAttempts = 0;
 
-  InputCorpus Corpus;
-
-  std::piecewise_constant_distribution<double> CorpusDistribution;
   UserCallback CB;
+  InputCorpus &Corpus;
   MutationDispatcher &MD;
   FuzzingOptions Options;
+
   system_clock::time_point ProcessStartTime = system_clock::now();
-  system_clock::time_point UnitStartTime;
+  system_clock::time_point UnitStartTime, UnitStopTime;
   long TimeOfLongestUnitInSeconds = 0;
   long EpochOfLastReadOfOutputCorpus = 0;
 

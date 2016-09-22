@@ -21,6 +21,9 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
+// This file will be TableGen'ed at some point.
+#include "AArch64GenRegisterBankInfo.def"
+
 using namespace llvm;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
@@ -28,7 +31,16 @@ using namespace llvm;
 #endif
 
 AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
-    : RegisterBankInfo(AArch64::NumRegisterBanks) {
+    : RegisterBankInfo(AArch64::RegBanks, AArch64::NumRegisterBanks) {
+  static bool AlreadyInit = false;
+  // We have only one set of register banks, whatever the subtarget
+  // is. Therefore, the initialization of the RegBanks table should be
+  // done only once. Indeed the table of all register banks
+  // (AArch64::RegBanks) is unique in the compiler. At some point, it
+  // will get tablegen'ed and the whole constructor becomes empty.
+  if (AlreadyInit)
+    return;
+  AlreadyInit = true;
   // Initialize the GPR bank.
   createRegisterBank(AArch64::GPRRegBankID, "GPR");
   // The GPR register bank is fully defined by all the registers in
@@ -36,6 +48,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   addRegBankCoverage(AArch64::GPRRegBankID, AArch64::GPR64allRegClassID, TRI);
   const RegisterBank &RBGPR = getRegBank(AArch64::GPRRegBankID);
   (void)RBGPR;
+  assert(&AArch64::GPRRegBank == &RBGPR &&
+         "The order in RegBanks is messed up");
   assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
          "Subclass not added?");
   assert(RBGPR.getSize() == 64 && "GPRs should hold up to 64-bit");
@@ -47,6 +61,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   addRegBankCoverage(AArch64::FPRRegBankID, AArch64::QQQQRegClassID, TRI);
   const RegisterBank &RBFPR = getRegBank(AArch64::FPRRegBankID);
   (void)RBFPR;
+  assert(&AArch64::FPRRegBank == &RBFPR &&
+         "The order in RegBanks is messed up");
   assert(RBFPR.covers(*TRI.getRegClass(AArch64::QQRegClassID)) &&
          "Subclass not added?");
   assert(RBFPR.covers(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
@@ -59,6 +75,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   addRegBankCoverage(AArch64::CCRRegBankID, AArch64::CCRRegClassID, TRI);
   const RegisterBank &RBCCR = getRegBank(AArch64::CCRRegBankID);
   (void)RBCCR;
+  assert(&AArch64::CCRRegBank == &RBCCR &&
+         "The order in RegBanks is messed up");
   assert(RBCCR.covers(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
          "Class not added?");
   assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");

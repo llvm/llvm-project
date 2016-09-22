@@ -245,6 +245,7 @@ def DS_MAX_U32        : DS_1A1D_NORET<"ds_max_u32">;
 def DS_AND_B32        : DS_1A1D_NORET<"ds_and_b32">;
 def DS_OR_B32         : DS_1A1D_NORET<"ds_or_b32">;
 def DS_XOR_B32        : DS_1A1D_NORET<"ds_xor_b32">;
+def DS_ADD_F32        : DS_1A1D_NORET<"ds_add_f32">;
 
 let mayLoad = 0 in {
 def DS_WRITE_B8       : DS_1A1D_NORET<"ds_write_b8">;
@@ -285,6 +286,8 @@ def DS_MAX_F64        : DS_1A1D_NORET<"ds_max_f64", VReg_64>;
 
 def DS_ADD_RTN_U32    : DS_1A1D_RET<"ds_add_rtn_u32">,
                         AtomicNoRet<"ds_add_u32", 1>;
+def DS_ADD_RTN_F32    : DS_1A1D_RET<"ds_add_rtn_f32">,
+                        AtomicNoRet<"ds_add_f32", 1>;
 def DS_SUB_RTN_U32    : DS_1A1D_RET<"ds_sub_rtn_u32">,
                         AtomicNoRet<"ds_sub_u32", 1>;
 def DS_RSUB_RTN_U32   : DS_1A1D_RET<"ds_rsub_rtn_u32">,
@@ -777,6 +780,7 @@ def DS_CMPST_B32_vi       : DS_Real_vi<0x10, DS_CMPST_B32>;
 def DS_CMPST_F32_vi       : DS_Real_vi<0x11, DS_CMPST_F32>;
 def DS_MIN_F32_vi         : DS_Real_vi<0x12, DS_MIN_F32>;
 def DS_MAX_F32_vi         : DS_Real_vi<0x13, DS_MAX_F32>;
+def DS_ADD_F32_vi         : DS_Real_vi<0x15, DS_ADD_F32>;
 def DS_GWS_INIT_vi        : DS_Real_vi<0x19, DS_GWS_INIT>;
 def DS_GWS_SEMA_V_vi      : DS_Real_vi<0x1a, DS_GWS_SEMA_V>;
 def DS_GWS_SEMA_BR_vi     : DS_Real_vi<0x1b, DS_GWS_SEMA_BR>;
@@ -805,6 +809,7 @@ def DS_CMPST_RTN_F32_vi   : DS_Real_vi<0x31, DS_CMPST_RTN_F32>;
 def DS_MIN_RTN_F32_vi     : DS_Real_vi<0x32, DS_MIN_RTN_F32>;
 def DS_MAX_RTN_F32_vi     : DS_Real_vi<0x33, DS_MAX_RTN_F32>;
 def DS_WRAP_RTN_F32_vi    : DS_Real_vi<0x34, DS_WRAP_RTN_F32>;
+def DS_ADD_RTN_F32_vi     : DS_Real_vi<0x35, DS_ADD_RTN_F32>;
 def DS_READ_B32_vi        : DS_Real_vi<0x36, DS_READ_B32>;
 def DS_READ2_B32_vi       : DS_Real_vi<0x37, DS_READ2_B32>;
 def DS_READ2ST64_B32_vi   : DS_Real_vi<0x38, DS_READ2ST64_B32>;

@@ -717,9 +717,13 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                                       "LC_DYLD_INFO_ONLY")))
         return;
     } else if (Load.C.cmd == MachO::LC_UUID) {
-      // Multiple UUID load commands
+      if (Load.C.cmdsize != sizeof(MachO::uuid_command)) {
+        Err = malformedError("LC_UUID command " + Twine(I) + " has incorrect "
+                             "cmdsize");
+        return;
+      }
       if (UuidLoadCmd) {
-        Err = malformedError("Multiple UUID load commands");
+        Err = malformedError("more than one LC_UUID command");
         return;
       }
       UuidLoadCmd = Load.Ptr;

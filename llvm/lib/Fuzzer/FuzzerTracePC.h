@@ -13,6 +13,7 @@
 #define LLVM_FUZZER_TRACE_PC
 
 #include "FuzzerDefs.h"
+#include "FuzzerValueBitMap.h"
 
 namespace fuzzer {
 
@@ -26,18 +27,18 @@ class TracePC {
   size_t UpdateCounterMap(ValueBitMap *Map);
   void FinalizeTrace();
 
-  size_t GetNewPCsAndFlush(uintptr_t **NewPCsPtr = nullptr) {
-    if (NewPCsPtr)
-      *NewPCsPtr = NewPCs;
-    size_t Res = NumNewPCs;
-    NumNewPCs = 0;
-    return Res;
+  size_t GetNewPCIDs(uintptr_t **NewPCIDsPtr) {
+    *NewPCIDsPtr = NewPCIDs;
+    return NumNewPCIDs;
   }
+
+  void ResetNewPCIDs() { NumNewPCIDs = 0; }
+  uintptr_t GetPCbyPCID(uintptr_t PCID) { return PCs[PCID]; }
 
   void Reset() {
     TotalCoverage = 0;
     TotalCounterBits = 0;
-    NumNewPCs = 0;
+    NumNewPCIDs = 0;
     CounterMap.Reset();
     TotalCoverageMap.Reset();
     ResetGuards();
@@ -52,10 +53,12 @@ private:
   size_t TotalCoverage = 0;
   size_t TotalCounterBits = 0;
 
-  static const size_t kMaxNewPCs = 64;
-  uintptr_t NewPCs[kMaxNewPCs];
-  size_t NumNewPCs = 0;
-  void AddNewPC(uintptr_t PC) { NewPCs[(NumNewPCs++) % kMaxNewPCs] = PC; }
+  static const size_t kMaxNewPCIDs = 64;
+  uintptr_t NewPCIDs[kMaxNewPCIDs];
+  size_t NumNewPCIDs = 0;
+  void AddNewPCID(uintptr_t PCID) {
+    NewPCIDs[(NumNewPCIDs++) % kMaxNewPCIDs] = PCID;
+  }
 
   void ResetGuards();
 
