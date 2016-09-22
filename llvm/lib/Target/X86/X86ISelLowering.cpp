@@ -32464,3 +32464,7 @@ void X86TargetLowering::insertCopiesSplitCSR(
           .addReg(NewVR);
   }
 }
+
+bool X86TargetLowering::supportSwiftError() const {
+  return Subtarget.is64Bit();
+}
