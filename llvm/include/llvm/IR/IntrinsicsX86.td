@@ -5819,7 +5819,7 @@ let TargetPrefix = "x86" in {
 
   def int_x86_avx512_gather3div2_di :
         GCCBuiltin<"__builtin_ia32_gather3div2di">,
-          Intrinsic<[llvm_v4i32_ty],
+          Intrinsic<[llvm_v2i64_ty],
           [llvm_v2i64_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, IntrArgMemOnly]>;
 
@@ -5831,7 +5831,7 @@ let TargetPrefix = "x86" in {
 
   def int_x86_avx512_gather3div4_di :
         GCCBuiltin<"__builtin_ia32_gather3div4di">,
-          Intrinsic<[llvm_v8i32_ty],
+          Intrinsic<[llvm_v4i64_ty],
           [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, IntrArgMemOnly]>;
 
@@ -5867,7 +5867,7 @@ let TargetPrefix = "x86" in {
 
   def int_x86_avx512_gather3siv2_di :
         GCCBuiltin<"__builtin_ia32_gather3siv2di">,
-          Intrinsic<[llvm_v4i32_ty],
+          Intrinsic<[llvm_v2i64_ty],
           [llvm_v2i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, IntrArgMemOnly]>;
 
@@ -5879,7 +5879,7 @@ let TargetPrefix = "x86" in {
 
   def int_x86_avx512_gather3siv4_di :
         GCCBuiltin<"__builtin_ia32_gather3siv4di">,
-          Intrinsic<[llvm_v8i32_ty],
+          Intrinsic<[llvm_v4i64_ty],
           [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, IntrArgMemOnly]>;
 

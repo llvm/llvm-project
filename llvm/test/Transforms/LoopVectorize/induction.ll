@@ -78,21 +78,15 @@ loopexit:
 ; CHECK: vector.body:
 ; CHECK:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:   %[[i0:.+]] = add i64 %index, 0
-; CHECK:   %[[i1:.+]] = add i64 %index, 1
 ; CHECK:   getelementptr inbounds i64, i64* %a, i64 %[[i0]]
-; CHECK:   getelementptr inbounds i64, i64* %a, i64 %[[i1]]
 ;
 ; UNROLL-NO-IC-LABEL: @scalarize_induction_variable_01(
 ; UNROLL-NO-IC: vector.body:
 ; UNROLL-NO-IC:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; UNROLL-NO-IC:   %[[i0:.+]] = add i64 %index, 0
-; UNROLL-NO-IC:   %[[i1:.+]] = add i64 %index, 1
 ; UNROLL-NO-IC:   %[[i2:.+]] = add i64 %index, 2
-; UNROLL-NO-IC:   %[[i3:.+]] = add i64 %index, 3
 ; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i0]]
-; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i1]]
 ; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i2]]
-; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i3]]
 ;
 ; IND-LABEL: @scalarize_induction_variable_01(
 ; IND:     vector.body:
@@ -611,9 +605,7 @@ exit:
 ; CHECK:   %vec.ind = phi <2 x i32> [ %[[START]], %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; CHECK:   %offset.idx = add i32 %i, %index
 ; CHECK:   %[[A1:.*]] = add i32 %offset.idx, 0
-; CHECK:   %[[A2:.*]] = add i32 %offset.idx, 1
 ; CHECK:   %[[G1:.*]] = getelementptr inbounds i32, i32* %a, i32 %[[A1]]
-; CHECK:   %[[G2:.*]] = getelementptr inbounds i32, i32* %a, i32 %[[A2]]
 ; CHECK:   %[[G3:.*]] = getelementptr i32, i32* %[[G1]], i32 0
 ; CHECK:   %[[B1:.*]] = bitcast i32* %[[G3]] to <2 x i32>*
 ; CHECK:   store <2 x i32> %vec.ind, <2 x i32>* %[[B1]]

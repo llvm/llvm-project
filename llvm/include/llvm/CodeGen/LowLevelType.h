@@ -83,6 +83,8 @@ public:
   /// Construct a low-level type based on an LLVM type.
   explicit LLT(Type &Ty, const DataLayout &DL);
 
+  explicit LLT(MVT VT);
+
   bool isValid() const { return Kind != Invalid; }
 
   bool isScalar() const { return Kind == Scalar; }

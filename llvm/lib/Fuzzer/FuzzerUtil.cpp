@@ -59,7 +59,7 @@ void PrintASCII(const Unit &U, const char *PrintAfter) {
   PrintASCII(U.data(), U.size(), PrintAfter);
 }
 
-std::string Sha1ToString(uint8_t Sha1[kSHA1NumBytes]) {
+std::string Sha1ToString(const uint8_t Sha1[kSHA1NumBytes]) {
   std::stringstream SS;
   for (int i = 0; i < kSHA1NumBytes; i++)
     SS << std::hex << std::setfill('0') << std::setw(2) << (unsigned)Sha1[i];

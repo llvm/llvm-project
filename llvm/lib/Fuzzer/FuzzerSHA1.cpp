@@ -16,7 +16,7 @@
 // For the same reason we do not want to depend on SHA1 from LLVM tree.
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerInternal.h"
+#include "FuzzerDefs.h"
 
 /* This code is public-domain - it is based on libcrypt
  * placed in the public domain by Wei Dai and other contributors.

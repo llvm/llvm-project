@@ -38,9 +38,14 @@ const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
 //------------------------------------------------------------------------------
 // RegisterBankInfo implementation.
 //------------------------------------------------------------------------------
-RegisterBankInfo::RegisterBankInfo(unsigned NumRegBanks)
-    : NumRegBanks(NumRegBanks) {
-  RegBanks.reset(new RegisterBank[NumRegBanks]);
+RegisterBankInfo::RegisterBankInfo(RegisterBank **RegBanks,
+                                   unsigned NumRegBanks)
+    : RegBanks(RegBanks), NumRegBanks(NumRegBanks) {
+  DEBUG(for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
+    assert(RegBanks[Idx] != nullptr && "Invalid RegisterBank");
+    assert(!RegBanks[Idx]->isValid() &&
+           "RegisterBank should be invalid before initialization");
+  });
 }
 
 bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
@@ -513,9 +518,7 @@ RegisterBankInfo::OperandsMapper::OperandsMapper(
     MachineRegisterInfo &MRI)
     : MRI(MRI), MI(MI), InstrMapping(InstrMapping) {
   unsigned NumOpds = MI.getNumOperands();
-  OpToNewVRegIdx.resize(NumOpds);
-  std::fill(OpToNewVRegIdx.begin(), OpToNewVRegIdx.end(),
-            OperandsMapper::DontKnowIdx);
+  OpToNewVRegIdx.resize(NumOpds, OperandsMapper::DontKnowIdx);
   assert(InstrMapping.verify(MI) && "Invalid mapping for MI");
 }
 

@@ -301,21 +301,21 @@ void EfficiencySanitizer::createStructCounterName(
   else
     NameStr += "struct.anon";
   // We allow the actual size of the StructCounterName to be larger than
-  // MaxStructCounterNameSize and append #NumFields and at least one
+  // MaxStructCounterNameSize and append $NumFields and at least one
   // field type id.
-  // Append #NumFields.
-  NameStr += "#";
+  // Append $NumFields.
+  NameStr += "$";
   Twine(StructTy->getNumElements()).toVector(NameStr);
   // Append struct field type ids in the reverse order.
   for (int i = StructTy->getNumElements() - 1; i >= 0; --i) {
-    NameStr += "#";
+    NameStr += "$";
     Twine(StructTy->getElementType(i)->getTypeID()).toVector(NameStr);
     if (NameStr.size() >= MaxStructCounterNameSize)
       break;
   }
   if (StructTy->isLiteral()) {
-    // End with # for literal struct.
-    NameStr += "#";
+    // End with $ for literal struct.
+    NameStr += "$";
   }
 }
 

@@ -27,6 +27,10 @@ enum {
   CCRRegBankID = 2, /// Conditional register: NZCV.
   NumRegisterBanks
 };
+
+extern RegisterBank GPRRegBank;
+extern RegisterBank FPRRegBank;
+extern RegisterBank CCRRegBank;
 } // End AArch64 namespace.
 
 /// This class provides the information for the target register banks.

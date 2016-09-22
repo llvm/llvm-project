@@ -111,62 +111,59 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       Instruction *Dst = cast<Instruction>(*J);
       if (Src == Dst)
         continue;
+      // Ignore Input dependencies.
       if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
         continue;
+      // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst, true)) {
-        DEBUG(dbgs() << "Found Dependency between Src and Dst\n"
+        assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+        DEBUG(StringRef DepType =
+                  D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
+              dbgs() << "Found " << DepType
+                     << " dependency between Src and Dst\n"
                      << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
-        if (D->isFlow()) {
-          // TODO: Handle Flow dependence.Check if it is sufficient to populate
-          // the Dependence Matrix with the direction reversed.
-          DEBUG(dbgs() << "Flow dependence not handled\n");
-          return false;
+        unsigned Levels = D->getLevels();
+        char Direction;
+        for (unsigned II = 1; II <= Levels; ++II) {
+          const SCEV *Distance = D->getDistance(II);
+          const SCEVConstant *SCEVConst =
+              dyn_cast_or_null<SCEVConstant>(Distance);
+          if (SCEVConst) {
+            const ConstantInt *CI = SCEVConst->getValue();
+            if (CI->isNegative())
+              Direction = '<';
+            else if (CI->isZero())
+              Direction = '=';
+            else
+              Direction = '>';
+            Dep.push_back(Direction);
+          } else if (D->isScalar(II)) {
+            Direction = 'S';
+            Dep.push_back(Direction);
+          } else {
+            unsigned Dir = D->getDirection(II);
+            if (Dir == Dependence::DVEntry::LT ||
+                Dir == Dependence::DVEntry::LE)
+              Direction = '<';
+            else if (Dir == Dependence::DVEntry::GT ||
+                     Dir == Dependence::DVEntry::GE)
+              Direction = '>';
+            else if (Dir == Dependence::DVEntry::EQ)
+              Direction = '=';
+            else
+              Direction = '*';
+            Dep.push_back(Direction);
+          }
         }
-        if (D->isAnti()) {
-          DEBUG(dbgs() << "Found Anti dependence\n");
-          unsigned Levels = D->getLevels();
-          char Direction;
-          for (unsigned II = 1; II <= Levels; ++II) {
-            const SCEV *Distance = D->getDistance(II);
-            const SCEVConstant *SCEVConst =
-                dyn_cast_or_null<SCEVConstant>(Distance);
-            if (SCEVConst) {
-              const ConstantInt *CI = SCEVConst->getValue();
-              if (CI->isNegative())
-                Direction = '<';
-              else if (CI->isZero())
-                Direction = '=';
-              else
-                Direction = '>';
-              Dep.push_back(Direction);
-            } else if (D->isScalar(II)) {
-              Direction = 'S';
-              Dep.push_back(Direction);
-            } else {
-              unsigned Dir = D->getDirection(II);
-              if (Dir == Dependence::DVEntry::LT ||
-                  Dir == Dependence::DVEntry::LE)
-                Direction = '<';
-              else if (Dir == Dependence::DVEntry::GT ||
-                       Dir == Dependence::DVEntry::GE)
-                Direction = '>';
-              else if (Dir == Dependence::DVEntry::EQ)
-                Direction = '=';
-              else
-                Direction = '*';
-              Dep.push_back(Direction);
-            }
-          }
-          while (Dep.size() != Level) {
-            Dep.push_back('I');
-          }
+        while (Dep.size() != Level) {
+          Dep.push_back('I');
+        }
 
-          DepMatrix.push_back(Dep);
-          if (DepMatrix.size() > MaxMemInstrCount) {
-            DEBUG(dbgs() << "Cannot handle more than " << MaxMemInstrCount
-                         << " dependencies inside loop\n");
-            return false;
-          }
+        DepMatrix.push_back(Dep);
+        if (DepMatrix.size() > MaxMemInstrCount) {
+          DEBUG(dbgs() << "Cannot handle more than " << MaxMemInstrCount
+                       << " dependencies inside loop\n");
+          return false;
         }
       }
     }
@@ -312,8 +309,7 @@ static PHINode *getInductionVariable(Loop *L, ScalarEvolution *SE) {
     if (!AddRec || !AddRec->isAffine())
       continue;
     const SCEV *Step = AddRec->getStepRecurrence(*SE);
-    const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
-    if (!C)
+    if (!isa<SCEVConstant>(Step))
       continue;
     // Found the induction variable.
     // FIXME: Handle loops with more than one induction variable. Note that,
@@ -471,7 +467,7 @@ struct LoopInterchange : public FunctionPass {
     for (Loop *L : LoopList) {
       const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
       if (ExitCountOuter == SE->getCouldNotCompute()) {
-        DEBUG(dbgs() << "Couldn't compute Backedge count\n");
+        DEBUG(dbgs() << "Couldn't compute backedge count\n");
         return false;
       }
       if (L->getNumBackEdges() != 1) {
@@ -479,7 +475,7 @@ struct LoopInterchange : public FunctionPass {
         return false;
       }
       if (!L->getExitingBlock()) {
-        DEBUG(dbgs() << "Loop Doesn't have unique exit block\n");
+        DEBUG(dbgs() << "Loop doesn't have unique exit block\n");
         return false;
       }
     }
@@ -516,7 +512,7 @@ struct LoopInterchange : public FunctionPass {
     Loop *OuterMostLoop = *(LoopList.begin());
     if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
                                   OuterMostLoop, DI)) {
-      DEBUG(dbgs() << "Populating Dependency matrix failed\n");
+      DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
     }
 #ifdef DUMP_DEP_MATRICIES
@@ -587,7 +583,7 @@ struct LoopInterchange : public FunctionPass {
     DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE);
     if (!LIP.isProfitable(InnerLoopId, OuterLoopId, DependencyMatrix)) {
-      DEBUG(dbgs() << "Interchanging Loops not profitable\n");
+      DEBUG(dbgs() << "Interchanging loops not profitable\n");
       return false;
     }
 
@@ -628,8 +624,7 @@ bool LoopInterchangeLegality::containsUnsafeInstructionsInLatch(
     // Stores corresponding to reductions are safe while concluding if tightly
     // nested.
     if (StoreInst *L = dyn_cast<StoreInst>(I)) {
-      PHINode *PHI = dyn_cast<PHINode>(L->getOperand(0));
-      if (!PHI)
+      if (!isa<PHINode>(L->getOperand(0)))
         return true;
     } else if (I->mayHaveSideEffects() || I->mayReadFromMemory())
       return true;
@@ -642,30 +637,30 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
 
-  DEBUG(dbgs() << "Checking if Loops are Tightly Nested\n");
+  DEBUG(dbgs() << "Checking if loops are tightly nested\n");
 
   // A perfectly nested loop will not have any branch in between the outer and
   // inner block i.e. outer header will branch to either inner preheader and
   // outerloop latch.
-  BranchInst *outerLoopHeaderBI =
+  BranchInst *OuterLoopHeaderBI =
       dyn_cast<BranchInst>(OuterLoopHeader->getTerminator());
-  if (!outerLoopHeaderBI)
+  if (!OuterLoopHeaderBI)
     return false;
-  unsigned num = outerLoopHeaderBI->getNumSuccessors();
-  for (unsigned i = 0; i < num; i++) {
-    if (outerLoopHeaderBI->getSuccessor(i) != InnerLoopPreHeader &&
-        outerLoopHeaderBI->getSuccessor(i) != OuterLoopLatch)
+
+  for (unsigned i = 0, e = OuterLoopHeaderBI->getNumSuccessors(); i < e; ++i) {
+    if (OuterLoopHeaderBI->getSuccessor(i) != InnerLoopPreHeader &&
+        OuterLoopHeaderBI->getSuccessor(i) != OuterLoopLatch)
       return false;
   }
 
-  DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch \n");
+  DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
   // We do not have any basic block in between now make sure the outer header
   // and outer loop latch doesn't contain any unsafe instructions.
   if (containsUnsafeInstructionsInHeader(OuterLoopHeader) ||
       containsUnsafeInstructionsInLatch(OuterLoopLatch))
     return false;
 
-  DEBUG(dbgs() << "Loops are perfectly nested \n");
+  DEBUG(dbgs() << "Loops are perfectly nested\n");
   // We have a perfect loop nest.
   return true;
 }
@@ -1023,8 +1018,6 @@ void LoopInterchangeTransform::restructureLoops(Loop *InnerLoop,
 }
 
 bool LoopInterchangeTransform::transform() {
-
-  DEBUG(dbgs() << "transform\n");
   bool Transformed = false;
   Instruction *InnerIndexVar;
 
@@ -1047,16 +1040,16 @@ bool LoopInterchangeTransform::transform() {
     // incremented/decremented.
     // TODO: This splitting logic may not work always. Fix this.
     splitInnerLoopLatch(InnerIndexVar);
-    DEBUG(dbgs() << "splitInnerLoopLatch Done\n");
+    DEBUG(dbgs() << "splitInnerLoopLatch done\n");
 
     // Splits the inner loops phi nodes out into a separate basic block.
     splitInnerLoopHeader();
-    DEBUG(dbgs() << "splitInnerLoopHeader Done\n");
+    DEBUG(dbgs() << "splitInnerLoopHeader done\n");
   }
 
   Transformed |= adjustLoopLinks();
   if (!Transformed) {
-    DEBUG(dbgs() << "adjustLoopLinks Failed\n");
+    DEBUG(dbgs() << "adjustLoopLinks failed\n");
     return false;
   }
 
@@ -1100,7 +1093,7 @@ void LoopInterchangeTransform::splitInnerLoopHeader() {
   }
 
   DEBUG(dbgs() << "Output of splitInnerLoopHeader InnerLoopHeaderSucc & "
-                  "InnerLoopHeader \n");
+                  "InnerLoopHeader\n");
 }
 
 /// \brief Move all instructions except the terminator from FromBB right before

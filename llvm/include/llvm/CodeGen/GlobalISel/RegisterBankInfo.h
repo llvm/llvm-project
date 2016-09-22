@@ -289,7 +289,7 @@ public:
 
 protected:
   /// Hold the set of supported register banks.
-  std::unique_ptr<RegisterBank[]> RegBanks;
+  RegisterBank **RegBanks;
   /// Total number of register banks.
   unsigned NumRegBanks;
 
@@ -299,7 +299,7 @@ protected:
   /// \note For the verify method to succeed all the \p NumRegBanks
   /// must be initialized by createRegisterBank and updated with
   /// addRegBankCoverage RegisterBank.
-  RegisterBankInfo(unsigned NumRegBanks);
+  RegisterBankInfo(RegisterBank **RegBanks, unsigned NumRegBanks);
 
   /// This constructor is meaningless.
   /// It just provides a default constructor that can be used at link time
@@ -339,7 +339,7 @@ protected:
   /// Get the register bank identified by \p ID.
   RegisterBank &getRegBank(unsigned ID) {
     assert(ID < getNumRegBanks() && "Accessing an unknown register bank");
-    return RegBanks[ID];
+    return *RegBanks[ID];
   }
 
   /// Try to get the mapping of \p MI.

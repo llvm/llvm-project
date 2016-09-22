@@ -752,6 +752,34 @@ static std::unique_ptr<LTO> createLTO() {
                                 ParallelCodeGenParallelismLevel);
 }
 
+// Write empty files that may be expected by a distributed build
+// system when invoked with thinlto_index_only. This is invoked when
+// the linker has decided not to include the given module in the
+// final link. Frequently the distributed build system will want to
+// confirm that all expected outputs are created based on all of the
+// modules provided to the linker.
+static void writeEmptyDistributedBuildOutputs(std::string &ModulePath,
+                                              std::string &OldPrefix,
+                                              std::string &NewPrefix) {
+  std::string NewModulePath =
+      getThinLTOOutputFile(ModulePath, OldPrefix, NewPrefix);
+  std::error_code EC;
+  {
+    raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
+                      sys::fs::OpenFlags::F_None);
+    if (EC)
+      message(LDPL_FATAL, "Failed to write '%s': %s",
+              (NewModulePath + ".thinlto.bc").c_str(), EC.message().c_str());
+  }
+  if (options::thinlto_emit_imports_files) {
+    raw_fd_ostream OS(NewModulePath + ".imports", EC,
+                      sys::fs::OpenFlags::F_None);
+    if (EC)
+      message(LDPL_FATAL, "Failed to write '%s': %s",
+              (NewModulePath + ".imports").c_str(), EC.message().c_str());
+  }
+}
+
 /// gold informs us that all symbols have been read. At this point, we use
 /// get_symbols to see if any of our definitions have been overridden by a
 /// native object file. Then, perform optimization and codegen.
@@ -771,13 +799,22 @@ static ld_plugin_status allSymbolsReadHook() {
 
   std::unique_ptr<LTO> Lto = createLTO();
 
+  std::string OldPrefix, NewPrefix;
+  if (options::thinlto_index_only)
+    getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
+
   for (claimed_file &F : Modules) {
     if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
       HandleToInputFile.insert(std::make_pair(
           F.leader_handle, llvm::make_unique<PluginInputFile>(F.handle)));
     const void *View = getSymbolsAndView(F);
-    if (!View)
+    if (!View) {
+      if (options::thinlto_index_only)
+        // Write empty output files that may be expected by the distributed
+        // build system.
+        writeEmptyDistributedBuildOutputs(F.name, OldPrefix, NewPrefix);
       continue;
+    }
     addModule(*Lto, F, View);
   }
 

@@ -28,14 +28,14 @@ entry:
   ret i32* %arrayidx
 }
 
-; CHECK:        %0 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST#3#13#3#11", i32 0, i32 3)
+; CHECK:        %0 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST$3$13$3$11", i32 0, i32 3)
 ; CHECK-NEXT:   %1 = add i64 %0, 1
-; CHECK-NEXT:   store i64 %1, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST#3#13#3#11", i32 0, i32 3)
-; CHECK-NEXT:   %2 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST#3#13#3#11", i32 0, i32 2)
+; CHECK-NEXT:   store i64 %1, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST$3$13$3$11", i32 0, i32 3)
+; CHECK-NEXT:   %2 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST$3$13$3$11", i32 0, i32 2)
 ; CHECK-NEXT:   %3 = add i64 %2, 1
-; CHECK-NEXT:   store i64 %3, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST#3#13#3#11", i32 0, i32 2)
-; CHECK-NEXT:   %4 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.RT#3#11#14#11", i32 0, i32 1)
+; CHECK-NEXT:   store i64 %3, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.ST$3$13$3$11", i32 0, i32 2)
+; CHECK-NEXT:   %4 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.RT$3$11$14$11", i32 0, i32 1)
 ; CHECK-NEXT:   %5 = add i64 %4, 1
-; CHECK-NEXT:   store i64 %5, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.RT#3#11#14#11", i32 0, i32 1)
+; CHECK-NEXT:   store i64 %5, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @"struct.RT$3$11$14$11", i32 0, i32 1)
 ; CHECK-NEXT:   %arrayidx = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 1, i32 2, i32 1, i64 5, i64 13
 ; CHECK-NEXT:   ret i32* %arrayidx

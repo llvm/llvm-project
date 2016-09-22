@@ -8,13 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK: %offset.idx = sub i64 %startval, %index
 ; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
-; CHECK: %[[a1:.+]] = add i64 %offset.idx, -1
-; CHECK: %[[a2:.+]] = add i64 %offset.idx, -2
-; CHECK: %[[a3:.+]] = add i64 %offset.idx, -3
 ; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
-; CHECK: %[[a5:.+]] = add i64 %offset.idx, -5
-; CHECK: %[[a6:.+]] = add i64 %offset.idx, -6
-; CHECK: %[[a7:.+]] = add i64 %offset.idx, -7
 
 define i32 @reverse_induction_i64(i64 %startval, i32 * %ptr) {
 entry:
@@ -40,13 +34,7 @@ loopend:
 ; CHECK: %index = phi i128 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK: %offset.idx = sub i128 %startval, %index
 ; CHECK: %[[a0:.+]] = add i128 %offset.idx, 0
-; CHECK: %[[a1:.+]] = add i128 %offset.idx, -1
-; CHECK: %[[a2:.+]] = add i128 %offset.idx, -2
-; CHECK: %[[a3:.+]] = add i128 %offset.idx, -3
 ; CHECK: %[[a4:.+]] = add i128 %offset.idx, -4
-; CHECK: %[[a5:.+]] = add i128 %offset.idx, -5
-; CHECK: %[[a6:.+]] = add i128 %offset.idx, -6
-; CHECK: %[[a7:.+]] = add i128 %offset.idx, -7
 
 define i32 @reverse_induction_i128(i128 %startval, i32 * %ptr) {
 entry:
@@ -72,13 +60,7 @@ loopend:
 ; CHECK: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK: %offset.idx = sub i16 %startval, {{.*}}
 ; CHECK: %[[a0:.+]] = add i16 %offset.idx, 0
-; CHECK: %[[a1:.+]] = add i16 %offset.idx, -1
-; CHECK: %[[a2:.+]] = add i16 %offset.idx, -2
-; CHECK: %[[a3:.+]] = add i16 %offset.idx, -3
 ; CHECK: %[[a4:.+]] = add i16 %offset.idx, -4
-; CHECK: %[[a5:.+]] = add i16 %offset.idx, -5
-; CHECK: %[[a6:.+]] = add i16 %offset.idx, -6
-; CHECK: %[[a7:.+]] = add i16 %offset.idx, -7
 
 define i32 @reverse_induction_i16(i16 %startval, i32 * %ptr) {
 entry:
@@ -121,13 +103,7 @@ loopend:
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK: %offset.idx = sub i64 1023, %index
 ; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
-; CHECK: %[[a1:.+]] = add i64 %offset.idx, -1
-; CHECK: %[[a2:.+]] = add i64 %offset.idx, -2
-; CHECK: %[[a3:.+]] = add i64 %offset.idx, -3
 ; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
-; CHECK: %[[a5:.+]] = add i64 %offset.idx, -5
-; CHECK: %[[a6:.+]] = add i64 %offset.idx, -6
-; CHECK: %[[a7:.+]] = add i64 %offset.idx, -7
 
 define void @reverse_forward_induction_i64_i8() {
 entry:
@@ -153,13 +129,7 @@ while.end:
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK: %offset.idx = sub i64 1023, %index
 ; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
-; CHECK: %[[a1:.+]] = add i64 %offset.idx, -1
-; CHECK: %[[a2:.+]] = add i64 %offset.idx, -2
-; CHECK: %[[a3:.+]] = add i64 %offset.idx, -3
 ; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
-; CHECK: %[[a5:.+]] = add i64 %offset.idx, -5
-; CHECK: %[[a6:.+]] = add i64 %offset.idx, -6
-; CHECK: %[[a7:.+]] = add i64 %offset.idx, -7
 
 define void @reverse_forward_induction_i64_i8_signed() {
 entry:
