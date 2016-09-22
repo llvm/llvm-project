@@ -55,6 +55,9 @@ public:
     Export
   };
 
+  int run(Command Cmd, int argc, const char **argv);
+
+private:
   /// \brief Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
 
@@ -94,8 +97,6 @@ public:
   /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
   StringRef getSymbolForHumans(StringRef Sym) const;
 
-  int run(Command Cmd, int argc, const char **argv);
-
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
 
   int show(int argc, const char **argv,
@@ -109,14 +110,24 @@ public:
 
   std::string ObjectFilename;
   CoverageViewOptions ViewOpts;
-  std::string PGOFilename;
   CoverageFiltersMatchAll Filters;
+
+  /// The path to the indexed profile.
+  std::string PGOFilename;
+
+  /// A list of input source files.
   std::vector<StringRef> SourceFiles;
+
+  /// Whether or not we're in -filename-equivalence mode.
   bool CompareFilenamesOnly;
+
+  /// In -filename-equivalence mode, this maps absolute paths from the
+  /// coverage mapping data to input source files.
   StringMap<std::string> RemappedFilenames;
+
+  /// The architecture the coverage mapping data targets.
   std::string CoverageArch;
 
-private:
   /// A cache for demangled symbol names.
   StringMap<std::string> DemangledNames;
 
