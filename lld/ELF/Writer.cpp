@@ -51,6 +51,7 @@ private:
   void forEachRelSec(
       std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
           Fn);
+  void sortSections();
   void finalizeSections();
   void addPredefinedSections();
   bool needsGot();
@@ -435,12 +436,10 @@ template <class ELFT> bool elf::isRelroSection(OutputSectionBase<ELFT> *Sec) {
          S == ".eh_frame";
 }
 
-// Output section ordering is determined by this function.
 template <class ELFT>
-static bool compareSections(OutputSectionBase<ELFT> *A,
-                            OutputSectionBase<ELFT> *B) {
+static bool compareSectionsNonScript(OutputSectionBase<ELFT> *A,
+                                     OutputSectionBase<ELFT> *B) {
   typedef typename ELFT::uint uintX_t;
-
   uintX_t AFlags = A->getFlags();
   uintX_t BFlags = B->getFlags();
 
@@ -451,19 +450,10 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
   if (AIsAlloc != BIsAlloc)
     return AIsAlloc;
 
-  // If  A and B are mentioned in linker script, use that order.
-  int AIndex = Script<ELFT>::X->getSectionIndex(A->getName());
-  int BIndex = Script<ELFT>::X->getSectionIndex(B->getName());
-  bool AInScript = AIndex != INT_MAX;
-  bool BInScript = BIndex != INT_MAX;
-  if (AInScript && BInScript)
-    return AIndex < BIndex;
-
   // We don't have any special requirements for the relative order of two non
   // allocatable sections.
-  // Just put linker script sections first to satisfy strict weak ordering.
   if (!AIsAlloc)
-    return AInScript;
+    return false;
 
   // We want the read only sections first so that they go in the PT_LOAD
   // covering the program headers at the start of the file.
@@ -512,8 +502,25 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
     return getPPC64SectionRank(A->getName()) <
            getPPC64SectionRank(B->getName());
 
-  // Just put linker script sections first to satisfy strict weak ordering.
-  return AInScript;
+  return false;
+}
+
+// Output section ordering is determined by this function.
+template <class ELFT>
+static bool compareSections(OutputSectionBase<ELFT> *A,
+                            OutputSectionBase<ELFT> *B) {
+  // For now, put sections mentioned in a linker script first.
+  int AIndex = Script<ELFT>::X->getSectionIndex(A->getName());
+  int BIndex = Script<ELFT>::X->getSectionIndex(B->getName());
+  bool AInScript = AIndex != INT_MAX;
+  bool BInScript = BIndex != INT_MAX;
+  if (AInScript != BInScript)
+    return AInScript;
+  // If both are in the script, use that order.
+  if (AInScript)
+    return AIndex < BIndex;
+
+  return compareSectionsNonScript(A, B);
 }
 
 template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
@@ -710,6 +717,55 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     Sec->assignOffsets();
 }
 
+template <class ELFT> void Writer<ELFT>::sortSections() {
+  if (!ScriptConfig->HasSections) {
+    std::stable_sort(OutputSections.begin(), OutputSections.end(),
+                     compareSectionsNonScript<ELFT>);
+    return;
+  }
+
+  // The order of the sections in the script is arbitrary and may not agree with
+  // compareSectionsNonScript. This means that we cannot easily define a
+  // strict weak ordering. To see why, consider a comparison of a section in the
+  // script and one not in the script. We have a two simple options:
+  // * Make them equivalent (a is not less than b, and b is not less than a).
+  //   The problem is then that equivalence has to be transitive and we can
+  //   have sections a, b and c with only b in a script and a less than c
+  //   which breaks this property.
+  // * Use compareSectionsNonScript. Given that the script order doesn't have
+  //   to match, we can end up with sections a, b, c, d where b and c are in the
+  //   script and c is compareSectionsNonScript less than b. In which case d
+  //   can be equivalent to c, a to b and d < a. As a concrete example:
+  //   .a (rx) # not in script
+  //   .b (rx) # in script
+  //   .c (ro) # in script
+  //   .d (ro) # not in script
+  //
+  // The way we define an order then is:
+  // *  First put script sections at the start and sort the script and
+  //    non-script sections independently.
+  // *  Move each non-script section to the first position where it
+  //    compareSectionsNonScript less than the successor.
+
+  std::stable_sort(OutputSections.begin(), OutputSections.end(),
+                   compareSections<ELFT>);
+
+  auto I = OutputSections.begin();
+  auto E = OutputSections.end();
+  auto NonScriptI = std::find_if(I, E, [](OutputSectionBase<ELFT> *S) {
+    return Script<ELFT>::X->getSectionIndex(S->getName()) == INT_MAX;
+  });
+  while (NonScriptI != E) {
+    auto FirstGreater =
+        std::find_if(I, NonScriptI, [&](OutputSectionBase<ELFT> *S) {
+          return compareSectionsNonScript<ELFT>(*NonScriptI, S);
+        });
+    std::rotate(FirstGreater, NonScriptI, NonScriptI + 1);
+    ++NonScriptI;
+    ++I;
+  }
+}
+
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::finalizeSections() {
   Out<ELFT>::PreinitArray = findSection(".preinit_array");
@@ -783,8 +839,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // This function adds linker-created Out<ELFT>::* sections.
   addPredefinedSections();
 
-  std::stable_sort(OutputSections.begin(), OutputSections.end(),
-                   compareSections<ELFT>);
+  sortSections();
 
   unsigned I = 1;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {

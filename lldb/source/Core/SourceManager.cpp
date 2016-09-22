@@ -172,7 +172,7 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         m_last_file_sp->GetLine(line, src_line);
         return_value += s->Printf("    \t");
         // Insert a space for every non-tab character in the source line.
-        for (int i = 0; i < column - 1 && i < src_line.length(); ++i)
+        for (size_t i = 0; i + 1 < column && i < src_line.length(); ++i)
           return_value += s->PutChar(src_line[i] == '\t' ? '\t' : ' ');
         // Now add the caret.
         return_value += s->Printf("^\n");

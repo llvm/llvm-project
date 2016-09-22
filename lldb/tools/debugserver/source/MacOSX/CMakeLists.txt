@@ -36,7 +36,7 @@ set(DEBUGSERVER_USED_LIBS
   lldbDebugserverMacOSX_DarwinLog
   )
 
-add_lldb_executable(debugserver
+add_lldb_executable(debugserver INCLUDE_IN_FRAMEWORK
   HasAVX.s
   CFBundle.cpp
   CFString.cpp
@@ -69,23 +69,14 @@ if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE CODESIGN_ALLOCATE
     )
-  # Older cmake versions don't support "-E env".
-  if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} LESS 3.2)
-    add_custom_command(TARGET debugserver
-      POST_BUILD
-      # Note: --entitlements option removed, as it causes errors when debugging.
-      # was: COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/../debugserver-entitlements.plist --force --sign ${LLDB_CODESIGN_IDENTITY} debugserver
-      COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${LLDB_CODESIGN_IDENTITY} debugserver
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    )
-  else()
-    add_custom_command(TARGET debugserver
-      POST_BUILD
-      # Note: --entitlements option removed (see comment above).
-      COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${LLDB_CODESIGN_IDENTITY} debugserver
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    )
-  endif()
+  add_custom_command(TARGET debugserver
+    POST_BUILD
+    # Note: --entitlements option removed (see comment above).
+    COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE}
+            codesign --force --sign ${LLDB_CODESIGN_IDENTITY}
+            $<TARGET_FILE:debugserver>
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
 endif()
 
 install(TARGETS debugserver

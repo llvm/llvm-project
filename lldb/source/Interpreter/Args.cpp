@@ -419,7 +419,7 @@ llvm::StringRef Args::ReplaceArgumentAtIndex(size_t idx,
     m_args_quote_char[idx] = quote_char;
     return GetArgumentAtIndex(idx);
   }
-  return nullptr;
+  return llvm::StringRef();
 }
 
 void Args::DeleteArgumentAtIndex(size_t idx) {

@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstring>
-#include <unordered_set>
 
 #include "FuzzerCorpus.h"
 #include "FuzzerDefs.h"

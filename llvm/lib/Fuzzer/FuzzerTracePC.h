@@ -13,6 +13,7 @@
 #define LLVM_FUZZER_TRACE_PC
 
 #include "FuzzerDefs.h"
+#include "FuzzerValueBitMap.h"
 
 namespace fuzzer {
 

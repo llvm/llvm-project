@@ -1278,8 +1278,6 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
       return std::make_pair(nullptr, 0);
     }
   }
-  default:
-    return std::make_pair(nullptr, 0);
   }
 }
 
