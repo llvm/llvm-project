@@ -723,6 +723,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
                      compareSectionsNonScript<ELFT>);
     return;
   }
+  Script<ELFT>::X->adjustSectionsBeforeSorting();
 
   // The order of the sections in the script is arbitrary and may not agree with
   // compareSectionsNonScript. This means that we cannot easily define a

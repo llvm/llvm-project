@@ -1976,7 +1976,8 @@ static void rematerializeLiveValues(CallSite CS,
     // Utility function which clones all instructions from "ChainToBase"
     // and inserts them before "InsertBefore". Returns rematerialized value
     // which should be used after statepoint.
-    auto rematerializeChain = [&ChainToBase](Instruction *InsertBefore) {
+    auto rematerializeChain = [&ChainToBase](
+        Instruction *InsertBefore, Value *RootOfChain, Value *AlternateLiveBase) {
       Instruction *LastClonedValue = nullptr;
       Instruction *LastValue = nullptr;
       for (Instruction *Instr: ChainToBase) {
@@ -1996,13 +1997,24 @@ static void rematerializeLiveValues(CallSite CS,
           assert(LastValue);
           ClonedValue->replaceUsesOfWith(LastValue, LastClonedValue);
 #ifndef NDEBUG
-          // Assert that cloned instruction does not use any instructions from
-          // this chain other than LastClonedValue
           for (auto OpValue : ClonedValue->operand_values()) {
+            // Assert that cloned instruction does not use any instructions from
+            // this chain other than LastClonedValue
             assert(!is_contained(ChainToBase, OpValue) &&
                    "incorrect use in rematerialization chain");
+            // Assert that the cloned instruction does not use the RootOfChain
+            // or the AlternateLiveBase.
+            assert(OpValue != RootOfChain && OpValue != AlternateLiveBase);
           }
 #endif
+        } else {
+          // For the first instruction, replace the use of unrelocated base i.e.
+          // RootOfChain/OrigRootPhi, with the corresponding PHI present in the
+          // live set. They have been proved to be the same PHI nodes.  Note
+          // that the *only* use of the RootOfChain in the ChainToBase list is
+          // the first Value in the list.
+          if (RootOfChain != AlternateLiveBase)
+            ClonedValue->replaceUsesOfWith(RootOfChain, AlternateLiveBase);
         }
 
         LastClonedValue = ClonedValue;
@@ -2017,7 +2029,8 @@ static void rematerializeLiveValues(CallSite CS,
     if (CS.isCall()) {
       Instruction *InsertBefore = CS.getInstruction()->getNextNode();
       assert(InsertBefore);
-      Instruction *RematerializedValue = rematerializeChain(InsertBefore);
+      Instruction *RematerializedValue = rematerializeChain(
+          InsertBefore, RootOfChain, Info.PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
       InvokeInst *Invoke = cast<InvokeInst>(CS.getInstruction());
@@ -2027,10 +2040,10 @@ static void rematerializeLiveValues(CallSite CS,
       Instruction *UnwindInsertBefore =
           &*Invoke->getUnwindDest()->getFirstInsertionPt();
 
-      Instruction *NormalRematerializedValue =
-          rematerializeChain(NormalInsertBefore);
-      Instruction *UnwindRematerializedValue =
-          rematerializeChain(UnwindInsertBefore);
+      Instruction *NormalRematerializedValue = rematerializeChain(
+          NormalInsertBefore, RootOfChain, Info.PointerToBase[LiveValue]);
+      Instruction *UnwindRematerializedValue = rematerializeChain(
+          UnwindInsertBefore, RootOfChain, Info.PointerToBase[LiveValue]);
 
       Info.RematerializedValues[NormalRematerializedValue] = LiveValue;
       Info.RematerializedValues[UnwindRematerializedValue] = LiveValue;

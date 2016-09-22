@@ -366,17 +366,16 @@ static unsigned GetAutoSenseRadix(StringRef &Str) {
     return 8;
   }
 
-  if (Str.startswith("0"))
+  if (Str[0] == '0' && Str.size() > 1 && ascii_isdigit(Str[1])) {
+    Str = Str.substr(1);
     return 8;
-  
+  }
+
   return 10;
 }
 
-
-/// GetAsUnsignedInteger - Workhorse method that converts a integer character
-/// sequence of radix up to 36 to an unsigned long long value.
-bool llvm::getAsUnsignedInteger(StringRef Str, unsigned Radix,
-                                unsigned long long &Result) {
+bool llvm::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
+                                  unsigned long long &Result) {
   // Autosense radix if not specified.
   if (Radix == 0)
     Radix = GetAutoSenseRadix(Str);
@@ -385,44 +384,51 @@ bool llvm::getAsUnsignedInteger(StringRef Str, unsigned Radix,
   if (Str.empty()) return true;
 
   // Parse all the bytes of the string given this radix.  Watch for overflow.
+  StringRef Str2 = Str;
   Result = 0;
-  while (!Str.empty()) {
+  while (!Str2.empty()) {
     unsigned CharVal;
-    if (Str[0] >= '0' && Str[0] <= '9')
-      CharVal = Str[0]-'0';
-    else if (Str[0] >= 'a' && Str[0] <= 'z')
-      CharVal = Str[0]-'a'+10;
-    else if (Str[0] >= 'A' && Str[0] <= 'Z')
-      CharVal = Str[0]-'A'+10;
+    if (Str2[0] >= '0' && Str2[0] <= '9')
+      CharVal = Str2[0] - '0';
+    else if (Str2[0] >= 'a' && Str2[0] <= 'z')
+      CharVal = Str2[0] - 'a' + 10;
+    else if (Str2[0] >= 'A' && Str2[0] <= 'Z')
+      CharVal = Str2[0] - 'A' + 10;
     else
-      return true;
+      break;
 
-    // If the parsed value is larger than the integer radix, the string is
-    // invalid.
+    // If the parsed value is larger than the integer radix, we cannot
+    // consume any more characters.
     if (CharVal >= Radix)
-      return true;
+      break;
 
     // Add in this character.
     unsigned long long PrevResult = Result;
-    Result = Result*Radix+CharVal;
+    Result = Result * Radix + CharVal;
 
     // Check for overflow by shifting back and seeing if bits were lost.
-    if (Result/Radix < PrevResult)
+    if (Result / Radix < PrevResult)
       return true;
 
-    Str = Str.substr(1);
+    Str2 = Str2.substr(1);
   }
 
+  // We consider the operation a failure if no characters were consumed
+  // successfully.
+  if (Str.size() == Str2.size())
+    return true;
+
+  Str = Str2;
   return false;
 }
 
-bool llvm::getAsSignedInteger(StringRef Str, unsigned Radix,
-                              long long &Result) {
+bool llvm::consumeSignedInteger(StringRef &Str, unsigned Radix,
+                                long long &Result) {
   unsigned long long ULLVal;
 
   // Handle positive strings first.
   if (Str.empty() || Str.front() != '-') {
-    if (getAsUnsignedInteger(Str, Radix, ULLVal) ||
+    if (consumeUnsignedInteger(Str, Radix, ULLVal) ||
         // Check for value so large it overflows a signed value.
         (long long)ULLVal < 0)
       return true;
@@ -431,15 +437,39 @@ bool llvm::getAsSignedInteger(StringRef Str, unsigned Radix,
   }
 
   // Get the positive part of the value.
-  if (getAsUnsignedInteger(Str.substr(1), Radix, ULLVal) ||
+  StringRef Str2 = Str.drop_front(1);
+  if (consumeUnsignedInteger(Str2, Radix, ULLVal) ||
       // Reject values so large they'd overflow as negative signed, but allow
       // "-0".  This negates the unsigned so that the negative isn't undefined
       // on signed overflow.
       (long long)-ULLVal > 0)
     return true;
 
+  Str = Str2;
   Result = -ULLVal;
   return false;
+}
+
+/// GetAsUnsignedInteger - Workhorse method that converts a integer character
+/// sequence of radix up to 36 to an unsigned long long value.
+bool llvm::getAsUnsignedInteger(StringRef Str, unsigned Radix,
+                                unsigned long long &Result) {
+  if (consumeUnsignedInteger(Str, Radix, Result))
+    return true;
+
+  // For getAsUnsignedInteger, we require the whole string to be consumed or
+  // else we consider it a failure.
+  return !Str.empty();
+}
+
+bool llvm::getAsSignedInteger(StringRef Str, unsigned Radix,
+                              long long &Result) {
+  if (consumeSignedInteger(Str, Radix, Result))
+    return true;
+
+  // For getAsSignedInteger, we require the whole string to be consumed or else
+  // we consider it a failure.
+  return !Str.empty();
 }
 
 bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {

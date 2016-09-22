@@ -329,49 +329,53 @@ private:
     return I1DFS < I2DFS;
   }
 
-  // Return true when there are users of Def in BB.
-  bool hasMemoryUseOnPath(MemoryAccess *Def, const BasicBlock *BB,
-                          const Instruction *OldPt) {
-    const BasicBlock *DefBB = Def->getBlock();
+  // Return true when there are memory uses of Def in BB.
+  bool hasMemoryUseOnPath(const Instruction *NewPt, MemoryDef *Def, const BasicBlock *BB) {
+    const Instruction *OldPt = Def->getMemoryInst();
     const BasicBlock *OldBB = OldPt->getParent();
+    const BasicBlock *NewBB = NewPt->getParent();
 
-    for (User *U : Def->users())
-      if (auto *MU = dyn_cast<MemoryUse>(U)) {
-        // FIXME: MU->getBlock() does not get updated when we move the instruction.
-        BasicBlock *UBB = MU->getMemoryInst()->getParent();
-        // Only analyze uses in BB.
-        if (BB != UBB)
-          continue;
+    bool ReachedNewPt = false;
+    MemoryLocation DefLoc = MemoryLocation::get(OldPt);
+    const MemorySSA::AccessList *Acc = MSSA->getBlockAccesses(BB);
+    for (const MemoryAccess &MA : *Acc) {
+      auto *MU = dyn_cast<MemoryUse>(&MA);
+      if (!MU)
+        continue;
 
-        // A use in the same block as the Def is on the path.
-        if (UBB == DefBB) {
-          assert(MSSA->locallyDominates(Def, MU) && "def not dominating use");
-          return true;
+      // Do not check whether MU aliases Def when MU occurs after OldPt.
+      if (BB == OldBB && firstInBB(OldPt, MU->getMemoryInst()))
+        break;
+
+      // Do not check whether MU aliases Def when MU occurs before NewPt.
+      if (BB == NewBB) {
+        if (!ReachedNewPt) {
+          if (firstInBB(MU->getMemoryInst(), NewPt))
+            continue;
+          ReachedNewPt = true;
         }
-
-        if (UBB != OldBB)
-          return true;
-
-        // It is only harmful to hoist when the use is before OldPt.
-        if (firstInBB(MU->getMemoryInst(), OldPt))
-          return true;
       }
+
+      if (!AA->isNoAlias(DefLoc, MemoryLocation::get(MU->getMemoryInst())))
+        return true;
+    }
 
     return false;
   }
 
   // Return true when there are exception handling or loads of memory Def
-  // between OldPt and NewPt.
+  // between Def and NewPt.  This function is only called for stores: Def is
+  // the MemoryDef of the store to be hoisted.
 
   // Decrement by 1 NBBsOnAllPaths for each block between HoistPt and BB, and
   // return true when the counter NBBsOnAllPaths reaces 0, except when it is
   // initialized to -1 which is unlimited.
-  bool hasEHOrLoadsOnPath(const Instruction *NewPt, const Instruction *OldPt,
-                          MemoryAccess *Def, int &NBBsOnAllPaths) {
+  bool hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
+                          int &NBBsOnAllPaths) {
     const BasicBlock *NewBB = NewPt->getParent();
-    const BasicBlock *OldBB = OldPt->getParent();
+    const BasicBlock *OldBB = Def->getBlock();
     assert(DT->dominates(NewBB, OldBB) && "invalid path");
-    assert(DT->dominates(Def->getBlock(), NewBB) &&
+    assert(DT->dominates(Def->getDefiningAccess()->getBlock(), NewBB) &&
            "def does not dominate new hoisting point");
 
     // Walk all basic blocks reachable in depth-first iteration on the inverse
@@ -390,7 +394,7 @@ private:
         return true;
 
       // Check that we do not move a store past loads.
-      if (hasMemoryUseOnPath(Def, *I, OldPt))
+      if (hasMemoryUseOnPath(NewPt, Def, *I))
         return true;
 
       // Stop walk once the limit is reached.
@@ -473,7 +477,7 @@ private:
 
     // Check for unsafe hoistings due to side effects.
     if (K == InsKind::Store) {
-      if (hasEHOrLoadsOnPath(NewPt, OldPt, D, NBBsOnAllPaths))
+      if (hasEHOrLoadsOnPath(NewPt, dyn_cast<MemoryDef>(U), NBBsOnAllPaths))
         return false;
     } else if (hasEHOnPath(NewBB, OldBB, NBBsOnAllPaths))
       return false;
@@ -889,6 +893,10 @@ private:
         // Only hoist the first instructions in BB up to MaxDepthInBB. Hoisting
         // deeper may increase the register pressure and compilation time.
         if (MaxDepthInBB != -1 && InstructionNb++ >= MaxDepthInBB)
+          break;
+
+        // Do not value number terminator instructions.
+        if (isa<TerminatorInst>(&I1))
           break;
 
         if (auto *Load = dyn_cast<LoadInst>(&I1))
