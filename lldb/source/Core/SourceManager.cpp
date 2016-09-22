@@ -22,6 +22,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/AnsiTerminal.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -71,7 +72,10 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
 
   // If file_sp is no good or it points to a non-existent file, reset it.
   if (!file_sp || !file_sp->GetFileSpec().Exists()) {
-    file_sp.reset(new File(file_spec, target_sp.get()));
+    if (target_sp)
+      file_sp.reset(new File(file_spec, target_sp.get()));
+    else
+      file_sp.reset(new File(file_spec, debugger_sp));
 
     if (debugger_sp)
       debugger_sp->GetSourceFileCache().AddSourceFile(file_sp);
@@ -79,8 +83,44 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   return file_sp;
 }
 
+static bool should_show_stop_column_with_ansi(DebuggerSP debugger_sp) {
+  // We don't use ANSI stop column formatting if we can't lookup values from
+  // the debugger.
+  if (!debugger_sp)
+    return false;
+
+  // We don't use ANSI stop column formatting if the debugger doesn't think
+  // it should be using color.
+  if (!debugger_sp->GetUseColor())
+    return false;
+
+  // We only use ANSI stop column formatting if we're either supposed to show
+  // ANSI where available (which we know we have when we get to this point), or
+  // if we're only supposed to use ANSI.
+  const auto value = debugger_sp->GetStopShowColumn();
+  return ((value == eStopShowColumnAnsiOrCaret) ||
+          (value == eStopShowColumnAnsi));
+}
+
+static bool should_show_stop_column_with_caret(DebuggerSP debugger_sp) {
+  // We don't use text-based stop column formatting if we can't lookup values
+  // from the debugger.
+  if (!debugger_sp)
+    return false;
+
+  // If we're asked to show the first available of ANSI or caret, then
+  // we do show the caret when ANSI is not available.
+  const auto value = debugger_sp->GetStopShowColumn();
+  if ((value == eStopShowColumnAnsiOrCaret) && !debugger_sp->GetUseColor())
+    return true;
+
+  // The only other time we use caret is if we're explicitly asked to show
+  // caret.
+  return value == eStopShowColumnCaret;
+}
+
 size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
-    uint32_t start_line, uint32_t count, uint32_t curr_line,
+    uint32_t start_line, uint32_t count, uint32_t curr_line, uint32_t column,
     const char *current_line_cstr, Stream *s,
     const SymbolContextList *bp_locs) {
   if (count == 0)
@@ -123,7 +163,20 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
       return_value +=
           s->Printf("%s%2.2s %-4u\t", prefix,
                     line == curr_line ? current_line_cstr : "", line);
-      size_t this_line_size = m_last_file_sp->DisplaySourceLines(line, 0, 0, s);
+      size_t this_line_size = m_last_file_sp->DisplaySourceLines(
+          line, line == curr_line ? column : 0, 0, 0, s);
+      if (column != 0 && line == curr_line &&
+          should_show_stop_column_with_caret(m_debugger_wp.lock())) {
+        // Display caret cursor.
+        std::string src_line;
+        m_last_file_sp->GetLine(line, src_line);
+        return_value += s->Printf("    \t");
+        // Insert a space for every non-tab character in the source line.
+        for (size_t i = 0; i + 1 < column && i < src_line.length(); ++i)
+          return_value += s->PutChar(src_line[i] == '\t' ? '\t' : ' ');
+        // Now add the caret.
+        return_value += s->Printf("^\n");
+      }
       if (this_line_size == 0) {
         m_last_line = UINT32_MAX;
         break;
@@ -135,8 +188,9 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
 }
 
 size_t SourceManager::DisplaySourceLinesWithLineNumbers(
-    const FileSpec &file_spec, uint32_t line, uint32_t context_before,
-    uint32_t context_after, const char *current_line_cstr, Stream *s,
+    const FileSpec &file_spec, uint32_t line, uint32_t column,
+    uint32_t context_before, uint32_t context_after,
+    const char *current_line_cstr, Stream *s,
     const SymbolContextList *bp_locs) {
   FileSP file_sp(GetFile(file_spec));
 
@@ -153,7 +207,7 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbers(
     m_last_file_sp = file_sp;
   }
   return DisplaySourceLinesWithLineNumbersUsingLastFile(
-      start_line, count, line, current_line_cstr, s, bp_locs);
+      start_line, count, line, column, current_line_cstr, s, bp_locs);
 }
 
 size_t SourceManager::DisplayMoreWithLineNumbers(
@@ -193,8 +247,9 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
     } else
       m_last_line = 1;
 
+    const uint32_t column = 0;
     return DisplaySourceLinesWithLineNumbersUsingLastFile(
-        m_last_line, m_last_count, UINT32_MAX, "", s, bp_locs);
+        m_last_line, m_last_count, UINT32_MAX, column, "", s, bp_locs);
   }
   return 0;
 }
@@ -272,10 +327,27 @@ void SourceManager::FindLinesMatchingRegex(FileSpec &file_spec,
                                          match_lines);
 }
 
+SourceManager::File::File(const FileSpec &file_spec,
+                          lldb::DebuggerSP debugger_sp)
+    : m_file_spec_orig(file_spec), m_file_spec(file_spec),
+      m_mod_time(file_spec.GetModificationTime()), m_source_map_mod_id(0),
+      m_data_sp(), m_offsets(), m_debugger_wp(debugger_sp) {
+  CommonInitializer(file_spec, nullptr);
+}
+
 SourceManager::File::File(const FileSpec &file_spec, Target *target)
     : m_file_spec_orig(file_spec), m_file_spec(file_spec),
       m_mod_time(file_spec.GetModificationTime()), m_source_map_mod_id(0),
-      m_data_sp(), m_offsets() {
+      m_data_sp(), m_offsets(),
+      m_debugger_wp(target ? target->GetDebugger().shared_from_this()
+                           : DebuggerSP()) {
+  CommonInitializer(file_spec, target);
+}
+
+SourceManager::File::~File() {}
+
+void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
+                                            Target *target) {
   if (!m_mod_time.IsValid()) {
     if (target) {
       m_source_map_mod_id = target->GetSourcePathMap().GetModificationID();
@@ -336,8 +408,6 @@ SourceManager::File::File(const FileSpec &file_spec, Target *target)
   if (m_mod_time.IsValid())
     m_data_sp = m_file_spec.ReadFileContents();
 }
-
-SourceManager::File::~File() {}
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
   if (line == 0)
@@ -418,10 +488,14 @@ void SourceManager::File::UpdateIfNeeded() {
   }
 }
 
-size_t SourceManager::File::DisplaySourceLines(uint32_t line,
+size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
                                                uint32_t context_before,
                                                uint32_t context_after,
                                                Stream *s) {
+  // Nothing to write if there's no stream.
+  if (!s)
+    return 0;
+
   // Sanity check m_data_sp before proceeding.
   if (!m_data_sp)
     return 0;
@@ -440,7 +514,61 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line,
     if (start_line_offset < end_line_offset) {
       size_t count = end_line_offset - start_line_offset;
       const uint8_t *cstr = m_data_sp->GetBytes() + start_line_offset;
-      bytes_written = s->Write(cstr, count);
+
+      bool displayed_line = false;
+
+      if (column && (column < count)) {
+        auto debugger_sp = m_debugger_wp.lock();
+        if (should_show_stop_column_with_ansi(debugger_sp) && debugger_sp) {
+          // Check if we have any ANSI codes with which to mark this column.
+          // If not, no need to do this work.
+          auto ansi_prefix_entry = debugger_sp->GetStopShowColumnAnsiPrefix();
+          auto ansi_suffix_entry = debugger_sp->GetStopShowColumnAnsiSuffix();
+
+          // We only bother breaking up the line to format the marked column if
+          // there is any marking specified on both sides of the marked column.
+          // In ANSI-terminal-sequence land, there must be a post if there is a
+          // pre format, and vice versa.
+          if (ansi_prefix_entry && ansi_suffix_entry) {
+            // Mark the current column with the desired escape sequence for
+            // formatting the column (e.g. underline, inverse, etc.)
+
+            // First print the part before the column to mark.
+            bytes_written = s->Write(cstr, column - 1);
+
+            // Write the pre escape sequence.
+            const SymbolContext *sc = nullptr;
+            const ExecutionContext *exe_ctx = nullptr;
+            const Address addr = LLDB_INVALID_ADDRESS;
+            ValueObject *valobj = nullptr;
+            const bool function_changed = false;
+            const bool initial_function = false;
+
+            FormatEntity::Format(*ansi_prefix_entry, *s, sc, exe_ctx, &addr,
+                                 valobj, function_changed, initial_function);
+
+            // Write the marked column.
+            bytes_written += s->Write(cstr + column - 1, 1);
+
+            // Write the post escape sequence.
+            FormatEntity::Format(*ansi_suffix_entry, *s, sc, exe_ctx, &addr,
+                                 valobj, function_changed, initial_function);
+
+            // And finish up with the rest of the line.
+            bytes_written += s->Write(cstr + column, count - column);
+
+            // Keep track of the fact that we just wrote the line.
+            displayed_line = true;
+          }
+        }
+      }
+
+      // If we didn't end up displaying the line with ANSI codes for whatever
+      // reason, display it now sans codes.
+      if (!displayed_line)
+        bytes_written = s->Write(cstr, count);
+
+      // Ensure we get an end of line character one way or another.
       if (!is_newline_char(cstr[count - 1]))
         bytes_written += s->EOL();
     }
@@ -464,7 +592,7 @@ void SourceManager::File::FindLinesMatchingRegex(
     std::string buffer;
     if (!GetLine(line_no, buffer))
       break;
-    if (regex.Execute(buffer.c_str())) {
+    if (regex.Execute(buffer)) {
       match_lines.push_back(line_no);
     }
   }

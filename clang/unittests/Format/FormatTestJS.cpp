@@ -147,6 +147,21 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("x = interface instanceof y;");
 }
 
+TEST_F(FormatTestJS, ReservedWordsMethods) {
+  verifyFormat(
+      "class X {\n"
+      "  delete() {\n"
+      "    x();\n"
+      "  }\n"
+      "  interface() {\n"
+      "    x();\n"
+      "  }\n"
+      "  let() {\n"
+      "    x();\n"
+      "  }\n"
+      "}\n");
+}
+
 TEST_F(FormatTestJS, CppKeywords) {
   // Make sure we don't mess stuff up because of C++ keywords.
   verifyFormat("return operator && (aa);");

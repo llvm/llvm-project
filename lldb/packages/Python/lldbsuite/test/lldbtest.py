@@ -228,6 +228,10 @@ def line_number(filename, string_to_match):
         "Unable to find '%s' within file %s" %
         (string_to_match, filename))
 
+def get_line(filename, line_number):
+    """Return the text of the line at the 1-based line number."""
+    with io.open(filename, mode='r', encoding="utf-8") as f:
+        return f.readlines()[line_number - 1]
 
 def pointer_size():
     """Return the pointer size of the host system."""

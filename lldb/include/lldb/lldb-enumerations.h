@@ -462,6 +462,13 @@ enum DynamicValueType {
   eDynamicDontRunTarget = 2
 };
 
+enum StopShowColumn {
+  eStopShowColumnAnsiOrCaret = 0,
+  eStopShowColumnAnsi = 1,
+  eStopShowColumnCaret = 2,
+  eStopShowColumnNone = 3
+};
+
 enum AccessType {
   eAccessNone,
   eAccessPublic,

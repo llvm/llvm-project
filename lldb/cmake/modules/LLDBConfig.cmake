@@ -299,6 +299,11 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   find_library(SECURITY_LIBRARY Security)
   find_library(DEBUG_SYMBOLS_LIBRARY DebugSymbols PATHS "/System/Library/PrivateFrameworks")
 
+  set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Output directory for LLDB.framework")
+  set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
+  set(LLDB_FRAMEWORK_RESOURCE_DIR
+    LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources)
+
   add_definitions( -DLIBXML2_DEFINED )
   list(APPEND system_libs xml2 ${CURSES_LIBRARIES})
   list(APPEND system_libs ${CARBON_LIBRARY} ${FOUNDATION_LIBRARY}

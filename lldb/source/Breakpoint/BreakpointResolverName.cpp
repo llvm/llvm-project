@@ -35,7 +35,7 @@ BreakpointResolverName::BreakpointResolverName(
       m_class_name(), m_regex(), m_match_type(type), m_language(language),
       m_skip_prologue(skip_prologue) {
   if (m_match_type == Breakpoint::Regexp) {
-    if (!m_regex.Compile(name_cstr)) {
+    if (!m_regex.Compile(llvm::StringRef::withNullAsEmpty(name_cstr))) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
       if (log)
@@ -126,7 +126,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_text);
   if (success) {
-    RegularExpression regex(regex_text.c_str());
+    RegularExpression regex(regex_text);
     return new BreakpointResolverName(bkpt, regex, language, offset,
                                       skip_prologue);
   } else {
@@ -395,7 +395,7 @@ Searcher::Depth BreakpointResolverName::GetDepth() {
 
 void BreakpointResolverName::GetDescription(Stream *s) {
   if (m_match_type == Breakpoint::Regexp)
-    s->Printf("regex = '%s'", m_regex.GetText());
+    s->Printf("regex = '%s'", m_regex.GetText().str().c_str());
   else {
     size_t num_names = m_lookups.size();
     if (num_names == 1)

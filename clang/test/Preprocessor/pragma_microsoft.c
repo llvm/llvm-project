@@ -178,3 +178,15 @@ void g() {}
 #pragma intrinsic(memset) // no-warning
 #undef __INTRIN_H
 #pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-pragma-intrinsic"
+#pragma intrinsic(asdf) // no-warning
+#pragma clang diagnostic pop
+#pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-pragmas"
+#pragma intrinsic(asdf) // no-warning
+#pragma clang diagnostic pop
+#pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}

@@ -2125,6 +2125,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(tok::star) &&
         Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
       return false;
+    // JS methods can use some keywords as names (e.g. `delete()`).
+    if (Right.is(tok::l_paren) && Line.MustBeDeclaration &&
+        Left.Tok.getIdentifierInfo())
+      return false;
     if (Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
                      Keywords.kw_of, tok::kw_const) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))

@@ -140,6 +140,24 @@ OptionEnumValueElement g_language_enumerators[] = {
 // {${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\n}{${function.changed}\n{${module.file.basename}`}{${function.name-without-args}}:\n}{${current-pc-arrow}
 // }{${addr-file-or-load}}:
 
+#define DEFAULT_STOP_SHOW_COLUMN_ANSI_PREFIX "${ansi.underline}"
+#define DEFAULT_STOP_SHOW_COLUMN_ANSI_SUFFIX "${ansi.normal}"
+
+static OptionEnumValueElement s_stop_show_column_values[] = {
+    {eStopShowColumnAnsiOrCaret, "ansi-or-caret",
+     "Highlight the stop column with ANSI terminal codes when color/ANSI mode "
+     "is enabled; otherwise, fall back to using a text-only caret (^) as if "
+     "\"caret-only\" mode was selected."},
+    {eStopShowColumnAnsi, "ansi", "Highlight the stop column with ANSI "
+                                  "terminal codes when running LLDB with "
+                                  "color/ANSI enabled."},
+    {eStopShowColumnCaret, "caret",
+     "Highlight the stop column with a caret character (^) underneath the stop "
+     "column. This method introduces a new line in source listings that "
+     "display thread stop locations."},
+    {eStopShowColumnNone, "none", "Do not highlight the stop column."},
+    {0, nullptr, nullptr}};
+
 static PropertyDefinition g_properties[] = {
     {"auto-confirm", OptionValue::eTypeBoolean, true, false, nullptr, nullptr,
      "If true all confirmation prompts will receive their default reply."},
@@ -173,6 +191,20 @@ static PropertyDefinition g_properties[] = {
     {"stop-line-count-before", OptionValue::eTypeSInt64, true, 3, nullptr,
      nullptr, "The number of sources lines to display that come before the "
               "current source line when displaying a stopped context."},
+    {"stop-show-column", OptionValue::eTypeEnum, false,
+     eStopShowColumnAnsiOrCaret, nullptr, s_stop_show_column_values,
+     "If true, LLDB will use the column information from the debug info to "
+     "mark the current position when displaying a stopped context."},
+    {"stop-show-column-ansi-prefix", OptionValue::eTypeFormatEntity, true, 0,
+     DEFAULT_STOP_SHOW_COLUMN_ANSI_PREFIX, nullptr,
+     "When displaying the column marker in a color-enabled (i.e. ANSI) "
+     "terminal, use the ANSI terminal code specified in this format at the "
+     "immediately before the column to be marked."},
+    {"stop-show-column-ansi-suffix", OptionValue::eTypeFormatEntity, true, 0,
+     DEFAULT_STOP_SHOW_COLUMN_ANSI_SUFFIX, nullptr,
+     "When displaying the column marker in a color-enabled (i.e. ANSI) "
+     "terminal, use the ANSI terminal code specified in this format "
+     "immediately after the column to be marked."},
     {"term-width", OptionValue::eTypeSInt64, true, 80, nullptr, nullptr,
      "The maximum number of columns to use for displaying text."},
     {"thread-format", OptionValue::eTypeFormatEntity, true, 0,
@@ -210,6 +242,9 @@ enum {
   ePropertyStopDisassemblyDisplay,
   ePropertyStopLineCountAfter,
   ePropertyStopLineCountBefore,
+  ePropertyStopShowColumn,
+  ePropertyStopShowColumnAnsiPrefix,
+  ePropertyStopShowColumnAnsiSuffix,
   ePropertyTerminalWidth,
   ePropertyThreadFormat,
   ePropertyUseExternalEditor,
@@ -369,6 +404,22 @@ bool Debugger::SetUseColor(bool b) {
   bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
   SetPrompt(GetPrompt());
   return ret;
+}
+
+StopShowColumn Debugger::GetStopShowColumn() const {
+  const uint32_t idx = ePropertyStopShowColumn;
+  return (lldb::StopShowColumn)m_collection_sp->GetPropertyAtIndexAsEnumeration(
+      nullptr, idx, g_properties[idx].default_uint_value);
+}
+
+const FormatEntity::Entry *Debugger::GetStopShowColumnAnsiPrefix() const {
+  const uint32_t idx = ePropertyStopShowColumnAnsiPrefix;
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+}
+
+const FormatEntity::Entry *Debugger::GetStopShowColumnAnsiSuffix() const {
+  const uint32_t idx = ePropertyStopShowColumnAnsiSuffix;
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
 }
 
 uint32_t Debugger::GetStopSourceLineCount(bool before) const {

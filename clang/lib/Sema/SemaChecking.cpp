@@ -4305,9 +4305,9 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
           goto tryAgain;
         }
       }
-
-      return SLCT_NotALiteral;
     }
+
+    return SLCT_NotALiteral;
   }
   case Stmt::UnaryOperatorClass: {
     const UnaryOperator *UnaOp = cast<UnaryOperator>(E);

@@ -529,7 +529,7 @@ protected:
     case eSetTypeFunctionRegexp: // Breakpoint by regular expression function
                                  // name
       {
-        RegularExpression regexp(m_options.m_func_regexp.c_str());
+        RegularExpression regexp(m_options.m_func_regexp);
         if (!regexp.IsValid()) {
           char err_str[1024];
           regexp.GetErrorAsCString(err_str, sizeof(err_str));
@@ -564,7 +564,7 @@ protected:
         }
       }
 
-      RegularExpression regexp(m_options.m_source_text_regexp.c_str());
+      RegularExpression regexp(m_options.m_source_text_regexp);
       if (!regexp.IsValid()) {
         char err_str[1024];
         regexp.GetErrorAsCString(err_str, sizeof(err_str));

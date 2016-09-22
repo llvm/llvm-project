@@ -238,6 +238,12 @@ public:
 
   bool SetUseColor(bool use_color);
 
+  lldb::StopShowColumn GetStopShowColumn() const;
+
+  const FormatEntity::Entry *GetStopShowColumnAnsiPrefix() const;
+
+  const FormatEntity::Entry *GetStopShowColumnAnsiSuffix() const;
+
   uint32_t GetStopSourceLineCount(bool before) const;
 
   StopDisassemblyType GetStopDisassemblyDisplay() const;

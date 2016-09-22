@@ -404,11 +404,11 @@ GDBRemoteCommunication::WaitForPacketWithTimeoutMicroSecondsNoLock(
             std::string regex_str = "^";
             regex_str += echo_packet;
             regex_str += "$";
-            response_regex.Compile(regex_str.c_str());
+            response_regex.Compile(regex_str);
           } else {
             echo_packet_len =
                 ::snprintf(echo_packet, sizeof(echo_packet), "qC");
-            response_regex.Compile("^QC[0-9A-Fa-f]+$");
+            response_regex.Compile(llvm::StringRef("^QC[0-9A-Fa-f]+$"));
           }
 
           PacketResult echo_packet_result =
@@ -422,8 +422,7 @@ GDBRemoteCommunication::WaitForPacketWithTimeoutMicroSecondsNoLock(
                   echo_response, timeout_usec, false);
               if (echo_packet_result == PacketResult::Success) {
                 ++successful_responses;
-                if (response_regex.Execute(
-                        echo_response.GetStringRef().c_str())) {
+                if (response_regex.Execute(echo_response.GetStringRef())) {
                   sync_success = true;
                   break;
                 } else if (successful_responses == 1) {
@@ -1110,7 +1109,6 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
 // Create a temporary file to get the stdout/stderr and redirect the
 // output of the command into this file. We will later read this file
 // if all goes well and fill the data into "command_output_ptr"
-
 #if defined(__APPLE__)
         // Binding to port zero, we need to figure out what port it ends up
         // using using a named pipe...
@@ -1124,8 +1122,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
           return error;
         }
         debugserver_args.AppendArgument(llvm::StringRef("--named-pipe"));
-        debugserver_args.AppendArgument(
-            llvm::StringRef(named_pipe_path.c_str()));
+        debugserver_args.AppendArgument(named_pipe_path);
 #else
         // Binding to port zero, we need to figure out what port it ends up
         // using using an unnamed pipe...
