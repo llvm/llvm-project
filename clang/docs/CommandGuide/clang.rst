@@ -333,7 +333,7 @@ Code Generation Options
   The default for :option:`-flto` is "full", in which the
   LLVM bitcode is suitable for monolithic Link Time Optimization (LTO), where
   the linker merges all such modules into a single combined module for
-  optimization. With :option:`-flto=thin`, :doc:`ThinLTO <../ThinLTO>`
+  optimization. With "thin", :doc:`ThinLTO <../ThinLTO>`
   compilation is invoked instead.
 
 Driver Options
