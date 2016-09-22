@@ -279,13 +279,35 @@ struct ErrorODRViolation : ErrorBase {
 };
 
 struct ErrorInvalidPointerPair : ErrorBase {
-  uptr pc, bp, sp, p1, p2;
+  uptr pc, bp, sp;
+  AddressDescription addr1_description;
+  AddressDescription addr2_description;
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
   // constructor
   ErrorInvalidPointerPair() = default;
-  ErrorInvalidPointerPair(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr p1_,
-                          uptr p2_)
-      : ErrorBase(tid), pc(pc_), bp(bp_), sp(sp_), p1(p1_), p2(p2_) {}
+  ErrorInvalidPointerPair(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr p1,
+                          uptr p2)
+      : ErrorBase(tid),
+        pc(pc_),
+        bp(bp_),
+        sp(sp_),
+        addr1_description(p1, 1, /*shouldLockThreadRegistry=*/false),
+        addr2_description(p2, 1, /*shouldLockThreadRegistry=*/false) {}
+  void Print();
+};
+
+struct ErrorGeneric : ErrorBase {
+  AddressDescription addr_description;
+  uptr pc, bp, sp;
+  uptr access_size;
+  const char *bug_descr;
+  bool is_write;
+  u8 shadow_val;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorGeneric() = default;
+  ErrorGeneric(u32 tid, uptr addr, uptr pc_, uptr bp_, uptr sp_, bool is_write_,
+               uptr access_size_);
   void Print();
 };
 
@@ -303,7 +325,8 @@ struct ErrorInvalidPointerPair : ErrorBase {
   macro(StringFunctionSizeOverflow)             \
   macro(BadParamsToAnnotateContiguousContainer) \
   macro(ODRViolation)                           \
-  macro(InvalidPointerPair)
+  macro(InvalidPointerPair)                     \
+  macro(Generic)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

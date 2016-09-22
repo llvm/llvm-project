@@ -5,9 +5,6 @@
 // FIXME: We currently emit the wrong debug info under devirtualization.
 // UNSUPPORTED: devirt
 
-// FIXME: Crashes LLD during LTO for unknown reasons.
-// XFAIL: win32
-
 struct ABase {};
 
 struct A : ABase {
