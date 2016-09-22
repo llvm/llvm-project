@@ -357,11 +357,14 @@ static void assignSectionSymbol(SymbolAssignment *Cmd,
   Body->Value = Cmd->Expression(Sec->getVA() + Off);
 }
 
+template <class ELFT> static bool isTbss(OutputSectionBase<ELFT> *Sec) {
+  return (Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS;
+}
+
 template <class ELFT> void LinkerScript<ELFT>::output(InputSection<ELFT> *S) {
   if (!AlreadyOutputIS.insert(S).second)
     return;
-  bool IsTbss =
-      (CurOutSec->getFlags() & SHF_TLS) && CurOutSec->getType() == SHT_NOBITS;
+  bool IsTbss = isTbss(CurOutSec);
 
   uintX_t Pos = IsTbss ? Dot + ThreadBssOffset : Dot;
   Pos = alignTo(Pos, S->Alignment);
@@ -373,7 +376,9 @@ template <class ELFT> void LinkerScript<ELFT>::output(InputSection<ELFT> *S) {
   // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
   CurOutSec->setSize(Pos - CurOutSec->getVA());
 
-  if (!IsTbss)
+  if (IsTbss)
+    ThreadBssOffset = Pos - Dot;
+  else
     Dot = Pos;
 }
 
@@ -396,7 +401,7 @@ void LinkerScript<ELFT>::switchTo(OutputSectionBase<ELFT> *Sec) {
   CurOutSec = Sec;
 
   Dot = alignTo(Dot, CurOutSec->getAlignment());
-  CurOutSec->setVA(Dot);
+  CurOutSec->setVA(isTbss(CurOutSec) ? Dot + ThreadBssOffset : Dot);
 }
 
 template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {

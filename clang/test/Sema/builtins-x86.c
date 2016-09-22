@@ -27,11 +27,11 @@ __m128d test__builtin_ia32_cmpsd(__m128d __a, __m128d __b) {
 }
 
 __mmask16 test__builtin_ia32_cmpps512_mask(__m512d __a, __m512d __b) {
-  __builtin_ia32_cmpps512_mask(__a, __b, 32, -1, 0); // expected-error {{argument should be a value from 0 to 31}}
+  __builtin_ia32_cmpps512_mask(__a, __b, 32, -1, 4); // expected-error {{argument should be a value from 0 to 31}}
 }
 
 __mmask8 test__builtin_ia32_cmppd512_mask(__m512d __a, __m512d __b) {
-  __builtin_ia32_cmppd512_mask(__a, __b, 32, -1, 0); // expected-error {{argument should be a value from 0 to 31}}
+  __builtin_ia32_cmppd512_mask(__a, __b, 32, -1, 4); // expected-error {{argument should be a value from 0 to 31}}
 }
 
 __m128i test__builtin_ia32_vpcomub(__m128i __a, __m128i __b) {

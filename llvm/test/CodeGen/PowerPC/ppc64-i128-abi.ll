@@ -1,9 +1,32 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-LE
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-BE
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-BE-NOVSX
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-LE-NOVSX
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-LE
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-BE
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-BE-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-LE-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr9 < %s | FileCheck %s -check-prefix=CHECK-P9 \
+; RUN:   --implicit-check-not xxswapd
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr9 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX \
+; RUN:   --implicit-check-not xxswapd
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr9 -mattr=-power9-vector < %s | FileCheck %s \
+; RUN:   -check-prefix=CHECK-LE
 
 @x = common global <1 x i128> zeroinitializer, align 16
 @y = common global <1 x i128> zeroinitializer, align 16
@@ -30,6 +53,11 @@ define <1 x i128> @v1i128_increment_by_one(<1 x i128> %a) nounwind {
 ; CHECK-LE: xxswapd 35, [[VAL]]
 ; CHECK-LE: vadduqm 2, 2, 3
 ; CHECK-LE: blr
+
+; CHECK-P9-LABEL: @v1i128_increment_by_one
+; CHECK-P9: lxvx
+; CHECK-P9: vadduqm 2, 2, 3
+; CHECK-P9: blr
 
 ; CHECK-BE-LABEL: @v1i128_increment_by_one
 ; CHECK-BE: lxvd2x 35, {{[0-9]+}}, {{[0-9]+}}
@@ -171,6 +199,11 @@ define <1 x i128> @call_v1i128_increment_by_one() nounwind {
 ; CHECK-LE: bl v1i128_increment_by_one
 ; CHECK-LE: blr
 
+; CHECK-P9-LABEL: @call_v1i128_increment_by_one
+; CHECK-P9: lxvx
+; CHECK-P9: bl v1i128_increment_by_one
+; CHECK-P9: blr
+
 ; CHECK-BE-LABEL: @call_v1i128_increment_by_one
 ; CHECK-BE: lxvw4x 34, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-BE-NOT: xxswapd 34, {{[0-9]+}}
@@ -197,6 +230,12 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-LE-DAG: xxswapd 35, [[PARAM2]]
 ; CHECK-LE: bl v1i128_increment_by_val
 ; CHECK-LE: blr
+
+; CHECK-P9-LABEL: @call_v1i128_increment_by_val
+; CHECK-P9-DAG: lxvx 34
+; CHECK-P9-DAG: lxvx 35
+; CHECK-P9: bl v1i128_increment_by_val
+; CHECK-P9: blr
 
 ; CHECK-BE-LABEL: @call_v1i128_increment_by_val
 

@@ -1,5 +1,17 @@
-; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -disable-ppc-vsx-swap-removal -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck -check-prefix=NOOPTSWAP %s
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -disable-ppc-vsx-swap-removal \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck \
+; RUN:   -check-prefix=NOOPTSWAP %s
+
+; RUN: llc -O3 -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:  -verify-machineinstrs -ppc-vsr-nums-as-vr < %s | FileCheck \
+; RUN:  -check-prefix=CHECK-P9 --implicit-check-not xxswapd %s
+
+; RUN: llc -O3 -mcpu=pwr9 -disable-ppc-vsx-swap-removal -mattr=-power9-vector \
+; RUN:  -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s \
+; RUN:  | FileCheck -check-prefix=NOOPTSWAP %s
 
 ; This test was generated from the following source:
 ;
@@ -98,6 +110,7 @@ for.end:
 ; CHECK-LABEL: @foo
 ; CHECK-NOT: xxpermdi
 ; CHECK-NOT: xxswapd
+; CHECK-P9-NOT: xxpermdi
 
 ; CHECK: lxvd2x
 ; CHECK: lxvd2x
@@ -126,7 +139,6 @@ for.end:
 ; CHECK-DAG: vadduwm
 ; CHECK: vmuluwm
 ; CHECK: stxvd2x
-
 
 ; NOOPTSWAP-LABEL: @foo
 
@@ -144,4 +156,30 @@ for.end:
 ; NOOPTSWAP-DAG: stxvd2x
 ; NOOPTSWAP-DAG: stxvd2x
 ; NOOPTSWAP: stxvd2x
+
+; CHECK-P9-LABEL: @foo
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9: lxvx
+; CHECK-P9-DAG: lxvx
+; CHECK-P9-DAG: lxvx
+; CHECK-P9-DAG: lxvx
+; CHECK-P9-DAG: vadduwm
+; CHECK-P9-DAG: vadduwm
+; CHECK-P9-DAG: vadduwm
+; CHECK-P9-DAG: vadduwm
+; CHECK-P9: vmuluwm
+; CHECK-P9: vmuluwm
+; CHECK-P9: vmuluwm
+; CHECK-P9-DAG: vmuluwm
+; CHECK-P9-DAG: stxvx
+; CHECK-P9: stxvx
+; CHECK-P9: stxvx
+; CHECK-P9: stxvx
 

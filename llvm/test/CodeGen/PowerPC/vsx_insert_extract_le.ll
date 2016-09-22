@@ -1,4 +1,12 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mattr=-power9-vector \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s \
+; RUN:   --check-prefix=CHECK-P9 --implicit-check-not xxswapd
 
 define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
   %v = load <2 x double>, <2 x double>* %p1
@@ -12,6 +20,12 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 ; CHECK: xxswapd 0, 0
 ; CHECK: xxspltd 1, 1, 0
 ; CHECK: xxpermdi 34, 0, 1, 1
+
+; CHECK-P9-LABEL: testi0
+; CHECK-P9: lxsdx 0, 0, 4
+; CHECK-P9: lxvx 1, 0, 3
+; CHECK-P9: xxspltd 0, 0, 0
+; CHECK-P9: xxpermdi 34, 1, 0, 1
 }
 
 define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
@@ -26,6 +40,12 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 ; CHECK: xxswapd 0, 0
 ; CHECK: xxspltd 1, 1, 0
 ; CHECK: xxmrgld 34, 1, 0
+
+; CHECK-P9-LABEL: testi1
+; CHECK-P9: lxsdx 0, 0, 4
+; CHECK-P9: lxvx 1, 0, 3
+; CHECK-P9: xxspltd 0, 0, 0
+; CHECK-P9: xxmrgld 34, 0, 1
 }
 
 define double @teste0(<2 x double>* %p1) {
@@ -35,6 +55,9 @@ define double @teste0(<2 x double>* %p1) {
 
 ; CHECK-LABEL: teste0
 ; CHECK: lxvd2x 1, 0, 3
+
+; CHECK-P9-LABEL: teste0
+; CHECK-P9: lxsdx 1, 0, 3
 }
 
 define double @teste1(<2 x double>* %p1) {
@@ -45,4 +68,8 @@ define double @teste1(<2 x double>* %p1) {
 ; CHECK-LABEL: teste1
 ; CHECK: lxvd2x 0, 0, 3
 ; CHECK: xxswapd 1, 0
+
+; CHECK-P9-LABEL: teste1
+; CHECK-P9: li 4, 8
+; CHECK-P9: lxsdx 1, 3, 4
 }

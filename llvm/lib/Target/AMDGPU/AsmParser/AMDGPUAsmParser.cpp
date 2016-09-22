@@ -2734,8 +2734,10 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
 
   if (Prefix == "row_mirror") {
     Int = 0x140;
+    Parser.Lex();
   } else if (Prefix == "row_half_mirror") {
     Int = 0x141;
+    Parser.Lex();
   } else {
     // Check to prevent parseDPPCtrlOps from eating invalid tokens
     if (Prefix != "quad_perm"
@@ -2759,60 +2761,46 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
       Parser.Lex();
       if (getLexer().isNot(AsmToken::LBrac))
         return MatchOperand_ParseFail;
+      Parser.Lex();
 
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Integer))
+      if (getParser().parseAbsoluteExpression(Int) || !(0 <= Int && Int <=3))
         return MatchOperand_ParseFail;
-      Int = getLexer().getTok().getIntVal();
 
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Comma))
-        return MatchOperand_ParseFail;
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Integer))
-        return MatchOperand_ParseFail;
-      Int += (getLexer().getTok().getIntVal() << 2);
+      for (int i = 0; i < 3; ++i) {
+        if (getLexer().isNot(AsmToken::Comma))
+          return MatchOperand_ParseFail;
+        Parser.Lex();
 
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Comma))
-        return MatchOperand_ParseFail;
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Integer))
-        return MatchOperand_ParseFail;
-      Int += (getLexer().getTok().getIntVal() << 4);
+        int64_t Temp;
+        if (getParser().parseAbsoluteExpression(Temp) || !(0 <= Temp && Temp <=3))
+          return MatchOperand_ParseFail;
+        const int shift = i*2 + 2;
+        Int += (Temp << shift);
+      }
 
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Comma))
-        return MatchOperand_ParseFail;
-      Parser.Lex();
-      if (getLexer().isNot(AsmToken::Integer))
-        return MatchOperand_ParseFail;
-      Int += (getLexer().getTok().getIntVal() << 6);
-
-      Parser.Lex();
       if (getLexer().isNot(AsmToken::RBrac))
         return MatchOperand_ParseFail;
+      Parser.Lex();
 
     } else {
       // sel:%d
       Parser.Lex();
-      if (getLexer().isNot(AsmToken::Integer))
+      if (getParser().parseAbsoluteExpression(Int))
         return MatchOperand_ParseFail;
-      Int = getLexer().getTok().getIntVal();
 
-      if (Prefix == "row_shl") {
+      if (Prefix == "row_shl" && 1 <= Int && Int <= 15) {
         Int |= 0x100;
-      } else if (Prefix == "row_shr") {
+      } else if (Prefix == "row_shr" && 1 <= Int && Int <= 15) {
         Int |= 0x110;
-      } else if (Prefix == "row_ror") {
+      } else if (Prefix == "row_ror" && 1 <= Int && Int <= 15) {
         Int |= 0x120;
-      } else if (Prefix == "wave_shl") {
+      } else if (Prefix == "wave_shl" && 1 == Int) {
         Int = 0x130;
-      } else if (Prefix == "wave_rol") {
+      } else if (Prefix == "wave_rol" && 1 == Int) {
         Int = 0x134;
-      } else if (Prefix == "wave_shr") {
+      } else if (Prefix == "wave_shr" && 1 == Int) {
         Int = 0x138;
-      } else if (Prefix == "wave_ror") {
+      } else if (Prefix == "wave_ror" && 1 == Int) {
         Int = 0x13C;
       } else if (Prefix == "row_bcast") {
         if (Int == 15) {
@@ -2827,7 +2815,6 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
       }
     }
   }
-  Parser.Lex(); // eat last token
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, AMDGPUOperand::ImmTyDppCtrl));
   return MatchOperand_Success;

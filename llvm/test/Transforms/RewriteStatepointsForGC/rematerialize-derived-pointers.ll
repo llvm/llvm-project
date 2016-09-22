@@ -285,7 +285,7 @@ merge:
   ; CHECK: %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint
   ; CHECK: %basephi.base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 7) ; (%basephi.base, %basephi.base)
   ; CHECK: %basephi.base.relocated.casted = bitcast i8 addrspace(1)* %basephi.base.relocated to i32 addrspace(1)*
-  ; CHECK: %ptr.gep.remat = getelementptr i32, i32 addrspace(1)* %basephi, i32 15
+  ; CHECK: %ptr.gep.remat = getelementptr i32, i32 addrspace(1)* %basephi.base.relocated.casted, i32 15
   ; CHECK: call void @use_obj32(i32 addrspace(1)* %ptr.gep.remat)
 
 
@@ -294,5 +294,37 @@ merge:
   %ptr.gep = getelementptr i32, i32 addrspace(1)* %basephi, i32 15
   call void @do_safepoint() ["deopt"() ]
   call void @use_obj32(i32 addrspace(1)* %ptr.gep)
+  ret void
+}
+
+
+define void @test_intersecting_chains_with_phi(i1 %cond) gc "statepoint-example" {
+; CHECK-LABEL: test_intersecting_chains_with_phi
+entry:
+  %base1 = call i32 addrspace(1)* @new_instance()
+  %base2 = call i32 addrspace(1)* @new_instance()
+  br i1 %cond, label %here, label %there
+
+here:
+  br label %merge
+
+there:
+  br label %merge
+
+merge:
+  %basephi = phi i32 addrspace(1)* [ %base1, %here ], [ %base2, %there ]
+  %ptr.gep = getelementptr i32, i32 addrspace(1)* %basephi, i32 15
+  %ptr.cast = bitcast i32 addrspace(1)* %ptr.gep to i64 addrspace(1)*
+  %ptr.cast2 = bitcast i32 addrspace(1)* %ptr.gep to i16 addrspace(1)*
+  call void @do_safepoint() [ "deopt"() ]
+  ; CHECK: statepoint
+  ; CHECK: %ptr.gep.remat1 = getelementptr i32, i32 addrspace(1)* %basephi.base.relocated.casted, i32 15
+  ; CHECK: %ptr.cast.remat = bitcast i32 addrspace(1)* %ptr.gep.remat1 to i64 addrspace(1)*
+  ; CHECK: %ptr.gep.remat = getelementptr i32, i32 addrspace(1)* %basephi.base.relocated.casted, i32 15
+  ; CHECK: %ptr.cast2.remat = bitcast i32 addrspace(1)* %ptr.gep.remat to i16 addrspace(1)*
+  ; CHECK: call void @use_obj64(i64 addrspace(1)* %ptr.cast.remat)
+  ; CHECK: call void @use_obj16(i16 addrspace(1)* %ptr.cast2.remat)
+  call void @use_obj64(i64 addrspace(1)* %ptr.cast)
+  call void @use_obj16(i16 addrspace(1)* %ptr.cast2)
   ret void
 }

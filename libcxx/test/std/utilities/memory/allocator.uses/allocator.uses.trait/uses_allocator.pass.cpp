@@ -42,9 +42,9 @@ template <bool Expected, class T, class A>
 void
 test()
 {
-    static_assert(std::uses_allocator<T, A>::value == Expected, "");
+    static_assert((std::uses_allocator<T, A>::value == Expected), "");
 #if TEST_STD_VER > 14
-    static_assert(std::uses_allocator_v<T, A> == Expected, "");
+    static_assert((std::uses_allocator_v<T, A> == Expected), "");
 #endif
 }
 

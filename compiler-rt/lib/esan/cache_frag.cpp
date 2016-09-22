@@ -94,8 +94,8 @@ static void reportStructCounter(StructHashMap::Handle &Handle) {
     type = "struct";
     start = &Struct->StructName[7];
   }
-  // Remove the suffixes with '#' during print.
-  end = strchr(start, '#');
+  // Remove the suffixes with '$' during print.
+  end = strchr(start, '$');
   CHECK(end != nullptr);
   Report("  %s %.*s\n", type, end - start, start);
   Report("   size = %u, count = %llu, ratio = %llu, array access = %llu\n",
