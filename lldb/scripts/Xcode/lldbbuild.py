@@ -46,6 +46,9 @@ def expected_package_build_path():
 
 
 def architecture():
+    rc_project_name = os.environ.get('RC_ProjectName')
+    if rc_project_name:
+      if rc_project_name == 'lldb_host': return 'macosx'
     platform_name = os.environ.get('RC_PLATFORM_NAME')
     if not platform_name:
         platform_name = os.environ.get('PLATFORM_NAME')
