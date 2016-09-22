@@ -679,11 +679,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
     Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
 
-    // Get the instance type:
-    if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                        lldb::eTypeIsMetatype))
-      imported_self_type = imported_self_type.GetInstanceType();
-
     // If 'self' is the Self archetype, resolve it to the actual metatype it is
     if (SwiftASTContext::IsSelfArchetypeType(imported_self_type)) {
       SwiftLanguageRuntime *swift_runtime =
@@ -705,6 +700,14 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         }
       }
     }
+      
+    // Get the instance type:
+    if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
+                                        lldb::eTypeIsMetatype)) {
+      imported_self_type = imported_self_type.GetInstanceType();
+      imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
+    }
+
 
     swift::Type object_type =
         swift::Type((swift::TypeBase *)(imported_self_type.GetOpaqueQualType()))
