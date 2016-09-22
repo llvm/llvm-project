@@ -68,6 +68,8 @@ namespace llvm {
     /// Construct an empty string ref.
     /*implicit*/ StringRef() : Data(nullptr), Length(0) {}
 
+    StringRef(std::nullptr_t) = delete;
+
     /// Construct a string ref from a cstring.
     /*implicit*/ StringRef(const char *Str)
       : Data(Str) {

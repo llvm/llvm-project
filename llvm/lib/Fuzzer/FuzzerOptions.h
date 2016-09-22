@@ -45,6 +45,7 @@ struct FuzzingOptions {
   bool OutputCSV = false;
   bool PrintNewCovPcs = false;
   bool PrintFinalStats = false;
+  bool PrintCorpusStats = false;
   bool PrintCoverage = false;
   bool DetectLeaks = true;
   bool PruneCorpus = true;

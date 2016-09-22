@@ -419,7 +419,7 @@ llvm::StringRef Args::ReplaceArgumentAtIndex(size_t idx,
     m_args_quote_char[idx] = quote_char;
     return GetArgumentAtIndex(idx);
   }
-  return nullptr;
+  return llvm::StringRef();
 }
 
 void Args::DeleteArgumentAtIndex(size_t idx) {
@@ -1002,7 +1002,7 @@ bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
 
   // Check each arg to see if it matches the env var name.
   for (size_t i = 0; i < GetArgumentCount(); ++i) {
-    auto arg_value = llvm::StringRef::withNullAsEmpty(GetArgumentAtIndex(0));
+    auto arg_value = llvm::StringRef::withNullAsEmpty(GetArgumentAtIndex(i));
 
     llvm::StringRef name, value;
     std::tie(name, value) = arg_value.split('=');

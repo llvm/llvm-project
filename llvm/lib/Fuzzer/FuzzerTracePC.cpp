@@ -31,7 +31,7 @@ void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
       PCs[Idx] = PC;
       if (TotalCoverageMap.AddValue(Idx)) {
         TotalCoverage++;
-        AddNewPC(PC);
+        AddNewPCID(Idx);
       }
     }
     if (Counter < 128)
@@ -41,7 +41,7 @@ void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
   } else {
     *Guard = 0;
     TotalCoverage++;
-    AddNewPC(PC);
+    AddNewPCID(Idx);
     PCs[Idx] = PC;
   }
 }

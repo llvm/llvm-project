@@ -131,7 +131,7 @@ static OptionDefinition g_options[] = {
      "Tells the debugger to execute this one-line lldb command before any file "
      "provided on the command line has been loaded."},
     {LLDB_3_TO_5, false, "batch", 'b', no_argument, 0, eArgTypeNone,
-     "Tells the debugger to running the commands from -s, -S, -o & -O, and "
+     "Tells the debugger to run the commands from -s, -S, -o & -O, and "
      "then quit.  However if any run command stopped due to a signal or crash, "
      "the debugger will return to the interactive prompt at the place of the "
      "crash."},

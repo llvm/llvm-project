@@ -42,12 +42,12 @@
 #           Idx Name          Size
 # SEC-ORDER: 1 .bss          00000002 {{[0-9a-f]*}} BSS
 # SEC-ORDER: 2 other         00000003 {{[0-9a-f]*}} DATA
-# SEC-ORDER: 3 .data         00000020 {{[0-9a-f]*}} DATA
-# SEC-ORDER: 4 .text         0000000e {{[0-9a-f]*}} TEXT DATA
-# SEC-ORDER: 5 .shstrtab     00000002 {{[0-9a-f]*}}
-# SEC-ORDER: 6 .shstrtab     00000032 {{[0-9a-f]*}}
-# SEC-ORDER: 7 .symtab       00000030 {{[0-9a-f]*}}
-# SEC-ORDER: 8 .strtab       00000008 {{[0-9a-f]*}}
+# SEC-ORDER: 3 .shstrtab     00000002 {{[0-9a-f]*}}
+# SEC-ORDER: 4 .shstrtab     00000032 {{[0-9a-f]*}}
+# SEC-ORDER: 5 .symtab       00000030 {{[0-9a-f]*}}
+# SEC-ORDER: 6 .strtab       00000008 {{[0-9a-f]*}}
+# SEC-ORDER: 7 .data         00000020 {{[0-9a-f]*}} DATA
+# SEC-ORDER: 8 .text         0000000e {{[0-9a-f]*}} TEXT DATA
 
 # .text and .data have swapped names but proper sizes and types.
 # RUN: echo "SECTIONS { \

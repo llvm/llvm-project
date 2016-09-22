@@ -687,3 +687,8 @@ void test_char_pointer_arithmetic(int b) {
   printf(s7 + 3, "");  // expected-warning{{more '%' conversions than data arguments}}
   // expected-note@-2{{format string is defined here}}
 }
+
+void PR30481() {
+  // This caused crashes due to invalid casts.
+  printf(1 > 0); // expected-warning{{format string is not a string literal}} expected-warning{{incompatible integer to pointer conversion}} expected-note@format-strings.c:*{{passing argument to parameter here}} expected-note{{to avoid this}}
+}
