@@ -71,7 +71,16 @@ void MachineIRBuilder::stopRecordingInsertions() {
 //------------------------------------------------------------------------------
 
 MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opcode) {
+  return insertInstr(buildInstrNoInsert(Opcode));
+}
+
+MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
   MachineInstrBuilder MIB = BuildMI(getMF(), DL, getTII().get(Opcode));
+  return MIB;
+}
+
+
+MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
   getMBB().insert(getInsertPt(), MIB);
   if (InsertedInstr)
     InsertedInstr(MIB);

@@ -111,6 +111,16 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildInstr(unsigned Opcode);
 
+  /// Build but don't insert <empty> = \p Opcode <empty>.
+  ///
+  /// \pre setMF, setBasicBlock or setMI  must have been called.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildInstrNoInsert(unsigned Opcode);
+
+  /// Insert an existing instruction at the insertion point.
+  MachineInstrBuilder insertInstr(MachineInstrBuilder MIB);
+
   /// Build and insert \p Res<def> = G_FRAME_INDEX \p Idx
   ///
   /// G_FRAME_INDEX materializes the address of an alloca value or other

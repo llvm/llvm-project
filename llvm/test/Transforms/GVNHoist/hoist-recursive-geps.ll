@@ -8,8 +8,8 @@
 ; CHECK: load
 ; CHECK: load
 ; CHECK: fsub
-; CHECK: fmul
 ; CHECK: fsub
+; CHECK: fmul
 ; CHECK: fmul
 ; CHECK-NOT: fsub
 ; CHECK-NOT: fmul

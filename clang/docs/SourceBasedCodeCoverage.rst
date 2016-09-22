@@ -61,7 +61,7 @@ To compile code with coverage enabled, pass ``-fprofile-instr-generate
     % clang++ -fprofile-instr-generate -fcoverage-mapping foo.cc -o foo
 
 Note that linking together code with and without coverage instrumentation is
-supported: any uninstrumented code simply won't be accounted for.
+supported. Uninstrumented code simply won't be accounted for in reports.
 
 Running the instrumented program
 ================================
@@ -95,27 +95,21 @@ Creating coverage reports
 =========================
 
 Raw profiles have to be **indexed** before they can be used to generate
-coverage reports. This is done using the "merge" tool in ``llvm-profdata``, so
-named because it can combine and index profiles at the same time:
+coverage reports. This is done using the "merge" tool in ``llvm-profdata``
+(which can combine multiple raw profiles and index them at the same time):
 
 .. code-block:: console
 
     # Step 3(a): Index the raw profile.
     % llvm-profdata merge -sparse foo.profraw -o foo.profdata
 
-There are multiple different ways to render coverage reports. One option is to
-generate a line-oriented report:
+There are multiple different ways to render coverage reports. The simplest
+option is to generate a line-oriented report:
 
 .. code-block:: console
 
     # Step 3(b): Create a line-oriented coverage report.
     % llvm-cov show ./foo -instr-profile=foo.profdata
-
-To generate the same report in html with demangling turned on, use:
-
-.. code-block:: console
-
-    % llvm-cov show ./foo -instr-profile=foo.profdata -format html -o report.dir -Xdemangler c++filt -Xdemangler -n
 
 This report includes a summary view as well as dedicated sub-views for
 templated functions and their instantiations. For our example program, we get
@@ -145,8 +139,8 @@ region counts (even in macro expansions):
     |      4|    1|}
     ------------------
 
-It's possible to generate a file-level summary of coverage statistics (instead
-of a line-oriented report) with:
+To generate a file-level summary of coverage statistics instead of a
+line-oriented report, try:
 
 .. code-block:: console
 
@@ -157,6 +151,11 @@ of a line-oriented report) with:
     /tmp/foo.cc             13                 0   100.00%           3                 0   100.00%          13                 0   100.00%
     --------------------------------------------------------------------------------------------------------------------------------------
     TOTAL                   13                 0   100.00%           3                 0   100.00%          13                 0   100.00%
+
+The ``llvm-cov`` tool supports specifying a custom demangler, writing out
+reports in a directory structure, and generating html reports. For the full
+list of options, please refer to the `command guide
+<http://llvm.org/docs/CommandGuide/llvm-cov.html>`_.
 
 A few final notes:
 
@@ -190,7 +189,7 @@ Interpreting reports
 There are four statistics tracked in a coverage summary:
 
 * Function coverage is the percentage of functions which have been executed at
-  least once. A function is treated as having been executed if any of its
+  least once. A function is considered to be executed if any of its
   instantiations are executed.
 
 * Instantiation coverage is the percentage of function instantiations which
@@ -200,13 +199,12 @@ There are four statistics tracked in a coverage summary:
 
 * Line coverage is the percentage of code lines which have been executed at
   least once. Only executable lines within function bodies are considered to be
-  code lines, so e.g coverage for macro definitions in a header might not be
-  included.
+  code lines.
 
 * Region coverage is the percentage of code regions which have been executed at
-  least once. A code region may span multiple lines (e.g a large function with
-  no control flow). However, it's also possible for a single line to contain
-  multiple code regions or even nested code regions (e.g "return x || y && z").
+  least once. A code region may span multiple lines (e.g in a large function
+  body with no control flow). However, it's also possible for a single line to
+  contain multiple code regions (e.g in "return x || y && z").
 
 Of these four statistics, function coverage is usually the least granular while
 region coverage is the most granular. The project-wide totals for each
@@ -224,9 +222,9 @@ Format compatibility guarantees
   These formats are not forwards-compatible: i.e, a tool which uses format
   version X will not be able to understand format version (X+k).
 
-* There is a third format in play: the format of the coverage mappings emitted
-  into instrumented binaries. Tools must retain **backwards** compatibility
-  with these formats. These formats are not forwards-compatible.
+* Tools must also retain **backwards** compatibility with the format of the
+  coverage mappings emitted into instrumented binaries. These formats are not
+  forwards-compatible.
 
 * The JSON coverage export format has a (major, minor, patch) version triple.
   Only a major version increment indicates a backwards-incompatible change. A

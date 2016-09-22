@@ -466,7 +466,7 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
                 [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
 }
 
-template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
+template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
   // It is common practice to use very generic linker scripts. So for any
   // given run some of the output sections in the script will be empty.
   // We could create corresponding empty output sections, but that would
@@ -490,6 +490,31 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
       });
   Opt.Commands.erase(Pos, Opt.Commands.end());
 
+  // If the output section contains only symbol assignments, create a
+  // corresponding output section. The bfd linker seems to only create them if
+  // '.' is assigned to, but creating these section should not have any bad
+  // consequeces and gives us a section to put the symbol in.
+  uintX_t Flags = SHF_ALLOC;
+  uint32_t Type = 0;
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
+    if (!Cmd)
+      continue;
+    std::vector<OutputSectionBase<ELFT> *> Secs =
+        findSections(*Cmd, *OutputSections);
+    if (!Secs.empty()) {
+      Flags = Secs[0]->getFlags();
+      Type = Secs[0]->getType();
+      continue;
+    }
+
+    auto *OutSec = new OutputSection<ELFT>(Cmd->Name, Type, Flags);
+    Out<ELFT>::Pool.emplace_back(OutSec);
+    OutputSections->push_back(OutSec);
+  }
+}
+
+template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
   // Orphan sections are sections present in the input files which
   // are not explicitly placed into the output file by the linker script.
   // We place orphan sections at end of file.
@@ -521,10 +546,7 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
       Opt.Commands.insert(CmdIter,
                           llvm::make_unique<OutputSectionCommand>(Name));
     } else {
-      // If linker script lists alloc/non-alloc sections is the wrong order,
-      // this does a right rotate to bring the desired command in place.
-      auto RPos = llvm::make_reverse_iterator(Pos + 1);
-      std::rotate(RPos, RPos + 1, llvm::make_reverse_iterator(CmdIter));
+      assert(Pos == CmdIter && "Section order doesn't match the linker script");
     }
     ++CmdIndex;
   }
@@ -563,8 +585,7 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
       Sec->setVA(0);
   }
 
-  uintX_t HeaderSize =
-      Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  uintX_t HeaderSize = getHeaderSize();
   if (HeaderSize > MinVA)
     fatal("Not enough space for ELF and program headers");
 
@@ -699,7 +720,7 @@ uint64_t LinkerScript<ELFT>::getOutputSectionAlign(StringRef Name) {
 }
 
 template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
-  return Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  return elf::getHeaderSize<ELFT>();
 }
 
 template <class ELFT> uint64_t LinkerScript<ELFT>::getSymbolValue(StringRef S) {

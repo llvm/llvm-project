@@ -139,6 +139,10 @@ An overview of all the command-line options:
     -enable-check-profile        - 
                                    Enable per-check timing profiles, and print a
                                    report to stderr.
+    -explain-config              - 
+                                   For each enabled check explains, where it is
+                                   enabled, i.e. in clang-tidy binary, command
+                                   line or a specific configuration file.
     -export-fixes=<filename>     - 
                                    YAML file to store suggested fixes in. The
                                    stored fixes can be applied to the input source

@@ -571,7 +571,8 @@ TEST(StringRefTest, getAsInteger) {
 
 
 static const char* BadStrings[] = {
-    "18446744073709551617"  // value just over max
+    ""                      // empty string
+  , "18446744073709551617"  // value just over max
   , "123456789012345678901" // value way too large
   , "4t23v"                 // illegal decimal characters
   , "0x123W56"              // illegal hex characters
@@ -587,6 +588,183 @@ TEST(StringRefTest, getAsUnsignedIntegerBadStrings) {
   for (size_t i = 0; i < array_lengthof(BadStrings); ++i) {
     bool IsBadNumber = StringRef(BadStrings[i]).getAsInteger(0, U64);
     ASSERT_TRUE(IsBadNumber);
+  }
+}
+
+struct ConsumeUnsignedPair {
+  const char *Str;
+  uint64_t Expected;
+  const char *Leftover;
+} ConsumeUnsigned[] = {
+    {"0", 0, ""},
+    {"255", 255, ""},
+    {"256", 256, ""},
+    {"65535", 65535, ""},
+    {"65536", 65536, ""},
+    {"4294967295", 4294967295ULL, ""},
+    {"4294967296", 4294967296ULL, ""},
+    {"255A376", 255, "A376"},
+    {"18446744073709551615", 18446744073709551615ULL, ""},
+    {"18446744073709551615ABC", 18446744073709551615ULL, "ABC"},
+    {"042", 34, ""},
+    {"0x42", 66, ""},
+    {"0x42-0x34", 66, "-0x34"},
+    {"0b101010", 42, ""},
+    {"0429F", 042, "9F"},            // Auto-sensed octal radix, invalid digit
+    {"0x42G12", 0x42, "G12"},        // Auto-sensed hex radix, invalid digit
+    {"0b10101020101", 42, "20101"}}; // Auto-sensed binary radix, invalid digit.
+
+struct ConsumeSignedPair {
+  const char *Str;
+  int64_t Expected;
+  const char *Leftover;
+} ConsumeSigned[] = {
+    {"0", 0, ""},
+    {"-0", 0, ""},
+    {"0-1", 0, "-1"},
+    {"-0-1", 0, "-1"},
+    {"127", 127, ""},
+    {"128", 128, ""},
+    {"127-1", 127, "-1"},
+    {"128-1", 128, "-1"},
+    {"-128", -128, ""},
+    {"-129", -129, ""},
+    {"-128-1", -128, "-1"},
+    {"-129-1", -129, "-1"},
+    {"32767", 32767, ""},
+    {"32768", 32768, ""},
+    {"32767-1", 32767, "-1"},
+    {"32768-1", 32768, "-1"},
+    {"-32768", -32768, ""},
+    {"-32769", -32769, ""},
+    {"-32768-1", -32768, "-1"},
+    {"-32769-1", -32769, "-1"},
+    {"2147483647", 2147483647LL, ""},
+    {"2147483648", 2147483648LL, ""},
+    {"2147483647-1", 2147483647LL, "-1"},
+    {"2147483648-1", 2147483648LL, "-1"},
+    {"-2147483648", -2147483648LL, ""},
+    {"-2147483649", -2147483649LL, ""},
+    {"-2147483648-1", -2147483648LL, "-1"},
+    {"-2147483649-1", -2147483649LL, "-1"},
+    {"-9223372036854775808", -(9223372036854775807LL) - 1, ""},
+    {"-9223372036854775808-1", -(9223372036854775807LL) - 1, "-1"},
+    {"042", 34, ""},
+    {"042-1", 34, "-1"},
+    {"0x42", 66, ""},
+    {"0x42-1", 66, "-1"},
+    {"0b101010", 42, ""},
+    {"0b101010-1", 42, "-1"},
+    {"-042", -34, ""},
+    {"-042-1", -34, "-1"},
+    {"-0x42", -66, ""},
+    {"-0x42-1", -66, "-1"},
+    {"-0b101010", -42, ""},
+    {"-0b101010-1", -42, "-1"}};
+
+TEST(StringRefTest, consumeIntegerUnsigned) {
+  uint8_t U8;
+  uint16_t U16;
+  uint32_t U32;
+  uint64_t U64;
+
+  for (size_t i = 0; i < array_lengthof(ConsumeUnsigned); ++i) {
+    StringRef Str = ConsumeUnsigned[i].Str;
+    bool U8Success = Str.consumeInteger(0, U8);
+    if (static_cast<uint8_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U8Success);
+      EXPECT_EQ(U8, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U8Success);
+    }
+
+    Str = ConsumeUnsigned[i].Str;
+    bool U16Success = Str.consumeInteger(0, U16);
+    if (static_cast<uint16_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U16Success);
+      EXPECT_EQ(U16, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U16Success);
+    }
+
+    Str = ConsumeUnsigned[i].Str;
+    bool U32Success = Str.consumeInteger(0, U32);
+    if (static_cast<uint32_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U32Success);
+      EXPECT_EQ(U32, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U32Success);
+    }
+
+    Str = ConsumeUnsigned[i].Str;
+    bool U64Success = Str.consumeInteger(0, U64);
+    if (static_cast<uint64_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U64Success);
+      EXPECT_EQ(U64, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U64Success);
+    }
+  }
+}
+
+TEST(StringRefTest, consumeIntegerSigned) {
+  int8_t S8;
+  int16_t S16;
+  int32_t S32;
+  int64_t S64;
+
+  for (size_t i = 0; i < array_lengthof(ConsumeSigned); ++i) {
+    StringRef Str = ConsumeSigned[i].Str;
+    bool S8Success = Str.consumeInteger(0, S8);
+    if (static_cast<int8_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S8Success);
+      EXPECT_EQ(S8, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S8Success);
+    }
+
+    Str = ConsumeSigned[i].Str;
+    bool S16Success = Str.consumeInteger(0, S16);
+    if (static_cast<int16_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S16Success);
+      EXPECT_EQ(S16, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S16Success);
+    }
+
+    Str = ConsumeSigned[i].Str;
+    bool S32Success = Str.consumeInteger(0, S32);
+    if (static_cast<int32_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S32Success);
+      EXPECT_EQ(S32, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S32Success);
+    }
+
+    Str = ConsumeSigned[i].Str;
+    bool S64Success = Str.consumeInteger(0, S64);
+    if (static_cast<int64_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S64Success);
+      EXPECT_EQ(S64, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S64Success);
+    }
   }
 }
 

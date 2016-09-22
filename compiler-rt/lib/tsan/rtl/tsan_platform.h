@@ -29,35 +29,42 @@ namespace __tsan {
 #if defined(__x86_64__)
 /*
 C/C++ on linux/x86_64 and freebsd/x86_64
-0000 0000 1000 - 0100 0000 0000: main binary and/or MAP_32BIT mappings
-0100 0000 0000 - 0200 0000 0000: -
-0200 0000 0000 - 1000 0000 0000: shadow
+0000 0000 1000 - 0040 0000 0000: main binary and/or MAP_32BIT mappings (256GB)
+0040 0000 0000 - 0100 0000 0000: -
+0100 0000 0000 - 1000 0000 0000: shadow
 1000 0000 0000 - 3000 0000 0000: -
 3000 0000 0000 - 4000 0000 0000: metainfo (memory blocks and sync objects)
-4000 0000 0000 - 6000 0000 0000: -
+4000 0000 0000 - 5540 0000 0000: -
+5540 0000 0000 - 5680 0000 0000: pie binaries without ASLR or on 4.1+ kernels
+5680 0000 0000 - 6000 0000 0000: -
 6000 0000 0000 - 6200 0000 0000: traces
 6200 0000 0000 - 7d00 0000 0000: -
-7d00 0000 0000 - 7e00 0000 0000: heap
-7e00 0000 0000 - 7e80 0000 0000: -
-7e80 0000 0000 - 8000 0000 0000: modules and main thread stack
+7c40 0000 0000 - 7d40 0000 0000: heap
+7d40 0000 0000 - 7ec0 0000 0000: -
+7ec0 0000 0000 - 8000 0000 0000: modules and main thread stack
 */
 struct Mapping {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x400000000000ull;
   static const uptr kTraceMemBeg   = 0x600000000000ull;
   static const uptr kTraceMemEnd   = 0x620000000000ull;
-  static const uptr kShadowBeg     = 0x020000000000ull;
+  static const uptr kShadowBeg     = 0x010000000000ull;
   static const uptr kShadowEnd     = 0x100000000000ull;
-  static const uptr kHeapMemBeg    = 0x7d0000000000ull;
-  static const uptr kHeapMemEnd    = 0x7e0000000000ull;
+  static const uptr kHeapMemBeg    = 0x7c4000000000ull;
+  static const uptr kHeapMemEnd    = 0x7d4000000000ull;
   static const uptr kLoAppMemBeg   = 0x000000001000ull;
-  static const uptr kLoAppMemEnd   = 0x010000000000ull;
-  static const uptr kHiAppMemBeg   = 0x7e8000000000ull;
+  static const uptr kLoAppMemEnd   = 0x004000000000ull;
+  static const uptr kMidAppMemBeg  = 0x554000000000ull;
+  static const uptr kMidAppMemEnd  = 0x568000000000ull;
+  static const uptr kMidShadowOff  = 0x540000000000ull;
+  static const uptr kHiAppMemBeg   = 0x7ec000000000ull;
   static const uptr kHiAppMemEnd   = 0x800000000000ull;
   static const uptr kAppMemMsk     = 0x7c0000000000ull;
-  static const uptr kAppMemXor     = 0x020000000000ull;
+  static const uptr kAppMemXor     = 0x028000000000ull;
   static const uptr kVdsoBeg       = 0xf000000000000000ull;
 };
+
+#define TSAN_MID_APP_RANGE 1
 #elif defined(__mips64)
 /*
 C/C++ on linux/mips64
@@ -690,17 +697,23 @@ template<typename Mapping>
 uptr ShadowToMemImpl(uptr s) {
   DCHECK(IsShadowMem(s));
 #ifndef SANITIZER_GO
-  if (s >= MemToShadow(Mapping::kLoAppMemBeg)
-      && s <= MemToShadow(Mapping::kLoAppMemEnd - 1))
-    return (s / kShadowCnt) ^ Mapping::kAppMemXor;
+  // The shadow mapping is non-linear and we've lost some bits, so we don't have
+  // an easy way to restore the original app address. But the mapping is a
+  // bijection, so we try to restore the address as belonging to low/mid/high
+  // range consecutively and see if shadow->app->shadow mapping gives us the
+  // same address.
+  uptr p = (s / kShadowCnt) ^ Mapping::kAppMemXor;
+  if (p >= Mapping::kLoAppMemBeg && p < Mapping::kLoAppMemEnd &&
+      MemToShadow(p) == s)
+    return p;
 # ifdef TSAN_MID_APP_RANGE
-  if (s >= MemToShadow(Mapping::kMidAppMemBeg)
-      && s <= MemToShadow(Mapping::kMidAppMemEnd - 1))
-    return ((s / kShadowCnt) ^ Mapping::kAppMemXor) + Mapping::kMidShadowOff;
+  p = ((s / kShadowCnt) ^ Mapping::kAppMemXor) + Mapping::kMidShadowOff;
+  if (p >= Mapping::kMidAppMemBeg && p < Mapping::kMidAppMemEnd &&
+      MemToShadow(p) == s)
+    return p;
 # endif
-  else
-    return ((s / kShadowCnt) ^ Mapping::kAppMemXor) | Mapping::kAppMemMsk;
-#else
+  return ((s / kShadowCnt) ^ Mapping::kAppMemXor) | Mapping::kAppMemMsk;
+#else  // #ifndef SANITIZER_GO
 # ifndef SANITIZER_WINDOWS
   return (s & ~Mapping::kShadowBeg) / kShadowCnt;
 # else
