@@ -33,6 +33,6 @@ typedef struct { int x, y, z, w; } __sampler_t;
 __attribute__((always_inline, const)) __constant __sampler_t *
 __translate_sampler_initializer(int i)
 {
-    return (__constant __sampler_t *)&SI_samplers[i - 16];
+    return (__constant __sampler_t *)&SI_samplers[(i - 16) << 2];
 }
 
