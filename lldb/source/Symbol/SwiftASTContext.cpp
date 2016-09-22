@@ -8600,14 +8600,19 @@ SwiftASTContext::GetTemplateArgument(void *type, size_t arg_idx,
                           substitution.getReplacement().getPointer());
     }
     case swift::TypeKind::PolymorphicFunction: {
-      swift::PolymorphicFunctionType *polymorhpic_func_type =
+      swift::PolymorphicFunctionType *polymorphic_func_type =
           swift_can_type->getAs<swift::PolymorphicFunctionType>();
-      if (!polymorhpic_func_type)
+      if (!polymorphic_func_type)
         break;
-      kind = eTemplateArgumentKindType;
-      return CompilerType(GetASTContext(),
-                          polymorhpic_func_type->getGenericParameters()[arg_idx]
-                              ->getArchetype());
+      if (arg_idx >= polymorphic_func_type->getGenericParameters().size())
+        break;
+      auto paramDecl = polymorphic_func_type->getGenericParameters()[arg_idx];
+      auto paramType = paramDecl->getDeclaredInterfaceType()
+          ->castTo<swift::GenericTypeParamType>();
+      return CompilerType(
+          GetASTContext(),
+          swift::ArchetypeBuilder::mapTypeIntoContext(
+              paramDecl->getDeclContext(), paramType).getPointer());
     } break;
     default:
       break;
