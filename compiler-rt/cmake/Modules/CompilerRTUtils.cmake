@@ -219,7 +219,7 @@ macro(load_llvm_config)
   include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
 
   set(LLVM_LIBRARY_OUTPUT_INTDIR
-    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+    ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
 endmacro()
 
 macro(construct_compiler_rt_default_triple)

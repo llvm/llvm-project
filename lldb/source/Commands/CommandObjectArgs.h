@@ -32,11 +32,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-    const OptionDefinition *GetDefinitions() override;
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
   };
 
   CommandObjectArgs(CommandInterpreter &interpreter);

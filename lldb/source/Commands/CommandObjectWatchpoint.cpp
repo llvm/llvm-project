@@ -152,6 +152,20 @@ bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
 //-------------------------------------------------------------------------
 // CommandObjectWatchpointList
 //-------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------
+// CommandObjectWatchpointList::Options
+//-------------------------------------------------------------------------
+#pragma mark List::CommandOptions
+
+static OptionDefinition g_watchpoint_list_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_1, false, "brief",   'b', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Give a brief description of the watchpoint (no location info)." },
+  { LLDB_OPT_SET_2, false, "full",    'f', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Give a full description of the watchpoint and its locations." },
+  { LLDB_OPT_SET_3, false, "verbose", 'v', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Explain everything we know about the watchpoint (for debugging debugger bugs)." }
+    // clang-format on
+};
+
 #pragma mark List
 
 class CommandObjectWatchpointList : public CommandObjectParsed {
@@ -211,11 +225,9 @@ public:
       m_level = lldb::eDescriptionLevelFull;
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_watchpoint_list_options);
+    }
 
     // Instance variables to hold the values for command options.
 
@@ -288,21 +300,6 @@ protected:
 
 private:
   CommandOptions m_options;
-};
-
-//-------------------------------------------------------------------------
-// CommandObjectWatchpointList::Options
-//-------------------------------------------------------------------------
-#pragma mark List::CommandOptions
-
-OptionDefinition CommandObjectWatchpointList::CommandOptions::g_option_table[] =
-    {
-        // clang-format off
-  {LLDB_OPT_SET_1, false, "brief",   'b', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Give a brief description of the watchpoint (no location info)."},
-  {LLDB_OPT_SET_2, false, "full",    'f', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Give a full description of the watchpoint and its locations."},
-  {LLDB_OPT_SET_3, false, "verbose", 'v', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Explain everything we know about the watchpoint (for debugging debugger bugs)."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-        // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -531,6 +528,13 @@ protected:
 // CommandObjectWatchpointIgnore
 //-------------------------------------------------------------------------
 
+#pragma mark Ignore::CommandOptions
+static OptionDefinition g_watchpoint_ignore_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_ALL, true, "ignore-count", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount, "Set the number of times this watchpoint is skipped before stopping." }
+    // clang-format on
+};
+
 class CommandObjectWatchpointIgnore : public CommandObjectParsed {
 public:
   CommandObjectWatchpointIgnore(CommandInterpreter &interpreter)
@@ -582,11 +586,9 @@ public:
       m_ignore_count = 0;
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_watchpoint_ignore_options);
+    }
 
     // Instance variables to hold the values for command options.
 
@@ -644,19 +646,18 @@ private:
   CommandOptions m_options;
 };
 
-#pragma mark Ignore::CommandOptions
-
-OptionDefinition
-    CommandObjectWatchpointIgnore::CommandOptions::g_option_table[] = {
-        // clang-format off
-  {LLDB_OPT_SET_ALL, true, "ignore-count", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount, "Set the number of times this watchpoint is skipped before stopping."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-        // clang-format on
-};
-
 //-------------------------------------------------------------------------
 // CommandObjectWatchpointModify
 //-------------------------------------------------------------------------
+
+#pragma mark Modify::CommandOptions
+
+static OptionDefinition g_watchpoint_modify_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_ALL, false, "condition", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression, "The watchpoint stops only if this condition expression evaluates to true." }
+    // clang-format on
+};
+
 #pragma mark Modify
 
 class CommandObjectWatchpointModify : public CommandObjectParsed {
@@ -716,11 +717,9 @@ public:
       m_condition_passed = false;
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_watchpoint_modify_options);
+    }
 
     // Instance variables to hold the values for command options.
 
@@ -779,16 +778,6 @@ protected:
 
 private:
   CommandOptions m_options;
-};
-
-#pragma mark Modify::CommandOptions
-
-OptionDefinition
-    CommandObjectWatchpointModify::CommandOptions::g_option_table[] = {
-        // clang-format off
-  {LLDB_OPT_SET_ALL, false, "condition", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression, "The watchpoint stops only if this condition expression evaluates to true."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-        // clang-format on
 };
 
 //-------------------------------------------------------------------------

@@ -34,10 +34,8 @@ public:
 
   ~OptionGroupBoolean() override;
 
-  uint32_t GetNumDefinitions() override { return 1; }
-
-  const OptionDefinition *GetDefinitions() override {
-    return &m_option_definition;
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::ArrayRef<OptionDefinition>(&m_option_definition, 1);
   }
 
   Error SetOptionValue(uint32_t option_idx, const char *option_value,

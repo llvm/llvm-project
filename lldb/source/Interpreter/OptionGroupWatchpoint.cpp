@@ -93,10 +93,6 @@ void OptionGroupWatchpoint::OptionParsingStarting(
   watch_size = 0;
 }
 
-const OptionDefinition *OptionGroupWatchpoint::GetDefinitions() {
-  return g_option_table;
-}
-
-uint32_t OptionGroupWatchpoint::GetNumDefinitions() {
-  return llvm::array_lengthof(g_option_table);
+llvm::ArrayRef<OptionDefinition> OptionGroupWatchpoint::GetDefinitions() {
+  return llvm::makeArrayRef(g_option_table);
 }

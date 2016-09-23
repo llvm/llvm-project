@@ -33,8 +33,17 @@ def archives_txt():
 def expected_package_build_path():
     return os.path.abspath(os.path.join(expected_llvm_build_path(), ".."))
 
+def is_host_build():
+    rc_project_name = os.environ.get('RC_ProjectName')
+    if rc_project_name:
+      if rc_project_name == 'lldb_host': return True
+    return False
+
+def rc_release_target():
+  return os.environ.get('RC_RELEASE', '')
 
 def architecture():
+    if is_host_build(): return 'macosx'
     platform_name = os.environ.get('RC_PLATFORM_NAME')
     if not platform_name:
         platform_name = os.environ.get('PLATFORM_NAME')

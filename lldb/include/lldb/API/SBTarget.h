@@ -646,17 +646,74 @@ public:
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
 
-  // Reads in breakpoints from source_file, returning the newly created
-  // breakpoints in new_bps.
+  //------------------------------------------------------------------
+  /// Read breakpoints from source_file and return the newly created
+  /// breakpoints in bkpt_list.
+  ///
+  /// @param[in] source_file
+  ///    The file from which to read the breakpoints.
+  ///
+  /// @param[out] bkpt_list
+  ///    A list of the newly created breakpoints.
+  ///
+  /// @return
+  ///     An SBError detailing any errors in reading in the breakpoints.
+  //------------------------------------------------------------------
   lldb::SBError BreakpointsCreateFromFile(SBFileSpec &source_file,
                                           SBBreakpointList &new_bps);
 
-  // Writes all breakpoints to dest_file.
+  //------------------------------------------------------------------
+  /// Read breakpoints from source_file and return the newly created
+  /// breakpoints in bkpt_list.
+  ///
+  /// @param[in] source_file
+  ///    The file from which to read the breakpoints.
+  ///
+  /// @param[in] matching_names
+  ///    Only read in breakpoints whose names match one of the names in this
+  ///    list.
+  ///
+  /// @param[out] bkpt_list
+  ///    A list of the newly created breakpoints.
+  ///
+  /// @return
+  ///     An SBError detailing any errors in reading in the breakpoints.
+  //------------------------------------------------------------------
+  lldb::SBError BreakpointsCreateFromFile(SBFileSpec &source_file,
+                                          SBStringList &matching_names,
+                                          SBBreakpointList &new_bps);
+
+  //------------------------------------------------------------------
+  /// Write breakpoints to dest_file.
+  ///
+  /// @param[in] dest_file
+  ///    The file to which to write the breakpoints.
+  ///
+  /// @return
+  ///     An SBError detailing any errors in writing in the breakpoints.
+  //------------------------------------------------------------------
   lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file);
 
-  // Writes the breakpoints in bkpt_list to dest_file
+  //------------------------------------------------------------------
+  /// Write breakpoints listed in bkpt_list to dest_file.
+  ///
+  /// @param[in] dest_file
+  ///    The file to which to write the breakpoints.
+  ///
+  /// @param[in] bkpt_list
+  ///    Only write breakpoints from this list.
+  ///
+  /// @param[in] append
+  ///    If \btrue, append the breakpoints in bkpt_list to the others
+  ///    serialized in dest_file.  If dest_file doesn't exist, then a new
+  ///    file will be created and the breakpoints in bkpt_list written to it.
+  ///
+  /// @return
+  ///     An SBError detailing any errors in writing in the breakpoints.
+  //------------------------------------------------------------------
   lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file,
-                                       SBBreakpointList &bkpt_list);
+                                       SBBreakpointList &bkpt_list,
+                                       bool append = false);
 
   uint32_t GetNumBreakpoints() const;
 
