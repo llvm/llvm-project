@@ -332,18 +332,34 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   if (Mismatched)
     warning(utostr(Mismatched) + " functions have mismatched data");
 
-  if (CompareFilenamesOnly) {
-    auto CoveredFiles = Coverage.get()->getUniqueSourceFiles();
+  std::vector<StringRef> CoveredFiles = Coverage.get()->getUniqueSourceFiles();
+
+  auto UncoveredFilesIt = SourceFiles.end();
+  if (!CompareFilenamesOnly) {
+    // The user may have specified source files which aren't in the coverage
+    // mapping. Filter these files away.
+    UncoveredFilesIt = std::remove_if(
+        SourceFiles.begin(), SourceFiles.end(), [&](const std::string &SF) {
+          return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(),
+                                     SF);
+        });
+  } else {
     for (auto &SF : SourceFiles) {
       StringRef SFBase = sys::path::filename(SF);
-      for (const auto &CF : CoveredFiles)
+      for (const auto &CF : CoveredFiles) {
         if (SFBase == sys::path::filename(CF)) {
           RemappedFilenames[CF] = SF;
           SF = CF;
           break;
         }
+      }
     }
+    UncoveredFilesIt = std::remove_if(
+        SourceFiles.begin(), SourceFiles.end(),
+        [&](const std::string &SF) { return !RemappedFilenames.count(SF); });
   }
+
+  SourceFiles.erase(UncoveredFilesIt, SourceFiles.end());
 
   demangleSymbols(*Coverage);
 
