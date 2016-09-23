@@ -654,6 +654,12 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   if (Mode == AM_None)
     return;
 
+  // Clear the AnalysisManager of old AnalysisDeclContexts.
+  Mgr->ClearContexts();
+  // Ignore autosynthesized code.
+  if (Mgr->getAnalysisDeclContext(D)->isBodyAutosynthesized())
+    return;
+
   DisplayFunction(D, Mode, IMode);
   CFG *DeclCFG = Mgr->getCFG(D);
   if (DeclCFG) {
@@ -661,8 +667,6 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
     MaxCFGSize = MaxCFGSize < CFGSize ? CFGSize : MaxCFGSize;
   }
 
-  // Clear the AnalysisManager of old AnalysisDeclContexts.
-  Mgr->ClearContexts();
   BugReporter BR(*Mgr);
 
   if (Mode & AM_Syntax)
