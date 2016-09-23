@@ -91,7 +91,7 @@ NativeObjectCache lto::localCache(std::string CacheDirectoryPath,
       }
 
       // This CacheStream will move the temporary file into the cache when done.
-      return make_unique<CacheStream>(
+      return llvm::make_unique<CacheStream>(
           llvm::make_unique<raw_fd_ostream>(TempFD, /* ShouldClose */ true),
           AddFile, TempFilename.str(), EntryPath.str(), Task);
     };
