@@ -456,6 +456,11 @@ LLVM-specific variables
   If enabled then sphinx documentation warnings will be treated as
   errors. Defaults to ON.
 
+**LLVM_INSTALL_SPHINX_HTML_DIR**:STRING
+  The path to install Sphinx-generated HTML documentation to. This path can
+  either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
+  `share/doc/llvm/html`.
+
 **LLVM_CREATE_XCODE_TOOLCHAIN**:BOOL
   OS X Only: If enabled CMake will generate a target named
   'install-xcode-toolchain'. This target will create a directory at

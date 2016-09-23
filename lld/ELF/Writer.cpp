@@ -244,8 +244,6 @@ template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  if (Config->Discard != DiscardPolicy::All)
-    copyLocalSymbols();
   addReservedSymbols();
 
   if (Target->NeedsThunks)
@@ -261,6 +259,9 @@ template <class ELFT> void Writer<ELFT>::run() {
     createSections();
     Script<ELFT>::X->processCommands(Factory);
   }
+
+  if (Config->Discard != DiscardPolicy::All)
+    copyLocalSymbols();
 
   finalizeSections();
   if (HasError)

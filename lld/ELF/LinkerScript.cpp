@@ -756,6 +756,10 @@ template <class ELFT> uint64_t LinkerScript<ELFT>::getSymbolValue(StringRef S) {
   return 0;
 }
 
+template <class ELFT> bool LinkerScript<ELFT>::isDefined(StringRef S) {
+  return Symtab<ELFT>::X->find(S) != nullptr;
+}
+
 // Returns indices of ELF headers containing specific section, identified
 // by Name. Each index is a zero based number of ELF header listed within
 // PHDRS {} script block.
@@ -1081,10 +1085,12 @@ void ScriptParser::readSections() {
 
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
-      .Case("*", 4)
-      .Case("/", 4)
-      .Case("+", 3)
-      .Case("-", 3)
+      .Case("*", 5)
+      .Case("/", 5)
+      .Case("+", 4)
+      .Case("-", 4)
+      .Case("<<", 3)
+      .Case(">>", 3)
       .Case("<", 2)
       .Case(">", 2)
       .Case(">=", 2)
@@ -1269,8 +1275,12 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       setError("unknown command " + Tok);
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
-  if (peek().startswith("="))
+
+  if (skip("="))
+    Cmd->Filler = readOutputSectionFiller(next());
+  else if (peek().startswith("="))
     Cmd->Filler = readOutputSectionFiller(next().drop_front());
+
   return Cmd;
 }
 
@@ -1361,6 +1371,10 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
     return [=](uint64_t Dot) { return L(Dot) + R(Dot); };
   if (Op == "-")
     return [=](uint64_t Dot) { return L(Dot) - R(Dot); };
+  if (Op == "<<")
+    return [=](uint64_t Dot) { return L(Dot) << R(Dot); };
+  if (Op == ">>")
+    return [=](uint64_t Dot) { return L(Dot) >> R(Dot); };
   if (Op == "<")
     return [=](uint64_t Dot) { return L(Dot) < R(Dot); };
   if (Op == ">")
@@ -1483,6 +1497,14 @@ Expr ScriptParser::readPrimary() {
     StringRef Tok = next();
     expect(")");
     return [=](uint64_t Dot) { return getConstant(Tok); };
+  }
+  if (Tok == "DEFINED") {
+    expect("(");
+    StringRef Tok = next();
+    expect(")");
+    return [=](uint64_t Dot) {
+      return ScriptBase->isDefined(Tok) ? 1 : 0;
+    };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");

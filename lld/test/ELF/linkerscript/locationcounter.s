@@ -42,6 +42,11 @@
 # RUN:  .plusassign : { *(.plusassign) } \
 # RUN:  . = ((. + 0x1fff) & ~(0x1000 + -1)); \
 # RUN:  .unary : { *(.unary) } \
+# RUN:  . = 0x30000 + (1 + 1 << 5); \
+# RUN:  .shiftl : { *(.shiftl) } \
+# RUN:  . = 0x30000 + (1 + 1023 >> 2); \
+# RUN:  .shiftr : { *(.shiftr) } \
+
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-objdump -section-headers %t2 | FileCheck %s
@@ -65,6 +70,8 @@
 # CHECK: .datasegmentalign {{.*}} 0000000000200000
 # CHECK: .plusassign       {{.*}} 0000000000028000
 # CHECK: .unary            {{.*}} 000000000002a000
+# CHECK: .shiftl           {{.*}} 0000000000030040
+# CHECK: .shiftr           {{.*}} 0000000000030100
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { \
@@ -173,4 +180,10 @@ nop
 .quad 0
 
 .section .unary, "a"
+.quad 0
+
+.section .shiftl, "a"
+.quad 0
+
+.section .shiftr, "a"
 .quad 0
