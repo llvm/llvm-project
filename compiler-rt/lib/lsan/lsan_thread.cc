@@ -36,7 +36,7 @@ static const uptr kMaxThreads = 1 << 13;
 static const uptr kThreadQuarantineSize = 64;
 
 void InitializeThreadRegistry() {
-  static char thread_registry_placeholder[sizeof(ThreadRegistry)] ALIGNED(64);
+  static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
   thread_registry = new(thread_registry_placeholder)
     ThreadRegistry(CreateThreadContext, kMaxThreads, kThreadQuarantineSize);
 }

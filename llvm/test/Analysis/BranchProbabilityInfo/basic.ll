@@ -176,6 +176,99 @@ exit:
   ret i32 %ret
 }
 
+; CHECK-LABEL: test_invoke_code_callsite1
+define i32 @test_invoke_code_callsite1(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+entry:
+  br i1 %c, label %if.then, label %if.end
+; Edge "entry->if.end" should have higher probability based on the cold call
+; heuristic which treat %if.then as a cold block because the normal destination
+; of the invoke instruction in %if.then is post-dominated by ColdFunc().
+; CHECK:  edge entry -> if.then probability is 0x07878788 / 0x80000000 = 5.88%
+; CHECK:  edge entry -> if.end probability is 0x78787878 / 0x80000000 = 94.12% [HOT edge]
+
+if.then:
+  invoke i32 @InvokeCall()
+          to label %invoke.cont unwind label %lpad
+; CHECK:  edge if.then -> invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge if.then -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+
+invoke.cont:
+  call void @ColdFunc() #0
+  br label %if.end
+
+lpad:
+  %ll = landingpad { i8*, i32 }
+          cleanup
+  br label %if.end
+
+if.end:
+  ret i32 0
+}
+
+; CHECK-LABEL: test_invoke_code_callsite2
+define i32 @test_invoke_code_callsite2(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+; CHECK:  edge entry -> if.then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:  edge entry -> if.end probability is 0x40000000 / 0x80000000 = 50.00%
+
+if.then:
+  invoke i32 @InvokeCall()
+          to label %invoke.cont unwind label %lpad
+; The cold call heuristic should not kick in when the cold callsite is in EH path.
+; CHECK:  edge if.then -> invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge if.then -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+
+invoke.cont:
+  br label %if.end
+
+lpad:
+  %ll = landingpad { i8*, i32 }
+          cleanup
+  call void @ColdFunc() #0
+  br label %if.end
+
+if.end:
+  ret i32 0
+}
+
+; CHECK-LABEL: test_invoke_code_callsite3
+define i32 @test_invoke_code_callsite3(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+entry:
+  br i1 %c, label %if.then, label %if.end
+; CHECK: edge entry -> if.then probability is 0x07878788 / 0x80000000 = 5.88%
+; CHECK: edge entry -> if.end probability is 0x78787878 / 0x80000000 = 94.12% [HOT edge]
+
+if.then:
+  invoke i32 @InvokeCall()
+          to label %invoke.cont unwind label %lpad
+; Regardless of cold calls, edge weights from a invoke instruction should be
+; determined by the invoke heuristic.
+; CHECK: edge if.then -> invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge if.then -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+
+invoke.cont:
+  call void @ColdFunc() #0
+  br label %if.end
+
+lpad:
+  %ll = landingpad { i8*, i32 }
+          cleanup
+  call void @ColdFunc() #0
+  br label %if.end
+
+if.end:
+  ret i32 0
+}
+
+declare i32 @__gxx_personality_v0(...)
+declare void  @ColdFunc()
+declare i32 @InvokeCall()
+
+attributes #0 = { cold }
+
+
 define i32 @zero1(i32 %i, i32 %a, i32 %b) {
 ; CHECK: Printing analysis {{.*}} for function 'zero1'
 entry:

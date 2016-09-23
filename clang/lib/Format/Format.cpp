@@ -1504,8 +1504,12 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 namespace {
 
 inline bool isHeaderInsertion(const tooling::Replacement &Replace) {
-  return Replace.getOffset() == UINT_MAX &&
+  return Replace.getOffset() == UINT_MAX && Replace.getLength() == 0 &&
          llvm::Regex(IncludeRegexPattern).match(Replace.getReplacementText());
+}
+
+inline bool isHeaderDeletion(const tooling::Replacement &Replace) {
+  return Replace.getOffset() == UINT_MAX && Replace.getLength() == 1;
 }
 
 void skipComments(Lexer &Lex, Token &Tok) {
@@ -1548,6 +1552,12 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
   return AfterComments;
 }
 
+bool isDeletedHeader(llvm::StringRef HeaderName,
+                     const std::set<llvm::StringRef> HeadersToDelete) {
+  return HeadersToDelete.find(HeaderName) != HeadersToDelete.end() ||
+         HeadersToDelete.find(HeaderName.trim("\"<>")) != HeadersToDelete.end();
+}
+
 // FIXME: we also need to insert a '\n' at the end of the code if we have an
 // insertion with offset Code.size(), and there is no '\n' at the end of the
 // code.
@@ -1561,12 +1571,15 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     return Replaces;
 
   tooling::Replacements HeaderInsertions;
+  std::set<llvm::StringRef> HeadersToDelete;
   tooling::Replacements Result;
   for (const auto &R : Replaces) {
     if (isHeaderInsertion(R)) {
       // Replacements from \p Replaces must be conflict-free already, so we can
       // simply consume the error.
       llvm::consumeError(HeaderInsertions.add(R));
+    } else if (isHeaderDeletion(R)) {
+      HeadersToDelete.insert(R.getReplacementText());
     } else if (R.getOffset() == UINT_MAX) {
       llvm::errs() << "Insertions other than header #include insertion are "
                       "not supported! "
@@ -1575,7 +1588,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
       llvm::consumeError(Result.add(R));
     }
   }
-  if (HeaderInsertions.empty())
+  if (HeaderInsertions.empty() && HeadersToDelete.empty())
     return Replaces;
 
   llvm::Regex IncludeRegex(IncludeRegexPattern);
@@ -1605,6 +1618,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   for (auto Line : Lines) {
     NextLineOffset = std::min(Code.size(), Offset + Line.size() + 1);
     if (IncludeRegex.match(Line, &Matches)) {
+      // The header name with quotes or angle brackets.
       StringRef IncludeName = Matches[2];
       ExistingIncludes.insert(IncludeName);
       int Category = Categories.getIncludePriority(
@@ -1612,6 +1626,19 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
       CategoryEndOffsets[Category] = NextLineOffset;
       if (FirstIncludeOffset < 0)
         FirstIncludeOffset = Offset;
+      if (isDeletedHeader(IncludeName, HeadersToDelete)) {
+        // If this is the last line without trailing newline, we need to make
+        // sure we don't delete across the file boundary.
+        unsigned Length = std::min(Line.size() + 1, Code.size() - Offset);
+        llvm::Error Err =
+            Result.add(tooling::Replacement(FileName, Offset, Length, ""));
+        if (Err) {
+          // Ignore the deletion on conflict.
+          llvm::errs() << "Failed to add header deletion replacement for "
+                       << IncludeName << ": " << llvm::toString(std::move(Err))
+                       << "\n";
+        }
+      }
     }
     Offset = NextLineOffset;
   }
