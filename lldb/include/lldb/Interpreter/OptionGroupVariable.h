@@ -31,8 +31,9 @@ public:
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-  Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                        ExecutionContext *execution_context) override;
+  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 

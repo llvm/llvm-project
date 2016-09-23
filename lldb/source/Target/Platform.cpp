@@ -1401,7 +1401,7 @@ void OptionGroupPlatformRSync::OptionParsingStarting(
 
 lldb_private::Error
 OptionGroupPlatformRSync::SetOptionValue(uint32_t option_idx,
-                                         const char *option_arg,
+                                         llvm::StringRef option_arg,
                                          ExecutionContext *execution_context) {
   Error error;
   char short_option = (char)GetDefinitions()[option_idx].short_option;
@@ -1447,7 +1447,7 @@ void OptionGroupPlatformSSH::OptionParsingStarting(
 
 lldb_private::Error
 OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
-                                       const char *option_arg,
+                                       llvm::StringRef option_arg,
                                        ExecutionContext *execution_context) {
   Error error;
   char short_option = (char)GetDefinitions()[option_idx].short_option;
@@ -1478,7 +1478,7 @@ void OptionGroupPlatformCaching::OptionParsingStarting(
 }
 
 lldb_private::Error OptionGroupPlatformCaching::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
   char short_option = (char)GetDefinitions()[option_idx].short_option;

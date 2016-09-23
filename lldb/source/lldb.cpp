@@ -18,6 +18,10 @@ extern "C" const unsigned char liblldb_coreVersionString[];
 
 #include "clang/Basic/Version.h"
 
+#ifdef HAVE_SVN_VERSION_INC
+#  include "SVNVersion.inc"
+#endif
+
 static const char *GetLLDBRevision() {
 #ifdef LLDB_REVISION
   return LLDB_REVISION;

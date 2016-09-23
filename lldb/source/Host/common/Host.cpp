@@ -942,15 +942,15 @@ bool Host::AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
       if (oflag & O_CREAT)
         mode = 0640;
 
-      error.SetError(
-          ::posix_spawn_file_actions_addopen(file_actions, info->GetFD(),
-                                             info->GetPath(), oflag, mode),
-          eErrorTypePOSIX);
+      error.SetError(::posix_spawn_file_actions_addopen(
+                         file_actions, info->GetFD(),
+                         info->GetPath().str().c_str(), oflag, mode),
+                     eErrorTypePOSIX);
       if (error.Fail() || log)
         error.PutToLog(log, "posix_spawn_file_actions_addopen (action=%p, "
                             "fd=%i, path='%s', oflag=%i, mode=%i)",
                        static_cast<void *>(file_actions), info->GetFD(),
-                       info->GetPath(), oflag, mode);
+                       info->GetPath().str().c_str(), oflag, mode);
     }
     break;
   }

@@ -217,7 +217,8 @@ public:
         break;
 
       case 'E': {
-        LanguageType language = Language::GetLanguageTypeFromString(option_arg);
+        LanguageType language =
+            Language::GetLanguageTypeFromString(option_strref);
 
         switch (language) {
         case eLanguageTypeC89:
@@ -304,7 +305,7 @@ public:
       }
 
       case 'L':
-        m_language = Language::GetLanguageTypeFromString(option_arg);
+        m_language = Language::GetLanguageTypeFromString(option_strref);
         if (m_language == eLanguageTypeUnknown)
           error.SetErrorStringWithFormat(
               "Unknown language type: '%s' for breakpoint", option_arg);
@@ -1772,28 +1773,29 @@ public:
     return llvm::makeArrayRef(g_breakpoint_name_options);
   }
 
-  Error SetOptionValue(uint32_t option_idx, const char *option_value,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                        ExecutionContext *execution_context) override {
     Error error;
     const int short_option = g_breakpoint_name_options[option_idx].short_option;
-    llvm::StringRef option_strref(option_value ? option_value : "");
 
     switch (short_option) {
     case 'N':
-      if (BreakpointID::StringIsBreakpointName(option_strref, error) &&
+      if (BreakpointID::StringIsBreakpointName(option_value, error) &&
           error.Success())
-        m_name.SetValueFromString(option_strref);
+        m_name.SetValueFromString(option_value);
       break;
 
     case 'B':
       if (m_breakpoint.SetValueFromString(option_value).Fail())
         error.SetErrorStringWithFormat(
-            "unrecognized value \"%s\" for breakpoint", option_value);
+            "unrecognized value \"%s\" for breakpoint",
+            option_value.str().c_str());
       break;
     case 'D':
       if (m_use_dummy.SetValueFromString(option_value).Fail())
         error.SetErrorStringWithFormat(
-            "unrecognized value \"%s\" for use-dummy", option_value);
+            "unrecognized value \"%s\" for use-dummy",
+            option_value.str().c_str());
       break;
 
     default:
@@ -1803,6 +1805,7 @@ public:
     }
     return error;
   }
+  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_name.Clear();

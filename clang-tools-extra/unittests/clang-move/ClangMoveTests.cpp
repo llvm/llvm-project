@@ -119,8 +119,7 @@ const char ExpectedNewHeader[] = "namespace a {\n"
                                  "} // namespace b\n"
                                  "} // namespace a\n";
 
-const char ExpectedNewCC[] = "#include \"foo.h\"\n"
-                             "namespace a {\n"
+const char ExpectedNewCC[] = "namespace a {\n"
                              "namespace b {\n"
                              "namespace {\n"
                              "void f1() {}\n"
@@ -181,11 +180,12 @@ TEST(ClangMove, MoveHeaderAndCC) {
   Spec.OldCC = "foo.cc";
   Spec.NewHeader = "new_foo.h";
   Spec.NewCC = "new_foo.cc";
+  std::string ExpectedHeader = "#include \"" + Spec.NewHeader + "\"\n";
   auto Results = runClangMoveOnCode(Spec);
   EXPECT_EQ(ExpectedTestHeader, Results[Spec.OldHeader]);
   EXPECT_EQ(ExpectedTestCC, Results[Spec.OldCC]);
   EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
-  EXPECT_EQ(ExpectedNewCC, Results[Spec.NewCC]);
+  EXPECT_EQ(ExpectedHeader + ExpectedNewCC, Results[Spec.NewCC]);
 }
 
 TEST(ClangMove, MoveHeaderOnly) {
@@ -204,10 +204,11 @@ TEST(ClangMove, MoveCCOnly) {
   Spec.Name = "a::b::Foo";
   Spec.OldCC = "foo.cc";
   Spec.NewCC = "new_foo.cc";
+  std::string ExpectedHeader = "#include \"foo.h\"\n";
   auto Results = runClangMoveOnCode(Spec);
   EXPECT_EQ(2u, Results.size());
   EXPECT_EQ(ExpectedTestCC, Results[Spec.OldCC]);
-  EXPECT_EQ(ExpectedNewCC, Results[Spec.NewCC]);
+  EXPECT_EQ(ExpectedHeader + ExpectedNewCC, Results[Spec.NewCC]);
 }
 
 TEST(ClangMove, MoveNonExistClass) {

@@ -341,8 +341,10 @@ public:
 
   virtual llvm::ArrayRef<OptionDefinition> GetDefinitions() = 0;
 
-  virtual Error SetOptionValue(uint32_t option_idx, const char *option_value,
+  virtual Error SetOptionValue(uint32_t option_idx,
+                               llvm::StringRef option_value,
                                ExecutionContext *execution_context) = 0;
+  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   virtual void OptionParsingStarting(ExecutionContext *execution_context) = 0;
 

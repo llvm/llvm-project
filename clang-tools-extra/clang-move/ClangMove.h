@@ -55,7 +55,8 @@ public:
 
   // Add #includes from old.h/cc files. The FileName is where the #include
   // comes from.
-  void addIncludes(llvm::StringRef IncludeLine, llvm::StringRef FileName);
+  void addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
+                   llvm::StringRef FileName);
 
 private:
   void removeClassDefinitionInOldFiles();

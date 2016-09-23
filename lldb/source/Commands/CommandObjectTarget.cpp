@@ -1980,8 +1980,8 @@ public:
       switch (short_option) {
       case 's':
         m_sort_order = (SortOrder)Args::StringToOptionEnum(
-            option_arg, GetDefinitions()[option_idx].enum_values,
-            eSortOrderNone, error);
+            llvm::StringRef::withNullAsEmpty(option_arg),
+            GetDefinitions()[option_idx].enum_values, eSortOrderNone, error);
         break;
 
       default:

@@ -491,7 +491,7 @@ const char *OptionValueProperties::GetPropertyAtIndexAsString(
 }
 
 bool OptionValueProperties::SetPropertyAtIndexAsString(
-    const ExecutionContext *exe_ctx, uint32_t idx, const char *new_value) {
+    const ExecutionContext *exe_ctx, uint32_t idx, llvm::StringRef new_value) {
   const Property *property = GetPropertyAtIndex(exe_ctx, true, idx);
   if (property) {
     OptionValue *value = property->GetValue().get();

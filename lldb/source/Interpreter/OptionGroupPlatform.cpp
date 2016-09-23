@@ -93,14 +93,13 @@ llvm::ArrayRef<OptionDefinition> OptionGroupPlatform::GetDefinitions() {
 }
 
 Error OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
-                                          const char *option_arg,
+                                          llvm::StringRef option_arg,
                                           ExecutionContext *execution_context) {
   Error error;
   if (!m_include_platform_option)
     ++option_idx;
 
   const int short_option = g_option_table[option_idx].short_option;
-  llvm::StringRef option_strref(option_arg ? option_arg : "");
 
   switch (short_option) {
   case 'p':
@@ -108,17 +107,18 @@ Error OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
     break;
 
   case 'v':
-    if (!Args::StringToVersion(option_strref, m_os_version_major,
+    if (!Args::StringToVersion(option_arg, m_os_version_major,
                                m_os_version_minor, m_os_version_update))
-      error.SetErrorStringWithFormat("invalid version string '%s'", option_arg);
+      error.SetErrorStringWithFormat("invalid version string '%s'",
+                                     option_arg.str().c_str());
     break;
 
   case 'b':
-    m_sdk_build.SetCString(option_arg);
+    m_sdk_build.SetString(option_arg);
     break;
 
   case 'S':
-    m_sdk_sysroot.SetCString(option_arg);
+    m_sdk_sysroot.SetString(option_arg);
     break;
 
   default:

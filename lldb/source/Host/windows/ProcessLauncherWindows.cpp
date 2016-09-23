@@ -124,7 +124,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
 
-  const char *path = action->GetPath();
+  llvm::StringRef path = action->GetPath();
   DWORD access = 0;
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;

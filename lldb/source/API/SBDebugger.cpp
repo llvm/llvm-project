@@ -930,14 +930,15 @@ const char *SBDebugger::GetPrompt() const {
   if (log)
     log->Printf("SBDebugger(%p)::GetPrompt () => \"%s\"",
                 static_cast<void *>(m_opaque_sp.get()),
-                (m_opaque_sp ? m_opaque_sp->GetPrompt() : ""));
+                (m_opaque_sp ? m_opaque_sp->GetPrompt().str().c_str() : ""));
 
-  return (m_opaque_sp ? m_opaque_sp->GetPrompt() : nullptr);
+  return (m_opaque_sp ? ConstString(m_opaque_sp->GetPrompt()).GetCString()
+                      : nullptr);
 }
 
 void SBDebugger::SetPrompt(const char *prompt) {
   if (m_opaque_sp)
-    m_opaque_sp->SetPrompt(prompt);
+    m_opaque_sp->SetPrompt(llvm::StringRef::withNullAsEmpty(prompt));
 }
 
 ScriptLanguage SBDebugger::GetScriptLanguage() const {

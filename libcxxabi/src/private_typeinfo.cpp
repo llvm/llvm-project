@@ -616,13 +616,11 @@ bool __pointer_to_member_type_info::can_catch_nested(
 // If there is a public path from (dynamic_ptr, dynamic_type) to
 //    (static_ptr, static_type), then return dynamic_ptr.
 // Else return nullptr.
-extern "C"
-void*
-__dynamic_cast(const void* static_ptr,
-               const __class_type_info* static_type,
-               const __class_type_info* dst_type,
-               std::ptrdiff_t src2dst_offset)
-{
+
+extern "C" _LIBCXXABI_FUNC_VIS void *
+__dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
+               const __class_type_info *dst_type,
+               std::ptrdiff_t src2dst_offset) {
     // Possible future optimization:  Take advantage of src2dst_offset
     // Currently clang always sets src2dst_offset to -1 (no hint).
 
