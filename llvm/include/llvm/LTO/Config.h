@@ -30,38 +30,6 @@ class raw_pwrite_stream;
 
 namespace lto {
 
-/// Abstract class representing a single Task output to be implemented by the
-/// client of the LTO API.
-///
-/// The general scheme the API is called is the following:
-///
-/// void process(NativeObjectOutput &Output) {
-///   /* check if caching is supported */
-///   if (Output.isCachingEnabled()) {
-///     auto Key = ComputeKeyForEntry(...); // "expensive" call
-///     if (Output.tryLoadFromCache())
-///        return; // Cache hit
-///   }
-///
-///   auto OS = Output.getStream();
-///
-///   OS << ....;
-/// }
-///
-class NativeObjectOutput {
-public:
-  // Return an allocated stream for the output, or null in case of failure.
-  virtual std::unique_ptr<raw_pwrite_stream> getStream() = 0;
-
-  // Try loading from a possible cache first, return true on cache hit.
-  virtual bool tryLoadFromCache(StringRef Key) { return false; }
-
-  // Returns true if a cache is available
-  virtual bool isCachingEnabled() const { return false; }
-
-  virtual ~NativeObjectOutput() = default;
-};
-
 /// LTO configuration. A linker can configure LTO by setting fields in this data
 /// structure and passing it to the lto::LTO constructor.
 struct Config {
@@ -234,13 +202,6 @@ struct Config {
   Error addSaveTemps(std::string OutputFileName,
                      bool UseInputModulePath = false);
 };
-
-/// This type defines the callback to add a native object that is generated on
-/// the fly.
-///
-/// Output callbacks must be thread safe.
-typedef std::function<std::unique_ptr<NativeObjectOutput>(unsigned Task)>
-    AddOutputFn;
 
 /// A derived class of LLVMContext that initializes itself according to a given
 /// Config object. The purpose of this class is to tie ownership of the
