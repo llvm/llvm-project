@@ -14,38 +14,6 @@ def isCIOnly : Predicate<"Subtarget->getGeneration() =="
 
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
-class vop {
-  field bits<9> SI3;
-  field bits<10> VI3;
-}
-
-class vop1 <bits<8> si, bits<8> vi = si> : vop {
-  field bits<8> SI = si;
-  field bits<8> VI = vi;
-
-  field bits<9>  SI3 = {1, 1, si{6-0}};
-  field bits<10> VI3 = !add(0x140, vi);
-}
-
-class vop2 <bits<6> si, bits<6> vi = si> : vop {
-  field bits<6> SI = si;
-  field bits<6> VI = vi;
-
-  field bits<9>  SI3 = {1, 0, 0, si{5-0}};
-  field bits<10> VI3 = {0, 1, 0, 0, vi{5-0}};
-}
-
-// Specify a VOP2 opcode for SI and VOP3 opcode for VI
-// that doesn't have VOP2 encoding on VI
-class vop23 <bits<6> si, bits<10> vi> : vop2 <si> {
-  let VI3 = vi;
-}
-
-class vop3 <bits<9> si, bits<10> vi = {0, si}> : vop {
-  let SI3 = si;
-  let VI3 = vi;
-}
-
 // Execpt for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in AMDGPUInstrInfo.cpp
 def SIEncodingFamily {
@@ -639,18 +607,20 @@ class getVOP3SrcForVT<ValueType VT> {
 
 // Returns 1 if the source arguments have modifiers, 0 if they do not.
 // XXX - do f16 instructions?
-class hasModifiers<ValueType SrcVT> {
+class isFloatType<ValueType SrcVT> {
   bit ret =
+    !if(!eq(SrcVT.Value, f16.Value), 1,
     !if(!eq(SrcVT.Value, f32.Value), 1,
     !if(!eq(SrcVT.Value, f64.Value), 1,
-    0));
+    0)));
 }
 
-class hasIntModifiers<ValueType SrcVT> {
+class isIntType<ValueType SrcVT> {
   bit ret =
+    !if(!eq(SrcVT.Value, i16.Value), 1,
     !if(!eq(SrcVT.Value, i32.Value), 1,
     !if(!eq(SrcVT.Value, i64.Value), 1,
-    0));
+    0)));
 }
 
 
@@ -756,39 +726,21 @@ class getInsSDWA <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
                // VOP1 without input operands (V_NOP)
                (ins),
             !if(!eq(NumSrcArgs, 1),
-                !if(HasFloatModifiers,
-                    // VOP1_SDWA with float modifiers
-                    (ins Src0Mod:$src0_fmodifiers, Src0RC:$src0,
-                         clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                         src0_sel:$src0_sel),
-                    // VOP1_SDWA with int modifiers
-                    (ins Src0Mod:$src0_imodifiers, Src0RC:$src0,
-                         clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                         src0_sel:$src0_sel))
-              /* NumSrcArgs == 2 */,
-              !if(HasFloatModifiers,
-                  !if(!eq(DstVT.Size, 1),
-                      // VOPC_SDWA with float modifiers
-                      (ins Src0Mod:$src0_fmodifiers, Src0RC:$src0,
-                           Src1Mod:$src1_fmodifiers, Src1RC:$src1,
-                           clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
-                      // VOP2_SDWA or VOPC_SDWA with float modifiers
-                      (ins Src0Mod:$src0_fmodifiers, Src0RC:$src0,
-                           Src1Mod:$src1_fmodifiers, Src1RC:$src1,
-                           clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                           src0_sel:$src0_sel, src1_sel:$src1_sel)),
-
-                  !if(!eq(DstVT.Size, 1),
-                      // VOPC_SDWA with int modifiers
-                      (ins Src0Mod:$src0_imodifiers, Src0RC:$src0,
-                           Src1Mod:$src1_imodifiers, Src1RC:$src1,
-                           clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
-                      // VOP2_SDWA or VOPC_SDWA with int modifiers
-                      (ins Src0Mod:$src0_imodifiers, Src0RC:$src0,
-                           Src1Mod:$src1_imodifiers, Src1RC:$src1,
-                           clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                           src0_sel:$src0_sel, src1_sel:$src1_sel))
-             /* endif */)));
+               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+                    clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                    src0_sel:$src0_sel),
+            !if(!eq(NumSrcArgs, 2),
+               !if(!eq(DstVT.Size, 1),
+                  // VOPC_SDWA with float modifiers
+                  (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+                       Src1Mod:$src1_modifiers, Src1RC:$src1,
+                       clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
+                  // VOP2_SDWA or VOPC_SDWA with float modifiers
+                  (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+                       Src1Mod:$src1_modifiers, Src1RC:$src1,
+                       clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                       src0_sel:$src0_sel, src1_sel:$src1_sel)),
+            (ins)/* endif */)));
 }
 
 // Outs for DPP and SDWA
@@ -852,8 +804,8 @@ class getAsmSDWA <bit HasDst, int NumSrcArgs, bit HasFloatModifiers,
                        " vcc", // use vcc token as dst for VOPC instructioins
                        "$vdst"),
                     "");
-  string src0 = !if(HasFloatModifiers, "$src0_fmodifiers", "$src0_imodifiers");
-  string src1 = !if(HasFloatModifiers, "$src1_fmodifiers", "$src1_imodifiers");
+  string src0 = "$src0_modifiers";
+  string src1 = "$src1_modifiers";
   string args = !if(!eq(NumSrcArgs, 0),
                     "",
                     !if(!eq(NumSrcArgs, 1),
@@ -892,6 +844,14 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
             );
 }
 
+class BitOr<bit a, bit b> {
+  bit ret = !if(a, 1, !if(b, 1, 0));
+}
+
+class BitAnd<bit a, bit b> {
+  bit ret = !if(a, !if(b, 1, 0), 0);
+}
+
 class VOPProfile <list<ValueType> _ArgVT> {
 
   field list<ValueType> ArgVT = _ArgVT;
@@ -918,19 +878,27 @@ class VOPProfile <list<ValueType> _ArgVT> {
 
   field bit HasDst = !if(!eq(DstVT.Value, untyped.Value), 0, 1);
   field bit HasDst32 = HasDst;
+  field bit EmitDst = HasDst; // force dst encoding, see v_movreld_b32 special case
   field int NumSrcArgs = getNumSrcArgs<Src0VT, Src1VT, Src2VT>.ret;
   field bit HasSrc0 = !if(!eq(Src0VT.Value, untyped.Value), 0, 1);
   field bit HasSrc1 = !if(!eq(Src1VT.Value, untyped.Value), 0, 1);
   field bit HasSrc2 = !if(!eq(Src2VT.Value, untyped.Value), 0, 1);
-  field bit HasSrc0Mods = hasModifiers<Src0VT>.ret;
-  field bit HasSrc1Mods = hasModifiers<Src1VT>.ret;
-  field bit HasSrc2Mods = hasModifiers<Src2VT>.ret;
 
-  field bit HasSrc0IntMods = hasIntModifiers<Src0VT>.ret;
-  field bit HasSrc1IntMods = hasIntModifiers<Src1VT>.ret;
-  field bit HasSrc2IntMods = hasIntModifiers<Src2VT>.ret;
+  // TODO: Modifiers logic is somewhat adhoc here, to be refined later
+  field bit HasModifiers = isFloatType<Src0VT>.ret;
 
-  field bit HasModifiers = HasSrc0Mods;
+  field bit HasSrc0FloatMods = isFloatType<Src0VT>.ret;
+  field bit HasSrc1FloatMods = isFloatType<Src1VT>.ret;
+  field bit HasSrc2FloatMods = isFloatType<Src2VT>.ret;
+
+  field bit HasSrc0IntMods = isIntType<Src0VT>.ret;
+  field bit HasSrc1IntMods = isIntType<Src1VT>.ret;
+  field bit HasSrc2IntMods = isIntType<Src2VT>.ret;
+
+  field bit HasSrc0Mods = HasModifiers;
+  field bit HasSrc1Mods = !if(HasModifiers, BitOr<HasSrc1FloatMods, HasSrc1IntMods>.ret, 0);
+  field bit HasSrc2Mods = !if(HasModifiers, BitOr<HasSrc2FloatMods, HasSrc2IntMods>.ret, 0);
+
   field bit HasOMod = HasModifiers;
   field bit HasClamp = HasModifiers;
   field bit HasSDWAClamp = HasSrc0;
@@ -997,125 +965,17 @@ def VOP_I32_F32_F32 : VOPProfile <[i32, f32, f32, untyped]>;
 def VOP_I32_F32_I32 : VOPProfile <[i32, f32, i32, untyped]>;
 def VOP_I32_I32_I32 : VOPProfile <[i32, i32, i32, untyped]>;
 
-// Restrict src0 to be VGPR
-def VOP_I32_VI32_NO_EXT : VOPProfile<[i32, i32, untyped, untyped]> {
-  let Src0RC32 = VRegSrc_32;
-  let Src0RC64 = VRegSrc_32;
-
-  let HasExt = 0;
-}
-
-// Special case because there are no true output operands.  Hack vdst
-// to be a src operand. The custom inserter must add a tied implicit
-// def and use of the super register since there seems to be no way to
-// add an implicit def of a virtual register in tablegen.
-def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
-  let Src0RC32 = VOPDstOperand<VGPR_32>;
-  let Src0RC64 = VOPDstOperand<VGPR_32>;
-
-  let Outs = (outs);
-  let Ins32 = (ins Src0RC32:$vdst, VSrc_b32:$src0);
-  let Ins64 = (ins Src0RC64:$vdst, VSrc_b32:$src0);
-
-  let InsDPP = (ins Src0RC32:$vdst, Src0RC32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsSDWA = (ins Src0RC32:$vdst, Int32InputMods:$src0_imodifiers, VCSrc_b32:$src0,
-                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                     src0_sel:$src0_sel);
-
-  let Asm32 = getAsm32<1, 1>.ret;
-  let Asm64 = getAsm64<1, 1, 0>.ret;
-  let AsmDPP = getAsmDPP<1, 1, 0>.ret;
-  let AsmSDWA = getAsmSDWA<1, 1, 0>.ret;
-
-  let HasExt = 0;
-  let HasDst = 0;
-}
-
-// Write out to vcc or arbitrary SGPR.
-def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped]> {
-  let Asm32 = "$vdst, vcc, $src0, $src1";
-  let Asm64 = "$vdst, $sdst, $src0, $src1";
-  let Outs32 = (outs DstRC:$vdst);
-  let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
-}
-
-// Write out to vcc or arbitrary SGPR and read in from vcc or
-// arbitrary SGPR.
-def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
-  // We use VCSrc_b32 to exclude literal constants, even though the
-  // encoding normally allows them since the implicit VCC use means
-  // using one would always violate the constant bus
-  // restriction. SGPRs are still allowed because it should
-  // technically be possible to use VCC again as src0.
-  let Src0RC32 = VCSrc_b32;
-  let Asm32 = "$vdst, vcc, $src0, $src1, vcc";
-  let Asm64 = "$vdst, $sdst, $src0, $src1, $src2";
-  let Outs32 = (outs DstRC:$vdst);
-  let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
-
-  // Suppress src2 implied by type since the 32-bit encoding uses an
-  // implicit VCC use.
-  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
-}
-
-// Read in from vcc or arbitrary SGPR
-def VOP2e_I32_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
-  let Src0RC32 = VCSrc_b32; // See comment in def VOP2b_I32_I1_I32_I32_I1 above.
-  let Asm32 = "$vdst, $src0, $src1, vcc";
-  let Asm64 = "$vdst, $src0, $src1, $src2";
-  let Outs32 = (outs DstRC:$vdst);
-  let Outs64 = (outs DstRC:$vdst);
-
-  // Suppress src2 implied by type since the 32-bit encoding uses an
-  // implicit VCC use.
-  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
-}
-
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
 def VOP_I64_I64_I64 : VOPProfile <[i64, i64, i64, untyped]>;
 
 def VOP_F32_F32_F32_F32 : VOPProfile <[f32, f32, f32, f32]>;
-def VOP_MADAK : VOPProfile <[f32, f32, f32, f32]> {
-  field dag Ins32 = (ins VCSrc_f32:$src0, VGPR_32:$src1, f32kimm:$imm);
-  field string Asm32 = "$vdst, $src0, $src1, $imm";
-  field bit HasExt = 0;
-}
-def VOP_MADMK : VOPProfile <[f32, f32, f32, f32]> {
-  field dag Ins32 = (ins VCSrc_f32:$src0, f32kimm:$imm, VGPR_32:$src1);
-  field string Asm32 = "$vdst, $src0, $imm, $src1";
-  field bit HasExt = 0;
-}
-def VOP_MAC : VOPProfile <[f32, f32, f32, f32]> {
-  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, VGPR_32:$src2);
-  let Ins64 = getIns64<Src0RC64, Src1RC64, RegisterOperand<VGPR_32>, 3,
-                       HasModifiers, Src0Mod, Src1Mod, Src2Mod>.ret;
-  let InsDPP = (ins FP32InputMods:$src0_modifiers, Src0RC32:$src0,
-                    FP32InputMods:$src1_modifiers, Src1RC32:$src1,
-                    VGPR_32:$src2, // stub argument
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsSDWA = (ins FP32InputMods:$src0_fmodifiers, Src0RC32:$src0,
-                     FP32InputMods:$src1_fmodifiers, Src1RC32:$src1,
-                     VGPR_32:$src2, // stub argument
-                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                     src0_sel:$src0_sel, src1_sel:$src1_sel);
-  let Asm32 = getAsm32<1, 2, f32>.ret;
-  let Asm64 = getAsm64<1, 2, HasModifiers, f32>.ret;
-  let AsmDPP = getAsmDPP<1, 2, HasModifiers, f32>.ret;
-  let AsmSDWA = getAsmSDWA<1, 2, HasModifiers, f32>.ret;
-}
 def VOP_F64_F64_F64_F64 : VOPProfile <[f64, f64, f64, f64]>;
 def VOP_I32_I32_I32_I32 : VOPProfile <[i32, i32, i32, i32]>;
 def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
 def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 def VOP_I64_I64_I32_I64 : VOPProfile <[i64, i64, i32, i64]>;
 def VOP_V4I32_I64_I32_V4I32 : VOPProfile <[v4i32, i64, i32, v4i32]>;
-
-class VOP <string opName> {
-  string OpName = opName;
-}
 
 class Commutable_REV <string revOp, bit isOrig> {
   string RevOp = revOp;
@@ -1126,556 +986,6 @@ class AtomicNoRet <string noRetOp, bit isRet> {
   string NoRetOp = noRetOp;
   bit IsRet = isRet;
 }
-
-class VOP1_Pseudo <dag outs, dag ins, list<dag> pattern, string opName> :
-  VOP1Common <outs, ins, "", pattern>,
-  VOP <opName>,
-  SIMCInstr <opName#"_e32", SIEncodingFamily.NONE>,
-  MnemonicAlias<opName#"_e32", opName> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-
-  field bits<8> vdst;
-  field bits<9> src0;
-}
-
-class VOP1_Real_si <string opName, vop1 op, dag outs, dag ins, string asm> :
-  VOP1<op.SI, outs, ins, asm, []>,
-  SIMCInstr <opName#"_e32", SIEncodingFamily.SI> {
-  let AssemblerPredicate = SIAssemblerPredicate;
-  let DecoderNamespace = "SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class VOP1_Real_vi <string opName, vop1 op, dag outs, dag ins, string asm> :
-  VOP1<op.VI, outs, ins, asm, []>,
-  SIMCInstr <opName#"_e32", SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-multiclass VOP1_m <vop1 op, string opName, VOPProfile p, list<dag> pattern,
-                   string asm = opName#p.Asm32> {
-  def "" : VOP1_Pseudo <p.Outs, p.Ins32, pattern, opName>;
-
-  def _si : VOP1_Real_si <opName, op, p.Outs, p.Ins32, asm>;
-
-  def _vi : VOP1_Real_vi <opName, op, p.Outs, p.Ins32, asm>;
-
-}
-
-class VOP1_DPP <vop1 op, string opName, VOPProfile p> :
-  VOP1_DPPe <op.VI>,
-  VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
-  let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
-  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.DPP,
-                                     AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "DPP";
-  let DisableDecoder = DisableVIDecoder;
-  let src0_modifiers = !if(p.HasModifiers, ?, 0);
-  let src1_modifiers = 0;
-}
-
-class SDWADisableFields <VOPProfile p> {
-  bits<8> src0 = !if(!eq(p.NumSrcArgs, 0), 0, ?);
-  bits<3> src0_sel = !if(!eq(p.NumSrcArgs, 0), 6, ?);
-  bits<2> src0_fmodifiers = !if(!eq(p.NumSrcArgs, 0),
-                                0,
-                                !if(p.HasModifiers, ?, 0));
-  bits<1> src0_imodifiers = !if(!eq(p.NumSrcArgs, 0),
-                                0,
-                                !if(p.HasModifiers, 0, ?));
-  bits<3> src1_sel = !if(!eq(p.NumSrcArgs, 0), 6,
-                         !if(!eq(p.NumSrcArgs, 1), 6,
-                             ?));
-  bits<2> src1_fmodifiers = !if(!eq(p.NumSrcArgs, 0), 0,
-                                !if(!eq(p.NumSrcArgs, 1), 0,
-                                    !if(p.HasModifiers, ?, 0)));
-  bits<1> src1_imodifiers = !if(!eq(p.NumSrcArgs, 0), 0,
-                                !if(!eq(p.NumSrcArgs, 1), 0,
-                                    !if(p.HasModifiers, 0, ?)));
-  bits<3> dst_sel = !if(p.HasDst, ?, 6);
-  bits<2> dst_unused = !if(p.HasDst, ?, 2);
-  bits<1> clamp = !if(!eq(p.NumSrcArgs, 0), 0, ?);
-}
-
-class VOP1_SDWA <vop1 op, string opName, VOPProfile p> :
-  VOP1_SDWAe <op.VI>,
-  VOP_SDWA <p.OutsSDWA, p.InsSDWA, opName#p.AsmSDWA, [], p.HasModifiers>,
-  SDWADisableFields <p> {
-  let AsmMatchConverter = "cvtSdwaVOP1";
-  let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
-  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
-                                     AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-multiclass VOP1SI_m <vop1 op, string opName, VOPProfile p, list<dag> pattern,
-                     string asm = opName#p.Asm32> {
-
-  def "" : VOP1_Pseudo <p.Outs, p.Ins32, pattern, opName>;
-
-  def _si : VOP1_Real_si <opName, op, p.Outs, p.Ins32, asm>;
-}
-
-class VOP2_Pseudo <dag outs, dag ins, list<dag> pattern, string opName> :
-  VOP2Common <outs, ins, "", pattern>,
-  VOP <opName>,
-  SIMCInstr<opName#"_e32", SIEncodingFamily.NONE>,
-  MnemonicAlias<opName#"_e32", opName> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-}
-
-class VOP2_Real_si <string opName, vop2 op, dag outs, dag ins, string asm> :
-  VOP2 <op.SI, outs, ins, opName#asm, []>,
-  SIMCInstr <opName#"_e32", SIEncodingFamily.SI> {
-  let AssemblerPredicates = [isSICI];
-  let DecoderNamespace = "SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class VOP2_Real_vi <string opName, vop2 op, dag outs, dag ins, string asm> :
-  VOP2 <op.VI, outs, ins, opName#asm, []>,
-  SIMCInstr <opName#"_e32", SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-multiclass VOP2SI_m <vop2 op, string opName, VOPProfile p, list<dag> pattern,
-                     string revOp> {
-
-  def "" : VOP2_Pseudo <p.Outs32, p.Ins32, pattern, opName>,
-           Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
-
-  def _si : VOP2_Real_si <opName, op, p.Outs32, p.Ins32, p.Asm32>;
-}
-
-multiclass VOP2_m <vop2 op, string opName, VOPProfile p, list <dag> pattern,
-                   string revOp> {
-
-  def "" : VOP2_Pseudo <p.Outs32, p.Ins32, pattern, opName>,
-           Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
-
-  def _si : VOP2_Real_si <opName, op, p.Outs32, p.Ins32, p.Asm32>;
-
-  def _vi : VOP2_Real_vi <opName, op, p.Outs32, p.Ins32, p.Asm32>;
-
-}
-
-class VOP2_DPP <vop2 op, string opName, VOPProfile p> :
-  VOP2_DPPe <op.VI>,
-  VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
-  let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
-  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.DPP,
-                                     AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "DPP";
-  let DisableDecoder = DisableVIDecoder;
-  let src0_modifiers = !if(p.HasModifiers, ?, 0);
-  let src1_modifiers = !if(p.HasModifiers, ?, 0);
-}
-
-class VOP2_SDWA <vop2 op, string opName, VOPProfile p> :
-  VOP2_SDWAe <op.VI>,
-  VOP_SDWA <p.OutsSDWA, p.InsSDWA, opName#p.AsmSDWA, [], p.HasModifiers>,
-  SDWADisableFields <p> {
-  let AsmMatchConverter = "cvtSdwaVOP2";
-  let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
-  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
-                                     AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-class VOP3DisableFields <bit HasSrc1, bit HasSrc2, bit HasModifiers> {
-
-  bits<2> src0_modifiers = !if(HasModifiers, ?, 0);
-  bits<2> src1_modifiers = !if(HasModifiers, !if(HasSrc1, ?, 0), 0);
-  bits<2> src2_modifiers = !if(HasModifiers, !if(HasSrc2, ?, 0), 0);
-  bits<2> omod = !if(HasModifiers, ?, 0);
-  bits<1> clamp = !if(HasModifiers, ?, 0);
-  bits<9> src1 = !if(HasSrc1, ?, 0);
-  bits<9> src2 = !if(HasSrc2, ?, 0);
-}
-
-class VOP3DisableModFields <bit HasSrc0Mods,
-                            bit HasSrc1Mods = 0,
-                            bit HasSrc2Mods = 0,
-                            bit HasOutputMods = 0> {
-  bits<2> src0_modifiers = !if(HasSrc0Mods, ?, 0);
-  bits<2> src1_modifiers = !if(HasSrc1Mods, ?, 0);
-  bits<2> src2_modifiers = !if(HasSrc2Mods, ?, 0);
-  bits<2> omod = !if(HasOutputMods, ?, 0);
-  bits<1> clamp = !if(HasOutputMods, ?, 0);
-}
-
-class VOP3_Pseudo <dag outs, dag ins, list<dag> pattern, string opName,
-                   bit HasMods = 0, bit VOP3Only = 0> :
-  VOP3Common <outs, ins, "", pattern, HasMods, VOP3Only>,
-  VOP <opName>,
-  SIMCInstr<opName#"_e64", SIEncodingFamily.NONE>,
-  MnemonicAlias<opName#"_e64", opName> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-
-  field bit vdst;
-  field bit src0;
-}
-
-class VOP3_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
-                    bit HasMods = 0, bit VOP3Only = 0> :
-  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
-  VOP3e <op>,
-  SIMCInstr<opName#"_e64", SIEncodingFamily.SI> {
-  let AssemblerPredicates = [isSICI];
-  let DecoderNamespace = "SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class VOP3_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
-                    bit HasMods = 0, bit VOP3Only = 0> :
-  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
-  VOP3e_vi <op>,
-  SIMCInstr <opName#"_e64", SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-class VOP3b_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
-                     bit HasMods = 0, bit VOP3Only = 0> :
-  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
-  VOP3be <op>,
-  SIMCInstr<opName#"_e64", SIEncodingFamily.SI> {
-  let AssemblerPredicates = [isSICI];
-  let DecoderNamespace = "SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class VOP3b_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
-                     bit HasMods = 0, bit VOP3Only = 0> :
-  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
-  VOP3be_vi <op>,
-  SIMCInstr <opName#"_e64", SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-class VOP3e_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
-                     bit HasMods = 0, bit VOP3Only = 0> :
-  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
-  VOP3e <op>,
-  SIMCInstr<opName#"_e64", SIEncodingFamily.SI> {
-  let AssemblerPredicates = [isSICI];
-  let DecoderNamespace = "SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class VOP3e_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
-                     bit HasMods = 0, bit VOP3Only = 0> :
-  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
-  VOP3e_vi <op>,
-  SIMCInstr <opName#"_e64", SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-multiclass VOP3_1_m <vop op, dag outs, dag ins, string asm,
-                     list<dag> pattern, string opName, bit HasMods = 1> {
-
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>;
-
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
-            VOP3DisableFields<0, 0, HasMods>;
-
-  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName, HasMods>,
-            VOP3DisableFields<0, 0, HasMods>;
-}
-
-multiclass VOP3SI_1_m <vop op, dag outs, dag ins, string asm,
-                     list<dag> pattern, string opName, bit HasMods = 1> {
-
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>;
-
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
-            VOP3DisableFields<0, 0, HasMods>;
-  // No VI instruction. This class is for SI only.
-}
-
-multiclass VOP3_2_m <vop op, dag outs, dag ins, string asm,
-                     list<dag> pattern, string opName, string revOp,
-                     bit HasMods = 1> {
-
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
-           Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
-
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
-            VOP3DisableFields<1, 0, HasMods>;
-
-  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName, HasMods>,
-            VOP3DisableFields<1, 0, HasMods>;
-}
-
-multiclass VOP3SI_2_m <vop op, dag outs, dag ins, string asm,
-                     list<dag> pattern, string opName, string revOp,
-                     bit HasMods = 1> {
-
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
-           Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
-
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
-            VOP3DisableFields<1, 0, HasMods>;
-
-  // No VI instruction. This class is for SI only.
-}
-
-// Two operand VOP3b instruction that may have a 3rd SGPR bool operand
-// instead of an implicit VCC as in the VOP2b format.
-multiclass VOP3b_2_3_m <vop op, dag outs, dag ins, string asm,
-                        list<dag> pattern, string opName, string revOp,
-                        bit HasMods = 1, bit useSrc2Input = 0, bit VOP3Only = 0> {
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods, VOP3Only>;
-
-  def _si : VOP3b_Real_si <op.SI3, outs, ins, asm, opName, HasMods, VOP3Only>,
-            VOP3DisableFields<1, useSrc2Input, HasMods>;
-
-  def _vi : VOP3b_Real_vi <op.VI3, outs, ins, asm, opName, HasMods, VOP3Only>,
-            VOP3DisableFields<1, useSrc2Input, HasMods>;
-}
-
-// Same as VOP3b_2_3_m but no 2nd destination (sdst), e.g. v_cndmask_b32.
-multiclass VOP3e_2_3_m <vop op, dag outs, dag ins, string asm,
-                        list<dag> pattern, string opName, string revOp,
-                        bit HasMods = 1, bit useSrc2Input = 0, bit VOP3Only = 0> {
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods, VOP3Only>;
-
-  def _si : VOP3e_Real_si <op.SI3, outs, ins, asm, opName, HasMods, VOP3Only>,
-            VOP3DisableFields<1, useSrc2Input, HasMods>;
-
-  def _vi : VOP3e_Real_vi <op.VI3, outs, ins, asm, opName, HasMods, VOP3Only>,
-            VOP3DisableFields<1, useSrc2Input, HasMods>;
-}
-
-
-// An instruction that is VOP2 on SI and VOP3 on VI, no modifiers.
-multiclass VOP2SI_3VI_m <vop3 op, string opName, dag outs, dag ins,
-                         string asm, list<dag> pattern = []> {
-  let isPseudo = 1, isCodeGenOnly = 1 in {
-    def "" : VOPAnyCommon <outs, ins, "", pattern>,
-             SIMCInstr<opName, SIEncodingFamily.NONE>;
-  }
-
-  def _si : VOP2 <op.SI3{5-0}, outs, ins, asm, []>,
-            SIMCInstr <opName, SIEncodingFamily.SI> {
-            let AssemblerPredicates = [isSICI];
-            let DecoderNamespace = "SICI";
-            let DisableDecoder = DisableSIDecoder;
-  }
-
-  def _vi : VOP3Common <outs, ins, asm, []>,
-            VOP3e_vi <op.VI3>,
-            VOP3DisableFields <1, 0, 0>,
-            SIMCInstr <opName, SIEncodingFamily.VI> {
-            let AssemblerPredicates = [isVI];
-            let DecoderNamespace = "VI";
-            let DisableDecoder = DisableVIDecoder;
-  }
-}
-
-multiclass VOP1_Helper <vop1 op, string opName, VOPProfile p, list<dag> pat32,
-                        list<dag> pat64> {
-
-  defm _e32 : VOP1_m <op, opName, p, pat32>;
-
-  defm _e64 : VOP3_1_m <op, p.Outs, p.Ins64, opName#p.Asm64, pat64, opName,
-                        p.HasModifiers>;
-
-  def _dpp : VOP1_DPP <op, opName, p>;
-
-  def _sdwa : VOP1_SDWA <op, opName, p>;
-}
-
-multiclass VOP1Inst <vop1 op, string opName, VOPProfile P,
-                     SDPatternOperator node = null_frag> : VOP1_Helper <
-  op, opName, P, [],
-  !if(P.HasModifiers,
-      [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0,
-                                i32:$src0_modifiers, i1:$clamp, i32:$omod))))],
-      [(set P.DstVT:$vdst, (node P.Src0VT:$src0))])
->;
-
-multiclass VOP1InstSI <vop1 op, string opName, VOPProfile P,
-                       SDPatternOperator node = null_frag> {
-
-  defm _e32 : VOP1SI_m <op, opName, P, []>;
-
-  defm _e64 : VOP3SI_1_m <op, P.Outs, P.Ins64, opName#P.Asm64,
-    !if(P.HasModifiers,
-      [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0,
-                                i32:$src0_modifiers, i1:$clamp, i32:$omod))))],
-      [(set P.DstVT:$vdst, (node P.Src0VT:$src0))]),
-    opName, P.HasModifiers>;
-}
-
-multiclass VOP2_Helper <vop2 op, string opName, VOPProfile p, list<dag> pat32,
-                        list<dag> pat64, string revOp> {
-
-  defm _e32 : VOP2_m <op, opName, p, pat32, revOp>;
-
-  defm _e64 : VOP3_2_m <op, p.Outs, p.Ins64, opName#p.Asm64, pat64, opName,
-                        revOp, p.HasModifiers>;
-
-  def _dpp : VOP2_DPP <op, opName, p>;
-
-  def _sdwa : VOP2_SDWA <op, opName, p>;
-}
-
-multiclass VOP2Inst <vop2 op, string opName, VOPProfile P,
-                     SDPatternOperator node = null_frag,
-                     string revOp = opName> : VOP2_Helper <
-  op, opName, P, [],
-  !if(P.HasModifiers,
-      [(set P.DstVT:$vdst,
-           (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
-                                      i1:$clamp, i32:$omod)),
-                 (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
-      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
-  revOp
->;
-
-multiclass VOP2InstSI <vop2 op, string opName, VOPProfile P,
-                       SDPatternOperator node = null_frag,
-                       string revOp = opName> {
-
-  defm _e32 : VOP2SI_m <op, opName, P, [], revOp>;
-
-  defm _e64 : VOP3SI_2_m <op, P.Outs, P.Ins64, opName#P.Asm64,
-    !if(P.HasModifiers,
-        [(set P.DstVT:$vdst,
-             (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
-                                        i1:$clamp, i32:$omod)),
-                   (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
-        [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
-    opName, revOp, P.HasModifiers>;
-}
-
-multiclass VOP2e_Helper <vop2 op, string opName, VOPProfile p,
-                         list<dag> pat32, list<dag> pat64,
-                         string revOp, bit useSGPRInput> {
-
-  let SchedRW = [Write32Bit] in {
-    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]) in {
-      defm _e32 : VOP2_m <op, opName, p, pat32, revOp>;
-    }
-
-    defm _e64 : VOP3e_2_3_m <op, p.Outs64, p.Ins64, opName#p.Asm64, pat64,
-                             opName, revOp, p.HasModifiers, useSGPRInput>;
-  }
-}
-
-multiclass VOP2eInst <vop2 op, string opName, VOPProfile P,
-                      SDPatternOperator node = null_frag,
-                      string revOp = opName> : VOP2e_Helper <
-  op, opName, P, [],
-  !if(P.HasModifiers,
-      [(set P.DstVT:$vdst,
-           (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
-                                      i1:$clamp, i32:$omod)),
-                 (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
-      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
-  revOp, !eq(P.NumSrcArgs, 3)
->;
-
-multiclass VOP2b_Helper <vop2 op, string opName, VOPProfile p,
-                         list<dag> pat32, list<dag> pat64,
-                         string revOp, bit useSGPRInput> {
-
-  let SchedRW = [Write32Bit, WriteSALU] in {
-    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
-      defm _e32 : VOP2_m <op, opName, p, pat32, revOp>;
-    }
-
-    defm _e64 : VOP3b_2_3_m <op, p.Outs64, p.Ins64, opName#p.Asm64, pat64,
-                             opName, revOp, p.HasModifiers, useSGPRInput>;
-  }
-}
-
-multiclass VOP2bInst <vop2 op, string opName, VOPProfile P,
-                      SDPatternOperator node = null_frag,
-                      string revOp = opName> : VOP2b_Helper <
-  op, opName, P, [],
-  !if(P.HasModifiers,
-      [(set P.DstVT:$vdst,
-           (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
-                                      i1:$clamp, i32:$omod)),
-                 (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
-      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
-  revOp, !eq(P.NumSrcArgs, 3)
->;
-
-// A VOP2 instruction that is VOP3-only on VI.
-multiclass VOP2_VI3_Helper <vop23 op, string opName, VOPProfile p,
-                            list<dag> pat32, list<dag> pat64, string revOp> {
-
-  defm _e32 : VOP2SI_m <op, opName, p, pat32, revOp>;
-
-  defm _e64 : VOP3_2_m <op, p.Outs, p.Ins64, opName#p.Asm64, pat64, opName,
-                        revOp, p.HasModifiers>;
-}
-
-multiclass VOP2_VI3_Inst <vop23 op, string opName, VOPProfile P,
-                          SDPatternOperator node = null_frag,
-                          string revOp = opName>
-                          : VOP2_VI3_Helper <
-  op, opName, P, [],
-  !if(P.HasModifiers,
-      [(set P.DstVT:$vdst,
-           (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
-                                      i1:$clamp, i32:$omod)),
-                 (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
-      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
-  revOp
->;
-
-multiclass VOP2MADK <vop2 op, string opName, VOPProfile P, list<dag> pattern = []> {
-
-  def "" : VOP2_Pseudo <P.Outs, P.Ins32, pattern, opName>;
-
-let isCodeGenOnly = 0 in {
-  def _si : VOP2Common <P.Outs, P.Ins32,
-                        !strconcat(opName, P.Asm32), []>,
-            SIMCInstr <opName#"_e32", SIEncodingFamily.SI>,
-            VOP2_MADKe <op.SI> {
-            let AssemblerPredicates = [isSICI];
-            let DecoderNamespace = "SICI";
-            let DisableDecoder = DisableSIDecoder;
-            }
-
-  def _vi : VOP2Common <P.Outs, P.Ins32,
-                        !strconcat(opName, P.Asm32), []>,
-            SIMCInstr <opName#"_e32", SIEncodingFamily.VI>,
-            VOP2_MADKe <op.VI> {
-            let AssemblerPredicates = [isVI];
-            let DecoderNamespace = "VI";
-            let DisableDecoder = DisableVIDecoder;
-            }
-} // End isCodeGenOnly = 0
-}
-
-class Vop3ModPat<Instruction Inst, VOPProfile P, SDPatternOperator node> : Pat<
-  (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
-        (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
-        (P.Src2VT (VOP3Mods P.Src2VT:$src2, i32:$src2_modifiers))),
-  (Inst i32:$src0_modifiers, P.Src0VT:$src0,
-        i32:$src1_modifiers, P.Src1VT:$src1,
-        i32:$src2_modifiers, P.Src2VT:$src2,
-        i1:$clamp,
-        i32:$omod)>;
 
 //===----------------------------------------------------------------------===//
 // Interpolation opcodes

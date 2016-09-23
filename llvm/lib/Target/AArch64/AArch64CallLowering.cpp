@@ -32,11 +32,10 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
-
 bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                             CCAssignFn *AssignFn,
                                             ArrayRef<ArgInfo> Args,
-                                            AssignFnTy AssignValToReg) const {
+                                            ValueHandler &Handler) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
 
@@ -49,19 +48,148 @@ bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
     if (AssignFn(i, CurVT, CurVT, CCValAssign::Full, Args[i].Flags, CCInfo))
       return false;
   }
+
   for (unsigned i = 0, e = Args.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
 
-    // FIXME: Support non-register argument.
-    if (!VA.isRegLoc())
+    if (VA.isRegLoc())
+      Handler.assignValueToReg(Args[i].Reg, VA.getLocReg(), VA);
+    else if (VA.isMemLoc()) {
+      unsigned Size = VA.getValVT().getSizeInBits() / 8;
+      unsigned Offset = VA.getLocMemOffset();
+      MachinePointerInfo MPO;
+      unsigned StackAddr = Handler.getStackAddress(Size, Offset, MPO);
+      Handler.assignValueToAddress(Args[i].Reg, StackAddr, Size, MPO, VA);
+    } else {
+      // FIXME: Support byvals and other weirdness
       return false;
-
-    // Everything checks out, tell the caller where we've decided this
-    // parameter/return value should go.
-    AssignValToReg(MIRBuilder, Args[i].Ty, Args[i].Reg, VA);
+    }
   }
   return true;
 }
+
+unsigned AArch64CallLowering::ValueHandler::extendRegister(unsigned ValReg,
+                                                           CCValAssign &VA) {
+  LLT LocTy{VA.getLocVT()};
+  switch (VA.getLocInfo()) {
+  default: break;
+  case CCValAssign::Full:
+  case CCValAssign::BCvt:
+    // FIXME: bitconverting between vector types may or may not be a
+    // nop in big-endian situations.
+    return ValReg;
+  case CCValAssign::AExt:
+    assert(!VA.getLocVT().isVector() && "unexpected vector extend");
+    // Otherwise, it's a nop.
+    return ValReg;
+  case CCValAssign::SExt: {
+    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    MIRBuilder.buildSExt(NewReg, ValReg);
+    return NewReg;
+  }
+  case CCValAssign::ZExt: {
+    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    MIRBuilder.buildZExt(NewReg, ValReg);
+    return NewReg;
+  }
+  }
+  llvm_unreachable("unable to extend register");
+}
+
+struct IncomingArgHandler : public AArch64CallLowering::ValueHandler {
+  IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+    : ValueHandler(MIRBuilder, MRI) {}
+
+  unsigned getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO) override {
+    auto &MFI = MIRBuilder.getMF().getFrameInfo();
+    int FI = MFI.CreateFixedObject(Size, Offset, true);
+    MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
+    unsigned AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
+    MIRBuilder.buildFrameIndex(AddrReg, FI);
+    return AddrReg;
+  }
+
+  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+                        CCValAssign &VA) override {
+    markPhysRegUsed(PhysReg);
+    MIRBuilder.buildCopy(ValVReg, PhysReg);
+    // FIXME: assert extension
+  }
+
+  void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+    auto MMO = MIRBuilder.getMF().getMachineMemOperand(
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
+        0);
+    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
+  }
+
+  /// How the physical register gets marked varies between formal
+  /// parameters (it's a basic-block live-in), and a call instruction
+  /// (it's an implicit-def of the BL).
+  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+};
+
+struct FormalArgHandler : public IncomingArgHandler {
+  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : IncomingArgHandler(MIRBuilder, MRI) {}
+
+  void markPhysRegUsed(unsigned PhysReg) override {
+    MIRBuilder.getMBB().addLiveIn(PhysReg);
+  }
+};
+
+struct CallReturnHandler : public IncomingArgHandler {
+  CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                       MachineInstrBuilder MIB)
+    : IncomingArgHandler(MIRBuilder, MRI), MIB(MIB) {}
+
+  void markPhysRegUsed(unsigned PhysReg) override {
+    MIB.addDef(PhysReg, RegState::Implicit);
+  }
+
+  MachineInstrBuilder MIB;
+};
+
+struct OutgoingArgHandler : public AArch64CallLowering::ValueHandler {
+  OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                     MachineInstrBuilder MIB)
+      : ValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+
+  unsigned getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO) override {
+    LLT p0 = LLT::pointer(0, 64);
+    LLT s64 = LLT::scalar(64);
+    unsigned SPReg = MRI.createGenericVirtualRegister(p0);
+    MIRBuilder.buildCopy(SPReg, AArch64::SP);
+
+    unsigned OffsetReg = MRI.createGenericVirtualRegister(s64);
+    MIRBuilder.buildConstant(OffsetReg, Offset);
+
+    unsigned AddrReg = MRI.createGenericVirtualRegister(p0);
+    MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
+
+    MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
+    return AddrReg;
+  }
+
+  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+                        CCValAssign &VA) override {
+    MIB.addUse(PhysReg, RegState::Implicit);
+    unsigned ExtReg = extendRegister(ValVReg, VA);
+    MIRBuilder.buildCopy(PhysReg, ExtReg);
+  }
+
+  void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+    auto MMO = MIRBuilder.getMF().getMachineMemOperand(
+        MPO, MachineMemOperand::MOStore, Size, 0);
+    MIRBuilder.buildStore(ValVReg, Addr, *MMO);
+  }
+
+  MachineInstrBuilder MIB;
+};
 
 void AArch64CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
                                             SmallVectorImpl<ArgInfo> &SplitArgs,
@@ -101,32 +229,6 @@ void AArch64CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   PerformArgSplit(SplitRegs, BitOffsets);
 }
 
-static void copyToPhysReg(MachineIRBuilder &MIRBuilder, unsigned ValReg,
-                          CCValAssign &VA, MachineRegisterInfo &MRI) {
-  LLT LocTy{VA.getLocVT()};
-  switch (VA.getLocInfo()) {
-  default: break;
-  case CCValAssign::AExt:
-    assert(!VA.getLocVT().isVector() && "unexpected vector extend");
-    // Otherwise, it's a nop.
-    break;
-  case CCValAssign::SExt: {
-    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
-    MIRBuilder.buildSExt(NewReg, ValReg);
-    ValReg = NewReg;
-    break;
-  }
-  case CCValAssign::ZExt: {
-    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
-    MIRBuilder.buildZExt(NewReg, ValReg);
-    ValReg = NewReg;
-    break;
-  }
-  }
-  MIRBuilder.buildCopy(VA.getLocReg(), ValReg);
-}
-
-
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val, unsigned VReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
@@ -152,12 +254,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                         MIRBuilder.buildExtract(Regs, Offsets, VReg);
                       });
 
-    return handleAssignments(MIRBuilder, AssignFn, SplitArgs,
-                             [&](MachineIRBuilder &MIRBuilder, Type *Ty,
-                                 unsigned ValReg, CCValAssign &VA) {
-                               copyToPhysReg(MIRBuilder, ValReg, VA, MRI);
-                               MIB.addUse(VA.getLocReg(), RegState::Implicit);
-                             });
+    OutgoingArgHandler Handler(MIRBuilder, MRI, MIB);
+    return handleAssignments(MIRBuilder, AssignFn, SplitArgs, Handler);
   }
   return true;
 }
@@ -190,14 +288,8 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
 
-  if (!handleAssignments(MIRBuilder, AssignFn, SplitArgs,
-                         [](MachineIRBuilder &MIRBuilder, Type *Ty,
-                            unsigned ValReg, CCValAssign &VA) {
-                           // FIXME: a sign/zeroext loc actually gives
-                           // us an optimization hint. We should use it.
-                           MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
-                           MIRBuilder.buildCopy(ValReg, VA.getLocReg());
-                         }))
+  FormalArgHandler Handler(MIRBuilder, MRI);
+  if (!handleAssignments(MIRBuilder, AssignFn, SplitArgs, Handler))
     return false;
 
   // Move back to the end of the basic block.
@@ -228,27 +320,24 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   CCAssignFn *CallAssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
 
-  // And finally we can do the actual assignments. For a call we need to keep
-  // track of the registers used because they'll be implicit uses of the BL.
-  SmallVector<unsigned, 8> PhysRegs;
-  if (!handleAssignments(MIRBuilder, CallAssignFn, SplitArgs,
-                         [&](MachineIRBuilder &MIRBuilder, Type *Ty,
-                             unsigned ValReg, CCValAssign &VA) {
-                           copyToPhysReg(MIRBuilder, ValReg, VA, MRI);
-                           PhysRegs.push_back(VA.getLocReg());
-                         }))
-    return false;
-
-  // Now we can build the actual call instruction.
-  auto MIB = MIRBuilder.buildInstr(Callee.isReg() ? AArch64::BLR : AArch64::BL);
+  // Create a temporarily-floating call instruction so we can add the implicit
+  // uses of arg registers.
+  auto MIB = MIRBuilder.buildInstrNoInsert(Callee.isReg() ? AArch64::BLR
+                                                          : AArch64::BL);
   MIB.addOperand(Callee);
 
   // Tell the call which registers are clobbered.
   auto TRI = MF.getSubtarget().getRegisterInfo();
   MIB.addRegMask(TRI->getCallPreservedMask(MF, F.getCallingConv()));
 
-  for (auto Reg : PhysRegs)
-    MIB.addUse(Reg, RegState::Implicit);
+  // Do the actual argument marshalling.
+  SmallVector<unsigned, 8> PhysRegs;
+  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB);
+  if (!handleAssignments(MIRBuilder, CallAssignFn, SplitArgs, Handler))
+    return false;
+
+  // Now we can add the actual call instruction to the correct basic block.
+  MIRBuilder.insertInstr(MIB);
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arugments, the physical register must be an
@@ -267,14 +356,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                   std::back_inserter(SplitRegs));
                       });
 
-    if (!handleAssignments(MIRBuilder, RetAssignFn, SplitArgs,
-                      [&](MachineIRBuilder &MIRBuilder, Type *Ty,
-                          unsigned ValReg, CCValAssign &VA) {
-                             // FIXME: a sign/zeroext loc actually gives
-                             // us an optimization hint. We should use it.
-                             MIRBuilder.buildCopy(ValReg, VA.getLocReg());
-                             MIB.addDef(VA.getLocReg(), RegState::Implicit);
-                           }))
+    CallReturnHandler Handler(MIRBuilder, MRI, MIB);
+    if (!handleAssignments(MIRBuilder, RetAssignFn, SplitArgs, Handler))
       return false;
 
     if (!RegOffsets.empty())

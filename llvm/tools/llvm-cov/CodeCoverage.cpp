@@ -55,6 +55,9 @@ public:
     Export
   };
 
+  int run(Command Cmd, int argc, const char **argv);
+
+private:
   /// \brief Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
 
@@ -63,6 +66,10 @@ public:
 
   /// \brief Copy \p Path into the list of input source files.
   void addCollectedPath(const std::string &Path);
+
+  /// \brief If \p Path is a regular file, collect the path. If it's a
+  /// directory, recursively collect all of the paths within the directory.
+  void collectPaths(const std::string &Path);
 
   /// \brief Return a memory buffer for the given source file.
   ErrorOr<const MemoryBuffer &> getSourceFile(StringRef SourceFile);
@@ -90,8 +97,6 @@ public:
   /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
   StringRef getSymbolForHumans(StringRef Sym) const;
 
-  int run(Command Cmd, int argc, const char **argv);
-
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
 
   int show(int argc, const char **argv,
@@ -105,14 +110,24 @@ public:
 
   std::string ObjectFilename;
   CoverageViewOptions ViewOpts;
-  std::string PGOFilename;
   CoverageFiltersMatchAll Filters;
+
+  /// The path to the indexed profile.
+  std::string PGOFilename;
+
+  /// A list of input source files.
   std::vector<StringRef> SourceFiles;
+
+  /// Whether or not we're in -filename-equivalence mode.
   bool CompareFilenamesOnly;
+
+  /// In -filename-equivalence mode, this maps absolute paths from the
+  /// coverage mapping data to input source files.
   StringMap<std::string> RemappedFilenames;
+
+  /// The architecture the coverage mapping data targets.
   std::string CoverageArch;
 
-private:
   /// A cache for demangled symbol names.
   StringMap<std::string> DemangledNames;
 
@@ -152,8 +167,47 @@ void CodeCoverageTool::warning(const Twine &Message, StringRef Whence) {
 }
 
 void CodeCoverageTool::addCollectedPath(const std::string &Path) {
-  CollectedPaths.push_back(Path);
+  if (CompareFilenamesOnly) {
+    CollectedPaths.push_back(Path);
+  } else {
+    SmallString<128> EffectivePath(Path);
+    if (std::error_code EC = sys::fs::make_absolute(EffectivePath)) {
+      error(EC.message(), Path);
+      return;
+    }
+    sys::path::remove_dots(EffectivePath, /*remove_dot_dots=*/true);
+    CollectedPaths.push_back(EffectivePath.str());
+  }
+
   SourceFiles.emplace_back(CollectedPaths.back());
+}
+
+void CodeCoverageTool::collectPaths(const std::string &Path) {
+  llvm::sys::fs::file_status Status;
+  llvm::sys::fs::status(Path, Status);
+  if (!llvm::sys::fs::exists(Status)) {
+    if (CompareFilenamesOnly)
+      addCollectedPath(Path);
+    else
+      error("Missing source file", Path);
+    return;
+  }
+
+  if (llvm::sys::fs::is_regular_file(Status)) {
+    addCollectedPath(Path);
+    return;
+  }
+
+  if (llvm::sys::fs::is_directory(Status)) {
+    std::error_code EC;
+    for (llvm::sys::fs::recursive_directory_iterator F(Path, EC), E;
+         F != E && !EC; F.increment(EC)) {
+      if (llvm::sys::fs::is_regular_file(F->path()))
+        addCollectedPath(F->path());
+    }
+    if (EC)
+      warning(EC.message(), Path);
+  }
 }
 
 ErrorOr<const MemoryBuffer &>
@@ -391,6 +445,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::list<std::string> InputSourceFiles(
       cl::Positional, cl::desc("<Source files>"), cl::ZeroOrMore);
 
+  cl::opt<bool> DebugDumpCollectedPaths(
+      "dump-collected-paths", cl::Optional, cl::Hidden,
+      cl::desc("Show the collected paths to source files"));
+
   cl::opt<std::string, true> PGOFilename(
       "instr-profile", cl::Required, cl::location(this->PGOFilename),
       cl::desc(
@@ -535,16 +593,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     }
     CoverageArch = Arch;
 
-    for (const auto &File : InputSourceFiles) {
-      SmallString<128> Path(File);
-      if (!CompareFilenamesOnly) {
-        if (std::error_code EC = sys::fs::make_absolute(Path)) {
-          error(EC.message(), File);
-          return 1;
-        }
-      }
-      addCollectedPath(Path.str());
+    for (const std::string &File : InputSourceFiles)
+      collectPaths(File);
+
+    if (DebugDumpCollectedPaths) {
+      for (StringRef SF : SourceFiles)
+        outs() << SF << '\n';
+      ::exit(0);
     }
+
     return 0;
   };
 

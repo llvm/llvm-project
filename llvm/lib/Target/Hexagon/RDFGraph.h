@@ -221,6 +221,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 
 #include <functional>
 #include <map>
@@ -236,10 +237,11 @@ namespace llvm {
   class MachineDominanceFrontier;
   class MachineDominatorTree;
   class TargetInstrInfo;
-  class TargetRegisterInfo;
 
 namespace rdf {
   typedef uint32_t NodeId;
+
+  struct DataFlowGraph;
 
   struct NodeAttrs {
     enum : uint16_t {
@@ -384,7 +386,16 @@ namespace rdf {
   };
 
   struct RegisterRef {
-    unsigned Reg, Sub;
+    // For virtual registers, Reg and Sub have the usual meanings.
+    //
+    // Physical registers are assumed not to have any subregisters, and for
+    // them, Sub is the key of the LaneBitmask in the lane mask map in DFG.
+    // The case of Sub = 0 is treated as 'all lanes', i.e. lane mask of ~0.
+    // Use an key/map to access lane masks, since we only have uint32_t
+    // for it, and the LaneBitmask type can grow in the future.
+    //
+    // The case when Reg = 0 and Sub = 0 is reserved to mean "no register".
+    uint32_t Reg, Sub;
 
     // No non-trivial constructors, since this will be a member of a union.
     RegisterRef() = default;
@@ -407,11 +418,25 @@ namespace rdf {
     virtual ~RegisterAliasInfo() {}
 
     virtual std::vector<RegisterRef> getAliasSet(RegisterRef RR) const;
-    virtual bool alias(RegisterRef RA, RegisterRef RB) const;
-    virtual bool covers(RegisterRef RA, RegisterRef RB) const;
-    virtual bool covers(const RegisterSet &RRs, RegisterRef RR) const;
+    virtual bool alias(RegisterRef RA, RegisterRef RB,
+                       const DataFlowGraph &DFG) const;
+    virtual bool covers(RegisterRef RA, RegisterRef RB,
+                        const DataFlowGraph &DFG) const;
+    virtual bool covers(const RegisterSet &RRs, RegisterRef RR,
+                        const DataFlowGraph &DFG) const;
 
     const TargetRegisterInfo &TRI;
+
+  protected:
+    LaneBitmask getLaneMask(RegisterRef RR, const DataFlowGraph &DFG) const;
+
+    struct CommonRegister {
+      CommonRegister(unsigned RegA, LaneBitmask LA,
+                     unsigned RegB, LaneBitmask LB,
+                     const TargetRegisterInfo &TRI);
+      unsigned SuperReg;
+      LaneBitmask MaskA, MaskB;
+    };
   };
 
   struct TargetOperandInfo {
@@ -424,8 +449,31 @@ namespace rdf {
     const TargetInstrInfo &TII;
   };
 
+  // Template class for a map translating uint32_t into arbitrary types.
+  // The map will act like an indexed set: upon insertion of a new object,
+  // it will automatically assign a new index to it. Index of 0 is treated
+  // as invalid and is never allocated.
+  template <typename T, unsigned N = 32>
+  struct IndexedSet {
+    IndexedSet() : Map(N) {}
+    const T get(uint32_t Idx) const {
+      // Index Idx corresponds to Map[Idx-1].
+      assert(Idx != 0 && !Map.empty() && Idx-1 < Map.size());
+      return Map[Idx-1];
+    }
+    uint32_t insert(T Val) {
+      // Linear search.
+      auto F = find(Map, Val);
+      if (F != Map.end())
+        return *F;
+      Map.push_back(Val);
+      return Map.size();  // Return actual_index + 1.
+    }
 
-  struct DataFlowGraph;
+  private:
+    std::vector<T> Map;
+  };
+
 
   struct NodeBase {
   public:
@@ -648,6 +696,13 @@ namespace rdf {
       return RAI;
     }
 
+    LaneBitmask getLaneMaskForIndex(uint32_t K) const {
+      return LMMap.get(K);
+    }
+    uint32_t getIndexForLaneMask(LaneBitmask LM) {
+      return LMMap.insert(LM);
+    }
+
     struct DefStack {
       DefStack() = default;
       bool empty() const { return Stack.empty() || top() == bottom(); }
@@ -820,6 +875,8 @@ namespace rdf {
     NodeAllocator Memory;
     // Local map:  MachineBasicBlock -> NodeAddr<BlockNode*>
     std::map<MachineBasicBlock*,NodeAddr<BlockNode*>> BlockNodes;
+    // Lane mask map.
+    IndexedSet<LaneBitmask> LMMap;
 
     MachineFunction &MF;
     const TargetInstrInfo &TII;

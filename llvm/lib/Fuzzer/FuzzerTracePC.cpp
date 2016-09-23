@@ -19,31 +19,22 @@
 namespace fuzzer {
 
 TracePC TPC;
-const size_t TracePC::kNumCounters;
-const size_t TracePC::kNumPCs;
 
 void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
   uintptr_t Idx = *Guard;
   if (!Idx) return;
-  if (UseCounters) {
-    uint8_t Counter = Counters[Idx % kNumCounters];
-    if (Counter == 0) {
-      PCs[Idx] = PC;
-      if (TotalCoverageMap.AddValue(Idx)) {
-        TotalCoverage++;
-        AddNewPCID(Idx);
-      }
-    }
-    if (Counter < 128)
-      Counters[Idx % kNumCounters] = Counter + 1;
-    else
-      *Guard = 0;
-  } else {
-    *Guard = 0;
-    TotalCoverage++;
+  uint8_t Counter = Counters[Idx % kNumCounters];
+  if (Counter == 0) {
     AddNewPCID(Idx);
-    PCs[Idx] = PC;
+    if (!PCs[Idx]) {
+      TotalPCCoverage++;
+      PCs[Idx] = PC;
+    }
   }
+  if (Counter < 128)
+    Counters[Idx % kNumCounters] = Counter + 1;
+  if (Counter >= 128 || !UseCounters)
+    *Guard = 0;
 }
 
 void TracePC::HandleInit(uintptr_t *Start, uintptr_t *Stop) {
@@ -72,8 +63,8 @@ void TracePC::ResetGuards() {
 }
 
 void TracePC::FinalizeTrace() {
-  if (UseCounters && TotalCoverage) {
-    for (size_t Idx = 1, N = std::min(kNumCounters, NumGuards); Idx < N;
+  if (TotalPCCoverage) {
+    for (size_t Idx = 1, N = Min(kNumCounters, NumGuards); Idx < N;
          Idx++) {
       uint8_t Counter = Counters[Idx];
       if (!Counter) continue;
@@ -91,14 +82,6 @@ void TracePC::FinalizeTrace() {
   }
 }
 
-size_t TracePC::UpdateCounterMap(ValueBitMap *Map) {
-  if (!TotalCoverage) return 0;
-  size_t NewTotalCounterBits = Map->MergeFrom(CounterMap);
-  size_t Delta = NewTotalCounterBits - TotalCounterBits;
-  TotalCounterBits = NewTotalCounterBits;
-  return Delta;
-}
-
 void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   const uintptr_t kBits = 12;
   const uintptr_t kMask = (1 << kBits) - 1;
@@ -107,7 +90,7 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 
 void TracePC::PrintCoverage() {
   Printf("COVERAGE:\n");
-  for (size_t i = 0; i < std::min(NumGuards, kNumPCs); i++) {
+  for (size_t i = 0; i < Min(NumGuards, kNumPCs); i++) {
     if (PCs[i])
       PrintPC("COVERED: %p %F %L\n", "COVERED: %p\n", PCs[i]);
   }

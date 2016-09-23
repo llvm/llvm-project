@@ -21,4 +21,4 @@ entry:
 ; SMALL-BSS-DAG:     lwz [[VREG:[0-9]+]], bar@GOT(30)
 ; SMALL-BSS-DAG:     lwz {{[0-9]+}}, 0([[VREG]])
 ; SMALL-BSS:         bl call_foo@PLT
-; SMALL-BSS:         lwz 30, -8(1)
+; SMALL-BSS:         lwz 30, 24(1)

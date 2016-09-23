@@ -92,7 +92,7 @@ bool RegBankSelect::assignmentMatch(
   OnlyAssign = false;
   // Each part of a break down needs to end up in a different register.
   // In other word, Reg assignement does not match.
-  if (ValMapping.BreakDown.size() > 1)
+  if (ValMapping.NumBreakDowns > 1)
     return false;
 
   const RegisterBank *CurRegBank = RBI->getRegBank(Reg, *MRI, *TRI);
@@ -112,9 +112,9 @@ bool RegBankSelect::repairReg(
     MachineOperand &MO, const RegisterBankInfo::ValueMapping &ValMapping,
     RegBankSelect::RepairingPlacement &RepairPt,
     const iterator_range<SmallVectorImpl<unsigned>::const_iterator> &NewVRegs) {
-  if (ValMapping.BreakDown.size() != 1 && !TPC->isGlobalISelAbortEnabled())
+  if (ValMapping.NumBreakDowns != 1 && !TPC->isGlobalISelAbortEnabled())
     return false;
-  assert(ValMapping.BreakDown.size() == 1 && "Not yet implemented");
+  assert(ValMapping.NumBreakDowns == 1 && "Not yet implemented");
   // An empty range of new register means no repairing.
   assert(NewVRegs.begin() != NewVRegs.end() && "We should not have to repair");
 
@@ -163,9 +163,9 @@ uint64_t RegBankSelect::getRepairCost(
     const MachineOperand &MO,
     const RegisterBankInfo::ValueMapping &ValMapping) const {
   assert(MO.isReg() && "We should only repair register operand");
-  assert(!ValMapping.BreakDown.empty() && "Nothing to map??");
+  assert(ValMapping.NumBreakDowns && "Nothing to map??");
 
-  bool IsSameNumOfValues = ValMapping.BreakDown.size() == 1;
+  bool IsSameNumOfValues = ValMapping.NumBreakDowns == 1;
   const RegisterBank *CurRegBank = RBI->getRegBank(MO.getReg(), *MRI, *TRI);
   // If MO does not have a register bank, we should have just been
   // able to set one unless we have to break the value down.
@@ -270,7 +270,7 @@ void RegBankSelect::tryAvoidingSplit(
       // For the PHI case, the split may not be actually required.
       // In the copy case, a phi is already a copy on the incoming edge,
       // therefore there is no need to split.
-      if (ValMapping.BreakDown.size() == 1)
+      if (ValMapping.NumBreakDowns == 1)
         // This is a already a copy, there is nothing to do.
         RepairPt.switchTo(RepairingPlacement::RepairingKind::Reassign);
     }
@@ -347,7 +347,7 @@ void RegBankSelect::tryAvoidingSplit(
     // We will split all the edges and repair there.
   } else {
     // This is a virtual register defined by a terminator.
-    if (ValMapping.BreakDown.size() == 1) {
+    if (ValMapping.NumBreakDowns == 1) {
       // There is nothing to repair, but we may actually lie on
       // the repairing cost because of the PHIs already proceeded
       // as already stated.
@@ -503,13 +503,11 @@ bool RegBankSelect::applyMapping(
     MachineOperand &MO = MI.getOperand(OpIdx);
     const RegisterBankInfo::ValueMapping &ValMapping =
         InstrMapping.getOperandMapping(OpIdx);
-    unsigned BreakDownSize = ValMapping.BreakDown.size();
-    (void)BreakDownSize;
     unsigned Reg = MO.getReg();
 
     switch (RepairPt.getKind()) {
     case RepairingPlacement::Reassign:
-      assert(BreakDownSize == 1 &&
+      assert(ValMapping.NumBreakDowns == 1 &&
              "Reassignment should only be for simple mapping");
       MRI->setRegBank(Reg, *ValMapping.BreakDown[0].RegBank);
       break;

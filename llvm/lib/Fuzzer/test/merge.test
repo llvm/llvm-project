@@ -7,7 +7,8 @@ RUN: echo .U.... > %tmp/T1/2
 RUN: echo ..Z... > %tmp/T1/3
 
 # T1 has 3 elements, T2 is empty.
-RUN: LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK1
+RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK1
+RUN: LLVMFuzzer-FullCoverageSetTest-TracePC -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK1
 CHECK1: === Minimizing the initial corpus of 3 units
 CHECK1: === Merge: written 0 units
 
@@ -19,13 +20,14 @@ RUN: echo .U.... > %tmp/T2/b
 RUN: echo ..Z... > %tmp/T2/c
 
 # T1 has 3 elements, T2 has 6 elements, only 3 are new.
-RUN: LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK2
+RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK2
 CHECK2: === Minimizing the initial corpus of 3 units
 CHECK2: === Merging extra 6 units
 CHECK2: === Merge: written 3 units
 
 # Now, T1 has 6 units and T2 has no new interesting units.
-RUN: LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK3
+RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK3
+RUN: LLVMFuzzer-FullCoverageSetTest-TracePC -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK3
 CHECK3: === Minimizing the initial corpus of 6 units
 CHECK3: === Merge: written 0 units
 

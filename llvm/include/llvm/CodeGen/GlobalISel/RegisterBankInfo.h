@@ -16,6 +16,8 @@
 #define LLVM_CODEGEN_GLOBALISEL_REGBANKINFO_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MachineValueType.h" // For SimpleValueType.
@@ -84,13 +86,21 @@ public:
   /// different register banks.
   struct ValueMapping {
     /// How the value is broken down between the different register banks.
-    SmallVector<PartialMapping, 2> BreakDown;
+    const PartialMapping *BreakDown;
 
-    /// Verify that this mapping makes sense for a value of \p ExpectedBitWidth.
+    /// Number of partial mapping to break down this value.
+    unsigned NumBreakDowns;
+
+    /// Iterators through the PartialMappings.
+    const PartialMapping *begin() const { return BreakDown; }
+    const PartialMapping *end() const { return BreakDown + NumBreakDowns; }
+
+    /// Verify that this mapping makes sense for a value of
+    /// \p MeaningFulBitWidth.
     /// \note This method does not check anything when assertions are disabled.
     ///
     /// \return True is the check was successful.
-    bool verify(unsigned ExpectedBitWidth) const;
+    bool verify(unsigned MeaningFulBitWidth) const;
 
     /// Print this on dbgs() stream.
     void dump() const;
@@ -161,13 +171,6 @@ public:
     /// Check whether this object is valid.
     /// This is a lightweight check for obvious wrong instance.
     bool isValid() const { return getID() != InvalidMappingID; }
-
-    /// Set the operand mapping for the \p OpIdx-th operand.
-    /// The mapping will consist of only one element in the break down list.
-    /// This element will map to \p RegBank and fully define a mask, whose
-    /// bitwidth matches the size of \p MaskSize.
-    void setOperandMapping(unsigned OpIdx, unsigned MaskSize,
-                           const RegisterBank &RegBank);
 
     /// Verifiy that this mapping makes sense for \p MI.
     /// \pre \p MI must be connected to a MachineFunction.
@@ -293,6 +296,10 @@ protected:
   /// Total number of register banks.
   unsigned NumRegBanks;
 
+  /// Keep dynamically allocated PartialMapping in a separate map.
+  /// This shouldn't be needed when everything gets TableGen'ed.
+  mutable DenseMap<unsigned, PartialMapping> MapOfPartialMappings;
+
   /// Create a RegisterBankInfo that can accomodate up to \p NumRegBanks
   /// RegisterBank instances.
   ///
@@ -360,6 +367,11 @@ protected:
   /// In other words, this method will likely fail to find a mapping for
   /// any generic opcode that has not been lowered by target specific code.
   InstructionMapping getInstrMappingImpl(const MachineInstr &MI) const;
+
+  /// Get the uniquely generated PartialMapping for the
+  /// given arguments.
+  const PartialMapping &getPartialMapping(unsigned StartIdx, unsigned Length,
+                                          const RegisterBank &RegBank) const;
 
   /// Get the register bank for the \p OpIdx-th operand of \p MI form
   /// the encoding constraints, if any.
