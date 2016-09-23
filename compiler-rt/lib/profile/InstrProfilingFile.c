@@ -358,12 +358,14 @@ static void parseAndSetFilename(const char *FilenamePat,
   lprofCurFilename.PNS = PNS;
 
   if (!OldFilenamePat) {
-    PROF_NOTE("Set profile file path to \"%s\" via %s.\n",
-              lprofCurFilename.FilenamePat, getPNSStr(PNS));
+    if (getenv("LLVM_PROFILE_VERBOSE"))
+      PROF_NOTE("Set profile file path to \"%s\" via %s.\n",
+                lprofCurFilename.FilenamePat, getPNSStr(PNS));
   } else {
-    PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
-              OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
-              getPNSStr(PNS));
+    if (getenv("LLVM_PROFILE_VERBOSE"))
+      PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
+                OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
+                getPNSStr(PNS));
   }
 
   truncateCurrentFile();
