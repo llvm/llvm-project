@@ -976,13 +976,15 @@ void Args::LongestCommonPrefix(std::string &common_prefix) {
 
 void Args::AddOrReplaceEnvironmentVariable(llvm::StringRef env_var_name,
                                            llvm::StringRef new_value) {
-  if (env_var_name.empty() || new_value.empty())
+  if (env_var_name.empty())
     return;
 
   // Build the new entry.
   std::string var_string(env_var_name);
-  var_string += "=";
-  var_string += new_value;
+  if (!new_value.empty()) {
+    var_string += "=";
+    var_string += new_value;
+  }
 
   size_t index = 0;
   if (ContainsEnvironmentVariable(env_var_name, &index)) {
@@ -1006,7 +1008,7 @@ bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
 
     llvm::StringRef name, value;
     std::tie(name, value) = arg_value.split('=');
-    if (name == env_var_name && !value.empty()) {
+    if (name == env_var_name) {
       if (argument_index)
         *argument_index = i;
       return true;

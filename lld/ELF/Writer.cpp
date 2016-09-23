@@ -1148,11 +1148,7 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
 
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = Config->ImageBase;
-  if (!Config->OFormatBinary)
-    VA +=
-        Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
-
+  uintX_t VA = Config->ImageBase + getHeaderSize<ELFT>();
   uintX_t ThreadBssOffset = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uintX_t Alignment = Sec->getAlignment();

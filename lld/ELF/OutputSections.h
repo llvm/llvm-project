@@ -812,6 +812,12 @@ private:
   llvm::SmallDenseMap<Key, OutputSectionBase<ELFT> *> Map;
 };
 
+template <class ELFT> uint64_t getHeaderSize() {
+  if (Config->OFormatBinary)
+    return 0;
+  return Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+}
+
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;

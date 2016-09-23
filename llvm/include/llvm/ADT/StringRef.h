@@ -426,7 +426,7 @@ namespace llvm {
     consumeInteger(unsigned Radix, T &Result) {
       unsigned long long ULLVal;
       if (consumeUnsignedInteger(*this, Radix, ULLVal) ||
-          static_cast<long long>(static_cast<T>(ULLVal)) != ULLVal)
+          static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
         return true;
       Result = ULLVal;
       return false;

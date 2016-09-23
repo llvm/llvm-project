@@ -338,6 +338,9 @@ private:
     bool ReachedNewPt = false;
     MemoryLocation DefLoc = MemoryLocation::get(OldPt);
     const MemorySSA::AccessList *Acc = MSSA->getBlockAccesses(BB);
+    if (!Acc)
+      return false;
+
     for (const MemoryAccess &MA : *Acc) {
       auto *MU = dyn_cast<MemoryUse>(&MA);
       if (!MU)

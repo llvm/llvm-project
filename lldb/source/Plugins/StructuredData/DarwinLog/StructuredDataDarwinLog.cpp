@@ -1566,7 +1566,7 @@ Error StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
   else if (options_sp->GetIncludeInfoLevel())
     env_var_value = "info";
   else
-    env_var_value = "";
+    env_var_value = "default";
 
   if (env_var_value) {
     launch_info.GetEnvironmentEntries().AddOrReplaceEnvironmentVariable(
