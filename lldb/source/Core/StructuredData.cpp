@@ -264,7 +264,7 @@ void StructuredData::String::Dump(Stream &s, bool pretty_print) const {
   const size_t strsize = m_value.size();
   for (size_t i = 0; i < strsize; ++i) {
     char ch = m_value[i];
-    if (ch == '"')
+    if (ch == '"' || ch == '\\')
       quoted.push_back('\\');
     quoted.push_back(ch);
   }

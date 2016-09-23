@@ -164,7 +164,7 @@ void Options::BuildValidOptionSets() {
   if (num_options == 0)
     return;
 
-  const OptionDefinition *opt_defs = GetDefinitions();
+  auto opt_defs = GetDefinitions();
   m_required_options.resize(1);
   m_optional_options.resize(1);
 
@@ -173,8 +173,8 @@ void Options::BuildValidOptionSets() {
 
   uint32_t num_option_sets = 0;
 
-  for (int i = 0; i < num_options; i++) {
-    uint32_t this_usage_mask = opt_defs[i].usage_mask;
+  for (const auto &def : opt_defs) {
+    uint32_t this_usage_mask = def.usage_mask;
     if (this_usage_mask == LLDB_OPT_SET_ALL) {
       if (num_option_sets == 0)
         num_option_sets = 1;
@@ -192,52 +192,35 @@ void Options::BuildValidOptionSets() {
     m_required_options.resize(num_option_sets);
     m_optional_options.resize(num_option_sets);
 
-    for (int i = 0; i < num_options; ++i) {
+    for (const auto &def : opt_defs) {
       for (uint32_t j = 0; j < num_option_sets; j++) {
-        if (opt_defs[i].usage_mask & 1 << j) {
-          if (opt_defs[i].required)
-            m_required_options[j].insert(opt_defs[i].short_option);
+        if (def.usage_mask & 1 << j) {
+          if (def.required)
+            m_required_options[j].insert(def.short_option);
           else
-            m_optional_options[j].insert(opt_defs[i].short_option);
+            m_optional_options[j].insert(def.short_option);
         }
       }
     }
   }
 }
 
-uint32_t Options::NumCommandOptions() {
-  const OptionDefinition *opt_defs = GetDefinitions();
-  if (opt_defs == nullptr)
-    return 0;
-
-  int i = 0;
-
-  if (opt_defs != nullptr) {
-    while (opt_defs[i].long_option != nullptr)
-      ++i;
-  }
-
-  return i;
-}
+uint32_t Options::NumCommandOptions() { return GetDefinitions().size(); }
 
 Option *Options::GetLongOptions() {
   // Check to see if this has already been done.
   if (m_getopt_table.empty()) {
-    // Check to see if there are any options.
-    const uint32_t num_options = NumCommandOptions();
-    if (num_options == 0)
+    auto defs = GetDefinitions();
+    if (defs.empty())
       return nullptr;
-
-    uint32_t i;
-    const OptionDefinition *opt_defs = GetDefinitions();
 
     std::map<int, uint32_t> option_seen;
 
-    m_getopt_table.resize(num_options + 1);
-    for (i = 0; i < num_options; ++i) {
-      const int short_opt = opt_defs[i].short_option;
+    m_getopt_table.resize(defs.size() + 1);
+    for (size_t i = 0; i < defs.size(); ++i) {
+      const int short_opt = defs[i].short_option;
 
-      m_getopt_table[i].definition = &opt_defs[i];
+      m_getopt_table[i].definition = &defs[i];
       m_getopt_table[i].flag = nullptr;
       m_getopt_table[i].val = short_opt;
 
@@ -253,25 +236,25 @@ Option *Options::GetLongOptions() {
                           "option[%u] --%s has a short option -%c that "
                           "conflicts with option[%u] --%s, short option won't "
                           "be used for --%s\n",
-                          i, opt_defs[i].long_option, short_opt, pos->second,
+                          (int)i, defs[i].long_option, short_opt, pos->second,
                           m_getopt_table[pos->second].definition->long_option,
-                          opt_defs[i].long_option);
+                          defs[i].long_option);
         else
           Host::SystemLog(Host::eSystemLogError,
                           "option[%u] --%s has a short option 0x%x that "
                           "conflicts with option[%u] --%s, short option won't "
                           "be used for --%s\n",
-                          i, opt_defs[i].long_option, short_opt, pos->second,
+                          (int)i, defs[i].long_option, short_opt, pos->second,
                           m_getopt_table[pos->second].definition->long_option,
-                          opt_defs[i].long_option);
+                          defs[i].long_option);
       }
     }
 
     // getopt_long_only requires a NULL final entry in the table:
 
-    m_getopt_table[i].definition = nullptr;
-    m_getopt_table[i].flag = nullptr;
-    m_getopt_table[i].val = 0;
+    m_getopt_table.back().definition = nullptr;
+    m_getopt_table.back().flag = nullptr;
+    m_getopt_table.back().val = 0;
   }
 
   if (m_getopt_table.empty())
@@ -351,19 +334,25 @@ void Options::OutputFormattedUsageText(Stream &strm,
 }
 
 bool Options::SupportsLongOption(const char *long_option) {
-  if (long_option && long_option[0]) {
-    const OptionDefinition *opt_defs = GetDefinitions();
-    if (opt_defs) {
-      const char *long_option_name = long_option;
-      if (long_option[0] == '-' && long_option[1] == '-')
-        long_option_name += 2;
+  if (!long_option || !long_option[0])
+    return false;
 
-      for (uint32_t i = 0; opt_defs[i].long_option; ++i) {
-        if (strcmp(opt_defs[i].long_option, long_option_name) == 0)
-          return true;
-      }
-    }
+  auto opt_defs = GetDefinitions();
+  if (opt_defs.empty())
+    return false;
+
+  const char *long_option_name = long_option;
+  if (long_option[0] == '-' && long_option[1] == '-')
+    long_option_name += 2;
+
+  for (auto &def : opt_defs) {
+    if (!def.long_option)
+      continue;
+
+    if (strcmp(def.long_option, long_option_name) == 0)
+      return true;
   }
+
   return false;
 }
 
@@ -415,7 +404,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
                                   uint32_t screen_width) {
   const bool only_print_args = cmd->IsDashDashCommand();
 
-  const OptionDefinition *opt_defs = GetDefinitions();
+  auto opt_defs = GetDefinitions();
   const uint32_t save_indent_level = strm.GetIndentLevel();
   const char *name;
 
@@ -465,14 +454,12 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
       std::set<int> options;
       std::set<int>::const_iterator options_pos, options_end;
-      for (i = 0; i < num_options; ++i) {
-        if (opt_defs[i].usage_mask & opt_set_mask &&
-            isprint8(opt_defs[i].short_option)) {
+      for (auto &def : opt_defs) {
+        if (def.usage_mask & opt_set_mask && isprint8(def.short_option)) {
           // Add current option to the end of out_stream.
 
-          if (opt_defs[i].required == true &&
-              opt_defs[i].option_has_arg == OptionParser::eNoArgument) {
-            options.insert(opt_defs[i].short_option);
+          if (def.required && def.option_has_arg == OptionParser::eNoArgument) {
+            options.insert(def.short_option);
           }
         }
       }
@@ -491,14 +478,14 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
           }
       }
 
-      for (i = 0, options.clear(); i < num_options; ++i) {
-        if (opt_defs[i].usage_mask & opt_set_mask &&
-            isprint8(opt_defs[i].short_option)) {
+      options.clear();
+      for (auto &def : opt_defs) {
+        if (def.usage_mask & opt_set_mask && isprint8(def.short_option)) {
           // Add current option to the end of out_stream.
 
-          if (opt_defs[i].required == false &&
-              opt_defs[i].option_has_arg == OptionParser::eNoArgument) {
-            options.insert(opt_defs[i].short_option);
+          if (def.required == false &&
+              def.option_has_arg == OptionParser::eNoArgument) {
+            options.insert(def.short_option);
           }
         }
       }
@@ -520,26 +507,21 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
       // First go through and print the required options (list them up front).
 
-      for (i = 0; i < num_options; ++i) {
-        if (opt_defs[i].usage_mask & opt_set_mask &&
-            isprint8(opt_defs[i].short_option)) {
-          if (opt_defs[i].required &&
-              opt_defs[i].option_has_arg != OptionParser::eNoArgument)
-            PrintOption(opt_defs[i], eDisplayBestOption, " ", nullptr, true,
-                        strm);
+      for (auto &def : opt_defs) {
+        if (def.usage_mask & opt_set_mask && isprint8(def.short_option)) {
+          if (def.required && def.option_has_arg != OptionParser::eNoArgument)
+            PrintOption(def, eDisplayBestOption, " ", nullptr, true, strm);
         }
       }
 
       // Now go through again, and this time only print the optional options.
 
-      for (i = 0; i < num_options; ++i) {
-        if (opt_defs[i].usage_mask & opt_set_mask) {
+      for (auto &def : opt_defs) {
+        if (def.usage_mask & opt_set_mask) {
           // Add current option to the end of out_stream.
 
-          if (!opt_defs[i].required &&
-              opt_defs[i].option_has_arg != OptionParser::eNoArgument)
-            PrintOption(opt_defs[i], eDisplayBestOption, " ", nullptr, true,
-                        strm);
+          if (!def.required && def.option_has_arg != OptionParser::eNoArgument)
+            PrintOption(def, eDisplayBestOption, " ", nullptr, true, strm);
         }
       }
 
@@ -582,15 +564,15 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
     // them alphabetically (by short_option)
     // when writing out detailed help for each option.
 
-    for (i = 0; i < num_options; ++i)
-      options_seen.insert(std::make_pair(opt_defs[i].short_option, i));
+    i = 0;
+    for (auto &def : opt_defs)
+      options_seen.insert(std::make_pair(def.short_option, i++));
 
     // Go through the unique'd and alphabetically sorted vector of options, find
     // the table entry for each option
     // and write out the detailed help information for that option.
 
     bool first_option_printed = false;
-    ;
 
     for (auto pos : options_seen) {
       i = pos.second;
@@ -686,7 +668,7 @@ bool Options::HandleOptionCompletion(
   // an option or its argument.  Otherwise we'll call HandleArgumentCompletion.
   // In the future we can use completion to validate options as well if we want.
 
-  const OptionDefinition *opt_defs = GetDefinitions();
+  auto opt_defs = GetDefinitions();
 
   std::string cur_opt_std_str(input.GetArgumentAtIndex(cursor_index));
   cur_opt_std_str.erase(char_pos);
@@ -706,16 +688,22 @@ bool Options::HandleOptionCompletion(
         // within the option group they belong to.
         char opt_str[3] = {'-', 'a', '\0'};
 
-        for (int j = 0; opt_defs[j].short_option != 0; j++) {
-          opt_str[1] = opt_defs[j].short_option;
+        for (auto &def : opt_defs) {
+          if (!def.short_option)
+            continue;
+          opt_str[1] = def.short_option;
           matches.AppendString(opt_str);
         }
+
         return true;
       } else if (opt_defs_index == OptionArgElement::eBareDoubleDash) {
         std::string full_name("--");
-        for (int j = 0; opt_defs[j].short_option != 0; j++) {
+        for (auto &def : opt_defs) {
+          if (!def.short_option)
+            continue;
+
           full_name.erase(full_name.begin() + 2, full_name.end());
-          full_name.append(opt_defs[j].long_option);
+          full_name.append(def.long_option);
           matches.AppendString(full_name.c_str());
         }
         return true;
@@ -748,11 +736,13 @@ bool Options::HandleOptionCompletion(
 
         if (cur_opt_str && strlen(cur_opt_str) > 2 && cur_opt_str[0] == '-' &&
             cur_opt_str[1] == '-') {
-          for (int j = 0; opt_defs[j].short_option != 0; j++) {
-            if (strstr(opt_defs[j].long_option, cur_opt_str + 2) ==
-                opt_defs[j].long_option) {
+          for (auto &def : opt_defs) {
+            if (!def.long_option)
+              continue;
+
+            if (strstr(def.long_option, cur_opt_str + 2) == def.long_option) {
               std::string full_name("--");
-              full_name.append(opt_defs[j].long_option);
+              full_name.append(def.long_option);
               // The options definitions table has duplicates because of the
               // way the grouping information is stored, so only add once.
               bool duplicate = false;
@@ -799,7 +789,7 @@ bool Options::HandleOptionArgumentCompletion(
     int match_start_point, int max_return_elements,
     CommandInterpreter &interpreter, bool &word_complete,
     lldb_private::StringList &matches) {
-  const OptionDefinition *opt_defs = GetDefinitions();
+  auto opt_defs = GetDefinitions();
   std::unique_ptr<SearchFilter> filter_ap;
 
   int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
@@ -882,9 +872,8 @@ bool Options::HandleOptionArgumentCompletion(
 }
 
 void OptionGroupOptions::Append(OptionGroup *group) {
-  const OptionDefinition *group_option_defs = group->GetDefinitions();
-  const uint32_t group_option_count = group->GetNumDefinitions();
-  for (uint32_t i = 0; i < group_option_count; ++i) {
+  auto group_option_defs = group->GetDefinitions();
+  for (uint32_t i = 0; i < group_option_defs.size(); ++i) {
     m_option_infos.push_back(OptionInfo(group, i));
     m_option_defs.push_back(group_option_defs[i]);
   }
@@ -901,9 +890,8 @@ const OptionGroup *OptionGroupOptions::GetGroupWithOption(char short_opt) {
 
 void OptionGroupOptions::Append(OptionGroup *group, uint32_t src_mask,
                                 uint32_t dst_mask) {
-  const OptionDefinition *group_option_defs = group->GetDefinitions();
-  const uint32_t group_option_count = group->GetNumDefinitions();
-  for (uint32_t i = 0; i < group_option_count; ++i) {
+  auto group_option_defs = group->GetDefinitions();
+  for (uint32_t i = 0; i < group_option_defs.size(); ++i) {
     if (group_option_defs[i].usage_mask & src_mask) {
       m_option_infos.push_back(OptionInfo(group, i));
       m_option_defs.push_back(group_option_defs[i]);
@@ -914,9 +902,6 @@ void OptionGroupOptions::Append(OptionGroup *group, uint32_t src_mask,
 
 void OptionGroupOptions::Finalize() {
   m_did_finalize = true;
-  OptionDefinition empty_option_def = {
-      0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr};
-  m_option_defs.push_back(empty_option_def);
 }
 
 Error OptionGroupOptions::SetOptionValue(uint32_t option_idx,
@@ -925,7 +910,6 @@ Error OptionGroupOptions::SetOptionValue(uint32_t option_idx,
   // After calling OptionGroupOptions::Append(...), you must finalize the groups
   // by calling OptionGroupOptions::Finlize()
   assert(m_did_finalize);
-  assert(m_option_infos.size() + 1 == m_option_defs.size());
   Error error;
   if (option_idx < m_option_infos.size()) {
     error = m_option_infos[option_idx].option_group->SetOptionValue(

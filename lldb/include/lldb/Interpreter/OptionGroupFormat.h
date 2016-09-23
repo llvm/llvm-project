@@ -41,9 +41,7 @@ public:
 
   ~OptionGroupFormat() override;
 
-  uint32_t GetNumDefinitions() override;
-
-  const OptionDefinition *GetDefinitions() override;
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
   Error SetOptionValue(uint32_t option_idx, const char *option_value,
                        ExecutionContext *execution_context) override;

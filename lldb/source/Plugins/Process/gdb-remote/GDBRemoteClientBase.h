@@ -44,13 +44,6 @@ public:
       ContinueDelegate &delegate, const UnixSignals &signals,
       llvm::StringRef payload, StringExtractorGDBRemote &response);
 
-  PacketResult SendPacketAndWaitForResponse(const char *payload, size_t len,
-                                            StringExtractorGDBRemote &response,
-                                            bool send_async) {
-    return SendPacketAndWaitForResponse(llvm::StringRef(payload, len), response,
-                                        send_async);
-  }
-
   PacketResult SendPacketAndWaitForResponse(llvm::StringRef payload,
                                             StringExtractorGDBRemote &response,
                                             bool send_async);

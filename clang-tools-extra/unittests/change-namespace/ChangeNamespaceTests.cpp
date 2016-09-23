@@ -314,6 +314,43 @@ TEST_F(ChangeNamespaceTest, TypeInNestedNameSpecifier) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, FixFunctionNameSpecifiers) {
+  std::string Code =
+      "namespace na {\n"
+      "class A {\n"
+      "public:\n"
+      "  static void f() {}\n"
+      "  static void g();\n"
+      "};\n"
+      "void A::g() {}"
+      "void a_f() {}\n"
+      "static void static_f() {}\n"
+      "namespace nb {\n"
+      "void f() { a_f(); static_f(); A::f(); }\n"
+      "void g() { f(); A::g(); }\n"
+      "}  // namespace nb\n"
+      "}  // namespace na\n";
+  std::string Expected =
+      "namespace na {\n"
+      "class A {\n"
+      "public:\n"
+      "  static void f() {}\n"
+      "  static void g();\n"
+      "};\n"
+      "void A::g() {}"
+      "void a_f() {}\n"
+      "static void static_f() {}\n"
+      "\n"
+      "}  // namespace na\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "void f() { na::a_f(); na::static_f(); na::A::f(); }\n"
+      "void g() { f(); na::A::g(); }\n"
+      "}  // namespace y\n"
+      "}  // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

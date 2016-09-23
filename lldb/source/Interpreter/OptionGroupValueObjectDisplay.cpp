@@ -19,6 +19,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Utils.h"
 
+#include "llvm/ADT/ArrayRef.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -67,15 +69,11 @@ static OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "element-count", 'Z',
      OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,
      "Treat the result of the expression as if its type is an array of this "
-     "many values."},
-    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}};
+     "many values."}};
 
-uint32_t OptionGroupValueObjectDisplay::GetNumDefinitions() {
-  return llvm::array_lengthof(g_option_table);
-}
-
-const OptionDefinition *OptionGroupValueObjectDisplay::GetDefinitions() {
-  return g_option_table;
+llvm::ArrayRef<OptionDefinition>
+OptionGroupValueObjectDisplay::GetDefinitions() {
+  return llvm::makeArrayRef(g_option_table);
 }
 
 Error OptionGroupValueObjectDisplay::SetOptionValue(

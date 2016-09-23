@@ -216,6 +216,41 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   return result_sp;
 }
 
+bool Breakpoint::SerializedBreakpointMatchesNames(
+    StructuredData::ObjectSP &bkpt_object_sp, std::vector<std::string> &names) {
+  if (!bkpt_object_sp)
+    return false;
+
+  StructuredData::Dictionary *bkpt_dict = bkpt_object_sp->GetAsDictionary();
+  if (!bkpt_dict)
+    return false;
+
+  if (names.empty())
+    return true;
+
+  StructuredData::Array *names_array;
+
+  bool success =
+      bkpt_dict->GetValueForKeyAsArray(GetKey(OptionNames::Names), names_array);
+  // If there are no names, it can't match these names;
+  if (!success)
+    return false;
+
+  size_t num_names = names_array->GetSize();
+  std::vector<std::string>::iterator begin = names.begin();
+  std::vector<std::string>::iterator end = names.end();
+
+  for (size_t i = 0; i < num_names; i++) {
+    std::string name;
+    if (names_array->GetItemAtIndexAsString(i, name)) {
+      if (std::find(begin, end, name) != end) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 const lldb::TargetSP Breakpoint::GetTargetSP() {
   return m_target.shared_from_this();
 }
