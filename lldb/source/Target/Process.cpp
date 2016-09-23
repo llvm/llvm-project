@@ -529,7 +529,7 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
   return error;
 }
 
-OptionDefinition ProcessLaunchCommandOptions::g_option_table[] = {
+static OptionDefinition g_process_launch_options[] = {
     {LLDB_OPT_SET_ALL, false, "stop-at-entry", 's', OptionParser::eNoArgument,
      nullptr, nullptr, 0, eArgTypeNone,
      "Stop at the entry point of the program when launching a process."},
@@ -576,7 +576,11 @@ OptionDefinition ProcessLaunchCommandOptions::g_option_table[] = {
     {LLDB_OPT_SET_4, false, "shell-expand-args", 'X',
      OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
      "Set whether to shell expand arguments to the process when launching."},
-    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}};
+};
+
+llvm::ArrayRef<OptionDefinition> ProcessLaunchCommandOptions::GetDefinitions() {
+  return llvm::makeArrayRef(g_process_launch_options);
+}
 
 bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
   if (m_name_match_type == eNameMatchIgnore || process_name == nullptr)

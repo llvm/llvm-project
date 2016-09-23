@@ -580,6 +580,8 @@ static const char* BadStrings[] = {
   , "08"                    // illegal oct characters
   , "0o8"                   // illegal oct characters
   , "-123"                  // negative unsigned value
+  , "0x"
+  , "0b"
 };
 
 

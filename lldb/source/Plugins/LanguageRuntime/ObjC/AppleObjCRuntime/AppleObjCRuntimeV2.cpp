@@ -470,6 +470,11 @@ LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,
     return NULL;
 }
 
+static OptionDefinition g_objc_classtable_dump_options[] = {
+    {LLDB_OPT_SET_ALL, false, "verbose", 'v', OptionParser::eNoArgument,
+     nullptr, nullptr, 0, eArgTypeNone,
+     "Print ivar and method information in detail"}};
+
 class CommandObjectObjC_ClassTable_Dump : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
@@ -501,10 +506,11 @@ public:
       m_verbose.Clear();
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_objc_classtable_dump_options);
+    }
 
     OptionValueBoolean m_verbose;
-    static OptionDefinition g_option_table[];
   };
 
   CommandObjectObjC_ClassTable_Dump(CommandInterpreter &interpreter)
@@ -626,13 +632,6 @@ protected:
 
   CommandOptions m_options;
 };
-
-OptionDefinition
-    CommandObjectObjC_ClassTable_Dump::CommandOptions::g_option_table[] = {
-        {LLDB_OPT_SET_ALL, false, "verbose", 'v', OptionParser::eNoArgument,
-         nullptr, nullptr, 0, eArgTypeNone,
-         "Print ivar and method information in detail"},
-        {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}};
 
 class CommandObjectMultiwordObjC_TaggedPointer_Info
     : public CommandObjectParsed {

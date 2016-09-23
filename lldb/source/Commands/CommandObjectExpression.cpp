@@ -49,7 +49,7 @@ static OptionEnumValueElement g_description_verbosity_type[] = {
      "Show the full output, including persistent variable's name and type"},
     {0, nullptr, nullptr}};
 
-OptionDefinition CommandObjectExpression::CommandOptions::g_option_table[] = {
+static OptionDefinition g_expression_options[] = {
     // clang-format off
   {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "all-threads",           'a', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeBoolean,              "Should we run all threads if the execution doesn't complete on one thread."},
   {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "ignore-breakpoints",    'i', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeBoolean,              "Ignore breakpoint hits while running expressions"},
@@ -69,17 +69,13 @@ OptionDefinition CommandObjectExpression::CommandOptions::g_option_table[] = {
     // clang-format on
 };
 
-uint32_t CommandObjectExpression::CommandOptions::GetNumDefinitions() {
-  return llvm::array_lengthof(g_option_table);
-}
-
 Error CommandObjectExpression::CommandOptions::SetOptionValue(
     uint32_t option_idx, const char *option_arg,
     ExecutionContext *execution_context) {
   Error error;
 
   auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
-  const int short_option = g_option_table[option_idx].short_option;
+  const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
   case 'l':
@@ -151,7 +147,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
     }
     m_verbosity =
         (LanguageRuntimeDescriptionDisplayVerbosity)Args::StringToOptionEnum(
-            option_arg, g_option_table[option_idx].enum_values, 0, error);
+            option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
     if (!error.Success())
       error.SetErrorStringWithFormat(
           "unrecognized value for description-verbosity '%s'", option_arg);
@@ -210,9 +206,9 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   allow_jit = true;
 }
 
-const OptionDefinition *
+llvm::ArrayRef<OptionDefinition>
 CommandObjectExpression::CommandOptions::GetDefinitions() {
-  return g_option_table;
+  return llvm::makeArrayRef(g_expression_options);
 }
 
 CommandObjectExpression::CommandObjectExpression(

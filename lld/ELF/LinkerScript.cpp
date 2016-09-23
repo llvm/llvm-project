@@ -514,6 +514,29 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
   }
 }
 
+// When placing orphan sections, we want to place them after symbol assignments
+// so that an orphan after
+//   begin_foo = .;
+//   foo : { *(foo) }
+//   end_foo = .;
+// doesn't break the intended meaning of the begin/end symbols.
+// We don't want to go over sections since Writer<ELFT>::sortSections is the
+// one in charge of deciding the order of the sections.
+// We don't want to go over alignments, since doing so in
+//  rx_sec : { *(rx_sec) }
+//  . = ALIGN(0x1000);
+//  /* The RW PT_LOAD starts here*/
+//  rw_sec : { *(rw_sec) }
+// would mean that the RW PT_LOAD would become unaligned.
+static bool shouldSkip(const BaseCommand &Cmd) {
+  if (isa<OutputSectionCommand>(Cmd))
+    return false;
+  const auto *Assign = dyn_cast<SymbolAssignment>(&Cmd);
+  if (!Assign)
+    return true;
+  return Assign->Name != ".";
+}
+
 template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
   // Orphan sections are sections present in the input files which
   // are not explicitly placed into the output file by the linker script.
@@ -529,10 +552,10 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
     StringRef Name = Sec->getName();
 
     // Find the last spot where we can insert a command and still get the
-    // correct order.
+    // correct result.
     auto CmdIter = Opt.Commands.begin() + CmdIndex;
     auto E = Opt.Commands.end();
-    while (CmdIter != E && !isa<OutputSectionCommand>(**CmdIter)) {
+    while (CmdIter != E && shouldSkip(**CmdIter)) {
       ++CmdIter;
       ++CmdIndex;
     }
@@ -545,10 +568,13 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
     if (Pos == E) {
       Opt.Commands.insert(CmdIter,
                           llvm::make_unique<OutputSectionCommand>(Name));
-    } else {
-      assert(Pos == CmdIter && "Section order doesn't match the linker script");
+      ++CmdIndex;
+      continue;
     }
-    ++CmdIndex;
+
+    // Continue from where we found it.
+    CmdIndex = (Pos - Opt.Commands.begin()) + 1;
+    continue;
   }
 
   // Assign addresses as instructed by linker script SECTIONS sub-commands.

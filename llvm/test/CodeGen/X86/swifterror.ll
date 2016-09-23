@@ -1,5 +1,6 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=CHECK-APPLE %s
 ; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=i386-apple-darwin | FileCheck --check-prefix=CHECK-i386 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
@@ -477,4 +478,20 @@ define swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %erro
 entry:
   %0 = tail call swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %error_ptr_ref)
   ret float %0
+}
+
+; Check that we can handle an empty function with swifterror argument.
+; CHECK-i386-LABEL: empty_swiftcc:
+; CHECK-i386:  movl    4(%esp), %eax
+; CHECK-i386:  movl    8(%esp), %edx
+; CHECK-i386:  movl    12(%esp), %ecx
+; CHECK-i386:  retl
+; CHECK-APPLE-LABEL: empty_swiftcc:
+; CHECK-APPLE:  movl    %edx, %ecx
+; CHECK-APPLE:  movl    %edi, %eax
+; CHECK-APPLE:  movl    %esi, %edx
+; CHECK-APPLE:  retq
+define swiftcc {i32, i32, i32} @empty_swiftcc({i32, i32, i32} , %swift_error** swifterror %error_ptr_ref) {
+entry:
+  ret {i32, i32, i32} %0
 }

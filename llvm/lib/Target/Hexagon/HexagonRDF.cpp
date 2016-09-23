@@ -16,7 +16,8 @@
 using namespace llvm;
 using namespace rdf;
 
-bool HexagonRegisterAliasInfo::covers(RegisterRef RA, RegisterRef RB) const {
+bool HexagonRegisterAliasInfo::covers(RegisterRef RA, RegisterRef RB,
+      const DataFlowGraph &DFG) const {
   if (RA == RB)
     return true;
 
@@ -31,30 +32,33 @@ bool HexagonRegisterAliasInfo::covers(RegisterRef RA, RegisterRef RB) const {
     }
   }
 
-  return RegisterAliasInfo::covers(RA, RB);
+  return RegisterAliasInfo::covers(RA, RB, DFG);
 }
 
-bool HexagonRegisterAliasInfo::covers(const RegisterSet &RRs, RegisterRef RR)
-      const {
+bool HexagonRegisterAliasInfo::covers(const RegisterSet &RRs, RegisterRef RR,
+      const DataFlowGraph &DFG) const {
   if (RRs.count(RR))
     return true;
 
-  if (!TargetRegisterInfo::isPhysicalRegister(RR.Reg)) {
-    assert(TargetRegisterInfo::isVirtualRegister(RR.Reg));
-    // Check if both covering subregisters are present.
+  // The exact reference RR is not in the set.
+
+  if (TargetRegisterInfo::isVirtualRegister(RR.Reg)) {
+    // Check if the there are references in RRs of the same register,
+    // with both covering subregisters.
     bool HasLo = RRs.count({RR.Reg, Hexagon::subreg_loreg});
     bool HasHi = RRs.count({RR.Reg, Hexagon::subreg_hireg});
     if (HasLo && HasHi)
       return true;
   }
 
-  if (RR.Sub == 0) {
-    // Check if both covering subregisters are present.
+  if (TargetRegisterInfo::isPhysicalRegister(RR.Reg)) {
+    // Check if both covering subregisters are present with full
+    // lane masks.
     unsigned Lo = TRI.getSubReg(RR.Reg, Hexagon::subreg_loreg);
     unsigned Hi = TRI.getSubReg(RR.Reg, Hexagon::subreg_hireg);
     if (RRs.count({Lo, 0}) && RRs.count({Hi, 0}))
       return true;
   }
 
-  return RegisterAliasInfo::covers(RRs, RR);
+  return RegisterAliasInfo::covers(RRs, RR, DFG);
 }

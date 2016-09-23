@@ -1387,9 +1387,8 @@ static OptionDefinition g_caching_option_table[] = {
      "Path in which to store local copies of files."},
 };
 
-const lldb_private::OptionDefinition *
-OptionGroupPlatformRSync::GetDefinitions() {
-  return g_rsync_option_table;
+llvm::ArrayRef<OptionDefinition> OptionGroupPlatformRSync::GetDefinitions() {
+  return llvm::makeArrayRef(g_rsync_option_table);
 }
 
 void OptionGroupPlatformRSync::OptionParsingStarting(
@@ -1431,17 +1430,13 @@ OptionGroupPlatformRSync::SetOptionValue(uint32_t option_idx,
   return error;
 }
 
-uint32_t OptionGroupPlatformRSync::GetNumDefinitions() {
-  return llvm::array_lengthof(g_rsync_option_table);
-}
-
 lldb::BreakpointSP
 Platform::SetThreadCreationBreakpoint(lldb_private::Target &target) {
   return lldb::BreakpointSP();
 }
 
-const lldb_private::OptionDefinition *OptionGroupPlatformSSH::GetDefinitions() {
-  return g_ssh_option_table;
+llvm::ArrayRef<OptionDefinition> OptionGroupPlatformSSH::GetDefinitions() {
+  return llvm::makeArrayRef(g_ssh_option_table);
 }
 
 void OptionGroupPlatformSSH::OptionParsingStarting(
@@ -1473,13 +1468,8 @@ OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
   return error;
 }
 
-uint32_t OptionGroupPlatformSSH::GetNumDefinitions() {
-  return llvm::array_lengthof(g_ssh_option_table);
-}
-
-const lldb_private::OptionDefinition *
-OptionGroupPlatformCaching::GetDefinitions() {
-  return g_caching_option_table;
+llvm::ArrayRef<OptionDefinition> OptionGroupPlatformCaching::GetDefinitions() {
+  return llvm::makeArrayRef(g_caching_option_table);
 }
 
 void OptionGroupPlatformCaching::OptionParsingStarting(
@@ -1503,10 +1493,6 @@ lldb_private::Error OptionGroupPlatformCaching::SetOptionValue(
   }
 
   return error;
-}
-
-uint32_t OptionGroupPlatformCaching::GetNumDefinitions() {
-  return llvm::array_lengthof(g_caching_option_table);
 }
 
 size_t Platform::GetEnvironment(StringList &environment) {

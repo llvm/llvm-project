@@ -27,12 +27,8 @@ static OptionDefinition g_option_table[] = {
      nullptr, nullptr, 0, eArgTypeNone, "A module UUID value."},
 };
 
-uint32_t OptionGroupUUID::GetNumDefinitions() {
-  return llvm::array_lengthof(g_option_table);
-}
-
-const OptionDefinition *OptionGroupUUID::GetDefinitions() {
-  return g_option_table;
+llvm::ArrayRef<OptionDefinition> OptionGroupUUID::GetDefinitions() {
+  return llvm::makeArrayRef(g_option_table);
 }
 
 Error OptionGroupUUID::SetOptionValue(uint32_t option_idx,

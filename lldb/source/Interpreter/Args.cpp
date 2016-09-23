@@ -1256,7 +1256,7 @@ void Args::ParseArgsForCompletion(Options &options,
   OptionParser::EnableError(false);
 
   int val;
-  const OptionDefinition *opt_defs = options.GetDefinitions();
+  auto opt_defs = options.GetDefinitions();
 
   // Fooey... OptionParser::Parse permutes the GetArgumentVector to move the
   // options to the front.
@@ -1347,13 +1347,11 @@ void Args::ParseArgsForCompletion(Options &options,
     // See if the option takes an argument, and see if one was supplied.
     if (long_options_index >= 0) {
       int opt_defs_index = -1;
-      for (int i = 0;; i++) {
-        if (opt_defs[i].short_option == 0)
-          break;
-        else if (opt_defs[i].short_option == val) {
-          opt_defs_index = i;
-          break;
-        }
+      for (size_t i = 0; i < opt_defs.size(); i++) {
+        if (opt_defs[i].short_option != val)
+          continue;
+        opt_defs_index = i;
+        break;
       }
 
       const OptionDefinition *def = long_options[long_options_index].definition;

@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/DebugLoc.h"
@@ -234,6 +235,9 @@ class MachineFunction {
   /// True if the function includes any inline assembly.
   bool HasInlineAsm = false;
 
+  /// True if any WinCFI instruction have been emitted in this function.
+  Optional<bool> HasWinCFI;
+
   /// Current high-level properties of the IR of the function (e.g. is in SSA
   /// form or whether registers have been allocated)
   MachineFunctionProperties Properties;
@@ -371,6 +375,12 @@ public:
   void setHasInlineAsm(bool B) {
     HasInlineAsm = B;
   }
+
+  bool hasWinCFI() const {
+    assert(HasWinCFI.hasValue() && "HasWinCFI not set yet!");
+    return *HasWinCFI;
+  }
+  void setHasWinCFI(bool v) { HasWinCFI = v; }
 
   /// Get the function properties
   const MachineFunctionProperties &getProperties() const { return Properties; }

@@ -935,6 +935,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       STI.isTarget64BitILP32()
           ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();
+  bool HasWinCFI = false;
   
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -1063,6 +1064,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     }
 
     if (NeedsWinCFI) {
+      HasWinCFI = true;
       BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg))
           .addImm(FramePtr)
           .setMIFlag(MachineInstr::FrameSetup);
@@ -1124,6 +1126,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     }
 
     if (NeedsWinCFI) {
+      HasWinCFI = true;
       BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg)).addImm(Reg).setMIFlag(
           MachineInstr::FrameSetup);
     }
@@ -1209,10 +1212,12 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     emitSPUpdate(MBB, MBBI, -(int64_t)NumBytes, /*InEpilogue=*/false);
   }
 
-  if (NeedsWinCFI && NumBytes)
+  if (NeedsWinCFI && NumBytes) {
+    HasWinCFI = true;
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_StackAlloc))
         .addImm(NumBytes)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
 
   int SEHFrameOffset = 0;
   unsigned SPOrEstablisher;
@@ -1259,6 +1264,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     // If this is not a funclet, emit the CFI describing our frame pointer.
     if (NeedsWinCFI && !IsFunclet) {
+      HasWinCFI = true;
       BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SetFrame))
           .addImm(FramePtr)
           .addImm(SEHFrameOffset)
@@ -1295,6 +1301,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           int Offset = getFrameIndexReference(MF, FI, IgnoredFrameReg);
           Offset += SEHFrameOffset;
 
+          HasWinCFI = true;
           BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SaveXMM))
               .addImm(Reg)
               .addImm(Offset)
@@ -1304,7 +1311,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  if (NeedsWinCFI)
+  if (NeedsWinCFI && HasWinCFI)
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_EndPrologue))
         .setMIFlag(MachineInstr::FrameSetup);
 
@@ -1396,6 +1403,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   if (Fn->getCallingConv() == CallingConv::X86_INTR)
     BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
         .setMIFlag(MachineInstr::FrameSetup);
+
+  // At this point we know if the function has WinCFI or not.
+  MF.setHasWinCFI(HasWinCFI);
 }
 
 bool X86FrameLowering::canUseLEAForSPInEpilogue(
@@ -1630,7 +1640,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // into the epilogue.  To cope with that, we insert an epilogue marker here,
   // then replace it with a 'nop' if it ends up immediately after a CALL in the
   // final emitted code.
-  if (NeedsWinCFI)
+  if (NeedsWinCFI && MF.hasWinCFI())
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
 
   if (!RetOpcode || !isTailCallOpcode(*RetOpcode)) {

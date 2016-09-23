@@ -48,7 +48,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static OptionDefinition g_option_table[] = {
+static OptionDefinition g_read_memory_options[] = {
     // clang-format off
   {LLDB_OPT_SET_1, false, "num-per-line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNumberPerLine, "The number of items per line to display." },
   {LLDB_OPT_SET_2, false, "binary",       'b', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,          "If true, memory will be saved as binary. If false, the memory is saved save as an ASCII dump that "
@@ -69,16 +69,14 @@ public:
 
   ~OptionGroupReadMemory() override = default;
 
-  uint32_t GetNumDefinitions() override {
-    return sizeof(g_option_table) / sizeof(OptionDefinition);
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::makeArrayRef(g_read_memory_options);
   }
-
-  const OptionDefinition *GetDefinitions() override { return g_option_table; }
 
   Error SetOptionValue(uint32_t option_idx, const char *option_arg,
                        ExecutionContext *execution_context) override {
     Error error;
-    const int short_option = g_option_table[option_idx].short_option;
+    const int short_option = g_read_memory_options[option_idx].short_option;
 
     switch (short_option) {
     case 'l':
@@ -906,12 +904,8 @@ public:
 
     ~OptionGroupFindMemory() override = default;
 
-    uint32_t GetNumDefinitions() override {
-      return sizeof(g_memory_find_option_table) / sizeof(OptionDefinition);
-    }
-
-    const OptionDefinition *GetDefinitions() override {
-      return g_memory_find_option_table;
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_memory_find_option_table);
     }
 
     Error SetOptionValue(uint32_t option_idx, const char *option_arg,
@@ -1206,12 +1200,8 @@ public:
 
     ~OptionGroupWriteMemory() override = default;
 
-    uint32_t GetNumDefinitions() override {
-      return sizeof(g_memory_write_option_table) / sizeof(OptionDefinition);
-    }
-
-    const OptionDefinition *GetDefinitions() override {
-      return g_memory_write_option_table;
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_memory_write_option_table);
     }
 
     Error SetOptionValue(uint32_t option_idx, const char *option_arg,
