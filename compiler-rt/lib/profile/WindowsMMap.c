@@ -20,6 +20,9 @@
 #include "WindowsMMap.h"
 #include "InstrProfiling.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #ifdef __USE_FILE_OFFSET64
 # define DWORD_HI(x) (x >> 32)
 # define DWORD_LO(x) ((x) & 0xffffffff)
