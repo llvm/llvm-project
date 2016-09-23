@@ -31,6 +31,11 @@
 # RUN:   | FileCheck --check-prefix=ERR2 %s
 # ERR2: invalid filler expression: 0x99XX
 
+## Check case with space between '=' and expression:
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } = 0x1122 }" > %t.script
+# RUN: ld.lld -o %t.out --script %t.script %t
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
+
 .section        .mysec.1,"a"
 .align  16
 .byte   0x66

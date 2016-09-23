@@ -483,6 +483,19 @@ class ProcessDriver(object):
     def on_process_exited(self, command, output, was_timeout, exit_status):
         pass
 
+    def on_timeout_pre_kill(self):
+        """Called after the timeout interval elapses but before killing it.
+
+        This method is added to enable derived classes the ability to do
+        something to the process prior to it being killed.  For example,
+        this would be a good spot to run a program that samples the process
+        to see what it was doing (or not doing).
+
+        Do not attempt to reap the process (i.e. use wait()) in this method.
+        That will interfere with the kill mechanism and return code processing.
+        """
+        pass
+
     def write(self, content):
         # pylint: disable=no-self-use
         # Intended - we want derived classes to be able to override
@@ -640,6 +653,11 @@ class ProcessDriver(object):
             # Reap the child process here.
             self.returncode = self.process.wait()
         else:
+
+            # Allow derived classes to do some work after we detected
+            # a timeout but before we touch the timed-out process.
+            self.on_timeout_pre_kill()
+
             # Prepare to stop the process
             process_terminated = completed_normally
             terminate_attempt_count = 0

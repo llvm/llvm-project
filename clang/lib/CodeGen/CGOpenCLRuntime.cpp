@@ -38,7 +38,7 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   uint32_t ImgAddrSpc = CGM.getContext().getTargetAddressSpace(
     CGM.getTarget().getOpenCLImageAddrSpace());
   switch (cast<BuiltinType>(T)->getKind()) {
-  default: 
+  default:
     llvm_unreachable("Unexpected opencl builtin type!");
     return nullptr;
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
@@ -85,4 +85,24 @@ llvm::PointerType *CGOpenCLRuntime::getSamplerType() {
       CGM.getContext().getTargetAddressSpace(
       LangAS::opencl_constant));
   return SamplerTy;
+}
+
+llvm::Value *CGOpenCLRuntime::getPipeElemSize(const Expr *PipeArg) {
+  const PipeType *PipeTy = PipeArg->getType()->getAs<PipeType>();
+  // The type of the last (implicit) argument to be passed.
+  llvm::Type *Int32Ty = llvm::IntegerType::getInt32Ty(CGM.getLLVMContext());
+  unsigned TypeSize = CGM.getContext()
+                          .getTypeSizeInChars(PipeTy->getElementType())
+                          .getQuantity();
+  return llvm::ConstantInt::get(Int32Ty, TypeSize, false);
+}
+
+llvm::Value *CGOpenCLRuntime::getPipeElemAlign(const Expr *PipeArg) {
+  const PipeType *PipeTy = PipeArg->getType()->getAs<PipeType>();
+  // The type of the last (implicit) argument to be passed.
+  llvm::Type *Int32Ty = llvm::IntegerType::getInt32Ty(CGM.getLLVMContext());
+  unsigned TypeSize = CGM.getContext()
+                          .getTypeAlignInChars(PipeTy->getElementType())
+                          .getQuantity();
+  return llvm::ConstantInt::get(Int32Ty, TypeSize, false);
 }

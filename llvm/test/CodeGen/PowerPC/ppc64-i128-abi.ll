@@ -17,16 +17,16 @@
 ; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-LE-NOVSX
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr9 < %s | FileCheck %s -check-prefix=CHECK-P9 \
-; RUN:   --implicit-check-not xxswapd
+; RUN:   -mcpu=pwr9 -ppc-vsr-nums-as-vr < %s | FileCheck %s \
+; RUN:   -check-prefix=CHECK-P9 --implicit-check-not xxswapd
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX \
 ; RUN:   --implicit-check-not xxswapd
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr9 -mattr=-power9-vector < %s | FileCheck %s \
-; RUN:   -check-prefix=CHECK-LE
+; RUN:   -mcpu=pwr9 -mattr=-power9-vector -mattr=-direct-move < %s | \
+; RUN:   FileCheck %s -check-prefix=CHECK-LE
 
 @x = common global <1 x i128> zeroinitializer, align 16
 @y = common global <1 x i128> zeroinitializer, align 16
@@ -55,8 +55,10 @@ define <1 x i128> @v1i128_increment_by_one(<1 x i128> %a) nounwind {
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @v1i128_increment_by_one
-; CHECK-P9: lxvx
-; CHECK-P9: vadduqm 2, 2, 3
+; CHECK-P9-DAG: li [[R1:r[0-9]+]], 1
+; CHECK-P9-DAG: li [[R2:r[0-9]+]], 0
+; CHECK-P9: mtvsrdd [[V1:v[0-9]+]], [[R2]], [[R1]]
+; CHECK-P9: vadduqm v2, v2, [[V1]]
 ; CHECK-P9: blr
 
 ; CHECK-BE-LABEL: @v1i128_increment_by_one
@@ -232,8 +234,8 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @call_v1i128_increment_by_val
-; CHECK-P9-DAG: lxvx 34
-; CHECK-P9-DAG: lxvx 35
+; CHECK-P9-DAG: lxvx v2
+; CHECK-P9-DAG: lxvx v3
 ; CHECK-P9: bl v1i128_increment_by_val
 ; CHECK-P9: blr
 

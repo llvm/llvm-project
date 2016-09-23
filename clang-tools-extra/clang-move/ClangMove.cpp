@@ -41,15 +41,8 @@ public:
                           const clang::FileEntry * /*File*/,
                           StringRef /*SearchPath*/, StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/) override {
-    if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc))) {
-      if (IsAngled) {
-        MoveTool->addIncludes("#include <" + FileName.str() + ">\n",
-                              FileEntry->getName());
-      } else {
-        MoveTool->addIncludes("#include \"" + FileName.str() + "\"\n",
-                              FileEntry->getName());
-      }
-    }
+    if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc)))
+      MoveTool->addIncludes(FileName, IsAngled, FileEntry->getName());
   }
 
 private:
@@ -135,7 +128,7 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
 
   // Add #Includes.
   std::string AllIncludesString;
-  // FIXME: Filter out the old_header.h and add header guard.
+  // FIXME: Add header guard.
   for (const auto &Include : Includes)
     AllIncludesString += Include;
   clang::tooling::Replacement InsertInclude(FileName, 0, 0, AllIncludesString);
@@ -205,6 +198,8 @@ ClangMoveTool::ClangMoveTool(
       std::map<std::string, tooling::Replacements> &FileToReplacements)
       : Spec(MoveSpec), FileToReplacements(FileToReplacements) {
   Spec.Name = llvm::StringRef(Spec.Name).ltrim(':');
+  if (!Spec.NewHeader.empty())
+    CCIncludes.push_back("#include \"" + Spec.NewHeader + "\"\n");
 }
 
 void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
@@ -290,12 +285,22 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   }
 }
 
-void ClangMoveTool::addIncludes(llvm::StringRef IncludeLine,
+void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
                                 llvm::StringRef FileName) {
+  // FIXME: Add old.h to the new.cc/h when the new target has dependencies on
+  // old.h/c. For instance, when moved class uses another class defined in
+  // old.h, the old.h should be added in new.h.
+  if (!Spec.OldHeader.empty() &&
+      llvm::StringRef(Spec.OldHeader).endswith(IncludeHeader))
+    return;
+
+  std::string IncludeLine =
+      IsAngled ? ("#include <" + IncludeHeader + ">\n").str()
+               : ("#include \"" + IncludeHeader + "\"\n").str();
   if (!Spec.OldHeader.empty() && FileName.endswith(Spec.OldHeader))
-    HeaderIncludes.push_back(IncludeLine.str());
+    HeaderIncludes.push_back(IncludeLine);
   else if (!Spec.OldCC.empty() && FileName.endswith(Spec.OldCC))
-    CCIncludes.push_back(IncludeLine.str());
+    CCIncludes.push_back(IncludeLine);
 }
 
 void ClangMoveTool::removeClassDefinitionInOldFiles() {

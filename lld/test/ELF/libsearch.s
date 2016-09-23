@@ -86,7 +86,7 @@
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=DYNAMIC %s
 
 // -nostdlib
-// RUN: echo 'SEARCH_DIR(' %t.dir ')' > %t.script
+// RUN: echo 'SEARCH_DIR("'%t.dir'")' > %t.script
 // RUN: ld.lld -o %t3 %t.o -script %t.script -lls
 // RUN: not ld.lld -o %t3 %t.o -script %t.script -lls -nostdlib \
 // RUN:   2>&1 | FileCheck --check-prefix=NOSTDLIB %s

@@ -131,22 +131,10 @@ ARMConstantPoolConstant::ARMConstantPoolConstant(const Constant *C,
                          AddCurrentAddress),
     CVal(C) {}
 
-ARMConstantPoolConstant::ARMConstantPoolConstant(const GlobalVariable *GV,
-                                                 const Constant *C)
-    : ARMConstantPoolValue((Type *)C->getType(), 0, ARMCP::CPPromotedGlobal, 0,
-                           ARMCP::no_modifier, false),
-      CVal(C), GVar(GV) {}
-
 ARMConstantPoolConstant *
 ARMConstantPoolConstant::Create(const Constant *C, unsigned ID) {
   return new ARMConstantPoolConstant(C, ID, ARMCP::CPValue, 0,
                                      ARMCP::no_modifier, false);
-}
-
-ARMConstantPoolConstant *
-ARMConstantPoolConstant::Create(const GlobalVariable *GVar,
-                                const Constant *Initializer) {
-  return new ARMConstantPoolConstant(GVar, Initializer);
 }
 
 ARMConstantPoolConstant *

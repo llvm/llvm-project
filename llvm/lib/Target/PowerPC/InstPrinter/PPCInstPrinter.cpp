@@ -328,10 +328,12 @@ void PPCInstPrinter::printU7ImmOperand(const MCInst *MI, unsigned OpNo,
   O << (unsigned int)Value;
 }
 
+// Operands of BUILD_VECTOR are signed and we use this to print operands
+// of XXSPLTIB which are unsigned. So we simply truncate to 8 bits and
+// print as unsigned.
 void PPCInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 255 && "Invalid u8imm argument!");
+  unsigned char Value = MI->getOperand(OpNo).getImm();
   O << (unsigned int)Value;
 }
 

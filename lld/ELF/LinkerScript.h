@@ -157,6 +157,7 @@ public:
   virtual uint64_t getOutputSectionAlign(StringRef Name) = 0;
   virtual uint64_t getHeaderSize() = 0;
   virtual uint64_t getSymbolValue(StringRef S) = 0;
+  virtual bool isDefined(StringRef S) = 0;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -203,6 +204,7 @@ public:
   uint64_t getOutputSectionAlign(StringRef Name) override;
   uint64_t getHeaderSize() override;
   uint64_t getSymbolValue(StringRef S) override;
+  bool isDefined(StringRef S) override;
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 

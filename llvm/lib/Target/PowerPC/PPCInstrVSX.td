@@ -767,6 +767,10 @@ let Uses = [RM] in {
                        "xxlxor $XT, $XA, $XB", IIC_VecGeneral,
                        [(set v4i32:$XT, (xor v4i32:$XA, v4i32:$XB))]>;
   } // isCommutable
+  let isCodeGenOnly = 1 in
+  def XXLXORz : XX3Form_Zero<60, 154, (outs vsrc:$XT), (ins),
+                       "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
+                       [(set v4i32:$XT, (v4i32 immAllZerosV))]>;
 
   // Permutation Instructions
   def XXMRGHW : XX3Form<60, 18,
@@ -1315,8 +1319,7 @@ let Predicates = [HasDirectMove] in {
 
 let Predicates = [IsISA3_0, HasDirectMove] in {
   def MTVSRWS: XX1_RS6_RD5_XO<31, 403, (outs vsrc:$XT), (ins gprc:$rA),
-                              "mtvsrws $XT, $rA", IIC_VecGeneral,
-                              []>;
+                              "mtvsrws $XT, $rA", IIC_VecGeneral, []>;
 
   def MTVSRDD: XX1Form<31, 435, (outs vsrc:$XT), (ins g8rc:$rA, g8rc:$rB),
                        "mtvsrdd $XT, $rA, $rB", IIC_VecGeneral,
@@ -1880,6 +1883,10 @@ def AlignValues {
   dag I32_TO_BE_WORD1 = (COPY_TO_REGCLASS (MTVSRWZ $B), VSRC);
 }
 
+// Materialize a zero-vector of long long
+def : Pat<(v2i64 immAllZerosV),
+          (v2i64 (XXLXORz))>;
+
 // The following VSX instructions were introduced in Power ISA 3.0
 def HasP9Vector : Predicate<"PPCSubTarget->hasP9Vector()">;
 let AddedComplexity = 400, Predicates = [HasP9Vector] in {
@@ -2310,4 +2317,40 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (STXVX $rS, xoaddr:$dst)>;
   def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, xoaddr:$dst),
             (STXVX $rS, xoaddr:$dst)>;
+
+  def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
+            (v4i32 (LXVWSX xoaddr:$src))>;
+  def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),
+            (v4f32 (LXVWSX xoaddr:$src))>;
+  def : Pat<(v4i32 (build_vector i32:$A, i32:$A, i32:$A, i32:$A)),
+            (v4i32 (MTVSRWS $A))>;
+  def : Pat<(v16i8 (build_vector immSExt8:$A, immSExt8:$A, immSExt8:$A,
+                                 immSExt8:$A, immSExt8:$A, immSExt8:$A,
+                                 immSExt8:$A, immSExt8:$A, immSExt8:$A,
+                                 immSExt8:$A, immSExt8:$A, immSExt8:$A,
+                                 immSExt8:$A, immSExt8:$A, immSExt8:$A,
+                                 immSExt8:$A)),
+            (v16i8 (COPY_TO_REGCLASS (XXSPLTIB imm:$A), VSRC))>;
+  def : Pat<(v16i8 immAllOnesV),
+            (v16i8 (COPY_TO_REGCLASS (XXSPLTIB 255), VSRC))>;
+  def : Pat<(v8i16 immAllOnesV),
+            (v8i16 (COPY_TO_REGCLASS (XXSPLTIB 255), VSRC))>;
+  def : Pat<(v4i32 immAllOnesV),
+            (v4i32 (XXSPLTIB 255))>;
+  def : Pat<(v2i64 immAllOnesV),
+            (v2i64 (XXSPLTIB 255))>;
 } // end HasP9Vector, AddedComplexity
+
+let Predicates = [IsISA3_0, HasDirectMove, IsLittleEndian] in {
+def : Pat<(v2i64 (build_vector i64:$rA, i64:$rB)),
+          (v2i64 (MTVSRDD $rB, $rA))>;
+def : Pat<(i64 (extractelt v2i64:$A, 0)),
+          (i64 (MFVSRLD $A))>;
+}
+
+let Predicates = [IsISA3_0, HasDirectMove, IsBigEndian] in {
+def : Pat<(v2i64 (build_vector i64:$rB, i64:$rA)),
+          (v2i64 (MTVSRDD $rB, $rA))>;
+def : Pat<(i64 (extractelt v2i64:$A, 1)),
+          (i64 (MFVSRLD $A))>;
+}

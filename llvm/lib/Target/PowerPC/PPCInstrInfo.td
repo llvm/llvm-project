@@ -312,6 +312,7 @@ def immZExt16  : PatLeaf<(imm), [{
   // field.  Used by instructions like 'ori'.
   return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
 }], LO16>;
+def immSExt8 : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 
 // imm16Shifted* - These match immediates where the low 16-bits are zero.  There
 // are two forms: imm16ShiftedSExt and imm16ShiftedZExt.  These two forms are
