@@ -118,9 +118,11 @@ namespace options {
   static unsigned OptLevel = 2;
   // Default parallelism of 0 used to indicate that user did not specify.
   // Actual parallelism default value depends on implementation.
-  // Currently, code generation defaults to no parallelism, whereas
-  // ThinLTO uses the hardware_concurrency as the default.
+  // Currently only affects ThinLTO, where the default is the
+  // hardware_concurrency.
   static unsigned Parallelism = 0;
+  // Default regular LTO codegen parallelism (number of partitions).
+  static unsigned ParallelCodeGenParallelismLevel = 1;
 #ifdef NDEBUG
   static bool DisableVerify = true;
 #else
@@ -211,6 +213,10 @@ namespace options {
     } else if (opt.startswith("jobs=")) {
       if (StringRef(opt_ + 5).getAsInteger(10, Parallelism))
         message(LDPL_FATAL, "Invalid parallelism level: %s", opt_ + 5);
+    } else if (opt.startswith("lto-partitions=")) {
+      if (opt.substr(strlen("lto-partitions="))
+              .getAsInteger(10, ParallelCodeGenParallelismLevel))
+        message(LDPL_FATAL, "Invalid codegen partition level: %s", opt_ + 5);
     } else if (opt == "disable-verify") {
       DisableVerify = true;
     } else {
@@ -694,7 +700,6 @@ public:
 static std::unique_ptr<LTO> createLTO() {
   Config Conf;
   ThinBackend Backend;
-  unsigned ParallelCodeGenParallelismLevel = 1;
 
   Conf.CPU = options::mcpu;
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
@@ -708,12 +713,8 @@ static std::unique_ptr<LTO> createLTO() {
   Conf.CGOptLevel = getCGOptLevel();
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
-  if (options::Parallelism) {
-    if (options::thinlto)
-      Backend = createInProcessThinBackend(options::Parallelism);
-    else
-      ParallelCodeGenParallelismLevel = options::Parallelism;
-  }
+  if (options::Parallelism)
+    Backend = createInProcessThinBackend(options::Parallelism);
   if (options::thinlto_index_only) {
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
@@ -753,7 +754,7 @@ static std::unique_ptr<LTO> createLTO() {
   }
 
   return llvm::make_unique<LTO>(std::move(Conf), Backend,
-                                ParallelCodeGenParallelismLevel);
+                                options::ParallelCodeGenParallelismLevel);
 }
 
 // Write empty files that may be expected by a distributed build
