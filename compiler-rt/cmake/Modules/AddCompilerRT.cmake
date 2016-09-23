@@ -77,6 +77,15 @@ macro(format_object_libs output suffix)
   endforeach()
 endmacro()
 
+function(add_compiler_rt_component name)
+  add_custom_target(${name})
+  set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT Misc")
+  if(COMMAND runtime_register_component)
+    runtime_register_component(${name})
+  endif()
+  add_dependencies(compiler-rt ${name})
+endfunction()
+
 # Adds static or shared runtime for a list of architectures and operating
 # systems and puts it in the proper directory in the build and install trees.
 # add_compiler_rt_runtime(<name>
