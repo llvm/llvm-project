@@ -358,12 +358,14 @@ static void parseAndSetFilename(const char *FilenamePat,
   lprofCurFilename.PNS = PNS;
 
   if (!OldFilenamePat) {
-    PROF_NOTE("Set profile file path to \"%s\" via %s.\n",
-              lprofCurFilename.FilenamePat, getPNSStr(PNS));
+    if (getenv("LLVM_PROFILE_VERBOSE"))
+      PROF_NOTE("Set profile file path to \"%s\" via %s.\n",
+                lprofCurFilename.FilenamePat, getPNSStr(PNS));
   } else {
-    PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
-              OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
-              getPNSStr(PNS));
+    if (getenv("LLVM_PROFILE_VERBOSE"))
+      PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
+                OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
+                getPNSStr(PNS));
   }
 
   truncateCurrentFile();
@@ -558,7 +560,7 @@ COMPILER_RT_VISIBILITY
 int __llvm_profile_dump(void) {
   if (!doMerging())
     PROF_WARN("Later invocation of __llvm_profile_dump can lead to clobbering "
-              " of previously dumped profile data : %s. Either use \%m "
+              " of previously dumped profile data : %s. Either use %%m "
               "in profile name or change profile name before dumping.\n",
               "online profile merging is not on");
   int rc = __llvm_profile_write_file();
