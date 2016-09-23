@@ -69,7 +69,8 @@ void test7() {
 		unsigned int reserved:28;
 	} f;
 
-	f.twoBits1 = ~1; // expected-warning {{implicit truncation from 'int' to bitfield changes value from -2 to 2}}
+	f.twoBits1 = ~0; // no-warning
+	f.twoBits1 = ~1; // no-warning
 	f.twoBits2 = ~2; // expected-warning {{implicit truncation from 'int' to bitfield changes value from -3 to 1}}
 	f.twoBits1 &= ~1; // no-warning
 	f.twoBits2 &= ~2; // no-warning
@@ -114,6 +115,8 @@ void test9() {
   char array_init[] = { 255, 127, 128, 129, 0 };
 }
 
+#define A 1
+
 void test10() {
   struct S {
     unsigned a : 4;
@@ -121,6 +124,9 @@ void test10() {
   s.a = -1;
   s.a = 15;
   s.a = -8;
+  s.a = ~0;
+  s.a = ~0U;
+  s.a = ~(1<<A);
 
   s.a = -9;  // expected-warning{{implicit truncation from 'int' to bitfield changes value from -9 to 7}}
   s.a = 16;  // expected-warning{{implicit truncation from 'int' to bitfield changes value from 16 to 0}}

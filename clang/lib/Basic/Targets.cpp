@@ -4679,8 +4679,10 @@ class ARMTargetInfo : public TargetInfo {
     DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
     const llvm::Triple &T = getTriple();
 
-    // size_t is unsigned long on MachO-derived environments, NetBSD and Bitrig.
+    // size_t is unsigned long on MachO-derived environments, NetBSD,
+    // OpenBSD and Bitrig.
     if (T.isOSBinFormatMachO() || T.getOS() == llvm::Triple::NetBSD ||
+        T.getOS() == llvm::Triple::OpenBSD ||
         T.getOS() == llvm::Triple::Bitrig)
       SizeType = UnsignedLong;
     else
@@ -4688,6 +4690,7 @@ class ARMTargetInfo : public TargetInfo {
 
     switch (T.getOS()) {
     case llvm::Triple::NetBSD:
+    case llvm::Triple::OpenBSD:
       WCharType = SignedInt;
       break;
     case llvm::Triple::Win32:
@@ -4885,6 +4888,7 @@ public:
 
     switch (getTriple().getOS()) {
     case llvm::Triple::NetBSD:
+    case llvm::Triple::OpenBSD:
       PtrDiffType = SignedLong;
       break;
     default:
