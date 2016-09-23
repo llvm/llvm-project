@@ -30,9 +30,7 @@ public:
 
   static bool IsWatchSizeSupported(uint32_t watch_size);
 
-  uint32_t GetNumDefinitions() override;
-
-  const OptionDefinition *GetDefinitions() override;
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
   Error SetOptionValue(uint32_t option_idx, const char *option_arg,
                        ExecutionContext *execution_context) override;

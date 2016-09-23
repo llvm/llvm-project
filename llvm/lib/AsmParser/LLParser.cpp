@@ -3704,16 +3704,6 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name, MDField &Result) {
 }
 
 template <>
-bool LLParser::ParseMDField(LocTy Loc, StringRef Name, MDConstant &Result) {
-  Metadata *MD;
-  if (ParseValueAsMetadata(MD, "expected constant", nullptr))
-    return true;
-
-  Result.assign(cast<ConstantAsMetadata>(MD));
-  return false;
-}
-
-template <>
 bool LLParser::ParseMDField(LocTy Loc, StringRef Name, MDStringField &Result) {
   LocTy ValueLoc = Lex.getLoc();
   std::string S;

@@ -61,6 +61,14 @@ using namespace lldb_private;
 // CommandObjectFrameDiagnose
 //-------------------------------------------------------------------------
 
+static OptionDefinition g_frame_diag_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegisterName,    "A register to diagnose." },
+  { LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,         "An address to diagnose." },
+  { LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,          "An optional offset.  Requires --register." }
+    // clang-format on
+};
+
 class CommandObjectFrameDiagnose : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
@@ -115,10 +123,9 @@ public:
       offset.reset();
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-    // Options table: Required for subclasses of Options.
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_frame_diag_options);
+    }
 
     // Options.
     llvm::Optional<lldb::addr_t> address;
@@ -215,16 +222,6 @@ protected:
   CommandOptions m_options;
 };
 
-OptionDefinition CommandObjectFrameDiagnose::CommandOptions::g_option_table[] =
-    {
-        // clang-format off
-    {LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegisterName,    "A register to diagnose."},
-    {LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,         "An address to diagnose."},
-    {LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,          "An optional offset.  Requires --register."},
-    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-        // clang-format on
-};
-
 #pragma mark CommandObjectFrameInfo
 
 //-------------------------------------------------------------------------
@@ -256,6 +253,12 @@ protected:
 //-------------------------------------------------------------------------
 // CommandObjectFrameSelect
 //-------------------------------------------------------------------------
+
+static OptionDefinition g_frame_select_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset, "A relative frame index offset from the current frame index." },
+    // clang-format on
+};
 
 class CommandObjectFrameSelect : public CommandObjectParsed {
 public:
@@ -292,11 +295,10 @@ public:
       relative_frame_offset = INT32_MIN;
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_frame_select_options);
+    }
 
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
     int32_t relative_frame_offset;
   };
 
@@ -418,13 +420,6 @@ protected:
 
 protected:
   CommandOptions m_options;
-};
-
-OptionDefinition CommandObjectFrameSelect::CommandOptions::g_option_table[] = {
-    // clang-format off
-  {LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset, "A relative frame index offset from the current frame index."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-    // clang-format on
 };
 
 #pragma mark CommandObjectFrameVariable

@@ -65,3 +65,7 @@ __m128i test__builtin_ia32_vpcomd(__m128i __a, __m128i __b) {
 __m128i test__builtin_ia32_vpcomq(__m128i __a, __m128i __b) {
   __builtin_ia32_vpcomuq(__a, __b, 8); // expected-error {{argument should be a value from 0 to 7}}
 }
+
+__mmask16 test__builtin_ia32_cmpps512_mask_rounding(__m512 __a, __m512 __b, __mmask16 __u) {
+  __builtin_ia32_cmpps512_mask(__a, __b, 0, __u, 0); // expected-error {{invalid rounding argument}}
+}

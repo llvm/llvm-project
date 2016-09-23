@@ -47,18 +47,15 @@ static OptionDefinition g_option_table[] = {
      "The number of total items to display."},
 };
 
-uint32_t OptionGroupFormat::GetNumDefinitions() {
+llvm::ArrayRef<OptionDefinition> OptionGroupFormat::GetDefinitions() {
+  auto result = llvm::makeArrayRef(g_option_table);
   if (m_byte_size.GetDefaultValue() < UINT64_MAX) {
     if (m_count.GetDefaultValue() < UINT64_MAX)
-      return 4;
+      return result;
     else
-      return 3;
+      return result.take_front(3);
   }
-  return 2;
-}
-
-const OptionDefinition *OptionGroupFormat::GetDefinitions() {
-  return g_option_table;
+  return result.take_front(2);
 }
 
 Error OptionGroupFormat::SetOptionValue(uint32_t option_idx,

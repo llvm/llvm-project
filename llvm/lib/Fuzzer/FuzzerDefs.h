@@ -37,6 +37,9 @@
 
 namespace fuzzer {
 
+template <class T> T Min(T a, T b) { return a < b ? a : b; }
+template <class T> T Max(T a, T b) { return a > b ? a : b; }
+
 class Random;
 class Dictionary;
 class DictionaryEntry;

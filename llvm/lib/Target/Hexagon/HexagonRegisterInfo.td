@@ -260,7 +260,10 @@ def CtrRegs : RegisterClass<"Hexagon", [i32], 32,
                             (add LC0, SA0, LC1, SA1,
                                  P3_0, C5,
                                  M0, M1, C6, C7, C8, CS0, CS1, UPCL, UPCH,
-                                 USR, USR_OVF, UGP, GP, PC)>;
+                                 USR, UGP, GP, PC)>;
+
+let isAllocatable = 0 in
+def UsrBits : RegisterClass<"Hexagon", [i1], 0, (add USR_OVF)>;
 
 let Size = 64, isAllocatable = 0 in
 def CtrRegs64 : RegisterClass<"Hexagon", [i64], 64,

@@ -81,6 +81,13 @@ static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> &Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
+  // Skip over discarded sections. This in theory shouldn't happen, because
+  // the ELF spec doesn't allow a relocation to point to a deduplicated
+  // COMDAT section directly. Unfortunately this happens in practice (e.g.
+  // .eh_frame) so we need to add a check.
+  if (&Sec == &InputSection<ELFT>::Discarded)
+    return;
+
   ELFFile<ELFT> &Obj = Sec.getFile()->getObj();
   for (const typename ELFT::Shdr *RelSec : Sec.RelocSections) {
     if (RelSec->sh_type == SHT_RELA) {

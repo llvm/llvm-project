@@ -5,6 +5,15 @@
 // RUN: llvm-readobj -s -t %t | FileCheck --check-prefix=READ %s
 // REQUIRES: x86
 
+// Check that we don't crash with --gc-section and that we print a list of
+// reclaimed sections on stderr.
+// RUN: ld.lld --gc-sections --print-gc-sections -shared %t.o %t.o %t2.o -o %t \
+// RUN:   2>&1 | FileCheck --check-prefix=GC %s
+// GC: removing unused section from '.text' in file
+// GC: removing unused section from '.text3' in file
+// GC: removing unused section from '.text' in file
+// GC: removing unused section from '.text' in file
+
         .section	.text2,"axG",@progbits,foo,comdat,unique,0
 foo:
         nop

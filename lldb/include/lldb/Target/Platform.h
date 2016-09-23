@@ -1094,9 +1094,7 @@ public:
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-  const lldb_private::OptionDefinition *GetDefinitions() override;
-
-  uint32_t GetNumDefinitions() override;
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
   // Options table: Required for subclasses of Options.
 
@@ -1125,9 +1123,7 @@ public:
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-  uint32_t GetNumDefinitions() override;
-
-  const lldb_private::OptionDefinition *GetDefinitions() override;
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
   // Options table: Required for subclasses of Options.
 
@@ -1154,9 +1150,7 @@ public:
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-  uint32_t GetNumDefinitions() override;
-
-  const lldb_private::OptionDefinition *GetDefinitions() override;
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
   // Options table: Required for subclasses of Options.
 

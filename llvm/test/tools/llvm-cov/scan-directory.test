@@ -1,0 +1,9 @@
+RUN: mkdir -p %t/a/b/
+RUN: echo "" > %t/a/b/c.tmp
+RUN: echo "" > %t/a/d.tmp
+
+RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths %t | FileCheck %s
+RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths %t/a/b/c.tmp %t/a/d.tmp | FileCheck %s
+
+CHECK-DAG: {{.*}}c.tmp
+CHECK-DAG: {{.*}}d.tmp

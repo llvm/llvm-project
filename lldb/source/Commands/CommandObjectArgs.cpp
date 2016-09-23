@@ -37,6 +37,12 @@ using namespace lldb_private;
 // calling functions.
 //
 
+static OptionDefinition g_arg_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation." },
+    // clang-format on
+};
+
 CommandObjectArgs::CommandOptions::CommandOptions(
     CommandInterpreter &interpreter)
     : Options() {
@@ -61,8 +67,9 @@ Error CommandObjectArgs::CommandOptions::SetOptionValue(
 void CommandObjectArgs::CommandOptions::OptionParsingStarting(
     ExecutionContext *execution_context) {}
 
-const OptionDefinition *CommandObjectArgs::CommandOptions::GetDefinitions() {
-  return g_option_table;
+llvm::ArrayRef<OptionDefinition>
+CommandObjectArgs::CommandOptions::GetDefinitions() {
+  return llvm::makeArrayRef(g_arg_options);
 }
 
 CommandObjectArgs::CommandObjectArgs(CommandInterpreter &interpreter)
@@ -228,10 +235,3 @@ bool CommandObjectArgs::DoExecute(Args &args, CommandReturnObject &result) {
 
   return result.Succeeded();
 }
-
-OptionDefinition CommandObjectArgs::CommandOptions::g_option_table[] = {
-    // clang-format off
-  {LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-    // clang-format on
-};

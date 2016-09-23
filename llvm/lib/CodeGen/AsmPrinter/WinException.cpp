@@ -90,7 +90,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
-  if (!Asm->MAI->usesWindowsCFI()) {
+  if (!Asm->MAI->usesWindowsCFI() || (!MF->hasWinCFI() && !Per)) {
     shouldEmitLSDA = hasEHFunclets;
     shouldEmitPersonality = false;
     return;

@@ -1128,6 +1128,13 @@ bool SBTarget::DeleteAllBreakpoints() {
 
 lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
                                                   SBBreakpointList &new_bps) {
+  SBStringList empty_name_list;
+  return BreakpointsCreateFromFile(source_file, empty_name_list, new_bps);
+}
+
+lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
+                                                  SBStringList &matching_names,
+                                                  SBBreakpointList &new_bps) {
   SBError sberr;
   TargetSP target_sp(GetSP());
   if (!target_sp) {
@@ -1138,7 +1145,14 @@ lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
   std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
 
   BreakpointIDList bp_ids;
-  sberr.ref() = target_sp->CreateBreakpointsFromFile(source_file.ref(), bp_ids);
+
+  std::vector<std::string> name_vector;
+  size_t num_names = matching_names.GetSize();
+  for (size_t i = 0; i < num_names; i++)
+    name_vector.push_back(matching_names.GetStringAtIndex(i));
+
+  sberr.ref() = target_sp->CreateBreakpointsFromFile(source_file.ref(),
+                                                     name_vector, bp_ids);
   if (sberr.Fail())
     return sberr;
 
@@ -1162,7 +1176,8 @@ lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file) {
 }
 
 lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file,
-                                               SBBreakpointList &bkpt_list) {
+                                               SBBreakpointList &bkpt_list,
+                                               bool append) {
   SBError sberr;
   TargetSP target_sp(GetSP());
   if (!target_sp) {
@@ -1173,8 +1188,8 @@ lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file,
   std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
   BreakpointIDList bp_id_list;
   bkpt_list.CopyToBreakpointIDList(bp_id_list);
-  sberr.ref() =
-      target_sp->SerializeBreakpointsToFile(dest_file.ref(), bp_id_list);
+  sberr.ref() = target_sp->SerializeBreakpointsToFile(dest_file.ref(),
+                                                      bp_id_list, append);
   return sberr;
 }
 

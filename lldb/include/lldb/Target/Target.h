@@ -679,9 +679,13 @@ public:
   bool IgnoreWatchpointByID(lldb::watch_id_t watch_id, uint32_t ignore_count);
 
   Error SerializeBreakpointsToFile(const FileSpec &file,
-                                   const BreakpointIDList &bp_ids);
+                                   const BreakpointIDList &bp_ids, bool append);
 
   Error CreateBreakpointsFromFile(const FileSpec &file,
+                                  BreakpointIDList &new_bps);
+
+  Error CreateBreakpointsFromFile(const FileSpec &file,
+                                  std::vector<std::string> &names,
                                   BreakpointIDList &new_bps);
 
   //------------------------------------------------------------------

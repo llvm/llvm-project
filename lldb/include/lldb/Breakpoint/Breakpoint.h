@@ -180,6 +180,10 @@ public:
   static lldb::BreakpointSP CreateFromStructuredData(
       Target &target, StructuredData::ObjectSP &data_object_sp, Error &error);
 
+  static bool
+  SerializedBreakpointMatchesNames(StructuredData::ObjectSP &bkpt_object_sp,
+                                   std::vector<std::string> &names);
+
   virtual StructuredData::ObjectSP SerializeToStructuredData();
 
   static const char *GetSerializationKey() { return "Breakpoint"; }

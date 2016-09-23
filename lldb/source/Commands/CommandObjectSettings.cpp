@@ -27,6 +27,12 @@ using namespace lldb_private;
 // CommandObjectSettingsSet
 //-------------------------------------------------------------------------
 
+static OptionDefinition g_settings_set_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Apply the new value to the global default value." }
+    // clang-format on
+};
+
 class CommandObjectSettingsSet : public CommandObjectRaw {
 public:
   CommandObjectSettingsSet(CommandInterpreter &interpreter)
@@ -118,11 +124,9 @@ insert-before or insert-after.");
       m_global = false;
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_settings_set_options);
+    }
 
     // Instance variables to hold the values for command options.
 
@@ -240,13 +244,6 @@ protected:
 
 private:
   CommandOptions m_options;
-};
-
-OptionDefinition CommandObjectSettingsSet::CommandOptions::g_option_table[] = {
-    // clang-format off
-  {LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Apply the new value to the global default value."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-    // clang-format on
 };
 
 //-------------------------------------------------------------------------
