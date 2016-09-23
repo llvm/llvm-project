@@ -130,8 +130,7 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
-file(GLOB CLANG_RESOURCE_PATHS "${LLDB_PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang")
-list(GET CLANG_RESOURCE_PATHS 0 CLANG_RESOURCE_PATH)
+set(CLANG_RESOURCE_PATH "${LLDB_PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang")
 add_custom_command_target(
     unused_var
     COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${CLANG_RESOURCE_PATH}" "${lib_dir}/lldb/clang"
