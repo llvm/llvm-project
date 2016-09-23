@@ -39,7 +39,7 @@ class getVOP3Pat<VOPProfile P, SDPatternOperator node> {
 }
 
 class VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit VOP3Only = 0> :
-  VOP3_PseudoNew<OpName, P,
+  VOP3_Pseudo<OpName, P,
     !if(P.HasModifiers, getVOP3ModPat<P, node>.ret, getVOP3Pat<P, node>.ret),
     VOP3Only>;
 
@@ -118,7 +118,7 @@ let Uses = [VCC, EXEC] in {
 //   if (vcc)
 //     result *= 2^32
 //
-def V_DIV_FMAS_F32 : VOP3_PseudoNew <"v_div_fmas_f32", VOP_F32_F32_F32_F32_VCC,
+def V_DIV_FMAS_F32 : VOP3_Pseudo <"v_div_fmas_f32", VOP_F32_F32_F32_F32_VCC,
   getVOP3VCC<VOP_F32_F32_F32_F32_VCC, AMDGPUdiv_fmas>.ret> {
   let SchedRW = [WriteFloatFMA];
 }
@@ -127,7 +127,7 @@ def V_DIV_FMAS_F32 : VOP3_PseudoNew <"v_div_fmas_f32", VOP_F32_F32_F32_F32_VCC,
 //   if (vcc)
 //     result *= 2^64
 //
-def V_DIV_FMAS_F64 : VOP3_PseudoNew <"v_div_fmas_f64", VOP_F64_F64_F64_F64_VCC,
+def V_DIV_FMAS_F64 : VOP3_Pseudo <"v_div_fmas_f64", VOP_F64_F64_F64_F64_VCC,
   getVOP3VCC<VOP_F64_F64_F64_F64_VCC, AMDGPUdiv_fmas>.ret> {
   let SchedRW = [WriteDouble];
 }
@@ -165,12 +165,12 @@ def V_DIV_FIXUP_F64 : VOP3Inst <"v_div_fixup_f64", VOP3_Profile<VOP_F64_F64_F64_
 def V_LDEXP_F64 : VOP3Inst <"v_ldexp_f64", VOP3_Profile<VOP_F64_F64_I32>, AMDGPUldexp, 1>;
 } // End SchedRW = [WriteDoubleAdd]
 
-def V_DIV_SCALE_F32 : VOP3_PseudoNew <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32, [], 1> {
+def V_DIV_SCALE_F32 : VOP3_Pseudo <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32, [], 1> {
   let SchedRW = [WriteFloatFMA, WriteSALU];
 }
 
 // Double precision division pre-scale.
-def V_DIV_SCALE_F64 : VOP3_PseudoNew <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64, [], 1> {
+def V_DIV_SCALE_F64 : VOP3_Pseudo <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64, [], 1> {
   let SchedRW = [WriteDouble, WriteSALU];
 }
 
@@ -234,13 +234,13 @@ let isCommutable = 1 in {
 let AssemblerPredicates = [isSICI], DecoderNamespace = "SICI" in {
 
 multiclass VOP3_Real_si<bits<9> op> {
-  def _si : VOP3_Real<!cast<VOP3_PseudoNew>(NAME), SIEncodingFamily.SI>,
-            VOP3e_siNew <op, !cast<VOP3_PseudoNew>(NAME).Pfl>;
+  def _si : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
+            VOP3e_si <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
 multiclass VOP3be_Real_si<bits<9> op> {
-  def _si : VOP3_Real<!cast<VOP3_PseudoNew>(NAME), SIEncodingFamily.SI>,
-            VOP3be_siNew <op, !cast<VOP3_PseudoNew>(NAME).Pfl>;
+  def _si : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
+            VOP3be_si <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
 } // End AssemblerPredicates = [isSICI], DecoderNamespace = "SICI"
@@ -303,8 +303,8 @@ defm V_TRIG_PREOP_F64   : VOP3_Real_si <0x174>;
 //===----------------------------------------------------------------------===//
 
 multiclass VOP3_Real_ci<bits<9> op> {
-  def _ci : VOP3_Real<!cast<VOP3_PseudoNew>(NAME), SIEncodingFamily.SI>,
-            VOP3e_siNew <op, !cast<VOP3_PseudoNew>(NAME).Pfl> {
+  def _ci : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
+            VOP3e_si <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicates = [isCIOnly];
     let DecoderNamespace = "CI";
   }
@@ -323,13 +323,13 @@ defm V_MAD_I64_I32      : VOP3_Real_ci <0x177>;
 let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
 
 multiclass VOP3_Real_vi<bits<10> op> {
-  def _vi : VOP3_Real<!cast<VOP3_PseudoNew>(NAME), SIEncodingFamily.VI>,
-            VOP3e_viNew <op, !cast<VOP3_PseudoNew>(NAME).Pfl>;
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
 multiclass VOP3be_Real_vi<bits<10> op> {
-  def _vi : VOP3_Real<!cast<VOP3_PseudoNew>(NAME), SIEncodingFamily.VI>,
-            VOP3be_viNew <op, !cast<VOP3_PseudoNew>(NAME).Pfl>;
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3be_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
 } // End AssemblerPredicates = [isVI], DecoderNamespace = "VI"

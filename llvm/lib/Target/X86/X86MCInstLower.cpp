@@ -1420,37 +1420,45 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
 
   case X86::SEH_PushReg:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     OutStreamer->EmitWinCFIPushReg(RI->getSEHRegNum(MI->getOperand(0).getImm()));
     return;
 
   case X86::SEH_SaveReg:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     OutStreamer->EmitWinCFISaveReg(RI->getSEHRegNum(MI->getOperand(0).getImm()),
                                    MI->getOperand(1).getImm());
     return;
 
   case X86::SEH_SaveXMM:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     OutStreamer->EmitWinCFISaveXMM(RI->getSEHRegNum(MI->getOperand(0).getImm()),
                                    MI->getOperand(1).getImm());
     return;
 
   case X86::SEH_StackAlloc:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     OutStreamer->EmitWinCFIAllocStack(MI->getOperand(0).getImm());
     return;
 
   case X86::SEH_SetFrame:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     OutStreamer->EmitWinCFISetFrame(RI->getSEHRegNum(MI->getOperand(0).getImm()),
                                     MI->getOperand(1).getImm());
     return;
 
   case X86::SEH_PushFrame:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     OutStreamer->EmitWinCFIPushFrame(MI->getOperand(0).getImm());
     return;
 
   case X86::SEH_EndPrologue:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     OutStreamer->EmitWinCFIEndProlog();
     return;
 
   case X86::SEH_Epilogue: {
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     MachineBasicBlock::const_iterator MBBI(MI);
     // Check if preceded by a call and emit nop if so.
     for (MBBI = PrevCrossBBInst(MBBI);

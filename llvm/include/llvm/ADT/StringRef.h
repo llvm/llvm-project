@@ -32,6 +32,10 @@ namespace llvm {
 
   bool getAsSignedInteger(StringRef Str, unsigned Radix, long long &Result);
 
+  bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
+                              unsigned long long &Result);
+  bool consumeSignedInteger(StringRef &Str, unsigned Radix, long long &Result);
+
   /// StringRef - Represent a constant reference to a string, i.e. a character
   /// array and a length, which need not be null terminated.
   ///
@@ -391,6 +395,37 @@ namespace llvm {
       // Visual C++ warning C4805: '!=' : unsafe mix of type 'bool' and type
       // 'unsigned __int64' when instantiating getAsInteger with T = bool.
       if (getAsUnsignedInteger(*this, Radix, ULLVal) ||
+          static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
+        return true;
+      Result = ULLVal;
+      return false;
+    }
+
+    /// Parse the current string as an integer of the specified radix.  If
+    /// \p Radix is specified as zero, this does radix autosensing using
+    /// extended C rules: 0 is octal, 0x is hex, 0b is binary.
+    ///
+    /// If the string does not begin with a number of the specified radix,
+    /// this returns true to signify the error. The string is considered
+    /// erroneous if empty or if it overflows T.
+    /// The portion of the string representing the discovered numeric value
+    /// is removed from the beginning of the string.
+    template <typename T>
+    typename std::enable_if<std::numeric_limits<T>::is_signed, bool>::type
+    consumeInteger(unsigned Radix, T &Result) {
+      long long LLVal;
+      if (consumeSignedInteger(*this, Radix, LLVal) ||
+          static_cast<long long>(static_cast<T>(LLVal)) != LLVal)
+        return true;
+      Result = LLVal;
+      return false;
+    }
+
+    template <typename T>
+    typename std::enable_if<!std::numeric_limits<T>::is_signed, bool>::type
+    consumeInteger(unsigned Radix, T &Result) {
+      unsigned long long ULLVal;
+      if (consumeUnsignedInteger(*this, Radix, ULLVal) ||
           static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
         return true;
       Result = ULLVal;

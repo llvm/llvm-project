@@ -11,6 +11,6 @@ entry:
 }
 
 ; CHECK-LABEL: test1{{$}}
-; CHECK: .seh_proc test1{{$}}
+; CHECK-NOT: .seh_proc test1
 ; CHECK: rex64 jmpq *fnptr(%rip)
-; CHECK: .seh_endproc
+; CHECK-NOT: .seh_endproc

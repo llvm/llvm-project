@@ -891,6 +891,10 @@ private:
         if (MaxDepthInBB != -1 && InstructionNb++ >= MaxDepthInBB)
           break;
 
+        // Do not value number terminator instructions.
+        if (isa<TerminatorInst>(&I1))
+          break;
+
         if (auto *Load = dyn_cast<LoadInst>(&I1))
           LI.insert(Load, VN);
         else if (auto *Store = dyn_cast<StoreInst>(&I1))

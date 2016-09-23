@@ -589,10 +589,6 @@ private:
   /// instruction.
   bool CheckPending;
 
-  // For heuristics, keep a list of the nodes that immediately depend on the
-  // most recently scheduled node.
-  SmallPtrSet<const SUnit*, 8> NextSUs;
-
   /// Number of cycles it takes to issue the instructions scheduled in this
   /// zone. It is defined as: scheduled-micro-ops / issue-width + stalls.
   /// See getStalls().
@@ -669,10 +665,6 @@ public:
   /// Micro-ops issued in the current cycle
   unsigned getCurrMOps() const { return CurrMOps; }
 
-  /// Return true if the given SU is used by the most recently scheduled
-  /// instruction.
-  bool isNextSU(const SUnit *SU) const { return NextSUs.count(SU); }
-
   // The latency of dependence chains leading into this zone.
   unsigned getDependentLatency() const { return DependentLatency; }
 
@@ -725,10 +717,6 @@ public:
   unsigned getOtherResourceCount(unsigned &OtherCritIdx);
 
   void releaseNode(SUnit *SU, unsigned ReadyCycle);
-
-  void releaseTopNode(SUnit *SU);
-
-  void releaseBottomNode(SUnit *SU);
 
   void bumpCycle(unsigned NextCycle);
 
@@ -900,12 +888,18 @@ public:
   void schedNode(SUnit *SU, bool IsTopNode) override;
 
   void releaseTopNode(SUnit *SU) override {
-    Top.releaseTopNode(SU);
+    if (SU->isScheduled)
+      return;
+
+    Top.releaseNode(SU, SU->TopReadyCycle);
     TopCand.SU = nullptr;
   }
 
   void releaseBottomNode(SUnit *SU) override {
-    Bot.releaseBottomNode(SU);
+    if (SU->isScheduled)
+      return;
+
+    Bot.releaseNode(SU, SU->BotReadyCycle);
     BotCand.SU = nullptr;
   }
 
@@ -983,7 +977,9 @@ public:
   void schedNode(SUnit *SU, bool IsTopNode) override;
 
   void releaseTopNode(SUnit *SU) override {
-    Top.releaseTopNode(SU);
+    if (SU->isScheduled)
+      return;
+    Top.releaseNode(SU, SU->TopReadyCycle);
   }
 
   // Only called for roots.

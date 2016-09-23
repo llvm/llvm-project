@@ -141,3 +141,35 @@ define zeroext i8 @test_abi_zext_ret(i8* %addr) {
   %val = load i8, i8* %addr
   ret i8 %val
 }
+
+; CHECK-LABEL: name: test_stack_slots
+; CHECK: fixedStack:
+; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], offset: 0, size: 8
+; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], offset: 8, size: 8
+; CHECK: [[LHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
+; CHECK: [[LHS:%[0-9]+]](s64) = G_LOAD [[LHS_ADDR]](p0) :: (invariant load 8 from %fixed-stack.[[STACK0]], align 0)
+; CHECK: [[RHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
+; CHECK: [[RHS:%[0-9]+]](s64) = G_LOAD [[RHS_ADDR]](p0) :: (invariant load 8 from %fixed-stack.[[STACK8]], align 0)
+; CHECK: [[SUM:%[0-9]+]](s64) = G_ADD [[LHS]], [[RHS]]
+; CHECK: %x0 = COPY [[SUM]](s64)
+define i64 @test_stack_slots([8 x i64], i64 %lhs, i64 %rhs) {
+  %sum = add i64 %lhs, %rhs
+  ret i64 %sum
+}
+
+; CHECK-LABEL: name: test_call_stack
+; CHECK: [[C42:%[0-9]+]](s64) = G_CONSTANT 42
+; CHECK: [[C12:%[0-9]+]](s64) = G_CONSTANT 12
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[C42_OFFS:%[0-9]+]](s64) = G_CONSTANT 0
+; CHECK: [[C42_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[C42_OFFS]](s64)
+; CHECK: G_STORE [[C42]](s64), [[C42_LOC]](p0) :: (store 8 into stack, align 0)
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[C12_OFFS:%[0-9]+]](s64) = G_CONSTANT 8
+; CHECK: [[C12_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[C12_OFFS]](s64)
+; CHECK: G_STORE [[C12]](s64), [[C12_LOC]](p0) :: (store 8 into stack + 8, align 0)
+; CHECK: BL @test_stack_slots
+define void @test_call_stack() {
+  call i64 @test_stack_slots([8 x i64] undef, i64 42, i64 12)
+  ret void
+}

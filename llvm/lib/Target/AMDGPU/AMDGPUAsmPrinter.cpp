@@ -730,7 +730,8 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
     header.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;
 
   // FIXME: Should use getKernArgSize
-  header.kernarg_segment_byte_size = MFI->getABIArgOffset();
+  header.kernarg_segment_byte_size =
+      STM.getKernArgSegmentSize(MFI->getABIArgOffset());
   header.wavefront_sgpr_count = KernelInfo.NumSGPR;
   header.workitem_vgpr_count = KernelInfo.NumVGPR;
   header.workitem_private_segment_byte_size = KernelInfo.ScratchSize;

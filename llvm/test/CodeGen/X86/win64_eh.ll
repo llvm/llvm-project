@@ -8,10 +8,10 @@ entry:
   ret void
 }
 ; WIN64-LABEL: foo0:
-; WIN64: .seh_proc foo0
-; WIN64: .seh_endprologue
+; WIN64-NOT: .seh_proc foo0
+; WIN64-NOT: .seh_endprologue
 ; WIN64: ret
-; WIN64: .seh_endproc
+; WIN64-NOT: .seh_endproc
 
 ; Checks a small stack allocation
 define void @foo1() uwtable {
