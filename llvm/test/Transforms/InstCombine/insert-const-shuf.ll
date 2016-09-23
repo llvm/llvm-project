@@ -26,6 +26,15 @@ define <4 x float> @twoInserts(<4 x float> %x) {
   ret <4 x float> %ins2
 }
 
+define <4 x i32> @shuffleRetain(<4 x i32> %base) {
+; CHECK-LABEL: @shuffleRetain(
+; CHECK-NEXT:  [[SHUF:%.*]] = shufflevector <4 x i32> %base, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 1>, <4 x i32> <i32 1, i32 2, i32 undef, i32 7>
+; CHECK-NEXT:  ret <4 x i32> [[SHUF]]
+;
+  %shuf = shufflevector <4 x i32> %base, <4 x i32> <i32 4, i32 3, i32 2, i32 1>, <4 x i32> <i32 1, i32 2, i32 undef, i32 7>
+  ret <4 x i32> %shuf
+}
+
 ; TODO: Transform an arbitrary shuffle with constant into a shuffle that is equivalant to a vector select.
 
 define <4 x float> @disguisedSelect(<4 x float> %x) {

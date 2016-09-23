@@ -256,6 +256,12 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH) {
     }
   }
 
+  if ((DumpType == DIDT_All || DumpType == DIDT_GdbIndex) &&
+      !getGdbIndexSection().empty()) {
+    OS << "\n.gnu_index contents:\n";
+    getGdbIndex().dump(OS);
+  }
+
   if (DumpType == DIDT_All || DumpType == DIDT_AppleNames)
     dumpAccelSection(OS, "apple_names", getAppleNamesSection(),
                      getStringSection(), isLittleEndian());
@@ -293,6 +299,16 @@ const DWARFUnitIndex &DWARFContext::getTUIndex() {
   TUIndex = llvm::make_unique<DWARFUnitIndex>(DW_SECT_TYPES);
   TUIndex->parse(TUIndexData);
   return *TUIndex;
+}
+
+DWARFGdbIndex &DWARFContext::getGdbIndex() {
+  if (GdbIndex)
+    return *GdbIndex;
+
+  DataExtractor GdbIndexData(getGdbIndexSection(), true /*LE*/, 0);
+  GdbIndex = llvm::make_unique<DWARFGdbIndex>();
+  GdbIndex->parse(GdbIndexData);
+  return *GdbIndex;
 }
 
 const DWARFDebugAbbrev *DWARFContext::getDebugAbbrev() {
@@ -718,6 +734,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
             .Case("apple_objc", &AppleObjCSection.Data)
             .Case("debug_cu_index", &CUIndexSection)
             .Case("debug_tu_index", &TUIndexSection)
+            .Case("gdb_index", &GdbIndexSection)
             // Any more debug info sections go here.
             .Default(nullptr);
     if (SectionData) {

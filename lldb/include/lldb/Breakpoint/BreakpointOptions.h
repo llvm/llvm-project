@@ -368,7 +368,7 @@ protected:
   };
   static const char *g_option_names[(size_t) OptionNames::LastOptionName];
 
-  static const char *GetKey(enum OptionNames enum_value) {
+  static const char *GetKey(OptionNames enum_value) {
     return g_option_names[(size_t) enum_value];
   }
 

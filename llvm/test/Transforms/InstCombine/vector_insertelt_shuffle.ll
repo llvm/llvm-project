@@ -7,10 +7,9 @@ define<4 x float> @foo(<4 x float> %x) {
   ret<4 x float> %ins2
 }
 
-; FIXME: insertelements should fold to shuffle
+; insertelements should fold to shuffle
 ; CHECK-LABEL: @foo
-; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 1.000000e+00, i32 1
-; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 2.000000e+00, i32 2
+; CHECK-NEXT: shufflevector <4 x float> %{{.+}}, <4 x float> <float undef, float 1.000000e+00, float 2.000000e+00, float undef>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; CHECK-NEXT: ret <4 x float> %
 
 define<4 x float> @bar(<4 x float> %x, float %a) {
@@ -45,12 +44,11 @@ define<4 x float> @bazz(<4 x float> %x, i32 %a) {
   ret<4 x float> %ins6
 }
 
-; FIXME: insertelements should fold to shuffle
+; insertelements should fold to shuffle
 ; CHECK-LABEL: @bazz
 ; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 1.000000e+00, i32 3
 ; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 5.000000e+00, i32 %
-; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 1.000000e+00, i32 1
-; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 2.000000e+00, i32 2
+; CHECK-NEXT: shufflevector <4 x float> %{{.+}}, <4 x float> <float undef, float 1.000000e+00, float 2.000000e+00, float undef>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 7.000000e+00, i32 %
 ; CHECK-NEXT: ret <4 x float> %
 
@@ -74,4 +72,23 @@ define<4 x float> @bazzzz(<4 x float> %x) {
 ; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 1.000000e+00, i32 undef
 ; CHECK-NEXT: insertelement <4 x float> %{{.+}}, float 2.000000e+00, i32 2
 ; CHECK-NEXT: ret <4 x float> %
+
+define<4 x float> @bazzzzz() {
+  %ins1 = insertelement <4 x float> insertelement (<4 x float> <float 1.0, float 2.0, float 3.0, float undef>, float 4.0, i32 3), float 5.0, i32 1
+  %ins2 = insertelement<4 x float> %ins1, float 10.0, i32 2
+  ret<4 x float> %ins2
+}
+
+; insertelements should fold to shuffle
+; CHECK-LABEL: @bazzzzz
+; CHECK-NEXT: ret <4 x float> <float 1.000000e+00, float 5.000000e+00, float 1.000000e+01, float 4.000000e+00>
+
+define<4 x float> @bazzzzzz(<4 x float> %x, i32 %a) {
+  %ins1 = insertelement <4 x float> insertelement (<4 x float> shufflevector (<4 x float> undef, <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0> , <4 x i32> <i32 0, i32 5, i32 undef, i32 6> ), float 4.0, i32 3), float 5.0, i32 1
+  ret<4 x float> %ins1
+}
+
+; insertelements should fold to shuffle
+; CHECK-LABEL: @bazzzzz
+; CHECK-NEXT: ret <4 x float> <float undef, float 5.000000e+00, float undef, float 4.000000e+00>
 

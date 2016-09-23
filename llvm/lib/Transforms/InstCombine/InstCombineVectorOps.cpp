@@ -585,58 +585,103 @@ static bool isShuffleEquivalentToSelect(ShuffleVectorInst &Shuf) {
   return true;
 }
 
-/// insertelt (shufflevector X, CVec, Mask), C, CIndex -->
-/// shufflevector X, CVec', Mask'
+/// insertelt (shufflevector X, CVec, Mask|insertelt X, C1, CIndex1), C, CIndex
+/// --> shufflevector X, CVec', Mask'
 static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
-  // Bail out if the shuffle has more than one use. In that case, we'd be
+  auto *Inst = dyn_cast<Instruction>(InsElt.getOperand(0));
+  // Bail out if the parent has more than one use. In that case, we'd be
   // replacing the insertelt with a shuffle, and that's not a clear win.
-  auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0));
-  if (!Shuf || !Shuf->hasOneUse())
+  if (!Inst || !Inst->hasOneUse())
     return nullptr;
+  if (auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0))) {
+    // The shuffle must have a constant vector operand. The insertelt must have
+    // a constant scalar being inserted at a constant position in the vector.
+    Constant *ShufConstVec, *InsEltScalar;
+    uint64_t InsEltIndex;
+    if (!match(Shuf->getOperand(1), m_Constant(ShufConstVec)) ||
+        !match(InsElt.getOperand(1), m_Constant(InsEltScalar)) ||
+        !match(InsElt.getOperand(2), m_ConstantInt(InsEltIndex)))
+      return nullptr;
 
-  // The shuffle must have a constant vector operand. The insertelt must have a
-  // constant scalar being inserted at a constant position in the vector.
-  Constant *ShufConstVec, *InsEltScalar;
-  uint64_t InsEltIndex;
-  if (!match(Shuf->getOperand(1), m_Constant(ShufConstVec)) ||
-      !match(InsElt.getOperand(1), m_Constant(InsEltScalar)) ||
-      !match(InsElt.getOperand(2), m_ConstantInt(InsEltIndex)))
-    return nullptr;
+    // Adding an element to an arbitrary shuffle could be expensive, but a
+    // shuffle that selects elements from vectors without crossing lanes is
+    // assumed cheap.
+    // If we're just adding a constant into that shuffle, it will still be
+    // cheap.
+    if (!isShuffleEquivalentToSelect(*Shuf))
+      return nullptr;
 
-  // Adding an element to an arbitrary shuffle could be expensive, but a shuffle
-  // that selects elements from vectors without crossing lanes is assumed cheap.
-  // If we're just adding a constant into that shuffle, it will still be cheap.
-  if (!isShuffleEquivalentToSelect(*Shuf))
-    return nullptr;
-
-  // From the above 'select' check, we know that the mask has the same number of
-  // elements as the vector input operands. We also know that each constant
-  // input element is used in its lane and can not be used more than once by the
-  // shuffle. Therefore, replace the constant in the shuffle's constant vector
-  // with the insertelt constant. Replace the constant in the shuffle's mask
-  // vector with the insertelt index plus the length of the vector (because the
-  // constant vector operand of a shuffle is always the 2nd operand).
-  Constant *Mask = Shuf->getMask();
-  unsigned NumElts = Mask->getType()->getVectorNumElements();
-  SmallVector<Constant*, 16> NewShufElts(NumElts);
-  SmallVector<Constant*, 16> NewMaskElts(NumElts);
-  for (unsigned i = 0; i != NumElts; ++i) {
-    if (i == InsEltIndex) {
-      NewShufElts[i] = InsEltScalar;
-      Type *Int32Ty = Type::getInt32Ty(Shuf->getContext());
-      NewMaskElts[i] = ConstantInt::get(Int32Ty, InsEltIndex + NumElts);
-    } else {
-      // Copy over the existing values.
-      NewShufElts[i] = ShufConstVec->getAggregateElement(i);
-      NewMaskElts[i] = Mask->getAggregateElement(i);
+    // From the above 'select' check, we know that the mask has the same number
+    // of elements as the vector input operands. We also know that each constant
+    // input element is used in its lane and can not be used more than once by
+    // the shuffle. Therefore, replace the constant in the shuffle's constant
+    // vector with the insertelt constant. Replace the constant in the shuffle's
+    // mask vector with the insertelt index plus the length of the vector
+    // (because the constant vector operand of a shuffle is always the 2nd
+    // operand).
+    Constant *Mask = Shuf->getMask();
+    unsigned NumElts = Mask->getType()->getVectorNumElements();
+    SmallVector<Constant *, 16> NewShufElts(NumElts);
+    SmallVector<Constant *, 16> NewMaskElts(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (I == InsEltIndex) {
+        NewShufElts[I] = InsEltScalar;
+        Type *Int32Ty = Type::getInt32Ty(Shuf->getContext());
+        NewMaskElts[I] = ConstantInt::get(Int32Ty, InsEltIndex + NumElts);
+      } else {
+        // Copy over the existing values.
+        NewShufElts[I] = ShufConstVec->getAggregateElement(I);
+        NewMaskElts[I] = Mask->getAggregateElement(I);
+      }
     }
-  }
 
-  // Create new operands for a shuffle that includes the constant of the
-  // original insertelt. The old shuffle will be dead now.
-  Constant *NewShufVec = ConstantVector::get(NewShufElts);
-  Constant *NewMask = ConstantVector::get(NewMaskElts);
-  return new ShuffleVectorInst(Shuf->getOperand(0), NewShufVec, NewMask);
+    // Create new operands for a shuffle that includes the constant of the
+    // original insertelt. The old shuffle will be dead now.
+    return new ShuffleVectorInst(Shuf->getOperand(0),
+                                 ConstantVector::get(NewShufElts),
+                                 ConstantVector::get(NewMaskElts));
+  } else if (auto *IEI = dyn_cast<InsertElementInst>(Inst)) {
+    // Transform sequences of insertelements ops with constant data/indexes into
+    // a single shuffle op.
+    unsigned NumElts = InsElt.getType()->getNumElements();
+
+    uint64_t InsertIdx[2];
+    Constant *Val[2];
+    if (!match(InsElt.getOperand(2), m_ConstantInt(InsertIdx[0])) ||
+        !match(InsElt.getOperand(1), m_Constant(Val[0])) ||
+        !match(IEI->getOperand(2), m_ConstantInt(InsertIdx[1])) ||
+        !match(IEI->getOperand(1), m_Constant(Val[1])))
+      return nullptr;
+    SmallVector<Constant *, 16> Values(NumElts);
+    SmallVector<Constant *, 16> Mask(NumElts);
+    auto ValI = std::begin(Val);
+    // Generate new constant vector and mask.
+    // We have 2 values/masks from the insertelements instructions. Insert them
+    // into new value/mask vectors.
+    for (uint64_t I : InsertIdx) {
+      if (!Values[I]) {
+        assert(!Mask[I]);
+        Values[I] = *ValI;
+        Mask[I] = ConstantInt::get(Type::getInt32Ty(InsElt.getContext()),
+                                   NumElts + I);
+      }
+      ++ValI;
+    }
+    // Remaining values are filled with 'undef' values.
+    for (unsigned I = 0; I < NumElts; ++I) {
+      if (!Values[I]) {
+        assert(!Mask[I]);
+        Values[I] = UndefValue::get(InsElt.getType()->getElementType());
+        Mask[I] = ConstantInt::get(Type::getInt32Ty(InsElt.getContext()), I);
+      }
+    }
+    // Create new operands for a shuffle that includes the constant of the
+    // original insertelt.
+    return new ShuffleVectorInst(IEI->getOperand(0),
+                                 ConstantVector::get(Values),
+                                 ConstantVector::get(Mask));
+  }
+  return nullptr;
 }
 
 Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
