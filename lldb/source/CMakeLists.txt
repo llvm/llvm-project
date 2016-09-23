@@ -83,7 +83,7 @@ add_subdirectory(API)
 # that works (git/svn).
 if (PYTHON_EXECUTABLE)
   execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/get_vcs_revision.py
+    COMMAND ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/get_vcs_revision.py
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE LLDB_REVISION)
   if ( LLDB_REVISION )

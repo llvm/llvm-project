@@ -6,6 +6,10 @@ include(SwiftAddCustomCommandTarget)
 set(output_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
 set(module_cache_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/repl_swift_module_cache")
 
+if(NOT LLDB_BUILT_STANDALONE)
+  set(swift_depends swift)
+endif()
+
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
   add_custom_command_target(
       repl_swift_target
@@ -13,7 +17,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
       OUTPUT "${output_dir}/repl_swift"
       VERBATIM
       ALL
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/main.swift")
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/main.swift" ${swift_depends})
 else()
   add_custom_command_target(
       repl_swift_target
@@ -21,7 +25,7 @@ else()
       OUTPUT "${output_dir}/repl_swift"
       VERBATIM
       ALL
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/main.swift")
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/main.swift" ${swift_depends})
 endif()
 
 # Ensure we get a fresh, clean module cache for the swift repl run

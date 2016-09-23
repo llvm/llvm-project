@@ -125,6 +125,10 @@ if (LLDB_WRAP_PYTHON)
 endif()
 target_link_libraries(liblldb PRIVATE ${LLDB_SYSTEM_LIBS})
 
+if(LLDB_BUILT_STANDALONE)
+  set(clang_headers_target clang-headers)
+endif()
+
 set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
 file(GLOB CLANG_RESOURCE_PATHS "${LLDB_PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang")
 list(GET CLANG_RESOURCE_PATHS 0 CLANG_RESOURCE_PATH)
@@ -134,7 +138,7 @@ add_custom_command_target(
     OUTPUT "${lib_dir}/lldb/clang"
     VERBATIM
     ALL
-    DEPENDS ${CLANG_RESOURCE_PATH}/include)
+    DEPENDS ${CLANG_RESOURCE_PATH}/include ${clang_headers_target})
 
 install(
   CODE "file(MAKE_DIRECTORY ${lib_dir}/lldb)")
