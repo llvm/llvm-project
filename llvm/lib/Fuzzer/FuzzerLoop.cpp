@@ -68,7 +68,6 @@ void Fuzzer::ResetCounters() {
   }
   if (EF->__sanitizer_get_coverage_pc_buffer_pos)
     PcBufferPos = EF->__sanitizer_get_coverage_pc_buffer_pos();
-  TPC.ResetNewPCIDs();
 }
 
 void Fuzzer::PrepareCounters(Fuzzer::Coverage *C) {
@@ -163,6 +162,8 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   assert(!F);
   F = this;
   TPC.ResetTotalPCCoverage();
+  TPC.ResetMaps();
+  TPC.ResetGuards();
   ResetCoverage();
   IsMyThread = true;
   if (Options.DetectLeaks && EF->__sanitizer_install_malloc_and_free_hooks)
@@ -309,7 +310,7 @@ void Fuzzer::RssLimitCallback() {
   _Exit(Options.ErrorExitCode); // Stop right now.
 }
 
-void Fuzzer::PrintStats(const char *Where, const char *End) {
+void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {
   size_t ExecPerSec = execPerSec();
   if (Options.OutputCSV) {
     static bool csvHeaderPrinted = false;
@@ -337,7 +338,11 @@ void Fuzzer::PrintStats(const char *Where, const char *End) {
     Printf(" bits: %zd", MaxCoverage.TPCMap.GetNumBitsSinceLastMerge());
   if (MaxCoverage.CallerCalleeCoverage)
     Printf(" indir: %zd", MaxCoverage.CallerCalleeCoverage);
-  Printf(" units: %zd exec/s: %zd", Corpus.size(), ExecPerSec);
+  if (size_t N = Corpus.size())
+    Printf(" units: %zd", N);
+  if (Units)
+    Printf(" units: %zd", Units);
+  Printf(" exec/s: %zd", ExecPerSec);
   Printf("%s", End);
 }
 
@@ -381,9 +386,7 @@ void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
       X.resize(MaxSize);
     if (!Corpus.HasUnit(X)) {
       if (RunOne(X)) {
-        uintptr_t *NewPCIDs;
-        size_t NumNewPCIDs = TPC.GetNewPCIDs(&NewPCIDs);
-        Corpus.AddToCorpus(X, NewPCIDs, NumNewPCIDs);
+        Corpus.AddToCorpus(X);
         PrintStats("RELOAD");
       }
     }
@@ -406,9 +409,7 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
   for (const auto &U : *InitialCorpus) {
     bool NewCoverage = RunOne(U);
     if (!Options.PruneCorpus || NewCoverage) {
-      uintptr_t *NewPCIDs;
-      size_t NumNewPCIDs = TPC.GetNewPCIDs(&NewPCIDs);
-      Corpus.AddToCorpus(U, NewPCIDs, NumNewPCIDs);
+      Corpus.AddToCorpus(U);
       if (Options.Verbosity >= 2)
         Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
     }
@@ -469,6 +470,7 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   AllocTracer.Start();
   UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
+  TPC.ResetMaps();
   int Res = CB(DataCopy, Size);
   UnitStopTime = system_clock::now();
   (void)Res;
@@ -545,9 +547,7 @@ void Fuzzer::PrintNewPCs() {
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   II->NumSuccessfullMutations++;
-  uintptr_t *NewPCIDs;
-  size_t NumNewPCIDs = TPC.GetNewPCIDs(&NewPCIDs);
-  Corpus.AddToCorpus(U, NewPCIDs, NumNewPCIDs);
+  Corpus.AddToCorpus(U);
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
@@ -566,6 +566,8 @@ UnitVector Fuzzer::FindExtraUnits(const UnitVector &Initial,
   size_t OldSize = Res.size();
   for (int Iter = 0; Iter < 10; Iter++) {
     ShuffleCorpus(&Res);
+    TPC.ResetMaps();
+    TPC.ResetGuards();
     ResetCoverage();
 
     for (auto &U : Initial)
@@ -578,7 +580,7 @@ UnitVector Fuzzer::FindExtraUnits(const UnitVector &Initial,
 
     char Stat[7] = "MIN   ";
     Stat[3] = '0' + Iter;
-    PrintStats(Stat);
+    PrintStats(Stat, "\n", Tmp.size());
 
     size_t NewSize = Tmp.size();
     assert(NewSize <= OldSize);
@@ -691,7 +693,6 @@ void Fuzzer::MutateAndTestOne() {
 void Fuzzer::ResetCoverage() {
   ResetEdgeCoverage();
   MaxCoverage.Reset();
-  TPC.Reset();
   PrepareCounters(&MaxCoverage);
 }
 

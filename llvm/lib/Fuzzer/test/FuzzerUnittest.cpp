@@ -583,7 +583,7 @@ TEST(Corpus, Distribution) {
   size_t N = 10;
   size_t TriesPerUnit = 1<<20;
   for (size_t i = 0; i < N; i++)
-    C.AddToCorpus(Unit{ static_cast<uint8_t>(i) }, nullptr, 0);
+    C.AddToCorpus(Unit{ static_cast<uint8_t>(i) });
 
   std::vector<size_t> Hist(N);
   for (size_t i = 0; i < N * TriesPerUnit; i++) {
