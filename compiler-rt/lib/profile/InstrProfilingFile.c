@@ -82,7 +82,8 @@ typedef struct lprofFilename {
   ProfileNameSpecifier PNS;
 } lprofFilename;
 
-lprofFilename lprofCurFilename = {0, 0, 0, {0}, {0}, 0, 0, 0, PNS_unknown};
+static lprofFilename lprofCurFilename = {0, 0, 0, {0}, {0},
+                                         0, 0, 0, PNS_unknown};
 
 int getpid(void);
 static int getCurFilenameLength();
