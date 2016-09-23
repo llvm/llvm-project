@@ -1037,17 +1037,21 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       }
     }
 
-    APInt UndefElts4(LHSVWidth, 0);
+    APInt LHSUndefElts(LHSVWidth, 0);
     TmpV = SimplifyDemandedVectorElts(I->getOperand(0), LeftDemanded,
-                                      UndefElts4, Depth + 1);
+                                      LHSUndefElts, Depth + 1);
     if (TmpV) { I->setOperand(0, TmpV); MadeChange = true; }
 
-    APInt UndefElts3(LHSVWidth, 0);
+    APInt RHSUndefElts(LHSVWidth, 0);
     TmpV = SimplifyDemandedVectorElts(I->getOperand(1), RightDemanded,
-                                      UndefElts3, Depth + 1);
+                                      RHSUndefElts, Depth + 1);
     if (TmpV) { I->setOperand(1, TmpV); MadeChange = true; }
 
     bool NewUndefElts = false;
+    unsigned LHSIdx = -1u;
+    unsigned RHSIdx = -1u;
+    bool LHSUniform = true;
+    bool RHSUniform = true;
     for (unsigned i = 0; i < VWidth; i++) {
       unsigned MaskVal = Shuffle->getMaskValue(i);
       if (MaskVal == -1u) {
@@ -1056,18 +1060,57 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
         NewUndefElts = true;
         UndefElts.setBit(i);
       } else if (MaskVal < LHSVWidth) {
-        if (UndefElts4[MaskVal]) {
+        if (LHSUndefElts[MaskVal]) {
           NewUndefElts = true;
           UndefElts.setBit(i);
+        } else {
+          LHSIdx = LHSIdx == -1u ? MaskVal : LHSVWidth;
+          LHSUniform = LHSUniform && (MaskVal == i);
         }
       } else {
-        if (UndefElts3[MaskVal - LHSVWidth]) {
+        if (RHSUndefElts[MaskVal - LHSVWidth]) {
           NewUndefElts = true;
           UndefElts.setBit(i);
+        } else {
+          RHSIdx = RHSIdx == -1u ? MaskVal - LHSVWidth : LHSVWidth;
+          RHSUniform = RHSUniform && (MaskVal - LHSVWidth == i);
         }
       }
     }
 
+    // Try to transform shuffle with constant vector and single element from
+    // this constant vector to single insertelement instruction.
+    // shufflevector V, C, <v1, v2, .., ci, .., vm> ->
+    // insertelement V, C[ci], ci-n
+    if (LHSVWidth == Shuffle->getType()->getNumElements()) {
+      Value *Op = nullptr;
+      Constant *Value = nullptr;
+      unsigned Idx = -1u;
+
+      // Find constant vector wigth the single element in shuffle (LHS or RHS).
+      if (LHSIdx < LHSVWidth && RHSUniform) {
+        if (auto *CV = dyn_cast<ConstantVector>(Shuffle->getOperand(0))) {
+          Op = Shuffle->getOperand(1);
+          Value = CV->getOperand(LHSIdx);
+          Idx = LHSIdx;
+        }
+      }
+      if (RHSIdx < LHSVWidth && LHSUniform) {
+        if (auto *CV = dyn_cast<ConstantVector>(Shuffle->getOperand(1))) {
+          Op = Shuffle->getOperand(0);
+          Value = CV->getOperand(RHSIdx);
+          Idx = RHSIdx;
+        }
+      }
+      // Found constant vector with single element - convert to insertelement.
+      if (Op && Value) {
+        Instruction *New = InsertElementInst::Create(
+            Op, Value, ConstantInt::get(Type::getInt32Ty(I->getContext()), Idx),
+            Shuffle->getName());
+        InsertNewInstWith(New, *Shuffle);
+        return New;
+      }
+    }
     if (NewUndefElts) {
       // Add additional discovered undefs.
       SmallVector<Constant*, 16> Elts;

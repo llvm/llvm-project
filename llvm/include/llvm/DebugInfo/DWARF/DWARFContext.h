@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 
@@ -41,6 +42,7 @@ class DWARFContext : public DIContext {
   DWARFUnitSection<DWARFCompileUnit> CUs;
   std::deque<DWARFUnitSection<DWARFTypeUnit>> TUs;
   std::unique_ptr<DWARFUnitIndex> CUIndex;
+  std::unique_ptr<DWARFGdbIndex> GdbIndex;
   std::unique_ptr<DWARFUnitIndex> TUIndex;
   std::unique_ptr<DWARFDebugAbbrev> Abbrev;
   std::unique_ptr<DWARFDebugLoc> Loc;
@@ -149,6 +151,7 @@ public:
   }
 
   const DWARFUnitIndex &getCUIndex();
+  DWARFGdbIndex &getGdbIndex();
   const DWARFUnitIndex &getTUIndex();
 
   /// Get a pointer to the parsed DebugAbbrev object.
@@ -220,6 +223,7 @@ public:
   virtual const DWARFSection& getAppleNamespacesSection() = 0;
   virtual const DWARFSection& getAppleObjCSection() = 0;
   virtual StringRef getCUIndexSection() = 0;
+  virtual StringRef getGdbIndexSection() = 0;
   virtual StringRef getTUIndexSection() = 0;
 
   static bool isSupportedVersion(unsigned version) {
@@ -272,6 +276,7 @@ class DWARFContextInMemory : public DWARFContext {
   DWARFSection AppleNamespacesSection;
   DWARFSection AppleObjCSection;
   StringRef CUIndexSection;
+  StringRef GdbIndexSection;
   StringRef TUIndexSection;
 
   SmallVector<SmallString<32>, 4> UncompressedSections;
@@ -318,6 +323,7 @@ public:
     return AddrSection;
   }
   StringRef getCUIndexSection() override { return CUIndexSection; }
+  StringRef getGdbIndexSection() override { return GdbIndexSection; }
   StringRef getTUIndexSection() override { return TUIndexSection; }
 };
 

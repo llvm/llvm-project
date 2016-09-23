@@ -124,6 +124,7 @@ enum DIDumpType {
   DIDT_AppleNamespaces,
   DIDT_AppleObjC,
   DIDT_CUIndex,
+  DIDT_GdbIndex,
   DIDT_TUIndex,
 };
 

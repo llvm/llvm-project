@@ -80,7 +80,7 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
 }
 
 // This class is used only with VOPC instructions. Use $sdst for out operand
-class VOPCInstAlias <VOP3_PseudoNew ps, Instruction inst, VOPProfile p = ps.Pfl> :
+class VOPCInstAlias <VOP3_Pseudo ps, Instruction inst, VOPProfile p = ps.Pfl> :
   InstAlias <ps.OpName#" "#p.Asm32, (inst)>, PredicateControl {
 
   field bit isCompare;
@@ -128,7 +128,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCompare = 1;
     let isCommutable = 1;
   }
-  def _e64 : VOP3_PseudoNew<opName, P,
+  def _e64 : VOP3_Pseudo<opName, P,
     !if(P.HasModifiers,
       [(set i1:$sdst,
           (setcc (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
@@ -398,10 +398,11 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType vt> :
   VOPC_Profile<sched, vt, i32> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0, Src1RC64:$src1);
   let Asm64 = "$sdst, $src0_modifiers, $src1";
-  let InsSDWA = (ins Src0Mod:$src0_fmodifiers, Src0RC64:$src0,
-                     Int32InputMods:$src1_imodifiers, Src1RC64:$src1,
+  let InsSDWA = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0,
+                     Int32InputMods:$src1_modifiers, Src1RC64:$src1,
                      clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
-  let AsmSDWA = " vcc, $src0_fmodifiers, $src1_imodifiers$clamp $src0_sel $src1_sel";
+  let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
+  let HasSrc1Mods = 0;
   let HasClamp = 0;
   let HasOMod = 0;
 }
@@ -422,7 +423,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec> {
     let SchedRW = p.Schedule;
     let isConvergent = DefExec;
   }
-  def _e64 : VOP3_PseudoNew<opName, p, getVOPCClassPat64<p>.ret> {
+  def _e64 : VOP3_Pseudo<opName, p, getVOPCClassPat64<p>.ret> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = p.Schedule;
   }
@@ -533,15 +534,15 @@ multiclass VOPC_Real_si <bits<9> op> {
       VOPCe<op{7-0}>;
 
     def _e64_si :
-      VOP3_Real<!cast<VOP3_PseudoNew>(NAME#"_e64"), SIEncodingFamily.SI>,
-      VOP3a_siNew <op, !cast<VOP3_PseudoNew>(NAME#"_e64").Pfl> {
+      VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.SI>,
+      VOP3a_si <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
       // Encoding used for VOPC instructions encoded as VOP3
       // Differs from VOP3e by destination name (sdst) as VOPC doesn't have vector dst
       bits<8> sdst;
       let Inst{7-0} = sdst;
     }
   }
-  def : VOPCInstAlias <!cast<VOP3_PseudoNew>(NAME#"_e64"),
+  def : VOPCInstAlias <!cast<VOP3_Pseudo>(NAME#"_e64"),
                        !cast<Instruction>(NAME#"_e32_si")> {
     let AssemblerPredicate = isSICI;
   }
@@ -764,9 +765,15 @@ defm V_CMPX_CLASS_F64 : VOPC_Real_si <0xb8>;
 // VI
 //===----------------------------------------------------------------------===//
 
-class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAeNew<P> {
-  bits<8> src1;
+class VOPC_SDWA<bits<8> op, VOPC_Pseudo ps, VOPProfile P = ps.Pfl> :
+  VOP_SDWA <ps.OpName, P> {
+  let Defs = ps.Defs;
+  let hasSideEffects = ps.hasSideEffects;
+  let AsmMatchConverter = "cvtSdwaVOPC";
+  let isCompare = ps.isCompare;
+  let isCommutable = ps.isCommutable;
 
+  bits<8> src1;
   let Inst{8-0}   = 0xf9; // sdwa
   let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
   let Inst{24-17} = op;
@@ -777,21 +784,6 @@ class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAeNew<P> {
   let Inst{44-43} = SDWA_UNUSED_PRESERVE;
 }
 
-class VOPC_SDWA<bits<8> op, VOPC_Pseudo ps, VOPProfile p = ps.Pfl> :
-  VOP_SDWA <p.OutsSDWA, p.InsSDWA, ps.OpName#p.AsmSDWA, [], p.HasModifiers>,
-  VOPC_SDWAe <op, p> {
-  let Defs = ps.Defs;
-  let hasSideEffects = ps.hasSideEffects;
-  let AsmMatchConverter = "cvtSdwaVOPC";
-  let SubtargetPredicate = isVI;
-  let AssemblerPredicate = !if(p.HasExt, isVI, DisableInst);
-  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
-                                     AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA";
-  let isCompare = ps.isCompare;
-  let isCommutable = ps.isCommutable;
-}
-
 multiclass VOPC_Real_vi <bits<10> op> {
   let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
     def _e32_vi :
@@ -799,8 +791,8 @@ multiclass VOPC_Real_vi <bits<10> op> {
       VOPCe<op{7-0}>;
 
     def _e64_vi :
-      VOP3_Real<!cast<VOP3_PseudoNew>(NAME#"_e64"), SIEncodingFamily.VI>,
-      VOP3a_viNew <op, !cast<VOP3_PseudoNew>(NAME#"_e64").Pfl> {
+      VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
+      VOP3a_vi <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
       // Encoding used for VOPC instructions encoded as VOP3
       // Differs from VOP3e by destination name (sdst) as VOPC doesn't have vector dst
       bits<8> sdst;
@@ -812,7 +804,7 @@ multiclass VOPC_Real_vi <bits<10> op> {
   // TODO: add corresponding pseudo
   def _sdwa : VOPC_SDWA<op{7-0}, !cast<VOPC_Pseudo>(NAME#"_e32")>;
 
-  def : VOPCInstAlias <!cast<VOP3_PseudoNew>(NAME#"_e64"),
+  def : VOPCInstAlias <!cast<VOP3_Pseudo>(NAME#"_e64"),
                        !cast<Instruction>(NAME#"_e32_vi")> {
     let AssemblerPredicate = isVI;
   }

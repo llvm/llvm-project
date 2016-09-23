@@ -751,10 +751,9 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   // we'll guess the signal set based on the remote architecture.
   m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
-  const char packet[] = "jSignalsInfo";
   StringExtractorGDBRemote response;
-  auto result = m_gdb_client.SendPacketAndWaitForResponse(
-      packet, strlen(packet), response, false);
+  auto result = m_gdb_client.SendPacketAndWaitForResponse("jSignalsInfo",
+                                                          response, false);
 
   if (result != decltype(result)::Success ||
       response.GetResponseType() != response.eResponse)
