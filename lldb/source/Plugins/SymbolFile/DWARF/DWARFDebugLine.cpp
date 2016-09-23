@@ -462,7 +462,7 @@ bool DWARFDebugLine::ParseSupportFiles(
 
   for (uint32_t file_idx = 1;
        prologue.GetFile(file_idx, cu_comp_dir, file_spec); ++file_idx) {
-    if (module_sp->RemapSourceFile(file_spec.GetCString(), remapped_file))
+    if (module_sp->RemapSourceFile(file_spec.GetPath(), remapped_file))
       file_spec.SetFile(remapped_file, false);
     support_files.Append(file_spec);
   }

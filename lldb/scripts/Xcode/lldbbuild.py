@@ -42,6 +42,9 @@ def is_host_build():
 def rc_release_target():
   return os.environ.get('RC_RELEASE', '')
 
+def rc_platform_name():
+  return os.environ.get('RC_PLATFORM_NAME', 'macOS')
+
 def architecture():
     if is_host_build(): return 'macosx'
     platform_name = os.environ.get('RC_PLATFORM_NAME')

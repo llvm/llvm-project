@@ -562,7 +562,7 @@ private:
       m_custom_type_name.clear();
     }
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_value,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option =
@@ -571,11 +571,10 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(
-            llvm::StringRef::withNullAsEmpty(option_value), true, &success);
+        m_cascade = Args::StringToBoolean(option_value, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
-                                         option_value);
+                                         option_value.str().c_str());
         break;
       case 'p':
         m_skip_pointers = true;
@@ -600,6 +599,7 @@ private:
 
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     // Instance variables to hold the values for command options.
 
@@ -784,7 +784,8 @@ protected:
         m_category = std::string(option_arg);
         break;
       case 'l':
-        m_language = Language::GetLanguageTypeFromString(option_arg);
+        m_language = Language::GetLanguageTypeFromString(
+            llvm::StringRef::withNullAsEmpty(option_arg));
         break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
@@ -1031,14 +1032,15 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed {
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-
+      llvm::StringRef option_strref =
+          llvm::StringRef::withNullAsEmpty(option_arg);
       switch (short_option) {
       case 'w':
-        m_category_regex.SetCurrentValue(option_arg);
+        m_category_regex.SetCurrentValue(option_strref);
         m_category_regex.SetOptionWasSet();
         break;
       case 'l':
-        error = m_category_language.SetValueFromString(option_arg);
+        error = m_category_language.SetValueFromString(option_strref);
         if (error.Success())
           m_category_language.SetOptionWasSet();
         break;
@@ -1814,10 +1816,11 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
 
       switch (short_option) {
       case 'e':
-        m_define_enabled.SetValueFromString("true");
+        m_define_enabled.SetValueFromString(llvm::StringRef("true"));
         break;
       case 'l':
-        error = m_cate_language.SetValueFromString(option_arg);
+        error = m_cate_language.SetValueFromString(
+            llvm::StringRef::withNullAsEmpty(option_arg));
         break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
@@ -1920,7 +1923,8 @@ class CommandObjectTypeCategoryEnable : public CommandObjectParsed {
       switch (short_option) {
       case 'l':
         if (option_arg) {
-          m_language = Language::GetLanguageTypeFromString(option_arg);
+          m_language = Language::GetLanguageTypeFromString(
+              llvm::StringRef::withNullAsEmpty(option_arg));
           if (m_language == lldb::eLanguageTypeUnknown)
             error.SetErrorStringWithFormat("unrecognized language '%s'",
                                            option_arg);
@@ -2097,7 +2101,8 @@ class CommandObjectTypeCategoryDisable : public CommandObjectParsed {
       switch (short_option) {
       case 'l':
         if (option_arg) {
-          m_language = Language::GetLanguageTypeFromString(option_arg);
+          m_language = Language::GetLanguageTypeFromString(
+              llvm::StringRef::withNullAsEmpty(option_arg));
           if (m_language == lldb::eLanguageTypeUnknown)
             error.SetErrorStringWithFormat("unrecognized language '%s'",
                                            option_arg);
@@ -2802,7 +2807,7 @@ protected:
       return llvm::makeArrayRef(g_type_lookup_options);
     }
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_value,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
 
@@ -2825,6 +2830,7 @@ protected:
 
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_show_help = false;

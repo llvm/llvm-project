@@ -40,7 +40,7 @@ OptionGroupBoolean::OptionGroupBoolean(uint32_t usage_mask, bool required,
 OptionGroupBoolean::~OptionGroupBoolean() {}
 
 Error OptionGroupBoolean::SetOptionValue(uint32_t option_idx,
-                                         const char *option_arg,
+                                         llvm::StringRef option_value,
                                          ExecutionContext *execution_context) {
   Error error;
   if (m_option_definition.option_has_arg == OptionParser::eNoArgument) {
@@ -49,7 +49,7 @@ Error OptionGroupBoolean::SetOptionValue(uint32_t option_idx,
     m_value.SetCurrentValue(!m_value.GetDefaultValue());
     m_value.SetOptionWasSet();
   } else {
-    error = m_value.SetValueFromString(option_arg);
+    error = m_value.SetValueFromString(option_value);
   }
   return error;
 }

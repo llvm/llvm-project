@@ -39,7 +39,7 @@ OptionGroupString::OptionGroupString(uint32_t usage_mask, bool required,
 OptionGroupString::~OptionGroupString() {}
 
 Error OptionGroupString::SetOptionValue(uint32_t option_idx,
-                                        const char *option_arg,
+                                        llvm::StringRef option_arg,
                                         ExecutionContext *execution_context) {
   Error error(m_value.SetValueFromString(option_arg));
   return error;

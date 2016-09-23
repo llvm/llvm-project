@@ -77,13 +77,11 @@ OptionGroupValueObjectDisplay::GetDefinitions() {
 }
 
 Error OptionGroupValueObjectDisplay::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = g_option_table[option_idx].short_option;
   bool success = false;
-
-  auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
   switch (short_option) {
   case 'd': {
@@ -113,43 +111,51 @@ Error OptionGroupValueObjectDisplay::SetOptionValue(
     break;
 
   case 'D':
-    max_depth = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0, &success);
-    if (!success)
-      error.SetErrorStringWithFormat("invalid max depth '%s'", option_arg);
+    if (option_arg.getAsInteger(0, max_depth)) {
+      max_depth = UINT32_MAX;
+      error.SetErrorStringWithFormat("invalid max depth '%s'",
+                                     option_arg.str().c_str());
+    }
     break;
 
   case 'Z':
-    elem_count = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0, &success);
-    if (!success)
-      error.SetErrorStringWithFormat("invalid element count '%s'", option_arg);
+    if (option_arg.getAsInteger(0, elem_count)) {
+      elem_count = UINT32_MAX;
+      error.SetErrorStringWithFormat("invalid element count '%s'",
+                                     option_arg.str().c_str());
+    }
     break;
 
   case 'P':
-    ptr_depth = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-    if (!success)
-      error.SetErrorStringWithFormat("invalid pointer depth '%s'", option_arg);
+    if (option_arg.getAsInteger(0, ptr_depth)) {
+      ptr_depth = 0;
+      error.SetErrorStringWithFormat("invalid pointer depth '%s'",
+                                     option_arg.str().c_str());
+    }
     break;
 
   case 'Y':
-    if (option_arg) {
-      no_summary_depth = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-      if (!success)
-        error.SetErrorStringWithFormat("invalid pointer depth '%s'",
-                                       option_arg);
-    } else
+    if (option_arg.empty())
       no_summary_depth = 1;
+    else if (option_arg.getAsInteger(0, no_summary_depth)) {
+      no_summary_depth = 0;
+      error.SetErrorStringWithFormat("invalid pointer depth '%s'",
+                                     option_arg.str().c_str());
+    }
     break;
 
   case 'S':
-    use_synth = Args::StringToBoolean(option_strref, true, &success);
+    use_synth = Args::StringToBoolean(option_arg, true, &success);
     if (!success)
-      error.SetErrorStringWithFormat("invalid synthetic-type '%s'", option_arg);
+      error.SetErrorStringWithFormat("invalid synthetic-type '%s'",
+                                     option_arg.str().c_str());
     break;
 
   case 'V':
-    run_validator = Args::StringToBoolean(option_strref, true, &success);
+    run_validator = Args::StringToBoolean(option_arg, true, &success);
     if (!success)
-      error.SetErrorStringWithFormat("invalid validate '%s'", option_arg);
+      error.SetErrorStringWithFormat("invalid validate '%s'",
+                                     option_arg.str().c_str());
     break;
 
   default:

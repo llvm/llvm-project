@@ -18,6 +18,8 @@ import os
 # Third-party modules
 import unittest2
 
+from unittest2.util import strclass
+
 # LLDB Modules
 from . import configuration
 from lldbsuite.test_event.event_builder import EventBuilder
@@ -124,10 +126,23 @@ class LLDBTestResult(unittest2.TextTestResult):
             test,
             test._testMethodName).__func__.__unittest_skip_why__ = "test case does not fall in any category of interest for this run"
 
+    def checkExclusion(self, exclusion_list, name):
+        if exclusion_list:
+            import re
+            for item in exclusion_list:
+                if re.search(item, name):
+                    return True
+        return False
+
     def startTest(self, test):
         if configuration.shouldSkipBecauseOfCategories(
                 self.getCategoriesForTest(test)):
             self.hardMarkAsSkipped(test)
+        if self.checkExclusion(
+                configuration.skip_methods,
+                test._testMethodName):
+            self.hardMarkAsSkipped(test)
+
         configuration.setCrashInfoHook(
             "%s at %s" %
             (str(test), inspect.getfile(
@@ -145,6 +160,15 @@ class LLDBTestResult(unittest2.TextTestResult):
                 EventBuilder.event_for_start(test))
 
     def addSuccess(self, test):
+        if self.checkExclusion(
+                configuration.xfail_files,
+                strclass(
+                    test.__class__)) or self.checkExclusion(
+                configuration.xfail_methods,
+                test._testMethodName):
+            self.addUnexpectedSuccess(test, None)
+            return
+
         super(LLDBTestResult, self).addSuccess(test)
         if configuration.parsable:
             self.stream.write(
@@ -214,6 +238,15 @@ class LLDBTestResult(unittest2.TextTestResult):
                     test, err))
 
     def addFailure(self, test, err):
+        if self.checkExclusion(
+                configuration.xfail_files,
+                strclass(
+                    test.__class__)) or self.checkExclusion(
+                configuration.xfail_methods,
+                test._testMethodName):
+            self.addExpectedFailure(test, err, None)
+            return
+
         configuration.sdir_has_content = True
         super(LLDBTestResult, self).addFailure(test, err)
         method = getattr(test, "markFailure", None)

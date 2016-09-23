@@ -113,6 +113,10 @@ EventDataBytes::EventDataBytes(const char *cstr) : m_bytes() {
   SetBytesFromCString(cstr);
 }
 
+EventDataBytes::EventDataBytes(llvm::StringRef str) : m_bytes() {
+  SetBytes(str.data(), str.size());
+}
+
 EventDataBytes::EventDataBytes(const void *src, size_t src_len) : m_bytes() {
   SetBytes(src, src_len);
 }

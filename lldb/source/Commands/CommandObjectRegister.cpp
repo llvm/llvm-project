@@ -260,7 +260,7 @@ protected:
       alternate_name.Clear();
     }
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_value,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = GetDefinitions()[option_idx].short_option;
@@ -294,6 +294,7 @@ protected:
       }
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     // Instance variables to hold the values for command options.
     OptionValueArray set_indexes;

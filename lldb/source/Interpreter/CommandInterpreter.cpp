@@ -1899,7 +1899,7 @@ int CommandInterpreter::HandleCompletion(
 
 CommandInterpreter::~CommandInterpreter() {}
 
-void CommandInterpreter::UpdatePrompt(const char *new_prompt) {
+void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {
   EventSP prompt_change_event_sp(
       new Event(eBroadcastBitResetPrompt, new EventDataBytes(new_prompt)));
   ;
@@ -2238,7 +2238,9 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
       continue;
 
     if (options.GetEchoCommands()) {
-      result.AppendMessageWithFormat("%s %s\n", m_debugger.GetPrompt(), cmd);
+      // TODO: Add Stream support.
+      result.AppendMessageWithFormat("%s %s\n",
+                                     m_debugger.GetPrompt().str().c_str(), cmd);
     }
 
     CommandReturnObject tmp_result;
@@ -2461,7 +2463,7 @@ void CommandInterpreter::HandleCommandsFromFile(
           flags,
           nullptr, // Pass in NULL for "editline_name" so no history is saved,
                    // or written
-          debugger.GetPrompt(), NULL,
+          debugger.GetPrompt(), llvm::StringRef(),
           false, // Not multi-line
           debugger.GetUseColor(), 0, *this));
       const bool old_async_execution = debugger.GetAsyncExecution();
@@ -2824,9 +2826,9 @@ void CommandInterpreter::GetLLDBCommandsFromIOHandler(
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::CommandList,
                             "lldb", // Name of input reader for history
-                            prompt, // Prompt
-                            NULL,   // Continuation prompt
-                            true,   // Get multiple lines
+                            llvm::StringRef::withNullAsEmpty(prompt), // Prompt
+                            llvm::StringRef(), // Continuation prompt
+                            true,              // Get multiple lines
                             debugger.GetUseColor(),
                             0,          // Don't show line numbers
                             delegate)); // IOHandlerDelegate
@@ -2847,9 +2849,9 @@ void CommandInterpreter::GetPythonCommandsFromIOHandler(
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::PythonCode,
                             "lldb-python", // Name of input reader for history
-                            prompt,        // Prompt
-                            NULL,          // Continuation prompt
-                            true,          // Get multiple lines
+                            llvm::StringRef::withNullAsEmpty(prompt), // Prompt
+                            llvm::StringRef(), // Continuation prompt
+                            true,              // Get multiple lines
                             debugger.GetUseColor(),
                             0,          // Don't show line numbers
                             delegate)); // IOHandlerDelegate
@@ -2898,7 +2900,7 @@ CommandInterpreter::GetIOHandler(bool force_create,
         m_debugger, IOHandler::Type::CommandInterpreter,
         m_debugger.GetInputFile(), m_debugger.GetOutputFile(),
         m_debugger.GetErrorFile(), flags, "lldb", m_debugger.GetPrompt(),
-        NULL,  // Continuation prompt
+        llvm::StringRef(), // Continuation prompt
         false, // Don't enable multiple line input, just single line commands
         m_debugger.GetUseColor(),
         0, // Don't show line numbers

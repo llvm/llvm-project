@@ -97,10 +97,11 @@ public:
     return nullptr;
   }
 
-  virtual bool SetPrompt(const char *prompt) {
+  virtual bool SetPrompt(llvm::StringRef prompt) {
     // Prompt support isn't mandatory
     return false;
   }
+  bool SetPrompt(const char *) = delete;
 
   virtual ConstString GetControlSequence(char ch) { return ConstString(); }
 
@@ -341,7 +342,7 @@ class IOHandlerEditline : public IOHandler {
 public:
   IOHandlerEditline(Debugger &debugger, IOHandler::Type type,
                     const char *editline_name, // Used for saving history files
-                    const char *prompt, const char *continuation_prompt,
+                    llvm::StringRef prompt, llvm::StringRef continuation_prompt,
                     bool multi_line, bool color_prompts,
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
@@ -353,12 +354,21 @@ public:
                     const lldb::StreamFileSP &output_sp,
                     const lldb::StreamFileSP &error_sp, uint32_t flags,
                     const char *editline_name, // Used for saving history files
-                    const char *prompt, const char *continuation_prompt,
+                    llvm::StringRef prompt, llvm::StringRef continuation_prompt,
                     bool multi_line, bool color_prompts,
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
                     IOHandlerDelegate &delegate);
+
+  IOHandlerEditline(Debugger &, IOHandler::Type, const char *, const char *,
+                    const char *, bool, bool, uint32_t,
+                    IOHandlerDelegate &) = delete;
+
+  IOHandlerEditline(Debugger &, IOHandler::Type, const lldb::StreamFileSP &,
+                    const lldb::StreamFileSP &, const lldb::StreamFileSP &,
+                    uint32_t, const char *, const char *, const char *, bool,
+                    bool, uint32_t, IOHandlerDelegate &) = delete;
 
   ~IOHandlerEditline() override;
 
@@ -388,11 +398,13 @@ public:
 
   const char *GetPrompt() override;
 
-  bool SetPrompt(const char *prompt) override;
+  bool SetPrompt(llvm::StringRef prompt) override;
+  bool SetPrompt(const char *prompt) = delete;
 
   const char *GetContinuationPrompt();
 
-  void SetContinuationPrompt(const char *prompt);
+  void SetContinuationPrompt(llvm::StringRef prompt);
+  void SetContinuationPrompt(const char *) = delete;
 
   bool GetLine(std::string &line, bool &interrupted);
 

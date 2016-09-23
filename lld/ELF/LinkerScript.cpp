@@ -383,10 +383,13 @@ template <class ELFT> void LinkerScript<ELFT>::output(InputSection<ELFT> *S) {
 }
 
 template <class ELFT> void LinkerScript<ELFT>::flush() {
-  if (auto *OutSec = dyn_cast_or_null<OutputSection<ELFT>>(CurOutSec)) {
+  if (!CurOutSec || !AlreadyOutputOS.insert(CurOutSec).second)
+    return;
+  if (auto *OutSec = dyn_cast<OutputSection<ELFT>>(CurOutSec)) {
     for (InputSection<ELFT> *I : OutSec->Sections)
       output(I);
-    AlreadyOutputOS.insert(CurOutSec);
+  } else {
+    Dot += CurOutSec->getSize();
   }
 }
 
@@ -421,8 +424,8 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
     switchTo(IB->OutSec);
     if (auto *I = dyn_cast<InputSection<ELFT>>(IB))
       output(I);
-    else if (AlreadyOutputOS.insert(CurOutSec).second)
-      Dot += CurOutSec->getSize();
+    else
+      flush();
   }
 }
 
@@ -454,14 +457,9 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
                .base();
   for (auto I = Cmd->Commands.begin(); I != E; ++I)
     process(**I);
-  flush();
-  for (OutputSectionBase<ELFT> *Base : Sections) {
-    if (AlreadyOutputOS.count(Base))
-      continue;
+  for (OutputSectionBase<ELFT> *Base : Sections)
     switchTo(Base);
-    Dot += CurOutSec->getSize();
-    flush();
-  }
+  flush();
   std::for_each(E, Cmd->Commands.end(),
                 [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
 }
@@ -754,6 +752,10 @@ template <class ELFT> uint64_t LinkerScript<ELFT>::getSymbolValue(StringRef S) {
     return B->getVA<ELFT>();
   error("symbol not found: " + S);
   return 0;
+}
+
+template <class ELFT> bool LinkerScript<ELFT>::isDefined(StringRef S) {
+  return Symtab<ELFT>::X->find(S) != nullptr;
 }
 
 // Returns indices of ELF headers containing specific section, identified
@@ -1081,18 +1083,11 @@ void ScriptParser::readSections() {
 
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
-      .Case("*", 4)
-      .Case("/", 4)
-      .Case("+", 3)
-      .Case("-", 3)
-      .Case("<", 2)
-      .Case(">", 2)
-      .Case(">=", 2)
-      .Case("<=", 2)
-      .Case("==", 2)
-      .Case("!=", 2)
-      .Case("&", 1)
-      .Case("|", 1)
+      .Cases("*", "/", 5)
+      .Cases("+", "-", 4)
+      .Cases("<<", ">>", 3)
+      .Cases("<", "<=", ">", ">=", "==", "!=", 2)
+      .Cases("&", "|", 1)
       .Default(-1);
 }
 
@@ -1269,8 +1264,12 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       setError("unknown command " + Tok);
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
-  if (peek().startswith("="))
+
+  if (skip("="))
+    Cmd->Filler = readOutputSectionFiller(next());
+  else if (peek().startswith("="))
     Cmd->Filler = readOutputSectionFiller(next().drop_front());
+
   return Cmd;
 }
 
@@ -1361,6 +1360,10 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
     return [=](uint64_t Dot) { return L(Dot) + R(Dot); };
   if (Op == "-")
     return [=](uint64_t Dot) { return L(Dot) - R(Dot); };
+  if (Op == "<<")
+    return [=](uint64_t Dot) { return L(Dot) << R(Dot); };
+  if (Op == ">>")
+    return [=](uint64_t Dot) { return L(Dot) >> R(Dot); };
   if (Op == "<")
     return [=](uint64_t Dot) { return L(Dot) < R(Dot); };
   if (Op == ">")
@@ -1483,6 +1486,14 @@ Expr ScriptParser::readPrimary() {
     StringRef Tok = next();
     expect(")");
     return [=](uint64_t Dot) { return getConstant(Tok); };
+  }
+  if (Tok == "DEFINED") {
+    expect("(");
+    StringRef Tok = next();
+    expect(")");
+    return [=](uint64_t Dot) {
+      return ScriptBase->isDefined(Tok) ? 1 : 0;
+    };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");

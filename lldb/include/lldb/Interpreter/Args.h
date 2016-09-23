@@ -227,6 +227,8 @@ public:
   void AddOrReplaceEnvironmentVariable(const char *, const char *) = delete;
   bool ContainsEnvironmentVariable(const char *,
                                    size_t * = nullptr) const = delete;
+  static int64_t StringToOptionEnum(const char *, OptionEnumValueElement *,
+                                    int32_t, Error &) = delete;
 
   //------------------------------------------------------------------
   /// Insert the argument value at index \a idx to \a arg_cstr.
@@ -407,7 +409,7 @@ public:
   static char StringToChar(llvm::StringRef s, char fail_value,
                            bool *success_ptr);
 
-  static int64_t StringToOptionEnum(const char *s,
+  static int64_t StringToOptionEnum(llvm::StringRef s,
                                     OptionEnumValueElement *enum_values,
                                     int32_t fail_value, Error &error);
 

@@ -241,6 +241,14 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_GD_TO_LE:
   case R_TLS:
+    // A weak undefined TLS symbol resolves to the base of the TLS
+    // block, i.e. gets a value of zero. If we pass --gc-sections to
+    // lld and .tbss is not referenced, it gets reclaimed and we don't
+    // create a TLS program header. Therefore, we resolve this
+    // statically to zero.
+    if (Body.isTls() && (Body.isLazy() || Body.isUndefined()) &&
+        Body.symbol()->isWeak())
+      return 0;
     if (Target->TcbSize)
       return Body.getVA<ELFT>(A) +
              alignTo(Target->TcbSize, Out<ELFT>::TlsPhdr->p_align);

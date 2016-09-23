@@ -83,32 +83,40 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   return Body.isPreemptible();
 }
 
-// This function is similar to the `handleTlsRelocation`. MIPS does not support
-// any relaxations for TLS relocations so by factoring out MIPS handling into
-// the separate function we can simplify the code and does not pollute
-// `handleTlsRelocation` by MIPS `ifs` statements.
+// This function is similar to the `handleTlsRelocation`. ARM and MIPS do not
+// support any relaxations for TLS relocations so by factoring out ARM and MIPS
+// handling in to the separate function we can simplify the code and do not
+// pollute `handleTlsRelocation` by ARM and MIPS `ifs` statements.
+// FIXME: The ARM implementation always adds the module index dynamic
+// relocation even for non-preemptible symbols in applications. For static
+// linking support we must either resolve the module index relocation at static
+// link time, or hard code the module index (1) for the application in the GOT.
 template <class ELFT>
-static unsigned
-handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
-                        InputSectionBase<ELFT> &C, typename ELFT::uint Offset,
-                        typename ELFT::uint Addend, RelExpr Expr) {
-  if (Expr == R_MIPS_TLSLD) {
-    if (Out<ELFT>::Got->addTlsIndex() && Config->Pic)
+static unsigned handleNoRelaxTlsRelocation(uint32_t Type, SymbolBody &Body,
+                                           InputSectionBase<ELFT> &C,
+                                           typename ELFT::uint Offset,
+                                           typename ELFT::uint Addend,
+                                           RelExpr Expr) {
+  if (Expr == R_MIPS_TLSLD || Expr == R_TLSLD_PC) {
+    if (Out<ELFT>::Got->addTlsIndex() &&
+        (Config->Pic || Config->EMachine == EM_ARM))
       Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Out<ELFT>::Got,
                                     Out<ELFT>::Got->getTlsIndexOff(), false,
                                     nullptr, 0});
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
+  typedef typename ELFT::uint uintX_t;
   if (Target->isTlsGlobalDynamicRel(Type)) {
-    if (Out<ELFT>::Got->addDynTlsEntry(Body) && Body.isPreemptible()) {
-      typedef typename ELFT::uint uintX_t;
+    if (Out<ELFT>::Got->addDynTlsEntry(Body) &&
+        (Body.isPreemptible() || Config->EMachine == EM_ARM)) {
       uintX_t Off = Out<ELFT>::Got->getGlobalDynOffset(Body);
       Out<ELFT>::RelaDyn->addReloc(
           {Target->TlsModuleIndexRel, Out<ELFT>::Got, Off, false, &Body, 0});
-      Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Out<ELFT>::Got,
-                                    Off + (uintX_t)sizeof(uintX_t), false,
-                                    &Body, 0});
+      if (Body.isPreemptible())
+        Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Out<ELFT>::Got,
+                                      Off + (uintX_t)sizeof(uintX_t), false,
+                                      &Body, 0});
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
@@ -130,8 +138,9 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 
   typedef typename ELFT::uint uintX_t;
 
-  if (Config->EMachine == EM_MIPS)
-    return handleMipsTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr);
+  if (Config->EMachine == EM_MIPS || Config->EMachine == EM_ARM)
+    return handleNoRelaxTlsRelocation<ELFT>(Type, Body, C, Offset, Addend,
+                                            Expr);
 
   if ((Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE || Expr == R_HINT) &&
       Config->Shared) {

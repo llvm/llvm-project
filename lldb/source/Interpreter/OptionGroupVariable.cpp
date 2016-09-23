@@ -75,7 +75,7 @@ OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
 OptionGroupVariable::~OptionGroupVariable() {}
 
 Error OptionGroupVariable::SetOptionValue(uint32_t option_idx,
-                                          const char *option_arg,
+                                          llvm::StringRef option_arg,
                                           ExecutionContext *execution_context) {
   Error error;
   if (!include_frame_options)
