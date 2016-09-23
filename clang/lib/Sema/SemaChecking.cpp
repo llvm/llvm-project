@@ -1596,15 +1596,9 @@ static bool SemaBuiltinCpuSupports(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
-  int i = 0, l = 0, u = 0;
+static bool isX86_64Builtin(unsigned BuiltinID) {
+  // These builtins only work on x86-64 targets.
   switch (BuiltinID) {
-  default:
-    return false;
-  case X86::BI__builtin_cpu_supports:
-    return SemaBuiltinCpuSupports(*this, TheCall);
-  case X86::BI__builtin_ms_va_start:
-    return SemaBuiltinMSVAStart(TheCall);
   case X86::BI__builtin_ia32_addcarryx_u64:
   case X86::BI__builtin_ia32_addcarry_u64:
   case X86::BI__builtin_ia32_subborrow_u64:
@@ -1647,14 +1641,132 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_cvtsi2ss64:
   case X86::BI__builtin_ia32_cvtusi2sd64:
   case X86::BI__builtin_ia32_cvtusi2ss64:
-  case X86::BI__builtin_ia32_rdseed64_step: {
-    // These builtins only work on x86-64 targets.
-    const llvm::Triple &TT = Context.getTargetInfo().getTriple();
-    if (TT.getArch() != llvm::Triple::x86_64)
-      return Diag(TheCall->getCallee()->getLocStart(),
-                  diag::err_x86_builtin_32_bit_tgt);
-    return false;
+  case X86::BI__builtin_ia32_rdseed64_step:
+    return true;
   }
+
+  return false;
+}
+
+// Check if the rounding mode is legal.
+bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
+  // Indicates if this instruction has rounding control or just SAE.
+  bool HasRC = false;
+
+  unsigned ArgNum = 0;
+  switch (BuiltinID) {
+  default:
+    return false;
+  case X86::BI__builtin_ia32_vcvttsd2si32:
+  case X86::BI__builtin_ia32_vcvttsd2si64:
+  case X86::BI__builtin_ia32_vcvttsd2usi32:
+  case X86::BI__builtin_ia32_vcvttsd2usi64:
+  case X86::BI__builtin_ia32_vcvttss2si32:
+  case X86::BI__builtin_ia32_vcvttss2si64:
+  case X86::BI__builtin_ia32_vcvttss2usi32:
+  case X86::BI__builtin_ia32_vcvttss2usi64:
+    ArgNum = 1;
+    break;
+  case X86::BI__builtin_ia32_cvtps2pd512_mask:
+  case X86::BI__builtin_ia32_cvttpd2dq512_mask:
+  case X86::BI__builtin_ia32_cvttpd2qq512_mask:
+  case X86::BI__builtin_ia32_cvttpd2udq512_mask:
+  case X86::BI__builtin_ia32_cvttpd2uqq512_mask:
+  case X86::BI__builtin_ia32_cvttps2dq512_mask:
+  case X86::BI__builtin_ia32_cvttps2qq512_mask:
+  case X86::BI__builtin_ia32_cvttps2udq512_mask:
+  case X86::BI__builtin_ia32_cvttps2uqq512_mask:
+  case X86::BI__builtin_ia32_exp2pd_mask:
+  case X86::BI__builtin_ia32_exp2ps_mask:
+  case X86::BI__builtin_ia32_getexppd512_mask:
+  case X86::BI__builtin_ia32_getexpps512_mask:
+  case X86::BI__builtin_ia32_rcp28pd_mask:
+  case X86::BI__builtin_ia32_rcp28ps_mask:
+  case X86::BI__builtin_ia32_rsqrt28pd_mask:
+  case X86::BI__builtin_ia32_rsqrt28ps_mask:
+  case X86::BI__builtin_ia32_vcomisd:
+  case X86::BI__builtin_ia32_vcomiss:
+  case X86::BI__builtin_ia32_vcvtph2ps512_mask:
+    ArgNum = 3;
+    break;
+  case X86::BI__builtin_ia32_cmppd512_mask:
+  case X86::BI__builtin_ia32_cmpps512_mask:
+  case X86::BI__builtin_ia32_cmpsd_mask:
+  case X86::BI__builtin_ia32_cmpss_mask:
+  case X86::BI__builtin_ia32_getexpsd128_round_mask:
+  case X86::BI__builtin_ia32_getexpss128_round_mask:
+  case X86::BI__builtin_ia32_rcp28sd_round_mask:
+  case X86::BI__builtin_ia32_rcp28ss_round_mask:
+  case X86::BI__builtin_ia32_reducepd512_mask:
+  case X86::BI__builtin_ia32_reduceps512_mask:
+  case X86::BI__builtin_ia32_rndscalepd_mask:
+  case X86::BI__builtin_ia32_rndscaleps_mask:
+  case X86::BI__builtin_ia32_rsqrt28sd_round_mask:
+  case X86::BI__builtin_ia32_rsqrt28ss_round_mask:
+    ArgNum = 4;
+    break;
+  case X86::BI__builtin_ia32_fixupimmpd512_mask:
+  case X86::BI__builtin_ia32_fixupimmps512_mask:
+  case X86::BI__builtin_ia32_fixupimmsd_mask:
+  case X86::BI__builtin_ia32_fixupimmss_mask:
+  case X86::BI__builtin_ia32_rangepd512_mask:
+  case X86::BI__builtin_ia32_rangeps512_mask:
+  case X86::BI__builtin_ia32_rangesd128_round_mask:
+  case X86::BI__builtin_ia32_rangess128_round_mask:
+  case X86::BI__builtin_ia32_reducesd_mask:
+  case X86::BI__builtin_ia32_reducess_mask:
+  case X86::BI__builtin_ia32_rndscalesd_round_mask:
+  case X86::BI__builtin_ia32_rndscaless_round_mask:
+    ArgNum = 5;
+    break;
+  }
+
+  llvm::APSInt Result;
+
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  // Check constant-ness first.
+  if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+
+  // Make sure rounding mode is either ROUND_CUR_DIRECTION or ROUND_NO_EXC bit
+  // is set. If the intrinsic has rounding control(bits 1:0), make sure its only
+  // combined with ROUND_NO_EXC.
+  if (Result == 4/*ROUND_CUR_DIRECTION*/ ||
+      Result == 8/*ROUND_NO_EXC*/ ||
+      (HasRC && Result.getZExtValue() >= 8 && Result.getZExtValue() <= 11))
+    return false;
+
+  return Diag(TheCall->getLocStart(), diag::err_x86_builtin_invalid_rounding)
+    << Arg->getSourceRange();
+}
+
+bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  if (BuiltinID == X86::BI__builtin_cpu_supports)
+    return SemaBuiltinCpuSupports(*this, TheCall);
+
+  if (BuiltinID == X86::BI__builtin_ms_va_start)
+    return SemaBuiltinMSVAStart(TheCall);
+
+  // Check for 64-bit only builtins on a 32-bit target.
+  const llvm::Triple &TT = Context.getTargetInfo().getTriple();
+  if (TT.getArch() != llvm::Triple::x86_64 && isX86_64Builtin(BuiltinID))
+    return Diag(TheCall->getCallee()->getLocStart(),
+                diag::err_x86_builtin_32_bit_tgt);
+
+  // If the intrinsic has rounding or SAE make sure its valid.
+  if (CheckX86BuiltinRoundingOrSAE(BuiltinID, TheCall))
+    return true;
+
+  // For intrinsics which take an immediate value as part of the instruction,
+  // range check them here.
+  int i = 0, l = 0, u = 0;
+  switch (BuiltinID) {
+  default:
+    return false;
   case X86::BI__builtin_ia32_extractf64x4_mask:
   case X86::BI__builtin_ia32_extracti64x4_mask:
   case X86::BI__builtin_ia32_extractf32x8_mask:
@@ -8171,11 +8283,10 @@ bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
   unsigned OriginalWidth = Value.getBitWidth();
   unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
 
-  if (Value.isSigned() && Value.isNegative())
+  if (!Value.isSigned() || Value.isNegative())
     if (UnaryOperator *UO = dyn_cast<UnaryOperator>(OriginalInit))
-      if (UO->getOpcode() == UO_Minus)
-        if (isa<IntegerLiteral>(UO->getSubExpr()))
-          OriginalWidth = Value.getMinSignedBits();
+      if (UO->getOpcode() == UO_Minus || UO->getOpcode() == UO_Not)
+        OriginalWidth = Value.getMinSignedBits();
 
   if (OriginalWidth <= FieldWidth)
     return false;

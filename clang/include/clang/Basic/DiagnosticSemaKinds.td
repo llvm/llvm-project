@@ -7805,6 +7805,8 @@ def err_ppc_builtin_only_on_pwr7 : Error<
   "this builtin is only valid on POWER7 or later CPUs">;
 def err_x86_builtin_32_bit_tgt : Error<
   "this builtin is only available on x86-64 targets">;
+def err_x86_builtin_invalid_rounding : Error<
+  "invalid rounding argument">;
 
 def err_builtin_longjmp_unsupported : Error<
   "__builtin_longjmp is not supported for the current target">;

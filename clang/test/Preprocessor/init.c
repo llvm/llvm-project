@@ -8463,6 +8463,29 @@
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix LANAI %s
 // LANAI: #define __lanai__ 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=amd64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-unknown-openbsd6.1-gnueabi < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
+// OPENBSD:#define __ELF__ 1
+// OPENBSD:#define __INT16_TYPE__ short
+// OPENBSD:#define __INT32_TYPE__ int
+// OPENBSD:#define __INT64_TYPE__ long long int
+// OPENBSD:#define __INT8_TYPE__ signed char
+// OPENBSD:#define __INTMAX_TYPE__ long long int
+// OPENBSD:#define __INTPTR_TYPE__ long int
+// OPENBSD:#define __OpenBSD__ 1
+// OPENBSD:#define __PTRDIFF_TYPE__ long int
+// OPENBSD:#define __SIZE_TYPE__ long unsigned int
+// OPENBSD:#define __UINT16_TYPE__ unsigned short
+// OPENBSD:#define __UINT32_TYPE__ unsigned int
+// OPENBSD:#define __UINT64_TYPE__ long long unsigned int
+// OPENBSD:#define __UINT8_TYPE__ unsigned char
+// OPENBSD:#define __UINTMAX_TYPE__ long long unsigned int
+// OPENBSD:#define __UINTPTR_TYPE__ long unsigned int
+// OPENBSD:#define __WCHAR_TYPE__ int
+// OPENBSD:#define __WINT_TYPE__ int
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-FREEBSD %s
 // PPC64-FREEBSD-NOT: #define __LONG_DOUBLE_128__ 1
 //

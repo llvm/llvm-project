@@ -328,17 +328,17 @@ Code Generation Options
   model can be overridden with the tls_model attribute. The compiler will try
   to choose a more efficient model if possible.
 
-.. option:: -flto[=full,thin], -emit-llvm
+.. option:: -flto, -flto=full, -flto=thin, -emit-llvm
 
   Generate output files in LLVM formats, suitable for link time optimization.
   When used with :option:`-S` this generates LLVM intermediate language
   assembly files, otherwise this generates LLVM bitcode format object files
   (which may be passed to the linker depending on the stage selection options).
 
-  The default for :option:`-flto` is :option:`-flto=full`, in which the
+  The default for :option:`-flto` is "full", in which the
   LLVM bitcode is suitable for monolithic Link Time Optimization (LTO), where
   the linker merges all such modules into a single combined module for
-  optimization. With :option:`-flto=thin`, :doc:`ThinLTO <../ThinLTO>`
+  optimization. With "thin", :doc:`ThinLTO <../ThinLTO>`
   compilation is invoked instead.
 
 Driver Options
