@@ -359,22 +359,24 @@ protected:
   //------------------------------------------------------------------
   // Classes that inherit from BreakpointOptions can see and modify these
   //------------------------------------------------------------------
-  enum OptionNames {
+  enum class OptionNames {
     ConditionText = 0,
     IgnoreCount,
     EnabledState,
     OneShotState,
     LastOptionName
   };
-  static const char *g_option_names[LastOptionName];
+  static const char *g_option_names[(size_t) OptionNames::LastOptionName];
 
   static const char *GetKey(enum OptionNames enum_value) {
-    return g_option_names[enum_value];
+    return g_option_names[(size_t) enum_value];
   }
 
   static bool BreakpointOptionsCallbackFunction(
       void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
       lldb::user_id_t break_loc_id);
+      
+  void SetThreadSpec(std::unique_ptr<ThreadSpec> &thread_spec_up);
 
 private:
   //------------------------------------------------------------------

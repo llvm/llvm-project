@@ -29,10 +29,6 @@ namespace fuzzer {
 
 using namespace std::chrono;
 
-// See FuzzerTraceState.cpp
-void EnableValueProfile();
-size_t VPMapMergeFromCurrent(ValueBitMap &M);
-
 class Fuzzer {
 public:
 
@@ -47,7 +43,6 @@ public:
       CounterBitmap.clear();
       VPMap.Reset();
       TPCMap.Reset();
-      VPMapBits = 0;
     }
 
     std::string DebugString() const;
@@ -59,7 +54,6 @@ public:
     std::vector<uint8_t> CounterBitmap;
     ValueBitMap TPCMap;
     ValueBitMap VPMap;
-    size_t VPMapBits;
   };
 
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
@@ -95,7 +89,8 @@ public:
   UnitVector FindExtraUnits(const UnitVector &Initial, const UnitVector &Extra);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
-  void SetMaxLen(size_t MaxLen);
+  void SetMaxInputLen(size_t MaxInputLen);
+  void SetMaxMutationLen(size_t MaxMutationLen);
   void RssLimitCallback();
 
   // Public for tests.
@@ -142,7 +137,7 @@ private:
   void PrepareCounters(Fuzzer::Coverage *C);
   bool RecordMaxCoverage(Fuzzer::Coverage *C);
 
-  void LazyAllocateCurrentUnitData();
+  void AllocateCurrentUnitData();
   uint8_t *CurrentUnitData = nullptr;
   std::atomic<size_t> CurrentUnitSize;
   uint8_t BaseSha1[kSHA1NumBytes];  // Checksum of the base unit.
@@ -165,6 +160,9 @@ private:
 
   // Maximum recorded coverage.
   Coverage MaxCoverage;
+
+  size_t MaxInputLen = 0;
+  size_t MaxMutationLen = 0;
 
   // For -print_pcs
   uintptr_t* PcBuffer = nullptr;

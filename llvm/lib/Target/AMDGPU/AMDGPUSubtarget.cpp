@@ -297,6 +297,15 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
+unsigned SISubtarget::getKernArgSegmentSize(unsigned ExplicitArgBytes) const {
+  unsigned ImplicitBytes = getImplicitArgNumBytes();
+  if (ImplicitBytes == 0)
+    return ExplicitArgBytes;
+
+  unsigned Alignment = getAlignmentForImplicitArgPtr();
+  return alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+}
+
 unsigned SISubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   if (getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
     if (SGPRs <= 80)

@@ -342,7 +342,8 @@ private:
 
   /// \brief Process the specified file for the .incbin directive.
   /// This returns true on failure.
-  bool processIncbinFile(const std::string &Filename);
+  bool processIncbinFile(const std::string &Filename, int64_t Skip = 0,
+                         const MCExpr *Count = nullptr, SMLoc Loc = SMLoc());
 
   /// \brief Reset the current lexer position to that given by \p Loc. The
   /// current token is not set; clients should ensure Lex() is called
@@ -643,7 +644,8 @@ bool AsmParser::enterIncludeFile(const std::string &Filename) {
 /// Process the specified .incbin file by searching for it in the include paths
 /// then just emitting the byte contents of the file to the streamer. This
 /// returns true on failure.
-bool AsmParser::processIncbinFile(const std::string &Filename) {
+bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
+                                  const MCExpr *Count, SMLoc Loc) {
   std::string IncludedFile;
   unsigned NewBuf =
       SrcMgr.AddIncludeFile(Filename, Lexer.getLoc(), IncludedFile);
@@ -651,7 +653,17 @@ bool AsmParser::processIncbinFile(const std::string &Filename) {
     return true;
 
   // Pick up the bytes from the file and emit them.
-  getStreamer().EmitBytes(SrcMgr.getMemoryBuffer(NewBuf)->getBuffer());
+  StringRef Bytes = SrcMgr.getMemoryBuffer(NewBuf)->getBuffer();
+  Bytes = Bytes.drop_front(Skip);
+  if (Count) {
+    int64_t Res;
+    if (!Count->evaluateAsAbsolute(Res))
+      return Error(Loc, "expected absolute expression");
+    if (Res < 0)
+      return Warning(Loc, "negative count has no effect");
+    Bytes = Bytes.take_front(Res);
+  }
+  getStreamer().EmitBytes(Bytes);
   return false;
 }
 
@@ -4388,20 +4400,46 @@ bool AsmParser::parseDirectiveInclude() {
 }
 
 /// parseDirectiveIncbin
-///  ::= .incbin "filename"
+///  ::= .incbin "filename" [ , skip [ , count ] ]
 bool AsmParser::parseDirectiveIncbin() {
   // Allow the strings to have escaped octal character sequence.
   std::string Filename;
   SMLoc IncbinLoc = getTok().getLoc();
   if (check(getTok().isNot(AsmToken::String),
             "expected string in '.incbin' directive") ||
-      parseEscapedString(Filename) ||
-      parseToken(AsmToken::EndOfStatement,
+      parseEscapedString(Filename))
+    return true;
+
+  int64_t Skip = 0;
+  const MCExpr *Count = nullptr;
+  SMLoc SkipLoc, CountLoc;
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    if (parseToken(AsmToken::Comma, "unexpected token in '.incbin' directive"))
+      return true;
+
+    // The skip expression can be omitted while specifying the count, e.g:
+    //  .incbin "filename",,4
+    if (getTok().isNot(AsmToken::Comma)) {
+      if (parseTokenLoc(SkipLoc) || parseAbsoluteExpression(Skip))
+        return true;
+    }
+
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      if (parseToken(AsmToken::Comma, "unexpected token in '.incbin' directive") ||
+          parseTokenLoc(CountLoc) || parseExpression(Count))
+        return true;
+    }
+  }
+
+  if (parseToken(AsmToken::EndOfStatement,
                  "unexpected token in '.incbin' directive"))
     return true;
 
+  if (check(Skip < 0, SkipLoc, "skip is negative"))
+    return true;
+
   // Attempt to process the included file.
-  if (processIncbinFile(Filename))
+  if (processIncbinFile(Filename, Skip, Count, CountLoc))
     return Error(IncbinLoc, "Could not find incbin file '" + Filename + "'");
   return false;
 }

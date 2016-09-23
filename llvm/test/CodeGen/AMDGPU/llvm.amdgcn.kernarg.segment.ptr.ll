@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL,HSA-NOENV %s
+; RUN: llc -mtriple=amdgcn--amdhsa-opencl -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL,HSA-OPENCL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,OS-MESA3D,MESA,ALL %s
 ; RUN: llc -mtriple=amdgcn-mesa-unknown -verify-machineinstrs < %s | FileCheck -check-prefixes=OS-UNKNOWN,MESA,ALL %s
 
@@ -29,6 +30,9 @@ define void @test_implicit(i32 addrspace(1)* %out) #1 {
 }
 
 ; ALL-LABEL: {{^}}test_implicit_alignment
+; HSA-NOENV: kernarg_segment_byte_size = 10
+; HSA-OPENCL: kernarg_segment_byte_size = 48
+; OS-MESA3D: kernarg_segment_byte_size = 28
 ; OS-UNKNOWN: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xc
 ; HSA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x4
 ; OS-MESA3D: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x3

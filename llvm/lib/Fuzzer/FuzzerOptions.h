@@ -30,7 +30,7 @@ struct FuzzingOptions {
   bool UseIndirCalls = true;
   bool UseMemcmp = true;
   bool UseMemmem = true;
-  bool UseFullCoverageSet = false;
+  bool UseValueProfile = false;
   bool Reload = true;
   bool ShuffleAtStartUp = true;
   bool PreferSmall = true;

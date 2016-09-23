@@ -2077,10 +2077,11 @@ public:
 //-------------------------------------------------------------------------
 // CommandObjectBreakpointRead
 //-------------------------------------------------------------------------
-#pragma mark Modify::CommandOptions
+#pragma mark Read::CommandOptions
 static OptionDefinition g_breakpoint_read_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, true, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,    "The file from which to read the breakpoints." },
+  { LLDB_OPT_SET_ALL, true, "file",                   'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,       "The file from which to read the breakpoints." },
+  {LLDB_OPT_SET_ALL, false, "breakpoint-name",        'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                       eArgTypeBreakpointName, "Only read in breakpoints with this name."},
     // clang-format on
 };
 
@@ -2121,6 +2122,16 @@ public:
       case 'f':
         m_filename.assign(option_arg);
         break;
+      case 'N': {
+        Error name_error;
+        if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(option_arg),
+                                                  name_error)) {
+          error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
+                                         name_error.AsCString());
+        }
+        m_names.push_back(option_arg);
+        break;
+      }
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
                                        short_option);
@@ -2132,6 +2143,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_filename.clear();
+      m_names.clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2141,6 +2153,7 @@ public:
     // Instance variables to hold the values for command options.
 
     std::string m_filename;
+    std::vector<std::string> m_names;
   };
 
 protected:
@@ -2152,16 +2165,38 @@ protected:
       return false;
     }
 
+    std::unique_lock<std::recursive_mutex> lock;
+    target->GetBreakpointList().GetListMutex(lock);
+
     FileSpec input_spec(m_options.m_filename, true);
     BreakpointIDList new_bps;
-    Error error = target->CreateBreakpointsFromFile(input_spec, new_bps);
+    Error error = target->CreateBreakpointsFromFile(input_spec,
+                                                    m_options.m_names, new_bps);
 
     if (!error.Success()) {
       result.AppendError(error.AsCString());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
-    // FIXME: Report the newly created breakpoints.
+
+    Stream &output_stream = result.GetOutputStream();
+
+    size_t num_breakpoints = new_bps.GetSize();
+    if (num_breakpoints == 0) {
+      result.AppendMessage("No breakpoints added.");
+    } else {
+      // No breakpoint selected; show info about all currently set breakpoints.
+      result.AppendMessage("New breakpoints:");
+      for (size_t i = 0; i < num_breakpoints; ++i) {
+        BreakpointID bp_id = new_bps.GetBreakpointIDAtIndex(i);
+        Breakpoint *bp = target->GetBreakpointList()
+                             .FindBreakpointByID(bp_id.GetBreakpointID())
+                             .get();
+        if (bp)
+          bp->GetDescription(&output_stream, lldb::eDescriptionLevelInitial,
+                             false);
+      }
+    }
     return result.Succeeded();
   }
 
@@ -2175,7 +2210,8 @@ private:
 #pragma mark Write::CommandOptions
 static OptionDefinition g_breakpoint_write_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, true, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,    "The file into which to write the breakpoints." },
+  { LLDB_OPT_SET_ALL, true,  "file",  'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,    "The file into which to write the breakpoints." },
+  { LLDB_OPT_SET_ALL, false, "append",'a', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                       eArgTypeNone,        "Append to saved breakpoints file if it exists."},
     // clang-format on
 };
 
@@ -2216,6 +2252,9 @@ public:
       case 'f':
         m_filename.assign(option_arg);
         break;
+      case 'a':
+        m_append = true;
+        break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
                                        short_option);
@@ -2227,6 +2266,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_filename.clear();
+      m_append = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2236,6 +2276,7 @@ public:
     // Instance variables to hold the values for command options.
 
     std::string m_filename;
+    bool m_append = false;
   };
 
 protected:
@@ -2261,7 +2302,8 @@ protected:
       }
     }
     Error error = target->SerializeBreakpointsToFile(
-        FileSpec(m_options.m_filename.c_str(), true), valid_bp_ids);
+        FileSpec(m_options.m_filename.c_str(), true), valid_bp_ids,
+        m_options.m_append);
     if (!error.Success()) {
       result.AppendErrorWithFormat("error serializing breakpoints: %s.",
                                    error.AsCString());

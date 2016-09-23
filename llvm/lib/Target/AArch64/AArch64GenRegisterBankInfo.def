@@ -24,5 +24,46 @@ RegisterBank CCRRegBank;
 
 RegisterBank *RegBanks[] = {&GPRRegBank, &FPRRegBank, &CCRRegBank};
 
+// PartialMappings.
+enum PartialMappingIdx {
+  GPR32,
+  GPR64,
+  FPR32,
+  FPR64,
+  FPR128,
+  FPR256,
+  FPR512,
+  FirstGPR = GPR32,
+  LastGPR = GPR64,
+  FirstFPR = FPR32,
+  LastFPR = FPR512
+};
+
+static unsigned getRegBankBaseIdx(unsigned Size) {
+  assert(Size && "0-sized type!!");
+  // Make anything smaller than 32 gets 32
+  Size = ((Size + 31) / 32) * 32;
+  // 32 is 0, 64 is 1, 128 is 2, and so on.
+  return Log2_32(Size) - /*Log2_32(32)=*/ 5;
+}
+
+RegisterBankInfo::PartialMapping PartMappings[] {
+  /* StartIdx, Length, RegBank */
+  // 0: GPR 32-bit value.
+  {0, 32, GPRRegBank},
+  // 1: GPR 64-bit value.
+  {0, 64, GPRRegBank},
+  // 2: FPR 32-bit value.
+  {0, 32, FPRRegBank},
+  // 3: FPR 64-bit value.
+  {0, 64, FPRRegBank},
+  // 4: FPR 64-bit value.
+  {0, 128, FPRRegBank},
+  // 5: FPR 64-bit value.
+  {0, 256, FPRRegBank},
+  // 6: FPR 64-bit value.
+  {0, 512, FPRRegBank}
+};
+
 } // End AArch64 namespace.
 } // End llvm namespace.

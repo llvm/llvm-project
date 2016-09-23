@@ -101,9 +101,9 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
     return std::unique_ptr<BreakpointOptions::CommandData>();
 }
 
-const char *BreakpointOptions::g_option_names
-    [BreakpointOptions::OptionNames::LastOptionName]{
-        "ConditionText", "IgnoreCount", "EnabledState", "OneShotState"};
+const char *BreakpointOptions::g_option_names[(
+    size_t)BreakpointOptions::OptionNames::LastOptionName]{
+    "ConditionText", "IgnoreCount", "EnabledState", "OneShotState"};
 
 bool BreakpointOptions::NullCallback(void *baton,
                                      StoppointCallbackContext *context,
@@ -232,6 +232,23 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       condition_text.c_str(), enabled, ignore_count, one_shot);
   if (cmd_data_up.get())
     bp_options->SetCommandDataCallback(cmd_data_up);
+
+  StructuredData::Dictionary *thread_spec_dict;
+  success = options_dict.GetValueForKeyAsDictionary(
+      ThreadSpec::GetSerializationKey(), thread_spec_dict);
+  if (success) {
+    Error thread_spec_error;
+    std::unique_ptr<ThreadSpec> thread_spec_up =
+        ThreadSpec::CreateFromStructuredData(*thread_spec_dict,
+                                             thread_spec_error);
+    if (thread_spec_error.Fail()) {
+      error.SetErrorStringWithFormat(
+          "Failed to deserialize breakpoint thread spec options: %s.",
+          thread_spec_error.AsCString());
+      return nullptr;
+    }
+    bp_options->SetThreadSpec(thread_spec_up);
+  }
   return bp_options;
 }
 
@@ -255,7 +272,12 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
           BreakpointOptions::CommandData::GetSerializationKey(), commands_sp);
     }
   }
-  // FIXME: Need to serialize thread filter...
+  if (m_thread_spec_ap) {
+    StructuredData::ObjectSP thread_spec_sp =
+        m_thread_spec_ap->SerializeToStructuredData();
+    options_dict_sp->AddItem(ThreadSpec::GetSerializationKey(), thread_spec_sp);
+  }
+
   return options_dict_sp;
 }
 
@@ -367,6 +389,11 @@ ThreadSpec *BreakpointOptions::GetThreadSpec() {
 
 void BreakpointOptions::SetThreadID(lldb::tid_t thread_id) {
   GetThreadSpec()->SetTID(thread_id);
+}
+
+void BreakpointOptions::SetThreadSpec(
+    std::unique_ptr<ThreadSpec> &thread_spec_up) {
+  m_thread_spec_ap = std::move(thread_spec_up);
 }
 
 void BreakpointOptions::GetDescription(Stream *s,

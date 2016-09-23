@@ -142,6 +142,10 @@ public:
     return TargetTriple.getOS() == Triple::Mesa3D;
   }
 
+  bool isOpenCLEnv() const {
+    return TargetTriple.getEnvironment() == Triple::OpenCL;
+  }
+
   Generation getGeneration() const {
     return Gen;
   }
@@ -286,6 +290,14 @@ public:
 
   unsigned getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? 8 : 4;
+  }
+
+  unsigned getImplicitArgNumBytes() const {
+    if (isMesa3DOS())
+      return 16;
+    if (isAmdHsaOS() && isOpenCLEnv())
+      return 32;
+    return 0;
   }
 
   unsigned getStackAlignment() const {
@@ -520,6 +532,8 @@ public:
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
   }
+
+  unsigned getKernArgSegmentSize(unsigned ExplictArgBytes) const;
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
