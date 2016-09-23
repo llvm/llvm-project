@@ -209,12 +209,12 @@ namespace llvm {
       FDIV_RND,
       FMAX_RND,
       FMIN_RND,
-      FSQRT_RND,
+      FSQRT_RND, FSQRTS_RND,
 
       // FP vector get exponent.
-      FGETEXP_RND,
+      FGETEXP_RND, FGETEXPS_RND,
       // Extract Normalized Mantissas.
-      VGETMANT,
+      VGETMANT, VGETMANTS,
       // FP Scale.
       SCALEF,
       SCALEFS,
@@ -297,10 +297,10 @@ namespace llvm {
       VTRUNCUS, VTRUNCS,
 
       // Vector FP extend.
-      VFPEXT,
+      VFPEXT, VFPEXT_RND, VFPEXTS_RND,
 
       // Vector FP round.
-      VFPROUND,
+      VFPROUND, VFPROUND_RND, VFPROUNDS_RND,
 
       // Vector signed/unsigned integer to double.
       CVTDQ2PD, CVTUDQ2PD,
@@ -430,9 +430,9 @@ namespace llvm {
       // Range Restriction Calculation For Packed Pairs of Float32/64 values.
       VRANGE,
       // Reduce - Perform Reduction Transformation on scalar\packed FP.
-      VREDUCE,
+      VREDUCE, VREDUCES,
       // RndScale - Round FP Values To Include A Given Number Of Fraction Bits.
-      VRNDSCALE,
+      VRNDSCALE, VRNDSCALES,
       // Tests Types Of a FP Values for packed types.
       VFPCLASS,
       // Tests Types Of a FP Values for scalar types.
@@ -494,15 +494,19 @@ namespace llvm {
       COMPRESS,
       EXPAND,
 
-      // Convert Unsigned/Integer to Scalar Floating-Point Value
-      // with rounding mode.
-      SINT_TO_FP_RND,
-      UINT_TO_FP_RND,
+      // Convert Unsigned/Integer to Floating-Point Value with rounding mode.
+      SINT_TO_FP_RND, UINT_TO_FP_RND,
+      SCALAR_SINT_TO_FP_RND, SCALAR_UINT_TO_FP_RND,
 
       // Vector float/double to signed/unsigned integer.
-      FP_TO_SINT_RND, FP_TO_UINT_RND,
+      CVTP2SI, CVTP2UI, CVTP2SI_RND, CVTP2UI_RND,
       // Scalar float/double to signed/unsigned integer.
-      SCALAR_FP_TO_SINT_RND, SCALAR_FP_TO_UINT_RND,
+      CVTS2SI_RND, CVTS2UI_RND,
+
+      // Vector float/double to signed/unsigned integer with truncation.
+      CVTTP2SI_RND, CVTTP2UI_RND,
+      // Scalar float/double to signed/unsigned integer with truncation.
+      CVTTS2SI_RND, CVTTS2UI_RND,
 
       // Save xmm argument registers to the stack, according to %al. An operator
       // is needed so that this can be expanded with control flow.
@@ -541,7 +545,7 @@ namespace llvm {
       XTEST,
 
       // ERI instructions.
-      RSQRT28, RCP28, EXP2,
+      RSQRT28, RSQRT28S, RCP28, RCP28S, EXP2,
 
       // Conversions between float and half-float.
       CVTPS2PH, CVTPH2PS,

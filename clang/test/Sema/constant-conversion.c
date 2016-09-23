@@ -128,6 +128,6 @@ void test10() {
   s.a = ~0U;
   s.a = ~(1<<A);
 
-s.a = -9;  // expected-warning{{implicit truncation from 'int' to bitfield changes value from -9 to 7}}
+  s.a = -9;  // expected-warning{{implicit truncation from 'int' to bitfield changes value from -9 to 7}}
   s.a = 16;  // expected-warning{{implicit truncation from 'int' to bitfield changes value from 16 to 0}}
 }

@@ -78,7 +78,11 @@ INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
     uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
     uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
-    void *new_ptr = asan_malloc(size, &stack);
+    void *new_ptr;
+    if (UNLIKELY(!asan_inited))
+      new_ptr = AllocateFromLocalPool(size);
+    else
+      new_ptr = asan_malloc(size, &stack);
     internal_memcpy(new_ptr, ptr, copy_size);
     return new_ptr;
   }
