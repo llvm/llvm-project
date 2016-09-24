@@ -14,6 +14,7 @@
 #include "CodeGenFunction.h"
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
+#include "CGOpenCLRuntime.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -2221,6 +2222,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BIwrite_pipe: {
     Value *Arg0 = EmitScalarExpr(E->getArg(0)),
           *Arg1 = EmitScalarExpr(E->getArg(1));
+    CGOpenCLRuntime OpenCLRT(CGM);
+    Value *PacketSize = OpenCLRT.getPipeElemSize(E->getArg(0));
+    Value *PacketAlign = OpenCLRT.getPipeElemAlign(E->getArg(0));
 
     // Type of the generic packet parameter.
     unsigned GenericAS =
@@ -2234,19 +2238,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                                              : "__write_pipe_2";
       // Creating a generic function type to be able to call with any builtin or
       // user defined type.
-      llvm::Type *ArgTys[] = {Arg0->getType(), I8PTy};
+      llvm::Type *ArgTys[] = {Arg0->getType(), I8PTy, Int32Ty, Int32Ty};
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
       Value *BCast = Builder.CreatePointerCast(Arg1, I8PTy);
-      return RValue::get(Builder.CreateCall(
-          CGM.CreateRuntimeFunction(FTy, Name), {Arg0, BCast}));
+      return RValue::get(
+          Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
+                             {Arg0, BCast, PacketSize, PacketAlign}));
     } else {
       assert(4 == E->getNumArgs() &&
              "Illegal number of parameters to pipe function");
       const char *Name = (BuiltinID == Builtin::BIread_pipe) ? "__read_pipe_4"
                                                              : "__write_pipe_4";
 
-      llvm::Type *ArgTys[] = {Arg0->getType(), Arg1->getType(), Int32Ty, I8PTy};
+      llvm::Type *ArgTys[] = {Arg0->getType(), Arg1->getType(), Int32Ty, I8PTy,
+                              Int32Ty, Int32Ty};
       Value *Arg2 = EmitScalarExpr(E->getArg(2)),
             *Arg3 = EmitScalarExpr(E->getArg(3));
       llvm::FunctionType *FTy = llvm::FunctionType::get(
@@ -2257,7 +2263,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       if (Arg2->getType() != Int32Ty)
         Arg2 = Builder.CreateZExtOrTrunc(Arg2, Int32Ty);
       return RValue::get(Builder.CreateCall(
-          CGM.CreateRuntimeFunction(FTy, Name), {Arg0, Arg1, Arg2, BCast}));
+          CGM.CreateRuntimeFunction(FTy, Name),
+          {Arg0, Arg1, Arg2, BCast, PacketSize, PacketAlign}));
     }
   }
   // OpenCL v2.0 s6.13.16 ,s9.17.3.5 - Built-in pipe reserve read and write
@@ -2286,9 +2293,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     Value *Arg0 = EmitScalarExpr(E->getArg(0)),
           *Arg1 = EmitScalarExpr(E->getArg(1));
     llvm::Type *ReservedIDTy = ConvertType(getContext().OCLReserveIDTy);
+    CGOpenCLRuntime OpenCLRT(CGM);
+    Value *PacketSize = OpenCLRT.getPipeElemSize(E->getArg(0));
+    Value *PacketAlign = OpenCLRT.getPipeElemAlign(E->getArg(0));
 
     // Building the generic function prototype.
-    llvm::Type *ArgTys[] = {Arg0->getType(), Int32Ty};
+    llvm::Type *ArgTys[] = {Arg0->getType(), Int32Ty, Int32Ty, Int32Ty};
     llvm::FunctionType *FTy = llvm::FunctionType::get(
         ReservedIDTy, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
     // We know the second argument is an integer type, but we may need to cast
@@ -2296,7 +2306,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     if (Arg1->getType() != Int32Ty)
       Arg1 = Builder.CreateZExtOrTrunc(Arg1, Int32Ty);
     return RValue::get(
-        Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name), {Arg0, Arg1}));
+        Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
+                           {Arg0, Arg1, PacketSize, PacketAlign}));
   }
   // OpenCL v2.0 s6.13.16, s9.17.3.5 - Built-in pipe commit read and write
   // functions
@@ -2322,15 +2333,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
 
     Value *Arg0 = EmitScalarExpr(E->getArg(0)),
           *Arg1 = EmitScalarExpr(E->getArg(1));
+    CGOpenCLRuntime OpenCLRT(CGM);
+    Value *PacketSize = OpenCLRT.getPipeElemSize(E->getArg(0));
+    Value *PacketAlign = OpenCLRT.getPipeElemAlign(E->getArg(0));
 
     // Building the generic function prototype.
-    llvm::Type *ArgTys[] = {Arg0->getType(), Arg1->getType()};
+    llvm::Type *ArgTys[] = {Arg0->getType(), Arg1->getType(), Int32Ty, Int32Ty};
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(llvm::Type::getVoidTy(getLLVMContext()),
                                 llvm::ArrayRef<llvm::Type *>(ArgTys), false);
 
     return RValue::get(
-        Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name), {Arg0, Arg1}));
+        Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
+                           {Arg0, Arg1, PacketSize, PacketAlign}));
   }
   // OpenCL v2.0 s6.13.16.4 Built-in pipe query functions
   case Builtin::BIget_pipe_num_packets:
@@ -2343,12 +2358,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
 
     // Building the generic function prototype.
     Value *Arg0 = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgTys[] = {Arg0->getType()};
+    CGOpenCLRuntime OpenCLRT(CGM);
+    Value *PacketSize = OpenCLRT.getPipeElemSize(E->getArg(0));
+    Value *PacketAlign = OpenCLRT.getPipeElemAlign(E->getArg(0));
+    llvm::Type *ArgTys[] = {Arg0->getType(), Int32Ty, Int32Ty};
     llvm::FunctionType *FTy = llvm::FunctionType::get(
         Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
 
-    return RValue::get(
-        Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name), {Arg0}));
+    return RValue::get(Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
+                                          {Arg0, PacketSize, PacketAlign}));
   }
 
   // OpenCL v2.0 s6.13.9 - Address space qualifier functions.

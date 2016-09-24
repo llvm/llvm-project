@@ -783,8 +783,13 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// \brief Returns the replacements corresponding to applying \p Replaces and
 /// cleaning up the code after that on success; otherwise, return an llvm::Error
 /// carrying llvm::StringError.
-/// This also inserts a C++ #include directive into the correct block if the
-/// replacement corresponding to the header insertion has offset UINT_MAX.
+/// This also supports inserting/deleting C++ #include directives:
+/// - If a replacement has offset UINT_MAX, length 0, and a replacement text
+///   that is an #include directive, this will insert the #include into the
+///   correct block in the \p Code.
+/// - If a replacement has offset UINT_MAX, length 1, and a replacement text
+///   that is the name of the header to be removed, the header will be removed
+///   from \p Code if it exists.
 llvm::Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);

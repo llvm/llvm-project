@@ -247,8 +247,12 @@ protected:
     return tooling::Replacement(FileName, Offset, Length, Text);
   }
 
-  tooling::Replacement createInsertion(StringRef HeaderName) {
-    return createReplacement(UINT_MAX, 0, HeaderName);
+  tooling::Replacement createInsertion(StringRef IncludeDirective) {
+    return createReplacement(UINT_MAX, 0, IncludeDirective);
+  }
+
+  tooling::Replacement createDeletion(StringRef HeaderName) {
+    return createReplacement(UINT_MAX, 1, HeaderName);
   }
 
   inline std::string apply(StringRef Code,
@@ -737,6 +741,57 @@ TEST_F(CleanUpReplacementsTest, AddIncludesWithDifferentForms) {
   tooling::Replacements Replaces =
       toReplacements({createInsertion("#include \"vector\""),
                       createInsertion("#include <a.h>")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, SimpleDeleteIncludes) {
+  std::string Code = "#include \"abc.h\"\n"
+                     "#include \"xyz.h\" // comment\n"
+                     "#include \"xyz\"\n"
+                     "int x;\n";
+  std::string Expected = "#include \"xyz\"\n"
+                         "int x;\n";
+  tooling::Replacements Replaces =
+      toReplacements({createDeletion("abc.h"), createDeletion("xyz.h")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, DeleteAllCode) {
+  std::string Code = "#include \"xyz.h\"\n"
+                     "#include <xyz.h>";
+  std::string Expected = "";
+  tooling::Replacements Replaces = toReplacements({createDeletion("xyz.h")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, DeleteAllIncludesWithSameNameIfNoType) {
+  std::string Code = "#include \"xyz.h\"\n"
+                     "#include \"xyz\"\n"
+                     "#include <xyz.h>\n";
+  std::string Expected = "#include \"xyz\"\n";
+  tooling::Replacements Replaces = toReplacements({createDeletion("xyz.h")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, OnlyDeleteHeaderWithType) {
+  std::string Code = "#include \"xyz.h\"\n"
+                     "#include \"xyz\"\n"
+                     "#include <xyz.h>";
+  std::string Expected = "#include \"xyz.h\"\n"
+                         "#include \"xyz\"\n";
+  tooling::Replacements Replaces = toReplacements({createDeletion("<xyz.h>")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, InsertionAndDeleteHeader) {
+  std::string Code = "#include \"a.h\"\n"
+                     "\n"
+                     "#include <vector>\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "\n"
+                         "#include <map>\n";
+  tooling::Replacements Replaces = toReplacements(
+      {createDeletion("<vector>"), createInsertion("#include <map>")});
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 

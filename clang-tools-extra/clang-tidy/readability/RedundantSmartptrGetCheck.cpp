@@ -119,7 +119,7 @@ void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
 
   StringRef SmartptrText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(Smartptr->getSourceRange()),
-      *Result.SourceManager, Result.Context->getLangOpts());
+      *Result.SourceManager, getLangOpts());
   // Replace foo->get() with *foo, and foo.get() with foo.
   std::string Replacement = Twine(IsPtrToPtr ? "*" : "", SmartptrText).str();
   diag(GetCall->getLocStart(), "redundant get() call on smart pointer")
