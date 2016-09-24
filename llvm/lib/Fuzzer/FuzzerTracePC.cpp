@@ -23,18 +23,24 @@ TracePC TPC;
 void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
   uintptr_t Idx = *Guard;
   if (!Idx) return;
-  uint8_t Counter = Counters[Idx % kNumCounters];
+  uint8_t *CounterPtr = &Counters[Idx % kNumCounters];
+  uint8_t Counter = *CounterPtr;
   if (Counter == 0) {
-    AddNewPCID(Idx);
     if (!PCs[Idx]) {
+      AddNewPCID(Idx);
       TotalPCCoverage++;
       PCs[Idx] = PC;
     }
   }
-  if (Counter < 128)
-    Counters[Idx % kNumCounters] = Counter + 1;
-  if (Counter >= 128 || !UseCounters)
+  if (UseCounters) {
+    if (Counter < 128)
+      *CounterPtr = Counter + 1;
+    else
+      *Guard = 0;
+  } else {
+    *CounterPtr = 1;
     *Guard = 0;
+  }
 }
 
 void TracePC::HandleInit(uintptr_t *Start, uintptr_t *Stop) {
@@ -94,6 +100,31 @@ void TracePC::PrintCoverage() {
     if (PCs[i])
       PrintPC("COVERED: %p %F %L\n", "COVERED: %p\n", PCs[i]);
   }
+}
+
+
+void TracePC::UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize) {
+  if (!CurrentElementSize) return;
+  for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++) {
+    if (!CounterMap.Get(Idx)) continue;
+    Feature &Fe = FeatureSet[Idx];
+    Fe.Count++;
+    if (!Fe.SmallestElementSize || Fe.SmallestElementSize > CurrentElementSize) {
+      Fe.SmallestElementIdx = CurrentElementIdx;
+      Fe.SmallestElementSize = CurrentElementSize;
+    }
+  }
+}
+
+void TracePC::PrintFeatureSet() {
+  Printf("[id: cnt idx sz] ");
+  for (size_t i = 0; i < kFeatureSetSize; i++) {
+    auto &Fe = FeatureSet[i];
+    if (!Fe.Count) continue;
+    Printf("[%zd: %zd %zd %zd] ", i, Fe.Count, Fe.SmallestElementIdx,
+           Fe.SmallestElementSize);
+  }
+  Printf("\n");
 }
 
 } // namespace fuzzer

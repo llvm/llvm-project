@@ -12,13 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/Caching.h"
-
-#ifdef HAVE_LLVM_REVISION
-#include "LLVMLTORevision.h"
-#endif
-
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,6 +26,8 @@ static void commitEntry(StringRef TempFilename, StringRef EntryPath) {
   auto EC = sys::fs::rename(TempFilename, EntryPath);
   if (EC) {
     // Renaming failed, probably not the same filesystem, copy and delete.
+    // FIXME: Avoid needing to do this by creating the temporary file in the
+    // cache directory.
     {
       auto ReloadedBufferOrErr = MemoryBuffer::getFile(TempFilename);
       if (auto EC = ReloadedBufferOrErr.getError())
@@ -48,51 +46,54 @@ static void commitEntry(StringRef TempFilename, StringRef EntryPath) {
   }
 }
 
-CacheObjectOutput::~CacheObjectOutput() {
-  if (EntryPath.empty())
-    // The entry was never used by the client (tryLoadFromCache() wasn't called)
-    return;
-  // TempFilename is only set if getStream() was called, i.e. on cache miss when
-  // tryLoadFromCache() returned false. And EntryPath is valid if a Key was
-  // submitted, otherwise it has been set to CacheDirectoryPath in
-  // tryLoadFromCache.
-  if (!TempFilename.empty()) {
-    if (EntryPath == CacheDirectoryPath)
-      // The Key supplied to tryLoadFromCache was empty, do not commit the temp.
-      EntryPath = TempFilename;
-    else
-      // We commit the tempfile into the cache now, by moving it to EntryPath.
-      commitEntry(TempFilename, EntryPath);
-  }
-  // Supply the cache path to the user.
-  AddBuffer(EntryPath.str());
-}
+NativeObjectCache lto::localCache(std::string CacheDirectoryPath,
+                                  AddFileFn AddFile) {
+  return [=](unsigned Task, StringRef Key) -> AddStreamFn {
+    // First, see if we have a cache hit.
+    SmallString<64> EntryPath;
+    sys::path::append(EntryPath, CacheDirectoryPath, Key);
+    if (sys::fs::exists(EntryPath)) {
+      AddFile(Task, EntryPath);
+      return AddStreamFn();
+    }
 
-// Return an allocated stream for the output, or null in case of failure.
-std::unique_ptr<raw_pwrite_stream> CacheObjectOutput::getStream() {
-  assert(!EntryPath.empty() && "API Violation: client didn't call "
-                               "tryLoadFromCache() before getStream()");
-  // Write to a temporary to avoid race condition
-  int TempFD;
-  std::error_code EC =
-      sys::fs::createTemporaryFile("Thin", "tmp.o", TempFD, TempFilename);
-  if (EC) {
-    errs() << "Error: " << EC.message() << "\n";
-    report_fatal_error("ThinLTO: Can't get a temporary file");
-  }
-  return llvm::make_unique<raw_fd_ostream>(TempFD, /* ShouldClose */ true);
-}
+    // This native object stream is responsible for commiting the resulting
+    // file to the cache and calling AddFile to add it to the link.
+    struct CacheStream : NativeObjectStream {
+      AddFileFn AddFile;
+      std::string TempFilename;
+      std::string EntryPath;
+      unsigned Task;
 
-// Try loading from a possible cache first, return true on cache hit.
-bool CacheObjectOutput::tryLoadFromCache(StringRef Key) {
-  assert(!CacheDirectoryPath.empty() &&
-         "CacheObjectOutput was initialized without a cache path");
-  if (Key.empty()) {
-    // Client didn't compute a valid key. EntryPath has been set to
-    // CacheDirectoryPath.
-    EntryPath = CacheDirectoryPath;
-    return false;
-  }
-  sys::path::append(EntryPath, CacheDirectoryPath, Key);
-  return sys::fs::exists(EntryPath);
+      CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddFileFn AddFile,
+                  std::string TempFilename, std::string EntryPath,
+                  unsigned Task)
+          : NativeObjectStream(std::move(OS)), AddFile(AddFile),
+            TempFilename(TempFilename), EntryPath(EntryPath), Task(Task) {}
+
+      ~CacheStream() {
+        // Make sure the file is closed before committing it.
+        OS.reset();
+        commitEntry(TempFilename, EntryPath);
+        AddFile(Task, EntryPath);
+      }
+    };
+
+    return [=](size_t Task) -> std::unique_ptr<NativeObjectStream> {
+      // Write to a temporary to avoid race condition
+      int TempFD;
+      SmallString<64> TempFilename;
+      std::error_code EC =
+          sys::fs::createTemporaryFile("Thin", "tmp.o", TempFD, TempFilename);
+      if (EC) {
+        errs() << "Error: " << EC.message() << "\n";
+        report_fatal_error("ThinLTO: Can't get a temporary file");
+      }
+
+      // This CacheStream will move the temporary file into the cache when done.
+      return llvm::make_unique<CacheStream>(
+          llvm::make_unique<raw_fd_ostream>(TempFD, /* ShouldClose */ true),
+          AddFile, TempFilename.str(), EntryPath.str(), Task);
+    };
+  };
 }

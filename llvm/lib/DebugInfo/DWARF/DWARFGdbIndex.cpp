@@ -18,8 +18,8 @@ using namespace llvm;
 // https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
 
 void DWARFGdbIndex::dumpCUList(raw_ostream &OS) const {
-  OS << format("\n  CU list offset = 0x%x, has %zu entries:", CuListOffset,
-               CuList.size())
+  OS << format("\n  CU list offset = 0x%x, has %" PRId64 " entries:",
+               CuListOffset, (uint64_t)CuList.size())
      << '\n';
   uint32_t I = 0;
   for (const CompUnitEntry &CU : CuList)
@@ -28,8 +28,8 @@ void DWARFGdbIndex::dumpCUList(raw_ostream &OS) const {
 }
 
 void DWARFGdbIndex::dumpAddressArea(raw_ostream &OS) const {
-  OS << format("\n  Address area offset = 0x%x, has %zu entries:",
-               AddressAreaOffset, AddressArea.size())
+  OS << format("\n  Address area offset = 0x%x, has %" PRId64 " entries:",
+               AddressAreaOffset, (uint64_t)AddressArea.size())
      << '\n';
   for (const AddressEntry &Addr : AddressArea)
     OS << format(
@@ -38,8 +38,9 @@ void DWARFGdbIndex::dumpAddressArea(raw_ostream &OS) const {
 }
 
 void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
-  OS << format("\n  Symbol table offset = 0x%x, size = %zu, filled slots:",
-               SymbolTableOffset, SymbolTable.size())
+  OS << format("\n  Symbol table offset = 0x%x, size = %" PRId64
+               ", filled slots:",
+               SymbolTableOffset, (uint64_t)SymbolTable.size())
      << '\n';
   uint32_t I = -1;
   for (const SymTableEntry &E : SymbolTable) {
@@ -66,8 +67,8 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
 }
 
 void DWARFGdbIndex::dumpConstantPool(raw_ostream &OS) const {
-  OS << format("\n  Constant pool offset = 0x%x, has %zu CU vectors:",
-               ConstantPoolOffset, ConstantPoolVectors.size());
+  OS << format("\n  Constant pool offset = 0x%x, has %" PRId64 " CU vectors:",
+               ConstantPoolOffset, (uint64_t)ConstantPoolVectors.size());
   uint32_t I = 0;
   for (const auto &V : ConstantPoolVectors) {
     OS << format("\n    %d(0x%x): ", I++, V.first);

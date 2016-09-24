@@ -72,7 +72,7 @@ bool RegisterBank::operator==(const RegisterBank &OtherRB) const {
   return &OtherRB == this;
 }
 
-void RegisterBank::dump(const TargetRegisterInfo *TRI) const {
+LLVM_DUMP_METHOD void RegisterBank::dump(const TargetRegisterInfo *TRI) const {
   print(dbgs(), /* IsForDebug */ true, TRI);
 }
 

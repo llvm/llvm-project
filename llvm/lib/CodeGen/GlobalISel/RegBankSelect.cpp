@@ -37,13 +37,13 @@ static cl::opt<RegBankSelect::Mode> RegBankSelectMode(
                clEnumValEnd));
 
 char RegBankSelect::ID = 0;
-INITIALIZE_PASS_BEGIN(RegBankSelect, "regbankselect",
+INITIALIZE_PASS_BEGIN(RegBankSelect, DEBUG_TYPE,
                       "Assign register bank of generic virtual registers",
                       false, false);
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RegBankSelect, "regbankselect",
+INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
                     false)
 

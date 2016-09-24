@@ -199,34 +199,20 @@ bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
-/// Monolithic LTO does not support caching (yet), this is a convenient wrapper
-/// around AddOutput to workaround this.
-static AddOutputFn getUncachedOutputWrapper(AddOutputFn &AddOutput,
-                                            unsigned Task) {
-  return [Task, &AddOutput](unsigned TaskId) {
-    auto Output = AddOutput(Task);
-    if (Output->isCachingEnabled() && Output->tryLoadFromCache(""))
-      report_fatal_error("Cache hit without a valid key?");
-    assert(Task == TaskId && "Unexpexted TaskId mismatch");
-    return Output;
-  };
-}
-
-void codegen(Config &Conf, TargetMachine *TM, AddOutputFn AddOutput,
+void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
              unsigned Task, Module &Mod) {
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
-  auto Output = AddOutput(Task);
-  std::unique_ptr<raw_pwrite_stream> OS = Output->getStream();
+  auto Stream = AddStream(Task);
   legacy::PassManager CodeGenPasses;
-  if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
+  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
                               TargetMachine::CGFT_ObjectFile))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(Mod);
 }
 
-void splitCodeGen(Config &C, TargetMachine *TM, AddOutputFn AddOutput,
+void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
                   unsigned ParallelCodeGenParallelismLevel,
                   std::unique_ptr<Module> Mod) {
   ThreadPool CodegenThreadPool(ParallelCodeGenParallelismLevel);
@@ -260,9 +246,7 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddOutputFn AddOutput,
               std::unique_ptr<TargetMachine> TM =
                   createTargetMachine(C, MPartInCtx->getTargetTriple(), T);
 
-              codegen(C, TM.get(),
-                      getUncachedOutputWrapper(AddOutput, ThreadId), ThreadId,
-                      *MPartInCtx);
+              codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx);
             },
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
@@ -299,7 +283,7 @@ static void handleAsmUndefinedRefs(Module &Mod, TargetMachine &TM) {
   updateCompilerUsed(Mod, TM, AsmUndefinedRefs);
 }
 
-Error lto::backend(Config &C, AddOutputFn AddOutput,
+Error lto::backend(Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel,
                    std::unique_ptr<Module> Mod) {
   Expected<const Target *> TOrErr = initAndLookupTarget(C, *Mod);
@@ -316,15 +300,15 @@ Error lto::backend(Config &C, AddOutputFn AddOutput,
       return Error();
 
   if (ParallelCodeGenParallelismLevel == 1) {
-    codegen(C, TM.get(), getUncachedOutputWrapper(AddOutput, 0), 0, *Mod);
+    codegen(C, TM.get(), AddStream, 0, *Mod);
   } else {
-    splitCodeGen(C, TM.get(), AddOutput, ParallelCodeGenParallelismLevel,
+    splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
                  std::move(Mod));
   }
   return Error();
 }
 
-Error lto::thinBackend(Config &Conf, unsigned Task, AddOutputFn AddOutput,
+Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
@@ -339,7 +323,7 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddOutputFn AddOutput,
   handleAsmUndefinedRefs(Mod, *TM);
 
   if (Conf.CodeGenOnly) {
-    codegen(Conf, TM.get(), AddOutput, Task, Mod);
+    codegen(Conf, TM.get(), AddStream, Task, Mod);
     return Error();
   }
 
@@ -379,6 +363,6 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddOutputFn AddOutput,
   if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLto=*/true))
     return Error();
 
-  codegen(Conf, TM.get(), AddOutput, Task, Mod);
+  codegen(Conf, TM.get(), AddStream, Task, Mod);
   return Error();
 }

@@ -115,6 +115,7 @@ private:
   void ShuffleCorpus(UnitVector *V);
   void TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
                                bool DuringInitialCorpusExecution);
+  void AddToCorpusAndMaybeRerun(const Unit &U);
 
   bool UpdateMaxCoverage();
 

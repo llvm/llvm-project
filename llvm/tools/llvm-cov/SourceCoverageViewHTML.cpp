@@ -298,7 +298,7 @@ static void emitColumnLabelsForIndex(raw_ostream &OS) {
 void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
                                           const FileCoverageSummary &FCS,
                                           bool IsTotals) const {
-  SmallVector<std::string, 4> Columns;
+  SmallVector<std::string, 8> Columns;
 
   // Format a coverage triple and add the result to the list of columns.
   auto AddCoverageTripleToColumn = [&Columns](unsigned Hit, unsigned Total,
@@ -318,13 +318,13 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
 
   // Simplify the display file path, and wrap it in a link if requested.
   std::string Filename;
-  SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
-  sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
-  sys::path::native(LinkTextStr);
-  std::string LinkText = escape(LinkTextStr, Opts);
   if (IsTotals) {
-    Filename = LinkText;
+    Filename = "TOTALS";
   } else {
+    SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
+    sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
+    sys::path::native(LinkTextStr);
+    std::string LinkText = escape(LinkTextStr, Opts);
     std::string LinkTarget =
         escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
     Filename = a(LinkTarget, LinkText);
@@ -347,7 +347,7 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
 }
 
 Error CoveragePrinterHTML::createIndexFile(
-    ArrayRef<StringRef> SourceFiles,
+    ArrayRef<std::string> SourceFiles,
     const coverage::CoverageMapping &Coverage) {
   // Emit the default stylesheet.
   auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
