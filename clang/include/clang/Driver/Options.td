@@ -820,6 +820,11 @@ def flto : Flag<["-"], "flto">, Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Enable LTO in 'full' mode">;
 def fno_lto : Flag<["-"], "fno-lto">, Group<f_Group>,
   HelpText<"Disable LTO mode (default)">;
+def flto_jobs_EQ : Joined<["-"], "flto-jobs=">,
+  Flags<[CC1Option]>, Group<f_Group>,
+  HelpText<"Controls the backend parallelism of -flto=thin (default "
+           "of 0 means the number of threads will be derived from "
+           "the number of CPUs detected)">;
 def fthinlto_index_EQ : Joined<["-"], "fthinlto-index=">,
   Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Perform ThinLTO importing using provided function summary index">;

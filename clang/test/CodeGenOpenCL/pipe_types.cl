@@ -41,7 +41,7 @@ void test_reserved_read_pipe(global struct Person *SDst,
                              read_only pipe struct Person SPipe) {
 // CHECK: define void @test_reserved_read_pipe
   read_pipe (SPipe, SDst);
-  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_t* %{{.*}}, i8* %{{.*}})
+  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_t* %{{.*}}, i8* %{{.*}}, i32 16, i32 8)
   read_pipe (SPipe, SDst);
-  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_t* %{{.*}}, i8* %{{.*}})
+  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_t* %{{.*}}, i8* %{{.*}}, i32 16, i32 8)
 }
