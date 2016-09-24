@@ -279,6 +279,16 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
         }
   }
 
+  if (auto *II = dyn_cast<InvokeInst>(TI)) {
+    // If the terminator is an InvokeInst, consider only the normal destination
+    // block.
+    if (PostDominatedByColdCall.count(II->getNormalDest()))
+      PostDominatedByColdCall.insert(BB);
+    // Return false here so that edge weights for InvokeInst could be decided
+    // in calcInvokeHeuristics().
+    return false;
+  }
+
   // Skip probabilities if this block has a single successor.
   if (TI->getNumSuccessors() == 1 || ColdEdges.empty())
     return false;

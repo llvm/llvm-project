@@ -14633,28 +14633,22 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  LLVMContext *Context = DAG.getContext();
   SDValue Mag = Op.getOperand(0);
   SDValue Sign = Op.getOperand(1);
   SDLoc dl(Op);
-  MVT VT = Op.getSimpleValueType();
-  MVT SignVT = Sign.getSimpleValueType();
-  bool IsF128 = (VT == MVT::f128);
 
   // If the sign operand is smaller, extend it first.
-  if (SignVT.bitsLT(VT)) {
+  MVT VT = Op.getSimpleValueType();
+  if (Sign.getSimpleValueType().bitsLT(VT))
     Sign = DAG.getNode(ISD::FP_EXTEND, dl, VT, Sign);
-    SignVT = VT;
-  }
+
   // And if it is bigger, shrink it first.
-  if (SignVT.bitsGT(VT)) {
+  if (Sign.getSimpleValueType().bitsGT(VT))
     Sign = DAG.getNode(ISD::FP_ROUND, dl, VT, Sign, DAG.getIntPtrConstant(1, dl));
-    SignVT = VT;
-  }
 
   // At this point the operands and the result should have the same
   // type, and that won't be f80 since that is not custom lowered.
+  bool IsF128 = (VT == MVT::f128);
   assert((VT == MVT::f64 || VT == MVT::f32 || IsF128) &&
          "Unexpected type in LowerFCOPYSIGN");
 
@@ -14663,61 +14657,46 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
           (IsF128 ? APFloat::IEEEquad : APFloat::IEEEsingle);
   const unsigned SizeInBits = VT.getSizeInBits();
 
-  SmallVector<Constant *, 4> CV(
-      VT == MVT::f64 ? 2 : (IsF128 ? 1 : 4),
-      ConstantFP::get(*Context, APFloat(Sem, APInt(SizeInBits, 0))));
+  // Perform all logic operations as 16-byte vectors because there are no
+  // scalar FP logic instructions in SSE.
+  MVT LogicVT =
+      (VT == MVT::f64) ? MVT::v2f64 : (IsF128 ? MVT::f128 : MVT::v4f32);
+  SDValue SignMask = DAG.getConstantFP(
+      APFloat(Sem, APInt::getSignBit(SizeInBits)), dl, LogicVT);
 
   // First, clear all bits but the sign bit from the second operand (sign).
-  CV[0] = ConstantFP::get(*Context,
-                          APFloat(Sem, APInt::getSignBit(SizeInBits)));
-  Constant *C = ConstantVector::get(CV);
-  auto PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-  SDValue CPIdx = DAG.getConstantPool(C, PtrVT, 16);
-
-  // Perform all logic operations as 16-byte vectors because there are no
-  // scalar FP logic instructions in SSE. This allows load folding of the
-  // constants into the logic instructions.
-  MVT LogicVT = (VT == MVT::f64) ? MVT::v2f64 : (IsF128 ? MVT::f128 : MVT::v4f32);
-  SDValue SignMask =
-      DAG.getLoad(LogicVT, dl, DAG.getEntryNode(), CPIdx,
-                  MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-                  /* Alignment = */ 16);
   if (!IsF128)
     Sign = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Sign);
   SDValue SignBit = DAG.getNode(X86ISD::FAND, dl, LogicVT, Sign, SignMask);
 
   // Next, clear the sign bit from the first operand (magnitude).
   // If it's a constant, we can clear it here.
+  SDValue MagMask = DAG.getConstantFP(
+      APFloat(Sem, ~APInt::getSignBit(SizeInBits)), dl, LogicVT);
+
+  // FIXME: This check shouldn't be necessary. Logic instructions with constant
+  // operands should be folded!
+  SDValue MagBits;
   if (ConstantFPSDNode *Op0CN = dyn_cast<ConstantFPSDNode>(Mag)) {
     APFloat APF = Op0CN->getValueAPF();
     // If the magnitude is a positive zero, the sign bit alone is enough.
     if (APF.isPosZero())
       return IsF128 ? SignBit :
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SignVT, SignBit,
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, SignBit,
                       DAG.getIntPtrConstant(0, dl));
     APF.clearSign();
-    CV[0] = ConstantFP::get(*Context, APF);
+    MagBits = DAG.getConstantFP(APF, dl, LogicVT);
   } else {
-    CV[0] = ConstantFP::get(*Context,
-                            APFloat(Sem, ~APInt::getSignBit(SizeInBits)));
-  }
-  C = ConstantVector::get(CV);
-  CPIdx = DAG.getConstantPool(C, PtrVT, 16);
-  SDValue MagMask =
-      DAG.getLoad(LogicVT, dl, DAG.getEntryNode(), CPIdx,
-                  MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-                  /* Alignment = */ 16);
-  // If the magnitude operand wasn't a constant, we need to AND out the sign.
-  SDValue MagBits = MagMask;
-  if (!isa<ConstantFPSDNode>(Mag)) {
+    // If the magnitude operand wasn't a constant, we need to AND out the sign.
     if (!IsF128)
       Mag = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Mag);
     MagBits = DAG.getNode(X86ISD::FAND, dl, LogicVT, Mag, MagMask);
   }
+
   // OR the magnitude value with the sign bit.
   SDValue Or = DAG.getNode(X86ISD::FOR, dl, LogicVT, MagBits, SignBit);
   return IsF128 ? Or :
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SignVT, Or,
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Or,
                   DAG.getIntPtrConstant(0, dl));
 }
 
