@@ -15995,7 +15995,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (Subtarget.hasAVX512()) {
         SDValue Cmp = DAG.getNode(X86ISD::FSETCCM, DL, MVT::i1, CondOp0,
                                   CondOp1, DAG.getConstant(SSECC, DL, MVT::i8));
-        return DAG.getNode(X86ISD::SELECT, DL, VT, Cmp, Op1, Op2);
+        return DAG.getNode(VT.isVector() ? X86ISD::SELECT : X86ISD::SELECTS,
+                           DL, VT, Cmp, Op1, Op2);
       }
 
       SDValue Cmp = DAG.getNode(X86ISD::FSETCC, DL, VT, CondOp0, CondOp1,
@@ -17529,7 +17530,7 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
 
   if (PreservedSrc.isUndef())
     PreservedSrc = getZeroVector(VT, Subtarget, DAG, dl);
-  return DAG.getNode(X86ISD::SELECT, dl, VT, IMask, Op, PreservedSrc);
+  return DAG.getNode(X86ISD::SELECTS, dl, VT, IMask, Op, PreservedSrc);
 }
 
 static int getSEHRegistrationNodeSize(const Function *Fn) {
@@ -17669,8 +17670,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       // (2) With rounding mode and sae - 7 operands.
       if (Op.getNumOperands() == 6) {
         SDValue Sae  = Op.getOperand(5);
-        unsigned Opc = IntrData->Opc1 ? IntrData->Opc1 : IntrData->Opc0;
-        return getScalarMaskingNode(DAG.getNode(Opc, dl, VT, Src1, Src2,
+        return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2,
                                                 Sae),
                                     Mask, Src0, Subtarget, DAG);
       }
@@ -22626,6 +22626,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::COMPRESS:           return "X86ISD::COMPRESS";
   case X86ISD::EXPAND:             return "X86ISD::EXPAND";
   case X86ISD::SELECT:             return "X86ISD::SELECT";
+  case X86ISD::SELECTS:            return "X86ISD::SELECTS";
   case X86ISD::ADDSUB:             return "X86ISD::ADDSUB";
   case X86ISD::RCP28:              return "X86ISD::RCP28";
   case X86ISD::RCP28S:             return "X86ISD::RCP28S";
@@ -26422,13 +26423,18 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       bool CanFold = false;
       switch (Opcode) {
       default : break;
-      case ISD::ADD :
-      case ISD::FADD :
-      case ISD::SUB :
-      case ISD::FSUB :
-      case ISD::MUL :
-      case ISD::FMUL :
-        CanFold = true;
+      case ISD::ADD:
+      case ISD::SUB:
+      case ISD::MUL:
+        // isOperationLegal lies for integer ops on floating point types.
+        CanFold = VT.isInteger();
+        break;
+      case ISD::FADD:
+      case ISD::FSUB:
+      case ISD::FMUL:
+        // isOperationLegal lies for floating point ops on integer types.
+        CanFold = VT.isFloatingPoint();
+        break;
       }
 
       unsigned SVTNumElts = SVT.getVectorNumElements();
@@ -31064,9 +31070,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // For an SSE1-only target, lower to X86ISD::CMPP early to avoid scalarization
-  // via legalization because v4i32 is not a legal type.
-  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32)
+  // For an SSE1-only target, lower a comparison of v4f32 to X86ISD::CMPP early
+  // to avoid scalarization via legalization because v4i32 is not a legal type.
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32 &&
+      LHS.getValueType() == MVT::v4f32)
     return LowerVSETCC(SDValue(N, 0), Subtarget, DAG);
 
   return SDValue();

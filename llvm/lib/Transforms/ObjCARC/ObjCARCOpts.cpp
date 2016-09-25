@@ -53,6 +53,11 @@ using namespace llvm::objcarc;
 /// \brief This is similar to GetRCIdentityRoot but it stops as soon
 /// as it finds a value with multiple uses.
 static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
+  // ConstantData (like ConstantPointerNull and UndefValue) is used across
+  // modules.  It's never a single-use value.
+  if (isa<ConstantData>(Arg))
+    return nullptr;
+
   if (Arg->hasOneUse()) {
     if (const BitCastInst *BC = dyn_cast<BitCastInst>(Arg))
       return FindSingleUseIdentifiedObject(BC->getOperand(0));
@@ -644,6 +649,12 @@ void ObjCARCOpt::OptimizeAutoreleaseRVCall(Function &F,
                                            ARCInstKind &Class) {
   // Check for a return of the pointer value.
   const Value *Ptr = GetArgRCIdentityRoot(AutoreleaseRV);
+
+  // If the argument is ConstantPointerNull or UndefValue, its other users
+  // aren't actually interesting to look at.
+  if (isa<ConstantData>(Ptr))
+    return;
+
   SmallVector<const Value *, 2> Users;
   Users.push_back(Ptr);
   do {

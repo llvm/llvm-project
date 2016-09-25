@@ -148,3 +148,66 @@ define <4 x float> @PR28044(<4 x float> %a0, <4 x float> %a1) nounwind {
   ret <4 x float> %res
 }
 
+; Don't crash trying to do the impossible: an integer vector comparison doesn't exist, so we must scalarize.
+; https://llvm.org/bugs/show_bug.cgi?id=30512
+
+define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
+; X32-LABEL: PR30512:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    sete %cl
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    sete %dl
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    sete %bl
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    sete %al
+; X32-NEXT:    movl %eax, 12(%ebp)
+; X32-NEXT:    movl %ebx, 8(%ebp)
+; X32-NEXT:    movl %edx, 4(%ebp)
+; X32-NEXT:    movl %ecx, (%ebp)
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    retl $4
+;
+; X64-LABEL: PR30512:
+; X64:       # BB#0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl %r9d, %esi
+; X64-NEXT:    sete %al
+; X64-NEXT:    xorl %esi, %esi
+; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %edx
+; X64-NEXT:    sete %sil
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %ecx
+; X64-NEXT:    sete %dl
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %r8d
+; X64-NEXT:    sete %cl
+; X64-NEXT:    movl %ecx, 12(%rdi)
+; X64-NEXT:    movl %edx, 8(%rdi)
+; X64-NEXT:    movl %esi, 4(%rdi)
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    retq
+  %cmp = icmp eq <4 x i32> %x, %y
+  %zext = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %zext
+}
+

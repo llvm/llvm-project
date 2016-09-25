@@ -297,6 +297,11 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
   if (!extractAlignmentInfo(ACall, AAPtr, AlignSCEV, OffSCEV))
     return false;
 
+  // Skip ConstantPointerNull and UndefValue.  Assumptions on these shouldn't
+  // affect other users.
+  if (isa<ConstantData>(AAPtr))
+    return false;
+
   const SCEV *AASCEV = SE->getSCEV(AAPtr);
 
   // Apply the assumption to all other users of the specified pointer.
