@@ -15,6 +15,7 @@
 #include <cassert>
 #include <iterator>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
@@ -34,7 +35,7 @@ int main()
         assert(c == c0);
         assert(c.get_allocator() == A(10));
     }
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     {
         typedef int T;
         typedef other_allocator<int> A;
@@ -49,8 +50,6 @@ int main()
         assert(c == c0);
         assert(c.get_allocator() == A(-2));
     }
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if TEST_STD_VER >= 11
     {
         typedef int T;
         typedef min_allocator<int> A;

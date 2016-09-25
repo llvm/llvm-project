@@ -22,7 +22,6 @@ public:
   void Initialize(MCContext &ctx, const TargetMachine &TM) override;
 
   MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
-                                    Mangler &Mang,
                                     const TargetMachine &TM) const override;
 
 private:

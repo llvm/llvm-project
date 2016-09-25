@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 struct A
 {
@@ -36,14 +38,14 @@ struct B
 {
     typedef T value_type;
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#if TEST_STD_VER >= 11
     template <class U, class ...Args>
     void construct(U* p, Args&& ...args)
     {
         ++b_construct;
         ::new ((void*)p) U(std::forward<Args>(args)...);
     }
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif
 };
 
 struct A0
@@ -105,7 +107,7 @@ int main()
         std::allocator_traits<A<int> >::construct(a, (A2*)&a2, 'd', 5);
         assert(A2::count == 1);
     }
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#if TEST_STD_VER >= 11
     {
         A0::count = 0;
         b_construct = 0;
@@ -139,5 +141,5 @@ int main()
         assert(A2::count == 1);
         assert(b_construct == 1);
     }
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif
 }
