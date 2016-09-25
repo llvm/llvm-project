@@ -871,11 +871,11 @@ TEST(StringRefTest, FindIf) {
 
   auto IsPunct = [](char c) { return ::ispunct(c); };
   auto IsAlpha = [](char c) { return ::isalpha(c); };
-  EXPECT_EQ(4, Punct.find_if(IsPunct));
+  EXPECT_EQ(4U, Punct.find_if(IsPunct));
   EXPECT_EQ(StringRef::npos, NoPunct.find_if(IsPunct));
   EXPECT_EQ(StringRef::npos, Empty.find_if(IsPunct));
 
-  EXPECT_EQ(4, Punct.find_if_not(IsAlpha));
+  EXPECT_EQ(4U, Punct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, NoPunct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, Empty.find_if_not(IsAlpha));
 }
