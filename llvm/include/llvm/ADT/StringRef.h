@@ -379,6 +379,8 @@ namespace llvm {
     LLVM_ATTRIBUTE_ALWAYS_INLINE
     bool contains(StringRef Other) const { return find(Other) != npos; }
 
+    /// Return true if the given character is contained in *this, and false
+    /// otherwise.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
     bool contains(char C) const { return find_first_of(C) != npos; }
 
