@@ -1491,9 +1491,7 @@ Expr ScriptParser::readPrimary() {
     expect("(");
     StringRef Tok = next();
     expect(")");
-    return [=](uint64_t Dot) {
-      return ScriptBase->isDefined(Tok) ? 1 : 0;
-    };
+    return [=](uint64_t Dot) { return ScriptBase->isDefined(Tok) ? 1 : 0; };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");
