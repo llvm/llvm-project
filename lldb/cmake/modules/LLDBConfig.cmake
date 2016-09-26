@@ -199,6 +199,15 @@ else ()
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
+if(NOT LLDB_BUILT_STANDALONE)
+  if (LLVM_EXTERNAL_SWIFT_SOURCE_DIR)
+    include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/include)
+  else ()
+    include_directories(${CMAKE_SOURCE_DIR}/tools/swift/include)
+  endif ()
+  include_directories("${CMAKE_CURRENT_BINARY_DIR}/../swift/include")
+endif()
+
 # Disable GCC warnings
 check_cxx_compiler_flag("-Wno-deprecated-declarations"
                         CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS)
