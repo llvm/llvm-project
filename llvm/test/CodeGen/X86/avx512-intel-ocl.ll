@@ -22,7 +22,7 @@ declare i32 @func_int(i32, i32)
 
 ; X64-LABEL: testf16_inp
 ; X64: vaddps  {{.*}}, {{%zmm[0-1]}}
-; X64: leaq    {{.*}}(%rsp), %rdi
+; X64: movq    %rsp, %rdi
 ; X64: call
 ; X64: ret
 

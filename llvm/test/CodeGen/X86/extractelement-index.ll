@@ -414,7 +414,7 @@ define i8 @extractelement_v32i8_var(<32 x i8> %a, i256 %i) nounwind {
 ; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm0, (%rsp)
-; SSE-NEXT:    leaq (%rsp), %rax
+; SSE-NEXT:    movq %rsp, %rax
 ; SSE-NEXT:    movb (%rdi,%rax), %al
 ; SSE-NEXT:    movq %rbp, %rsp
 ; SSE-NEXT:    popq %rbp
@@ -427,7 +427,7 @@ define i8 @extractelement_v32i8_var(<32 x i8> %a, i256 %i) nounwind {
 ; AVX-NEXT:    andq $-32, %rsp
 ; AVX-NEXT:    subq $64, %rsp
 ; AVX-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX-NEXT:    leaq (%rsp), %rax
+; AVX-NEXT:    movq %rsp, %rax
 ; AVX-NEXT:    movb (%rdi,%rax), %al
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp

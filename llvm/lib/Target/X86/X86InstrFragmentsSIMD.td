@@ -959,7 +959,8 @@ def masked_load_unaligned : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 // do not support vector types (llvm-tblgen will fail).
 def X86mstore : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                         (masked_store node:$src1, node:$src2, node:$src3), [{
-  return !cast<MaskedStoreSDNode>(N)->isTruncatingStore();
+  return (!cast<MaskedStoreSDNode>(N)->isTruncatingStore()) &&
+         (!cast<MaskedStoreSDNode>(N)->isCompressingStore());
 }]>;
 
 def masked_store_aligned128 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
@@ -986,6 +987,11 @@ def masked_store_aligned512 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 def masked_store_unaligned : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                          (X86mstore node:$src1, node:$src2, node:$src3), [{
   return isa<MaskedStoreSDNode>(N);
+}]>;
+
+def X86mCompressingStore : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                             (masked_store node:$src1, node:$src2, node:$src3), [{
+    return cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 
 // masked truncstore fragments
