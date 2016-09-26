@@ -27,8 +27,8 @@ sub_sat(T##N x, T##N y) \
 ATTR u##T##N \
 sub_sat(u##T##N x, u##T##N y) \
 { \
-    uint##N s = convert_uint##N(x) - convert_uint##N(y); \
-    return convert_u##T##N(max(s, (uint##N) 0)); \
+    int##N s = convert_int##N(x) - convert_int##N(y); \
+    return convert_u##T##N(max(s, (int##N) 0)); \
 }
 
 #define GEN(T) \
