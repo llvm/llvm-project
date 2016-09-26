@@ -148,6 +148,8 @@ public:
 
   bool GetEnableNotifyAboutFixIts() const;
 
+  bool GetEnableSaveObjects() const;
+
   bool GetEnableSyntheticValue() const;
 
   uint32_t GetMaximumNumberOfChildrenToDisplay() const;

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -322,6 +323,32 @@ void IRExecutionUnit::GetRunnableInfo(Error &error, lldb::addr_t &func_addr,
     error.SetErrorStringWithFormat("Couldn't JIT the function: %s",
                                    error_string.c_str());
     return;
+  }
+
+  class ObjectDumper : public llvm::ObjectCache {
+  public:
+    void notifyObjectCompiled(const llvm::Module *module,
+                              llvm::MemoryBufferRef object) override {
+      int fd = 0;
+      llvm::SmallVector<char, 256> result_path;
+      std::string object_name_model =
+          "jit-object-" + module->getModuleIdentifier() + "-%%%.o";
+      (void)llvm::sys::fs::createUniqueFile(object_name_model, fd, result_path);
+      llvm::raw_fd_ostream fds(fd, true);
+      fds.write(object.getBufferStart(), object.getBufferSize());
+    }
+
+    std::unique_ptr<llvm::MemoryBuffer>
+    getObject(const llvm::Module *module) override {
+      // Return nothing - we're just abusing the object-cache mechanism to dump
+      // objects.
+      return nullptr;
+    }
+  };
+
+  if (process_sp->GetTarget().GetEnableSaveObjects()) {
+    m_object_cache_ap = llvm::make_unique<ObjectDumper>();
+    m_execution_engine_ap->setObjectCache(m_object_cache_ap.get());
   }
 
   // Make sure we see all sections, including ones that don't have
