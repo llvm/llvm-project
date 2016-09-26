@@ -60,21 +60,27 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
   // might be on global namespace or found by ADL, might be a template, etc.
   // For now, lets keep a list of known standard types.
 
-  const auto IsAKnownSmartptr = recordDecl(
-      anyOf(hasName("::std::unique_ptr"), hasName("::std::shared_ptr")));
+  const auto IsAKnownSmartptr =
+      recordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr"));
 
   // Matches against nullptr.
   Finder->addMatcher(
-      binaryOperator(
-          anyOf(hasOperatorName("=="), hasOperatorName("!=")),
-          hasEitherOperand(ignoringImpCasts(cxxNullPtrLiteralExpr())),
-          hasEitherOperand(callToGet(IsAKnownSmartptr))),
+      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+                     hasEitherOperand(ignoringImpCasts(
+                         anyOf(cxxNullPtrLiteralExpr(), gnuNullExpr(),
+                               integerLiteral(equals(0))))),
+                     hasEitherOperand(callToGet(IsAKnownSmartptr))),
       Callback);
-  // TODO: Catch ptr.get() == other_ptr.get()
+
+  // Matches against if(ptr.get())
+  Finder->addMatcher(
+      ifStmt(hasCondition(ignoringImpCasts(callToGet(IsAKnownSmartptr)))),
+      Callback);
+
+  // FIXME: Match and fix if (l.get() == r.get()).
 }
 
-
-}  // namespace
+} // namespace
 
 void RedundantSmartptrGetCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
@@ -102,10 +108,11 @@ bool allReturnTypesMatch(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<Type>("getType")->getUnqualifiedDesugaredType();
   return OpArrowType == OpStarType && OpArrowType == GetType;
 }
-}  // namespace
+} // namespace
 
 void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
-  if (!allReturnTypesMatch(Result)) return;
+  if (!allReturnTypesMatch(Result))
+    return;
 
   bool IsPtrToPtr = Result.Nodes.getNodeAs<Decl>("ptr_to_ptr") != nullptr;
   bool IsMemberExpr = Result.Nodes.getNodeAs<Expr>("memberExpr") != nullptr;

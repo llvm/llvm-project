@@ -27,7 +27,7 @@ declare <16 x float> @func_float16(<16 x float>, <16 x float>)
 ; NOT_WIN: addps  {{.*}}, {{%xmm[0-3]}}
 ; NOT_WIN: addps  {{.*}}, {{%xmm[0-3]}}
 ; NOT_WIN: addps  {{.*}}, {{%xmm[0-3]}}
-; NOT_WIN: leaq    {{.*}}(%rsp), %rdi
+; NOT_WIN: movq   %rsp, %rdi
 ; NOT_WIN: call
 ; NOT_WIN: ret
 

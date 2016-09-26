@@ -21,7 +21,7 @@ define void @test1(i8* nocapture readonly %src, i32 %len) #0 {
   %call1 = tail call <4 x float> @_mm_castsi128_ps(<2 x i64> %tmp0)
   ret void
 ; CHECK-LABEL: test1:
-; CHECK:	leal{{.*}}
+; CHECK:	movl %esp,
 ; CHECK:	calll _memcpy
 ; CHECK:	movaps __xmm@{{[0-9a-f]+}}, %xmm1
 ; CHECK:	calll __mm_xor_si128

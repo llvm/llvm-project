@@ -110,7 +110,7 @@ define i32 @f8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "no-frame-pointer-elim"="
   %gep = getelementptr [300 x i8], [300 x i8]* %alloca, i32 0, i32 0
   call void @external(i8* %gep)
   ; CHECK:        subq    $32, %rsp
-  ; CHECK:        leaq    (%rbx), %rcx
+  ; CHECK:        movq    %rbx, %rcx
   ; CHECK:        callq   external
   ; CHECK:        addq    $32, %rsp
 

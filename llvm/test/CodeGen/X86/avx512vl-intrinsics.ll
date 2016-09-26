@@ -893,6 +893,37 @@ define <4 x i32> @compr10(<4 x i32> %data, i8 %mask) {
   ret <4 x i32> %res
 }
 
+
+@xmm = common global <4 x i32> zeroinitializer, align 16
+@k8 = common global i8 0, align 1
+
+define i32 @compr11() {
+; CHECK-LABEL: compr11:
+; CHECK:       ## BB#0: ## %entry
+; CHECK-NEXT:    movq _xmm@{{.*}}(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
+; CHECK-NEXT:    ## fixup A - offset: 3, value: _xmm@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
+; CHECK-NEXT:    vmovdqa32 (%rax), %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x6f,0x00]
+; CHECK-NEXT:    movq _k8@{{.*}}(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
+; CHECK-NEXT:    ## fixup A - offset: 3, value: _k8@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
+; CHECK-NEXT:    movzbl (%rax), %eax ## encoding: [0x0f,0xb6,0x00]
+; CHECK-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; CHECK-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x8b,0xc0]
+; CHECK-NEXT:    vpxord %xmm1, %xmm1, %xmm1 ## encoding: [0x62,0xf1,0x75,0x08,0xef,0xc9]
+; CHECK-NEXT:    vmovdqa32 %xmm0, -{{[0-9]+}}(%rsp) ## encoding: [0x62,0xf1,0x7d,0x08,0x7f,0x84,0x24,0xd8,0xff,0xff,0xff]
+; CHECK-NEXT:    vmovdqa32 %xmm1, -{{[0-9]+}}(%rsp) ## encoding: [0x62,0xf1,0x7d,0x08,0x7f,0x8c,0x24,0xe8,0xff,0xff,0xff]
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %.compoundliteral = alloca <2 x i64>, align 16
+  %res = alloca <4 x i32>, align 16
+  %a0 = load <4 x i32>, <4 x i32>* @xmm, align 16
+  %a2 = load i8, i8* @k8, align 1
+  %a21 = call <4 x i32> @llvm.x86.avx512.mask.compress.d.128(<4 x i32> %a0, <4 x i32> zeroinitializer, i8 %a2) #2
+  store volatile <4 x i32> %a21, <4 x i32>* %res, align 16
+  store <2 x i64> zeroinitializer, <2 x i64>* %.compoundliteral, align 16
+  ret i32 0
+}
+
 declare <4 x i32> @llvm.x86.avx512.mask.compress.d.128(<4 x i32> %data, <4 x i32> %src0, i8 %mask)
 
 ; Expand
@@ -3210,7 +3241,7 @@ define <2 x double>@test_int_x86_avx512_mask_cvt_dq2pd_128(<4 x i32> %x0, <2 x d
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vcvtdq2pd %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0x7e,0x09,0xe6,0xc8]
-; CHECK-NEXT:    vcvtdq2pd %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0xe6,0xc0]
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7e,0x08,0xe6,0xc0]
 ; CHECK-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0xf5,0x08,0x58,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.avx512.mask.cvtdq2pd.128(<4 x i32> %x0, <2 x double> %x1, i8 %x2)
@@ -3226,7 +3257,7 @@ define <4 x double>@test_int_x86_avx512_mask_cvt_dq2pd_256(<4 x i32> %x0, <4 x d
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm1 {%k1} ## encoding: [0x62,0xf1,0x7e,0x29,0xe6,0xc8]
-; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0 ## encoding: [0xc5,0xfe,0xe6,0xc0]
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0 ## encoding: [0x62,0xf1,0x7e,0x28,0xe6,0xc0]
 ; CHECK-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf1,0xf5,0x28,0x58,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.avx512.mask.cvtdq2pd.256(<4 x i32> %x0, <4 x double> %x1, i8 %x2)
@@ -5219,9 +5250,9 @@ define <8 x i32>@test_int_x86_avx512_mask_psrav8_si_const() {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovdqa32 {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
 ; CHECK-NEXT:    ## encoding: [0x62,0xf1,0x7d,0x28,0x6f,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI308_0-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI309_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    vpsravd {{.*}}(%rip), %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x46,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI308_1-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI309_1-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.mask.psrav8.si(<8 x i32> <i32 2, i32 9, i32 -12, i32 23, i32 -26, i32 37, i32 -40, i32 51>, <8 x i32> <i32 1, i32 18, i32 35, i32 52, i32 69, i32 15, i32 32, i32 49>, <8 x i32> zeroinitializer, i8 -1)
   ret <8 x i32> %res
@@ -5252,9 +5283,9 @@ define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128_const(i8 %x3) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [2,18446744073709551607]
 ; CHECK-NEXT:    ## encoding: [0x62,0xf1,0xfd,0x08,0x6f,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI310_0-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI311_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    vpsravq {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0x62,0xf2,0xfd,0x08,0x46,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI310_1-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI311_1-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.psrav.q.128(<2 x i64> <i64 2, i64 -9>, <2 x i64> <i64 1, i64 90>, <2 x i64> zeroinitializer, i8 -1)
   ret <2 x i64> %res
