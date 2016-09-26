@@ -48,6 +48,10 @@ static cl::opt<float>
                       cl::desc("As we import functions, multiply the "
                                "`import-instr-limit` threshold by this factor "
                                "before processing newly imported functions"));
+static cl::opt<float> ImportHotMultiplier(
+    "import-hot-multiplier", cl::init(3.0), cl::Hidden, cl::value_desc("x"),
+    cl::ZeroOrMore, cl::desc("Multiply the `import-instr-limit` threshold for "
+                             "hot callsites"));
 
 static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
                                   cl::desc("Print imported functions"));
@@ -268,7 +272,7 @@ using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
 /// exported from their source module.
 static void computeImportForFunction(
     const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
-    unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
+    const unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
@@ -281,7 +285,12 @@ static void computeImportForFunction(
       continue;
     }
 
-    auto *CalleeSummary = selectCallee(GUID, Threshold, Index);
+    // FIXME: Also lower the threshold for cold callsites.
+    const auto NewThreshold =
+        Edge.second.Hotness == CalleeInfo::HotnessType::Hot
+            ? Threshold * ImportHotMultiplier
+            : Threshold;
+    auto *CalleeSummary = selectCallee(GUID, NewThreshold, Index);
     if (!CalleeSummary) {
       DEBUG(dbgs() << "ignored! No qualifying callee with summary found.\n");
       continue;
@@ -297,7 +306,7 @@ static void computeImportForFunction(
     } else
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
-    assert(ResolvedCalleeSummary->instCount() <= Threshold &&
+    assert(ResolvedCalleeSummary->instCount() <= NewThreshold &&
            "selectCallee() didn't honor the threshold");
 
     auto ExportModulePath = ResolvedCalleeSummary->modulePath();
