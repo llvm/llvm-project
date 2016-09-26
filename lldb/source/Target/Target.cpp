@@ -3701,7 +3701,8 @@ const char *TargetProperties::GetArg0() const {
 
 void TargetProperties::SetArg0(const char *arg) {
   const uint32_t idx = ePropertyArg0;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, arg);
+  m_collection_sp->SetPropertyAtIndexAsString(
+      nullptr, idx, llvm::StringRef::withNullAsEmpty(arg));
   m_launch_info.SetArg0(arg);
 }
 
@@ -3816,9 +3817,9 @@ FileSpec TargetProperties::GetStandardInputPath() const {
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
 }
 
-void TargetProperties::SetStandardInputPath(const char *p) {
+void TargetProperties::SetStandardInputPath(llvm::StringRef path) {
   const uint32_t idx = ePropertyInputPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
+  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
 }
 
 FileSpec TargetProperties::GetStandardOutputPath() const {
@@ -3826,14 +3827,19 @@ FileSpec TargetProperties::GetStandardOutputPath() const {
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
 }
 
-void TargetProperties::SetStandardOutputPath(const char *p) {
+void TargetProperties::SetStandardOutputPath(llvm::StringRef path) {
   const uint32_t idx = ePropertyOutputPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
+  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
 }
 
 FileSpec TargetProperties::GetStandardErrorPath() const {
   const uint32_t idx = ePropertyErrorPath;
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+}
+
+void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
+  const uint32_t idx = ePropertyErrorPath;
+  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
 }
 
 LanguageType TargetProperties::GetLanguage() const {
@@ -3857,11 +3863,6 @@ const char *TargetProperties::GetExpressionPrefixContentsAsCString() {
       return (const char *)data_sp->GetBytes();
   }
   return nullptr;
-}
-
-void TargetProperties::SetStandardErrorPath(const char *p) {
-  const uint32_t idx = ePropertyErrorPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
 }
 
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
@@ -3959,23 +3960,17 @@ void TargetProperties::SetProcessLaunchInfo(
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
-    const char *input_path = input_file_action->GetPath();
-    if (input_path)
-      SetStandardInputPath(input_path);
+    SetStandardInputPath(input_file_action->GetPath());
   }
   const FileAction *output_file_action =
       launch_info.GetFileActionForFD(STDOUT_FILENO);
   if (output_file_action) {
-    const char *output_path = output_file_action->GetPath();
-    if (output_path)
-      SetStandardOutputPath(output_path);
+    SetStandardOutputPath(output_file_action->GetPath());
   }
   const FileAction *error_file_action =
       launch_info.GetFileActionForFD(STDERR_FILENO);
   if (error_file_action) {
-    const char *error_path = error_file_action->GetPath();
-    if (error_path)
-      SetStandardErrorPath(error_path);
+    SetStandardErrorPath(error_file_action->GetPath());
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));

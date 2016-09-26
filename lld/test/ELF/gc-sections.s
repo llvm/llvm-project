@@ -14,6 +14,8 @@
 # NOGC: Name: .dtors
 # NOGC: Name: .init
 # NOGC: Name: .fini
+# NOGC: Name: .debug_pubtypes
+# NOGC: Name: .comment
 # NOGC: Name: a
 # NOGC: Name: b
 # NOGC: Name: c
@@ -29,6 +31,8 @@
 # GC1:     Name: .dtors
 # GC1:     Name: .init
 # GC1:     Name: .fini
+# GC1:     Name: .debug_pubtypes
+# GC1:     Name: .comment
 # GC1:     Name: a
 # GC1:     Name: b
 # GC1:     Name: c
@@ -44,6 +48,8 @@
 # GC2:     Name: .dtors
 # GC2:     Name: .init
 # GC2:     Name: .fini
+# GC2:     Name: .debug_pubtypes
+# GC2:     Name: .comment
 # GC2:     Name: a
 # GC2:     Name: b
 # GC2:     Name: c
@@ -99,4 +105,10 @@ y:
   .quad 0
 
 .section .eh_frame,"a",@unwind
+  .quad 0
+
+.section .debug_pubtypes,"",@progbits
+  .quad 0
+
+.section .comment,"MS",@progbits,8
   .quad 0

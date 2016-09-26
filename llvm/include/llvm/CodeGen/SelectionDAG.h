@@ -968,7 +968,8 @@ public:
                         MachineMemOperand *MMO, ISD::LoadExtType);
   SDValue getMaskedStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                          SDValue Ptr, SDValue Mask, EVT MemVT,
-                         MachineMemOperand *MMO, bool IsTrunc);
+                         MachineMemOperand *MMO, bool IsTrunc, 
+                         bool isCompressing = false);
   SDValue getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
                           ArrayRef<SDValue> Ops, MachineMemOperand *MMO);
   SDValue getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,

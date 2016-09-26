@@ -824,29 +824,32 @@ const char *Args::GetShellSafeArgument(const FileSpec &shell,
   return safe_arg.c_str();
 }
 
-int64_t Args::StringToOptionEnum(const char *s,
+int64_t Args::StringToOptionEnum(llvm::StringRef s,
                                  OptionEnumValueElement *enum_values,
                                  int32_t fail_value, Error &error) {
-  if (enum_values) {
-    if (s && s[0]) {
-      for (int i = 0; enum_values[i].string_value != nullptr; i++) {
-        if (strstr(enum_values[i].string_value, s) ==
-            enum_values[i].string_value) {
-          error.Clear();
-          return enum_values[i].value;
-        }
-      }
-    }
-
-    StreamString strm;
-    strm.PutCString("invalid enumeration value, valid values are: ");
-    for (int i = 0; enum_values[i].string_value != nullptr; i++) {
-      strm.Printf("%s\"%s\"", i > 0 ? ", " : "", enum_values[i].string_value);
-    }
-    error.SetErrorString(strm.GetData());
-  } else {
+  error.Clear();
+  if (!enum_values) {
     error.SetErrorString("invalid enumeration argument");
+    return fail_value;
   }
+
+  if (s.empty()) {
+    error.SetErrorString("empty enumeration string");
+    return fail_value;
+  }
+
+  for (int i = 0; enum_values[i].string_value != nullptr; i++) {
+    llvm::StringRef this_enum(enum_values[i].string_value);
+    if (this_enum.startswith(s))
+      return enum_values[i].value;
+  }
+
+  StreamString strm;
+  strm.PutCString("invalid enumeration value, valid values are: ");
+  for (int i = 0; enum_values[i].string_value != nullptr; i++) {
+    strm.Printf("%s\"%s\"", i > 0 ? ", " : "", enum_values[i].string_value);
+  }
+  error.SetErrorString(strm.GetData());
   return fail_value;
 }
 

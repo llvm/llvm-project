@@ -10,10 +10,10 @@
 // XFAIL: libcpp-no-exceptions
 // <string>
 
-// basic_string<charT,traits,Allocator>&
-//   assign(basic_string_view<charT,traits> sv, size_type pos, size_type n=npos);
-// the =npos was added for C++14
+// template <class T>
+//    basic_string& append(const T& t, size_type pos, size_type n=npos); // C++17
 
+#include <string>
 #include <string>
 #include <stdexcept>
 #include <cassert>
@@ -27,7 +27,7 @@ test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected)
 {
     try
     {
-        s.assign(sv, pos, n);
+        s.append(sv, pos, n);
         LIBCPP_ASSERT(s.__invariants());
         assert(pos <= sv.size());
         assert(s == expected);
@@ -44,7 +44,7 @@ test_npos(S s, SV sv, typename S::size_type pos, S expected)
 {
     try
     {
-        s.assign(sv, pos);
+        s.append(sv, pos);
         LIBCPP_ASSERT(s.__invariants());
         assert(pos <= sv.size());
         assert(s == expected);
@@ -73,14 +73,14 @@ int main()
     test(S(), SV("12345678901234567890"), 12, 13, S("34567890"));
     test(S(), SV("12345678901234567890"), 21, 13, S("not happening"));
 
-    test(S("12345"), SV(), 0, 0, S());
-    test(S("12345"), SV("12345"), 2, 2, S("34"));
-    test(S("12345"), SV("1234567890"), 0, 100, S("1234567890"));
+    test(S("12345"), SV(), 0, 0, S("12345"));
+    test(S("12345"), SV("12345"), 2, 2, S("1234534"));
+    test(S("12345"), SV("1234567890"), 0, 100, S("123451234567890"));
 
-    test(S("12345678901234567890"), SV(), 0, 0, S());
-    test(S("12345678901234567890"), SV("12345"), 1, 3, S("234"));
+    test(S("12345678901234567890"), SV(), 0, 0, S("12345678901234567890"));
+    test(S("12345678901234567890"), SV("12345"), 1, 3, S("12345678901234567890234"));
     test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10,
-         S("6789012345"));
+         S("123456789012345678906789012345"));
     }
 #if TEST_STD_VER >= 11
     {
@@ -99,14 +99,14 @@ int main()
     test(S(), SV("12345678901234567890"), 12, 13, S("34567890"));
     test(S(), SV("12345678901234567890"), 21, 13, S("not happening"));
 
-    test(S("12345"), SV(), 0, 0, S());
-    test(S("12345"), SV("12345"), 2, 2, S("34"));
-    test(S("12345"), SV("1234567890"), 0, 100, S("1234567890"));
+    test(S("12345"), SV(), 0, 0, S("12345"));
+    test(S("12345"), SV("12345"), 2, 2, S("1234534"));
+    test(S("12345"), SV("1234567890"), 0, 100, S("123451234567890"));
 
-    test(S("12345678901234567890"), SV(), 0, 0, S());
-    test(S("12345678901234567890"), SV("12345"), 1, 3, S("234"));
+    test(S("12345678901234567890"), SV(), 0, 0, S("12345678901234567890"));
+    test(S("12345678901234567890"), SV("12345"), 1, 3, S("12345678901234567890234"));
     test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10,
-         S("6789012345"));
+         S("123456789012345678906789012345"));
     }
 #endif
     {
@@ -119,5 +119,62 @@ int main()
     test_npos(S(), SV("12345"), 3, S("45"));
     test_npos(S(), SV("12345"), 5, S(""));
     test_npos(S(), SV("12345"), 6, S("not happening"));
+    }
+    {
+    typedef std::string S;
+    typedef std::string_view SV;
+    S s;
+    SV sv = "EFGH";
+    char arr[] = "IJKL";
+
+    s.append("CDEF", 0);    // calls append(const char *, len)
+    assert(s == "");
+    s.clear();
+
+    s.append("QRST", 0, std::string::npos); // calls append(string("QRST"), pos, npos)
+    assert(s == "QRST");
+    s.clear();
+
+    s.append(sv, 0);  // calls append(T, pos, npos)
+    assert(s == sv);
+    s.clear();
+    
+    s.append(sv, 0, std::string::npos);   // calls append(T, pos, npos)
+    assert(s == sv);
+    s.clear();
+
+    s.append(arr, 0);     // calls append(const char *, len)
+    assert(s == "");
+    s.clear();
+
+    s.append(arr, 0, std::string::npos);    // calls append(string("IJKL"), pos, npos)
+    assert(s == "IJKL");
+    s.clear();
+
+    s.append(arr, 0);     // calls append(const char *, len)
+    assert(s == "");
+    s.clear();
+
+    {
+    S s = "ABCD";
+    SV sv = s;
+    s.append(sv);
+    assert(s == "ABCDABCD");
+
+    sv = s;
+    s.append(sv, 0, std::string::npos);
+    assert(s == "ABCDABCDABCDABCD");
+    }
+    
+    {
+    S s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    SV sv = s;
+    s.append(sv);
+    assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+    sv = s;
+    s.append(sv, 0, std::string::npos);
+    assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    }
     }
 }

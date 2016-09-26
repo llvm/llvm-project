@@ -57,10 +57,9 @@ void InaccurateEraseCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *AlgCall = Result.Nodes.getNodeAs<CallExpr>("InaccAlgCall");
     std::string ReplacementText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(EndExpr->getSourceRange()),
-        *Result.SourceManager, Result.Context->getLangOpts());
+        *Result.SourceManager, getLangOpts());
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-        AlgCall->getLocEnd(), 0, *Result.SourceManager,
-        Result.Context->getLangOpts());
+        AlgCall->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
     Hint = FixItHint::CreateInsertion(EndLoc, ", " + ReplacementText);
   }
 

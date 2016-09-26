@@ -579,8 +579,9 @@ public:
   }
 };
 
-/// MCRegUnitIterator enumerates a list of register units and their associated
-/// lane masks for Reg. The register units are in ascending numerical order.
+/// MCRegUnitMaskIterator enumerates a list of register units and their
+/// associated lane masks for Reg. The register units are in ascending
+/// numerical order.
 class MCRegUnitMaskIterator {
   MCRegUnitIterator RUIter;
   const unsigned *MaskListIter;

@@ -34,8 +34,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static mode_t ParsePermissionString(const char *permissions) {
-  if (strlen(permissions) != 9)
+static mode_t ParsePermissionString(const char *) = delete;
+
+static mode_t ParsePermissionString(llvm::StringRef permissions) {
+  if (permissions.size() != 9)
     return (mode_t)(-1);
   bool user_r, user_w, user_x, group_r, group_w, group_x, world_r, world_w,
       world_x;
@@ -76,32 +78,31 @@ static OptionDefinition g_permissions_options[] = {
     // clang-format on
 };
 
-class OptionPermissions : public lldb_private::OptionGroup {
+class OptionPermissions : public OptionGroup {
 public:
   OptionPermissions() {}
 
   ~OptionPermissions() override = default;
 
   lldb_private::Error
-  SetOptionValue(uint32_t option_idx, const char *option_arg,
+  SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                  ExecutionContext *execution_context) override {
     Error error;
     char short_option = (char)GetDefinitions()[option_idx].short_option;
     switch (short_option) {
     case 'v': {
-      bool ok;
-      uint32_t perms = StringConvert::ToUInt32(option_arg, 777, 8, &ok);
-      if (!ok)
+      if (option_arg.getAsInteger(8, m_permissions)) {
+        m_permissions = 0777;
         error.SetErrorStringWithFormat("invalid value for permissions: %s",
-                                       option_arg);
-      else
-        m_permissions = perms;
+                                       option_arg.str().c_str());
+      }
+
     } break;
     case 's': {
       mode_t perms = ParsePermissionString(option_arg);
       if (perms == (mode_t)-1)
         error.SetErrorStringWithFormat("invalid value for permissions: %s",
-                                       option_arg);
+                                       option_arg.str().c_str());
       else
         m_permissions = perms;
     } break;

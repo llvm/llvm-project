@@ -337,10 +337,10 @@ void SUnit::dumpAll(const ScheduleDAG *G) const {
          I != E; ++I) {
       dbgs() << "   ";
       switch (I->getKind()) {
-      case SDep::Data:        dbgs() << "val "; break;
-      case SDep::Anti:        dbgs() << "anti"; break;
-      case SDep::Output:      dbgs() << "out "; break;
-      case SDep::Order:       dbgs() << "ch  "; break;
+      case SDep::Data:   dbgs() << "data "; break;
+      case SDep::Anti:   dbgs() << "anti "; break;
+      case SDep::Output: dbgs() << "out  "; break;
+      case SDep::Order:  dbgs() << "ord  "; break;
       }
       dbgs() << "SU(" << I->getSUnit()->NodeNum << ")";
       if (I->isArtificial())
@@ -357,10 +357,10 @@ void SUnit::dumpAll(const ScheduleDAG *G) const {
          I != E; ++I) {
       dbgs() << "   ";
       switch (I->getKind()) {
-      case SDep::Data:        dbgs() << "val "; break;
-      case SDep::Anti:        dbgs() << "anti"; break;
-      case SDep::Output:      dbgs() << "out "; break;
-      case SDep::Order:       dbgs() << "ch  "; break;
+      case SDep::Data:   dbgs() << "data "; break;
+      case SDep::Anti:   dbgs() << "anti "; break;
+      case SDep::Output: dbgs() << "out  "; break;
+      case SDep::Order:  dbgs() << "ord  "; break;
       }
       dbgs() << "SU(" << I->getSUnit()->NodeNum << ")";
       if (I->isArtificial())

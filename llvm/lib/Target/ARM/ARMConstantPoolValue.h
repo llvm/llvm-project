@@ -24,6 +24,7 @@ namespace llvm {
 class BlockAddress;
 class Constant;
 class GlobalValue;
+class GlobalVariable;
 class LLVMContext;
 class MachineBasicBlock;
 
@@ -33,7 +34,8 @@ namespace ARMCP {
     CPExtSymbol,
     CPBlockAddress,
     CPLSDA,
-    CPMachineBasicBlock
+    CPMachineBasicBlock,
+    CPPromotedGlobal
   };
 
   enum ARMCPModifier {
@@ -103,7 +105,8 @@ public:
   bool isBlockAddress() const { return Kind == ARMCP::CPBlockAddress; }
   bool isLSDA() const { return Kind == ARMCP::CPLSDA; }
   bool isMachineBasicBlock() const{ return Kind == ARMCP::CPMachineBasicBlock; }
-
+  bool isPromotedGlobal() const{ return Kind == ARMCP::CPPromotedGlobal; }
+  
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 unsigned Alignment) override;
 
@@ -133,6 +136,7 @@ inline raw_ostream &operator<<(raw_ostream &O, const ARMConstantPoolValue &V) {
 /// Functions, and BlockAddresses.
 class ARMConstantPoolConstant : public ARMConstantPoolValue {
   const Constant *CVal;         // Constant being loaded.
+  const GlobalVariable *GVar = nullptr;
 
   ARMConstantPoolConstant(const Constant *C,
                           unsigned ID,
@@ -146,11 +150,14 @@ class ARMConstantPoolConstant : public ARMConstantPoolValue {
                           unsigned char PCAdj,
                           ARMCP::ARMCPModifier Modifier,
                           bool AddCurrentAddress);
+  ARMConstantPoolConstant(const GlobalVariable *GV, const Constant *Init);
 
 public:
   static ARMConstantPoolConstant *Create(const Constant *C, unsigned ID);
   static ARMConstantPoolConstant *Create(const GlobalValue *GV,
                                          ARMCP::ARMCPModifier Modifier);
+  static ARMConstantPoolConstant *Create(const GlobalVariable *GV,
+                                         const Constant *Initializer);
   static ARMConstantPoolConstant *Create(const Constant *C, unsigned ID,
                                          ARMCP::ARMCPKind Kind,
                                          unsigned char PCAdj);
@@ -162,6 +169,12 @@ public:
 
   const GlobalValue *getGV() const;
   const BlockAddress *getBlockAddress() const;
+  const GlobalVariable *getPromotedGlobal() const {
+    return dyn_cast_or_null<GlobalVariable>(GVar);
+  }
+  const Constant *getPromotedGlobalInit() const {
+    return CVal;
+  }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 unsigned Alignment) override;
@@ -174,7 +187,8 @@ public:
 
   void print(raw_ostream &O) const override;
   static bool classof(const ARMConstantPoolValue *APV) {
-    return APV->isGlobalValue() || APV->isBlockAddress() || APV->isLSDA();
+    return APV->isGlobalValue() || APV->isBlockAddress() || APV->isLSDA() ||
+           APV->isPromotedGlobal();
   }
 
   bool equals(const ARMConstantPoolConstant *A) const {

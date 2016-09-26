@@ -81,11 +81,11 @@ lldb::IOHandlerSP REPL::GetIOHandler() {
     m_io_handler_sp.reset(
         new IOHandlerEditline(debugger, IOHandler::Type::REPL,
                               "lldb-repl", // Name of input reader for history
-                              "> ",        // prompt
-                              ". ",        // Continuation prompt
-                              true,        // Multi-line
-                              true,        // The REPL prompt is always colored
-                              1,           // Line number
+                              llvm::StringRef("> "), // prompt
+                              llvm::StringRef(". "), // Continuation prompt
+                              true,                  // Multi-line
+                              true, // The REPL prompt is always colored
+                              1,    // Line number
                               *this));
 
     // Don't exit if CTRL+C is pressed

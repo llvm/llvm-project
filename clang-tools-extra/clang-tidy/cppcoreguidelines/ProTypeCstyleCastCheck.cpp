@@ -68,7 +68,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
           CharSourceRange::getTokenRange(
               MatchedCast->getLParenLoc().getLocWithOffset(1),
               MatchedCast->getRParenLoc().getLocWithOffset(-1)),
-          *Result.SourceManager, Result.Context->getLangOpts());
+          *Result.SourceManager, getLangOpts());
 
       auto diag_builder = diag(
           MatchedCast->getLocStart(),
@@ -82,8 +82,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
         CastText.push_back('(');
         diag_builder << FixItHint::CreateInsertion(
             Lexer::getLocForEndOfToken(SubExpr->getLocEnd(), 0,
-                                       *Result.SourceManager,
-                                       Result.Context->getLangOpts()),
+                                       *Result.SourceManager, getLangOpts()),
             ")");
       }
       auto ParenRange = CharSourceRange::getTokenRange(

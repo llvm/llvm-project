@@ -171,10 +171,6 @@ struct language_name_pair language_names[] = {
 static uint32_t num_languages =
     sizeof(language_names) / sizeof(struct language_name_pair);
 
-LanguageType Language::GetLanguageTypeFromString(const char *s) {
-  return GetLanguageTypeFromString(llvm::StringRef(s ? s : ""));
-}
-
 LanguageType Language::GetLanguageTypeFromString(llvm::StringRef string) {
   for (const auto &L : language_names) {
     if (string.equals_lower(L.name))

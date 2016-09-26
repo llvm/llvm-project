@@ -117,7 +117,7 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   FixItHint Hint;
 
   SourceManager &SM = *Result.SourceManager;
-  LangOptions LangOpts = Result.Context->getLangOpts();
+  LangOptions LangOpts = getLangOpts();
 
   CharSourceRange CallRange =
       CharSourceRange::getTokenRange(AlgCall->getSourceRange());

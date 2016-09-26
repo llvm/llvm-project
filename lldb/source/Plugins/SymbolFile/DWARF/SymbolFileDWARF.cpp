@@ -746,7 +746,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
               }
 
               std::string remapped_file;
-              if (module_sp->RemapSourceFile(cu_file_spec.GetCString(),
+              if (module_sp->RemapSourceFile(cu_file_spec.GetPath(),
                                              remapped_file))
                 cu_file_spec.SetFile(remapped_file, false);
             }

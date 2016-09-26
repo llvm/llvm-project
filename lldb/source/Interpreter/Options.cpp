@@ -913,8 +913,8 @@ Error OptionGroupOptions::SetOptionValue(uint32_t option_idx,
   Error error;
   if (option_idx < m_option_infos.size()) {
     error = m_option_infos[option_idx].option_group->SetOptionValue(
-        m_option_infos[option_idx].option_index, option_value,
-        execution_context);
+        m_option_infos[option_idx].option_index,
+        llvm::StringRef::withNullAsEmpty(option_value), execution_context);
 
   } else {
     error.SetErrorString("invalid option index"); // Shouldn't happen...

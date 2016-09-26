@@ -47,7 +47,11 @@ class TracePC {
     NumNewPCIDs = 0;
     CounterMap.Reset();
     ValueProfileMap.Reset();
+    memset(Counters, 0, sizeof(Counters));
   }
+
+  void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
+  void PrintFeatureSet();
 
   void ResetGuards();
 
@@ -67,7 +71,6 @@ private:
     NewPCIDs[(NumNewPCIDs++) % kMaxNewPCIDs] = PCID;
   }
 
-
   struct Module {
     uintptr_t *Start, *Stop;
   };
@@ -84,6 +87,15 @@ private:
 
   ValueBitMap CounterMap;
   ValueBitMap ValueProfileMap;
+
+  struct Feature {
+    size_t Count;
+    size_t SmallestElementIdx;
+    size_t SmallestElementSize;
+  };
+
+  static const size_t kFeatureSetSize = ValueBitMap::kNumberOfItems;
+  Feature FeatureSet[kFeatureSetSize];
 };
 
 extern TracePC TPC;

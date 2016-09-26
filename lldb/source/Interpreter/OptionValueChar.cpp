@@ -57,7 +57,7 @@ Error OptionValueChar::SetValueFromString(llvm::StringRef value,
   } break;
 
   default:
-    error = OptionValue::SetValueFromString(value.str().c_str(), op);
+    error = OptionValue::SetValueFromString(value, op);
     break;
   }
   return error;

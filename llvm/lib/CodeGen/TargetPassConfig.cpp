@@ -260,8 +260,7 @@ TargetPassConfig::~TargetPassConfig() {
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
 TargetPassConfig::TargetPassConfig(TargetMachine *tm, PassManagerBase &pm)
-    : ImmutablePass(ID), PM(&pm), StartBefore(nullptr), StartAfter(nullptr),
-      StopAfter(nullptr), Started(true), Stopped(false),
+    : ImmutablePass(ID), PM(&pm), Started(true), Stopped(false),
       AddingMachinePasses(false), TM(tm), Impl(nullptr), Initialized(false),
       DisableVerify(false), EnableTailMerge(true) {
 
@@ -355,6 +354,8 @@ void TargetPassConfig::addPass(Pass *P, bool verifyAfter, bool printAfter) {
 
   if (StartBefore == PassID)
     Started = true;
+  if (StopBefore == PassID)
+    Stopped = true;
   if (Started && !Stopped) {
     std::string Banner;
     // Construct banner message before PM->add() as that may delete the pass.

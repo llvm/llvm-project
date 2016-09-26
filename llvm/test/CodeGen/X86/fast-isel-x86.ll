@@ -83,7 +83,7 @@ entry:
   ret void
 ; CHECK-LABEL: test4:
 ; CHECK: subl $28
-; CHECK: leal (%esp), %ecx
+; CHECK: movl %esp, %ecx
 ; CHECK: calll _test4fastccsret
 ; CHECK: addl $28
 }

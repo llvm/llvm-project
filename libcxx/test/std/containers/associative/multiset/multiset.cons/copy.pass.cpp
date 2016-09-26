@@ -16,6 +16,7 @@
 #include <set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
@@ -67,7 +68,7 @@ int main()
         assert(*next(mo.begin(), 7) == 3);
         assert(*next(mo.begin(), 8) == 3);
     }
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     {
         typedef int V;
         V ar[] =
@@ -114,5 +115,5 @@ int main()
         assert(*next(mo.begin(), 7) == 3);
         assert(*next(mo.begin(), 8) == 3);
     }
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif
 }

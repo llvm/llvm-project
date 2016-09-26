@@ -5608,24 +5608,28 @@ let Predicates = [HasAVX512] in {
             (VCVTSD2SI64Zrm addr:$src)>;
 } // HasAVX512
 
-let isCodeGenOnly = 1 , Predicates = [HasAVX512] in {
-  defm Int_VCVTSI2SSZ : sse12_cvt_sint_3addr<0x2A, GR32, VR128X,
-            int_x86_sse_cvtsi2ss, i32mem, loadi32, "cvtsi2ss{l}",
-            SSE_CVT_Scalar, 0>, XS, EVEX_4V;
-  defm Int_VCVTSI2SS64Z : sse12_cvt_sint_3addr<0x2A, GR64, VR128X,
-            int_x86_sse_cvtsi642ss, i64mem, loadi64, "cvtsi2ss{q}",
-            SSE_CVT_Scalar, 0>, XS, EVEX_4V, VEX_W;
-  defm Int_VCVTSI2SDZ : sse12_cvt_sint_3addr<0x2A, GR32, VR128X,
-            int_x86_sse2_cvtsi2sd, i32mem, loadi32, "cvtsi2sd{l}",
-            SSE_CVT_Scalar, 0>, XD, EVEX_4V;
-  defm Int_VCVTSI2SD64Z : sse12_cvt_sint_3addr<0x2A, GR64, VR128X,
-            int_x86_sse2_cvtsi642sd, i64mem, loadi64, "cvtsi2sd{q}",
-            SSE_CVT_Scalar, 0>, XD, EVEX_4V, VEX_W;
-
-  defm Int_VCVTUSI2SDZ : sse12_cvt_sint_3addr<0x7B, GR32, VR128X,
-            int_x86_avx512_cvtusi2sd, i32mem, loadi32, "cvtusi2sd{l}",
-            SSE_CVT_Scalar, 0>, XD, EVEX_4V;
-} // isCodeGenOnly = 1, Predicates = [HasAVX512]
+let Predicates = [HasAVX512] in {
+  def : Pat<(int_x86_sse_cvtsi2ss VR128X:$src1, GR32:$src2),
+            (VCVTSI2SSZrr_Int VR128X:$src1, GR32:$src2)>;
+  def : Pat<(int_x86_sse_cvtsi2ss VR128X:$src1, (loadi32 addr:$src2)),
+            (VCVTSI2SSZrm_Int VR128X:$src1, addr:$src2)>;
+  def : Pat<(int_x86_sse_cvtsi642ss VR128X:$src1, GR64:$src2),
+            (VCVTSI642SSZrr_Int VR128X:$src1, GR64:$src2)>;
+  def : Pat<(int_x86_sse_cvtsi642ss VR128X:$src1, (loadi64 addr:$src2)),
+            (VCVTSI642SSZrm_Int VR128X:$src1, addr:$src2)>;
+  def : Pat<(int_x86_sse2_cvtsi2sd VR128X:$src1, GR32:$src2),
+            (VCVTSI2SDZrr_Int VR128X:$src1, GR32:$src2)>;
+  def : Pat<(int_x86_sse2_cvtsi2sd VR128X:$src1, (loadi32 addr:$src2)),
+            (VCVTSI2SDZrm_Int VR128X:$src1, addr:$src2)>;
+  def : Pat<(int_x86_sse2_cvtsi642sd VR128X:$src1, GR64:$src2),
+            (VCVTSI642SDZrr_Int VR128X:$src1, GR64:$src2)>;
+  def : Pat<(int_x86_sse2_cvtsi642sd VR128X:$src1, (loadi64 addr:$src2)),
+            (VCVTSI642SDZrm_Int VR128X:$src1, addr:$src2)>;
+  def : Pat<(int_x86_avx512_cvtusi2sd VR128X:$src1, GR32:$src2),
+            (VCVTUSI2SDZrr_Int VR128X:$src1, GR32:$src2)>;
+  def : Pat<(int_x86_avx512_cvtusi2sd VR128X:$src1, (loadi32 addr:$src2)),
+            (VCVTUSI2SDZrm_Int VR128X:$src1, addr:$src2)>;
+} // Predicates = [HasAVX512]
 
 // Convert float/double to signed/unsigned int 32/64 with truncation
 multiclass avx512_cvt_s_all<bits<8> opc, string asm, X86VectorVTInfo _SrcRC,
@@ -6353,24 +6357,22 @@ let Predicates = [HasAVX512, NoVLX, NoF16C] in {
 }
 
 //  Unordered/Ordered scalar fp compare with Sea and set EFLAGS
-multiclass avx512_ord_cmp_sae<bits<8> opc, X86VectorVTInfo _, SDNode OpNode,
+multiclass avx512_ord_cmp_sae<bits<8> opc, X86VectorVTInfo _,
                             string OpcodeStr> {
   def rb: AVX512<opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
                  !strconcat(OpcodeStr, "\t{{sae}, $src2, $src1|$src1, $src2, {sae}}"),
-                 [(set EFLAGS, (OpNode (_.VT _.RC:$src1), _.RC:$src2,
-                                                        (i32 FROUND_NO_EXC)))],
-                 IIC_SSE_COMIS_RR>, EVEX, EVEX_B, VEX_LIG, EVEX_V128,
+                 [], IIC_SSE_COMIS_RR>, EVEX, EVEX_B, VEX_LIG, EVEX_V128,
                  Sched<[WriteFAdd]>;
 }
 
 let Defs = [EFLAGS], Predicates = [HasAVX512] in {
-  defm VUCOMISSZ : avx512_ord_cmp_sae<0x2E, v4f32x_info, X86ucomiSae, "vucomiss">,
+  defm VUCOMISSZ : avx512_ord_cmp_sae<0x2E, v4f32x_info, "vucomiss">,
                                    AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
-  defm VUCOMISDZ : avx512_ord_cmp_sae<0x2E, v2f64x_info, X86ucomiSae, "vucomisd">,
+  defm VUCOMISDZ : avx512_ord_cmp_sae<0x2E, v2f64x_info, "vucomisd">,
                                    AVX512PDIi8Base, VEX_W, EVEX_CD8<64, CD8VT1>;
-  defm VCOMISSZ : avx512_ord_cmp_sae<0x2F, v4f32x_info, X86comiSae, "vcomiss">,
+  defm VCOMISSZ : avx512_ord_cmp_sae<0x2F, v4f32x_info, "vcomiss">,
                                    AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
-  defm VCOMISDZ : avx512_ord_cmp_sae<0x2F, v2f64x_info, X86comiSae, "vcomisd">,
+  defm VCOMISDZ : avx512_ord_cmp_sae<0x2F, v2f64x_info, "vcomisd">,
                                    AVX512PDIi8Base, VEX_W, EVEX_CD8<64, CD8VT1>;
 }
 
@@ -7450,7 +7452,7 @@ defm VPMOVQ2M : avx512_convert_vector_to_mask<0x39, "vpmovq2m",
 // AVX-512 - COMPRESS and EXPAND
 //
 
-multiclass compress_by_vec_width<bits<8> opc, X86VectorVTInfo _,
+multiclass compress_by_vec_width_common<bits<8> opc, X86VectorVTInfo _,
                                  string OpcodeStr> {
   defm rr : AVX512_maskable<opc, MRMDestReg, _, (outs _.RC:$dst),
               (ins _.RC:$src1), OpcodeStr, "$src1", "$src1",
@@ -7465,19 +7467,28 @@ multiclass compress_by_vec_width<bits<8> opc, X86VectorVTInfo _,
   def mrk : AVX5128I<opc, MRMDestMem, (outs),
               (ins _.MemOp:$dst, _.KRCWM:$mask, _.RC:$src),
               OpcodeStr # "\t{$src, $dst {${mask}}|$dst {${mask}}, $src}",
-              [(store (_.VT (vselect _.KRCWM:$mask,
-                             (_.VT (X86compress  _.RC:$src)), _.ImmAllZerosV)),
-                addr:$dst)]>,
+              []>,
               EVEX_K, EVEX_CD8<_.EltSize, CD8VT1>;
+}
+
+multiclass compress_by_vec_width_lowering<X86VectorVTInfo _ > {
+
+  def : Pat<(X86mCompressingStore addr:$dst, _.KRCWM:$mask,
+                                               (_.VT _.RC:$src)),
+            (!cast<Instruction>(NAME#_.ZSuffix##mrk)
+                            addr:$dst, _.KRCWM:$mask, _.RC:$src)>;
 }
 
 multiclass compress_by_elt_width<bits<8> opc, string OpcodeStr,
                                  AVX512VLVectorVTInfo VTInfo> {
-  defm Z : compress_by_vec_width<opc, VTInfo.info512, OpcodeStr>, EVEX_V512;
+  defm Z : compress_by_vec_width_common<opc, VTInfo.info512, OpcodeStr>,
+           compress_by_vec_width_lowering<VTInfo.info512>, EVEX_V512;
 
   let Predicates = [HasVLX] in {
-    defm Z256 : compress_by_vec_width<opc, VTInfo.info256, OpcodeStr>, EVEX_V256;
-    defm Z128 : compress_by_vec_width<opc, VTInfo.info128, OpcodeStr>, EVEX_V128;
+    defm Z256 : compress_by_vec_width_common<opc, VTInfo.info256, OpcodeStr>,
+                compress_by_vec_width_lowering<VTInfo.info256>, EVEX_V256;
+    defm Z128 : compress_by_vec_width_common<opc, VTInfo.info128, OpcodeStr>,
+                compress_by_vec_width_lowering<VTInfo.info128>, EVEX_V128;
   }
 }
 

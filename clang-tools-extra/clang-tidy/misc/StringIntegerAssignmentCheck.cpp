@@ -62,8 +62,7 @@ void StringIntegerAssignmentCheck::check(
   }
 
   SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-      Argument->getLocEnd(), 0, *Result.SourceManager,
-      Result.Context->getLangOpts());
+      Argument->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
   if (IsOneDigit) {
     Diag << FixItHint::CreateInsertion(Loc, IsWideCharType ? "L'" : "'")
          << FixItHint::CreateInsertion(EndLoc, "'");

@@ -6946,25 +6946,55 @@ public:
 static void appendOpenCLVersionMD (CodeGen::CodeGenModule &CGM);
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
-  const Decl *D,
-  llvm::GlobalValue *GV,
-  CodeGen::CodeGenModule &M) const {
+    const Decl *D,
+    llvm::GlobalValue *GV,
+    CodeGen::CodeGenModule &M) const {
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)
     return;
 
-  if (const auto Attr = FD->getAttr<AMDGPUNumVGPRAttr>()) {
-    llvm::Function *F = cast<llvm::Function>(GV);
-    uint32_t NumVGPR = Attr->getNumVGPR();
-    if (NumVGPR != 0)
-      F->addFnAttr("amdgpu_num_vgpr", llvm::utostr(NumVGPR));
+  llvm::Function *F = cast<llvm::Function>(GV);
+
+  if (const auto *Attr = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
+    unsigned Min = Attr->getMin();
+    unsigned Max = Attr->getMax();
+
+    if (Min != 0) {
+      assert(Min <= Max && "Min must be less than or equal Max");
+
+      std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
+      F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
+    } else
+      assert(Max == 0 && "Max must be zero");
   }
 
-  if (const auto Attr = FD->getAttr<AMDGPUNumSGPRAttr>()) {
-    llvm::Function *F = cast<llvm::Function>(GV);
+  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
+    unsigned Min = Attr->getMin();
+    unsigned Max = Attr->getMax();
+
+    if (Min != 0) {
+      assert((Max == 0 || Min <= Max) && "Min must be less than or equal Max");
+
+      std::string AttrVal = llvm::utostr(Min);
+      if (Max != 0)
+        AttrVal = AttrVal + "," + llvm::utostr(Max);
+      F->addFnAttr("amdgpu-waves-per-eu", AttrVal);
+    } else
+      assert(Max == 0 && "Max must be zero");
+  }
+
+  if (const auto *Attr = FD->getAttr<AMDGPUNumSGPRAttr>()) {
     unsigned NumSGPR = Attr->getNumSGPR();
+
     if (NumSGPR != 0)
-      F->addFnAttr("amdgpu_num_sgpr", llvm::utostr(NumSGPR));
+      F->addFnAttr("amdgpu-num-sgpr", llvm::utostr(NumSGPR));
+  }
+
+  if (const auto *Attr = FD->getAttr<AMDGPUNumVGPRAttr>()) {
+    uint32_t NumVGPR = Attr->getNumVGPR();
+
+    if (NumVGPR != 0)
+      F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
 
   appendOpenCLVersionMD(M);

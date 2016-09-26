@@ -864,4 +864,60 @@ TEST(StringRefTest, Take) {
   EXPECT_TRUE(Taken.empty());
 }
 
+TEST(StringRefTest, FindIf) {
+  StringRef Punct("Test.String");
+  StringRef NoPunct("ABCDEFG");
+  StringRef Empty;
+
+  auto IsPunct = [](char c) { return ::ispunct(c); };
+  auto IsAlpha = [](char c) { return ::isalpha(c); };
+  EXPECT_EQ(4U, Punct.find_if(IsPunct));
+  EXPECT_EQ(StringRef::npos, NoPunct.find_if(IsPunct));
+  EXPECT_EQ(StringRef::npos, Empty.find_if(IsPunct));
+
+  EXPECT_EQ(4U, Punct.find_if_not(IsAlpha));
+  EXPECT_EQ(StringRef::npos, NoPunct.find_if_not(IsAlpha));
+  EXPECT_EQ(StringRef::npos, Empty.find_if_not(IsAlpha));
+}
+
+TEST(StringRefTest, TakeWhileUntil) {
+  StringRef Test("String With 1 Number");
+
+  StringRef Taken = Test.take_while([](char c) { return ::isdigit(c); });
+  EXPECT_EQ("", Taken);
+
+  Taken = Test.take_until([](char c) { return ::isdigit(c); });
+  EXPECT_EQ("String With ", Taken);
+
+  Taken = Test.take_while([](char c) { return true; });
+  EXPECT_EQ(Test, Taken);
+
+  Taken = Test.take_until([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+
+  Test = "";
+  Taken = Test.take_while([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+}
+
+TEST(StringRefTest, DropWhileUntil) {
+  StringRef Test("String With 1 Number");
+
+  StringRef Taken = Test.drop_while([](char c) { return ::isdigit(c); });
+  EXPECT_EQ(Test, Taken);
+
+  Taken = Test.drop_until([](char c) { return ::isdigit(c); });
+  EXPECT_EQ("1 Number", Taken);
+
+  Taken = Test.drop_while([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+
+  Taken = Test.drop_until([](char c) { return true; });
+  EXPECT_EQ(Test, Taken);
+
+  StringRef EmptyString = "";
+  Taken = EmptyString.drop_while([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+}
+
 } // end anonymous namespace

@@ -331,8 +331,9 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 's':
         m_script_language = (lldb::ScriptLanguage)Args::StringToOptionEnum(
-            option_arg, GetDefinitions()[option_idx].enum_values,
-            eScriptLanguageNone, error);
+            llvm::StringRef::withNullAsEmpty(option_arg),
+            GetDefinitions()[option_idx].enum_values, eScriptLanguageNone,
+            error);
 
         m_use_script_language = (m_script_language == eScriptLanguagePython ||
                                  m_script_language == eScriptLanguageDefault);

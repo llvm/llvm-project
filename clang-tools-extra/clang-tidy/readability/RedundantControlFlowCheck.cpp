@@ -80,16 +80,14 @@ void RedundantControlFlowCheck::issueDiagnostic(
   SourceLocation Start;
   if (Previous != Block->body_rend())
     Start = Lexer::findLocationAfterToken(
-        dyn_cast<Stmt>(*Previous)->getLocEnd(), tok::semi, SM,
-        Result.Context->getLangOpts(),
+        dyn_cast<Stmt>(*Previous)->getLocEnd(), tok::semi, SM, getLangOpts(),
         /*SkipTrailingWhitespaceAndNewLine=*/true);
   if (!Start.isValid())
     Start = StmtRange.getBegin();
   auto RemovedRange = CharSourceRange::getCharRange(
-      Start,
-      Lexer::findLocationAfterToken(StmtRange.getEnd(), tok::semi, SM,
-                                    Result.Context->getLangOpts(),
-                                    /*SkipTrailingWhitespaceAndNewLine=*/true));
+      Start, Lexer::findLocationAfterToken(
+                 StmtRange.getEnd(), tok::semi, SM, getLangOpts(),
+                 /*SkipTrailingWhitespaceAndNewLine=*/true));
 
   diag(StmtRange.getBegin(), Diag) << FixItHint::CreateRemoval(RemovedRange);
 }

@@ -37,7 +37,7 @@ void UnusedAliasDeclsCheck::check(const MatchFinder::MatchResult &Result) {
         AliasDecl->getLocStart(),
         Lexer::findLocationAfterToken(
             AliasDecl->getLocEnd(), tok::semi, *Result.SourceManager,
-            Result.Context->getLangOpts(),
+            getLangOpts(),
             /*SkipTrailingWhitespaceAndNewLine=*/true));
     return;
   }

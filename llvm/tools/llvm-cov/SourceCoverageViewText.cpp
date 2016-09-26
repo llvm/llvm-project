@@ -29,7 +29,7 @@ void CoveragePrinterText::closeViewFile(OwnedStream OS) {
 }
 
 Error CoveragePrinterText::createIndexFile(
-    ArrayRef<StringRef> SourceFiles,
+    ArrayRef<std::string> SourceFiles,
     const coverage::CoverageMapping &Coverage) {
   auto OSOrErr = createOutputStream("index", "txt", /*InToplevel=*/true);
   if (Error E = OSOrErr.takeError())
@@ -38,7 +38,7 @@ Error CoveragePrinterText::createIndexFile(
   raw_ostream &OSRef = *OS.get();
 
   CoverageReport Report(Opts, Coverage);
-  Report.renderFileReports(OSRef);
+  Report.renderFileReports(OSRef, SourceFiles);
 
   Opts.colored_ostream(OSRef, raw_ostream::CYAN) << "\n"
                                                  << Opts.getLLVMVersionString();

@@ -828,7 +828,7 @@ public:
 template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
 struct __pointer_traits_rebind
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename _Tp::template rebind<_Up> type;
 #else
     typedef typename _Tp::template rebind<_Up>::other type;
@@ -840,7 +840,7 @@ struct __pointer_traits_rebind
 template <template <class, class...> class _Sp, class _Tp, class ..._Args, class _Up>
 struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, true>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
 #else
     typedef typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
@@ -858,7 +858,7 @@ struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, false>
 template <template <class> class _Sp, class _Tp, class _Up>
 struct __pointer_traits_rebind<_Sp<_Tp>, _Up, true>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename _Sp<_Tp>::template rebind<_Up> type;
 #else
     typedef typename _Sp<_Tp>::template rebind<_Up>::other type;
@@ -874,7 +874,7 @@ struct __pointer_traits_rebind<_Sp<_Tp>, _Up, false>
 template <template <class, class> class _Sp, class _Tp, class _A0, class _Up>
 struct __pointer_traits_rebind<_Sp<_Tp, _A0>, _Up, true>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename _Sp<_Tp, _A0>::template rebind<_Up> type;
 #else
     typedef typename _Sp<_Tp, _A0>::template rebind<_Up>::other type;
@@ -891,7 +891,7 @@ template <template <class, class, class> class _Sp, class _Tp, class _A0,
                                          class _A1, class _Up>
 struct __pointer_traits_rebind<_Sp<_Tp, _A0, _A1>, _Up, true>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename _Sp<_Tp, _A0, _A1>::template rebind<_Up> type;
 #else
     typedef typename _Sp<_Tp, _A0, _A1>::template rebind<_Up>::other type;
@@ -909,7 +909,7 @@ template <template <class, class, class, class> class _Sp, class _Tp, class _A0,
                                                 class _A1, class _A2, class _Up>
 struct __pointer_traits_rebind<_Sp<_Tp, _A0, _A1, _A2>, _Up, true>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename _Sp<_Tp, _A0, _A1, _A2>::template rebind<_Up> type;
 #else
     typedef typename _Sp<_Tp, _A0, _A1, _A2>::template rebind<_Up>::other type;
@@ -932,12 +932,12 @@ struct _LIBCPP_TYPE_VIS_ONLY pointer_traits
     typedef typename __pointer_traits_element_type<pointer>::type    element_type;
     typedef typename __pointer_traits_difference_type<pointer>::type difference_type;
 
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     template <class _Up> using rebind = typename __pointer_traits_rebind<pointer, _Up>::type;
 #else
     template <class _Up> struct rebind
         {typedef typename __pointer_traits_rebind<pointer, _Up>::type other;};
-#endif  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#endif  // _LIBCPP_CXX03_LANG
 
 private:
     struct __nat {};
@@ -955,7 +955,7 @@ struct _LIBCPP_TYPE_VIS_ONLY pointer_traits<_Tp*>
     typedef _Tp       element_type;
     typedef ptrdiff_t difference_type;
 
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     template <class _Up> using rebind = _Up*;
 #else
     template <class _Up> struct rebind {typedef _Up* other;};
@@ -972,7 +972,7 @@ public:
 
 template <class _From, class _To>
 struct __rebind_pointer {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename pointer_traits<_From>::template rebind<_To>        type;
 #else
     typedef typename pointer_traits<_From>::template rebind<_To>::other type;
@@ -1036,7 +1036,7 @@ struct __const_pointer
 template <class _Tp, class _Ptr, class _Alloc>
 struct __const_pointer<_Tp, _Ptr, _Alloc, false>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename pointer_traits<_Ptr>::template rebind<const _Tp> type;
 #else
     typedef typename pointer_traits<_Ptr>::template rebind<const _Tp>::other type;
@@ -1063,7 +1063,7 @@ struct __void_pointer
 template <class _Ptr, class _Alloc>
 struct __void_pointer<_Ptr, _Alloc, false>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename pointer_traits<_Ptr>::template rebind<void> type;
 #else
     typedef typename pointer_traits<_Ptr>::template rebind<void>::other type;
@@ -1090,7 +1090,7 @@ struct __const_void_pointer
 template <class _Ptr, class _Alloc>
 struct __const_void_pointer<_Ptr, _Alloc, false>
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename pointer_traits<_Ptr>::template rebind<const void> type;
 #else
     typedef typename pointer_traits<_Ptr>::template rebind<const void>::other type;
@@ -1321,7 +1321,7 @@ struct __allocator_traits_rebind<_Alloc<_Tp, _A0, _A1, _A2>, _Up, false>
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 auto
@@ -1344,7 +1344,7 @@ struct __has_allocate_hint
 {
 };
 
-#else  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#else  // _LIBCPP_CXX03_LANG
 
 template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 struct __has_allocate_hint
@@ -1352,9 +1352,9 @@ struct __has_allocate_hint
 {
 };
 
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif  // _LIBCPP_CXX03_LANG
 
-#if !defined(_LIBCPP_HAS_NO_ADVANCED_SFINAE) && !defined(_LIBCPP_HAS_NO_VARIADICS)
+#if !defined(_LIBCPP_CXX03_LANG)
 
 template <class _Alloc, class _Tp, class ..._Args>
 decltype(_VSTD::declval<_Alloc>().construct(_VSTD::declval<_Tp*>(),
@@ -1435,7 +1435,7 @@ struct __has_select_on_container_copy_construction
 {
 };
 
-#else  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#else  // _LIBCPP_CXX03_LANG
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
@@ -1473,7 +1473,7 @@ struct __has_select_on_container_copy_construction
 {
 };
 
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Alloc, class _Ptr, bool = __has_difference_type<_Alloc>::value>
 struct __alloc_traits_difference_type
@@ -1510,16 +1510,16 @@ struct _LIBCPP_TYPE_VIS_ONLY allocator_traits
     typedef typename __is_always_equal<allocator_type>::type
                      is_always_equal;
 
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     template <class _Tp> using rebind_alloc =
                   typename __allocator_traits_rebind<allocator_type, _Tp>::type;
     template <class _Tp> using rebind_traits = allocator_traits<rebind_alloc<_Tp>>;
-#else  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#else  // _LIBCPP_CXX03_LANG
     template <class _Tp> struct rebind_alloc
         {typedef typename __allocator_traits_rebind<allocator_type, _Tp>::type other;};
     template <class _Tp> struct rebind_traits
         {typedef allocator_traits<typename rebind_alloc<_Tp>::other> other;};
-#endif  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     static pointer allocate(allocator_type& __a, size_type __n)
@@ -1731,7 +1731,7 @@ private:
 template <class _Traits, class _Tp>
 struct __rebind_alloc_helper
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename _Traits::template rebind_alloc<_Tp>        type;
 #else
     typedef typename _Traits::template rebind_alloc<_Tp>::other type;

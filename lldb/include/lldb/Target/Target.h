@@ -137,16 +137,16 @@ public:
   uint32_t GetMaximumMemReadSize() const;
 
   FileSpec GetStandardInputPath() const;
-
-  void SetStandardInputPath(const char *path);
-
+  FileSpec GetStandardErrorPath() const;
   FileSpec GetStandardOutputPath() const;
 
-  void SetStandardOutputPath(const char *path);
+  void SetStandardInputPath(llvm::StringRef path);
+  void SetStandardOutputPath(llvm::StringRef path);
+  void SetStandardErrorPath(llvm::StringRef path);
 
-  FileSpec GetStandardErrorPath() const;
-
-  void SetStandardErrorPath(const char *path);
+  void SetStandardInputPath(const char *path) = delete;
+  void SetStandardOutputPath(const char *path) = delete;
+  void SetStandardErrorPath(const char *path) = delete;
 
   bool GetBreakpointsConsultPlatformAvoidList();
 

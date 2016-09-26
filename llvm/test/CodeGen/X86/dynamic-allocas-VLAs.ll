@@ -38,7 +38,7 @@ entry:
 ; CHECK: subq ${{[0-9]+}}, %rsp
 ;
 ; CHECK: leaq {{[0-9]*}}(%rsp), %rdi
-; CHECK: leaq {{[0-9]*}}(%rsp), %rsi
+; CHECK: movq %rsp, %rsi
 ; CHECK: callq _t2_helper
 ;
 ; CHECK: movq %rbp, %rsp
@@ -89,7 +89,7 @@ entry:
 ; CHECK: movq %rsp, %rbx
 ;
 ; CHECK: leaq {{[0-9]*}}(%rbx), %rdi
-; CHECK: leaq {{[0-9]*}}(%rbx), %rdx
+; CHECK: movq %rbx, %rdx
 ; CHECK: callq   _t4_helper
 ;
 ; CHECK: leaq -{{[0-9]+}}(%rbp), %rsp

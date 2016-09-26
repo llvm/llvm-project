@@ -16,6 +16,7 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
@@ -47,7 +48,7 @@ int main()
         assert(mo.get_allocator() == A(7));
         assert(mo.key_comp() == C(5));
     }
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     {
         typedef std::pair<const int, double> V;
         V ar[] =
@@ -73,8 +74,6 @@ int main()
         assert(mo.get_allocator() == A(7));
         assert(mo.key_comp() == C(5));
     }
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if TEST_STD_VER >= 11
     {
         typedef std::pair<const int, double> V;
         V ar[] =

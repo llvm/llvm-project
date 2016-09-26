@@ -254,7 +254,7 @@ entry:
   call void @test20sret(%struct.a* sret %tmp)
   ret void
 ; CHECK-LABEL: test20:
-; CHECK: leaq (%rsp), %rdi
+; CHECK: movq %rsp, %rdi
 ; CHECK: callq _test20sret
 }
 declare void @test20sret(%struct.a* sret)
