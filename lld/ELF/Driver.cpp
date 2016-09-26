@@ -675,7 +675,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // if it is resolvable.
     Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
   }
-  if (!HasEntryAddr) {
+  if (!HasEntryAddr && !Config->Entry.empty()) {
     if (Symtab.find(Config->Entry))
       Config->EntrySym = Symtab.addUndefined(Config->Entry);
     else

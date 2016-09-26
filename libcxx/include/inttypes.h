@@ -237,6 +237,13 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 #pragma GCC system_header
 #endif
 
+/* C99 stdlib (e.g. glibc < 2.18) does not provide format macros needed
+   for C++11 unless __STDC_FORMAT_MACROS is defined
+*/
+#if defined(__cplusplus) && !defined(__STDC_FORMAT_MACROS)
+#   define __STDC_FORMAT_MACROS
+#endif
+
 #include_next <inttypes.h>
 
 #ifdef __cplusplus

@@ -13,4 +13,18 @@ void f() {
   int j; // NOLINT
 }
 
-// CHECK-MESSAGES: Suppressed 3 warnings (3 NOLINT)
+#define MACRO(X) class X { X(int i); };
+MACRO(D)
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: single-argument constructors must be marked explicit
+MACRO(E) // NOLINT
+
+#define MACRO_NOARG class F { F(int i); };
+MACRO_NOARG // NOLINT
+
+#define MACRO_NOLINT class G { G(int i); }; // NOLINT
+MACRO_NOLINT
+
+#define DOUBLE_MACRO MACRO(H) // NOLINT
+DOUBLE_MACRO
+
+// CHECK-MESSAGES: Suppressed 7 warnings (7 NOLINT)

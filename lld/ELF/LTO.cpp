@@ -67,7 +67,7 @@ static void runNewCustomLtoPasses(Module &M, TargetMachine &TM) {
 
   // Parse a custom AA pipeline if asked to.
   if (!PB.parseAAPipeline(AA, Config->LtoAAPipeline)) {
-    error("Unable to parse AA pipeline description: " + Config->LtoAAPipeline);
+    error("unable to parse AA pipeline description: " + Config->LtoAAPipeline);
     return;
   }
 

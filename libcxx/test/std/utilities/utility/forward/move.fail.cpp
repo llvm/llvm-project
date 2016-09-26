@@ -7,22 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test move
-
 // UNSUPPORTED: c++98, c++03
+
+// test move
 
 #include <utility>
 #include <cassert>
 
-class move_only
-{
-    move_only(const move_only&);
-    move_only& operator=(const move_only&);
-public:
-    move_only(move_only&&) {}
-    move_only& operator=(move_only&&) {return *this;}
-
+struct move_only {
     move_only() {}
+    move_only(move_only&&) = default;
+    move_only& operator=(move_only&&) = default;
 };
 
 move_only source() {return move_only();}
@@ -32,8 +27,8 @@ void test(move_only) {}
 
 int main()
 {
-    move_only mo;
+    move_only a;
+    const move_only ca = move_only();
 
-    test(std::move(mo));
-    test(source());
+    test(std::move(ca)); // c
 }

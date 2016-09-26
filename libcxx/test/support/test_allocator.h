@@ -66,7 +66,7 @@ public:
         {
             assert(data_ >= 0);
             if (time_to_throw >= throw_after) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
                 throw std::bad_alloc();
 #else
                 std::terminate();
@@ -130,7 +130,7 @@ public:
         {
             assert(data_ >= 0);
             if (time_to_throw >= throw_after) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
                 throw std::bad_alloc();
 #else
                 std::terminate();
@@ -221,10 +221,10 @@ public:
     typedef std::true_type propagate_on_container_move_assignment;
     typedef std::true_type propagate_on_container_swap;
 
-#ifdef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER < 11
     std::size_t max_size() const
         {return UINT_MAX / sizeof(T);}
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif
 
 };
 

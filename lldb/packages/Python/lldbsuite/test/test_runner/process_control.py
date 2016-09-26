@@ -360,18 +360,28 @@ class UnixProcessHelper(ProcessHelper):
 
         # Choose kill mechanism based on whether we're targeting
         # a process group or just a process.
-        if popen_process.using_process_groups:
-            # if log_file:
-            #    log_file.write(
-            #        "sending signum {} to process group {} now\n".format(
-            #            signum, popen_process.pid))
-            os.killpg(popen_process.pid, signum)
-        else:
-            # if log_file:
-            #    log_file.write(
-            #        "sending signum {} to process {} now\n".format(
-            #            signum, popen_process.pid))
-            os.kill(popen_process.pid, signum)
+        try:
+            if popen_process.using_process_groups:
+                # if log_file:
+                #    log_file.write(
+                #        "sending signum {} to process group {} now\n".format(
+                #            signum, popen_process.pid))
+                os.killpg(popen_process.pid, signum)
+            else:
+                # if log_file:
+                #    log_file.write(
+                #        "sending signum {} to process {} now\n".format(
+                #            signum, popen_process.pid))
+                os.kill(popen_process.pid, signum)
+        except OSError as error:
+            import errno
+            if error.errno == errno.ESRCH:
+                # This is okay - failed to find the process.  It may be that
+                # that the timeout pre-kill hook eliminated the process.  We'll
+                # ignore.
+                pass
+            else:
+                raise
 
     def soft_terminate(self, popen_process, log_file=None, want_core=True):
         # Choose signal based on desire for core file.

@@ -412,7 +412,7 @@ void ScriptInterpreterPython::IOHandlerInputComplete(IOHandler &io_handler,
       if (!bp_options)
         continue;
 
-      auto data_ap = llvm::make_unique<BreakpointOptions::CommandData>();
+      auto data_ap = llvm::make_unique<CommandDataPython>();
       if (!data_ap)
         break;
       data_ap->user_source.SplitIntoLines(data);
@@ -1231,10 +1231,26 @@ void ScriptInterpreterPython::SetBreakpointCommandCallbackFunction(
       bp_options, oneliner.c_str());
 }
 
+Error ScriptInterpreterPython::SetBreakpointCommandCallback(
+    BreakpointOptions *bp_options,
+    std::unique_ptr<BreakpointOptions::CommandData> &cmd_data_up) {
+  Error error;
+  error = GenerateBreakpointCommandCallbackData(cmd_data_up->user_source,
+                                                cmd_data_up->script_source);
+  if (error.Fail()) {
+    return error;
+  }
+  auto baton_sp =
+      std::make_shared<BreakpointOptions::CommandBaton>(std::move(cmd_data_up));
+  bp_options->SetCallback(ScriptInterpreterPython::BreakpointCallbackFunction,
+                          baton_sp);
+  return error;
+}
+
 // Set a Python one-liner as the callback for the breakpoint.
 Error ScriptInterpreterPython::SetBreakpointCommandCallback(
     BreakpointOptions *bp_options, const char *command_body_text) {
-  auto data_ap = llvm::make_unique<BreakpointOptions::CommandData>();
+  auto data_ap = llvm::make_unique<CommandDataPython>();
 
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will
@@ -2054,8 +2070,7 @@ void ScriptInterpreterPython::Clear() {
 bool ScriptInterpreterPython::BreakpointCallbackFunction(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
-  BreakpointOptions::CommandData *bp_option_data =
-      (BreakpointOptions::CommandData *)baton;
+  CommandDataPython *bp_option_data = (CommandDataPython *)baton;
   const char *python_function_name = bp_option_data->script_source.c_str();
 
   if (!context)

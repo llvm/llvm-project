@@ -26,9 +26,6 @@ class StdVBoolDataFormatterTestCase(TestBase):
     @expectedFailureAll(
         oslist=['freebsd'],
         bugnumber='llvm.org/pr20548 fails to build on lab.llvm.org buildbot')
-    @expectedFailureAll(
-        compiler="icc",
-        bugnumber="llvm.org/pr15301 LLDB prints incorrect sizes of STL containers")
     @skipIfWindows  # libstdcpp not ported to Windows.
     @skipIfDarwin
     def test_with_run_command(self):

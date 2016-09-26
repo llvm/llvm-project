@@ -26,9 +26,9 @@ void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
   // with a constructor that can throw.
   Finder->addMatcher(
       varDecl(anyOf(hasThreadStorageDuration(), hasStaticStorageDuration()),
+              unless(hasAncestor(functionDecl())),
               hasInitializer(cxxConstructExpr(hasDeclaration(
-                  cxxConstructorDecl(unless(isNoThrow()))
-                      .bind("ctor")))))
+                  cxxConstructorDecl(unless(isNoThrow())).bind("ctor")))))
           .bind("var"),
       this);
 }

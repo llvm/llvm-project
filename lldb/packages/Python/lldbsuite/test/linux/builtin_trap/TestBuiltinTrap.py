@@ -23,12 +23,6 @@ class BuiltinTrapTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @expectedFailureAll(
-        "llvm.org/pr15936",
-        compiler="gcc",
-        compiler_version=[
-            "<=",
-            "4.6"])
     # gcc generates incorrect linetable
     @expectedFailureAll(archs="arm", compiler="gcc", triple=".*-android")
     @expectedFailureAll(oslist=['linux'], archs=['arm'])

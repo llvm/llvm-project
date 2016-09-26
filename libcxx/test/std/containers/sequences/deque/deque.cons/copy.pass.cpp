@@ -13,6 +13,8 @@
 
 #include <deque>
 #include <cassert>
+
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
@@ -37,15 +39,13 @@ int main()
         assert(v2 == v);
         assert(v2.get_allocator() == v.get_allocator());
     }
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     {
         std::deque<int, other_allocator<int> > v(3, 2, other_allocator<int>(5));
         std::deque<int, other_allocator<int> > v2 = v;
         assert(v2 == v);
         assert(v2.get_allocator() == other_allocator<int>(-2));
     }
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if TEST_STD_VER >= 11
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
         int* an = ab + sizeof(ab)/sizeof(ab[0]);

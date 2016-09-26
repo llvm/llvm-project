@@ -64,8 +64,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     Context.UsingDeclRange = CharSourceRange::getCharRange(
         Using->getLocStart(),
         Lexer::findLocationAfterToken(
-            Using->getLocEnd(), tok::semi, *Result.SourceManager,
-            Result.Context->getLangOpts(),
+            Using->getLocEnd(), tok::semi, *Result.SourceManager, getLangOpts(),
             /*SkipTrailingWhitespaceAndNewLine=*/true));
     for (const auto *UsingShadow : Using->shadows()) {
       const auto *TargetDecl = UsingShadow->getTargetDecl()->getCanonicalDecl();

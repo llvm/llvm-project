@@ -100,7 +100,7 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
 
   CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(getTypeRange(*Param)),
-      *Result.SourceManager, Result.Context->getLangOpts());
+      *Result.SourceManager, getLangOpts());
 
   if (!FileRange.isValid())
     return;

@@ -6,17 +6,20 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// UNSUPPORTED: c++03
 
-// test forward
+// <ios>
 
-#include <utility>
+// template <> struct is_error_code_enum<io_errc> : public true_type {};
 
-struct A
-{
-};
+#include <ios>
+#include "test_macros.h"
 
 int main()
 {
-    A a;
-    std::forward(a);  // error
+    static_assert(std::is_error_code_enum  <std::io_errc>::value, "");
+#if TEST_STD_VER > 14
+    static_assert(std::is_error_code_enum_v<std::io_errc>, "");
+#endif
 }
