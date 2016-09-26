@@ -30,8 +30,8 @@
 } while (0)
 
 #define ADJUST_XY(C,I,S) do { \
-    float _w = (float)FIELD(I,64,14); \
-    float _h = (float)FIELD(I,78,14); \
+    float _w = (float)(FIELD(I,64,14) + 1U); \
+    float _h = (float)(FIELD(I,78,14) + 1U); \
     bool _f = FIELD(S,15,1); \
     float _p = _f ? 1.0f : _w; \
     float _q = _f ? 1.0f : _h; \
@@ -43,9 +43,9 @@
 } while (0)
 
 #define ADJUST_XYZ(C,I,S) do { \
-    float _w = (float)FIELD(I,64,14); \
-    float _h = (float)FIELD(I,78,14); \
-    float _d = (float)FIELD(I, 128, 13); \
+    float _w = (float)(FIELD(I,64,14) + 1U); \
+    float _h = (float)(FIELD(I,78,14) + 1U); \
+    float _d = (float)(FIELD(I, 128, 13) + 1U); \
     bool _f = FIELD(S,15,1); \
     float _p = _f ? 1.0f : _w; \
     float _q = _f ? 1.0f : _h; \
@@ -641,9 +641,9 @@ OCKL_MANGLE_T(image_sampleh_lod,3D)(TSHARP i, SSHARP s, float4 c, float l)
 
 // We rely on the fact that the runtime allocates 12 words for the T# or V#
 // and fills words 8, 9, and 10 with the data we need to answer all of the queries
-GATTR int OCKL_MANGLE_T(image_array_size,1Da)(TSHARP i)  { return FIELD(i, 173, 13); }
-GATTR int OCKL_MANGLE_T(image_array_size,2Da)(TSHARP i)  { return FIELD(i, 173, 13); }
-GATTR int OCKL_MANGLE_T(image_array_size,2Dad)(TSHARP i) { return FIELD(i, 173, 13); }
+GATTR int OCKL_MANGLE_T(image_array_size,1Da)(TSHARP i)  { return FIELD(i, 173, 13) + 1U; }
+GATTR int OCKL_MANGLE_T(image_array_size,2Da)(TSHARP i)  { return FIELD(i, 173, 13) + 1U; }
+GATTR int OCKL_MANGLE_T(image_array_size,2Dad)(TSHARP i) { return FIELD(i, 173, 13) + 1U; }
 
 GATTR int OCKL_MANGLE_T(image_channel_data_type,1D)(TSHARP i)   { return WORD(i, 8); }
 GATTR int OCKL_MANGLE_T(image_channel_data_type,1Da)(TSHARP i)  { return WORD(i, 8); }
@@ -663,13 +663,13 @@ GATTR int OCKL_MANGLE_T(image_channel_order,2Dad)(TSHARP i) { return WORD(i, 9);
 GATTR int OCKL_MANGLE_T(image_channel_order,2Dd)(TSHARP i)  { return WORD(i, 9); }
 GATTR int OCKL_MANGLE_T(image_channel_order,3D)(TSHARP i)   { return WORD(i, 9); }
 
-GATTR int OCKL_MANGLE_T(image_depth,3D)(TSHARP i) { return FIELD(i, 128, 13); }
+GATTR int OCKL_MANGLE_T(image_depth,3D)(TSHARP i) { return FIELD(i, 128, 13) + 1U; }
 
-GATTR int OCKL_MANGLE_T(image_height,2D)(TSHARP i)   { return FIELD(i, 78, 14); }
-GATTR int OCKL_MANGLE_T(image_height,2Da)(TSHARP i)  { return FIELD(i, 78, 14); }
-GATTR int OCKL_MANGLE_T(image_height,2Dad)(TSHARP i) { return FIELD(i, 78, 14); }
-GATTR int OCKL_MANGLE_T(image_height,2Dd)(TSHARP i)  { return FIELD(i, 78, 14); }
-GATTR int OCKL_MANGLE_T(image_height,3D)(TSHARP i)   { return FIELD(i, 78, 14); }
+GATTR int OCKL_MANGLE_T(image_height,2D)(TSHARP i)   { return FIELD(i, 78, 14) + 1U; }
+GATTR int OCKL_MANGLE_T(image_height,2Da)(TSHARP i)  { return FIELD(i, 78, 14) + 1U; }
+GATTR int OCKL_MANGLE_T(image_height,2Dad)(TSHARP i) { return FIELD(i, 78, 14) + 1U; }
+GATTR int OCKL_MANGLE_T(image_height,2Dd)(TSHARP i)  { return FIELD(i, 78, 14) + 1U; }
+GATTR int OCKL_MANGLE_T(image_height,3D)(TSHARP i)   { return FIELD(i, 78, 14) + 1U; }
 
 GATTR int OCKL_MANGLE_T(image_num_mip_levels,1D)(TSHARP i)   { return FIELD(i, 112, 4); }
 GATTR int OCKL_MANGLE_T(image_num_mip_levels,1Da)(TSHARP i)  { return FIELD(i, 112, 4); }
