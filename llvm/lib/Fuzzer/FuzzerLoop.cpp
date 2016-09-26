@@ -374,6 +374,18 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
   this->MaxMutationLen = MaxMutationLen;
 }
 
+void Fuzzer::AddToCorpusAndMaybeRerun(const Unit &U) {
+  Corpus.AddToCorpus(U);
+  if (TPC.GetTotalPCCoverage()) {
+    TPC.ResetMaps();
+    TPC.ResetGuards();
+    ExecuteCallback(U.data(), U.size());
+    TPC.FinalizeTrace();
+    TPC.UpdateFeatureSet(Corpus.size() - 1, U.size());
+    // TPC.PrintFeatureSet();
+  }
+}
+
 void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
   if (Options.OutputCorpus.empty() || !Options.Reload) return;
   std::vector<Unit> AdditionalCorpus;
@@ -386,7 +398,7 @@ void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
       X.resize(MaxSize);
     if (!Corpus.HasUnit(X)) {
       if (RunOne(X)) {
-        Corpus.AddToCorpus(X);
+        AddToCorpusAndMaybeRerun(X);
         PrintStats("RELOAD");
       }
     }
@@ -409,7 +421,7 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
   for (const auto &U : *InitialCorpus) {
     bool NewCoverage = RunOne(U);
     if (!Options.PruneCorpus || NewCoverage) {
-      Corpus.AddToCorpus(U);
+      AddToCorpusAndMaybeRerun(U);
       if (Options.Verbosity >= 2)
         Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
     }
@@ -471,6 +483,7 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
   TPC.ResetMaps();
+  TPC.ResetGuards();
   int Res = CB(DataCopy, Size);
   UnitStopTime = system_clock::now();
   (void)Res;
@@ -547,12 +560,12 @@ void Fuzzer::PrintNewPCs() {
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   II->NumSuccessfullMutations++;
-  Corpus.AddToCorpus(U);
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
   NumberOfNewUnitsAdded++;
   PrintNewPCs();
+  AddToCorpusAndMaybeRerun(U);
 }
 
 // Finds minimal number of units in 'Extra' that add coverage to 'Initial'.

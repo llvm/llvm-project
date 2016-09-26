@@ -177,7 +177,7 @@ void SuspiciousStringCompareCheck::check(
   if (Result.Nodes.getNodeAs<Stmt>("missing-comparison")) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Call->getRParenLoc(), 0, Result.Context->getSourceManager(),
-        Result.Context->getLangOpts());
+        getLangOpts());
 
     diag(Call->getLocStart(),
          "function %0 is called without explicitly comparing result")
@@ -187,7 +187,7 @@ void SuspiciousStringCompareCheck::check(
   if (const auto *E = Result.Nodes.getNodeAs<Expr>("logical-not-comparison")) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Call->getRParenLoc(), 0, Result.Context->getSourceManager(),
-        Result.Context->getLangOpts());
+        getLangOpts());
     SourceLocation NotLoc = E->getLocStart();
 
     diag(Call->getLocStart(),

@@ -1566,7 +1566,7 @@ end(_Tp (&__array)[_Np])
     return __array + _Np;
 }
 
-#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_TRAILING_RETURN)
+#if !defined(_LIBCPP_CXX03_LANG)
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1689,7 +1689,7 @@ auto crend(const _Cp& __c) -> decltype(_VSTD::rend(__c))
 #endif
 
 
-#else  // !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_TRAILING_RETURN)
+#else  // defined(_LIBCPP_CXX03_LANG)
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1723,7 +1723,7 @@ end(const _Cp& __c)
     return __c.end();
 }
 
-#endif  // !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_TRAILING_RETURN)
+#endif  // !defined(_LIBCPP_CXX03_LANG)
 
 #if _LIBCPP_STD_VER > 14
 template <class _Cont>

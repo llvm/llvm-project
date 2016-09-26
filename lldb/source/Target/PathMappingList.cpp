@@ -136,7 +136,8 @@ void PathMappingList::Clear(bool notify) {
 bool PathMappingList::RemapPath(const ConstString &path,
                                 ConstString &new_path) const {
   const char *path_cstr = path.GetCString();
-
+  // CLEANUP: Convert this function to use StringRefs internally instead
+  // of raw c-strings.
   if (!path_cstr)
     return false;
 
@@ -154,19 +155,19 @@ bool PathMappingList::RemapPath(const ConstString &path,
   return false;
 }
 
-bool PathMappingList::RemapPath(const char *path, std::string &new_path) const {
-  if (m_pairs.empty() || path == nullptr || path[0] == '\0')
+bool PathMappingList::RemapPath(llvm::StringRef path,
+                                std::string &new_path) const {
+  if (m_pairs.empty() || path.empty())
     return false;
 
   const_iterator pos, end = m_pairs.end();
   for (pos = m_pairs.begin(); pos != end; ++pos) {
-    const size_t prefix_len = pos->first.GetLength();
+    if (!path.consume_front(pos->first.GetStringRef()))
+      continue;
 
-    if (::strncmp(pos->first.GetCString(), path, prefix_len) == 0) {
-      new_path = pos->second.GetCString();
-      new_path.append(path + prefix_len);
-      return true;
-    }
+    new_path = pos->second.GetStringRef();
+    new_path.append(path);
+    return true;
   }
   return false;
 }

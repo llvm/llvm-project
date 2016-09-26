@@ -81,7 +81,7 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
   let SchedRW = [WriteVMEM];
 }
 
-class MTBUF_Real <bits<3> op, MTBUF_Pseudo ps> :
+class MTBUF_Real <MTBUF_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   Enc64 {
 
@@ -113,8 +113,6 @@ class MTBUF_Real <bits<3> op, MTBUF_Pseudo ps> :
   let Inst{12}    = offen;
   let Inst{13}    = idxen;
   let Inst{14}    = glc;
-  let Inst{15}    = addr64;
-  let Inst{18-16} = op;
   let Inst{22-19} = dfmt;
   let Inst{25-23} = nfmt;
   let Inst{31-26} = 0x3a; //encoding
@@ -1171,10 +1169,14 @@ def BUFFER_WBINVL1_SC_si        : MUBUF_Real_si <0x70, BUFFER_WBINVL1_SC>;
 def BUFFER_WBINVL1_si           : MUBUF_Real_si <0x71, BUFFER_WBINVL1>;
 
 class MTBUF_Real_si <bits<3> op, MTBUF_Pseudo ps> :
-  MTBUF_Real<op, ps>,
+  MTBUF_Real<ps>,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI> {
   let AssemblerPredicate=isSICI;
   let DecoderNamespace="SICI";
+
+  bits<1> addr64;
+  let Inst{15}    = addr64;
+  let Inst{18-16} = op;
 }
 
 def TBUFFER_LOAD_FORMAT_XYZW_si  : MTBUF_Real_si <3, TBUFFER_LOAD_FORMAT_XYZW>;
@@ -1290,11 +1292,13 @@ defm BUFFER_ATOMIC_DEC_X2       : MUBUF_Real_Atomic_vi <0x6c>;
 def BUFFER_WBINVL1_vi           : MUBUF_Real_vi <0x3e, BUFFER_WBINVL1>;
 def BUFFER_WBINVL1_VOL_vi       : MUBUF_Real_vi <0x3f, BUFFER_WBINVL1_VOL>;
 
-class MTBUF_Real_vi <bits<3> op, MTBUF_Pseudo ps> :
-  MTBUF_Real<op, ps>,
+class MTBUF_Real_vi <bits<4> op, MTBUF_Pseudo ps> :
+  MTBUF_Real<ps>,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.VI> {
   let AssemblerPredicate=isVI;
   let DecoderNamespace="VI";
+
+  let Inst{18-15} = op;
 }
 
 def TBUFFER_LOAD_FORMAT_XYZW_vi  : MTBUF_Real_vi <3, TBUFFER_LOAD_FORMAT_XYZW>;

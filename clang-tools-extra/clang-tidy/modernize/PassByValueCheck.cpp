@@ -200,11 +200,10 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     TypeLoc ValueTL = RefTL.getPointeeLoc();
     auto TypeRange = CharSourceRange::getTokenRange(ParmDecl->getLocStart(),
                                                     ParamTL.getLocEnd());
-    std::string ValueStr =
-        Lexer::getSourceText(
-            CharSourceRange::getTokenRange(ValueTL.getSourceRange()), SM,
-            Result.Context->getLangOpts())
-            .str();
+    std::string ValueStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                                    ValueTL.getSourceRange()),
+                                                SM, getLangOpts())
+                               .str();
     ValueStr += ' ';
     Diag << FixItHint::CreateReplacement(TypeRange, ValueStr);
   }

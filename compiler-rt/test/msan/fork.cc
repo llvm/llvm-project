@@ -10,6 +10,9 @@
 // a kernel bug:
 // https://lkml.org/lkml/2014/2/17/324
 
+// Flaky on PPC64.
+// UNSUPPORTED: powerpc64-target-arch
+// UNSUPPORTED: powerpc64le-target-arch
 
 #include <pthread.h>
 #include <unistd.h>
@@ -89,7 +92,7 @@ int main() {
       exit(0);
     }
   }
-  
+
   for (int i = 0; i < kChildren; ++i) {
     pid_t p;
     while ((p = wait(NULL)) == -1) {  }

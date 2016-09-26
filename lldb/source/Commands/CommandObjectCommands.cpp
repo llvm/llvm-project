@@ -70,22 +70,25 @@ protected:
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
+      llvm::StringRef option_strref =
+          llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'c':
-        error = m_count.SetValueFromString(option_arg, eVarSetOperationAssign);
+        error =
+            m_count.SetValueFromString(option_strref, eVarSetOperationAssign);
         break;
       case 's':
         if (option_arg && strcmp("end", option_arg) == 0) {
           m_start_idx.SetCurrentValue(UINT64_MAX);
           m_start_idx.SetOptionWasSet();
         } else
-          error = m_start_idx.SetValueFromString(option_arg,
+          error = m_start_idx.SetValueFromString(option_strref,
                                                  eVarSetOperationAssign);
         break;
       case 'e':
-        error =
-            m_stop_idx.SetValueFromString(option_arg, eVarSetOperationAssign);
+        error = m_stop_idx.SetValueFromString(option_strref,
+                                              eVarSetOperationAssign);
         break;
       case 'C':
         m_clear.SetCurrentValue(true);
@@ -260,18 +263,20 @@ protected:
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
+      llvm::StringRef option_strref =
+          llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'e':
-        error = m_stop_on_error.SetValueFromString(option_arg);
+        error = m_stop_on_error.SetValueFromString(option_strref);
         break;
 
       case 'c':
-        error = m_stop_on_continue.SetValueFromString(option_arg);
+        error = m_stop_on_continue.SetValueFromString(option_strref);
         break;
 
       case 's':
-        error = m_silent_run.SetValueFromString(option_arg);
+        error = m_silent_run.SetValueFromString(option_strref);
         break;
 
       default:
@@ -371,20 +376,21 @@ protected:
       return llvm::makeArrayRef(g_alias_options);
     }
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_value,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
 
       const int short_option = GetDefinitions()[option_idx].short_option;
+      std::string option_str(option_value);
 
       switch (short_option) {
       case 'h':
-        m_help.SetCurrentValue(option_value);
+        m_help.SetCurrentValue(option_str);
         m_help.SetOptionWasSet();
         break;
 
       case 'H':
-        m_long_help.SetCurrentValue(option_value);
+        m_long_help.SetCurrentValue(option_str);
         m_long_help.SetOptionWasSet();
         break;
 
@@ -396,6 +402,7 @@ protected:
 
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_help.Clear();
@@ -1070,9 +1077,9 @@ protected:
         const bool multiple_lines = true; // Get multiple lines
         IOHandlerSP io_handler_sp(new IOHandlerEditline(
             debugger, IOHandler::Type::Other,
-            "lldb-regex", // Name of input reader for history
-            "> ",         // Prompt
-            nullptr,      // Continuation prompt
+            "lldb-regex",          // Name of input reader for history
+            llvm::StringRef("> "), // Prompt
+            llvm::StringRef(),     // Continuation prompt
             multiple_lines, color_prompt,
             0, // Don't show line numbers
             *this));
@@ -1645,7 +1652,8 @@ protected:
       case 's':
         m_synchronicity =
             (ScriptedCommandSynchronicity)Args::StringToOptionEnum(
-                option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
+                llvm::StringRef::withNullAsEmpty(option_arg),
+                GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
           error.SetErrorStringWithFormat(
               "unrecognized value for synchronicity '%s'", option_arg);

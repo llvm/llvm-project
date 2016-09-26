@@ -301,7 +301,8 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 's':
         m_script_language = (lldb::ScriptLanguage)Args::StringToOptionEnum(
-            option_arg, g_breakpoint_add_options[option_idx].enum_values,
+            llvm::StringRef::withNullAsEmpty(option_arg),
+            g_breakpoint_add_options[option_idx].enum_values,
             eScriptLanguageNone, error);
 
         if (m_script_language == eScriptLanguagePython ||

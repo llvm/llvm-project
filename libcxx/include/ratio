@@ -300,18 +300,18 @@ public:
         >::type type;
 };
 
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2> using ratio_multiply
                                     = typename __ratio_multiply<_R1, _R2>::type;
 
-#else  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct _LIBCPP_TYPE_VIS_ONLY ratio_multiply
     : public __ratio_multiply<_R1, _R2>::type {};
 
-#endif  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct __ratio_divide
@@ -327,18 +327,18 @@ public:
         >::type type;
 };
 
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2> using ratio_divide
                                       = typename __ratio_divide<_R1, _R2>::type;
 
-#else  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct _LIBCPP_TYPE_VIS_ONLY ratio_divide
     : public __ratio_divide<_R1, _R2>::type {};
 
-#endif  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct __ratio_add
@@ -362,18 +362,18 @@ public:
         >::type type;
 };
 
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2> using ratio_add
                                          = typename __ratio_add<_R1, _R2>::type;
 
-#else  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct _LIBCPP_TYPE_VIS_ONLY ratio_add
     : public __ratio_add<_R1, _R2>::type {};
 
-#endif  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct __ratio_subtract
@@ -397,18 +397,18 @@ public:
         >::type type;
 };
 
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2> using ratio_subtract
                                     = typename __ratio_subtract<_R1, _R2>::type;
 
-#else  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct _LIBCPP_TYPE_VIS_ONLY ratio_subtract
     : public __ratio_subtract<_R1, _R2>::type {};
 
-#endif  // _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#endif  // _LIBCPP_CXX03_LANG
 
 // ratio_equal
 

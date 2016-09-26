@@ -27,7 +27,7 @@ void AVRTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
 
 MCSection *
 AVRTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
-                                            SectionKind Kind, Mangler &Mang,
+                                            SectionKind Kind,
                                             const TargetMachine &TM) const {
   // Global values in flash memory are placed in the progmem.data section
   // unless they already have a user assigned section.
@@ -35,6 +35,7 @@ AVRTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
     return ProgmemDataSection;
 
   // Otherwise, we work the same way as ELF.
-  return Base::SelectSectionForGlobal(GV, Kind, Mang, TM);
+  return Base::SelectSectionForGlobal(GV, Kind, TM);
 }
 } // end of namespace llvm
+

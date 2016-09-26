@@ -51,7 +51,7 @@
 
   <div class="submenu">
     <label>Quick Links</label>
-    <a href="http://buildd-clang.debian.net/coverage/">Testing Coverage</a>
+    <a href="http://llvm.org/reports/coverage/">Testing Coverage</a>
   </div>
 
   <div class="submenu">

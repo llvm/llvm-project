@@ -207,16 +207,16 @@ define <4 x float> @ultof432(<4 x i64> %a) {
 ; KNL-LABEL: ultof432:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    vcvtusi2ssq %rax, %xmm0, %xmm1
+; KNL-NEXT:    vcvtusi2ssq %rax, %xmm1, %xmm1
 ; KNL-NEXT:    vmovq %xmm0, %rax
-; KNL-NEXT:    vcvtusi2ssq %rax, %xmm0, %xmm2
+; KNL-NEXT:    vcvtusi2ssq %rax, %xmm2, %xmm2
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL-NEXT:    vmovq %xmm0, %rax
-; KNL-NEXT:    vcvtusi2ssq %rax, %xmm0, %xmm2
+; KNL-NEXT:    vcvtusi2ssq %rax, %xmm3, %xmm2
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    vcvtusi2ssq %rax, %xmm0, %xmm0
+; KNL-NEXT:    vcvtusi2ssq %rax, %xmm3, %xmm0
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; KNL-NEXT:    retq
 ;
@@ -233,27 +233,27 @@ define <8 x double> @ultof64(<8 x i64> %a) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
 ; KNL-NEXT:    vpextrq $1, %xmm1, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm2
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm2, %xmm2
 ; KNL-NEXT:    vmovq %xmm1, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm1
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm3, %xmm1
 ; KNL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; KNL-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
 ; KNL-NEXT:    vpextrq $1, %xmm2, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm3
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm3, %xmm3
 ; KNL-NEXT:    vmovq %xmm2, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm2
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm4, %xmm2
 ; KNL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; KNL-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; KNL-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
 ; KNL-NEXT:    vpextrq $1, %xmm2, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm3
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm4, %xmm3
 ; KNL-NEXT:    vmovq %xmm2, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm2
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm4, %xmm2
 ; KNL-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm3
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm4, %xmm3
 ; KNL-NEXT:    vmovq %xmm0, %rax
-; KNL-NEXT:    vcvtusi2sdq %rax, %xmm0, %xmm0
+; KNL-NEXT:    vcvtusi2sdq %rax, %xmm4, %xmm0
 ; KNL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; KNL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; KNL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0

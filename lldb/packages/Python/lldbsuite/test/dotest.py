@@ -26,6 +26,7 @@ import atexit
 import os
 import errno
 import platform
+import re
 import signal
 import socket
 import subprocess
@@ -202,6 +203,48 @@ o GDB_REMOTE_LOG: if defined, specifies the log file pathname for the
     sys.exit(0)
 
 
+def parseExclusion(exclusion_file):
+    """Parse an exclusion file, of the following format, where
+       'skip files', 'skip methods', 'xfail files', and 'xfail methods'
+       are the possible list heading values:
+
+       skip files
+       <file name>
+       <file name>
+
+       xfail methods
+       <method name>
+    """
+    excl_type = None
+    case_type = None
+
+    with open(exclusion_file) as f:
+        for line in f:
+            if not excl_type:
+                [excl_type, case_type] = line.split()
+                continue
+
+            line = line.strip()
+            if not line:
+                excl_type = None
+            elif excl_type == 'skip' and case_type == 'files':
+                if not configuration.skip_files:
+                    configuration.skip_files = []
+                configuration.skip_files.append(line)
+            elif excl_type == 'skip' and case_type == 'methods':
+                if not configuration.skip_methods:
+                    configuration.skip_methods = []
+                configuration.skip_methods.append(line)
+            elif excl_type == 'xfail' and case_type == 'files':
+                if not configuration.xfail_files:
+                    configuration.xfail_files = []
+                configuration.xfail_files.append(line)
+            elif excl_type == 'xfail' and case_type == 'methods':
+                if not configuration.xfail_methods:
+                    configuration.xfail_methods = []
+                configuration.xfail_methods.append(line)
+
+
 def parseOptionsAndInitTestdirs():
     """Initialize the list of directories containing our unittest scripts.
 
@@ -330,6 +373,9 @@ def parseOptionsAndInitTestdirs():
 
     if args.executable:
         lldbtest_config.lldbExec = os.path.realpath(args.executable)
+
+    if args.excluded:
+        parseExclusion(args.excluded)
 
     if args.p:
         if args.p.startswith('-'):
@@ -749,10 +795,14 @@ def setupSysPath():
 def visit_file(dir, name):
     # Try to match the regexp pattern, if specified.
     if configuration.regexp:
-        import re
         if not re.search(configuration.regexp, name):
             # We didn't match the regex, we're done.
             return
+
+    if configuration.skip_files:
+        for file_regexp in configuration.skip_files:
+            if re.search(file_regexp, name):
+                return
 
     # We found a match for our test.  Add it to the suite.
 

@@ -32,7 +32,7 @@ llvm::ArrayRef<OptionDefinition> OptionGroupUUID::GetDefinitions() {
 }
 
 Error OptionGroupUUID::SetOptionValue(uint32_t option_idx,
-                                      const char *option_arg,
+                                      llvm::StringRef option_arg,
                                       ExecutionContext *execution_context) {
   Error error;
   const int short_option = g_option_table[option_idx].short_option;

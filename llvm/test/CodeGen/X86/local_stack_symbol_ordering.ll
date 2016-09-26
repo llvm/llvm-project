@@ -67,7 +67,7 @@
 ; X64: callq check_a
 ; X64: callq bar1
 ; X64: callq bar1
-; X64: leaq (%rsp), %rdi
+; X64: movq %rsp, %rdi
 ; X64: callq check_f
 ; X64: callq bar1
 ; X64: callq bar3

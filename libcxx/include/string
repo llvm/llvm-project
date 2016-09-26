@@ -170,7 +170,8 @@ public:
     basic_string& append(const basic_string& str);
     basic_string& append(basic_string_view<charT, traits> sv);
     basic_string& append(const basic_string& str, size_type pos, size_type n=npos); //C++14
-    basic_string& append(basic_string_view<charT, traits> sv, size_type pos, size_type n=npos); //C++14
+    template <class T>
+        basic_string& append(const T& t, size_type pos, size_type n=npos); // C++17
     basic_string& append(const value_type* s, size_type n);
     basic_string& append(const value_type* s);
     basic_string& append(size_type n, value_type c);
@@ -189,7 +190,8 @@ public:
     basic_string& assign(basic_string_view<charT, traits> sv);
     basic_string& assign(basic_string&& str);
     basic_string& assign(const basic_string& str, size_type pos, size_type n=npos); // C++14
-    basic_string& assign(basic_string_view<charT, traits> sv, size_type pos, size_type n=npos); // C++14
+    template <class T>
+        basic_string& assign(const T& t, size_type pos, size_type n=npos); // C++17
     basic_string& assign(const value_type* s, size_type n);
     basic_string& assign(const value_type* s);
     basic_string& assign(size_type n, value_type c);
@@ -201,8 +203,8 @@ public:
     basic_string& insert(size_type pos1, basic_string_view<charT, traits> sv);
     basic_string& insert(size_type pos1, const basic_string& str,
                          size_type pos2, size_type n);
-    basic_string& insert(size_type pos1, basic_string_view<charT, traits> sv,
-                         size_type pos2, size_type n);
+    template <class T>
+        basic_string& insert(size_type pos1, const T& t, size_type pos2, size_type n); // C++17
     basic_string& insert(size_type pos, const value_type* s, size_type n=npos); //C++14
     basic_string& insert(size_type pos, const value_type* s);
     basic_string& insert(size_type pos, size_type n, value_type c);
@@ -220,8 +222,9 @@ public:
     basic_string& replace(size_type pos1, size_type n1, basic_string_view<charT, traits> sv);
     basic_string& replace(size_type pos1, size_type n1, const basic_string& str,
                           size_type pos2, size_type n2=npos); // C++14
-    basic_string& replace(size_type pos1, size_type n1, basic_string_view<charT, traits> sv,
-                          size_type pos2, size_type n2=npos); // C++14
+    template <class T>
+        basic_string& replace(size_type pos1, size_type n1, const T& t,
+                              size_type pos2, size_type n); // C++17
     basic_string& replace(size_type pos, size_type n1, const value_type* s, size_type n2);
     basic_string& replace(size_type pos, size_type n1, const value_type* s);
     basic_string& replace(size_type pos, size_type n1, size_type n2, value_type c);
@@ -289,8 +292,9 @@ public:
     int compare(size_type pos1, size_type n1, basic_string_view<charT, traits> sv) const;
     int compare(size_type pos1, size_type n1, const basic_string& str,
                 size_type pos2, size_type n2=npos) const; // C++14
-    int compare(size_type pos1, size_type n1, basic_string_view<charT, traits> sv,
-                size_type pos2, size_type n2=npos) const; // C++14
+    template <class T>
+        int compare(size_type pos1, size_type n1, const T& t,
+                    size_type pos2, size_type n2=npos) const; // C++17
     int compare(const value_type* s) const noexcept;
     int compare(size_type pos1, size_type n1, const value_type* s) const;
     int compare(size_type pos1, size_type n1, const value_type* s, size_type n2) const;
@@ -603,6 +607,11 @@ template <class _Iter>
 struct __libcpp_string_gets_noexcept_iterator
     : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value || __libcpp_string_gets_noexcept_iterator_impl<_Iter>::value) {};
 
+template <class _CharT, class _Traits, class _Tp>
+struct __can_be_converted_to_string_view : public _LIBCPP_BOOL_CONSTANT(
+	( is_convertible<const _Tp&, basic_string_view<_CharT, _Traits> >::value &&
+     !is_convertible<const _Tp&, const _CharT*>::value)) {};
+
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
 template <class _CharT, size_t = sizeof(_CharT)>
@@ -907,8 +916,13 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_string& append(__self_view __sv) { return append(__sv.data(), __sv.size()); }
     basic_string& append(const basic_string& __str, size_type __pos, size_type __n=npos);
-    _LIBCPP_INLINE_VISIBILITY
-    basic_string& append(__self_view __sv, size_type __pos, size_type __n=npos);
+    template <typename _Tp>
+        typename enable_if
+        <
+            __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+            basic_string&
+        >::type
+                  append(const _Tp& __t, size_type __pos, size_type __n=npos);
     basic_string& append(const value_type* __s, size_type __n);
     basic_string& append(const value_type* __s);
     basic_string& append(size_type __n, value_type __c);
@@ -952,8 +966,13 @@ public:
         {*this = _VSTD::move(str); return *this;}
 #endif
     basic_string& assign(const basic_string& __str, size_type __pos, size_type __n=npos);
-    _LIBCPP_INLINE_VISIBILITY
-    basic_string& assign(__self_view __sv, size_type pos, size_type n=npos);
+    template <typename _Tp>
+        typename enable_if
+        <
+            __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+            basic_string&
+        >::type
+                  assign(const _Tp & __t, size_type pos, size_type n=npos);
     basic_string& assign(const value_type* __s, size_type __n);
     basic_string& assign(const value_type* __s);
     basic_string& assign(size_type __n, value_type __c);
@@ -982,8 +1001,13 @@ public:
     basic_string& insert(size_type __pos1, const basic_string& __str);
     _LIBCPP_INLINE_VISIBILITY
     basic_string& insert(size_type __pos1, __self_view __sv) { return insert(__pos1, __sv.data(), __sv.size()); }
-    _LIBCPP_INLINE_VISIBILITY
-    basic_string& insert(size_type __pos1, __self_view __sv, size_type __pos2, size_type __n=npos);
+    template <class _Tp>
+        typename enable_if
+        <
+            __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+            basic_string&
+        >::type
+                  insert(size_type __pos1, const _Tp& __t, size_type __pos2, size_type __n=npos);
     basic_string& insert(size_type __pos1, const basic_string& __str, size_type __pos2, size_type __n=npos);
     basic_string& insert(size_type __pos, const value_type* __s, size_type __n);
     basic_string& insert(size_type __pos, const value_type* __s);
@@ -1024,8 +1048,13 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_string& replace(size_type __pos1, size_type __n1, __self_view __sv) { return replace(__pos1, __n1, __sv.data(), __sv.size()); }
     basic_string& replace(size_type __pos1, size_type __n1, const basic_string& __str, size_type __pos2, size_type __n2=npos);
-    inline _LIBCPP_INLINE_VISIBILITY
-    basic_string& replace(size_type __pos1, size_type __n1, __self_view __sv, size_type __pos2, size_type __n2=npos);
+    template <class _Tp>
+        typename enable_if
+        <
+            __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+            basic_string&
+        >::type
+                  replace(size_type __pos1, size_type __n1, const _Tp& __t, size_type __pos2, size_type __n2=npos);
     basic_string& replace(size_type __pos, size_type __n1, const value_type* __s, size_type __n2);
     basic_string& replace(size_type __pos, size_type __n1, const value_type* __s);
     basic_string& replace(size_type __pos, size_type __n1, size_type __n2, value_type __c);
@@ -1144,8 +1173,13 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     int compare(size_type __pos1, size_type __n1, const basic_string& __str) const;
     int compare(size_type __pos1, size_type __n1, const basic_string& __str, size_type __pos2, size_type __n2=npos) const;
-    _LIBCPP_INLINE_VISIBILITY
-    int compare(size_type __pos1, size_type __n1, __self_view __sv, size_type __pos2, size_type __n2=npos) const;
+    template <class _Tp>
+        typename enable_if
+        <
+            __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+            int
+        >::type
+        compare(size_type __pos1, size_type __n1, const _Tp& __t, size_type __pos2, size_type __n2=npos) const;
     int compare(const value_type* __s) const _NOEXCEPT;
     int compare(size_type __pos1, size_type __n1, const value_type* __s) const;
     int compare(size_type __pos1, size_type __n1, const value_type* __s, size_type __n2) const;
@@ -2042,10 +2076,15 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const basic_string& __str, siz
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::assign(__self_view __sv, size_type __pos, size_type __n)
+template <class _Tp>
+typename enable_if
+<
+    __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+	basic_string<_CharT, _Traits, _Allocator>&
+>::type
+basic_string<_CharT, _Traits, _Allocator>::assign(const _Tp & __t, size_type __pos, size_type __n)
 {
+    __self_view __sv = __t;
     size_type __sz = __sv.size();
     if (__pos > __sz)
         this->__throw_out_of_range();
@@ -2222,10 +2261,15 @@ basic_string<_CharT, _Traits, _Allocator>::append(const basic_string& __str, siz
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::append(__self_view __sv, size_type __pos, size_type __n)
+template <typename _Tp>
+    typename enable_if
+    <
+        __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+        basic_string<_CharT, _Traits, _Allocator>&
+    >::type
+basic_string<_CharT, _Traits, _Allocator>::append(const _Tp & __t, size_type __pos, size_type __n)
 {
+    __self_view __sv = __t;
     size_type __sz = __sv.size();
     if (__pos > __sz)
         this->__throw_out_of_range();
@@ -2393,11 +2437,16 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const basic_
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, __self_view __sv,
+template <class _Tp>
+typename enable_if
+<
+    __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+	basic_string<_CharT, _Traits, _Allocator>&
+>::type
+basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const _Tp& __t,
                                                   size_type __pos2, size_type __n)
 {
+    __self_view __sv = __t;
     size_type __str_sz = __sv.size();
     if (__pos2 > __str_sz)
         this->__throw_out_of_range();
@@ -2574,10 +2623,16 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type _
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type __n1, __self_view __sv,
+template <class _Tp>
+typename enable_if
+<
+	__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+	basic_string<_CharT, _Traits, _Allocator>&
+>::type
+basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type __n1, const _Tp& __t,
                                                    size_type __pos2, size_type __n2)
 {
+    __self_view __sv = __t;
     size_type __str_sz = __sv.size();
     if (__pos2 > __str_sz)
         this->__throw_out_of_range();
@@ -3344,13 +3399,19 @@ basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-int inline _LIBCPP_INLINE_VISIBILITY
+template <class _Tp>
+typename enable_if
+<
+	__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+	int
+>::type
 basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
                                                    size_type __n1,
-                                                   __self_view __sv,
+                                                   const _Tp& __t,
                                                    size_type __pos2,
                                                    size_type __n2) const
 {
+    __self_view __sv = __t;
     return __self_view(*this).substr(__pos1, __n1).compare(__sv.substr(__pos2, __n2));
 }
 

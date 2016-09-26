@@ -115,7 +115,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_ADVANCED_SFINAE)
+#if !defined(_LIBCPP_CXX03_LANG)
 
 // scoped_allocator_adaptor
 
@@ -597,7 +597,7 @@ operator!=(const scoped_allocator_adaptor<_OuterA1, _InnerAllocs...>& __a,
     return !(__a == __b);
 }
 
-#endif  // !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_ADVANCED_SFINAE)
+#endif  // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_END_NAMESPACE_STD
 

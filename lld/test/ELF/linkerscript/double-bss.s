@@ -4,7 +4,7 @@
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -section-headers %t1 | FileCheck %s
 # CHECK:      .bss          00000004 0000000000000122 BSS
-# CHECK-NEXT: .bss          00000100 0000000000000128 BSS
+# CHECK-NEXT: .bss          00000080 0000000000000128 BSS
 
 .globl _start
 _start:

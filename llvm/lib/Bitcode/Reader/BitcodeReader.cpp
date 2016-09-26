@@ -230,12 +230,79 @@ private:
   Metadata *resolveTypeRefArray(Metadata *MaybeTuple);
 };
 
-class BitcodeReader : public GVMaterializer {
-  LLVMContext &Context;
-  Module *TheModule = nullptr;
+class BitcodeReaderBase {
+protected:
+  BitcodeReaderBase() = default;
+  BitcodeReaderBase(MemoryBuffer *Buffer) : Buffer(Buffer) {}
+
   std::unique_ptr<MemoryBuffer> Buffer;
   std::unique_ptr<BitstreamReader> StreamFile;
   BitstreamCursor Stream;
+
+  std::error_code initStream(std::unique_ptr<DataStreamer> Streamer);
+  std::error_code initStreamFromBuffer();
+  std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
+
+  virtual std::error_code error(const Twine &Message) = 0;
+  virtual ~BitcodeReaderBase() = default;
+};
+
+std::error_code
+BitcodeReaderBase::initStream(std::unique_ptr<DataStreamer> Streamer) {
+  if (Streamer)
+    return initLazyStream(std::move(Streamer));
+  return initStreamFromBuffer();
+}
+
+std::error_code BitcodeReaderBase::initStreamFromBuffer() {
+  const unsigned char *BufPtr = (const unsigned char*)Buffer->getBufferStart();
+  const unsigned char *BufEnd = BufPtr+Buffer->getBufferSize();
+
+  if (Buffer->getBufferSize() & 3)
+    return error("Invalid bitcode signature");
+
+  // If we have a wrapper header, parse it and ignore the non-bc file contents.
+  // The magic number is 0x0B17C0DE stored in little endian.
+  if (isBitcodeWrapper(BufPtr, BufEnd))
+    if (SkipBitcodeWrapperHeader(BufPtr, BufEnd, true))
+      return error("Invalid bitcode wrapper header");
+
+  StreamFile.reset(new BitstreamReader(BufPtr, BufEnd));
+  Stream.init(&*StreamFile);
+
+  return std::error_code();
+}
+
+std::error_code
+BitcodeReaderBase::initLazyStream(std::unique_ptr<DataStreamer> Streamer) {
+  // Check and strip off the bitcode wrapper; BitstreamReader expects never to
+  // see it.
+  auto OwnedBytes =
+      llvm::make_unique<StreamingMemoryObject>(std::move(Streamer));
+  StreamingMemoryObject &Bytes = *OwnedBytes;
+  StreamFile = llvm::make_unique<BitstreamReader>(std::move(OwnedBytes));
+  Stream.init(&*StreamFile);
+
+  unsigned char buf[16];
+  if (Bytes.readBytes(buf, 16, 0) != 16)
+    return error("Invalid bitcode signature");
+
+  if (!isBitcode(buf, buf + 16))
+    return error("Invalid bitcode signature");
+
+  if (isBitcodeWrapper(buf, buf + 4)) {
+    const unsigned char *bitcodeStart = buf;
+    const unsigned char *bitcodeEnd = buf + 16;
+    SkipBitcodeWrapperHeader(bitcodeStart, bitcodeEnd, false);
+    Bytes.dropLeadingBytes(bitcodeStart - buf);
+    Bytes.setKnownObjectSize(bitcodeEnd - bitcodeStart);
+  }
+  return std::error_code();
+}
+
+class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
+  LLVMContext &Context;
+  Module *TheModule = nullptr;
   // Next offset to start scanning for lazy parsing of function bodies.
   uint64_t NextUnreadBit = 0;
   // Last function offset found in the VST.
@@ -329,7 +396,7 @@ class BitcodeReader : public GVMaterializer {
 
 public:
   std::error_code error(BitcodeError E, const Twine &Message);
-  std::error_code error(const Twine &Message);
+  std::error_code error(const Twine &Message) override;
 
   BitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context);
   BitcodeReader(LLVMContext &Context);
@@ -505,9 +572,6 @@ private:
   ErrorOr<std::string> parseModuleTriple();
   ErrorOr<bool> hasObjCCategoryInModule();
   std::error_code parseUseLists();
-  std::error_code initStream(std::unique_ptr<DataStreamer> Streamer);
-  std::error_code initStreamFromBuffer();
-  std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
   std::error_code findFunctionInStream(
       Function *F,
       DenseMap<Function *, uint64_t>::iterator DeferredFunctionInfoIterator);
@@ -515,15 +579,11 @@ private:
 
 /// Class to manage reading and parsing function summary index bitcode
 /// files/sections.
-class ModuleSummaryIndexBitcodeReader {
+class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   DiagnosticHandlerFunction DiagnosticHandler;
 
   /// Eventually points to the module index built during parsing.
   ModuleSummaryIndex *TheIndex = nullptr;
-
-  std::unique_ptr<MemoryBuffer> Buffer;
-  std::unique_ptr<BitstreamReader> StreamFile;
-  BitstreamCursor Stream;
 
   /// Used to indicate whether caller only wants to check for the presence
   /// of the global value summary bitcode section. All blocks are skipped,
@@ -588,9 +648,6 @@ private:
       DenseMap<unsigned, GlobalValue::LinkageTypes> &ValueIdToLinkageMap);
   std::error_code parseEntireSummary();
   std::error_code parseModuleStringTable();
-  std::error_code initStream(std::unique_ptr<DataStreamer> Streamer);
-  std::error_code initStreamFromBuffer();
-  std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
   std::pair<GlobalValue::GUID, GlobalValue::GUID>
 
   getGUIDFromValueId(unsigned ValueId);
@@ -643,12 +700,11 @@ std::error_code BitcodeReader::error(const Twine &Message) {
 }
 
 BitcodeReader::BitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context)
-    : Context(Context), Buffer(Buffer), ValueList(Context),
+    : BitcodeReaderBase(Buffer), Context(Context), ValueList(Context),
       MetadataList(Context) {}
 
 BitcodeReader::BitcodeReader(LLVMContext &Context)
-    : Context(Context), Buffer(nullptr), ValueList(Context),
-      MetadataList(Context) {}
+    : Context(Context), ValueList(Context), MetadataList(Context) {}
 
 std::error_code BitcodeReader::materializeForwardReferencedFunctions() {
   if (WillMaterializeAllForwardRefs)
@@ -5875,59 +5931,6 @@ std::vector<StructType *> BitcodeReader::getIdentifiedStructTypes() const {
   return IdentifiedStructTypes;
 }
 
-std::error_code
-BitcodeReader::initStream(std::unique_ptr<DataStreamer> Streamer) {
-  if (Streamer)
-    return initLazyStream(std::move(Streamer));
-  return initStreamFromBuffer();
-}
-
-std::error_code BitcodeReader::initStreamFromBuffer() {
-  const unsigned char *BufPtr = (const unsigned char*)Buffer->getBufferStart();
-  const unsigned char *BufEnd = BufPtr+Buffer->getBufferSize();
-
-  if (Buffer->getBufferSize() & 3)
-    return error("Invalid bitcode signature");
-
-  // If we have a wrapper header, parse it and ignore the non-bc file contents.
-  // The magic number is 0x0B17C0DE stored in little endian.
-  if (isBitcodeWrapper(BufPtr, BufEnd))
-    if (SkipBitcodeWrapperHeader(BufPtr, BufEnd, true))
-      return error("Invalid bitcode wrapper header");
-
-  StreamFile.reset(new BitstreamReader(BufPtr, BufEnd));
-  Stream.init(&*StreamFile);
-
-  return std::error_code();
-}
-
-std::error_code
-BitcodeReader::initLazyStream(std::unique_ptr<DataStreamer> Streamer) {
-  // Check and strip off the bitcode wrapper; BitstreamReader expects never to
-  // see it.
-  auto OwnedBytes =
-      llvm::make_unique<StreamingMemoryObject>(std::move(Streamer));
-  StreamingMemoryObject &Bytes = *OwnedBytes;
-  StreamFile = llvm::make_unique<BitstreamReader>(std::move(OwnedBytes));
-  Stream.init(&*StreamFile);
-
-  unsigned char buf[16];
-  if (Bytes.readBytes(buf, 16, 0) != 16)
-    return error("Invalid bitcode signature");
-
-  if (!isBitcode(buf, buf + 16))
-    return error("Invalid bitcode signature");
-
-  if (isBitcodeWrapper(buf, buf + 4)) {
-    const unsigned char *bitcodeStart = buf;
-    const unsigned char *bitcodeEnd = buf + 16;
-    SkipBitcodeWrapperHeader(bitcodeStart, bitcodeEnd, false);
-    Bytes.dropLeadingBytes(bitcodeStart - buf);
-    Bytes.setKnownObjectSize(bitcodeEnd - bitcodeStart);
-  }
-  return std::error_code();
-}
-
 std::error_code ModuleSummaryIndexBitcodeReader::error(const Twine &Message) {
   return ::error(DiagnosticHandler,
                  make_error_code(BitcodeError::CorruptedBitcode), Message);
@@ -5936,7 +5939,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::error(const Twine &Message) {
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
     bool CheckGlobalValSummaryPresenceOnly)
-    : DiagnosticHandler(std::move(DiagnosticHandler)), Buffer(Buffer),
+    : BitcodeReaderBase(Buffer), DiagnosticHandler(std::move(DiagnosticHandler)),
       CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
 
 void ModuleSummaryIndexBitcodeReader::freeState() { Buffer = nullptr; }
@@ -6553,59 +6556,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseSummaryIndexInto(
     if (Stream.SkipBlock())
       return error("Invalid record");
   }
-}
-
-std::error_code ModuleSummaryIndexBitcodeReader::initStream(
-    std::unique_ptr<DataStreamer> Streamer) {
-  if (Streamer)
-    return initLazyStream(std::move(Streamer));
-  return initStreamFromBuffer();
-}
-
-std::error_code ModuleSummaryIndexBitcodeReader::initStreamFromBuffer() {
-  const unsigned char *BufPtr = (const unsigned char *)Buffer->getBufferStart();
-  const unsigned char *BufEnd = BufPtr + Buffer->getBufferSize();
-
-  if (Buffer->getBufferSize() & 3)
-    return error("Invalid bitcode signature");
-
-  // If we have a wrapper header, parse it and ignore the non-bc file contents.
-  // The magic number is 0x0B17C0DE stored in little endian.
-  if (isBitcodeWrapper(BufPtr, BufEnd))
-    if (SkipBitcodeWrapperHeader(BufPtr, BufEnd, true))
-      return error("Invalid bitcode wrapper header");
-
-  StreamFile.reset(new BitstreamReader(BufPtr, BufEnd));
-  Stream.init(&*StreamFile);
-
-  return std::error_code();
-}
-
-std::error_code ModuleSummaryIndexBitcodeReader::initLazyStream(
-    std::unique_ptr<DataStreamer> Streamer) {
-  // Check and strip off the bitcode wrapper; BitstreamReader expects never to
-  // see it.
-  auto OwnedBytes =
-      llvm::make_unique<StreamingMemoryObject>(std::move(Streamer));
-  StreamingMemoryObject &Bytes = *OwnedBytes;
-  StreamFile = llvm::make_unique<BitstreamReader>(std::move(OwnedBytes));
-  Stream.init(&*StreamFile);
-
-  unsigned char buf[16];
-  if (Bytes.readBytes(buf, 16, 0) != 16)
-    return error("Invalid bitcode signature");
-
-  if (!isBitcode(buf, buf + 16))
-    return error("Invalid bitcode signature");
-
-  if (isBitcodeWrapper(buf, buf + 4)) {
-    const unsigned char *bitcodeStart = buf;
-    const unsigned char *bitcodeEnd = buf + 16;
-    SkipBitcodeWrapperHeader(bitcodeStart, bitcodeEnd, false);
-    Bytes.dropLeadingBytes(bitcodeStart - buf);
-    Bytes.setKnownObjectSize(bitcodeEnd - bitcodeStart);
-  }
-  return std::error_code();
 }
 
 namespace {

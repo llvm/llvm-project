@@ -37,8 +37,8 @@ declare void @callee2(i8*, i8*, i8*, i8*, i8*,
 ; CHECK: SU({{.*}}):   [[VRB]]<def> = LDRXui <fi#-2>
 ; CHECK-NOT: SU
 ; CHECK:  Successors:
-; CHECK:   ch  SU([[DEPSTOREB:.*]]): Latency=0
-; CHECK:   ch  SU([[DEPSTOREA:.*]]): Latency=0
+; CHECK:   ord  SU([[DEPSTOREB:.*]]): Latency=0
+; CHECK:   ord  SU([[DEPSTOREA:.*]]): Latency=0
 
 ; CHECK: SU([[DEPSTOREA]]):   STRXui %vreg{{.*}}, <fi#-4>
 ; CHECK: SU([[DEPSTOREB]]):   STRXui %vreg{{.*}}, <fi#-3>

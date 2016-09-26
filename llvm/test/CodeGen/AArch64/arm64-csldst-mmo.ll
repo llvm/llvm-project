@@ -13,9 +13,9 @@
 ; CHECK: SU(2):   STRWui %WZR
 ; CHECK: SU(3):   %X21<def>, %X20<def> = LDPXi %SP
 ; CHECK:  Predecessors:
-; CHECK-NEXT:   out SU(0)
-; CHECK-NEXT:   out SU(0)
-; CHECK-NEXT:   ch  SU(0)
+; CHECK-NEXT:   out  SU(0)
+; CHECK-NEXT:   out  SU(0)
+; CHECK-NEXT:   ord  SU(0)
 ; CHECK-NEXT:  Successors:
 define void @test1() {
 entry:

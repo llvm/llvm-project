@@ -4351,7 +4351,7 @@ template <class _Tp> struct __is_nothrow_swappable;
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#ifndef _LIBCPP_CXX03_LANG
 typename enable_if
 <
     is_move_constructible<_Tp>::value &&
@@ -4559,7 +4559,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename __sfinae_underlying_type<_Tp>::__promoted_type
 __convert_to_integral(_Tp __val) { return __val; }
 
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp>
 struct __has_operator_addressof_member_imp
@@ -4591,7 +4591,7 @@ struct __has_operator_addressof
                                   || __has_operator_addressof_free_imp<_Tp>::value>
 {};
 
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 template <class...> using void_t = void;

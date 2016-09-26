@@ -54,7 +54,7 @@ def main():
         print stderr
 
     # Reload all buffers in Vim.
-    vim.command("bufdo edit")
+    vim.command("checktime")
 
 
 if __name__ == '__main__':

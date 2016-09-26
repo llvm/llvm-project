@@ -441,7 +441,8 @@ public:
   /// can't be associated with any coverage information.
   unsigned getMismatchedCount() { return MismatchedFunctionCount; }
 
-  /// \brief Returns the list of files that are covered.
+  /// \brief Returns a lexicographically sorted, unique list of files that are
+  /// covered.
   std::vector<StringRef> getUniqueSourceFiles() const;
 
   /// \brief Get the coverage for a particular file.

@@ -23,6 +23,7 @@ struct ValueBitMap {
   static const size_t kBitsInWord = (sizeof(uintptr_t) * 8);
   static const size_t kMapSizeInWords = kMapSizeInBitsAligned / kBitsInWord;
  public:
+  static const size_t kNumberOfItems = kMapSizeInBits;
   // Clears all bits.
   void Reset() { memset(Map, 0, sizeof(Map)); }
 
@@ -36,6 +37,13 @@ struct ValueBitMap {
     uintptr_t New = Old | (1UL << BitIdx);
     Map[WordIdx] = New;
     return New != Old;
+  }
+
+  inline bool Get(uintptr_t Idx) {
+    assert(Idx < kMapSizeInBits);
+    uintptr_t WordIdx = Idx / kBitsInWord;
+    uintptr_t BitIdx = Idx % kBitsInWord;
+    return Map[WordIdx] & (1UL << BitIdx);
   }
 
   size_t GetNumBitsSinceLastMerge() const { return NumBits; }

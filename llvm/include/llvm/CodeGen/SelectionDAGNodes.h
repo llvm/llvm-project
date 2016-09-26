@@ -451,6 +451,7 @@ protected:
     uint16_t : NumLSBaseSDNodeBits;
 
     uint16_t IsTruncating : 1;
+    uint16_t IsCompressing : 1;
   };
 
   union {
@@ -1940,14 +1941,22 @@ class MaskedStoreSDNode : public MaskedLoadStoreSDNode {
 public:
   friend class SelectionDAG;
   MaskedStoreSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                    bool isTrunc, EVT MemVT, MachineMemOperand *MMO)
+                    bool isTrunc, bool isCompressing, EVT MemVT, 
+                    MachineMemOperand *MMO)
       : MaskedLoadStoreSDNode(ISD::MSTORE, Order, dl, VTs, MemVT, MMO) {
     StoreSDNodeBits.IsTruncating = isTrunc;
+    StoreSDNodeBits.IsCompressing = isCompressing;
   }
   /// Return true if the op does a truncation before store.
   /// For integers this is the same as doing a TRUNCATE and storing the result.
   /// For floats, it is the same as doing an FP_ROUND and storing the result.
   bool isTruncatingStore() const { return StoreSDNodeBits.IsTruncating; }
+
+  /// Returns true if the op does a compression to the vector before storing.
+  /// The node contiguously stores the active elements (integers or floats) 
+  /// in src (those with their respective bit set in writemask k) to unaligned 
+  /// memory at base_addr.
+  bool isCompressingStore() const { return StoreSDNodeBits.IsCompressing; }
 
   const SDValue &getValue() const { return getOperand(3); }
 

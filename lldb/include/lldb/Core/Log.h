@@ -106,6 +106,7 @@ public:
 
   virtual void PutCString(const char *cstr);
 
+  // CLEANUP: Add llvm::raw_ostream &Stream() function.
   virtual void Printf(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 

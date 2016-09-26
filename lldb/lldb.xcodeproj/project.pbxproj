@@ -57,7 +57,6 @@
 		23059A0719532B96007B8189 /* LinuxSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0519532B96007B8189 /* LinuxSignals.cpp */; };
 		23059A101958B319007B8189 /* SBUnixSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0F1958B319007B8189 /* SBUnixSignals.cpp */; };
 		23059A121958B3B2007B8189 /* SBUnixSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = 23059A111958B37B007B8189 /* SBUnixSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		230EC4591D63C3A7008DF59F /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 230EC4571D63C3A7008DF59F /* CMakeLists.txt */; };
 		230EC45B1D63C3BA008DF59F /* ThreadPlanCallOnFunctionExit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 230EC4581D63C3A7008DF59F /* ThreadPlanCallOnFunctionExit.cpp */; };
 		232CB615191E00CD00EF39FC /* NativeBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60B191E00CC00EF39FC /* NativeBreakpoint.cpp */; };
 		232CB617191E00CD00EF39FC /* NativeBreakpointList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60D191E00CC00EF39FC /* NativeBreakpointList.cpp */; };
@@ -68,8 +67,6 @@
 		233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */; };
 		236124A41986B4E2004EFC37 /* IOObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A21986B4E2004EFC37 /* IOObject.cpp */; };
 		236124A51986B4E2004EFC37 /* Socket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A31986B4E2004EFC37 /* Socket.cpp */; };
-		2374D7461D4BAA1D005C9575 /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2374D7431D4BAA1D005C9575 /* CMakeLists.txt */; };
-		2374D7521D4BB299005C9575 /* GDBRemoteClientBase.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2374D74F1D4BB299005C9575 /* GDBRemoteClientBase.h */; };
 		2374D7531D4BB2FF005C9575 /* GDBRemoteClientBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2374D74E1D4BB299005C9575 /* GDBRemoteClientBase.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
 		238F2B9E1D2C82D0001FF92A /* StructuredDataPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 238F2B9D1D2C82D0001FF92A /* StructuredDataPlugin.cpp */; };
@@ -78,10 +75,6 @@
 		238F2BA81D2C85FA001FF92A /* StructuredDataDarwinLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 238F2BA61D2C85FA001FF92A /* StructuredDataDarwinLog.cpp */; };
 		238F2BA91D2C85FA001FF92A /* StructuredDataDarwinLog.h in Headers */ = {isa = PBXBuildFile; fileRef = 238F2BA71D2C85FA001FF92A /* StructuredDataDarwinLog.h */; };
 		239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 239481851C59EBDD00DF7168 /* libncurses.dylib */; };
-		23CB14F21D66CC9000EDDDE1 /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23CB14F11D66CC9000EDDDE1 /* CMakeLists.txt */; };
-		23CB14F41D66CC9B00EDDDE1 /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23CB14F31D66CC9B00EDDDE1 /* CMakeLists.txt */; };
-		23CB14F71D66CCD600EDDDE1 /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23CB14F61D66CCD600EDDDE1 /* CMakeLists.txt */; };
-		23CB14FB1D66CCF100EDDDE1 /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23CB14F91D66CCF100EDDDE1 /* CMakeLists.txt */; };
 		23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
 		23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14FA1D66CCF100EDDDE1 /* CPlusPlusLanguageTest.cpp */; };
 		23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9461BDD346100BA9A93 /* UriParserTest.cpp */; };
@@ -109,18 +102,11 @@
 		23CB154C1D66DA9300EDDDE1 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF4A1BDD681800A5CEAC /* libz.dylib */; };
 		23CB154D1D66DA9300EDDDE1 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF471BDD67C100A5CEAC /* libncurses.dylib */; };
 		23CB154E1D66DA9300EDDDE1 /* liblldb-core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2689FFCA13353D7A00698AC0 /* liblldb-core.a */; };
-		23D065881D4A7BDA0008EDE6 /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23D065811D4A7BDA0008EDE6 /* CMakeLists.txt */; };
-		23D0658A1D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23D065831D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h */; };
-		23D0658C1D4A7BDA0008EDE6 /* RenderScriptRuntime.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23D065851D4A7BDA0008EDE6 /* RenderScriptRuntime.h */; };
-		23D0658E1D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23D065871D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h */; };
 		23D0658F1D4A7BEE0008EDE6 /* RenderScriptExpressionOpts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065821D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.cpp */; };
 		23D065901D4A7BEE0008EDE6 /* RenderScriptRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065841D4A7BDA0008EDE6 /* RenderScriptRuntime.cpp */; };
 		23D065911D4A7BEE0008EDE6 /* RenderScriptx86ABIFixups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */; };
 		23D4007D1C2101F2000C3885 /* DWARFDebugMacro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CD61C20F29F007192AD /* DWARFDebugMacro.cpp */; };
 		23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */; };
-		23DCBE9B1D63E14B0084C36B /* SBLanguageRuntime.i in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23DCBE971D63E14B0084C36B /* SBLanguageRuntime.i */; };
-		23DCBE9D1D63E14B0084C36B /* SBTypeEnumMember.i in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23DCBE991D63E14B0084C36B /* SBTypeEnumMember.i */; };
-		23DCBE9E1D63E14B0084C36B /* SBUnixSignals.i in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23DCBE9A1D63E14B0084C36B /* SBUnixSignals.i */; };
 		23DCBEA21D63E7190084C36B /* SBStructuredData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DCBEA01D63E6440084C36B /* SBStructuredData.cpp */; };
 		23DCBEA31D63E71F0084C36B /* SBStructuredData.h in Headers */ = {isa = PBXBuildFile; fileRef = 23DCBE9F1D63E3800084C36B /* SBStructuredData.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		23DCEA461D1C4D0F00A602B4 /* SBMemoryRegionInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DCEA421D1C4C6900A602B4 /* SBMemoryRegionInfo.cpp */; };
@@ -131,7 +117,6 @@
 		23E2E5291D9037D9006F38BB /* SymbolFilePDBTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15141D66CF8700EDDDE1 /* SymbolFilePDBTests.cpp */; };
 		23E2E52B1D9037E6006F38BB /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15011D66CD8400EDDDE1 /* ModuleCacheTest.cpp */; };
 		23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E52D1D90382B006F38BB /* BreakpointIDTest.cpp */; };
-		23E2E53B1D9048FB006F38BB /* CMakeLists.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 23E2E5361D9048FB006F38BB /* CMakeLists.txt */; };
 		23E2E5441D904913006F38BB /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E5371D9048FB006F38BB /* MinidumpParser.cpp */; };
 		23E2E5451D904913006F38BB /* MinidumpTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E5391D9048FB006F38BB /* MinidumpTypes.cpp */; };
 		23EFE389193D1ABC00E54E54 /* SBTypeEnumMember.h in Headers */ = {isa = PBXBuildFile; fileRef = 23EFE388193D1ABC00E54E54 /* SBTypeEnumMember.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -740,7 +725,6 @@
 		49DA65031485C92A005FF180 /* AppleObjCDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DA65021485C92A005FF180 /* AppleObjCDeclVendor.cpp */; };
 		49DCF6FE170E6B4A0092F75E /* IRMemoryMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF6FD170E6B4A0092F75E /* IRMemoryMap.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
-		49DEF1221CD7BD90006A7C7D /* BlockPointer.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 49DEF1201CD7BD90006A7C7D /* BlockPointer.h */; };
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
@@ -755,7 +739,6 @@
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
 		4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CABA9DF134A8BCD00539BDD /* ValueObjectMemory.cpp */; };
 		4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */; };
-		4CC7C6531D5299140076FF94 /* DWARFASTParserOCaml.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 4CC7C6511D5299140076FF94 /* DWARFASTParserOCaml.h */; };
 		4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */; };
 		4CC7C6581D529B950076FF94 /* DWARFASTParserOCaml.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */; };
 		4CCA644D13B40B82003BDF98 /* ItaniumABILanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA643D13B40B82003BDF98 /* ItaniumABILanguageRuntime.cpp */; };
@@ -1194,27 +1177,10 @@
 		AF90106415AB7D2900FF120D /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 8;
-			dstPath = "$(DEVELOPER_DIR)/usr/share/man/man1/";
+			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				23D0658E1D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h in CopyFiles */,
-				23CB14FB1D66CCF100EDDDE1 /* CMakeLists.txt in CopyFiles */,
-				2374D7521D4BB299005C9575 /* GDBRemoteClientBase.h in CopyFiles */,
-				23D0658C1D4A7BDA0008EDE6 /* RenderScriptRuntime.h in CopyFiles */,
-				23D0658A1D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h in CopyFiles */,
-				23CB14F21D66CC9000EDDDE1 /* CMakeLists.txt in CopyFiles */,
-				230EC4591D63C3A7008DF59F /* CMakeLists.txt in CopyFiles */,
-				49DEF1221CD7BD90006A7C7D /* BlockPointer.h in CopyFiles */,
-				23E2E53B1D9048FB006F38BB /* CMakeLists.txt in CopyFiles */,
-				2374D7461D4BAA1D005C9575 /* CMakeLists.txt in CopyFiles */,
-				4CC7C6531D5299140076FF94 /* DWARFASTParserOCaml.h in CopyFiles */,
-				23DCBE9D1D63E14B0084C36B /* SBTypeEnumMember.i in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
-				23DCBE9B1D63E14B0084C36B /* SBLanguageRuntime.i in CopyFiles */,
-				23CB14F71D66CCD600EDDDE1 /* CMakeLists.txt in CopyFiles */,
-				23DCBE9E1D63E14B0084C36B /* SBUnixSignals.i in CopyFiles */,
-				23D065881D4A7BDA0008EDE6 /* CMakeLists.txt in CopyFiles */,
-				23CB14F41D66CC9B00EDDDE1 /* CMakeLists.txt in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};

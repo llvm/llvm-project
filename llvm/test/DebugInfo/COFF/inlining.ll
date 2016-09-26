@@ -170,7 +170,7 @@
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
 ; OBJ:     PtrNext: 0x0
-; OBJ:     CodeSize: 0x3D
+; OBJ:     CodeSize: 0x3C
 ; OBJ:     DbgStart: 0x0
 ; OBJ:     DbgEnd: 0x0
 ; OBJ:     FunctionType: baz (0x1004)
@@ -189,7 +189,7 @@
 ; OBJ-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x8, LineOffset: 1}
 ; OBJ-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
 ; OBJ-NEXT:   ChangeLineOffset: 1
-; OBJ-NEXT:   ChangeCodeOffset: 0x1E
+; OBJ-NEXT:   ChangeCodeOffset: 0x1D
 ; OBJ-NEXT:   ChangeCodeLength: 0x7
 ; OBJ:      ]
 ; OBJ:   }
@@ -199,7 +199,7 @@
 ; OBJ:     Inlinee: foo (0x1003)
 ; OBJ:     BinaryAnnotations [
 ; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xF, LineOffset: 1}
-; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xA, LineOffset: 1}
+; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x9, LineOffset: 1}
 ; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
 ; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
 ; OBJ-NEXT:  ChangeCodeLength: 0x7

@@ -73,17 +73,18 @@ public:
     return llvm::makeArrayRef(g_read_memory_options);
   }
 
-  Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                        ExecutionContext *execution_context) override {
     Error error;
     const int short_option = g_read_memory_options[option_idx].short_option;
 
     switch (short_option) {
     case 'l':
-      error = m_num_per_line.SetValueFromString(option_arg);
+      error = m_num_per_line.SetValueFromString(option_value);
       if (m_num_per_line.GetCurrentValue() == 0)
         error.SetErrorStringWithFormat(
-            "invalid value for --num-per-line option '%s'", option_arg);
+            "invalid value for --num-per-line option '%s'",
+            option_value.str().c_str());
       break;
 
     case 'b':
@@ -91,7 +92,7 @@ public:
       break;
 
     case 't':
-      error = m_view_as_type.SetValueFromString(option_arg);
+      error = m_view_as_type.SetValueFromString(option_value);
       break;
 
     case 'r':
@@ -99,7 +100,7 @@ public:
       break;
 
     case 'E':
-      error = m_offset.SetValueFromString(option_arg);
+      error = m_offset.SetValueFromString(option_value);
       break;
 
     default:
@@ -109,6 +110,7 @@ public:
     }
     return error;
   }
+  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_num_per_line.Clear();
@@ -908,7 +910,7 @@ public:
       return llvm::makeArrayRef(g_memory_find_option_table);
     }
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option =
@@ -916,20 +918,20 @@ public:
 
       switch (short_option) {
       case 'e':
-        m_expr.SetValueFromString(option_arg);
+        m_expr.SetValueFromString(option_value);
         break;
 
       case 's':
-        m_string.SetValueFromString(option_arg);
+        m_string.SetValueFromString(option_value);
         break;
 
       case 'c':
-        if (m_count.SetValueFromString(option_arg).Fail())
+        if (m_count.SetValueFromString(option_value).Fail())
           error.SetErrorString("unrecognized value for count");
         break;
 
       case 'o':
-        if (m_offset.SetValueFromString(option_arg).Fail())
+        if (m_offset.SetValueFromString(option_value).Fail())
           error.SetErrorString("unrecognized value for dump-offset");
         break;
 
@@ -940,6 +942,7 @@ public:
       }
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_expr.Clear();
@@ -1204,7 +1207,7 @@ public:
       return llvm::makeArrayRef(g_memory_write_option_table);
     }
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option =
@@ -1212,20 +1215,19 @@ public:
 
       switch (short_option) {
       case 'i':
-        m_infile.SetFile(option_arg, true);
+        m_infile.SetFile(option_value, true);
         if (!m_infile.Exists()) {
           m_infile.Clear();
           error.SetErrorStringWithFormat("input file does not exist: '%s'",
-                                         option_arg);
+                                         option_value.str().c_str());
         }
         break;
 
       case 'o': {
-        bool success;
-        m_infile_offset = StringConvert::ToUInt64(option_arg, 0, 0, &success);
-        if (!success) {
+        if (option_value.getAsInteger(0, m_infile_offset)) {
+          m_infile_offset = 0;
           error.SetErrorStringWithFormat("invalid offset string '%s'",
-                                         option_arg);
+                                         option_value.str().c_str());
         }
       } break;
 
@@ -1236,6 +1238,7 @@ public:
       }
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_infile.Clear();

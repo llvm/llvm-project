@@ -138,7 +138,7 @@ entry:
 ; The this pointer goes to ECX.
 ; (through %ecx in the -O0 build).
 ; WIN32:      leal {{[0-9]*}}(%esp), %e{{[a-d]}}x
-; WIN32:      leal {{[0-9]*}}(%esp), %ecx
+; WIN32:      {{leal [1-9]+\(%esp\)|movl %esp}}, %ecx
 ; WIN32:      {{pushl %e[a-d]x|movl %e[a-d]x, \(%esp\)}}
 ; WIN32-NEXT: calll "?foo@C5@@QAE?AUS5@@XZ"
 ; WIN32:      retl
@@ -158,16 +158,16 @@ define void @test6_f(%struct.test6* %x) nounwind {
 
 
 ; The sret pointer is (%esp)
-; WIN32:          leal    {{4?}}(%esp), %eax
+; WIN32:      {{leal 4\(%esp\)|movl %esp}}, %eax
 ; WIN32-NEXT:     {{pushl   %eax|movl %eax, \(%esp\)}}
 
 ; The sret pointer is %ecx
 ; The %x argument is moved to (%esp). It will be the this pointer.
-; MINGW_X86:      leal    {{4?}}(%esp), %ecx
+; MINGW_X86:      {{leal 4\(%esp\)|movl %esp}}, %ecx
 ; MINGW_X86-NEXT: {{pushl   16\(%esp\)|movl %eax, \(%esp\)}}
 ; MINGW_X86-NEXT: calll   _test6_g
 
-; CYGWIN:      leal    {{4?}}(%esp), %ecx
+; CYGWIN:      {{leal 4\(%esp\)|movl %esp}}, %ecx
 ; CYGWIN-NEXT: {{pushl   16\(%esp\)|movl %eax, \(%esp\)}}
 ; CYGWIN-NEXT: calll   _test6_g
 
@@ -191,11 +191,11 @@ define void @test7_f(%struct.test7* %x) nounwind {
 ; CYGWIN:     movl    {{16|20}}(%esp), %ecx
 
 ; The sret pointer is (%esp)
-; WIN32:          leal    {{4?}}(%esp), %eax
+; WIN32:      {{leal 4\(%esp\)|movl %esp}}, %eax
 ; WIN32-NEXT:     {{pushl   %eax|movl %eax, \(%esp\)}}
-; MINGW_X86:      leal    {{4?}}(%esp), %eax
+; MINGW_X86:      {{leal 4\(%esp\)|movl %esp}}, %eax
 ; MINGW_X86-NEXT: {{pushl   %eax|movl %eax, \(%esp\)}}
-; CYGWIN:         leal    {{4?}}(%esp), %eax
+; CYGWIN:      {{leal 4\(%esp\)|movl %esp}}, %eax
 ; CYGWIN-NEXT: {{pushl   %eax|movl %eax, \(%esp\)}}
 
   %tmp = alloca %struct.test7, align 4

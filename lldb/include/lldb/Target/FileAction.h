@@ -40,7 +40,7 @@ public:
 
   int GetActionArgument() const { return m_arg; }
 
-  const char *GetPath() const;
+  llvm::StringRef GetPath() const;
 
   const FileSpec &GetFileSpec() const;
 

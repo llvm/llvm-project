@@ -205,15 +205,15 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     InstructionMapping FPRMapping(/*ID*/ 2, /*Cost*/ 1, /*NumOperands*/ 3);
     for (unsigned Idx = 0; Idx != 3; ++Idx) {
       GPRMapping.setOperandMapping(
-          Idx,
-          ValueMapping{&AArch64::PartMappings[AArch64::getRegBankBaseIdx(Size) +
-                                              AArch64::FirstGPR],
-                       1});
+          Idx, getValueMapping(
+                   &AArch64::PartMappings[AArch64::getRegBankBaseIdx(Size) +
+                                          AArch64::FirstGPR],
+                   1));
       FPRMapping.setOperandMapping(
-          Idx,
-          ValueMapping{&AArch64::PartMappings[AArch64::getRegBankBaseIdx(Size) +
-                                              AArch64::FirstFPR],
-                       1});
+          Idx, getValueMapping(
+                   &AArch64::PartMappings[AArch64::getRegBankBaseIdx(Size) +
+                                          AArch64::FirstFPR],
+                   1));
     }
     AltMappings.emplace_back(std::move(GPRMapping));
     AltMappings.emplace_back(std::move(FPRMapping));
@@ -325,7 +325,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx)
     if (MI.getOperand(Idx).isReg())
       Mapping.setOperandMapping(
-          Idx, ValueMapping{&AArch64::PartMappings[OpFinalIdx[Idx]], 1});
+          Idx, getValueMapping(&AArch64::PartMappings[OpFinalIdx[Idx]], 1));
 
   return Mapping;
 }

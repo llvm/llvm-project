@@ -20,7 +20,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
-#include "llvm/LTO/Config.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -34,12 +34,12 @@ class Target;
 namespace lto {
 
 /// Runs a regular LTO backend.
-Error backend(Config &C, AddOutputFn AddStream,
+Error backend(Config &C, AddStreamFn AddStream,
               unsigned ParallelCodeGenParallelismLevel,
               std::unique_ptr<Module> M);
 
 /// Runs a ThinLTO backend.
-Error thinBackend(Config &C, unsigned Task, AddOutputFn AddStream, Module &M,
+Error thinBackend(Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
                   ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,

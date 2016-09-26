@@ -38,7 +38,7 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; in memroy. The caller provides space for the return value and passes
 ; the address in %rax. The first input argument will be in %rdi.
 ; CHECK-LABEL: test2:
-; CHECK: leaq (%rsp), %rax
+; CHECK: movq %rsp, %rax
 ; CHECK: callq gen2
 ; CHECK: movl (%rsp)
 ; CHECK-DAG: addl 4(%rsp)
@@ -46,7 +46,7 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; CHECK-DAG: addl 12(%rsp)
 ; CHECK-DAG: addl 16(%rsp)
 ; CHECK-O0-LABEL: test2:
-; CHECK-O0-DAG: leaq (%rsp), %rax
+; CHECK-O0-DAG: movq %rsp, %rax
 ; CHECK-O0: callq gen2
 ; CHECK-O0-DAG: movl (%rsp)
 ; CHECK-O0-DAG: movl 4(%rsp)

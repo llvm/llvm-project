@@ -2445,12 +2445,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64) {
     Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
   }
-
-  if ((LangOpts.C11 || LangOpts.C99 || LangOpts.CPlusPlus) &&
-      (CodeGenOptions::FPC_On == Res.getCodeGenOpts().getFPContractMode()) &&
-      !LangOpts.CUDA)
-    LangOpts.DefaultFPContract = 1;
-
   return Success;
 }
 

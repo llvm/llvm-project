@@ -27,7 +27,9 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/lldb-forward.h"
+
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -953,7 +955,8 @@ public:
   ///     /b true if \a path was successfully located and \a new_path
   ///     is filled in with a new source path, \b false otherwise.
   //------------------------------------------------------------------
-  bool RemapSourceFile(const char *path, std::string &new_path) const;
+  bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
+  bool RemapSourceFile(const char *, std::string &) const = delete;
 
   //----------------------------------------------------------------------
   /// @class LookupInfo Module.h "lldb/Core/Module.h"

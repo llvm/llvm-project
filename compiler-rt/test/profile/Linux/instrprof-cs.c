@@ -1,12 +1,12 @@
 // RUN: rm -fr %t.prof
 // RUN: %clang_pgogen=%t.prof/ -o %t.gen.cs -O2 %s
-// RUN: %t.gen.cs
+// RUN: %run %t.gen.cs
 // RUN: llvm-profdata merge -o %t.cs.profdata %t.prof/
 // Check context sensitive profile
 // RUN: %clang_profuse=%t.cs.profdata  -O2 -emit-llvm -S %s -o - | FileCheck %s --check-prefix=CS
 //
 // RUN: %clang_profgen=%t.profraw -o %t.gen.cis -O2 %s
-// RUN: %t.gen.cis
+// RUN: %run %t.gen.cis
 // RUN: llvm-profdata merge -o %t.cis.profdata %t.profraw
 // Check context insenstive profile
 // RUN: %clang_profuse=%t.cis.profdata  -O2 -emit-llvm -S %s -o - | FileCheck %s --check-prefix=CIS

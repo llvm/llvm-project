@@ -381,7 +381,7 @@ public:
         OptionEnumValueElement *enum_values =
             GetDefinitions()[option_idx].enum_values;
         m_run_mode = (lldb::RunMode)Args::StringToOptionEnum(
-            option_arg, enum_values, eOnlyDuringStepping, error);
+            option_strref, enum_values, eOnlyDuringStepping, error);
       } break;
 
       case 'e': {
@@ -957,7 +957,8 @@ public:
         OptionEnumValueElement *enum_values =
             GetDefinitions()[option_idx].enum_values;
         lldb::RunMode run_mode = (lldb::RunMode)Args::StringToOptionEnum(
-            option_arg, enum_values, eOnlyDuringStepping, error);
+            llvm::StringRef::withNullAsEmpty(option_arg), enum_values,
+            eOnlyDuringStepping, error);
 
         if (error.Success()) {
           if (run_mode == eAllThreads)

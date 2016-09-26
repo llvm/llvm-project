@@ -28,7 +28,7 @@ public:
 
   void closeViewFile(OwnedStream OS) override;
 
-  Error createIndexFile(ArrayRef<StringRef> SourceFiles,
+  Error createIndexFile(ArrayRef<std::string> SourceFiles,
                         const coverage::CoverageMapping &Coverage) override;
 
   CoveragePrinterHTML(const CoverageViewOptions &Opts)

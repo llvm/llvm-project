@@ -276,7 +276,7 @@ Error Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
   if (error.Success()) {
     // FIXME it would be nice to have "on-change" callbacks for properties
     if (strcmp(property_path, g_properties[ePropertyPrompt].name) == 0) {
-      const char *new_prompt = GetPrompt();
+      llvm::StringRef new_prompt = GetPrompt();
       std::string str = lldb_utility::ansi::FormatAnsiTerminalCodes(
           new_prompt, GetUseColor());
       if (str.length())
@@ -337,16 +337,16 @@ bool Debugger::GetNotifyVoid() const {
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
-const char *Debugger::GetPrompt() const {
+llvm::StringRef Debugger::GetPrompt() const {
   const uint32_t idx = ePropertyPrompt;
   return m_collection_sp->GetPropertyAtIndexAsString(
       nullptr, idx, g_properties[idx].default_cstr_value);
 }
 
-void Debugger::SetPrompt(const char *p) {
+void Debugger::SetPrompt(llvm::StringRef p) {
   const uint32_t idx = ePropertyPrompt;
   m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
-  const char *new_prompt = GetPrompt();
+  llvm::StringRef new_prompt = GetPrompt();
   std::string str =
       lldb_utility::ansi::FormatAnsiTerminalCodes(new_prompt, GetUseColor());
   if (str.length())

@@ -82,7 +82,9 @@ Property::Property(const PropertyDefinition &definition)
           definition.enum_values, definition.default_uint_value);
       m_value_sp.reset(enum_value);
       if (definition.default_cstr_value) {
-        if (enum_value->SetValueFromString(definition.default_cstr_value)
+        if (enum_value
+                ->SetValueFromString(
+                    llvm::StringRef(definition.default_cstr_value))
                 .Success()) {
           enum_value->SetDefaultValue(enum_value->GetCurrentValue());
           // Call Clear() since we don't want the value to appear as

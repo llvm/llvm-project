@@ -105,7 +105,8 @@ TargetIRAnalysis LLVMTargetMachine::getTargetIRAnalysis() {
 static MCContext *
 addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
                         bool DisableVerify, AnalysisID StartBefore,
-                        AnalysisID StartAfter, AnalysisID StopAfter,
+                        AnalysisID StartAfter, AnalysisID StopBefore,
+                        AnalysisID StopAfter,
                         MachineFunctionInitializer *MFInitializer = nullptr) {
 
   // When in emulated TLS mode, add the LowerEmuTLS pass.
@@ -120,7 +121,8 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
   // Targets may override createPassConfig to provide a target-specific
   // subclass.
   TargetPassConfig *PassConfig = TM->createPassConfig(PM);
-  PassConfig->setStartStopPasses(StartBefore, StartAfter, StopAfter);
+  PassConfig->setStartStopPasses(StartBefore, StartAfter, StopBefore,
+                                 StopAfter);
 
   // Set PassConfig options provided by TargetMachine.
   PassConfig->setDisableVerify(DisableVerify);
@@ -191,15 +193,16 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
 bool LLVMTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
     bool DisableVerify, AnalysisID StartBefore, AnalysisID StartAfter,
-    AnalysisID StopAfter, MachineFunctionInitializer *MFInitializer) {
+    AnalysisID StopBefore, AnalysisID StopAfter,
+    MachineFunctionInitializer *MFInitializer) {
   // Add common CodeGen passes.
   MCContext *Context =
       addPassesToGenerateCode(this, PM, DisableVerify, StartBefore, StartAfter,
-                              StopAfter, MFInitializer);
+                              StopBefore, StopAfter, MFInitializer);
   if (!Context)
     return true;
 
-  if (StopAfter) {
+  if (StopBefore || StopAfter) {
     PM.add(createPrintMIRPass(Out));
     return false;
   }
@@ -284,7 +287,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
                                           bool DisableVerify) {
   // Add common CodeGen passes.
   Ctx = addPassesToGenerateCode(this, PM, DisableVerify, nullptr, nullptr,
-                                nullptr);
+                                nullptr, nullptr);
   if (!Ctx)
     return true;
 

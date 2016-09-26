@@ -6,7 +6,7 @@
 ;
 ; CHECK:      callq   _Z3fooPcjPKc
 ; CHECK:      callq   _Z3fooPcjPKc
-; CHECK:      leaq    (%rsp), %rdi
+; CHECK:      movq    %rsp, %rdi
 ; CHECK:      movl    $4, %esi
 ; CHECK:      testl   {{%[a-z]+}}, {{%[a-z]+}}
 ; CHECK:      je     .LBB0_4

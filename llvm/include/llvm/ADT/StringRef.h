@@ -10,6 +10,7 @@
 #ifndef LLVM_ADT_STRINGREF_H
 #define LLVM_ADT_STRINGREF_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
@@ -276,6 +277,32 @@ namespace llvm {
       return npos;
     }
 
+    /// Search for the first character satisfying the predicate \p F
+    ///
+    /// \returns The index of the first character satisfying \p F starting from
+    /// \p From, or npos if not found.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    size_t find_if(function_ref<bool(char)> F, size_t From = 0) const {
+      StringRef S = drop_front(From);
+      while (!S.empty()) {
+        if (F(S.front()))
+          return size() - S.size();
+        S = S.drop_front();
+      }
+      return npos;
+    }
+
+    /// Search for the first character not satisfying the predicate \p F
+    ///
+    /// \returns The index of the first character not satisfying \p F starting
+    /// from \p From, or npos if not found.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    size_t find_if_not(function_ref<bool(char)> F, size_t From = 0) const {
+      return find_if([F](char c) { return !F(c); }, From);
+    }
+
     /// Search for the first string \p Str in the string.
     ///
     /// \returns The index of the first occurrence of \p Str, or npos if not
@@ -351,6 +378,11 @@ namespace llvm {
     /// otherwise.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
     bool contains(StringRef Other) const { return find(Other) != npos; }
+
+    /// Return true if the given character is contained in *this, and false
+    /// otherwise.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    bool contains(char C) const { return find_first_of(C) != npos; }
 
     /// @}
     /// @name Helpful Algorithms
@@ -496,6 +528,22 @@ namespace llvm {
       return drop_front(size() - N);
     }
 
+    /// Return the longest prefix of 'this' such that every character
+    /// in the prefix satisfies the given predicate.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    StringRef take_while(function_ref<bool(char)> F) const {
+      return substr(0, find_if_not(F));
+    }
+
+    /// Return the longest prefix of 'this' such that no character in
+    /// the prefix satisfies the given predicate.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    StringRef take_until(function_ref<bool(char)> F) const {
+      return substr(0, find_if(F));
+    }
+
     /// Return a StringRef equal to 'this' but with the first \p N elements
     /// dropped.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -512,6 +560,22 @@ namespace llvm {
     StringRef drop_back(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return substr(0, size()-N);
+    }
+
+    /// Return a StringRef equal to 'this', but with all characters satisfying
+    /// the given predicate dropped from the beginning of the string.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    StringRef drop_while(function_ref<bool(char)> F) const {
+      return substr(find_if_not(F));
+    }
+
+    /// Return a StringRef equal to 'this', but with all characters not
+    /// satisfying the given predicate dropped from the beginning of the string.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    StringRef drop_until(function_ref<bool(char)> F) const {
+      return substr(find_if(F));
     }
 
     /// Returns true if this StringRef has the given prefix and removes that
