@@ -44,7 +44,9 @@ volatile int        __kmp_init_gtid       = FALSE;
 volatile int        __kmp_init_common     = FALSE;
 volatile int        __kmp_init_middle     = FALSE;
 volatile int        __kmp_init_parallel   = FALSE;
+#if KMP_USE_MONITOR
 volatile int        __kmp_init_monitor    = 0;  /* 1 - launched, 2 - actually started (Windows* OS only) */
+#endif
 volatile int        __kmp_init_user_locks = FALSE;
 
 /* list of address of allocated caches for commons */
@@ -61,7 +63,9 @@ unsigned int __kmp_init_wait = KMP_DEFAULT_INIT_WAIT;   /* initial number of spi
 unsigned int __kmp_next_wait = KMP_DEFAULT_NEXT_WAIT;   /* susequent number of spin-tests */
 
 size_t      __kmp_stksize         = KMP_DEFAULT_STKSIZE;
+#if KMP_USE_MONITOR
 size_t      __kmp_monitor_stksize = 0;  // auto adjust
+#endif
 size_t      __kmp_stkoffset       = KMP_DEFAULT_STKOFFSET;
 int         __kmp_stkpadding      = KMP_MIN_STKPADDING;
 
@@ -343,6 +347,8 @@ int        __kmp_env_consistency_check  = FALSE;  /* KMP_CONSISTENCY_CHECK speci
 
 kmp_uint32 __kmp_yield_init = KMP_INIT_WAIT;
 kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
+
+#if KMP_USE_MONITOR
 kmp_uint32 __kmp_yielding_on = 1;
 #if KMP_OS_CNK
 kmp_uint32 __kmp_yield_cycle = 0;
@@ -351,6 +357,7 @@ kmp_uint32 __kmp_yield_cycle = 1;     /* Yield-cycle is on by default */
 #endif
 kmp_int32  __kmp_yield_on_count = 10; /* By default, yielding is on for 10 monitor periods. */
 kmp_int32  __kmp_yield_off_count = 1; /* By default, yielding is off for 1 monitor periods. */
+#endif
 /* ----------------------------------------------------- */
 
 
@@ -398,8 +405,10 @@ KMP_ALIGN_CACHE_INTERNODE
 kmp_bootstrap_lock_t __kmp_forkjoin_lock; /* control fork/join access */
 KMP_ALIGN_CACHE_INTERNODE
 kmp_bootstrap_lock_t __kmp_exit_lock;   /* exit() is not always thread-safe */
+#if KMP_USE_MONITOR
 KMP_ALIGN_CACHE_INTERNODE
 kmp_bootstrap_lock_t __kmp_monitor_lock; /* control monitor thread creation */
+#endif
 KMP_ALIGN_CACHE_INTERNODE
 kmp_bootstrap_lock_t __kmp_tp_cached_lock; /* used for the hack to allow threadprivate cache and __kmp_threads expansion to co-exist */
 
@@ -415,7 +424,9 @@ KMP_ALIGN_CACHE
 kmp_bootstrap_lock_t __kmp_initz_lock   = KMP_BOOTSTRAP_LOCK_INITIALIZER( __kmp_initz_lock   ); /* Control initializations */
 kmp_bootstrap_lock_t __kmp_forkjoin_lock; /* control fork/join access */
 kmp_bootstrap_lock_t __kmp_exit_lock;   /* exit() is not always thread-safe */
+#if KMP_USE_MONITOR
 kmp_bootstrap_lock_t __kmp_monitor_lock; /* control monitor thread creation */
+#endif
 kmp_bootstrap_lock_t __kmp_tp_cached_lock; /* used for the hack to allow threadprivate cache and __kmp_threads expansion to co-exist */
 
 KMP_ALIGN(128)

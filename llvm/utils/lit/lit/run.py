@@ -151,16 +151,18 @@ def run_one_tester(run, provider, display):
     tester.run()
 
 ###
+
 class _Display(object):
     def __init__(self, display, provider, maxFailures):
         self.display = display
+        self.provider = provider
         self.maxFailures = maxFailures or object()
         self.failedCount = 0
     def update(self, test):
         self.display.update(test)
         self.failedCount += (test.result.code == lit.Test.FAIL)
         if self.failedCount == self.maxFailures:
-            provider.cancel()
+            self.provider.cancel()
 
 def handleFailures(provider, consumer, maxFailures):
     consumer.display = _Display(consumer.display, provider, maxFailures)

@@ -66,7 +66,7 @@ CompressDebugSections("compress-debug-sections", cl::ValueOptional,
     clEnumValN(DebugCompressionType::DCT_Zlib, "zlib",
       "Use zlib compression"),
     clEnumValN(DebugCompressionType::DCT_ZlibGnu, "zlib-gnu",
-      "Use zlib-gnu compression (depricated)"),
+      "Use zlib-gnu compression (deprecated)"),
     clEnumValEnd));
 
 static cl::opt<bool>

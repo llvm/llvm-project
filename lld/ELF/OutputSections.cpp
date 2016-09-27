@@ -18,8 +18,9 @@
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/SHA1.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -1681,59 +1682,12 @@ template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
   HashBuf = Buf + 16;
 }
 
-static uint64_t murmurHash64A(const void *Key, int Len) {
-  uint64_t Seed = 0;
-  const uint64_t M = 0xc6a4a7935bd1e995LLU;
-  const int R = 47;
-
-  uint64_t H = Seed ^ (Len * M);
-
-  const uint64_t *Data = (const uint64_t *)Key;
-  const uint64_t *End = Data + (Len / 8);
-
-  while (Data != End) {
-    uint64_t K = *Data++;
-
-    K *= M;
-    K ^= K >> R;
-    K *= M;
-
-    H ^= K;
-    H *= M;
-  }
-
-  const unsigned char *Data2 = (const unsigned char *)Data;
-  switch (Len & 7) {
-  case 7:
-    H ^= uint64_t(Data2[6]) << 48;
-  case 6:
-    H ^= uint64_t(Data2[5]) << 40;
-  case 5:
-    H ^= uint64_t(Data2[4]) << 32;
-  case 4:
-    H ^= uint64_t(Data2[3]) << 24;
-  case 3:
-    H ^= uint64_t(Data2[2]) << 16;
-  case 2:
-    H ^= uint64_t(Data2[1]) << 8;
-  case 1:
-    H ^= uint64_t(Data2[0]);
-    H *= M;
-  };
-
-  H ^= H >> R;
-  H *= M;
-  H ^= H >> R;
-
-  return H;
-}
-
 template <class ELFT>
 void BuildIdFastHash<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   const endianness E = ELFT::TargetEndianness;
 
-  // 64-bit murmur2 hash
-  uint64_t Hash = murmurHash64A(Buf.data(), Buf.size());
+  // 64-bit xxhash
+  uint64_t Hash = xxHash64(StringRef((const char *)Buf.data(), Buf.size()));
   write64<E>(this->HashBuf, Hash);
 }
 

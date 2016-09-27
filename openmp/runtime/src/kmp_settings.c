@@ -795,6 +795,7 @@ __kmp_stg_print_wait_policy( kmp_str_buf_t * buffer, char const * name, void * d
 
 } // __kmp_stg_print_wait_policy
 
+#if KMP_USE_MONITOR
 // -------------------------------------------------------------------------------------------------
 // KMP_MONITOR_STACKSIZE
 // -------------------------------------------------------------------------------------------------
@@ -832,6 +833,7 @@ __kmp_stg_print_monitor_stacksize( kmp_str_buf_t * buffer, char const * name, vo
     }
 
 } // __kmp_stg_print_monitor_stacksize
+#endif // KMP_USE_MONITOR
 
 // -------------------------------------------------------------------------------------------------
 // KMP_SETTINGS
@@ -3793,6 +3795,7 @@ __kmp_stg_print_par_range_env( kmp_str_buf_t * buffer, char const * name, void *
     }
 } // __kmp_stg_print_par_range_env
 
+#if KMP_USE_MONITOR
 // -------------------------------------------------------------------------------------------------
 // KMP_YIELD_CYCLE, KMP_YIELD_ON, KMP_YIELD_OFF
 // -------------------------------------------------------------------------------------------------
@@ -3828,6 +3831,7 @@ static void
 __kmp_stg_print_yield_off( kmp_str_buf_t * buffer, char const * name, void * data ) {
     __kmp_stg_print_int( buffer, name, __kmp_yield_off_count );
 } // __kmp_stg_print_yield_off
+#endif // KMP_USE_MONITOR
 
 #endif
 
@@ -4675,7 +4679,9 @@ static kmp_setting_t __kmp_stg_table[] = {
     { "KMP_DUPLICATE_LIB_OK",              __kmp_stg_parse_duplicate_lib_ok,   __kmp_stg_print_duplicate_lib_ok,   NULL, 0, 0 },
     { "KMP_LIBRARY",                       __kmp_stg_parse_wait_policy,        __kmp_stg_print_wait_policy,        NULL, 0, 0 },
     { "KMP_MAX_THREADS",                   __kmp_stg_parse_all_threads,        NULL,                               NULL, 0, 0 }, // For backward compatibility
+#if KMP_USE_MONITOR
     { "KMP_MONITOR_STACKSIZE",             __kmp_stg_parse_monitor_stacksize,  __kmp_stg_print_monitor_stacksize,  NULL, 0, 0 },
+#endif
     { "KMP_SETTINGS",                      __kmp_stg_parse_settings,           __kmp_stg_print_settings,           NULL, 0, 0 },
     { "KMP_STACKOFFSET",                   __kmp_stg_parse_stackoffset,        __kmp_stg_print_stackoffset,        NULL, 0, 0 },
     { "KMP_STACKSIZE",                     __kmp_stg_parse_stacksize,          __kmp_stg_print_stacksize,          NULL, 0, 0 },
@@ -4731,9 +4737,11 @@ static kmp_setting_t __kmp_stg_table[] = {
     { "KMP_DIAG",                          __kmp_stg_parse_diag,               __kmp_stg_print_diag,               NULL, 0, 0 },
 
     { "KMP_PAR_RANGE",                     __kmp_stg_parse_par_range_env,      __kmp_stg_print_par_range_env,      NULL, 0, 0 },
+#if KMP_USE_MONITOR
     { "KMP_YIELD_CYCLE",                   __kmp_stg_parse_yield_cycle,        __kmp_stg_print_yield_cycle,        NULL, 0, 0 },
     { "KMP_YIELD_ON",                      __kmp_stg_parse_yield_on,           __kmp_stg_print_yield_on,           NULL, 0, 0 },
     { "KMP_YIELD_OFF",                     __kmp_stg_parse_yield_off,          __kmp_stg_print_yield_off,          NULL, 0, 0 },
+#endif
 #endif // KMP_DEBUG
 
     { "KMP_ALIGN_ALLOC",                   __kmp_stg_parse_align_alloc,        __kmp_stg_print_align_alloc,        NULL, 0, 0 },

@@ -184,6 +184,9 @@ There are versions here for integers of size 1,2,4 and 8 bytes both signed and u
     __kmpc_atomic_fixed1_wr
     __kmpc_atomic_fixed1_xor
     __kmpc_atomic_fixed1_xor_cpt
+    __kmpc_atomic_fixed1u_add_fp
+    __kmpc_atomic_fixed1u_sub_fp
+    __kmpc_atomic_fixed1u_mul_fp
     __kmpc_atomic_fixed1u_div
     __kmpc_atomic_fixed1u_div_cpt
     __kmpc_atomic_fixed1u_div_cpt_rev
@@ -240,6 +243,9 @@ There are versions here for integers of size 1,2,4 and 8 bytes both signed and u
     __kmpc_atomic_fixed2_wr
     __kmpc_atomic_fixed2_xor
     __kmpc_atomic_fixed2_xor_cpt
+    __kmpc_atomic_fixed2u_add_fp
+    __kmpc_atomic_fixed2u_sub_fp
+    __kmpc_atomic_fixed2u_mul_fp
     __kmpc_atomic_fixed2u_div
     __kmpc_atomic_fixed2u_div_cpt
     __kmpc_atomic_fixed2u_div_cpt_rev
@@ -296,6 +302,9 @@ There are versions here for integers of size 1,2,4 and 8 bytes both signed and u
     __kmpc_atomic_fixed4_wr
     __kmpc_atomic_fixed4_xor
     __kmpc_atomic_fixed4_xor_cpt
+    __kmpc_atomic_fixed4u_add_fp
+    __kmpc_atomic_fixed4u_sub_fp
+    __kmpc_atomic_fixed4u_mul_fp
     __kmpc_atomic_fixed4u_div
     __kmpc_atomic_fixed4u_div_cpt
     __kmpc_atomic_fixed4u_div_cpt_rev
@@ -352,6 +361,9 @@ There are versions here for integers of size 1,2,4 and 8 bytes both signed and u
     __kmpc_atomic_fixed8_wr
     __kmpc_atomic_fixed8_xor
     __kmpc_atomic_fixed8_xor_cpt
+    __kmpc_atomic_fixed8u_add_fp
+    __kmpc_atomic_fixed8u_sub_fp
+    __kmpc_atomic_fixed8u_mul_fp
     __kmpc_atomic_fixed8u_div
     __kmpc_atomic_fixed8u_div_cpt
     __kmpc_atomic_fixed8u_div_cpt_rev
@@ -1394,26 +1406,38 @@ ATOMIC_CMPXCHG_MIX( float4, kmp_real32, div, 32, /, float8, kmp_real64, 4r, 3, K
 // RHS=float16 (deprecated, to be removed when we are sure the compiler does not use them)
 #if KMP_HAVE_QUAD
 ATOMIC_CMPXCHG_MIX( fixed1,  char,       add,  8, +, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1_add_fp
+ATOMIC_CMPXCHG_MIX( fixed1u, uchar,      add,  8, +, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1u_add_fp
 ATOMIC_CMPXCHG_MIX( fixed1,  char,       sub,  8, -, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1_sub_fp
+ATOMIC_CMPXCHG_MIX( fixed1u, uchar,      sub,  8, -, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1u_sub_fp
 ATOMIC_CMPXCHG_MIX( fixed1,  char,       mul,  8, *, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1_mul_fp
+ATOMIC_CMPXCHG_MIX( fixed1u, uchar,      mul,  8, *, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1u_mul_fp
 ATOMIC_CMPXCHG_MIX( fixed1,  char,       div,  8, /, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1_div_fp
 ATOMIC_CMPXCHG_MIX( fixed1u, uchar,      div,  8, /, fp, _Quad, 1i, 0, KMP_ARCH_X86 ) // __kmpc_atomic_fixed1u_div_fp
 
 ATOMIC_CMPXCHG_MIX( fixed2,  short,      add, 16, +, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2_add_fp
+ATOMIC_CMPXCHG_MIX( fixed2u, ushort,     add, 16, +, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2u_add_fp
 ATOMIC_CMPXCHG_MIX( fixed2,  short,      sub, 16, -, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2_sub_fp
+ATOMIC_CMPXCHG_MIX( fixed2u, ushort,     sub, 16, -, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2u_sub_fp
 ATOMIC_CMPXCHG_MIX( fixed2,  short,      mul, 16, *, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2_mul_fp
+ATOMIC_CMPXCHG_MIX( fixed2u, ushort,     mul, 16, *, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2u_mul_fp
 ATOMIC_CMPXCHG_MIX( fixed2,  short,      div, 16, /, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2_div_fp
 ATOMIC_CMPXCHG_MIX( fixed2u, ushort,     div, 16, /, fp, _Quad, 2i, 1, KMP_ARCH_X86 ) // __kmpc_atomic_fixed2u_div_fp
 
 ATOMIC_CMPXCHG_MIX( fixed4,  kmp_int32,  add, 32, +, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4_add_fp
+ATOMIC_CMPXCHG_MIX( fixed4u, kmp_uint32, add, 32, +, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4u_add_fp
 ATOMIC_CMPXCHG_MIX( fixed4,  kmp_int32,  sub, 32, -, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4_sub_fp
+ATOMIC_CMPXCHG_MIX( fixed4u, kmp_uint32, sub, 32, -, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4u_sub_fp
 ATOMIC_CMPXCHG_MIX( fixed4,  kmp_int32,  mul, 32, *, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4_mul_fp
+ATOMIC_CMPXCHG_MIX( fixed4u, kmp_uint32, mul, 32, *, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4u_mul_fp
 ATOMIC_CMPXCHG_MIX( fixed4,  kmp_int32,  div, 32, /, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4_div_fp
 ATOMIC_CMPXCHG_MIX( fixed4u, kmp_uint32, div, 32, /, fp, _Quad, 4i, 3, 0 )            // __kmpc_atomic_fixed4u_div_fp
 
 ATOMIC_CMPXCHG_MIX( fixed8,  kmp_int64,  add, 64, +, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8_add_fp
+ATOMIC_CMPXCHG_MIX( fixed8u, kmp_uint64, add, 64, +, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8u_add_fp
 ATOMIC_CMPXCHG_MIX( fixed8,  kmp_int64,  sub, 64, -, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8_sub_fp
+ATOMIC_CMPXCHG_MIX( fixed8u, kmp_uint64, sub, 64, -, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8u_sub_fp
 ATOMIC_CMPXCHG_MIX( fixed8,  kmp_int64,  mul, 64, *, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8_mul_fp
+ATOMIC_CMPXCHG_MIX( fixed8u, kmp_uint64, mul, 64, *, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8u_mul_fp
 ATOMIC_CMPXCHG_MIX( fixed8,  kmp_int64,  div, 64, /, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8_div_fp
 ATOMIC_CMPXCHG_MIX( fixed8u, kmp_uint64, div, 64, /, fp, _Quad, 8i, 7, KMP_ARCH_X86 ) // __kmpc_atomic_fixed8u_div_fp
 

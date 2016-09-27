@@ -319,18 +319,6 @@ remove_flags(-stdlib=libc++ -stdlib=libstdc++)
 # so they don't get transformed into -Wno and -errors respectivly.
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
-# FIXME: this is cribbed from HandleLLVMOptions.cmake.
-if(LIBCXX_STANDALONE_BUILD)
-  # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
-  # build might work on ELF but fail on MachO/COFF.
-  if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR WIN32 OR CYGWIN OR
-          ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR
-          ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD") AND
-     NOT LLVM_USE_SANITIZER)
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
-  endif()
-endif()
-
 # Required flags ==============================================================
 set(LIBCXX_STANDARD_VER c++11 CACHE INTERNAL "internal option to change build dialect")
 add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})

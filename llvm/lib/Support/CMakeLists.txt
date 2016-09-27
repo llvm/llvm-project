@@ -106,6 +106,7 @@ add_llvm_library(LLVMSupport
   regexec.c
   regfree.c
   regstrlcpy.c
+  xxhash.cpp
 
 # System
   Atomic.cpp

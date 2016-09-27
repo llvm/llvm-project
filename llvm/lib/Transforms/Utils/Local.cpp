@@ -1147,13 +1147,15 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   if (PhiHasDebugValue(DIVar, DIExpr, APN))
     return;
 
-  auto BB = APN->getParent();
+  BasicBlock *BB = APN->getParent();
   auto InsertionPt = BB->getFirstInsertionPt();
-  if (InsertionPt != BB->end()) {
-    Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
-        APN, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
-    DbgValue->insertBefore(&*InsertionPt);
-  }
+
+  // The block may be a catchswitch block, which does not have a valid
+  // insertion point.
+  // FIXME: Insert dbg.value markers in the successors when appropriate.
+  if (InsertionPt != BB->end())
+    Builder.insertDbgValueIntrinsic(APN, 0, DIVar, DIExpr, DDI->getDebugLoc(),
+                                    &*InsertionPt);
 }
 
 /// Determine whether this alloca is either a VLA or an array.

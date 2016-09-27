@@ -4172,6 +4172,7 @@ __kmp_allocate_thread( kmp_root_t *root, kmp_team_t *team, int new_tid )
     KMP_ASSERT( __kmp_nth    == __kmp_all_nth );
     KMP_ASSERT( __kmp_all_nth < __kmp_threads_capacity );
 
+#if KMP_USE_MONITOR
     //
     // If this is the first worker thread the RTL is creating, then also
     // launch the monitor thread.  We try to do this as early as possible.
@@ -4199,6 +4200,7 @@ __kmp_allocate_thread( kmp_root_t *root, kmp_team_t *team, int new_tid )
         }
         __kmp_release_bootstrap_lock( & __kmp_monitor_lock );
     }
+#endif
 
     KMP_MB();
     for( new_gtid=1 ; TCR_PTR(__kmp_threads[new_gtid]) != NULL; ++new_gtid ) {
@@ -5781,6 +5783,7 @@ __kmp_internal_end(void)
     TCW_SYNC_4(__kmp_global.g.g_done, TRUE);
 
     if ( i < __kmp_threads_capacity ) {
+#if KMP_USE_MONITOR
         // 2009-09-08 (lev): Other alive roots found. Why do we kill the monitor??
         KMP_MB();       /* Flush all pending memory write invalidates.  */
 
@@ -5802,6 +5805,7 @@ __kmp_internal_end(void)
         }
         __kmp_release_bootstrap_lock( & __kmp_monitor_lock );
         KA_TRACE( 10, ("__kmp_internal_end: monitor reaped\n" ) );
+#endif // KMP_USE_MONITOR
     } else {
         /* TODO move this to cleanup code */
         #ifdef KMP_DEBUG
@@ -5853,6 +5857,7 @@ __kmp_internal_end(void)
         KA_TRACE( 10, ("__kmp_internal_end: all workers reaped\n" ) );
         KMP_MB();
 
+#if KMP_USE_MONITOR
         //
         // See note above: One of the possible fixes for CQ138434 / CQ140126
         //
@@ -5866,7 +5871,7 @@ __kmp_internal_end(void)
         }
         __kmp_release_bootstrap_lock( & __kmp_monitor_lock );
         KA_TRACE( 10, ("__kmp_internal_end: monitor reaped\n" ) );
-
+#endif
     } /* else !__kmp_global.t_active */
     TCW_4(__kmp_init_gtid, FALSE);
     KMP_MB();       /* Flush all pending memory write invalidates.  */
@@ -6131,7 +6136,7 @@ __kmp_register_library_startup(
         double dtime;
         long   ltime;
     } time;
-    #if KMP_OS_WINDOWS
+    #if KMP_ARCH_X86 || KMP_ARCH_X86_64
         __kmp_initialize_system_tick();
     #endif
     __kmp_read_system_time( & time.dtime );
@@ -6337,7 +6342,9 @@ __kmp_do_serial_initialize( void )
     __kmp_init_atomic_lock( & __kmp_atomic_lock_32c );
     __kmp_init_bootstrap_lock( & __kmp_forkjoin_lock  );
     __kmp_init_bootstrap_lock( & __kmp_exit_lock      );
+#if KMP_USE_MONITOR
     __kmp_init_bootstrap_lock( & __kmp_monitor_lock   );
+#endif
     __kmp_init_bootstrap_lock( & __kmp_tp_cached_lock );
 
     /* conduct initialization and initial setup of configuration */

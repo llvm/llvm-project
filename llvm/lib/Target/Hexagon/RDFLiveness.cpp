@@ -86,8 +86,17 @@ namespace rdf {
 
 NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
       NodeAddr<RefNode*> RefA, bool FullChain, const RegisterSet &DefRRs) {
+  NodeList RDefs; // Return value.
   SetVector<NodeId> DefQ;
   SetVector<NodeId> Owners;
+
+  // Dead defs will be treated as if they were live, since they are actually
+  // on the data-flow path. They cannot be ignored because even though they
+  // do not generate meaningful values, they still modify registers.
+
+  // If the reference is undefined, there is nothing to do.
+  if (RefA.Addr->getFlags() & NodeAttrs::Undef)
+    return RDefs;
 
   // The initial queue should not have reaching defs for shadows. The
   // whole point of a shadow is that it will have a reaching def that
@@ -186,7 +195,6 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
   //                     covered if we added A first, and A would be covered
   //                     if we added B first.
 
-  NodeList RDefs;
   RegisterSet RRs = DefRRs;
 
   auto DefInSet = [&Defs] (NodeAddr<RefNode*> TA) -> bool {
@@ -222,6 +230,11 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
           RRs.insert(DA.Addr->getRegRef());
     }
   }
+
+  auto DeadP = [](const NodeAddr<DefNode*> DA) -> bool {
+    return DA.Addr->getFlags() & NodeAttrs::Dead;
+  };
+  RDefs.resize(std::distance(RDefs.begin(), remove_if(RDefs, DeadP)));
 
   return RDefs;
 }
@@ -285,7 +298,9 @@ NodeSet Liveness::getAllReachedUses(RegisterRef RefRR,
     return Uses;
 
   // Add all directly reached uses.
-  NodeId U = DefA.Addr->getReachedUse();
+  // If the def is dead, it does not provide a value for any use.
+  bool IsDead = DefA.Addr->getFlags() & NodeAttrs::Dead;
+  NodeId U = !IsDead ? DefA.Addr->getReachedUse() : 0;
   while (U != 0) {
     auto UA = DFG.addr<UseNode*>(U);
     if (!(UA.Addr->getFlags() & NodeAttrs::Undef)) {
@@ -296,7 +311,7 @@ NodeSet Liveness::getAllReachedUses(RegisterRef RefRR,
     U = UA.Addr->getSibling();
   }
 
-  // Traverse all reached defs.
+  // Traverse all reached defs. This time dead defs cannot be ignored.
   for (NodeId D = DefA.Addr->getReachedDef(), NextD; D != 0; D = NextD) {
     auto DA = DFG.addr<DefNode*>(D);
     NextD = DA.Addr->getSibling();
@@ -360,8 +375,10 @@ void Liveness::computePhiInfo() {
     // are actually reached by the phi defs.
     for (unsigned i = 0; i < DefQ.size(); ++i) {
       NodeAddr<DefNode*> DA = DFG.addr<DefNode*>(DefQ[i]);
-      // Visit all reached uses.
-      NodeId UN = DA.Addr->getReachedUse();
+      // Visit all reached uses. Phi defs should not really have the "dead"
+      // flag set, but check it anyway for consistency.
+      bool IsDead = DA.Addr->getFlags() & NodeAttrs::Dead;
+      NodeId UN = !IsDead ? DA.Addr->getReachedUse() : 0;
       while (UN != 0) {
         NodeAddr<UseNode*> A = DFG.addr<UseNode*>(UN);
         uint16_t F = A.Addr->getFlags();
@@ -409,6 +426,8 @@ void Liveness::computePhiInfo() {
       NodeSet &Uses = UI->second;
       for (auto I = Uses.begin(), E = Uses.end(); I != E; ) {
         auto UA = DFG.addr<UseNode*>(*I);
+        // Undef flag is checked above.
+        assert((UA.Addr->getFlags() & NodeAttrs::Undef) == 0);
         NodeList RDs = getAllReachingDefs(UI->first, UA);
         if (any_of(RDs, InPhiDefs))
           ++I;

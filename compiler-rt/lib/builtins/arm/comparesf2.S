@@ -39,6 +39,9 @@
 
 #include "../assembly.h"
 .syntax unified
+#if __ARM_ARCH_ISA_THUMB == 2
+.thumb
+#endif
 
 .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__eqsf2)

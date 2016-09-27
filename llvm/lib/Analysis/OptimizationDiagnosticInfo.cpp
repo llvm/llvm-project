@@ -16,6 +16,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -49,6 +50,90 @@ Optional<uint64_t> OptimizationRemarkEmitter::computeHotness(const Value *V) {
     return None;
 
   return BFI->getBlockProfileCount(cast<BasicBlock>(V));
+}
+
+namespace llvm {
+namespace yaml {
+
+template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
+  static void mapping(IO &io, DiagnosticInfoOptimizationBase *&OptDiag) {
+    assert(io.outputting() && "input not yet implemented");
+
+    if (io.mapTag("!Missed", OptDiag->getKind() == DK_OptimizationRemarkMissed))
+      ;
+    else
+      llvm_unreachable("todo");
+
+    // These are read-only for now.
+    DebugLoc DL = OptDiag->getDebugLoc();
+    StringRef FN = OptDiag->getFunction().getName();
+
+    StringRef PassName(OptDiag->PassName);
+    io.mapRequired("Pass", PassName);
+    io.mapRequired("Name", OptDiag->RemarkName);
+    if (!io.outputting() || DL)
+      io.mapOptional("DebugLoc", DL);
+    io.mapRequired("Function", FN);
+    io.mapOptional("Hotness", OptDiag->Hotness);
+    io.mapOptional("Args", OptDiag->Args);
+  }
+};
+
+template <> struct MappingTraits<DebugLoc> {
+  static void mapping(IO &io, DebugLoc &DL) {
+    assert(io.outputting() && "input not yet implemented");
+
+    auto *Scope = cast<DIScope>(DL.getScope());
+    StringRef File = Scope->getFilename();
+    unsigned Line = DL.getLine();
+    unsigned Col = DL.getCol();
+
+    io.mapRequired("File", File);
+    io.mapRequired("Line", Line);
+    io.mapRequired("Column", Col);
+  }
+
+  static const bool flow = true;
+};
+
+template <> struct ScalarTraits<DiagnosticInfoOptimizationBase::Argument> {
+  static void output(const DiagnosticInfoOptimizationBase::Argument &Arg,
+                     void *, llvm::raw_ostream &out) {
+    out << Arg.Key << ": " << Arg.Val;
+  }
+
+  static StringRef input(StringRef scalar, void *,
+                         DiagnosticInfoOptimizationBase::Argument &Arg) {
+    llvm_unreachable("input not yet implemented");
+  }
+
+  static bool mustQuote(StringRef) { return false; }
+};
+
+} // end namespace yaml
+} // end namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(DiagnosticInfoOptimizationBase::Argument)
+
+void OptimizationRemarkEmitter::computeHotness(
+    DiagnosticInfoOptimizationBase &OptDiag) {
+  Value *V = OptDiag.getCodeRegion();
+  if (V)
+    OptDiag.setHotness(computeHotness(V));
+}
+
+void OptimizationRemarkEmitter::emit(DiagnosticInfoOptimizationBase &OptDiag) {
+  computeHotness(OptDiag);
+
+  yaml::Output *Out = F->getContext().getDiagnosticsOutputFile();
+  if (Out && OptDiag.isEnabled()) {
+    auto *P = &const_cast<DiagnosticInfoOptimizationBase &>(OptDiag);
+    *Out << P;
+  }
+  // FIXME: now that IsVerbose is part of DI, filtering for this will be moved
+  // from here to clang.
+  if (!OptDiag.isVerbose() || shouldEmitVerbose())
+    F->getContext().diagnose(OptDiag);
 }
 
 void OptimizationRemarkEmitter::emitOptimizationRemark(const char *PassName,

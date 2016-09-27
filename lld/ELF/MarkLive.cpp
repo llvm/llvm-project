@@ -64,12 +64,19 @@ static typename ELFT::uint getAddend(InputSectionBase<ELFT> &Sec,
   return Rel.r_addend;
 }
 
+template <class ELFT> static bool IsAlloc(InputSectionBase<ELFT> &Sec) {
+  return (&Sec != &InputSection<ELFT>::Discarded) &&
+         (Sec.getSectionHdr()->sh_flags & SHF_ALLOC);
+}
+
 template <class ELFT, class RelT>
 static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
                                         RelT &Rel) {
   SymbolBody &B = Sec.getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
+    return {nullptr, 0};
+  if (!IsAlloc<ELFT>(Sec) && IsAlloc<ELFT>(*D->Section))
     return {nullptr, 0};
   typename ELFT::uint Offset = D->Value;
   if (D->isSection())
@@ -208,8 +215,7 @@ template <class ELFT> void elf::markLive() {
       return;
     R.Sec->Live = true;
     if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(R.Sec))
-      if (S->getSectionHdr()->sh_flags & SHF_ALLOC)
-        Q.push_back(S);
+      Q.push_back(S);
   };
 
   auto MarkSymbol = [&](const SymbolBody *Sym) {
