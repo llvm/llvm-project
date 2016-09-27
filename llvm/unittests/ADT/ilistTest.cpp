@@ -96,4 +96,25 @@ TEST(ilistTest, UnsafeClear) {
   EXPECT_EQ(6, List.back().Value);
 }
 
+struct Empty {};
+TEST(ilistTest, HasObsoleteCustomizationTrait) {
+  // Negative test for HasObsoleteCustomization.
+  static_assert(!ilist_detail::HasObsoleteCustomization<Empty, Node>::value,
+                "Empty has no customizations");
 }
+
+struct GetNext {
+  Node *getNext(Node *);
+};
+TEST(ilistTest, HasGetNextTrait) {
+  static_assert(ilist_detail::HasGetNext<GetNext, Node>::value,
+                "GetNext has a getNext(Node*)");
+  static_assert(ilist_detail::HasObsoleteCustomization<GetNext, Node>::value,
+                "Empty should be obsolete because of getNext()");
+
+  // Negative test for HasGetNext.
+  static_assert(!ilist_detail::HasGetNext<Empty, Node>::value,
+                "Empty does not have a getNext(Node*)");
+}
+
+} // end namespace
