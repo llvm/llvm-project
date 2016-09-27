@@ -1865,6 +1865,12 @@
 //
 // CHECK_PPC_POWER8_VECTOR_M64: #define __POWER8_VECTOR__ 1
 //
+// RUN: %clang -mpower9-vector -E -dM %s -o - 2>&1 \
+// RUN:     -target powerpc64-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_PPC_POWER9_VECTOR_M64
+//
+// CHECK_PPC_POWER9_VECTOR_M64: #define __POWER9_VECTOR__ 1
+//
 // RUN: %clang -mcrypto -E -dM %s -o - 2>&1 \
 // RUN:     -target powerpc64-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_PPC_CRYPTO_M64

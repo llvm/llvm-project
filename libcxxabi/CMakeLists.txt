@@ -249,6 +249,15 @@ if (LIBCXXABI_USE_COMPILER_RT)
   list(APPEND LIBCXXABI_LINK_FLAGS "-rtlib=compiler-rt")
 endif()
 
+# Let the library headers know they are currently being used to build the
+# library.
+add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
+
+# Disable DLL annotations on Windows for static builds.
+if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
+  add_definitions(-D_LIBCXXABI_DISABLE_DLL_IMPORT_EXPORT)
+endif()
+
 append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WERROR_FLAG -Werror=return-type)
 
 # Get warning flags
@@ -333,7 +342,6 @@ if (LIBCXXABI_HAS_PTHREAD_API)
   add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
 endif()
 
-# This is the _ONLY_ place where add_definitions is called.
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()

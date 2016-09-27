@@ -65,10 +65,10 @@ public:
       : M("MemorySSATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
 };
 
-TEST_F(MemorySSATest, CreateALoadAndPhi) {
+TEST_F(MemorySSATest, CreateALoad) {
   // We create a diamond where there is a store on one side, and then after
   // building MemorySSA, create a load after the merge point, and use it to test
-  // updating by creating an access for the load and a memoryphi.
+  // updating by creating an access for the load.
   F = Function::Create(
       FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
       GlobalValue::ExternalLinkage, "F", &M);
@@ -80,7 +80,7 @@ TEST_F(MemorySSATest, CreateALoadAndPhi) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   Argument *PointerArg = &*F->arg_begin();
-  StoreInst *StoreInst = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateStore(B.getInt8(16), PointerArg);
   BranchInst::Create(Merge, Left);
   BranchInst::Create(Merge, Right);
 
@@ -89,14 +89,10 @@ TEST_F(MemorySSATest, CreateALoadAndPhi) {
   // Add the load
   B.SetInsertPoint(Merge);
   LoadInst *LoadInst = B.CreateLoad(PointerArg);
-  // Should be no phi to start
-  EXPECT_EQ(MSSA.getMemoryAccess(Merge), nullptr);
 
-  // Create the phi
-  MemoryPhi *MP = MSSA.createMemoryPhi(Merge);
-  MemoryDef *StoreAccess = cast<MemoryDef>(MSSA.getMemoryAccess(StoreInst));
-  MP->addIncoming(StoreAccess, Left);
-  MP->addIncoming(MSSA.getLiveOnEntryDef(), Right);
+  // MemoryPHI should already exist.
+  MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
+  EXPECT_NE(MP, nullptr);
 
   // Create the load memory acccess
   MemoryUse *LoadAccess = cast<MemoryUse>(

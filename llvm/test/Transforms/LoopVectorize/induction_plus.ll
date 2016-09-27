@@ -9,7 +9,9 @@ target triple = "x86_64-apple-macosx10.8.0"
 ;CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ;CHECK: %vec.ind = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
 ;CHECK: %vec.ind1 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ %vec.ind.next2, %vector.body ]
-;CHECK: add nsw <4 x i64> %vec.ind, <i64 12, i64 12, i64 12, i64 12>
+;CHECK: %[[T1:.+]] = add i64 %index, 0
+;CHECK: %[[T2:.+]] = add nsw i64 %[[T1]], 12
+;CHECK: getelementptr inbounds [1024 x i32], [1024 x i32]* @array, i64 0, i64 %[[T2]]
 ;CHECK: %vec.ind.next = add <4 x i64> %vec.ind, <i64 4, i64 4, i64 4, i64 4>
 ;CHECK: %vec.ind.next2 = add <4 x i32> %vec.ind1, <i32 4, i32 4, i32 4, i32 4>
 ;CHECK: ret i32

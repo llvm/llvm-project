@@ -8454,12 +8454,19 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
   if (!areJTsAllowed(TLI, SI))
     return;
 
+  const bool OptForSize = DefaultMBB->getParent()->getFunction()->optForSize();
+
   const int64_t N = Clusters.size();
-  const unsigned MinJumpTableSize = TLI.getMinimumJumpTableEntries();
+  const unsigned MinJumpTableEntries = TLI.getMinimumJumpTableEntries();
+  const unsigned MaxJumpTableSize =
+    OptForSize ? UINT_MAX : TLI.getMaximumJumpTableSize() ?
+                            TLI.getMaximumJumpTableSize() : UINT_MAX;
+
+  if (N < 2 || N < MinJumpTableEntries)
+    return;
 
   // TotalCases[i]: Total nbr of cases in Clusters[0..i].
   SmallVector<unsigned, 8> TotalCases(N);
-
   for (unsigned i = 0; i < N; ++i) {
     const APInt &Hi = Clusters[i].High->getValue();
     const APInt &Lo = Clusters[i].Low->getValue();
@@ -8468,12 +8475,16 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
       TotalCases[i] += TotalCases[i - 1];
   }
 
-  unsigned MinDensity = JumpTableDensity;
-  if (DefaultMBB->getParent()->getFunction()->optForSize())
-    MinDensity = OptsizeJumpTableDensity;
-  if (N >= MinJumpTableSize
-      && isDense(Clusters, TotalCases, 0, N - 1, MinDensity)) {
-    // Cheap case: the whole range might be suitable for jump table.
+  const unsigned MinDensity =
+    OptForSize ? OptsizeJumpTableDensity : JumpTableDensity;
+
+  // Cheap case: the whole range may be suitable for jump table.
+  unsigned JumpTableSize = (Clusters[N - 1].High->getValue() -
+                            Clusters[0].Low->getValue())
+                           .getLimitedValue(UINT_MAX - 1) + 1;
+  if (JumpTableSize <= MaxJumpTableSize &&
+      isDense(Clusters, TotalCases, 0, N - 1, MinDensity)) {
+
     CaseCluster JTCluster;
     if (buildJumpTable(Clusters, 0, N - 1, SI, DefaultMBB, JTCluster)) {
       Clusters[0] = JTCluster;
@@ -8503,7 +8514,6 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
   // Base case: There is only one way to partition Clusters[N-1].
   MinPartitions[N - 1] = 1;
   LastElement[N - 1] = N - 1;
-  assert(MinJumpTableSize > 1);
   NumTables[N - 1] = 0;
 
   // Note: loop indexes are signed to avoid underflow.
@@ -8517,9 +8527,13 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
     // Search for a solution that results in fewer partitions.
     for (int64_t j = N - 1; j > i; j--) {
       // Try building a partition from Clusters[i..j].
-      if (isDense(Clusters, TotalCases, i, j, MinDensity)) {
+      JumpTableSize = (Clusters[j].High->getValue() -
+                       Clusters[i].Low->getValue())
+                      .getLimitedValue(UINT_MAX - 1) + 1;
+      if (JumpTableSize <= MaxJumpTableSize &&
+          isDense(Clusters, TotalCases, i, j, MinDensity)) {
         unsigned NumPartitions = 1 + (j == N - 1 ? 0 : MinPartitions[j + 1]);
-        bool IsTable = j - i + 1 >= MinJumpTableSize;
+        bool IsTable = j - i + 1 >= MinJumpTableEntries;
         unsigned Tables = IsTable + (j == N - 1 ? 0 : NumTables[j + 1]);
 
         // If this j leads to fewer partitions, or same number of partitions
@@ -8543,7 +8557,7 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
     unsigned NumClusters = Last - First + 1;
 
     CaseCluster JTCluster;
-    if (NumClusters >= MinJumpTableSize &&
+    if (NumClusters >= MinJumpTableEntries &&
         buildJumpTable(Clusters, First, Last, SI, DefaultMBB, JTCluster)) {
       Clusters[DstIndex++] = JTCluster;
     } else {

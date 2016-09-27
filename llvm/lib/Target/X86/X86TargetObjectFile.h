@@ -49,6 +49,12 @@ namespace llvm {
     const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
   };
 
+  /// X86FreeBSDTargetObjectFile - This implementation is used for FreeBSD
+  /// on x86 and x86-64.
+  class X86FreeBSDTargetObjectFile : public X86ELFTargetObjectFile {
+    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  };
+
   /// X86LinuxNaClTargetObjectFile - This implementation is used for linux and
   /// Native Client on x86 and x86-64.
   class X86LinuxNaClTargetObjectFile : public X86ELFTargetObjectFile {

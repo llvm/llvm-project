@@ -134,6 +134,14 @@ BUILTIN(__builtin_altivec_vcmpequw, "V4iV4iV4i", "")
 BUILTIN(__builtin_altivec_vcmpequd, "V2LLiV2LLiV2LLi", "")
 BUILTIN(__builtin_altivec_vcmpeqfp, "V4iV4fV4f", "")
 
+BUILTIN(__builtin_altivec_vcmpneb, "V16cV16cV16c", "")
+BUILTIN(__builtin_altivec_vcmpneh, "V8sV8sV8s", "")
+BUILTIN(__builtin_altivec_vcmpnew, "V4iV4iV4i", "")
+
+BUILTIN(__builtin_altivec_vcmpnezb, "V16cV16cV16c", "")
+BUILTIN(__builtin_altivec_vcmpnezh, "V8sV8sV8s", "")
+BUILTIN(__builtin_altivec_vcmpnezw, "V4iV4iV4i", "")
+
 BUILTIN(__builtin_altivec_vcmpgtsb, "V16cV16ScV16Sc", "")
 BUILTIN(__builtin_altivec_vcmpgtub, "V16cV16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vcmpgtsh, "V8sV8SsV8Ss", "")
@@ -223,6 +231,11 @@ BUILTIN(__builtin_altivec_vcmpequw_p, "iiV4iV4i", "")
 BUILTIN(__builtin_altivec_vcmpequd_p, "iiV2LLiV2LLi", "")
 BUILTIN(__builtin_altivec_vcmpeqfp_p, "iiV4fV4f", "")
 
+BUILTIN(__builtin_altivec_vcmpneb_p, "iiV16cV16c", "")
+BUILTIN(__builtin_altivec_vcmpneh_p, "iiV8sV8s", "")
+BUILTIN(__builtin_altivec_vcmpnew_p, "iiV4iV4i", "")
+BUILTIN(__builtin_altivec_vcmpned_p, "iiV2LLiV2LLi", "")
+
 BUILTIN(__builtin_altivec_vcmpgtsb_p, "iiV16ScV16Sc", "")
 BUILTIN(__builtin_altivec_vcmpgtub_p, "iiV16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vcmpgtsh_p, "iiV8SsV8Ss", "")
@@ -254,6 +267,16 @@ BUILTIN(__builtin_altivec_vclzb, "V16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vclzh, "V8UsV8Us", "")
 BUILTIN(__builtin_altivec_vclzw, "V4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vclzd, "V2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vctzb, "V16UcV16Uc", "")
+BUILTIN(__builtin_altivec_vctzh, "V8UsV8Us", "")
+BUILTIN(__builtin_altivec_vctzw, "V4UiV4Ui", "")
+BUILTIN(__builtin_altivec_vctzd, "V2ULLiV2ULLi", "")
+
+// Vector population count built-ins
+BUILTIN(__builtin_altivec_vpopcntb, "V16UcV16Uc", "")
+BUILTIN(__builtin_altivec_vpopcnth, "V8UsV8Us", "")
+BUILTIN(__builtin_altivec_vpopcntw, "V4UiV4Ui", "")
+BUILTIN(__builtin_altivec_vpopcntd, "V2ULLiV2ULLi", "")
 
 // VSX built-ins.
 

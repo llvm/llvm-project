@@ -1572,6 +1572,10 @@ def mpower8_vector : Flag<["-"], "mpower8-vector">,
     Group<m_ppc_Features_Group>;
 def mno_power8_vector : Flag<["-"], "mno-power8-vector">,
     Group<m_ppc_Features_Group>;
+def mpower9_vector : Flag<["-"], "mpower9-vector">,
+    Group<m_ppc_Features_Group>;
+def mno_power9_vector : Flag<["-"], "mno-power9-vector">,
+    Group<m_ppc_Features_Group>;
 def mpower8_crypto : Flag<["-"], "mcrypto">,
     Group<m_ppc_Features_Group>;
 def mnopower8_crypto : Flag<["-"], "mno-crypto">,
@@ -1876,6 +1880,11 @@ def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[DriverOption]>,
 def save_temps : Flag<["-", "--"], "save-temps">, Flags<[DriverOption]>,
   Alias<save_temps_EQ>, AliasArgs<["cwd"]>,
   HelpText<"Save intermediate compilation results">;
+def save_stats_EQ : Joined<["-", "--"], "save-stats=">, Flags<[DriverOption]>,
+  HelpText<"Save llvm statistics.">;
+def save_stats : Flag<["-", "--"], "save-stats">, Flags<[DriverOption]>,
+  Alias<save_stats_EQ>, AliasArgs<["cwd"]>,
+  HelpText<"Save llvm statistics.">;
 def via_file_asm : Flag<["-", "--"], "via-file-asm">, InternalDebugOpt,
   HelpText<"Write assembly to file for input to assemble jobs">;
 def sectalign : MultiArg<["-"], "sectalign", 3>;

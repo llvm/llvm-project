@@ -80,6 +80,14 @@ class LLVM_LIBRARY_VISIBILITY CoroIdInst : public IntrinsicInst {
   enum { AlignArg, PromiseArg, CoroutineArg, InfoArg };
 
 public:
+  IntrinsicInst *getCoroAlloc() {
+    for (User *U : users())
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        if (II->getIntrinsicID() == Intrinsic::coro_alloc)
+          return II;
+    return nullptr;
+  }
+
   IntrinsicInst *getCoroBegin() {
     for (User *U : users())
       if (auto *II = dyn_cast<IntrinsicInst>(U))

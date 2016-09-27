@@ -274,19 +274,20 @@ define void @sub_i16rhs() minsize {
 ; N.b. we could probably check more here ("add w2, w3, w1, uxtw" for
 ; example), but the remaining instructions are probably not idiomatic
 ; in the face of "add/sub (shifted register)" so I don't intend to.
-define void @addsub_i32rhs() minsize {
+define void @addsub_i32rhs(i32 %in32) minsize {
 ; CHECK-LABEL: addsub_i32rhs:
     %val32_tmp = load i32, i32* @var32
     %lhs64 = load i64, i64* @var64
 
     %val32 = add i32 %val32_tmp, 123
 
-    %rhs64_zext = zext i32 %val32 to i64
+    %rhs64_zext = zext i32 %in32 to i64
     %res64_zext = add i64 %lhs64, %rhs64_zext
     store volatile i64 %res64_zext, i64* @var64
 ; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw
 
-    %rhs64_zext_shift = shl i64 %rhs64_zext, 2
+    %rhs64_zext2 = zext i32 %val32 to i64
+    %rhs64_zext_shift = shl i64 %rhs64_zext2, 2
     %res64_zext_shift = add i64 %lhs64, %rhs64_zext_shift
     store volatile i64 %res64_zext_shift, i64* @var64
 ; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw #2
@@ -304,19 +305,20 @@ define void @addsub_i32rhs() minsize {
     ret void
 }
 
-define void @sub_i32rhs() minsize {
+define void @sub_i32rhs(i32 %in32) minsize {
 ; CHECK-LABEL: sub_i32rhs:
     %val32_tmp = load i32, i32* @var32
     %lhs64 = load i64, i64* @var64
 
     %val32 = add i32 %val32_tmp, 123
 
-    %rhs64_zext = zext i32 %val32 to i64
+    %rhs64_zext = zext i32 %in32 to i64
     %res64_zext = sub i64 %lhs64, %rhs64_zext
     store volatile i64 %res64_zext, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw
 
-    %rhs64_zext_shift = shl i64 %rhs64_zext, 2
+    %rhs64_zext2 = zext i32 %val32 to i64
+    %rhs64_zext_shift = shl i64 %rhs64_zext2, 2
     %res64_zext_shift = sub i64 %lhs64, %rhs64_zext_shift
     store volatile i64 %res64_zext_shift, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw #2
@@ -332,4 +334,99 @@ define void @sub_i32rhs() minsize {
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, sxtw #2
 
     ret void
+}
+
+; Check that implicit zext from w reg write is used instead of uxtw form of add.
+define i64 @add_fold_uxtw(i32 %x, i64 %y) {
+; CHECK-LABEL: add_fold_uxtw:
+entry:
+; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
+  %m = and i32 %x, 3
+  %ext = zext i32 %m to i64
+; CHECK-NEXT: add x0, x1, x[[TMP]]
+  %ret = add i64 %y, %ext
+  ret i64 %ret
+}
+
+; Check that implicit zext from w reg write is used instead of uxtw
+; form of sub and that mov WZR is folded to form a neg instruction.
+define i64 @sub_fold_uxtw_xzr(i32 %x)  {
+; CHECK-LABEL: sub_fold_uxtw_xzr:
+entry:
+; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
+  %m = and i32 %x, 3
+  %ext = zext i32 %m to i64
+; CHECK-NEXT: neg x0, x[[TMP]]
+  %ret = sub i64 0, %ext
+  ret i64 %ret
+}
+
+; Check that implicit zext from w reg write is used instead of uxtw form of subs/cmp.
+define i1 @cmp_fold_uxtw(i32 %x, i64 %y) {
+; CHECK-LABEL: cmp_fold_uxtw:
+entry:
+; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
+  %m = and i32 %x, 3
+  %ext = zext i32 %m to i64
+; CHECK-NEXT: cmp x1, x[[TMP]]
+; CHECK-NEXT: cset
+  %ret = icmp eq i64 %y, %ext
+  ret i1 %ret
+}
+
+; Check that implicit zext from w reg write is used instead of uxtw
+; form of add, leading to madd selection.
+define i64 @madd_fold_uxtw(i32 %x, i64 %y) {
+; CHECK-LABEL: madd_fold_uxtw:
+entry:
+; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
+  %m = and i32 %x, 3
+  %ext = zext i32 %m to i64
+; CHECK-NEXT: madd x0, x1, x1, x[[TMP]]
+  %mul = mul i64 %y, %y
+  %ret = add i64 %mul, %ext
+  ret i64 %ret
+}
+
+; Check that implicit zext from w reg write is used instead of uxtw
+; form of sub, leading to sub/cmp folding.
+; Check that implicit zext from w reg write is used instead of uxtw form of subs/cmp.
+define i1 @cmp_sub_fold_uxtw(i32 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: cmp_sub_fold_uxtw:
+entry:
+; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
+  %m = and i32 %x, 3
+  %ext = zext i32 %m to i64
+; CHECK-NEXT: cmp x[[TMP2:[0-9]+]], x[[TMP]]
+; CHECK-NEXT: cset
+  %sub = sub i64 %z, %ext
+  %ret = icmp eq i64 %sub, 0
+  ret i1 %ret
+}
+
+; Check that implicit zext from w reg write is used instead of uxtw
+; form of add and add of -1 gets selected as sub.
+define i64 @add_imm_fold_uxtw(i32 %x) {
+; CHECK-LABEL: add_imm_fold_uxtw:
+entry:
+; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
+  %m = and i32 %x, 3
+  %ext = zext i32 %m to i64
+; CHECK-NEXT: sub x0, x[[TMP]], #1
+  %ret = add i64 %ext, -1
+  ret i64 %ret
+}
+
+; Check that implicit zext from w reg write is used instead of uxtw
+; form of add and add lsl form gets selected.
+define i64 @add_lsl_fold_uxtw(i32 %x, i64 %y) {
+; CHECK-LABEL: add_lsl_fold_uxtw:
+entry:
+; CHECK: orr w[[TMP:[0-9]+]], w0, #0x3
+  %m = or i32 %x, 3
+  %ext = zext i32 %m to i64
+  %shift = shl i64 %y, 3
+; CHECK-NEXT: add x0, x[[TMP]], x1, lsl #3
+  %ret = add i64 %ext, %shift
+  ret i64 %ret
 }

@@ -1005,6 +1005,9 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
     for (InputSection<ELFT> *C : Sections)
       C->writeTo(Buf);
   }
+  // Linker scripts may have BYTE()-family commands with which you
+  // can write arbitrary bytes to the output. Process them if any.
+  Script<ELFT>::X->writeDataBytes(this->Name, Buf);
 }
 
 template <class ELFT>

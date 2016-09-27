@@ -9,7 +9,7 @@
 ; CHECK-NEXT:    <VERSION
 ; See if the call to func is registered, using the expected callsite count
 ; and value id matching the subsequent value symbol table.
-; CHECK-NEXT:    <PERMODULE {{.*}} op4=[[FUNCID:[0-9]+]] op5=1/>
+; CHECK-NEXT:    <PERMODULE {{.*}} op4=[[FUNCID:[0-9]+]]/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK-NEXT:  <VALUE_SYMTAB
 ; CHECK-NEXT:    <FNENTRY {{.*}} record string = 'main'
@@ -21,7 +21,7 @@
 ; COMBINED-NEXT:    <VERSION
 ; See if the call to analias is registered, using the expected callsite count
 ; and value id matching the subsequent value symbol table.
-; COMBINED-NEXT:    <COMBINED {{.*}} op5=[[ALIASID:[0-9]+]] op6=1/>
+; COMBINED-NEXT:    <COMBINED {{.*}} op5=[[ALIASID:[0-9]+]]/>
 ; Followed by the alias and aliasee
 ; COMBINED-NEXT:    <COMBINED {{.*}}
 ; COMBINED-NEXT:    <COMBINED_ALIAS  {{.*}} op3=[[ALIASEEID:[0-9]+]]

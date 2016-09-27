@@ -7,32 +7,40 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // test forward
 
 #include <utility>
+#include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 struct A
 {
 };
 
-A source() {return A();}
-const A csource() {return A();}
+A source() noexcept {return A();}
+const A csource() noexcept {return A();}
 
-typedef char one;
-struct two {one _[2];};
-struct four {one _[4];};
-struct eight {one _[8];};
 
-one test(A&);
-two test(const A&);
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-four test(A&&);
-eight test(const A&&);
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+constexpr bool test_constexpr_forward() {
+#if TEST_STD_VER > 11
+    int x = 42;
+    const int cx = 101;
+    return std::forward<int&>(x)        == 42
+        && std::forward<int>(x)         == 42
+        && std::forward<const int&>(x)  == 42
+        && std::forward<const int>(x)   == 42
+        && std::forward<int&&>(x)       == 42
+        && std::forward<const int&&>(x) == 42
+        && std::forward<const int&>(cx) == 101
+        && std::forward<const int>(cx)  == 101;
+#else
+    return true;
+#endif
+}
 
 int main()
 {
@@ -42,42 +50,42 @@ int main()
     ((void)a); // Prevent unused warning
     ((void)ca); // Prevent unused warning
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    static_assert(sizeof(test(std::forward<A&>(a))) == 1, "");
-    static_assert(sizeof(test(std::forward<A>(a))) == 4, "");
-    static_assert(sizeof(test(std::forward<A>(source()))) == 4, "");
+    static_assert(std::is_same<decltype(std::forward<A&>(a)), A&>::value, "");
+    static_assert(std::is_same<decltype(std::forward<A>(a)), A&&>::value, "");
+    static_assert(std::is_same<decltype(std::forward<A>(source())), A&&>::value, "");
+    static_assert(noexcept(std::forward<A&>(a)), "");
+    static_assert(noexcept(std::forward<A>(a)), "");
+    static_assert(noexcept(std::forward<A>(source())), "");
 
-    static_assert(sizeof(test(std::forward<const A&>(a))) == 2, "");
-//    static_assert(sizeof(test(std::forward<const A&>(source()))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A>(a))) == 8, "");
-    static_assert(sizeof(test(std::forward<const A>(source()))) == 8, "");
+    static_assert(std::is_same<decltype(std::forward<const A&>(a)), const A&>::value, "");
+    static_assert(std::is_same<decltype(std::forward<const A>(a)), const A&&>::value, "");
+    static_assert(std::is_same<decltype(std::forward<const A>(source())), const A&&>::value, "");
+    static_assert(noexcept(std::forward<const A&>(a)), "");
+    static_assert(noexcept(std::forward<const A>(a)), "");
+    static_assert(noexcept(std::forward<const A>(source())), "");
 
-    static_assert(sizeof(test(std::forward<const A&>(ca))) == 2, "");
-//    static_assert(sizeof(test(std::forward<const A&>(csource()))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A>(ca))) == 8, "");
-    static_assert(sizeof(test(std::forward<const A>(csource()))) == 8, "");
+    static_assert(std::is_same<decltype(std::forward<const A&>(ca)), const A&>::value, "");
+    static_assert(std::is_same<decltype(std::forward<const A>(ca)), const A&&>::value, "");
+    static_assert(std::is_same<decltype(std::forward<const A>(csource())), const A&&>::value, "");
+    static_assert(noexcept(std::forward<const A&>(ca)), "");
+    static_assert(noexcept(std::forward<const A>(ca)), "");
+    static_assert(noexcept(std::forward<const A>(csource())), "");
 
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-    static_assert(sizeof(test(std::forward<A&>(a))) == 1, "");
-    static_assert(sizeof(test(std::forward<A>(a))) == 1, "");
-//    static_assert(sizeof(test(std::forward<A>(source()))) == 2, "");
-
-    static_assert(sizeof(test(std::forward<const A&>(a))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A&>(source()))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A>(a))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A>(source()))) == 2, "");
-
-    static_assert(sizeof(test(std::forward<const A&>(ca))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A&>(csource()))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A>(ca))) == 2, "");
-    static_assert(sizeof(test(std::forward<const A>(csource()))) == 2, "");
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-#if _LIBCPP_STD_VER > 11
-    constexpr int i1 = std::move(23);
-    static_assert(i1 == 23, "" );
+#if TEST_STD_VER > 11
+    {
     constexpr int i2 = std::forward<int>(42);
-    static_assert(i2 == 42, "" );
+    static_assert(std::forward<int>(42) == 42, "");
+    static_assert(std::forward<const int&>(i2) == 42, "");
+    static_assert(test_constexpr_forward(), "");
+    }
+#endif
+#if TEST_STD_VER == 11 && defined(_LIBCPP_VERSION)
+    // Test that std::forward is constexpr in C++11. This is an extension
+    // provided by both libc++ and libstdc++.
+    {
+    constexpr int i2 = std::forward<int>(42);
+    static_assert(std::forward<int>(42) == 42, "" );
+    static_assert(std::forward<const int&>(i2) == 42, "");
+    }
 #endif
 }

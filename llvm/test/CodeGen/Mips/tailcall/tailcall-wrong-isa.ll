@@ -1,24 +1,24 @@
-; RUN: llc -filetype=obj -march=mipsel -relocation-model=pic -verify-machineinstrs < %s -o - \
+; RUN: llc -filetype=obj -march=mipsel -relocation-model=pic -verify-machineinstrs -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s -check-prefix=PIC32
 
-; RUN: llc -filetype=obj -march=mipsel -relocation-model=static -verify-machineinstrs < %s -o - \
+; RUN: llc -filetype=obj -march=mipsel -relocation-model=static -verify-machineinstrs -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s -check-prefix=STATIC32
 
-; RUN: llc -filetype=obj -march=mips64el -mcpu=mips64 -verify-machineinstrs < %s -o - \
+; RUN: llc -filetype=obj -march=mips64el -mcpu=mips64 -verify-machineinstrs -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s -check-prefix=N64
 
-; RUN: llc -filetype=obj -march=mipsel -relocation-model=pic -mattr=+micromips < %s -o - \
+; RUN: llc -filetype=obj -march=mipsel -relocation-model=pic -mattr=+micromips -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s -check-prefix=PIC32MM
 
-; RUN: llc -filetype=obj -march=mipsel -relocation-model=static -mattr=+micromips < %s -o - \
+; RUN: llc -filetype=obj -march=mipsel -relocation-model=static -mattr=+micromips -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s -check-prefix=STATIC32MM
 
-; RUN: llc -filetype=obj -march=mipsel -relocation-model=pic -mcpu=mips32r6 < %s -o - \
+; RUN: llc -filetype=obj -march=mipsel -relocation-model=pic -mcpu=mips32r6 -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s  -check-prefix=PIC32R6
-; RUN: llc -filetype=obj -march=mipsel -relocation-model=static -mcpu=mips32r6 < %s -o - \
+; RUN: llc -filetype=obj -march=mipsel -relocation-model=static -mcpu=mips32r6 -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s -check-prefix=STATIC32R6
 
-; RUN: llc -filetype=obj -march=mips64el -mcpu=mips64r6 < %s -o - \
+; RUN: llc -filetype=obj -march=mips64el -mcpu=mips64r6 -mips-tail-calls=1 < %s -o - \
 ; RUN:   | llvm-objdump  -d - | FileCheck %s -check-prefix=N64R6
 
 declare i8 @f2(i8)

@@ -64,6 +64,11 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   int64_t FrameOffset = MFI.getStackSize() + MFI.getObjectOffset(FrameIndex);
 
+  assert(MFI.getObjectSize(FrameIndex) != 0 &&
+         "We assume that variable-sized objects have already been lowered, "
+         "and don't use FrameIndex operands.");
+  unsigned FrameRegister = getFrameRegister(MF);
+
   // If this is the address operand of a load or store, make it relative to SP
   // and fold the frame offset directly in.
   if (MI.mayLoadOrStore() && FIOperandNum == WebAssembly::MemOpAddressOperandNo) {
@@ -73,7 +78,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
     if (static_cast<uint64_t>(Offset) <= std::numeric_limits<uint32_t>::max()) {
       MI.getOperand(FIOperandNum - 1).setImm(Offset);
       MI.getOperand(FIOperandNum)
-          .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
+          .ChangeToRegister(FrameRegister, /*IsDef=*/false);
       return;
     }
   }
@@ -94,7 +99,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
           MachineOperand &ImmMO = Def->getOperand(1);
           ImmMO.setImm(ImmMO.getImm() + uint32_t(FrameOffset));
           MI.getOperand(FIOperandNum)
-              .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
+              .ChangeToRegister(FrameRegister, /*IsDef=*/false);
           return;
         }
       }
@@ -104,7 +109,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   // Otherwise create an i32.add SP, offset and make it the operand.
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-  unsigned FIRegOperand = WebAssembly::SP32;
+  unsigned FIRegOperand = FrameRegister;
   if (FrameOffset) {
     // Create i32.add SP, offset and make it the operand.
     const TargetRegisterClass *PtrRC =
@@ -116,7 +121,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
     FIRegOperand = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::ADD_I32),
             FIRegOperand)
-        .addReg(WebAssembly::SP32)
+        .addReg(FrameRegister)
         .addReg(OffsetOp);
   }
   MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*IsDef=*/false);

@@ -30,3 +30,11 @@ entry:
 ; CHECK: call void @__sanitizer_cov_trace_gep(i64 %idxprom1)
 ; CHECK: call void @__sanitizer_cov_trace_gep(i64 %idxprom)
 ; CHECK: ret void
+
+; Just make sure we don't insturment this one and don't crash
+define void @gep_3(<2 x i8*> %a, i32 %i, i32 %j) {
+entry:
+  %0 = getelementptr i8, <2 x i8*> %a, <2 x i64> <i64 8, i64 8>
+  ret void
+}
+

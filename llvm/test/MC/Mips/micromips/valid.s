@@ -203,3 +203,7 @@ cfc1 $1, $2                 # CHECK: cfc1 $1, $2            # encoding: [0x54,0x
 cfc2 $3, $4                 # CHECK: cfc2 $3, $4            # encoding: [0x00,0x64,0xcd,0x3c]
 ctc1 $5, $6                 # CHECK: ctc1 $5, $6            # encoding: [0x54,0xa6,0x18,0x3b]
 ctc2 $7, $8                 # CHECK: ctc2 $7, $8            # encoding: [0x00,0xe8,0xdd,0x3c]
+recip.s $f2, $f4            # CHECK: recip.s $f2, $f4       # encoding: [0x54,0x44,0x12,0x3b]
+recip.d $f2, $f4            # CHECK: recip.d $f2, $f4       # encoding: [0x54,0x44,0x52,0x3b]
+rsqrt.s $f3, $f5            # CHECK: rsqrt.s $f3, $f5       # encoding: [0x54,0x65,0x02,0x3b]
+rsqrt.d $f2, $f4            # CHECK: rsqrt.d $f2, $f4       # encoding: [0x54,0x44,0x42,0x3b]

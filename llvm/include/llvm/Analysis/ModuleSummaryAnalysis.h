@@ -21,6 +21,7 @@
 
 namespace llvm {
 class BlockFrequencyInfo;
+class ProfileSummaryInfo;
 
 /// Direct function to compute a \c ModuleSummaryIndex from a given module.
 ///
@@ -30,8 +31,8 @@ class BlockFrequencyInfo;
 /// that information.
 ModuleSummaryIndex buildModuleSummaryIndex(
     const Module &M,
-    std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback =
-        nullptr);
+    std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
+    ProfileSummaryInfo *PSI);
 
 /// Analysis pass to provide the ModuleSummaryIndex object.
 class ModuleSummaryIndexAnalysis

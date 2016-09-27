@@ -2610,6 +2610,22 @@ functionDecl(isNoThrow()) and functionProtoType(isNoThrow())
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isStaticStorageClass0')"><a name="isStaticStorageClass0Anchor">isStaticStorageClass</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isStaticStorageClass0"><pre>Matches variablefunction declarations that have "static" storage
+class specifier ("static" keyword) written in the source.
+
+Given:
+  static void f() {}
+  static int i = 0;
+  extern int j;
+  int k;
+functionDecl(isStaticStorageClass())
+  matches the function declaration f.
+varDecl(isStaticStorageClass())
+  matches the variable declaration i.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isTemplateInstantiation0')"><a name="isTemplateInstantiation0Anchor">isTemplateInstantiation</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isTemplateInstantiation0"><pre>Matches template instantiations of function, class, or static
 member variable template instantiations.
@@ -3380,15 +3396,19 @@ int z;
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('hasStaticStorageDuration0')"><a name="hasStaticStorageDuration0Anchor">hasStaticStorageDuration</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="hasStaticStorageDuration0"><pre>Matches a variable declaration that has static storage duration.
+It includes the variable declared at namespace scope and those declared
+with "static" and "extern" storage class specifiers.
 
-Example matches y and a, but not x or z.
-(matcher = varDecl(hasStaticStorageDuration())
 void f() {
   int x;
   static int y;
   thread_local int z;
 }
 int a;
+static int b;
+extern int c;
+varDecl(hasStaticStorageDuration())
+  matches the function declaration y, a, b and c.
 </pre></td></tr>
 
 
@@ -3470,6 +3490,22 @@ Given:
   void h() {}
 functionDecl(isExternC())
   matches the declaration of f and g, but not the declaration h
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isStaticStorageClass1')"><a name="isStaticStorageClass1Anchor">isStaticStorageClass</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isStaticStorageClass1"><pre>Matches variablefunction declarations that have "static" storage
+class specifier ("static" keyword) written in the source.
+
+Given:
+  static void f() {}
+  static int i = 0;
+  extern int j;
+  int k;
+functionDecl(isStaticStorageClass())
+  matches the function declaration f.
+varDecl(isStaticStorageClass())
+  matches the variable declaration i.
 </pre></td></tr>
 
 
@@ -4092,7 +4128,7 @@ matcher, or is a pointer to a type that matches the InnerMatcher.
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('forEachOverridden0')"><a name="forEachOverridden0Anchor">forEachOverridden</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachOverridden0"><pre>Matches each method overridden by the given method. This matcher may
+<tr><td colspan="4" class="doc" id="forEachOverridden0"><pre>Matches each method overriden by the given method. This matcher may
 produce multiple matches.
 
 Given

@@ -448,6 +448,9 @@ def : ItinRW<[P5600WriteFPUSqrtD], [II_SQRT_D]>;
 def : InstRW<[P5600WriteFPURsqrtD], (instregex "^FRCP_(W|D)$")>;
 def : InstRW<[P5600WriteFPURsqrtD], (instregex "^FRSQRT_(W|D)$")>;
 
+def : ItinRW<[P5600WriteFPURsqrtD], [II_RECIP_D, II_RSQRT_D]>;
+def : ItinRW<[P5600WriteFPURsqrtS], [II_RECIP_S, II_RSQRT_S]>;
+
 // fmadd.[wd], fmsubb.[wd], fdiv.[wd], fsqrt.[wd], fmul.[wd], fadd.[wd],
 // fsub.[wd]
 def : InstRW<[P5600WriteFPUL_MADDSUB], (instregex "^FMADD_(W|D)$")>;

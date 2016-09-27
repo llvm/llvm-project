@@ -38,6 +38,7 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
@@ -92,6 +93,10 @@ bool InputSectionDescription::classof(const BaseCommand *C) {
 
 bool AssertCommand::classof(const BaseCommand *C) {
   return C->Kind == AssertKind;
+}
+
+bool BytesDataCommand::classof(const BaseCommand *C) {
+  return C->Kind == BytesDataKind;
 }
 
 template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
@@ -408,6 +413,7 @@ void LinkerScript<ELFT>::switchTo(OutputSectionBase<ELFT> *Sec) {
 }
 
 template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
+  // This handles the assignments to symbol or to a location counter (.)
   if (auto *AssignCmd = dyn_cast<SymbolAssignment>(&Base)) {
     if (AssignCmd->Name == ".") {
       // Update to location counter means update to section size.
@@ -418,6 +424,18 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
     assignSectionSymbol<ELFT>(AssignCmd, CurOutSec, Dot - CurOutSec->getVA());
     return;
   }
+
+  // Handle BYTE(), SHORT(), LONG(), or QUAD().
+  if (auto *DataCmd = dyn_cast<BytesDataCommand>(&Base)) {
+    DataCmd->Offset = Dot - CurOutSec->getVA();
+    Dot += DataCmd->Size;
+    CurOutSec->setSize(Dot - CurOutSec->getVA());
+    return;
+  }
+
+  // It handles single input section description command,
+  // calculates and assigns the offsets for each section and also
+  // updates the output section size.
   auto &ICmd = cast<InputSectionDescription>(Base);
   for (InputSectionData *ID : ICmd.Sections) {
     auto *IB = static_cast<InputSectionBase<ELFT> *>(ID);
@@ -689,6 +707,41 @@ ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
   return {};
 }
 
+template <class ELFT>
+static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {
+  const endianness E = ELFT::TargetEndianness;
+
+  switch (Size) {
+  case 1:
+    *Buf = (uint8_t)Data;
+    break;
+  case 2:
+    write16<E>(Buf, Data);
+    break;
+  case 4:
+    write32<E>(Buf, Data);
+    break;
+  case 8:
+    write64<E>(Buf, Data);
+    break;
+  default:
+    llvm_unreachable("unsupported Size argument");
+  }
+}
+
+template <class ELFT>
+void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
+  int I = getSectionIndex(Name);
+  if (I == INT_MAX)
+    return;
+
+  OutputSectionCommand *Cmd =
+      dyn_cast<OutputSectionCommand>(Opt.Commands[I].get());
+  for (const std::unique_ptr<BaseCommand> &Base2 : Cmd->Commands)
+    if (auto *DataCmd = dyn_cast<BytesDataCommand>(Base2.get()))
+      writeInt<ELFT>(&Buf[DataCmd->Offset], DataCmd->Data, DataCmd->Size);
+}
+
 template <class ELFT> Expr LinkerScript<ELFT>::getLma(StringRef Name) {
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
@@ -815,6 +868,7 @@ private:
   void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
+  BytesDataCommand *readBytesDataCommand(StringRef Tok);
   std::vector<uint8_t> readFill();
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
   std::vector<uint8_t> readOutputSectionFiller(StringRef Tok);
@@ -1254,6 +1308,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     StringRef Tok = next();
     if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok, false))
       Cmd->Commands.emplace_back(Assignment);
+    else if (BytesDataCommand *Data = readBytesDataCommand(Tok))
+      Cmd->Commands.emplace_back(Data);
     else if (Tok == "FILL")
       Cmd->Filler = readFill();
     else if (Tok == "SORT")
@@ -1449,6 +1505,25 @@ static bool readInteger(StringRef Tok, uint64_t &Result) {
     return false;
   Result *= Suffix;
   return true;
+}
+
+BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
+  int Size = StringSwitch<unsigned>(Tok)
+                 .Case("BYTE", 1)
+                 .Case("SHORT", 2)
+                 .Case("LONG", 4)
+                 .Case("QUAD", 8)
+                 .Default(-1);
+  if (Size == -1)
+    return nullptr;
+
+  expect("(");
+  uint64_t Val = 0;
+  StringRef S = next();
+  if (!readInteger(S, Val))
+    setError("unexpected value: " + S);
+  expect(")");
+  return new BytesDataCommand(Val, Size);
 }
 
 Expr ScriptParser::readPrimary() {

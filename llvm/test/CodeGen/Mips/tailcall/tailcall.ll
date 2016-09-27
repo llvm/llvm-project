@@ -1,30 +1,30 @@
 ; RUN: llc -march=mipsel -relocation-model=pic  \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s -check-prefix=PIC32
+; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=PIC32
 ; RUN: llc -march=mipsel -relocation-model=static  \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s -check-prefix=STATIC32
+; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=STATIC32
 ; RUN: llc -march=mips64el -mcpu=mips64r2  \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s -check-prefix=N64
+; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=N64
 ; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=pic \
-; RUN:      -verify-machineinstrs < %s | \
+; RUN:      -verify-machineinstrs -mips-tail-calls=1 < %s | \
 ; RUN:     FileCheck %s -check-prefix=PIC16
 
-; RUN: llc -march=mipsel -relocation-model=pic -mattr=+micromips < %s | \
+; RUN: llc -march=mipsel -relocation-model=pic -mattr=+micromips -mips-tail-calls=1 < %s | \
 ; RUN:     FileCheck %s -check-prefix=PIC32
 ; RUN: llc -march=mipsel -relocation-model=static -mattr=+micromips \
-; RUN:     < %s | FileCheck %s -check-prefix=STATIC32
+; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=STATIC32
 
-; RUN: llc -march=mipsel -relocation-model=pic -mcpu=mips32r6 < %s | \
+; RUN: llc -march=mipsel -relocation-model=pic -mcpu=mips32r6 -mips-tail-calls=1 < %s | \
 ; RUN:     FileCheck %s -check-prefix=PIC32
 ; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
-; RUN:     < %s | FileCheck %s -check-prefix=STATIC32
+; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=STATIC32
 ; RUN: llc -march=mips64el -mcpu=mips64r6  \
-; RUN:     < %s | FileCheck %s -check-prefix=N64
+; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=N64
 
 ; RUN: llc -march=mipsel -relocation-model=pic -mcpu=mips32r6 -mattr=+micromips \
-; RUN:      < %s | FileCheck %s -check-prefix=PIC32
+; RUN:      -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=PIC32
 ; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
-; RUN:     -mattr=+micromips < %s | FileCheck %s -check-prefix=STATIC32
-; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=+micromips < %s \
+; RUN:     -mattr=+micromips -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=STATIC32
+; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=+micromips -mips-tail-calls=1 < %s \
 ; RUN:      | FileCheck %s -check-prefix=N64
 
 @g0 = common global i32 0, align 4

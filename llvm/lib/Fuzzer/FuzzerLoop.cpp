@@ -374,7 +374,24 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
   this->MaxMutationLen = MaxMutationLen;
 }
 
+void Fuzzer::CheckExitOnSrcPos() {
+  if (!Options.ExitOnSrcPos.empty()) {
+    uintptr_t *PCIDs;
+    if (size_t NumNewPCIDs = TPC.GetNewPCIDs(&PCIDs)) {
+      for (size_t i = 0; i < NumNewPCIDs; i++) {
+        std::string Descr = DescribePC("%L", TPC.GetPCbyPCID(PCIDs[i]));
+        if (Descr.find(Options.ExitOnSrcPos) != std::string::npos) {
+          Printf("INFO: found line matching '%s', exiting.\n",
+                 Options.ExitOnSrcPos.c_str());
+          _Exit(0);
+        }
+      }
+    }
+  }
+}
+
 void Fuzzer::AddToCorpusAndMaybeRerun(const Unit &U) {
+  CheckExitOnSrcPos();
   Corpus.AddToCorpus(U);
   if (TPC.GetTotalPCCoverage()) {
     TPC.ResetMaps();

@@ -513,6 +513,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(STI.getPrefFunctionAlignment());
   setPrefLoopAlignment(STI.getPrefLoopAlignment());
 
+  // Only change the limit for entries in a jump table if specified by
+  // the subtarget, but not at the command line.
+  unsigned MaxJT = STI.getMaximumJumpTableSize();
+  if (MaxJT && getMaximumJumpTableSize() == 0)
+    setMaximumJumpTableSize(MaxJT);
+
   setHasExtractBitsInsn(true);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);

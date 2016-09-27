@@ -346,9 +346,7 @@ entry:
 ; CHECK-FISL-LABEL: @test17
 ; CHECK-FISL: vor 4, 3, 3
 ; CHECK-FISL: vor 5, 2, 2
-; CHECK-FISL: vspltisb 2, -1
-; CHECK-FISL: vor 0, 2, 2
-; CHECK-FISL: xxlxor 36, 36, 32
+; CHECK-FISL: xxlnor 36, 36, 36
 ; CHECK-FISL: xxland 36, 37, 36
 ; CHECK-FISL: vor 2, 4, 4
 ; CHECK-FISL: blr
@@ -369,18 +367,17 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test18
-; CHECK-FISL: vspltisb 4, -1
+; CHECK-FISL: vor 4, 3, 3
 ; CHECK-FISL: vor 5, 3, 3
+; CHECK-FISL: xxlnor 36, 36, 37
 ; CHECK-FISL: vor 0, 4, 4
-; CHECK-FISL: xxlxor 37, 37, 32
-; CHECK-FISL: vor 4, 5, 5
-; CHECK-FISL: vor 5, 2, 2
-; CHECK-FISL: vor 0, 3, 3
-; CHECK-FISL: xxlandc 37, 37, 32
-; CHECK-FISL: vor 2, 5, 5
+; CHECK-FISL: vor 4, 2, 2
+; CHECK-FISL: vor 5, 3, 3
+; CHECK-FISL: xxlandc 36, 36, 37
+; CHECK-FISL: vor 2, 4, 4
 ; CHECK-FISL: lis 0, -1
 ; CHECK-FISL: ori 0, 0, 65520
-; CHECK-FISL: stvx 4, 1, 0
+; CHECK-FISL: stvx 0, 1, 0
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test18
@@ -399,18 +396,17 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test19
-; CHECK-FISL: vspltisb 4, -1
+; CHECK-FISL: vor 4, 3, 3
 ; CHECK-FISL: vor 5, 3, 3
+; CHECK-FISL: xxlnor 36, 36, 37
 ; CHECK-FISL: vor 0, 4, 4
-; CHECK-FISL: xxlxor 37, 37, 32
-; CHECK-FISL: vor 4, 5, 5
-; CHECK-FISL: vor 5, 2, 2
-; CHECK-FISL: vor 0, 3, 3
-; CHECK-FISL: xxlandc 37, 37, 32
-; CHECK-FISL: vor 2, 5, 5
+; CHECK-FISL: vor 4, 2, 2
+; CHECK-FISL: vor 5, 3, 3
+; CHECK-FISL: xxlandc 36, 36, 37
+; CHECK-FISL: vor 2, 4, 4
 ; CHECK-FISL: lis 0, -1
 ; CHECK-FISL: ori 0, 0, 65520
-; CHECK-FISL: stvx 4, 1, 0
+; CHECK-FISL: stvx 0, 1, 0
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test19
