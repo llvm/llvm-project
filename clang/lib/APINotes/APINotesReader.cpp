@@ -175,8 +175,8 @@ namespace {
   /// Used to deserialize the on-disk Objective-C property table.
   class ObjCPropertyTableInfo {
   public:
-    // (context ID, name ID)
-    using internal_key_type = std::pair<unsigned, unsigned>; 
+    // (context ID, name ID, isInstance)
+    using internal_key_type = std::tuple<unsigned, unsigned, char>; 
     using external_key_type = internal_key_type;
     using data_type = ObjCPropertyInfo;
     using hash_value_type = size_t;
@@ -208,7 +208,8 @@ namespace {
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
       auto classID = endian::readNext<uint32_t, little, unaligned>(data);
       auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
-      return { classID, nameID };
+      char isInstance = endian::readNext<uint8_t, little, unaligned>(data);
+      return std::make_tuple(classID, nameID, isInstance);
     }
     
     static data_type ReadData(internal_key_type key, const uint8_t *data,
@@ -1510,7 +1511,8 @@ auto APINotesReader::lookupObjCProtocol(StringRef name)
 
 Optional<ObjCPropertyInfo> APINotesReader::lookupObjCProperty(
                              ContextID contextID,
-                             StringRef name) {
+                             StringRef name,
+                             bool isInstance) {
   if (!Impl.ObjCPropertyTable)
     return None;
 
@@ -1518,7 +1520,9 @@ Optional<ObjCPropertyInfo> APINotesReader::lookupObjCProperty(
   if (!propertyID)
     return None;
 
-  auto known = Impl.ObjCPropertyTable->find({contextID.Value, *propertyID});
+  auto known = Impl.ObjCPropertyTable->find(std::make_tuple(contextID.Value,
+                                                            *propertyID,
+                                                            (char)isInstance));
   if (known == Impl.ObjCPropertyTable->end())
     return None;
 
@@ -1639,6 +1643,7 @@ void APINotesReader::Visitor::visitObjCMethod(ContextID contextID,
 
 void APINotesReader::Visitor::visitObjCProperty(ContextID contextID,
                                                 StringRef name,
+                                                bool isInstance,
                                                 const ObjCPropertyInfo &info) { }
 
 void APINotesReader::Visitor::visitGlobalVariable(
@@ -1723,10 +1728,11 @@ void APINotesReader::visit(Visitor &visitor) {
   // Visit properties.
   if (Impl.ObjCPropertyTable) {
     for (auto key : Impl.ObjCPropertyTable->keys()) {
-      ContextID contextID(key.first);
-      auto name = identifiers[key.second];
+      ContextID contextID(std::get<0>(key));
+      auto name = identifiers[std::get<1>(key)];
+      char isInstance = std::get<2>(key);
       auto info = *Impl.ObjCPropertyTable->find(key);
-      visitor.visitObjCProperty(contextID, name, info);
+      visitor.visitObjCProperty(contextID, name, isInstance, info);
     }
   }
 
