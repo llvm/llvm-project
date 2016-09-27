@@ -167,6 +167,10 @@ bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
   return false;
 }
 
+bool AArch64RegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
+  return PhysReg == AArch64::WZR || PhysReg == AArch64::XZR;
+}
+
 const TargetRegisterClass *
 AArch64RegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                       unsigned Kind) const {

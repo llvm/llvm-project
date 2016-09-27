@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/raw_ostream.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 
 using namespace llvm;
@@ -19,10 +19,7 @@ int main(int argc, char **argv) {
     const char *Mangled = argv[I];
     int Status;
     char *Demangled = itaniumDemangle(Mangled, nullptr, nullptr, &Status);
-    if (Demangled)
-      printf("%s\n", Demangled);
-    else
-      printf("%s\n", Mangled);
+    llvm::outs() << (Demangled ? Demangled : Mangled) << '\n';
     free(Demangled);
   }
   return 0;

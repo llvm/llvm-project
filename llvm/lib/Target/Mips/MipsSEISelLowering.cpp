@@ -28,7 +28,7 @@ using namespace llvm;
 
 static cl::opt<bool>
 UseMipsTailCalls("mips-tail-calls", cl::Hidden,
-                    cl::desc("MIPS: permit tail calls."), cl::init(true));
+                    cl::desc("MIPS: permit tail calls."), cl::init(false));
 
 static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
                                    cl::desc("Expand double precision loads and "

@@ -151,3 +151,40 @@ L1_latch:
 exit:
   ret i8 0
 }
+
+; CHECK-LABEL: @foo5
+define void @foo5() {
+entry:
+  br label %outer
+
+outer:
+  br label %inner1
+
+; CHECK: inner1:
+; CHECK-NOT: br i1 true
+; CHECK: br label %inner2_indirect_exit
+inner1:
+  br i1 true, label %inner2_indirect_exit.preheader, label %inner1
+
+inner2_indirect_exit.preheader:
+  br label %inner2_indirect_exit
+
+inner2_indirect_exit:
+  %a = phi i32 [ %b, %inner2_latch ], [ undef, %inner2_indirect_exit.preheader ]
+  indirectbr i8* undef, [label %inner2_latch, label %inner3, label %outer_latch]
+
+inner2_latch:
+  %b = load i32, i32* undef, align 8
+  br label %inner2_indirect_exit
+
+inner3:
+  %a.lcssa = phi i32 [ %a.lcssa, %inner3 ], [ %a, %inner2_indirect_exit ]
+  br i1 true, label %outer_latch.loopexit, label %inner3
+
+outer_latch.loopexit:
+  %a.lcssa.lcssa = phi i32 [ %a.lcssa, %inner3 ]
+  br label %outer_latch
+
+outer_latch:
+  br label %outer
+}

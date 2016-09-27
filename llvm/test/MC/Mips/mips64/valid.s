@@ -213,10 +213,14 @@ a:
         or        $12,$s0,$sp
         or        $2, 4                # CHECK: ori $2, $2, 4          # encoding: [0x34,0x42,0x00,0x04]
         pref      1, 8($5)             # CHECK: pref 1, 8($5)          # encoding: [0xcc,0xa1,0x00,0x08]
+        recip.d   $f19,$f6             # CHECK: recip.d $f19, $f6      # encoding: [0x46,0x20,0x34,0xd5]
+        recip.s   $f3,$f30             # CHECK: recip.s $f3, $f30      # encoding: [0x46,0x00,0xf0,0xd5]
         round.l.d $f12,$f1
         round.l.s $f25,$f5
         round.w.d $f6,$f4
         round.w.s $f27,$f28
+        rsqrt.s   $f0,$f4              # CHECK: rsqrt.s $f0, $f4       # encoding: [0x46,0x00,0x20,0x16]
+        rsqrt.d   $f2,$f6              # CHECK: rsqrt.d $f2, $f6       # encoding: [0x46,0x20,0x30,0x96]
         s.s       $f2, 8($3)           # CHECK: swc1  $f2, 8($3)       # encoding: [0xe4,0x62,0x00,0x08]
         s.d       $f2, 8($3)           # CHECK: sdc1  $f2, 8($3)       # encoding: [0xf4,0x62,0x00,0x08]
         sb        $s6,-19857($14)

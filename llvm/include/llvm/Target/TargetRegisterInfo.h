@@ -495,6 +495,10 @@ public:
   /// used by register scavenger to determine what registers are free.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
 
+  /// Returns true if PhysReg is unallocatable and constant throughout the
+  /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
+  virtual bool isConstantPhysReg(unsigned PhysReg) const { return false; }
+
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).
