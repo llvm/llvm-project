@@ -298,3 +298,12 @@ INVALID-SPLITINFO-DATAOFF-DATASIZE: macho-invalid-splitinfo-dataoff-datasize': t
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib_code_sign_drs-bad-size  2>&1 | FileCheck -check-prefix INVALID-DYLIB_CODE_SIGN_DRS-BAD-SIZE %s
 INVALID-DYLIB_CODE_SIGN_DRS-BAD-SIZE: macho-invalid-dylib_code_sign_drs-bad-size': truncated or malformed object (LC_DYLIB_CODE_SIGN_DRS command 0 has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyld-small  2>&1 | FileCheck -check-prefix INVALID-DYLD-SMALL %s
+INVALID-DYLD-SMALL: macho-invalid-dyld-small': truncated or malformed object (load command 0 LC_ID_DYLINKER cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyld-name_offset-toobig  2>&1 | FileCheck -check-prefix INVALID-DYLD-NAME_OFFSET-TOOBIG %s
+INVALID-DYLD-NAME_OFFSET-TOOBIG: macho-invalid-dyld-name_offset-toobig': truncated or malformed object (load command 0 LC_LOAD_DYLINKER name.offset field extends past the end of the load command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyld-name_toobig 2>&1 | FileCheck -check-prefix INVALID-DYLD-NAME_TOOBIG %s
+INVALID-DYLD-NAME_TOOBIG: macho-invalid-dyld-name_toobig': truncated or malformed object (load command 0 LC_DYLD_ENVIRONMENT dyld name extends past the end of the load command)

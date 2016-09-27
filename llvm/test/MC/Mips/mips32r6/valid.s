@@ -139,6 +139,8 @@ a:
                                  # CHECK-NEXT: .set  mips32r2
                                  # CHECK-NEXT: rdhwr $sp, $11
                                  # CHECK-NEXT: .set  pop      # encoding: [0x7c,0x1d,0x58,0x3b]
+        recip.d $f19,$f6         # CHECK: recip.d $f19, $f6   # encoding: [0x46,0x20,0x34,0xd5]
+        recip.s $f3,$f30         # CHECK: recip.s $f3, $f30   # encoding: [0x46,0x00,0xf0,0xd5]
         s.s    $f2, 8($3)        # CHECK: swc1 $f2, 8($3)     # encoding: [0xe4,0x62,0x00,0x08]
         s.d    $f2, 8($3)        # CHECK: sdc1 $f2, 8($3)     # encoding: [0xf4,0x62,0x00,0x08]
         sel.d   $f0,$f1,$f2      # CHECK: sel.d $f0, $f1, $f2 # encoding: [0x46,0x22,0x08,0x10]
@@ -185,6 +187,8 @@ a:
         sc      $15,-40($s3)     # CHECK: sc $15, -40($19)       # encoding: [0x7e,0x6f,0xec,0x26]
         clo     $11,$a1          # CHECK: clo $11, $5            # encoding: [0x00,0xa0,0x58,0x51]
         clz     $sp,$gp          # CHECK: clz $sp, $gp           # encoding: [0x03,0x80,0xe8,0x50]
+        rsqrt.s $f0,$f4          # CHECK: rsqrt.s $f0, $f4       # encoding: [0x46,0x00,0x20,0x16]
+        rsqrt.d $f2,$f6          # CHECK: rsqrt.d $f2, $f6       # encoding: [0x46,0x20,0x30,0x96]
         sgt     $4, $5           # CHECK: slt $4, $5, $4         # encoding: [0x00,0xa4,0x20,0x2a]
         sgt     $4, $5, $6       # CHECK: slt $4, $6, $5         # encoding: [0x00,0xc5,0x20,0x2a]
         sgtu    $4, $5           # CHECK: sltu $4, $5, $4        # encoding: [0x00,0xa4,0x20,0x2b]

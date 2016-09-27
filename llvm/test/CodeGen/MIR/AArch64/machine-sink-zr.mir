@@ -1,0 +1,48 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-sink -o - %s | FileCheck %s
+--- |
+  define void @sinkwzr() { ret void }
+...
+---
+name:            sinkwzr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr32sp }
+  - { id: 3, class: gpr32 }
+  - { id: 4, class: gpr32 }
+body:             |
+  ; Check that WZR copy is sunk into the loop preheader.
+  ; CHECK-LABEL: name: sinkwzr
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NOT: COPY %wzr
+  bb.0:
+    successors: %bb.3, %bb.1
+    liveins: %w0
+
+    %0 = COPY %w0
+    %1 = COPY %wzr
+    CBZW %0, %bb.3
+
+  ; CHECK-LABEL: bb.1:
+  ; CHECK: COPY %wzr
+
+  bb.1:
+    successors: %bb.2
+
+    B %bb.2
+
+  bb.2:
+    successors: %bb.3, %bb.2
+
+    %2 = PHI %0, %bb.1, %4, %bb.2
+    %w0 = COPY %1
+    %3 = SUBSWri %2, 1, 0, implicit-def dead %nzcv
+    %4 = COPY %3
+    CBZW %3, %bb.3
+    B %bb.2
+
+  bb.3:
+    RET_ReallyLR
+
+...

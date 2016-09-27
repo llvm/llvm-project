@@ -1169,7 +1169,7 @@ Here are some examples of good and bad names:
                                 // kind of factories.
   };
 
-  Vehicle MakeVehicle(VehicleType Type) {
+  Vehicle makeVehicle(VehicleType Type) {
     VehicleMaker M;                         // Might be OK if having a short life-span.
     Tire Tmp1 = M.makeTire();               // Bad -- 'Tmp1' provides no information.
     Light Headlight = M.makeLight("head");  // Good -- descriptive.

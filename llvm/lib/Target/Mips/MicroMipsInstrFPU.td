@@ -141,6 +141,16 @@ let AdditionalPredicates = [InMicroMips] in {
                   MFC1_FM_MM<0x40>;
     def CTC1_MM : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>,
                   MFC1_FM_MM<0x60>;
+    def RECIP_S_MM : MMRel, ABSS_FT<"recip.s", FGR32Opnd, FGR32Opnd,
+                                    II_RECIP_S>,
+                     ROUND_W_FM_MM<0b0, 0b01001000>;
+    def RECIP_D_MM : MMRel, ABSS_FT<"recip.d", AFGR64Opnd, AFGR64Opnd,
+                                 II_RECIP_D>, ROUND_W_FM_MM<0b1, 0b01001000>;
+    def RSQRT_S_MM : MMRel, ABSS_FT<"rsqrt.s", FGR32Opnd, FGR32Opnd,
+                                    II_RECIP_S>,
+                     ROUND_W_FM_MM<0b0, 0b00001000>;
+    def RSQRT_D_MM : MMRel, ABSS_FT<"rsqrt.d", AFGR64Opnd, AFGR64Opnd,
+                                 II_RECIP_D>, ROUND_W_FM_MM<0b1, 0b00001000>;
   }
   let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
     def LDC1_MM : MMRel, LW_FT<"ldc1", AFGR64Opnd, mem_mm_16, II_LDC1, load>,

@@ -101,11 +101,7 @@
         pul.ps          $f9,$f30,$f26
         puu.ps          $f24,$f9,$f2
         rdpgpr          $s3,$9
-        recip.d         $f19,$f6
-        recip.s         $f3,$f30
         rorv            $13,$a3,$s5
-        rsqrt.d         $f3,$f28
-        rsqrt.s         $f4,$f8
         sbe             $s7,33($s1)
         sce             $sp,189($10)
         she             $24,105($v0)

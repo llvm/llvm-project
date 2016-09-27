@@ -5,10 +5,8 @@
 ; RUN:       -pass-remarks-analysis=inline -pass-remarks-with-hotness -S 2>&1 | \
 ; RUN:       FileCheck -check-prefix=CHECK -check-prefix=HOTNESS %s
 
-; HOTNESS: definition of fox is not available
-; HOTNESS: fox will not be inlined into bar
-; NO_HOTNESS-NOT: definition of fox is not available
-; NO_HOTNESS-NOT: fox will not be inlined into bar
+; HOTNESS: fox will not be inlined into bar because its definition is unavailable
+; NO_HOTNESS-NOT: fox will not be inlined into bar because its definition is unavailable
 ; CHECK: foo should always be inlined (cost=always)
 ; CHECK: foo inlined into bar
 ; CHECK: foz should never be inlined (cost=never)

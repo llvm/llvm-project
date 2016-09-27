@@ -191,6 +191,13 @@
 //   imply that the use in (3) may indeed be reached by some prior def.
 //   Adding Undef flag to the def in (1) prevents that. The Undef flag
 //   may be applied to both defs and uses.
+// - Dead: applies only to defs. The value coming out of a "dead" def is
+//   assumed to be unused, even if the def appears to be reaching other defs
+//   or uses. The motivation for this flag comes from dead defs on function
+//   calls: there is no way to determine if such a def is dead without
+//   analyzing the target's ABI. Hence the graph should contain this info,
+//   as it is unavailable otherwise. On the other hand, a def without any
+//   uses on a typical instruction is not the intended target for this flag.
 //
 // *** Shadow references
 //
@@ -261,14 +268,15 @@ namespace rdf {
       Block         = 0x0005 << 2,  // 101
       Func          = 0x0006 << 2,  // 110
 
-      // Flags: 6 bits for now
-      FlagMask      = 0x003F << 5,
-      Shadow        = 0x0001 << 5,  // 000001, Has extra reaching defs.
-      Clobbering    = 0x0002 << 5,  // 000010, Produces unspecified values.
-      PhiRef        = 0x0004 << 5,  // 000100, Member of PhiNode.
-      Preserving    = 0x0008 << 5,  // 001000, Def can keep original bits.
-      Fixed         = 0x0010 << 5,  // 010000, Fixed register.
-      Undef         = 0x0020 << 5,  // 100000, Has no pre-existing value.
+      // Flags: 7 bits for now
+      FlagMask      = 0x007F << 5,
+      Shadow        = 0x0001 << 5,  // 0000001, Has extra reaching defs.
+      Clobbering    = 0x0002 << 5,  // 0000010, Produces unspecified values.
+      PhiRef        = 0x0004 << 5,  // 0000100, Member of PhiNode.
+      Preserving    = 0x0008 << 5,  // 0001000, Def can keep original bits.
+      Fixed         = 0x0010 << 5,  // 0010000, Fixed register.
+      Undef         = 0x0020 << 5,  // 0100000, Has no pre-existing value.
+      Dead          = 0x0040 << 5,  // 1000000, Does not define a value.
     };
 
     static uint16_t type(uint16_t T)  { return T & TypeMask; }
@@ -820,6 +828,8 @@ namespace rdf {
 
   private:
     void reset();
+
+    std::vector<uint32_t> getLandingPadLiveIns() const;
 
     NodeAddr<NodeBase*> newNode(uint16_t Attrs);
     NodeAddr<NodeBase*> cloneNode(const NodeAddr<NodeBase*> B);

@@ -194,8 +194,12 @@ a:
                                  # CHECK-NEXT: .set  mips32r2
                                  # CHECK-NEXT: rdhwr $sp, $11
                                  # CHECK-NEXT: .set  pop         # encoding: [0x7c,0x1d,0x58,0x3b]
+        recip.d $f19,$f6         # CHECK: recip.d $f19, $f6      # encoding: [0x46,0x20,0x34,0xd5]
+        recip.s $f3,$f30         # CHECK: recip.s $f3, $f30      # encoding: [0x46,0x00,0xf0,0xd5]
         rint.d $f2, $f4          # CHECK: rint.d $f2, $f4        # encoding: [0x46,0x20,0x20,0x9a]
         rint.s $f2, $f4          # CHECK: rint.s $f2, $f4        # encoding: [0x46,0x00,0x20,0x9a]
+        rsqrt.s $f0,$f4          # CHECK: rsqrt.s $f0, $f4       # encoding: [0x46,0x00,0x20,0x16]
+        rsqrt.d $f2,$f6          # CHECK: rsqrt.d $f2, $f6       # encoding: [0x46,0x20,0x30,0x96]
         s.s    $f2, 8($3)        # CHECK: swc1 $f2, 8($3)        # encoding: [0xe4,0x62,0x00,0x08]
         s.d    $f2, 8($3)        # CHECK: sdc1 $f2, 8($3)        # encoding: [0xf4,0x62,0x00,0x08]
         sc      $15,-40($s3)     # CHECK: sc $15, -40($19)       # encoding: [0x7e,0x6f,0xec,0x26]

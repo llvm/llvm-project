@@ -35,7 +35,3 @@
         c.ult.s         $fcc7,$f24,$f10
         c.un.d          $fcc6,$f23,$f24
         c.un.s          $fcc1,$f30,$f4
-        recip.d         $f19,$f6
-        recip.s         $f3,$f30
-        rsqrt.d         $f3,$f28
-        rsqrt.s         $f4,$f8

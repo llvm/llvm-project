@@ -50,34 +50,34 @@ Setting up the build environment
 First, configure and build LLVM.  Next, you need to create a new directory
 somewhere in the LLVM source base.  For this example, we'll assume that you
 made ``lib/Transforms/Hello``.  Finally, you must set up a build script
-(``Makefile``) that will compile the source code for the new pass.  To do this,
-copy the following into ``Makefile``:
+that will compile the source code for the new pass.  To do this,
+copy the following into ``CMakeLists.txt``:
 
-.. code-block:: make
+.. code-block:: cmake
 
-    # Makefile for hello pass
+  add_llvm_loadable_module( LLVMHello
+    Hello.cpp
+  
+    PLUGIN_TOOL
+    opt
+    )
 
-    # Path to top level of LLVM hierarchy
-    LEVEL = ../../..
+and the following line into ``lib/Transforms/CMakeLists.txt``:
 
-    # Name of the library to build
-    LIBRARYNAME = Hello
+.. code-block:: cmake
 
-    # Make the shared library become a loadable module so the tools can
-    # dlopen/dlsym on the resulting library.
-    LOADABLE_MODULE = 1
+  add_subdirectory(Hello)
 
-    # Include the makefile implementation stuff
-    include $(LEVEL)/Makefile.common
+(Note that there is already a directory named ``Hello`` with a sample "Hello"
+pass; you may play with it -- in which case you don't need to modify any
+``CMakeLists.txt`` files -- or, if you want to create everything from scratch,
+use another name.)
 
-This makefile specifies that all of the ``.cpp`` files in the current directory
-are to be compiled and linked together into a shared object
-``$(LEVEL)/Debug+Asserts/lib/Hello.so`` that can be dynamically loaded by the
-:program:`opt` or :program:`bugpoint` tools via their :option:`-load` options.
-If your operating system uses a suffix other than ``.so`` (such as Windows or Mac
-OS X), the appropriate extension will be used.
-
-If you are used CMake to build LLVM, see :ref:`cmake-out-of-source-pass`.
+This build script specifies that ``Hello.cpp`` file in the current directory
+is to be compiled and linked into a shared object ``$(LEVEL)/lib/LLVMHello.so`` that
+can be dynamically loaded by the :program:`opt` tool via its :option:`-load`
+option. If your operating system uses a suffix other than ``.so`` (such as
+Windows or Mac OS X), the appropriate extension will be used.
 
 Now that we have the build scripts set up, we just need to write the code for
 the pass itself.
@@ -143,12 +143,12 @@ to avoid using expensive C++ runtime information.
 
 .. code-block:: c++
 
-      bool runOnFunction(Function &F) override {
-        errs() << "Hello: ";
-        errs().write_escaped(F.getName()) << "\n";
-        return false;
-      }
-    }; // end of struct Hello
+    bool runOnFunction(Function &F) override {
+      errs() << "Hello: ";
+      errs().write_escaped(F.getName()) << '\n';
+      return false;
+    }
+  }; // end of struct Hello
   }  // end of anonymous namespace
 
 We declare a :ref:`runOnFunction <writing-an-llvm-pass-runOnFunction>` method,
@@ -180,31 +180,33 @@ As a whole, the ``.cpp`` file looks like:
 
 .. code-block:: c++
 
-    #include "llvm/Pass.h"
-    #include "llvm/IR/Function.h"
-    #include "llvm/Support/raw_ostream.h"
-
-    using namespace llvm;
-
-    namespace {
-      struct Hello : public FunctionPass {
-        static char ID;
-        Hello() : FunctionPass(ID) {}
-
-        bool runOnFunction(Function &F) override {
-          errs() << "Hello: ";
-          errs().write_escaped(F.getName()) << '\n';
-          return false;
-        }
-      };
+  #include "llvm/Pass.h"
+  #include "llvm/IR/Function.h"
+  #include "llvm/Support/raw_ostream.h"
+  
+  using namespace llvm;
+  
+  namespace {
+  struct Hello : public FunctionPass {
+    static char ID;
+    Hello() : FunctionPass(ID) {}
+  
+    bool runOnFunction(Function &F) override {
+      errs() << "Hello: ";
+      errs().write_escaped(F.getName()) << '\n';
+      return false;
     }
-
-    char Hello::ID = 0;
-    static RegisterPass<Hello> X("hello", "Hello World Pass", false, false);
+  }; // end of struct Hello
+  }  // end of anonymous namespace
+  
+  char Hello::ID = 0;
+  static RegisterPass<Hello> X("hello", "Hello World Pass",
+                               false /* Only looks at CFG */,
+                               false /* Analysis Pass */);
 
 Now that it's all together, compile the file with a simple "``gmake``" command
 from the top level of your build directory and you should get a new file
-"``Debug+Asserts/lib/Hello.so``".  Note that everything in this file is
+"``lib/LLVMHello.so``".  Note that everything in this file is
 contained in an anonymous namespace --- this reflects the fact that passes
 are self contained units that do not need external interfaces (although they
 can have them) to be useful.
@@ -224,7 +226,7 @@ will work):
 
 .. code-block:: console
 
-  $ opt -load ../../Debug+Asserts/lib/Hello.so -hello < hello.bc > /dev/null
+  $ opt -load lib/LLVMHello.so -hello < hello.bc > /dev/null
   Hello: __main
   Hello: puts
   Hello: main
@@ -241,20 +243,20 @@ To see what happened to the other string you registered, try running
 
 .. code-block:: console
 
-  $ opt -load ../../Debug+Asserts/lib/Hello.so -help
-  OVERVIEW: llvm .bc -> .bc modular optimizer
+  $ opt -load lib/LLVMHello.so -help
+  OVERVIEW: llvm .bc -> .bc modular optimizer and analysis printer
 
-  USAGE: opt [options] <input bitcode>
+  USAGE: opt [subcommand] [options] <input bitcode file>
 
   OPTIONS:
     Optimizations available:
   ...
-      -globalopt                - Global Variable Optimizer
-      -globalsmodref-aa         - Simple mod/ref analysis for globals
+      -guard-widening           - Widen guards
       -gvn                      - Global Value Numbering
+      -gvn-hoist                - Early GVN Hoisting of Expressions
       -hello                    - Hello World Pass
       -indvars                  - Induction Variable Simplification
-      -inline                   - Function Integration/Inlining
+      -inferattrs               - Infer set function attributes
   ...
 
 The pass name gets added as the information string for your pass, giving some
@@ -268,21 +270,20 @@ you queue up.  For example:
 
 .. code-block:: console
 
-  $ opt -load ../../Debug+Asserts/lib/Hello.so -hello -time-passes < hello.bc > /dev/null
+  $ opt -load lib/LLVMHello.so -hello -time-passes < hello.bc > /dev/null
   Hello: __main
   Hello: puts
   Hello: main
-  ===============================================================================
+  ===-------------------------------------------------------------------------===
                         ... Pass execution timing report ...
-  ===============================================================================
-    Total Execution Time: 0.02 seconds (0.0479059 wall clock)
-
-     ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Pass Name ---
-     0.0100 (100.0%)   0.0000 (  0.0%)   0.0100 ( 50.0%)   0.0402 ( 84.0%)  Bitcode Writer
-     0.0000 (  0.0%)   0.0100 (100.0%)   0.0100 ( 50.0%)   0.0031 (  6.4%)  Dominator Set Construction
-     0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0013 (  2.7%)  Module Verifier
-     0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0033 (  6.9%)  Hello World Pass
-     0.0100 (100.0%)   0.0100 (100.0%)   0.0200 (100.0%)   0.0479 (100.0%)  TOTAL
+  ===-------------------------------------------------------------------------===
+    Total Execution Time: 0.0007 seconds (0.0005 wall clock)
+  
+     ---User Time---   --User+System--   ---Wall Time---  --- Name ---
+     0.0004 ( 55.3%)   0.0004 ( 55.3%)   0.0004 ( 75.7%)  Bitcode Writer
+     0.0003 ( 44.7%)   0.0003 ( 44.7%)   0.0001 ( 13.6%)  Hello World Pass
+     0.0000 (  0.0%)   0.0000 (  0.0%)   0.0001 ( 10.7%)  Module Verifier
+     0.0007 (100.0%)   0.0007 (100.0%)   0.0005 (100.0%)  Total
 
 As you can see, our implementation above is pretty fast.  The additional
 passes listed are automatically inserted by the :program:`opt` tool to verify
@@ -964,14 +965,14 @@ just does a few simple checks that don't require significant analysis to
 compute (such as: two different globals can never alias each other, etc).
 Passes that use the `AliasAnalysis
 <http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ interface (for
-example the `gcse <http://llvm.org/doxygen/structGCSE.html>`_ pass), do not
+example the `gvn <http://llvm.org/doxygen/classllvm_1_1GVN.html>`_ pass), do not
 care which implementation of alias analysis is actually provided, they just use
 the designated interface.
 
 From the user's perspective, commands work just like normal.  Issuing the
-command ``opt -gcse ...`` will cause the ``basicaa`` class to be instantiated
-and added to the pass sequence.  Issuing the command ``opt -somefancyaa -gcse
-...`` will cause the ``gcse`` pass to use the ``somefancyaa`` alias analysis
+command ``opt -gvn ...`` will cause the ``basicaa`` class to be instantiated
+and added to the pass sequence.  Issuing the command ``opt -somefancyaa -gvn
+...`` will cause the ``gvn`` pass to use the ``somefancyaa`` alias analysis
 (which doesn't actually exist, it's just a hypothetical example) instead.
 
 .. _writing-an-llvm-pass-RegisterAnalysisGroup:
@@ -1092,74 +1093,69 @@ information about all of the variants of the ``--debug-pass`` option, just type
 
 By using the --debug-pass=Structure option, for example, we can see how our
 :ref:`Hello World <writing-an-llvm-pass-basiccode>` pass interacts with other
-passes.  Lets try it out with the gcse and licm passes:
+passes.  Lets try it out with the gvn and licm passes:
 
 .. code-block:: console
 
-  $ opt -load ../../Debug+Asserts/lib/Hello.so -gcse -licm --debug-pass=Structure < hello.bc > /dev/null
-  Module Pass Manager
-    Function Pass Manager
-      Dominator Set Construction
-      Immediate Dominators Construction
-      Global Common Subexpression Elimination
-  --  Immediate Dominators Construction
-  --  Global Common Subexpression Elimination
-      Natural Loop Construction
-      Loop Invariant Code Motion
-  --  Natural Loop Construction
-  --  Loop Invariant Code Motion
+  $ opt -load lib/LLVMHello.so -gvn -licm --debug-pass=Structure < hello.bc > /dev/null
+  ModulePass Manager
+    FunctionPass Manager
+      Dominator Tree Construction
+      Basic Alias Analysis (stateless AA impl)
+      Function Alias Analysis Results
+      Memory Dependence Analysis
+      Global Value Numbering
+      Natural Loop Information
+      Canonicalize natural loops
+      Loop-Closed SSA Form Pass
+      Basic Alias Analysis (stateless AA impl)
+      Function Alias Analysis Results
+      Scalar Evolution Analysis
+      Loop Pass Manager
+        Loop Invariant Code Motion
       Module Verifier
-  --  Dominator Set Construction
-  --  Module Verifier
     Bitcode Writer
-  --Bitcode Writer
 
-This output shows us when passes are constructed and when the analysis results
-are known to be dead (prefixed with "``--``").  Here we see that GCSE uses
-dominator and immediate dominator information to do its job.  The LICM pass
-uses natural loop information, which uses dominator sets, but not immediate
-dominators.  Because immediate dominators are no longer useful after the GCSE
-pass, it is immediately destroyed.  The dominator sets are then reused to
-compute natural loop information, which is then used by the LICM pass.
+This output shows us when passes are constructed.
+Here we see that GVN uses dominator tree information to do its job.  The LICM pass
+uses natural loop information, which uses dominator tree as well.
 
 After the LICM pass, the module verifier runs (which is automatically added by
-the :program:`opt` tool), which uses the dominator set to check that the
-resultant LLVM code is well formed.  After it finishes, the dominator set
-information is destroyed, after being computed once, and shared by three
-passes.
+the :program:`opt` tool), which uses the dominator tree to check that the
+resultant LLVM code is well formed. Note that the dominator tree is computed
+once, and shared by three passes.
 
 Lets see how this changes when we run the :ref:`Hello World
 <writing-an-llvm-pass-basiccode>` pass in between the two passes:
 
 .. code-block:: console
 
-  $ opt -load ../../Debug+Asserts/lib/Hello.so -gcse -hello -licm --debug-pass=Structure < hello.bc > /dev/null
-  Module Pass Manager
-    Function Pass Manager
-      Dominator Set Construction
-      Immediate Dominators Construction
-      Global Common Subexpression Elimination
-  --  Dominator Set Construction
-  --  Immediate Dominators Construction
-  --  Global Common Subexpression Elimination
+  $ opt -load lib/LLVMHello.so -gvn -hello -licm --debug-pass=Structure < hello.bc > /dev/null
+  ModulePass Manager
+    FunctionPass Manager
+      Dominator Tree Construction
+      Basic Alias Analysis (stateless AA impl)
+      Function Alias Analysis Results
+      Memory Dependence Analysis
+      Global Value Numbering
       Hello World Pass
-  --  Hello World Pass
-      Dominator Set Construction
-      Natural Loop Construction
-      Loop Invariant Code Motion
-  --  Natural Loop Construction
-  --  Loop Invariant Code Motion
+      Dominator Tree Construction
+      Natural Loop Information
+      Canonicalize natural loops
+      Loop-Closed SSA Form Pass
+      Basic Alias Analysis (stateless AA impl)
+      Function Alias Analysis Results
+      Scalar Evolution Analysis
+      Loop Pass Manager
+        Loop Invariant Code Motion
       Module Verifier
-  --  Dominator Set Construction
-  --  Module Verifier
     Bitcode Writer
-  --Bitcode Writer
   Hello: __main
   Hello: puts
   Hello: main
 
 Here we see that the :ref:`Hello World <writing-an-llvm-pass-basiccode>` pass
-has killed the Dominator Set pass, even though it doesn't modify the code at
+has killed the Dominator Tree pass, even though it doesn't modify the code at
 all!  To fix this, we need to add the following :ref:`getAnalysisUsage
 <writing-an-llvm-pass-getAnalysisUsage>` method to our pass:
 
@@ -1174,26 +1170,26 @@ Now when we run our pass, we get this output:
 
 .. code-block:: console
 
-  $ opt -load ../../Debug+Asserts/lib/Hello.so -gcse -hello -licm --debug-pass=Structure < hello.bc > /dev/null
-  Pass Arguments:  -gcse -hello -licm
-  Module Pass Manager
-    Function Pass Manager
-      Dominator Set Construction
-      Immediate Dominators Construction
-      Global Common Subexpression Elimination
-  --  Immediate Dominators Construction
-  --  Global Common Subexpression Elimination
+  $ opt -load lib/LLVMHello.so -gvn -hello -licm --debug-pass=Structure < hello.bc > /dev/null
+  Pass Arguments:  -gvn -hello -licm
+  ModulePass Manager
+    FunctionPass Manager
+      Dominator Tree Construction
+      Basic Alias Analysis (stateless AA impl)
+      Function Alias Analysis Results
+      Memory Dependence Analysis
+      Global Value Numbering
       Hello World Pass
-  --  Hello World Pass
-      Natural Loop Construction
-      Loop Invariant Code Motion
-  --  Loop Invariant Code Motion
-  --  Natural Loop Construction
+      Natural Loop Information
+      Canonicalize natural loops
+      Loop-Closed SSA Form Pass
+      Basic Alias Analysis (stateless AA impl)
+      Function Alias Analysis Results
+      Scalar Evolution Analysis
+      Loop Pass Manager
+        Loop Invariant Code Motion
       Module Verifier
-  --  Dominator Set Construction
-  --  Module Verifier
     Bitcode Writer
-  --Bitcode Writer
   Hello: __main
   Hello: puts
   Hello: main

@@ -533,7 +533,7 @@ private:
   ValueExprMapType ValueExprMap;
 
   /// Mark predicate values currently being processed by isImpliedCond.
-  DenseSet<Value *> PendingLoopPredicates;
+  SmallPtrSet<Value *, 6> PendingLoopPredicates;
 
   /// Set to true by isLoopBackedgeGuardedByCond when we're walking the set of
   /// conditions dominating the backedge of a loop.

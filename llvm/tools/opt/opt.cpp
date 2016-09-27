@@ -49,6 +49,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
@@ -231,6 +232,11 @@ static cl::opt<bool> PassRemarksWithHotness(
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
 
+static cl::opt<std::string>
+    RemarksFilename("pass-remarks-output",
+                    cl::desc("YAML output filename for pass remarks"),
+                    cl::value_desc("filename"));
+
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
   PM.add(P);
@@ -407,6 +413,18 @@ int main(int argc, char **argv) {
 
   if (PassRemarksWithHotness)
     Context.setDiagnosticHotnessRequested(true);
+
+  std::unique_ptr<tool_output_file> YamlFile;
+  if (RemarksFilename != "") {
+    std::error_code EC;
+    YamlFile = llvm::make_unique<tool_output_file>(RemarksFilename, EC,
+                                                   sys::fs::F_None);
+    if (EC) {
+      errs() << EC.message() << '\n';
+      return 1;
+    }
+    Context.setDiagnosticsOutputFile(new yaml::Output(YamlFile->os()));
+  }
 
   // Load the input module...
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
@@ -716,6 +734,8 @@ int main(int argc, char **argv) {
                 "the compile-twice option\n";
       Out->os() << BOS->str();
       Out->keep();
+      if (YamlFile)
+        YamlFile->keep();
       return 1;
     }
     Out->os() << BOS->str();
@@ -724,6 +744,9 @@ int main(int argc, char **argv) {
   // Declare success.
   if (!NoOutput || PrintBreakpoints)
     Out->keep();
+
+  if (YamlFile)
+    YamlFile->keep();
 
   return 0;
 }
