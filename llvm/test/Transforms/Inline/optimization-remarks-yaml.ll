@@ -11,12 +11,12 @@
 ;   5    return foo() + bar();
 ;   6  }
 
-; CHECK:      remark: /tmp/s.c:5:10: foo will not be inlined into baz (hotness: 30)
-; CHECK-NEXT: remark: /tmp/s.c:5:18: bar will not be inlined into baz (hotness: 30)
+; CHECK:      remark: /tmp/s.c:5:10: foo will not be inlined into baz because its definition is unavailable (hotness: 30)
+; CHECK-NEXT: remark: /tmp/s.c:5:18: bar will not be inlined into baz because its definition is unavailable (hotness: 30)
 
 ; YAML:      --- !Missed
 ; YAML-NEXT: Pass:            inline
-; YAML-NEXT: Name:            NotInlined
+; YAML-NEXT: Name:            NoDefinition
 ; YAML-NEXT: DebugLoc:        { File: /tmp/s.c, Line: 5, Column: 10 }
 ; YAML-NEXT: Function:        baz
 ; YAML-NEXT: Hotness:         30
@@ -24,10 +24,11 @@
 ; YAML-NEXT:   - Callee: foo
 ; YAML-NEXT:   - String:  will not be inlined into
 ; YAML-NEXT:   - Caller: baz
+; YAML-NEXT:   - String:  because its definition is unavailable
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Missed
 ; YAML-NEXT: Pass:            inline
-; YAML-NEXT: Name:            NotInlined
+; YAML-NEXT: Name:            NoDefinition
 ; YAML-NEXT: DebugLoc:        { File: /tmp/s.c, Line: 5, Column: 18 }
 ; YAML-NEXT: Function:        baz
 ; YAML-NEXT: Hotness:         30
@@ -35,6 +36,7 @@
 ; YAML-NEXT:   - Callee: bar
 ; YAML-NEXT:   - String:  will not be inlined into
 ; YAML-NEXT:   - Caller: baz
+; YAML-NEXT:   - String:  because its definition is unavailable
 ; YAML-NEXT: ...
 
 ; ModuleID = '/tmp/s.c'
