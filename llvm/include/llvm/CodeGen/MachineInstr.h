@@ -722,8 +722,10 @@ public:
   };
 
   /// Return true if this instruction is identical to \p Other.
-  /// Identical meaning same opcode and all operands reported as
-  /// isIdenticalOp()  (equal except for liveness flags).
+  /// Two instructions are identical if they have the same opcode and all their
+  /// operands are identical (with respect to MachineOperand::isIdenticalTo()).
+  /// Note that this means liveness related flags (dead, undef, kill) do not
+  /// affect the notion of identical.
   bool isIdenticalTo(const MachineInstr &Other,
                      MICheckType Check = CheckDefs) const;
 

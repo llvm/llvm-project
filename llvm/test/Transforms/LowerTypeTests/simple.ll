@@ -1,6 +1,4 @@
-; RUN: opt -S -lowertypetests < %s | FileCheck --check-prefixes=CHECK,CHECK2 %s
-; RUN: opt -S -lowertypetests -lowertypetests-bitsets-level=0 < %s | FileCheck --check-prefixes=CHECK,CHECK0 %s
-; RUN: opt -S -lowertypetests -lowertypetests-bitsets-level=2 < %s | FileCheck --check-prefixes=CHECK,CHECK2 %s
+; RUN: opt -S -lowertypetests < %s | FileCheck %s
 ; RUN: opt -S -lowertypetests -mtriple=x86_64-apple-macosx10.8.0 < %s | FileCheck -check-prefix=CHECK-DARWIN %s
 ; RUN: opt -S -O3 < %s | FileCheck -check-prefix=CHECK-NODISCARD %s
 
@@ -20,7 +18,7 @@ target datalayout = "e-p:32:32"
 ; CHECK-NODISCARD: !type
 ; CHECK-NODISCARD: !type
 
-; CHECK2: [[BA:@[^ ]*]] = private constant [68 x i8] c"\03\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\02\00\01"
+; CHECK: [[BA:@[^ ]*]] = private constant [68 x i8] c"\03\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\02\00\01"
 
 ; Offset 0, 4 byte alignment
 !0 = !{i32 0, !"typeid1"}
@@ -32,10 +30,9 @@ target datalayout = "e-p:32:32"
 ; Offset 0, 4 byte alignment
 !2 = !{i32 0, !"typeid3"}
 
-; CHECK2: @bits_use{{[0-9]*}} = private alias i8, i8* @bits{{[0-9]*}}
-; CHECK0-NOT: bits_use
-; CHECK2: @bits_use.{{[0-9]*}} = private alias i8, i8* @bits{{[0-9]*}}
-; CHECK2: @bits_use.{{[0-9]*}} = private alias i8, i8* @bits{{[0-9]*}}
+; CHECK: @bits_use{{[0-9]*}} = private alias i8, i8* @bits{{[0-9]*}}
+; CHECK: @bits_use.{{[0-9]*}} = private alias i8, i8* @bits{{[0-9]*}}
+; CHECK: @bits_use.{{[0-9]*}} = private alias i8, i8* @bits{{[0-9]*}}
 
 ; CHECK: @a = alias i32, getelementptr inbounds ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }, { i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }* [[G]], i32 0, i32 0)
 ; CHECK: @b = hidden alias [63 x i32], getelementptr inbounds ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }, { i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }* [[G]], i32 0, i32 2)
@@ -56,8 +53,8 @@ target datalayout = "e-p:32:32"
 
 ; CHECK-DARWIN: [[G]] = private constant
 
-; CHECK2: @bits{{[0-9]*}} = private alias i8, getelementptr inbounds ([68 x i8], [68 x i8]* [[BA]], i32 0, i32 0)
-; CHECK2: @bits.{{[0-9]*}} = private alias i8, getelementptr inbounds ([68 x i8], [68 x i8]* [[BA]], i32 0, i32 0)
+; CHECK: @bits{{[0-9]*}} = private alias i8, getelementptr inbounds ([68 x i8], [68 x i8]* [[BA]], i32 0, i32 0)
+; CHECK: @bits.{{[0-9]*}} = private alias i8, getelementptr inbounds ([68 x i8], [68 x i8]* [[BA]], i32 0, i32 0)
 
 declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
 
@@ -73,24 +70,20 @@ define i1 @foo(i32* %p) {
   ; CHECK: [[R4:%[^ ]*]] = shl i32 [[R2]], 30
   ; CHECK: [[R5:%[^ ]*]] = or i32 [[R3]], [[R4]]
   ; CHECK: [[R6:%[^ ]*]] = icmp ult i32 [[R5]], 68
-  ; CHECK2: br i1 [[R6]]
-  ; CHECK0-NOT: br
+  ; CHECK: br i1 [[R6]]
 
-  ; CHECK2: [[R8:%[^ ]*]] = getelementptr i8, i8* @bits_use.{{[0-9]*}}, i32 [[R5]]
-  ; CHECK0-NOT: bits_use
-  ; CHECK2: [[R9:%[^ ]*]] = load i8, i8* [[R8]]
-  ; CHECK2: [[R10:%[^ ]*]] = and i8 [[R9]], 1
-  ; CHECK2: [[R11:%[^ ]*]] = icmp ne i8 [[R10]], 0
+  ; CHECK: [[R8:%[^ ]*]] = getelementptr i8, i8* @bits_use.{{[0-9]*}}, i32 [[R5]]
+  ; CHECK: [[R9:%[^ ]*]] = load i8, i8* [[R8]]
+  ; CHECK: [[R10:%[^ ]*]] = and i8 [[R9]], 1
+  ; CHECK: [[R11:%[^ ]*]] = icmp ne i8 [[R10]], 0
 
-  ; CHECK2: [[R16:%[^ ]*]] = phi i1 [ false, {{%[^ ]*}} ], [ [[R11]], {{%[^ ]*}} ]
+  ; CHECK: [[R16:%[^ ]*]] = phi i1 [ false, {{%[^ ]*}} ], [ [[R11]], {{%[^ ]*}} ]
   %x = call i1 @llvm.type.test(i8* %pi8, metadata !"typeid1")
 
   ; CHECK-NOT: llvm.type.test
-  ; CHECK0-NOT: llvm.type.test
   %y = call i1 @llvm.type.test(i8* %pi8, metadata !"typeid1")
 
-  ; CHECK2: ret i1 [[R16]]
-  ; CHECK0: ret i1 [[R6]]
+  ; CHECK: ret i1 [[R16]]
   ret i1 %x
 }
 
@@ -120,18 +113,15 @@ define i1 @baz(i32* %p) {
   ; CHECK: [[T4:%[^ ]*]] = shl i32 [[T2]], 30
   ; CHECK: [[T5:%[^ ]*]] = or i32 [[T3]], [[T4]]
   ; CHECK: [[T6:%[^ ]*]] = icmp ult i32 [[T5]], 66
-  ; CHECK2: br i1 [[T6]]
-  ; CHECK0-NOT: br
+  ; CHECK: br i1 [[T6]]
 
-  ; CHECK2: [[T8:%[^ ]*]] = getelementptr i8, i8* @bits_use{{(\.[0-9]*)?}}, i32 [[T5]]
-  ; CHECK0-NOT: bits_use
-  ; CHECK2: [[T9:%[^ ]*]] = load i8, i8* [[T8]]
-  ; CHECK2: [[T10:%[^ ]*]] = and i8 [[T9]], 2
-  ; CHECK2: [[T11:%[^ ]*]] = icmp ne i8 [[T10]], 0
+  ; CHECK: [[T8:%[^ ]*]] = getelementptr i8, i8* @bits_use{{(\.[0-9]*)?}}, i32 [[T5]]
+  ; CHECK: [[T9:%[^ ]*]] = load i8, i8* [[T8]]
+  ; CHECK: [[T10:%[^ ]*]] = and i8 [[T9]], 2
+  ; CHECK: [[T11:%[^ ]*]] = icmp ne i8 [[T10]], 0
 
-  ; CHECK2: [[T16:%[^ ]*]] = phi i1 [ false, {{%[^ ]*}} ], [ [[T11]], {{%[^ ]*}} ]
+  ; CHECK: [[T16:%[^ ]*]] = phi i1 [ false, {{%[^ ]*}} ], [ [[T11]], {{%[^ ]*}} ]
   %x = call i1 @llvm.type.test(i8* %pi8, metadata !"typeid3")
-  ; CHECK2: ret i1 [[T16]]
-  ; CHECK0: ret i1 [[T6]]
+  ; CHECK: ret i1 [[T16]]
   ret i1 %x
 }

@@ -1,15 +1,20 @@
 ; Test to check the callgraph in summary when there is PGO
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
+
 ; RUN: opt -module-summary %p/Inputs/thinlto-function-summary-callgraph.ll -o %t2.o
 ; RUN: llvm-lto -thinlto -o %t3 %t.o %t2.o
 ; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 
+; Check parsing for old summary versions generated from this file.
+; RUN: llvm-lto -thinlto-index-stats %p/Inputs/thinlto-function-summary-callgraph-pgo.1.bc  | FileCheck %s --check-prefix=OLD
+; RUN: llvm-lto -thinlto-index-stats %p/Inputs/thinlto-function-summary-callgraph-pgo-combined.1.bc  | FileCheck %s --check-prefix=OLD-COMBINED
+
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
 ; See if the call to func is registered, using the expected callsite count
-; and profile count, with value id matching the subsequent value symbol table.
-; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[FUNCID:[0-9]+]] op5=1 op6=1/>
+; and hotness type, with value id matching the subsequent value symbol table.
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[FUNCID:[0-9]+]] op5=2/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK-NEXT:  <VALUE_SYMTAB
 ; CHECK-NEXT:    <FNENTRY {{.*}} record string = 'main'
@@ -21,8 +26,9 @@
 ; COMBINED-NEXT:    <VERSION
 ; COMBINED-NEXT:    <COMBINED
 ; See if the call to func is registered, using the expected callsite count
-; and profile count, with value id matching the subsequent value symbol table.
-; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op5=[[FUNCID:[0-9]+]] op6=1 op7=1/>
+; and hotness type, with value id matching the subsequent value symbol table.
+; op6=2 which is hotnessType::None.
+; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op5=[[FUNCID:[0-9]+]] op6=2/>
 ; COMBINED-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; COMBINED-NEXT:  <VALUE_SYMTAB
 ; Entry for function func should have entry with value id FUNCID
@@ -44,3 +50,6 @@ entry:
 declare void @func(...) #1
 
 !2 = !{!"function_entry_count", i64 1}
+
+; OLD: Index {{.*}} contains 1 nodes (1 functions, 0 alias, 0 globals) and 1 edges (0 refs and 1 calls)
+; OLD-COMBINED: Index {{.*}} contains 2 nodes (2 functions, 0 alias, 0 globals) and 1 edges (0 refs and 1 calls)

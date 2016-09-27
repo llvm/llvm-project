@@ -70,7 +70,7 @@ void TracePC::ResetGuards() {
 
 void TracePC::FinalizeTrace() {
   if (TotalPCCoverage) {
-    for (size_t Idx = 1, N = Min(kNumCounters, NumGuards); Idx < N;
+    for (size_t Idx = 1, N = Min(kNumCounters, NumGuards + 1); Idx < N;
          Idx++) {
       uint8_t Counter = Counters[Idx];
       if (!Counter) continue;
@@ -96,7 +96,7 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 
 void TracePC::PrintCoverage() {
   Printf("COVERAGE:\n");
-  for (size_t i = 0; i < Min(NumGuards, kNumPCs); i++) {
+  for (size_t i = 0; i < Min(NumGuards + 1, kNumPCs); i++) {
     if (PCs[i])
       PrintPC("COVERED: %p %F %L\n", "COVERED: %p\n", PCs[i]);
   }

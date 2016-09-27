@@ -94,6 +94,9 @@ FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
     "reaching this limit of RSS memory usage.")
 FUZZER_FLAG_INT(prune_corpus, 1, "Prune corpus items without new coverage when "
                                  "loading corpus.")
+FUZZER_FLAG_STRING(exit_on_src_pos, "Exit if a newly found PC originates"
+    " from the given source location. Example: -exit_on_src_pos=foo.cc:123. "
+    "Used primarily for testing libFuzzer itself.")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)
 FUZZER_DEPRECATED_FLAG(save_minimized_corpus)

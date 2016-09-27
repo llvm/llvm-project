@@ -387,7 +387,7 @@ for.end:                                          ; preds = %for.cond
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @noAlias08(
-; CHECK: sub <4 x i32>
+; CHECK: load <4 x i32>
 ; CHECK: ret
 
 define i32 @noAlias08(i32 %a) #0 {
@@ -439,7 +439,7 @@ for.end:                                          ; preds = %for.cond
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @noAlias09(
-; CHECK: sub <4 x i32>
+; CHECK: load <4 x i32>
 ; CHECK: ret
 
 define i32 @noAlias09(i32 %a) #0 {
@@ -721,7 +721,7 @@ for.end:                                          ; preds = %for.cond
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @noAlias14(
-; CHECK: sub <4 x i32>
+; CHECK: load <4 x i32>
 ; CHECK: ret
 
 define i32 @noAlias14(i32 %a) #0 {

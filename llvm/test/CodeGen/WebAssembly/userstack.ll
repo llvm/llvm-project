@@ -173,21 +173,62 @@ define void @dynamic_alloca_redzone(i32 %alloc) {
 ; CHECK-LABEL: dynamic_static_alloca:
 define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; Decrement SP in the prolog by the static amount and writeback to memory.
- ; CHECK: i32.const $push[[L11:.+]]=, 0{{$}}
- ; CHECK: i32.const $push[[L8:.+]]=, 0{{$}}
- ; CHECK-NEXT: i32.load $push[[L9:.+]]=, __stack_pointer($pop[[L8]])
- ; CHECK-NEXT: i32.const $push[[L10:.+]]=, 16
- ; CHECK-NEXT: i32.sub $push[[L20:.+]]=, $pop[[L9]], $pop[[L10]]
- ; CHECK-NEXT: tee_local $push[[L19:.+]]=, $[[FP:.+]]=, $pop[[L20]]
- ; CHECK:      i32.store $drop=, __stack_pointer($pop{{.+}}), $pop{{.+}}
+ ; CHECK: i32.const $push[[L13:.+]]=, 0{{$}}
+ ; CHECK: i32.const $push[[L10:.+]]=, 0{{$}}
+ ; CHECK-NEXT: i32.load $push[[L11:.+]]=, __stack_pointer($pop[[L10]])
+ ; CHECK-NEXT: i32.const $push[[L12:.+]]=, 16
+ ; CHECK-NEXT: i32.sub $push[[L23:.+]]=, $pop[[L11]], $pop[[L12]]
+ ; CHECK-NEXT: tee_local $push[[L22:.+]]=, $[[SP:.+]]=, $pop[[L23]]
+ ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop{{.+}}), $pop[[L22]]
+
+ ; Alloc and write to a static alloca
+ ; CHECK: copy_local $push[[L21:.+]]=, $[[SP]]
+ ; CHECK-NEXT: tee_local $push[[pushedFP:.+]]=, $[[FP:.+]]=, $pop[[L21]]
+ ; CHECK-NEXT: i32.const $push[[L0:.+]]=, 101
+ ; CHECK-NEXT: i32.store $drop=, [[static_offset:.+]]($pop[[pushedFP]]), $pop[[L0]]
+ %static = alloca i32
+ store volatile i32 101, i32* %static
+
  ; Decrement SP in the body by the dynamic amount.
  ; CHECK: i32.sub
+ ; CHECK: tee_local $push{{.+}}=, $[[dynamic_local:.+]]=, $pop{{.+}}
+ ; CHECK: i32.store {{.*}} __stack_pointer
+ %dynamic = alloca i32, i32 %alloc
+
+ ; Ensure we don't modify the frame pointer after assigning it.
+ ; CHECK-NOT: $[[FP]]=
+
+ ; Ensure the static address doesn't change after modifying the stack pointer.
+ ; CHECK: i32.const $push[[L7:.+]]=, 102
+ ; CHECK-NEXT: i32.store $drop=, [[static_offset]]($[[FP]]), $pop[[L7]]
+ ; CHECK-NEXT: i32.const $push[[L8:.+]]=, 103
+ ; CHECK-NEXT: i32.store $drop=, 0($[[dynamic_local]]), $pop[[L8]]
+ store volatile i32 102, i32* %static
+ store volatile i32 103, i32* %dynamic
+
+ ; Decrement SP in the body by the dynamic amount.
+ ; CHECK: i32.sub
+ ; CHECK: tee_local $push{{.+}}=, $[[dynamic2_local:.+]]=, $pop{{.+}}
+ %dynamic.2 = alloca i32, i32 %alloc
+
+ ; CHECK-NOT: $[[FP]]=
+
+ ; Ensure neither the static nor dynamic address changes after the second
+ ; modification of the stack pointer.
+ ; CHECK: i32.const $push[[L9:.+]]=, 104
+ ; CHECK-NEXT: i32.store $drop=, [[static_offset]]($[[FP]]), $pop[[L9]]
+ ; CHECK-NEXT: i32.const $push[[L10:.+]]=, 105
+ ; CHECK-NEXT: i32.store $drop=, 0($[[dynamic_local]]), $pop[[L10]]
+ ; CHECK-NEXT: i32.const $push[[L11:.+]]=, 106
+ ; CHECK-NEXT: i32.store $drop=, 0($[[dynamic2_local]]), $pop[[L11]]
+ store volatile i32 104, i32* %static
+ store volatile i32 105, i32* %dynamic
+ store volatile i32 106, i32* %dynamic.2
+
  ; Writeback to memory.
- ; CHECK: i32.store $drop=, __stack_pointer($pop{{.+}}), $pop{{.+}}
- %r1 = alloca i32
- %r = alloca i32, i32 %alloc
- store i32 0, i32* %r
- ; CHEC: i32.store $drop=, 0($pop{{.+}}), $pop{{.+}}
+ ; CHECK: i32.const $push[[L17:.+]]=, 16
+ ; CHECK-NEXT: i32.add $push[[L18:.+]]=, $[[FP]], $pop[[L17]]
+ ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop{{.+}}), $pop[[L18]]
  ret void
 }
 

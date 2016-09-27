@@ -21,7 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   int Z = Ids[(unsigned char)'Z'];
   if (F >= 0 && U > F && Z > U) {
     Sink++;
-    // printf("IDS: %d %d %d\n", F, U, Z);
+    // fprintf(stderr, "IDS: %d %d %d\n", F, U, Z);
   }
   return 0;
 }

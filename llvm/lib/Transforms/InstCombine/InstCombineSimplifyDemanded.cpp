@@ -1048,8 +1048,8 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     if (TmpV) { I->setOperand(1, TmpV); MadeChange = true; }
 
     bool NewUndefElts = false;
-    unsigned LHSIdx = -1u;
-    unsigned RHSIdx = -1u;
+    unsigned LHSIdx = -1u, LHSValIdx = -1u;
+    unsigned RHSIdx = -1u, RHSValIdx = -1u;
     bool LHSUniform = true;
     bool RHSUniform = true;
     for (unsigned i = 0; i < VWidth; i++) {
@@ -1064,7 +1064,8 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
           NewUndefElts = true;
           UndefElts.setBit(i);
         } else {
-          LHSIdx = LHSIdx == -1u ? MaskVal : LHSVWidth;
+          LHSIdx = LHSIdx == -1u ? i : LHSVWidth;
+          LHSValIdx = LHSValIdx == -1u ? MaskVal : LHSVWidth;
           LHSUniform = LHSUniform && (MaskVal == i);
         }
       } else {
@@ -1072,7 +1073,8 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
           NewUndefElts = true;
           UndefElts.setBit(i);
         } else {
-          RHSIdx = RHSIdx == -1u ? MaskVal - LHSVWidth : LHSVWidth;
+          RHSIdx = RHSIdx == -1u ? i : LHSVWidth;
+          RHSValIdx = RHSValIdx == -1u ? MaskVal - LHSVWidth : LHSVWidth;
           RHSUniform = RHSUniform && (MaskVal - LHSVWidth == i);
         }
       }
@@ -1091,14 +1093,14 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (LHSIdx < LHSVWidth && RHSUniform) {
         if (auto *CV = dyn_cast<ConstantVector>(Shuffle->getOperand(0))) {
           Op = Shuffle->getOperand(1);
-          Value = CV->getOperand(LHSIdx);
+          Value = CV->getOperand(LHSValIdx);
           Idx = LHSIdx;
         }
       }
       if (RHSIdx < LHSVWidth && LHSUniform) {
         if (auto *CV = dyn_cast<ConstantVector>(Shuffle->getOperand(1))) {
           Op = Shuffle->getOperand(0);
-          Value = CV->getOperand(RHSIdx);
+          Value = CV->getOperand(RHSValIdx);
           Idx = RHSIdx;
         }
       }

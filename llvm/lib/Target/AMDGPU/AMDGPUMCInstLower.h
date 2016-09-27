@@ -13,6 +13,7 @@
 namespace llvm {
 
 class AMDGPUSubtarget;
+class AsmPrinter;
 class MachineInstr;
 class MCContext;
 class MCInst;
@@ -20,9 +21,11 @@ class MCInst;
 class AMDGPUMCInstLower {
   MCContext &Ctx;
   const AMDGPUSubtarget &ST;
+  const AsmPrinter &AP;
 
 public:
-  AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &ST);
+  AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &ST,
+                    const AsmPrinter &AP);
 
   /// \brief Lower a MachineInstr to an MCInst
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
