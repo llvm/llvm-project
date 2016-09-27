@@ -115,16 +115,14 @@ void RunFreeHooks(const void *ptr);
 // keep frame size low.
 // FIXME: use InternalAlloc instead of MmapOrDie once
 // InternalAlloc is made libc-free.
-template<typename T>
+template <typename T>
 class InternalScopedBuffer {
  public:
   explicit InternalScopedBuffer(uptr cnt) {
     cnt_ = cnt;
-    ptr_ = (T*)MmapOrDie(cnt * sizeof(T), "InternalScopedBuffer");
+    ptr_ = (T *)MmapOrDie(cnt * sizeof(T), "InternalScopedBuffer");
   }
-  ~InternalScopedBuffer() {
-    UnmapOrDie(ptr_, cnt_ * sizeof(T));
-  }
+  ~InternalScopedBuffer() { UnmapOrDie(ptr_, cnt_ * sizeof(T)); }
   T &operator[](uptr i) { return ptr_[i]; }
   T *data() { return ptr_; }
   uptr size() { return cnt_ * sizeof(T); }
@@ -132,9 +130,11 @@ class InternalScopedBuffer {
  private:
   T *ptr_;
   uptr cnt_;
-  // Disallow evil constructors.
-  InternalScopedBuffer(const InternalScopedBuffer&);
-  void operator=(const InternalScopedBuffer&);
+  // Disallow copies and moves.
+  InternalScopedBuffer(const InternalScopedBuffer &) = delete;
+  InternalScopedBuffer &operator=(const InternalScopedBuffer &) = delete;
+  InternalScopedBuffer(InternalScopedBuffer &&) = delete;
+  InternalScopedBuffer &operator=(InternalScopedBuffer &&) = delete;
 };
 
 class InternalScopedString : public InternalScopedBuffer<char> {
