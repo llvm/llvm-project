@@ -58,8 +58,9 @@ public:
 
   /// Information about Objective-C properties.
   ///
-  /// Indexed by the context ID and property name.
-  llvm::DenseMap<std::pair<unsigned, unsigned>, ObjCPropertyInfo> 
+  /// Indexed by the context ID, property name, and whether this is an
+  /// instance property.
+  llvm::DenseMap<std::tuple<unsigned, unsigned, char>, ObjCPropertyInfo> 
     ObjCProperties;
 
   /// Information about Objective-C methods.
@@ -430,7 +431,8 @@ namespace {
   /// Used to serialize the on-disk Objective-C property table.
   class ObjCPropertyTableInfo {
   public:
-    using key_type = std::pair<unsigned, unsigned>; // (class ID, name ID)
+    // (class ID, name ID, isInstance)
+    using key_type = std::tuple<unsigned, unsigned, char>;
     using key_type_ref = key_type;
     using data_type = ObjCPropertyInfo;
     using data_type_ref = const data_type &;
@@ -444,7 +446,7 @@ namespace {
     std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
                                                     key_type_ref key,
                                                     data_type_ref data) {
-      uint32_t keyLength = sizeof(uint32_t) + sizeof(uint32_t);
+      uint32_t keyLength = sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint8_t);
       uint32_t dataLength = getVariableInfoSize(data);
       endian::Writer<little> writer(out);
       writer.write<uint16_t>(keyLength);
@@ -454,8 +456,9 @@ namespace {
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer<little> writer(out);
-      writer.write<uint32_t>(key.first);
-      writer.write<uint32_t>(key.second);
+      writer.write<uint32_t>(std::get<0>(key));
+      writer.write<uint32_t>(std::get<1>(key));
+      writer.write<uint8_t>(std::get<2>(key));
     }
 
     void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
@@ -1060,10 +1063,11 @@ ContextID APINotesWriter::addObjCProtocol(StringRef name,
   return ContextID(known->second.first);
 }
 void APINotesWriter::addObjCProperty(ContextID contextID, StringRef name,
+                                     bool isInstance,
                                      const ObjCPropertyInfo &info) {
   IdentifierID nameID = Impl.getIdentifier(name);
-  assert(!Impl.ObjCProperties.count({contextID.Value, nameID}));
-  Impl.ObjCProperties[{contextID.Value, nameID}] = info;
+  assert(!Impl.ObjCProperties.count({contextID.Value, nameID, isInstance}));
+  Impl.ObjCProperties[{contextID.Value, nameID, isInstance}] = info;
 }
 
 void APINotesWriter::addObjCMethod(ContextID contextID,
