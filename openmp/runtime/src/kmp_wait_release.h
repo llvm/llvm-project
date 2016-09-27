@@ -84,6 +84,22 @@ class kmp_flag {
     */
 };
 
+#if ! KMP_USE_MONITOR
+# if KMP_OS_UNIX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
+   // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
+   extern double __kmp_ticks_per_nsec;
+#  define KMP_NOW() __kmp_hardware_timestamp()
+#  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC * __kmp_ticks_per_nsec)
+#  define KMP_BLOCKING(goal, count) ((goal) > KMP_NOW())
+# else
+   // System time is retrieved sporadically while blocking.
+   extern kmp_uint64 __kmp_now_nsec();
+#  define KMP_NOW() __kmp_now_nsec()
+#  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC)
+#  define KMP_BLOCKING(goal, count) ((count) % 1000 != 0 || (goal) > KMP_NOW())
+# endif
+#endif
+
 /* Spin wait loop that first does pause, then yield, then sleep. A thread that calls __kmp_wait_*
    must make certain that another thread calls __kmp_release to wake it back up to prevent deadlocks!  */
 template <class C>
@@ -98,6 +114,10 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
     int th_gtid;
     int tasks_completed = FALSE;
     int oversubscribed;
+#if ! KMP_USE_MONITOR
+    kmp_uint64 poll_count;
+    kmp_uint64 hibernate_goal;
+#endif
 
     KMP_FSYNC_SPIN_INIT(spin, NULL);
     if (flag->done_check()) {
@@ -142,6 +162,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
     KMP_INIT_YIELD(spins);
 
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
+#if KMP_USE_MONITOR
         // The worker threads cannot rely on the team struct existing at this point.
         // Use the bt values cached in the thread struct instead.
 #ifdef KMP_ADJUST_BLOCKTIME
@@ -165,6 +186,10 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
         KF_TRACE(20, ("__kmp_wait_sleep: T#%d now=%d, hibernate=%d, intervals=%d\n",
                       th_gtid, __kmp_global.g.g_time.dt.t_value, hibernate,
                       hibernate - __kmp_global.g.g_time.dt.t_value));
+#else
+        hibernate_goal = KMP_NOW() + KMP_BLOCKTIME_INTERVAL();
+        poll_count = 0;
+#endif // KMP_USE_MONITOR
     }
 
     oversubscribed = (TCR_4(__kmp_nth) > __kmp_avail_proc);
@@ -246,9 +271,14 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
         if ((task_team != NULL) && TCR_4(task_team->tt.tt_found_tasks))
             continue;
 
+#if KMP_USE_MONITOR
         // If we have waited a bit more, fall asleep
         if (TCR_4(__kmp_global.g.g_time.dt.t_value) < hibernate)
             continue;
+#else
+        if (KMP_BLOCKING(hibernate_goal, poll_count++))
+            continue;
+#endif
 
         KF_TRACE(50, ("__kmp_wait_sleep: T#%d suspend time reached\n", th_gtid));
 

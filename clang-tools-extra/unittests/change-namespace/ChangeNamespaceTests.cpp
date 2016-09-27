@@ -229,8 +229,23 @@ TEST_F(ChangeNamespaceTest, MoveFunctions) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, DoNotCrashWithLambdaAsParameter) {
+  std::string Code =
+      "#include <functional>\n"
+      "void f(std::function<void(int)> func, int param) { func(param); } "
+      "void g() { f([](int x) {}, 1); }";
+
+  std::string Expected =
+      "#include <functional>\n"
+      "void f(std::function<void(int)> func, int param) { func(param); } "
+      "void g() { f([](int x) {}, 1); }";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 TEST_F(ChangeNamespaceTest, FixUsingShadowDecl) {
-  std::string Code = "namespace na {\n"
+  std::string Code = "class GLOB {};\n"
+                     "using BLOG = GLOB;\n"
+                     "namespace na {\n"
                      "namespace nc {\n"
                      "class SAME {};\n"
                      "}\n"
@@ -245,7 +260,9 @@ TEST_F(ChangeNamespaceTest, FixUsingShadowDecl) {
                      "} // namespace nb\n"
                      "} // namespace na\n";
 
-  std::string Expected = "namespace na {\n"
+  std::string Expected = "class GLOB {};\n"
+                         "using BLOG = GLOB;\n"
+                         "namespace na {\n"
                          "namespace nc {\n"
                          "class SAME {};\n"
                          "}\n"
@@ -260,6 +277,85 @@ TEST_F(ChangeNamespaceTest, FixUsingShadowDecl) {
                          "using YO = na::nc::SAME;\n"
                          "typedef na::nc::SAME IDENTICAL;\n"
                          "void f(na::nd::SAME Same) {}\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, UsingShadowDeclInFunction) {
+  std::string Code = "namespace glob {\n"
+                     "class Glob {};\n"
+                     "}\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() {\n"
+                     "  using glob::Glob;\n"
+                     "  Glob g;\n"
+                     "}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+
+  // FIXME: don't add namespace qualifier when there is UsingShadowDecl.
+  std::string Expected = "namespace glob {\n"
+                         "class Glob {};\n"
+                         "}\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "void f() {\n"
+                         "  using ::glob::Glob;\n"
+                         "  glob::Glob g;\n"
+                         "}\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, UsingShadowDeclInGlobal) {
+  std::string Code = "namespace glob {\n"
+                     "class Glob {};\n"
+                     "}\n"
+                     "using glob::Glob;\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() { Glob g; }\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+
+  // FIXME: don't add namespace qualifier when there is UsingShadowDecl.
+  std::string Expected = "namespace glob {\n"
+                         "class Glob {};\n"
+                         "}\n"
+                         "using glob::Glob;\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "void f() { glob::Glob g; }\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, UsingNamespace) {
+  std::string Code = "namespace glob {\n"
+                     "class Glob {};\n"
+                     "}\n"
+                     "using namespace glob;\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() { Glob g; }\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+
+  // FIXME: don't add namespace qualifier when there is "using namespace" decl.
+  std::string Expected = "namespace glob {\n"
+                         "class Glob {};\n"
+                         "}\n"
+                         "using namespace glob;\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "void f() { glob::Glob g; }\n"
                          "} // namespace y\n"
                          "} // namespace x\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));

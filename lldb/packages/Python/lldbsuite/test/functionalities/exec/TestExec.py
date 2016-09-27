@@ -27,6 +27,7 @@ class ExecTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://28476369")
     def test(self):
         if self.getArchitecture() == 'x86_64':
             source = os.path.join(os.getcwd(), "main.cpp")
