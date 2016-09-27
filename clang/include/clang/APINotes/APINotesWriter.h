@@ -66,6 +66,7 @@ public:
   /// \param name The name of this property.
   /// \param info Information about this property.
   void addObjCProperty(ContextID contextID, StringRef name,
+                       bool isInstanceProperty,
                        const ObjCPropertyInfo &info);
 
   /// Add information about a specific Objective-C method.

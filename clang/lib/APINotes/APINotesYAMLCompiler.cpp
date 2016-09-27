@@ -193,6 +193,7 @@ namespace {
 
   struct Property {
     StringRef Name;
+    llvm::Optional<MethodKind> Kind;
     llvm::Optional<NullabilityKind> Nullability;
     AvailabilityItem Availability;
     bool SwiftPrivate = false;
@@ -348,6 +349,7 @@ namespace llvm {
     struct MappingTraits<Property> {
       static void mapping(IO &io, Property& p) {
         io.mapRequired("Name",            p.Name);
+        io.mapOptional("PropertyKind",    p.Kind);
         io.mapOptional("Nullability",     p.Nullability, 
                                           AbsentNullability);
         io.mapOptional("Availability",    p.Availability.Mode);
@@ -693,11 +695,20 @@ namespace {
       }
 
       // Write all properties.
-      llvm::StringSet<> knownProperties;
+      llvm::StringSet<> knownInstanceProperties;
+      llvm::StringSet<> knownClassProperties;
       for (const auto &prop : cl.Properties) {
         // Check for duplicate property definitions.
-        if (!knownProperties.insert(prop.Name).second) {
-          emitError("duplicate definition of property '" + cl.Name + "." +
+        if ((!prop.Kind || *prop.Kind == MethodKind::Instance) &&
+            !knownInstanceProperties.insert(prop.Name).second) {
+          emitError("duplicate definition of instance property '" + cl.Name +
+                    "." + prop.Name + "'");
+          continue;
+        }
+
+        if ((!prop.Kind || *prop.Kind == MethodKind::Class) &&
+            !knownClassProperties.insert(prop.Name).second) {
+          emitError("duplicate definition of class property '" + cl.Name + "." +
                     prop.Name + "'");
           continue;
         }
@@ -711,7 +722,14 @@ namespace {
         pInfo.SwiftName = prop.SwiftName;
         if (prop.Nullability)
           pInfo.setNullabilityAudited(*prop.Nullability);
-        Writer->addObjCProperty(clID, prop.Name, pInfo);
+        if (prop.Kind) {
+          Writer->addObjCProperty(clID, prop.Name,
+                                  *prop.Kind == MethodKind::Instance, pInfo);
+        } else {
+          // Add both instance and class properties with this name.
+          Writer->addObjCProperty(clID, prop.Name, true, pInfo);
+          Writer->addObjCProperty(clID, prop.Name, false, pInfo);
+        }
       }
     }
 
@@ -1037,9 +1055,11 @@ namespace {
     }
 
     virtual void visitObjCProperty(ContextID contextID, StringRef name,
+                                   bool isInstance,
                                    const ObjCPropertyInfo &info) {
       Property property;
       property.Name = name;
+      property.Kind = isInstance ? MethodKind::Instance : MethodKind::Class;
       handleCommon(property, info);
 
       // FIXME: No way to represent "not audited for nullability".
@@ -1109,6 +1129,11 @@ namespace {
   };
 }
 
+/// Produce a flattened, numeric value for optional method/property kinds.
+static unsigned flattenPropertyKind(llvm::Optional<MethodKind> kind) {
+  return kind ? (*kind == MethodKind::Instance ? 2 : 1) : 0;
+}
+
 bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
                                   llvm::raw_ostream &os) {
   // Try to read the file.
@@ -1150,7 +1175,10 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
     // Sort properties.
     std::sort(record.Properties.begin(), record.Properties.end(),
               [](const Property &lhs, const Property &rhs) -> bool {
-                return lhs.Name < rhs.Name;
+                return lhs.Name < rhs.Name ||
+                  (lhs.Name == rhs.Name &&
+                   flattenPropertyKind(lhs.Kind) < 
+                     flattenPropertyKind(rhs.Kind));
               });
 
     // Sort methods.
