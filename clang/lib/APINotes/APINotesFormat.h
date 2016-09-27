@@ -291,6 +291,4 @@ namespace llvm {
   };
 }
 
-}
-
 #endif // LLVM_CLANG_API_NOTES_FORMAT_H
