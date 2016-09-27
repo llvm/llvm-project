@@ -20,6 +20,14 @@ Classes:
         AvailabilityMsg: "wouldn't work anyway"
       - Name: internalProperty
         Nullability: N
+      - Name: nonnullAInstance
+        PropertyKind:    Instance
+        Nullability:     N
+      - Name: nonnullAClass
+        PropertyKind:    Class
+        Nullability:     N
+      - Name: nonnullABoth
+        Nullability:     N
   - Name: B
     Availability: none
     AvailabilityMsg: "just don't"

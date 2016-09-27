@@ -74,10 +74,13 @@ public:
   ///
   /// \param contextID The ID that references the context we are looking for.
   /// \param name The name of the property we're looking for.
+  /// \param isInstance Whether we are looking for an instance property (vs.
+  /// a class property).
   ///
   /// \returns Information about the property, if known.
   Optional<ObjCPropertyInfo> lookupObjCProperty(ContextID contextID,
-                                                StringRef name);
+                                                StringRef name,
+                                                bool isInstance);
 
   /// Look for information regarding the given Objective-C method in
   /// the given context.
@@ -147,6 +150,7 @@ public:
 
     /// Visit an Objective-C property.
     virtual void visitObjCProperty(ContextID contextID, StringRef name,
+                                   bool isInstance,
                                    const ObjCPropertyInfo &info);
 
     /// Visit a global variable.

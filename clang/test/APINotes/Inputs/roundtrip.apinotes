@@ -90,12 +90,14 @@ Classes:
         SwiftName:       'beginDragginSession(_:event:source:)'
     Properties:      
       - Name:            enclosingScrollView
+        PropertyKind:    Instance
         Nullability:     O
         Availability:    available
         AvailabilityMsg: ''
         SwiftPrivate:    false
         SwiftName:       enclosing
       - Name:            makeBackingLayer
+        PropertyKind:    Class
         Nullability:     N
         Availability:    available
         AvailabilityMsg: ''
