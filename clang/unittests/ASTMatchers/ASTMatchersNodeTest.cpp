@@ -528,6 +528,11 @@ TEST(Matcher, ConstructorCall) {
   EXPECT_TRUE(matches("class X {}; void x(int) { X x; }", Constructor));
 }
 
+TEST(Match, ConstructorInitializers) {
+  EXPECT_TRUE(matches("class C { int i; public: C(int ii) : i(ii) {} };",
+                      cxxCtorInitializer(forField(hasName("i")))));
+}
+
 TEST(Matcher, ThisExpr) {
   EXPECT_TRUE(
     matches("struct X { int a; int f () { return a; } };", cxxThisExpr()));

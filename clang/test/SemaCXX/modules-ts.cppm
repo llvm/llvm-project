@@ -66,3 +66,18 @@ struct S {
 
 // FIXME: Exports of declarations without external linkage are disallowed.
 // Exports of declarations with non-external-linkage types are disallowed.
+
+// Cannot export within another export. This isn't precisely covered by the
+// language rules right now, but (per personal correspondence between zygoloid
+// and gdr) is the intent.
+#if TEST == 1
+export {
+  extern "C++" {
+    namespace NestedExport {
+      export { // expected-error {{appears within another export}}
+        int q;
+      }
+    }
+  }
+}
+#endif

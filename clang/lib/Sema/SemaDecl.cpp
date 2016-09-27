@@ -15478,14 +15478,17 @@ void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,
 /// (if present).
 Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
                                  SourceLocation LBraceLoc) {
-  // FIXME: C++ Modules TS:
+  ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
+
+  // C++ Modules TS draft:
   //   An export-declaration [...] shall not contain more than one
   //   export keyword.
   //
   // The intent here is that an export-declaration cannot appear within another
   // export-declaration.
+  if (D->isExported())
+    Diag(ExportLoc, diag::err_export_within_export);
 
-  ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
   CurContext->addDecl(D);
   PushDeclContext(S, D);
   return D;
