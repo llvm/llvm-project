@@ -453,8 +453,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         if (Function *Callee = CS.getCalledFunction())
           if (Callee->isDeclaration()) {
             using namespace ore;
-            ORE.emit(DiagnosticInfoOptimizationRemarkMissed(DEBUG_TYPE,
-                                                            "NoDefinition", &I)
+            ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "NoDefinition", &I)
                      << NV("Callee", Callee) << " will not be inlined into "
                      << NV("Caller", CS.getCaller())
                      << " because its definition is unavailable"
