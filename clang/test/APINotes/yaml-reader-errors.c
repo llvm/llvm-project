@@ -34,7 +34,7 @@ Classes:
         Nullability:     N
         Availability:    iOS
         AvailabilityMsg: iOSOnly
-# CHECK: duplicate definition of property 'UIFont.familyName'
+# CHECK: duplicate definition of instance property 'UIFont.familyName'
       - Name:            familyName
         Nullability:     N
         Availability:    iOS
