@@ -67,6 +67,7 @@ CHECK-NEXT:   warn_extraneous_char_constant
 CHECK-NEXT:   warn_fe_cc_log_diagnostics_failure
 CHECK-NEXT:   warn_fe_cc_print_header_failure
 CHECK-NEXT:   warn_fe_macro_contains_embedded_newline
+CHECK-NEXT:   warn_fe_unable_to_open_stats_file
 CHECK-NEXT:   warn_file_asm_volatile
 CHECK-NEXT:   warn_ignoring_ftabstop_value
 CHECK-NEXT:   warn_implements_nscopying
