@@ -179,8 +179,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   success = breakpoint_dict->GetValueForKeyAsDictionary(
       BreakpointOptions::GetSerializationKey(), options_dict);
   if (success) {
-    options_up = BreakpointOptions::CreateFromStructuredData(*options_dict,
-                                                             create_error);
+    options_up = BreakpointOptions::CreateFromStructuredData(
+        target, *options_dict, create_error);
     if (create_error.Fail()) {
       error.SetErrorStringWithFormat(
           "Error creating breakpoint options from data: %s.",

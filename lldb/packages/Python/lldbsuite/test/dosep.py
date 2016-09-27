@@ -243,7 +243,7 @@ class DoTestProcessDriver(process_control.ProcessDriver):
         except ImportError:
             # We don't have one for this platform.  Skip.
             sys.stderr.write("\nwarning: no timeout handler module: " +
-                             module_name)
+                             module_name + "\n")
             return
 
         # Try to run the pre-kill-hook method.
@@ -254,13 +254,26 @@ class DoTestProcessDriver(process_control.ProcessDriver):
 
             # Write the output to a filename associated with the test file and
             # pid.
+            MAX_UNCOMPRESSED_BYTE_COUNT = 10 * 1024
+
+            content = output_io.getvalue()
+            compress_output = len(content) > MAX_UNCOMPRESSED_BYTE_COUNT
             basename = "{}-{}.sample".format(self.file_name, self.pid)
             sample_path = os.path.join(g_session_dir, basename)
-            with open(sample_path, "w") as output_file:
-                output_file.write(output_io.getvalue())
+
+            if compress_output:
+                # Write compressed output into a .zip file.
+                from zipfile import ZipFile, ZIP_DEFLATED
+                zipfile = sample_path + ".zip"
+                with ZipFile(zipfile, "w", ZIP_DEFLATED) as sample_zip:
+                    sample_zip.writestr(basename, content)
+            else:
+                # Write raw output into a text file.
+                with open(sample_path, "w") as output_file:
+                    output_file.write(content)
         except Exception as e:
             sys.stderr.write("caught exception while running "
-                             "pre-kill action: {}".format(e))
+                             "pre-kill action: {}\n".format(e))
             return
 
     def is_exceptional_exit(self):

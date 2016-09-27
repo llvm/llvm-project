@@ -1012,7 +1012,7 @@ public:
         iterator try_emplace(const_iterator __h, const key_type& __k, _Args&&... __args)
     {
 #if _LIBCPP_DEBUG_LEVEL >= 2
-        _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+        _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
             "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
             " referring to this unordered_map");
 #endif
@@ -1024,7 +1024,7 @@ public:
         iterator try_emplace(const_iterator __h, key_type&& __k, _Args&&... __args)
     {
 #if _LIBCPP_DEBUG_LEVEL >= 2
-        _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+        _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
             "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
             " referring to this unordered_map");
 #endif

@@ -200,7 +200,7 @@ class BreakpointSerialization(TestBase):
         bkpt.SetQueueName("grubby")
         bkpt.AddName("FirstName")
         bkpt.AddName("SecondName")
-
+        bkpt.SetScriptCallbackBody('\tprint("I am a function that prints.")\n\tprint("I don\'t do anything else")\n')
         source_bps.Append(bkpt)
 
         bkpt = self.orig_target.BreakpointCreateBySourceRegex("dont really care", blubby_file_spec)

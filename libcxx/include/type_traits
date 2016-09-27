@@ -2155,7 +2155,7 @@ template <class _Tp> _LIBCPP_CONSTEXPR bool is_destructible_v
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename remove_reference<_Tp>::type&&
 move(_Tp&& __t) _NOEXCEPT
 {
@@ -2164,7 +2164,7 @@ move(_Tp&& __t) _NOEXCEPT
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 _Tp&&
 forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
 {
@@ -2172,12 +2172,12 @@ forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 _Tp&&
 forward(typename remove_reference<_Tp>::type&& __t) _NOEXCEPT
 {
     static_assert(!is_lvalue_reference<_Tp>::value,
-                  "Can not forward an rvalue as an lvalue.");
+                  "can not forward an rvalue as an lvalue");
     return static_cast<_Tp&&>(__t);
 }
 

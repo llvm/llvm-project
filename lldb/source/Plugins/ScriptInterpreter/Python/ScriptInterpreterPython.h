@@ -25,6 +25,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "PythonDataObjects.h"
+#include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -37,6 +38,13 @@ namespace lldb_private {
 class ScriptInterpreterPython : public ScriptInterpreter,
                                 public IOHandlerDelegateMultiline {
 public:
+  class CommandDataPython : public BreakpointOptions::CommandData {
+  public:
+    CommandDataPython() : BreakpointOptions::CommandData() {
+      interpreter = lldb::eScriptLanguagePython;
+    }
+  };
+
 #if PY_MAJOR_VERSION >= 3
   typedef PyObject *(*SWIGInitCallback)(void);
 #else
@@ -361,6 +369,11 @@ public:
 
   void SetBreakpointCommandCallbackFunction(BreakpointOptions *bp_options,
                                             const char *function_name) override;
+
+  /// This one is for deserialization:
+  Error SetBreakpointCommandCallback(
+      BreakpointOptions *bp_options,
+      std::unique_ptr<BreakpointOptions::CommandData> &data_up) override;
 
   /// Set a one-liner as the callback for the watchpoint.
   void SetWatchpointCommandCallback(WatchpointOptions *wp_options,

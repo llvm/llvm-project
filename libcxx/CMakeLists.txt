@@ -330,6 +330,8 @@ endif()
 # headers
 add_compile_flags_if_supported(-nostdinc++)
 
+# Let the library headers know they are currently being used to build the
+# library.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
 
 # Warning flags ===============================================================
@@ -454,6 +456,14 @@ config_define_if_not(LIBCXX_ENABLE_THREAD_UNSAFE_C_FUNCTIONS _LIBCPP_HAS_NO_THRE
 config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define_if(LIBCXX_HAS_EXTERNAL_THREAD_API _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
+
+# By default libc++ on Windows expects to use a shared library, which requires
+# the headers to use DLL import/export semantics. However when building a
+# static library only we modify the headers to disable DLL import/export.
+if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
+  message(STATUS "Generating custom __config for non-DLL Windows build")
+  config_define(ON _LIBCPP_DISABLE_DLL_IMPORT_EXPORT)
+endif()
 
 if (LIBCXX_NEEDS_SITE_CONFIG)
   configure_file(

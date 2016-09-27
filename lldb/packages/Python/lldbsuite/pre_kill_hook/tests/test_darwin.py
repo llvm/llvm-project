@@ -38,7 +38,7 @@ class DarwinPreKillTestCase(TestCase):
             print("parent: sending shut-down request to child")
         if self.process:
             self.child_work_queue.put("hello, child")
-        self.process.join()
+            self.process.join()
         if self.verbose:
             print("parent: child is fully shut down")
 

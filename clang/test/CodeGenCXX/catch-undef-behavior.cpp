@@ -277,12 +277,12 @@ int array_index(const int (&a)[4], int n) {
 int multi_array_index(int n, int m) {
   int arr[4][6];
 
-  // CHECK: %[[IDX2_OK:.*]] = icmp ult i64 %{{.*}}, 6
-  // CHECK: br i1 %[[IDX2_OK]]
-  // CHECK: call void @__ubsan_handle_out_of_bounds(
-
   // CHECK: %[[IDX1_OK:.*]] = icmp ult i64 %{{.*}}, 4
   // CHECK: br i1 %[[IDX1_OK]]
+  // CHECK: call void @__ubsan_handle_out_of_bounds(
+
+  // CHECK: %[[IDX2_OK:.*]] = icmp ult i64 %{{.*}}, 6
+  // CHECK: br i1 %[[IDX2_OK]]
   // CHECK: call void @__ubsan_handle_out_of_bounds(
   return arr[n][m];
 }

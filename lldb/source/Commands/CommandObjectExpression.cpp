@@ -142,7 +142,7 @@ Error CommandObjectExpression::CommandOptions::SetOptionValue(
   }
 
   case 'v':
-    if (!option_arg.empty()) {
+    if (option_arg.empty()) {
       m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityFull;
       break;
     }

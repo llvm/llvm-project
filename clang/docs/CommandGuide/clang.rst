@@ -408,6 +408,12 @@ Driver Options
 
   Save intermediate compilation results.
 
+.. option:: -save-stats, -save-stats=cwd, -save-stats=obj
+
+  Save internal code generation (LLVM) statistics to a file in the current
+  directory (:option:`-save-stats`/:option:`-save-stats=cwd`) or the directory
+  of the output file (:option:`-save-state=obj`).
+
 .. option:: -integrated-as, -no-integrated-as
 
   Used to enable and disable, respectively, the use of the integrated

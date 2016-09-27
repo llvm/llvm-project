@@ -208,7 +208,8 @@ template <class ELFT> void elf::markLive() {
       return;
     R.Sec->Live = true;
     if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(R.Sec))
-      Q.push_back(S);
+      if (S->getSectionHdr()->sh_flags & SHF_ALLOC)
+        Q.push_back(S);
   };
 
   auto MarkSymbol = [&](const SymbolBody *Sym) {

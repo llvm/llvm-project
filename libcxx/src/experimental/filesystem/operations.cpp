@@ -720,7 +720,7 @@ space_info __space(const path& p, std::error_code *ec) {
     // Multiply with overflow checking.
     auto do_mult = [&](std::uintmax_t& out, std::uintmax_t other) {
       out = other * m_svfs.f_frsize;
-      if (out / other != m_svfs.f_frsize || other == 0)
+      if (other == 0 || out / other != m_svfs.f_frsize)
           out = static_cast<std::uintmax_t>(-1);
     };
     do_mult(si.capacity, m_svfs.f_blocks);
