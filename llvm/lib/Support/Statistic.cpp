@@ -37,14 +37,14 @@ using namespace llvm;
 /// -stats - Command line option to cause transformations to emit stats about
 /// what they did.
 ///
-static cl::opt<bool>
-Enabled(
-    "stats",
+static cl::opt<bool> Stats("stats",
     cl::desc("Enable statistics output from program (available with Asserts)"));
 
 
 static cl::opt<bool> StatsAsJSON("stats-json",
                                  cl::desc("Display statistics as json data"));
+
+static bool Enabled;
 
 namespace {
 /// StatisticInfo - This class is used in a ManagedStatic so that it is created
@@ -77,7 +77,7 @@ void Statistic::RegisterStatistic() {
   // printed.
   sys::SmartScopedLock<true> Writer(*StatLock);
   if (!Initialized) {
-    if (Enabled)
+    if (Stats || Enabled)
       StatInfo->addStatistic(this);
 
     TsanHappensBefore(this);
@@ -91,15 +91,16 @@ void Statistic::RegisterStatistic() {
 
 // Print information when destroyed, iff command line option is specified.
 StatisticInfo::~StatisticInfo() {
-  llvm::PrintStatistics();
+  if (::Stats)
+    llvm::PrintStatistics();
 }
 
 void llvm::EnableStatistics() {
-  Enabled.setValue(true);
+  Enabled = true;
 }
 
 bool llvm::AreStatisticsEnabled() {
-  return Enabled;
+  return Enabled || Stats;
 }
 
 void StatisticInfo::sort() {
@@ -195,7 +196,7 @@ void llvm::PrintStatistics() {
   // Check if the -stats option is set instead of checking
   // !Stats.Stats.empty().  In release builds, Statistics operators
   // do nothing, so stats are never Registered.
-  if (Enabled) {
+  if (Stats) {
     // Get the stream to write to.
     std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
     (*OutStream) << "Statistics are disabled.  "
