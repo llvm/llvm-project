@@ -14,6 +14,7 @@
 
 #include "llvm/IR/DiagnosticInfo.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -170,6 +171,9 @@ const std::string DiagnosticInfoWithDebugLocBase::getLocationStr() const {
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
 
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
+    : Key(Key), Val(itostr(N)) {}
+
 void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
   DP << getLocationStr() << ": " << getMsg();
   if (Hotness)
@@ -180,6 +184,13 @@ bool DiagnosticInfoOptimizationRemark::isEnabled() const {
   return PassRemarksOptLoc.Pattern &&
          PassRemarksOptLoc.Pattern->match(getPassName());
 }
+
+DiagnosticInfoOptimizationRemarkMissed::DiagnosticInfoOptimizationRemarkMissed(
+    const char *PassName, StringRef RemarkName, Instruction *Inst)
+    : DiagnosticInfoOptimizationBase(DK_OptimizationRemarkMissed, DS_Remark,
+                                     PassName, RemarkName,
+                                     *Inst->getParent()->getParent(),
+                                     Inst->getDebugLoc(), Inst->getParent()) {}
 
 bool DiagnosticInfoOptimizationRemarkMissed::isEnabled() const {
   return PassRemarksMissedOptLoc.Pattern &&
@@ -261,4 +272,30 @@ void llvm::emitLoopInterleaveWarning(LLVMContext &Ctx, const Function &Fn,
                                      const DebugLoc &DLoc, const Twine &Msg) {
   Ctx.diagnose(DiagnosticInfoOptimizationFailure(
       Fn, DLoc, Twine("loop not interleaved: " + Msg)));
+}
+
+DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
+operator<<(StringRef S) {
+  Args.emplace_back(S);
+  return *this;
+}
+
+DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
+operator<<(Argument A) {
+  Args.push_back(std::move(A));
+  return *this;
+}
+
+DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
+operator<<(setIsVerbose V) {
+  IsVerbose = true;
+  return *this;
+}
+
+std::string DiagnosticInfoOptimizationBase::getMsg() const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  for (const DiagnosticInfoOptimizationBase::Argument &Arg : Args)
+    OS << Arg.Val;
+  return OS.str();
 }

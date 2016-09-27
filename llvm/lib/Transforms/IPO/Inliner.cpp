@@ -452,13 +452,15 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         // direct call, so we keep it.
         if (Function *Callee = CS.getCalledFunction())
           if (Callee->isDeclaration()) {
-            ORE.emitOptimizationRemarkMissedAndAnalysis(
-                DEBUG_TYPE, &I,
-                Twine(Callee->getName()) + " will not be inlined into " +
-                    CS.getCaller()->getName(),
-                Twine("definition of ") + Callee->getName() +
-                    " is not available",
+            ORE.emitOptimizationRemarkAnalysis(
+                DEBUG_TYPE, &I, Twine("definition of ") + Callee->getName() +
+                                    " is not available",
                 /*Verbose=*/true);
+            using namespace ore;
+            ORE.emit(DiagnosticInfoOptimizationRemarkMissed(DEBUG_TYPE,
+                                                            "NotInlined", &I)
+                     << NV("Callee", Callee) << " will not be inlined into "
+                     << NV("Caller", CS.getCaller()) << setIsVerbose());
             continue;
           }
 

@@ -33,6 +33,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
 namespace llvm {
@@ -1043,6 +1044,7 @@ public:
   void *DiagnosticContext;
   bool RespectDiagnosticFilters;
   bool DiagnosticHotnessRequested;
+  std::unique_ptr<yaml::Output> DiagnosticsOutputFile;
 
   LLVMContext::YieldCallbackTy YieldCallback;
   void *YieldOpaqueHandle;
