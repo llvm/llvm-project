@@ -870,6 +870,7 @@ class PPCTargetInfo : public TargetInfo {
   bool HasHTM;
   bool HasBPERMD;
   bool HasExtDiv;
+  bool HasP9Vector;
 
 protected:
   std::string ABI;
@@ -878,7 +879,7 @@ public:
   PPCTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
     : TargetInfo(Triple), HasVSX(false), HasP8Vector(false),
       HasP8Crypto(false), HasDirectMove(false), HasQPX(false), HasHTM(false),
-      HasBPERMD(false), HasExtDiv(false) {
+      HasBPERMD(false), HasExtDiv(false), HasP9Vector(false) {
     SimdDefaultAlign = 128;
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble;
@@ -1157,6 +1158,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasHTM = true;
     } else if (Feature == "+float128") {
       HasFloat128 = true;
+    } else if (Feature == "+power9-vector") {
+      HasP9Vector = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -1326,6 +1329,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HTM__");
   if (HasFloat128)
     Builder.defineMacro("__FLOAT128__");
+  if (HasP9Vector)
+    Builder.defineMacro("__POWER9_VECTOR__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -1355,8 +1360,12 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 // Handle explicit options being passed to the compiler here: if we've
-// explicitly turned off vsx and turned on power8-vector or direct-move then
-// go ahead and error since the customer has expressed a somewhat incompatible
+// explicitly turned off vsx and turned on any of:
+// - power8-vector
+// - direct-move
+// - float128
+// - power9-vector
+// then go ahead and error since the customer has expressed an incompatible
 // set of options.
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
@@ -1380,6 +1389,13 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
     if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+float128") !=
         FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128"
+                                                     << "-mno-vsx";
+      return false;
+    }
+
+    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+power9-vector") !=
+        FeaturesVec.end()) {
+      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mpower9-vector"
                                                      << "-mno-vsx";
       return false;
     }
@@ -1407,6 +1423,7 @@ bool PPCTargetInfo::initFeatureMap(
     .Default(false);
 
   Features["qpx"] = (CPU == "a2q");
+  Features["power9-vector"] = (CPU == "pwr9");
   Features["crypto"] = llvm::StringSwitch<bool>(CPU)
     .Case("ppc64le", true)
     .Case("pwr9", true)
@@ -1459,6 +1476,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
     .Case("bpermd", HasBPERMD)
     .Case("extdiv", HasExtDiv)
     .Case("float128", HasFloat128)
+    .Case("power9-vector", HasP9Vector)
     .Default(false);
 }
 
@@ -1468,19 +1486,21 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   // as well. Do the inverse if we're disabling vsx. We'll diagnose any user
   // incompatible options.
   if (Enabled) {
-    if (Name == "direct-move") {
+    if (Name == "direct-move" ||
+        Name == "power8-vector" ||
+        Name == "float128" ||
+        Name == "power9-vector") {
+      // power9-vector is really a superset of power8-vector so encode that.
       Features[Name] = Features["vsx"] = true;
-    } else if (Name == "power8-vector") {
-      Features[Name] = Features["vsx"] = true;
-    } else if (Name == "float128") {
-      Features[Name] = Features["vsx"] = true;
+      if (Name == "power9-vector")
+        Features["power8-vector"] = true;
     } else {
       Features[Name] = true;
     }
   } else {
     if (Name == "vsx") {
       Features[Name] = Features["direct-move"] = Features["power8-vector"] =
-          Features["float128"] = false;
+          Features["float128"] = Features["power9-vector"] = false;
     } else {
       Features[Name] = false;
     }

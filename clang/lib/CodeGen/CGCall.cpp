@@ -3172,7 +3172,8 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
 void CodeGenFunction::EmitCallArgs(
     CallArgList &Args, ArrayRef<QualType> ArgTypes,
     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-    const FunctionDecl *CalleeDecl, unsigned ParamsToSkip) {
+    const FunctionDecl *CalleeDecl, unsigned ParamsToSkip,
+    bool ForceRightToLeftEvaluation) {
   assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
 
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg) {
@@ -3191,7 +3192,8 @@ void CodeGenFunction::EmitCallArgs(
 
   // We *have* to evaluate arguments from right to left in the MS C++ ABI,
   // because arguments are destroyed left to right in the callee.
-  if (CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+  if (CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee() ||
+      ForceRightToLeftEvaluation) {
     // Insert a stack save if we're going to need any inalloca args.
     bool HasInAllocaArgs = false;
     for (ArrayRef<QualType>::iterator I = ArgTypes.begin(), E = ArgTypes.end();

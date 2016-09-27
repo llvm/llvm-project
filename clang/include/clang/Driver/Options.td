@@ -1582,6 +1582,10 @@ def mpower8_vector : Flag<["-"], "mpower8-vector">,
     Group<m_ppc_Features_Group>;
 def mno_power8_vector : Flag<["-"], "mno-power8-vector">,
     Group<m_ppc_Features_Group>;
+def mpower9_vector : Flag<["-"], "mpower9-vector">,
+    Group<m_ppc_Features_Group>;
+def mno_power9_vector : Flag<["-"], "mno-power9-vector">,
+    Group<m_ppc_Features_Group>;
 def mpower8_crypto : Flag<["-"], "mcrypto">,
     Group<m_ppc_Features_Group>;
 def mnopower8_crypto : Flag<["-"], "mno-crypto">,
