@@ -48,11 +48,6 @@ static cl::opt<bool> AvoidReuse(
     cl::desc("Try to avoid reuse of byte array addresses using aliases"),
     cl::Hidden, cl::init(true));
 
-static cl::opt<unsigned> BitsetsLevel(
-    "lowertypetests-bitsets-level",
-    cl::desc("Whether to generate bitsets: 0 - never, 1 - only if no loads, 2 - always."),
-    cl::Hidden, cl::init(2));
-
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -208,26 +203,22 @@ struct ByteArrayInfo {
   Constant *Mask;
 };
 
-struct LowerTypeTests : public ModulePass {
-  static char ID;
-  LowerTypeTests() : ModulePass(ID) {
-    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
-  }
-
-  Module *M;
+class LowerTypeTestsModule {
+  Module &M;
 
   bool LinkerSubsectionsViaSymbols;
   Triple::ArchType Arch;
   Triple::ObjectFormatType ObjectFormat;
-  IntegerType *Int1Ty;
-  IntegerType *Int8Ty;
-  IntegerType *Int32Ty;
-  Type *Int32PtrTy;
-  IntegerType *Int64Ty;
-  IntegerType *IntPtrTy;
+
+  IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
+  IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
+  IntegerType *Int32Ty = Type::getInt32Ty(M.getContext());
+  PointerType *Int32PtrTy = PointerType::getUnqual(Int32Ty);
+  IntegerType *Int64Ty = Type::getInt64Ty(M.getContext());
+  IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext(), 0);
 
   // Indirect function call index assignment counter for WebAssembly
-  uint64_t IndirectIndex;
+  uint64_t IndirectIndex = 1;
 
   // Mapping from type identifiers to the call sites that test them.
   DenseMap<Metadata *, std::vector<CallInst *>> TypeTestCallSites;
@@ -263,8 +254,23 @@ struct LowerTypeTests : public ModulePass {
                                      ArrayRef<Function *> Functions);
   void buildBitSetsFromDisjointSet(ArrayRef<Metadata *> TypeIds,
                                    ArrayRef<GlobalObject *> Globals);
+
+public:
+  LowerTypeTestsModule(Module &M);
   bool lower();
-  bool runOnModule(Module &M) override;
+};
+
+struct LowerTypeTests : public ModulePass {
+  static char ID;
+  LowerTypeTests() : ModulePass(ID) {
+    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+    return LowerTypeTestsModule(M).lower();
+  }
 };
 
 } // anonymous namespace
@@ -277,7 +283,7 @@ ModulePass *llvm::createLowerTypeTestsPass() { return new LowerTypeTests; }
 
 /// Build a bit set for TypeId using the object layouts in
 /// GlobalLayout.
-BitSetInfo LowerTypeTests::buildBitSet(
+BitSetInfo LowerTypeTestsModule::buildBitSet(
     Metadata *TypeId, const DenseMap<GlobalObject *, uint64_t> &GlobalLayout) {
   BitSetBuilder BSB;
 
@@ -316,13 +322,13 @@ static Value *createMaskedBitTest(IRBuilder<> &B, Value *Bits,
   return B.CreateICmpNE(MaskedBits, ConstantInt::get(BitsType, 0));
 }
 
-ByteArrayInfo *LowerTypeTests::createByteArray(BitSetInfo &BSI) {
+ByteArrayInfo *LowerTypeTestsModule::createByteArray(BitSetInfo &BSI) {
   // Create globals to stand in for byte arrays and masks. These never actually
   // get initialized, we RAUW and erase them later in allocateByteArrays() once
   // we know the offset and mask to use.
   auto ByteArrayGlobal = new GlobalVariable(
-      *M, Int8Ty, /*isConstant=*/true, GlobalValue::PrivateLinkage, nullptr);
-  auto MaskGlobal = new GlobalVariable(*M, Int8Ty, /*isConstant=*/true,
+      M, Int8Ty, /*isConstant=*/true, GlobalValue::PrivateLinkage, nullptr);
+  auto MaskGlobal = new GlobalVariable(M, Int8Ty, /*isConstant=*/true,
                                        GlobalValue::PrivateLinkage, nullptr);
 
   ByteArrayInfos.emplace_back();
@@ -335,7 +341,7 @@ ByteArrayInfo *LowerTypeTests::createByteArray(BitSetInfo &BSI) {
   return BAI;
 }
 
-void LowerTypeTests::allocateByteArrays() {
+void LowerTypeTestsModule::allocateByteArrays() {
   std::stable_sort(ByteArrayInfos.begin(), ByteArrayInfos.end(),
                    [](const ByteArrayInfo &BAI1, const ByteArrayInfo &BAI2) {
                      return BAI1.BitSize > BAI2.BitSize;
@@ -354,9 +360,9 @@ void LowerTypeTests::allocateByteArrays() {
     cast<GlobalVariable>(BAI->Mask->getOperand(0))->eraseFromParent();
   }
 
-  Constant *ByteArrayConst = ConstantDataArray::get(M->getContext(), BAB.Bytes);
+  Constant *ByteArrayConst = ConstantDataArray::get(M.getContext(), BAB.Bytes);
   auto ByteArray =
-      new GlobalVariable(*M, ByteArrayConst->getType(), /*isConstant=*/true,
+      new GlobalVariable(M, ByteArrayConst->getType(), /*isConstant=*/true,
                          GlobalValue::PrivateLinkage, ByteArrayConst);
 
   for (unsigned I = 0; I != ByteArrayInfos.size(); ++I) {
@@ -374,7 +380,7 @@ void LowerTypeTests::allocateByteArrays() {
       BAI->ByteArray->replaceAllUsesWith(GEP);
     } else {
       GlobalAlias *Alias = GlobalAlias::create(
-          Int8Ty, 0, GlobalValue::PrivateLinkage, "bits", GEP, M);
+          Int8Ty, 0, GlobalValue::PrivateLinkage, "bits", GEP, &M);
       BAI->ByteArray->replaceAllUsesWith(Alias);
     }
     BAI->ByteArray->eraseFromParent();
@@ -388,8 +394,9 @@ void LowerTypeTests::allocateByteArrays() {
 
 /// Build a test that bit BitOffset is set in BSI, where
 /// BitSetGlobal is a global containing the bits in BSI.
-Value *LowerTypeTests::createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI,
-                                        ByteArrayInfo *&BAI, Value *BitOffset) {
+Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI,
+                                              ByteArrayInfo *&BAI,
+                                              Value *BitOffset) {
   if (BSI.BitSize <= 64) {
     // If the bit set is sufficiently small, we can avoid a load by bit testing
     // a constant.
@@ -418,7 +425,7 @@ Value *LowerTypeTests::createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI,
       // improving the security of the CFI mechanism based on this pass.
       ByteArray = GlobalAlias::create(BAI->ByteArray->getValueType(), 0,
                                       GlobalValue::PrivateLinkage, "bits_use",
-                                      ByteArray, M);
+                                      ByteArray, &M);
     }
 
     Value *ByteAddr = B.CreateGEP(Ty, ByteArray, BitOffset);
@@ -431,15 +438,15 @@ Value *LowerTypeTests::createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI,
 
 /// Lower a llvm.type.test call to its implementation. Returns the value to
 /// replace the call with.
-Value *LowerTypeTests::lowerBitSetCall(
+Value *LowerTypeTestsModule::lowerBitSetCall(
     CallInst *CI, BitSetInfo &BSI, ByteArrayInfo *&BAI,
     Constant *CombinedGlobalIntAddr,
     const DenseMap<GlobalObject *, uint64_t> &GlobalLayout) {
   Value *Ptr = CI->getArgOperand(0);
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = M.getDataLayout();
 
   if (BSI.containsValue(DL, GlobalLayout, Ptr))
-    return ConstantInt::getTrue(M->getContext());
+    return ConstantInt::getTrue(M.getContext());
 
   Constant *OffsetedGlobalAsInt = ConstantExpr::getAdd(
       CombinedGlobalIntAddr, ConstantInt::get(IntPtrTy, BSI.ByteOffset));
@@ -478,10 +485,8 @@ Value *LowerTypeTests::lowerBitSetCall(
   Constant *BitSizeConst = ConstantInt::get(IntPtrTy, BSI.BitSize);
   Value *OffsetInRange = B.CreateICmpULT(BitOffset, BitSizeConst);
 
-  // If the bit set is all ones (or we treat it as such), testing against it
-  // is unnecessary.
-  if (BSI.isAllOnes() || BitsetsLevel == 0 ||
-      (BitsetsLevel == 1 && BSI.BitSize > 64))
+  // If the bit set is all ones, testing against it is unnecessary.
+  if (BSI.isAllOnes())
     return OffsetInRange;
 
   TerminatorInst *Term = SplitBlockAndInsertIfThen(OffsetInRange, CI, false);
@@ -503,14 +508,14 @@ Value *LowerTypeTests::lowerBitSetCall(
 
 /// Given a disjoint set of type identifiers and globals, lay out the globals,
 /// build the bit sets and lower the llvm.type.test calls.
-void LowerTypeTests::buildBitSetsFromGlobalVariables(
+void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalVariable *> Globals) {
   // Build a new global with the combined contents of the referenced globals.
   // This global is a struct whose even-indexed elements contain the original
   // contents of the referenced globals and whose odd-indexed elements contain
   // any padding required to align the next element to the next power of 2.
   std::vector<Constant *> GlobalInits;
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable *G : Globals) {
     GlobalInits.push_back(G->getInitializer());
     uint64_t InitSize = DL.getTypeAllocSize(G->getValueType());
@@ -528,9 +533,9 @@ void LowerTypeTests::buildBitSetsFromGlobalVariables(
   }
   if (!GlobalInits.empty())
     GlobalInits.pop_back();
-  Constant *NewInit = ConstantStruct::getAnon(M->getContext(), GlobalInits);
+  Constant *NewInit = ConstantStruct::getAnon(M.getContext(), GlobalInits);
   auto *CombinedGlobal =
-      new GlobalVariable(*M, NewInit->getType(), /*isConstant=*/true,
+      new GlobalVariable(M, NewInit->getType(), /*isConstant=*/true,
                          GlobalValue::PrivateLinkage, NewInit);
 
   StructType *NewTy = cast<StructType>(NewInit->getType());
@@ -559,7 +564,7 @@ void LowerTypeTests::buildBitSetsFromGlobalVariables(
       assert(Globals[I]->getType()->getAddressSpace() == 0);
       GlobalAlias *GAlias = GlobalAlias::create(NewTy->getElementType(I * 2), 0,
                                                 Globals[I]->getLinkage(), "",
-                                                CombinedGlobalElemPtr, M);
+                                                CombinedGlobalElemPtr, &M);
       GAlias->setVisibility(Globals[I]->getVisibility());
       GAlias->takeName(Globals[I]);
       Globals[I]->replaceAllUsesWith(GAlias);
@@ -568,7 +573,7 @@ void LowerTypeTests::buildBitSetsFromGlobalVariables(
   }
 }
 
-void LowerTypeTests::lowerTypeTestCalls(
+void LowerTypeTestsModule::lowerTypeTestCalls(
     ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
     const DenseMap<GlobalObject *, uint64_t> &GlobalLayout) {
   Constant *CombinedGlobalIntAddr =
@@ -599,7 +604,7 @@ void LowerTypeTests::lowerTypeTestCalls(
   }
 }
 
-void LowerTypeTests::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
+void LowerTypeTestsModule::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
   if (Type->getNumOperands() != 2)
     report_fatal_error("All operands of type metadata must have 2 elements");
 
@@ -623,7 +628,7 @@ void LowerTypeTests::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
 
 static const unsigned kX86JumpTableEntrySize = 8;
 
-unsigned LowerTypeTests::getJumpTableEntrySize() {
+unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   return kX86JumpTableEntrySize;
 }
 
@@ -631,9 +636,9 @@ unsigned LowerTypeTests::getJumpTableEntrySize() {
 // consists of an instruction sequence containing a relative branch to Dest. The
 // constant will be laid out at address Src+(Len*Distance) where Len is the
 // target-specific jump table entry size.
-Constant *LowerTypeTests::createJumpTableEntry(GlobalObject *Src,
-                                               Function *Dest,
-                                               unsigned Distance) {
+Constant *LowerTypeTestsModule::createJumpTableEntry(GlobalObject *Src,
+                                                     Function *Dest,
+                                                     unsigned Distance) {
   const unsigned kJmpPCRel32Code = 0xe9;
   const unsigned kInt3Code = 0xcc;
 
@@ -657,16 +662,16 @@ Constant *LowerTypeTests::createJumpTableEntry(GlobalObject *Src,
   return ConstantStruct::getAnon(Fields, /*Packed=*/true);
 }
 
-Type *LowerTypeTests::getJumpTableEntryType() {
-  return StructType::get(M->getContext(),
+Type *LowerTypeTestsModule::getJumpTableEntryType() {
+  return StructType::get(M.getContext(),
                          {Int8Ty, Int32Ty, Int8Ty, Int8Ty, Int8Ty},
                          /*Packed=*/true);
 }
 
 /// Given a disjoint set of type identifiers and functions, build the bit sets
 /// and lower the llvm.type.test calls, architecture dependently.
-void LowerTypeTests::buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
-                                               ArrayRef<Function *> Functions) {
+void LowerTypeTestsModule::buildBitSetsFromFunctions(
+    ArrayRef<Metadata *> TypeIds, ArrayRef<Function *> Functions) {
   if (Arch == Triple::x86 || Arch == Triple::x86_64)
     buildBitSetsFromFunctionsX86(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
@@ -677,7 +682,7 @@ void LowerTypeTests::buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
 
 /// Given a disjoint set of type identifiers and functions, build a jump table
 /// for the functions, build the bit sets and lower the llvm.type.test calls.
-void LowerTypeTests::buildBitSetsFromFunctionsX86(
+void LowerTypeTestsModule::buildBitSetsFromFunctionsX86(
     ArrayRef<Metadata *> TypeIds, ArrayRef<Function *> Functions) {
   // Unlike the global bitset builder, the function bitset builder cannot
   // re-arrange functions in a particular order and base its calculations on the
@@ -769,7 +774,7 @@ void LowerTypeTests::buildBitSetsFromFunctionsX86(
   // Create a constant to hold the jump table.
   ArrayType *JumpTableType =
       ArrayType::get(getJumpTableEntryType(), Functions.size());
-  auto JumpTable = new GlobalVariable(*M, JumpTableType,
+  auto JumpTable = new GlobalVariable(M, JumpTableType,
                                       /*isConstant=*/true,
                                       GlobalValue::PrivateLinkage, nullptr);
   JumpTable->setSection(ObjectFormat == Triple::MachO
@@ -792,7 +797,7 @@ void LowerTypeTests::buildBitSetsFromFunctionsX86(
       assert(Functions[I]->getType()->getAddressSpace() == 0);
       GlobalAlias *GAlias = GlobalAlias::create(Functions[I]->getValueType(), 0,
                                                 Functions[I]->getLinkage(), "",
-                                                CombinedGlobalElemPtr, M);
+                                                CombinedGlobalElemPtr, &M);
       GAlias->setVisibility(Functions[I]->getVisibility());
       GAlias->takeName(Functions[I]);
       Functions[I]->replaceAllUsesWith(GAlias);
@@ -816,7 +821,7 @@ void LowerTypeTests::buildBitSetsFromFunctionsX86(
 /// table in the backend, it will assign the given indexes.
 /// Note: Dynamic linking is not supported, as the WebAssembly ABI has not yet
 /// been finalized.
-void LowerTypeTests::buildBitSetsFromFunctionsWASM(
+void LowerTypeTestsModule::buildBitSetsFromFunctionsWASM(
     ArrayRef<Metadata *> TypeIds, ArrayRef<Function *> Functions) {
   assert(!Functions.empty());
 
@@ -840,12 +845,11 @@ void LowerTypeTests::buildBitSetsFromFunctionsWASM(
 
   // The indirect function table index space starts at zero, so pass a NULL
   // pointer as the subtracted "jump table" offset.
-  lowerTypeTestCalls(TypeIds,
-                     ConstantPointerNull::get(cast<PointerType>(Int32PtrTy)),
+  lowerTypeTestCalls(TypeIds, ConstantPointerNull::get(Int32PtrTy),
                      GlobalLayout);
 }
 
-void LowerTypeTests::buildBitSetsFromDisjointSet(
+void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalObject *> Globals) {
   llvm::DenseMap<Metadata *, uint64_t> TypeIdIndices;
   for (unsigned I = 0; I != TypeIds.size(); ++I)
@@ -917,9 +921,16 @@ void LowerTypeTests::buildBitSetsFromDisjointSet(
 }
 
 /// Lower all type tests in this module.
-bool LowerTypeTests::lower() {
+LowerTypeTestsModule::LowerTypeTestsModule(Module &M) : M(M) {
+  Triple TargetTriple(M.getTargetTriple());
+  LinkerSubsectionsViaSymbols = TargetTriple.isMacOSX();
+  Arch = TargetTriple.getArch();
+  ObjectFormat = TargetTriple.getObjectFormat();
+}
+
+bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
-      M->getFunction(Intrinsic::getName(Intrinsic::type_test));
+      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   if (!TypeTestFunc || TypeTestFunc->use_empty())
     return false;
 
@@ -936,7 +947,7 @@ bool LowerTypeTests::lower() {
   llvm::DenseMap<Metadata *, unsigned> TypeIdIndices;
   unsigned I = 0;
   SmallVector<MDNode *, 2> Types;
-  for (GlobalObject &GO : M->global_objects()) {
+  for (GlobalObject &GO : M.global_objects()) {
     Types.clear();
     GO.getMetadata(LLVMContext::MD_type, Types);
     for (MDNode *Type : Types) {
@@ -969,7 +980,7 @@ bool LowerTypeTests::lower() {
     GlobalClassesTy::member_iterator CurSet = GlobalClasses.findLeader(GCI);
 
     // Add the referenced globals to the type identifier's equivalence class.
-    for (GlobalObject &GO : M->global_objects()) {
+    for (GlobalObject &GO : M.global_objects()) {
       Types.clear();
       GO.getMetadata(LLVMContext::MD_type, Types);
       for (MDNode *Type : Types)
@@ -1035,36 +1046,9 @@ bool LowerTypeTests::lower() {
   return true;
 }
 
-// Initialization helper shared by the old and the new PM.
-static void init(LowerTypeTests *LTT, Module &M) {
-  LTT->M = &M;
-  const DataLayout &DL = M.getDataLayout();
-  Triple TargetTriple(M.getTargetTriple());
-  LTT->LinkerSubsectionsViaSymbols = TargetTriple.isMacOSX();
-  LTT->Arch = TargetTriple.getArch();
-  LTT->ObjectFormat = TargetTriple.getObjectFormat();
-  LTT->Int1Ty = Type::getInt1Ty(M.getContext());
-  LTT->Int8Ty = Type::getInt8Ty(M.getContext());
-  LTT->Int32Ty = Type::getInt32Ty(M.getContext());
-  LTT->Int32PtrTy = PointerType::getUnqual(LTT->Int32Ty);
-  LTT->Int64Ty = Type::getInt64Ty(M.getContext());
-  LTT->IntPtrTy = DL.getIntPtrType(M.getContext(), 0);
-  LTT->TypeTestCallSites.clear();
-  LTT->IndirectIndex = 1;
-}
-
-bool LowerTypeTests::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-  init(this, M);
-  return lower();
-}
-
 PreservedAnalyses LowerTypeTestsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  LowerTypeTests Impl;
-  init(&Impl, M);
-  bool Changed = Impl.lower();
+  bool Changed = LowerTypeTestsModule(M).lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

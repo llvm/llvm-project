@@ -457,7 +457,7 @@ void SBBreakpoint::SetCommandLineCommands(SBStringList &commands) {
   std::lock_guard<std::recursive_mutex> guard(
       m_opaque_sp->GetTarget().GetAPIMutex());
   std::unique_ptr<BreakpointOptions::CommandData> cmd_data_up(
-      new BreakpointOptions::CommandData(*commands));
+      new BreakpointOptions::CommandData(*commands, eScriptLanguageNone));
 
   m_opaque_sp->GetOptions()->SetCommandDataCallback(cmd_data_up);
 }

@@ -72,8 +72,4 @@
         plu.ps          $f1,$f26,$f29
         pul.ps          $f9,$f30,$f26
         puu.ps          $f24,$f9,$f2
-        recip.d         $f19,$f6
-        recip.s         $f3,$f30
-        rsqrt.d         $f3,$f28
-        rsqrt.s         $f4,$f8
         sub.ps          $f5,$f14,$f26

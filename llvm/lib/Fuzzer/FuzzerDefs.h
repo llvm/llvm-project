@@ -79,6 +79,7 @@ void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter = "");
 void PrintASCII(const Unit &U, const char *PrintAfter = "");
 
 void PrintPC(const char *SymbolizedFMT, const char *FallbackFMT, uintptr_t PC);
+std::string DescribePC(const char *SymbolizedFMT, uintptr_t PC);
 std::string Hash(const Unit &U);
 void SetTimer(int Seconds);
 void SetSigSegvHandler();

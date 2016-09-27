@@ -44,10 +44,11 @@ void readVersionScript(MemoryBufferRef MB);
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
 enum SectionsCommandKind {
-  AssignmentKind,
+  AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  AssertKind
+  AssertKind,   // ASSERT(expr)
+  BytesDataKind // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
 };
 
 struct BaseCommand {
@@ -138,6 +139,15 @@ struct AssertCommand : BaseCommand {
   Expr Expression;
 };
 
+struct BytesDataCommand : BaseCommand {
+  BytesDataCommand(uint64_t Data, unsigned Size)
+      : BaseCommand(BytesDataKind), Data(Data), Size(Size) {}
+  static bool classof(const BaseCommand *C);
+  uint64_t Data;
+  unsigned Offset;
+  unsigned Size;
+};
+
 struct PhdrsCommand {
   StringRef Name;
   unsigned Type;
@@ -194,6 +204,7 @@ public:
   bool ignoreInterpSection();
 
   ArrayRef<uint8_t> getFiller(StringRef Name);
+  void writeDataBytes(StringRef Name, uint8_t *Buf);
   Expr getLma(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignOffsets(OutputSectionCommand *Cmd);

@@ -36,8 +36,9 @@
 
 using namespace llvm;
 
-AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &st):
-  Ctx(ctx), ST(st) { }
+AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &st,
+                                     const AsmPrinter &ap):
+  Ctx(ctx), ST(st), AP(ap) { }
 
 static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
   switch (MOFlags) {
@@ -75,7 +76,9 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       break;
     case MachineOperand::MO_GlobalAddress: {
       const GlobalValue *GV = MO.getGlobal();
-      MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(GV->getName()));
+      SmallString<128> SymbolName;
+      AP.getNameWithPrefix(SymbolName, GV);
+      MCSymbol *Sym = Ctx.getOrCreateSymbol(SymbolName);
       const MCExpr *SymExpr =
           MCSymbolRefExpr::create(Sym, getVariantKind(MO.getTargetFlags()),Ctx);
       const MCExpr *Expr = MCBinaryExpr::createAdd(SymExpr,
@@ -97,7 +100,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
 
 void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   const AMDGPUSubtarget &STI = MF->getSubtarget<AMDGPUSubtarget>();
-  AMDGPUMCInstLower MCInstLowering(OutContext, STI);
+  AMDGPUMCInstLower MCInstLowering(OutContext, STI, *this);
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {

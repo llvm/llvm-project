@@ -284,6 +284,16 @@ defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
 defm FLOOR_W : ROUND_M<"floor.w.d", II_FLOOR>, ABSS_FM<0xf, 17>, ISA_MIPS2;
 defm CVT_W   : ROUND_M<"cvt.w.d", II_CVT>, ABSS_FM<0x24, 17>;
 
+let AdditionalPredicates = [NotInMicroMips] in {
+  def RECIP_S : MMRel, ABSS_FT<"recip.s", FGR32Opnd, FGR32Opnd, II_RECIP_S>,
+                ABSS_FM<0b010101, 0x10>, INSN_MIPS4_32R2;
+  def RECIP_D : MMRel, ABSS_FT<"recip.d", FGR64Opnd, FGR64Opnd, II_RECIP_D>,
+                ABSS_FM<0b010101, 0x11>, INSN_MIPS4_32R2;
+  def RSQRT_S : MMRel, ABSS_FT<"rsqrt.s", FGR32Opnd, FGR32Opnd, II_RSQRT_S>,
+                ABSS_FM<0b010110, 0x10>, INSN_MIPS4_32R2;
+  def RSQRT_D : MMRel, ABSS_FT<"rsqrt.d", FGR64Opnd, FGR64Opnd, II_RSQRT_D>,
+                ABSS_FM<0b010110, 0x11>, INSN_MIPS4_32R2;
+}
 let DecoderNamespace = "Mips64" in {
   let AdditionalPredicates = [NotInMicroMips] in {
   def ROUND_L_S : ABSS_FT<"round.l.s", FGR64Opnd, FGR32Opnd, II_ROUND>,

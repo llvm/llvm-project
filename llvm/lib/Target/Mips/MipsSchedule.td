@@ -270,11 +270,15 @@ def II_ORI              : InstrItinClass;
 def II_POP              : InstrItinClass;
 def II_RDHWR            : InstrItinClass;
 def II_RESTORE          : InstrItinClass;
+def II_RECIP_S          : InstrItinClass;
+def II_RECIP_D          : InstrItinClass;
 def II_RINT_S           : InstrItinClass;
 def II_RINT_D           : InstrItinClass;
 def II_ROTR             : InstrItinClass;
 def II_ROTRV            : InstrItinClass;
 def II_ROUND            : InstrItinClass;
+def II_RSQRT_S          : InstrItinClass;
+def II_RSQRT_D          : InstrItinClass;
 def II_SAVE             : InstrItinClass;
 def II_SC               : InstrItinClass;
 def II_SCD              : InstrItinClass;
@@ -607,6 +611,10 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_NMSUB_D         , [InstrStage<8,  [ALU]>]>,
   InstrItinData<II_DIV_S           , [InstrStage<23, [ALU]>]>,
   InstrItinData<II_DIV_D           , [InstrStage<36, [ALU]>]>,
+  InstrItinData<II_RECIP_D         , [InstrStage<25, [ALU]>]>,
+  InstrItinData<II_RECIP_S         , [InstrStage<13, [ALU]>]>,
+  InstrItinData<II_RSQRT_D         , [InstrStage<29, [ALU]>]>,
+  InstrItinData<II_RSQRT_S         , [InstrStage<14, [ALU]>]>,
   InstrItinData<II_RINT_D          , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_RINT_S          , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_SQRT_S          , [InstrStage<54, [ALU]>]>,

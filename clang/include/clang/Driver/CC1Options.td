@@ -509,6 +509,8 @@ def arcmt_migrate : Flag<["-"], "arcmt-migrate">,
 
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">;
+def stats_file : Joined<["-"], "stats-file=">,
+  HelpText<"Filename to write statistics to">;
 def fdump_record_layouts : Flag<["-"], "fdump-record-layouts">,
   HelpText<"Dump record layout information">;
 def fdump_record_layouts_simple : Flag<["-"], "fdump-record-layouts-simple">,

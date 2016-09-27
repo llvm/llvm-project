@@ -194,8 +194,10 @@ public:
   }
 
   ~AnalysisConsumer() override {
-    if (Opts->PrintStats)
+    if (Opts->PrintStats) {
       delete TUTotalTimer;
+      llvm::PrintStatistics();
+    }
   }
 
   void DigestAnalyzerOptions() {

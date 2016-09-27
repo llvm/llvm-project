@@ -995,7 +995,7 @@ public:
   void addConstantUImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     uint64_t Imm = getConstantImm() - Offset;
-    Imm &= (1 << Bits) - 1;
+    Imm &= (1ULL << Bits) - 1;
     Imm += Offset;
     Imm += AdjustOffset;
     Inst.addOperand(MCOperand::createImm(Imm));
@@ -1093,7 +1093,8 @@ public:
   bool isRegIdx() const { return Kind == k_RegisterIndex; }
   bool isImm() const override { return Kind == k_Immediate; }
   bool isConstantImm() const {
-    return isImm() && isa<MCConstantExpr>(getImm());
+    int64_t Res;
+    return isImm() && getImm()->evaluateAsAbsolute(Res);
   }
   bool isConstantImmz() const {
     return isConstantImm() && getConstantImm() == 0;
@@ -1264,7 +1265,9 @@ public:
 
   int64_t getConstantImm() const {
     const MCExpr *Val = getImm();
-    return static_cast<const MCConstantExpr *>(Val)->getValue();
+    int64_t Value = 0;
+    (void)Val->evaluateAsAbsolute(Value);
+    return Value;
   }
 
   MipsOperand *getMemBase() const {
@@ -4051,6 +4054,9 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_SImm32_Relaxed:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 32-bit signed immediate");
+  case Match_UImm32_Coerced:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 32-bit immediate");
   case Match_MemSImm9:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected memory with 9-bit signed offset");

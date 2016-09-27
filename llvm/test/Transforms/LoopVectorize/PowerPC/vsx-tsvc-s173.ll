@@ -43,7 +43,7 @@ for.end12:                                        ; preds = %for.end, %entry
 
 ; CHECK-LABEL: @s173
 ; CHECK: load <4 x float>, <4 x float>*
-; CHECK: add i64 %index, 16000
+; CHECK: add nsw i64 %index, 16000
 ; CHECK: ret i32 0
 }
 

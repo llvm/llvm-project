@@ -264,14 +264,7 @@ are no syntax errors may indicate that a function was declared but never called.
     for (auto bp_options : bp_options_vec) {
       auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
 
-      // It's necessary to set both user_source and script_source to the
-      // oneliner.
-      // The former is used to generate callback description (as in breakpoint
-      // command list)
-      // while the latter is used for Python to interpret during the actual
-      // callback.
       cmd_data->user_source.AppendString(oneliner);
-      cmd_data->script_source.assign(oneliner);
       cmd_data->stop_on_error = m_options.m_stop_on_error;
 
       bp_options->SetCommandDataCallback(cmd_data);

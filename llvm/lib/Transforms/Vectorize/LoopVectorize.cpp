@@ -4506,6 +4506,15 @@ static bool mayDivideByZero(Instruction &I) {
 void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
   // For each instruction in the old loop.
   for (Instruction &I : *BB) {
+
+    // Scalarize instructions that should remain scalar after vectorization.
+    if (!(isa<BranchInst>(&I) || isa<PHINode>(&I) ||
+          isa<DbgInfoIntrinsic>(&I)) &&
+        Legal->isScalarAfterVectorization(&I)) {
+      scalarizeInstruction(&I);
+      continue;
+    }
+
     switch (I.getOpcode()) {
     case Instruction::Br:
       // Nothing to do for PHIs and BR, since we already took care of the

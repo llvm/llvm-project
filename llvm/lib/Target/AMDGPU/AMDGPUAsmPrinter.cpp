@@ -135,8 +135,9 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   if (MFI->isKernel() && STM.isAmdCodeObjectV2()) {
     AMDGPUTargetStreamer *TS =
         static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
-    TS->EmitAMDGPUSymbolType(CurrentFnSym->getName(),
-                             ELF::STT_AMDGPU_HSA_KERNEL);
+    SmallString<128> SymbolName;
+    getNameWithPrefix(SymbolName, MF->getFunction()),
+    TS->EmitAMDGPUSymbolType(SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
 
   AsmPrinter::EmitFunctionEntryLabel();

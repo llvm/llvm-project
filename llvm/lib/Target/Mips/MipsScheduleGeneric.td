@@ -440,6 +440,10 @@ def : ItinRW<[GenericWriteFPUDivD], [II_DIV_D]>;
 def : ItinRW<[GenericWriteFPUSqrtS], [II_SQRT_S]>;
 def : ItinRW<[GenericWriteFPUSqrtD], [II_SQRT_D]>;
 
+// rsqrt.[ds], recip.[ds]
+def : ItinRW<[GenericWriteFPURcpS], [II_RECIP_S, II_RSQRT_S]>;
+def : ItinRW<[GenericWriteFPURcpD], [II_RECIP_D, II_RSQRT_D]>;
+
 // MIPSR6
 // ======
 //

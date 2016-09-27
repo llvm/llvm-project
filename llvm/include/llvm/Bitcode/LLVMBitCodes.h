@@ -194,20 +194,20 @@ enum ModulePathSymtabCodes {
 // and combined index cases.
 enum GlobalValueSummarySymtabCodes {
   // PERMODULE: [valueid, flags, instcount, numrefs, numrefs x valueid,
-  //             n x (valueid, callsitecount)]
+  //             n x (valueid)]
   FS_PERMODULE = 1,
   // PERMODULE_PROFILE: [valueid, flags, instcount, numrefs,
   //                     numrefs x valueid,
-  //                     n x (valueid, callsitecount, profilecount)]
+  //                     n x (valueid, hotness)]
   FS_PERMODULE_PROFILE = 2,
   // PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
   FS_PERMODULE_GLOBALVAR_INIT_REFS = 3,
   // COMBINED: [valueid, modid, flags, instcount, numrefs, numrefs x valueid,
-  //            n x (valueid, callsitecount)]
+  //            n x (valueid)]
   FS_COMBINED = 4,
   // COMBINED_PROFILE: [valueid, modid, flags, instcount, numrefs,
   //                    numrefs x valueid,
-  //                    n x (valueid, callsitecount, profilecount)]
+  //                    n x (valueid, hotness)]
   FS_COMBINED_PROFILE = 5,
   // COMBINED_GLOBALVAR_INIT_REFS: [valueid, modid, flags, n x valueid]
   FS_COMBINED_GLOBALVAR_INIT_REFS = 6,

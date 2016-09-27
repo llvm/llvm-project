@@ -42,6 +42,18 @@
 // RUN: -mcpu=power6 -std=c++11 -mdirect-move %s 2>&1 | FileCheck %s \
 // RUN: -check-prefix=CHECK-VSX
 
+// RUN: not %clang -target powerpc64le-unknown-unknown -fsyntax-only \
+// RUN: -mcpu=power9 -std=c++11 %s 2>&1 | FileCheck %s \
+// RUN: -check-prefix=CHECK-DEFAULT-P9
+
+// RUN: not %clang -target powerpc64le-unknown-unknown -fsyntax-only \
+// RUN: -mcpu=power9 -std=c++11 -mno-vsx -mpower9-vector %s 2>&1 | \
+// RUN: FileCheck %s -check-prefix=CHECK-NVSX-P9V
+
+// RUN: not %clang -target powerpc64le-unknown-unknown -fsyntax-only \
+// RUN: -mcpu=power9 -std=c++11 -mno-vsx -mfloat128 %s 2>&1 | \
+// RUN: FileCheck %s -check-prefix=CHECK-NVSX-FLT128
+
 #ifdef __VSX__
 static_assert(false, "VSX enabled");
 #endif
@@ -50,13 +62,21 @@ static_assert(false, "VSX enabled");
 static_assert(false, "P8V enabled");
 #endif
 
-#if !defined(__VSX__) && !defined(__POWER8_VECTOR__)
+#ifdef __POWER9_VECTOR__
+static_assert(false, "P9V enabled");
+#endif
+
+#if !defined(__VSX__) && !defined(__POWER8_VECTOR__) && \
+    !defined(__POWER9_VECTOR__)
 static_assert(false, "Neither enabled");
 #endif
 
 // CHECK-DEFAULT: VSX enabled
 // CHECK-DEFAULT: P8V enabled
+// CHECK-DEFAULT-P9: P9V enabled
 // CHECK-NVSX-P8V: error: option '-mpower8-vector' cannot be specified with '-mno-vsx'
+// CHECK-NVSX-P9V: error: option '-mpower9-vector' cannot be specified with '-mno-vsx'
+// CHECK-NVSX-FLT128: error: option '-mfloat128' cannot be specified with '-mno-vsx'
 // CHECK-NVSX-DMV: error: option '-mdirect-move' cannot be specified with '-mno-vsx'
 // CHECK-NVSX: Neither enabled
 // CHECK-VSX: VSX enabled

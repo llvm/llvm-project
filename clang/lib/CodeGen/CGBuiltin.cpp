@@ -7637,6 +7637,25 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ResultType);
     return Builder.CreateCall(F, {X, Undef});
   }
+  case PPC::BI__builtin_altivec_vctzb:
+  case PPC::BI__builtin_altivec_vctzh:
+  case PPC::BI__builtin_altivec_vctzw:
+  case PPC::BI__builtin_altivec_vctzd: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ResultType);
+    return Builder.CreateCall(F, {X, Undef});
+  }
+  case PPC::BI__builtin_altivec_vpopcntb:
+  case PPC::BI__builtin_altivec_vpopcnth:
+  case PPC::BI__builtin_altivec_vpopcntw:
+  case PPC::BI__builtin_altivec_vpopcntd: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *X = EmitScalarExpr(E->getArg(0));
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
+    return Builder.CreateCall(F, X);
+  }
   // Copy sign
   case PPC::BI__builtin_vsx_xvcpsgnsp:
   case PPC::BI__builtin_vsx_xvcpsgndp: {
