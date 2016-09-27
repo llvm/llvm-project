@@ -842,7 +842,11 @@ struct CounterCoverageMappingBuilder
 
     Counter ExitCount = getRegionCounter(S);
     SourceLocation ExitLoc = getEnd(S);
-    pushRegion(ExitCount, getStart(S), ExitLoc);
+    pushRegion(ExitCount);
+
+    // Ensure that handleFileExit recognizes when the end location is located
+    // in a different file.
+    MostRecentLocation = getStart(S);
     handleFileExit(ExitLoc);
   }
 
