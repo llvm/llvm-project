@@ -44,6 +44,10 @@ static cl::opt<bool> JumpIsExpensiveOverride(
     cl::desc("Do not create extra branches to split comparison logic."),
     cl::Hidden);
 
+static cl::opt<unsigned> MaximumJumpTableSize
+  ("max-jump-table", cl::init(0), cl::Hidden,
+   cl::desc("Set maximum number of jump table entries; zero for no limit."));
+
 // Although this default value is arbitrary, it is not random. It is assumed
 // that a condition that evaluates the same way by a higher percentage than this
 // is best represented as control flow. Therefore, the default value N should be
@@ -1830,4 +1834,12 @@ Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
 
 Value *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
   return nullptr;
+}
+
+unsigned TargetLoweringBase::getMaximumJumpTableSize() const {
+  return MaximumJumpTableSize;
+}
+
+void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
+  MaximumJumpTableSize = Val;
 }

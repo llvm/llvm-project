@@ -123,10 +123,12 @@ raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
 unsigned getLongestCommonPrefixLen(ArrayRef<std::string> Strings) {
   unsigned LCP = Strings[0].size();
   for (unsigned I = 1, E = Strings.size(); LCP > 0 && I < E; ++I) {
-    auto Mismatch =
-        std::mismatch(Strings[0].begin(), Strings[0].end(), Strings[I].begin())
-            .first;
-    LCP = std::min(LCP, (unsigned)std::distance(Strings[0].begin(), Mismatch));
+    unsigned Cursor;
+    StringRef S = Strings[I];
+    for (Cursor = 0; Cursor < LCP && Cursor < S.size(); ++Cursor)
+      if (Strings[0][Cursor] != S[Cursor])
+        break;
+    LCP = std::min(LCP, Cursor);
   }
   return LCP;
 }

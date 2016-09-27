@@ -1154,14 +1154,13 @@ MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
 }
 
 void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
-  SmallSet<unsigned, 5> KnownSet;
-  KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
-
   if (!hasMetadataHashEntry())
     return; // Nothing to remove!
 
   auto &InstructionMetadata = getContext().pImpl->InstructionMetadata;
 
+  SmallSet<unsigned, 4> KnownSet;
+  KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
   if (KnownSet.empty()) {
     // Just drop our entry at the store.
     InstructionMetadata.erase(this);

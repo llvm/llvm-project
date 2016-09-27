@@ -18,20 +18,14 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-namespace {
-AST_POLYMORPHIC_MATCHER(isStatic, AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                                  VarDecl)) {
-  return Node.getStorageClass() == SC_Static;
-}
-} // namespace
-
 void StaticDefinitionInAnonymousNamespaceCheck::registerMatchers(
     MatchFinder *Finder) {
-  Finder->addMatcher(namedDecl(anyOf(functionDecl(isDefinition(), isStatic()),
-                                     varDecl(isDefinition(), isStatic())),
-                               hasParent(namespaceDecl(isAnonymous())))
-                         .bind("static-def"),
-                     this);
+  Finder->addMatcher(
+      namedDecl(anyOf(functionDecl(isDefinition(), isStaticStorageClass()),
+                      varDecl(isDefinition(), isStaticStorageClass())),
+                hasParent(namespaceDecl(isAnonymous())))
+          .bind("static-def"),
+      this);
 }
 
 void StaticDefinitionInAnonymousNamespaceCheck::check(

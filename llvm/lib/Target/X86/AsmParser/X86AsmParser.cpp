@@ -59,6 +59,7 @@ class X86AsmParser : public MCTargetAsmParser {
   const MCInstrInfo &MII;
   ParseInstructionInfo *InstInfo;
   std::unique_ptr<X86AsmInstrumentation> Instrumentation;
+  bool Code16GCC;
 
 private:
   SMLoc consumeToken() {
@@ -66,6 +67,19 @@ private:
     SMLoc Result = Parser.getTok().getLoc();
     Parser.Lex();
     return Result;
+  }
+
+  unsigned MatchInstruction(const OperandVector &Operands, MCInst &Inst,
+                            uint64_t &ErrorInfo, bool matchingInlineAsm,
+                            unsigned VariantID = 0) {
+    // In Code16GCC mode, match as 32-bit.
+    if (Code16GCC)
+      SwitchMode(X86::Mode32Bit);
+    unsigned rv = MatchInstructionImpl(Operands, Inst, ErrorInfo,
+                                       matchingInlineAsm, VariantID);
+    if (Code16GCC)
+      SwitchMode(X86::Mode16Bit);
+    return rv;
   }
 
   enum InfixCalculatorTok {
@@ -794,7 +808,8 @@ private:
 public:
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti), MII(mii), InstInfo(nullptr) {
+      : MCTargetAsmParser(Options, sti), MII(mii), InstInfo(nullptr),
+        Code16GCC(false) {
 
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
@@ -983,20 +998,20 @@ void X86AsmParser::SetFrameRegister(unsigned RegNo) {
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::DefaultMemSIOperand(SMLoc Loc) {
-  unsigned basereg =
-    is64BitMode() ? X86::RSI : (is32BitMode() ? X86::ESI : X86::SI);
+  bool Parse32 = is32BitMode() || Code16GCC;
+  unsigned Basereg = is64BitMode() ? X86::RSI : (Parse32 ? X86::ESI : X86::SI);
   const MCExpr *Disp = MCConstantExpr::create(0, getContext());
   return X86Operand::CreateMem(getPointerWidth(), /*SegReg=*/0, Disp,
-                               /*BaseReg=*/basereg, /*IndexReg=*/0, /*Scale=*/1,
+                               /*BaseReg=*/Basereg, /*IndexReg=*/0, /*Scale=*/1,
                                Loc, Loc, 0);
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::DefaultMemDIOperand(SMLoc Loc) {
-  unsigned basereg =
-    is64BitMode() ? X86::RDI : (is32BitMode() ? X86::EDI : X86::DI);
+  bool Parse32 = is32BitMode() || Code16GCC;
+  unsigned Basereg = is64BitMode() ? X86::RDI : (Parse32 ? X86::EDI : X86::DI);
   const MCExpr *Disp = MCConstantExpr::create(0, getContext());
   return X86Operand::CreateMem(getPointerWidth(), /*SegReg=*/0, Disp,
-                               /*BaseReg=*/basereg, /*IndexReg=*/0, /*Scale=*/1,
+                               /*BaseReg=*/Basereg, /*IndexReg=*/0, /*Scale=*/1,
                                Loc, Loc, 0);
 }
 
@@ -1672,8 +1687,9 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOffsetOfOperator() {
   // The offset operator will have an 'r' constraint, thus we need to create
   // register operand to ensure proper matching.  Just pick a GPR based on
   // the size of a pointer.
-  unsigned RegNo =
-      is64BitMode() ? X86::RBX : (is32BitMode() ? X86::EBX : X86::BX);
+  bool Parse32 = is32BitMode() || Code16GCC;
+  unsigned RegNo = is64BitMode() ? X86::RBX : (Parse32 ? X86::EBX : X86::BX);
+
   return X86Operand::CreateReg(RegNo, Start, End, /*GetAddress=*/true,
                                OffsetOfLoc, Identifier, Info.OpDecl);
 }
@@ -2585,9 +2601,8 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
 
   // First, try a direct match.
-  switch (MatchInstructionImpl(Operands, Inst,
-                               ErrorInfo, MatchingInlineAsm,
-                               isParsingIntelSyntax())) {
+  switch (MatchInstruction(Operands, Inst, ErrorInfo, MatchingInlineAsm,
+                           isParsingIntelSyntax())) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:
     // Some instructions need post-processing to, for example, tweak which
@@ -2638,8 +2653,8 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
-    Match[I] = MatchInstructionImpl(Operands, Inst, ErrorInfoIgnore,
-                                  MatchingInlineAsm, isParsingIntelSyntax());
+    Match[I] = MatchInstruction(Operands, Inst, ErrorInfoIgnore,
+                                MatchingInlineAsm, isParsingIntelSyntax());
     // If this returned as a missing feature failure, remember that.
     if (Match[I] == Match_MissingFeature)
       ErrorInfoMissingFeature = ErrorInfoIgnore;
@@ -2785,9 +2800,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
       UnsizedMemOp->Mem.Size = Size;
       uint64_t ErrorInfoIgnore;
       unsigned LastOpcode = Inst.getOpcode();
-      unsigned M =
-          MatchInstructionImpl(Operands, Inst, ErrorInfoIgnore,
-                               MatchingInlineAsm, isParsingIntelSyntax());
+      unsigned M = MatchInstruction(Operands, Inst, ErrorInfoIgnore,
+                                    MatchingInlineAsm, isParsingIntelSyntax());
       if (Match.empty() || LastOpcode != Inst.getOpcode())
         Match.push_back(M);
 
@@ -2805,9 +2819,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // operation.  There shouldn't be any ambiguity in our mnemonic table, so try
   // matching with the unsized operand.
   if (Match.empty()) {
-    Match.push_back(MatchInstructionImpl(Operands, Inst, ErrorInfo,
-                                         MatchingInlineAsm,
-                                         isParsingIntelSyntax()));
+    Match.push_back(MatchInstruction(
+        Operands, Inst, ErrorInfo, MatchingInlineAsm, isParsingIntelSyntax()));
     // If this returned as a missing feature failure, remember that.
     if (Match.back() == Match_MissingFeature)
       ErrorInfoMissingFeature = ErrorInfo;
@@ -2967,8 +2980,17 @@ bool X86AsmParser::ParseDirectiveWord(unsigned Size, SMLoc L) {
 ///  ::= .code16 | .code32 | .code64
 bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
   MCAsmParser &Parser = getParser();
+  Code16GCC = false;
   if (IDVal == ".code16") {
     Parser.Lex();
+    if (!is16BitMode()) {
+      SwitchMode(X86::Mode16Bit);
+      getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);
+    }
+  } else if (IDVal == ".code16gcc") {
+    // .code16gcc parses as if in 32-bit mode, but emits code in 16-bit mode.
+    Parser.Lex();
+    Code16GCC = true;
     if (!is16BitMode()) {
       SwitchMode(X86::Mode16Bit);
       getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);

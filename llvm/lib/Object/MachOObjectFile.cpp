@@ -673,6 +673,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
   }
 
   const char *DyldIdLoadCmd = nullptr;
+  const char *FuncStartsLoadCmd = nullptr;
+  const char *SplitInfoLoadCmd = nullptr;
+  const char *CodeSignDrsLoadCmd = nullptr;
   for (unsigned I = 0; I < LoadCommandCount; ++I) {
     if (is64Bit()) {
       if (Load.C.cmdsize % 8 != 0) {
@@ -707,6 +710,18 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
     } else if (Load.C.cmd == MachO::LC_LINKER_OPTIMIZATION_HINT) {
       if ((Err = checkLinkeditDataCommand(this, Load, I, &LinkOptHintsLoadCmd,
                                           "LC_LINKER_OPTIMIZATION_HINT")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_FUNCTION_STARTS) {
+      if ((Err = checkLinkeditDataCommand(this, Load, I, &FuncStartsLoadCmd,
+                                          "LC_FUNCTION_STARTS")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_SEGMENT_SPLIT_INFO) {
+      if ((Err = checkLinkeditDataCommand(this, Load, I, &SplitInfoLoadCmd,
+                                          "LC_SEGMENT_SPLIT_INFO")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_DYLIB_CODE_SIGN_DRS) {
+      if ((Err = checkLinkeditDataCommand(this, Load, I, &CodeSignDrsLoadCmd,
+                                          "LC_DYLIB_CODE_SIGN_DRS")))
         return;
     } else if (Load.C.cmd == MachO::LC_DYLD_INFO) {
       if ((Err = checkDyldInfoCommand(this, Load, I, &DyldInfoLoadCmd,

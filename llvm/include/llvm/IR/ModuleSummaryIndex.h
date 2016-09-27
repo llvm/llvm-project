@@ -30,18 +30,14 @@ namespace llvm {
 
 /// \brief Class to accumulate and hold information about a callee.
 struct CalleeInfo {
-  /// The static number of callsites calling corresponding function.
-  unsigned CallsiteCount;
-  /// The cumulative profile count of calls to corresponding function
-  /// (if using PGO, otherwise 0).
-  uint64_t ProfileCount;
-  CalleeInfo() : CallsiteCount(0), ProfileCount(0) {}
-  CalleeInfo(unsigned CallsiteCount, uint64_t ProfileCount)
-      : CallsiteCount(CallsiteCount), ProfileCount(ProfileCount) {}
-  CalleeInfo &operator+=(uint64_t RHSProfileCount) {
-    CallsiteCount++;
-    ProfileCount += RHSProfileCount;
-    return *this;
+  enum class HotnessType : uint8_t { Unknown = 0, Cold = 1, None = 2, Hot = 3 };
+  HotnessType Hotness = HotnessType::Unknown;
+
+  CalleeInfo() = default;
+  explicit CalleeInfo(HotnessType Hotness) : Hotness(Hotness) {}
+
+  void updateHotness(const HotnessType OtherHotness) {
+    Hotness = std::max(Hotness, OtherHotness);
   }
 };
 

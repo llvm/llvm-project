@@ -212,6 +212,15 @@ define <2 x double> @test_fpext(float %f) {
   ret <2 x double> %ret
 }
 
+define <4 x double> @test_shuffle(<4 x double> %f) {
+; CHECK-LABEL: @test_shuffle(
+; CHECK-NEXT:    [[RET1:%.*]] = insertelement <4 x double> %f, double 1.000000e+00, i32 3
+; CHECK-NEXT:    ret <4 x double> [[RET1]]
+;
+  %ret = shufflevector <4 x double> %f, <4 x double> <double undef, double 1.0, double undef, double undef>, <4 x i32> <i32 0, i32 1, i32 2, i32 5>
+  ret <4 x double> %ret
+}
+
 define <4 x float> @test_select(float %f, float %g) {
 ; CHECK-LABEL: @test_select(
 ; CHECK-NEXT:    [[A0:%.*]] = insertelement <4 x float> undef, float %f, i32 0

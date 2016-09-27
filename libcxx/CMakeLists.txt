@@ -307,9 +307,12 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
 include(HandleLibCXXABI) # Setup the ABI library flags
 
-# Remove flags that may have snuck in.
-remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
-             -stdlib=libc++ -stdlib=libstdc++ -lc++abi -m32)
+if (NOT LIBCXX_STANDALONE_BUILD)
+  # Remove flags that may have snuck in.
+  remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
+               -lc++abi -m32)
+endif()
+remove_flags(-stdlib=libc++ -stdlib=libstdc++)
 
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors

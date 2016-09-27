@@ -6963,7 +6963,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
       return false;
     // FIXME: If a VR128 can have size 32, we should be checking if a 32-byte
     // memory access is slow above.
-    unsigned Alignment = RC->getSize() == 32 ? 32 : 16;
+    unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
     bool isAligned = (*MMOs.first) &&
                      (*MMOs.first)->getAlignment() >= Alignment;
     Load = DAG.getMachineNode(getLoadRegOpcode(0, RC, isAligned, Subtarget), dl,
@@ -7008,7 +7008,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
       return false;
     // FIXME: If a VR128 can have size 32, we should be checking if a 32-byte
     // memory access is slow above.
-    unsigned Alignment = RC->getSize() == 32 ? 32 : 16;
+    unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
     bool isAligned = (*MMOs.first) &&
                      (*MMOs.first)->getAlignment() >= Alignment;
     SDNode *Store =

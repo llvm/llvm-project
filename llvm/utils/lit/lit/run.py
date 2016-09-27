@@ -152,6 +152,19 @@ def run_one_tester(run, provider, display):
 
 ###
 
+def handleFailures(provider, consumer, maxFailures):
+    class _Display(object):
+        def __init__(self, display):
+            self.display = display
+            self.maxFailures = maxFailures or object()
+            self.failedCount = 0
+        def update(self, test):
+            self.display.update(test)
+            self.failedCount += (test.result.code == lit.Test.FAIL)
+            if self.failedCount == self.maxFailures:
+                provider.cancel()
+    consumer.display = _Display(consumer.display)
+
 class Run(object):
     """
     This class represents a concrete, configured testing run.
@@ -232,6 +245,7 @@ class Run(object):
 
         # Create the test provider.
         provider = TestProvider(queue_impl, canceled_flag)
+        handleFailures(provider, consumer, self.lit_config.maxFailures)
 
         # Queue the tests outside the main thread because we can't guarantee
         # that we can put() all the tests without blocking:

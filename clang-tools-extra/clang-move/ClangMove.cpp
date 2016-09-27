@@ -23,12 +23,6 @@ namespace clang {
 namespace move {
 namespace {
 
-// FIXME: Move to ASTMatcher.
-AST_POLYMORPHIC_MATCHER(isStatic, AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                                  VarDecl)) {
-  return Node.getStorageClass() == SC_Static;
-}
-
 class FindAllIncludes : public clang::PPCallbacks {
 public:
   explicit FindAllIncludes(SourceManager *SM, ClangMoveTool *const MoveTool)
@@ -241,9 +235,9 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Match static functions/variabale definitions in old cc.
   Finder->addMatcher(
       namedDecl(anyOf(functionDecl(isDefinition(), unless(InMovedClass),
-                                   isStatic(), InOldCC),
-                      varDecl(isDefinition(), unless(InMovedClass), isStatic(),
-                              InOldCC)))
+                                   isStaticStorageClass(), InOldCC),
+                      varDecl(isDefinition(), unless(InMovedClass),
+                              isStaticStorageClass(), InOldCC)))
           .bind("static_decls"),
       this);
 
