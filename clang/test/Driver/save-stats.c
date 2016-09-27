@@ -9,8 +9,8 @@
 // NO-STATS-NO: -stats-file
 
 // RUN: %clang -target x86_64-apple-darwin -save-stats=obj -c -o obj/dir/save-stats.o %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-OBJ
-// CHECK-OBJ: "-stats-file=obj/dir{{.}}save-stats.stats"
-// CHECK-OBJ: "-o" "obj/dir{{.}}save-stats.o"
+// CHECK-OBJ: "-stats-file=obj/dir{{/|\\\\}}save-stats.stats"
+// CHECK-OBJ: "-o" "obj/dir{{/|\\\\}}save-stats.o"
 
 // RUN: %clang -target x86_64-apple-darwin -save-stats=obj -c %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-OBJ-NOO
 // CHECK-OBJ-NOO: "-stats-file=save-stats.stats"
