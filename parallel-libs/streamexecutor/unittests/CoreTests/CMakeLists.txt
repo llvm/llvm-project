@@ -3,7 +3,7 @@ if(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM)
 endif()
 
 add_se_unittest(
-  CoreTests
+  StreamExecutorCoreTests
   DeviceTest.cpp
   KernelSpecTest.cpp
   PackedKernelArgumentArrayTest.cpp

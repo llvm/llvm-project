@@ -9381,13 +9381,13 @@ _mm512_maskz_cvtps_pd (__mmask8 __U, __m256 __A)
 }
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
-_mm512_cvtpslo_pd (__m512d __A)
+_mm512_cvtpslo_pd (__m512 __A)
 {
   return (__m512) _mm512_cvtps_pd(_mm512_castps512_ps256(__A));
 }
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
-_mm512_mask_cvtpslo_pd (__m512d __W, __mmask8 __U, __m512d __A)
+_mm512_mask_cvtpslo_pd (__m512d __W, __mmask8 __U, __m512 __A)
 {
   return (__m512) _mm512_mask_cvtps_pd(__W, __U, _mm512_castps512_ps256(__A));
 }

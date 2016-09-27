@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
@@ -64,6 +65,8 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeId> &P) {
     case NodeAttrs::Ref:
       if (Flags & NodeAttrs::Undef)
         OS << '/';
+      if (Flags & NodeAttrs::Dead)
+        OS << '\\';
       if (Flags & NodeAttrs::Preserving)
         OS << '+';
       if (Flags & NodeAttrs::Clobbering)
@@ -876,6 +879,19 @@ unsigned DataFlowGraph::DefStack::nextDown(unsigned P) const {
   return P;
 }
 
+std::vector<uint32_t> DataFlowGraph::getLandingPadLiveIns() const {
+  std::vector<uint32_t> LR;
+  const Function &F = *MF.getFunction();
+  const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn()
+                                            : nullptr;
+  const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
+  if (uint32_t EPReg = TLI.getExceptionPointerRegister(PF))
+    LR.push_back(EPReg);
+  if (uint32_t ESReg = TLI.getExceptionSelectorRegister(PF))
+    LR.push_back(ESReg);
+  return LR;
+}
+
 // Node management functions.
 
 // Get the pointer to the node with the id N.
@@ -999,8 +1015,10 @@ void DataFlowGraph::build(unsigned Options) {
     }
   }
 
-  // Collect information about block references.
   NodeAddr<BlockNode*> EA = Func.Addr->getEntryBlock(*this);
+  NodeList Blocks = Func.Addr->members(*this);
+
+  // Collect information about block references.
   BlockRefsMap RefM;
   buildBlockRefs(EA, RefM);
 
@@ -1014,10 +1032,42 @@ void DataFlowGraph::build(unsigned Options) {
     PA.Addr->addMember(DA, *this);
   }
 
+  // Add phis for landing pads.
+  // Landing pads, unlike usual backs blocks, are not entered through
+  // branches in the program, or fall-throughs from other blocks. They
+  // are entered from the exception handling runtime and target's ABI
+  // may define certain registers as defined on entry to such a block.
+  std::vector<uint32_t> EHRegs = getLandingPadLiveIns();
+  if (!EHRegs.empty()) {
+    for (NodeAddr<BlockNode*> BA : Blocks) {
+      const MachineBasicBlock &B = *BA.Addr->getCode();
+      if (!B.isEHPad())
+        continue;
+
+      // Prepare a list of NodeIds of the block's predecessors.
+      NodeList Preds;
+      for (MachineBasicBlock *PB : B.predecessors())
+        Preds.push_back(findBlock(PB));
+
+      // Build phi nodes for each live-in.
+      for (uint32_t R : EHRegs) {
+        NodeAddr<PhiNode*> PA = newPhi(BA);
+        uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
+        // Add def:
+        NodeAddr<DefNode*> DA = newDef(PA, {R,0}, PhiFlags);
+        PA.Addr->addMember(DA, *this);
+        // Add uses (no reaching defs for phi uses):
+        for (NodeAddr<BlockNode*> PBA : Preds) {
+          NodeAddr<PhiUseNode*> PUA = newPhiUse(PA, {R,0}, PBA);
+          PA.Addr->addMember(PUA, *this);
+        }
+      }
+    }
+  }
+
   // Build a map "PhiM" which will contain, for each block, the set
   // of references that will require phi definitions in that block.
   BlockRefsMap PhiM;
-  auto Blocks = Func.Addr->members(*this);
   for (NodeAddr<BlockNode*> BA : Blocks)
     recordDefsForDF(PhiM, RefM, BA);
   for (NodeAddr<BlockNode*> BA : Blocks)
@@ -1268,7 +1318,8 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     while (uint16_t R = *ImpU++)
       ImpUses.insert({R, 0});
 
-  bool NeedsImplicit = isCall(In) || In.isInlineAsm() || In.isReturn();
+  bool IsCall = isCall(In);
+  bool NeedsImplicit = IsCall || In.isInlineAsm() || In.isReturn();
   bool IsPredicated = TII.isPredicated(In);
   unsigned NumOps = In.getNumOperands();
 
@@ -1294,6 +1345,8 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
       Flags |= NodeAttrs::Clobbering;
     if (TOI.isFixedReg(In, OpN))
       Flags |= NodeAttrs::Fixed;
+    if (IsCall && Op.isDead())
+      Flags |= NodeAttrs::Dead;
     NodeAddr<DefNode*> DA = newDef(SA, Op, Flags);
     SA.Addr->addMember(DA, *this);
     DoneDefs.insert(RR);
@@ -1321,6 +1374,8 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
       Flags |= NodeAttrs::Clobbering;
     if (TOI.isFixedReg(In, OpN))
       Flags |= NodeAttrs::Fixed;
+    if (IsCall && Op.isDead())
+      Flags |= NodeAttrs::Dead;
     NodeAddr<DefNode*> DA = newDef(SA, Op, Flags);
     SA.Addr->addMember(DA, *this);
     DoneDefs.insert(RR);
@@ -1676,10 +1731,22 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
     NodeAddr<PhiUseNode*> PUA = NA;
     return PUA.Addr->getPredecessor() == BA.Id;
   };
+
+  std::vector<uint32_t> EHLiveIns = getLandingPadLiveIns();
   MachineBasicBlock *MBB = BA.Addr->getCode();
+
   for (auto SB : MBB->successors()) {
-    auto SBA = findBlock(SB);
+    bool IsEHPad = SB->isEHPad();
+    NodeAddr<BlockNode*> SBA = findBlock(SB);
     for (NodeAddr<InstrNode*> IA : SBA.Addr->members_if(IsPhi, *this)) {
+      // Do not link phi uses for landing pad live-ins.
+      if (IsEHPad) {
+        // Find what register this phi is for.
+        NodeAddr<RefNode*> RA = IA.Addr->getFirstMember(*this);
+        assert(RA.Id != 0);
+        if (find(EHLiveIns, RA.Addr->getRegRef().Reg) != EHLiveIns.end())
+          continue;
+      }
       // Go over each phi use associated with MBB, and link it.
       for (auto U : IA.Addr->members_if(IsUseForBA, *this)) {
         NodeAddr<PhiUseNode*> PUA = U;

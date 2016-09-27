@@ -514,7 +514,7 @@ void BackendConsumer::EmitOptimizationMessage(
 
   std::string Msg;
   raw_string_ostream MsgStream(Msg);
-  MsgStream << D.getMsg().str();
+  MsgStream << D.getMsg();
 
   if (D.getHotness())
     MsgStream << " (hotness: " << *D.getHotness() << ")";

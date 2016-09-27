@@ -14,6 +14,8 @@
 
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/ArrayRef.h"
+
 namespace llvm {
 namespace sys {
 class DynamicLibrary;
@@ -61,6 +63,15 @@ struct RegisterInfo {
   // the byte size of this register.
   size_t dynamic_size_dwarf_len; // The length of the DWARF expression in bytes
                                  // in the dynamic_size_dwarf_expr_bytes member.
+
+  llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
+    return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);
+  }
+
+  llvm::MutableArrayRef<uint8_t> mutable_data(uint8_t *context_base) const {
+    return llvm::MutableArrayRef<uint8_t>(context_base + byte_offset,
+                                          byte_size);
+  }
 };
 
 //----------------------------------------------------------------------

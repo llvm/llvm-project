@@ -201,7 +201,8 @@ private:
                 VarLocInMBB &OutLocs, VarLocMap &VarLocIDs);
 
   bool join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
-            const VarLocMap &VarLocIDs);
+            const VarLocMap &VarLocIDs,
+            SmallPtrSet<const MachineBasicBlock *, 16> &Visited);
 
   bool ExtendRanges(MachineFunction &MF);
 
@@ -368,7 +369,8 @@ bool LiveDebugValues::transfer(MachineInstr &MI, OpenRangesSet &OpenRanges,
 /// inserting a new DBG_VALUE instruction at the start of the @MBB - if the same
 /// source variable in all the predecessors of @MBB reside in the same location.
 bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
-                           VarLocInMBB &InLocs, const VarLocMap &VarLocIDs) {
+                           VarLocInMBB &InLocs, const VarLocMap &VarLocIDs,
+                           SmallPtrSet<const MachineBasicBlock *, 16> &Visited) {
   DEBUG(dbgs() << "join MBB: " << MBB.getName() << "\n");
   bool Changed = false;
 
@@ -376,21 +378,32 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
 
   // For all predecessors of this MBB, find the set of VarLocs that
   // can be joined.
+  int NumVisited = 0;
   for (auto p : MBB.predecessors()) {
+    // Ignore unvisited predecessor blocks.  As we are processing
+    // the blocks in reverse post-order any unvisited block can
+    // be considered to not remove any incoming values.
+    if (!Visited.count(p))
+      continue;
     auto OL = OutLocs.find(p);
     // Join is null in case of empty OutLocs from any of the pred.
     if (OL == OutLocs.end())
       return false;
 
-    // Just copy over the Out locs to incoming locs for the first predecessor.
-    if (p == *MBB.pred_begin()) {
+    // Just copy over the Out locs to incoming locs for the first visited
+    // predecessor, and for all other predecessors join the Out locs.
+    if (!NumVisited)
       InLocsT = OL->second;
-      continue;
-    }
-    // Join with this predecessor.
-    InLocsT &= OL->second;
+    else
+      InLocsT &= OL->second;
+    NumVisited++;
   }
 
+  // As we are processing blocks in reverse post-order we
+  // should have processed at least one predecessor, unless it
+  // is the entry block which has no predecessor.
+  assert((NumVisited || MBB.pred_empty()) &&
+         "Should have processed at least one predecessor");
   if (InLocsT.empty())
     return false;
 
@@ -463,6 +476,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   // To solve it, we perform join() and transfer() using the two worklist method
   // until the ranges converge.
   // Ranges have converged when both worklists are empty.
+  SmallPtrSet<const MachineBasicBlock *, 16> Visited;
   while (!Worklist.empty() || !Pending.empty()) {
     // We track what is on the pending worklist to avoid inserting the same
     // thing twice.  We could avoid this with a custom priority queue, but this
@@ -472,8 +486,8 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
     while (!Worklist.empty()) {
       MachineBasicBlock *MBB = OrderToBB[Worklist.top()];
       Worklist.pop();
-      MBBJoined = join(*MBB, OutLocs, InLocs, VarLocIDs);
-
+      MBBJoined = join(*MBB, OutLocs, InLocs, VarLocIDs, Visited);
+      Visited.insert(MBB);
       if (MBBJoined) {
         MBBJoined = false;
         Changed = true;

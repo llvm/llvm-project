@@ -52,6 +52,7 @@ add_llvm_unittest(SupportTests
   raw_ostream_test.cpp
   raw_pwrite_stream_test.cpp
   raw_sha1_ostream_test.cpp
+  xxhashTest.cpp
   )
 
 # ManagedStatic.cpp uses <pthread>.

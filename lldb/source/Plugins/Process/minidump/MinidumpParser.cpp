@@ -64,8 +64,9 @@ MinidumpParser::MinidumpParser(
     : m_data_sp(data_buf_sp), m_header(header), m_directory_map(directory_map) {
 }
 
-lldb::offset_t MinidumpParser::GetByteSize() {
-  return m_data_sp->GetByteSize();
+llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
+  return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes(),
+                                 m_data_sp->GetByteSize());
 }
 
 llvm::ArrayRef<uint8_t>

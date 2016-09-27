@@ -1731,7 +1731,7 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 /// the control of the client. The options should be modified before calling
 /// llvm::cl::ParseCommandLineOptions().
 ///
-/// Hopefully this API can be depricated soon. Any situation where options need
+/// Hopefully this API can be deprecated soon. Any situation where options need
 /// to be modified by tools or libraries should be handled by sane APIs rather
 /// than just handing around a global list.
 StringMap<Option *> &getRegisteredOptions(SubCommand &Sub = *TopLevelSubCommand);

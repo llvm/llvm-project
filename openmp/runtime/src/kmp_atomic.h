@@ -677,26 +677,38 @@ void __kmpc_atomic_float4_div_float8( ident_t *id_ref, int gtid, kmp_real32 * lh
 // RHS=float16 (deprecated, to be removed when we are sure the compiler does not use them)
 #if KMP_HAVE_QUAD
 void __kmpc_atomic_fixed1_add_fp(  ident_t *id_ref, int gtid, char * lhs, _Quad rhs );
+void __kmpc_atomic_fixed1u_add_fp( ident_t *id_ref, int gtid, unsigned char * lhs, _Quad rhs );
 void __kmpc_atomic_fixed1_sub_fp(  ident_t *id_ref, int gtid, char * lhs, _Quad rhs );
+void __kmpc_atomic_fixed1u_sub_fp( ident_t *id_ref, int gtid, unsigned char * lhs, _Quad rhs );
 void __kmpc_atomic_fixed1_mul_fp(  ident_t *id_ref, int gtid, char * lhs, _Quad rhs );
+void __kmpc_atomic_fixed1u_mul_fp( ident_t *id_ref, int gtid, unsigned char * lhs, _Quad rhs );
 void __kmpc_atomic_fixed1_div_fp(  ident_t *id_ref, int gtid, char * lhs, _Quad rhs );
 void __kmpc_atomic_fixed1u_div_fp( ident_t *id_ref, int gtid, unsigned char * lhs, _Quad rhs );
 
 void __kmpc_atomic_fixed2_add_fp(  ident_t *id_ref, int gtid, short * lhs, _Quad rhs );
+void __kmpc_atomic_fixed2u_add_fp( ident_t *id_ref, int gtid, unsigned short * lhs, _Quad rhs );
 void __kmpc_atomic_fixed2_sub_fp(  ident_t *id_ref, int gtid, short * lhs, _Quad rhs );
+void __kmpc_atomic_fixed2u_sub_fp( ident_t *id_ref, int gtid, unsigned short * lhs, _Quad rhs );
 void __kmpc_atomic_fixed2_mul_fp(  ident_t *id_ref, int gtid, short * lhs, _Quad rhs );
+void __kmpc_atomic_fixed2u_mul_fp( ident_t *id_ref, int gtid, unsigned short * lhs, _Quad rhs );
 void __kmpc_atomic_fixed2_div_fp(  ident_t *id_ref, int gtid, short * lhs, _Quad rhs );
 void __kmpc_atomic_fixed2u_div_fp( ident_t *id_ref, int gtid, unsigned short * lhs, _Quad rhs );
 
 void __kmpc_atomic_fixed4_add_fp(  ident_t *id_ref, int gtid, kmp_int32 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed4u_add_fp( ident_t *id_ref, int gtid, kmp_uint32 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed4_sub_fp(  ident_t *id_ref, int gtid, kmp_int32 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed4u_sub_fp( ident_t *id_ref, int gtid, kmp_uint32 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed4_mul_fp(  ident_t *id_ref, int gtid, kmp_int32 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed4u_mul_fp( ident_t *id_ref, int gtid, kmp_uint32 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed4_div_fp(  ident_t *id_ref, int gtid, kmp_int32 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed4u_div_fp( ident_t *id_ref, int gtid, kmp_uint32 * lhs, _Quad rhs );
 
 void __kmpc_atomic_fixed8_add_fp(  ident_t *id_ref, int gtid, kmp_int64 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed8u_add_fp( ident_t *id_ref, int gtid, kmp_uint64 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed8_sub_fp(  ident_t *id_ref, int gtid, kmp_int64 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed8u_sub_fp( ident_t *id_ref, int gtid, kmp_uint64 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed8_mul_fp(  ident_t *id_ref, int gtid, kmp_int64 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed8u_mul_fp( ident_t *id_ref, int gtid, kmp_uint64 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed8_div_fp(  ident_t *id_ref, int gtid, kmp_int64 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed8u_div_fp( ident_t *id_ref, int gtid, kmp_uint64 * lhs, _Quad rhs );
 

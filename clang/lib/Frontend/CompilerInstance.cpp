@@ -859,7 +859,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     createFrontendTimer();
 
   if (getFrontendOpts().ShowStats || !getFrontendOpts().StatsFile.empty())
-    llvm::EnableStatistics();
+    llvm::EnableStatistics(false);
 
   for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
     // Reset the ID tables if we are reusing the SourceManager and parsing
