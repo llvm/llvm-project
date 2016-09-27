@@ -151,7 +151,7 @@ protected:
   static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC, {0}, false}
 
 /// \brief Enable the collection and printing of statistics.
-void EnableStatistics();
+void EnableStatistics(bool PrintOnExit = true);
 
 /// \brief Check if statistics are enabled.
 bool AreStatisticsEnabled();

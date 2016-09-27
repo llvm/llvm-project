@@ -45,6 +45,7 @@ static cl::opt<bool> StatsAsJSON("stats-json",
                                  cl::desc("Display statistics as json data"));
 
 static bool Enabled;
+static bool PrintOnExit;
 
 namespace {
 /// StatisticInfo - This class is used in a ManagedStatic so that it is created
@@ -91,12 +92,13 @@ void Statistic::RegisterStatistic() {
 
 // Print information when destroyed, iff command line option is specified.
 StatisticInfo::~StatisticInfo() {
-  if (::Stats)
+  if (::Stats || PrintOnExit)
     llvm::PrintStatistics();
 }
 
-void llvm::EnableStatistics() {
+void llvm::EnableStatistics(bool PrintOnExit) {
   Enabled = true;
+  ::PrintOnExit = PrintOnExit;
 }
 
 bool llvm::AreStatisticsEnabled() {
