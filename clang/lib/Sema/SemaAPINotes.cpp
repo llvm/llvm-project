@@ -491,8 +491,12 @@ void Sema::ProcessAPINotes(Decl *D) {
       if (api_notes::APINotesReader *Reader
             = APINotes.findAPINotes(D->getLocation())) {
         if (auto Context = GetContext(Reader)) {
+          bool isInstanceProperty =
+            (Property->getPropertyAttributesAsWritten() &
+               ObjCPropertyDecl::OBJC_PR_class) == 0;
           if (auto Info = Reader->lookupObjCProperty(*Context,
-                                                     Property->getName())) {
+                                                     Property->getName(),
+                                                     isInstanceProperty)) {
             ::ProcessAPINotes(*this, Property, *Info);
           }
         }

@@ -12,8 +12,17 @@ Classes:
         Nullability:      [ N, S ]
     Properties:
       - Name: intValue
+        PropertyKind:    Instance
         Availability: none
         AvailabilityMsg: "wouldn't work anyway"
+      - Name: nonnullAInstance
+        PropertyKind:    Instance
+        Nullability:     N
+      - Name: nonnullAClass
+        PropertyKind:    Class
+        Nullability:     N
+      - Name: nonnullABoth
+        Nullability:     N
   - Name: B
     Availability: none
     AvailabilityMsg: "just don't"
