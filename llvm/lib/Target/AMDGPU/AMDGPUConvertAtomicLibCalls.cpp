@@ -32,7 +32,7 @@ using namespace llvm;
 
 namespace {
 const char MangledAtomicPrefix[] = "U7_Atomic";
-};
+} // anonymous namespace
 
 // Check if a mangled type name is unsigned
 static bool isMangledTypeUnsigned(char Mangled) {
@@ -95,7 +95,7 @@ char AMDGPUConvertAtomicLibCalls::ID = 0;
 INITIALIZE_PASS(
     AMDGPUConvertAtomicLibCalls, "amdgpu-lower-opencl-atomic-builtins",
     "Convert OpenCL atomic intrinsic calls into LLVM IR Instructions ", false,
-    false);
+    false)
 
 char &llvm::AMDGPUConvertAtomicLibCallsID = AMDGPUConvertAtomicLibCalls::ID;
 

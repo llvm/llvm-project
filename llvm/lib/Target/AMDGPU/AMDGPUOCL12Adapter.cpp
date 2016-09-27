@@ -48,7 +48,7 @@ public:
 }
 
 INITIALIZE_PASS(AMDGPUOCL12Adapter, "amdgpu-opencl-12-adapter",
-                "Convert OpenCL 1.2 builtins to 2.0 builtins", false, false);
+                "Convert OpenCL 1.2 builtins to 2.0 builtins", false, false)
 
 char AMDGPUOCL12Adapter::ID = 0;
 
