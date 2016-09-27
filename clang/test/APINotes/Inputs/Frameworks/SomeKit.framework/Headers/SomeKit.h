@@ -24,4 +24,15 @@ __attribute__((objc_root_class))
 +(instancetype)processInfo;
 @end
 
+@interface A(NonNullProperties)
+@property (nonatomic, readwrite, retain) A *nonnullAInstance;
+@property (class, nonatomic, readwrite, retain) A *nonnullAInstance;
+
+@property (nonatomic, readwrite, retain) A *nonnullAClass;
+@property (class, nonatomic, readwrite, retain) A *nonnullAClass;
+
+@property (nonatomic, readwrite, retain) A *nonnullABoth;
+@property (class, nonatomic, readwrite, retain) A *nonnullABoth;
+@end
+
 #endif

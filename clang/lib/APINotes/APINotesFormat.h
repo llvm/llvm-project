@@ -36,7 +36,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 13;  // Function/method parameters
+const uint16_t VERSION_MINOR = 14;  // Objective-C class properties
 
 using IdentifierID = PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = BCVBR<16>;
