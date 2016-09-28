@@ -134,6 +134,7 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, Defined *Sym,
   case IMAGE_REL_ARM_BRANCH20T: applyBranch20T(Off, S - P - 4); break;
   case IMAGE_REL_ARM_BRANCH24T: applyBranch24T(Off, S - P - 4); break;
   case IMAGE_REL_ARM_BLX23T:    applyBranch24T(Off, S - P - 4); break;
+  case IMAGE_REL_ARM_SECREL:    add32(Off, Sym->getSecrel()); break;
   default:
     fatal("unsupported relocation type");
   }

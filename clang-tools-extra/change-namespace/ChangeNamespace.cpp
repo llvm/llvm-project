@@ -256,9 +256,10 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   auto DeclMatcher = namedDecl(
       hasAncestor(namespaceDecl()),
       unless(anyOf(
-          hasAncestor(namespaceDecl(isAnonymous())),
+          isImplicit(), hasAncestor(namespaceDecl(isAnonymous())),
           hasAncestor(cxxRecordDecl()),
           allOf(IsInMovedNs, unless(cxxRecordDecl(unless(isDefinition())))))));
+
   // Match TypeLocs on the declaration. Carefully match only the outermost
   // TypeLoc that's directly linked to the old class and don't handle nested
   // name specifier locs.
@@ -271,10 +272,13 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
               hasAncestor(decl().bind("dc")))
           .bind("type"),
       this);
+
   // Types in `UsingShadowDecl` is not matched by `typeLoc` above, so we need to
   // special case it.
   Finder->addMatcher(
-      usingDecl(hasAnyUsingShadowDecl(IsInMovedNs)).bind("using_decl"), this);
+      usingDecl(IsInMovedNs, hasAnyUsingShadowDecl(decl())).bind("using_decl"),
+      this);
+
   // Handle types in nested name specifier.
   Finder->addMatcher(nestedNameSpecifierLoc(
                          hasAncestor(decl(IsInMovedNs).bind("dc")),
@@ -284,18 +288,19 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                      this);
 
   // Handle function.
-  // Only handle functions that are defined in a namespace excluding static
-  // methods (qualified by nested specifier) and functions defined in the global
-  // namespace.
+  // Only handle functions that are defined in a namespace excluding member
+  // function, static methods (qualified by nested specifier), and functions
+  // defined in the global namespace.
   // Note that the matcher does not exclude calls to out-of-line static method
   // definitions, so we need to exclude them in the callback handler.
-  auto FuncMatcher = functionDecl(
-      hasParent(namespaceDecl()),
-      unless(anyOf(IsInMovedNs, hasAncestor(namespaceDecl(isAnonymous())),
-                   hasAncestor(cxxRecordDecl()))));
+  auto FuncMatcher =
+      functionDecl(unless(anyOf(cxxMethodDecl(), IsInMovedNs,
+                                hasAncestor(namespaceDecl(isAnonymous())),
+                                hasAncestor(cxxRecordDecl()))),
+                   hasParent(namespaceDecl()));
   Finder->addMatcher(
       decl(forEachDescendant(callExpr(callee(FuncMatcher)).bind("call")),
-           IsInMovedNs)
+           IsInMovedNs, unless(isImplicit()))
           .bind("dc"),
       this);
 }
@@ -432,6 +437,8 @@ void ChangeNamespaceTool::moveClassForwardDeclaration(
 
 // Replaces a qualified symbol that refers to a declaration `DeclName` with the
 // shortest qualified name possible when the reference is in `NewNamespace`.
+// FIXME: don't need to add redundant namespace qualifier when there is
+// UsingShadowDecl or using namespace decl.
 void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
     const ast_matchers::MatchFinder::MatchResult &Result, const Decl *DeclCtx,
     SourceLocation Start, SourceLocation End, llvm::StringRef DeclName) {

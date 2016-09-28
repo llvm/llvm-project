@@ -1154,7 +1154,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uintX_t Alignment = Sec->getAlignment();
     if (Sec->PageAlign)
-      Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
+      Alignment = std::max<uintX_t>(Alignment, Target->MaxPageSize);
 
     auto I = Config->SectionStartMap.find(Sec->getName());
     if (I != Config->SectionStartMap.end())
@@ -1182,14 +1182,14 @@ template <class ELFT, class uintX_t>
 static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
   uintX_t Alignment = Sec->getAlignment();
   if (Sec->PageAlign)
-    Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
+    Alignment = std::max<uintX_t>(Alignment, Target->MaxPageSize);
   Off = alignTo(Off, Alignment);
 
   // Relocatable output does not have program headers
   // and does not need any other offset adjusting.
   if (Config->Relocatable || !(Sec->getFlags() & SHF_ALLOC))
     return Off;
-  return alignTo(Off, Target->PageSize, Sec->getVA());
+  return alignTo(Off, Target->MaxPageSize, Sec->getVA());
 }
 
 template <class ELFT, class uintX_t>
@@ -1241,7 +1241,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       H.p_vaddr = First->getVA();
     }
     if (H.p_type == PT_LOAD)
-      H.p_align = Target->PageSize;
+      H.p_align = Target->MaxPageSize;
     else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
 

@@ -39,7 +39,7 @@ public:
   static llvm::Optional<MinidumpParser>
   Create(const lldb::DataBufferSP &data_buf_sp);
 
-  lldb::offset_t GetByteSize();
+  llvm::ArrayRef<uint8_t> GetData();
 
   llvm::ArrayRef<uint8_t> GetStream(MinidumpStreamType stream_type);
 
@@ -71,6 +71,6 @@ private:
       llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &&directory_map);
 };
 
-} // namespace minidump
-} // namespace lldb_private
+} // end namespace minidump
+} // end namespace lldb_private
 #endif // liblldb_MinidumpParser_h_

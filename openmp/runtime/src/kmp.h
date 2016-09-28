@@ -2733,7 +2733,9 @@ extern volatile int __kmp_init_gtid;
 extern volatile int __kmp_init_common;
 extern volatile int __kmp_init_middle;
 extern volatile int __kmp_init_parallel;
+#if KMP_USE_MONITOR
 extern volatile int __kmp_init_monitor;
+#endif
 extern volatile int __kmp_init_user_locks;
 extern int __kmp_init_counter;
 extern int __kmp_root_counter;
@@ -2760,7 +2762,9 @@ extern char const   *__kmp_barrier_pattern_name        [ bp_last_bar ];
 extern kmp_bootstrap_lock_t __kmp_initz_lock;     /* control initialization */
 extern kmp_bootstrap_lock_t __kmp_forkjoin_lock;  /* control fork/join access */
 extern kmp_bootstrap_lock_t __kmp_exit_lock;      /* exit() is not always thread-safe */
+#if KMP_USE_MONITOR
 extern kmp_bootstrap_lock_t __kmp_monitor_lock;   /* control monitor thread creation */
+#endif
 extern kmp_bootstrap_lock_t __kmp_tp_cached_lock; /* used for the hack to allow threadprivate cache and __kmp_threads expansion to co-exist */
 
 extern kmp_lock_t __kmp_global_lock;    /* control OS/global access  */
@@ -2780,7 +2784,9 @@ extern enum sched_type  __kmp_auto;     /* default auto scheduling method */
 extern int              __kmp_chunk;    /* default runtime chunk size */
 
 extern size_t     __kmp_stksize;        /* stack size per thread         */
+#if KMP_USE_MONITOR
 extern size_t     __kmp_monitor_stksize;/* stack size for monitor thread */
+#endif
 extern size_t     __kmp_stkoffset;      /* stack offset per thread       */
 extern int        __kmp_stkpadding;     /* Should we pad root thread(s) stack */
 
@@ -2802,10 +2808,13 @@ extern int        __kmp_suspend_count;  /* count inside __kmp_suspend_template()
 
 extern kmp_uint32 __kmp_yield_init;
 extern kmp_uint32 __kmp_yield_next;
+
+#if KMP_USE_MONITOR
 extern kmp_uint32 __kmp_yielding_on;
 extern kmp_uint32 __kmp_yield_cycle;
 extern kmp_int32  __kmp_yield_on_count;
 extern kmp_int32  __kmp_yield_off_count;
+#endif
 
 /* ------------------------------------------------------------------------- */
 extern int        __kmp_allThreadsSpecified;
@@ -3152,7 +3161,7 @@ extern void __kmp_check_stack_overlap( kmp_info_t *thr );
 extern void __kmp_expand_host_name( char *buffer, size_t size );
 extern void __kmp_expand_file_name( char *result, size_t rlen, char *pattern );
 
-#if KMP_OS_WINDOWS
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 extern void __kmp_initialize_system_tick( void );  /* Initialize timer tick value */
 #endif
 
@@ -3193,7 +3202,9 @@ extern double __kmp_read_cpu_time( void );
 
 extern int  __kmp_read_system_info( struct kmp_sys_info *info );
 
+#if KMP_USE_MONITOR
 extern void __kmp_create_monitor( kmp_info_t *th );
+#endif
 
 extern void *__kmp_launch_thread( kmp_info_t *thr );
 
@@ -3205,7 +3216,9 @@ extern int  __kmp_is_thread_alive( kmp_info_t * th, DWORD *exit_val );
 extern void __kmp_free_handle( kmp_thread_t tHandle );
 #endif
 
+#if KMP_USE_MONITOR
 extern void __kmp_reap_monitor( kmp_info_t *th );
+#endif
 extern void __kmp_reap_worker( kmp_info_t *th );
 extern void __kmp_terminate_thread( int gtid );
 

@@ -21,8 +21,13 @@
 #define __has_attribute(_attribute_) 0
 #endif
 
-#if defined(_LIBCXXABI_DLL)
- #if defined(cxxabi_EXPORTS)
+#if defined(_WIN32)
+ #if defined(_LIBCXXABI_DISABLE_DLL_IMPORT_EXPORT)
+  #define _LIBCXXABI_HIDDEN
+  #define _LIBCXXABI_DATA_VIS
+  #define _LIBCXXABI_FUNC_VIS
+  #define _LIBCXXABI_TYPE_VIS
+ #elif defined(_LIBCXXABI_BUILDING_LIBRARY)
   #define _LIBCXXABI_HIDDEN
   #define _LIBCXXABI_DATA_VIS __declspec(dllexport)
   #define _LIBCXXABI_FUNC_VIS __declspec(dllexport)

@@ -33,14 +33,6 @@ static ExitOnError ExitOnErr;
 const int BlockSize = 4096;
 
 void coff::createPDB(StringRef Path) {
-  // Create a file.
-  size_t FileSize = BlockSize * 10;
-  auto BufferOrErr = FileOutputBuffer::create(Path, FileSize);
-  if (auto EC = BufferOrErr.getError())
-    fatal(EC, "failed to open " + Path);
-  auto FileByteStream =
-      llvm::make_unique<msf::FileBufferByteStream>(std::move(*BufferOrErr));
-
   // Create the superblock.
   msf::SuperBlock SB;
   memcpy(SB.MagicBytes, msf::Magic, sizeof(msf::Magic));
@@ -76,6 +68,12 @@ void coff::createPDB(StringRef Path) {
   auto &TpiBuilder = Builder.getTpiBuilder();
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
-  // Write the root directory. Root stream is on page 2.
+  // Write to a file.
+  size_t FileSize = BlockSize * 10;
+  auto BufferOrErr = FileOutputBuffer::create(Path, FileSize);
+  if (auto EC = BufferOrErr.getError())
+    fatal(EC, "failed to open " + Path);
+  auto FileByteStream =
+      llvm::make_unique<msf::FileBufferByteStream>(std::move(*BufferOrErr));
   ExitOnErr(Builder.commit(*FileByteStream));
 }

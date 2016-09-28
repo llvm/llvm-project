@@ -519,20 +519,20 @@ namespace std {
 
 
 #ifdef _WIN32
-// only really useful for a DLL. _LIBCPP_DLL should be a compiler builtin define ideally...
-#if defined(_LIBCPP_DLL) && defined(cxx_EXPORTS)
-# define _LIBCPP_DLL_VIS __declspec(dllexport)
-# define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-# define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS _LIBCPP_DLL_VIS
-#elif defined(_LIBCPP_DLL)
-# define _LIBCPP_DLL_VIS __declspec(dllimport)
-# define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DLL_VIS
-# define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
-#else
+#if defined(_LIBCPP_DISABLE_DLL_IMPORT_EXPORT)
 # define _LIBCPP_DLL_VIS
 # define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
 # define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+#elif defined(_LIBCPP_BUILDING_LIBRARY)
+# define _LIBCPP_DLL_VIS __declspec(dllexport)
+# define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
+# define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS _LIBCPP_DLL_VIS
+#else
+# define _LIBCPP_DLL_VIS __declspec(dllimport)
+# define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DLL_VIS
+# define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #endif
+
 #define _LIBCPP_TYPE_VIS            _LIBCPP_DLL_VIS
 #define _LIBCPP_FUNC_VIS            _LIBCPP_DLL_VIS
 #define _LIBCPP_EXCEPTION_ABI       _LIBCPP_DLL_VIS
