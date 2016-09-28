@@ -31,7 +31,8 @@ class APINotesReader {
 
   Implementation &Impl;
 
-  APINotesReader(std::unique_ptr<llvm::MemoryBuffer> inputBuffer, bool &failed);
+  APINotesReader(llvm::MemoryBuffer *inputBuffer, bool ownsInputBuffer,
+                 bool &failed);
 
 public:
   /// Create a new API notes reader from the given member buffer, which
@@ -40,6 +41,13 @@ public:
   /// \returns the new API notes reader, or null if an error occurred.
   static std::unique_ptr<APINotesReader>
   get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer);
+
+  /// Create a new API notes reader from the given member buffer, which
+  /// contains the contents of a binary API notes file.
+  ///
+  /// \returns the new API notes reader, or null if an error occurred.
+  static std::unique_ptr<APINotesReader>
+  getUnmanaged(llvm::MemoryBuffer *inputBuffer);
 
   ~APINotesReader();
 
