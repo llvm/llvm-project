@@ -101,7 +101,9 @@ endmacro(add_lldb_library)
 macro(add_lldb_executable name)
   add_llvm_executable(${name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
   set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
-  # $ORIGIN is only 
+  # ELF and Mach-O loaders have different ways of expressing that an rpath
+  # should be relative to the binary being loaded. Mach-O uses @loader_path, and
+  # ELF uses $ORIGIN.
   if(APPLE)
     set(rpath_prefix "@loader_path")
   else()
