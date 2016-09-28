@@ -542,8 +542,12 @@ def fno_profile_use : Flag<["-"], "fno-profile-use">,
 
 def fapinotes : Flag<["-"], "fapinotes">, Group<f_clang_Group>,
   Flags<[CC1Option]>, HelpText<"Enable external API notes support">;
+def fapinotes_modules : Flag<["-"], "fapinotes-modules">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable module-based external API notes support">;
 def fno_apinotes : Flag<["-"], "fno-apinotes">, Group<f_clang_Group>,
   Flags<[CC1Option]>, HelpText<"Disable external API notes support">;
+def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable module-based external API notes support">;
 def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
   Group<i_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the API notes cache path">;
