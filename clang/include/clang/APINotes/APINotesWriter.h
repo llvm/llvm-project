@@ -23,6 +23,9 @@ namespace llvm {
 }
 
 namespace clang {
+
+class FileEntry;
+
 namespace api_notes {
 
 /// A class that writes API notes data to a binary representation that can be
@@ -32,8 +35,9 @@ class APINotesWriter {
   Implementation &Impl;
 
 public:
-  /// Create a new API notes writer with the given module name.
-  APINotesWriter(StringRef moduleName);
+  /// Create a new API notes writer with the given module name and
+  /// (optional) source file.
+  APINotesWriter(StringRef moduleName, const FileEntry *sourceFile);
   ~APINotesWriter();
 
   APINotesWriter(const APINotesWriter &) = delete;

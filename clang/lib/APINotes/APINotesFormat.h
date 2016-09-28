@@ -36,7 +36,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 14;  // Objective-C class properties
+const uint16_t VERSION_MINOR = 15;  // source file info
 
 using IdentifierID = PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = BCVBR<16>;
@@ -106,7 +106,8 @@ namespace control_block {
   enum {
     METADATA = 1,
     MODULE_NAME = 2,
-    MODULE_OPTIONS = 3
+    MODULE_OPTIONS = 3,
+    SOURCE_FILE = 4,
   };
 
   using MetadataLayout = BCRecordLayout<
@@ -123,6 +124,12 @@ namespace control_block {
   using ModuleOptionsLayout = BCRecordLayout<
     MODULE_OPTIONS,
     BCFixed<1> // SwiftInferImportAsMember
+  >;
+
+  using SourceFileLayout = BCRecordLayout<
+    SOURCE_FILE,
+    BCVBR<16>, // file size
+    BCVBR<16>  // creation time
   >;
 }
 

@@ -586,6 +586,10 @@ public:
   /// The name of the module that we read from the control block.
   std::string ModuleName;
 
+  // The size and modification time of the source file from
+  // which this API notes file was created, if known.
+  Optional<std::pair<off_t, time_t>> SourceFileSizeAndModTime;
+
   /// Various options and attributes for the module
   ModuleOptions ModuleOpts;
 
@@ -764,6 +768,10 @@ bool APINotesReader::Implementation::readControlBlock(
 
     case control_block::MODULE_OPTIONS:
       ModuleOpts.SwiftInferImportAsMember = (scratch.front() & 1) != 0;
+      break;
+
+    case control_block::SOURCE_FILE:
+      SourceFileSizeAndModTime = { scratch[0], scratch[1] };
       break;
 
     default:
@@ -1469,6 +1477,11 @@ APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer) {
 
 StringRef APINotesReader::getModuleName() const {
   return Impl.ModuleName;
+}
+
+Optional<std::pair<off_t, time_t>>
+APINotesReader::getSourceFileSizeAndModTime() const {
+  return Impl.SourceFileSizeAndModTime;
 }
 
 ModuleOptions APINotesReader::getModuleOptions() const {
