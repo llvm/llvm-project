@@ -1066,8 +1066,8 @@ void APINotesWriter::addObjCProperty(ContextID contextID, StringRef name,
                                      bool isInstance,
                                      const ObjCPropertyInfo &info) {
   IdentifierID nameID = Impl.getIdentifier(name);
-  assert(!Impl.ObjCProperties.count({contextID.Value, nameID, isInstance}));
-  Impl.ObjCProperties[{contextID.Value, nameID, isInstance}] = info;
+  assert(!Impl.ObjCProperties.count(std::make_tuple(contextID.Value, nameID, isInstance)));
+  Impl.ObjCProperties[std::make_tuple(contextID.Value, nameID, isInstance)] = info;
 }
 
 void APINotesWriter::addObjCMethod(ContextID contextID,
