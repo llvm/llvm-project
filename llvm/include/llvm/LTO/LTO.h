@@ -171,7 +171,7 @@ public:
     bool canBeOmittedFromSymbolTable() const {
       return GV && llvm::canBeOmittedFromSymbolTable(GV);
     }
-    bool isTLS() {
+    bool isTLS() const {
       // FIXME: Expose a thread-local flag for module asm symbols.
       return GV && GV->isThreadLocal();
     }
