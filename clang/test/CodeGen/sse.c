@@ -1,8 +1,6 @@
-// RUN: %clang_cc1 -O3 -triple x86_64-apple-macosx10.8.0 -target-feature +sse4.1 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -O3 -triple x86_64-apple-macosx10.8.0 -target-feature +sse4.1 -emit-llvm %s -o - | FileCheck %s
 // FIXME: This test currently depends on optimization - it should be rewritten to avoid it.
 
-// Don't include mm_malloc.h, it's system specific.
-#define __MM_MALLOC_H
 
 #include <emmintrin.h>
 

@@ -26,7 +26,8 @@ define i32 @test(float %a, float %b)  {
 ; CHECK-NEXT:    movb %dil, %r8b
 ; CHECK-NEXT:    andl $1, %r8d
 ; CHECK-NEXT:    kmovw %r8d, %k1
-; CHECK-NEXT:    kortestw %k1, %k1
+; CHECK-NEXT:    kmovw %k1, %ecx
+; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp) ## 1-byte Spill
 ; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; CHECK-NEXT:    jne LBB0_1

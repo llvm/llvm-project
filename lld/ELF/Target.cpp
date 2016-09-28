@@ -546,7 +546,6 @@ void X86TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
 }
 
 template <class ELFT> X86_64TargetInfo<ELFT>::X86_64TargetInfo() {
-  MaxPageSize = 0x200000; // 2MiB
   CopyRel = R_X86_64_COPY;
   GotRel = R_X86_64_GLOB_DAT;
   PltRel = R_X86_64_JUMP_SLOT;
@@ -989,7 +988,7 @@ PPC64TargetInfo::PPC64TargetInfo() {
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
-  PageSize = 65536;
+  MaxPageSize = 65536;
 
   // The PPC64 ELF ABI v1 spec, says:
   //
@@ -1855,7 +1854,7 @@ bool ARMTargetInfo::isTlsInitialExecRel(uint32_t Type) const {
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   GotPltHeaderEntriesNum = 2;
-  PageSize = 65536;
+  MaxPageSize = 65536;
   GotEntrySize = sizeof(typename ELFT::uint);
   GotPltEntrySize = sizeof(typename ELFT::uint);
   PltEntrySize = 16;

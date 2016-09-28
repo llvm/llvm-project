@@ -226,6 +226,11 @@ void elf::ObjectFile<ELFT>::initializeSections(
     if (Sections[I] == &InputSection<ELFT>::Discarded)
       continue;
 
+    if (Sec.sh_flags & SHF_EXCLUDE) {
+      Sections[I] = &InputSection<ELFT>::Discarded;
+      continue;
+    }
+
     switch (Sec.sh_type) {
     case SHT_GROUP:
       Sections[I] = &InputSection<ELFT>::Discarded;
