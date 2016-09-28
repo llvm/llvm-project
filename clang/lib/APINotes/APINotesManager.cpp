@@ -146,12 +146,14 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   StringRef apiNotesFileExt = llvm::sys::path::extension(apiNotesFileName);
   if (!apiNotesFileExt.empty() &&
       apiNotesFileExt.substr(1) == BINARY_APINOTES_EXTENSION) {
+    auto compiledFileID = SourceMgr.createFileID(apiNotesFile, SourceLocation(), SrcMgr::C_User);
+
     // Load the file.
-    auto buffer = fileMgr.getBufferForFile(apiNotesFile);
+    auto buffer = SourceMgr.getBuffer(compiledFileID, SourceLocation());
     if (!buffer) return nullptr;
 
     // Load the binary form.
-    return APINotesReader::get(std::move(buffer.get()));
+    return APINotesReader::getUnmanaged(buffer);
   }
 
   // If we haven't pruned the API notes cache yet during this execution, do

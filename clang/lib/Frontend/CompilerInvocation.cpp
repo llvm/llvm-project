@@ -2390,8 +2390,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
 
-    // -fapinotes requires -fapinotes-cache-path=<directory>.
-    if (LangOpts.APINotes &&
+    // -fapinotes and -fapinotes-modules requires -fapinotes-cache-path=<directory>.
+    if ((LangOpts.APINotes || LangOpts.APINotesModules) &&
         Res.getFileSystemOpts().APINotesCachePath.empty()) {
       Diags.Report(diag::err_no_apinotes_cache_path);
       Success = false;
