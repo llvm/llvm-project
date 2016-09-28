@@ -28,7 +28,7 @@ static RequiredArgs
 commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
                                   llvm::Value *This, llvm::Value *ImplicitParam,
                                   QualType ImplicitParamTy, const CallExpr *CE,
-                                  CallArgList &Args, CallArgList *RtlArgs) {
+                                  CallArgList &Args) {
   assert(CE == nullptr || isa<CXXMemberCallExpr>(CE) ||
          isa<CXXOperatorCallExpr>(CE));
   assert(MD->isInstance() &&
@@ -61,12 +61,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
   RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, Args.size(), MD);
 
   // And the rest of the call args.
-  if (RtlArgs) {
-    // Special case: if the caller emitted the arguments right-to-left already
-    // (prior to emitting the *this argument), we're done. This happens for
-    // assignment operators.
-    Args.addFrom(*RtlArgs);
-  } else if (CE) {
+  if (CE) {
     // Special case: skip first argument of CXXOperatorCall (it is "this").
     unsigned ArgsToSkip = isa<CXXOperatorCallExpr>(CE) ? 1 : 0;
     CGF.EmitCallArgs(Args, FPT, drop_begin(CE->arguments(), ArgsToSkip),
@@ -82,11 +77,11 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
 RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
     const CXXMethodDecl *MD, llvm::Value *Callee, ReturnValueSlot ReturnValue,
     llvm::Value *This, llvm::Value *ImplicitParam, QualType ImplicitParamTy,
-    const CallExpr *CE, CallArgList *RtlArgs) {
+    const CallExpr *CE) {
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   CallArgList Args;
   RequiredArgs required = commonEmitCXXMemberOrOperatorCall(
-      *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
+      *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args);
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required),
                   Callee, ReturnValue, Args, MD);
 }
@@ -97,7 +92,7 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
     StructorType Type) {
   CallArgList Args;
   commonEmitCXXMemberOrOperatorCall(*this, DD, This, ImplicitParam,
-                                    ImplicitParamTy, CE, Args, nullptr);
+                                    ImplicitParamTy, CE, Args);
   return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(DD, Type),
                   Callee, ReturnValueSlot(), Args, DD);
 }
@@ -175,19 +170,6 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
-  // operator before the LHS.
-  CallArgList RtlArgStorage;
-  CallArgList *RtlArgs = nullptr;
-  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
-    if (OCE->isAssignmentOp()) {
-      RtlArgs = &RtlArgStorage;
-      EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
-                   drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
-                   /*ParamsToSkip*/0, /*ForceRightToLeftEvaluation*/true);
-    }
-  }
-
   Address This = Address::invalid();
   if (IsArrow)
     This = EmitPointerWithAlignment(Base);
@@ -205,12 +187,10 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) {
         // We don't like to generate the trivial copy/move assignment operator
         // when it isn't necessary; just produce the proper effect here.
-        LValue RHS = isa<CXXOperatorCallExpr>(CE)
-                         ? MakeNaturalAlignAddrLValue(
-                               (*RtlArgs)[0].RV.getScalarVal(),
-                               (*(CE->arg_begin() + 1))->getType())
-                         : EmitLValue(*CE->arg_begin());
-        EmitAggregateAssign(This, RHS.getAddress(), CE->getType());
+        // Special case: skip first argument of CXXOperatorCall (it is "this").
+        unsigned ArgsToSkip = isa<CXXOperatorCallExpr>(CE) ? 1 : 0;
+        Address RHS = EmitLValue(*(CE->arg_begin() + ArgsToSkip)).getAddress();
+        EmitAggregateAssign(This, RHS, CE->getType());
         return RValue::get(This.getPointer());
       }
 
@@ -269,8 +249,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
         Callee = CGM.GetAddrOfFunction(GlobalDecl(DDtor, Dtor_Complete), Ty);
       }
       EmitCXXMemberOrOperatorCall(MD, Callee, ReturnValue, This.getPointer(),
-                                  /*ImplicitParam=*/nullptr, QualType(), CE,
-                                  nullptr);
+                                  /*ImplicitParam=*/nullptr, QualType(), CE);
     }
     return RValue::get(nullptr);
   }
@@ -303,8 +282,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   }
 
   return EmitCXXMemberOrOperatorCall(MD, Callee, ReturnValue, This.getPointer(),
-                                     /*ImplicitParam=*/nullptr, QualType(), CE,
-                                     RtlArgs);
+                                     /*ImplicitParam=*/nullptr, QualType(), CE);
 }
 
 RValue

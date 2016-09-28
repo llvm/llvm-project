@@ -76,16 +76,6 @@ public:
   /// expression refers to.
   OverloadedOperatorKind getOperator() const { return Operator; }
 
-  static bool isAssignmentOp(OverloadedOperatorKind Opc) {
-    return Opc == OO_Equal || Opc == OO_StarEqual ||
-           Opc == OO_SlashEqual || Opc == OO_PercentEqual ||
-           Opc == OO_PlusEqual || Opc == OO_MinusEqual ||
-           Opc == OO_LessLessEqual || Opc == OO_GreaterGreaterEqual ||
-           Opc == OO_AmpEqual || Opc == OO_CaretEqual ||
-           Opc == OO_PipeEqual;
-  }
-  bool isAssignmentOp() const { return isAssignmentOp(getOperator()); }
-
   /// \brief Returns the location of the operator symbol in the expression.
   ///
   /// When \c getOperator()==OO_Call, this is the location of the right
