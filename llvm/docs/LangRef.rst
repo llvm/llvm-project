@@ -2164,18 +2164,19 @@ If an atomic operation is marked ``singlethread``, it only *synchronizes with*,
 and only participates in the seq\_cst total orderings of, other operations
 running in the same thread (for example, in signal handlers).
 
-.. _synchscope:
+.. _syncscope:
 
-If an atomic operation is marked ``syncscope(<n>)``, then it is target defined
-how ``<n>`` affects which other operations it *synchronizes with*, and with
-which other operations it participates in the seq\_cst total orderings (for
-example, OpenCL supports separate memory scopes for device, work-group and
-sub-group).
+If an atomic operation is marked ``syncscope(<n>)``, then it
+*synchronizes with*, and participates in the seq\_cst total orderings of, other
+atomic operations marked ``syncscope(<n>)``. It is target defined how it
+interacts with atomic operations marked ``singlethread``, marked
+``syncscope(<m>)`` where ``m != n``, or not marked ``singlethread`` or
+``syncscope(<n>)``.
 
 Otherwise, an atomic operation that is not marked ``singlethread`` or
 ``syncscope(<n>)`` *synchronizes with*, and participates in the global seq\_cst
-total orderings of, other operations that do not specify ``singlethread`` or
-``syncscope(<n>)`` running in any thread.
+total orderings of, other operations that are not marked ``singlethread`` or
+``syncscope(<n>)``.
 
 .. _fastmath:
 
@@ -7032,7 +7033,7 @@ Syntax:
 ::
 
       <result> = load [volatile] <ty>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<index>][, !invariant.load !<index>][, !invariant.group !<index>][, !nonnull !<index>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>]
-      <result> = load atomic [volatile] <ty>, <ty>* <pointer> [singlethread|synchscope(<n>)] <ordering>, align <alignment> [, !invariant.group !<index>]
+      <result> = load atomic [volatile] <ty>, <ty>* <pointer> [singlethread|syncscope(<n>)] <ordering>, align <alignment> [, !invariant.group !<index>]
       !<index> = !{ i32 1 }
       !<deref_bytes_node> = !{i64 <dereferenceable_bytes>}
       !<align_node> = !{ i64 <value_alignment> }
@@ -7053,7 +7054,7 @@ modify the number or order of execution of this ``load`` with other
 :ref:`volatile operations <volatile>`.
 
 If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
-<ordering>` and optional ``singlethread`` or ``synchscope(<n>)`` argument. The
+<ordering>` and optional ``singlethread`` or ``syncscope(<n>)`` argument. The
 ``release`` and ``acq_rel`` orderings are not valid on ``load`` instructions.
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
@@ -7161,7 +7162,7 @@ Syntax:
 ::
 
       store [volatile] <ty> <value>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<index>][, !invariant.group !<index>]        ; yields void
-      store atomic [volatile] <ty> <value>, <ty>* <pointer> [singlethread|synchscope(<n>)] <ordering>, align <alignment> [, !invariant.group !<index>] ; yields void
+      store atomic [volatile] <ty> <value>, <ty>* <pointer> [singlethread|syncscope(<n>)] <ordering>, align <alignment> [, !invariant.group !<index>] ; yields void
 
 Overview:
 """""""""
@@ -7181,7 +7182,7 @@ allowed to modify the number or order of execution of this ``store`` with other
 structural type <t_opaque>`) can be stored.
 
 If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
-<ordering>` and optional ``singlethread`` or ``synchscope(<n>)`` argument. The
+<ordering>` and optional ``singlethread`` or ``syncscope(<n>)`` argument. The
 ``acquire`` and ``acq_rel`` orderings aren't valid on ``store`` instructions.
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
@@ -7249,7 +7250,7 @@ Syntax:
 
 ::
 
-      fence [singlethread|synchscope(<n>)] <ordering>            ; yields void
+      fence [singlethread|syncscope(<n>)] <ordering>            ; yields void
 
 Overview:
 """""""""
@@ -7283,12 +7284,8 @@ A ``fence`` which has ``seq_cst`` ordering, in addition to having both
 ``acquire`` and ``release`` semantics specified above, participates in
 the global program order of other ``seq_cst`` operations and/or fences.
 
-The optional ":ref:`singlethread <singlethread>`" argument specifies
-that the fence only synchronizes with other fences in the same thread.
-(This is useful for interacting with signal handlers.)
-
-If ``fence`` is marked ``syncscope(<n>)``, then it is target defined how ``<n>``
-affects which other operations it *synchronizes with*.
+A ``fence`` instruction can also take an optional
+":ref:`singlethread <singlethread>`" or ":ref:`syncscope <syncscope>`" argument.
 
 Example:
 """"""""
@@ -7297,7 +7294,7 @@ Example:
 
       fence acquire                          ; yields void
       fence singlethread seq_cst             ; yields void
-      fence synchscope(2) seq_cst            ; yields void
+      fence syncscope(2) seq_cst             ; yields void
 
 .. _i_cmpxchg:
 
@@ -7309,7 +7306,7 @@ Syntax:
 
 ::
 
-      cmpxchg [weak] [volatile] <ty>* <pointer>, <ty> <cmp>, <ty> <new> [singlethread|synchscope(<n>)] <success ordering> <failure ordering> ; yields  { ty, i1 }
+      cmpxchg [weak] [volatile] <ty>* <pointer>, <ty> <cmp>, <ty> <new> [singlethread|syncscope(<n>)] <success ordering> <failure ordering> ; yields  { ty, i1 }
 
 Overview:
 """""""""
@@ -7338,12 +7335,8 @@ must be at least ``monotonic``, the ordering constraint on failure must be no
 stronger than that on success, and the failure ordering cannot be either
 ``release`` or ``acq_rel``.
 
-The optional "``singlethread``" argument declares that the ``cmpxchg``
-is only atomic with respect to code (usually signal handlers) running in
-the same thread as the ``cmpxchg``.
-
-If ``cmpxchg`` is marked ``syncscope(<n>)``, then it is target defined how
-``<n>`` affects which other operations it *synchronizes with*.
+A ``cmpxchg`` instruction can also take an optional
+":ref:`singlethread <singlethread>`" or ":ref:`syncscope <syncscope>`" argument.
 
 The pointer passed into cmpxchg must have alignment greater than or
 equal to the size in memory of the operand.
@@ -7397,7 +7390,7 @@ Syntax:
 
 ::
 
-      atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [singlethread|synchscope(<n>)] <ordering>                   ; yields ty
+      atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [singlethread|syncscope(<n>)] <ordering>                   ; yields ty
 
 Overview:
 """""""""
@@ -7431,12 +7424,8 @@ be a pointer to that type. If the ``atomicrmw`` is marked as
 order of execution of this ``atomicrmw`` with other :ref:`volatile
 operations <volatile>`.
 
-The optional "``singlethread``" argument declares that the ``atomicrmw``
-is only atomic with respect to code (usually signal handlers) running in
-the same thread as the ``atomicrmw``.
-
-If ``atomicrmw`` is marked ``syncscope(<n>)``, then it is target defined how
-``<n>`` affects which other operations it *synchronizes with*.
+A ``atomicrmw`` instruction can also take an optional
+":ref:`singlethread <singlethread>`" or ":ref:`syncscope <syncscope>`" argument.
 
 Semantics:
 """"""""""

@@ -1,9 +1,9 @@
 ; RUN:   opt -mtriple=amdgcn--amdhsa -amdgpu-lower-opencl-atomic-builtins -mcpu=fiji -S < %s | FileCheck %s
-; CHECK: atomicrmw add i32 addrspace(1)* null, i32 1 synchscope(2) monotonic
-; CHECK: atomicrmw add i32 addrspace(1)* null, i32 0 synchscope(2) monotonic
-; CHECK: cmpxchg i32 addrspace(1)* null, i32 0, i32 0 synchscope(2) monotonic monotonic
-; CHECK: atomicrmw xchg i32 addrspace(1)* null, i32 0 synchscope(2) monotonic
-; CHECK: [[A:%[0-9]*]] = atomicrmw xchg i32 addrspace(3)* null, i32 0 synchscope(2) monotonic
+; CHECK: atomicrmw add i32 addrspace(1)* null, i32 1 syncscope(2) monotonic
+; CHECK: atomicrmw add i32 addrspace(1)* null, i32 0 syncscope(2) monotonic
+; CHECK: cmpxchg i32 addrspace(1)* null, i32 0, i32 0 syncscope(2) monotonic monotonic
+; CHECK: atomicrmw xchg i32 addrspace(1)* null, i32 0 syncscope(2) monotonic
+; CHECK: [[A:%[0-9]*]] = atomicrmw xchg i32 addrspace(3)* null, i32 0 syncscope(2) monotonic
 ; CHECK: bitcast i32 [[A]] to float
 
 define amdgpu_kernel void @test() {

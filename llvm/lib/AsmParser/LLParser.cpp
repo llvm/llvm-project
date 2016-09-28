@@ -1274,6 +1274,19 @@ bool LLParser::ParseStringConstant(std::string &Result) {
   return false;
 }
 
+/// ParseUInt8
+///   ::= uint8
+bool LLParser::ParseUInt8(uint8_t &Val) {
+  if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
+    return TokError("expected integer");
+  uint64_t Val64 = Lex.getAPSIntVal().getLimitedValue(0xFFULL+1);
+  if (Val64 != uint8_t(Val64))
+    return TokError("expected 8-bit integer (too large)");
+  Val = Val64;
+  Lex.Lex();
+  return false;
+}
+
 /// ParseUInt32
 ///   ::= uint32
 bool LLParser::ParseUInt32(uint32_t &Val) {
@@ -1888,7 +1901,7 @@ bool LLParser::parseAllocSizeArguments(unsigned &BaseSizeArg,
 
 /// ParseScopeAndOrdering
 ///   if isAtomic:
-///     ::= 'singlethread' or 'synchscope' '(' uint32 ')'? AtomicOrdering
+///     ::= 'singlethread' or 'syncscope' '(' uint8 ')'? AtomicOrdering
 ///   else
 ///     ::=
 ///
@@ -1904,27 +1917,27 @@ bool LLParser::ParseScopeAndOrdering(bool isAtomic, SynchronizationScope &Scope,
 /// ParseScope
 ///   ::= /* empty */
 ///   ::= 'singlethread'
-///   ::= 'synchscope' '(' uint32 ')'
+///   ::= 'syncscope' '(' uint8 ')'
 ///
 /// This sets Scope to the parsed value.
 bool LLParser::ParseScope(SynchronizationScope &Scope) {
-  if (EatIfPresent(lltok::kw_synchscope)) {
+  if (EatIfPresent(lltok::kw_syncscope)) {
     auto StartParen = Lex.getLoc();
     if (!EatIfPresent(lltok::lparen))
-      return Error(StartParen, "expected '(' in synchscope");
+      return Error(StartParen, "expected '(' in syncscope");
 
-    unsigned ScopeU32 = 0;
-    auto ScopeU32At = Lex.getLoc();
-    if (ParseUInt32(ScopeU32))
+    uint8_t ScopeU8 = 0;
+    auto ScopeU8At = Lex.getLoc();
+    if (ParseUInt8(ScopeU8))
       return true;
-    if (ScopeU32 < SynchronizationScopeFirstTargetSpecific)
-      return Error(ScopeU32At, "invalid target specific synchronization scope");
+    if (ScopeU8 < SynchronizationScopeFirstTargetSpecific)
+      return Error(ScopeU8At, "invalid syncscope");
 
     auto EndParen = Lex.getLoc();
     if (!EatIfPresent(lltok::rparen))
-      return Error(EndParen, "expected ')' in synchscope");
+      return Error(EndParen, "expected ')' in syncscope");
 
-    Scope = SynchronizationScope(ScopeU32);
+    Scope = SynchronizationScope(ScopeU8);
     return false;
   }
 

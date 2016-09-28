@@ -2055,6 +2055,7 @@ public:
   void writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
                           AtomicOrdering FailureOrdering,
                           SynchronizationScope SynchScope);
+  void writeSynchScope(SynchronizationScope SynchScope);
 
   void writeAllMDNodes();
   void writeMDNode(unsigned Slot, const MDNode *Node);
@@ -2120,20 +2121,7 @@ void AssemblyWriter::writeAtomic(AtomicOrdering Ordering,
   if (Ordering == AtomicOrdering::NotAtomic)
     return;
 
-  if (SynchScope >= SynchronizationScopeFirstTargetSpecific) {
-    Out << " synchscope(" << unsigned(SynchScope) << ')';
-  } else {
-    switch (SynchScope) {
-    case SingleThread:
-      Out << " singlethread";
-      break;
-    case CrossThread:
-      break;
-    default:
-      llvm_unreachable("Unknown SynchScope");
-    }
-  }
-
+  writeSynchScope(SynchScope);
   Out << " " << toIRString(Ordering);
 }
 
@@ -2143,8 +2131,14 @@ void AssemblyWriter::writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
   assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
          FailureOrdering != AtomicOrdering::NotAtomic);
 
+  writeSynchScope(SynchScope);
+  Out << " " << toIRString(SuccessOrdering);
+  Out << " " << toIRString(FailureOrdering);
+}
+
+void AssemblyWriter::writeSynchScope(SynchronizationScope SynchScope) {
   if (SynchScope >= SynchronizationScopeFirstTargetSpecific) {
-    Out << " synchscope(" << unsigned(SynchScope) << ')';
+    Out << " syncscope(" << unsigned(SynchScope) << ')';
   } else {
     switch (SynchScope) {
     case SingleThread:
@@ -2153,12 +2147,9 @@ void AssemblyWriter::writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
     case CrossThread:
       break;
     default:
-      llvm_unreachable("Unknown SynchScope");
+      llvm_unreachable("Invalid syncscope");
     }
   }
-
-  Out << " " << toIRString(SuccessOrdering);
-  Out << " " << toIRString(FailureOrdering);
 }
 
 void AssemblyWriter::writeParamOperand(const Value *Operand,

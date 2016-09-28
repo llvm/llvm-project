@@ -117,15 +117,38 @@ public:
   };
 
 private:
+  /// Atomic information for this memory operation.
+  struct MachineAtomicInfo {
+    /// Synchronization scope for this memory operation.
+    unsigned SynchScope : 8;      // enum SynchronizationScope
+    /// Atomic ordering requirements for this memory operation. For cmpxchg
+    /// atomic operations, atomic ordering requirements when store occurs.
+    unsigned Ordering : 4;        // enum AtomicOrdering
+    /// For cmpxchg atomic operations, atomic ordering requirements when store
+    /// does not occur.
+    unsigned FailureOrdering : 4; // enum AtomicOrdering
+    /// Reserved/unused.
+    unsigned Reserved : 16;
+  };
+
   MachinePointerInfo PtrInfo;
   uint64_t Size;
   Flags FlagVals;
   uint16_t BaseAlignLog2; // log_2(base_alignment) + 1
+  MachineAtomicInfo AtomicInfo;
   AAMDNodes AAInfo;
   const MDNode *Ranges;
-  SynchronizationScope SynchScope;
-  AtomicOrdering Ordering;
-  AtomicOrdering FailureOrdering;
+
+  /// Initialize atomic information for this memory operation.
+  void InitAtomicInfo(SynchronizationScope SynchScope, AtomicOrdering Ordering,
+                      AtomicOrdering FailureOrdering) {
+    AtomicInfo.SynchScope = static_cast<unsigned>(SynchScope);
+    assert(getSynchScope() == SynchScope && "Value truncated");
+    AtomicInfo.Ordering = static_cast<unsigned>(Ordering);
+    assert(getOrdering() == Ordering && "Value truncated");
+    AtomicInfo.FailureOrdering = static_cast<unsigned>(FailureOrdering);
+    assert(getFailureOrdering() == FailureOrdering && "Value truncated");
+  }
 
 public:
   /// Construct a MachineMemOperand object with the specified PtrInfo, flags,
@@ -188,18 +211,26 @@ public:
   const MDNode *getRanges() const { return Ranges; }
 
   /// Return the synchronization scope for this memory operation.
-  SynchronizationScope getSynchScope() const { return SynchScope; }
+  SynchronizationScope getSynchScope() const {
+    return static_cast<SynchronizationScope>(AtomicInfo.SynchScope);
+  }
 
   /// Return the atomic ordering requirements for this memory operation.
-  AtomicOrdering getOrdering() const { return Ordering; }
+  AtomicOrdering getOrdering() const {
+    return static_cast<AtomicOrdering>(AtomicInfo.Ordering);
+  }
 
   /// For cmpxchg atomic operations, return the atomic ordering requirements
   /// when store occurs.
-  AtomicOrdering getSuccessOrdering() const { return getOrdering(); }
+  AtomicOrdering getSuccessOrdering() const {
+    return getOrdering();
+  }
 
   /// For cmpxchg atomic operations, return the atomic ordering requirements
   /// when store does not occur.
-  AtomicOrdering getFailureOrdering() const { return FailureOrdering; }
+  AtomicOrdering getFailureOrdering() const {
+    return static_cast<AtomicOrdering>(AtomicInfo.FailureOrdering);
+  }
 
   bool isLoad() const { return FlagVals & MOLoad; }
   bool isStore() const { return FlagVals & MOStore; }

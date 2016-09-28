@@ -542,13 +542,13 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
     : PtrInfo(ptrinfo), Size(s), FlagVals(f), BaseAlignLog2(Log2_32(a) + 1),
-      AAInfo(AAInfo), Ranges(Ranges), SynchScope(SynchScope),
-      Ordering(Ordering), FailureOrdering(FailureOrdering) {
+      AAInfo(AAInfo), Ranges(Ranges) {
   assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue*>() ||
           isa<PointerType>(PtrInfo.V.get<const Value*>()->getType())) &&
          "invalid pointer value");
   assert(getBaseAlignment() == a && "Alignment is not a power of 2!");
   assert((isLoad() || isStore()) && "Not a load/store!");
+  InitAtomicInfo(SynchScope, Ordering, FailureOrdering);
 }
 
 /// Profile - Gather unique data for the object.

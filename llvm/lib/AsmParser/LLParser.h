@@ -211,6 +211,11 @@ namespace llvm {
       return false;
     }
     bool ParseStringConstant(std::string &Result);
+    bool ParseUInt8(uint8_t &Val);
+    bool ParseUInt8(uint8_t &Val, LocTy &Loc) {
+      Loc = Lex.getLoc();
+      return ParseUInt8(Val);
+    }
     bool ParseUInt32(unsigned &Val);
     bool ParseUInt32(unsigned &Val, LocTy &Loc) {
       Loc = Lex.getLoc();

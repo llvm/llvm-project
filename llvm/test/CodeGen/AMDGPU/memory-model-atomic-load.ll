@@ -55,7 +55,7 @@ define void @system_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @agent_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(2) unordered, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(2) unordered, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -67,7 +67,7 @@ define void @agent_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @agent_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(2) monotonic, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(2) monotonic, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -79,7 +79,7 @@ define void @agent_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @agent_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(2) acquire, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(2) acquire, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -91,7 +91,7 @@ define void @agent_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @agent_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(2) seq_cst, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(2) seq_cst, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -103,7 +103,7 @@ define void @agent_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @work_group_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(3) unordered, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(3) unordered, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -115,7 +115,7 @@ define void @work_group_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out)
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @work_group_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(3) monotonic, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(3) monotonic, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -127,7 +127,7 @@ define void @work_group_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out)
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @work_group_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(3) acquire, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(3) acquire, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -139,7 +139,7 @@ define void @work_group_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @work_group_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(3) seq_cst, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(3) seq_cst, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -151,7 +151,7 @@ define void @work_group_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @wavefront_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(4) unordered, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(4) unordered, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -163,7 +163,7 @@ define void @wavefront_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) 
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @wavefront_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(4) monotonic, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(4) monotonic, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -175,7 +175,7 @@ define void @wavefront_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out) 
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @wavefront_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(4) acquire, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(4) acquire, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -187,7 +187,7 @@ define void @wavefront_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @wavefront_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(4) seq_cst, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(4) seq_cst, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -199,7 +199,7 @@ define void @wavefront_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @image_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(5) unordered, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(5) unordered, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -211,7 +211,7 @@ define void @image_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @image_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(5) monotonic, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(5) monotonic, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -223,7 +223,7 @@ define void @image_monotonic(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @image_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(5) acquire, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(5) acquire, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
@@ -235,7 +235,7 @@ define void @image_acquire(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @image_seq_cst(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
-  %val = load atomic i32, i32 addrspace(4)* %in synchscope(5) seq_cst, align 4
+  %val = load atomic i32, i32 addrspace(4)* %in syncscope(5) seq_cst, align 4
   store i32 %val, i32 addrspace(4)* %out
   ret void
 }
