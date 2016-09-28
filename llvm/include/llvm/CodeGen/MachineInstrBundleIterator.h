@@ -37,6 +37,13 @@ public:
   typedef typename instr_iterator::const_pointer const_pointer;
   typedef typename instr_iterator::const_reference const_reference;
 
+private:
+  typedef typename std::remove_const<value_type>::type nonconst_value_type;
+  typedef ilist_node<nonconst_value_type> node_type;
+  typedef ilist_iterator<nonconst_value_type> nonconst_instr_iterator;
+  typedef MachineInstrBundleIterator<nonconst_value_type> nonconst_iterator;
+
+public:
   MachineInstrBundleIterator(instr_iterator MI) : MII(MI) {}
 
   MachineInstrBundleIterator(reference MI) : MII(MI) {
@@ -130,6 +137,12 @@ public:
   }
 
   instr_iterator getInstrIterator() const { return MII; }
+
+  nonconst_iterator getNonConstIterator() const {
+    if (auto *N = const_cast<node_type *>(MII.getNodePtr()))
+      return nonconst_iterator(nonconst_instr_iterator(*N));
+    return nonconst_iterator();
+  }
 };
 
 } // end namespace llvm
