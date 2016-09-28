@@ -58,7 +58,7 @@ protected:
       bool Changed = false;
 
       MachineBasicBlock::iterator I = ReturnMBB.begin();
-      I = ReturnMBB.SkipPHIsAndLabels(I);
+      I = ReturnMBB.SkipPHIsLabelsAndDebug(I);
 
       // The block must be essentially empty except for the blr.
       if (I == ReturnMBB.end() ||
