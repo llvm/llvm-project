@@ -65,9 +65,9 @@
 # CHECK: .greateq          {{.*}} 0000000000021000
 # CHECK: .eq               {{.*}} 0000000000022000
 # CHECK: .neq              {{.*}} 0000000000023000
-# CHECK: .maxpagesize      {{.*}} 0000000004800000
+# CHECK: .maxpagesize      {{.*}} 0000000000024000
 # CHECK: .commonpagesize   {{.*}} 0000000000025000
-# CHECK: .datasegmentalign {{.*}} 0000000000200000
+# CHECK: .datasegmentalign {{.*}} 0000000000026000
 # CHECK: .plusassign       {{.*}} 0000000000028000
 # CHECK: .unary            {{.*}} 000000000002a000
 # CHECK: .shiftl           {{.*}} 0000000000030040

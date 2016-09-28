@@ -24,6 +24,7 @@
 namespace clang {
   class ASTContext;
   class CXXCtorInitializer;
+  class CXXBaseSpecifier;
   class Decl;
   class DeclContext;
   class DiagnosticsEngine;
@@ -39,7 +40,9 @@ namespace clang {
   class ASTImporter {
   public:
     typedef llvm::DenseSet<std::pair<Decl *, Decl *> > NonEquivalentDeclSet;
-    
+    typedef llvm::DenseMap<const CXXBaseSpecifier *, CXXBaseSpecifier *>
+    ImportedCXXBaseSpecifierMap;
+
   private:
     /// \brief The contexts we're importing to and from.
     ASTContext &ToContext, &FromContext;
@@ -68,7 +71,12 @@ namespace clang {
     /// \brief Mapping from the already-imported FileIDs in the "from" source
     /// manager to the corresponding FileIDs in the "to" source manager.
     llvm::DenseMap<FileID, FileID> ImportedFileIDs;
-    
+
+    /// \brief Mapping from the already-imported CXXBasesSpecifier in
+    ///  the "from" source manager to the corresponding CXXBasesSpecifier
+    ///  in the "to" source manager.
+    ImportedCXXBaseSpecifierMap ImportedCXXBaseSpecifiers;
+
     /// \brief Imported, anonymous tag declarations that are missing their 
     /// corresponding typedefs.
     SmallVector<TagDecl *, 4> AnonTagsWithPendingTypedefs;
@@ -212,8 +220,13 @@ namespace clang {
     /// \returns the equivalent initializer in the "to" context.
     CXXCtorInitializer *Import(CXXCtorInitializer *FromInit);
 
+    /// \brief Import the given CXXBaseSpecifier from the "from" context into
+    /// the "to" context.
+    ///
+    /// \returns the equivalent CXXBaseSpecifier in the source manager of the
+    /// "to" context.
+    CXXBaseSpecifier *Import(const CXXBaseSpecifier *FromSpec);
 
-    
     /// \brief Import the definition of the given declaration, including all of
     /// the declarations it contains.
     ///

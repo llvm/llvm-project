@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -O1 -target-cpu core2 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -triple i386-apple-darwin9 -O1 -target-cpu core2 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
 typedef short __v4hi __attribute__ ((__vector_size__ (8)));
 
 void test1() {
@@ -20,8 +20,6 @@ void test3 ( vec4* a, char b, float c ) {
 
 
 
-// Don't include mm_malloc.h, it's system specific.
-#define __MM_MALLOC_H
 
 #include <mmintrin.h>
 

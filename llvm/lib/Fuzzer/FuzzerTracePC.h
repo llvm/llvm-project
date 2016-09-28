@@ -79,7 +79,7 @@ private:
   size_t NumGuards = 0;
 
   static const size_t kNumCounters = 1 << 14;
-  uint8_t Counters[kNumCounters];
+  alignas(8) uint8_t Counters[kNumCounters];
 
   static const size_t kNumPCs = 1 << 20;
   uintptr_t PCs[kNumPCs];

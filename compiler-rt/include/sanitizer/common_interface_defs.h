@@ -179,7 +179,9 @@ extern "C" {
   // use-after-return detection.
   void __sanitizer_start_switch_fiber(void **fake_stack_save,
                                       const void *bottom, size_t size);
-  void __sanitizer_finish_switch_fiber(void *fake_stack_save);
+  void __sanitizer_finish_switch_fiber(void *fake_stack_save,
+                                       const void **bottom_old,
+                                       size_t *size_old);
 #ifdef __cplusplus
 }  // extern "C"
 #endif

@@ -134,12 +134,73 @@ void Replacement::setFromSourceRange(const SourceManager &Sources,
                         ReplacementText);
 }
 
-llvm::Error makeConflictReplacementsError(const Replacement &New,
-                                          const Replacement &Existing) {
+Replacement
+Replacements::getReplacementInChangedCode(const Replacement &R) const {
+  unsigned NewStart = getShiftedCodePosition(R.getOffset());
+  unsigned NewEnd = getShiftedCodePosition(R.getOffset() + R.getLength());
+  return Replacement(R.getFilePath(), NewStart, NewEnd - NewStart,
+                     R.getReplacementText());
+}
+
+static llvm::Error makeConflictReplacementsError(const Replacement &New,
+                                                 const Replacement &Existing) {
   return llvm::make_error<llvm::StringError>(
       "New replacement:\n" + New.toString() +
           "\nconflicts with existing replacement:\n" + Existing.toString(),
       llvm::inconvertibleErrorCode());
+}
+
+Replacements Replacements::getCanonicalReplacements() const {
+  std::vector<Replacement> NewReplaces;
+  // Merge adjacent replacements.
+  for (const auto &R : Replaces) {
+    if (NewReplaces.empty()) {
+      NewReplaces.push_back(R);
+      continue;
+    }
+    auto &Prev = NewReplaces.back();
+    unsigned PrevEnd = Prev.getOffset() + Prev.getLength();
+    if (PrevEnd < R.getOffset()) {
+      NewReplaces.push_back(R);
+    } else {
+      assert(PrevEnd == R.getOffset() &&
+             "Existing replacements must not overlap.");
+      Replacement NewR(
+          R.getFilePath(), Prev.getOffset(), Prev.getLength() + R.getLength(),
+          (Prev.getReplacementText() + R.getReplacementText()).str());
+      Prev = NewR;
+    }
+  }
+  ReplacementsImpl NewReplacesImpl(NewReplaces.begin(), NewReplaces.end());
+  return Replacements(NewReplacesImpl.begin(), NewReplacesImpl.end());
+}
+
+// `R` and `Replaces` are order-independent if applying them in either order
+// has the same effect, so we need to compare replacements associated to
+// applying them in either order.
+llvm::Expected<Replacements>
+Replacements::mergeIfOrderIndependent(const Replacement &R) const {
+  Replacements Rs(R);
+  // A Replacements set containg a single replacement that is `R` referring to
+  // the code after the existing replacements `Replaces` are applied.
+  Replacements RsShiftedByReplaces(getReplacementInChangedCode(R));
+  // A Replacements set that is `Replaces` referring to the code after `R` is
+  // applied.
+  Replacements ReplacesShiftedByRs;
+  for (const auto &Replace : Replaces)
+    ReplacesShiftedByRs.Replaces.insert(
+        Rs.getReplacementInChangedCode(Replace));
+  // This is equivalent to applying `Replaces` first and then `R`.
+  auto MergeShiftedRs = merge(RsShiftedByReplaces);
+  // This is equivalent to applying `R` first and then `Replaces`.
+  auto MergeShiftedReplaces = Rs.merge(ReplacesShiftedByRs);
+
+  // Since empty or segmented replacements around existing replacements might be
+  // produced above, we need to compare replacements in canonical forms.
+  if (MergeShiftedRs.getCanonicalReplacements() ==
+      MergeShiftedReplaces.getCanonicalReplacements())
+    return MergeShiftedRs;
+  return makeConflictReplacementsError(R, *Replaces.begin());
 }
 
 llvm::Error Replacements::add(const Replacement &R) {
@@ -172,8 +233,21 @@ llvm::Error Replacements::add(const Replacement &R) {
   if (I != Replaces.end() && R.getOffset() == I->getOffset()) {
     assert(R.getLength() == 0);
     // `I` is also an insertion, `R` and `I` conflict.
-    if (I->getLength() == 0)
-      return makeConflictReplacementsError(R, *I);
+    if (I->getLength() == 0) {
+      // Check if two insertions are order-indepedent: if inserting them in
+      // either order produces the same text, they are order-independent.
+      if ((R.getReplacementText() + I->getReplacementText()).str() !=
+          (I->getReplacementText() + R.getReplacementText()).str()) {
+        return makeConflictReplacementsError(R, *I);
+      }
+      // If insertions are order-independent, we can merge them.
+      Replacement NewR(
+          R.getFilePath(), R.getOffset(), 0,
+          (R.getReplacementText() + I->getReplacementText()).str());
+      Replaces.erase(I);
+      Replaces.insert(NewR);
+      return llvm::Error::success();
+    }
     // Insertion `R` is adjacent to a non-insertion replacement `I`, so they
     // are order-independent. It is safe to assume that `R` will not conflict
     // with any replacement before `I` since all replacements before `I` must
@@ -192,10 +266,13 @@ llvm::Error Replacements::add(const Replacement &R) {
     return llvm::Error::success();
   }
   --I;
+  auto Overlap = [](const Replacement &R1, const Replacement &R2) -> bool {
+    return Range(R1.getOffset(), R1.getLength())
+        .overlapsWith(Range(R2.getOffset(), R2.getLength()));
+  };
   // If the previous entry does not overlap, we know that entries before it
   // can also not overlap.
-  if (!Range(R.getOffset(), R.getLength())
-           .overlapsWith(Range(I->getOffset(), I->getLength()))) {
+  if (!Overlap(R, *I)) {
     // If `R` and `I` do not have the same offset, it is safe to add `R` since
     // it must come after `I`. Otherwise:
     //   - If `R` is an insertion, `I` must not be an insertion since it would
@@ -204,9 +281,28 @@ llvm::Error Replacements::add(const Replacement &R) {
     //   and `I` would have overlapped.
     // In either case, we can safely insert `R`.
     Replaces.insert(R);
-    return llvm::Error::success();
+  } else {
+    // `I` overlaps with `R`. We need to check `R` against all overlapping
+    // replacements to see if they are order-indepedent. If they are, merge `R`
+    // with them and replace them with the merged replacements.
+    auto MergeBegin = I;
+    auto MergeEnd = std::next(I);
+    while (I != Replaces.begin()) {
+      --I;
+      // If `I` doesn't overlap with `R`, don't merge it.
+      if (!Overlap(R, *I))
+        break;
+      MergeBegin = I;
+    }
+    Replacements OverlapReplaces(MergeBegin, MergeEnd);
+    llvm::Expected<Replacements> Merged =
+        OverlapReplaces.mergeIfOrderIndependent(R);
+    if (!Merged)
+      return Merged.takeError();
+    Replaces.erase(MergeBegin, MergeEnd);
+    Replaces.insert(Merged->begin(), Merged->end());
   }
-  return makeConflictReplacementsError(R, *I);
+  return llvm::Error::success();
 }
 
 namespace {

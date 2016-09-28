@@ -50,6 +50,8 @@ public:
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
 
+  void getUnrollingPreferences(Loop *L, TTI::UnrollingPreferences &UP);
+
   /// @}
 
   /// \name Vector TTI Implementations

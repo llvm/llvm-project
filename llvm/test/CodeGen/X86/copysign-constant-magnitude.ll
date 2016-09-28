@@ -27,9 +27,7 @@ define double @mag_neg0_double(double %x) nounwind {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movsd [[SIGNMASK2]](%rip), %xmm1
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0,0]
-; CHECK-NEXT:    andps %xmm0, %xmm1
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    orps %xmm1, %xmm0
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %y = call double @copysign(double -0.0, double %x)
@@ -95,9 +93,7 @@ define float @mag_neg0_float(float %x) nounwind {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movss [[SIGNMASK6]](%rip), %xmm1
 ; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; CHECK-NEXT:    andps %xmm0, %xmm1
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    orps %xmm1, %xmm0
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %y = call float @copysignf(float -0.0, float %x)

@@ -651,7 +651,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     StringRef S = Arg->getValue();
     if (S.getAsInteger(0, Config->ImageBase))
       error(Arg->getSpelling() + ": number expected, but got " + S);
-    else if ((Config->ImageBase % Target->PageSize) != 0)
+    else if ((Config->ImageBase % Target->MaxPageSize) != 0)
       warning(Arg->getSpelling() + ": address isn't multiple of page size");
   } else {
     Config->ImageBase = Config->Pic ? 0 : Target->DefaultImageBase;

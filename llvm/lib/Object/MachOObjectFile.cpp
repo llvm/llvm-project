@@ -625,6 +625,35 @@ static Error checkDylibIdCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+static Error checkDyldCommand(const MachOObjectFile *Obj,
+                              const MachOObjectFile::LoadCommandInfo &Load,
+                              uint32_t LoadCommandIndex, const char *CmdName) {
+  if (Load.C.cmdsize < sizeof(MachO::dylinker_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " cmdsize too small");
+  MachO::dylinker_command D = getStruct<MachO::dylinker_command>(Obj, Load.Ptr);
+  if (D.name < sizeof(MachO::dylinker_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " name.offset field too small, not past "
+                          "the end of the dylinker_command struct");
+  if (D.name >= D.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " name.offset field extends past the end "
+                          "of the load command");
+  // Make sure there is a null between the starting offset of the name and
+  // the end of the load command.
+  uint32_t i;
+  const char *P = (const char *)Load.Ptr;
+  for (i = D.name; i < D.cmdsize; i++)
+    if (P[i] == '\0')
+      break;
+  if (i >= D.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " dyld name extends past the end of the "
+                          "load command");
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -777,6 +806,15 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       if ((Err = checkDylibCommand(this, Load, I, "LC_LOAD_UPWARD_DYLIB")))
         return;
       Libraries.push_back(Load.Ptr);
+    } else if (Load.C.cmd == MachO::LC_ID_DYLINKER) {
+      if ((Err = checkDyldCommand(this, Load, I, "LC_ID_DYLINKER")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_LOAD_DYLINKER) {
+      if ((Err = checkDyldCommand(this, Load, I, "LC_LOAD_DYLINKER")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_DYLD_ENVIRONMENT) {
+      if ((Err = checkDyldCommand(this, Load, I, "LC_DYLD_ENVIRONMENT")))
+        return;
     }
     if (I < LoadCommandCount - 1) {
       if (auto LoadOrErr = getNextLoadCommandInfo(this, I, Load))

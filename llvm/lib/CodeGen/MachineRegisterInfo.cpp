@@ -468,9 +468,13 @@ bool MachineRegisterInfo::isConstantPhysReg(unsigned PhysReg,
                                             const MachineFunction &MF) const {
   assert(TargetRegisterInfo::isPhysicalRegister(PhysReg));
 
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  if (TRI->isConstantPhysReg(PhysReg))
+    return true;
+
   // Check if any overlapping register is modified, or allocatable so it may be
   // used later.
-  for (MCRegAliasIterator AI(PhysReg, getTargetRegisterInfo(), true);
+  for (MCRegAliasIterator AI(PhysReg, TRI, true);
        AI.isValid(); ++AI)
     if (!def_empty(*AI) || isAllocatable(*AI))
       return false;

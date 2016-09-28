@@ -94,7 +94,8 @@ class AsanThread {
   }
 
   void StartSwitchFiber(FakeStack **fake_stack_save, uptr bottom, uptr size);
-  void FinishSwitchFiber(FakeStack *fake_stack_save);
+  void FinishSwitchFiber(FakeStack *fake_stack_save, uptr *bottom_old,
+                         uptr *size_old);
 
   bool has_fake_stack() {
     return !atomic_load(&stack_switching_, memory_order_relaxed) &&
