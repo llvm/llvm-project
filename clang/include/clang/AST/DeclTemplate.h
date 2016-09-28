@@ -44,6 +44,8 @@ class VarTemplatePartialSpecializationDecl;
 typedef llvm::PointerUnion3<TemplateTypeParmDecl*, NonTypeTemplateParmDecl*,
                             TemplateTemplateParmDecl*> TemplateParameter;
 
+NamedDecl *getAsNamedDecl(TemplateParameter P);
+
 /// \brief Stores a list of template parameters for a TemplateDecl and its
 /// derived classes.
 class TemplateParameterList final
@@ -2911,6 +2913,14 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 };
+
+inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
+  if (auto *PD = P.dyn_cast<TemplateTypeParmDecl*>())
+    return PD;
+  if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl*>())
+    return PD;
+  return P.get<TemplateTemplateParmDecl*>();
+}
 
 } /* end of namespace clang */
 
