@@ -15,6 +15,7 @@
 #define LLVM_CLANG_APINOTES_APINOTESMANAGER_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -81,6 +82,14 @@ class APINotesManager {
   bool loadAPINotes(const DirectoryEntry *HeaderDir,
                     const FileEntry *APINotesFile);
 
+  /// Look for API notes relative to the given directory, adjusting
+  /// for whether it is a framework directory, and with the base
+  /// filename.
+  ///
+  /// This might find either a binary or source API notes.
+  const FileEntry *findAPINotes(const DirectoryEntry *directory,
+                                bool isFramework, StringRef filename);
+
   /// Attempt to load API notes for the given framework.
   ///
   /// \param FrameworkPath The path to the framework.
@@ -100,13 +109,15 @@ public:
 
   /// Load the API notes for the current module.
   ///
-  /// \param moduleName The name of the current module.
+  /// \param module The current module.
+  /// \param lookInModule Whether to look inside the module itself.
   /// \param searchPaths The paths in which we should search for API notes
   /// for the current module.
   ///
   /// \returns the file entry for the API notes file loaded, or nullptr if
   /// no API notes were found.
-  const FileEntry *loadCurrentModuleAPINotes(StringRef moduleName,
+  const FileEntry *loadCurrentModuleAPINotes(const Module *module,
+                                             bool lookInModule,
                                              ArrayRef<std::string> searchPaths);
 
   /// Find the API notes reader that corresponds to the given source location.
