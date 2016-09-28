@@ -47,7 +47,6 @@
 # CHECK: DBG_VALUE debug-use [[REG_I]], debug-use _, [[VAR_I]]
 
 # CHECK: bb.4.for.cond.cleanup
-# CHECK: DBG_VALUE debug-use [[REG_I]], debug-use _, [[VAR_I]]
 # CHECK: DBG_VALUE debug-use [[REG_C]], debug-use _, [[VAR_C]]
 # CHECK: DBG_VALUE debug-use [[REG_B]], debug-use _, [[VAR_B]]
 # CHECK: DBG_VALUE debug-use [[REG_A]], debug-use _, [[VAR_A]]
