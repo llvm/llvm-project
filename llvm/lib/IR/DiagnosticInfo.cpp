@@ -180,10 +180,25 @@ void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
     DP << " (hotness: " << *Hotness << ")";
 }
 
+OptimizationRemark::OptimizationRemark(const char *PassName,
+                                       StringRef RemarkName,
+                                       const DebugLoc &DLoc, Value *CodeRegion)
+    : DiagnosticInfoOptimizationBase(
+          DK_OptimizationRemark, DS_Remark, PassName, RemarkName,
+          *cast<BasicBlock>(CodeRegion)->getParent(), DLoc, CodeRegion) {}
+
 bool OptimizationRemark::isEnabled() const {
   return PassRemarksOptLoc.Pattern &&
          PassRemarksOptLoc.Pattern->match(getPassName());
 }
+
+OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
+                                                   StringRef RemarkName,
+                                                   const DebugLoc &DLoc,
+                                                   Value *CodeRegion)
+    : DiagnosticInfoOptimizationBase(
+          DK_OptimizationRemarkMissed, DS_Remark, PassName, RemarkName,
+          *cast<BasicBlock>(CodeRegion)->getParent(), DLoc, CodeRegion) {}
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
                                                    StringRef RemarkName,
@@ -197,6 +212,14 @@ bool OptimizationRemarkMissed::isEnabled() const {
   return PassRemarksMissedOptLoc.Pattern &&
          PassRemarksMissedOptLoc.Pattern->match(getPassName());
 }
+
+OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
+                                                       StringRef RemarkName,
+                                                       Instruction *Inst)
+    : DiagnosticInfoOptimizationBase(DK_OptimizationRemarkAnalysis, DS_Remark,
+                                     PassName, RemarkName,
+                                     *Inst->getParent()->getParent(),
+                                     Inst->getDebugLoc(), Inst->getParent()) {}
 
 bool OptimizationRemarkAnalysis::isEnabled() const {
   return shouldAlwaysPrint() ||

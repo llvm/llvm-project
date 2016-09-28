@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -pass-remarks-missed=inline -pass-remarks-with-hotness \
+; RUN: opt < %s -S -inline -pass-remarks-missed=inline -pass-remarks-with-hotness \
 ; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
