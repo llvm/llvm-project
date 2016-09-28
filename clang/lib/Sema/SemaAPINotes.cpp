@@ -327,8 +327,7 @@ void Sema::ProcessAPINotes(Decl *D) {
   if (D->getDeclContext()->isFileContext()) {
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupGlobalVariable(VD->getName())) {
           ::ProcessAPINotes(*this, VD, *Info);
         }
@@ -340,8 +339,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Global functions.
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getDeclName().isIdentifier()) {
-        if (api_notes::APINotesReader *Reader
-              = APINotes.findAPINotes(D->getLocation())) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
           if (auto Info = Reader->lookupGlobalFunction(FD->getName())) {
             ::ProcessAPINotes(*this, FD, *Info);
           }
@@ -353,8 +351,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C classes.
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupObjCClass(Class->getName())) {
           ::ProcessAPINotes(*this, Class, Info->second);
         }
@@ -365,8 +362,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C protocols.
     if (auto Protocol = dyn_cast<ObjCProtocolDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupObjCProtocol(Protocol->getName())) {
           ::ProcessAPINotes(*this, Protocol, Info->second);
         }
@@ -377,8 +373,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Tags
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupTag(Tag->getName())) {
           ::ProcessAPINotes(*this, Tag, *Info);
         }
@@ -389,8 +384,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Typedefs
     if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupTypedef(Typedef->getName())) {
           ::ProcessAPINotes(*this, Typedef, *Info);
         }
@@ -405,8 +399,7 @@ void Sema::ProcessAPINotes(Decl *D) {
   // Enumerators.
   if (D->getDeclContext()->getRedeclContext()->isFileContext()) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupEnumConstant(EnumConstant->getName())) {
           ::ProcessAPINotes(*this, EnumConstant, *Info);
         }
@@ -461,8 +454,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C methods.
     if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Context = GetContext(Reader)) {
           // Map the selector.
           Selector Sel = Method->getSelector();
@@ -488,8 +480,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C properties.
     if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-      if (api_notes::APINotesReader *Reader
-            = APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Context = GetContext(Reader)) {
           bool isInstanceProperty =
             (Property->getPropertyAttributesAsWritten() &

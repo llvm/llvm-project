@@ -1,7 +1,7 @@
 Name: SomeKit
 Classes:
   - Name: A
-    Methods:         
+    Methods:
       - Selector:        "transform:"
         MethodKind:      Instance
         Availability:    none

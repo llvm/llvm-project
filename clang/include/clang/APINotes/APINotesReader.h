@@ -31,7 +31,8 @@ class APINotesReader {
 
   Implementation &Impl;
 
-  APINotesReader(std::unique_ptr<llvm::MemoryBuffer> inputBuffer, bool &failed);
+  APINotesReader(llvm::MemoryBuffer *inputBuffer, bool ownsInputBuffer,
+                 bool &failed);
 
 public:
   /// Create a new API notes reader from the given member buffer, which
@@ -41,6 +42,13 @@ public:
   static std::unique_ptr<APINotesReader>
   get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer);
 
+  /// Create a new API notes reader from the given member buffer, which
+  /// contains the contents of a binary API notes file.
+  ///
+  /// \returns the new API notes reader, or null if an error occurred.
+  static std::unique_ptr<APINotesReader>
+  getUnmanaged(llvm::MemoryBuffer *inputBuffer);
+
   ~APINotesReader();
 
   APINotesReader(const APINotesReader &) = delete;
@@ -49,6 +57,10 @@ public:
   /// Retrieve the name of the module for which this reader is providing API
   /// notes.
   StringRef getModuleName() const;
+
+  /// Retrieve the size and modification time of the source file from
+  /// which this API notes file was created, if known.
+  Optional<std::pair<off_t, time_t>> getSourceFileSizeAndModTime() const;
 
   /// Retrieve the module options
   ModuleOptions getModuleOptions() const;

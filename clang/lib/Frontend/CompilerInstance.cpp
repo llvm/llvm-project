@@ -540,20 +540,19 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
 
-  // If we're building a module, notify the API notes manager.
-  StringRef currentModuleName = getLangOpts().CurrentModule;
-  if (!currentModuleName.empty()) {
+  // If we're building a module and are supposed to load API notes,
+  // notify the API notes manager.
+  if (auto currentModule = getPreprocessor().getCurrentModule()) {
     (void)TheSema->APINotes.loadCurrentModuleAPINotes(
-            currentModuleName,
+            currentModule,
+            getLangOpts().APINotesModules,
             getAPINotesOpts().ModuleSearchPaths);
     // Check for any attributes we should add to the module
-    if (auto curReader = TheSema->APINotes.getCurrentModuleReader()) {
-      auto currentModule = getPreprocessor().getCurrentModule();
-      assert(currentModule && "how can we have a reader for it?");
-
+    for (auto reader : TheSema->APINotes.getCurrentModuleReaders()) {
       // swift_infer_import_as_member
-      if (curReader->getModuleOptions().SwiftInferImportAsMember) {
+      if (reader->getModuleOptions().SwiftInferImportAsMember) {
         currentModule->IsSwiftInferImportAsMember = true;
+        break;
       }
     }
   }
@@ -953,7 +952,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
                               SourceLocation ImportLoc,
                               Module *Module,
                               StringRef ModuleFileName) {
-  ModuleMap &ModMap 
+  ModuleMap &ModMap
     = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
     
   // Construct a compiler invocation for creating this module.

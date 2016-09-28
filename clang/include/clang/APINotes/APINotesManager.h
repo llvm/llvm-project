@@ -15,6 +15,7 @@
 #define LLVM_CLANG_APINOTES_APINOTESMANAGER_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -54,8 +55,11 @@ class APINotesManager {
   /// source file from which an entity was declared.
   bool ImplicitAPINotes;
 
-  /// The API notes reader for the current module.
-  std::unique_ptr<APINotesReader> CurrentModuleReader;
+  /// API notes readers for the current module.
+  ///
+  /// There can be up to two of these, one for public headers and one
+  /// for private headers.
+  APINotesReader *CurrentModuleReaders[2] = { nullptr, nullptr };
 
   /// Whether we have already pruned the API notes cache.
   bool PrunedCache;
@@ -81,6 +85,13 @@ class APINotesManager {
   bool loadAPINotes(const DirectoryEntry *HeaderDir,
                     const FileEntry *APINotesFile);
 
+  /// Look for API notes in the given directory.
+  ///
+  /// This might find either a binary or source API notes.
+  const FileEntry *findAPINotesFile(const DirectoryEntry *directory,
+                                    StringRef filename,
+                                    bool wantPublic = true);
+
   /// Attempt to load API notes for the given framework.
   ///
   /// \param FrameworkPath The path to the framework.
@@ -100,21 +111,25 @@ public:
 
   /// Load the API notes for the current module.
   ///
-  /// \param moduleName The name of the current module.
+  /// \param module The current module.
+  /// \param lookInModule Whether to look inside the module itself.
   /// \param searchPaths The paths in which we should search for API notes
   /// for the current module.
   ///
-  /// \returns the file entry for the API notes file loaded, or nullptr if
-  /// no API notes were found.
-  const FileEntry *loadCurrentModuleAPINotes(StringRef moduleName,
-                                             ArrayRef<std::string> searchPaths);
+  /// \returns true if API notes were successfully loaded, \c false otherwise.
+  bool loadCurrentModuleAPINotes(const Module *module,
+                                 bool lookInModule,
+                                 ArrayRef<std::string> searchPaths);
 
-  /// Find the API notes reader that corresponds to the given source location.
-  APINotesReader *findAPINotes(SourceLocation Loc);
-
-  APINotesReader *getCurrentModuleReader() {
-    return CurrentModuleReader.get();
+  /// Retrieve the set of API notes readers for the current module.
+  ArrayRef<APINotesReader *> getCurrentModuleReaders() const {
+    unsigned numReaders = static_cast<unsigned>(CurrentModuleReaders[0] != nullptr) +
+      static_cast<unsigned>(CurrentModuleReaders[1] != nullptr);
+    return llvm::makeArrayRef(CurrentModuleReaders).slice(0, numReaders);
   }
+
+  /// Find the API notes readers that correspond to the given source location.
+  llvm::SmallVector<APINotesReader *, 2> findAPINotes(SourceLocation Loc);
 };
 
 } // end namespace api_notes

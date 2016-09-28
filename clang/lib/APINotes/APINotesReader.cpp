@@ -578,13 +578,20 @@ namespace {
 class APINotesReader::Implementation {
 public:
   /// The input buffer for the API notes data.
-  std::unique_ptr<llvm::MemoryBuffer> InputBuffer;
+  llvm::MemoryBuffer *InputBuffer;
+
+  /// Whether we own the input buffer.
+  bool OwnsInputBuffer;
 
   /// The reader attached to \c InputBuffer.
   llvm::BitstreamReader InputReader;
 
   /// The name of the module that we read from the control block.
   std::string ModuleName;
+
+  // The size and modification time of the source file from
+  // which this API notes file was created, if known.
+  Optional<std::pair<off_t, time_t>> SourceFileSizeAndModTime;
 
   /// Various options and attributes for the module
   ModuleOptions ModuleOpts;
@@ -764,6 +771,10 @@ bool APINotesReader::Implementation::readControlBlock(
 
     case control_block::MODULE_OPTIONS:
       ModuleOpts.SwiftInferImportAsMember = (scratch.front() & 1) != 0;
+      break;
+
+    case control_block::SOURCE_FILE:
+      SourceFileSizeAndModTime = { scratch[0], scratch[1] };
       break;
 
     default:
@@ -1313,14 +1324,16 @@ bool APINotesReader::Implementation::readTypedefBlock(
   return false;
 }
 
-APINotesReader::APINotesReader(std::unique_ptr<llvm::MemoryBuffer> inputBuffer, 
-                             bool &failed) 
+APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer, 
+                               bool ownsInputBuffer,
+                               bool &failed) 
   : Impl(*new Implementation)
 {
   failed = false;
 
   // Initialize the input buffer.
-  Impl.InputBuffer = std::move(inputBuffer);
+  Impl.InputBuffer = inputBuffer;
+  Impl.OwnsInputBuffer = ownsInputBuffer;
   Impl.InputReader.init(
     reinterpret_cast<const uint8_t *>(Impl.InputBuffer->getBufferStart()), 
     reinterpret_cast<const uint8_t *>(Impl.InputBuffer->getBufferEnd()));
@@ -1453,6 +1466,9 @@ APINotesReader::APINotesReader(std::unique_ptr<llvm::MemoryBuffer> inputBuffer,
 }
 
 APINotesReader::~APINotesReader() {
+  if (Impl.OwnsInputBuffer)
+    delete Impl.InputBuffer;
+
   delete &Impl;
 }
 
@@ -1460,7 +1476,20 @@ std::unique_ptr<APINotesReader>
 APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer) {
   bool failed = false;
   std::unique_ptr<APINotesReader> 
-    reader(new APINotesReader(std::move(inputBuffer), failed));
+    reader(new APINotesReader(inputBuffer.release(), /*ownsInputBuffer=*/true,
+                              failed));
+  if (failed)
+    return nullptr;
+
+  return reader;
+}
+
+std::unique_ptr<APINotesReader> 
+APINotesReader::getUnmanaged(llvm::MemoryBuffer *inputBuffer) {
+  bool failed = false;
+  std::unique_ptr<APINotesReader> 
+    reader(new APINotesReader(inputBuffer, /*ownsInputBuffer=*/false,
+                              failed));
   if (failed)
     return nullptr;
 
@@ -1469,6 +1498,11 @@ APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer) {
 
 StringRef APINotesReader::getModuleName() const {
   return Impl.ModuleName;
+}
+
+Optional<std::pair<off_t, time_t>>
+APINotesReader::getSourceFileSizeAndModTime() const {
+  return Impl.SourceFileSizeAndModTime;
 }
 
 ModuleOptions APINotesReader::getModuleOptions() const {
