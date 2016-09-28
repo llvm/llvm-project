@@ -1,4 +1,4 @@
-//===--- APINotesMAnager.cpp - Manage API Notes Files ---------------------===//
+//===--- APINotesManager.cpp - Manage API Notes Files ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -275,6 +275,39 @@ bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
   return true;
 }
 
+const FileEntry *APINotesManager::findAPINotes(const DirectoryEntry *directory,
+                                               bool isFramework,
+                                               StringRef basename) {
+  FileManager &fileMgr = SourceMgr.getFileManager();
+
+  llvm::SmallString<128> path;
+  path += directory->getName();
+
+  if (isFramework) {
+    llvm::sys::path::append(path, "APINotes");
+    auto apinotesDir = fileMgr.getDirectory(path);
+    if (!apinotesDir) return nullptr;
+
+    // Find the API notes within this directory.
+    return findAPINotes(apinotesDir, /*isFramework=*/false, basename);
+  }
+
+  unsigned pathLen = path.size();
+
+  // Look for a binary API notes file.
+  llvm::sys::path::append(path, 
+    llvm::Twine(basename) + "." + BINARY_APINOTES_EXTENSION);
+  if (const FileEntry *binaryFile = fileMgr.getFile(path))
+    return binaryFile;
+
+  path.resize(pathLen);
+
+  // Look for the source API notes file.
+  llvm::sys::path::append(path, 
+    llvm::Twine(basename) + "." + SOURCE_APINOTES_EXTENSION);
+  return fileMgr.getFile(path);
+}
+
 const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
                         llvm::StringRef FrameworkPath,
                         llvm::StringRef FrameworkName,
@@ -326,38 +359,33 @@ const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
 }
 
 const FileEntry *APINotesManager::loadCurrentModuleAPINotes(
-                   StringRef moduleName,
+                   const Module *module,
+                   bool lookInModule,
                    ArrayRef<std::string> searchPaths) {
   assert(!CurrentModuleReader &&
          "Already loaded API notes for the current module?");
 
   FileManager &fileMgr = SourceMgr.getFileManager();
+  auto moduleName = module->getTopLevelModuleName();
 
-  // Look for API notes for this module in the module search paths.
-  for (const auto &searchPath : searchPaths) {
-    // First, look for a binary API notes file.
-    llvm::SmallString<128> apiNotesFilePath;
-    apiNotesFilePath += searchPath;
-    llvm::sys::path::append(
-      apiNotesFilePath,
-      llvm::Twine(moduleName) + "." + BINARY_APINOTES_EXTENSION);
-
-    // Try to open the binary API Notes file.
-    if (const FileEntry *binaryAPINotesFile
-          = fileMgr.getFile(apiNotesFilePath)) {
-      CurrentModuleReader = loadAPINotes(binaryAPINotesFile);
-      return CurrentModuleReader ? binaryAPINotesFile : nullptr;
+  // First, look relative to the module itself.
+  if (lookInModule) {
+    if (auto file = findAPINotes(module->Directory, module->IsFramework,
+                                 moduleName)) {
+      CurrentModuleReader = loadAPINotes(file);
+      return CurrentModuleReader ? file : nullptr;
     }
+  }
 
-    // Try to open the source API Notes file.
-    apiNotesFilePath = searchPath;
-    llvm::sys::path::append(
-      apiNotesFilePath,
-      llvm::Twine(moduleName) + "." + SOURCE_APINOTES_EXTENSION);
-    if (const FileEntry *sourceAPINotesFile
-          = fileMgr.getFile(apiNotesFilePath)) {
-      CurrentModuleReader = loadAPINotes(sourceAPINotesFile);
-      return CurrentModuleReader ? sourceAPINotesFile : nullptr;
+  // Second, look for API notes for this module in the module API
+  // notes search paths.
+  for (const auto &searchPath : searchPaths) {
+    if (auto searchDir = fileMgr.getDirectory(searchPath)) {
+      if (auto file = findAPINotes(searchDir, /*isFramework=*/false,
+                                   moduleName)) {
+        CurrentModuleReader = loadAPINotes(file);
+        return CurrentModuleReader ? file : nullptr;
+      }
     }
   }
 
