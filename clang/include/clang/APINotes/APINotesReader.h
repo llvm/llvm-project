@@ -50,6 +50,10 @@ public:
   /// notes.
   StringRef getModuleName() const;
 
+  /// Retrieve the size and modification time of the source file from
+  /// which this API notes file was created, if known.
+  Optional<std::pair<off_t, time_t>> getSourceFileSizeAndModTime() const;
+
   /// Retrieve the module options
   ModuleOptions getModuleOptions() const;
 
