@@ -63,6 +63,9 @@ APINotesManager::~APINotesManager() {
       delete reader;
     }
   }
+
+  delete CurrentModuleReaders[0];
+  delete CurrentModuleReaders[1];
 }
 
 /// \brief Write a new timestamp file with the given path.
@@ -275,36 +278,31 @@ bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
   return true;
 }
 
-const FileEntry *APINotesManager::findAPINotes(const DirectoryEntry *directory,
-                                               bool isFramework,
-                                               StringRef basename) {
+const FileEntry *APINotesManager::findAPINotesFile(const DirectoryEntry *directory,
+                                                   StringRef basename,
+                                                   bool wantPublic) {
   FileManager &fileMgr = SourceMgr.getFileManager();
 
   llvm::SmallString<128> path;
   path += directory->getName();
 
-  if (isFramework) {
-    llvm::sys::path::append(path, "APINotes");
-    auto apinotesDir = fileMgr.getDirectory(path);
-    if (!apinotesDir) return nullptr;
-
-    // Find the API notes within this directory.
-    return findAPINotes(apinotesDir, /*isFramework=*/false, basename);
-  }
-
   unsigned pathLen = path.size();
+
+  StringRef basenameSuffix = "";
+  if (!wantPublic) basenameSuffix = "_private";
 
   // Look for a binary API notes file.
   llvm::sys::path::append(path, 
-    llvm::Twine(basename) + "." + BINARY_APINOTES_EXTENSION);
+    llvm::Twine(basename) + basenameSuffix + "." + BINARY_APINOTES_EXTENSION);
   if (const FileEntry *binaryFile = fileMgr.getFile(path))
     return binaryFile;
 
+  // Go back to the original path.
   path.resize(pathLen);
 
   // Look for the source API notes file.
   llvm::sys::path::append(path, 
-    llvm::Twine(basename) + "." + SOURCE_APINOTES_EXTENSION);
+    llvm::Twine(basename) + basenameSuffix + "." + SOURCE_APINOTES_EXTENSION);
   return fileMgr.getFile(path);
 }
 
@@ -358,11 +356,11 @@ const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
   return HeaderDir;
 }
 
-const FileEntry *APINotesManager::loadCurrentModuleAPINotes(
+bool APINotesManager::loadCurrentModuleAPINotes(
                    const Module *module,
                    bool lookInModule,
                    ArrayRef<std::string> searchPaths) {
-  assert(!CurrentModuleReader &&
+  assert(!CurrentModuleReaders[0] &&
          "Already loaded API notes for the current module?");
 
   FileManager &fileMgr = SourceMgr.getFileManager();
@@ -370,48 +368,76 @@ const FileEntry *APINotesManager::loadCurrentModuleAPINotes(
 
   // First, look relative to the module itself.
   if (lookInModule) {
-    if (auto file = findAPINotes(module->Directory, module->IsFramework,
-                                 moduleName)) {
-      CurrentModuleReader = loadAPINotes(file);
-      return CurrentModuleReader ? file : nullptr;
+    bool foundAny = false;
+    unsigned numReaders = 0;
+
+    // Local function to try loading an API notes file in the given directory.
+    auto tryAPINotes = [&](const DirectoryEntry *dir, bool wantPublic) {
+      if (auto file = findAPINotesFile(dir, moduleName, wantPublic)) {
+        foundAny = true;
+
+        // Try to load the API notes file.
+        CurrentModuleReaders[numReaders] = loadAPINotes(file).release();
+        if (CurrentModuleReaders[numReaders])
+          ++numReaders;
+      }
+    };
+
+    if (module->IsFramework) {
+      // For frameworks, we search in the "APINotes" subdirectory.
+      llvm::SmallString<128> path;
+      path += module->Directory->getName();
+      llvm::sys::path::append(path, "APINotes");
+      if (auto apinotesDir = fileMgr.getDirectory(path)) {
+        tryAPINotes(apinotesDir, /*wantPublic=*/true);
+        tryAPINotes(apinotesDir, /*wantPublic=*/false);
+      }
+    } else {
+      tryAPINotes(module->Directory, /*wantPublic=*/true);
+      tryAPINotes(module->Directory, /*wantPublic=*/false);
     }
+
+    if (foundAny)
+      return numReaders > 0;
   }
 
   // Second, look for API notes for this module in the module API
   // notes search paths.
   for (const auto &searchPath : searchPaths) {
     if (auto searchDir = fileMgr.getDirectory(searchPath)) {
-      if (auto file = findAPINotes(searchDir, /*isFramework=*/false,
-                                   moduleName)) {
-        CurrentModuleReader = loadAPINotes(file);
-        return CurrentModuleReader ? file : nullptr;
+      if (auto file = findAPINotesFile(searchDir, moduleName)) {
+        CurrentModuleReaders[0] = loadAPINotes(file).release();
+        return !getCurrentModuleReaders().empty();
       }
     }
   }
 
   // Didn't find any API notes.
-  return nullptr;
+  return false;
 }
 
-APINotesReader *APINotesManager::findAPINotes(SourceLocation Loc) {
-  // If there is a reader for the current module, return it.
-  if (CurrentModuleReader) return CurrentModuleReader.get();
+llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocation Loc) {
+  llvm::SmallVector<APINotesReader *, 2> Results;
+
+  // If there are readers for the current module, return them.
+  if (!getCurrentModuleReaders().empty()) {
+    Results.append(getCurrentModuleReaders().begin(), getCurrentModuleReaders().end());
+    return Results;
+  }
 
   // If we're not allowed to implicitly load API notes files, we're done.
-  if (!ImplicitAPINotes) return nullptr;
+  if (!ImplicitAPINotes) return Results;
 
   // If we don't have source location information, we're done.
-  if (Loc.isInvalid()) return nullptr;
+  if (Loc.isInvalid()) return Results;
 
   // API notes are associated with the expansion location. Retrieve the
   // file for this location.
   SourceLocation ExpansionLoc = SourceMgr.getExpansionLoc(Loc);
   FileID ID = SourceMgr.getFileID(ExpansionLoc);
-  if (ID.isInvalid())
-    return nullptr;
+  if (ID.isInvalid()) return Results;
   const FileEntry *File = SourceMgr.getFileEntryForID(ID);
-  if (!File)
-    return nullptr;
+  if (!File) return Results;
 
   // Look for API notes in the directory corresponding to this file, or one of
   // its its parent directories.
@@ -420,7 +446,6 @@ APINotesReader *APINotesManager::findAPINotes(SourceLocation Loc) {
   llvm::SetVector<const DirectoryEntry *,
                   SmallVector<const DirectoryEntry *, 4>,
                   llvm::SmallPtrSet<const DirectoryEntry *, 4>> DirsVisited;
-  APINotesReader *Result = nullptr;
   do {
     // Look for an API notes reader for this header search directory.
     auto Known = Readers.find(Dir);
@@ -437,7 +462,8 @@ APINotesReader *APINotesManager::findAPINotes(SourceLocation Loc) {
       }
 
       // We have the answer.
-      Result = Known->second.dyn_cast<APINotesReader *>();
+      if (auto Reader = Known->second.dyn_cast<APINotesReader *>())
+        Results.push_back(Reader);
       break;
     }
 
@@ -473,7 +499,8 @@ APINotesReader *APINotesManager::findAPINotes(SourceLocation Loc) {
         }
 
         // Grab the result.
-        Result = Readers[Dir].dyn_cast<APINotesReader *>();;
+        if (auto Reader = Readers[Dir].dyn_cast<APINotesReader *>())
+          Results.push_back(Reader);
         break;
       }
     } else {
@@ -489,7 +516,8 @@ APINotesReader *APINotesManager::findAPINotes(SourceLocation Loc) {
       if (const FileEntry *APINotesFile = FileMgr.getFile(APINotesPath)) {
         if (!loadAPINotes(Dir, APINotesFile)) {
           ++NumHeaderAPINotes;
-          Result = Readers[Dir].dyn_cast<APINotesReader *>();
+          if (auto Reader = Readers[Dir].dyn_cast<APINotesReader *>())
+            Results.push_back(Reader);
           break;
         }
       }
@@ -519,5 +547,5 @@ APINotesReader *APINotesManager::findAPINotes(SourceLocation Loc) {
     Readers[Visited] = Dir;
   }
 
-  return Result;
+  return Results;
 }

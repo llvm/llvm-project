@@ -548,10 +548,11 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
             getLangOpts().APINotesModules,
             getAPINotesOpts().ModuleSearchPaths);
     // Check for any attributes we should add to the module
-    if (auto curReader = TheSema->APINotes.getCurrentModuleReader()) {
+    for (auto reader : TheSema->APINotes.getCurrentModuleReaders()) {
       // swift_infer_import_as_member
-      if (curReader->getModuleOptions().SwiftInferImportAsMember) {
+      if (reader->getModuleOptions().SwiftInferImportAsMember) {
         currentModule->IsSwiftInferImportAsMember = true;
+        break;
       }
     }
   }
