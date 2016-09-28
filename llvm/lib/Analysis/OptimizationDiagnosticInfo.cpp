@@ -59,7 +59,13 @@ template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
   static void mapping(IO &io, DiagnosticInfoOptimizationBase *&OptDiag) {
     assert(io.outputting() && "input not yet implemented");
 
-    if (io.mapTag("!Missed", OptDiag->getKind() == DK_OptimizationRemarkMissed))
+    if (io.mapTag("!Passed", OptDiag->getKind() == DK_OptimizationRemark))
+      ;
+    else if (io.mapTag("!Missed",
+                       OptDiag->getKind() == DK_OptimizationRemarkMissed))
+      ;
+    else if (io.mapTag("!Analysis",
+                       OptDiag->getKind() == DK_OptimizationRemarkAnalysis))
       ;
     else
       llvm_unreachable("todo");

@@ -264,6 +264,8 @@ public:
     /// transformation will select an unrolling factor based on the current cost
     /// threshold and other factors.
     unsigned Count;
+    /// Default unroll count for loops with run-time trip count.
+    unsigned DefaultUnrollRuntimeCount;
     // Set the maximum unrolling factor. The unrolling factor may be selected
     // using the appropriate cost threshold, but may not exceed this number
     // (set to UINT_MAX to disable). This does not apply in cases where the

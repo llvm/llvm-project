@@ -102,10 +102,6 @@ static cl::opt<unsigned> PragmaUnrollThreshold(
 /// code expansion would result.
 static const unsigned NoThreshold = UINT_MAX;
 
-/// Default unroll count for loops with run-time trip count if
-/// -unroll-count is not set
-static const unsigned DefaultUnrollRuntimeCount = 8;
-
 /// Gather the various unrolling parameters based on the defaults, compiler
 /// flags, TTI overrides and user specified parameters.
 static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
@@ -122,6 +118,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.PartialThreshold = UP.Threshold;
   UP.PartialOptSizeThreshold = 0;
   UP.Count = 0;
+  UP.DefaultUnrollRuntimeCount = 8;
   UP.MaxCount = UINT_MAX;
   UP.FullUnrollMaxCount = UINT_MAX;
   UP.Partial = false;
@@ -803,7 +800,7 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
         // largest power-of-two factor that satisfies the threshold limit.
         // As we'll create fixup loop, do the type of unrolling only if
         // remainder loop is allowed.
-        UP.Count = DefaultUnrollRuntimeCount;
+        UP.Count = UP.DefaultUnrollRuntimeCount;
         UnrolledSize = (LoopSize - BEInsns) * UP.Count + BEInsns;
         while (UP.Count != 0 && UnrolledSize > UP.PartialThreshold) {
           UP.Count >>= 1;
@@ -852,7 +849,7 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     return false;
   }
   if (UP.Count == 0)
-    UP.Count = DefaultUnrollRuntimeCount;
+    UP.Count = UP.DefaultUnrollRuntimeCount;
   UnrolledSize = (LoopSize - BEInsns) * UP.Count + BEInsns;
 
   // Reduce unroll count to be the largest power-of-two factor of

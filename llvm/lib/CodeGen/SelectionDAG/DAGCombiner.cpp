@@ -13064,13 +13064,6 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
     Mask[i] = Vec2Offset + ExtIndex;
   }
 
-  // Avoid introducing illegal shuffles with zero.
-  // TODO: This doesn't actually do anything smart at the moment.
-  // We should either delete this, or check legality for all the shuffles
-  // we create.
-  if (UsesZeroVector && !TLI.isVectorClearMaskLegal(Mask, VT))
-    return SDValue();
-
   // The type the input vectors may have changed above.
   InVT1 = VecIn1.getValueType();
 
