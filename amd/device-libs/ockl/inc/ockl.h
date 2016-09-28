@@ -374,6 +374,12 @@ extern __attribute__((const)) size_t __ockl_get_enqueued_local_size(uint);
 extern __attribute__((const)) size_t __ockl_get_global_linear_id(void);
 extern __attribute__((const)) size_t __ockl_get_local_linear_id(void);
 
+extern __attribute__((const)) bool OCKL_MANGLE_T(is_local,addr)(const void *);
+extern __attribute__((const)) bool OCKL_MANGLE_T(is_private,addr)(const void *);
+extern __attribute__((const)) __global void * OCKL_MANGLE_T(to,global)(void *);
+extern __attribute__((const)) __local void * OCKL_MANGLE_T(to,local)(void *);
+extern __attribute__((const)) __private void * OCKL_MANGLE_T(to,private)(void *);
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
 #endif // OCKL_H

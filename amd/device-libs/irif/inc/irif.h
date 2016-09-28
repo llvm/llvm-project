@@ -226,6 +226,7 @@ extern __attribute__((const)) uint __llvm_amdgcn_workgroup_id_y(void) __asm("llv
 extern __attribute__((const)) uint __llvm_amdgcn_workgroup_id_z(void) __asm("llvm.amdgcn.workgroup.id.z");
 
 extern __attribute__((const)) __constant void *__llvm_amdgcn_dispatch_ptr(void) __asm("llvm.amdgcn.dispatch.ptr");
+extern __attribute__((const)) __constant void *__llvm_amdgcn_queue_ptr(void) __asm("llvm.amdgcn.queue.ptr");
 extern __attribute__((const)) __constant void *__llvm_amdgcn_kernarg_segment_ptr(void) __asm("llvm.amdgcn.kernarg.segment.ptr");
 extern __attribute__((const)) __constant void *__llvm_amdgcn_implicitarg_ptr(void) __asm("llvm.amdgcn.implicitarg.ptr");
 
