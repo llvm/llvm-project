@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesWriter.h"
 #include "APINotesFormat.h"
+#include "clang/Basic/FileManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
@@ -42,6 +43,10 @@ class APINotesWriter::Implementation {
 public:
   /// The name of the module
   std::string ModuleName;
+
+  /// The source file from which this binary representation was
+  /// created, if known.
+  const FileEntry *SourceFile;
 
   bool SwiftInferImportAsMember = false;
 
@@ -221,6 +226,12 @@ void APINotesWriter::Implementation::writeControlBlock(
   if (SwiftInferImportAsMember) {
     control_block::ModuleOptionsLayout moduleOptions(writer);
     moduleOptions.emit(ScratchRecord, SwiftInferImportAsMember);
+  }
+
+  if (SourceFile) {
+    control_block::SourceFileLayout sourceFile(writer);
+    sourceFile.emit(ScratchRecord, SourceFile->getSize(),
+                    SourceFile->getModificationTime());
   }
 }
 
@@ -1006,10 +1017,11 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &os) {
   os.flush();
 }
 
-APINotesWriter::APINotesWriter(StringRef moduleName)
+APINotesWriter::APINotesWriter(StringRef moduleName, const FileEntry *sourceFile)
   : Impl(*new Implementation)
 {
   Impl.ModuleName = moduleName;
+  Impl.SourceFile = sourceFile;
 }
 
 APINotesWriter::~APINotesWriter() {

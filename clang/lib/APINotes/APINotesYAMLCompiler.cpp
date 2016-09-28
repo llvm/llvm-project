@@ -501,6 +501,7 @@ namespace {
 
   class YAMLConverter {
     const Module &TheModule;
+    const FileEntry *SourceFile;
     APINotesWriter *Writer;
     OSType TargetOS;
     llvm::raw_ostream &OS;
@@ -519,11 +520,12 @@ namespace {
 
   public:
     YAMLConverter(const Module &module,
-                 OSType targetOS,
-                 llvm::raw_ostream &os,
-                 llvm::SourceMgr::DiagHandlerTy diagHandler,
-                 void *diagHandlerCtxt) :
-      TheModule(module), Writer(0), TargetOS(targetOS), OS(os),
+                  const FileEntry *sourceFile,
+                  OSType targetOS,
+                  llvm::raw_ostream &os,
+                  llvm::SourceMgr::DiagHandlerTy diagHandler,
+                  void *diagHandlerCtxt) :
+      TheModule(module), SourceFile(sourceFile), Writer(0), TargetOS(targetOS), OS(os),
       DiagHandler(diagHandler), DiagHandlerCtxt(diagHandlerCtxt),
       ErrorOccured(false) {}
 
@@ -739,7 +741,7 @@ namespace {
 
       // Set up the writer.
       // FIXME: This is kindof ugly.
-      APINotesWriter writer(TheModule.Name);
+      APINotesWriter writer(TheModule.Name, SourceFile);
       Writer = &writer;
 
       // Write all classes.
@@ -877,13 +879,14 @@ namespace {
 }
 
 static bool compile(const Module &module,
+                    const FileEntry *sourceFile,
                     llvm::raw_ostream &os,
                     api_notes::OSType targetOS,
                     llvm::SourceMgr::DiagHandlerTy diagHandler,
                     void *diagHandlerCtxt){
   using namespace api_notes;
 
-  YAMLConverter c(module, targetOS, os, diagHandler, diagHandlerCtxt);
+  YAMLConverter c(module, sourceFile, targetOS, os, diagHandler, diagHandlerCtxt);
   return c.convertModule();
 }
 
@@ -905,6 +908,7 @@ static void printDiagnostic(const llvm::SMDiagnostic &diag, void *context) {
 }
 
 bool api_notes::compileAPINotes(StringRef yamlInput,
+                                const FileEntry *sourceFile,
                                 llvm::raw_ostream &os,
                                 OSType targetOS,
                                 llvm::SourceMgr::DiagHandlerTy diagHandler,
@@ -918,7 +922,7 @@ bool api_notes::compileAPINotes(StringRef yamlInput,
   if (parseAPINotes(yamlInput, module, diagHandler, diagHandlerCtxt))
     return true;
 
-  return compile(module, os, targetOS, diagHandler, diagHandlerCtxt);
+  return compile(module, sourceFile, os, targetOS, diagHandler, diagHandlerCtxt);
 }
 
 namespace {
