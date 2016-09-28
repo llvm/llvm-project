@@ -4121,17 +4121,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
   if (Chain)
     Args.add(RValue::get(Builder.CreateBitCast(Chain, CGM.VoidPtrTy)),
              CGM.getContext().VoidPtrTy);
-
-  // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left. It also requires that we evaluate arguments to operators
-  // <<, >>, and ->* left-to-right, but that is not possible under the MS ABI,
-  // so there is no corresponding "force left-to-right" case.
-  bool ForceRightToLeft = false;
-  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E))
-    ForceRightToLeft = OCE->isAssignmentOp();
-
   EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
-               E->getDirectCallee(), /*ParamsToSkip*/ 0, ForceRightToLeft);
+               E->getDirectCallee(), /*ParamsToSkip*/ 0);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*isChainCall=*/Chain);

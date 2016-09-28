@@ -18,8 +18,7 @@ struct B {
 struct C {
   operator int *();
   A *operator->();
-  void operator->*(A);
-  friend void operator->*(C, B);
+  void operator->*(B);
 
   friend void operator<<(C, B);
   friend void operator>>(C, B);
@@ -138,17 +137,7 @@ int dotstar_lhs_before_rhs() {
   int b = make_a_ptr()->*make_mem_ptr_a();
 
   // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
-  make_c()->*make_a();
-
-  // FIXME: The corresponding case for Windows ABIs is unimplementable if the
-  // operand has a non-trivially-destructible type, because the order of
-  // construction of function arguments is defined by the ABI there (it's the
-  // reverse of the order in which the parameters are destroyed in the callee).
-  // But we could follow the C++17 rule in the case where the operand type is
-  // trivially-destructible.
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c()->*make_b();
 
   // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
@@ -165,60 +154,61 @@ int dotstar_lhs_before_rhs() {
 // CHECK: }
 }
 
-
-// CHECK-LABEL: define {{.*}}@{{.*}}assign_rhs_before_lhs{{.*}}(
+#if 0
+// CHECKDISABLED-LABEL: define {{.*}}@{{.*}}assign_lhs_before_rhs{{.*}}(
 void assign_rhs_before_lhs() {
   extern int &lhs_ref(), rhs();
 
-  // CHECK: call {{.*}}@{{.*}}rhs{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}lhs_ref{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}rhs{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}lhs_ref{{.*}}(
   lhs_ref() = rhs();
 
-  // CHECK: call {{.*}}@{{.*}}rhs{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}lhs_ref{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}rhs{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}lhs_ref{{.*}}(
   lhs_ref() += rhs();
 
-  // CHECK: call {{.*}}@{{.*}}rhs{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}lhs_ref{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}rhs{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}lhs_ref{{.*}}(
   lhs_ref() %= rhs();
 
-  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_c{{.*}}(
   make_c() = make_b();
 
-  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_c{{.*}}(
   make_c() += make_b();
-// CHECK: }
+// CHECKDISABLED: }
 }
-
-// CHECK-LABEL: define {{.*}}@{{.*}}shift_lhs_before_rhs{{.*}}(
+#endif
+#if 0
+// CHECKDISABLED-LABEL: define {{.*}}@{{.*}}shift_lhs_before_rhs{{.*}}(
 void shift_lhs_before_rhs() {
   extern int lhs(), rhs();
 
-  // CHECK: call {{.*}}@{{.*}}lhs{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}rhs{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}lhs{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}rhs{{.*}}(
   (void)(lhs() << rhs());
 
-  // CHECK: call {{.*}}@{{.*}}lhs{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}rhs{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}lhs{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}rhs{{.*}}(
   (void)(lhs() >> rhs());
 
-  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_a{{.*}}(
   make_c() << make_a();
 
-  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_a{{.*}}(
   make_c() >> make_a();
 
-  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() << make_b();
 
-  // FIXME: This is unimplementable for Windows ABIs, see above.
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECKDISABLED: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() >> make_b();
-// CHECK: }
+// CHECKDISABLED: }
 }
+#endif
