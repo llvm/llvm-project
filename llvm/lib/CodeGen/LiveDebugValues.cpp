@@ -23,6 +23,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
+#include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -60,6 +61,26 @@ class LiveDebugValues : public MachineFunctionPass {
 private:
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
+  LexicalScopes LS;
+
+  /// Keeps track of lexical scopes associated with a user value's source
+  /// location.
+  class UserValueScopes {
+    DebugLoc DL;
+    LexicalScopes &LS;
+    SmallPtrSet<const MachineBasicBlock *, 4> LBlocks;
+
+  public:
+    UserValueScopes(DebugLoc D, LexicalScopes &L) : DL(std::move(D)), LS(L) {}
+
+    /// Return true if current scope dominates at least one machine
+    /// instruction in a given machine basic block.
+    bool dominates(MachineBasicBlock *MBB) {
+      if (LBlocks.empty())
+        LS.getMachineBasicBlocks(DL, LBlocks);
+      return LBlocks.count(MBB) != 0 || LS.dominates(DL, MBB);
+    }
+  };
 
   /// Based on std::pair so it can be used as an index into a DenseMap.
   typedef std::pair<const DILocalVariable *, const DILocation *>
@@ -83,7 +104,7 @@ private:
   struct VarLoc {
     const DebugVariable Var;
     const MachineInstr &MI; ///< Only used for cloning a new DBG_VALUE.
-
+    mutable UserValueScopes UVS;
     enum { InvalidKind = 0, RegisterKind } Kind;
 
     /// The value location. Stored separately to avoid repeatedly
@@ -96,9 +117,9 @@ private:
       uint64_t Hash;
     } Loc;
 
-    VarLoc(const MachineInstr &MI)
+    VarLoc(const MachineInstr &MI, LexicalScopes &LS)
         : Var(MI.getDebugVariable(), MI.getDebugLoc()->getInlinedAt()), MI(MI),
-          Kind(InvalidKind) {
+          UVS(MI.getDebugLoc(), LS), Kind(InvalidKind) {
       static_assert((sizeof(Loc) == sizeof(uint64_t)),
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
@@ -124,6 +145,10 @@ private:
         return Loc.RegisterLoc.RegNo;
       return 0;
     }
+
+    /// Determine whether the lexical scope of this value's debug location
+    /// dominates MBB.
+    bool dominates(MachineBasicBlock &MBB) const { return UVS.dominates(&MBB); }
 
     void dump() const { MI.dump(); }
 
@@ -229,6 +254,7 @@ public:
   /// Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -295,7 +321,7 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
   // Add the VarLoc to OpenRanges from this DBG_VALUE.
   // TODO: Currently handles DBG_VALUE which has only reg as location.
   if (isDbgValueDescribedByReg(MI)) {
-    VarLoc VL(MI);
+    VarLoc VL(MI, LS);
     unsigned ID = VarLocIDs.insert(VL);
     OpenRanges.insert(ID, VL.Var);
   }
@@ -398,6 +424,13 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
       InLocsT &= OL->second;
     NumVisited++;
   }
+
+  // Filter out DBG_VALUES that are out of scope.
+  VarLocSet KillSet;
+  for (auto ID : InLocsT)
+    if (!VarLocIDs[ID].dominates(MBB))
+      KillSet.set(ID);
+  InLocsT.intersectWithComplement(KillSet);
 
   // As we are processing blocks in reverse post-order we
   // should have processed at least one predecessor, unless it
@@ -520,12 +553,14 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 }
 
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
+  if (!MF.getFunction()->getSubprogram())
+    // LiveDebugValues will already have removed all DBG_VALUEs.
+    return false;
+
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
+  LS.initialize(MF);
 
-  bool Changed = false;
-
-  Changed |= ExtendRanges(MF);
-
+  bool Changed = ExtendRanges(MF);
   return Changed;
 }
