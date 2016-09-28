@@ -1969,6 +1969,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns)
                             | Opts.NativeHalfArgsAndReturns;
   Opts.APINotes = Args.hasArg(OPT_fapinotes);
+  Opts.APINotesModules = Args.hasArg(OPT_fapinotes_modules);
   Opts.GNUAsm = !Args.hasArg(OPT_fno_gnu_inline_asm);
 
   // __declspec is enabled by default for the PS4 by the driver, and also

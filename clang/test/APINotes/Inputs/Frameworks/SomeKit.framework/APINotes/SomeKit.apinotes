@@ -1,7 +1,7 @@
 Name: SomeKit
 Classes:
   - Name: A
-    Methods:         
+    Methods:
       - Selector:        "transform:"
         MethodKind:      Instance
         Availability:    none
@@ -31,3 +31,7 @@ Classes:
       - Selector: "initWithA:"
         MethodKind: Instance
         DesignatedInit: true
+Protocols:
+  - Name: InternalProtocol
+    Availability: none
+    AvailabilityMsg: "not for you"
