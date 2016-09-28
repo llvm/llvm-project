@@ -7,7 +7,7 @@ set(output_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
 set(module_cache_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/repl_swift_module_cache")
 
 if(NOT LLDB_BUILT_STANDALONE)
-  set(swift_depends swift)
+  set(swift_depends swift swift-stdlib)
 endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
