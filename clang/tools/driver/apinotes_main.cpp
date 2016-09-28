@@ -119,7 +119,7 @@ int cc1apinotes_main(ArrayRef<const char *> Argv, const char *Argv0,
     llvm::raw_fd_ostream os(OutputFilename, EC,
                             llvm::sys::fs::OpenFlags::F_None);
 
-    if (api_notes::compileAPINotes(input, os, targetOS))
+    if (api_notes::compileAPINotes(input, /*sourceFile=*/nullptr, os, targetOS))
       return 1;
     
     os.flush();

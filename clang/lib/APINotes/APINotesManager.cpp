@@ -181,11 +181,16 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
                                                       /*cacheFailure=*/false)) {
     // Load the file contents.
     if (auto buffer = fileMgr.getBufferForFile(compiledFile)) {
-      // Make sure the file is up-to-date.
-      if (compiledFile->getModificationTime()
-            >= apiNotesFile->getModificationTime()) {
-        // Load the file.
-        if (auto reader = APINotesReader::get(std::move(buffer.get()))) {
+      // Load the file.
+      if (auto reader = APINotesReader::get(std::move(buffer.get()))) {
+        bool outOfDate = false;
+        if (auto sizeAndModTime = reader->getSourceFileSizeAndModTime()) {
+          if (sizeAndModTime->first != apiNotesFile->getSize() ||
+              sizeAndModTime->second != apiNotesFile->getModificationTime())
+            outOfDate = true;
+        }
+
+        if (!outOfDate) {
           // Success.
           ++NumBinaryCacheHits;
           return reader;
@@ -202,13 +207,15 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   }
 
   // Open the source file.
-  auto buffer = fileMgr.getBufferForFile(apiNotesFile);
-  if (!buffer) return nullptr;
+  auto sourceFileID = SourceMgr.createFileID(apiNotesFile, SourceLocation(), SrcMgr::C_User);
+  auto sourceBuffer = SourceMgr.getBuffer(sourceFileID, SourceLocation());
+  if (!sourceBuffer) return nullptr;
 
   // Compile the API notes source into a buffer.
   // FIXME: Either propagate OSType through or, better yet, improve the binary
   // APINotes format to maintain complete availability information.
   llvm::SmallVector<char, 1024> apiNotesBuffer;
+  std::unique_ptr<llvm::MemoryBuffer> compiledBuffer;
   {
     SourceMgrAdapter srcMgrAdapter(SourceMgr, SourceMgr.getDiagnostics(),
                                    diag::err_apinotes_message,
@@ -216,7 +223,8 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
                                    diag::note_apinotes_message,
                                    apiNotesFile);
     llvm::raw_svector_ostream OS(apiNotesBuffer);
-    if (api_notes::compileAPINotes(buffer.get()->getBuffer(),
+    if (api_notes::compileAPINotes(sourceBuffer->getBuffer(),
+                                   SourceMgr.getFileEntryForID(sourceFileID),
                                    OS,
                                    api_notes::OSType::Absent,
                                    srcMgrAdapter.getDiagHandler(),
@@ -224,7 +232,7 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
       return nullptr;
 
     // Make a copy of the compiled form into the buffer.
-    buffer = llvm::MemoryBuffer::getMemBufferCopy(
+    compiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
                StringRef(apiNotesBuffer.data(), apiNotesBuffer.size()));
   }
 
@@ -247,7 +255,8 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     bool hadError;
     {
       llvm::raw_fd_ostream out(temporaryFD, /*shouldClose=*/true);
-      out.write(buffer.get()->getBufferStart(), buffer.get()->getBufferSize());
+      out.write(compiledBuffer.get()->getBufferStart(),
+                compiledBuffer.get()->getBufferSize());
       out.flush();
 
       hadError = out.has_error();
@@ -261,7 +270,7 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   }
 
   // Load the binary form we just compiled.
-  auto reader = APINotesReader::get(std::move(*buffer));
+  auto reader = APINotesReader::get(std::move(compiledBuffer));
   assert(reader && "Could not load the API notes we just generated?");
   return reader;
 }
