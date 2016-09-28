@@ -40,7 +40,7 @@ class ProfileSummary;
 // units. This would require making this depend on BFI.
 class ProfileSummaryInfo {
 private:
-  Module &M;
+  Module *M;
   std::unique_ptr<ProfileSummary> Summary;
   void computeSummary();
   void computeThresholds();
@@ -48,7 +48,7 @@ private:
   Optional<uint64_t> HotCountThreshold, ColdCountThreshold;
 
 public:
-  ProfileSummaryInfo(Module &M) : M(M) {}
+  ProfileSummaryInfo(Module *M) : M(M) {}
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg)
       : M(Arg.M), Summary(std::move(Arg.Summary)) {}
   /// \brief Returns true if \p F is a hot function.
@@ -59,6 +59,8 @@ public:
   bool isHotCount(uint64_t C);
   /// \brief Returns true if count \p C is considered cold.
   bool isColdCount(uint64_t C);
+  /// \brief Checks if \p NewM is up-to-date, if not, invalidate Summary.
+  void resetModule(Module *NewM);
 };
 
 /// An analysis pass based on legacy pass manager to deliver ProfileSummaryInfo.
