@@ -17,6 +17,8 @@ int main() {
   [a setNonnullABoth: 0]; // expected-warning{{null passed to a callee that requires a non-null argument}}
   [A setNonnullABoth: 0]; // expected-warning{{null passed to a callee that requires a non-null argument}}
 
+  [a setInternalProperty: 0]; // expected-warning{{null passed to a callee that requires a non-null argument}}
+
   return 0;
 }
 

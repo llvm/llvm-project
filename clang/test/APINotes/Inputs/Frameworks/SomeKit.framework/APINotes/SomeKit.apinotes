@@ -31,7 +31,3 @@ Classes:
       - Selector: "initWithA:"
         MethodKind: Instance
         DesignatedInit: true
-Protocols:
-  - Name: InternalProtocol
-    Availability: none
-    AvailabilityMsg: "not for you"
