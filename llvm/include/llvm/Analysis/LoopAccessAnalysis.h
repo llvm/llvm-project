@@ -639,7 +639,12 @@ private:
   /// pass.
   bool canAnalyzeLoop();
 
-  void emitAnalysis(LoopAccessReport &Message);
+  /// \brief Save the analysis remark.
+  ///
+  /// LAA does not directly emits the remarks.  Instead it stores it which the
+  /// client can retrieve and presents as its own analysis
+  /// (e.g. -Rpass-analysis=loop-vectorize).
+  void recordAnalysis(LoopAccessReport &Message);
 
   /// \brief Collect memory access with loop invariant strides.
   ///

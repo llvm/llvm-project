@@ -1464,25 +1464,23 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   // We can only analyze innermost loops.
   if (!TheLoop->empty()) {
     DEBUG(dbgs() << "LAA: loop is not the innermost loop\n");
-    emitAnalysis(LoopAccessReport() << "loop is not the innermost loop");
+    recordAnalysis(LoopAccessReport() << "loop is not the innermost loop");
     return false;
   }
 
   // We must have a single backedge.
   if (TheLoop->getNumBackEdges() != 1) {
     DEBUG(dbgs() << "LAA: loop control flow is not understood by analyzer\n");
-    emitAnalysis(
-        LoopAccessReport() <<
-        "loop control flow is not understood by analyzer");
+    recordAnalysis(LoopAccessReport()
+                   << "loop control flow is not understood by analyzer");
     return false;
   }
 
   // We must have a single exiting block.
   if (!TheLoop->getExitingBlock()) {
     DEBUG(dbgs() << "LAA: loop control flow is not understood by analyzer\n");
-    emitAnalysis(
-        LoopAccessReport() <<
-        "loop control flow is not understood by analyzer");
+    recordAnalysis(LoopAccessReport()
+                   << "loop control flow is not understood by analyzer");
     return false;
   }
 
@@ -1491,17 +1489,16 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   // instructions in the loop are executed the same number of times.
   if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
     DEBUG(dbgs() << "LAA: loop control flow is not understood by analyzer\n");
-    emitAnalysis(
-        LoopAccessReport() <<
-        "loop control flow is not understood by analyzer");
+    recordAnalysis(LoopAccessReport()
+                   << "loop control flow is not understood by analyzer");
     return false;
   }
 
   // ScalarEvolution needs to be able to find the exit count.
   const SCEV *ExitCount = PSE->getBackedgeTakenCount();
   if (ExitCount == PSE->getSE()->getCouldNotCompute()) {
-    emitAnalysis(LoopAccessReport()
-                 << "could not determine number of loop iterations");
+    recordAnalysis(LoopAccessReport()
+                   << "could not determine number of loop iterations");
     DEBUG(dbgs() << "LAA: SCEV could not compute the loop exit count.\n");
     return false;
   }
@@ -1550,8 +1547,8 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
 
         auto *Ld = dyn_cast<LoadInst>(&I);
         if (!Ld || (!Ld->isSimple() && !IsAnnotatedParallel)) {
-          emitAnalysis(LoopAccessReport(Ld)
-                       << "read with atomic ordering or volatile read");
+          recordAnalysis(LoopAccessReport(Ld)
+                         << "read with atomic ordering or volatile read");
           DEBUG(dbgs() << "LAA: Found a non-simple load.\n");
           CanVecMem = false;
           return;
@@ -1568,14 +1565,14 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
       if (I.mayWriteToMemory()) {
         auto *St = dyn_cast<StoreInst>(&I);
         if (!St) {
-          emitAnalysis(LoopAccessReport(St)
-                       << "instruction cannot be vectorized");
+          recordAnalysis(LoopAccessReport(St)
+                         << "instruction cannot be vectorized");
           CanVecMem = false;
           return;
         }
         if (!St->isSimple() && !IsAnnotatedParallel) {
-          emitAnalysis(LoopAccessReport(St)
-                       << "write with atomic ordering or volatile write");
+          recordAnalysis(LoopAccessReport(St)
+                         << "write with atomic ordering or volatile write");
           DEBUG(dbgs() << "LAA: Found a non-simple store.\n");
           CanVecMem = false;
           return;
@@ -1683,7 +1680,7 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
   bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(),
                                                   TheLoop, SymbolicStrides);
   if (!CanDoRTIfNeeded) {
-    emitAnalysis(LoopAccessReport() << "cannot identify array bounds");
+    recordAnalysis(LoopAccessReport() << "cannot identify array bounds");
     DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                  << "the array bounds.\n");
     CanVecMem = false;
@@ -1714,8 +1711,8 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {
-        emitAnalysis(LoopAccessReport()
-                     << "cannot check memory dependencies at runtime");
+        recordAnalysis(LoopAccessReport()
+                       << "cannot check memory dependencies at runtime");
         DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
         CanVecMem = false;
         return;
@@ -1730,7 +1727,7 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
                  << (PtrRtChecking->Need ? "" : " don't")
                  << " need runtime memory checks.\n");
   else {
-    emitAnalysis(
+    recordAnalysis(
         LoopAccessReport()
         << "unsafe dependent memory operations in loop. Use "
            "#pragma loop distribute(enable) to allow loop distribution "
@@ -1749,7 +1746,7 @@ bool LoopAccessInfo::blockNeedsPredication(BasicBlock *BB, Loop *TheLoop,
   return !DT->dominates(BB, Latch);
 }
 
-void LoopAccessInfo::emitAnalysis(LoopAccessReport &Message) {
+void LoopAccessInfo::recordAnalysis(LoopAccessReport &Message) {
   assert(!Report && "Multiple reports generated");
   Report = Message;
 }
