@@ -592,10 +592,10 @@ static unsigned getEncodedOrdering(AtomicOrdering Ordering) {
 static unsigned getEncodedSynchScope(SynchronizationScope SynchScope) {
   if (SynchScope >= SynchronizationScopeFirstTargetSpecific)
     return unsigned(bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC +
-      (SynchScope - SynchronizationScopeFirstTargetSpecific));
+        (SynchScope - SynchronizationScopeFirstTargetSpecific));
 
   switch (SynchScope) {
-  default: llvm_unreachable("Invalid synch scope");
+  default: llvm_unreachable("Invalid syncscope");
   case SingleThread: return bitc::SYNCHSCOPE_SINGLETHREAD;
   case CrossThread: return bitc::SYNCHSCOPE_CROSSTHREAD;
   }

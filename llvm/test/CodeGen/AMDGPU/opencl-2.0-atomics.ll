@@ -1,10 +1,10 @@
 ; RUN: opt -mtriple=amdgcn--amdhsa -amdgpu-lower-opencl-atomic-builtins -mcpu=fiji -S < %s | FileCheck %s
-; CHECK: cmpxchg i32 addrspace(4)* null, i32 %{{[0-9]+}}, i32 0 synchscope(2) seq_cst seq_cst
-; CHECK: cmpxchg i32 addrspace(4)* null, i32 %{{[0-9]+}}, i32 0 synchscope(4) release acquire
-; CHECK: atomicrmw add i32 addrspace(4)* null, i32 1 synchscope(3) release
+; CHECK: cmpxchg i32 addrspace(4)* null, i32 %{{[0-9]+}}, i32 0 syncscope(2) seq_cst seq_cst
+; CHECK: cmpxchg i32 addrspace(4)* null, i32 %{{[0-9]+}}, i32 0 syncscope(4) release acquire
+; CHECK: atomicrmw add i32 addrspace(4)* null, i32 1 syncscope(3) release
 ; CHECK: store volatile i32 42, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @test.guide to i32 addrspace(4)*)
-; CHECK: load atomic volatile i32, i32 addrspace(4)* null synchscope(2) monotonic, align 4
-; CHECK: store atomic volatile i32 0, i32 addrspace(4)* null synchscope(2) release, align 4
+; CHECK: load atomic volatile i32, i32 addrspace(4)* null syncscope(2) monotonic, align 4
+; CHECK: store atomic volatile i32 0, i32 addrspace(4)* null syncscope(2) release, align 4
 ; CHECK: call void @my_atomic_compare_exchange_strong_explicit(
 
 @test.guide = internal addrspace(3) global i32 undef, align 4

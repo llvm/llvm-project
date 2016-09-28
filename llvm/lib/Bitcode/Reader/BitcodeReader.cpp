@@ -970,12 +970,14 @@ static AtomicOrdering getDecodedOrdering(unsigned Val) {
 }
 
 static SynchronizationScope getDecodedSynchScope(unsigned Val) {
-  if (Val >= bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC)
+  if (Val >= bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC) {
+    assert(Val == uint8_t(Val) && "expected 8-bit integer (too large)");
     return SynchronizationScope(SynchronizationScopeFirstTargetSpecific +
-      (Val - bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC));
+        (Val - bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC));
+  }
 
   switch (Val) {
-  default: llvm_unreachable("Invalid synch scope");
+  default: llvm_unreachable("Invalid syncscope");
   case bitc::SYNCHSCOPE_SINGLETHREAD: return SingleThread;
   case bitc::SYNCHSCOPE_CROSSTHREAD: return CrossThread;
   }

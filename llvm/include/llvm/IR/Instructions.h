@@ -38,7 +38,7 @@ class DataLayout;
 class LLVMContext;
 
 /// Predefined synchronization scopes.
-enum SynchronizationScope : unsigned {
+enum SynchronizationScope : uint8_t {
   /// Synchronized with respect to signal handlers executing in the same thread.
   SingleThread = 0,
 

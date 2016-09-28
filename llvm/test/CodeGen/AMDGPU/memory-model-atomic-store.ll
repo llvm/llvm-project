@@ -36,7 +36,7 @@ define void @system_seq_cst(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @agent_unordered(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(2) unordered, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(2) unordered, align 4
   ret void
 }
 
@@ -44,7 +44,7 @@ define void @agent_unordered(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @agent_monotonic(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(2) monotonic, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(2) monotonic, align 4
   ret void
 }
 
@@ -52,7 +52,7 @@ define void @agent_monotonic(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @agent_release(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(2) release, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(2) release, align 4
   ret void
 }
 
@@ -60,7 +60,7 @@ define void @agent_release(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @agent_seq_cst(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(2) seq_cst, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(2) seq_cst, align 4
   ret void
 }
 
@@ -68,7 +68,7 @@ define void @agent_seq_cst(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @work_group_unordered(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(3) unordered, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(3) unordered, align 4
   ret void
 }
 
@@ -76,7 +76,7 @@ define void @work_group_unordered(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @work_group_monotonic(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(3) monotonic, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(3) monotonic, align 4
   ret void
 }
 
@@ -84,7 +84,7 @@ define void @work_group_monotonic(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @work_group_release(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(3) release, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(3) release, align 4
   ret void
 }
 
@@ -92,7 +92,7 @@ define void @work_group_release(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @work_group_seq_cst(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(3) seq_cst, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(3) seq_cst, align 4
   ret void
 }
 
@@ -100,7 +100,7 @@ define void @work_group_seq_cst(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @wavefront_unordered(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(4) unordered, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(4) unordered, align 4
   ret void
 }
 
@@ -108,7 +108,7 @@ define void @wavefront_unordered(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @wavefront_monotonic(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(4) monotonic, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(4) monotonic, align 4
   ret void
 }
 
@@ -116,7 +116,7 @@ define void @wavefront_monotonic(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @wavefront_release(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(4) release, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(4) release, align 4
   ret void
 }
 
@@ -124,7 +124,7 @@ define void @wavefront_release(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @wavefront_seq_cst(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(4) seq_cst, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(4) seq_cst, align 4
   ret void
 }
 
@@ -132,7 +132,7 @@ define void @wavefront_seq_cst(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @image_unordered(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(5) unordered, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(5) unordered, align 4
   ret void
 }
 
@@ -140,7 +140,7 @@ define void @image_unordered(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @image_monotonic(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(5) monotonic, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(5) monotonic, align 4
   ret void
 }
 
@@ -148,7 +148,7 @@ define void @image_monotonic(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @image_release(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(5) release, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(5) release, align 4
   ret void
 }
 
@@ -156,7 +156,7 @@ define void @image_release(i32 %in, i32 addrspace(4)* %out) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @image_seq_cst(i32 %in, i32 addrspace(4)* %out) {
-  store atomic i32 %in, i32 addrspace(4)* %out synchscope(5) seq_cst, align 4
+  store atomic i32 %in, i32 addrspace(4)* %out syncscope(5) seq_cst, align 4
   ret void
 }
 

@@ -370,7 +370,7 @@ enum AtomicOrderingCodes {
 };
 
 /// Encoded SynchronizationScope values.
-enum AtomicSynchScopeCodes : unsigned {
+enum AtomicSynchScopeCodes : uint8_t {
   /// Encoded value for SingleThread synchronization scope.
   SYNCHSCOPE_SINGLETHREAD = 0,
 

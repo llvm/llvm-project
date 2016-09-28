@@ -56,7 +56,7 @@ define void @system_seq_cst(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @agent_monotonic(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(2) monotonic
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(2) monotonic
   ret void
 }
 
@@ -66,7 +66,7 @@ define void @agent_monotonic(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NEXT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_acquire(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(2) acquire
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(2) acquire
   ret void
 }
 
@@ -76,7 +76,7 @@ define void @agent_acquire(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @agent_release(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(2) release
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(2) release
   ret void
 }
 
@@ -86,7 +86,7 @@ define void @agent_release(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NEXT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_acq_rel(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(2) acq_rel
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(2) acq_rel
   ret void
 }
 
@@ -96,7 +96,7 @@ define void @agent_acq_rel(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NEXT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_seq_cst(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(2) seq_cst
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(2) seq_cst
   ret void
 }
 
@@ -106,7 +106,7 @@ define void @agent_seq_cst(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_monotonic(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(3) monotonic
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(3) monotonic
   ret void
 }
 
@@ -116,7 +116,7 @@ define void @work_group_monotonic(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_acquire(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(3) acquire
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(3) acquire
   ret void
 }
 
@@ -126,7 +126,7 @@ define void @work_group_acquire(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_release(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(3) release
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(3) release
   ret void
 }
 
@@ -136,7 +136,7 @@ define void @work_group_release(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_acq_rel(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(3) acq_rel
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(3) acq_rel
   ret void
 }
 
@@ -146,7 +146,7 @@ define void @work_group_acq_rel(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_seq_cst(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(3) seq_cst
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(3) seq_cst
   ret void
 }
 
@@ -156,7 +156,7 @@ define void @work_group_seq_cst(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_monotonic(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(4) monotonic
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(4) monotonic
   ret void
 }
 
@@ -166,7 +166,7 @@ define void @wavefront_monotonic(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_acquire(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(4) acquire
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(4) acquire
   ret void
 }
 
@@ -176,7 +176,7 @@ define void @wavefront_acquire(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_release(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(4) release
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(4) release
   ret void
 }
 
@@ -186,7 +186,7 @@ define void @wavefront_release(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_acq_rel(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(4) acq_rel
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(4) acq_rel
   ret void
 }
 
@@ -196,7 +196,7 @@ define void @wavefront_acq_rel(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_seq_cst(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(4) seq_cst
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(4) seq_cst
   ret void
 }
 
@@ -206,7 +206,7 @@ define void @wavefront_seq_cst(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_monotonic(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(5) monotonic
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(5) monotonic
   ret void
 }
 
@@ -216,7 +216,7 @@ define void @image_monotonic(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_acquire(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(5) acquire
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(5) acquire
   ret void
 }
 
@@ -226,7 +226,7 @@ define void @image_acquire(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_release(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(5) release
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(5) release
   ret void
 }
 
@@ -236,7 +236,7 @@ define void @image_release(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_acq_rel(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(5) acq_rel
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(5) acq_rel
   ret void
 }
 
@@ -246,7 +246,7 @@ define void @image_acq_rel(i32 addrspace(4)* %out, i32 %in) {
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_seq_cst(i32 addrspace(4)* %out, i32 %in) {
-  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in synchscope(5) seq_cst
+  %val = atomicrmw volatile xchg i32 addrspace(4)* %out, i32 %in syncscope(5) seq_cst
   ret void
 }
 

@@ -117,7 +117,7 @@ define void @system_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @agent_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) monotonic monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) monotonic monotonic
   ret void
 }
 
@@ -128,7 +128,7 @@ define void @agent_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) acquire monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) acquire monotonic
   ret void
 }
 
@@ -139,7 +139,7 @@ define void @agent_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @agent_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) release monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) release monotonic
   ret void
 }
 
@@ -150,7 +150,7 @@ define void @agent_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) acq_rel monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) acq_rel monotonic
   ret void
 }
 
@@ -161,7 +161,7 @@ define void @agent_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) seq_cst monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) seq_cst monotonic
   ret void
 }
 
@@ -172,7 +172,7 @@ define void @agent_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) acquire acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) acquire acquire
   ret void
 }
 
@@ -183,7 +183,7 @@ define void @agent_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) release acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) release acquire
   ret void
 }
 
@@ -194,7 +194,7 @@ define void @agent_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) acq_rel acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) acq_rel acquire
   ret void
 }
 
@@ -205,7 +205,7 @@ define void @agent_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) seq_cst acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) seq_cst acquire
   ret void
 }
 
@@ -216,7 +216,7 @@ define void @agent_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 define void @agent_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(2) seq_cst seq_cst
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(2) seq_cst seq_cst
   ret void
 }
 
@@ -227,7 +227,7 @@ define void @agent_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) monotonic monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) monotonic monotonic
   ret void
 }
 
@@ -238,7 +238,7 @@ define void @work_group_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) acquire monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) acquire monotonic
   ret void
 }
 
@@ -249,7 +249,7 @@ define void @work_group_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) release monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) release monotonic
   ret void
 }
 
@@ -260,7 +260,7 @@ define void @work_group_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) acq_rel monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) acq_rel monotonic
   ret void
 }
 
@@ -271,7 +271,7 @@ define void @work_group_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) seq_cst monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) seq_cst monotonic
   ret void
 }
 
@@ -282,7 +282,7 @@ define void @work_group_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) acquire acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) acquire acquire
   ret void
 }
 
@@ -293,7 +293,7 @@ define void @work_group_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %ol
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) release acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) release acquire
   ret void
 }
 
@@ -304,7 +304,7 @@ define void @work_group_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %ol
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) acq_rel acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) acq_rel acquire
   ret void
 }
 
@@ -315,7 +315,7 @@ define void @work_group_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %ol
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) seq_cst acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) seq_cst acquire
   ret void
 }
 
@@ -326,7 +326,7 @@ define void @work_group_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %ol
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @work_group_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(3) seq_cst seq_cst
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(3) seq_cst seq_cst
   ret void
 }
 
@@ -337,7 +337,7 @@ define void @work_group_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %ol
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) monotonic monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) monotonic monotonic
   ret void
 }
 
@@ -348,7 +348,7 @@ define void @wavefront_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32 
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) acquire monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) acquire monotonic
   ret void
 }
 
@@ -359,7 +359,7 @@ define void @wavefront_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %o
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) release monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) release monotonic
   ret void
 }
 
@@ -370,7 +370,7 @@ define void @wavefront_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %o
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) acq_rel monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) acq_rel monotonic
   ret void
 }
 
@@ -381,7 +381,7 @@ define void @wavefront_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %o
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) seq_cst monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) seq_cst monotonic
   ret void
 }
 
@@ -392,7 +392,7 @@ define void @wavefront_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %o
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) acquire acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) acquire acquire
   ret void
 }
 
@@ -403,7 +403,7 @@ define void @wavefront_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) release acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) release acquire
   ret void
 }
 
@@ -414,7 +414,7 @@ define void @wavefront_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) acq_rel acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) acq_rel acquire
   ret void
 }
 
@@ -425,7 +425,7 @@ define void @wavefront_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) seq_cst acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) seq_cst acquire
   ret void
 }
 
@@ -436,7 +436,7 @@ define void @wavefront_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @wavefront_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(4) seq_cst seq_cst
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(4) seq_cst seq_cst
   ret void
 }
 
@@ -447,7 +447,7 @@ define void @wavefront_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %old
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) monotonic monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) monotonic monotonic
   ret void
 }
 
@@ -458,7 +458,7 @@ define void @image_monotonic_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) acquire monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) acquire monotonic
   ret void
 }
 
@@ -469,7 +469,7 @@ define void @image_acquire_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) release monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) release monotonic
   ret void
 }
 
@@ -480,7 +480,7 @@ define void @image_release_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) acq_rel monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) acq_rel monotonic
   ret void
 }
 
@@ -491,7 +491,7 @@ define void @image_acq_rel_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) seq_cst monotonic
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) seq_cst monotonic
   ret void
 }
 
@@ -502,7 +502,7 @@ define void @image_seq_cst_monotonic(i32 addrspace(4)* %out, i32 %in, i32 %old) 
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) acquire acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) acquire acquire
   ret void
 }
 
@@ -513,7 +513,7 @@ define void @image_acquire_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) release acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) release acquire
   ret void
 }
 
@@ -524,7 +524,7 @@ define void @image_release_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) acq_rel acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) acq_rel acquire
   ret void
 }
 
@@ -535,7 +535,7 @@ define void @image_acq_rel_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) seq_cst acquire
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) seq_cst acquire
   ret void
 }
 
@@ -546,7 +546,7 @@ define void @image_seq_cst_acquire(i32 addrspace(4)* %out, i32 %in, i32 %old) {
 ; CHECK-NOT: buffer_wbinvl1_vol
 define void @image_seq_cst_seq_cst(i32 addrspace(4)* %out, i32 %in, i32 %old) {
   %gep = getelementptr i32, i32 addrspace(4)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in synchscope(5) seq_cst seq_cst
+  %val = cmpxchg volatile i32 addrspace(4)* %gep, i32 %old, i32 %in syncscope(5) seq_cst seq_cst
   ret void
 }
 

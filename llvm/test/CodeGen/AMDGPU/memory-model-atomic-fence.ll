@@ -43,7 +43,7 @@ define void @system_seq_cst() {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 ; CHECK-NEXT: s_endpgm
 define void @agent_acquire() {
-  fence synchscope(2) acquire
+  fence syncscope(2) acquire
   ret void
 }
 
@@ -52,7 +52,7 @@ define void @agent_acquire() {
 ; CHECK-NEXT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT: s_endpgm
 define void @agent_release() {
-  fence synchscope(2) release
+  fence syncscope(2) release
   ret void
 }
 
@@ -62,7 +62,7 @@ define void @agent_release() {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 ; CHECK-NEXT: s_endpgm
 define void @agent_acq_rel() {
-  fence synchscope(2) acq_rel
+  fence syncscope(2) acq_rel
   ret void
 }
 
@@ -72,7 +72,7 @@ define void @agent_acq_rel() {
 ; CHECK-NEXT: buffer_wbinvl1_vol
 ; CHECK-NEXT: s_endpgm
 define void @agent_seq_cst() {
-  fence synchscope(2) seq_cst
+  fence syncscope(2) seq_cst
   ret void
 }
 
@@ -80,7 +80,7 @@ define void @agent_seq_cst() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @work_group_acquire() {
-  fence synchscope(3) acquire
+  fence syncscope(3) acquire
   ret void
 }
 
@@ -88,7 +88,7 @@ define void @work_group_acquire() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @work_group_release() {
-  fence synchscope(3) release
+  fence syncscope(3) release
   ret void
 }
 
@@ -96,7 +96,7 @@ define void @work_group_release() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @work_group_acq_rel() {
-  fence synchscope(3) acq_rel
+  fence syncscope(3) acq_rel
   ret void
 }
 
@@ -104,7 +104,7 @@ define void @work_group_acq_rel() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @work_group_seq_cst() {
-  fence synchscope(3) seq_cst
+  fence syncscope(3) seq_cst
   ret void
 }
 
@@ -112,7 +112,7 @@ define void @work_group_seq_cst() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @wavefront_acquire() {
-  fence synchscope(4) acquire
+  fence syncscope(4) acquire
   ret void
 }
 
@@ -120,7 +120,7 @@ define void @wavefront_acquire() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @wavefront_release() {
-  fence synchscope(4) release
+  fence syncscope(4) release
   ret void
 }
 
@@ -128,7 +128,7 @@ define void @wavefront_release() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @wavefront_acq_rel() {
-  fence synchscope(4) acq_rel
+  fence syncscope(4) acq_rel
   ret void
 }
 
@@ -136,7 +136,7 @@ define void @wavefront_acq_rel() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @wavefront_seq_cst() {
-  fence synchscope(4) seq_cst
+  fence syncscope(4) seq_cst
   ret void
 }
 
@@ -144,7 +144,7 @@ define void @wavefront_seq_cst() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @image_acquire() {
-  fence synchscope(5) acquire
+  fence syncscope(5) acquire
   ret void
 }
 
@@ -152,7 +152,7 @@ define void @image_acquire() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @image_release() {
-  fence synchscope(5) release
+  fence syncscope(5) release
   ret void
 }
 
@@ -160,7 +160,7 @@ define void @image_release() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @image_acq_rel() {
-  fence synchscope(5) acq_rel
+  fence syncscope(5) acq_rel
   ret void
 }
 
@@ -168,7 +168,7 @@ define void @image_acq_rel() {
 ; CHECK: BB#0
 ; CHECK-NEXT: s_endpgm
 define void @image_seq_cst() {
-  fence synchscope(5) seq_cst
+  fence syncscope(5) seq_cst
   ret void
 }
 

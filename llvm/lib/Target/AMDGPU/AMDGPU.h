@@ -181,7 +181,7 @@ enum AddressSpaces : unsigned {
 } // namespace AMDGPUAS
 
 /// AMDGPU-specific synchronization scopes.
-enum class AMDGPUSynchronizationScope : unsigned {
+enum class AMDGPUSynchronizationScope : uint8_t {
   /// Synchronized with respect to the entire system, which includes all
   /// work-items on all agents executing kernel dispatches for the same
   /// application process, together with all agents executing the same
