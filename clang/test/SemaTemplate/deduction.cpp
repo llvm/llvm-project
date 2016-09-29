@@ -265,3 +265,11 @@ int main() {
 }
 } // end ns2 
 }
+
+namespace nullptr_deduction {
+  template<typename T, T v> struct X {};
+  template<typename T, T v> void f(X<T, v>) {
+    static_assert(!v, "");
+  }
+  void g() { f(X<int*, nullptr>()); }
+}

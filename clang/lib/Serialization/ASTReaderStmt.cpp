@@ -1575,6 +1575,7 @@ void ASTStmtReader::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
   E->Loc = Range.getBegin();
   E->RParen = Range.getEnd();
   E->QueriedType = GetTypeSourceInfo(Record, Idx);
+  E->Dimension = Reader.ReadSubExpr();
 }
 
 void ASTStmtReader::VisitExpressionTraitExpr(ExpressionTraitExpr *E) {

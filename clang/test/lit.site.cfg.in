@@ -16,6 +16,7 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = "@HAVE_LIBZ@"
 config.clang_arcmt = @ENABLE_CLANG_ARCMT@
+config.clang_default_cxx_stdlib = "@CLANG_DEFAULT_CXX_STDLIB@"
 config.clang_staticanalyzer = @ENABLE_CLANG_STATIC_ANALYZER@
 config.clang_examples = @ENABLE_CLANG_EXAMPLES@
 config.enable_shared = @ENABLE_SHARED@

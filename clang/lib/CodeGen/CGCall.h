@@ -81,10 +81,19 @@ namespace CodeGen {
       push_back(CallArg(rvalue, type, needscopy));
     }
 
+    /// Add all the arguments from another CallArgList to this one. After doing
+    /// this, the old CallArgList retains its list of arguments, but must not
+    /// be used to emit a call.
     void addFrom(const CallArgList &other) {
       insert(end(), other.begin(), other.end());
       Writebacks.insert(Writebacks.end(),
                         other.Writebacks.begin(), other.Writebacks.end());
+      CleanupsToDeactivate.insert(CleanupsToDeactivate.end(),
+                                  other.CleanupsToDeactivate.begin(),
+                                  other.CleanupsToDeactivate.end());
+      assert(!(StackBase && other.StackBase) && "can't merge stackbases");
+      if (!StackBase)
+        StackBase = other.StackBase;
     }
 
     void addWriteback(LValue srcLV, Address temporary,
@@ -132,11 +141,6 @@ namespace CodeGen {
 
     /// The stacksave call.  It dominates all of the argument evaluation.
     llvm::CallInst *StackBase;
-
-    /// The iterator pointing to the stack restore cleanup.  We manually run and
-    /// deactivate this cleanup after the call in the unexceptional case because
-    /// it doesn't run in the normal order.
-    EHScopeStack::stable_iterator StackCleanup;
   };
 
   /// FunctionArgList - Type for representing both the decl and type
