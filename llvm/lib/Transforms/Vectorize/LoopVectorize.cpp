@@ -296,6 +296,32 @@ static bool hasCyclesInLoopBody(const Loop &L) {
   return false;
 }
 
+/// Create an analysis remark that explains why vectorization failed
+///
+/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
+/// RemarkName is the identifier for the remark.  If \p I is passed it is an
+/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
+/// the location of the remark.  \return the remark object that can be
+/// streamed to.
+static OptimizationRemarkAnalysis
+createMissedAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
+                     Instruction *I = nullptr) {
+  Value *CodeRegion = TheLoop->getHeader();
+  DebugLoc DL = TheLoop->getStartLoc();
+
+  if (I) {
+    CodeRegion = I->getParent();
+    // If there is no debug location attached to the instruction, revert back to
+    // using the loop's.
+    if (I->getDebugLoc())
+      DL = I->getDebugLoc();
+  }
+
+  OptimizationRemarkAnalysis R(PassName, RemarkName, DL, CodeRegion);
+  R << "loop not vectorized: ";
+  return R;
+}
+
 /// \brief This modifies LoopAccessReport to initialize message with
 /// loop-vectorizer-specific part.
 class VectorizationReport : public LoopAccessReport {
@@ -1652,21 +1678,8 @@ private:
   /// streamed to.
   OptimizationRemarkAnalysis
   createMissedAnalysis(StringRef RemarkName, Instruction *I = nullptr) const {
-    Value *CodeRegion = TheLoop->getHeader();
-    DebugLoc DL = TheLoop->getStartLoc();
-
-    if (I) {
-      CodeRegion = I->getParent();
-      // If there is no debug location attached to the instruction, revert back
-      // to using the loop's.
-      if (I->getDebugLoc())
-        DL = I->getDebugLoc();
-    }
-
-    OptimizationRemarkAnalysis R(Hints->vectorizeAnalysisPassName(), RemarkName,
-                                 DL, CodeRegion);
-    R << "loop not vectorized: ";
-    return R;
+    return ::createMissedAnalysis(Hints->vectorizeAnalysisPassName(),
+                                  RemarkName, TheLoop, I);
   }
 
   /// \brief If an access has a symbolic strides, this maps the pointer value to
