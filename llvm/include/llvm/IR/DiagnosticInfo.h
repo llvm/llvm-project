@@ -387,8 +387,10 @@ public:
     std::string Val;
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
-    explicit Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
-    explicit Argument(StringRef Key, int N);
+    Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
+    Argument(StringRef Key, int N);
+    Argument(StringRef Key, unsigned N);
+    Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
@@ -571,7 +573,13 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
   /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p Inst is the instruction that the optimization operates on.
+  /// remark.  \p DLoc is the debug location and \p CodeRegion is the region
+  /// that the optimization operates on (currently on block is supported).
+  OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
+                             const DebugLoc &DLoc, Value *CodeRegion);
+
+  /// \brief Same as above but \p Inst is used to derive code region and debug
+  /// location.
   OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                              Instruction *Inst);
 

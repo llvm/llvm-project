@@ -48,10 +48,15 @@ static cl::opt<float>
                       cl::desc("As we import functions, multiply the "
                                "`import-instr-limit` threshold by this factor "
                                "before processing newly imported functions"));
+
 static cl::opt<float> ImportHotMultiplier(
     "import-hot-multiplier", cl::init(3.0), cl::Hidden, cl::value_desc("x"),
-    cl::ZeroOrMore, cl::desc("Multiply the `import-instr-limit` threshold for "
-                             "hot callsites"));
+    cl::desc("Multiply the `import-instr-limit` threshold for hot callsites"));
+
+// FIXME: This multiplier was not really tuned up.
+static cl::opt<float> ImportColdMultiplier(
+    "import-cold-multiplier", cl::init(0), cl::Hidden, cl::value_desc("N"),
+    cl::desc("Multiply the `import-instr-limit` threshold for cold callsites"));
 
 static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
                                   cl::desc("Print imported functions"));
@@ -285,11 +290,16 @@ static void computeImportForFunction(
       continue;
     }
 
-    // FIXME: Also lower the threshold for cold callsites.
+    auto GetBonusMultiplier = [](CalleeInfo::HotnessType Hotness) -> float {
+      if (Hotness == CalleeInfo::HotnessType::Hot)
+        return ImportHotMultiplier;
+      if (Hotness == CalleeInfo::HotnessType::Cold)
+        return ImportColdMultiplier;
+      return 1.0;
+    };
+
     const auto NewThreshold =
-        Edge.second.Hotness == CalleeInfo::HotnessType::Hot
-            ? Threshold * ImportHotMultiplier
-            : Threshold;
+        Threshold * GetBonusMultiplier(Edge.second.Hotness);
     auto *CalleeSummary = selectCallee(GUID, NewThreshold, Index);
     if (!CalleeSummary) {
       DEBUG(dbgs() << "ignored! No qualifying callee with summary found.\n");

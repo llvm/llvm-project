@@ -69,7 +69,7 @@ struct ValueBitMap {
   }
 
  private:
-  size_t NumBits;
+  size_t NumBits = 0;
   uintptr_t Map[kMapSizeInWords] __attribute__((aligned(512)));
 };
 

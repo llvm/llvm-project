@@ -5,12 +5,13 @@
 
 ; Test import with default hot multiplier (3)
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S -import-hot-multiplier=3.0 | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S -import-hot-multiplier=3.0 -import-cold-multiplier=0.0 | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
+
 ; HOT-DEFAULT-DAG: define available_externally void @hot1()
 ; HOT-DEFAULT-DAG: define available_externally void @hot2()
-; HOT-DEFAULT-DAG: define available_externally void @cold()
 ; HOT-DEFAULT-DAG: define available_externally void @none1()
 
+; HOT-DEFAULT-NOT: define available_externally void @cold()
 ; HOT-DEFAULT-NOT: define available_externally void @hot3()
 ; HOT-DEFAULT-NOT: define available_externally void @none2()
 ; HOT-DEFAULT-NOT: define available_externally void @none3()
@@ -20,17 +21,26 @@
 ; Test import with hot multiplier 1.0 - treat hot callsites as normal.
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 -import-hot-multiplier=1.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-ONE
 ; HOT-ONE-DAG: define available_externally void @hot1()
-; HOT-ONE-DAG: define available_externally void @cold()
 ; HOT-ONE-DAG: define available_externally void @none1()
+; HOT-ONE-NOT: define available_externally void @cold()
 ; HOT-ONE-NOT: define available_externally void @hot2()
 ; HOT-ONE-NOT: define available_externally void @hot3()
 ; HOT-ONE-NOT: define available_externally void @none2()
 ; HOT-ONE-NOT: define available_externally void @none3()
 ; HOT-ONE-NOT: define available_externally void @cold2()
 
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 -import-hot-multiplier=1.0 -import-cold-multiplier=1.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-COLD-ONE
+; HOT-COLD-ONE-DAG: define available_externally void @hot1()
+; HOT-COLD-ONE-DAG: define available_externally void @cold()
+; HOT-COLD-ONE-DAG: define available_externally void @none1()
+; HOT-COLD-ONE-NOT: define available_externally void @hot2()
+; HOT-COLD-ONE-NOT: define available_externally void @hot3()
+; HOT-COLD-ONE-NOT: define available_externally void @none2()
+; HOT-COLD-ONE-NOT: define available_externally void @none3()
+; HOT-COLD-ONE-NOT: define available_externally void @cold2()
 
 ; Test import with hot multiplier 0.0 and high threshold - don't import functions called from hot callsite.
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -import-hot-multiplier=0.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-ZERO
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -import-hot-multiplier=0.0 -import-cold-multiplier=1.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-ZERO
 ; HOT-ZERO-DAG: define available_externally void @cold()
 ; HOT-ZERO-DAG: define available_externally void @none1()
 ; HOT-ZERO-DAG: define available_externally void @none2()
