@@ -198,7 +198,7 @@ define   <8 x double> @_sd8xdouble_maskz_load(double* %a.ptr, <8 x i32> %mask1) 
 define   <16 x i32> @_xmm16xi32(<16 x i32> %a) {
 ; ALL-LABEL: _xmm16xi32:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpbroadcastd %xmm0, %zmm0
+; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = shufflevector <16 x i32> %a, <16 x i32> undef, <16 x i32> zeroinitializer
   ret <16 x i32> %b
@@ -388,7 +388,7 @@ define <32 x i16> @_invec16xi16(<16 x i16>%a)  {
 define <16 x i32> @_invec8xi32(<8 x i32>%a)  {
 ; ALL-LABEL: _invec8xi32:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpbroadcastd %xmm0, %zmm0
+; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %res = shufflevector <8 x i32> %a, <8 x i32> undef, <16 x i32> zeroinitializer
   ret <16 x i32>%res
@@ -397,7 +397,7 @@ define <16 x i32> @_invec8xi32(<8 x i32>%a)  {
 define <8 x i64> @_invec4xi64(<4 x i64>%a)  {
 ; ALL-LABEL: _invec4xi64:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpbroadcastq %xmm0, %zmm0
+; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %res = shufflevector <4 x i64> %a, <4 x i64> undef, <8 x i32> zeroinitializer
   ret <8 x i64>%res

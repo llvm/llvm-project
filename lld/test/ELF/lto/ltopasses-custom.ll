@@ -3,8 +3,8 @@
 ; RUN: ld.lld -m elf_x86_64 %t.o -o %t.so -save-temps --lto-aa-pipeline=basic-aa \
 ; RUN: --lto-newpm-passes=ipsccp -shared
 ; RUN: ld.lld -m elf_x86_64 %t.o -o %t2.so -save-temps --lto-newpm-passes=loweratomic -shared
-; RUN: llvm-dis %t.so.lto.opt.bc -o - | FileCheck %s
-; RUN: llvm-dis %t2.so.lto.opt.bc -o - | FileCheck %s --check-prefix=ATOMIC
+; RUN: llvm-dis %t.so.0.4.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t2.so.0.4.opt.bc -o - | FileCheck %s --check-prefix=ATOMIC
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

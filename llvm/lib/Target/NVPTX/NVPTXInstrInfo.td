@@ -131,6 +131,10 @@ def hasAtomRedGen64 : Predicate<"Subtarget->hasAtomRedGen64()">;
 def useAtomRedG64forGen64 :
   Predicate<"!Subtarget->hasAtomRedGen64() && Subtarget->hasAtomRedG64()">;
 def hasAtomAddF32 : Predicate<"Subtarget->hasAtomAddF32()">;
+def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
+def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;
+def hasAtomBitwise64 : Predicate<"Subtarget->hasAtomBitwise64()">;
+def hasAtomMinMax64 : Predicate<"Subtarget->hasAtomMinMax64()">;
 def hasVote : Predicate<"Subtarget->hasVote()">;
 def hasDouble : Predicate<"Subtarget->hasDouble()">;
 def reqPTX20 : Predicate<"Subtarget->reqPTX20()">;

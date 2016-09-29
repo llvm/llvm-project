@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -std=c++98 -verify %s
-// RUN: %clang_cc1 -std=c++11 -verify %s
-// RUN: %clang_cc1 -std=c++1y -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++14 -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++1z -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++1z -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
-// RUN: %clang_cc1 -fcoroutines -DCOROUTINES -verify %s
+// RUN: %clang_cc1 -std=c++98 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++11 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++1y -fcxx-exceptions -fsized-deallocation -verify %s
+// RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -fsized-deallocation -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
+// RUN: %clang_cc1 -fno-rtti -verify %s -DNO_EXCEPTIONS -DNO_RTTI
+// RUN: %clang_cc1 -fcoroutines -DNO_EXCEPTIONS -DCOROUTINES -verify %s
 
 // expected-no-diagnostics
 
@@ -19,10 +20,80 @@
 #define check(macro, cxx98, cxx11, cxx14, cxx1z) cxx1z == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx1z
 #endif
 
+// --- C++17 features ---
+
+#if check(hex_float, 0, 0, 0, 201603)
+#error "wrong value for __cpp_hex_float"
+#endif
+
+#if check(inline_variables, 0, 0, 0, 201606) // FIXME: provisional name
+#error "wrong value for __cpp_inline_variables"
+#endif
+
+#if check(aligned_new, 0, 0, 0, 0) // FIXME: provisional name
+// FIXME: value shuld be 201606 for cxx1z once implemented
+#error "wrong value for __cpp_aligned_new"
+#endif
+
+#if check(noexcept_function_type, 0, 0, 0, 0)
+// FIXME: value shuld be 201510 for cxx1z once implemented
+#error "wrong value for __cpp_noexcept_function_type"
+#endif
+
+#if check(fold_expressions, 0, 0, 0, 201603)
+#error "wrong value for __cpp_fold_expressions"
+#endif
+
+#if check(capture_star_this, 0, 0, 0, 201603)
+#error "wrong value for __cpp_capture_star_this"
+#endif
+
+// FIXME: bump __cpp_constexpr to 201603 for constexpr lambda support
+
+#if check(if_constexpr, 0, 0, 0, 201606) // FIXME: provisional name
+#error "wrong value for __cpp_if_constexpr"
+#endif
+
+// range_based_for checked below
+
+// static_assert checked below
+
+#if check(template_auto, 0, 0, 0, 201606) // FIXME: provisional name
+#error "wrong value for __cpp_template_auto"
+#endif
+
+#if check(namespace_attributes, 0, 0, 0, 201411)
+// FIXME: allowed without warning in C++14 and C++11
+#error "wrong value for __cpp_namespace_attributes"
+#endif
+
+#if check(enumerator_attributes, 0, 0, 0, 201411)
+// FIXME: allowed without warning in C++14 and C++11
+#error "wrong value for __cpp_enumerator_attributes"
+#endif
+
+#if check(nested_namespace_definitions, 0, 0, 0, 201411)
+#error "wrong value for __cpp_nested_namespace_definitions"
+#endif
+
+#if check(aggregate_bases, 0, 0, 0, 201603)
+#error "wrong value for __cpp_aggregate_bases"
+#endif
+
+// FIXME: structured_bindings / decomposition_decl name not yet settled, and
+// Clang implementation is incomplete.
+
+#if check(nontype_template_args, 0, 0, 0, 201411)
+#error "wrong value for __cpp_nontype_template_args"
+#endif
+
+// --- C++14 features ---
+
 #if check(binary_literals, 0, 0, 201304, 201304)
 #error "wrong value for __cpp_binary_literals"
 #endif
 
+// (Removed from SD-6.)
 #if check(digit_separators, 0, 0, 201309, 201309)
 #error "wrong value for __cpp_digit_separators"
 #endif
@@ -39,9 +110,7 @@
 #error "wrong value for __cpp_sized_deallocation"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201304)
-#error "wrong value for __cpp_constexpr"
-#endif
+// constexpr checked below
 
 #if check(decltype_auto, 0, 0, 201304, 201304)
 #error "wrong value for __cpp_decltype_auto"
@@ -63,6 +132,8 @@
 #error "wrong value for __cpp_variable_templates"
 #endif
 
+// --- C++11 features ---
+
 #if check(unicode_characters, 0, 200704, 200704, 200704)
 #error "wrong value for __cpp_unicode_characters"
 #endif
@@ -83,11 +154,15 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(range_based_for, 0, 200907, 200907, 200907)
+#if check(constexpr, 0, 200704, 201304, 201304)
+#error "wrong value for __cpp_constexpr"
+#endif
+
+#if check(range_based_for, 0, 200907, 200907, 201603)
 #error "wrong value for __cpp_range_based_for"
 #endif
 
-#if check(static_assert, 0, 200410, 200410, 200410)
+#if check(static_assert, 0, 200410, 200410, 201411)
 #error "wrong value for __cpp_static_assert"
 #endif
 
@@ -119,7 +194,7 @@
 #error "wrong value for __cpp_nsdmi"
 #endif
 
-#if check(inheriting_constructors, 0, 200802, 200802, 200802)
+#if check(inheriting_constructors, 0, 201511, 201511, 201511)
 #error "wrong value for __cpp_inheriting_constructors"
 #endif
 
@@ -130,6 +205,18 @@
 #if check(alias_templates, 0, 200704, 200704, 200704)
 #error "wrong value for __cpp_alias_templates"
 #endif
+
+// --- C++98 features ---
+
+#if defined(NO_RTTI) ? check(rtti, 0, 0, 0, 0) : check(rtti, 199711, 199711, 199711, 199711)
+#error "wrong value for __cpp_rtti"
+#endif
+
+#if defined(NO_EXCEPTIONS) ? check(exceptions, 0, 0, 0, 0) : check(exceptions, 199711, 199711, 199711, 199711)
+#error "wrong value for __cpp_exceptions"
+#endif
+
+// --- TS features --
 
 #if check(experimental_concepts, 0, 0, CONCEPTS_TS, CONCEPTS_TS)
 #error "wrong value for __cpp_experimental_concepts"

@@ -21,6 +21,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <climits>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -379,7 +380,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   if (!Out<ELFT>::SymTab)
     return;
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-    const char *StrTab = F->getStringTable().data();
+    StringRef StrTab = F->getStringTable();
     for (SymbolBody *B : F->getLocalSymbols()) {
       auto *DR = dyn_cast<DefinedRegular<ELFT>>(B);
       // No reason to keep local undefined symbol in symtab.
@@ -387,7 +388,9 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         continue;
       if (!includeInSymtab<ELFT>(*B))
         continue;
-      StringRef SymName(StrTab + B->getNameOffset());
+      if (B->getNameOffset() >= StrTab.size())
+        fatal(getFilename(F) + ": invalid symbol name offset");
+      StringRef SymName(StrTab.data() + B->getNameOffset());
       InputSectionBase<ELFT> *Sec = DR->Section;
       if (!shouldKeepInSymtab<ELFT>(Sec, SymName, *B))
         continue;
@@ -541,6 +544,8 @@ void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
   if (!First)
     First = Sec;
   H.p_align = std::max<typename ELFT::uint>(H.p_align, Sec->getAlignment());
+  if (H.p_type == PT_LOAD && !Config->OFormatBinary)
+    Sec->FirstInPtLoad = First;
 }
 
 template <class ELFT>
@@ -1154,7 +1159,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uintX_t Alignment = Sec->getAlignment();
     if (Sec->PageAlign)
-      Alignment = std::max<uintX_t>(Alignment, Target->MaxPageSize);
+      Alignment = std::max<uintX_t>(Alignment, Config->MaxPageSize);
 
     auto I = Config->SectionStartMap.find(Sec->getName());
     if (I != Config->SectionStartMap.end())
@@ -1182,14 +1187,20 @@ template <class ELFT, class uintX_t>
 static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
   uintX_t Alignment = Sec->getAlignment();
   if (Sec->PageAlign)
-    Alignment = std::max<uintX_t>(Alignment, Target->MaxPageSize);
+    Alignment = std::max<uintX_t>(Alignment, Config->MaxPageSize);
   Off = alignTo(Off, Alignment);
 
   // Relocatable output does not have program headers
   // and does not need any other offset adjusting.
   if (Config->Relocatable || !(Sec->getFlags() & SHF_ALLOC))
     return Off;
-  return alignTo(Off, Target->MaxPageSize, Sec->getVA());
+
+  OutputSectionBase<ELFT> *First = Sec->FirstInPtLoad;
+  // If two sections share the same PT_LOAD the file offset is calculated using
+  // this formula: Off2 = Off1 + (VA2 - VA1).
+  if (!First || Sec == First)
+    return alignTo(Off, Target->MaxPageSize, Sec->getVA());
+  return First->getFileOffset() + Sec->getVA() - First->getVA();
 }
 
 template <class ELFT, class uintX_t>
@@ -1241,7 +1252,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       H.p_vaddr = First->getVA();
     }
     if (H.p_type == PT_LOAD)
-      H.p_align = Target->MaxPageSize;
+      H.p_align = Config->MaxPageSize;
     else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
 

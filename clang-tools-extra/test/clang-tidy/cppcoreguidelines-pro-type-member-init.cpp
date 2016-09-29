@@ -73,6 +73,11 @@ struct NegativeInClassInitialized {
   NegativeInClassInitialized() {}
 };
 
+struct NegativeInClassInitializedDefaulted {
+  int F = 0;
+  NegativeInClassInitializedDefaulted() = default;
+};
+
 struct NegativeConstructorDelegated {
   int F;
 
@@ -367,3 +372,8 @@ class PositiveIndirectMember {
   PositiveIndirectMember() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A
 };
+
+void Bug30487()
+{
+  NegativeInClassInitializedDefaulted s;
+}

@@ -915,19 +915,18 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
   return 0;
 }
 
-static bool GetFunctionAddressInDLLs(const char *func_name, uptr *func_addr) {
-  *func_addr = 0;
+bool OverrideFunction(
+    const char *func_name, uptr new_func, uptr *orig_old_func) {
+  bool hooked = false;
   void **DLLs = InterestingDLLsAvailable();
-  for (size_t i = 0; *func_addr == 0 && DLLs[i]; ++i)
-    *func_addr = InternalGetProcAddress(DLLs[i], func_name);
-  return (*func_addr != 0);
-}
-
-bool OverrideFunction(const char *name, uptr new_func, uptr *orig_old_func) {
-  uptr orig_func;
-  if (!GetFunctionAddressInDLLs(name, &orig_func))
-    return false;
-  return OverrideFunction(orig_func, new_func, orig_old_func);
+  for (size_t i = 0; DLLs[i]; ++i) {
+    uptr func_addr = InternalGetProcAddress(DLLs[i], func_name);
+    if (func_addr &&
+        OverrideFunction(func_addr, new_func, orig_old_func)) {
+      hooked = true;
+    }
+  }
+  return hooked;
 }
 
 bool OverrideImportedFunction(const char *module_to_patch,

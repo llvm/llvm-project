@@ -3,12 +3,12 @@
 ; RUN: llvm-as %s -o %t2.o
 
 ; RUN: ld.lld -m elf_x86_64 %t1.o %t2.o  -o %t3 -save-temps
-; RUN: llvm-dis %t3.lto.bc -o - | FileCheck %s
+; RUN: llvm-dis %t3.0.2.internalize.bc -o - | FileCheck %s
 
 ; RUN: rm -f %t.a
 ; RUN: llvm-ar rcs %t.a %t1.o
 ; RUN: ld.lld -m elf_x86_64 %t.a %t1.o %t2.o  -o %t3 -save-temps
-; RUN: llvm-dis %t3.lto.bc -o - | FileCheck %s
+; RUN: llvm-dis %t3.0.2.internalize.bc -o - | FileCheck %s
 
 ; CHECK: define internal void @foo() {
 

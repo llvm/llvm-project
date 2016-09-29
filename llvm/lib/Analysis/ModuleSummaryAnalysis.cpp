@@ -228,7 +228,7 @@ ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
 }
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
-  auto &PSI = *getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI(M);
+  auto &PSI = *getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   Index = buildModuleSummaryIndex(
       M,
       [this](const Function &F) {

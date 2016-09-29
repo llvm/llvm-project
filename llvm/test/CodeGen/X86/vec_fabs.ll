@@ -70,7 +70,7 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ; X32_AVX512VL-LABEL: fabs_v4f64:
 ; X32_AVX512VL:       # BB#0:
 ; X32_AVX512VL-NEXT:    vbroadcastsd {{\.LCPI.*}}, %ymm1
-; X32_AVX512VL-NEXT:    vandpd %ymm1, %ymm0, %ymm0
+; X32_AVX512VL-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X32_AVX512VL-NEXT:    retl
 ;
 ; X32_AVX512VLDQ-LABEL: fabs_v4f64:
@@ -86,7 +86,7 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ; X64_AVX512VL-LABEL: fabs_v4f64:
 ; X64_AVX512VL:       # BB#0:
 ; X64_AVX512VL-NEXT:    vbroadcastsd {{.*}}(%rip), %ymm1
-; X64_AVX512VL-NEXT:    vandpd %ymm1, %ymm0, %ymm0
+; X64_AVX512VL-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X64_AVX512VL-NEXT:    retq
 ;
 ; X64_AVX512VLDQ-LABEL: fabs_v4f64:

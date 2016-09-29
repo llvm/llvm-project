@@ -19,7 +19,3 @@ extern "C" void LLVMInitializeAVRTargetInfo() {
       llvm::TheAVRTarget, "avr", "Atmel AVR Microcontroller");
 }
 
-// FIXME: Temporary stub - this function must be defined for linking
-// to succeed. Remove once this function is properly implemented.
-extern "C" void LLVMInitializeAVRTargetMC() {
-}

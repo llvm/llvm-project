@@ -1089,19 +1089,13 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
   case OO_Array_New: Out << "?_U"; break;
   // <operator-name> ::= ?_V # delete[]
   case OO_Array_Delete: Out << "?_V"; break;
+  // <operator-name> ::= ?__L # co_await
+  case OO_Coawait: Out << "?__L"; break;
 
   case OO_Conditional: {
     DiagnosticsEngine &Diags = Context.getDiags();
     unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
       "cannot mangle this conditional operator yet");
-    Diags.Report(Loc, DiagID);
-    break;
-  }
-
-  case OO_Coawait: {
-    DiagnosticsEngine &Diags = Context.getDiags();
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-      "cannot mangle this operator co_await yet");
     Diags.Report(Loc, DiagID);
     break;
   }

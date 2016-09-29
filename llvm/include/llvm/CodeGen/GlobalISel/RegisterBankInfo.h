@@ -143,9 +143,22 @@ public:
     /// Number of partial mapping to break down this value.
     unsigned NumBreakDowns;
 
+    /// The default constructor creates an invalid (isValid() == false)
+    /// instance.
+    ValueMapping() : ValueMapping(nullptr, 0) {}
+
+    /// Initialize a ValueMapping with the given parameter.
+    /// \p BreakDown needs to have a life time at least as long
+    /// as this instance.
+    ValueMapping(const PartialMapping *BreakDown, unsigned NumBreakDowns)
+        : BreakDown(BreakDown), NumBreakDowns(NumBreakDowns) {}
+
     /// Iterators through the PartialMappings.
     const PartialMapping *begin() const { return BreakDown; }
     const PartialMapping *end() const { return BreakDown + NumBreakDowns; }
+
+    /// Check if this ValueMapping is valid.
+    bool isValid() const { return BreakDown && NumBreakDowns; }
 
     /// Verify that this mapping makes sense for a value of
     /// \p MeaningFulBitWidth.
@@ -171,12 +184,11 @@ public:
     /// Cost of this mapping.
     unsigned Cost;
     /// Mapping of all the operands.
-    /// Note: Use a SmallVector to avoid heap allocation in most cases.
-    SmallVector<const ValueMapping *, 8> OperandsMapping;
+    const ValueMapping *OperandsMapping;
     /// Number of operands.
     unsigned NumOperands;
 
-    const ValueMapping *&getOperandMapping(unsigned i) {
+    const ValueMapping &getOperandMapping(unsigned i) {
       assert(i < getNumOperands() && "Out of bound operand");
       return OperandsMapping[i];
     }
@@ -190,11 +202,13 @@ public:
     /// at the index i.
     ///
     /// \pre ID != InvalidMappingID
-    InstructionMapping(unsigned ID, unsigned Cost, unsigned NumOperands)
-        : ID(ID), Cost(Cost), NumOperands(NumOperands) {
+    InstructionMapping(unsigned ID, unsigned Cost,
+                       const ValueMapping *OperandsMapping,
+                       unsigned NumOperands)
+        : ID(ID), Cost(Cost), OperandsMapping(OperandsMapping),
+          NumOperands(NumOperands) {
       assert(getID() != InvalidMappingID &&
              "Use the default constructor for invalid mapping");
-      OperandsMapping.resize(getNumOperands(), nullptr);
     }
 
     /// Default constructor.
@@ -214,26 +228,23 @@ public:
     /// \pre The mapping for the ith operand has been set.
     /// \pre The ith operand is a register.
     const ValueMapping &getOperandMapping(unsigned i) const {
-      const ValueMapping *&ValMapping =
+      const ValueMapping &ValMapping =
           const_cast<InstructionMapping *>(this)->getOperandMapping(i);
-      assert(ValMapping && "Trying to get the mapping for a non-reg operand?");
-      return *ValMapping;
+      return ValMapping;
     }
 
-    /// Check if the value mapping of the ith operand has been set.
-    bool isOperandMappingSet(unsigned i) const {
-      return const_cast<InstructionMapping *>(this)->getOperandMapping(i) !=
-             nullptr;
-    }
-
-    /// Get the value mapping of the ith operand.
-    void setOperandMapping(unsigned i, const ValueMapping &ValMapping) {
-      getOperandMapping(i) = &ValMapping;
+    /// Set the mapping for all the operands.
+    /// In other words, OpdsMapping should hold at least getNumOperands
+    /// ValueMapping.
+    void setOperandsMapping(const ValueMapping *OpdsMapping) {
+      OperandsMapping = OpdsMapping;
     }
 
     /// Check whether this object is valid.
     /// This is a lightweight check for obvious wrong instance.
-    bool isValid() const { return getID() != InvalidMappingID; }
+    bool isValid() const {
+      return getID() != InvalidMappingID && OperandsMapping;
+    }
 
     /// Verifiy that this mapping makes sense for \p MI.
     /// \pre \p MI must be connected to a MachineFunction.
@@ -367,6 +378,10 @@ protected:
   /// This shouldn't be needed when everything gets TableGen'ed.
   mutable DenseMap<unsigned, const ValueMapping *> MapOfValueMappings;
 
+  /// Keep dynamically allocated array of ValueMapping in a separate map.
+  /// This shouldn't be needed when everything gets TableGen'ed.
+  mutable DenseMap<unsigned, ValueMapping *> MapOfOperandsMappings;
+
   /// Create a RegisterBankInfo that can accomodate up to \p NumRegBanks
   /// RegisterBank instances.
   ///
@@ -451,6 +466,39 @@ protected:
   /// Get the ValueMapping for the given arguments.
   const ValueMapping &getValueMapping(const PartialMapping *BreakDown,
                                       unsigned NumBreakDowns) const;
+  /// @}
+
+  /// Methods to get a uniquely generated array of ValueMapping.
+  /// @{
+
+  /// Get the uniquely generated array of ValueMapping for the
+  /// elements of between \p Begin and \p End.
+  ///
+  /// Elements that are nullptr will be replaced by
+  /// invalid ValueMapping (ValueMapping::isValid == false).
+  ///
+  /// \pre The pointers on ValueMapping between \p Begin and \p End
+  /// must uniquely identify a ValueMapping. Otherwise, there is no
+  /// guarantee that the return instance will be unique, i.e., another
+  /// OperandsMapping could have the same content.
+  template <typename Iterator>
+  const ValueMapping *getOperandsMapping(Iterator Begin, Iterator End) const;
+
+  /// Get the uniquely generated array of ValueMapping for the
+  /// elements of \p OpdsMapping.
+  ///
+  /// Elements of \p OpdsMapping that are nullptr will be replaced by
+  /// invalid ValueMapping (ValueMapping::isValid == false).
+  const ValueMapping *getOperandsMapping(
+      const SmallVectorImpl<const ValueMapping *> &OpdsMapping) const;
+
+  /// Get the uniquely generated array of ValueMapping for the
+  /// given arguments.
+  ///
+  /// Arguments that are nullptr will be replaced by invalid
+  /// ValueMapping (ValueMapping::isValid == false).
+  const ValueMapping *getOperandsMapping(
+      std::initializer_list<const ValueMapping *> OpdsMapping) const;
   /// @}
 
   /// Get the register bank for the \p OpIdx-th operand of \p MI form

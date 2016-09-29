@@ -572,9 +572,16 @@ template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   else
     this->Pieces = splitNonStrings(Data, EntSize);
 
-  if (Config->GcSections)
-    for (uintX_t Off : LiveOffsets)
-      this->getSectionPiece(Off)->Live = true;
+  if (Config->GcSections) {
+    if (this->getSectionHdr()->sh_flags & SHF_ALLOC) {
+      for (uintX_t Off : LiveOffsets)
+        this->getSectionPiece(Off)->Live = true;
+      return;
+    }
+
+    for (SectionPiece &Piece : this->Pieces)
+      Piece.Live = true;
+  }
 }
 
 template <class ELFT>

@@ -318,19 +318,6 @@ define i8 @coerce_offset0(i32 %V, i32* %P) {
 ; CHECK: ret i8
 }
 
-define i8 @coerce_offset0_addrspacecast(i32 %V, i32* %P) {
-  store i32 %V, i32* %P
-
-  %P2 = addrspacecast i32* %P to i8 addrspace(1)*
-  %P3 = getelementptr i8, i8 addrspace(1)* %P2, i32 2
-
-  %A = load i8, i8 addrspace(1)* %P3
-  ret i8 %A
-; CHECK-LABEL: @coerce_offset0_addrspacecast(
-; CHECK-NOT: load
-; CHECK: ret i8
-}
-
 ;; non-local i32/float -> i8 load forwarding.
 define i8 @coerce_offset_nonlocal0(i32* %P, i1 %cond) {
   %P2 = bitcast i32* %P to float*

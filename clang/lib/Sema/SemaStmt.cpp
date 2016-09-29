@@ -3644,6 +3644,10 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
       !getSourceManager().isInSystemHeader(TryLoc))
     Diag(TryLoc, diag::err_exceptions_disabled) << "try";
 
+  // Exceptions aren't allowed in CUDA device code.
+  if (getLangOpts().CUDA)
+    CheckCUDAExceptionExpr(TryLoc, "try");
+
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";
 

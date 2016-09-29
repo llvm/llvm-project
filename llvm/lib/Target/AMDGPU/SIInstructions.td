@@ -112,6 +112,27 @@ def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
 } // End let usesCustomInserter = 1, SALU = 1
 
+def S_MOV_B64_term : PseudoInstSI<(outs SReg_64:$dst),
+   (ins SSrc_b64:$src0)> {
+  let SALU = 1;
+  let isAsCheapAsAMove = 1;
+  let isTerminator = 1;
+}
+
+def S_XOR_B64_term : PseudoInstSI<(outs SReg_64:$dst),
+   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
+  let SALU = 1;
+  let isAsCheapAsAMove = 1;
+  let isTerminator = 1;
+}
+
+def S_ANDN2_B64_term : PseudoInstSI<(outs SReg_64:$dst),
+   (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
+  let SALU = 1;
+  let isAsCheapAsAMove = 1;
+  let isTerminator = 1;
+}
+
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
@@ -132,9 +153,9 @@ def SI_IF: CFPseudoInstSI <
   (outs SReg_64:$dst), (ins SReg_64:$vcc, brtarget:$target),
   [(set i64:$dst, (int_amdgcn_if i1:$vcc, bb:$target))], 1, 1> {
   let Constraints = "";
-  let Size = 8;
-  let mayStore = 1;
+  let Size = 12;
   let mayLoad = 1;
+  let mayStore = 1;
   let hasSideEffects = 1;
 }
 

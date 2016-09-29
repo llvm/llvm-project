@@ -62,39 +62,46 @@ class SBTypeMemberFunctionsTest(TestBase):
         Derived = variable.GetType()
         Base = Derived.GetDirectBaseClassAtIndex(0).GetType()
 
-        self.assertTrue(
-            Derived.GetNumberOfMemberFunctions() == 2,
+        self.assertEquals(2,
+            Derived.GetNumberOfMemberFunctions(),
             "Derived declares two methods")
-        self.assertTrue(Derived.GetMemberFunctionAtIndex(0).GetType(
-        ).GetFunctionReturnType().GetName() == "int", "Derived::dImpl returns int")
+        self.assertEquals("int", Derived.GetMemberFunctionAtIndex(0).GetType(
+            ).GetFunctionReturnType().GetName(),
+            "Derived::dImpl returns int")
 
-        self.assertTrue(
-            Base.GetNumberOfMemberFunctions() == 4,
+        self.assertEquals(4,
+            Base.GetNumberOfMemberFunctions(),
             "Base declares three methods")
-        self.assertTrue(Base.GetMemberFunctionAtIndex(3).GetType(
-        ).GetFunctionArgumentTypes().GetSize() == 3, "Base::sfunc takes three arguments")
-        self.assertTrue(Base.GetMemberFunctionAtIndex(
-            3).GetName() == "sfunc", "Base::sfunc not found")
-        self.assertTrue(Base.GetMemberFunctionAtIndex(3).GetKind(
-        ) == lldb.eMemberFunctionKindStaticMethod, "Base::sfunc is a static")
-        self.assertTrue(Base.GetMemberFunctionAtIndex(2).GetType(
-        ).GetFunctionArgumentTypes().GetSize() == 0, "Base::dat takes no arguments")
-        self.assertTrue(Base.GetMemberFunctionAtIndex(1).GetType().GetFunctionArgumentTypes(
-        ).GetTypeAtIndex(1).GetName() == "char", "Base::bar takes a second 'char' argument")
-        self.assertTrue(Base.GetMemberFunctionAtIndex(
-            1).GetName() == "bar", "Base::bar not found")
+        self.assertEquals(3, Base.GetMemberFunctionAtIndex(3).GetType(
+            ).GetFunctionArgumentTypes().GetSize(),
+            "Base::sfunc takes three arguments")
+        self.assertEquals("sfunc", Base.GetMemberFunctionAtIndex(
+            3).GetName(), "Base::sfunc not found")
+        self.assertEquals(lldb.eMemberFunctionKindStaticMethod,
+            Base.GetMemberFunctionAtIndex(3).GetKind(),
+            "Base::sfunc is a static")
+        self.assertEquals(0, Base.GetMemberFunctionAtIndex(2).GetType(
+            ).GetFunctionArgumentTypes().GetSize(),
+            "Base::dat takes no arguments")
+        self.assertEquals("char",
+            Base.GetMemberFunctionAtIndex(1).GetType().GetFunctionArgumentTypes(
+            ).GetTypeAtIndex(1).GetName(),
+            "Base::bar takes a second 'char' argument")
+        self.assertEquals("bar",
+            Base.GetMemberFunctionAtIndex(1).GetName(), "Base::bar not found")
 
         variable = frame0.FindVariable("thingy")
         Thingy = variable.GetType()
 
-        self.assertTrue(
-            Thingy.GetNumberOfMemberFunctions() == 2,
+        self.assertEquals(
+            2, Thingy.GetNumberOfMemberFunctions(),
             "Thingy declares two methods")
 
-        self.assertTrue(Thingy.GetMemberFunctionAtIndex(
-            0).GetReturnType().GetName() == "id", "Thingy::init returns an id")
-        self.assertTrue(
-            Thingy.GetMemberFunctionAtIndex(1).GetNumberOfArguments() == 2,
+        self.assertEquals("id", Thingy.GetMemberFunctionAtIndex(
+            0).GetReturnType().GetName(), "Thingy::init returns an id")
+        self.assertEquals(2,
+            Thingy.GetMemberFunctionAtIndex(1).GetNumberOfArguments(),
             "Thingy::foo takes two arguments")
-        self.assertTrue(Thingy.GetMemberFunctionAtIndex(1).GetArgumentTypeAtIndex(
-            0).GetName() == "int", "Thingy::foo takes an int")
+        self.assertEquals("int",
+            Thingy.GetMemberFunctionAtIndex(1).GetArgumentTypeAtIndex(
+            0).GetName(), "Thingy::foo takes an int")

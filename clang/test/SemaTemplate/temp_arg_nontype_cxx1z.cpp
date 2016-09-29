@@ -122,7 +122,7 @@ namespace DeduceDifferentType {
   int a_exp = a<3>(A<3>());
 
   template<decltype(nullptr)> struct B {};
-  template<int *P> int b(B<P>); // expected-note {{could not match}} expected-note {{not implicitly convertible}}
+  template<int *P> int b(B<P>); // expected-note {{does not have the same type}} expected-note {{not implicitly convertible}}
   int b_imp = b(B<nullptr>()); // expected-error {{no matching function}}
   int b_exp = b<nullptr>(B<nullptr>()); // expected-error {{no matching function}}
 
@@ -154,4 +154,114 @@ namespace PR24921 {
   template<E> void f();
   template<int> void f(int);
   template<> void f<e>() {}
+}
+
+namespace Auto {
+  namespace Basic {
+    // simple auto
+    template<auto x> constexpr auto constant = x; // expected-note {{declared here}}
+
+    auto v1 = constant<5>;
+    auto v2 = constant<true>;
+    auto v3 = constant<'a'>;
+    auto v4 = constant<2.5>;  // expected-error {{cannot have type 'double'}}
+
+    using T1 = decltype(v1);
+    using T1 = int;
+    using T2 = decltype(v2);
+    using T2 = bool;
+    using T3 = decltype(v3);
+    using T3 = char;
+
+    // pointers
+    template<auto v>    class B { };
+    template<auto* p>   class B<p> { };
+    template<auto** pp> class B<pp> { };
+    template<auto* p0>   int &f(B<p0> b);
+    template<auto** pp0> float &f(B<pp0> b);
+
+    int a, *b = &a;
+    int &r = f(B<&a>());
+    float &s = f(B<&b>());
+  }
+
+  namespace Chained {
+    // chained template argument deduction
+    template<long n> struct C { };
+    template<class T> struct D;
+    template<class T, T n> struct D<C<n>>
+    {
+        using Q = T;
+    };
+    using DQ = long;
+    using DQ = D<C<short(2)>>::Q;
+
+    // chained template argument deduction from an array bound
+    template<typename T> struct E;
+    template<typename T, T n> struct E<int[n]> {
+        using Q = T;
+    };
+    using EQ = E<int[short(42)]>::Q;
+    using EQ = decltype(sizeof 0);
+
+    template<int N> struct F;
+    template<typename T, T N> int foo(F<N> *) = delete;  // expected-note {{explicitly deleted}}
+    void foo(void *); // expected-note {{candidate function}}
+    void bar(F<0> *p) {
+        foo(p); // expected-error {{deleted function}}
+    }
+  }
+
+  namespace ArrayToPointer {
+    constexpr char s[] = "test";
+    template<const auto* p> struct S { };
+    S<s> p;
+  }
+
+  namespace DecltypeAuto {
+    template<auto v> struct A { };
+    template<decltype(auto) v> struct DA { };
+    template<auto&> struct R { };
+
+    auto n = 0; // expected-note + {{declared here}}
+    A<n> a; // expected-error {{not a constant}} expected-note {{non-const variable 'n'}}
+    DA<n> da1;  // expected-error {{not a constant}} expected-note {{non-const variable 'n'}}
+    DA<(n)> da2;
+    R<n> r;
+  }
+
+  namespace Decomposition {
+    double foo(int, bool);
+    template<auto& f> struct fn_result_type;
+
+    template<class R, class... Args, R (& f)(Args...)>
+    struct fn_result_type<f>
+    {
+        using type = R;
+    };
+
+    using R1 = fn_result_type<foo>::type;
+    using R1 = double;
+  }
+
+  namespace Variadic {
+    template<auto... vs> struct value_list { };
+
+    using size_t = decltype(sizeof 0);
+    template<size_t n, class List> struct nth_element;
+    template<size_t n, class List> constexpr auto nth_element_v = nth_element<n, List>::value;
+
+    template<size_t n, auto v0, auto... vs>
+    struct nth_element<n, value_list<v0, vs...>>
+    {
+        static constexpr auto value = nth_element<n - 1, value_list<vs...>>::value;
+    };
+    template<auto v0, auto... vs>
+    struct nth_element<0, value_list<v0, vs...>>
+    {
+        static constexpr auto value = v0;
+    };
+
+    static_assert(nth_element_v<2, value_list<'a', 27U, false>> == false, "value mismatch");
+  }
 }

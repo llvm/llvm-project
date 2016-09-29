@@ -1,8 +1,7 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-          "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <html>
 <head>
-  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
   <title>Clang - C++1z, C++14, C++11 and C++98 Status</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
@@ -28,11 +27,11 @@
 <!--*************************************************************************-->
 <p>Last updated: $Date$</p>
 
-<p>Clang fully implements all published ISO C++ standards including <a
-href="#cxx11">C++11</a>, as well as the upcoming <a
-href="#cxx14">C++14</a> standard, and some parts of the fledgling <a
-href="#cxx17">C++1z</a> standard,
-and is considered a production-quality C++ compiler.
+<p>Clang fully implements all published ISO C++ standards (<a
+href="#cxx98">C++98 / C++03</a>, <a
+href="#cxx11">C++11</a>, and <a
+href="#cxx14">C++14</a>), and most of the upcoming <a
+href="#cxx17">C++1z</a> standard.
 
 <p>The Clang community is continually striving to improve C++ standards
 compliance between releases by submitting and tracking <a
@@ -55,20 +54,17 @@ each language mode.</p>
 
 <h2 id="cxx11">C++11 implementation status</h2>
 
-  <p>Clang 3.3 and later implement all of the <a
-    href="http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=50372">ISO
-    C++ 2011 standard</a>. The following table describes the Clang version
-  in which each feature became available.</p>
+<p>Clang 3.3 and later implement all of the <a
+  href="http://www.iso.org/iso/catalogue_detail.htm?csnumber=50372">ISO
+  C++ 2011 standard</a>.
 
 <p>By default, Clang builds C++ code according to the C++98 standard, with many
 C++11 features accepted as extensions. You can use Clang in C++11 mode with the
 <code>-std=c++11</code> option. Clang's C++11 mode can be used
-with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++, but
-patches are needed to make <a href="libstdc++4.4-clang0x.patch">libstdc++-4.4</a>
-work with Clang in C++11 mode. Patches are also needed to make
-<a href="libstdc++4.6-clang11.patch">libstdc++-4.6</a>
-and <a href="libstdc++4.7-clang11.patch">libstdc++-4.7</a> work with Clang
-releases prior to version 3.2 in C++11 mode.
+with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
+
+<details>
+<summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
  <tr>
@@ -425,17 +421,19 @@ such as Clang that does not provide any extended integer types.
 because changing <code>intmax_t</code> would be an ABI-incompatible
 change.</span>
 </p>
+</details>
 
 <h2 id="cxx14">C++14 implementation status</h2>
 
-<p>Clang 3.4 and later implement all of the Draft International Standard (see <a
-href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3797.pdf">most
-recent publicly available draft</a>)
-of the upcoming C++14 language standard. The following table describes the
-Clang version in which each feature became available.</p>
+<p>Clang 3.4 and later implement all of the <a
+    href="http://www.iso.org/iso/catalogue_detail.htm?csnumber=64029">ISO
+    C++ 2014 standard</a>.
 
 <p>You can use Clang in C++14 mode with the <code>-std=c++14</code> option
 (use <code>-std=c++1y</code> in Clang 3.4 and earlier).</p>
+
+<details>
+<summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
  <tr>
@@ -518,19 +516,19 @@ added these functions in version 5.0, and <code>libc++</code> added them in
 version 3.7.
 </span>
 </p>
+</details>
 
 <h2 id="cxx17">C++1z implementation status</h2>
 
 <p>Clang has <b>experimental</b> support for some proposed features of
 the C++ standard following C++14, provisionally named C++1z.
-The following table describes which C++1z features
-have been implemented in Clang and in which Clang version they became
-available.</p>
-
-<p>Note that support for these features may change or be removed without notice,
-as the draft C++1z standard evolves.</p>
+Note that support for these features may change or be removed without notice,
+as the draft C++1z standard evolves.
 
 <p>You can use Clang in C++1z mode with the <code>-std=c++1z</code> option.</p>
+
+<details open>
+<summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
  <tr>
@@ -691,7 +689,7 @@ as the draft C++1z standard evolves.</p>
     <tr>
       <td>Non-type template parameters with <tt>auto</tt> type</td>
       <td><a href="http://wg21.link/p0127r2">P0127R2</a></td>
-      <td class="none" align="center">No</td>
+      <td class="svn" align="center">SVN</td>
     </tr>
     <tr>
       <td>Guaranteed copy elision</td>
@@ -701,7 +699,7 @@ as the draft C++1z standard evolves.</p>
     <tr>
       <td rowspan=2>Stricter expression evaluation order</td>
       <td><a href="http://wg21.link/p0145r3">P0145R3</a></td>
-      <td class="none" align="center" rowspan=2>No</td>
+      <td class="svn" align="center" rowspan=2>SVN <a href="#p0145">(10)</a></td>
     </tr>
     <tr>
       <td><a href="http://wg21.link/p0400r0">P0400R0</a></td>
@@ -741,25 +739,38 @@ In Clang 3.7, a warning is emitted for all cases that would change meaning.
 </span><br>
 <span id="p0136">(9): This is the resolution to a Defect Report, so is applied
 to all language versions supporting inheriting constructors.
+</span><br>
+<span id="p0145">(10): Under the MS ABI, this feature is not fully implementable,
+because the calling convention requires that function parameters are destroyed
+from left to right in the callee. In order to guarantee that destruction order
+is reverse construction order, the operands of overloaded
+<tt>operator&lt;&lt;</tt>, <tt>operator&gt;&gt;</tt>, <tt>operator-&gt;*</tt>,
+<tt>operator&amp;&amp;</tt>, <tt>operator||</tt>, and <tt>operator,</tt>
+functions are evaluated right-to-left under the MS ABI when called using operator
+syntax, not left-to-right as P0145R3 requires.
 </span>
 </p>
+</details>
 
 <h2 id="ts">Technical specifications and standing documents</h2>
 
 <p>ISO C++ also publishes a number of documents describing additional language
-and library features that are not part of standard C++. The following table
-describes which language features have been implemented in Clang and in which
-Clang version they became available:</p>
+and library features that are not part of standard C++.</p>
+
+<details open>
+<summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
  <tr>
     <th>Document</th>
     <th>Latest draft</th>
+    <th>Compiler flag</th>
     <th>Available in Clang?</th>
  </tr>
     <tr>
-      <td rowspan="2">SD-6: SG10 feature test recommendations</td>
-      <td rowspan="2"><a href="http://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
+      <td rowspan="3">SD-6: SG10 feature test recommendations</td>
+      <td rowspan="3"><a href="http://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
+      <td rowspan="3">N/A</td>
       <td class="full" align="center">
         Clang 3.4 (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3745">N3745</a>)</br>
       </td>
@@ -769,10 +780,15 @@ Clang version they became available:</p>
         Clang 3.6 (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4200">N4200</a>)</a>
       </td>
     </tr>
+    <tr>
+      <td class="svn" align="center">
+        SVN (<a href="http://wg21.link/p0096r3">P0096R3</a>)</a>
+      </td>
+    </tr>
     <!-- FIXME: Implement latest recommendations.
     <tr>
       <td class="svn" align="center">
-        SVN (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0096r0">P0096R0</a>)</a>
+        SVN (<a href="http://wg21.link/p0096r3">P0096R3</a>)</a>
       </td>
     </tr>
     -->
@@ -786,29 +802,41 @@ Clang version they became available:</p>
     <tr>
       <td>[TS] Concepts</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0121r0.pdf">P0121R0</a></td>
-      <td class="none" align="center">No</td>
+      <td></td>
+      <td class="none" align="center">WIP</td>
+    </tr>
+    <tr>
+      <td>[DRAFT TS] Coroutines</td>
+      <td><a href="http://wg21.link/p0057r5">P0057R5</a></td>
+      <td></td>
+      <td class="none" align="center">WIP</td>
     </tr>
     <tr>
       <td>[TS] Library Fundamentals, Version 1 (invocation type traits)</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4480.html">N4480</a></td>
+      <td>N/A</td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>[DRAFT TS] Library Fundamentals, Version 2 (<tt>source_location</tt>)</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4529.html">N4529</a></td>
+     <td><a href="http://wg21.link/n4600">N4600</a></td>
+      <td>N/A</td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
-      <td>[TS] Modules</td>
-      <td><a href="http://wg21.link/p0143r2">P0143R2</a></td>
-      <td class="none" align="center">No</td>
+      <td>[DRAFT TS] Modules</td>
+      <td><a href="http://wg21.link/n4592">N4592</a></td>
+      <td><tt>-fmodules-ts</tt></td>
+      <td class="none" align="center">WIP</td>
     </tr>
     <tr>
       <td>[TS] Transactional Memory</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4514.pdf">N4514</a></td>
+      <td></td>
       <td class="none" align="center">No</td>
     </tr>
 </table>
+</details>
 
 </div>
 </body>

@@ -18,7 +18,7 @@ _start:
 #CHECK: Disassembly of section .text:
 #CHECK: _start:
 #CHECK:  11000: 40 d0 3b d5     mrs     x0, TPIDR_EL0
-#CHECK:  11004: 00 00 00 91     add     x0, x0, #0
+#CHECK:  11004: 00 00 40 91     add     x0, x0, #0, lsl #12
 #CHECK:  11008: 00 40 00 91     add     x0, x0, #16
 
 .type   v1,@object

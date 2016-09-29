@@ -642,12 +642,12 @@ define <32 x i16> @combine_permvar_as_vpbroadcastw512(<32 x i16> %x0) {
 define <16 x i32> @combine_permvar_as_vpbroadcastd512(<16 x i32> %x0) {
 ; X32-LABEL: combine_permvar_as_vpbroadcastd512:
 ; X32:       # BB#0:
-; X32-NEXT:    vpbroadcastd %xmm0, %zmm0
+; X32-NEXT:    vbroadcastss %xmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_permvar_as_vpbroadcastd512:
 ; X64:       # BB#0:
-; X64-NEXT:    vpbroadcastd %xmm0, %zmm0
+; X64-NEXT:    vbroadcastss %xmm0, %zmm0
 ; X64-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %x0, <16 x i32> zeroinitializer, <16 x i32> undef, i16 -1)
   ret <16 x i32> %1
@@ -662,7 +662,7 @@ define <8 x i64> @combine_permvar_as_vpbroadcastq512(<8 x i64> %x0) {
 ;
 ; X64-LABEL: combine_permvar_as_vpbroadcastq512:
 ; X64:       # BB#0:
-; X64-NEXT:    vpbroadcastq %xmm0, %zmm0
+; X64-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; X64-NEXT:    retq
   %1 = call <8 x i64> @llvm.x86.avx512.mask.permvar.di.512(<8 x i64> %x0, <8 x i64> zeroinitializer, <8 x i64> undef, i8 -1)
   ret <8 x i64> %1

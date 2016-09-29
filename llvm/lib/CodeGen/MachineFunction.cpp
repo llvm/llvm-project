@@ -417,6 +417,7 @@ StringRef MachineFunction::getName() const {
 void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
   OS << "# Machine code for function " << getName() << ": ";
   getProperties().print(OS);
+  OS << '\n';
 
   // Print Frame Information
   FrameInfo->print(*this, OS);

@@ -1419,6 +1419,10 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
 
   Error error;
   ValueObjectSP pointee = base->Dereference(error);
+    
+  if (!pointee) {
+    return ValueObjectSP();
+  }
 
   if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
     int64_t index = offset / pointee->GetByteSize();

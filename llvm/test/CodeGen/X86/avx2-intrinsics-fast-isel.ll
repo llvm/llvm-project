@@ -505,12 +505,12 @@ define <4 x i64> @test_mm256_broadcastsi128_si256_mem(<2 x i64>* %p0) {
 ; X32-LABEL: test_mm256_broadcastsi128_si256_mem:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_broadcastsi128_si256_mem:
 ; X64:       # BB#0:
-; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
   %a0 = load <2 x i64>, <2 x i64>* %p0
   %res = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
