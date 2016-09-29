@@ -108,6 +108,19 @@ Visibility Macros
   versioning namespace. This allows throwing and catching some exception types
   between libc++ and libstdc++.
 
+**_LIBCPP_NEW_DELETE_VIS**
+  Mark a symbol as being exported by the libc++ library. This macro must be
+  applied to all `operator new` and `operator delete` overloads.
+
+  **Windows Behavior**: When using the Microsoft CRT, all the `operator new` and
+  `operator delete` overloads are defined statically in `msvcrt.lib`. Marking
+  them as `dllimport` in the libc++ `<new>` header is therefore undesirable: if
+  we were to mark them as `dllimport` and then link against libc++, source files
+  which included `<new>` would end up linking against libc++'s `operator new`
+  and `operator delete`, while source files which did not include `<new>` would
+  end up linking against msvcrt's `operator new` and `operator delete`, which
+  would be a confusing and potentially error-prone inconsistency.
+
 Links
 =====
 

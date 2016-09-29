@@ -62,8 +62,10 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
   if (ClassDecl->hasTrivialDefaultConstructor())
     return true;
 
-  // If all its fields are trivially constructible.
+  // If all its fields are trivially constructible and have no default initializers.
   for (const FieldDecl *Field : ClassDecl->fields()) {
+    if (Field->hasInClassInitializer())
+      return false;
     if (!isTriviallyDefaultConstructible(Field->getType(), Context))
       return false;
   }
