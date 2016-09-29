@@ -253,6 +253,7 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
             std::move(BC), ThreadCount++);
       },
       false);
+  CodegenThreadPool.wait();
 }
 
 Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
