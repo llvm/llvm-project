@@ -6708,9 +6708,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
     else {
       DEBUG(dbgs() << "\n");
-      emitAnalysisDiag(L, Hints, *ORE, VectorizationReport()
-                                           << "vectorization is not beneficial "
-                                              "and is not explicitly forced");
+      ORE->emit(createMissedAnalysis(Hints.vectorizeAnalysisPassName(),
+                                     "NotBeneficial", L)
+                << "vectorization is not beneficial "
+                   "and is not explicitly forced");
       return false;
     }
   }
@@ -6756,10 +6757,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
     DEBUG(dbgs() << "LV: Can't vectorize when the NoImplicitFloat"
                     "attribute is used.\n");
-    emitAnalysisDiag(
-        L, Hints, *ORE,
-        VectorizationReport()
-            << "loop not vectorized due to NoImplicitFloat attribute");
+    ORE->emit(createMissedAnalysis(Hints.vectorizeAnalysisPassName(),
+                                   "NoImplicitFloat", L)
+              << "loop not vectorized due to NoImplicitFloat attribute");
     emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
@@ -6771,9 +6771,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (Hints.isPotentiallyUnsafe() &&
       TTI->isFPVectorizationPotentiallyUnsafe()) {
     DEBUG(dbgs() << "LV: Potentially unsafe FP op prevents vectorization.\n");
-    emitAnalysisDiag(L, Hints, *ORE,
-                     VectorizationReport()
-                         << "loop not vectorized due to unsafe FP support.");
+    ORE->emit(
+        createMissedAnalysis(Hints.vectorizeAnalysisPassName(), "UnsafeFP", L)
+        << "loop not vectorized due to unsafe FP support.");
     emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
