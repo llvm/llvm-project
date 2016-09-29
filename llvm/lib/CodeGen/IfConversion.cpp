@@ -1453,6 +1453,17 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
     }
     if (LiveBeforeMI.count(Reg))
       MIB.addReg(Reg, RegState::Implicit);
+    else {
+      bool HasLiveSubReg = false;
+      for (MCSubRegIterator S(Reg, TRI); S.isValid(); ++S) {
+        if (!LiveBeforeMI.count(*S))
+          continue;
+        HasLiveSubReg = true;
+        break;
+      }
+      if (HasLiveSubReg)
+        MIB.addReg(Reg, RegState::Implicit);
+    }
   }
 }
 

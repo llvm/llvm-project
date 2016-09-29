@@ -190,6 +190,13 @@ Defined::Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
 Defined::Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type)
     : SymbolBody(K, NameOffset, StOther, Type) {}
 
+template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
+  if (!Section || !isFunc())
+    return false;
+  return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
+         (Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC);
+}
+
 Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type,
                      InputFile *File)
     : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {
@@ -314,6 +321,11 @@ template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
+
+template class elf::DefinedRegular<ELF32LE>;
+template class elf::DefinedRegular<ELF32BE>;
+template class elf::DefinedRegular<ELF64LE>;
+template class elf::DefinedRegular<ELF64BE>;
 
 template class elf::DefinedSynthetic<ELF32LE>;
 template class elf::DefinedSynthetic<ELF32BE>;

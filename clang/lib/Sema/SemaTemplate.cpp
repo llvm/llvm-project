@@ -730,7 +730,13 @@ Sema::CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc) {
       T->isNullPtrType() ||
       // If T is a dependent type, we can't do the check now, so we
       // assume that it is well-formed.
-      T->isDependentType()) {
+      T->isDependentType() ||
+      // Allow use of auto in template parameter declarations.
+      T->isUndeducedType()) {
+    if (T->isUndeducedType()) {
+      Diag(Loc, diag::warn_cxx14_compat_template_nontype_parm_auto_type)
+          << QualType(T->getContainedAutoType(), 0);
+    }
     // C++ [temp.param]p5: The top-level cv-qualifiers on the template-parameter
     // are ignored when determining its type.
     return T.getUnqualifiedType();
@@ -4974,6 +4980,29 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                                        TemplateArgument &Converted,
                                        CheckTemplateArgumentKind CTAK) {
   SourceLocation StartLoc = Arg->getLocStart();
+
+  // If the parameter type somehow involves auto, deduce the type now.
+  if (getLangOpts().CPlusPlus1z && ParamType->isUndeducedType()) {
+    if (DeduceAutoType(
+            Context.getTrivialTypeSourceInfo(ParamType, Param->getLocation()),
+                       Arg, ParamType) == DAR_Failed) {
+      Diag(Arg->getExprLoc(),
+           diag::err_non_type_template_parm_type_deduction_failure)
+        << Param->getDeclName() << Param->getType() << Arg->getType()
+        << Arg->getSourceRange();
+      Diag(Param->getLocation(), diag::note_template_param_here);
+      return ExprError();
+    }
+    // CheckNonTypeTemplateParameterType will produce a diagnostic if there's
+    // an error. The error message normally references the parameter
+    // declaration, but here we'll pass the argument location because that's
+    // where the parameter type is deduced.
+    ParamType = CheckNonTypeTemplateParameterType(ParamType, Arg->getExprLoc());
+    if (ParamType.isNull()) {
+      Diag(Param->getLocation(), diag::note_template_param_here);
+      return ExprError();
+    }
+  }
 
   // If either the parameter has a dependent type or the argument is
   // type-dependent, there's nothing we can check now.

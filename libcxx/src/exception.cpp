@@ -32,8 +32,8 @@
     #define HAVE_DEPENDENT_EH_ABI 1
   #endif
 #elif !defined(__GLIBCXX__) // defined(LIBCXX_BUILDING_LIBCXXABI)
-  static std::terminate_handler  __terminate_handler;
-  static std::unexpected_handler __unexpected_handler;
+  _LIBCPP_SAFE_STATIC static std::terminate_handler  __terminate_handler;
+  _LIBCPP_SAFE_STATIC static std::unexpected_handler __unexpected_handler;
 #endif // defined(LIBCXX_BUILDING_LIBCXXABI)
 
 namespace std

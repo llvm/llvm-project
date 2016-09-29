@@ -76,6 +76,9 @@ extern char &SILowerControlFlowID;
 void initializeSIInsertSkipsPass(PassRegistry &);
 extern char &SIInsertSkipsPassID;
 
+void initializeSIOptimizeExecMaskingPass(PassRegistry &);
+extern char &SIOptimizeExecMaskingID;
+
 ModulePass *createAMDGPUConvertAtomicLibCallsPass();
 void initializeAMDGPUConvertAtomicLibCallsPass(PassRegistry &);
 extern char &AMDGPUConvertAtomicLibCallsID;

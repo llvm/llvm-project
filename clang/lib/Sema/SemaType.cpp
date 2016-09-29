@@ -1582,7 +1582,14 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       // template type parameter.
       Result = QualType(CorrespondingTemplateParam->getTypeForDecl(), 0);
     } else {
-      Result = Context.getAutoType(QualType(), AutoTypeKeyword::Auto, false);
+      // If auto appears in the declaration of a template parameter, treat
+      // the parameter as type-dependent.
+      bool IsDependent =
+        S.getLangOpts().CPlusPlus1z &&
+        declarator.getContext() == Declarator::TemplateParamContext;
+      Result = Context.getAutoType(QualType(),
+                                   AutoTypeKeyword::Auto,
+                                   IsDependent);
     }
     break;
 
@@ -2241,6 +2248,10 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     Diag(Loc, diag::err_opencl_vla);
     return QualType();
   }
+  // CUDA device code doesn't support VLAs.
+  if (getLangOpts().CUDA && T->isVariableArrayType() && !CheckCUDAVLA(Loc))
+    return QualType();
+
   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
   if (!getLangOpts().C99) {
     if (T->isVariableArrayType()) {
@@ -2854,7 +2865,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       Error = 7; // Exception declaration
       break;
     case Declarator::TemplateParamContext:
-      Error = 8; // Template parameter
+      if (!SemaRef.getLangOpts().CPlusPlus1z)
+        Error = 8; // Template parameter
       break;
     case Declarator::BlockLiteralContext:
       Error = 9; // Block literal
@@ -5536,7 +5548,7 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
         if (Class->isArcWeakrefUnavailable()) {
           S.Diag(AttrLoc, diag::err_arc_unsupported_weak_class);
           S.Diag(ObjT->getInterfaceDecl()->getLocation(),
-                  diag::note_class_declared);
+                 diag::note_class_declared);
         }
       }
     }

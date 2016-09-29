@@ -1472,7 +1472,7 @@ uint64_t static getConstant(StringRef S) {
   if (S == "COMMONPAGESIZE")
     return Target->PageSize;
   if (S == "MAXPAGESIZE")
-    return Target->MaxPageSize;
+    return Config->MaxPageSize;
   error("unknown constant: " + S);
   return 0;
 }

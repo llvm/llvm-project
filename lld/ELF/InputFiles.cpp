@@ -9,10 +9,10 @@
 
 #include "InputFiles.h"
 #include "Driver.h"
+#include "ELFCreator.h"
 #include "Error.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
-#include "ELFCreator.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -397,13 +398,12 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case SHN_UNDEF:
     return elf::Symtab<ELFT>::X
         ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
-                       /*CanOmitFromDynSym*/ false, /*HasUnnamedAddr*/ false,
-                       this)
+                       /*CanOmitFromDynSym*/ false, this)
         ->body();
   case SHN_COMMON:
     return elf::Symtab<ELFT>::X
         ->addCommon(Name, Sym->st_size, Sym->st_value, Binding, Sym->st_other,
-                    Sym->getType(), /*HasUnnamedAddr*/ false, this)
+                    Sym->getType(), this)
         ->body();
   }
 
@@ -416,8 +416,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
     if (Sec == &InputSection<ELFT>::Discarded)
       return elf::Symtab<ELFT>::X
           ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
-                         /*CanOmitFromDynSym*/ false,
-                         /*HasUnnamedAddr*/ false, this)
+                         /*CanOmitFromDynSym*/ false, this)
           ->body();
     return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec)->body();
   }
@@ -427,8 +426,17 @@ template <class ELFT> void ArchiveFile::parse() {
   File = check(Archive::create(MB), "failed to parse archive");
 
   // Read the symbol table to construct Lazy objects.
-  for (const Archive::Symbol &Sym : File->symbols())
+  bool IsEmpty = true;
+  for (const Archive::Symbol &Sym : File->symbols()) {
     Symtab<ELFT>::X->addLazyArchive(this, Sym);
+    IsEmpty = false;
+  }
+
+  if (IsEmpty)
+    warning(getName() + " has no symbol. Chances are you are doing "
+            "an LTO build and forgot to use an ar command that can create "
+            "a symbol table for LLVM bitcode files. If so, use llvm-ar or "
+            "GNU ar + plugin.");
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -630,8 +638,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef MB) : InputFile(BitcodeKind, MB) {
   EMachine = getBitcodeMachineKind(MB);
 }
 
-static uint8_t getGvVisibility(const GlobalValue *GV) {
-  switch (GV->getVisibility()) {
+static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
+  switch (GvVisibility) {
   case GlobalValue::DefaultVisibility:
     return STV_DEFAULT;
   case GlobalValue::HiddenVisibility:
@@ -643,84 +651,48 @@ static uint8_t getGvVisibility(const GlobalValue *GV) {
 }
 
 template <class ELFT>
-Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
-                                  const IRObjectFile &Obj,
-                                  const BasicSymbolRef &Sym) {
-  const GlobalValue *GV = Obj.getSymbolGV(Sym.getRawDataRefImpl());
-
-  SmallString<64> Name;
-  raw_svector_ostream OS(Name);
-  Sym.printName(OS);
-  StringRef NameRef = Saver.save(StringRef(Name));
-
-  uint32_t Flags = Sym.getFlags();
+static Symbol *createBitcodeSymbol(const DenseSet<const Comdat *> &KeptComdats,
+                                   const lto::InputFile::Symbol &ObjSym,
+                                   StringSaver &Saver, BitcodeFile *F) {
+  StringRef NameRef = Saver.save(ObjSym.getName());
+  uint32_t Flags = ObjSym.getFlags();
   uint32_t Binding = (Flags & BasicSymbolRef::SF_Weak) ? STB_WEAK : STB_GLOBAL;
 
-  uint8_t Type = STT_NOTYPE;
-  uint8_t Visibility;
-  bool CanOmitFromDynSym = false;
-  bool HasUnnamedAddr = false;
+  uint8_t Type = ObjSym.isTLS() ? STT_TLS : STT_NOTYPE;
+  uint8_t Visibility = mapVisibility(ObjSym.getVisibility());
+  bool CanOmitFromDynSym = ObjSym.canBeOmittedFromSymbolTable();
 
-  // FIXME: Expose a thread-local flag for module asm symbols.
-  if (GV) {
-    if (GV->isThreadLocal())
-      Type = STT_TLS;
-    CanOmitFromDynSym = canBeOmittedFromSymbolTable(GV);
-    Visibility = getGvVisibility(GV);
-    HasUnnamedAddr =
-        GV->getUnnamedAddr() == llvm::GlobalValue::UnnamedAddr::Global;
-  } else {
-    // FIXME: Set SF_Hidden flag correctly for module asm symbols, and expose
-    // protected visibility.
-    Visibility = STV_DEFAULT;
-  }
+  if (const Comdat *C = check(ObjSym.getComdat()))
+    if (!KeptComdats.count(C))
+      return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
+                                           CanOmitFromDynSym, F);
 
-  if (GV)
-    if (const Comdat *C = GV->getComdat())
-      if (!KeptComdats.count(C))
-        return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                             CanOmitFromDynSym, HasUnnamedAddr,
-                                             this);
-
-  const Module &M = Obj.getModule();
   if (Flags & BasicSymbolRef::SF_Undefined)
     return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                         CanOmitFromDynSym, HasUnnamedAddr,
-                                         this);
-  if (Flags & BasicSymbolRef::SF_Common) {
-    // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
-    // size and alignment.
-    assert(GV);
-    const DataLayout &DL = M.getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
-    return Symtab<ELFT>::X->addCommon(NameRef, Size, GV->getAlignment(),
-                                      Binding, Visibility, STT_OBJECT,
-                                      HasUnnamedAddr, this);
-  }
-  return Symtab<ELFT>::X->addBitcode(NameRef, Binding, Visibility, Type,
-                                     CanOmitFromDynSym, HasUnnamedAddr, this);
-}
+                                         CanOmitFromDynSym, F);
 
-bool BitcodeFile::shouldSkip(uint32_t Flags) {
-  return !(Flags & BasicSymbolRef::SF_Global) ||
-         (Flags & BasicSymbolRef::SF_FormatSpecific);
+  if (Flags & BasicSymbolRef::SF_Common)
+    return Symtab<ELFT>::X->addCommon(NameRef, ObjSym.getCommonSize(),
+                                      ObjSym.getCommonAlignment(), Binding,
+                                      Visibility, STT_OBJECT, F);
+
+  return Symtab<ELFT>::X->addBitcode(NameRef, Binding, Visibility, Type,
+                                     CanOmitFromDynSym, F);
 }
 
 template <class ELFT>
 void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
-  Obj = check(IRObjectFile::create(MB, Driver->Context));
-  const Module &M = Obj->getModule();
-
+  Obj = check(lto::InputFile::create(MB));
   DenseSet<const Comdat *> KeptComdats;
-  for (const auto &P : M.getComdatSymbolTable()) {
+  for (const auto &P : Obj->getComdatSymbolTable()) {
     StringRef N = Saver.save(P.first());
     if (ComdatGroups.insert(N).second)
       KeptComdats.insert(&P.second);
   }
 
-  for (const BasicSymbolRef &Sym : Obj->symbols())
-    if (!shouldSkip(Sym.getFlags()))
-      Symbols.push_back(createSymbol<ELFT>(KeptComdats, *Obj, Sym));
+  for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
+    Symbols.push_back(
+        createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, Saver, this));
 }
 
 template <template <class> class T>
@@ -843,21 +815,11 @@ template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
 }
 
 std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
-  LLVMContext Context;
-  std::unique_ptr<IRObjectFile> Obj =
-      check(IRObjectFile::create(this->MB, Context));
+  std::unique_ptr<lto::InputFile> Obj = check(lto::InputFile::create(this->MB));
   std::vector<StringRef> V;
-  for (const BasicSymbolRef &Sym : Obj->symbols()) {
-    uint32_t Flags = Sym.getFlags();
-    if (BitcodeFile::shouldSkip(Flags))
-      continue;
-    if (Flags & BasicSymbolRef::SF_Undefined)
-      continue;
-    SmallString<64> Name;
-    raw_svector_ostream OS(Name);
-    Sym.printName(OS);
-    V.push_back(Saver.save(StringRef(Name)));
-  }
+  for (const lto::InputFile::Symbol &Sym : Obj->symbols())
+    if (!(Sym.getFlags() & BasicSymbolRef::SF_Undefined))
+      V.push_back(Saver.save(Sym.getName()));
   return V;
 }
 

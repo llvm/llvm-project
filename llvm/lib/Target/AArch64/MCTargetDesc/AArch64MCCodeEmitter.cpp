@@ -263,6 +263,14 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
 
   ++MCNumFixups;
 
+  // Set the shift bit of the add instruction for relocation types
+  // R_AARCH64_TLSLE_ADD_TPREL_HI12 and R_AARCH64_TLSLD_ADD_DTPREL_HI12.
+  if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
+    AArch64MCExpr::VariantKind RefKind = A64E->getKind();
+    if (RefKind == AArch64MCExpr::VK_TPREL_HI12 ||
+        RefKind == AArch64MCExpr::VK_DTPREL_HI12)
+      ShiftVal = 12;
+  }
   return ShiftVal == 0 ? 0 : (1 << ShiftVal);
 }
 

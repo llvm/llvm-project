@@ -1179,8 +1179,8 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
                         cast<PackExpansionType>(parm->getType())->getPattern(),
                                      TemplateArgs, loc, parm->getDeclName());
     } else {
-      type = SemaRef.SubstType(parm->getType(), TemplateArgs, 
-                               loc, parm->getDeclName());
+      type = SemaRef.SubstType(VD ? arg.getParamTypeForDecl() : arg.getNullPtrType(),
+                               TemplateArgs, loc, parm->getDeclName());
     }
     assert(!type.isNull() && "type substitution failed for param type");
     assert(!type->isDependentType() && "param type still dependent");

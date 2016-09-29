@@ -214,6 +214,9 @@ public:
     this->File = F;
   }
 
+  // Return true if the symbol is a PIC function.
+  bool isMipsPIC() const;
+
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
   }
@@ -409,9 +412,6 @@ struct Symbol {
   // Symbol visibility. This is the computed minimum visibility of all
   // observed non-DSO symbols.
   unsigned Visibility : 2;
-
-  // True if the symbol has unnamed_addr.
-  unsigned HasUnnamedAddr : 1;
 
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for

@@ -11,13 +11,13 @@ define void @bar__512(<16 x i32>* %var) #0 {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    vmovups (%rbx), %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rsp) ## 64-byte Spill
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1
-; CHECK-NEXT:    vmovdqa32 %zmm1, (%rbx)
+; CHECK-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
+; CHECK-NEXT:    vmovaps %zmm1, (%rbx)
 ; CHECK-NEXT:    callq _Print__512
 ; CHECK-NEXT:    vmovups (%rsp), %zmm0 ## 64-byte Reload
 ; CHECK-NEXT:    callq _Print__512
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0
-; CHECK-NEXT:    vmovdqa32 %zmm0, (%rbx)
+; CHECK-NEXT:    vbroadcastss {{.*}}(%rip), %zmm0
+; CHECK-NEXT:    vmovaps %zmm0, (%rbx)
 ; CHECK-NEXT:    addq $112, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq

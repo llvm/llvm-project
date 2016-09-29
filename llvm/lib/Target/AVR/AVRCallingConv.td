@@ -23,7 +23,7 @@ def RetCC_AVR : CallingConv
 ]>;
 
 // Special return value calling convention for runtime functions.
-def RetCC_AVR_RT : CallingConv
+def RetCC_AVR_BUILTIN : CallingConv
 <[
   CCIfType<[i8], CCAssignToReg<[R24,R25]>>,
   CCIfType<[i16], CCAssignToReg<[R23R22, R25R24]>>
@@ -44,14 +44,14 @@ def ArgCC_AVR_Vararg : CallingConv
 
 // Special argument calling convention for
 // multiplication runtime functions.
-def ArgCC_AVR_RT_MUL : CallingConv
+def ArgCC_AVR_BUILTIN_MUL : CallingConv
 <[
   CCIfType<[i16], CCAssignToReg<[R27R26,R19R18]>>
 ]>;
 
 // Special argument calling convention for
 // division runtime functions.
-def ArgCC_AVR_RT_DIV : CallingConv
+def ArgCC_AVR_BUILTIN_DIV : CallingConv
 <[
   CCIfType<[i8], CCAssignToReg<[R24,R22]>>,
   CCIfType<[i16], CCAssignToReg<[R25R24, R23R22]>>

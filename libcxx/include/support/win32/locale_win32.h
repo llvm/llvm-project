@@ -43,8 +43,9 @@ decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l )
 #define mbtowc_l _mbtowc_l
 #define strtoll_l _strtoi64_l
 #define strtoull_l _strtoui64_l
-// FIXME: current msvcrt does not know about long double
-#define strtold_l _strtod_l
+#define strtof_l _strtof_l
+#define strtod_l _strtod_l
+#define strtold_l _strtold_l
 
 inline _LIBCPP_INLINE_VISIBILITY
 int

@@ -48,6 +48,10 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // FrameLowering class because TargetFrameLowering is abstract.
   NVPTXFrameLowering FrameLowering;
 
+protected:
+  // Processor supports scoped atomic operations.
+  bool HasAtomScope;
+
 public:
   /// This constructor initializes the data members to match that
   /// of the specified module.
@@ -77,6 +81,10 @@ public:
   bool hasAtomRedGen32() const { return SmVersion >= 20; }
   bool hasAtomRedGen64() const { return SmVersion >= 20; }
   bool hasAtomAddF32() const { return SmVersion >= 20; }
+  bool hasAtomAddF64() const { return SmVersion >= 60; }
+  bool hasAtomScope() const { return HasAtomScope; }
+  bool hasAtomBitwise64() const { return SmVersion >= 32; }
+  bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasVote() const { return SmVersion >= 12; }
   bool hasDouble() const { return SmVersion >= 13; }
   bool reqPTX20() const { return SmVersion >= 20; }

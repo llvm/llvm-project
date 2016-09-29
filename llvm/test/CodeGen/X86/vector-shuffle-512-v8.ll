@@ -962,12 +962,12 @@ define <8 x i64> @shuffle_v8i64_00000000(<8 x i64> %a, <8 x i64> %b) {
 ;
 ; AVX512F-LABEL: shuffle_v8i64_00000000:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512F-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: shuffle_v8i64_00000000:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512F-32-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x i64> %shuffle

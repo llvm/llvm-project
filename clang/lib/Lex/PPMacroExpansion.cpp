@@ -1192,7 +1192,7 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("cxx_unrestricted_unions", LangOpts.CPlusPlus11)
       .Case("cxx_user_literals", LangOpts.CPlusPlus11)
       .Case("cxx_variadic_templates", LangOpts.CPlusPlus11)
-      // C++1y features
+      // C++14 features
       .Case("cxx_aggregate_nsdmi", LangOpts.CPlusPlus14)
       .Case("cxx_binary_literals", LangOpts.CPlusPlus14)
       .Case("cxx_contextual_conversions", LangOpts.CPlusPlus14)
@@ -1202,6 +1202,9 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("cxx_relaxed_constexpr", LangOpts.CPlusPlus14)
       .Case("cxx_return_type_deduction", LangOpts.CPlusPlus14)
       .Case("cxx_variable_templates", LangOpts.CPlusPlus14)
+      // NOTE: For features covered by SD-6, it is preferable to provide *only*
+      // the SD-6 macro and not a __has_feature check.
+
       // C++ TSes
       //.Case("cxx_runtime_arrays", LangOpts.CPlusPlusTSArrays)
       //.Case("cxx_concepts", LangOpts.CPlusPlusTSConcepts)
@@ -1285,7 +1288,7 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
            .Case("cxx_reference_qualified_functions", LangOpts.CPlusPlus)
            .Case("cxx_rvalue_references", LangOpts.CPlusPlus)
            .Case("cxx_variadic_templates", LangOpts.CPlusPlus)
-           // C++1y features supported by other languages as extensions.
+           // C++14 features supported by other languages as extensions.
            .Case("cxx_binary_literals", true)
            .Case("cxx_init_captures", LangOpts.CPlusPlus11)
            .Case("cxx_variable_templates", LangOpts.CPlusPlus)

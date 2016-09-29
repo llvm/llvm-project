@@ -222,17 +222,13 @@ void LexicalScopes::constructScopeNest(LexicalScope *Scope) {
     LexicalScope *WS = WorkStack.back();
     const SmallVectorImpl<LexicalScope *> &Children = WS->getChildren();
     bool visitedChildren = false;
-    for (SmallVectorImpl<LexicalScope *>::const_iterator SI = Children.begin(),
-                                                         SE = Children.end();
-         SI != SE; ++SI) {
-      LexicalScope *ChildScope = *SI;
+    for (auto &ChildScope : Children)
       if (!ChildScope->getDFSOut()) {
         WorkStack.push_back(ChildScope);
         visitedChildren = true;
         ChildScope->setDFSIn(++Counter);
         break;
       }
-    }
     if (!visitedChildren) {
       WorkStack.pop_back();
       WS->setDFSOut(++Counter);
@@ -247,10 +243,7 @@ void LexicalScopes::assignInstructionRanges(
     DenseMap<const MachineInstr *, LexicalScope *> &MI2ScopeMap) {
 
   LexicalScope *PrevLexicalScope = nullptr;
-  for (SmallVectorImpl<InsnRange>::const_iterator RI = MIRanges.begin(),
-                                                  RE = MIRanges.end();
-       RI != RE; ++RI) {
-    const InsnRange &R = *RI;
+  for (const auto &R : MIRanges) {
     LexicalScope *S = MI2ScopeMap.lookup(R.first);
     assert(S && "Lost LexicalScope for a machine instruction!");
     if (PrevLexicalScope && !PrevLexicalScope->dominates(S))
@@ -281,12 +274,8 @@ void LexicalScopes::getMachineBasicBlocks(
   }
 
   SmallVectorImpl<InsnRange> &InsnRanges = Scope->getRanges();
-  for (SmallVectorImpl<InsnRange>::iterator I = InsnRanges.begin(),
-                                            E = InsnRanges.end();
-       I != E; ++I) {
-    InsnRange &R = *I;
+  for (auto &R : InsnRanges)
     MBBs.insert(R.first->getParent());
-  }
 }
 
 /// dominates - Return true if DebugLoc's lexical scope dominates at least one
@@ -301,9 +290,8 @@ bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
     return true;
 
   bool Result = false;
-  for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
-       ++I) {
-    if (const DILocation *IDL = I->getDebugLoc())
+  for (auto &I : *MBB) {
+    if (const DILocation *IDL = I.getDebugLoc())
       if (LexicalScope *IScope = getOrCreateLexicalScope(IDL))
         if (Scope->dominates(IScope))
           return true;

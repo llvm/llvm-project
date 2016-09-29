@@ -6,11 +6,27 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// In LLD, we have three levels of errors: fatal, error or warn.
+//
+// Fatal makes the program exit immediately with an error message.
+// You shouldn't use it except for reporting a corrupted input file.
+//
+// Error prints out an error message and set a global variable HasError
+// to true to record the fact that we met an error condition. It does
+// not exit, so it is safe for a lld-as-a-library use case. It is generally
+// useful because it can report more than one errors in a single run.
+//
+// Warn doesn't do anything but printing out a given message.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLD_ELF_ERROR_H
 #define LLD_ELF_ERROR_H
 
 #include "lld/Core/LLVM.h"
+
+#include "llvm/Support/Error.h"
 
 namespace lld {
 namespace elf {
@@ -30,6 +46,13 @@ template <typename T> void error(const ErrorOr<T> &V, const Twine &Prefix) {
 
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
+
+inline void check(Error E) {
+  handleAllErrors(std::move(E), [&](llvm::ErrorInfoBase &EIB) {
+    error(EIB.message());
+    return Error::success();
+  });
+}
 
 template <class T> T check(ErrorOr<T> E) {
   if (auto EC = E.getError())

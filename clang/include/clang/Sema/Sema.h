@@ -9245,6 +9245,18 @@ public:
   /// Otherwise, returns true without emitting any diagnostics.
   bool CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee);
 
+  /// Check whether a 'try' or 'throw' expression is allowed within the current
+  /// context, and raise an error or create a deferred error, as appropriate.
+  ///
+  /// 'try' and 'throw' are never allowed in CUDA __device__ functions, and are
+  /// allowed in __host__ __device__ functions only if those functions are never
+  /// codegen'ed for the device.
+  ///
+  /// ExprTy should be the string "try" or "throw", as appropriate.
+  bool CheckCUDAExceptionExpr(SourceLocation Loc, StringRef ExprTy);
+
+  bool CheckCUDAVLA(SourceLocation Loc);
+
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower
   /// calling priority.

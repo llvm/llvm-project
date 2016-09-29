@@ -29,6 +29,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 
+#include <sstream>
+
 #define DEBUG_TYPE "avr-asm-parser"
 
 namespace llvm {

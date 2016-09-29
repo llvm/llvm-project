@@ -1518,23 +1518,22 @@ static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
       return getFalse(ITy);
   }
 
-  // FIXME: Use m_APInt to allow vector splat matches.
-  ConstantInt *CI1, *CI2;
-  if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_ConstantInt(CI1)),
-                         m_ConstantInt(CI2))))
+  // (icmp (add V, C0), C1) & (icmp V, C0)
+  if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_APInt(C0)), m_APInt(C1))))
     return nullptr;
 
-  if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Specific(CI1))))
+  if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Value())))
     return nullptr;
 
   auto *AddInst = cast<BinaryOperator>(Op0->getOperand(0));
+  if (AddInst->getOperand(1) != Op1->getOperand(1))
+    return nullptr;
+
   bool isNSW = AddInst->hasNoSignedWrap();
   bool isNUW = AddInst->hasNoUnsignedWrap();
 
-  const APInt &CI1V = CI1->getValue();
-  const APInt &CI2V = CI2->getValue();
-  const APInt Delta = CI2V - CI1V;
-  if (CI1V.isStrictlyPositive()) {
+  const APInt Delta = *C1 - *C0;
+  if (C0->isStrictlyPositive()) {
     if (Delta == 2) {
       if (Pred0 == ICmpInst::ICMP_ULT && Pred1 == ICmpInst::ICMP_SGT)
         return getFalse(ITy);
@@ -1548,7 +1547,7 @@ static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
         return getFalse(ITy);
     }
   }
-  if (CI1V.getBoolValue() && isNUW) {
+  if (C0->getBoolValue() && isNUW) {
     if (Delta == 2)
       if (Pred0 == ICmpInst::ICMP_ULT && Pred1 == ICmpInst::ICMP_UGT)
         return getFalse(ITy);
@@ -1688,27 +1687,26 @@ static Value *SimplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false))
     return X;
 
-  // FIXME: Use m_APInt to allow vector splat matches.
+  // (icmp (add V, C0), C1) | (icmp V, C0)
   ICmpInst::Predicate Pred0, Pred1;
-  ConstantInt *CI1, *CI2;
+  const APInt *C0, *C1;
   Value *V;
-  if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_ConstantInt(CI1)),
-                         m_ConstantInt(CI2))))
+  if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_APInt(C0)), m_APInt(C1))))
     return nullptr;
 
-  if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Specific(CI1))))
+  if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Value())))
+    return nullptr;
+
+  auto *AddInst = cast<BinaryOperator>(Op0->getOperand(0));
+  if (AddInst->getOperand(1) != Op1->getOperand(1))
     return nullptr;
 
   Type *ITy = Op0->getType();
-
-  auto *AddInst = cast<BinaryOperator>(Op0->getOperand(0));
   bool isNSW = AddInst->hasNoSignedWrap();
   bool isNUW = AddInst->hasNoUnsignedWrap();
 
-  const APInt &CI1V = CI1->getValue();
-  const APInt &CI2V = CI2->getValue();
-  const APInt Delta = CI2V - CI1V;
-  if (CI1V.isStrictlyPositive()) {
+  const APInt Delta = *C1 - *C0;
+  if (C0->isStrictlyPositive()) {
     if (Delta == 2) {
       if (Pred0 == ICmpInst::ICMP_UGE && Pred1 == ICmpInst::ICMP_SLE)
         return getTrue(ITy);
@@ -1722,7 +1720,7 @@ static Value *SimplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
         return getTrue(ITy);
     }
   }
-  if (CI1V.getBoolValue() && isNUW) {
+  if (C0->getBoolValue() && isNUW) {
     if (Delta == 2)
       if (Pred0 == ICmpInst::ICMP_UGE && Pred1 == ICmpInst::ICMP_ULE)
         return getTrue(ITy);

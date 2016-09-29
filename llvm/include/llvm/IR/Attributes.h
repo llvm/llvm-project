@@ -68,7 +68,7 @@ public:
     // IR-Level Attributes
     None,                  ///< No attributes have been set
     #define GET_ATTR_ENUM
-    #include "llvm/IR/Attributes.inc"
+    #include "llvm/IR/Attributes.gen"
     EndAttrKinds           ///< Sentinal value useful for loops
   };
 

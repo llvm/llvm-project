@@ -509,7 +509,6 @@ bool set_times_checked(time_t* sec_out, SubSecT* subsec_out, file_time_type tp) 
     // The tv_nsec and tv_usec fields must not be negative so adjust accordingly
     if (subsec_dur.count() < 0) {
         if (sec_dur.count() > min_seconds) {
-
             sec_dur -= seconds(1);
             subsec_dur += seconds(1);
         } else {
@@ -520,11 +519,24 @@ bool set_times_checked(time_t* sec_out, SubSecT* subsec_out, file_time_type tp) 
         && checked_set(subsec_out, subsec_dur.count());
 }
 
+using TimeSpec = struct ::timespec;
+using StatT = struct ::stat;
+
+#if defined(__APPLE__)
+TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }
+TimeSpec extract_atime(StatT const& st) { return st.st_atimespec; }
+#else
+TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }
+__attribute__((unused)) // Suppress warning
+TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
+#endif
+
 }} // end namespace detail
 
 
 file_time_type __last_write_time(const path& p, std::error_code *ec)
 {
+    using namespace ::std::chrono;
     std::error_code m_ec;
     struct ::stat st;
     detail::posix_stat(p, st, &m_ec);
@@ -533,7 +545,26 @@ file_time_type __last_write_time(const path& p, std::error_code *ec)
         return file_time_type::min();
     }
     if (ec) ec->clear();
-    return file_time_type::clock::from_time_t(st.st_mtime);
+    auto ts = detail::extract_mtime(st);
+#ifndef _LIBCPP_HAS_NO_INT128
+    using IntMax = __int128_t;
+    // FIXME: The value may not be representable as file_time_type. Fix
+    // file_time_type so it can represent all possible values returned by the
+    // filesystem. For now we do the calculation with the largest possible types
+    // and then truncate, this prevents signed integer overflow bugs.
+    const auto NsDur = duration<IntMax, nano>(ts.tv_nsec) + seconds(ts.tv_sec);
+    if (NsDur > file_time_type::max().time_since_epoch() ||
+        NsDur < file_time_type::min().time_since_epoch()) {
+        set_or_throw(error_code(EOVERFLOW, generic_category()), ec,
+                     "last_write_time", p);
+        return file_time_type::min();
+    }
+    return file_time_type(duration_cast<file_time_type::duration>(NsDur));
+#else
+    // FIXME the under/overflow check done above overflows if we don't have
+    // a 128 bit integer type.
+    return file_time_type::clock::from_time_t(ts.tv_sec);
+#endif
 }
 
 void __last_write_time(const path& p, file_time_type new_time,
@@ -554,9 +585,10 @@ void __last_write_time(const path& p, file_time_type new_time,
         set_or_throw(m_ec, ec, "last_write_time", p);
         return;
     }
+    auto atime = detail::extract_atime(st);
     struct ::timeval tbuf[2];
-    tbuf[0].tv_sec = st.st_atime;
-    tbuf[0].tv_usec = 0;
+    tbuf[0].tv_sec = atime.tv_sec;
+    tbuf[0].tv_usec = duration_cast<microseconds>(nanoseconds(atime.tv_nsec)).count();
     const bool overflowed = !detail::set_times_checked<microseconds>(
         &tbuf[1].tv_sec, &tbuf[1].tv_usec, new_time);
 

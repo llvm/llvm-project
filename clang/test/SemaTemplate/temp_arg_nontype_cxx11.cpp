@@ -23,3 +23,7 @@ namespace CanonicalNullptr {
   B<int> b = MakeB<int>();
   C<int> c = MakeC<int>();
 }
+
+namespace Auto {
+  template<auto> struct A { };  // expected-error {{until C++1z}}
+}

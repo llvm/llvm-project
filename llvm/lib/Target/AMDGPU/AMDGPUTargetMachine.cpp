@@ -85,6 +85,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertSkipsPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
+  initializeSIOptimizeExecMaskingPass(*PR);
   initializeAMDGPUConvertAtomicLibCallsPass(*PR);
   initializeAMDGPUOCL12AdapterPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
@@ -344,6 +345,7 @@ public:
   void addFastRegAlloc(FunctionPass *RegAllocPass) override;
   void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
   void addPreRegAlloc() override;
+  void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
@@ -559,7 +561,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 #endif
 
 void GCNPassConfig::addPreRegAlloc() {
-
   addPass(createSIShrinkInstructionsPass());
   addPass(createSIWholeQuadModePass());
 }
@@ -567,7 +568,11 @@ void GCNPassConfig::addPreRegAlloc() {
 void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
-  insertPass(&TwoAddressInstructionPassID, &SILowerControlFlowID, false);
+
+  // This must be run immediately after phi elimination and before
+  // TwoAddressInstructions, otherwise the processing of the tied operand of
+  // SI_ELSE will introduce a copy of the tied operand source after the else.
+  insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
   TargetPassConfig::addFastRegAlloc(RegAllocPass);
 }
@@ -577,11 +582,17 @@ void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
   // passes might recompute live intervals.
   insertPass(&MachineSchedulerID, &SIFixControlFlowLiveIntervalsID);
 
-  // TODO: It might be better to run this right after phi elimination, but for
-  // now that would require not running the verifier.
-  insertPass(&RenameIndependentSubregsID, &SILowerControlFlowID);
+  // This must be run immediately after phi elimination and before
+  // TwoAddressInstructions, otherwise the processing of the tied operand of
+  // SI_ELSE will introduce a copy of the tied operand source after the else.
+  insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
   TargetPassConfig::addOptimizedRegAlloc(RegAllocPass);
+}
+
+void GCNPassConfig::addPostRegAlloc() {
+  addPass(&SIOptimizeExecMaskingID);
+  TargetPassConfig::addPostRegAlloc();
 }
 
 void GCNPassConfig::addPreSched2() {

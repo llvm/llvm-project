@@ -2,7 +2,7 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/type-merge.ll -o %t2.o
 ; RUN: ld.lld -m elf_x86_64 %t.o %t2.o -o %t -shared -save-temps
-; RUN: llvm-dis < %t.lto.bc | FileCheck %s
+; RUN: llvm-dis < %t.0.0.preopt.bc | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

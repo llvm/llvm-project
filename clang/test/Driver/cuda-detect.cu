@@ -22,13 +22,14 @@
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE20
-// sm_30, sm_5x and sm_6x map to compute_30
+// sm_30, sm_6x map to compute_30.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_30 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE30
+// sm_5x is a special case. Maps to compute_30 for cuda-7.x only.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_50 \
-// RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
+// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE30
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_60 \
@@ -44,6 +45,12 @@
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix CUDAINC \
 // RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE35
+// sm_5x -> compute_50 for CUDA-8.0 and newer.
+// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_50 \
+// RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON \
+// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE50
+
 
 // Verify that -nocudainc prevents adding include path to CUDA headers.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
@@ -56,8 +63,8 @@
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC
 
 // Verify that we get an error if there's no libdevice library to link with.
-// NOTE: Inputs/CUDA deliberately does *not* have libdevice.compute_30  for this purpose.
-// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_30 \
+// NOTE: Inputs/CUDA deliberately does *not* have libdevice.compute_20  for this purpose.
+// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_20 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix MISSINGLIBDEVICE
 
@@ -81,7 +88,7 @@
 // CHECK: Found CUDA installation: {{.*}}/Inputs/CUDA/usr/local/cuda
 // NOCUDA-NOT: Found CUDA installation:
 
-// MISSINGLIBDEVICE: error: cannot find libdevice for sm_30.
+// MISSINGLIBDEVICE: error: cannot find libdevice for sm_20.
 
 // COMMON: "-triple" "nvptx-nvidia-cuda"
 // COMMON-SAME: "-fcuda-is-device"
@@ -90,6 +97,7 @@
 // LIBDEVICE20-SAME: libdevice.compute_20.10.bc
 // LIBDEVICE30-SAME: libdevice.compute_30.10.bc
 // LIBDEVICE35-SAME: libdevice.compute_35.10.bc
+// LIBDEVICE50-SAME: libdevice.compute_50.10.bc
 // NOLIBDEVICE-NOT: libdevice.compute_{{.*}}.bc
 // LIBDEVICE-SAME: "-target-feature" "+ptx42"
 // NOLIBDEVICE-NOT: "-target-feature" "+ptx42"

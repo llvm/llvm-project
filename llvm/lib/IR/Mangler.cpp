@@ -121,7 +121,7 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
     // already.
     unsigned &ID = AnonGlobalIDs[GV];
     if (ID == 0)
-      ID = NextAnonGlobalID++;
+      ID = AnonGlobalIDs.size();
 
     // Must mangle the global into a unique ID.
     getNameWithPrefixImpl(OS, "__unnamed_" + Twine(ID), DL, PrefixTy);
