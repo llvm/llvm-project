@@ -2854,14 +2854,9 @@ Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
       ByteOffset += GEPOffset.getSExtValue();
 
       Ptr = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(Ptr) == Instruction::BitCast) {
+    } else if (Operator::getOpcode(Ptr) == Instruction::BitCast ||
+               Operator::getOpcode(Ptr) == Instruction::AddrSpaceCast) {
       Ptr = cast<Operator>(Ptr)->getOperand(0);
-    } else if (AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(Ptr)) {
-      Value *SourcePtr = ASCI->getPointerOperand();
-      // Don't look through addrspace cast which changes pointer size
-      if (BitWidth != DL.getPointerTypeSizeInBits(SourcePtr->getType()))
-        break;
-      Ptr = SourcePtr;
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(Ptr)) {
       if (GA->isInterposable())
         break;
