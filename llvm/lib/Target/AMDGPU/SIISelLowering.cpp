@@ -540,6 +540,10 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
 
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
 
+  // i16 is not desirable unless it is a load or a store.
+  if (VT == MVT::i16 && Op != ISD::LOAD && Op != ISD::STORE)
+    return false;
+
   // SimplifySetCC uses this function to determine whether or not it should
   // create setcc with i1 operands.  We don't have instructions for i1 setcc.
   if (VT == MVT::i1 && Op == ISD::SETCC)

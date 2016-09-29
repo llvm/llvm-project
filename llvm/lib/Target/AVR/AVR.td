@@ -537,27 +537,28 @@ include "AVRCallingConv.td"
 // Assembly Parsers
 //===---------------------------------------------------------------------===//
 
-// def AVRAsmParser : AsmParser {
-//   let ShouldEmitMatchRegisterName = 1;
-//   let ShouldEmitMatchRegisterAltName = 1;
-// }
+def AVRAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterName = 1;
+  let ShouldEmitMatchRegisterAltName = 1;
+}
 
-// def AVRAsmParserVariant : AsmParserVariant {
-//   int Variant = 0;
-//
-//   // Recognize hard coded registers.
-//   string RegisterPrefix = "$";
-// }
+def AVRAsmParserVariant : AsmParserVariant {
+  int Variant = 0;
+
+  // Recognize hard coded registers.
+  string RegisterPrefix = "$";
+  string TokenizingCharacters = "+";
+}
 
 //===---------------------------------------------------------------------===//
 // Target Declaration
 //===---------------------------------------------------------------------===//
 
 def AVR : Target {
-   let InstructionSet         = AVRInstrInfo;
-//   let AssemblyWriters        = [AVRAsmWriter];
-//
-//   let AssemblyParsers        = [AVRAsmParser];
-//   let AssemblyParserVariants = [AVRAsmParserVariant];
+  let InstructionSet         = AVRInstrInfo;
+  /* let AssemblyWriters        = [AVRAsmWriter]; */
+
+  let AssemblyParsers        = [AVRAsmParser];
+  let AssemblyParserVariants = [AVRAsmParserVariant];
 }
 

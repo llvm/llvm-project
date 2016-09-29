@@ -37,8 +37,8 @@
 ; ASM:         #DEBUG_VALUE: c <- %EAX
 ; ASM:         testl   %esi, %esi
 ; ASM:         je      .LBB0_2
+; ASM: [[after_je:\.Ltmp.*]]:
 ; ASM: # BB#1:                                 # %if.then
-; ASM-DAG:     #DEBUG_VALUE: c <- %EAX
 ; ASM-DAG:     #DEBUG_VALUE: inlineinc:a <- %EAX
 ; ASM-DAG:     #DEBUG_VALUE: a <- %EAX
 ; ASM-DAG:     #DEBUG_VALUE: f:p <- %ESI
@@ -65,7 +65,7 @@
 ; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "c"
-; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
+; ASM:         .cv_def_range    [[after_getint]] [[after_je]], "A\021\021\000\000\000"
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "b"
 ; ASM:         .cv_def_range    [[after_inc_eax]] [[after_if]], "A\021\021\000\000\000"
@@ -132,7 +132,7 @@
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
 ; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0x6
+; OBJ:       Range: 0x4
 ; OBJ:     }
 ; OBJ:   }
 ; OBJ:   Local {
@@ -143,7 +143,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeRegister {
 ; OBJ:     Register: 17
-; OBJ:     LocalVariableAddrRange {
+; OBJ:     MayHaveNoName: 0
 ; OBJ:       OffsetStart: .text+0x12
 ; OBJ:       ISectStart: 0x0
 ; OBJ:       Range: 0x6

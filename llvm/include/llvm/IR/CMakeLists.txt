@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Attributes.td)
-tablegen(LLVM Attributes.inc -gen-attrs)
+tablegen(LLVM Attributes.gen -gen-attrs)
 
 set(LLVM_TARGET_DEFINITIONS Intrinsics.td)
 tablegen(LLVM Intrinsics.gen -gen-intrinsic)

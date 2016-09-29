@@ -729,6 +729,39 @@ let TargetPrefix = "nvvm" in {
           [LLVMAnyPointerType<llvm_i32_ty>, llvm_i32_ty],
                                       [IntrArgMemOnly, NoCapture<0>]>;
 
+  class SCOPED_ATOMIC2_impl<LLVMType elty>
+        : Intrinsic<[elty],
+          [LLVMAnyPointerType<LLVMMatchType<0>>, LLVMMatchType<0>],
+          [IntrArgMemOnly, NoCapture<0>]>;
+  class SCOPED_ATOMIC3_impl<LLVMType elty>
+        : Intrinsic<[elty],
+          [LLVMAnyPointerType<LLVMMatchType<0>>, LLVMMatchType<0>,
+           LLVMMatchType<0>],
+          [IntrArgMemOnly, NoCapture<0>]>;
+
+  multiclass PTXAtomicWithScope2<LLVMType elty> {
+    def _cta : SCOPED_ATOMIC2_impl<elty>;
+    def _sys : SCOPED_ATOMIC2_impl<elty>;
+  }
+  multiclass PTXAtomicWithScope3<LLVMType elty> {
+    def _cta : SCOPED_ATOMIC3_impl<elty>;
+    def _sys : SCOPED_ATOMIC3_impl<elty>;
+  }
+  multiclass PTXAtomicWithScope2_fi {
+    defm _f: PTXAtomicWithScope2<llvm_anyfloat_ty>;
+    defm _i: PTXAtomicWithScope2<llvm_anyint_ty>;
+  }
+  defm int_nvvm_atomic_add_gen   : PTXAtomicWithScope2_fi;
+  defm int_nvvm_atomic_inc_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_dec_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_exch_gen_i: PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_xor_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_max_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_min_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_or_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_and_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_cas_gen_i : PTXAtomicWithScope3<llvm_anyint_ty>;
+
 // Bar.Sync
 
   // The builtin for "bar.sync 0" is called __syncthreads.  Unlike most of the

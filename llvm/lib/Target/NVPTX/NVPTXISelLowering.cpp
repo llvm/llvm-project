@@ -3274,20 +3274,34 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     return false;
 
   case Intrinsic::nvvm_atomic_load_add_f32:
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::f32;
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.vol = 0;
-    Info.readMem = true;
-    Info.writeMem = true;
-    Info.align = 0;
-    return true;
-
   case Intrinsic::nvvm_atomic_load_inc_32:
   case Intrinsic::nvvm_atomic_load_dec_32:
+
+  case Intrinsic::nvvm_atomic_add_gen_f_cta:
+  case Intrinsic::nvvm_atomic_add_gen_f_sys:
+  case Intrinsic::nvvm_atomic_add_gen_i_cta:
+  case Intrinsic::nvvm_atomic_add_gen_i_sys:
+  case Intrinsic::nvvm_atomic_and_gen_i_cta:
+  case Intrinsic::nvvm_atomic_and_gen_i_sys:
+  case Intrinsic::nvvm_atomic_cas_gen_i_cta:
+  case Intrinsic::nvvm_atomic_cas_gen_i_sys:
+  case Intrinsic::nvvm_atomic_dec_gen_i_cta:
+  case Intrinsic::nvvm_atomic_dec_gen_i_sys:
+  case Intrinsic::nvvm_atomic_inc_gen_i_cta:
+  case Intrinsic::nvvm_atomic_inc_gen_i_sys:
+  case Intrinsic::nvvm_atomic_max_gen_i_cta:
+  case Intrinsic::nvvm_atomic_max_gen_i_sys:
+  case Intrinsic::nvvm_atomic_min_gen_i_cta:
+  case Intrinsic::nvvm_atomic_min_gen_i_sys:
+  case Intrinsic::nvvm_atomic_or_gen_i_cta:
+  case Intrinsic::nvvm_atomic_or_gen_i_sys:
+  case Intrinsic::nvvm_atomic_exch_gen_i_cta:
+  case Intrinsic::nvvm_atomic_exch_gen_i_sys:
+  case Intrinsic::nvvm_atomic_xor_gen_i_cta:
+  case Intrinsic::nvvm_atomic_xor_gen_i_sys: {
+    auto &DL = I.getModule()->getDataLayout();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::i32;
+    Info.memVT = getValueType(DL, I.getType());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.vol = 0;
@@ -3295,6 +3309,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.writeMem = true;
     Info.align = 0;
     return true;
+  }
 
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:

@@ -27137,7 +27137,7 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
       return Cond;
     }
   }
-  
+
   return SDValue();
 }
 

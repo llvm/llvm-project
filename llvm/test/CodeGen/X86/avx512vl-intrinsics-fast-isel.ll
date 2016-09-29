@@ -7,12 +7,12 @@
 define <2 x i64> @test_mm_broadcastd_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_broadcastd_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
+; X32-NEXT:    vbroadcastss %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_broadcastd_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
+; X64-NEXT:    vbroadcastss %xmm0, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %res0 = shufflevector <4 x i32> %arg0, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -88,12 +88,12 @@ define <2 x i64> @test_mm_maskz_broadcastd_epi32(i8 %a0, <2 x i64> %a1) {
 define <4 x i64> @test_mm256_broadcastd_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_broadcastd_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpbroadcastd %xmm0, %ymm0
+; X32-NEXT:    vbroadcastss %xmm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_broadcastd_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpbroadcastd %xmm0, %ymm0
+; X64-NEXT:    vbroadcastss %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %res0 = shufflevector <4 x i32> %arg0, <4 x i32> undef, <8 x i32> zeroinitializer
@@ -221,12 +221,12 @@ define <2 x i64> @test_mm_maskz_broadcastq_epi64(i8 %a0, <2 x i64> %a1) {
 define <4 x i64> @test_mm256_broadcastq_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_broadcastq_epi64:
 ; X32:       # BB#0:
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
+; X32-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_broadcastq_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    vpbroadcastq %xmm0, %ymm0
+; X64-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; X64-NEXT:    retq
   %res = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> zeroinitializer
   ret <4 x i64> %res

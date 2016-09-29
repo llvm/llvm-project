@@ -173,7 +173,7 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
   if (CanBeUnnamed && !UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, true);
 
-  // Determine whether this is an user writter assembler temporary or normal
+  // Determine whether this is a user written assembler temporary or normal
   // label, if used.
   bool IsTemporary = CanBeUnnamed;
   if (AllowTemporaryLabels && !IsTemporary)

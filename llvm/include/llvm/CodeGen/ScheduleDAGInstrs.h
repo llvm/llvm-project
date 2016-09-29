@@ -345,7 +345,6 @@ namespace llvm {
     SUnits.emplace_back(MI, (unsigned)SUnits.size());
     assert((Addr == nullptr || Addr == &SUnits[0]) &&
            "SUnits std::vector reallocated on the fly!");
-    SUnits.back().OrigNode = &SUnits.back();
     return &SUnits.back();
   }
 
