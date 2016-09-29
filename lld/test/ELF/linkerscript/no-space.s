@@ -2,9 +2,21 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
 # RUN: echo "SECTIONS {foo 0 : {*(foo*)} }" > %t.script
-# RUN: not ld.lld -o %t --script %t.script %t.o -shared 2>&1 | FileCheck %s
+# RUN: ld.lld -o %t --script %t.script %t.o -shared
+# RUN: llvm-readobj -elf-output-style=GNU -l %t | FileCheck %s
 
-# CHECK: Not enough space for ELF and program headers
+# There is not enough address space available for the header, so just start the PT_LOAD
+# after it.
+
+# CHECK: Program Headers:
+# CHECK-NEXT: Type  Offset   VirtAddr           PhysAddr
+# CHECK-NEXT: PHDR
+# CHECK-NEXT: LOAD  0x001000 0x0000000000000000 0x0000000000000000
+
+# CHECK:      Section to Segment mapping:
+# CHECK-NEXT:  Segment Sections...
+# CHECK-NEXT:   00
+# CHECK-NEXT:   01     foo .dynsym .hash .dynstr
 
 .section foo, "a"
 .quad 0

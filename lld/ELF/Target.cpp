@@ -2054,14 +2054,9 @@ RelExpr MipsTargetInfo<ELFT>::getThunkExpr(RelExpr Expr, uint32_t Type,
   if (F->getObj().getHeader()->e_flags & EF_MIPS_PIC)
     return Expr;
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&S);
-  if (!D || !D->Section)
-    return Expr;
   // LA25 is required if target file has PIC code
   // or target symbol is a PIC symbol.
-  const ELFFile<ELFT> &DefFile = D->Section->getFile()->getObj();
-  bool PicFile = DefFile.getHeader()->e_flags & EF_MIPS_PIC;
-  bool PicSym = (D->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC;
-  return (PicFile || PicSym) ? R_THUNK_ABS : Expr;
+  return D && D->isMipsPIC() ? R_THUNK_ABS : Expr;
 }
 
 template <class ELFT>

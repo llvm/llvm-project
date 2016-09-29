@@ -214,6 +214,9 @@ public:
     this->File = F;
   }
 
+  // Return true if the symbol is a PIC function.
+  bool isMipsPIC() const;
+
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
   }

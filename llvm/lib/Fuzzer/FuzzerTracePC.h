@@ -19,8 +19,8 @@ namespace fuzzer {
 
 class TracePC {
  public:
-  void HandleTrace(uintptr_t *guard, uintptr_t PC);
-  void HandleInit(uintptr_t *start, uintptr_t *stop);
+  void HandleTrace(uint32_t *guard, uintptr_t PC);
+  void HandleInit(uint32_t *start, uint32_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   void HandleValueProfile(size_t Value) { ValueProfileMap.AddValue(Value); }
   size_t GetTotalPCCoverage() { return TotalPCCoverage; }
@@ -71,7 +71,7 @@ private:
   }
 
   struct Module {
-    uintptr_t *Start, *Stop;
+    uint32_t *Start, *Stop;
   };
 
   Module Modules[4096];

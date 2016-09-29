@@ -30,7 +30,7 @@ Here are the steps you can follow to do so:
 
 #. Install buildslave (currently we are using buildbot version 0.8.5).
    Depending on the platform, buildslave could be available to download and
-   install with your packet manager, or you can download it directly from
+   install with your package manager, or you can download it directly from
    `<http://trac.buildbot.net>`_ and install it manually.
 
 #. Create a designated user account, your buildslave will be running under,
@@ -43,7 +43,7 @@ Here are the steps you can follow to do so:
 #. Create a buildslave in context of that buildslave account.  Point it to
    the **lab.llvm.org** port **9990** (see `Buildbot documentation,
    Creating a slave
-   <http://buildbot.net/buildbot/docs/current/full.html#creating-a-slave>`_
+   <http://docs.buildbot.net/current/tutorial/firstrun.html#creating-a-slave>`_
    for more details) by running the following command:
 
     .. code-block:: bash

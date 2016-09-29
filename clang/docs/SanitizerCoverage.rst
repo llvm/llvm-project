@@ -334,7 +334,7 @@ on every edge:
    if (guard_variable)
      __sanitizer_cov_trace_pc_guard(&guard_variable)
 
-Every edge will have its own `guard_variable` (uintptr_t).
+Every edge will have its own `guard_variable` (uint32_t).
 
 The compler will also insert a module constructor that will call
 
@@ -342,12 +342,91 @@ The compler will also insert a module constructor that will call
 
    // The guards are [start, stop).
    // This function may be called multiple times with the same values of start/stop.
-   __sanitizer_cov_trace_pc_guard_init(uintptr_t *start, uintptr_t *stop);
+   __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop);
 
 Similarly to `trace-pc,indirect-calls`, with `trace-pc-guards,indirect-calls`
 ``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
 
 The functions `__sanitizer_cov_trace_pc_*` should be defined by the user.
+
+Example: 
+
+.. code-block:: c++
+
+  // trace-pc-guard-cb.cc
+  #include <stdint.h>
+  #include <stdio.h>
+  #include <sanitizer/coverage_interface.h>
+
+  // This callback is inserted by the compiler as a module constructor
+  // into every compilation unit. 'start' and 'stop' correspond to the
+  // beginning and end of the section with the guards for the entire
+  // binary (executable or DSO) and so it will be called multiple times
+  // with the same parameters.
+  extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start,
+                                                      uint32_t *stop) {
+    static uint64_t N;  // Counter for the guards.
+    if (start == stop || *start) return;  // Initialize only once.
+    printf("INIT: %p %p\n", start, stop);
+    for (uint32_t *x = start; x < stop; x++)
+      *x = ++N;  // Guards should start from 1.
+  }
+
+  // This callback is inserted by the compiler on every edge in the
+  // control flow (some optimizations apply).
+  // Typically, the compiler will emit the code like this:
+  //    if(*guard)
+  //      __sanitizer_cov_trace_pc_guard(guard);
+  // But for large functions it will emit a simple call:
+  //    __sanitizer_cov_trace_pc_guard(guard);
+  extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
+    if (!*guard) return;  // Duplicate the guard check.
+    // If you set *guard to 0 this code will not be called again for this edge.
+    // Now you can get the PC and do whatever you want: 
+    //   store it somewhere or symbolize it and print right away.
+    // The values of `*guard` are as you set them in
+    // __sanitizer_cov_trace_pc_guard_init and so you can make them consecutive
+    // and use them to dereference an array or a bit vector.
+    void *PC = __builtin_return_address(0);
+    char PcDescr[1024];
+    // This function is a part of the sanitizer run-time.
+    // To use it, link with AddressSanitizer or other sanitizer.
+    __sanitizer_symbolize_pc(PC, "%p %F %L", PcDescr, sizeof(PcDescr));
+    printf("guard: %p %x PC %s\n", guard, *guard, PcDescr);
+  }
+
+.. code-block:: c++
+
+  // trace-pc-guard-example.cc
+  void foo() { }
+  int main(int argc, char **argv) {
+    if (argc > 1) foo();
+  }
+
+.. code-block:: console
+  
+  clang++ -g  -fsanitize-coverage=trace-pc-guard trace-pc-guard-example.cc -c
+  clang++ trace-pc-guard-cb.cc trace-pc-guard-example.o -fsanitize=address
+  ASAN_OPTIONS=strip_path_prefix=`pwd`/ ./a.out
+
+.. code-block:: console
+
+  INIT: 0x71bcd0 0x71bce0
+  guard: 0x71bcd4 2 PC 0x4ecd5b in main trace-pc-guard-example.cc:2
+  guard: 0x71bcd8 3 PC 0x4ecd9e in main trace-pc-guard-example.cc:3:7
+
+.. code-block:: console
+
+  ASAN_OPTIONS=strip_path_prefix=`pwd`/ ./a.out with-foo
+
+
+.. code-block:: console
+
+  INIT: 0x71bcd0 0x71bce0
+  guard: 0x71bcd4 2 PC 0x4ecd5b in main trace-pc-guard-example.cc:3
+  guard: 0x71bcdc 4 PC 0x4ecdc7 in main trace-pc-guard-example.cc:4:17
+  guard: 0x71bcd0 1 PC 0x4ecd20 in foo() trace-pc-guard-example.cc:2:14
+
 
 Tracing data flow
 =================

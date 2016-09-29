@@ -433,10 +433,10 @@ template <class ELFT> void ArchiveFile::parse() {
   }
 
   if (IsEmpty)
-    warning(getName() + " has no symbol. Chances are you are doing "
-            "an LTO build and forgot to use an ar command that can create "
-            "a symbol table for LLVM bitcode files. If so, use llvm-ar or "
-            "GNU ar + plugin.");
+    warn(getName() + " has no symbol. Chances are you are doing "
+         "an LTO build and forgot to use an ar command that can create "
+         "a symbol table for LLVM bitcode files. If so, use llvm-ar or "
+         "GNU ar + plugin.");
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.

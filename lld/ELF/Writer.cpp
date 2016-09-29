@@ -275,7 +275,7 @@ template <class ELFT> void Writer<ELFT>::run() {
                                                 : createPhdrs();
     fixHeaders();
     if (ScriptConfig->HasSections) {
-      Script<ELFT>::X->assignAddresses();
+      Script<ELFT>::X->assignAddresses(Phdrs);
     } else {
       fixSectionAlignments();
       assignAddresses();
@@ -320,7 +320,7 @@ template <class ELFT> static void reportUndefined(SymbolBody *Sym) {
   if (Sym->File)
     Msg += " in " + getFilename(Sym->File);
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
-    warning(Msg);
+    warn(Msg);
   else
     error(Msg);
 }
@@ -544,7 +544,7 @@ void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
   if (!First)
     First = Sec;
   H.p_align = std::max<typename ELFT::uint>(H.p_align, Sec->getAlignment());
-  if (H.p_type == PT_LOAD && !Config->OFormatBinary)
+  if (H.p_type == PT_LOAD)
     Sec->FirstInPtLoad = First;
 }
 
@@ -1047,8 +1047,10 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   // Add the first PT_LOAD segment for regular output sections.
   uintX_t Flags = computeFlags<ELFT>(PF_R);
   Phdr *Load = AddHdr(PT_LOAD, Flags);
-  Load->add(Out<ELFT>::ElfHeader);
-  Load->add(Out<ELFT>::ProgramHeaders);
+  if (!ScriptConfig->HasSections) {
+    Load->add(Out<ELFT>::ElfHeader);
+    Load->add(Out<ELFT>::ProgramHeaders);
+  }
 
   Phdr TlsHdr(PT_TLS, PF_R);
   Phdr RelRo(PT_GNU_RELRO, PF_R);
@@ -1190,15 +1192,14 @@ static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
     Alignment = std::max<uintX_t>(Alignment, Config->MaxPageSize);
   Off = alignTo(Off, Alignment);
 
-  // Relocatable output does not have program headers
-  // and does not need any other offset adjusting.
-  if (Config->Relocatable || !(Sec->getFlags() & SHF_ALLOC))
+  OutputSectionBase<ELFT> *First = Sec->FirstInPtLoad;
+  // If the section is not in a PT_LOAD, we have no other constraint.
+  if (!First)
     return Off;
 
-  OutputSectionBase<ELFT> *First = Sec->FirstInPtLoad;
   // If two sections share the same PT_LOAD the file offset is calculated using
   // this formula: Off2 = Off1 + (VA2 - VA1).
-  if (!First || Sec == First)
+  if (Sec == First)
     return alignTo(Off, Target->MaxPageSize, Sec->getVA());
   return First->getFileOffset() + Sec->getVA() - First->getVA();
 }

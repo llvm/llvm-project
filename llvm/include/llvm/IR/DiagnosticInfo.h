@@ -387,8 +387,10 @@ public:
     std::string Val;
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
-    explicit Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
-    explicit Argument(StringRef Key, int N);
+    Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
+    Argument(StringRef Key, int N);
+    Argument(StringRef Key, unsigned N);
+    Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
@@ -571,7 +573,13 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
   /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p Inst is the instruction that the optimization operates on.
+  /// remark.  \p DLoc is the debug location and \p CodeRegion is the region
+  /// that the optimization operates on (currently on block is supported).
+  OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
+                             const DebugLoc &DLoc, Value *CodeRegion);
+
+  /// \brief Same as above but \p Inst is used to derive code region and debug
+  /// location.
   OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                              Instruction *Inst);
 
@@ -592,6 +600,10 @@ protected:
                              const Twine &Msg, Optional<uint64_t> Hotness)
       : DiagnosticInfoOptimizationBase(Kind, DS_Remark, PassName, Fn, DLoc, Msg,
                                        Hotness) {}
+
+  OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
+                             StringRef RemarkName, const DebugLoc &DLoc,
+                             Value *CodeRegion);
 };
 
 /// Diagnostic information for optimization analysis remarks related to
@@ -613,6 +625,19 @@ public:
                                       Optional<uint64_t> Hotness = None)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
                                    PassName, Fn, DLoc, Msg, Hotness) {}
+
+  /// \p PassName is the name of the pass emitting this diagnostic. If this name
+  /// matches the regular expression given in -Rpass-analysis=, then the
+  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
+  /// remark.  \p DLoc is the debug location and \p CodeRegion is the region
+  /// that the optimization operates on (currently on block is supported). The
+  /// front-end will append its own message related to options that address
+  /// floating-point non-commutativity.
+  OptimizationRemarkAnalysisFPCommute(const char *PassName,
+                                      StringRef RemarkName,
+                                      const DebugLoc &DLoc, Value *CodeRegion)
+      : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
+                                   PassName, RemarkName, DLoc, CodeRegion) {}
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkAnalysisFPCommute;
@@ -638,6 +663,18 @@ public:
                                      Optional<uint64_t> Hotness = None)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
                                    PassName, Fn, DLoc, Msg, Hotness) {}
+
+  /// \p PassName is the name of the pass emitting this diagnostic. If this name
+  /// matches the regular expression given in -Rpass-analysis=, then the
+  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
+  /// remark.  \p DLoc is the debug location and \p CodeRegion is the region
+  /// that the optimization operates on (currently on block is supported). The
+  /// front-end will append its own message related to options that address
+  /// pointer aliasing legality.
+  OptimizationRemarkAnalysisAliasing(const char *PassName, StringRef RemarkName,
+                                     const DebugLoc &DLoc, Value *CodeRegion)
+      : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
+                                   PassName, RemarkName, DLoc, CodeRegion) {}
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkAnalysisAliasing;

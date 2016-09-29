@@ -659,6 +659,8 @@ MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(elf::ObjectFile<ELFT> *F,
     return;
   }
   Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(Data.data());
+  if (Reginfo->ri_gp_value)
+    error(getName(this) + ": unsupported non-zero ri_gp_value");
 }
 
 template <class ELFT>
@@ -682,6 +684,8 @@ MipsOptionsInputSection<ELFT>::MipsOptionsInputSection(elf::ObjectFile<ELFT> *F,
     auto *O = reinterpret_cast<const Elf_Mips_Options<ELFT> *>(D.data());
     if (O->kind == ODK_REGINFO) {
       Reginfo = &O->getRegInfo();
+      if (Reginfo->ri_gp_value)
+        error(getName(this) + ": unsupported non-zero ri_gp_value");
       break;
     }
     D = D.slice(O->size);

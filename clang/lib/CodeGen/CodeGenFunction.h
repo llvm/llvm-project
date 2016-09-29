@@ -3318,13 +3318,22 @@ public:
   static bool isObjCMethodWithTypeParams(const T *) { return false; }
 #endif
 
+  enum class EvaluationOrder {
+    ///! No language constraints on evaluation order.
+    Default,
+    ///! Language semantics require left-to-right evaluation.
+    ForceLeftToRight,
+    ///! Language semantics require right-to-left evaluation.
+    ForceRightToLeft
+  };
+
   /// EmitCallArgs - Emit call arguments for a function.
   template <typename T>
   void EmitCallArgs(CallArgList &Args, const T *CallArgTypeInfo,
                     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
                     const FunctionDecl *CalleeDecl = nullptr,
                     unsigned ParamsToSkip = 0,
-                    bool ForceRightToLeftEvaluation = false) {
+                    EvaluationOrder Order = EvaluationOrder::Default) {
     SmallVector<QualType, 16> ArgTypes;
     CallExpr::const_arg_iterator Arg = ArgRange.begin();
 
@@ -3364,15 +3373,14 @@ public:
     for (auto *A : llvm::make_range(Arg, ArgRange.end()))
       ArgTypes.push_back(getVarArgType(A));
 
-    EmitCallArgs(Args, ArgTypes, ArgRange, CalleeDecl, ParamsToSkip,
-                 ForceRightToLeftEvaluation);
+    EmitCallArgs(Args, ArgTypes, ArgRange, CalleeDecl, ParamsToSkip, Order);
   }
 
   void EmitCallArgs(CallArgList &Args, ArrayRef<QualType> ArgTypes,
                     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
                     const FunctionDecl *CalleeDecl = nullptr,
                     unsigned ParamsToSkip = 0,
-                    bool ForceRightToLeftEvaluation = false);
+                    EvaluationOrder Order = EvaluationOrder::Default);
 
   /// EmitPointerWithAlignment - Given an expression with a pointer
   /// type, emit the value and compute our best estimate of the
