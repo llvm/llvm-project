@@ -30,6 +30,8 @@ typedef ElfW(Ehdr) Elf_Ehdr;
 #include "ubsan/ubsan_handlers.h"
 #endif
 
+using namespace __sanitizer;
+
 namespace __cfi {
 
 #define kCfiShadowLimitsStorageSize 4096 // 1 page
