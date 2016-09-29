@@ -1855,12 +1855,13 @@ private:
   /// as a vector operation.
   bool isConsecutiveLoadOrStore(Instruction *I);
 
-  /// Report an analysis message to assist the user in diagnosing loops that are
-  /// not vectorized.  These are handled as LoopAccessReport rather than
-  /// VectorizationReport because the << operator of VectorizationReport returns
-  /// LoopAccessReport.
-  void emitAnalysis(const LoopAccessReport &Message) const {
-    emitAnalysisDiag(TheLoop, *Hints, *ORE, Message);
+  /// Create an analysis remark that explains why vectorization failed
+  ///
+  /// \p RemarkName is the identifier for the remark.  \return the remark object
+  /// that can be streamed to.
+  OptimizationRemarkAnalysis createMissedAnalysis(StringRef RemarkName) {
+    return ::createMissedAnalysis(Hints->vectorizeAnalysisPassName(),
+                                  RemarkName, TheLoop);
   }
 
 public:
@@ -5517,20 +5518,18 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
   // Width 1 means no vectorize
   VectorizationFactor Factor = {1U, 0U};
   if (OptForSize && Legal->getRuntimePointerChecking()->Need) {
-    emitAnalysis(
-        VectorizationReport()
-        << "runtime pointer checks needed. Enable vectorization of this "
-           "loop with '#pragma clang loop vectorize(enable)' when "
-           "compiling with -Os/-Oz");
+    ORE->emit(createMissedAnalysis("CantVersionLoopWithOptForSize")
+              << "runtime pointer checks needed. Enable vectorization of this "
+                 "loop with '#pragma clang loop vectorize(enable)' when "
+                 "compiling with -Os/-Oz");
     DEBUG(dbgs()
           << "LV: Aborting. Runtime ptr check is required with -Os/-Oz.\n");
     return Factor;
   }
 
   if (!EnableCondStoresVectorization && Legal->getNumPredStores()) {
-    emitAnalysis(
-        VectorizationReport()
-        << "store that is conditionally executed prevents vectorization");
+    ORE->emit(createMissedAnalysis("ConditionalStore")
+              << "store that is conditionally executed prevents vectorization");
     DEBUG(dbgs() << "LV: No vectorization. There are conditional stores.\n");
     return Factor;
   }
@@ -5598,8 +5597,8 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
   if (OptForSize) {
     // If we are unable to calculate the trip count then don't try to vectorize.
     if (TC < 2) {
-      emitAnalysis(
-          VectorizationReport()
+      ORE->emit(
+          createMissedAnalysis("UnknownLoopCountComplexCFG")
           << "unable to calculate the loop count due to complex control flow");
       DEBUG(dbgs() << "LV: Aborting. A tail loop is required with -Os/-Oz.\n");
       return Factor;
@@ -5613,11 +5612,11 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
     else {
       // If the trip count that we found modulo the vectorization factor is not
       // zero then we require a tail.
-      emitAnalysis(VectorizationReport()
-                   << "cannot optimize for size and vectorize at the "
-                      "same time. Enable vectorization of this loop "
-                      "with '#pragma clang loop vectorize(enable)' "
-                      "when compiling with -Os/-Oz");
+      ORE->emit(createMissedAnalysis("NoTailLoopWithOptForSize")
+                << "cannot optimize for size and vectorize at the "
+                   "same time. Enable vectorization of this loop "
+                   "with '#pragma clang loop vectorize(enable)' "
+                   "when compiling with -Os/-Oz");
       DEBUG(dbgs() << "LV: Aborting. A tail loop is required with -Os/-Oz.\n");
       return Factor;
     }
