@@ -77,6 +77,7 @@ public:
   void setVA(uintX_t VA) { Header.sh_addr = VA; }
   uintX_t getVA() const { return Header.sh_addr; }
   void setFileOffset(uintX_t Off) { Header.sh_offset = Off; }
+  uintX_t getFileOffset() { return Header.sh_offset; }
   void setSHName(unsigned Val) { Header.sh_name = Val; }
   void writeHeaderTo(Elf_Shdr *SHdr);
   StringRef getName() { return Name; }
@@ -107,6 +108,14 @@ public:
   // If true, this section will be page aligned on disk.
   // Typically the first section of each PT_LOAD segment has this flag.
   bool PageAlign = false;
+
+  // Pointer to the first section in PT_LOAD segment, which this section
+  // also resides in. This field is used to correctly compute file offset
+  // of a section. When two sections share the same load segment, difference
+  // between their file offsets should be equal to difference between their
+  // virtual addresses. To compute some section offset we use the following
+  // formula: Off = Off_first + VA - VA_first.
+  OutputSectionBase<ELFT> *FirstInPtLoad = nullptr;
 
   virtual void finalize() {}
   virtual void finalizePieces() {}

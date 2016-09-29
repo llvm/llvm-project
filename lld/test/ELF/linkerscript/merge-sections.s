@@ -58,6 +58,7 @@
 # CHECK-NEXT:   Type:
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:     SHF_EXECINSTR
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Address: 0x[[ADDR2:.*]]
 # CHECK-NEXT:   Offset: 0x[[ADDR2]]

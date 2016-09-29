@@ -46,10 +46,8 @@ class CombinedAllocator {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
-    if (size + alignment < size)
-      return ReturnNullOrDie();
-    if (check_rss_limit && RssLimitIsExceeded())
-      return ReturnNullOrDie();
+    if (size + alignment < size) return ReturnNullOrDieOnBadRequest();
+    if (check_rss_limit && RssLimitIsExceeded()) return ReturnNullOrDieOnOOM();
     if (alignment > 8)
       size = RoundUpTo(size, alignment);
     void *res;
@@ -69,10 +67,15 @@ class CombinedAllocator {
     return atomic_load(&may_return_null_, memory_order_acquire);
   }
 
-  void *ReturnNullOrDie() {
+  void *ReturnNullOrDieOnBadRequest() {
     if (MayReturnNull())
       return nullptr;
-    ReportAllocatorCannotReturnNull();
+    ReportAllocatorCannotReturnNull(false);
+  }
+
+  void *ReturnNullOrDieOnOOM() {
+    if (MayReturnNull()) return nullptr;
+    ReportAllocatorCannotReturnNull(true);
   }
 
   void SetMayReturnNull(bool may_return_null) {

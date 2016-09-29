@@ -42,12 +42,12 @@ class BitcodeCompiler {
 public:
   BitcodeCompiler();
   ~BitcodeCompiler();
+
   void add(BitcodeFile &F);
   std::vector<InputFile *> compile();
 
-  std::unique_ptr<llvm::lto::LTO> LtoObj;
-
 private:
+  std::unique_ptr<llvm::lto::LTO> LtoObj;
   std::vector<SmallString<0>> Buff;
 };
 }

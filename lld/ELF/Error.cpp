@@ -26,7 +26,7 @@ void elf::log(const Twine &Msg) {
     outs() << Msg << "\n";
 }
 
-void elf::warning(const Twine &Msg) {
+void elf::warn(const Twine &Msg) {
   if (Config->FatalWarnings)
     error(Msg);
   else

@@ -64,19 +64,12 @@ static typename ELFT::uint getAddend(InputSectionBase<ELFT> &Sec,
   return Rel.r_addend;
 }
 
-template <class ELFT> static bool IsAlloc(InputSectionBase<ELFT> &Sec) {
-  return (&Sec != &InputSection<ELFT>::Discarded) &&
-         (Sec.getSectionHdr()->sh_flags & SHF_ALLOC);
-}
-
 template <class ELFT, class RelT>
 static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
                                         RelT &Rel) {
   SymbolBody &B = Sec.getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
-    return {nullptr, 0};
-  if (!IsAlloc<ELFT>(Sec) && IsAlloc<ELFT>(*D->Section))
     return {nullptr, 0};
   typename ELFT::uint Offset = D->Value;
   if (D->isSection())
@@ -214,8 +207,12 @@ template <class ELFT> void elf::markLive() {
     if (R.Sec->Live)
       return;
     R.Sec->Live = true;
+    // Add input section to the queue. We don't want to consider relocations
+    // from non-allocatable input sections, because we can bring those
+    // allocatable sections to living which otherwise would be dead.
     if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(R.Sec))
-      Q.push_back(S);
+      if (S->getSectionHdr()->sh_flags & SHF_ALLOC)
+        Q.push_back(S);
   };
 
   auto MarkSymbol = [&](const SymbolBody *Sym) {

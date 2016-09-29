@@ -269,7 +269,7 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
     return ((read32<E>(BufLoc) & 0xffff) << 16) +
            readSignedLo16<E>(Buf + RI->r_offset);
   }
-  warning("can't find matching " + getRelName(Type) + " relocation for " +
+  warn("can't find matching " + getRelName(Type) + " relocation for " +
           getRelName(Rel->getType(Config->Mips64EL)));
   return 0;
 }
