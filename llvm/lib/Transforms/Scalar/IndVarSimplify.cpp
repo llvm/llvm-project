@@ -880,7 +880,6 @@ class WidenIV {
   // Parameters
   PHINode *OrigPhi;
   Type *WideType;
-  bool IsSigned;
 
   // Context
   LoopInfo        *LI;
@@ -894,8 +893,15 @@ class WidenIV {
   const SCEV *WideIncExpr;
   SmallVectorImpl<WeakVH> &DeadInsts;
 
-  SmallPtrSet<Instruction*,16> Widened;
+  SmallPtrSet<Instruction *,16> Widened;
   SmallVector<NarrowIVDefUse, 8> NarrowIVUsers;
+
+  enum ExtendKind { ZeroExtended, SignExtended, Unknown };
+  // A map tracking the kind of extension used to widen each narrow IV 
+  // and narrow IV user.
+  // Key: pointer to a narrow IV or IV user.
+  // Value: the kind of extension used to widen this Instruction.
+  DenseMap<AssertingVH<Instruction>, ExtendKind> ExtendKindMap;
 
 public:
   WidenIV(const WideIVInfo &WI, LoopInfo *LInfo,
@@ -903,7 +909,6 @@ public:
           SmallVectorImpl<WeakVH> &DI) :
     OrigPhi(WI.NarrowIV),
     WideType(WI.WidestNativeType),
-    IsSigned(WI.IsSigned),
     LI(LInfo),
     L(LI->getLoopFor(OrigPhi->getParent())),
     SE(SEv),
@@ -913,6 +918,7 @@ public:
     WideIncExpr(nullptr),
     DeadInsts(DI) {
     assert(L->getHeader() == OrigPhi->getParent() && "Phi must be an IV");
+    ExtendKindMap[OrigPhi] = WI.IsSigned ? SignExtended : ZeroExtended;
   }
 
   PHINode *createWideIV(SCEVExpander &Rewriter);
@@ -926,9 +932,13 @@ protected:
                                      const SCEVAddRecExpr *WideAR);
   Instruction *cloneBitwiseIVUser(NarrowIVDefUse DU);
 
-  const SCEVAddRecExpr *getWideRecurrence(Instruction *NarrowUse);
+  ExtendKind getExtendKind(Instruction *I);
 
-  const SCEVAddRecExpr* getExtendedOperandRecurrence(NarrowIVDefUse DU);
+  typedef std::pair<const SCEVAddRecExpr *, ExtendKind> WidenedRecTy;
+
+  WidenedRecTy getWideRecurrence(NarrowIVDefUse DU);
+
+  WidenedRecTy getExtendedOperandRecurrence(NarrowIVDefUse DU);
 
   const SCEV *getSCEVByOpCode(const SCEV *LHS, const SCEV *RHS,
                               unsigned OpCode) const;
@@ -1002,6 +1012,7 @@ Instruction *WidenIV::cloneBitwiseIVUser(NarrowIVDefUse DU) {
   // about the narrow operand yet so must insert a [sz]ext. It is probably loop
   // invariant and will be folded or hoisted. If it actually comes from a
   // widened IV, it should be removed during a future call to widenIVUse.
+  bool IsSigned = getExtendKind(NarrowDef) == SignExtended;
   Value *LHS = (NarrowUse->getOperand(0) == NarrowDef)
                    ? WideDef
                    : createExtendInst(NarrowUse->getOperand(0), WideType,
@@ -1086,7 +1097,7 @@ Instruction *WidenIV::cloneArithmeticIVUser(NarrowIVDefUse DU,
     return WideUse == WideAR;
   };
 
-  bool SignExtend = IsSigned;
+  bool SignExtend = getExtendKind(NarrowDef) == SignExtended;
   if (!GuessNonIVOperand(SignExtend)) {
     SignExtend = !SignExtend;
     if (!GuessNonIVOperand(SignExtend))
@@ -1112,6 +1123,12 @@ Instruction *WidenIV::cloneArithmeticIVUser(NarrowIVDefUse DU,
   return WideBO;
 }
 
+WidenIV::ExtendKind WidenIV::getExtendKind(Instruction *I) {
+  auto It = ExtendKindMap.find(I);
+  assert(It != ExtendKindMap.end() && "Instruction not yet extended!");
+  return It->second;
+}
+
 const SCEV *WidenIV::getSCEVByOpCode(const SCEV *LHS, const SCEV *RHS,
                                      unsigned OpCode) const {
   if (OpCode == Instruction::Add)
@@ -1127,15 +1144,16 @@ const SCEV *WidenIV::getSCEVByOpCode(const SCEV *LHS, const SCEV *RHS,
 /// No-wrap operations can transfer sign extension of their result to their
 /// operands. Generate the SCEV value for the widened operation without
 /// actually modifying the IR yet. If the expression after extending the
-/// operands is an AddRec for this loop, return it.
-const SCEVAddRecExpr* WidenIV::getExtendedOperandRecurrence(NarrowIVDefUse DU) {
+/// operands is an AddRec for this loop, return the AddRec and the kind of
+/// extension used.
+WidenIV::WidenedRecTy WidenIV::getExtendedOperandRecurrence(NarrowIVDefUse DU) {
 
   // Handle the common case of add<nsw/nuw>
   const unsigned OpCode = DU.NarrowUse->getOpcode();
   // Only Add/Sub/Mul instructions supported yet.
   if (OpCode != Instruction::Add && OpCode != Instruction::Sub &&
       OpCode != Instruction::Mul)
-    return nullptr;
+    return {nullptr, Unknown};
 
   // One operand (NarrowDef) has already been extended to WideDef. Now determine
   // if extending the other will lead to a recurrence.
@@ -1146,14 +1164,15 @@ const SCEVAddRecExpr* WidenIV::getExtendedOperandRecurrence(NarrowIVDefUse DU) {
   const SCEV *ExtendOperExpr = nullptr;
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(DU.NarrowUse);
-  if (IsSigned && OBO->hasNoSignedWrap())
+  ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
+  if (ExtKind == SignExtended && OBO->hasNoSignedWrap())
     ExtendOperExpr = SE->getSignExtendExpr(
       SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if(!IsSigned && OBO->hasNoUnsignedWrap())
+  else if(ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap())
     ExtendOperExpr = SE->getZeroExtendExpr(
       SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
   else
-    return nullptr;
+    return {nullptr, Unknown};
 
   // When creating this SCEV expr, don't apply the current operations NSW or NUW
   // flags. This instruction may be guarded by control flow that the no-wrap
@@ -1171,33 +1190,49 @@ const SCEVAddRecExpr* WidenIV::getExtendedOperandRecurrence(NarrowIVDefUse DU) {
       dyn_cast<SCEVAddRecExpr>(getSCEVByOpCode(lhs, rhs, OpCode));
 
   if (!AddRec || AddRec->getLoop() != L)
-    return nullptr;
-  return AddRec;
+    return {nullptr, Unknown};
+
+  return {AddRec, ExtKind};
 }
 
 /// Is this instruction potentially interesting for further simplification after
 /// widening it's type? In other words, can the extend be safely hoisted out of
 /// the loop with SCEV reducing the value to a recurrence on the same loop. If
-/// so, return the sign or zero extended recurrence. Otherwise return NULL.
-const SCEVAddRecExpr *WidenIV::getWideRecurrence(Instruction *NarrowUse) {
-  if (!SE->isSCEVable(NarrowUse->getType()))
-    return nullptr;
+/// so, return the extended recurrence and the kind of extension used. Otherwise
+/// return {nullptr, Unknown}.
+WidenIV::WidenedRecTy WidenIV::getWideRecurrence(NarrowIVDefUse DU) {
+  if (!SE->isSCEVable(DU.NarrowUse->getType()))
+    return {nullptr, Unknown};
 
-  const SCEV *NarrowExpr = SE->getSCEV(NarrowUse);
+  const SCEV *NarrowExpr = SE->getSCEV(DU.NarrowUse);
   if (SE->getTypeSizeInBits(NarrowExpr->getType()) >=
       SE->getTypeSizeInBits(WideType)) {
     // NarrowUse implicitly widens its operand. e.g. a gep with a narrow
     // index. So don't follow this use.
-    return nullptr;
+    return {nullptr, Unknown};
   }
 
-  const SCEV *WideExpr = IsSigned ?
-    SE->getSignExtendExpr(NarrowExpr, WideType) :
-    SE->getZeroExtendExpr(NarrowExpr, WideType);
+  const SCEV *WideExpr;
+  ExtendKind ExtKind;
+  if (DU.NeverNegative) {
+    WideExpr = SE->getSignExtendExpr(NarrowExpr, WideType);
+    if (isa<SCEVAddRecExpr>(WideExpr))
+      ExtKind = SignExtended;
+    else {
+      WideExpr = SE->getZeroExtendExpr(NarrowExpr, WideType);
+      ExtKind = ZeroExtended;
+    }
+  } else if (getExtendKind(DU.NarrowDef) == SignExtended) {
+    WideExpr = SE->getSignExtendExpr(NarrowExpr, WideType);
+    ExtKind = SignExtended;
+  } else {
+    WideExpr = SE->getZeroExtendExpr(NarrowExpr, WideType);
+    ExtKind = ZeroExtended;
+  }
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(WideExpr);
   if (!AddRec || AddRec->getLoop() != L)
-    return nullptr;
-  return AddRec;
+    return {nullptr, Unknown};
+  return {AddRec, ExtKind};
 }
 
 /// This IV user cannot be widen. Replace this use of the original narrow IV
@@ -1233,7 +1268,7 @@ bool WidenIV::widenLoopCompare(NarrowIVDefUse DU) {
   //
   //      (A) == icmp slt i32 sext(%narrow), sext(%val)
   //          == icmp slt i32 zext(%narrow), sext(%val)
-
+  bool IsSigned = getExtendKind(DU.NarrowDef) == SignExtended;
   if (!(DU.NeverNegative || IsSigned == Cmp->isSigned()))
     return false;
 
@@ -1258,6 +1293,8 @@ bool WidenIV::widenLoopCompare(NarrowIVDefUse DU) {
 /// Determine whether an individual user of the narrow IV can be widened. If so,
 /// return the wide clone of the user.
 Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
+  assert(ExtendKindMap.count(DU.NarrowDef) &&
+         "Should already know the kind of extension used to widen NarrowDef");
 
   // Stop traversing the def-use chain at inner-loop phis or post-loop phis.
   if (PHINode *UsePhi = dyn_cast<PHINode>(DU.NarrowUse)) {
@@ -1288,8 +1325,19 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
       return nullptr;
     }
   }
+
+  // This narrow use can be widened by a sext if it's non-negative or its narrow
+  // def was widended by a sext. Same for zext.
+  auto canWidenBySExt = [&]() {
+    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == SignExtended;
+  };
+  auto canWidenByZExt = [&]() {
+    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ZeroExtended;
+  };
+
   // Our raison d'etre! Eliminate sign and zero extension.
-  if (IsSigned ? isa<SExtInst>(DU.NarrowUse) : isa<ZExtInst>(DU.NarrowUse)) {
+  if ((isa<SExtInst>(DU.NarrowUse) && canWidenBySExt()) ||
+      (isa<ZExtInst>(DU.NarrowUse) && canWidenByZExt())) {
     Value *NewDef = DU.WideDef;
     if (DU.NarrowUse->getType() != WideType) {
       unsigned CastWidth = SE->getTypeSizeInBits(DU.NarrowUse->getType());
@@ -1327,11 +1375,12 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
   }
 
   // Does this user itself evaluate to a recurrence after widening?
-  const SCEVAddRecExpr *WideAddRec = getWideRecurrence(DU.NarrowUse);
-  if (!WideAddRec)
+  WidenedRecTy WideAddRec = getWideRecurrence(DU);
+  if (!WideAddRec.first)
     WideAddRec = getExtendedOperandRecurrence(DU);
 
-  if (!WideAddRec) {
+  assert((WideAddRec.first == nullptr) == (WideAddRec.second == Unknown));
+  if (!WideAddRec.first) {
     // If use is a loop condition, try to promote the condition instead of
     // truncating the IV first.
     if (widenLoopCompare(DU))
@@ -1351,10 +1400,11 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
   // Reuse the IV increment that SCEVExpander created as long as it dominates
   // NarrowUse.
   Instruction *WideUse = nullptr;
-  if (WideAddRec == WideIncExpr && Rewriter.hoistIVInc(WideInc, DU.NarrowUse))
+  if (WideAddRec.first == WideIncExpr &&
+      Rewriter.hoistIVInc(WideInc, DU.NarrowUse))
     WideUse = WideInc;
   else {
-    WideUse = cloneIVUser(DU, WideAddRec);
+    WideUse = cloneIVUser(DU, WideAddRec.first);
     if (!WideUse)
       return nullptr;
   }
@@ -1363,13 +1413,14 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
   // evaluates to the same expression as the extended narrow use, but doesn't
   // absolutely guarantee it. Hence the following failsafe check. In rare cases
   // where it fails, we simply throw away the newly created wide use.
-  if (WideAddRec != SE->getSCEV(WideUse)) {
+  if (WideAddRec.first != SE->getSCEV(WideUse)) {
     DEBUG(dbgs() << "Wide use expression mismatch: " << *WideUse
-          << ": " << *SE->getSCEV(WideUse) << " != " << *WideAddRec << "\n");
+          << ": " << *SE->getSCEV(WideUse) << " != " << *WideAddRec.first << "\n");
     DeadInsts.emplace_back(WideUse);
     return nullptr;
   }
 
+  ExtendKindMap[DU.NarrowUse] = WideAddRec.second;
   // Returning WideUse pushes it on the worklist.
   return WideUse;
 }
@@ -1408,9 +1459,9 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
     return nullptr;
 
   // Widen the induction variable expression.
-  const SCEV *WideIVExpr = IsSigned ?
-    SE->getSignExtendExpr(AddRec, WideType) :
-    SE->getZeroExtendExpr(AddRec, WideType);
+  const SCEV *WideIVExpr = getExtendKind(OrigPhi) == SignExtended
+                               ? SE->getSignExtendExpr(AddRec, WideType)
+                               : SE->getZeroExtendExpr(AddRec, WideType);
 
   assert(SE->getEffectiveSCEVType(WideIVExpr->getType()) == WideType &&
          "Expect the new IV expression to preserve its type");

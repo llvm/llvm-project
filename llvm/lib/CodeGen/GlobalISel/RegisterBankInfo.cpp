@@ -41,6 +41,10 @@ STATISTIC(NumValueMappingsCreated,
           "Number of value mappings dynamically created");
 STATISTIC(NumValueMappingsAccessed,
           "Number of value mappings dynamically accessed");
+STATISTIC(NumOperandsMappingsCreated,
+          "Number of operands mappings dynamically created");
+STATISTIC(NumOperandsMappingsAccessed,
+          "Number of operands mappings dynamically accessed");
 
 const unsigned RegisterBankInfo::DefaultMappingID = UINT_MAX;
 const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
@@ -233,6 +237,7 @@ const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
 RegisterBankInfo::InstructionMapping
 RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,
+                                               /*OperandsMapping*/ nullptr,
                                                MI.getNumOperands());
   const MachineFunction &MF = *MI.getParent()->getParent();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
@@ -251,7 +256,10 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   const RegisterBank *RegBank = nullptr;
   // Remember the size of the register for reuse for copy-like instructions.
   unsigned RegSize = 0;
-  for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End; ++OpIdx) {
+
+  unsigned NumOperands = MI.getNumOperands();
+  SmallVector<const ValueMapping *, 8> OperandsMapping(NumOperands);
+  for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
     const MachineOperand &MO = MI.getOperand(OpIdx);
     if (!MO.isReg())
       continue;
@@ -289,11 +297,13 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
     }
     RegBank = CurRegBank;
     RegSize = getSizeInBits(Reg, MRI, TRI);
-    Mapping.setOperandMapping(OpIdx, getValueMapping(0, RegSize, *CurRegBank));
+    OperandsMapping[OpIdx] = &getValueMapping(0, RegSize, *CurRegBank);
   }
 
-  if (CompleteMapping)
+  if (CompleteMapping) {
+    Mapping.setOperandsMapping(getOperandsMapping(OperandsMapping));
     return Mapping;
+  }
 
   assert(isCopyLike && "We should have bailed on non-copies at this point");
   // For copy like instruction, if none of the operand has a register
@@ -304,18 +314,19 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   // This is a copy-like instruction.
   // Propagate RegBank to all operands that do not have a
   // mapping yet.
-  for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End; ++OpIdx) {
+  for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
     const MachineOperand &MO = MI.getOperand(OpIdx);
     // Don't assign a mapping for non-reg operands.
     if (!MO.isReg())
       continue;
 
     // If a mapping already exists, do not touch it.
-    if (Mapping.isOperandMappingSet(OpIdx))
+    if (OperandsMapping[OpIdx])
       continue;
 
-    Mapping.setOperandMapping(OpIdx, getValueMapping(0, RegSize, *RegBank));
+    OperandsMapping[OpIdx] = &getValueMapping(0, RegSize, *RegBank);
   }
+  Mapping.setOperandsMapping(getOperandsMapping(OperandsMapping));
   return Mapping;
 }
 
@@ -355,21 +366,23 @@ RegisterBankInfo::getValueMapping(unsigned StartIdx, unsigned Length,
   return getValueMapping(&getPartialMapping(StartIdx, Length, RegBank), 1);
 }
 
+static hash_code
+hashValueMapping(const RegisterBankInfo::PartialMapping *BreakDown,
+                 unsigned NumBreakDowns) {
+  if (LLVM_LIKELY(NumBreakDowns == 1))
+    return hash_value(*BreakDown);
+  SmallVector<size_t, 8> Hashes(NumBreakDowns);
+  for (unsigned Idx = 0; Idx != NumBreakDowns; ++Idx)
+    Hashes.push_back(hash_value(BreakDown[Idx]));
+  return hash_combine_range(Hashes.begin(), Hashes.end());
+}
+
 const RegisterBankInfo::ValueMapping &
 RegisterBankInfo::getValueMapping(const PartialMapping *BreakDown,
                                   unsigned NumBreakDowns) const {
-  hash_code Hash;
-  if (LLVM_LIKELY(NumBreakDowns == 1))
-    Hash = hash_value(*BreakDown);
-  else {
-    SmallVector<size_t, 8> Hashes;
-    for (unsigned Idx = 0; Idx != NumBreakDowns; ++Idx)
-      Hashes.push_back(hash_value(BreakDown[Idx]));
-    Hash = hash_combine_range(Hashes.begin(), Hashes.end());
-  }
-
   ++NumValueMappingsAccessed;
 
+  hash_code Hash = hashValueMapping(BreakDown, NumBreakDowns);
   const auto &It = MapOfValueMappings.find(Hash);
   if (It != MapOfValueMappings.end())
     return *It->second;
@@ -379,6 +392,50 @@ RegisterBankInfo::getValueMapping(const PartialMapping *BreakDown,
   const ValueMapping *&ValMapping = MapOfValueMappings[Hash];
   ValMapping = new ValueMapping{BreakDown, NumBreakDowns};
   return *ValMapping;
+}
+
+template <typename Iterator>
+const RegisterBankInfo::ValueMapping *
+RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
+
+  ++NumOperandsMappingsAccessed;
+
+  // The addresses of the value mapping are unique.
+  // Therefore, we can use them directly to hash the operand mapping.
+  hash_code Hash = hash_combine_range(Begin, End);
+  const auto &It = MapOfOperandsMappings.find(Hash);
+  if (It != MapOfOperandsMappings.end())
+    return It->second;
+
+  ++NumOperandsMappingsCreated;
+
+  // Create the array of ValueMapping.
+  // Note: this array will not hash to this instance of operands
+  // mapping, because we use the pointer of the ValueMapping
+  // to hash and we expect them to uniquely identify an instance
+  // of value mapping.
+  ValueMapping *&Res = MapOfOperandsMappings[Hash];
+  Res = new ValueMapping[std::distance(Begin, End)];
+  unsigned Idx = 0;
+  for (Iterator It = Begin; It != End; ++It, ++Idx) {
+    const ValueMapping *ValMap = *It;
+    if (!ValMap)
+      continue;
+    Res[Idx] = *ValMap;
+  }
+  return Res;
+}
+
+const RegisterBankInfo::ValueMapping *RegisterBankInfo::getOperandsMapping(
+    const SmallVectorImpl<const RegisterBankInfo::ValueMapping *> &OpdsMapping)
+    const {
+  return getOperandsMapping(OpdsMapping.begin(), OpdsMapping.end());
+}
+
+const RegisterBankInfo::ValueMapping *RegisterBankInfo::getOperandsMapping(
+    std::initializer_list<const RegisterBankInfo::ValueMapping *> OpdsMapping)
+    const {
+  return getOperandsMapping(OpdsMapping.begin(), OpdsMapping.end());
 }
 
 RegisterBankInfo::InstructionMapping
@@ -544,14 +601,14 @@ bool RegisterBankInfo::InstructionMapping::verify(
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     const MachineOperand &MO = MI.getOperand(Idx);
     if (!MO.isReg()) {
-      assert(!isOperandMappingSet(Idx) &&
+      assert(!getOperandMapping(Idx).isValid() &&
              "We should not care about non-reg mapping");
       continue;
     }
     unsigned Reg = MO.getReg();
     if (!Reg)
       continue;
-    assert(isOperandMappingSet(Idx) &&
+    assert(getOperandMapping(Idx).isValid() &&
            "We must have a mapping for reg operands");
     const RegisterBankInfo::ValueMapping &MOMapping = getOperandMapping(Idx);
     (void)MOMapping;

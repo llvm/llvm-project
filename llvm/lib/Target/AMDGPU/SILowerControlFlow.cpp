@@ -70,6 +70,7 @@ private:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   LiveIntervals *LIS;
+  MachineRegisterInfo *MRI;
 
   void emitIf(MachineInstr &MI);
   void emitElse(MachineInstr &MI);
@@ -86,7 +87,8 @@ public:
     MachineFunctionPass(ID),
     TRI(nullptr),
     TII(nullptr),
-    LIS(nullptr) {}
+    LIS(nullptr),
+    MRI(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -95,8 +97,12 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<LiveIntervals>();
+    // Should preserve the same set that TwoAddressInstructions does.
     AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveIntervals>();
+    AU.addPreservedID(LiveVariablesID);
+    AU.addPreservedID(MachineLoopInfoID);
+    AU.addPreservedID(MachineDominatorsID);
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -108,6 +114,13 @@ char SILowerControlFlow::ID = 0;
 
 INITIALIZE_PASS(SILowerControlFlow, DEBUG_TYPE,
                "SI lower control flow", false, false)
+
+static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
+  MachineOperand &ImpDefSCC = MI.getOperand(3);
+  assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
+
+  ImpDefSCC.setIsDead(IsDead);
+}
 
 char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
@@ -123,14 +136,36 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   unsigned SaveExecReg = SaveExec.getReg();
 
-  MachineInstr *AndSaveExec =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_AND_SAVEEXEC_B64), SaveExecReg)
-    .addOperand(Cond);
+  MachineOperand &ImpDefSCC = MI.getOperand(4);
+  assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
+
+  // Add an implicit def of exec to discourage scheduling VALU after this which
+  // will interfere with trying to form s_and_saveexec_b64 later.
+  MachineInstr *CopyExec =
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), SaveExecReg)
+    .addReg(AMDGPU::EXEC)
+    .addReg(AMDGPU::EXEC, RegState::ImplicitDefine);
+
+  unsigned Tmp = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+
+  MachineInstr *And =
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_AND_B64), Tmp)
+    .addReg(SaveExecReg)
+    //.addReg(AMDGPU::EXEC)
+    .addReg(Cond.getReg());
+  setImpSCCDefDead(*And, true);
 
   MachineInstr *Xor =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
-    .addReg(AMDGPU::EXEC)
+    .addReg(Tmp)
     .addReg(SaveExecReg);
+  setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
+
+  // Use a copy that is a terminator to get correct spill code placement it with
+  // fast regalloc.
+  MachineInstr *SetExec =
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B64_term), AMDGPU::EXEC)
+    .addReg(Tmp, RegState::Kill);
 
   // Insert a pseudo terminator to help keep the verifier happy. This will also
   // be used later when inserting skips.
@@ -143,11 +178,17 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     return;
   }
 
+  LIS->InsertMachineInstrInMaps(*CopyExec);
 
-  LIS->ReplaceMachineInstrInMaps(MI, *AndSaveExec);
+  // Replace with and so we don't need to fix the live interval for condition
+  // register.
+  LIS->ReplaceMachineInstrInMaps(MI, *And);
+
   LIS->InsertMachineInstrInMaps(*Xor);
+  LIS->InsertMachineInstrInMaps(*SetExec);
   LIS->InsertMachineInstrInMaps(*NewBr);
 
+  LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
   MI.eraseFromParent();
 
   // FIXME: Is there a better way of adjusting the liveness? It shouldn't be
@@ -155,6 +196,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // valno.
   LIS->removeInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(SaveExecReg);
+  LIS->createAndComputeVirtRegInterval(Tmp);
 }
 
 void SILowerControlFlow::emitElse(MachineInstr &MI) {
@@ -167,11 +209,18 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   bool ExecModified = MI.getOperand(3).getImm() != 0;
   MachineBasicBlock::iterator Start = MBB.begin();
 
+  // We are running before TwoAddressInstructions, and si_else's operands are
+  // tied. In order to correctly tie the registers, split this into a copy of
+  // the src like it does.
+  BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), DstReg)
+    .addOperand(MI.getOperand(1)); // Saved EXEC
+
   // This must be inserted before phis and any spill code inserted before the
   // else.
   MachineInstr *OrSaveExec =
     BuildMI(MBB, Start, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), DstReg)
-    .addOperand(MI.getOperand(1)); // Saved EXEC
+    .addReg(DstReg);
+
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
   MachineBasicBlock::iterator ElsePt(MI);
@@ -187,14 +236,12 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   }
 
   MachineInstr *Xor =
-    BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
+    BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_XOR_B64_term), AMDGPU::EXEC)
     .addReg(AMDGPU::EXEC)
     .addReg(DstReg);
 
-  MachineBasicBlock::iterator Term = MBB.getFirstTerminator();
-  // Insert a pseudo terminator to help keep the verifier happy.
   MachineInstr *Branch =
-    BuildMI(MBB, Term, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+    BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
     .addMBB(DestBB);
 
   if (!LIS) {
@@ -246,7 +293,7 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
   const DebugLoc &DL = MI.getDebugLoc();
 
   MachineInstr *AndN2 =
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ANDN2_B64), AMDGPU::EXEC)
+    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ANDN2_B64_term), AMDGPU::EXEC)
     .addReg(AMDGPU::EXEC)
     .addOperand(MI.getOperand(0));
 
@@ -288,6 +335,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();
+  MRI = &MF.getRegInfo();
 
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();

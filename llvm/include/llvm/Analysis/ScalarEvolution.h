@@ -551,18 +551,35 @@ private:
     const SCEV *ExactNotTaken;
     const SCEV *MaxNotTaken;
 
-    /// A predicate union guard for this ExitLimit. The result is only
-    /// valid if this predicate evaluates to 'true' at run-time.
-    SCEVUnionPredicate Predicate;
+    /// A set of predicate guards for this ExitLimit. The result is only valid
+    /// if all of the predicates in \c Predicates evaluate to 'true' at
+    /// run-time.
+    SmallPtrSet<const SCEVPredicate *, 4> Predicates;
+
+    void addPredicate(const SCEVPredicate *P) {
+      assert(!isa<SCEVUnionPredicate>(P) && "Only add leaf predicates here!");
+      Predicates.insert(P);
+    }
 
     /*implicit*/ ExitLimit(const SCEV *E) : ExactNotTaken(E), MaxNotTaken(E) {}
 
-    ExitLimit(const SCEV *E, const SCEV *M, SCEVUnionPredicate &P)
-        : ExactNotTaken(E), MaxNotTaken(M), Predicate(P) {
+    ExitLimit(
+        const SCEV *E, const SCEV *M,
+        ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
+        : ExactNotTaken(E), MaxNotTaken(M) {
       assert((isa<SCEVCouldNotCompute>(ExactNotTaken) ||
               !isa<SCEVCouldNotCompute>(MaxNotTaken)) &&
              "Exact is not allowed to be less precise than Max");
+      for (auto *PredSet : PredSetList)
+        for (auto *P : *PredSet)
+          addPredicate(P);
     }
+
+    ExitLimit(const SCEV *E, const SCEV *M,
+              const SmallPtrSetImpl<const SCEVPredicate *> &PredSet)
+        : ExitLimit(E, M, {&PredSet}) {}
+
+    ExitLimit(const SCEV *E, const SCEV *M) : ExitLimit(E, M, None) {}
 
     /// Test whether this ExitLimit contains any computed information, or
     /// whether it's all SCEVCouldNotCompute values.
@@ -1581,9 +1598,9 @@ public:
                                     SCEVUnionPredicate &A);
   /// Tries to convert the \p S expression to an AddRec expression,
   /// adding additional predicates to \p Preds as required.
-  const SCEVAddRecExpr *
-  convertSCEVToAddRecWithPredicates(const SCEV *S, const Loop *L,
-                                    SCEVUnionPredicate &Preds);
+  const SCEVAddRecExpr *convertSCEVToAddRecWithPredicates(
+      const SCEV *S, const Loop *L,
+      SmallPtrSetImpl<const SCEVPredicate *> &Preds);
 
 private:
   /// Compute the backedge taken count knowing the interval difference, the

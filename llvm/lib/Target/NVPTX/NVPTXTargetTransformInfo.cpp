@@ -42,6 +42,29 @@ static bool isNVVMAtomic(const IntrinsicInst *II) {
     case Intrinsic::nvvm_atomic_load_add_f32:
     case Intrinsic::nvvm_atomic_load_inc_32:
     case Intrinsic::nvvm_atomic_load_dec_32:
+
+    case Intrinsic::nvvm_atomic_add_gen_f_cta:
+    case Intrinsic::nvvm_atomic_add_gen_f_sys:
+    case Intrinsic::nvvm_atomic_add_gen_i_cta:
+    case Intrinsic::nvvm_atomic_add_gen_i_sys:
+    case Intrinsic::nvvm_atomic_and_gen_i_cta:
+    case Intrinsic::nvvm_atomic_and_gen_i_sys:
+    case Intrinsic::nvvm_atomic_cas_gen_i_cta:
+    case Intrinsic::nvvm_atomic_cas_gen_i_sys:
+    case Intrinsic::nvvm_atomic_dec_gen_i_cta:
+    case Intrinsic::nvvm_atomic_dec_gen_i_sys:
+    case Intrinsic::nvvm_atomic_inc_gen_i_cta:
+    case Intrinsic::nvvm_atomic_inc_gen_i_sys:
+    case Intrinsic::nvvm_atomic_max_gen_i_cta:
+    case Intrinsic::nvvm_atomic_max_gen_i_sys:
+    case Intrinsic::nvvm_atomic_min_gen_i_cta:
+    case Intrinsic::nvvm_atomic_min_gen_i_sys:
+    case Intrinsic::nvvm_atomic_or_gen_i_cta:
+    case Intrinsic::nvvm_atomic_or_gen_i_sys:
+    case Intrinsic::nvvm_atomic_exch_gen_i_cta:
+    case Intrinsic::nvvm_atomic_exch_gen_i_sys:
+    case Intrinsic::nvvm_atomic_xor_gen_i_cta:
+    case Intrinsic::nvvm_atomic_xor_gen_i_sys:
       return true;
   }
 }

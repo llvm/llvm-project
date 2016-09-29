@@ -118,3 +118,56 @@ define <32 x i16> @shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<32 x i16> %a
   %shuffle = shufflevector <32 x i16> %a, <32 x i16> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i16> %shuffle
 }
+
+define <32 x i16> @insert_dup_mem_v32i16_i32(i32* %ptr) {
+; ALL-LABEL: insert_dup_mem_v32i16_i32:
+; ALL:       # BB#0:
+; ALL-NEXT:    movl (%rdi), %eax
+; ALL-NEXT:    vpbroadcastw %ax, %zmm0
+; ALL-NEXT:    retq
+  %tmp = load i32, i32* %ptr, align 4
+  %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
+  %tmp2 = bitcast <4 x i32> %tmp1 to <8 x i16>
+  %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> zeroinitializer
+  ret <32 x i16> %tmp3
+}
+
+define <32 x i16> @insert_dup_mem_v32i16_sext_i16(i16* %ptr) {
+; ALL-LABEL: insert_dup_mem_v32i16_sext_i16:
+; ALL:       # BB#0:
+; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    vpbroadcastw %ax, %zmm0
+; ALL-NEXT:    retq
+  %tmp = load i16, i16* %ptr, align 2
+  %tmp1 = sext i16 %tmp to i32
+  %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
+  %tmp3 = bitcast <4 x i32> %tmp2 to <8 x i16>
+  %tmp4 = shufflevector <8 x i16> %tmp3, <8 x i16> undef, <32 x i32> zeroinitializer
+  ret <32 x i16> %tmp4
+}
+
+define <32 x i16> @insert_dup_elt1_mem_v32i16_i32(i32* %ptr) #0 {
+; ALL-LABEL: insert_dup_elt1_mem_v32i16_i32:
+; ALL:       # BB#0:
+; ALL-NEXT:    movzwl 2(%rdi), %eax
+; ALL-NEXT:    vpbroadcastw %ax, %zmm0
+; ALL-NEXT:    retq
+  %tmp = load i32, i32* %ptr, align 4
+  %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
+  %tmp2 = bitcast <4 x i32> %tmp1 to <8 x i16>
+  %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  ret <32 x i16> %tmp3
+}
+
+define <32 x i16> @insert_dup_elt3_mem_v32i16_i32(i32* %ptr) #0 {
+; ALL-LABEL: insert_dup_elt3_mem_v32i16_i32:
+; ALL:       # BB#0:
+; ALL-NEXT:    movzwl 2(%rdi), %eax
+; ALL-NEXT:    vpbroadcastw %ax, %zmm0
+; ALL-NEXT:    retq
+  %tmp = load i32, i32* %ptr, align 4
+  %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 1
+  %tmp2 = bitcast <4 x i32> %tmp1 to <8 x i16>
+  %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <32 x i16> %tmp3
+}

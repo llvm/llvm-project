@@ -25,6 +25,8 @@
 
 namespace llvm {
 
+static const char *AVRDataLayout = "e-p:16:16:16-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-n8";
+
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
   if (CPU.empty() || CPU == "generic") {
@@ -44,7 +46,7 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    Optional<Reloc::Model> RM, CodeModel::Model CM,
                                    CodeGenOpt::Level OL)
     : LLVMTargetMachine(
-          T, "e-p:16:8:8-i8:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-n8", TT,
+          T, AVRDataLayout, TT,
           getCPU(CPU), FS, Options, getEffectiveRelocModel(RM), CM, OL),
       SubTarget(TT, getCPU(CPU), FS, *this) {
   this->TLOF = make_unique<AVRTargetObjectFile>();

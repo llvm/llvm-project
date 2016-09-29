@@ -613,7 +613,7 @@ define <16 x float> @test11(float* %base, i32 %ind) {
 ; KNL_32-LABEL: test11:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %zmm1
+; KNL_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
@@ -628,7 +628,7 @@ define <16 x float> @test11(float* %base, i32 %ind) {
 ; SKX_32-LABEL: test11:
 ; SKX_32:       # BB#0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SKX_32-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %zmm1
+; SKX_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl

@@ -1377,8 +1377,204 @@ defm INT_PTX_ATOM_CAS_GEN_64 : F_ATOMIC_3<Int64Regs, "", ".b64", ".cas",
 defm INT_PTX_ATOM_CAS_GEN_64_USE_G : F_ATOMIC_3<Int64Regs, ".global", ".b64",
   ".cas", atomic_cmp_swap_64_gen, i64imm, useAtomRedG64forGen64>;
 
+// Support for scoped atomic operations.  Matches
+// int_nvvm_atomic_{op}_{space}_{type}_{scope}
+// and converts it into the appropriate instruction.
+// NOTE: not all possible combinations are implemented
+//  'space' is limited to generic as it's the only one needed to support CUDA.
+//  'scope' = 'gpu' is default and is handled by regular atomic instructions.
+class ATOM23_impl<string AsmStr, NVPTXRegClass regclass, list<Predicate> Preds,
+                  dag ins, dag Operands>
+      : NVPTXInst<(outs regclass:$result), ins,
+                  AsmStr,
+                  [(set regclass:$result, Operands)]>,
+        Requires<Preds>;
 
+// Define instruction variants for all addressing modes.
+multiclass ATOM2P_impl<string AsmStr,  Intrinsic Intr,
+                       NVPTXRegClass regclass, Operand ImmType,
+                       SDNode Imm, ValueType ImmTy,
+                       list<Predicate> Preds> {
+  let AddedComplexity = 1 in {
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int32Regs:$src, regclass:$b),
+                      (Intr Int32Regs:$src, regclass:$b)>;
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int64Regs:$src, regclass:$b),
+                      (Intr Int64Regs:$src, regclass:$b)>;
+  }
+  // tablegen can't infer argument types from Intrinsic (though it can
+  // from Instruction) so we have to enforce specific type on
+  // immediates via explicit cast to ImmTy.
+  def : ATOM23_impl<AsmStr, regclass, Preds,
+                    (ins Int32Regs:$src, ImmType:$b),
+                    (Intr Int32Regs:$src, (ImmTy Imm:$b))>;
+  def : ATOM23_impl<AsmStr, regclass, Preds,
+                    (ins Int64Regs:$src, ImmType:$b),
+                    (Intr Int64Regs:$src, (ImmTy Imm:$b))>;
+}
 
+multiclass ATOM3P_impl<string AsmStr,  Intrinsic Intr,
+                       NVPTXRegClass regclass, Operand ImmType,
+                       SDNode Imm, ValueType ImmTy,
+                       list<Predicate> Preds> {
+  // Variants for register/immediate permutations of $b and $c
+  let AddedComplexity = 2 in {
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int32Regs:$src, regclass:$b, regclass:$c),
+                      (Intr Int32Regs:$src, regclass:$b, regclass:$c)>;
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int64Regs:$src, regclass:$b, regclass:$c),
+                      (Intr Int64Regs:$src, regclass:$b, regclass:$c)>;
+  }
+  let AddedComplexity = 1 in {
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int32Regs:$src, ImmType:$b, regclass:$c),
+                      (Intr Int32Regs:$src, (ImmTy Imm:$b), regclass:$c)>;
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int64Regs:$src, ImmType:$b, regclass:$c),
+                      (Intr Int64Regs:$src, (ImmTy Imm:$b), regclass:$c)>;
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int32Regs:$src, regclass:$b, ImmType:$c),
+                      (Intr Int32Regs:$src, regclass:$b, (ImmTy Imm:$c))>;
+    def : ATOM23_impl<AsmStr, regclass, Preds,
+                      (ins Int64Regs:$src, regclass:$b, ImmType:$c),
+                      (Intr Int64Regs:$src, regclass:$b, (ImmTy Imm:$c))>;
+  }
+  def : ATOM23_impl<AsmStr, regclass, Preds,
+                    (ins Int32Regs:$src, ImmType:$b, ImmType:$c),
+                    (Intr Int32Regs:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
+  def : ATOM23_impl<AsmStr, regclass, Preds,
+                    (ins Int64Regs:$src, ImmType:$b, ImmType:$c),
+                    (Intr Int64Regs:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
+}
+
+// Constructs instrinsic name and instruction asm strings.
+multiclass ATOM2N_impl<string OpStr, string IntTypeStr, string TypeStr,
+                       string ScopeStr, string SpaceStr,
+                       NVPTXRegClass regclass, Operand ImmType, SDNode Imm,
+                       ValueType ImmTy, list<Predicate> Preds> {
+  defm : ATOM2P_impl<"atom" # !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr)
+                            # !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr)
+                            # "." # OpStr # "." # TypeStr
+                            # " \t$result, [$src], $b;",
+                     !cast<Intrinsic>(
+                            "int_nvvm_atomic_" # OpStr
+                            # "_" # SpaceStr # "_" # IntTypeStr
+                            # !if(!eq(ScopeStr,""), "", "_" # ScopeStr)),
+                     regclass, ImmType, Imm, ImmTy, Preds>;
+}
+multiclass ATOM3N_impl<string OpStr, string IntTypeStr, string TypeStr,
+                       string ScopeStr, string SpaceStr,
+                       NVPTXRegClass regclass, Operand ImmType, SDNode Imm,
+                       ValueType ImmTy, list<Predicate> Preds> {
+  defm : ATOM3P_impl<"atom" # !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr)
+                            # !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr)
+                            # "." # OpStr # "." # TypeStr
+                            # " \t$result, [$src], $b, $c;",
+                     !cast<Intrinsic>(
+                            "int_nvvm_atomic_" # OpStr
+                            # "_" # SpaceStr # "_" # IntTypeStr
+                            # !if(!eq(ScopeStr,""), "", "_" # ScopeStr)),
+                     regclass, ImmType, Imm, ImmTy, Preds>;
+}
+
+// Constructs variants for different address spaces.
+// For now we only need variants for generic space pointers.
+multiclass ATOM2A_impl<string OpStr, string IntTypeStr, string TypeStr,
+                       string ScopeStr, NVPTXRegClass regclass, Operand ImmType,
+                       SDNode Imm, ValueType ImmTy, list<Predicate> Preds> {
+   defm _gen_ : ATOM2N_impl<OpStr, IntTypeStr, TypeStr, ScopeStr, "gen",
+                            regclass, ImmType, Imm, ImmTy, Preds>;
+}
+multiclass ATOM3A_impl<string OpStr, string IntTypeStr, string TypeStr,
+                       string ScopeStr, NVPTXRegClass regclass, Operand ImmType,
+                       SDNode Imm, ValueType ImmTy, list<Predicate> Preds> {
+   defm _gen_ : ATOM3N_impl<OpStr, IntTypeStr, TypeStr, ScopeStr, "gen",
+                            regclass, ImmType, Imm, ImmTy, Preds>;
+}
+
+// Constructs variants for different scopes of atomic op.
+multiclass ATOM2S_impl<string OpStr, string IntTypeStr, string TypeStr,
+                       NVPTXRegClass regclass, Operand ImmType, SDNode Imm,
+                       ValueType ImmTy, list<Predicate> Preds> {
+   // .gpu scope is default and is currently covered by existing
+   // atomics w/o explicitly specified scope.
+   defm _cta : ATOM2A_impl<OpStr, IntTypeStr, TypeStr, "cta",
+                           regclass, ImmType, Imm, ImmTy,
+                           !listconcat(Preds,[hasAtomScope])>;
+   defm _sys : ATOM2A_impl<OpStr, IntTypeStr, TypeStr, "sys",
+                           regclass, ImmType, Imm, ImmTy,
+                           !listconcat(Preds,[hasAtomScope])>;
+}
+multiclass ATOM3S_impl<string OpStr, string IntTypeStr, string TypeStr,
+           NVPTXRegClass regclass, Operand ImmType, SDNode Imm, ValueType ImmTy,
+           list<Predicate> Preds> {
+   // No need to define ".gpu"-scoped atomics.  They do the same thing
+   // as the regular, non-scoped atomics defined elsewhere.
+   defm _cta : ATOM3A_impl<OpStr, IntTypeStr, TypeStr, "cta",
+                           regclass, ImmType, Imm, ImmTy,
+                           !listconcat(Preds,[hasAtomScope])>;
+   defm _sys : ATOM3A_impl<OpStr, IntTypeStr, TypeStr, "sys",
+                           regclass, ImmType, Imm, ImmTy,
+                           !listconcat(Preds,[hasAtomScope])>;
+}
+
+// atom.add
+multiclass ATOM2_add_impl<string OpStr> {
+   defm _s32  : ATOM2S_impl<OpStr, "i", "s32", Int32Regs, i32imm, imm, i32, []>;
+   defm _u32  : ATOM2S_impl<OpStr, "i", "u32", Int32Regs, i32imm, imm, i32, []>;
+   defm _u64  : ATOM2S_impl<OpStr, "i", "u64", Int64Regs, i64imm, imm, i64, []>;
+   defm _f32  : ATOM2S_impl<OpStr, "f", "f32", Float32Regs, f32imm, fpimm, f32,
+                            [hasAtomAddF32]>;
+   defm _f64  : ATOM2S_impl<OpStr, "f", "f64", Float64Regs, f64imm, fpimm, f64,
+                            [hasAtomAddF64]>;
+}
+
+// atom.{and,or,xor}
+multiclass ATOM2_bitwise_impl<string OpStr> {
+   defm _b32  : ATOM2S_impl<OpStr, "i", "b32", Int32Regs, i32imm, imm, i32, []>;
+   defm _b64  : ATOM2S_impl<OpStr, "i", "b64", Int64Regs, i64imm, imm, i64,
+                            [hasAtomBitwise64]>;
+}
+
+// atom.exch
+multiclass ATOM2_exch_impl<string OpStr> {
+   defm _b32 : ATOM2S_impl<OpStr, "i", "b32", Int32Regs, i32imm, imm, i32, []>;
+   defm _b64 : ATOM2S_impl<OpStr, "i", "b64", Int64Regs, i64imm, imm, i64, []>;
+}
+
+// atom.{min,max}
+multiclass ATOM2_minmax_impl<string OpStr> {
+   defm _s32  : ATOM2S_impl<OpStr, "i", "s32", Int32Regs, i32imm, imm, i32, []>;
+   defm _u32  : ATOM2S_impl<OpStr, "i", "u32", Int32Regs, i32imm, imm, i32, []>;
+   defm _s64  : ATOM2S_impl<OpStr, "i", "s64", Int64Regs, i64imm, imm, i64,
+                            [hasAtomMinMax64]>;
+   defm _u64  : ATOM2S_impl<OpStr, "i", "u64", Int64Regs, i64imm, imm, i64,
+                            [hasAtomMinMax64]>;
+}
+
+// atom.{inc,dec}
+multiclass ATOM2_incdec_impl<string OpStr> {
+   defm _u32  : ATOM2S_impl<OpStr, "i", "u32", Int32Regs, i32imm, imm, i32, []>;
+}
+
+// atom.cas
+multiclass ATOM3_cas_impl<string OpStr> {
+   defm _b32  : ATOM3S_impl<OpStr, "i", "b32", Int32Regs, i32imm, imm, i32, []>;
+   defm _b64  : ATOM3S_impl<OpStr, "i", "b64", Int64Regs, i64imm, imm, i64, []>;
+}
+
+defm INT_PTX_SATOM_ADD : ATOM2_add_impl<"add">;
+defm INT_PTX_SATOM_AND : ATOM2_bitwise_impl<"and">;
+defm INT_PTX_SATOM_CAS : ATOM3_cas_impl<"cas">;
+defm INT_PTX_SATOM_DEC : ATOM2_incdec_impl<"dec">;
+defm INT_PTX_SATOM_EXCH: ATOM2_exch_impl<"exch">;
+defm INT_PTX_SATOM_INC : ATOM2_incdec_impl<"inc">;
+defm INT_PTX_SATOM_MAX : ATOM2_minmax_impl<"max">;
+defm INT_PTX_SATOM_MIN : ATOM2_minmax_impl<"min">;
+defm INT_PTX_SATOM_OR  : ATOM2_bitwise_impl<"or">;
+defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
 
 //-----------------------------------
 // Support for ldu on sm_20 or later
