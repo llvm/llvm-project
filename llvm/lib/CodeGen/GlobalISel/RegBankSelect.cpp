@@ -382,8 +382,8 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
   // match this mapping. In other words, we may need to locally reassign the
   // register banks. Account for that repairing cost as well.
   // In this context, local means in the surrounding of MI.
-  for (unsigned OpIdx = 0, EndOpIdx = MI.getNumOperands(); OpIdx != EndOpIdx;
-       ++OpIdx) {
+  for (unsigned OpIdx = 0, EndOpIdx = InstrMapping.getNumOperands();
+       OpIdx != EndOpIdx; ++OpIdx) {
     const MachineOperand &MO = MI.getOperand(OpIdx);
     if (!MO.isReg())
       continue;

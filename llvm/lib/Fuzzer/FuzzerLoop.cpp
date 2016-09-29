@@ -500,7 +500,8 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
   TPC.ResetMaps();
-  TPC.ResetGuards();
+  if (Options.UseCounters)
+    TPC.ResetGuards();
   int Res = CB(DataCopy, Size);
   UnitStopTime = system_clock::now();
   (void)Res;

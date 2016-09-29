@@ -655,7 +655,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     if (S.getAsInteger(0, Config->ImageBase))
       error(Arg->getSpelling() + ": number expected, but got " + S);
     else if ((Config->ImageBase % Target->MaxPageSize) != 0)
-      warning(Arg->getSpelling() + ": address isn't multiple of page size");
+      warn(Arg->getSpelling() + ": address isn't multiple of page size");
   } else {
     Config->ImageBase = Config->Pic ? 0 : Target->DefaultImageBase;
   }
@@ -689,7 +689,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     if (Symtab.find(Config->Entry))
       Config->EntrySym = Symtab.addUndefined(Config->Entry);
     else
-      warning("entry symbol " + Config->Entry + " not found, assuming 0");
+      warn("entry symbol " + Config->Entry + " not found, assuming 0");
   }
 
   if (HasError)

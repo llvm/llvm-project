@@ -275,7 +275,7 @@ template <class ELFT> void Writer<ELFT>::run() {
                                                 : createPhdrs();
     fixHeaders();
     if (ScriptConfig->HasSections) {
-      Script<ELFT>::X->assignAddresses();
+      Script<ELFT>::X->assignAddresses(Phdrs);
     } else {
       fixSectionAlignments();
       assignAddresses();
@@ -320,7 +320,7 @@ template <class ELFT> static void reportUndefined(SymbolBody *Sym) {
   if (Sym->File)
     Msg += " in " + getFilename(Sym->File);
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
-    warning(Msg);
+    warn(Msg);
   else
     error(Msg);
 }
@@ -1047,8 +1047,10 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   // Add the first PT_LOAD segment for regular output sections.
   uintX_t Flags = computeFlags<ELFT>(PF_R);
   Phdr *Load = AddHdr(PT_LOAD, Flags);
-  Load->add(Out<ELFT>::ElfHeader);
-  Load->add(Out<ELFT>::ProgramHeaders);
+  if (!ScriptConfig->HasSections) {
+    Load->add(Out<ELFT>::ElfHeader);
+    Load->add(Out<ELFT>::ProgramHeaders);
+  }
 
   Phdr TlsHdr(PT_TLS, PF_R);
   Phdr RelRo(PT_GNU_RELRO, PF_R);

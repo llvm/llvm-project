@@ -328,7 +328,7 @@ static int compareDefinedNonCommon(Symbol *S, bool WasInserted,
   if (isa<DefinedCommon>(S->body())) {
     // Non-common symbols take precedence over common symbols.
     if (Config->WarnCommon)
-      warning("common " + S->body()->getName() + " is overridden");
+      warn("common " + S->body()->getName() + " is overridden");
     return 1;
   }
   return 0;
@@ -352,12 +352,12 @@ Symbol *SymbolTable<ELFT>::addCommon(StringRef N, uint64_t Size,
     if (!C) {
       // Non-common symbols take precedence over common symbols.
       if (Config->WarnCommon)
-        warning("common " + S->body()->getName() + " is overridden");
+        warn("common " + S->body()->getName() + " is overridden");
       return S;
     }
 
     if (Config->WarnCommon)
-      warning("multiple common of " + S->body()->getName());
+      warn("multiple common of " + S->body()->getName());
 
     Alignment = C->Alignment = std::max(C->Alignment, Alignment);
     if (Size > C->Size)
@@ -371,7 +371,7 @@ void SymbolTable<ELFT>::reportDuplicate(SymbolBody *Existing,
                                         InputFile *NewFile) {
   std::string Msg = "duplicate symbol: " + conflictMsg(Existing, NewFile);
   if (Config->AllowMultipleDefinition)
-    warning(Msg);
+    warn(Msg);
   else
     error(Msg);
 }
@@ -576,7 +576,7 @@ static void setVersionId(SymbolBody *Body, StringRef VersionName,
 
   Symbol *Sym = Body->symbol();
   if (Sym->VersionId != Config->DefaultSymbolVersion)
-    warning("duplicate symbol " + Name + " in version script");
+    warn("duplicate symbol " + Name + " in version script");
   Sym->VersionId = Version;
 }
 

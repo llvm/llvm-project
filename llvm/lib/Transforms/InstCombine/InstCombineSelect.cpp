@@ -920,28 +920,26 @@ static Instruction *foldAddSubSelect(SelectInst &SI,
 /// we may be able to create an i1 select which can be further folded to
 /// logical ops.
 static Instruction *foldSelectExtConst(InstCombiner::BuilderTy &Builder,
-                                       SelectInst &SI, Instruction *EI,
-                                       const APInt &C, bool isExtTrueVal,
-                                       bool isSigned) {
-  Value *SmallVal = EI->getOperand(0);
+                                       SelectInst &SI, Instruction *ExtInst,
+                                       const APInt &C, bool IsExtTrueVal,
+                                       bool IsSigned) {
+  Value *SmallVal = ExtInst->getOperand(0);
   Type *SmallType = SmallVal->getType();
 
-  // TODO Handle larger types as well? Note this requires adjusting
-  // FoldOpIntoSelect as well.
+  // TODO: Handle larger types? That requires adjusting FoldOpIntoSelect too.
   if (!SmallType->getScalarType()->isIntegerTy(1))
     return nullptr;
 
-  if (C != 0 && (isSigned || C != 1) &&
-      (!isSigned || !C.isAllOnesValue()))
+  if (C != 0 && (IsSigned || C != 1) && (!IsSigned || !C.isAllOnesValue()))
     return nullptr;
 
   Value *SmallConst = ConstantInt::get(SmallType, C.trunc(1));
-  Value *TrueVal = isExtTrueVal ? SmallVal : SmallConst;
-  Value *FalseVal = isExtTrueVal ? SmallConst : SmallVal;
+  Value *TrueVal = IsExtTrueVal ? SmallVal : SmallConst;
+  Value *FalseVal = IsExtTrueVal ? SmallConst : SmallVal;
   Value *Select = Builder.CreateSelect(SI.getOperand(0), TrueVal, FalseVal,
                                        "fold." + SI.getName(), &SI);
 
-  if (isSigned)
+  if (IsSigned)
     return new SExtInst(Select, SI.getType());
 
   return new ZExtInst(Select, SI.getType());

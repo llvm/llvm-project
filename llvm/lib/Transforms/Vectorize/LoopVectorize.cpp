@@ -1978,14 +1978,15 @@ public:
   void addRuntimePointerChecks(unsigned Num) { NumRuntimePointerChecks = Num; }
 
   bool doesNotMeet(Function *F, Loop *L, const LoopVectorizeHints &Hints) {
-    const char *Name = Hints.vectorizeAnalysisPassName();
+    const char *PassName = Hints.vectorizeAnalysisPassName();
     bool Failed = false;
     if (UnsafeAlgebraInst && !Hints.allowReordering()) {
-      ORE.emitOptimizationRemarkAnalysisFPCommute(
-          Name, UnsafeAlgebraInst->getDebugLoc(),
-          UnsafeAlgebraInst->getParent(),
-          VectorizationReport() << "cannot prove it is safe to reorder "
-                                   "floating-point operations");
+      ORE.emit(
+          OptimizationRemarkAnalysisFPCommute(PassName, "CantReorderFPOps",
+                                              UnsafeAlgebraInst->getDebugLoc(),
+                                              UnsafeAlgebraInst->getParent())
+          << "loop not vectorized: cannot prove it is safe to reorder "
+             "floating-point operations");
       Failed = true;
     }
 
@@ -1996,10 +1997,11 @@ public:
         NumRuntimePointerChecks > VectorizerParams::RuntimeMemoryCheckThreshold;
     if ((ThresholdReached && !Hints.allowReordering()) ||
         PragmaThresholdReached) {
-      ORE.emitOptimizationRemarkAnalysisAliasing(
-          Name, L,
-          VectorizationReport()
-              << "cannot prove it is safe to reorder memory operations");
+      ORE.emit(OptimizationRemarkAnalysisAliasing(PassName, "CantReorderMemOps",
+                                                  L->getStartLoc(),
+                                                  L->getHeader())
+               << "loop not vectorized: cannot prove it is safe to reorder "
+                  "memory operations");
       DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
       Failed = true;
     }
@@ -6993,9 +6995,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
     else {
       DEBUG(dbgs() << "\n");
-      emitAnalysisDiag(L, Hints, *ORE, VectorizationReport()
-                                           << "vectorization is not beneficial "
-                                              "and is not explicitly forced");
+      ORE->emit(createMissedAnalysis(Hints.vectorizeAnalysisPassName(),
+                                     "NotBeneficial", L)
+                << "vectorization is not beneficial "
+                   "and is not explicitly forced");
       return false;
     }
   }
@@ -7041,10 +7044,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
     DEBUG(dbgs() << "LV: Can't vectorize when the NoImplicitFloat"
                     "attribute is used.\n");
-    emitAnalysisDiag(
-        L, Hints, *ORE,
-        VectorizationReport()
-            << "loop not vectorized due to NoImplicitFloat attribute");
+    ORE->emit(createMissedAnalysis(Hints.vectorizeAnalysisPassName(),
+                                   "NoImplicitFloat", L)
+              << "loop not vectorized due to NoImplicitFloat attribute");
     emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
@@ -7056,9 +7058,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (Hints.isPotentiallyUnsafe() &&
       TTI->isFPVectorizationPotentiallyUnsafe()) {
     DEBUG(dbgs() << "LV: Potentially unsafe FP op prevents vectorization.\n");
-    emitAnalysisDiag(L, Hints, *ORE,
-                     VectorizationReport()
-                         << "loop not vectorized due to unsafe FP support.");
+    ORE->emit(
+        createMissedAnalysis(Hints.vectorizeAnalysisPassName(), "UnsafeFP", L)
+        << "loop not vectorized due to unsafe FP support.");
     emitMissedWarning(F, L, Hints, ORE);
     return false;
   }

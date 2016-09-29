@@ -43,7 +43,7 @@
 #if HAVE_LINK_H
 #include <link.h>
 #endif
-#if HAVE_UNWIND_BACKTRACE
+#ifdef HAVE__UNWIND_BACKTRACE
 // FIXME: We should be able to use <unwind.h> for any target that has an
 // _Unwind_Backtrace function, but on FreeBSD the configure test passes
 // despite the function not existing, and on Android, <unwind.h> conflicts
@@ -51,7 +51,7 @@
 #ifdef __GLIBC__
 #include <unwind.h>
 #else
-#undef HAVE_UNWIND_BACKTRACE
+#undef HAVE__UNWIND_BACKTRACE
 #endif
 #endif
 
@@ -355,7 +355,7 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
 }
 #endif // defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES) && ...
 
-#if defined(ENABLE_BACKTRACES) && defined(HAVE_UNWIND_BACKTRACE)
+#if defined(ENABLE_BACKTRACES) && defined(HAVE__UNWIND_BACKTRACE)
 static int unwindBacktrace(void **StackTrace, int MaxEntries) {
   if (MaxEntries < 0)
     return 0;
@@ -401,7 +401,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
   if (!depth)
     depth = backtrace(StackTrace, static_cast<int>(array_lengthof(StackTrace)));
 #endif
-#if defined(HAVE_UNWIND_BACKTRACE)
+#if defined(HAVE__UNWIND_BACKTRACE)
   // Try _Unwind_Backtrace() if backtrace() failed.
   if (!depth)
     depth = unwindBacktrace(StackTrace,
