@@ -455,9 +455,14 @@ public:
   iterator getFirstNonPHI();
 
   /// Return the first instruction in MBB after I that is not a PHI or a label.
-  /// This is the correct point to insert copies at the beginning of a basic
-  /// block.
+  /// This is the correct point to insert lowered copies at the beginning of a
+  /// basic block that must be before any debugging information.
   iterator SkipPHIsAndLabels(iterator I);
+
+  /// Return the first instruction in MBB after I that is not a PHI, label or
+  /// debug.  This is the correct point to insert copies at the beginning of a
+  /// basic block.
+  iterator SkipPHIsLabelsAndDebug(iterator I);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().
