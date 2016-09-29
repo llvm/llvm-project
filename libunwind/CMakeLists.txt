@@ -107,6 +107,7 @@ option(LIBUNWIND_ENABLE_SHARED "Build libunwind as a shared library." ON)
 option(LIBUNWIND_ENABLE_STATIC "Build libunwind as a static library." ON)
 option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." OFF)
 option(LIBUNWIND_ENABLE_ARM_WMMX "Enable unwinding support for ARM WMMX registers." OFF)
+option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
 
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
@@ -240,6 +241,11 @@ endif()
 # Cross-unwinding
 if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -D_LIBUNWIND_IS_NATIVE_ONLY)
+endif()
+
+# Threading-support
+if (NOT LIBUNWIND_ENABLE_THREADS)
+  list(APPEND LIBUNWIND_COMPILE_FLAGS -D_LIBUNWIND_HAS_NO_THREADS)
 endif()
 
 # ARM WMMX register support

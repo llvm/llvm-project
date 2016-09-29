@@ -867,6 +867,16 @@ void *MachTask::ExceptionThread(void *arg) {
       // TODO: notify of error?
     } else {
       if (exception_message.CatchExceptionRaise(task)) {
+        if (exception_message.state.task_port != task) {
+          if (exception_message.state.IsValid()) {
+            // We exec'ed and our task port changed on us.
+            DNBLogThreadedIf(LOG_EXCEPTIONS,
+                             "task port changed from 0x%4.4x to 0x%4.4x",
+                             task, exception_message.state.task_port);
+            task = exception_message.state.task_port;
+            mach_task->TaskPortChanged(exception_message.state.task_port);
+          }
+        }
         ++num_exceptions_received;
         mach_proc->ExceptionMessageReceived(exception_message);
       }
@@ -984,3 +994,8 @@ nub_bool_t MachTask::DeallocateMemory(nub_addr_t addr) {
 }
 
 nub_size_t MachTask::PageSize() { return m_vm_memory.PageSize(m_task); }
+
+void MachTask::TaskPortChanged(task_t task)
+{
+  m_task = task;
+}

@@ -264,15 +264,20 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
-static Optional<StringRef>
-getZOptionValue(opt::InputArgList &Args, StringRef Key) {
+static uint64_t
+getZOptionValue(opt::InputArgList &Args, StringRef Key, uint64_t Default) {
   for (auto *Arg : Args.filtered(OPT_z)) {
     StringRef Value = Arg->getValue();
     size_t Pos = Value.find("=");
-    if (Pos != StringRef::npos && Key == Value.substr(0, Pos))
-      return Value.substr(Pos + 1);
+    if (Pos != StringRef::npos && Key == Value.substr(0, Pos)) {
+      Value = Value.substr(Pos + 1);
+      uint64_t Result;
+      if (Value.getAsInteger(0, Result))
+        error("invalid " + Key + ": " + Value);
+      return Result;
+    }
   }
-  return None;
+  return Default;
 }
 
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
@@ -492,9 +497,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (!Config->Relocatable)
     Config->Strip = getStripOption(Args);
 
-  if (Optional<StringRef> Value = getZOptionValue(Args, "stack-size"))
-    if (Value->getAsInteger(0, Config->ZStackSize))
-      error("invalid stack size: " + *Value);
+  Config->ZStackSize = getZOptionValue(Args, "stack-size", -1);
 
   // Config->Pic is true if we are generating position-independent code.
   Config->Pic = Config->Pie || Config->Shared;
@@ -656,6 +659,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   } else {
     Config->ImageBase = Config->Pic ? 0 : Target->DefaultImageBase;
   }
+
+  // Initialize Config->MaxPageSize. The default value is defined by
+  // the target, but it can be overriden using the option.
+  Config->MaxPageSize =
+      getZOptionValue(Args, "max-page-size", Target->MaxPageSize);
+  if (!isPowerOf2_64(Config->MaxPageSize))
+    error("max-page-size: value isn't a power of 2");
 
   // Add all files to the symbol table. After this, the symbol table
   // contains all known names except a few linker-synthesized symbols.

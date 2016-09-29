@@ -35,7 +35,7 @@ namespace libunwind {
 #include "Registers.hpp"
 
 #if _LIBUNWIND_ARM_EHABI
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 
 typedef void *_Unwind_Ptr;
 

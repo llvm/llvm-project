@@ -27,6 +27,12 @@
 
 #include <map>
 
+namespace llvm {
+namespace lto {
+class InputFile;
+}
+}
+
 namespace lld {
 namespace elf {
 
@@ -247,17 +253,12 @@ public:
   template <class ELFT>
   void parse(llvm::DenseSet<StringRef> &ComdatGroups);
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
-  static bool shouldSkip(uint32_t Flags);
-  std::unique_ptr<llvm::object::IRObjectFile> Obj;
+  std::unique_ptr<llvm::lto::InputFile> Obj;
 
 private:
   std::vector<Symbol *> Symbols;
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver{Alloc};
-  template <class ELFT>
-  Symbol *createSymbol(const llvm::DenseSet<const llvm::Comdat *> &KeptComdats,
-                       const llvm::object::IRObjectFile &Obj,
-                       const llvm::object::BasicSymbolRef &Sym);
 };
 
 // .so file.

@@ -141,7 +141,9 @@ void AsanThread::StartSwitchFiber(FakeStack **fake_stack_save, uptr bottom,
     current_fake_stack->Destroy(this->tid());
 }
 
-void AsanThread::FinishSwitchFiber(FakeStack *fake_stack_save) {
+void AsanThread::FinishSwitchFiber(FakeStack *fake_stack_save,
+                                   uptr *bottom_old,
+                                   uptr *size_old) {
   if (!atomic_load(&stack_switching_, memory_order_relaxed)) {
     Report("ERROR: finishing a fiber switch that has not started\n");
     Die();
@@ -152,6 +154,10 @@ void AsanThread::FinishSwitchFiber(FakeStack *fake_stack_save) {
     fake_stack_ = fake_stack_save;
   }
 
+  if (bottom_old)
+    *bottom_old = stack_bottom_;
+  if (size_old)
+    *size_old = stack_top_ - stack_bottom_;
   stack_bottom_ = next_stack_bottom_;
   stack_top_ = next_stack_top_;
   atomic_store(&stack_switching_, 0, memory_order_release);
@@ -447,12 +453,16 @@ void __sanitizer_start_switch_fiber(void **fakestacksave, const void *bottom,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_finish_switch_fiber(void* fakestack) {
+void __sanitizer_finish_switch_fiber(void* fakestack,
+                                     const void **bottom_old,
+                                     uptr *size_old) {
   AsanThread *t = GetCurrentThread();
   if (!t) {
     VReport(1, "__asan_finish_switch_fiber called from unknown thread\n");
     return;
   }
-  t->FinishSwitchFiber((FakeStack*)fakestack);
+  t->FinishSwitchFiber((FakeStack*)fakestack,
+                       (uptr*)bottom_old,
+                       (uptr*)size_old);
 }
 }
