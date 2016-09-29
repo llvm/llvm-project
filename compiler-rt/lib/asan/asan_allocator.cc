@@ -390,7 +390,7 @@ struct Allocator {
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize) {
       Report("WARNING: AddressSanitizer failed to allocate 0x%zx bytes\n",
              (void*)size);
-      return allocator.ReturnNullOrDie();
+      return allocator.ReturnNullOrDieOnBadRequest();
     }
 
     AsanThread *t = GetCurrentThread();
@@ -407,8 +407,7 @@ struct Allocator {
           allocator.Allocate(cache, needed_size, 8, false, check_rss_limit);
     }
 
-    if (!allocated)
-      return allocator.ReturnNullOrDie();
+    if (!allocated) return allocator.ReturnNullOrDieOnOOM();
 
     if (*(u8 *)MEM_TO_SHADOW((uptr)allocated) == 0 && CanPoisonMemory()) {
       // Heap poisoning is enabled, but the allocator provides an unpoisoned
@@ -597,7 +596,7 @@ struct Allocator {
 
   void *Calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
     if (CallocShouldReturnNullDueToOverflow(size, nmemb))
-      return allocator.ReturnNullOrDie();
+      return allocator.ReturnNullOrDieOnBadRequest();
     void *ptr = Allocate(nmemb * size, 8, stack, FROM_MALLOC, false);
     // If the memory comes from the secondary allocator no need to clear it
     // as it comes directly from mmap.
