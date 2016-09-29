@@ -456,5 +456,24 @@ TEST(ImportExpr, ImportInitListExpr) {
 }
 
 
+const internal::VariadicDynCastAllOfMatcher<Expr, VAArgExpr> vaArgExpr;
+
+TEST(ImportExpr, ImportVAArgExpr) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(
+        testImport(
+          "void declToImport(__builtin_va_list list, ...) {"
+          "  (void)__builtin_va_arg(list, int); }",
+          Lang_CXX, "", Lang_CXX, Verifier,
+          functionDecl(
+            hasBody(
+              compoundStmt(
+                has(
+                  cStyleCastExpr(
+                    hasSourceExpression(
+                      vaArgExpr()))))))));
+}
+
+
 } // end namespace ast_matchers
 } // end namespace clang

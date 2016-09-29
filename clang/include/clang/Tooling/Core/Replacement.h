@@ -167,10 +167,25 @@ class Replacements {
   /// order-dependent replacements. To control the order in which
   /// order-dependent replacements are applied, use merge({R}) with R referring
   /// to the changed code after applying all existing replacements.
-  /// Two replacements are considered order-independent if they:
+  /// Two replacements A and B are considered order-independent if applying them
+  /// in either order produces the same result. Note that the range of the
+  /// replacement that is applied later still refers to the original code.
+  /// These include (but not restricted to) replacements that:
   ///   - don't overlap (being directly adjacent is fine) and
-  ///   - aren't both inserts at the same code location (would be
-  ///     order-dependent).
+  ///   - are overlapping deletions.
+  ///   - are insertions at the same offset and applying them in either order
+  ///     has the same effect, i.e. X + Y = Y + X when inserting X and Y
+  ///     respectively.
+  /// Examples:
+  /// 1. Replacement A(0, 0, "a") and B(0, 0, "aa") are order-independent since
+  ///    applying them in either order gives replacement (0, 0, "aaa").
+  ///    However, A(0, 0, "a") and B(0, 0, "b") are order-dependent since
+  ///    applying A first gives (0, 0, "ab") while applying B first gives (B, A,
+  ///    "ba").
+  /// 2. Replacement A(0, 2, "123") and B(0, 2, "123") are order-independent
+  ///    since applying them in either order gives (0, 2, "123").
+  /// 3. Replacement A(0, 3, "123") and B(2, 3, "321") are order-independent
+  ///    since either order gives (0, 5, "12321").
   /// Replacements with offset UINT_MAX are special - we do not detect conflicts
   /// for such replacements since users may add them intentionally as a special
   /// category of replacements.
@@ -212,6 +227,22 @@ private:
       : Replaces(Begin, End) {}
 
   Replacements mergeReplacements(const ReplacementsImpl &Second) const;
+
+  // Returns `R` with new range that refers to code after `Replaces` being
+  // applied.
+  Replacement getReplacementInChangedCode(const Replacement &R) const;
+
+  // Returns a set of replacements that is equivalent to the current
+  // replacements by merging all adjacent replacements. Two sets of replacements
+  // are considered equivalent if they have the same effect when they are
+  // applied.
+  Replacements getCanonicalReplacements() const;
+
+  // If `R` and all existing replacements are order-indepedent, then merge it
+  // with `Replaces` and returns the merged replacements; otherwise, returns an
+  // error.
+  llvm::Expected<Replacements>
+  mergeIfOrderIndependent(const Replacement &R) const;
 
   ReplacementsImpl Replaces;
 };

@@ -1774,8 +1774,7 @@ void Generic_GCC::CudaInstallationDetector::init(
         Args.getLastArgValue(options::OPT_cuda_path_EQ));
   else {
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda");
-    // FIXME: Uncomment this once we can compile the cuda 8 headers.
-    // CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-8.0");
+    CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-8.0");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.5");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.0");
   }
@@ -1795,6 +1794,16 @@ void Generic_GCC::CudaInstallationDetector::init(
           FS.exists(LibDevicePath)))
       continue;
 
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
+        FS.getBufferForFile(InstallPath + "/version.txt");
+    if (!VersionFile) {
+      // CUDA 7.0 doesn't have a version.txt, so guess that's our version if
+      // version.txt isn't present.
+      Version = CudaVersion::CUDA_70;
+    } else {
+      Version = ParseCudaVersionFile((*VersionFile)->getBuffer());
+    }
+
     std::error_code EC;
     for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
@@ -1807,24 +1816,20 @@ void Generic_GCC::CudaInstallationDetector::init(
       StringRef GpuArch = FileName.slice(
           LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
       LibDeviceMap[GpuArch] = FilePath.str();
-      // Insert map entries for specifc devices with this compute capability.
-      // NVCC's choice of libdevice library version is rather peculiar:
-      // http://docs.nvidia.com/cuda/libdevice-users-guide/basic-usage.html#version-selection
-      // TODO: this will need to be updated once CUDA-8 is released.
+      // Insert map entries for specifc devices with this compute
+      // capability. NVCC's choice of the libdevice library version is
+      // rather peculiar and depends on the CUDA version.
       if (GpuArch == "compute_20") {
         LibDeviceMap["sm_20"] = FilePath;
         LibDeviceMap["sm_21"] = FilePath;
         LibDeviceMap["sm_32"] = FilePath;
       } else if (GpuArch == "compute_30") {
         LibDeviceMap["sm_30"] = FilePath;
-        // compute_30 is the fallback libdevice variant for sm_30+,
-        // unless CUDA specifies different version for specific GPU
-        // arch.
-        LibDeviceMap["sm_50"] = FilePath;
-        LibDeviceMap["sm_52"] = FilePath;
-        LibDeviceMap["sm_53"] = FilePath;
-        // sm_6? are currently all aliases for sm_53 in LLVM and
-        // should use compute_30.
+        if (Version < CudaVersion::CUDA_80) {
+          LibDeviceMap["sm_50"] = FilePath;
+          LibDeviceMap["sm_52"] = FilePath;
+          LibDeviceMap["sm_53"] = FilePath;
+        }
         LibDeviceMap["sm_60"] = FilePath;
         LibDeviceMap["sm_61"] = FilePath;
         LibDeviceMap["sm_62"] = FilePath;
@@ -1832,19 +1837,12 @@ void Generic_GCC::CudaInstallationDetector::init(
         LibDeviceMap["sm_35"] = FilePath;
         LibDeviceMap["sm_37"] = FilePath;
       } else if (GpuArch == "compute_50") {
-        // NVCC does not use compute_50 libdevice at all at the moment.
-        // The version that's shipped with CUDA-7.5 is a copy of compute_30.
+        if (Version >= CudaVersion::CUDA_80) {
+          LibDeviceMap["sm_50"] = FilePath;
+          LibDeviceMap["sm_52"] = FilePath;
+          LibDeviceMap["sm_53"] = FilePath;
+        }
       }
-    }
-
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
-        FS.getBufferForFile(InstallPath + "/version.txt");
-    if (!VersionFile) {
-      // CUDA 7.0 doesn't have a version.txt, so guess that's our version if
-      // version.txt isn't present.
-      Version = CudaVersion::CUDA_70;
-    } else {
-      Version = ParseCudaVersionFile((*VersionFile)->getBuffer());
     }
 
     IsValid = true;

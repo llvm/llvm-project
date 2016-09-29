@@ -62,7 +62,7 @@
 #include "cuda.h"
 #if !defined(CUDA_VERSION)
 #error "cuda.h did not define CUDA_VERSION"
-#elif CUDA_VERSION < 7000 || CUDA_VERSION > 7050
+#elif CUDA_VERSION < 7000 || CUDA_VERSION > 8000
 #error "Unsupported CUDA version!"
 #endif
 
@@ -113,6 +113,7 @@
 #undef __cxa_vec_ctor
 #undef __cxa_vec_cctor
 #undef __cxa_vec_dtor
+#undef __cxa_vec_new
 #undef __cxa_vec_new2
 #undef __cxa_vec_new3
 #undef __cxa_vec_delete2
@@ -135,6 +136,21 @@
 // the headers we're about to include.
 #define __host__ UNEXPECTED_HOST_ATTRIBUTE
 
+// CUDA 8.0.41 relies on __USE_FAST_MATH__ and __CUDA_PREC_DIV's values.
+// Previous versions used to check whether they are defined or not.
+// CU_DEVICE_INVALID macro is only defined in 8.0.41, so we use it
+// here to detect the switch.
+
+#if defined(CU_DEVICE_INVALID)
+#if !defined(__USE_FAST_MATH__)
+#define __USE_FAST_MATH__ 0
+#endif
+
+#if !defined(__CUDA_PREC_DIV)
+#define __CUDA_PREC_DIV 0
+#endif
+#endif
+
 // device_functions.hpp and math_functions*.hpp use 'static
 // __forceinline__' (with no __device__) for definitions of device
 // functions. Temporarily redefine __forceinline__ to include
@@ -151,7 +167,7 @@
 // slow divides), so we need to scope our define carefully here.
 #pragma push_macro("__USE_FAST_MATH__")
 #if defined(__CLANG_CUDA_APPROX_TRANSCENDENTALS__)
-#define __USE_FAST_MATH__
+#define __USE_FAST_MATH__ 1
 #endif
 #include "math_functions.hpp"
 #pragma pop_macro("__USE_FAST_MATH__")

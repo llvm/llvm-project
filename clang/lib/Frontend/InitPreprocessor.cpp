@@ -467,8 +467,10 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_lambdas", "200907");
     Builder.defineMacro("__cpp_constexpr",
                         LangOpts.CPlusPlus14 ? "201304" : "200704");
-    Builder.defineMacro("__cpp_range_based_for", "200907");
-    Builder.defineMacro("__cpp_static_assert", "200410");
+    Builder.defineMacro("__cpp_range_based_for",
+                        LangOpts.CPlusPlus1z ? "201603" : "200907");
+    Builder.defineMacro("__cpp_static_assert",
+                        LangOpts.CPlusPlus1z ? "201411" : "200410");
     Builder.defineMacro("__cpp_decltype", "200707");
     Builder.defineMacro("__cpp_attributes", "200809");
     Builder.defineMacro("__cpp_rvalue_references", "200610");
@@ -476,7 +478,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_initializer_lists", "200806");
     Builder.defineMacro("__cpp_delegating_constructors", "200604");
     Builder.defineMacro("__cpp_nsdmi", "200809");
-    Builder.defineMacro("__cpp_inheriting_constructors", "200802");
+    Builder.defineMacro("__cpp_inheriting_constructors", "201511");
     Builder.defineMacro("__cpp_ref_qualifiers", "200710");
     Builder.defineMacro("__cpp_alias_templates", "200704");
   }
@@ -494,6 +496,25 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   if (LangOpts.SizedDeallocation)
     Builder.defineMacro("__cpp_sized_deallocation", "201309");
+
+  // C++17 features.
+  if (LangOpts.CPlusPlus1z) {
+    Builder.defineMacro("__cpp_hex_float", "201603");
+    Builder.defineMacro("__cpp_inline_variables", "201606");
+    //Builder.defineMacro("__cpp_aligned_new", "201606");
+    //Builder.defineMacro("__cpp_noexcept_function_type", "201510");
+    Builder.defineMacro("__cpp_capture_star_this", "201603");
+    Builder.defineMacro("__cpp_if_constexpr", "201606");
+    Builder.defineMacro("__cpp_template_auto", "201606");
+    Builder.defineMacro("__cpp_namespace_attributes", "201411");
+    Builder.defineMacro("__cpp_enumerator_attributes", "201411");
+    Builder.defineMacro("__cpp_nested_namespace_definitions", "201411");
+    Builder.defineMacro("__cpp_aggregate_bases", "201603");
+    Builder.defineMacro("__cpp_nontype_template_args", "201411");
+    Builder.defineMacro("__cpp_fold_expressions", "201603");
+  }
+
+  // TS features.
   if (LangOpts.ConceptsTS)
     Builder.defineMacro("__cpp_experimental_concepts", "1");
   if (LangOpts.Coroutines)

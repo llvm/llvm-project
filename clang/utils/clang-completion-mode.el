@@ -64,15 +64,15 @@ This variable will typically contain include paths, e.g., -I~/MyProject."
   :group 'clang-completion-mode)
 
 ;;; The prefix header to use with Clang code completion. 
-(setq clang-completion-prefix-header "")
+(defvar clang-completion-prefix-header "")
 
 ;;; The substring we will use to filter completion results
-(setq clang-completion-substring "")
+(defvar clang-completion-substring "")
 
 ;;; The current completion buffer
-(setq clang-completion-buffer nil)
+(defvar clang-completion-buffer nil)
 
-(setq clang-result-string "")
+(defvar clang-result-string "")
 
 ;;; Compute the current line in the buffer	
 (defun current-line ()
@@ -199,14 +199,14 @@ This variable will typically contain include paths, e.g., -I~/MyProject."
 ;; for the currently-active code completion.
 (defun clang-backspace ()
   (interactive)
-  (delete-backward-char 1)
+  (delete-char -1)
   (clang-update-filter))
 
 ;; Invoked when the user types the delete key to update the filter
 ;; for the currently-active code completion.
 (defun clang-delete ()
   (interactive)
-  (delete-backward-char 1)
+  (delete-char -1)
   (clang-update-filter))
 
 ;; Set up the keymap for the Clang minor mode.
@@ -246,4 +246,3 @@ This variable will typically contain include paths, e.g., -I~/MyProject."
   nil
   " Clang"
   clang-completion-mode-map)
-

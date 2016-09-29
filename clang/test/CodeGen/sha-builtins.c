@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -target-feature +sha -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +sha -emit-llvm -o - | FileCheck %s
 
-// Don't include mm_malloc.h, it's system specific.
-#define __MM_MALLOC_H
 
 #include <immintrin.h>
 

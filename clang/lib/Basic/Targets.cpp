@@ -1850,8 +1850,19 @@ public:
     return llvm::makeArrayRef(BuiltinInfo,
                          clang::NVPTX::LastTSBuiltin - Builtin::FirstTSBuiltin);
   }
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override {
+    Features["satom"] = GPU >= CudaArch::SM_60;
+    return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+  }
+
   bool hasFeature(StringRef Feature) const override {
-    return Feature == "ptx" || Feature == "nvptx";
+    return llvm::StringSwitch<bool>(Feature)
+        .Cases("ptx", "nvptx", true)
+        .Case("satom", GPU >= CudaArch::SM_60)  // Atomics w/ scope.
+        .Default(false);
   }
 
   ArrayRef<const char *> getGCCRegNames() const override;
@@ -1906,6 +1917,8 @@ const Builtin::Info NVPTXTargetInfo::BuiltinInfo[] = {
   { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
   { #ID, TYPE, ATTRS, HEADER, ALL_LANGUAGES, nullptr },
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE },
 #include "clang/Basic/BuiltinsNVPTX.def"
 };
 
