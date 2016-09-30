@@ -8,6 +8,12 @@
 // with -verify.
 __extension__ typedef __SIZE_TYPE__ size_t;
 void *operator new(size_t); // expected-error 0-1{{missing exception spec}} expected-note{{candidate}}
+#if __cplusplus > 201402L
+namespace std {
+  enum class align_val_t : size_t {};
+}
+void *operator new(size_t, std::align_val_t); // expected-note{{candidate}}
+#endif
 
 namespace dr500 { // dr500: dup 372
   class D;

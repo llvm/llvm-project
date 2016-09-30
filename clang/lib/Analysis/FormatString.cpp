@@ -266,14 +266,15 @@ bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
   if (SpecifierBegin + 1 >= FmtStrEnd)
     return false;
 
-  const UTF8 *SB = reinterpret_cast<const UTF8 *>(SpecifierBegin + 1);
-  const UTF8 *SE = reinterpret_cast<const UTF8 *>(FmtStrEnd);
+  const llvm::UTF8 *SB =
+      reinterpret_cast<const llvm::UTF8 *>(SpecifierBegin + 1);
+  const llvm::UTF8 *SE = reinterpret_cast<const llvm::UTF8 *>(FmtStrEnd);
   const char FirstByte = *SB;
 
   // If the invalid specifier is a multibyte UTF-8 string, return the
   // total length accordingly so that the conversion specifier can be
   // properly updated to reflect a complete UTF-8 specifier.
-  unsigned NumBytes = getNumBytesForUTF8(FirstByte);
+  unsigned NumBytes = llvm::getNumBytesForUTF8(FirstByte);
   if (NumBytes == 1)
     return false;
   if (SB + NumBytes > SE)

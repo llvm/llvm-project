@@ -1577,7 +1577,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction() const {
   //   deallocation function. [...]
   if (getNumParams() == 1)
     return true;
-  
+
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   [...] If class T does not declare such an operator delete but does 
   //   declare a member deallocation function named operator delete with 

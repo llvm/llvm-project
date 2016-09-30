@@ -1485,13 +1485,13 @@ bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
 
 bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr) {
   const char *UnicodePtr = CurPtr;
-  UTF32 CodePoint;
-  ConversionResult Result =
-      llvm::convertUTF8Sequence((const UTF8 **)&UnicodePtr,
-                                (const UTF8 *)BufferEnd,
+  llvm::UTF32 CodePoint;
+  llvm::ConversionResult Result =
+      llvm::convertUTF8Sequence((const llvm::UTF8 **)&UnicodePtr,
+                                (const llvm::UTF8 *)BufferEnd,
                                 &CodePoint,
-                                strictConversion);
-  if (Result != conversionOK ||
+                                llvm::strictConversion);
+  if (Result != llvm::conversionOK ||
       !isAllowedIDChar(static_cast<uint32_t>(CodePoint), LangOpts))
     return false;
 
@@ -3625,17 +3625,17 @@ LexNextToken:
       break;
     }
 
-    UTF32 CodePoint;
+    llvm::UTF32 CodePoint;
 
     // We can't just reset CurPtr to BufferPtr because BufferPtr may point to
     // an escaped newline.
     --CurPtr;
-    ConversionResult Status =
-        llvm::convertUTF8Sequence((const UTF8 **)&CurPtr,
-                                  (const UTF8 *)BufferEnd,
+    llvm::ConversionResult Status =
+        llvm::convertUTF8Sequence((const llvm::UTF8 **)&CurPtr,
+                                  (const llvm::UTF8 *)BufferEnd,
                                   &CodePoint,
-                                  strictConversion);
-    if (Status == conversionOK) {
+                                  llvm::strictConversion);
+    if (Status == llvm::conversionOK) {
       if (CheckUnicodeWhitespace(Result, CodePoint, CurPtr)) {
         if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
           return true; // KeepWhitespaceMode
