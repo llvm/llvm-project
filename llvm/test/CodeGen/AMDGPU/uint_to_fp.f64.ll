@@ -74,7 +74,7 @@ define void @s_uint_to_fp_v4i32_to_v4f64(<4 x double> addrspace(1)* %out, <4 x i
 ; uses an SGPR (implicit vcc).
 
 ; SI-LABEL: {{^}}uint_to_fp_i1_to_f64:
-; SI-DAG: v_cmp_eq_i32_e64 vcc
+; SI-DAG: v_cmp_eq_u32_e64 vcc
 ; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}
 ; SI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; SI: buffer_store_dwordx2 v{{\[}}[[ZERO]]:[[SEL]]{{\]}}

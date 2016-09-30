@@ -87,7 +87,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 ; FIXME: why does the skip depend on the asm length in the same block?
 
 ; CHECK-LABEL: {{^}}test_kill_control_flow:
-; CHECK: s_cmp_lg_i32 s{{[0-9]+}}, 0
+; CHECK: s_cmp_lg_u32 s{{[0-9]+}}, 0
 ; CHECK: s_cbranch_scc1 [[RETURN_BB:BB[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ; BB#1:
@@ -137,7 +137,7 @@ exit:
 }
 
 ; CHECK-LABEL: {{^}}test_kill_control_flow_remainder:
-; CHECK: s_cmp_lg_i32 s{{[0-9]+}}, 0
+; CHECK: s_cmp_lg_u32 s{{[0-9]+}}, 0
 ; CHECK-NEXT: s_cbranch_scc1 [[RETURN_BB:BB[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ; BB#1: ; %bb
@@ -199,7 +199,7 @@ exit:
 }
 
 ; CHECK-LABEL: {{^}}test_kill_divergent_loop:
-; CHECK: v_cmp_eq_i32_e32 vcc, 0, v0
+; CHECK: v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT: s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], vcc
 ; CHECK-NEXT: s_xor_b64 [[SAVEEXEC]], exec, [[SAVEEXEC]]
 ; CHECK-NEXT: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
@@ -216,7 +216,7 @@ exit:
 
 ; CHECK-NEXT: ; BB#3:
 ; CHECK: buffer_load_dword [[LOAD:v[0-9]+]]
-; CHECK: v_cmp_eq_i32_e32 vcc, 0, [[LOAD]]
+; CHECK: v_cmp_eq_u32_e32 vcc, 0, [[LOAD]]
 ; CHECK-NEXT: s_and_b64 vcc, exec, vcc
 ; CHECK-NEXT: s_cbranch_vccnz [[LOOP_BB]]
 

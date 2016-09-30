@@ -131,7 +131,7 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &MF) {
         MI.eraseFromParent();
       } else if (TRI->getCommonSubClass(DstRC, &AMDGPU::SGPR_64RegClass) &&
                  SrcRC == &AMDGPU::VReg_1RegClass) {
-        BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::V_CMP_NE_I32_e64))
+        BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::V_CMP_NE_U32_e64))
           .addOperand(Dst)
           .addOperand(Src)
           .addImm(0);

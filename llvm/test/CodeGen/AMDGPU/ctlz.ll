@@ -19,7 +19,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; FUNC-LABEL: {{^}}s_ctlz_i32:
 ; GCN: s_load_dword [[VAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 ; GCN-DAG: s_flbit_i32_b32 [[CTLZ:s[0-9]+]], [[VAL]]
-; GCN-DAG: v_cmp_eq_i32_e64 [[CMPZ:s\[[0-9]+:[0-9]+\]]], [[VAL]], 0{{$}}
+; GCN-DAG: v_cmp_eq_u32_e64 [[CMPZ:s\[[0-9]+:[0-9]+\]]], [[VAL]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[VCTLZ:v[0-9]+]], [[CTLZ]]
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], [[VCTLZ]], 32, [[CMPZ]]
 ; GCN: buffer_store_dword [[RESULT]]
@@ -36,7 +36,7 @@ define void @s_ctlz_i32(i32 addrspace(1)* noalias %out, i32 %val) nounwind {
 ; FUNC-LABEL: {{^}}v_ctlz_i32:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]],
 ; GCN-DAG: v_ffbh_u32_e32 [[CTLZ:v[0-9]+]], [[VAL]]
-; GCN-DAG: v_cmp_eq_i32_e32 vcc, 0, [[CTLZ]]
+; GCN-DAG: v_cmp_eq_u32_e32 vcc, 0, [[CTLZ]]
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], [[CTLZ]], 32, vcc
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
@@ -99,7 +99,7 @@ define void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrsp
 ; FUNC-LABEL: {{^}}v_ctlz_i8:
 ; GCN: buffer_load_ubyte [[VAL:v[0-9]+]],
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
-; GCN-DAG: v_cmp_eq_i32_e32 vcc, 0, [[CTLZ]]
+; GCN-DAG: v_cmp_eq_u32_e32 vcc, 0, [[CTLZ]]
 ; GCN-DAG: v_cndmask_b32_e64 [[CORRECTED_FFBH:v[0-9]+]], [[FFBH]], 32, vcc
 ; GCN: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, 0xffffffe8, [[CORRECTED_FFBH]]
 ; GCN: buffer_store_byte [[RESULT]],
@@ -112,7 +112,7 @@ define void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %
 
 ; FUNC-LABEL: {{^}}s_ctlz_i64:
 ; GCN: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
-; GCN-DAG: v_cmp_eq_i32_e64 vcc, s[[HI]], 0{{$}}
+; GCN-DAG: v_cmp_eq_u32_e64 vcc, s[[HI]], 0{{$}}
 ; GCN-DAG: s_flbit_i32_b32 [[FFBH_LO:s[0-9]+]], s[[LO]]
 ; GCN-DAG: s_add_i32 [[ADD:s[0-9]+]], [[FFBH_LO]], 32
 ; GCN-DAG: s_flbit_i32_b32 [[FFBH_HI:s[0-9]+]], s[[HI]]
@@ -138,13 +138,13 @@ define void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 %val) nounwind
 ; FUNC-LABEL: {{^}}v_ctlz_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}
 ; GCN-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
-; GCN-DAG: v_cmp_eq_i32_e64 [[CMPHI:s\[[0-9]+:[0-9]+\]]], 0, v[[HI]]
+; GCN-DAG: v_cmp_eq_u32_e64 [[CMPHI:s\[[0-9]+:[0-9]+\]]], 0, v[[HI]]
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH_LO:v[0-9]+]], v[[LO]]
 ; GCN-DAG: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 32, [[FFBH_LO]]
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH_HI:v[0-9]+]], v[[HI]]
 ; GCN-DAG: v_cndmask_b32_e64 v[[CTLZ:[0-9]+]], [[FFBH_HI]], [[ADD]], [[CMPHI]]
 ; GCN-DAG: v_or_b32_e32 [[OR:v[0-9]+]], v[[HI]], v[[LO]]
-; GCN-DAG: v_cmp_eq_i32_e32 vcc, 0, [[OR]]
+; GCN-DAG: v_cmp_eq_u32_e32 vcc, 0, [[OR]]
 ; GCN-DAG: v_cndmask_b32_e64 v[[CLTZ_LO:[0-9]+]], v[[CTLZ:[0-9]+]], 64, vcc
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CLTZ_LO]]:[[CTLZ_HI]]{{\]}}
 define void @v_ctlz_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {

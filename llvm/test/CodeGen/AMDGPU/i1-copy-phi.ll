@@ -6,7 +6,7 @@
 ; SI: s_and_saveexec_b64
 ; SI: s_xor_b64
 ; SI: v_mov_b32_e32 [[REG]], -1{{$}}
-; SI: v_cmp_ne_i32_e32 vcc, 0, [[REG]]
+; SI: v_cmp_ne_u32_e32 vcc, 0, [[REG]]
 ; SI: s_and_saveexec_b64
 ; SI: s_xor_b64
 ; SI: s_endpgm

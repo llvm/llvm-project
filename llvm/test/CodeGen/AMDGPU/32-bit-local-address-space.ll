@@ -57,8 +57,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}null_32bit_lds_ptr:
-; SI: v_cmp_ne_i32
-; SI-NOT: v_cmp_ne_i32
+; SI: v_cmp_ne_u32
+; SI-NOT: v_cmp_ne_u32
 ; SI: v_cndmask_b32
 define void @null_32bit_lds_ptr(i32 addrspace(1)* %out, i32 addrspace(3)* %lds) nounwind {
   %cmp = icmp ne i32 addrspace(3)* %lds, null

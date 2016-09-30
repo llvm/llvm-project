@@ -236,9 +236,17 @@ const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
 
 RegisterBankInfo::InstructionMapping
 RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
+  // For copies we want to walk over the operands and try to find one
+  // that has a register bank since the instruction itself will not get
+  // us any constraint.
+  bool isCopyLike = MI.isCopy() || MI.isPHI();
+  // For copy like instruction, only the mapping of the definition
+  // is important. The rest is not constrained.
+  unsigned NumOperandsForMapping = isCopyLike ? 1 : MI.getNumOperands();
+
   RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,
                                                /*OperandsMapping*/ nullptr,
-                                               MI.getNumOperands());
+                                               NumOperandsForMapping);
   const MachineFunction &MF = *MI.getParent()->getParent();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -249,17 +257,10 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   // Before doing anything complicated check if the mapping is not
   // directly available.
   bool CompleteMapping = true;
-  // For copies we want to walk over the operands and try to find one
-  // that has a register bank.
-  bool isCopyLike = MI.isCopy() || MI.isPHI();
-  // Remember the register bank for reuse for copy-like instructions.
-  const RegisterBank *RegBank = nullptr;
-  // Remember the size of the register for reuse for copy-like instructions.
-  unsigned RegSize = 0;
 
-  unsigned NumOperands = MI.getNumOperands();
-  SmallVector<const ValueMapping *, 8> OperandsMapping(NumOperands);
-  for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
+  SmallVector<const ValueMapping *, 8> OperandsMapping(NumOperandsForMapping);
+  for (unsigned OpIdx = 0, EndIdx = MI.getNumOperands(); OpIdx != EndIdx;
+       ++OpIdx) {
     const MachineOperand &MO = MI.getOperand(OpIdx);
     if (!MO.isReg())
       continue;
@@ -287,45 +288,24 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
         if (!isCopyLike)
           // MI does not carry enough information to guess the mapping.
           return InstructionMapping();
-
-        // For copies, we want to keep interating to find a register
-        // bank for the other operands if we did not find one yet.
-        if (RegBank)
-          break;
         continue;
       }
     }
-    RegBank = CurRegBank;
-    RegSize = getSizeInBits(Reg, MRI, TRI);
-    OperandsMapping[OpIdx] = &getValueMapping(0, RegSize, *CurRegBank);
+    const ValueMapping *ValMapping =
+        &getValueMapping(0, getSizeInBits(Reg, MRI, TRI), *CurRegBank);
+    if (isCopyLike) {
+      OperandsMapping[0] = ValMapping;
+      CompleteMapping = true;
+      break;
+    }
+    OperandsMapping[OpIdx] = ValMapping;
   }
 
-  if (CompleteMapping) {
-    Mapping.setOperandsMapping(getOperandsMapping(OperandsMapping));
-    return Mapping;
-  }
-
-  assert(isCopyLike && "We should have bailed on non-copies at this point");
-  // For copy like instruction, if none of the operand has a register
-  // bank avialable, there is nothing we can propagate.
-  if (!RegBank)
+  if (isCopyLike && !CompleteMapping)
+    // No way to deduce the type from what we have.
     return InstructionMapping();
 
-  // This is a copy-like instruction.
-  // Propagate RegBank to all operands that do not have a
-  // mapping yet.
-  for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
-    const MachineOperand &MO = MI.getOperand(OpIdx);
-    // Don't assign a mapping for non-reg operands.
-    if (!MO.isReg())
-      continue;
-
-    // If a mapping already exists, do not touch it.
-    if (OperandsMapping[OpIdx])
-      continue;
-
-    OperandsMapping[OpIdx] = &getValueMapping(0, RegSize, *RegBank);
-  }
+  assert(CompleteMapping && "Setting an uncomplete mapping");
   Mapping.setOperandsMapping(getOperandsMapping(OperandsMapping));
   return Mapping;
 }
@@ -471,8 +451,9 @@ RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
 void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
   MachineInstr &MI = OpdMapper.getMI();
   DEBUG(dbgs() << "Applying default-like mapping\n");
-  for (unsigned OpIdx = 0, EndIdx = MI.getNumOperands(); OpIdx != EndIdx;
-       ++OpIdx) {
+  for (unsigned OpIdx = 0,
+                EndIdx = OpdMapper.getInstrMapping().getNumOperands();
+       OpIdx != EndIdx; ++OpIdx) {
     DEBUG(dbgs() << "OpIdx " << OpIdx);
     MachineOperand &MO = MI.getOperand(OpIdx);
     if (!MO.isReg()) {
@@ -591,7 +572,9 @@ bool RegisterBankInfo::InstructionMapping::verify(
     const MachineInstr &MI) const {
   // Check that all the register operands are properly mapped.
   // Check the constructor invariant.
-  assert(NumOperands == MI.getNumOperands() &&
+  // For PHI, we only care about mapping the definition.
+  assert(NumOperands ==
+             ((MI.isCopy() || MI.isPHI()) ? 1 : MI.getNumOperands()) &&
          "NumOperands must match, see constructor");
   assert(MI.getParent() && MI.getParent()->getParent() &&
          "MI must be connected to a MachineFunction");
@@ -643,14 +626,14 @@ RegisterBankInfo::OperandsMapper::OperandsMapper(
     MachineInstr &MI, const InstructionMapping &InstrMapping,
     MachineRegisterInfo &MRI)
     : MRI(MRI), MI(MI), InstrMapping(InstrMapping) {
-  unsigned NumOpds = MI.getNumOperands();
+  unsigned NumOpds = InstrMapping.getNumOperands();
   OpToNewVRegIdx.resize(NumOpds, OperandsMapper::DontKnowIdx);
   assert(InstrMapping.verify(MI) && "Invalid mapping for MI");
 }
 
 iterator_range<SmallVectorImpl<unsigned>::iterator>
 RegisterBankInfo::OperandsMapper::getVRegsMem(unsigned OpIdx) {
-  assert(OpIdx < getMI().getNumOperands() && "Out-of-bound access");
+  assert(OpIdx < getInstrMapping().getNumOperands() && "Out-of-bound access");
   unsigned NumPartialVal =
       getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns;
   int StartIdx = OpToNewVRegIdx[OpIdx];
@@ -686,7 +669,7 @@ RegisterBankInfo::OperandsMapper::getNewVRegsEnd(unsigned StartIdx,
 }
 
 void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
-  assert(OpIdx < getMI().getNumOperands() && "Out-of-bound access");
+  assert(OpIdx < getInstrMapping().getNumOperands() && "Out-of-bound access");
   iterator_range<SmallVectorImpl<unsigned>::iterator> NewVRegsForOpIdx =
       getVRegsMem(OpIdx);
   const ValueMapping &ValMapping = getInstrMapping().getOperandMapping(OpIdx);
@@ -703,7 +686,7 @@ void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
 void RegisterBankInfo::OperandsMapper::setVRegs(unsigned OpIdx,
                                                 unsigned PartialMapIdx,
                                                 unsigned NewVReg) {
-  assert(OpIdx < getMI().getNumOperands() && "Out-of-bound access");
+  assert(OpIdx < getInstrMapping().getNumOperands() && "Out-of-bound access");
   assert(getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns >
              PartialMapIdx &&
          "Out-of-bound access for partial mapping");
@@ -718,7 +701,7 @@ iterator_range<SmallVectorImpl<unsigned>::const_iterator>
 RegisterBankInfo::OperandsMapper::getVRegs(unsigned OpIdx,
                                            bool ForDebug) const {
   (void)ForDebug;
-  assert(OpIdx < getMI().getNumOperands() && "Out-of-bound access");
+  assert(OpIdx < getInstrMapping().getNumOperands() && "Out-of-bound access");
   int StartIdx = OpToNewVRegIdx[OpIdx];
 
   if (StartIdx == OperandsMapper::DontKnowIdx)
@@ -744,7 +727,7 @@ LLVM_DUMP_METHOD void RegisterBankInfo::OperandsMapper::dump() const {
 
 void RegisterBankInfo::OperandsMapper::print(raw_ostream &OS,
                                              bool ForDebug) const {
-  unsigned NumOpds = getMI().getNumOperands();
+  unsigned NumOpds = getInstrMapping().getNumOperands();
   if (ForDebug) {
     OS << "Mapping for " << getMI() << "\nwith " << getInstrMapping() << '\n';
     // Print out the internal state of the index table.

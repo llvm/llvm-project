@@ -20,8 +20,8 @@ namespace fuzzer {
 
 TracePC TPC;
 
-void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
-  uintptr_t Idx = *Guard;
+void TracePC::HandleTrace(uint32_t *Guard, uintptr_t PC) {
+  uint32_t Idx = *Guard;
   if (!Idx) return;
   uint8_t *CounterPtr = &Counters[Idx % kNumCounters];
   uint8_t Counter = *CounterPtr;
@@ -43,10 +43,10 @@ void TracePC::HandleTrace(uintptr_t *Guard, uintptr_t PC) {
   }
 }
 
-void TracePC::HandleInit(uintptr_t *Start, uintptr_t *Stop) {
+void TracePC::HandleInit(uint32_t *Start, uint32_t *Stop) {
   if (Start == Stop || *Start) return;
   assert(NumModules < sizeof(Modules) / sizeof(Modules[0]));
-  for (uintptr_t *P = Start; P < Stop; P++)
+  for (uint32_t *P = Start; P < Stop; P++)
     *P = ++NumGuards;
   Modules[NumModules].Start = Start;
   Modules[NumModules].Stop = Stop;
@@ -61,9 +61,9 @@ void TracePC::PrintModuleInfo() {
 }
 
 void TracePC::ResetGuards() {
-  uintptr_t N = 0;
+  uint32_t N = 0;
   for (size_t M = 0; M < NumModules; M++)
-    for (uintptr_t *X = Modules[M].Start; X < Modules[M].Stop; X++)
+    for (uint32_t *X = Modules[M].Start; X < Modules[M].Stop; X++)
       *X = ++N;
   assert(N == NumGuards);
 }
@@ -109,42 +109,17 @@ void TracePC::PrintCoverage() {
   }
 }
 
-
-void TracePC::UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize) {
-  if (!CurrentElementSize) return;
-  for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++) {
-    if (!CounterMap.Get(Idx)) continue;
-    Feature &Fe = FeatureSet[Idx];
-    Fe.Count++;
-    if (!Fe.SmallestElementSize || Fe.SmallestElementSize > CurrentElementSize) {
-      Fe.SmallestElementIdx = CurrentElementIdx;
-      Fe.SmallestElementSize = CurrentElementSize;
-    }
-  }
-}
-
-void TracePC::PrintFeatureSet() {
-  Printf("[id: cnt idx sz] ");
-  for (size_t i = 0; i < kFeatureSetSize; i++) {
-    auto &Fe = FeatureSet[i];
-    if (!Fe.Count) continue;
-    Printf("[%zd: %zd %zd %zd] ", i, Fe.Count, Fe.SmallestElementIdx,
-           Fe.SmallestElementSize);
-  }
-  Printf("\n");
-}
-
 } // namespace fuzzer
 
 extern "C" {
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc_guard(uintptr_t *Guard) {
+void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
   uintptr_t PC = (uintptr_t)__builtin_return_address(0);
   fuzzer::TPC.HandleTrace(Guard, PC);
 }
 
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc_guard_init(uintptr_t *Start, uintptr_t *Stop) {
+void __sanitizer_cov_trace_pc_guard_init(uint32_t *Start, uint32_t *Stop) {
   fuzzer::TPC.HandleInit(Start, Stop);
 }
 

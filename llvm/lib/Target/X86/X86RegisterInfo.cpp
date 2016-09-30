@@ -311,6 +311,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_MostRegs_SaveList;
     break;
   case CallingConv::X86_64_Win64:
+    if (!HasSSE)
+      return CSR_Win64_NoSSE_SaveList;
     return CSR_Win64_SaveList;
   case CallingConv::X86_64_SysV:
     if (CallsEHReturn)
@@ -337,8 +339,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   if (Is64Bit) {
-    if (IsWin64)
+    if (IsWin64) {
+      if (!HasSSE)
+        return CSR_Win64_NoSSE_SaveList;
       return CSR_Win64_SaveList;
+    }
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
     if (Subtarget.getTargetLowering()->supportSwiftError() &&

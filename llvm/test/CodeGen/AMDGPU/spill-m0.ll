@@ -6,7 +6,7 @@
 ; XXX - Why does it like to use vcc?
 
 ; GCN-LABEL: {{^}}spill_m0:
-; GCN: s_cmp_lg_i32
+; GCN: s_cmp_lg_u32
 
 ; TOVGPR: s_mov_b32 vcc_hi, m0
 ; TOVGPR: v_writelane_b32 [[SPILL_VREG:v[0-9]+]], vcc_hi, 0

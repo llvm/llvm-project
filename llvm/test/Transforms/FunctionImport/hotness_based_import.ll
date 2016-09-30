@@ -3,43 +3,74 @@
 ; RUN: opt -module-summary %p/Inputs/hotness_based_import.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
-; Test import with default hot multiplier (3)
+; Test import with default hot multiplier (3) and default hot-evolution-factor (1.0)
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S -import-hot-multiplier=3.0 -import-cold-multiplier=0.0 | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S -import-hot-multiplier=3.0 | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S -import-hot-multiplier=3.0 -import-instr-evolution-factor=0.0 | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S -import-hot-multiplier=3.0 -import-hot-evolution-factor=1.0 | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-DEFAULT
 ; HOT-DEFAULT-DAG: define available_externally void @hot1()
 ; HOT-DEFAULT-DAG: define available_externally void @hot2()
-; HOT-DEFAULT-DAG: define available_externally void @cold()
+; HOT-DEFAULT-DAG: define available_externally void @calledFromHot()
+; HOT-DEFAULT-DAG: define available_externally void @calledFromHot2()
 ; HOT-DEFAULT-DAG: define available_externally void @none1()
-
+; HOT-DEFAULT-NOT: define available_externally void @cold()
 ; HOT-DEFAULT-NOT: define available_externally void @hot3()
 ; HOT-DEFAULT-NOT: define available_externally void @none2()
 ; HOT-DEFAULT-NOT: define available_externally void @none3()
 ; HOT-DEFAULT-NOT: define available_externally void @cold2()
+; HOT-DEFAULT-NOT: define available_externally void @calledFromCold()
+; HOT-DEFAULT-NOT: define available_externally void @calledFromNone()
 
+; This one tests if we decay threshold for hot callsites. With hot-evolution-factor of 0
+; we should not import any of calledFromHot functions
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 --S -import-hot-multiplier=3.0 -import-hot-evolution-factor=0.0 | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-EVOLUTION
+; HOT-EVOLUTION-DAG: define available_externally void @hot1()
+; HOT-EVOLUTION-DAG: define available_externally void @hot2()
+; HOT-EVOLUTION-DAG: define available_externally void @none1()
+; HOT-EVOLUTION-NOT: define available_externally void @hot3()
+; HOT-EVOLUTION-NOT: define available_externally void @cold()
+; HOT-EVOLUTION-NOT: define available_externally void @none2()
+; HOT-EVOLUTION-NOT: define available_externally void @none3()
+; HOT-EVOLUTION-NOT: define available_externally void @cold2()
+; HOT-EVOLUTION-NOT: define available_externally void @calledFromHot()
+; HOT-EVOLUTION-NOT: define available_externally void @calledFromHot2()
 
 ; Test import with hot multiplier 1.0 - treat hot callsites as normal.
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 -import-hot-multiplier=1.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-ONE
 ; HOT-ONE-DAG: define available_externally void @hot1()
-; HOT-ONE-DAG: define available_externally void @cold()
 ; HOT-ONE-DAG: define available_externally void @none1()
+; HOT-ONE-NOT: define available_externally void @cold()
 ; HOT-ONE-NOT: define available_externally void @hot2()
 ; HOT-ONE-NOT: define available_externally void @hot3()
 ; HOT-ONE-NOT: define available_externally void @none2()
 ; HOT-ONE-NOT: define available_externally void @none3()
 ; HOT-ONE-NOT: define available_externally void @cold2()
 
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=1 -import-hot-multiplier=1.0 -import-cold-multiplier=1.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-COLD-ONE
+; HOT-COLD-ONE-DAG: define available_externally void @hot1()
+; HOT-COLD-ONE-DAG: define available_externally void @cold()
+; HOT-COLD-ONE-DAG: define available_externally void @none1()
+; HOT-COLD-ONE-NOT: define available_externally void @hot2()
+; HOT-COLD-ONE-NOT: define available_externally void @hot3()
+; HOT-COLD-ONE-NOT: define available_externally void @none2()
+; HOT-COLD-ONE-NOT: define available_externally void @none3()
+; HOT-COLD-ONE-NOT: define available_externally void @cold2()
 
 ; Test import with hot multiplier 0.0 and high threshold - don't import functions called from hot callsite.
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -import-hot-multiplier=0.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-ZERO
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -import-hot-multiplier=0.0 -import-cold-multiplier=1.0 --S | FileCheck %s --check-prefix=CHECK --check-prefix=HOT-ZERO
 ; HOT-ZERO-DAG: define available_externally void @cold()
 ; HOT-ZERO-DAG: define available_externally void @none1()
 ; HOT-ZERO-DAG: define available_externally void @none2()
 ; HOT-ZERO-DAG: define available_externally void @none3()
 ; HOT-ZERO-DAG: define available_externally void @cold2()
+; HOT-ZERO-DAG: define available_externally void @calledFromCold()
+; HOT-ZERO-DAG: define available_externally void @calledFromNone()
 ; HOT-ZERO-NOT: define available_externally void @hot2()
 ; HOT-ZERO-NOT: define available_externally void @hot1()
 ; HOT-ZERO-NOT: define available_externally void @hot3()
-
+; HOT-ZERO-NOT: define available_externally void @calledFromHot()
+; HOT-ZERO-NOT: define available_externally void @calledFromHot2()
 
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'

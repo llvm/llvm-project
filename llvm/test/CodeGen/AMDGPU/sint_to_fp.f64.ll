@@ -14,7 +14,7 @@ define void @sint_to_fp_i32_to_f64(double addrspace(1)* %out, i32 %in) {
 ; uses an SGPR (implicit vcc).
 
 ; SI-LABEL: {{^}}sint_to_fp_i1_f64:
-; SI-DAG: v_cmp_eq_i32_e64 vcc,
+; SI-DAG: v_cmp_eq_u32_e64 vcc,
 ; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}
 ; SI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; SI: buffer_store_dwordx2 v{{\[}}[[ZERO]]:[[SEL]]{{\]}}

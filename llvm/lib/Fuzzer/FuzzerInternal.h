@@ -118,8 +118,6 @@ private:
   void AddToCorpusAndMaybeRerun(const Unit &U);
   void CheckExitOnSrcPos();
 
-  bool UpdateMaxCoverage();
-
   // Trace-based fuzzing: we run a unit with some kind of tracing
   // enabled and record potentially useful mutations. Then
   // We apply these mutations one by one to the unit and run it again.
@@ -165,11 +163,6 @@ private:
 
   size_t MaxInputLen = 0;
   size_t MaxMutationLen = 0;
-
-  // For -print_pcs
-  uintptr_t* PcBuffer = nullptr;
-  size_t PcBufferLen = 0;
-  size_t PcBufferPos = 0, PrevPcBufferPos = 0;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;
