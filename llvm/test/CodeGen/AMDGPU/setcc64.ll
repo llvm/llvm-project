@@ -159,7 +159,7 @@ entry:
 ;;;==========================================================================;;;
 
 ; FUNC-LABEL: {{^}}i64_eq:
-; SI: v_cmp_eq_i64
+; SI: v_cmp_eq_u64
 define void @i64_eq(i32 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
   %0 = icmp eq i64 %a, %b
@@ -169,7 +169,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i64_ne:
-; SI: v_cmp_ne_i64
+; SI: v_cmp_ne_u64
 define void @i64_ne(i32 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
   %0 = icmp ne i64 %a, %b

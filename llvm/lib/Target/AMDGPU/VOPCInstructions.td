@@ -320,10 +320,10 @@ defm V_CMPSX_TRU_F64 : VOPCX_F64 <"v_cmpsx_tru_f64">;
 
 defm V_CMP_F_I32 : VOPC_I32 <"v_cmp_f_i32">;
 defm V_CMP_LT_I32 : VOPC_I32 <"v_cmp_lt_i32", COND_SLT, "v_cmp_gt_i32">;
-defm V_CMP_EQ_I32 : VOPC_I32 <"v_cmp_eq_i32", COND_EQ>;
+defm V_CMP_EQ_I32 : VOPC_I32 <"v_cmp_eq_i32">;
 defm V_CMP_LE_I32 : VOPC_I32 <"v_cmp_le_i32", COND_SLE, "v_cmp_ge_i32">;
 defm V_CMP_GT_I32 : VOPC_I32 <"v_cmp_gt_i32", COND_SGT>;
-defm V_CMP_NE_I32 : VOPC_I32 <"v_cmp_ne_i32", COND_NE>;
+defm V_CMP_NE_I32 : VOPC_I32 <"v_cmp_ne_i32">;
 defm V_CMP_GE_I32 : VOPC_I32 <"v_cmp_ge_i32", COND_SGE>;
 defm V_CMP_T_I32 : VOPC_I32 <"v_cmp_t_i32">;
 
@@ -338,10 +338,10 @@ defm V_CMPX_T_I32 : VOPCX_I32 <"v_cmpx_t_i32">;
 
 defm V_CMP_F_I64 : VOPC_I64 <"v_cmp_f_i64">;
 defm V_CMP_LT_I64 : VOPC_I64 <"v_cmp_lt_i64", COND_SLT, "v_cmp_gt_i64">;
-defm V_CMP_EQ_I64 : VOPC_I64 <"v_cmp_eq_i64", COND_EQ>;
+defm V_CMP_EQ_I64 : VOPC_I64 <"v_cmp_eq_i64">;
 defm V_CMP_LE_I64 : VOPC_I64 <"v_cmp_le_i64", COND_SLE, "v_cmp_ge_i64">;
 defm V_CMP_GT_I64 : VOPC_I64 <"v_cmp_gt_i64", COND_SGT>;
-defm V_CMP_NE_I64 : VOPC_I64 <"v_cmp_ne_i64", COND_NE>;
+defm V_CMP_NE_I64 : VOPC_I64 <"v_cmp_ne_i64">;
 defm V_CMP_GE_I64 : VOPC_I64 <"v_cmp_ge_i64", COND_SGE>;
 defm V_CMP_T_I64 : VOPC_I64 <"v_cmp_t_i64">;
 
@@ -460,8 +460,8 @@ class ICMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> : Pat <
   (inst $src0, $src1)
 >;
 
-def : ICMP_Pattern <COND_EQ, V_CMP_EQ_I32_e64, i32>;
-def : ICMP_Pattern <COND_NE, V_CMP_NE_I32_e64, i32>;
+def : ICMP_Pattern <COND_EQ, V_CMP_EQ_U32_e64, i32>;
+def : ICMP_Pattern <COND_NE, V_CMP_NE_U32_e64, i32>;
 def : ICMP_Pattern <COND_UGT, V_CMP_GT_U32_e64, i32>;
 def : ICMP_Pattern <COND_UGE, V_CMP_GE_U32_e64, i32>;
 def : ICMP_Pattern <COND_ULT, V_CMP_LT_U32_e64, i32>;
@@ -471,8 +471,8 @@ def : ICMP_Pattern <COND_SGE, V_CMP_GE_I32_e64, i32>;
 def : ICMP_Pattern <COND_SLT, V_CMP_LT_I32_e64, i32>;
 def : ICMP_Pattern <COND_SLE, V_CMP_LE_I32_e64, i32>;
 
-def : ICMP_Pattern <COND_EQ, V_CMP_EQ_I64_e64, i64>;
-def : ICMP_Pattern <COND_NE, V_CMP_NE_I64_e64, i64>;
+def : ICMP_Pattern <COND_EQ, V_CMP_EQ_U64_e64, i64>;
+def : ICMP_Pattern <COND_NE, V_CMP_NE_U64_e64, i64>;
 def : ICMP_Pattern <COND_UGT, V_CMP_GT_U64_e64, i64>;
 def : ICMP_Pattern <COND_UGE, V_CMP_GE_U64_e64, i64>;
 def : ICMP_Pattern <COND_ULT, V_CMP_LT_U64_e64, i64>;

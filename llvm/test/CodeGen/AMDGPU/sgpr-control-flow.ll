@@ -69,10 +69,10 @@ endif:
 
 ; SI: BB2_2:
 ; SI: buffer_load_dword [[AVAL:v[0-9]+]]
-; SI: v_cmp_eq_i32_e32 [[CMP_ELSE:vcc]], 0, [[AVAL]]
+; SI: v_cmp_eq_u32_e32 [[CMP_ELSE:vcc]], 0, [[AVAL]]
 ; SI: v_cndmask_b32_e64 [[V_CMP]], 0, -1, [[CMP_ELSE]]
 
-; SI: v_cmp_ne_i32_e32 [[CMP_CMP:vcc]], 0, [[V_CMP]]
+; SI: v_cmp_ne_u32_e32 [[CMP_CMP:vcc]], 0, [[V_CMP]]
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1, [[CMP_CMP]]
 ; SI: buffer_store_dword [[RESULT]]
 define void @sgpr_if_else_valu_cmp_phi_br(i32 addrspace(1)* %out, i32 addrspace(1)* %a, i32 addrspace(1)* %b) {

@@ -447,6 +447,72 @@ TEST_F(ChangeNamespaceTest, FixFunctionNameSpecifiers) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, MoveAndFixGlobalVariables) {
+  std::string Code = "namespace na {\n"
+                     "int GlobA;\n"
+                     "static int GlobAStatic = 0;\n"
+                     "namespace nc { int GlobC; }\n"
+                     "namespace nb {\n"
+                     "int GlobB;\n"
+                     "void f() {\n"
+                     "  int a = GlobA;\n"
+                     "  int b = GlobAStatic;\n"
+                     "  int c = nc::GlobC;\n"
+                     "}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+
+  std::string Expected = "namespace na {\n"
+                         "int GlobA;\n"
+                         "static int GlobAStatic = 0;\n"
+                         "namespace nc { int GlobC; }\n"
+                         "\n"
+                         "} // namespace na\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "int GlobB;\n"
+                         "void f() {\n"
+                         "  int a = na::GlobA;\n"
+                         "  int b = na::GlobAStatic;\n"
+                         "  int c = na::nc::GlobC;\n"
+                         "}\n"
+                         "}  // namespace y\n"
+                         "}  // namespace x\n";
+
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, DoNotFixStaticVariableOfClass) {
+  std::string Code = "namespace na {\n"
+                     "class A {\n"
+                     "public:\n"
+                     "static int A1;\n"
+                     "static int A2;\n"
+                     "}\n"
+                     "static int A::A1 = 0;\n"
+                     "namespace nb {\n"
+                     "void f() { int a = A::A1; int b = A::A2; }"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+
+  std::string Expected = "namespace na {\n"
+                         "class A {\n"
+                         "public:\n"
+                         "static int A1;\n"
+                         "static int A2;\n"
+                         "}\n"
+                         "static int A::A1 = 0;\n"
+                         "\n"
+                         "} // namespace na\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "void f() { int a = na::A::A1; int b = na::A::A2; }"
+                         "}  // namespace y\n"
+                         "}  // namespace x\n";
+
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

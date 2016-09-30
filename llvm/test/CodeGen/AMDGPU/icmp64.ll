@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}test_i64_eq:
-; SI: v_cmp_eq_i64
+; SI: v_cmp_eq_u64
 define void @test_i64_eq(i32 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %cmp = icmp eq i64 %a, %b
   %result = sext i1 %cmp to i32
@@ -11,7 +11,7 @@ define void @test_i64_eq(i32 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
 }
 
 ; SI-LABEL: {{^}}test_i64_ne:
-; SI: v_cmp_ne_i64
+; SI: v_cmp_ne_u64
 define void @test_i64_ne(i32 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %cmp = icmp ne i64 %a, %b
   %result = sext i1 %cmp to i32

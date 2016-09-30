@@ -3,7 +3,7 @@
 ; Test a simple uniform loop that lives inside non-uniform control flow.
 
 ; CHECK-LABEL: {{^}}test1:
-; CHECK: v_cmp_ne_i32_e32 vcc, 0
+; CHECK: v_cmp_ne_u32_e32 vcc, 0
 ; CHECK: s_and_saveexec_b64
 ; CHECK-NEXT: s_xor_b64
 ; CHECK-NEXT: ; mask branch

@@ -623,7 +623,9 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) const {
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.
   const SectionPiece &Piece = *this->getSectionPiece(Offset);
-  assert(Piece.Live);
+  if (!Piece.Live)
+    return 0;
+
   uintX_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;
 }

@@ -230,8 +230,6 @@ ChangeNamespaceTool::ChangeNamespaceTool(
   DiffNewNamespace = joinNamespaces(NewNsSplitted);
 }
 
-// FIXME: handle the following symbols:
-//   - Variable references.
 void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Match old namespace blocks.
   std::string FullOldNs = "::" + OldNamespace;
@@ -303,6 +301,14 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
            IsInMovedNs, unless(isImplicit()))
           .bind("dc"),
       this);
+
+  auto GlobalVarMatcher = varDecl(
+      hasGlobalStorage(), hasParent(namespaceDecl()),
+      unless(anyOf(IsInMovedNs, hasAncestor(namespaceDecl(isAnonymous())))));
+  Finder->addMatcher(declRefExpr(IsInMovedNs, hasAncestor(decl().bind("dc")),
+                                 to(GlobalVarMatcher.bind("var_decl")))
+                         .bind("var_ref"),
+                     this);
 }
 
 void ChangeNamespaceTool::run(
@@ -324,8 +330,19 @@ void ChangeNamespaceTool::run(
   } else if (const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type")) {
     fixTypeLoc(Result, startLocationForType(*TLoc), EndLocationForType(*TLoc),
                *TLoc);
+  } else if (const auto *VarRef = Result.Nodes.getNodeAs<DeclRefExpr>("var_ref")){
+    const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var_decl");
+    assert(Var);
+    if (Var->getCanonicalDecl()->isStaticDataMember())
+      return;
+    std::string Name = Var->getQualifiedNameAsString();
+    const clang::Decl *Context = Result.Nodes.getNodeAs<clang::Decl>("dc");
+    assert(Context && "Empty decl context.");
+    clang::SourceRange VarRefRange = VarRef->getSourceRange();
+    replaceQualifiedSymbolInDeclContext(Result, Context, VarRefRange.getBegin(),
+                                        VarRefRange.getEnd(), Name);
   } else {
-    const auto* Call = Result.Nodes.getNodeAs<clang::CallExpr>("call");
+    const auto *Call = Result.Nodes.getNodeAs<clang::CallExpr>("call");
     assert(Call != nullptr &&"Expecting callback for CallExpr.");
     const clang::FunctionDecl* Func = Call->getDirectCallee();
     assert(Func != nullptr);

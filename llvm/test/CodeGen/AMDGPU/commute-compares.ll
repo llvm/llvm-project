@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; --------------------------------------------------------------------------------
 
 ; GCN-LABEL: {{^}}commute_eq_64_i32:
-; GCN: v_cmp_eq_i32_e32 vcc, 64, v{{[0-9]+}}
+; GCN: v_cmp_eq_u32_e32 vcc, 64, v{{[0-9]+}}
 define void @commute_eq_64_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
@@ -20,7 +20,7 @@ define void @commute_eq_64_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1
 }
 
 ; GCN-LABEL: {{^}}commute_ne_64_i32:
-; GCN: v_cmp_ne_i32_e32 vcc, 64, v{{[0-9]+}}
+; GCN: v_cmp_ne_u32_e32 vcc, 64, v{{[0-9]+}}
 define void @commute_ne_64_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
@@ -35,7 +35,7 @@ define void @commute_ne_64_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1
 ; FIXME: Why isn't this being folded as a constant?
 ; GCN-LABEL: {{^}}commute_ne_litk_i32:
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3039
-; GCN: v_cmp_ne_i32_e32 vcc, [[K]], v{{[0-9]+}}
+; GCN: v_cmp_ne_u32_e32 vcc, [[K]], v{{[0-9]+}}
 define void @commute_ne_litk_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
@@ -172,7 +172,7 @@ define void @commute_sle_5_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1
 ; --------------------------------------------------------------------------------
 
 ; GCN-LABEL: {{^}}commute_eq_64_i64:
-; GCN: v_cmp_eq_i64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
+; GCN: v_cmp_eq_u64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
 define void @commute_eq_64_i64(i32 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
@@ -185,7 +185,7 @@ define void @commute_eq_64_i64(i32 addrspace(1)* %out, i64 addrspace(1)* %in) #1
 }
 
 ; GCN-LABEL: {{^}}commute_ne_64_i64:
-; GCN: v_cmp_ne_i64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
+; GCN: v_cmp_ne_u64_e32 vcc, 64, v{{\[[0-9]+:[0-9]+\]}}
 define void @commute_ne_64_i64(i32 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
@@ -697,7 +697,7 @@ define void @commute_uno_2.0_f64(i32 addrspace(1)* %out, double addrspace(1)* %i
 ; SIShrinkInstructions, this was using the VOP3 compare.
 
 ; GCN-LABEL: {{^}}commute_frameindex:
-; GCN: v_cmp_eq_i32_e32 vcc, 0, v{{[0-9]+}}
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v{{[0-9]+}}
 define void @commute_frameindex(i32 addrspace(1)* nocapture %out) #0 {
 entry:
   %stack0 = alloca i32

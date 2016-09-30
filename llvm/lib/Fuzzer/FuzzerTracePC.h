@@ -19,6 +19,8 @@ namespace fuzzer {
 
 class TracePC {
  public:
+  static const size_t kFeatureSetSize = ValueBitMap::kNumberOfItems;
+
   void HandleTrace(uint32_t *guard, uintptr_t PC);
   void HandleInit(uint32_t *start, uint32_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
@@ -58,6 +60,8 @@ class TracePC {
 
   void PrintCoverage();
 
+  bool HasFeature(size_t Idx) { return CounterMap.Get(Idx); }
+
 private:
   bool UseCounters = false;
   bool UseValueProfile = false;
@@ -86,15 +90,6 @@ private:
 
   ValueBitMap CounterMap;
   ValueBitMap ValueProfileMap;
-
-  struct Feature {
-    size_t Count;
-    size_t SmallestElementIdx;
-    size_t SmallestElementSize;
-  };
-
-  static const size_t kFeatureSetSize = ValueBitMap::kNumberOfItems;
-  Feature FeatureSet[kFeatureSetSize];
 };
 
 extern TracePC TPC;

@@ -1,4 +1,3 @@
-RUN: LLVMFuzzer-SimpleTest         -print_pcs=1 -seed=1 2>&1 | FileCheck %s --check-prefix=PCS
 RUN: LLVMFuzzer-SimpleTest-TracePC -print_pcs=1 -seed=1 2>&1 | FileCheck %s --check-prefix=PCS
 PCS-NOT: NEW_PC
 PCS:INITED

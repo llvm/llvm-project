@@ -18,7 +18,7 @@ define void @round_f64(double addrspace(1)* %out, double %x) #0 {
 ; SI-DAG: v_not_b32_e32
 ; SI-DAG: v_not_b32_e32
 
-; SI-DAG: v_cmp_eq_i32
+; SI-DAG: v_cmp_eq_u32
 
 ; SI-DAG: s_mov_b32 [[BFIMASK:s[0-9]+]], 0x7fffffff
 ; SI-DAG: v_cmp_gt_i32

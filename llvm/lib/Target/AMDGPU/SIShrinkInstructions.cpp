@@ -237,13 +237,13 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
     return;
 
   // eq/ne is special because the imm16 can be treated as signed or unsigned,
-  // and initially selectd to the signed versions.
-  if (SOPKOpc == AMDGPU::S_CMPK_EQ_I32 || SOPKOpc == AMDGPU::S_CMPK_LG_I32) {
+  // and initially selectd to the unsigned versions.
+  if (SOPKOpc == AMDGPU::S_CMPK_EQ_U32 || SOPKOpc == AMDGPU::S_CMPK_LG_U32) {
     bool HasUImm;
     if (isKImmOrKUImmOperand(TII, Src1, HasUImm)) {
-      if (HasUImm) {
-        SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_I32) ?
-          AMDGPU::S_CMPK_EQ_U32 : AMDGPU::S_CMPK_LG_U32;
+      if (!HasUImm) {
+        SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_U32) ?
+          AMDGPU::S_CMPK_EQ_I32 : AMDGPU::S_CMPK_LG_I32;
       }
 
       MI.setDesc(TII->get(SOPKOpc));

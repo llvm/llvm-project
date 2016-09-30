@@ -109,31 +109,6 @@ void TracePC::PrintCoverage() {
   }
 }
 
-
-void TracePC::UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize) {
-  if (!CurrentElementSize) return;
-  for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++) {
-    if (!CounterMap.Get(Idx)) continue;
-    Feature &Fe = FeatureSet[Idx];
-    Fe.Count++;
-    if (!Fe.SmallestElementSize || Fe.SmallestElementSize > CurrentElementSize) {
-      Fe.SmallestElementIdx = CurrentElementIdx;
-      Fe.SmallestElementSize = CurrentElementSize;
-    }
-  }
-}
-
-void TracePC::PrintFeatureSet() {
-  Printf("[id: cnt idx sz] ");
-  for (size_t i = 0; i < kFeatureSetSize; i++) {
-    auto &Fe = FeatureSet[i];
-    if (!Fe.Count) continue;
-    Printf("[%zd: %zd %zd %zd] ", i, Fe.Count, Fe.SmallestElementIdx,
-           Fe.SmallestElementSize);
-  }
-  Printf("\n");
-}
-
 } // namespace fuzzer
 
 extern "C" {
