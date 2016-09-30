@@ -201,10 +201,12 @@ static void InterceptHooks();
 // want to call it in the __asan_init interceptor.
 WRAP_W_V(__asan_should_detect_stack_use_after_return)
 WRAP_W_V(__asan_should_detect_stack_use_after_scope)
+WRAP_W_V(__asan_get_shadow_memory_dynamic_address)
 
 extern "C" {
   int __asan_option_detect_stack_use_after_return;
   int __asan_option_detect_stack_use_after_scope;
+  uptr __asan_shadow_memory_dynamic_address;
 
   // Manually wrap __asan_init as we need to initialize
   // __asan_option_detect_stack_use_after_return afterwards.
@@ -220,6 +222,8 @@ extern "C" {
         (__asan_should_detect_stack_use_after_return() != 0);
     __asan_option_detect_stack_use_after_scope =
         (__asan_should_detect_stack_use_after_scope() != 0);
+    __asan_shadow_memory_dynamic_address =
+        (uptr)__asan_get_shadow_memory_dynamic_address();
 
     InterceptHooks();
   }

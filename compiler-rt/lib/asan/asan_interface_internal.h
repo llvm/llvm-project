@@ -158,6 +158,9 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   /* OPTIONAL */ const char* __asan_default_options();
 
+  SANITIZER_INTERFACE_ATTRIBUTE
+  extern uptr __asan_shadow_memory_dynamic_address;
+
   // Global flag, copy of ASAN_OPTIONS=detect_stack_use_after_return
   SANITIZER_INTERFACE_ATTRIBUTE
   extern int __asan_option_detect_stack_use_after_return;
