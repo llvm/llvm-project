@@ -69,6 +69,24 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
                                             std::pair<int, int> Default,
                                             bool OnlyFirstRequired = false);
 
+/// \returns VMCNT bit mask for given isa \p Version.
+unsigned getVmcntMask(IsaVersion Version);
+
+/// \returns VMCNT bit shift for given isa \p Version.
+unsigned getVmcntShift(IsaVersion Version);
+
+/// \returns EXPCNT bit mask for given isa \p Version.
+unsigned getExpcntMask(IsaVersion Version);
+
+/// \returns EXPCNT bit shift for given isa \p Version.
+unsigned getExpcntShift(IsaVersion Version);
+
+/// \returns LGKMCNT bit mask for given isa \p Version.
+unsigned getLgkmcntMask(IsaVersion Version);
+
+/// \returns LGKMCNT bit shift for given isa \p Version.
+unsigned getLgkmcntShift(IsaVersion Version);
+
 unsigned getInitialPSInputAddr(const Function &F);
 
 bool isShader(CallingConv::ID cc);

@@ -505,17 +505,17 @@ std::string ProcessWinMiniDump::Impl::GetMiniDumpString(RVA rva) const {
   }
   auto md_string = reinterpret_cast<const MINIDUMP_STRING *>(
       static_cast<const char *>(m_base_addr) + rva);
-  auto source_start = reinterpret_cast<const UTF16 *>(md_string->Buffer);
+  auto source_start = reinterpret_cast<const llvm::UTF16 *>(md_string->Buffer);
   const auto source_length = ::wcslen(md_string->Buffer);
   const auto source_end = source_start + source_length;
   result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT *
                 source_length); // worst case length
-  auto result_start = reinterpret_cast<UTF8 *>(&result[0]);
+  auto result_start = reinterpret_cast<llvm::UTF8 *>(&result[0]);
   const auto result_end = result_start + result.size();
-  ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end,
-                     strictConversion);
+  llvm::ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end,
+                           llvm::ConversionFlags::strictConversion);
   const auto result_size =
-      std::distance(reinterpret_cast<UTF8 *>(&result[0]), result_start);
+      std::distance(reinterpret_cast<llvm::UTF8 *>(&result[0]), result_start);
   result.resize(result_size); // shrink to actual length
   return result;
 }

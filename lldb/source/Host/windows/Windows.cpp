@@ -32,21 +32,21 @@ int _chdir(const char *path);
 
 namespace {
 bool utf8ToWide(const char *utf8, wchar_t *buf, size_t bufSize) {
-  const UTF8 *sourceStart = reinterpret_cast<const UTF8 *>(utf8);
+  const llvm::UTF8 *sourceStart = reinterpret_cast<const llvm::UTF8 *>(utf8);
   size_t sourceLen = strlen(utf8) + 1 /* convert null too */;
-  UTF16 *target = reinterpret_cast<UTF16 *>(buf);
-  ConversionFlags flags = strictConversion;
-  return ConvertUTF8toUTF16(&sourceStart, sourceStart + sourceLen, &target,
-                            target + bufSize, flags) == conversionOK;
+  llvm::UTF16 *target = reinterpret_cast<llvm::UTF16 *>(buf);
+  llvm::ConversionFlags flags = llvm::strictConversion;
+  return llvm::ConvertUTF8toUTF16(&sourceStart, sourceStart + sourceLen, &target,
+                            target + bufSize, flags) == llvm::conversionOK;
 }
 
 bool wideToUtf8(const wchar_t *wide, char *buf, size_t bufSize) {
-  const UTF16 *sourceStart = reinterpret_cast<const UTF16 *>(wide);
+  const llvm::UTF16 *sourceStart = reinterpret_cast<const llvm::UTF16 *>(wide);
   size_t sourceLen = wcslen(wide) + 1 /* convert null too */;
-  UTF8 *target = reinterpret_cast<UTF8 *>(buf);
-  ConversionFlags flags = strictConversion;
-  return ConvertUTF16toUTF8(&sourceStart, sourceStart + sourceLen, &target,
-                            target + bufSize, flags) == conversionOK;
+  llvm::UTF8 *target = reinterpret_cast<llvm::UTF8 *>(buf);
+  llvm::ConversionFlags flags = llvm::strictConversion;
+  return llvm::ConvertUTF16toUTF8(&sourceStart, sourceStart + sourceLen, &target,
+                            target + bufSize, flags) == llvm::conversionOK;
 }
 }
 

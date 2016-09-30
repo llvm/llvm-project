@@ -41,6 +41,7 @@
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 namespace {
 
@@ -2008,15 +2009,16 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   int CntShift;
   int CntMask;
 
+  IsaVersion IV = getIsaVersion(getSTI().getFeatureBits());
   if (CntName == "vmcnt") {
-    CntMask = 0xf;
-    CntShift = 0;
+    CntMask = getVmcntMask(IV);
+    CntShift = getVmcntShift(IV);
   } else if (CntName == "expcnt") {
-    CntMask = 0x7;
-    CntShift = 4;
+    CntMask = getExpcntMask(IV);
+    CntShift = getExpcntShift(IV);
   } else if (CntName == "lgkmcnt") {
-    CntMask = 0xf;
-    CntShift = 8;
+    CntMask = getLgkmcntMask(IV);
+    CntShift = getLgkmcntShift(IV);
   } else {
     return true;
   }
