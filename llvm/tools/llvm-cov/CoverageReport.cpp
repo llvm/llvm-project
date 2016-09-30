@@ -120,7 +120,7 @@ raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
 
 /// \brief Determine the length of the longest common prefix of the strings in
 /// \p Strings.
-unsigned getLongestCommonPrefixLen(ArrayRef<StringRef> Strings) {
+unsigned getLongestCommonPrefixLen(ArrayRef<std::string> Strings) {
   unsigned LCP = Strings[0].size();
   for (unsigned I = 1, E = Strings.size(); LCP > 0 && I < E; ++I) {
     auto Mismatch =
@@ -215,7 +215,7 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
   OS << "\n";
 }
 
-void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
+void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
                                            raw_ostream &OS) {
   bool isFirst = true;
   for (StringRef Filename : Files) {
@@ -261,7 +261,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
 std::vector<FileCoverageSummary>
 CoverageReport::prepareFileReports(const coverage::CoverageMapping &Coverage,
                                    FileCoverageSummary &Totals,
-                                   ArrayRef<StringRef> Files) {
+                                   ArrayRef<std::string> Files) {
   std::vector<FileCoverageSummary> FileReports;
   unsigned LCP = 0;
   if (Files.size() > 1)
@@ -298,12 +298,14 @@ CoverageReport::prepareFileReports(const coverage::CoverageMapping &Coverage,
 }
 
 void CoverageReport::renderFileReports(raw_ostream &OS) const {
-  std::vector<StringRef> UniqueSourceFiles = Coverage.getUniqueSourceFiles();
+  std::vector<std::string> UniqueSourceFiles;
+  for (StringRef SF : Coverage.getUniqueSourceFiles())
+    UniqueSourceFiles.emplace_back(SF.str());
   renderFileReports(OS, UniqueSourceFiles);
 }
 
 void CoverageReport::renderFileReports(raw_ostream &OS,
-                                       ArrayRef<StringRef> Files) const {
+                                       ArrayRef<std::string> Files) const {
   FileCoverageSummary Totals("TOTAL");
   auto FileReports = prepareFileReports(Coverage, Totals, Files);
 
