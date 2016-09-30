@@ -5,6 +5,10 @@
 # RUN: ld.lld -o %t --script %t.script %t.o -shared
 # RUN: llvm-readobj -elf-output-style=GNU -l %t | FileCheck %s
 
+# RUN: echo "SECTIONS {foo : {*(foo*)} }" > %t.script
+# RUN: ld.lld -o %t --script %t.script %t.o -shared
+# RUN: llvm-readobj -elf-output-style=GNU -l %t | FileCheck %s
+
 # There is not enough address space available for the header, so just start the PT_LOAD
 # after it.
 
@@ -16,7 +20,7 @@
 # CHECK:      Section to Segment mapping:
 # CHECK-NEXT:  Segment Sections...
 # CHECK-NEXT:   00
-# CHECK-NEXT:   01     foo .dynsym .hash .dynstr
+# CHECK-NEXT:   01     foo .text .dynsym .hash .dynstr
 
 .section foo, "a"
 .quad 0

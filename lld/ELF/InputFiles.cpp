@@ -720,9 +720,10 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
   return Obj;
 }
 
+// Wraps a binary blob with an ELF header and footer
+// so that we can link it as a regular ELF file.
 template <class ELFT> InputFile *BinaryFile::createELF() {
-  // Wrap the binary blob with an ELF header and footer
-  // so that we can link it as a regular ELF file.
+  // Fill the ELF file header.
   ELFCreator<ELFT> ELF(ET_REL, Config->EMachine);
   auto DataSec = ELF.addSection(".data");
   DataSec.Header->sh_flags = SHF_ALLOC;
@@ -730,33 +731,35 @@ template <class ELFT> InputFile *BinaryFile::createELF() {
   DataSec.Header->sh_type = SHT_PROGBITS;
   DataSec.Header->sh_addralign = 8;
 
+  // Replace non-alphanumeric characters with '_'.
   std::string Filepath = MB.getBufferIdentifier();
   std::transform(Filepath.begin(), Filepath.end(), Filepath.begin(),
                  [](char C) { return isalnum(C) ? C : '_'; });
-  std::string StartSym = "_binary_" + Filepath + "_start";
-  std::string EndSym = "_binary_" + Filepath + "_end";
-  std::string SizeSym = "_binary_" + Filepath + "_size";
 
+  // Add _start, _end and _size symbols.
+  std::string StartSym = "_binary_" + Filepath + "_start";
   auto SSym = ELF.addSymbol(StartSym);
   SSym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
   SSym.Sym->st_shndx = DataSec.Index;
 
+  std::string EndSym = "_binary_" + Filepath + "_end";
   auto ESym = ELF.addSymbol(EndSym);
   ESym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
   ESym.Sym->st_shndx = DataSec.Index;
   ESym.Sym->st_value = MB.getBufferSize();
 
+  std::string SizeSym = "_binary_" + Filepath + "_size";
   auto SZSym = ELF.addSymbol(SizeSym);
   SZSym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
   SZSym.Sym->st_shndx = SHN_ABS;
   SZSym.Sym->st_value = MB.getBufferSize();
 
+  // Fix the ELF file layout and write it down to ELFData uint8_t vector.
   std::size_t Size = ELF.layout();
   ELFData.resize(Size);
-
   ELF.write(ELFData.data());
 
-  // .data
+  // Fill .data section with actual data.
   std::copy(MB.getBufferStart(), MB.getBufferEnd(),
             ELFData.data() + DataSec.Header->sh_offset);
 

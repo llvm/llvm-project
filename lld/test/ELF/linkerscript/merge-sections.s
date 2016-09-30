@@ -1,7 +1,10 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 
-# RUN: echo "SECTIONS {.foo : { begin = .; *(.foo.*) end = .;} }" > %t.script
+# RUN: echo "SECTIONS { \
+# RUN:   . = SIZEOF_HEADERS; \
+# RUN:   .foo : { begin = .; *(.foo.*) end = .;} \
+# RUN: }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t -shared
 # RUN: llvm-readobj -s -t %t1 | FileCheck %s
 
@@ -58,6 +61,7 @@
 # CHECK-NEXT:   Type:
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:     SHF_EXECINSTR
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Address: 0x[[ADDR2:.*]]
 # CHECK-NEXT:   Offset: 0x[[ADDR2]]

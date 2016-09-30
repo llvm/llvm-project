@@ -90,6 +90,14 @@
 #ifndef LLVM_SUPPORT_CONVERTUTF_H
 #define LLVM_SUPPORT_CONVERTUTF_H
 
+#include <string>
+#include <cstddef>
+
+// Wrap everything in namespace llvm so that programs can link with llvm and
+// their own version of the unicode libraries.
+
+namespace llvm {
+
 /* ---------------------------------------------------------------------
     The following 4 definitions are compiler-specific.
     The C standard does not guarantee that wchar_t has at least
@@ -126,11 +134,6 @@ typedef enum {
   strictConversion = 0,
   lenientConversion
 } ConversionFlags;
-
-/* This is for C++ and does no harm in C */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 ConversionResult ConvertUTF8toUTF16 (
   const UTF8** sourceStart, const UTF8* sourceEnd,
@@ -174,16 +177,9 @@ Boolean isLegalUTF8String(const UTF8 **source, const UTF8 *sourceEnd);
 
 unsigned getNumBytesForUTF8(UTF8 firstByte);
 
-#ifdef __cplusplus
-}
-
 /*************************************************************************/
 /* Below are LLVM-specific wrappers of the functions above. */
 
-#include <string>
-#include <cstddef>
-
-namespace llvm {
 template <typename T> class ArrayRef;
 template <typename T> class SmallVectorImpl;
 class StringRef;
@@ -291,9 +287,5 @@ bool convertUTF8ToUTF16String(StringRef SrcUTF8,
                               SmallVectorImpl<UTF16> &DstUTF16);
 
 } /* end namespace llvm */
-
-#endif
-
-/* --------------------------------------------------------------------- */
 
 #endif

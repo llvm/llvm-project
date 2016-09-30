@@ -3045,7 +3045,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case SEMA_DECL_REFS:
-      if (Record.size() != 2) {
+      if (Record.size() != 3) {
         Error("Invalid SEMA_DECL_REFS block");
         return Failure;
       }
@@ -7104,12 +7104,14 @@ void ASTReader::UpdateSema() {
   // Load the offsets of the declarations that Sema references.
   // They will be lazily deserialized when needed.
   if (!SemaDeclRefs.empty()) {
-    assert(SemaDeclRefs.size() % 2 == 0);
-    for (unsigned I = 0; I != SemaDeclRefs.size(); I += 2) {
+    assert(SemaDeclRefs.size() % 3 == 0);
+    for (unsigned I = 0; I != SemaDeclRefs.size(); I += 3) {
       if (!SemaObj->StdNamespace)
         SemaObj->StdNamespace = SemaDeclRefs[I];
       if (!SemaObj->StdBadAlloc)
         SemaObj->StdBadAlloc = SemaDeclRefs[I+1];
+      if (!SemaObj->StdAlignValT)
+        SemaObj->StdAlignValT = SemaDeclRefs[I+2];
     }
     SemaDeclRefs.clear();
   }

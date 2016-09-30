@@ -1,5 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: echo "SECTIONS { \
+// RUN:       . = SIZEOF_HEADERS; \
 // RUN:       .R_ARM_JUMP24_callee_1 : { *(.R_ARM_JUMP24_callee_low) } \
 // RUN:       .R_ARM_THM_JUMP_callee_1 : { *(.R_ARM_THM_JUMP_callee_low)} \
 // RUN:       .text : { *(.text) } \

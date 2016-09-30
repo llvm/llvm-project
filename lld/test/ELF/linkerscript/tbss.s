@@ -1,6 +1,11 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: echo "SECTIONS { foo : { *(foo) } bar : { *(bar) } }" > %t.script
+# RUN: echo "SECTIONS { \
+# RUN:   . = SIZEOF_HEADERS; \
+# RUN:   .text : { *(.text) } \
+# RUN:   foo : { *(foo) } \
+# RUN:   bar : { *(bar) } \
+# RUN: }" > %t.script
 # RUN: ld.lld -T %t.script %t.o -o %t
 # RUN: llvm-readobj -s %t | FileCheck %s
 

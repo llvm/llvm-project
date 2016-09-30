@@ -119,16 +119,17 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *i,
   begin = reinterpret_cast<unsigned char const *>(&*(SourceLine.begin() + *i));
   end = begin + (SourceLine.size() - *i);
   
-  if (isLegalUTF8Sequence(begin, end)) {
-    UTF32 c;
-    UTF32 *cptr = &c;
+  if (llvm::isLegalUTF8Sequence(begin, end)) {
+    llvm::UTF32 c;
+    llvm::UTF32 *cptr = &c;
     unsigned char const *original_begin = begin;
-    unsigned char const *cp_end = begin+getNumBytesForUTF8(SourceLine[*i]);
+    unsigned char const *cp_end =
+        begin + llvm::getNumBytesForUTF8(SourceLine[*i]);
 
-    ConversionResult res = ConvertUTF8toUTF32(&begin, cp_end, &cptr, cptr+1,
-                                              strictConversion);
+    llvm::ConversionResult res = llvm::ConvertUTF8toUTF32(
+        &begin, cp_end, &cptr, cptr + 1, llvm::strictConversion);
     (void)res;
-    assert(conversionOK==res);
+    assert(llvm::conversionOK == res);
     assert(0 < begin-original_begin
            && "we must be further along in the string now");
     *i += begin-original_begin;

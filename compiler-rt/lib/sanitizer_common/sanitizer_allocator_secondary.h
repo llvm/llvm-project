@@ -36,8 +36,7 @@ class LargeMmapAllocator {
     if (alignment > page_size_)
       map_size += alignment;
     // Overflow.
-    if (map_size < size)
-      return ReturnNullOrDie();
+    if (map_size < size) return ReturnNullOrDieOnBadRequest();
     uptr map_beg = reinterpret_cast<uptr>(
         MmapOrDie(map_size, "LargeMmapAllocator"));
     CHECK(IsAligned(map_beg, page_size_));
@@ -73,10 +72,18 @@ class LargeMmapAllocator {
     return reinterpret_cast<void*>(res);
   }
 
-  void *ReturnNullOrDie() {
-    if (atomic_load(&may_return_null_, memory_order_acquire))
-      return nullptr;
-    ReportAllocatorCannotReturnNull();
+  bool MayReturnNull() const {
+    return atomic_load(&may_return_null_, memory_order_acquire);
+  }
+
+  void *ReturnNullOrDieOnBadRequest() {
+    if (MayReturnNull()) return nullptr;
+    ReportAllocatorCannotReturnNull(false);
+  }
+
+  void *ReturnNullOrDieOnOOM() {
+    if (MayReturnNull()) return nullptr;
+    ReportAllocatorCannotReturnNull(true);
   }
 
   void SetMayReturnNull(bool may_return_null) {

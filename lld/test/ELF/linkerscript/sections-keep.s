@@ -34,6 +34,7 @@
 ## first one doesn't have KEEP, the second one does. If section that have
 ## KEEP is the first in order then section is NOT collected.
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  .keep : { KEEP(*(.keep)) } \
 # RUN:  .nokeep : { *(.keep) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t1 --script %t.script %t
@@ -42,17 +43,18 @@
 # MIXED1-NEXT: Idx Name          Size
 # MIXED1-NEXT:   0               00000000
 # MIXED1-NEXT:   1 .keep         00000004
-# MIXED1-NEXT:   2 .temp         00000004
-# MIXED1-NEXT:   3 .text         00000007
-# MIXED1-NEXT:   4 .symtab       00000060
-# MIXED1-NEXT:   5 .shstrtab     0000002d
-# MIXED1-NEXT:   6 .strtab       00000012
+# MIXED1-NEXT:   2 .text         00000007 00000000000000ec TEXT DATA
+# MIXED1-NEXT:   3 .temp         00000004 00000000000000f3 DATA
+# MIXED1-NEXT:   4 .symtab       00000060 0000000000000000
+# MIXED1-NEXT:   5 .shstrtab     0000002d 0000000000000000
+# MIXED1-NEXT:   6 .strtab       00000012 0000000000000000
 
 ## The same, but now section without KEEP is at first place.
 ## gold and bfd linkers disagree here. gold collects .keep while
 ## bfd keeps it. Our current behavior is compatible with bfd although
 ## we can choose either way.
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  .nokeep : { *(.keep) } \
 # RUN:  .keep : { KEEP(*(.keep)) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t1 --script %t.script %t
@@ -60,12 +62,12 @@
 # MIXED2:      Sections:
 # MIXED2-NEXT: Idx Name          Size
 # MIXED2-NEXT:   0               00000000
-# MIXED2-NEXT:   1 .nokeep       00000004
-# MIXED2-NEXT:   2 .temp         00000004
-# MIXED2-NEXT:   3 .text         00000007
-# MIXED2-NEXT:   4 .symtab       00000060
-# MIXED2-NEXT:   5 .shstrtab     0000002f
-# MIXED2-NEXT:   6 .strtab       00000012
+# MIXED2-NEXT:   1 .nokeep       00000004 00000000000000e8 DATA
+# MIXED2-NEXT:   2 .text         00000007 00000000000000ec TEXT DATA
+# MIXED2-NEXT:   3 .temp         00000004 00000000000000f3 DATA
+# MIXED2-NEXT:   4 .symtab       00000060 0000000000000000
+# MIXED2-NEXT:   5 .shstrtab     0000002f 0000000000000000
+# MIXED2-NEXT:   6 .strtab       00000012 0000000000000000
 
 .global _start
 _start:

@@ -213,6 +213,11 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, SourceLocation Loc,
 }
 
 ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
+  auto *Coroutine = checkCoroutineContext(*this, Loc, "co_await");
+  if (!Coroutine) {
+    CorrectDelayedTyposInExpr(E);
+    return ExprError();
+  }
   if (E->getType()->isPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
     if (R.isInvalid()) return ExprError();
@@ -222,6 +227,7 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
   ExprResult Awaitable = buildOperatorCoawaitCall(*this, S, Loc, E);
   if (Awaitable.isInvalid())
     return ExprError();
+
   return BuildCoawaitExpr(Loc, Awaitable.get());
 }
 ExprResult Sema::BuildCoawaitExpr(SourceLocation Loc, Expr *E) {
@@ -275,8 +281,10 @@ static ExprResult buildPromiseCall(Sema &S, FunctionScopeInfo *Coroutine,
 
 ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
   auto *Coroutine = checkCoroutineContext(*this, Loc, "co_yield");
-  if (!Coroutine)
+  if (!Coroutine) {
+    CorrectDelayedTyposInExpr(E);
     return ExprError();
+  }
 
   // Build yield_value call.
   ExprResult Awaitable =
@@ -325,6 +333,11 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
 }
 
 StmtResult Sema::ActOnCoreturnStmt(SourceLocation Loc, Expr *E) {
+  auto *Coroutine = checkCoroutineContext(*this, Loc, "co_return");
+  if (!Coroutine) {
+    CorrectDelayedTyposInExpr(E);
+    return StmtError();
+  }
   return BuildCoreturnStmt(Loc, E);
 }
 StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E) {

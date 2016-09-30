@@ -3262,15 +3262,15 @@ bool Sema::CheckObjCString(Expr *Arg) {
   if (Literal->containsNonAsciiOrNull()) {
     StringRef String = Literal->getString();
     unsigned NumBytes = String.size();
-    SmallVector<UTF16, 128> ToBuf(NumBytes);
-    const UTF8 *FromPtr = (const UTF8 *)String.data();
-    UTF16 *ToPtr = &ToBuf[0];
-    
-    ConversionResult Result = ConvertUTF8toUTF16(&FromPtr, FromPtr + NumBytes,
-                                                 &ToPtr, ToPtr + NumBytes,
-                                                 strictConversion);
+    SmallVector<llvm::UTF16, 128> ToBuf(NumBytes);
+    const llvm::UTF8 *FromPtr = (const llvm::UTF8 *)String.data();
+    llvm::UTF16 *ToPtr = &ToBuf[0];
+
+    llvm::ConversionResult Result =
+        llvm::ConvertUTF8toUTF16(&FromPtr, FromPtr + NumBytes, &ToPtr,
+                                 ToPtr + NumBytes, llvm::strictConversion);
     // Check for conversion failure.
-    if (Result != conversionOK)
+    if (Result != llvm::conversionOK)
       Diag(Arg->getLocStart(),
            diag::warn_cfstring_truncated) << Arg->getSourceRange();
   }
@@ -4777,16 +4777,16 @@ CheckFormatHandler::HandleInvalidConversionSpecifier(unsigned argIndex,
   // hex value.
   std::string CodePointStr;
   if (!llvm::sys::locale::isPrint(*csStart)) {
-    UTF32 CodePoint;
-    const UTF8 **B = reinterpret_cast<const UTF8 **>(&csStart);
-    const UTF8 *E =
-        reinterpret_cast<const UTF8 *>(csStart + csLen);
-    ConversionResult Result =
-        llvm::convertUTF8Sequence(B, E, &CodePoint, strictConversion);
+    llvm::UTF32 CodePoint;
+    const llvm::UTF8 **B = reinterpret_cast<const llvm::UTF8 **>(&csStart);
+    const llvm::UTF8 *E =
+        reinterpret_cast<const llvm::UTF8 *>(csStart + csLen);
+    llvm::ConversionResult Result =
+        llvm::convertUTF8Sequence(B, E, &CodePoint, llvm::strictConversion);
 
-    if (Result != conversionOK) {
+    if (Result != llvm::conversionOK) {
       unsigned char FirstChar = *csStart;
-      CodePoint = (UTF32)FirstChar;
+      CodePoint = (llvm::UTF32)FirstChar;
     }
 
     llvm::raw_string_ostream OS(CodePointStr);

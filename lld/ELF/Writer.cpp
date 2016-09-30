@@ -466,12 +466,17 @@ static bool compareSectionsNonScript(OutputSectionBase<ELFT> *A,
   if (AIsWritable != BIsWritable)
     return BIsWritable;
 
-  // For a corresponding reason, put non exec sections first (the program
-  // header PT_LOAD is not executable).
-  bool AIsExec = AFlags & SHF_EXECINSTR;
-  bool BIsExec = BFlags & SHF_EXECINSTR;
-  if (AIsExec != BIsExec)
-    return BIsExec;
+  if (!ScriptConfig->HasSections) {
+    // For a corresponding reason, put non exec sections first (the program
+    // header PT_LOAD is not executable).
+    // We only do that if we are not using linker scripts, since with linker
+    // scripts ro and rx sections are in the same PT_LOAD, so their relative
+    // order is not important.
+    bool AIsExec = AFlags & SHF_EXECINSTR;
+    bool BIsExec = BFlags & SHF_EXECINSTR;
+    if (AIsExec != BIsExec)
+      return BIsExec;
+  }
 
   // If we got here we know that both A and B are in the same PT_LOAD.
 
