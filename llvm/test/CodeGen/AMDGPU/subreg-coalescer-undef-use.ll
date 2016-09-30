@@ -8,7 +8,7 @@ target triple="amdgcn--"
 ; CHECK-NEXT: s_load_dwordx2 s[4:5], s[0:1], 0xb
 ; CHECK-NEXT: s_waitcnt lgkmcnt(0)
 ; CHECK: v_mbcnt_lo_u32_b32_e64
-; CHECK-NEXT: v_cmp_eq_i32_e32 vcc, 0, v0
+; CHECK-NEXT: v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT: s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT: s_xor_b64 s[2:3], exec, s[2:3]
 ; BB0_1:

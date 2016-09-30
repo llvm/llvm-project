@@ -1958,9 +1958,11 @@ X86TargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
   case MVT::f32: case MVT::f64:
   case MVT::v16i8: case MVT::v8i16: case MVT::v4i32: case MVT::v2i64:
   case MVT::v4f32: case MVT::v2f64:
-  case MVT::v32i8: case MVT::v8i32: case MVT::v4i64: case MVT::v8f32:
-  case MVT::v4f64:
-    RRC = &X86::VR128RegClass;
+  case MVT::v32i8: case MVT::v16i16: case MVT::v8i32: case MVT::v4i64:
+  case MVT::v8f32: case MVT::v4f64:
+  case MVT::v64i8: case MVT::v32i16: case MVT::v16i32: case MVT::v8i64:
+  case MVT::v16f32: case MVT::v8f64:
+    RRC = &X86::VR128XRegClass;
     break;
   }
   return std::make_pair(RRC, Cost);

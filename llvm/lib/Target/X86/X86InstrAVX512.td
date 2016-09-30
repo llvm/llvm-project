@@ -2816,13 +2816,13 @@ def VMOVUPSZ256rm_NOVLX : I<0, Pseudo, (outs VR256X:$dst), (ins f256mem:$src),
 }
 
 let isPseudo = 1, mayStore = 1, hasSideEffects = 0 in {
-def VMOVAPSZ128mr_NOVLX : I<0, Pseudo, (outs f128mem:$dst), (ins VR128X:$src),
+def VMOVAPSZ128mr_NOVLX : I<0, Pseudo, (outs), (ins f128mem:$dst, VR128X:$src),
                             "", []>;
-def VMOVAPSZ256mr_NOVLX : I<0, Pseudo, (outs f256mem:$dst), (ins VR256X:$src),
+def VMOVAPSZ256mr_NOVLX : I<0, Pseudo, (outs), (ins f256mem:$dst, VR256X:$src),
                             "", []>;
-def VMOVUPSZ128mr_NOVLX : I<0, Pseudo, (outs f128mem:$dst), (ins VR128X:$src),
+def VMOVUPSZ128mr_NOVLX : I<0, Pseudo, (outs), (ins f128mem:$dst, VR128X:$src),
                             "", []>;
-def VMOVUPSZ256mr_NOVLX : I<0, Pseudo, (outs f256mem:$dst), (ins VR256X:$src),
+def VMOVUPSZ256mr_NOVLX : I<0, Pseudo, (outs), (ins f256mem:$dst, VR256X:$src),
                             "", []>;
 }
 

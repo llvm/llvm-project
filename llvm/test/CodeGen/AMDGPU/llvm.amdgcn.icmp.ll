@@ -5,7 +5,7 @@ declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
 
 ; GCN-LABEL: {{^}}v_icmp_i32_eq:
-; GCN: v_cmp_eq_i32_e64
+; GCN: v_cmp_eq_u32_e64
 define void @v_icmp_i32_eq(i64 addrspace(1)* %out, i32 %src) {
   %result = call i64 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 32)
   store i64 %result, i64 addrspace(1)* %out
@@ -13,14 +13,14 @@ define void @v_icmp_i32_eq(i64 addrspace(1)* %out, i32 %src) {
 }
 
 ; GCN-LABEL: {{^}}v_icmp:
-; GCN-NOT: v_cmp_eq_i32_e64
+; GCN-NOT: v_cmp_eq_u32_e64
 define void @v_icmp(i64 addrspace(1)* %out, i32 %src) {
   %result = call i64 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 30)
   store i64 %result, i64 addrspace(1)* %out
   ret void
 }
 ; GCN-LABEL: {{^}}v_icmp_i32_ne:
-; GCN: v_cmp_ne_i32_e64
+; GCN: v_cmp_ne_u32_e64
 define void @v_icmp_i32_ne(i64 addrspace(1)* %out, i32 %src) {
   %result = call i64 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 33)
   store i64 %result, i64 addrspace(1)* %out
@@ -91,7 +91,7 @@ define void @v_icmp_i32_sle(i64 addrspace(1)* %out, i32 %src) {
 }
 
 ; GCN-LABEL: {{^}}v_icmp_i64_eq:
-; GCN: v_cmp_eq_i64_e64
+; GCN: v_cmp_eq_u64_e64
 define void @v_icmp_i64_eq(i64 addrspace(1)* %out, i64 %src) {
   %result = call i64 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 32)
   store i64 %result, i64 addrspace(1)* %out
@@ -99,7 +99,7 @@ define void @v_icmp_i64_eq(i64 addrspace(1)* %out, i64 %src) {
 }
 
 ; GCN-LABEL: {{^}}v_icmp_i64_ne:
-; GCN: v_cmp_ne_i64_e64
+; GCN: v_cmp_ne_u64_e64
 define void @v_icmp_i64_ne(i64 addrspace(1)* %out, i64 %src) {
   %result = call i64 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 33)
   store i64 %result, i64 addrspace(1)* %out

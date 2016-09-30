@@ -407,7 +407,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       } else {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
-        BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_I32_e32))
+        BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_U32_e32))
           .addImm(0)
           .addReg(SrcReg, getKillRegState(KillSrc));
       }

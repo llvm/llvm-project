@@ -357,7 +357,7 @@ bb2:
 
 ; CHECK-LABEL: {{^}}extract_adjacent_blocks:
 ; CHECK: s_load_dword [[ARG:s[0-9]+]]
-; CHECK: s_cmp_lg_i32
+; CHECK: s_cmp_lg_u32
 ; CHECK: s_cbranch_scc0 [[BB4:BB[0-9]+_[0-9]+]]
 
 ; CHECK: buffer_load_dwordx4
@@ -396,7 +396,7 @@ bb7:
 
 ; CHECK-LABEL: {{^}}insert_adjacent_blocks:
 ; CHECK: s_load_dword [[ARG:s[0-9]+]]
-; CHECK: s_cmp_lg_i32
+; CHECK: s_cmp_lg_u32
 ; CHECK: s_cbranch_scc0 [[BB4:BB[0-9]+_[0-9]+]]
 
 ; CHECK: buffer_load_dwordx4

@@ -644,8 +644,8 @@ class SOPC_32<bits<7> op, string opName, list<dag> pattern = []>
 class SOPC_64_32<bits<7> op, string opName, list<dag> pattern = []>
   : SOPC_Base<op, SSrc_b64, SSrc_b32, opName, pattern>;
 
-def S_CMP_EQ_I32 : SOPC_CMP_32 <0x00, "s_cmp_eq_i32", COND_EQ>;
-def S_CMP_LG_I32 : SOPC_CMP_32 <0x01, "s_cmp_lg_i32", COND_NE>;
+def S_CMP_EQ_I32 : SOPC_CMP_32 <0x00, "s_cmp_eq_i32">;
+def S_CMP_LG_I32 : SOPC_CMP_32 <0x01, "s_cmp_lg_i32">;
 def S_CMP_GT_I32 : SOPC_CMP_32 <0x02, "s_cmp_gt_i32", COND_SGT>;
 def S_CMP_GE_I32 : SOPC_CMP_32 <0x03, "s_cmp_ge_i32", COND_SGE>;
 def S_CMP_LT_I32 : SOPC_CMP_32 <0x04, "s_cmp_lt_i32", COND_SLT, "s_cmp_gt_i32">;

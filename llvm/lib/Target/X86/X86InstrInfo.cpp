@@ -2438,9 +2438,13 @@ static bool isFrameLoadOpcode(int Opcode) {
   case X86::VMOVAPSZrm:
   case X86::VMOVAPSZ128rm:
   case X86::VMOVAPSZ256rm:
+  case X86::VMOVAPSZ128rm_NOVLX:
+  case X86::VMOVAPSZ256rm_NOVLX:
   case X86::VMOVUPSZrm:
   case X86::VMOVUPSZ128rm:
   case X86::VMOVUPSZ256rm:
+  case X86::VMOVUPSZ128rm_NOVLX:
+  case X86::VMOVUPSZ256rm_NOVLX:
   case X86::VMOVAPDZrm:
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPDZ256rm:
@@ -2508,9 +2512,13 @@ static bool isFrameStoreOpcode(int Opcode) {
   case X86::VMOVUPSZmr:
   case X86::VMOVUPSZ128mr:
   case X86::VMOVUPSZ256mr:
+  case X86::VMOVUPSZ128mr_NOVLX:
+  case X86::VMOVUPSZ256mr_NOVLX:
   case X86::VMOVAPSZmr:
   case X86::VMOVAPSZ128mr:
   case X86::VMOVAPSZ256mr:
+  case X86::VMOVAPSZ128mr_NOVLX:
+  case X86::VMOVAPSZ256mr_NOVLX:
   case X86::VMOVUPDZmr:
   case X86::VMOVUPDZ128mr:
   case X86::VMOVUPDZ256mr:

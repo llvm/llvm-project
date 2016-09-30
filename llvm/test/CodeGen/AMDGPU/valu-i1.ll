@@ -65,7 +65,7 @@ end:
 }
 
 ; SI-LABEL: @simple_test_v_if
-; SI: v_cmp_ne_i32_e32 vcc, 0, v{{[0-9]+}}
+; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
 
@@ -91,7 +91,7 @@ exit:
 }
 
 ; SI-LABEL: {{^}}simple_test_v_loop:
-; SI: v_cmp_ne_i32_e32 vcc, 0, v{{[0-9]+}}
+; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
 ; SI: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
@@ -101,7 +101,7 @@ exit:
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword
 ; SI-DAG: buffer_store_dword
-; SI-DAG: v_cmp_eq_i32_e32 vcc,
+; SI-DAG: v_cmp_eq_u32_e32 vcc,
 ; SI-DAG: s_and_b64 vcc, exec, vcc
 ; SI: s_cbranch_vccz [[LABEL_LOOP]]
 ; SI: [[LABEL_EXIT]]:
@@ -148,8 +148,8 @@ exit:
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword [[B:v[0-9]+]]
 ; SI: buffer_load_dword [[A:v[0-9]+]]
-; SI-DAG: v_cmp_ne_i32_e64 [[NEG1_CHECK_0:s\[[0-9]+:[0-9]+\]]], -1, [[A]]
-; SI-DAG: v_cmp_ne_i32_e32 [[NEG1_CHECK_1:vcc]], -1, [[B]]
+; SI-DAG: v_cmp_ne_u32_e64 [[NEG1_CHECK_0:s\[[0-9]+:[0-9]+\]]], -1, [[A]]
+; SI-DAG: v_cmp_ne_u32_e32 [[NEG1_CHECK_1:vcc]], -1, [[B]]
 ; SI: s_and_b64 [[ORNEG1:s\[[0-9]+:[0-9]+\]]], [[NEG1_CHECK_1]], [[NEG1_CHECK_0]]
 ; SI: s_and_saveexec_b64 [[ORNEG2:s\[[0-9]+:[0-9]+\]]], [[ORNEG1]]
 ; SI: s_xor_b64 [[ORNEG2]], exec, [[ORNEG2]]

@@ -18,7 +18,7 @@ define void @s_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
 ; GCN: v_cndmask
 ; GCN: v_cndmask
 
-; GCN-DAG: v_cmp_eq_i64
+; GCN-DAG: v_cmp_eq_u64
 ; GCN-DAG: v_cmp_lt_u64
 
 ; GCN: v_add_i32_e32 [[VR:v[0-9]+]]

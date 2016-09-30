@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator:
-; GCN: v_cmp_eq_i32
+; GCN: v_cmp_eq_u32
 ; GCN: s_and_saveexec_b64
 ; GCN: s_xor_b64
 ; GCN: s_branch BB0_1
@@ -26,7 +26,7 @@ bb68:
 }
 
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator_swap_block_order:
-; GCN: v_cmp_eq_i32
+; GCN: v_cmp_eq_u32
 ; GCN: s_and_saveexec_b64
 ; GCN: s_xor_b64
 ; GCN: s_endpgm
