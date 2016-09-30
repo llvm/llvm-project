@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: echo "SECTIONS { .common : { *(COMMON) } }" > %t.script
+# RUN: echo "SECTIONS { . = SIZEOF_HEADERS; .common : { *(COMMON) } }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-readobj -s -t %t1 | FileCheck %s
 

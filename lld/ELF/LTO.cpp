@@ -37,7 +37,14 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
   raw_svector_ostream OS(ErrStorage);
   DiagnosticPrinterRawOStream DP(OS);
   DI.print(DP);
-  warning(ErrStorage);
+  warn(ErrStorage);
+}
+
+static void checkError(Error E) {
+  handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
+    error(EIB.message());
+    return Error::success();
+  });
 }
 
 static std::unique_ptr<lto::LTO> createLTO() {
@@ -58,7 +65,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.AAPipeline = Config->LtoAAPipeline;
 
   if (Config->SaveTemps)
-    check(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
+    checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
                             /*UseInputModulePath*/ true));
 
   return llvm::make_unique<lto::LTO>(std::move(Conf), Backend, Config->LtoJobs);
@@ -103,7 +110,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     if (R.Prevailing)
       undefine(Sym);
   }
-  check(LtoObj->add(std::move(F.Obj), Resols));
+  checkError(LtoObj->add(std::move(F.Obj), Resols));
 }
 
 // Merge all the bitcode files we have seen, codegen the result
@@ -113,15 +120,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   unsigned MaxTasks = LtoObj->getMaxTasks();
   Buff.resize(MaxTasks);
 
-  auto AddStream =
-      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
+  checkError(LtoObj->run([&](size_t Task) {
     return llvm::make_unique<lto::NativeObjectStream>(
         llvm::make_unique<llvm::raw_svector_ostream>(Buff[Task]));
-  };
-
-  check(LtoObj->run(AddStream));
-  if (HasError)
-    return Ret;
+  }));
 
   for (unsigned I = 0; I != MaxTasks; ++I) {
     if (Buff[I].empty())
@@ -132,8 +134,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       else
         saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.o");
     }
-    MemoryBufferRef CompiledObjRef(Buff[I], "lto.tmp");
-    InputFile *Obj = createObjectFile(CompiledObjRef);
+    InputFile *Obj = createObjectFile(MemoryBufferRef(Buff[I], "lto.tmp"));
     Ret.push_back(Obj);
   }
   return Ret;

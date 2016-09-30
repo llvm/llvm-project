@@ -28,7 +28,7 @@ class BreakpointAfterJoinTestCase(TestBase):
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
     @expectedFailureAll(
         oslist=lldbplatformutil.getDarwinOSTriples(),
-        bugnumber="llvm.org/pr15824 thread states not properly maintained")
+        bugnumber="llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")

@@ -553,7 +553,8 @@ static bool shouldSkip(const BaseCommand &Cmd) {
   return Assign->Name != ".";
 }
 
-template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
+template <class ELFT>
+void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
   // Orphan sections are sections present in the input files which
   // are not explicitly placed into the output file by the linker script.
   // We place orphan sections at end of file.
@@ -594,7 +595,7 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
   }
 
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
-  Dot = getHeaderSize();
+  Dot = 0;
 
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base.get())) {
@@ -628,14 +629,20 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
   }
 
   uintX_t HeaderSize = getHeaderSize();
-  if (HeaderSize > MinVA)
-    fatal("Not enough space for ELF and program headers");
-
-  // ELF and Program headers need to be right before the first section in
-  // memory. Set their addresses accordingly.
-  MinVA = alignDown(MinVA - HeaderSize, Target->PageSize);
-  Out<ELFT>::ElfHeader->setVA(MinVA);
-  Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
+  auto FirstPTLoad =
+      std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry<ELFT> &E) {
+        return E.H.p_type == PT_LOAD;
+      });
+  if (HeaderSize <= MinVA && FirstPTLoad != Phdrs.end()) {
+    // ELF and Program headers need to be right before the first section in
+    // memory. Set their addresses accordingly.
+    MinVA = alignDown(MinVA - HeaderSize, Target->PageSize);
+    Out<ELFT>::ElfHeader->setVA(MinVA);
+    Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
+    FirstPTLoad->First = Out<ELFT>::ElfHeader;
+    if (!FirstPTLoad->Last)
+      FirstPTLoad->Last = Out<ELFT>::ProgramHeaders;
+  }
 }
 
 // Creates program headers as instructed by PHDRS linker script command.

@@ -5,10 +5,10 @@
 # RUN: ld.lld -o %t1 --script %t.script %t -shared
 # RUN: llvm-readobj -elf-output-style=GNU -s %t1 | FileCheck %s
 
-# CHECK:      .dynsym  {{.*}}   A
+# CHECK:      .text    {{.*}}   AX
+# CHECK-NEXT: .dynsym  {{.*}}   A
 # CHECK-NEXT: .hash    {{.*}}   A
 # CHECK-NEXT: .dynstr  {{.*}}   A
-# CHECK-NEXT: .text    {{.*}}   AX
 # CHECK-NEXT: .dynamic {{.*}}  WA
 # CHECK-NEXT: foo      {{.*}}  WA
 

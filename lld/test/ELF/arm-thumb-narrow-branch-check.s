@@ -1,5 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: echo "SECTIONS { \
+// RUN:          . = SIZEOF_HEADERS; \
 // RUN:          .R_ARM_PC11_1 : { *(.R_ARM_PC11_1) } \
 // RUN:          .caller : { *(.caller) } \
 // RUN:          .R_ARM_PC11_2 : { *(.R_ARM_PC11_2) } \

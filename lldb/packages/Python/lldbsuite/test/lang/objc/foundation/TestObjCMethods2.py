@@ -131,18 +131,18 @@ class FoundationTestCase2(TestBase):
                     patterns=["\(int\) \$.* ="])
         self.expect("expression (int)[str_id length]",
                     patterns=["\(int\) \$.* ="])
-        self.expect("expression [str description]",
+        self.expect("expression (id)[str description]",
                     patterns=["\(id\) \$.* = 0x"])
         self.expect("expression (id)[str_id description]",
                     patterns=["\(id\) \$.* = 0x"])
         self.expect("expression str.length")
-        self.expect("expression str.description")
         self.expect('expression str = @"new"')
         self.runCmd("image lookup -t NSString")
-        self.expect('expression str = [NSString stringWithCString: "new"]')
+        self.expect('expression str = (id)[NSString stringWithCString: "new"]')
         self.runCmd("process continue")
 
-    def test_MyString_dump(self):
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_MyString_dump_with_runtime(self):
         """Test dump of a known Objective-C object by dereferencing it."""
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
@@ -159,25 +159,29 @@ class FoundationTestCase2(TestBase):
             "expression --show-types -- *my",
             patterns=[
                 "\(MyString\) \$.* = ",
-                "\(MyBase\)",
-                "\(NSObject\)",
-                "\(Class\)"])
+                "\(MyBase\)"])
         self.runCmd("process continue")
 
     @expectedFailureAll(archs=["i[3-6]86"])
-    def test_NSError_po(self):
-        """Test that po of the result of an unknown method doesn't require a cast."""
+    def test_runtime_types(self):
+        """Test commands that require runtime types"""
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        line = self.lines[4]
-
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.m", line, num_expected_locations=1, loc_exact=True)
+        # Break inside Test_NSString:
+        line = self.lines[2]
+        lldbutil.run_break_set_by_source_regexp(
+            self, "NSString tests")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        # Test_NSString:
+        self.runCmd("thread backtrace")
+        self.expect("expression [str length]",
+                    patterns=["\(NSUInteger\) \$.* ="])
+        self.expect("expression str.length")
+        self.expect('expression str = [NSString stringWithCString: "new"]')
         self.expect(
             'po [NSError errorWithDomain:@"Hello" code:35 userInfo:@{@"NSDescription" : @"be completed."}]',
             substrs=[

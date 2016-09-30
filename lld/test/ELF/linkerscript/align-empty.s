@@ -2,6 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  abc : { } \
 # RUN:  . = ALIGN(0x1000); \
 # RUN:  foo : { *(foo) } \

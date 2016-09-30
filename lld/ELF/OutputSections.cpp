@@ -1467,13 +1467,19 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     else if (isa<DefinedRegular<ELFT>>(Body))
       ESym->st_shndx = SHN_ABS;
 
-    // On MIPS we need to mark symbol which has a PLT entry and requires pointer
-    // equality by STO_MIPS_PLT flag. That is necessary to help dynamic linker
-    // distinguish such symbols and MIPS lazy-binding stubs.
-    // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
-    if (Config->EMachine == EM_MIPS && Body->isInPlt() &&
-        Body->NeedsCopyOrPltAddr)
-      ESym->st_other |= STO_MIPS_PLT;
+    if (Config->EMachine == EM_MIPS) {
+      // On MIPS we need to mark symbol which has a PLT entry and requires
+      // pointer equality by STO_MIPS_PLT flag. That is necessary to help
+      // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
+      // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+      if (Body->isInPlt() && Body->NeedsCopyOrPltAddr)
+        ESym->st_other |= STO_MIPS_PLT;
+      if (Config->Relocatable) {
+        auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
+        if (D && D->isMipsPIC())
+          ESym->st_other |= STO_MIPS_PIC;
+      }
+    }
     ++ESym;
   }
 }
@@ -1734,7 +1740,10 @@ MipsReginfoOutputSection<ELFT>::MipsReginfoOutputSection()
 template <class ELFT>
 void MipsReginfoOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *R = reinterpret_cast<Elf_Mips_RegInfo *>(Buf);
-  R->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
+  if (Config->Relocatable)
+    R->ri_gp_value = 0;
+  else
+    R->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
   R->ri_gprmask = GprMask;
 }
 
@@ -1763,7 +1772,10 @@ void MipsOptionsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   Opt->section = 0;
   Opt->info = 0;
   auto *Reg = reinterpret_cast<Elf_Mips_RegInfo *>(Buf + sizeof(*Opt));
-  Reg->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
+  if (Config->Relocatable)
+    Reg->ri_gp_value = 0;
+  else
+    Reg->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
   Reg->ri_gprmask = GprMask;
 }
 
