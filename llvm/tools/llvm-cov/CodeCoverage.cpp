@@ -64,7 +64,8 @@ private:
   /// \brief Print the warning message to the error output stream.
   void warning(const Twine &Message, StringRef Whence = "");
 
-  /// \brief Copy \p Path into the list of input source files.
+  /// \brief Convert \p Path into an absolute path and append it to the list
+  /// of collected paths.
   void addCollectedPath(const std::string &Path);
 
   /// \brief If \p Path is a regular file, collect the path. If it's a
@@ -116,7 +117,7 @@ private:
   std::string PGOFilename;
 
   /// A list of input source files.
-  std::vector<StringRef> SourceFiles;
+  std::vector<std::string> SourceFiles;
 
   /// Whether or not we're in -filename-equivalence mode.
   bool CompareFilenamesOnly;
@@ -130,9 +131,6 @@ private:
 
   /// A cache for demangled symbol names.
   StringMap<std::string> DemangledNames;
-
-  /// File paths (absolute, or otherwise) to input source files.
-  std::vector<std::string> CollectedPaths;
 
   /// Errors and warnings which have not been printed.
   std::mutex ErrsLock;
@@ -168,7 +166,7 @@ void CodeCoverageTool::warning(const Twine &Message, StringRef Whence) {
 
 void CodeCoverageTool::addCollectedPath(const std::string &Path) {
   if (CompareFilenamesOnly) {
-    CollectedPaths.push_back(Path);
+    SourceFiles.emplace_back(Path);
   } else {
     SmallString<128> EffectivePath(Path);
     if (std::error_code EC = sys::fs::make_absolute(EffectivePath)) {
@@ -176,10 +174,8 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
       return;
     }
     sys::path::remove_dots(EffectivePath, /*remove_dot_dots=*/true);
-    CollectedPaths.push_back(EffectivePath.str());
+    SourceFiles.emplace_back(EffectivePath.str());
   }
-
-  SourceFiles.emplace_back(CollectedPaths.back());
 }
 
 void CodeCoverageTool::collectPaths(const std::string &Path) {
@@ -597,7 +593,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       collectPaths(File);
 
     if (DebugDumpCollectedPaths) {
-      for (StringRef SF : SourceFiles)
+      for (const std::string &SF : SourceFiles)
         outs() << SF << '\n';
       ::exit(0);
     }
@@ -751,11 +747,11 @@ int CodeCoverageTool::show(int argc, const char **argv,
     ThreadCount = std::thread::hardware_concurrency();
   ThreadPool Pool(ThreadCount);
 
-  for (StringRef SourceFile : SourceFiles) {
-    Pool.async([this, SourceFile, &Coverage, &Printer, ShowFilenames] {
+  for (const std::string &SourceFile : SourceFiles) {
+    Pool.async([this, &SourceFile, &Coverage, &Printer, ShowFilenames] {
       auto View = createSourceFileView(SourceFile, *Coverage);
       if (!View) {
-        warning("The file '" + SourceFile.str() + "' isn't covered.");
+        warning("The file '" + SourceFile + "' isn't covered.");
         return;
       }
 

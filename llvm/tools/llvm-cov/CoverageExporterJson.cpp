@@ -175,7 +175,9 @@ class CoverageExporterJson {
     emitDictKey("files");
 
     FileCoverageSummary Totals = FileCoverageSummary("Totals");
-    std::vector<StringRef> SourceFiles = Coverage.getUniqueSourceFiles();
+    std::vector<std::string> SourceFiles;
+    for (StringRef SF : Coverage.getUniqueSourceFiles())
+      SourceFiles.emplace_back(SF);
     auto FileReports =
         CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
     renderFiles(SourceFiles, FileReports);
@@ -235,7 +237,7 @@ class CoverageExporterJson {
   }
 
   /// \brief Render an array of all the source files, also pass back a Summary.
-  void renderFiles(ArrayRef<StringRef> SourceFiles,
+  void renderFiles(ArrayRef<std::string> SourceFiles,
                    ArrayRef<FileCoverageSummary> FileReports) {
     // Start List of Files.
     emitArrayStart();
