@@ -190,6 +190,13 @@ OptimizationRemark::OptimizationRemark(const char *PassName,
           DK_OptimizationRemark, DS_Remark, PassName, RemarkName,
           *cast<BasicBlock>(CodeRegion)->getParent(), DLoc, CodeRegion) {}
 
+OptimizationRemark::OptimizationRemark(const char *PassName,
+                                       StringRef RemarkName, Instruction *Inst)
+    : DiagnosticInfoOptimizationBase(DK_OptimizationRemark, DS_Remark, PassName,
+                                     RemarkName,
+                                     *Inst->getParent()->getParent(),
+                                     Inst->getDebugLoc(), Inst->getParent()) {}
+
 bool OptimizationRemark::isEnabled() const {
   return PassRemarksOptLoc.Pattern &&
          PassRemarksOptLoc.Pattern->match(getPassName());
