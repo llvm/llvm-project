@@ -613,6 +613,78 @@ template <typename T> struct deref {
   }
 };
 
+namespace detail {
+template <typename I, typename V> class enumerator_impl {
+public:
+  template <typename X> struct result_pair {
+    result_pair(std::size_t Index, X Value) : Index(Index), Value(Value) {}
+
+    const std::size_t Index;
+    X Value;
+  };
+
+  struct iterator {
+    iterator(I Iter, std::size_t Index) : Iter(Iter), Index(Index) {}
+
+    result_pair<const V> operator*() const {
+      return result_pair<const V>(Index, *Iter);
+    }
+    result_pair<V> operator*() { return result_pair<V>(Index, *Iter); }
+
+    iterator &operator++() {
+      ++Iter;
+      ++Index;
+      return *this;
+    }
+
+    bool operator!=(const iterator &RHS) const { return Iter != RHS.Iter; }
+
+  private:
+    I Iter;
+    std::size_t Index;
+  };
+
+  enumerator_impl(I Begin, I End)
+      : Begin(std::move(Begin)), End(std::move(End)) {}
+
+  iterator begin() { return iterator(Begin, 0); }
+  iterator end() { return iterator(End, std::size_t(-1)); }
+
+  iterator begin() const { return iterator(Begin, 0); }
+  iterator end() const { return iterator(End, std::size_t(-1)); }
+
+private:
+  I Begin;
+  I End;
+};
+
+template <typename I>
+auto make_enumerator(I Begin, I End) -> enumerator_impl<I, decltype(*Begin)> {
+  return enumerator_impl<I, decltype(*Begin)>(std::move(Begin), std::move(End));
+}
+}
+
+/// Given an input range, returns a new range whose values are are pair (A,B)
+/// such that A is the 0-based index of the item in the sequence, and B is
+/// the value from the original sequence.  Example:
+///
+/// std::vector<char> Items = {'A', 'B', 'C', 'D'};
+/// for (auto X : enumerate(Items)) {
+///   printf("Item %d - %c\n", X.Item, X.Value);
+/// }
+///
+/// Output:
+///   Item 0 - A
+///   Item 1 - B
+///   Item 2 - C
+///   Item 3 - D
+///
+template <typename R>
+auto enumerate(R &&Range)
+    -> decltype(detail::make_enumerator(std::begin(Range), std::end(Range))) {
+  return detail::make_enumerator(std::begin(Range), std::end(Range));
+}
+
 } // End llvm namespace
 
 #endif
