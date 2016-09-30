@@ -34,8 +34,8 @@ namespace __scudo {
 
 FORMAT(1, 2)
 void NORETURN dieWithMessage(const char *Format, ...) {
-  // Our messages are tiny, 128 characters is more than enough.
-  char Message[128];
+  // Our messages are tiny, 256 characters is more than enough.
+  char Message[256];
   va_list Args;
   va_start(Args, Format);
   __sanitizer::VSNPrintf(Message, sizeof(Message), Format, Args);

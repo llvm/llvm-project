@@ -239,6 +239,7 @@ public:
   // check if a symbol is in the archive
   Expected<Optional<Child>> findSym(StringRef name) const;
 
+  bool isEmpty() const;
   bool hasSymbolTable() const;
   StringRef getSymbolTable() const { return SymbolTable; }
   StringRef getStringTable() const { return StringTable; }

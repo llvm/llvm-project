@@ -752,7 +752,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
 
 Archive::child_iterator Archive::child_begin(Error &Err,
                                              bool SkipInternal) const {
-  if (Data.getBufferSize() == 8) // empty archive.
+  if (isEmpty())
     return child_end();
 
   if (SkipInternal)
@@ -967,5 +967,8 @@ Expected<Optional<Archive::Child>> Archive::findSym(StringRef name) const {
   }
   return Optional<Child>();
 }
+
+// Returns true if archive file contains no member file.
+bool Archive::isEmpty() const { return Data.getBufferSize() == 8; }
 
 bool Archive::hasSymbolTable() const { return !SymbolTable.empty(); }

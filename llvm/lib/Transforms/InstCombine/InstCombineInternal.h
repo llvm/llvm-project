@@ -590,8 +590,7 @@ private:
   Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI, const APInt *C);
 
   // Helpers of visitSelectInst().
-  Instruction *foldSelectExtConst(SelectInst &Sel, Instruction *ExtInst,
-                                  const APInt &C);
+  Instruction *foldSelectExtConst(SelectInst &Sel);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,

@@ -559,3 +559,18 @@ bool Sema::CheckCUDAVLA(SourceLocation Loc) {
   }
   return true;
 }
+
+void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
+  if (Method->hasAttr<CUDAHostAttr>() || Method->hasAttr<CUDADeviceAttr>())
+    return;
+  FunctionDecl *CurFn = dyn_cast<FunctionDecl>(CurContext);
+  if (!CurFn)
+    return;
+  CUDAFunctionTarget Target = IdentifyCUDATarget(CurFn);
+  if (Target == CFT_Global || Target == CFT_Device) {
+    Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+  } else if (Target == CFT_HostDevice) {
+    Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+    Method->addAttr(CUDAHostAttr::CreateImplicit(Context));
+  }
+}

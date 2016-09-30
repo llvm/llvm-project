@@ -8,20 +8,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <vector>
+
 int main(int argc, char **argv)
 {
   void *p;
-  size_t size = 1U << 8;
+  std::vector<size_t> sizes{1, 1 << 5, 1 << 10, 1 << 15, 1 << 20};
 
-  p = malloc(size);
-  if (!p)
-    return 1;
-  memset(p, 'A', size);
-  free(p);
   p = malloc(0);
   if (!p)
     return 1;
   free(p);
+  for (size_t size : sizes) {
+    p = malloc(size);
+    if (!p)
+      return 1;
+    memset(p, 'A', size);
+    free(p);
+  }
 
   return 0;
 }

@@ -4279,6 +4279,41 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {StoreVal, StoreAddr}, "strex");
   }
 
+  switch (BuiltinID) {
+  case ARM::BI__iso_volatile_load8:
+  case ARM::BI__iso_volatile_load16:
+  case ARM::BI__iso_volatile_load32:
+  case ARM::BI__iso_volatile_load64: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    QualType ElTy = E->getArg(0)->getType()->getPointeeType();
+    CharUnits LoadSize = getContext().getTypeSizeInChars(ElTy);
+    llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
+                                             LoadSize.getQuantity() * 8);
+    Ptr = Builder.CreateBitCast(Ptr, ITy->getPointerTo());
+    llvm::LoadInst *Load =
+      Builder.CreateAlignedLoad(Ptr, LoadSize);
+    Load->setVolatile(true);
+    return Load;
+  }
+  case ARM::BI__iso_volatile_store8:
+  case ARM::BI__iso_volatile_store16:
+  case ARM::BI__iso_volatile_store32:
+  case ARM::BI__iso_volatile_store64: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Value = EmitScalarExpr(E->getArg(1));
+    QualType ElTy = E->getArg(0)->getType()->getPointeeType();
+    CharUnits StoreSize = getContext().getTypeSizeInChars(ElTy);
+    llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
+                                             StoreSize.getQuantity() * 8);
+    Ptr = Builder.CreateBitCast(Ptr, ITy->getPointerTo());
+    llvm::StoreInst *Store =
+      Builder.CreateAlignedStore(Value, Ptr,
+                                 StoreSize);
+    Store->setVolatile(true);
+    return Store;
+  }
+  }
+
   if (BuiltinID == ARM::BI__builtin_arm_clrex) {
     Function *F = CGM.getIntrinsic(Intrinsic::arm_clrex);
     return Builder.CreateCall(F);

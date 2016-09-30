@@ -14,6 +14,9 @@
 #ifndef LLVM_CONFIG_H
 #define LLVM_CONFIG_H
 
+/* Define if we link Polly to the tools */
+#cmakedefine LINK_POLLY_INTO_TOOLS
+
 /* Installation directory for binary executables */
 #cmakedefine LLVM_BINDIR "${LLVM_BINDIR}"
 
@@ -26,9 +29,8 @@
 /* Installation directory for documentation */
 #cmakedefine LLVM_DOCSDIR "${LLVM_DOCSDIR}"
 
-/* Define if LLVM is built with asserts and checks that change the layout of
-   client-visible data structures.  */
-#cmakedefine LLVM_ENABLE_ABI_BREAKING_CHECKS
+/* Define to enable checks that alter the LLVM C++ ABI */
+#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 /* Define if threads enabled */
 #cmakedefine01 LLVM_ENABLE_THREADS
@@ -82,10 +84,10 @@
 #cmakedefine LLVM_PREFIX "${LLVM_PREFIX}"
 
 /* Define if we have the Intel JIT API runtime support library */
-#cmakedefine LLVM_USE_INTEL_JITEVENTS 1
+#cmakedefine01 LLVM_USE_INTEL_JITEVENTS
 
 /* Define if we have the oprofile JIT-support library */
-#cmakedefine LLVM_USE_OPROFILE 1
+#cmakedefine01 LLVM_USE_OPROFILE
 
 /* Major version of the LLVM API */
 #define LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
@@ -98,8 +100,5 @@
 
 /* LLVM version string */
 #define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
-
-/* Define if we link Polly to the tools */
-#cmakedefine LINK_POLLY_INTO_TOOLS
 
 #endif

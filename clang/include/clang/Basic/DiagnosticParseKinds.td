@@ -1022,6 +1022,10 @@ def err_pragma_invalid_keyword : Error<
 def warn_pragma_unroll_cuda_value_in_parens : Warning<
   "argument to '#pragma unroll' should not be in parentheses in CUDA C/C++">,
   InGroup<CudaCompat>;
+
+def warn_cuda_attr_lambda_position : Warning<
+  "nvcc does not allow '__%0__' to appear after '()' in lambdas">,
+  InGroup<CudaCompat>;
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {

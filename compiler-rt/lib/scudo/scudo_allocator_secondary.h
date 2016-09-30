@@ -42,7 +42,7 @@ class ScudoLargeMmapAllocator {
     uptr Ptr = MapBeg + sizeof(SecondaryHeader);
     // TODO(kostyak): add a random offset to Ptr.
     CHECK_GT(Ptr + Size, MapBeg);
-    CHECK_LT(Ptr + Size, MapEnd);
+    CHECK_LE(Ptr + Size, MapEnd);
     SecondaryHeader *Header = getHeader(Ptr);
     Header->MapBeg = MapBeg - PageSize;
     Header->MapSize = MapSize + 2 * PageSize;

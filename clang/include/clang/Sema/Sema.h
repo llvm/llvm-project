@@ -9259,7 +9259,18 @@ public:
   /// ExprTy should be the string "try" or "throw", as appropriate.
   bool CheckCUDAExceptionExpr(SourceLocation Loc, StringRef ExprTy);
 
+  /// Check whether it's legal for us to create a variable-length array in the
+  /// current context.  Returns true if the VLA is OK; returns false and emits
+  /// an error otherwise.
   bool CheckCUDAVLA(SourceLocation Loc);
+
+  /// Set __device__ or __host__ __device__ attributes on the given lambda
+  /// operator() method.
+  ///
+  /// CUDA lambdas declared inside __device__ or __global__ functions inherit
+  /// the __device__ attribute.  Similarly, lambdas inside __host__ __device__
+  /// functions become __host__ __device__ themselves.
+  void CUDASetLambdaAttrs(CXXMethodDecl *Method);
 
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower
