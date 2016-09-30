@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fcuda-is-device -verify -fsyntax-only -verify-ignore-unexpected=note %s
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -verify-ignore-unexpected=note %s
+// RUN: %clang_cc1 -std=c++11 -fcuda-is-device -verify -fsyntax-only -verify-ignore-unexpected=warning -verify-ignore-unexpected=note %s
+// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -verify-ignore-unexpected=warning -verify-ignore-unexpected=note %s
 
 #include "Inputs/cuda.h"
 

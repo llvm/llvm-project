@@ -1128,13 +1128,23 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   ParsedAttributes Attr(AttrFactory);
   SourceLocation DeclLoc = Tok.getLocation();
-  SourceLocation DeclEndLoc = DeclLoc;
   if (getLangOpts().CUDA) {
     // In CUDA code, GNU attributes are allowed to appear immediately after the
     // "[...]", even if there is no "(...)" before the lambda body.
-    MaybeParseGNUAttributes(Attr, &DeclEndLoc);
-    D.takeAttributes(Attr, DeclEndLoc);
+    MaybeParseGNUAttributes(D);
   }
+
+  // Helper to emit a warning if we see a CUDA host/device/global attribute
+  // after '(...)'. nvcc doesn't accept this.
+  auto WarnIfHasCUDATargetAttr = [&] {
+    if (getLangOpts().CUDA)
+      for (auto *A = Attr.getList(); A != nullptr; A = A->getNext())
+        if (A->getKind() == AttributeList::AT_CUDADevice ||
+            A->getKind() == AttributeList::AT_CUDAHost ||
+            A->getKind() == AttributeList::AT_CUDAGlobal)
+          Diag(A->getLoc(), diag::warn_cuda_attr_lambda_position)
+              << A->getName()->getName();
+  };
 
   TypeResult TrailingReturnType;
   if (Tok.is(tok::l_paren)) {
@@ -1161,7 +1171,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     }
     T.consumeClose();
     SourceLocation RParenLoc = T.getCloseLocation();
-    DeclEndLoc = RParenLoc;
+    SourceLocation DeclEndLoc = RParenLoc;
 
     // GNU-style attributes must be parsed before the mutable specifier to be
     // compatible with GCC.
@@ -1212,6 +1222,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
     PrototypeScope.Exit();
 
+    WarnIfHasCUDATargetAttr();
+
     SourceLocation NoLoc;
     D.AddTypeInfo(DeclaratorChunk::getFunction(/*hasProto=*/true,
                                            /*isAmbiguous=*/false,
@@ -1253,7 +1265,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     Diag(Tok, diag::err_lambda_missing_parens)
       << TokKind
       << FixItHint::CreateInsertion(Tok.getLocation(), "() ");
-    DeclEndLoc = DeclLoc;
+    SourceLocation DeclEndLoc = DeclLoc;
 
     // GNU-style attributes must be parsed before the mutable specifier to be
     // compatible with GCC.
@@ -1276,6 +1288,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       if (Range.getEnd().isValid())
         DeclEndLoc = Range.getEnd();
     }
+
+    WarnIfHasCUDATargetAttr();
 
     SourceLocation NoLoc;
     D.AddTypeInfo(DeclaratorChunk::getFunction(/*hasProto=*/true,

@@ -245,7 +245,7 @@ llvm::Error Replacements::add(const Replacement &R) {
           R.getFilePath(), R.getOffset(), 0,
           (R.getReplacementText() + I->getReplacementText()).str());
       Replaces.erase(I);
-      Replaces.insert(NewR);
+      Replaces.insert(std::move(NewR));
       return llvm::Error::success();
     }
     // Insertion `R` is adjacent to a non-insertion replacement `I`, so they

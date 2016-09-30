@@ -37,7 +37,7 @@ TEST(IListSentinelTest, DefaultConstructor) {
   Sentinel S;
   EXPECT_EQ(&S, LocalAccess::getPrev(S));
   EXPECT_EQ(&S, LocalAccess::getNext(S));
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   EXPECT_TRUE(S.isKnownSentinel());
 #else
   EXPECT_FALSE(S.isKnownSentinel());

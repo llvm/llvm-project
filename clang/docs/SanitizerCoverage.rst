@@ -114,7 +114,7 @@ Sancov matches these files using module names and binaries file names.
       -print                    - Print coverage addresses
       -covered-functions        - Print all covered functions.
       -not-covered-functions    - Print all not covered functions.
-      -html-report              - Print HTML coverage report.
+      -symbolize                - Symbolizes the report.
 
     Options
       -blacklist=<string>         - Blacklist file (sanitizer blacklist format).
@@ -122,13 +122,20 @@ Sancov matches these files using module names and binaries file names.
       -strip_path_prefix=<string> - Strip this prefix from file paths in reports
 
 
-Automatic HTML Report Generation
+Coverage Reports (Experimental)
 ================================
 
-If ``*SAN_OPTIONS`` contains ``html_cov_report=1`` option set, then html
-coverage report would be automatically generated alongside the coverage files.
-The ``sancov`` binary should be present in ``PATH`` or
-``sancov_path=<path_to_sancov`` option can be used to specify tool location.
+``.sancov`` files do not contain enough information to generate a source-level 
+coverage report. The missing information is contained
+in debug info of the binary. Thus the ``.sancov`` has to be symbolized
+to produce a ``.symcov`` file first:
+
+.. code-block:: console
+    sancov -symbolize my_program.123.sancov my_program > my_program.123.symcov
+
+The ``.symcov`` file can be browsed overlayed over the source code by
+running ``tools/sancov/sancov-report-server.py`` script that will start
+an HTTP server.
 
 
 How good is the coverage?

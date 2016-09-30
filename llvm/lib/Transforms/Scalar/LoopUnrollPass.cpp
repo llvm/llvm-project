@@ -411,6 +411,9 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
       // it.  We don't change the actual IR, just count optimization
       // opportunities.
       for (Instruction &I : *BB) {
+        if (isa<DbgInfoIntrinsic>(I))
+          continue;
+
         // Track this instruction's expected baseline cost when executing the
         // rolled loop form.
         RolledDynamicCost += TTI.getUserCost(&I);

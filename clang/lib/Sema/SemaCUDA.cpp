@@ -573,8 +573,4 @@ void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
     Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
     Method->addAttr(CUDAHostAttr::CreateImplicit(Context));
   }
-
-  // TODO: nvcc doesn't allow you to specify __host__ or __device__ attributes
-  // on lambdas in all contexts -- we should emit a compatibility warning where
-  // we're more permissive.
 }

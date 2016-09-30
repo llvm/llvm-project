@@ -8,8 +8,8 @@ RUN: llvm-pdbdump raw -headers -tpi-records %t.2 | FileCheck %s
 
 CHECK:      FileHeaders {
 CHECK-NEXT:   BlockSize: 4096
-CHECK-NEXT:   FreeBlockMap: 2
-CHECK-NEXT:   NumBlocks: 25
+CHECK-NEXT:   FreeBlockMap:
+CHECK-NEXT:   NumBlocks:
 CHECK-NEXT:   NumDirectoryBytes:
 CHECK-NEXT:   Unknown1: 0
 CHECK-NEXT:   BlockMapAddr:

@@ -166,6 +166,17 @@ define <2 x i32> @test_vectors_sext(<2 x i1> %cca, <2 x i1> %ccb) {
   ret <2 x i32> %r
 }
 
+define <2 x i32> @test_vectors_sext_nonsplat(<2 x i1> %cca, <2 x i1> %ccb) {
+; CHECK-LABEL: @test_vectors_sext_nonsplat(
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> %ccb, <2 x i1> %cca, <2 x i1> <i1 false, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[NARROW]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %ccax = sext <2 x i1> %cca to <2 x i32>
+  %r = select <2 x i1> %ccb, <2 x i32> %ccax, <2 x i32> <i32 0, i32 -1>
+  ret <2 x i32> %r
+}
+
 define <2 x i32> @test_vectors_zext(<2 x i1> %cca, <2 x i1> %ccb) {
 ; CHECK-LABEL: @test_vectors_zext(
 ; CHECK-NEXT:    [[FOLD_R:%.*]] = and <2 x i1> %ccb, %cca
@@ -174,6 +185,17 @@ define <2 x i32> @test_vectors_zext(<2 x i1> %cca, <2 x i1> %ccb) {
 ;
   %ccax = zext <2 x i1> %cca to <2 x i32>
   %r = select <2 x i1> %ccb, <2 x i32> %ccax, <2 x i32> <i32 0, i32 0>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_vectors_zext_nonsplat(<2 x i1> %cca, <2 x i1> %ccb) {
+; CHECK-LABEL: @test_vectors_zext_nonsplat(
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> %ccb, <2 x i1> %cca, <2 x i1> <i1 true, i1 false>
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[NARROW]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %ccax = zext <2 x i1> %cca to <2 x i32>
+  %r = select <2 x i1> %ccb, <2 x i32> %ccax, <2 x i32> <i32 1, i32 0>
   ret <2 x i32> %r
 }
 
@@ -198,3 +220,94 @@ define <2 x i32> @scalar_select_of_vectors_zext(<2 x i1> %cca, i1 %ccb) {
   %r = select i1 %ccb, <2 x i32> %ccax, <2 x i32> <i32 0, i32 0>
   ret <2 x i32> %r
 }
+
+define i32 @sext_true_val_must_be_all_ones(i1 %x) {
+; CHECK-LABEL: @sext_true_val_must_be_all_ones(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 %x to i32
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %x, i32 [[EXT]], i32 42, !prof !0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ext = sext i1 %x to i32
+  %sel = select i1 %x, i32 %ext, i32 42, !prof !0
+  ret i32 %sel
+}
+
+define <2 x i32> @sext_true_val_must_be_all_ones_vec(<2 x i1> %x) {
+; CHECK-LABEL: @sext_true_val_must_be_all_ones_vec(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> %x to <2 x i32>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> %x, <2 x i32> [[EXT]], <2 x i32> <i32 42, i32 12>, !prof !0
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %sel = select <2 x i1> %x, <2 x i32> %ext, <2 x i32> <i32 42, i32 12>, !prof !0
+  ret <2 x i32> %sel
+}
+
+define i32 @zext_true_val_must_be_one(i1 %x) {
+; CHECK-LABEL: @zext_true_val_must_be_one(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 %x to i32
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %x, i32 [[EXT]], i32 42, !prof !0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ext = zext i1 %x to i32
+  %sel = select i1 %x, i32 %ext, i32 42, !prof !0
+  ret i32 %sel
+}
+
+define <2 x i32> @zext_true_val_must_be_one_vec(<2 x i1> %x) {
+; CHECK-LABEL: @zext_true_val_must_be_one_vec(
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> %x to <2 x i32>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> %x, <2 x i32> [[EXT]], <2 x i32> <i32 42, i32 12>, !prof !0
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %ext = zext <2 x i1> %x to <2 x i32>
+  %sel = select <2 x i1> %x, <2 x i32> %ext, <2 x i32> <i32 42, i32 12>, !prof !0
+  ret <2 x i32> %sel
+}
+
+define i32 @sext_false_val_must_be_zero(i1 %x) {
+; CHECK-LABEL: @sext_false_val_must_be_zero(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 %x to i32
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %x, i32 42, i32 [[EXT]], !prof !0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ext = sext i1 %x to i32
+  %sel = select i1 %x, i32 42, i32 %ext, !prof !0
+  ret i32 %sel
+}
+
+define <2 x i32> @sext_false_val_must_be_zero_vec(<2 x i1> %x) {
+; CHECK-LABEL: @sext_false_val_must_be_zero_vec(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> %x to <2 x i32>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> %x, <2 x i32> <i32 42, i32 12>, <2 x i32> [[EXT]], !prof !0
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %sel = select <2 x i1> %x, <2 x i32> <i32 42, i32 12>, <2 x i32> %ext, !prof !0
+  ret <2 x i32> %sel
+}
+
+define i32 @zext_false_val_must_be_zero(i1 %x) {
+; CHECK-LABEL: @zext_false_val_must_be_zero(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 %x to i32
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %x, i32 42, i32 [[EXT]], !prof !0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ext = zext i1 %x to i32
+  %sel = select i1 %x, i32 42, i32 %ext, !prof !0
+  ret i32 %sel
+}
+
+define <2 x i32> @zext_false_val_must_be_zero_vec(<2 x i1> %x) {
+; CHECK-LABEL: @zext_false_val_must_be_zero_vec(
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> %x to <2 x i32>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> %x, <2 x i32> <i32 42, i32 12>, <2 x i32> [[EXT]], !prof !0
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %ext = zext <2 x i1> %x to <2 x i32>
+  %sel = select <2 x i1> %x, <2 x i32> <i32 42, i32 12>, <2 x i32> %ext, !prof !0
+  ret <2 x i32> %sel
+}
+
+!0 = !{!"branch_weights", i32 3, i32 5}
+

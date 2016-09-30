@@ -498,6 +498,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xd9f748:    // 48 f7 d9 : neg rcx
     case 0xd12b48:    // 48 2b d1 : sub rdx, rcx
     case 0x07c1f6:    // f6 c1 07 : test cl, 0x7
+    case 0xc98548:    // 48 85 C9 : test rcx, rcx
     case 0xc0854d:    // 4d 85 c0 : test r8, r8
     case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d

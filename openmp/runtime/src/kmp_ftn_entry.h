@@ -690,6 +690,8 @@ FTN_GET_NUM_PLACES( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return 0;
         return __kmp_affinity_num_masks;
     #endif
 }
@@ -705,6 +707,8 @@ FTN_GET_PLACE_NUM_PROCS( int place_num )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return 0;
         if ( place_num < 0 || place_num >= (int)__kmp_affinity_num_masks )
             return 0;
         kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
@@ -729,6 +733,8 @@ FTN_GET_PLACE_PROC_IDS( int place_num, int *ids )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return;
         if ( place_num < 0 || place_num >= (int)__kmp_affinity_num_masks )
             return;
         kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
@@ -754,6 +760,8 @@ FTN_GET_PLACE_NUM( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return -1;
         gtid = __kmp_entry_gtid();
         thread = __kmp_thread_from_gtid(gtid);
         if ( thread->th.th_current_place < 0 )
@@ -773,6 +781,8 @@ FTN_GET_PARTITION_NUM_PLACES( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return 0;
         gtid = __kmp_entry_gtid();
         thread = __kmp_thread_from_gtid(gtid);
         first_place = thread->th.th_first_place;
@@ -797,6 +807,8 @@ FTN_GET_PARTITION_PLACE_NUMS( int *place_nums ) {
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return;
         gtid = __kmp_entry_gtid();
         thread = __kmp_thread_from_gtid(gtid);
         first_place = thread->th.th_first_place;

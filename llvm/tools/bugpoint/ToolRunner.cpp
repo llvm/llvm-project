@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ToolRunner.h"
-#include "llvm/Config/config.h" // for HAVE_LINK_R
+#include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"

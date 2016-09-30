@@ -10,6 +10,8 @@
 #ifndef LLVM_ADT_ILIST_NODE_OPTIONS_H
 #define LLVM_ADT_ILIST_NODE_OPTIONS_H
 
+#include "llvm/Config/llvm-config.h"
+
 #include <type_traits>
 
 namespace llvm {
@@ -64,7 +66,7 @@ struct extract_sentinel_tracking<
 template <class Option1, class... Options>
 struct extract_sentinel_tracking<Option1, Options...>
     : extract_sentinel_tracking<Options...> {};
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 template <> struct extract_sentinel_tracking<> : std::true_type, is_implicit {};
 #else
 template <>

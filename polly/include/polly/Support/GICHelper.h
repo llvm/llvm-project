@@ -248,18 +248,18 @@ template <typename T> class IslPtr {
 private:
   T *Obj;
 
-  explicit IslPtr(__isl_take T *Obj, bool TakeOwnership)
-      : Obj(TakeOwnership ? Obj : Traits::copy(Obj)) {}
+  explicit IslPtr(__isl_take T *Obj) : Obj(Obj) {}
 
 public:
   IslPtr() : Obj(nullptr) {}
   /* implicit */ IslPtr(std::nullptr_t That) : IslPtr() {}
 
-  /* implicit */ IslPtr(const ThisTy &That) : IslPtr(That.Obj, false) {}
-  /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj, true) {
+  /* implicit */ IslPtr(const ThisTy &That)
+      : IslPtr(IslObjTraits<T>::copy(That.Obj)) {}
+  /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj) {
     That.Obj = nullptr;
   }
-  /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy(), true) {}
+  /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy()) {}
   ~IslPtr() {
     if (Obj)
       Traits::free(Obj);
@@ -280,14 +280,14 @@ public:
 
   static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
 
-  static ThisTy give(T *Obj) { return ThisTy(Obj, true); }
+  static ThisTy give(__isl_take T *Obj) { return ThisTy(Obj); }
   T *keep() const { return Obj; }
-  T *take() {
+  __isl_give T *take() {
     auto *Result = Obj;
     Obj = nullptr;
     return Result;
   }
-  T *copy() const { return Traits::copy(Obj); }
+  __isl_give T *copy() const { return Traits::copy(Obj); }
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }
@@ -344,7 +344,7 @@ public:
   static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
 
   T *keep() const { return Obj; }
-  T *copy() const { return Traits::copy(Obj); }
+  __isl_give T *copy() const { return Traits::copy(Obj); }
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }

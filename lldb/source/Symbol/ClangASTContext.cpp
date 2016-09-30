@@ -4463,19 +4463,22 @@ ClangASTContext::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
       }
       break;
 
-    case clang::Type::ObjCObjectPointer:
-      if (GetCompleteType(type)) {
-        const clang::ObjCObjectPointerType *objc_class_type =
-            qual_type->getAsObjCInterfacePointerType();
-        if (objc_class_type) {
-          clang::ObjCInterfaceDecl *class_interface_decl =
-              objc_class_type->getInterfaceDecl();
-          if (class_interface_decl)
-            num_functions = std::distance(class_interface_decl->meth_begin(),
-                                          class_interface_decl->meth_end());
+    case clang::Type::ObjCObjectPointer: {
+      const clang::ObjCObjectPointerType *objc_class_type =
+          qual_type->getAsObjCInterfacePointerType();
+      const clang::ObjCInterfaceType *objc_interface_type =
+          objc_class_type->getInterfaceType();
+      if (objc_interface_type &&
+          GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+        clang::ObjCInterfaceDecl *class_interface_decl =
+            objc_interface_type->getDecl();
+        if (class_interface_decl) {
+          num_functions = std::distance(class_interface_decl->meth_begin(),
+                                        class_interface_decl->meth_end());
         }
       }
       break;
+    }
 
     case clang::Type::ObjCObject:
     case clang::Type::ObjCInterface:
@@ -4568,34 +4571,36 @@ ClangASTContext::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
       }
       break;
 
-    case clang::Type::ObjCObjectPointer:
-      if (GetCompleteType(type)) {
-        const clang::ObjCObjectPointerType *objc_class_type =
-            qual_type->getAsObjCInterfacePointerType();
-        if (objc_class_type) {
-          clang::ObjCInterfaceDecl *class_interface_decl =
-              objc_class_type->getInterfaceDecl();
-          if (class_interface_decl) {
-            auto method_iter = class_interface_decl->meth_begin();
-            auto method_end = class_interface_decl->meth_end();
-            if (idx <
-                static_cast<size_t>(std::distance(method_iter, method_end))) {
-              std::advance(method_iter, idx);
-              clang::ObjCMethodDecl *objc_method_decl =
-                  method_iter->getCanonicalDecl();
-              if (objc_method_decl) {
-                clang_decl = CompilerDecl(this, objc_method_decl);
-                name = objc_method_decl->getSelector().getAsString();
-                if (objc_method_decl->isClassMethod())
-                  kind = lldb::eMemberFunctionKindStaticMethod;
-                else
-                  kind = lldb::eMemberFunctionKindInstanceMethod;
-              }
+    case clang::Type::ObjCObjectPointer: {
+      const clang::ObjCObjectPointerType *objc_class_type =
+          qual_type->getAsObjCInterfacePointerType();
+      const clang::ObjCInterfaceType *objc_interface_type =
+          objc_class_type->getInterfaceType();
+      if (objc_interface_type &&
+          GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+        clang::ObjCInterfaceDecl *class_interface_decl =
+            objc_interface_type->getDecl();
+        if (class_interface_decl) {
+          auto method_iter = class_interface_decl->meth_begin();
+          auto method_end = class_interface_decl->meth_end();
+          if (idx <
+              static_cast<size_t>(std::distance(method_iter, method_end))) {
+            std::advance(method_iter, idx);
+            clang::ObjCMethodDecl *objc_method_decl =
+                method_iter->getCanonicalDecl();
+            if (objc_method_decl) {
+              clang_decl = CompilerDecl(this, objc_method_decl);
+              name = objc_method_decl->getSelector().getAsString();
+              if (objc_method_decl->isClassMethod())
+                kind = lldb::eMemberFunctionKindStaticMethod;
+              else
+                kind = lldb::eMemberFunctionKindInstanceMethod;
             }
           }
         }
       }
       break;
+    }
 
     case clang::Type::ObjCObject:
     case clang::Type::ObjCInterface:
@@ -5629,19 +5634,21 @@ uint32_t ClangASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {
                 .GetNumFields();
     break;
 
-  case clang::Type::ObjCObjectPointer:
-    if (GetCompleteType(type)) {
-      const clang::ObjCObjectPointerType *objc_class_type =
-          qual_type->getAsObjCInterfacePointerType();
-      if (objc_class_type) {
-        clang::ObjCInterfaceDecl *class_interface_decl =
-            objc_class_type->getInterfaceDecl();
-
-        if (class_interface_decl)
-          count = class_interface_decl->ivar_size();
+  case clang::Type::ObjCObjectPointer: {
+    const clang::ObjCObjectPointerType *objc_class_type =
+        qual_type->getAsObjCInterfacePointerType();
+    const clang::ObjCInterfaceType *objc_interface_type =
+        objc_class_type->getInterfaceType();
+    if (objc_interface_type &&
+        GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+      clang::ObjCInterfaceDecl *class_interface_decl =
+          objc_interface_type->getDecl();
+      if (class_interface_decl) {
+        count = class_interface_decl->ivar_size();
       }
     }
     break;
+  }
 
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface:
@@ -5774,13 +5781,16 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
     }
     break;
 
-  case clang::Type::ObjCObjectPointer:
-    if (GetCompleteType(type)) {
-      const clang::ObjCObjectPointerType *objc_class_type =
-          qual_type->getAsObjCInterfacePointerType();
-      if (objc_class_type) {
-        clang::ObjCInterfaceDecl *class_interface_decl =
-            objc_class_type->getInterfaceDecl();
+  case clang::Type::ObjCObjectPointer: {
+    const clang::ObjCObjectPointerType *objc_class_type =
+        qual_type->getAsObjCInterfacePointerType();
+    const clang::ObjCInterfaceType *objc_interface_type =
+        objc_class_type->getInterfaceType();
+    if (objc_interface_type &&
+        GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+      clang::ObjCInterfaceDecl *class_interface_decl =
+          objc_interface_type->getDecl();
+      if (class_interface_decl) {
         return CompilerType(
             this, GetObjCFieldAtIndex(getASTContext(), class_interface_decl,
                                       idx, name, bit_offset_ptr,
@@ -5788,6 +5798,7 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
       }
     }
     break;
+  }
 
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface:
