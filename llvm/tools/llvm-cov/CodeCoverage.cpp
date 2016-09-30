@@ -92,6 +92,9 @@ private:
   /// \brief Load the coverage mapping data. Return nullptr if an error occured.
   std::unique_ptr<CoverageMapping> load();
 
+  /// \brief Remove input source files which aren't mapped by \p Coverage.
+  void removeUnmappedInputs(const CoverageMapping &Coverage);
+
   /// \brief If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
@@ -332,7 +335,16 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   if (Mismatched)
     warning(utostr(Mismatched) + " functions have mismatched data");
 
-  std::vector<StringRef> CoveredFiles = Coverage.get()->getUniqueSourceFiles();
+  if (!SourceFiles.empty())
+    removeUnmappedInputs(*Coverage);
+
+  demangleSymbols(*Coverage);
+
+  return Coverage;
+}
+
+void CodeCoverageTool::removeUnmappedInputs(const CoverageMapping &Coverage) {
+  std::vector<StringRef> CoveredFiles = Coverage.getUniqueSourceFiles();
 
   auto UncoveredFilesIt = SourceFiles.end();
   if (!CompareFilenamesOnly) {
@@ -360,10 +372,6 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   }
 
   SourceFiles.erase(UncoveredFilesIt, SourceFiles.end());
-
-  demangleSymbols(*Coverage);
-
-  return Coverage;
 }
 
 void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
