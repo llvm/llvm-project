@@ -50,8 +50,9 @@
 // RUN:   | FileCheck %s -check-prefix=INCLUDES
 // INCLUDES: "-iquote" "quotepath" "-isystem" "syspath"
 
+// -fno-split-dwarf-inlining is consumed but not passed to moviCompile.
 // RUN: %clang -target shave-myriad -c -### %s -g -fno-inline-functions \
-// RUN: -fno-inline-functions-called-once -Os -Wall -MF dep.d \
+// RUN: -fno-inline-functions-called-once -Os -Wall -MF dep.d -fno-split-dwarf-inlining \
 // RUN: -ffunction-sections 2>&1 | FileCheck %s -check-prefix=PASSTHRU_OPTIONS
 // PASSTHRU_OPTIONS: "-g" "-fno-inline-functions" "-fno-inline-functions-called-once"
 // PASSTHRU_OPTIONS: "-Os" "-Wall" "-MF" "dep.d" "-ffunction-sections"

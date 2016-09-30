@@ -151,16 +151,15 @@ int dotstar_lhs_before_rhs() {
   // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
   make_c()->*make_a();
 
-  // FIXME: The corresponding case for Windows ABIs is unimplementable if the
-  // operand has a non-trivially-destructible type, because the order of
-  // construction of function arguments is defined by the ABI there (it's the
-  // reverse of the order in which the parameters are destroyed in the callee).
-  // But we could follow the C++17 rule in the case where the operand type is
-  // trivially-destructible.
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // FIXME: For MS ABI, the order of destruction of parameters here will not be
+  // reverse construction order (parameters are destroyed left-to-right in the
+  // callee). That sadly seems unavoidable; the rules are not implementable as
+  // specified. If we changed parameter destruction order for these functions
+  // to right-to-left, we could make the destruction order match for all cases
+  // other than indirect calls, but we can't completely avoid the problem.
+  //
+  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c()->*make_b();
 
   // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
@@ -228,17 +227,13 @@ void shift_lhs_before_rhs() {
   // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
   make_c() >> make_a();
 
-  // FIXME: This is unimplementable for Windows ABIs, see above.
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // FIXME: This is not correct for Windows ABIs, see above.
+  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() << make_b();
 
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() >> make_b();
 // CHECK: }
 }
@@ -249,11 +244,9 @@ void comma_lhs_before_rhs() {
   // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
   make_c() , make_a();
 
-  // FIXME: This is unimplementable for Windows ABIs, see above.
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // FIXME: This is not correct for Windows ABIs, see above.
+  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() , make_b();
 }
 
@@ -267,16 +260,12 @@ void andor_lhs_before_rhs() {
   // CHECK: call {{.*}}@{{.*}}make_a{{.*}}(
   make_c() || make_a();
 
-  // FIXME: This is unimplementable for Windows ABIs, see above.
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // FIXME: This is not correct for Windows ABIs, see above.
+  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() && make_b();
 
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CHECK-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CHECK-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() || make_b();
 }

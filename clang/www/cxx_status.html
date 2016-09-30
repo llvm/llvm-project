@@ -740,14 +740,12 @@ In Clang 3.7, a warning is emitted for all cases that would change meaning.
 <span id="p0136">(9): This is the resolution to a Defect Report, so is applied
 to all language versions supporting inheriting constructors.
 </span><br>
-<span id="p0145">(10): Under the MS ABI, this feature is not fully implementable,
-because the calling convention requires that function parameters are destroyed
-from left to right in the callee. In order to guarantee that destruction order
-is reverse construction order, the operands of overloaded
+<span id="p0145">(10): Under the MS ABI, function parameters are destroyed from
+left to right in the callee. As a result, function parameters in calls to
 <tt>operator&lt;&lt;</tt>, <tt>operator&gt;&gt;</tt>, <tt>operator-&gt;*</tt>,
 <tt>operator&amp;&amp;</tt>, <tt>operator||</tt>, and <tt>operator,</tt>
-functions are evaluated right-to-left under the MS ABI when called using operator
-syntax, not left-to-right as P0145R3 requires.
+functions using expression syntax are no longer guaranteed to be destroyed in
+reverse construction order in that ABI.
 </span>
 </p>
 </details>

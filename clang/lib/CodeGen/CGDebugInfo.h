@@ -97,8 +97,7 @@ class CGDebugInfo {
   /// List of interfaces we want to keep even if orphaned.
   std::vector<void *> RetainedTypes;
 
-  /// Cache of forward declared types to RAUW at the end of
-  /// compilation.
+  /// Cache of forward declared types to RAUW at the end of compilation.
   std::vector<std::pair<const TagType *, llvm::TrackingMDRef>> ReplaceMap;
 
   /// Cache of replaceable forward declarations (functions and

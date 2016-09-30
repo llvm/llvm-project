@@ -134,11 +134,6 @@ bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
   llvm::GlobalValue::LinkageTypes TargetLinkage =
       getFunctionLinkage(TargetDecl);
 
-  // available_externally definitions aren't real definitions, so we cannot
-  // create an alias to one.
-  if (TargetLinkage == llvm::GlobalValue::AvailableExternallyLinkage)
-    return true;
-
   // Check if we have it already.
   StringRef MangledName = getMangledName(AliasDecl);
   llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
@@ -161,7 +156,14 @@ bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
 
   // Instead of creating as alias to a linkonce_odr, replace all of the uses
   // of the aliasee.
-  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage)) {
+  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage) &&
+     (TargetLinkage != llvm::GlobalValue::AvailableExternallyLinkage ||
+      !TargetDecl.getDecl()->hasAttr<AlwaysInlineAttr>())) {
+    // FIXME: An extern template instantiation will create functions with
+    // linkage "AvailableExternally". In libc++, some classes also define
+    // members with attribute "AlwaysInline" and expect no reference to
+    // be generated. It is desirable to reenable this optimisation after
+    // corresponding LLVM changes.
     addReplacement(MangledName, Aliasee);
     return false;
   }

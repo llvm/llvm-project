@@ -4123,15 +4123,33 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
              CGM.getContext().VoidPtrTy);
 
   // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left. It also requires that we evaluate arguments to operators
-  // <<, >>, and ->* left-to-right, but that is not possible under the MS ABI,
-  // so there is no corresponding "force left-to-right" case.
-  bool ForceRightToLeft = false;
-  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E))
-    ForceRightToLeft = OCE->isAssignmentOp();
+  // right-to-left, and that we evaluate arguments to certain other operators
+  // left-to-right. Note that we allow this to override the order dictated by
+  // the calling convention on the MS ABI, which means that parameter
+  // destruction order is not necessarily reverse construction order.
+  // FIXME: Revisit this based on C++ committee response to unimplementability.
+  EvaluationOrder Order = EvaluationOrder::Default;
+  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
+    if (OCE->isAssignmentOp())
+      Order = EvaluationOrder::ForceRightToLeft;
+    else {
+      switch (OCE->getOperator()) {
+      case OO_LessLess:
+      case OO_GreaterGreater:
+      case OO_AmpAmp:
+      case OO_PipePipe:
+      case OO_Comma:
+      case OO_ArrowStar:
+        Order = EvaluationOrder::ForceLeftToRight;
+        break;
+      default:
+        break;
+      }
+    }
+  }
 
   EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
-               E->getDirectCallee(), /*ParamsToSkip*/ 0, ForceRightToLeft);
+               E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*isChainCall=*/Chain);

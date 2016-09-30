@@ -184,7 +184,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       RtlArgs = &RtlArgStorage;
       EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
                    drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
-                   /*ParamsToSkip*/0, /*ForceRightToLeftEvaluation*/true);
+                   /*ParamsToSkip*/0, EvaluationOrder::ForceRightToLeft);
     }
   }
 

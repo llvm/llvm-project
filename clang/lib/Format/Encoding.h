@@ -33,16 +33,17 @@ enum Encoding {
 /// \brief Detects encoding of the Text. If the Text can be decoded using UTF-8,
 /// it is considered UTF8, otherwise we treat it as some 8-bit encoding.
 inline Encoding detectEncoding(StringRef Text) {
-  const UTF8 *Ptr = reinterpret_cast<const UTF8 *>(Text.begin());
-  const UTF8 *BufEnd = reinterpret_cast<const UTF8 *>(Text.end());
-  if (::isLegalUTF8String(&Ptr, BufEnd))
+  const llvm::UTF8 *Ptr = reinterpret_cast<const llvm::UTF8 *>(Text.begin());
+  const llvm::UTF8 *BufEnd = reinterpret_cast<const llvm::UTF8 *>(Text.end());
+  if (llvm::isLegalUTF8String(&Ptr, BufEnd))
     return Encoding_UTF8;
   return Encoding_Unknown;
 }
 
 inline unsigned getCodePointCountUTF8(StringRef Text) {
   unsigned CodePoints = 0;
-  for (size_t i = 0, e = Text.size(); i < e; i += getNumBytesForUTF8(Text[i])) {
+  for (size_t i = 0, e = Text.size(); i < e;
+       i += llvm::getNumBytesForUTF8(Text[i])) {
     ++CodePoints;
   }
   return CodePoints;
@@ -97,7 +98,7 @@ inline unsigned columnWidthWithTabs(StringRef Text, unsigned StartColumn,
 inline unsigned getCodePointNumBytes(char FirstChar, Encoding Encoding) {
   switch (Encoding) {
   case Encoding_UTF8:
-    return getNumBytesForUTF8(FirstChar);
+    return llvm::getNumBytesForUTF8(FirstChar);
   default:
     return 1;
   }
@@ -136,7 +137,7 @@ inline unsigned getEscapeSequenceLength(StringRef Text) {
         ++I;
       return I;
     }
-    return 1 + getNumBytesForUTF8(Text[1]);
+    return 1 + llvm::getNumBytesForUTF8(Text[1]);
   }
 }
 

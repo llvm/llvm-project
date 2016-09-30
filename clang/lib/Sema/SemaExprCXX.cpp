@@ -2340,41 +2340,61 @@ void Sema::DeclareGlobalNewDelete() {
                                         nullptr);
     getStdBadAlloc()->setImplicit(true);
   }
+  if (!StdAlignValT && getLangOpts().CPlusPlus1z) {
+    // The "std::align_val_t" enum class has not yet been declared, so build it
+    // implicitly.
+    auto *AlignValT = EnumDecl::Create(
+        Context, getOrCreateStdNamespace(), SourceLocation(), SourceLocation(),
+        &PP.getIdentifierTable().get("align_val_t"), nullptr, true, true, true);
+    AlignValT->setIntegerType(Context.getSizeType());
+    AlignValT->setPromotionType(Context.getSizeType());
+    AlignValT->setImplicit(true);
+    StdAlignValT = AlignValT;
+  }
 
   GlobalNewDeleteDeclared = true;
 
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
   QualType SizeT = Context.getSizeType();
 
-  DeclareGlobalAllocationFunction(
-      Context.DeclarationNames.getCXXOperatorName(OO_New),
-      VoidPtr, SizeT, QualType());
-  DeclareGlobalAllocationFunction(
-      Context.DeclarationNames.getCXXOperatorName(OO_Array_New),
-      VoidPtr, SizeT, QualType());
-  DeclareGlobalAllocationFunction(
-      Context.DeclarationNames.getCXXOperatorName(OO_Delete),
-      Context.VoidTy, VoidPtr);
-  DeclareGlobalAllocationFunction(
-      Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete),
-      Context.VoidTy, VoidPtr);
-  if (getLangOpts().SizedDeallocation) {
-    DeclareGlobalAllocationFunction(
-        Context.DeclarationNames.getCXXOperatorName(OO_Delete),
-        Context.VoidTy, VoidPtr, Context.getSizeType());
-    DeclareGlobalAllocationFunction(
-        Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete),
-        Context.VoidTy, VoidPtr, Context.getSizeType());
-  }
+  auto DeclareGlobalAllocationFunctions = [&](OverloadedOperatorKind Kind,
+                                              QualType Return, QualType Param) {
+    llvm::SmallVector<QualType, 3> Params;
+    Params.push_back(Param);
+
+    // Create up to four variants of the function (sized/aligned).
+    bool HasSizedVariant = getLangOpts().SizedDeallocation &&
+                           (Kind == OO_Delete || Kind == OO_Array_Delete);
+    bool HasAlignedVariant = getLangOpts().CPlusPlus1z;
+    for (int Sized = 0; Sized <= HasSizedVariant; ++Sized) {
+      if (Sized)
+        Params.push_back(SizeT);
+
+      for (int Aligned = 0; Aligned <= HasAlignedVariant; ++Aligned) {
+        if (Aligned)
+          Params.push_back(Context.getTypeDeclType(getStdAlignValT()));
+
+        DeclareGlobalAllocationFunction(
+            Context.DeclarationNames.getCXXOperatorName(Kind), Return, Params);
+
+        if (Aligned)
+          Params.pop_back();
+      }
+    }
+  };
+
+  DeclareGlobalAllocationFunctions(OO_New, VoidPtr, SizeT);
+  DeclareGlobalAllocationFunctions(OO_Array_New, VoidPtr, SizeT);
+  DeclareGlobalAllocationFunctions(OO_Delete, Context.VoidTy, VoidPtr);
+  DeclareGlobalAllocationFunctions(OO_Array_Delete, Context.VoidTy, VoidPtr);
 }
 
 /// DeclareGlobalAllocationFunction - Declares a single implicit global
 /// allocation function if it doesn't already exist.
 void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
                                            QualType Return,
-                                           QualType Param1, QualType Param2) {
+                                           ArrayRef<QualType> Params) {
   DeclContext *GlobalCtx = Context.getTranslationUnitDecl();
-  unsigned NumParams = Param2.isNull() ? 1 : 2;
 
   // Check if this function is already declared.
   DeclContext::lookup_result R = GlobalCtx->lookup(Name);
@@ -2383,18 +2403,12 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
     // Only look at non-template functions, as it is the predefined,
     // non-templated allocation function we are trying to declare here.
     if (FunctionDecl *Func = dyn_cast<FunctionDecl>(*Alloc)) {
-      if (Func->getNumParams() == NumParams) {
-        QualType InitialParam1Type =
-            Context.getCanonicalType(Func->getParamDecl(0)
-                                         ->getType().getUnqualifiedType());
-        QualType InitialParam2Type =
-            NumParams == 2
-                ? Context.getCanonicalType(Func->getParamDecl(1)
-                                               ->getType().getUnqualifiedType())
-                : QualType();
-        // FIXME: Do we need to check for default arguments here?
-        if (InitialParam1Type == Param1 &&
-            (NumParams == 1 || InitialParam2Type == Param2)) {
+      if (Func->getNumParams() == Params.size()) {
+        llvm::SmallVector<QualType, 3> FuncParams;
+        for (auto *P : Func->parameters())
+          FuncParams.push_back(
+              Context.getCanonicalType(P->getType().getUnqualifiedType()));
+        if (llvm::makeArrayRef(FuncParams) == Params) {
           // Make the function visible to name lookup, even if we found it in
           // an unimported module. It either is an implicitly-declared global
           // allocation function, or is suppressing that function.
@@ -2423,10 +2437,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
         getLangOpts().CPlusPlus11 ? EST_BasicNoexcept : EST_DynamicNone;
   }
 
-  QualType Params[] = { Param1, Param2 };
-
-  QualType FnType = Context.getFunctionType(
-      Return, llvm::makeArrayRef(Params, NumParams), EPI);
+  QualType FnType = Context.getFunctionType(Return, Params, EPI);
   FunctionDecl *Alloc =
     FunctionDecl::Create(Context, GlobalCtx, SourceLocation(),
                          SourceLocation(), Name,
@@ -2437,15 +2448,14 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
   Alloc->addAttr(VisibilityAttr::CreateImplicit(Context,
                                                 VisibilityAttr::Default));
 
-  ParmVarDecl *ParamDecls[2];
-  for (unsigned I = 0; I != NumParams; ++I) {
-    ParamDecls[I] = ParmVarDecl::Create(Context, Alloc, SourceLocation(),
-                                        SourceLocation(), nullptr,
-                                        Params[I], /*TInfo=*/nullptr,
-                                        SC_None, nullptr);
-    ParamDecls[I]->setImplicit();
+  llvm::SmallVector<ParmVarDecl*, 3> ParamDecls;
+  for (QualType T : Params) {
+    ParamDecls.push_back(
+        ParmVarDecl::Create(Context, Alloc, SourceLocation(), SourceLocation(),
+                            nullptr, T, /*TInfo=*/nullptr, SC_None, nullptr));
+    ParamDecls.back()->setImplicit();
   }
-  Alloc->setParams(llvm::makeArrayRef(ParamDecls, NumParams));
+  Alloc->setParams(ParamDecls);
 
   Context.getTranslationUnitDecl()->addDecl(Alloc);
   IdResolver.tryAddTopLevelDecl(Alloc, Name);
