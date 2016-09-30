@@ -607,9 +607,9 @@ public:
 
     BasicBlock *PH = L->getLoopPreheader();
     if (!PH)
-      return fail("no preheader");
+      return fail("NoHeader", "no preheader");
     if (!L->getExitBlock())
-      return fail("multiple exit blocks");
+      return fail("MultipleExitBlocks", "multiple exit blocks");
 
     // LAA will check that we only have a single exiting block.
     LAI = &GetLAA(*L);
@@ -617,11 +617,12 @@ public:
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
     if (LAI->canVectorizeMemory())
-      return fail("memory operations are safe for vectorization");
+      return fail("MemOpsCanBeVectorized",
+                  "memory operations are safe for vectorization");
 
     auto *Dependences = LAI->getDepChecker().getDependences();
     if (!Dependences || Dependences->empty())
-      return fail("no unsafe dependences to isolate");
+      return fail("NoUnsafeDeps", "no unsafe dependences to isolate");
 
     InstPartitionContainer Partitions(L, LI, DT);
 
@@ -674,14 +675,16 @@ public:
 
     DEBUG(dbgs() << "Seeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
-      return fail("cannot isolate unsafe dependencies");
+      return fail("CantIsolateUnsafeDeps",
+                  "cannot isolate unsafe dependencies");
 
     // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
     // should be able to vectorize these together.
     Partitions.mergeBeforePopulating();
     DEBUG(dbgs() << "\nMerged partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
-      return fail("cannot isolate unsafe dependencies");
+      return fail("CantIsolateUnsafeDeps",
+                  "cannot isolate unsafe dependencies");
 
     // Now, populate the partitions with non-memory operations.
     Partitions.populateUsedSet();
@@ -693,7 +696,8 @@ public:
       DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
                    << Partitions);
       if (Partitions.getSize() < 2)
-        return fail("cannot isolate unsafe dependencies");
+        return fail("CantIsolateUnsafeDeps",
+                    "cannot isolate unsafe dependencies");
     }
 
     // Don't distribute the loop if we need too many SCEV run-time checks.
@@ -701,7 +705,8 @@ public:
     if (Pred.getComplexity() > (IsForced.getValueOr(false)
                                     ? PragmaDistributeSCEVCheckThreshold
                                     : DistributeSCEVCheckThreshold))
-      return fail("too many SCEV run-time checks needed.\n");
+      return fail("TooManySCEVRuntimeChecks",
+                  "too many SCEV run-time checks needed.\n");
 
     DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
     // We're done forming the partitions set up the reverse mapping from
@@ -748,28 +753,32 @@ public:
 
     ++NumLoopsDistributed;
     // Report the success.
-    ORE->emitOptimizationRemark(LDIST_NAME, L, "distributed loop");
+    ORE->emit(OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
+                                 L->getHeader())
+              << "distributed loop");
     return true;
   }
 
   /// \brief Provide diagnostics then \return with false.
-  bool fail(llvm::StringRef Message) {
+  bool fail(StringRef RemarkName, StringRef Message) {
     LLVMContext &Ctx = F->getContext();
     bool Forced = isForced().getValueOr(false);
 
     DEBUG(dbgs() << "Skipping; " << Message << "\n");
 
     // With Rpass-missed report that distribution failed.
-    ORE->emitOptimizationRemarkMissed(
-        LDIST_NAME, L,
-        "loop not distributed: use -Rpass-analysis=loop-distribute for more "
-        "info");
+    ORE->emit(
+        OptimizationRemarkMissed(LDIST_NAME, "NotDistributed", L->getStartLoc(),
+                                 L->getHeader())
+        << "loop not distributed: use -Rpass-analysis=loop-distribute for more "
+           "info");
 
     // With Rpass-analysis report why.  This is on by default if distribution
     // was requested explicitly.
-    ORE->emitOptimizationRemarkAnalysis(
-        Forced ? OptimizationRemarkAnalysis::AlwaysPrint : LDIST_NAME, L,
-        Twine("loop not distributed: ") + Message);
+    ORE->emit(OptimizationRemarkAnalysis(
+                  Forced ? OptimizationRemarkAnalysis::AlwaysPrint : LDIST_NAME,
+                  RemarkName, L->getStartLoc(), L->getHeader())
+              << "loop not distributed: " << Message);
 
     // Also issue a warning if distribution was requested explicitly but it
     // failed.
