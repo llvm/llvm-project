@@ -43,7 +43,9 @@ char const __kmp_version_alt_comp[] = KMP_VERSION_PREFIX "alternative compiler s
 #endif /* defined(KMP_GOMP_COMPAT) */
 
 char const __kmp_version_omp_api[] = KMP_VERSION_PREFIX "API version: "
-#if OMP_40_ENABLED
+#if OMP_45_ENABLED
+    "4.5 (201511)";
+#elif OMP_40_ENABLED
     "4.0 (201307)";
 #else
     "3.1 (201107)";

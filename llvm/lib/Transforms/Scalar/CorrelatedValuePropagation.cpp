@@ -40,7 +40,7 @@ STATISTIC(NumDeadCases, "Number of switch cases removed");
 STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 
-static cl::opt<bool> DontProcessAdds("cvp-dont-process-adds", cl::init(true));
+static cl::opt<bool> DontProcessAdds("cvp-dont-process-adds", cl::init(false));
 
 namespace {
   class CorrelatedValuePropagation : public FunctionPass {

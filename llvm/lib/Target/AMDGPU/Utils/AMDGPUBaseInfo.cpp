@@ -152,6 +152,30 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
   return Ints;
 }
 
+unsigned getVmcntMask(IsaVersion Version) {
+  return 0xf;
+}
+
+unsigned getVmcntShift(IsaVersion Version) {
+  return 0;
+}
+
+unsigned getExpcntMask(IsaVersion Version) {
+  return 0x7;
+}
+
+unsigned getExpcntShift(IsaVersion Version) {
+  return 4;
+}
+
+unsigned getLgkmcntMask(IsaVersion Version) {
+  return 0xf;
+}
+
+unsigned getLgkmcntShift(IsaVersion Version) {
+  return 8;
+}
+
 unsigned getInitialPSInputAddr(const Function &F) {
   return getIntegerAttribute(F, "InitialPSInputAddr", 0);
 }

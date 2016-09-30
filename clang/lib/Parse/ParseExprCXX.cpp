@@ -1124,7 +1124,17 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   DeclSpec DS(AttrFactory);
   Declarator D(DS, Declarator::LambdaExprContext);
   TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-  Actions.PushLambdaScope();    
+  Actions.PushLambdaScope();
+
+  ParsedAttributes Attr(AttrFactory);
+  SourceLocation DeclLoc = Tok.getLocation();
+  SourceLocation DeclEndLoc = DeclLoc;
+  if (getLangOpts().CUDA) {
+    // In CUDA code, GNU attributes are allowed to appear immediately after the
+    // "[...]", even if there is no "(...)" before the lambda body.
+    MaybeParseGNUAttributes(Attr, &DeclEndLoc);
+    D.takeAttributes(Attr, DeclEndLoc);
+  }
 
   TypeResult TrailingReturnType;
   if (Tok.is(tok::l_paren)) {
@@ -1133,13 +1143,11 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                               Scope::FunctionDeclarationScope |
                               Scope::DeclScope);
 
-    SourceLocation DeclEndLoc;
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
     SourceLocation LParenLoc = T.getOpenLocation();
 
     // Parse parameter-declaration-clause.
-    ParsedAttributes Attr(AttrFactory);
     SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
     SourceLocation EllipsisLoc;
     
@@ -1245,12 +1253,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     Diag(Tok, diag::err_lambda_missing_parens)
       << TokKind
       << FixItHint::CreateInsertion(Tok.getLocation(), "() ");
-    SourceLocation DeclLoc = Tok.getLocation();
-    SourceLocation DeclEndLoc = DeclLoc;
+    DeclEndLoc = DeclLoc;
 
     // GNU-style attributes must be parsed before the mutable specifier to be
     // compatible with GCC.
-    ParsedAttributes Attr(AttrFactory);
     MaybeParseGNUAttributes(Attr, &DeclEndLoc);
 
     // Parse 'mutable', if it's there.
@@ -1297,7 +1303,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                                                TrailingReturnType),
                   Attr, DeclEndLoc);
   }
-  
 
   // FIXME: Rename BlockScope -> ClosureScope if we decide to continue using
   // it.

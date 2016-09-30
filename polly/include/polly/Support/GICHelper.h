@@ -260,10 +260,14 @@ public:
     That.Obj = nullptr;
   }
   /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy(), true) {}
-  ~IslPtr() { Traits::free(Obj); }
+  ~IslPtr() {
+    if (Obj)
+      Traits::free(Obj);
+  }
 
   ThisTy &operator=(const ThisTy &That) {
-    Traits::free(this->Obj);
+    if (Obj)
+      Traits::free(Obj);
     this->Obj = Traits::copy(That.Obj);
     return *this;
   }
@@ -287,6 +291,16 @@ public:
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }
+
+  /// Print a string representation of this ISL object to stderr.
+  ///
+  /// This function is meant to be called from a debugger and therefore must
+  /// not be declared inline: The debugger needs a valid function pointer to
+  /// call, even if the method is not used.
+  ///
+  /// Note that the string representation of isl_*_dump is different than the
+  /// one for isl_printer/isl_*_to_str().
+  void dump() const;
 };
 
 template <typename T> static IslPtr<T> give(__isl_take T *Obj) {
@@ -334,6 +348,11 @@ public:
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }
+
+  /// Print a string representation of this ISL object to stderr.
+  ///
+  /// @see IslPtr<T>::dump()
+  void dump() const;
 };
 
 template <typename T>

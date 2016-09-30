@@ -60,18 +60,16 @@ ELFCreator<ELFT>::ELFCreator(std::uint16_t Type, std::uint16_t Machine) {
 template <class ELFT>
 typename ELFCreator<ELFT>::Section
 ELFCreator<ELFT>::addSection(StringRef Name) {
-  std::size_t NameOff = SecHdrStrTabBuilder.add(Name);
   auto Shdr = new (Alloc) Elf_Shdr{};
-  Shdr->sh_name = NameOff;
+  Shdr->sh_name = SecHdrStrTabBuilder.add(Name);
   Sections.push_back(Shdr);
   return {Shdr, Sections.size()};
 }
 
 template <class ELFT>
 typename ELFCreator<ELFT>::Symbol ELFCreator<ELFT>::addSymbol(StringRef Name) {
-  std::size_t NameOff = StrTabBuilder.add(Name);
   auto Sym = new (Alloc) Elf_Sym{};
-  Sym->st_name = NameOff;
+  Sym->st_name = StrTabBuilder.add(Name);
   StaticSymbols.push_back(Sym);
   return {Sym, StaticSymbols.size()};
 }

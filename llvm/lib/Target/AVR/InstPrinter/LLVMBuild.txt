@@ -1,4 +1,4 @@
-;===- ./lib/Target/AVR/LLVMBuild.txt ---------------------------*- Conf -*--===;
+;===- ./lib/Target/AVR/InstPrinter/LLVMBuild.txt ----------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,19 +15,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = TargetInfo
-
 [component_0]
-type = TargetGroup
-name = AVR
-parent = Target
-has_asmprinter = 1
-has_asmparser = 1
-
-[component_1]
 type = Library
-name = AVRCodeGen
+name = AVRAsmPrinter
 parent = AVR
-required_libraries = AsmPrinter CodeGen Core MC AVRInfo SelectionDAG Support Target
+required_libraries = MC Support
 add_to_library_groups = AVR
