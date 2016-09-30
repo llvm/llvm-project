@@ -7,6 +7,10 @@
 # First, run a test with no such section.
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
+# RUN:	.dynsym : {  } \
+# RUN:	.hash : {  } \
+# RUN:	.dynstr : {  } \
 # RUN:  .text : { *(.text) } \
 # RUN:  . = ALIGN(0x1000); \
 # RUN:  .data.rel.ro : { *(.data.rel.ro) } \
@@ -24,6 +28,10 @@
 # cover the padding bits created by ALIGN.
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
+# RUN:	.dynsym : {  } \
+# RUN:	.hash : {  } \
+# RUN:	.dynstr : {  } \
 # RUN:  .text : { *(.text) } \
 # RUN:  . = ALIGN(0x1000); \
 # RUN:  bar : { HIDDEN(bar_sym = .); } \
@@ -43,6 +51,10 @@
 # of the section. That is, handle the above like the following test.
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
+# RUN:	.dynsym : {  } \
+# RUN:	.hash : {  } \
+# RUN:	.dynstr : {  } \
 # RUN:  .text : { *(.text) } \
 # RUN:  . = ALIGN(0x1000); \
 # RUN:  HIDDEN(bar_sym = .); \

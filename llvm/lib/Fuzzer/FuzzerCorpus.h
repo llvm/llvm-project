@@ -17,21 +17,26 @@
 
 #include "FuzzerDefs.h"
 #include "FuzzerRandom.h"
+#include "FuzzerTracePC.h"
 
 namespace fuzzer {
 
 struct InputInfo {
   Unit U;  // The actual input data.
   uint8_t Sha1[kSHA1NumBytes];  // Checksum.
+  // Number of features that this input has and no smaller input has.
+  size_t NumFeatures = 0;
+  size_t Tmp = 0; // Used by ValidateFeatureSet.
   // Stats.
-  uintptr_t NumExecutedMutations = 0;
-  uintptr_t NumSuccessfullMutations = 0;
+  size_t NumExecutedMutations = 0;
+  size_t NumSuccessfullMutations = 0;
 };
 
 class InputCorpus {
  public:
   InputCorpus() {
     Inputs.reserve(1 << 14);  // Avoid too many resizes.
+    memset(FeatureSet, 0, sizeof(FeatureSet));
   }
   size_t size() const { return Inputs.size(); }
   bool empty() const { return Inputs.empty(); }
@@ -44,6 +49,7 @@ class InputCorpus {
     InputInfo &II = Inputs.back();
     II.U = U;
     memcpy(II.Sha1, Hash, kSHA1NumBytes);
+    UpdateFeatureSet(Inputs.size() - 1);
     UpdateCorpusDistribution();
   }
 
@@ -74,7 +80,67 @@ class InputCorpus {
     }
   }
 
+  void PrintFeatureSet() {
+    Printf("Features [id: cnt idx sz] ");
+    for (size_t i = 0; i < kFeatureSetSize; i++) {
+      auto &Fe = FeatureSet[i];
+      if (!Fe.Count) continue;
+      Printf("[%zd: %zd %zd] ", i, Fe.SmallestElementIdx,
+             Fe.SmallestElementSize);
+    }
+    Printf("\n\t");
+    for (size_t i = 0; i < Inputs.size(); i++)
+      if (size_t N = Inputs[i].NumFeatures)
+        Printf(" %zd=>%zd ", i, N);
+    Printf("\n");
+  }
+
 private:
+
+  static const bool FeatureDebug = false;
+  static const size_t kFeatureSetSize = TracePC::kFeatureSetSize;
+
+  void ValidateFeatureSet() {
+    for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++) {
+      Feature &Fe = FeatureSet[Idx];
+      if(Fe.Count && Fe.SmallestElementSize)
+        Inputs[Fe.SmallestElementIdx].Tmp++;
+    }
+    for (auto &II: Inputs) {
+      assert(II.Tmp == II.NumFeatures);
+      II.Tmp = 0;
+    }
+  }
+
+  void UpdateFeatureSet(size_t CurrentElementIdx) {
+    auto &II = Inputs[CurrentElementIdx];
+    size_t Size = II.U.size();
+    if (!Size)
+      return;
+    bool Updated = false;
+    for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++) {
+      if (!TPC.HasFeature(Idx))
+        continue;
+      Feature &Fe = FeatureSet[Idx];
+      Fe.Count++;
+      if (!Fe.SmallestElementSize ||
+          Fe.SmallestElementSize > Size) {
+        II.NumFeatures++;
+        if (Fe.SmallestElementSize > Size) {
+          auto &OlderII = Inputs[Fe.SmallestElementIdx];
+          assert(OlderII.NumFeatures > 0);
+          OlderII.NumFeatures--;
+          if (!OlderII.NumFeatures && FeatureDebug)
+            Printf("EVICTED %zd\n", Fe.SmallestElementIdx);
+        }
+        Fe.SmallestElementIdx = CurrentElementIdx;
+        Fe.SmallestElementSize = Size;
+        Updated = true;
+      }
+    }
+    if (Updated && FeatureDebug) PrintFeatureSet();
+    ValidateFeatureSet();
+  }
 
   // Updates the probability distribution for the units in the corpus.
   // Must be called whenever the corpus or unit weights are changed.
@@ -91,6 +157,13 @@ private:
 
   std::unordered_set<std::string> Hashes;
   std::vector<InputInfo> Inputs;
+
+  struct Feature {
+    size_t Count;
+    size_t SmallestElementIdx;
+    size_t SmallestElementSize;
+  };
+  Feature FeatureSet[kFeatureSetSize];
 };
 
 }  // namespace fuzzer

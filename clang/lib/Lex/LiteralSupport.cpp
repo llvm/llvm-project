@@ -402,7 +402,7 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   if (CharByteWidth == 4) {
     // FIXME: Make the type of the result buffer correct instead of
     // using reinterpret_cast.
-    UTF32 *ResultPtr = reinterpret_cast<UTF32*>(ResultBuf);
+    llvm::UTF32 *ResultPtr = reinterpret_cast<llvm::UTF32*>(ResultBuf);
     *ResultPtr = UcnVal;
     ResultBuf += 4;
     return;
@@ -411,7 +411,7 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   if (CharByteWidth == 2) {
     // FIXME: Make the type of the result buffer correct instead of
     // using reinterpret_cast.
-    UTF16 *ResultPtr = reinterpret_cast<UTF16*>(ResultBuf);
+    llvm::UTF16 *ResultPtr = reinterpret_cast<llvm::UTF16*>(ResultBuf);
 
     if (UcnVal <= (UTF32)0xFFFF) {
       *ResultPtr = UcnVal;
@@ -1114,11 +1114,11 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
 
       char const *tmp_in_start = start;
       uint32_t *tmp_out_start = buffer_begin;
-      ConversionResult res =
-          ConvertUTF8toUTF32(reinterpret_cast<UTF8 const **>(&start),
-                             reinterpret_cast<UTF8 const *>(begin),
-                             &buffer_begin, buffer_end, strictConversion);
-      if (res != conversionOK) {
+      llvm::ConversionResult res =
+          llvm::ConvertUTF8toUTF32(reinterpret_cast<llvm::UTF8 const **>(&start),
+                             reinterpret_cast<llvm::UTF8 const *>(begin),
+                             &buffer_begin, buffer_end, llvm::strictConversion);
+      if (res != llvm::conversionOK) {
         // If we see bad encoding for unprefixed character literals, warn and
         // simply copy the byte values, for compatibility with gcc and
         // older versions of clang.
@@ -1510,13 +1510,13 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
         if (CharByteWidth == 4) {
           // FIXME: Make the type of the result buffer correct instead of
           // using reinterpret_cast.
-          UTF32 *ResultWidePtr = reinterpret_cast<UTF32*>(ResultPtr);
+          llvm::UTF32 *ResultWidePtr = reinterpret_cast<llvm::UTF32*>(ResultPtr);
           *ResultWidePtr = ResultChar;
           ResultPtr += 4;
         } else if (CharByteWidth == 2) {
           // FIXME: Make the type of the result buffer correct instead of
           // using reinterpret_cast.
-          UTF16 *ResultWidePtr = reinterpret_cast<UTF16*>(ResultPtr);
+          llvm::UTF16 *ResultWidePtr = reinterpret_cast<llvm::UTF16*>(ResultPtr);
           *ResultWidePtr = ResultChar & 0xFFFF;
           ResultPtr += 2;
         } else {
@@ -1531,12 +1531,12 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
     if (CharByteWidth == 4) {
       // FIXME: Make the type of the result buffer correct instead of
       // using reinterpret_cast.
-      UTF32 *ResultWidePtr = reinterpret_cast<UTF32*>(ResultBuf.data());
+      llvm::UTF32 *ResultWidePtr = reinterpret_cast<llvm::UTF32*>(ResultBuf.data());
       ResultWidePtr[0] = GetNumStringChars() - 1;
     } else if (CharByteWidth == 2) {
       // FIXME: Make the type of the result buffer correct instead of
       // using reinterpret_cast.
-      UTF16 *ResultWidePtr = reinterpret_cast<UTF16*>(ResultBuf.data());
+      llvm::UTF16 *ResultWidePtr = reinterpret_cast<llvm::UTF16*>(ResultBuf.data());
       ResultWidePtr[0] = GetNumStringChars() - 1;
     } else {
       assert(CharByteWidth == 1 && "Unexpected char width");
@@ -1570,7 +1570,7 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
 static const char *resyncUTF8(const char *Err, const char *End) {
   if (Err == End)
     return End;
-  End = Err + std::min<unsigned>(getNumBytesForUTF8(*Err), End-Err);
+  End = Err + std::min<unsigned>(llvm::getNumBytesForUTF8(*Err), End-Err);
   while (++Err != End && (*Err & 0xC0) == 0x80)
     ;
   return Err;
@@ -1582,7 +1582,7 @@ static const char *resyncUTF8(const char *Err, const char *End) {
 bool StringLiteralParser::CopyStringFragment(const Token &Tok,
                                              const char *TokBegin,
                                              StringRef Fragment) {
-  const UTF8 *ErrorPtrTmp;
+  const llvm::UTF8 *ErrorPtrTmp;
   if (ConvertUTF8toWide(CharByteWidth, Fragment, ResultPtr, ErrorPtrTmp))
     return false;
 

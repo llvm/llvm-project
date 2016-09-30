@@ -4,6 +4,7 @@
 # is not location counter but offset from the beginning of output
 # section .foo
 # RUN: echo "SECTIONS { \
+# RUN:          . = SIZEOF_HEADERS; \
 # RUN:          .foo : { \
 # RUN:              begin_foo = .; \
 # RUN:              PROVIDE(_begin_sec = .); \

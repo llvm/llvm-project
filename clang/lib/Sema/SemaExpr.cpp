@@ -3070,8 +3070,9 @@ static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
                                     SmallString<32> &Target) {
   Target.resize(CharByteWidth * (Source.size() + 1));
   char *ResultPtr = &Target[0];
-  const UTF8 *ErrorPtr;
-  bool success = ConvertUTF8toWide(CharByteWidth, Source, ResultPtr, ErrorPtr);
+  const llvm::UTF8 *ErrorPtr;
+  bool success =
+      llvm::ConvertUTF8toWide(CharByteWidth, Source, ResultPtr, ErrorPtr);
   (void)success;
   assert(success);
   Target.resize(ResultPtr - &Target[0]);

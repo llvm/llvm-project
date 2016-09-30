@@ -4,6 +4,7 @@
 # RUN: ld.lld -shared %t2.o -o %t2.so
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  .plt  : { *(.plt) } \
 # RUN:  .text : { *(.text) } \
 # RUN:  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE)); \

@@ -110,13 +110,6 @@ struct GetTypes<R(Args...)> {
 // C-style interface around internal sanitizer libc functions.
 extern "C" {
 
-// Libc++ calls these hooks from __cxa_guard_acquire. Normally, they should go
-// into google3 fiber scheduler code. But in the canned symbolizer they are
-// both unnecessary and lead to deadlocks as symbolizer calls arbitrary google3
-// code during race reporting.
-void __google_potentially_blocking_region_begin() {}
-void __google_potentially_blocking_region_end() {}
-
 #define RETURN_OR_SET_ERRNO(T, res)                   \
   int rverrno;                                        \
   if (__sanitizer::internal_iserror(res, &rverrno)) { \

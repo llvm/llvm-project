@@ -227,7 +227,7 @@ class ObjCDataFormatterTestCase(TestBase):
                 '@"21 items"'])
 
         self.expect(
-            'expression -d run -- [NSArray new]',
+            'expression -d run -- (NSArray*)[NSArray new]',
             substrs=['@"0 elements"'])
 
     def nsdata_data_formatter_commands(self):

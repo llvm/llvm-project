@@ -595,7 +595,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
   }
 
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
-  Dot = getHeaderSize();
+  Dot = 0;
 
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base.get())) {

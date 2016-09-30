@@ -4363,9 +4363,10 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   // Build a record containing some declaration references.
   RecordData SemaDeclRefs;
-  if (SemaRef.StdNamespace || SemaRef.StdBadAlloc) {
+  if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
     AddDeclRef(SemaRef.getStdNamespace(), SemaDeclRefs);
     AddDeclRef(SemaRef.getStdBadAlloc(), SemaDeclRefs);
+    AddDeclRef(SemaRef.getStdAlignValT(), SemaDeclRefs);
   }
 
   RecordData CUDASpecialDeclRefs;

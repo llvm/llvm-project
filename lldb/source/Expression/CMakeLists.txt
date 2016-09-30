@@ -15,3 +15,7 @@ add_lldb_library(lldbExpression
   UserExpression.cpp
   UtilityFunction.cpp
   )
+
+if(NOT LLDB_BUILT_STANDALONE)
+  add_dependencies(lldbExpression intrinsics_gen)
+endif()

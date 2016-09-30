@@ -8266,6 +8266,10 @@ CXXRecordDecl *Sema::getStdBadAlloc() const {
                                   StdBadAlloc.get(Context.getExternalSource()));
 }
 
+EnumDecl *Sema::getStdAlignValT() const {
+  return cast_or_null<EnumDecl>(StdAlignValT.get(Context.getExternalSource()));
+}
+
 NamespaceDecl *Sema::getStdNamespace() const {
   return cast_or_null<NamespaceDecl>(
                                  StdNamespace.get(Context.getExternalSource()));

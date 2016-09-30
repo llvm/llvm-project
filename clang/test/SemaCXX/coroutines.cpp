@@ -1,5 +1,22 @@
 // RUN: %clang_cc1 -std=c++14 -fcoroutines -verify %s
 
+void no_coroutine_traits_bad_arg_await() {
+  co_await a; // expected-error {{include <coroutine>}}
+  // expected-error@-1 {{use of undeclared identifier 'a'}}
+}
+
+void no_coroutine_traits_bad_arg_yield() {
+  co_yield a; // expected-error {{include <coroutine>}}
+  // expected-error@-1 {{use of undeclared identifier 'a'}}
+}
+
+
+void no_coroutine_traits_bad_arg_return() {
+  co_return a; // expected-error {{include <coroutine>}}
+  // expected-error@-1 {{use of undeclared identifier 'a'}}
+}
+
+
 struct awaitable {
   bool await_ready();
   void await_suspend(); // FIXME: coroutine_handle

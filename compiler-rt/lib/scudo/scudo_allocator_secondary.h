@@ -51,10 +51,16 @@ class ScudoLargeMmapAllocator {
     return reinterpret_cast<void *>(Ptr);
   }
 
-  void *ReturnNullOrDie() {
+  void *ReturnNullOrDieOnBadRequest() {
     if (atomic_load(&MayReturnNull, memory_order_acquire))
       return nullptr;
-    ReportAllocatorCannotReturnNull();
+    ReportAllocatorCannotReturnNull(false);
+  }
+
+  void *ReturnNullOrDieOnOOM() {
+    if (atomic_load(&MayReturnNull, memory_order_acquire))
+      return nullptr;
+    ReportAllocatorCannotReturnNull(true);
   }
 
   void SetMayReturnNull(bool AllocatorMayReturnNull) {

@@ -120,15 +120,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   unsigned MaxTasks = LtoObj->getMaxTasks();
   Buff.resize(MaxTasks);
 
-  auto AddStream =
-      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
+  checkError(LtoObj->run([&](size_t Task) {
     return llvm::make_unique<lto::NativeObjectStream>(
         llvm::make_unique<llvm::raw_svector_ostream>(Buff[Task]));
-  };
-
-  checkError(LtoObj->run(AddStream));
-  if (HasError)
-    return Ret;
+  }));
 
   for (unsigned I = 0; I != MaxTasks; ++I) {
     if (Buff[I].empty())
@@ -139,8 +134,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       else
         saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.o");
     }
-    MemoryBufferRef CompiledObjRef(Buff[I], "lto.tmp");
-    InputFile *Obj = createObjectFile(CompiledObjRef);
+    InputFile *Obj = createObjectFile(MemoryBufferRef(Buff[I], "lto.tmp"));
     Ret.push_back(Obj);
   }
   return Ret;

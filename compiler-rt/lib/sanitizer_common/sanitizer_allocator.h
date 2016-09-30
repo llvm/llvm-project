@@ -24,8 +24,13 @@
 
 namespace __sanitizer {
 
+// Returns true if ReportAllocatorCannotReturnNull(true) was called.
+// Can be use to avoid memory hungry operations.
+bool IsReportingOOM();
+
 // Prints error message and kills the program.
-void NORETURN ReportAllocatorCannotReturnNull();
+void NORETURN ReportAllocatorCannotReturnNull(bool out_of_memory);
+
 // Allocators call these callbacks on mmap/munmap.
 struct NoOpMapUnmapCallback {
   void OnMap(uptr p, uptr size) const { }

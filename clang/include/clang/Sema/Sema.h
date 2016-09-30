@@ -721,6 +721,10 @@ public:
   /// standard library.
   LazyDeclPtr StdBadAlloc;
 
+  /// \brief The C++ "std::align_val_t" enum class, which is defined by the C++
+  /// standard library.
+  LazyDeclPtr StdAlignValT;
+
   /// \brief The C++ "std::initializer_list" template, which is defined in
   /// \<initializer_list>.
   ClassTemplateDecl *StdInitializerList;
@@ -4237,6 +4241,7 @@ public:
   NamespaceDecl *getOrCreateStdNamespace();
 
   CXXRecordDecl *getStdBadAlloc() const;
+  EnumDecl *getStdAlignValT() const;
 
   /// \brief Tests whether Ty is an instance of std::initializer_list and, if
   /// it is and Element is not NULL, assigns the element type to Element.
@@ -4838,8 +4843,7 @@ public:
                               bool Diagnose = true);
   void DeclareGlobalNewDelete();
   void DeclareGlobalAllocationFunction(DeclarationName Name, QualType Return,
-                                       QualType Param1,
-                                       QualType Param2 = QualType());
+                                       ArrayRef<QualType> Params);
 
   bool FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
                                 DeclarationName Name, FunctionDecl* &Operator,

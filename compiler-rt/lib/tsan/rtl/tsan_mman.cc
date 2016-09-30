@@ -148,7 +148,7 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
 
 void *user_alloc(ThreadState *thr, uptr pc, uptr sz, uptr align, bool signal) {
   if ((sz >= (1ull << 40)) || (align >= (1ull << 40)))
-    return allocator()->ReturnNullOrDie();
+    return allocator()->ReturnNullOrDieOnBadRequest();
   void *p = allocator()->Allocate(&thr->proc()->alloc_cache, sz, align);
   if (p == 0)
     return 0;
@@ -161,7 +161,7 @@ void *user_alloc(ThreadState *thr, uptr pc, uptr sz, uptr align, bool signal) {
 
 void *user_calloc(ThreadState *thr, uptr pc, uptr size, uptr n) {
   if (CallocShouldReturnNullDueToOverflow(size, n))
-    return allocator()->ReturnNullOrDie();
+    return allocator()->ReturnNullOrDieOnBadRequest();
   void *p = user_alloc(thr, pc, n * size);
   if (p)
     internal_memset(p, 0, n * size);

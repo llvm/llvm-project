@@ -63,11 +63,8 @@ void Fuzzer::ResetEdgeCoverage() {
 }
 
 void Fuzzer::ResetCounters() {
-  if (Options.UseCounters) {
+  if (Options.UseCounters)
     EF->__sanitizer_update_counter_bitset_and_clear_counters(0);
-  }
-  if (EF->__sanitizer_get_coverage_pc_buffer_pos)
-    PcBufferPos = EF->__sanitizer_get_coverage_pc_buffer_pos();
 }
 
 void Fuzzer::PrepareCounters(Fuzzer::Coverage *C) {
@@ -116,19 +113,6 @@ bool Fuzzer::RecordMaxCoverage(Fuzzer::Coverage *C) {
   if (TPC.UpdateValueProfileMap(&C->VPMap))
     Res = true;
 
-  if (EF->__sanitizer_get_coverage_pc_buffer_pos) {
-    uint64_t NewPcBufferPos = EF->__sanitizer_get_coverage_pc_buffer_pos();
-    if (NewPcBufferPos > PcBufferPos) {
-      Res = true;
-      PcBufferPos = NewPcBufferPos;
-    }
-
-    if (PcBufferLen && NewPcBufferPos >= PcBufferLen) {
-      Printf("ERROR: PC buffer overflow\n");
-      _Exit(1);
-    }
-  }
-
   return Res;
 }
 
@@ -171,11 +155,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   TPC.SetUseCounters(Options.UseCounters);
   TPC.SetUseValueProfile(Options.UseValueProfile);
 
-  if (Options.PrintNewCovPcs) {
-    PcBufferLen = 1 << 24;
-    PcBuffer = new uintptr_t[PcBufferLen];
-    EF->__sanitizer_set_coverage_pc_buffer(PcBuffer, PcBufferLen);
-  }
   if (Options.Verbosity)
     TPC.PrintModuleInfo();
   if (!Options.OutputCorpus.empty() && Options.Reload)
@@ -392,15 +371,13 @@ void Fuzzer::CheckExitOnSrcPos() {
 
 void Fuzzer::AddToCorpusAndMaybeRerun(const Unit &U) {
   CheckExitOnSrcPos();
-  Corpus.AddToCorpus(U);
   if (TPC.GetTotalPCCoverage()) {
     TPC.ResetMaps();
     TPC.ResetGuards();
     ExecuteCallback(U.data(), U.size());
     TPC.FinalizeTrace();
-    TPC.UpdateFeatureSet(Corpus.size() - 1, U.size());
-    // TPC.PrintFeatureSet();
   }
+  Corpus.AddToCorpus(U);
 }
 
 void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
@@ -453,18 +430,11 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
   }
 }
 
-bool Fuzzer::UpdateMaxCoverage() {
-  PrevPcBufferPos = PcBufferPos;
-  bool Res = RecordMaxCoverage(&MaxCoverage);
-
-  return Res;
-}
-
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   TotalNumberOfRuns++;
 
   ExecuteCallback(Data, Size);
-  bool Res = UpdateMaxCoverage();
+  bool Res = RecordMaxCoverage(&MaxCoverage);
 
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
@@ -563,13 +533,6 @@ void Fuzzer::PrintOneNewPC(uintptr_t PC) {
 
 void Fuzzer::PrintNewPCs() {
   if (!Options.PrintNewCovPcs) return;
-  if (PrevPcBufferPos != PcBufferPos) {
-    int NumPrinted = 0;
-    for (size_t I = PrevPcBufferPos; I < PcBufferPos; ++I) {
-      if (NumPrinted++ > 30) break;  // Don't print too many new PCs.
-      PrintOneNewPC(PcBuffer[I]);
-    }
-  }
   uintptr_t *PCIDs;
   if (size_t NumNewPCIDs = TPC.GetNewPCIDs(&PCIDs))
     for (size_t i = 0; i < NumNewPCIDs; i++)
