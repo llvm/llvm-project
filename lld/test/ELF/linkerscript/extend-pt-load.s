@@ -7,6 +7,7 @@
 # First, run a test with no such section.
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:	.dynsym : {  } \
 # RUN:	.hash : {  } \
 # RUN:	.dynstr : {  } \
@@ -27,6 +28,7 @@
 # cover the padding bits created by ALIGN.
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:	.dynsym : {  } \
 # RUN:	.hash : {  } \
 # RUN:	.dynstr : {  } \
@@ -49,6 +51,7 @@
 # of the section. That is, handle the above like the following test.
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:	.dynsym : {  } \
 # RUN:	.hash : {  } \
 # RUN:	.dynstr : {  } \

@@ -882,12 +882,12 @@ def : Pat <
 
 def : Pat <
   (i1 (trunc i32:$a)),
-  (V_CMP_EQ_I32_e64 (S_AND_B32 (i32 1), $a), 1)
+  (V_CMP_EQ_U32_e64 (S_AND_B32 (i32 1), $a), 1)
 >;
 
 def : Pat <
   (i1 (trunc i64:$a)),
-  (V_CMP_EQ_I32_e64 (S_AND_B32 (i32 1),
+  (V_CMP_EQ_U32_e64 (S_AND_B32 (i32 1),
                     (EXTRACT_SUBREG $a, sub0)), 1)
 >;
 

@@ -259,17 +259,34 @@ void ArgList::AddLastArg(ArgStringList &Output, OptSpecifier Id0,
   }
 }
 
-void ArgList::AddAllArgs(ArgStringList &Output,
-                         ArrayRef<OptSpecifier> Ids) const {
+void ArgList::AddAllArgsExcept(ArgStringList &Output,
+                               ArrayRef<OptSpecifier> Ids,
+                               ArrayRef<OptSpecifier> ExcludeIds) const {
   for (const Arg *Arg : Args) {
-    for (OptSpecifier Id : Ids) {
+    bool Excluded = false;
+    for (OptSpecifier Id : ExcludeIds) {
       if (Arg->getOption().matches(Id)) {
-        Arg->claim();
-        Arg->render(*this, Output);
+        Excluded = true;
         break;
       }
     }
+    if (!Excluded) {
+      for (OptSpecifier Id : Ids) {
+        if (Arg->getOption().matches(Id)) {
+          Arg->claim();
+          Arg->render(*this, Output);
+          break;
+        }
+      }
+    }
   }
+}
+
+/// This is a nicer interface when you don't have a list of Ids to exclude.
+void ArgList::AddAllArgs(ArgStringList &Output,
+                         ArrayRef<OptSpecifier> Ids) const {
+  ArrayRef<OptSpecifier> Exclude = None;
+  AddAllArgsExcept(Output, Ids, Exclude);
 }
 
 /// This 3-opt variant of AddAllArgs could be eliminated in favor of one

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+avx512f | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f | FileCheck %s
 
 declare <4 x float> @foo(<4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>)
 

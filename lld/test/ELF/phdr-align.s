@@ -2,6 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  .bss : { *(.bss) } \
 # RUN:  .data : { *(.data) } \
 # RUN:  .text : { *(.text) } }" > %t.script

@@ -15,7 +15,7 @@
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD0:v[0-9]+]]
 
-; GCN: v_cmp_eq_i32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0,
+; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0,
 ; GCN: s_mov_b64 s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, exec
 ; GCN: s_and_b64 s{{\[}}[[ANDEXEC_LO:[0-9]+]]:[[ANDEXEC_HI:[0-9]+]]{{\]}}, s{{\[}}[[SAVEEXEC_LO]]:[[SAVEEXEC_HI]]{{\]}}, [[CMP0]]
 ; GCN: s_xor_b64 s{{\[}}[[SAVEEXEC_LO]]:[[SAVEEXEC_HI]]{{\]}}, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}, s{{\[}}[[SAVEEXEC_LO]]:[[SAVEEXEC_HI]]{{\]}}
@@ -93,7 +93,7 @@ endif:
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD0:v[0-9]+]]
 
-; GCN: v_cmp_eq_i32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0,
+; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0,
 
 ; GCN: s_mov_b64 s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, exec
 ; GCN: s_and_b64 s{{\[}}[[ANDEXEC_LO:[0-9]+]]:[[ANDEXEC_HI:[0-9]+]]{{\]}}, s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, [[CMP0]]
@@ -122,7 +122,7 @@ endif:
 ; GCN: [[LOOP:BB[0-9]+_[0-9]+]]:
 ; GCN: buffer_load_dword v[[VAL_LOOP_RELOAD:[0-9]+]], off, s[8:11], s12 offset:[[VAL_OFFSET]] ; 4-byte Folded Reload
 ; GCN: v_subrev_i32_e32 [[VAL_LOOP:v[0-9]+]], vcc, v{{[0-9]+}}, v[[VAL_LOOP_RELOAD]]
-; GCN: v_cmp_ne_i32_e32 vcc,
+; GCN: v_cmp_ne_u32_e32 vcc,
 ; GCN: s_and_b64 vcc, exec, vcc
 ; GCN: buffer_store_dword [[VAL_LOOP]], off, s[8:11], s12 offset:[[VAL_SUB_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 ; GCN: s_waitcnt vmcnt(0) expcnt(0)
@@ -173,7 +173,7 @@ end:
 ; GCN: s_mov_b32 m0, -1
 ; VMEM: ds_read_b32 [[LOAD0:v[0-9]+]]
 
-; GCN: v_cmp_ne_i32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0,
+; GCN: v_cmp_ne_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0,
 
 ; GCN: s_mov_b64 s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, exec
 ; GCN: s_and_b64 s{{\[}}[[ANDEXEC_LO:[0-9]+]]:[[ANDEXEC_HI:[0-9]+]]{{\]}}, s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, [[CMP0]]

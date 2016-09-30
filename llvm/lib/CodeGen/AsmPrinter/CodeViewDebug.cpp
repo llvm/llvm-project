@@ -614,11 +614,12 @@ void CodeViewDebug::emitCompilerInformation() {
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
   // guarantees it'll be big enough without really lying about the version.
-  Version BackVer = {{
-      1000 * LLVM_VERSION_MAJOR +
-      10 * LLVM_VERSION_MINOR +
-      LLVM_VERSION_PATCH,
-      0, 0, 0 }};
+  int Major = 1000 * LLVM_VERSION_MAJOR +
+              10 * LLVM_VERSION_MINOR +
+              LLVM_VERSION_PATCH;
+  // Clamp it for builds that use unusually large version numbers.
+  Major = std::min<int>(Major, std::numeric_limits<uint16_t>::max());
+  Version BackVer = {{ Major, 0, 0, 0 }};
   OS.AddComment("Backend version");
   for (int N = 0; N < 4; ++N)
     OS.EmitIntValue(BackVer.Part[N], 2);
@@ -1222,20 +1223,20 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
     break;
   case dwarf::DW_ATE_signed:
     switch (ByteSize) {
-    case 1:  STK = SimpleTypeKind::SByte;      break;
-    case 2:  STK = SimpleTypeKind::Int16Short; break;
-    case 4:  STK = SimpleTypeKind::Int32;      break;
-    case 8:  STK = SimpleTypeKind::Int64Quad;  break;
-    case 16: STK = SimpleTypeKind::Int128Oct;  break;
+    case 1:  STK = SimpleTypeKind::SignedCharacter; break;
+    case 2:  STK = SimpleTypeKind::Int16Short;      break;
+    case 4:  STK = SimpleTypeKind::Int32;           break;
+    case 8:  STK = SimpleTypeKind::Int64Quad;       break;
+    case 16: STK = SimpleTypeKind::Int128Oct;       break;
     }
     break;
   case dwarf::DW_ATE_unsigned:
     switch (ByteSize) {
-    case 1:  STK = SimpleTypeKind::Byte;        break;
-    case 2:  STK = SimpleTypeKind::UInt16Short; break;
-    case 4:  STK = SimpleTypeKind::UInt32;      break;
-    case 8:  STK = SimpleTypeKind::UInt64Quad;  break;
-    case 16: STK = SimpleTypeKind::UInt128Oct;  break;
+    case 1:  STK = SimpleTypeKind::UnsignedCharacter; break;
+    case 2:  STK = SimpleTypeKind::UInt16Short;       break;
+    case 4:  STK = SimpleTypeKind::UInt32;            break;
+    case 8:  STK = SimpleTypeKind::UInt64Quad;        break;
+    case 16: STK = SimpleTypeKind::UInt128Oct;        break;
     }
     break;
   case dwarf::DW_ATE_UTF:

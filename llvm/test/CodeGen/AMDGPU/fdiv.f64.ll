@@ -15,8 +15,8 @@
 
 ; COMMON-DAG: v_rcp_f64_e32 [[RCP_SCALE0:v\[[0-9]+:[0-9]+\]]], [[SCALE0]]
 
-; SI-DAG: v_cmp_eq_i32_e32 vcc, {{v[0-9]+}}, {{v[0-9]+}}
-; SI-DAG: v_cmp_eq_i32_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], {{v[0-9]+}}, {{v[0-9]+}}
+; SI-DAG: v_cmp_eq_u32_e32 vcc, {{v[0-9]+}}, {{v[0-9]+}}
+; SI-DAG: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], {{v[0-9]+}}, {{v[0-9]+}}
 ; SI-DAG: s_xor_b64 vcc, [[CMP0]], vcc
 
 ; COMMON-DAG: v_fma_f64 [[FMA0:v\[[0-9]+:[0-9]+\]]], -[[SCALE0]], [[RCP_SCALE0]], 1.0

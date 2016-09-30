@@ -17,9 +17,6 @@
 /* Installation directory for binary executables */
 #cmakedefine LLVM_BINDIR "${LLVM_BINDIR}"
 
-/* Time at which LLVM was configured */
-#cmakedefine LLVM_CONFIGTIME "${LLVM_CONFIGTIME}"
-
 /* Installation directory for data files */
 #cmakedefine LLVM_DATADIR "${LLVM_DATADIR}"
 

@@ -8,7 +8,7 @@ declare i32 @llvm.amdgcn.groupstaticsize() #1
 @lds = addrspace(3) global [512 x i32] undef, align 4
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_inline_imm:
-; GCN: s_cmp_eq_i32 s{{[0-9]+}}, 4{{$}}
+; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 4{{$}}
 define void @br_scc_eq_i32_inline_imm(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 4
@@ -88,7 +88,7 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_simm16_min_m1:
-; GCN: s_cmp_eq_i32 s{{[0-9]+}}, 0xffff7fff{{$}}
+; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0xffff7fff{{$}}
 define void @br_scc_eq_i32_simm16_min_m1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, -32769
@@ -136,7 +136,7 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_uimm16_max_p1:
-; GCN: s_cmp_eq_i32 s{{[0-9]+}}, 0x10000{{$}}
+; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0x10000{{$}}
 define void @br_scc_eq_i32_uimm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 65536
@@ -572,7 +572,7 @@ endif:
 ; GCN-LABEL: {{^}}br_scc_eq_i64_inline_imm:
 ; VI: s_cmp_eq_u64 s{{\[[0-9]+:[0-9]+\]}}, 4
 
-; SI: v_cmp_eq_i64_e64
+; SI: v_cmp_eq_u64_e64
 define void @br_scc_eq_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i64 %cond, 4
@@ -592,7 +592,7 @@ endif:
 ; VI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0
 ; VI: s_cmp_eq_u64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
 
-; SI: v_cmp_eq_i64_e32
+; SI: v_cmp_eq_u64_e32
 define void @br_scc_eq_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i64 %cond, 1234
@@ -610,7 +610,7 @@ endif:
 ; GCN-LABEL: {{^}}br_scc_ne_i64_inline_imm:
 ; VI: s_cmp_lg_u64 s{{\[[0-9]+:[0-9]+\]}}, 4
 
-; SI: v_cmp_ne_i64_e64
+; SI: v_cmp_ne_u64_e64
 define void @br_scc_ne_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ne i64 %cond, 4
@@ -630,7 +630,7 @@ endif:
 ; VI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0
 ; VI: s_cmp_lg_u64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
 
-; SI: v_cmp_ne_i64_e32
+; SI: v_cmp_ne_u64_e32
 define void @br_scc_ne_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ne i64 %cond, 1234

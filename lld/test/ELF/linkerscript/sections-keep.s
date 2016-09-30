@@ -34,6 +34,7 @@
 ## first one doesn't have KEEP, the second one does. If section that have
 ## KEEP is the first in order then section is NOT collected.
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  .keep : { KEEP(*(.keep)) } \
 # RUN:  .nokeep : { *(.keep) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t1 --script %t.script %t
@@ -53,6 +54,7 @@
 ## bfd keeps it. Our current behavior is compatible with bfd although
 ## we can choose either way.
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  .nokeep : { *(.keep) } \
 # RUN:  .keep : { KEEP(*(.keep)) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t1 --script %t.script %t

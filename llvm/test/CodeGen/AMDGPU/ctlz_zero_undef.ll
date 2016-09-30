@@ -92,7 +92,7 @@ define void @v_ctlz_zero_undef_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)
 
 ; FUNC-LABEL: {{^}}s_ctlz_zero_undef_i64:
 ; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
-; SI-DAG: v_cmp_eq_i32_e64 vcc, s[[HI]], 0{{$}}
+; SI-DAG: v_cmp_eq_u32_e64 vcc, s[[HI]], 0{{$}}
 ; SI-DAG: s_flbit_i32_b32 [[FFBH_LO:s[0-9]+]], s[[LO]]
 ; SI-DAG: s_add_i32 [[ADD:s[0-9]+]], [[FFBH_LO]], 32
 ; SI-DAG: s_flbit_i32_b32 [[FFBH_HI:s[0-9]+]], s[[HI]]
@@ -117,7 +117,7 @@ define void @s_ctlz_zero_undef_i64_trunc(i32 addrspace(1)* noalias %out, i64 %va
 
 ; FUNC-LABEL: {{^}}v_ctlz_zero_undef_i64:
 ; SI-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
-; SI-DAG: v_cmp_eq_i32_e64 [[CMPHI:s\[[0-9]+:[0-9]+\]]], 0, v[[HI]]
+; SI-DAG: v_cmp_eq_u32_e64 [[CMPHI:s\[[0-9]+:[0-9]+\]]], 0, v[[HI]]
 ; SI-DAG: v_ffbh_u32_e32 [[FFBH_LO:v[0-9]+]], v[[LO]]
 ; SI-DAG: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 32, [[FFBH_LO]]
 ; SI-DAG: v_ffbh_u32_e32 [[FFBH_HI:v[0-9]+]], v[[HI]]
@@ -188,7 +188,7 @@ define void @v_ctlz_zero_undef_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out, i
 ; FUNC-LABEL: {{^}}v_ctlz_zero_undef_i32_sel_eq_neg1_two_use:
 ; SI: buffer_load_dword [[VAL:v[0-9]+]],
 ; SI-DAG: v_ffbh_u32_e32 [[RESULT0:v[0-9]+]], [[VAL]]
-; SI-DAG: v_cmp_eq_i32_e32 vcc, 0, [[VAL]]
+; SI-DAG: v_cmp_eq_u32_e32 vcc, 0, [[VAL]]
 ; SI-DAG: v_cndmask_b32_e64 [[RESULT1:v[0-9]+]], 0, 1, vcc
 ; SI-DAG: buffer_store_dword [[RESULT0]]
 ; SI-DAG: buffer_store_byte [[RESULT1]]

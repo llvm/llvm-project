@@ -133,7 +133,7 @@ private:
   vectorizeStoreChain(ArrayRef<Instruction *> Chain,
                       SmallPtrSet<Instruction *, 16> *InstructionsProcessed);
 
-  /// Check if this load/store access is misaligned accesses
+  /// Check if this load/store access is misaligned accesses.
   bool accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
                           unsigned Alignment);
 };

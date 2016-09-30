@@ -16,17 +16,8 @@
 /* Define if position independent code is enabled */
 #cmakedefine ENABLE_PIC
 
-/* Define to 1 if you have the `arc4random' function. */
-#cmakedefine HAVE_DECL_ARC4RANDOM ${HAVE_DECL_ARC4RANDOM}
-
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
-
-/* Define to 1 if you have the `bcopy' function. */
-#undef HAVE_BCOPY
-
-/* Define to 1 if you have the `closedir' function. */
-#cmakedefine HAVE_CLOSEDIR ${HAVE_CLOSEDIR}
 
 /* Define to 1 if you have the <CrashReporterClient.h> header file. */
 #undef HAVE_CRASHREPORTERCLIENT_H
@@ -34,31 +25,34 @@
 /* can use __crashreporter_info__ */
 #undef HAVE_CRASHREPORTER_INFO
 
+/* Define to 1 if you have the declaration of `arc4random', and to 0 if you
+   don't. */
+#cmakedefine01 HAVE_DECL_ARC4RANDOM
+
+/* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
+   don't. */
+#cmakedefine01 HAVE_DECL_FE_ALL_EXCEPT
+
+/* Define to 1 if you have the declaration of `FE_INEXACT', and to 0 if you
+   don't. */
+#cmakedefine01 HAVE_DECL_FE_INEXACT
+
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */
 #cmakedefine01 HAVE_DECL_STRERROR_S
 
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
-#cmakedefine HAVE_DIA_SDK ${HAVE_DIA_SDK}
+#cmakedefine01 HAVE_DIA_SDK
 
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
 #cmakedefine HAVE_DIRENT_H ${HAVE_DIRENT_H}
-
-/* Define if you have the GNU dld library. */
-#undef HAVE_DLD
-
-/* Define to 1 if you have the `dlerror' function. */
-#cmakedefine HAVE_DLERROR ${HAVE_DLERROR}
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #cmakedefine HAVE_DLFCN_H ${HAVE_DLFCN_H}
 
 /* Define if dlopen() is available on this platform. */
 #cmakedefine HAVE_DLOPEN ${HAVE_DLOPEN}
-
-/* Define if you have the _dyld_func_lookup function. */
-#undef HAVE_DYLD
 
 /* Define to 1 if you have the <errno.h> header file. */
 #cmakedefine HAVE_ERRNO_H ${HAVE_ERRNO_H}
@@ -81,11 +75,11 @@
 /* Define to 1 if you have the <ffi.h> header file. */
 #cmakedefine HAVE_FFI_H ${HAVE_FFI_H}
 
+/* Define to 1 if you have the `futimens' function. */
+#cmakedefine HAVE_FUTIMENS ${HAVE_FUTIMENS}
+
 /* Define to 1 if you have the `futimes' function. */
 #cmakedefine HAVE_FUTIMES ${HAVE_FUTIMES}
-
-/* Define to 1 if you have the `futimens' function */
-#cmakedefine HAVE_FUTIMENS ${HAVE_FUTIMENS}
 
 /* Define to 1 if you have the `getcwd' function. */
 #cmakedefine HAVE_GETCWD ${HAVE_GETCWD}
@@ -129,14 +123,11 @@
 /* Define to 1 if you have the `shell32' library (-lshell32). */
 #cmakedefine HAVE_LIBSHELL32 ${HAVE_LIBSHELL32}
 
-/* Define to 1 if you have the 'z' library (-lz). */
+/* Define to 1 if you have the `z' library (-lz). */
 #cmakedefine HAVE_LIBZ ${HAVE_LIBZ}
 
 /* Define to 1 if you have the 'edit' library (-ledit). */
 #cmakedefine HAVE_LIBEDIT ${HAVE_LIBEDIT}
-
-/* Define to 1 if you have the <limits.h> header file. */
-#cmakedefine HAVE_LIMITS_H ${HAVE_LIMITS_H}
 
 /* Define to 1 if you have the <link.h> header file. */
 #cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
@@ -148,16 +139,13 @@
    the current directory to the dynamic linker search path. */
 #undef HAVE_LINK_R
 
-/* Define to 1 if you have the `longjmp' function. */
-#cmakedefine HAVE_LONGJMP ${HAVE_LONGJMP}
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
 
-/* Define to 1 if you have the <mach-o/dyld.h> header file. */
-#cmakedefine HAVE_MACH_O_DYLD_H ${HAVE_MACH_O_DYLD_H}
+/* Define to 1 if you have the `mallctl' function. */
+#cmakedefine HAVE_MALLCTL ${HAVE_MALLCTL}
 
-/* Define if mallinfo() is available on this platform. */
+/* Define to 1 if you have the `mallinfo' function. */
 #cmakedefine HAVE_MALLINFO ${HAVE_MALLINFO}
 
 /* Define to 1 if you have the <malloc.h> header file. */
@@ -168,9 +156,6 @@
 
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 #cmakedefine HAVE_MALLOC_ZONE_STATISTICS ${HAVE_MALLOC_ZONE_STATISTICS}
-
-/* Define to 1 if you have the `mallctl` function. */
-#cmakedefine HAVE_MALLCTL ${HAVE_MALLCTL}
 
 /* Define to 1 if you have the `mkdtemp' function. */
 #cmakedefine HAVE_MKDTEMP ${HAVE_MKDTEMP}
@@ -194,20 +179,14 @@
 /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
 #cmakedefine HAVE_NDIR_H ${HAVE_NDIR_H}
 
-/* Define to 1 if you have the `opendir' function. */
-#cmakedefine HAVE_OPENDIR ${HAVE_OPENDIR}
+/* Define to 1 if you have the `posix_fallocate' function. */
+#cmakedefine HAVE_POSIX_FALLOCATE ${HAVE_POSIX_FALLOCATE}
 
 /* Define to 1 if you have the `posix_spawn' function. */
 #cmakedefine HAVE_POSIX_SPAWN ${HAVE_POSIX_SPAWN}
 
 /* Define to 1 if you have the `pread' function. */
 #cmakedefine HAVE_PREAD ${HAVE_PREAD}
-
-/* Define if libtool can extract symbol lists from object files. */
-#undef HAVE_PRELOADED_SYMBOLS
-
-/* Define to have the %a format string */
-#undef HAVE_PRINTF_A
 
 /* Have pthread_getspecific */
 #cmakedefine HAVE_PTHREAD_GETSPECIFIC ${HAVE_PTHREAD_GETSPECIFIC}
@@ -221,12 +200,6 @@
 /* Have pthread_rwlock_init */
 #cmakedefine HAVE_PTHREAD_RWLOCK_INIT ${HAVE_PTHREAD_RWLOCK_INIT}
 
-/* Define to 1 if srand48/lrand48/drand48 exist in <stdlib.h> */
-#cmakedefine HAVE_RAND48 ${HAVE_RAND48}
-
-/* Define to 1 if you have the `readdir' function. */
-#cmakedefine HAVE_READDIR ${HAVE_READDIR}
-
 /* Define to 1 if you have the `realpath' function. */
 #cmakedefine HAVE_REALPATH ${HAVE_REALPATH}
 
@@ -236,38 +209,17 @@
 /* Define to 1 if you have the `setenv' function. */
 #cmakedefine HAVE_SETENV ${HAVE_SETENV}
 
-/* Define to 1 if you have the `setjmp' function. */
-#cmakedefine HAVE_SETJMP ${HAVE_SETJMP}
-
 /* Define to 1 if you have the `setrlimit' function. */
 #cmakedefine HAVE_SETRLIMIT ${HAVE_SETRLIMIT}
-
-/* Define if you have the shl_load function. */
-#undef HAVE_SHL_LOAD
 
 /* Define to 1 if you have the `sigaltstack' function. */
 #cmakedefine HAVE_SIGALTSTACK ${HAVE_SIGALTSTACK}
 
-/* Define to 1 if you have the `siglongjmp' function. */
-#cmakedefine HAVE_SIGLONGJMP ${HAVE_SIGLONGJMP}
-
 /* Define to 1 if you have the <signal.h> header file. */
 #cmakedefine HAVE_SIGNAL_H ${HAVE_SIGNAL_H}
 
-/* Define to 1 if you have the `sigsetjmp' function. */
-#cmakedefine HAVE_SIGSETJMP ${HAVE_SIGSETJMP}
-
 /* Define to 1 if you have the <stdint.h> header file. */
 #cmakedefine HAVE_STDINT_H ${HAVE_STDINT_H}
-
-/* Set to 1 if the std::isinf function is found in <cmath> */
-#undef HAVE_STD_ISINF_IN_CMATH
-
-/* Set to 1 if the std::isnan function is found in <cmath> */
-#undef HAVE_STD_ISNAN_IN_CMATH
-
-/* Define to 1 if you have the `strdup' function. */
-#cmakedefine HAVE_STRDUP ${HAVE_STRDUP}
 
 /* Define to 1 if you have the `strerror' function. */
 #cmakedefine HAVE_STRERROR ${HAVE_STRERROR}
@@ -282,7 +234,7 @@
 #cmakedefine HAVE_STRTOQ ${HAVE_STRTOQ}
 
 /* Define to 1 if you have the `sysconf' function. */
-#undef HAVE_SYSCONF
+#cmakedefine HAVE_SYSCONF ${HAVE_SYSCONF}
 
 /* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
    */
@@ -331,12 +283,6 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
 
-/* Define to 1 if you have the `_Unwind_Backtrace' function. */
-#cmakedefine HAVE_UNWIND_BACKTRACE ${HAVE_UNWIND_BACKTRACE}
-
-/* Define to 1 if you have the <utime.h> header file. */
-#cmakedefine HAVE_UTIME_H ${HAVE_UTIME_H}
-
 /* Define to 1 if the system has the type `u_int64_t'. */
 #cmakedefine HAVE_U_INT64_T ${HAVE_U_INT64_T}
 
@@ -351,6 +297,12 @@
 
 /* Have host's _alloca */
 #cmakedefine HAVE__ALLOCA ${HAVE__ALLOCA}
+
+/* Define to 1 if you have the `_chsize_s' function. */
+#cmakedefine HAVE__CHSIZE_S ${HAVE__CHSIZE_S}
+
+/* Define to 1 if you have the `_Unwind_Backtrace' function. */
+#cmakedefine HAVE__UNWIND_BACKTRACE ${HAVE__UNWIND_BACKTRACE}
 
 /* Have host's __alloca */
 #cmakedefine HAVE___ALLOCA ${HAVE___ALLOCA}
@@ -411,9 +363,6 @@
 
 /* Installation directory for binary executables */
 #cmakedefine LLVM_BINDIR "${LLVM_BINDIR}"
-
-/* Time at which LLVM was configured */
-#cmakedefine LLVM_CONFIGTIME "${LLVM_CONFIGTIME}"
 
 /* Installation directory for data files */
 #cmakedefine LLVM_DATADIR "${LLVM_DATADIR}"
@@ -508,18 +457,8 @@
 /* Define if we link Polly to the tools */
 #cmakedefine LINK_POLLY_INTO_TOOLS
 
-/* Define if the OS needs help to load dependent libraries for dlopen(). */
-#cmakedefine LTDL_DLOPEN_DEPLIBS ${LTDL_DLOPEN_DEPLIBS}
-
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
-#undef LTDL_OBJDIR
-
 /* Define to the extension used for shared libraries, say, ".so". */
 #cmakedefine LTDL_SHLIB_EXT "${LTDL_SHLIB_EXT}"
-
-/* Define to the system default library search path. */
-#cmakedefine LTDL_SYSSEARCHPATH "${LTDL_SYSSEARCHPATH}"
 
 /* Define if /dev/zero should be used when mapping RWX memory, or undefine if
    its not necessary */
@@ -578,10 +517,5 @@
 
 /* Define to a function implementing strdup */
 #cmakedefine strdup ${strdup}
-
-/* Define to 1 if you have the `_chsize_s' function. */
-#cmakedefine HAVE__CHSIZE_S ${HAVE__CHSIZE_S}
-
-#cmakedefine HAVE_POSIX_FALLOCATE ${HAVE_POSIX_FALLOCATE}
 
 #endif
