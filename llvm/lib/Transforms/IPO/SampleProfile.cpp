@@ -204,7 +204,7 @@ public:
   bool doInitialization(Module &M) override {
     return SampleLoader.doInitialization(M);
   }
-  const char *getPassName() const override { return "Sample profile pass"; }
+  StringRef getPassName() const override { return "Sample profile pass"; }
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

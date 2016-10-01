@@ -684,7 +684,7 @@ public:
     return false;
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "R600 Control Flow Finalizer Pass";
   }
 };

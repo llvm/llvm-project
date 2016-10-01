@@ -172,9 +172,6 @@ public:
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  /// Return the target triple string.
-  StringRef getTargetTriple() const;
-
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
 

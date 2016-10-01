@@ -939,7 +939,7 @@ void ARMAsmPrinter::emitAttributes() {
 
 //===----------------------------------------------------------------------===//
 
-static MCSymbol *getPICLabel(const char *Prefix, unsigned FunctionNumber,
+static MCSymbol *getPICLabel(StringRef Prefix, unsigned FunctionNumber,
                              unsigned LabelId, MCContext &Ctx) {
 
   MCSymbol *Label = Ctx.getOrCreateSymbol(Twine(Prefix)

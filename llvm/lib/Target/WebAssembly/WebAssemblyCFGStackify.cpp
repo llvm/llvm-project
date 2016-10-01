@@ -43,9 +43,7 @@ using namespace llvm;
 
 namespace {
 class WebAssemblyCFGStackify final : public MachineFunctionPass {
-  const char *getPassName() const override {
-    return "WebAssembly CFG Stackify";
-  }
+  StringRef getPassName() const override { return "WebAssembly CFG Stackify"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

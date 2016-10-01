@@ -22,22 +22,7 @@
 
 namespace llvm {
 
-#ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
-
-class DebugEpochBase {
-public:
-  void incrementEpoch() {}
-
-  class HandleBase {
-  public:
-    HandleBase() = default;
-    explicit HandleBase(const DebugEpochBase *) {}
-    bool isHandleInSync() const { return true; }
-    const void *getEpochAddress() const { return nullptr; }
-  };
-};
-
-#else
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 /// \brief A base class for data structure classes wishing to make iterators
 /// ("handles") pointing into themselves fail-fast.  When building without
@@ -89,6 +74,21 @@ public:
     /// this handle points into.  Can be used to check if two iterators point
     /// into the same data structure.
     const void *getEpochAddress() const { return EpochAddress; }
+  };
+};
+
+#else
+
+class DebugEpochBase {
+public:
+  void incrementEpoch() {}
+
+  class HandleBase {
+  public:
+    HandleBase() = default;
+    explicit HandleBase(const DebugEpochBase *) {}
+    bool isHandleInSync() const { return true; }
+    const void *getEpochAddress() const { return nullptr; }
   };
 };
 

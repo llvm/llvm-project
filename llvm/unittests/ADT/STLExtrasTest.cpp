@@ -10,6 +10,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
+#include <vector>
+
 using namespace llvm;
 
 namespace {
@@ -37,4 +39,51 @@ TEST(STLExtrasTest, Rank) {
   EXPECT_EQ(4, f(rank<6>()));
 }
 
+TEST(STLExtrasTest, Enumerate) {
+  std::vector<char> foo = {'a', 'b', 'c'};
+
+  std::vector<std::pair<std::size_t, char>> results;
+
+  for (auto X : llvm::enumerate(foo)) {
+    results.push_back(std::make_pair(X.Index, X.Value));
+  }
+  ASSERT_EQ(3u, results.size());
+  EXPECT_EQ(0u, results[0].first);
+  EXPECT_EQ('a', results[0].second);
+  EXPECT_EQ(1u, results[1].first);
+  EXPECT_EQ('b', results[1].second);
+  EXPECT_EQ(2u, results[2].first);
+  EXPECT_EQ('c', results[2].second);
+
+  results.clear();
+  const std::vector<int> bar = {'1', '2', '3'};
+  for (auto X : llvm::enumerate(bar)) {
+    results.push_back(std::make_pair(X.Index, X.Value));
+  }
+  EXPECT_EQ(0u, results[0].first);
+  EXPECT_EQ('1', results[0].second);
+  EXPECT_EQ(1u, results[1].first);
+  EXPECT_EQ('2', results[1].second);
+  EXPECT_EQ(2u, results[2].first);
+  EXPECT_EQ('3', results[2].second);
+
+  results.clear();
+  const std::vector<int> baz;
+  for (auto X : llvm::enumerate(baz)) {
+    results.push_back(std::make_pair(X.Index, X.Value));
+  }
+  EXPECT_TRUE(baz.empty());
+}
+
+TEST(STLExtrasTest, EnumerateModify) {
+  std::vector<char> foo = {'a', 'b', 'c'};
+
+  for (auto X : llvm::enumerate(foo)) {
+    ++X.Value;
+  }
+
+  EXPECT_EQ('b', foo[0]);
+  EXPECT_EQ('c', foo[1]);
+  EXPECT_EQ('d', foo[2]);
+}
 }

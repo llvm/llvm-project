@@ -77,7 +77,7 @@ static unsigned getReductionSize() {
 static void dumpSUList(ScheduleDAGInstrs::SUList &L) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "{ ";
-  for (auto *su : L) {
+  for (const SUnit *su : L) {
     dbgs() << "SU(" << su->NodeNum << ")";
     if (su != L.back())
       dbgs() << ", ";
@@ -142,9 +142,7 @@ static void getUnderlyingObjects(const Value *V,
     SmallVector<Value *, 4> Objs;
     GetUnderlyingObjects(const_cast<Value *>(V), Objs, DL);
 
-    for (SmallVectorImpl<Value *>::iterator I = Objs.begin(), IE = Objs.end();
-         I != IE; ++I) {
-      V = *I;
+    for (Value *V : Objs) {
       if (!Visited.insert(V).second)
         continue;
       if (Operator::getOpcode(V) == Instruction::IntToPtr) {
@@ -254,8 +252,7 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
   if (ExitMI && AllDepKnown) {
     // If it's a call or a barrier, add dependencies on the defs and uses of
     // instruction.
-    for (unsigned i = 0, e = ExitMI->getNumOperands(); i != e; ++i) {
-      const MachineOperand &MO = ExitMI->getOperand(i);
+    for (const MachineOperand &MO : ExitMI->operands()) {
       if (!MO.isReg() || MO.isDef()) continue;
       unsigned Reg = MO.getReg();
       if (Reg == 0) continue;
@@ -263,18 +260,18 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
       if (TRI->isPhysicalRegister(Reg))
         Uses.insert(PhysRegSUOper(&ExitSU, -1, Reg));
       else if (MO.readsReg()) // ignore undef operands
-        addVRegUseDeps(&ExitSU, i);
+        addVRegUseDeps(&ExitSU, ExitMI->getOperandNo(&MO));
     }
   } else {
     // For others, e.g. fallthrough, conditional branch, assume the exit
     // uses all the registers that are livein to the successor blocks.
     assert(Uses.empty() && "Uses in set before adding deps?");
-    for (MachineBasicBlock::succ_iterator SI = BB->succ_begin(),
-           SE = BB->succ_end(); SI != SE; ++SI)
-      for (const auto &LI : (*SI)->liveins()) {
+    for (const MachineBasicBlock *Succ : BB->successors()) {
+      for (const auto &LI : Succ->liveins()) {
         if (!Uses.contains(LI.PhysReg))
           Uses.insert(PhysRegSUOper(&ExitSU, -1, LI.PhysReg));
       }
+    }
   }
 }
 
@@ -668,10 +665,10 @@ void ScheduleDAGInstrs::initSUnits() {
     // within an out-of-order core. These are identified by BufferSize=1.
     if (SchedModel.hasInstrSchedModel()) {
       const MCSchedClassDesc *SC = getSchedClass(SU);
-      for (TargetSchedModel::ProcResIter
-             PI = SchedModel.getWriteProcResBegin(SC),
-             PE = SchedModel.getWriteProcResEnd(SC); PI != PE; ++PI) {
-        switch (SchedModel.getProcResource(PI->ProcResourceIdx)->BufferSize) {
+      for (const MCWriteProcResEntry &PRE :
+           make_range(SchedModel.getWriteProcResBegin(SC),
+                      SchedModel.getWriteProcResEnd(SC))) {
+        switch (SchedModel.getProcResource(PRE.ProcResourceIdx)->BufferSize) {
         case 0:
           SU->hasReservedResource = true;
           break;
@@ -1201,9 +1198,8 @@ void ScheduleDAGInstrs::startBlockForKills(MachineBasicBlock *BB) {
   LiveRegs.reset();
 
   // Examine the live-in regs of all successors.
-  for (MachineBasicBlock::succ_iterator SI = BB->succ_begin(),
-       SE = BB->succ_end(); SI != SE; ++SI) {
-    for (const auto &LI : (*SI)->liveins()) {
+  for (const MachineBasicBlock *Succ : BB->successors()) {
+    for (const auto &LI : Succ->liveins()) {
       // Repeat, for reg and all subregs.
       for (MCSubRegIterator SubRegs(LI.PhysReg, TRI, /*IncludeSelf=*/true);
            SubRegs.isValid(); ++SubRegs)
@@ -1313,8 +1309,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
     // register is used multiple times we only set the kill flag on
     // the first use. Don't set kill flags on undef operands.
     killedRegs.reset();
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
       unsigned Reg = MO.getReg();
       if ((Reg == 0) || MRI.isReserved(Reg)) continue;
@@ -1356,8 +1351,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
 
     // Mark any used register (that is not using undef) and subregs as
     // now live...
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
       unsigned Reg = MO.getReg();
       if ((Reg == 0) || MRI.isReserved(Reg)) continue;
@@ -1458,13 +1452,12 @@ public:
     // the subtree limit, then try to join it now since splitting subtrees is
     // only useful if multiple high-pressure paths are possible.
     unsigned InstrCount = R.DFSNodeData[SU->NodeNum].InstrCount;
-    for (SUnit::const_pred_iterator
-           PI = SU->Preds.begin(), PE = SU->Preds.end(); PI != PE; ++PI) {
-      if (PI->getKind() != SDep::Data)
+    for (const SDep &PredDep : SU->Preds) {
+      if (PredDep.getKind() != SDep::Data)
         continue;
-      unsigned PredNum = PI->getSUnit()->NodeNum;
+      unsigned PredNum = PredDep.getSUnit()->NodeNum;
       if ((InstrCount - R.DFSNodeData[PredNum].InstrCount) < R.SubtreeLimit)
-        joinPredSubtree(*PI, SU, /*CheckLimit=*/false);
+        joinPredSubtree(PredDep, SU, /*CheckLimit=*/false);
 
       // Either link or merge the TreeData entry from the child to the parent.
       if (R.DFSNodeData[PredNum].SubtreeID == PredNum) {
@@ -1506,12 +1499,11 @@ public:
     R.DFSTreeData.resize(SubtreeClasses.getNumClasses());
     assert(SubtreeClasses.getNumClasses() == RootSet.size()
            && "number of roots should match trees");
-    for (SparseSet<RootData>::const_iterator
-           RI = RootSet.begin(), RE = RootSet.end(); RI != RE; ++RI) {
-      unsigned TreeID = SubtreeClasses[RI->NodeID];
-      if (RI->ParentNodeID != SchedDFSResult::InvalidSubtreeID)
-        R.DFSTreeData[TreeID].ParentTreeID = SubtreeClasses[RI->ParentNodeID];
-      R.DFSTreeData[TreeID].SubInstrCount = RI->SubInstrCount;
+    for (const RootData &Root : RootSet) {
+      unsigned TreeID = SubtreeClasses[Root.NodeID];
+      if (Root.ParentNodeID != SchedDFSResult::InvalidSubtreeID)
+        R.DFSTreeData[TreeID].ParentTreeID = SubtreeClasses[Root.ParentNodeID];
+      R.DFSTreeData[TreeID].SubInstrCount = Root.SubInstrCount;
       // Note that SubInstrCount may be greater than InstrCount if we joined
       // subtrees across a cross edge. InstrCount will be attributed to the
       // original parent, while SubInstrCount will be attributed to the joined
@@ -1525,14 +1517,12 @@ public:
       DEBUG(dbgs() << "  SU(" << Idx << ") in tree "
             << R.DFSNodeData[Idx].SubtreeID << '\n');
     }
-    for (std::vector<std::pair<const SUnit*, const SUnit*> >::const_iterator
-           I = ConnectionPairs.begin(), E = ConnectionPairs.end();
-         I != E; ++I) {
-      unsigned PredTree = SubtreeClasses[I->first->NodeNum];
-      unsigned SuccTree = SubtreeClasses[I->second->NodeNum];
+    for (const std::pair<const SUnit*, const SUnit*> &P : ConnectionPairs) {
+      unsigned PredTree = SubtreeClasses[P.first->NodeNum];
+      unsigned SuccTree = SubtreeClasses[P.second->NodeNum];
       if (PredTree == SuccTree)
         continue;
-      unsigned Depth = I->first->getDepth();
+      unsigned Depth = P.first->getDepth();
       addConnection(PredTree, SuccTree, Depth);
       addConnection(SuccTree, PredTree, Depth);
     }
@@ -1554,9 +1544,8 @@ protected:
     // Four is the magic number of successors before a node is considered a
     // pinch point.
     unsigned NumDataSucs = 0;
-    for (SUnit::const_succ_iterator SI = PredSU->Succs.begin(),
-           SE = PredSU->Succs.end(); SI != SE; ++SI) {
-      if (SI->getKind() == SDep::Data) {
+    for (const SDep &SuccDep : PredSU->Succs) {
+      if (SuccDep.getKind() == SDep::Data) {
         if (++NumDataSucs >= 4)
           return false;
       }
@@ -1576,10 +1565,9 @@ protected:
     do {
       SmallVectorImpl<SchedDFSResult::Connection> &Connections =
         R.SubtreeConnections[FromTree];
-      for (SmallVectorImpl<SchedDFSResult::Connection>::iterator
-             I = Connections.begin(), E = Connections.end(); I != E; ++I) {
-        if (I->TreeID == ToTree) {
-          I->Level = std::max(I->Level, Depth);
+      for (SchedDFSResult::Connection &C : Connections) {
+        if (C.TreeID == ToTree) {
+          C.Level = std::max(C.Level, Depth);
           return;
         }
       }
@@ -1618,9 +1606,9 @@ public:
 } // anonymous
 
 static bool hasDataSucc(const SUnit *SU) {
-  for (SUnit::const_succ_iterator
-         SI = SU->Succs.begin(), SE = SU->Succs.end(); SI != SE; ++SI) {
-    if (SI->getKind() == SDep::Data && !SI->getSUnit()->isBoundaryNode())
+  for (const SDep &SuccDep : SU->Succs) {
+    if (SuccDep.getKind() == SDep::Data &&
+        !SuccDep.getSUnit()->isBoundaryNode())
       return true;
   }
   return false;
@@ -1633,15 +1621,13 @@ void SchedDFSResult::compute(ArrayRef<SUnit> SUnits) {
     llvm_unreachable("Top-down ILP metric is unimplemnted");
 
   SchedDFSImpl Impl(*this);
-  for (ArrayRef<SUnit>::const_iterator
-         SI = SUnits.begin(), SE = SUnits.end(); SI != SE; ++SI) {
-    const SUnit *SU = &*SI;
-    if (Impl.isVisited(SU) || hasDataSucc(SU))
+  for (const SUnit &SU : SUnits) {
+    if (Impl.isVisited(&SU) || hasDataSucc(&SU))
       continue;
 
     SchedDAGReverseDFS DFS;
-    Impl.visitPreorder(SU);
-    DFS.follow(SU);
+    Impl.visitPreorder(&SU);
+    DFS.follow(&SU);
     for (;;) {
       // Traverse the leftmost path as far as possible.
       while (DFS.getPred() != DFS.getPredEnd()) {
@@ -1677,13 +1663,11 @@ void SchedDFSResult::compute(ArrayRef<SUnit> SUnits) {
 /// connected to this tree, record the depth of the connection so that the
 /// nearest connected subtrees can be prioritized.
 void SchedDFSResult::scheduleTree(unsigned SubtreeID) {
-  for (SmallVectorImpl<Connection>::const_iterator
-         I = SubtreeConnections[SubtreeID].begin(),
-         E = SubtreeConnections[SubtreeID].end(); I != E; ++I) {
-    SubtreeConnectLevels[I->TreeID] =
-      std::max(SubtreeConnectLevels[I->TreeID], I->Level);
-    DEBUG(dbgs() << "  Tree: " << I->TreeID
-          << " @" << SubtreeConnectLevels[I->TreeID] << '\n');
+  for (const Connection &C : SubtreeConnections[SubtreeID]) {
+    SubtreeConnectLevels[C.TreeID] =
+      std::max(SubtreeConnectLevels[C.TreeID], C.Level);
+    DEBUG(dbgs() << "  Tree: " << C.TreeID
+          << " @" << SubtreeConnectLevels[C.TreeID] << '\n');
   }
 }
 

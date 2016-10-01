@@ -261,7 +261,7 @@ public:
 
   bool hasLinkerPrivateGlobalPrefix() const { return ManglingMode == MM_MachO; }
 
-  const char *getLinkerPrivateGlobalPrefix() const {
+  StringRef getLinkerPrivateGlobalPrefix() const {
     if (ManglingMode == MM_MachO)
       return "l";
     return "";
@@ -281,7 +281,7 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  const char *getPrivateGlobalPrefix() const {
+  StringRef getPrivateGlobalPrefix() const {
     switch (ManglingMode) {
     case MM_None:
       return "";

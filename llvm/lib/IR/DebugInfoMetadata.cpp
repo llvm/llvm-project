@@ -72,7 +72,7 @@ DINode::DIFlags DINode::getFlag(StringRef Flag) {
       .Default(DINode::FlagZero);
 }
 
-const char *DINode::getFlagString(DIFlags Flag) {
+StringRef DINode::getFlagString(DIFlags Flag) {
   switch (Flag) {
 #define HANDLE_DI_FLAG(ID, NAME)                                               \
   case Flag##NAME:                                                             \

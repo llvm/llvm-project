@@ -318,9 +318,7 @@ public:
   RAGreedy();
 
   /// Return the pass name.
-  const char* getPassName() const override {
-    return "Greedy Register Allocator";
-  }
+  StringRef getPassName() const override { return "Greedy Register Allocator"; }
 
   /// RAGreedy analysis usage.
   void getAnalysisUsage(AnalysisUsage &AU) const override;

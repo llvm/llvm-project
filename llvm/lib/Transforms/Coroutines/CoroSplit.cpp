@@ -200,13 +200,15 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
 
   SmallVector<ReturnInst *, 4> Returns;
 
+  if (DISubprogram *SP = F.getSubprogram()) {
+    // If we have debug info, add mapping for the metadata nodes that should not
+    // be cloned by CloneFunctionInfo.
+    auto &MD = VMap.MD();
+    MD[SP->getUnit()].reset(SP->getUnit());
+    MD[SP->getType()].reset(SP->getType());
+    MD[SP->getFile()].reset(SP->getFile());
+  }
   CloneFunctionInto(NewF, &F, VMap, /*ModuleLevelChanges=*/true, Returns);
-
-  // If we have debug info, update it. ModuleLevelChanges = true above, does
-  // the heavy lifting, we just need to repoint subprogram at the same
-  // DICompileUnit as the original function F.
-  if (DISubprogram *SP = F.getSubprogram())
-    NewF->getSubprogram()->replaceUnit(SP->getUnit());
 
   // Remove old returns.
   for (ReturnInst *Return : Returns)

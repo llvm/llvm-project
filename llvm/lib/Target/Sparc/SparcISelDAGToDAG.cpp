@@ -53,7 +53,7 @@ public:
                                     unsigned ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "SPARC DAG->DAG Pattern Instruction Selection";
   }
 

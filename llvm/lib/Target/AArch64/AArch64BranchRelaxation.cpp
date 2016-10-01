@@ -88,9 +88,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
-    return AARCH64_BR_RELAX_NAME;
-  }
+  StringRef getPassName() const override { return AARCH64_BR_RELAX_NAME; }
 };
 char AArch64BranchRelaxation::ID = 0;
 }

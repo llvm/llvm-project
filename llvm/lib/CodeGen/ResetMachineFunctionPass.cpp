@@ -36,9 +36,7 @@ namespace {
     ResetMachineFunction(bool EmitFallbackDiag = false)
         : MachineFunctionPass(ID), EmitFallbackDiag(EmitFallbackDiag) {}
 
-    const char *getPassName() const override {
-      return "ResetMachineFunction";
-    }
+    StringRef getPassName() const override { return "ResetMachineFunction"; }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       if (MF.getProperties().hasProperty(

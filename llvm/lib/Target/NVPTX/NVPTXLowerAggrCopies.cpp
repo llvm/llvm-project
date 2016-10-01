@@ -47,7 +47,7 @@ struct NVPTXLowerAggrCopies : public FunctionPass {
 
   static const unsigned MaxAggrCopySize = 128;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Lower aggregate copies/intrinsics into loops";
   }
 };

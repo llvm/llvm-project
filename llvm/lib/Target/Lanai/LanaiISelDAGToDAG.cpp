@@ -56,7 +56,7 @@ public:
   }
 
   // Pass Name
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Lanai DAG->DAG Pattern Instruction Selection";
   }
 

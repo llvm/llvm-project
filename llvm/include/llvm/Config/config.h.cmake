@@ -7,14 +7,11 @@
 /* Bug report URL. */
 #define BUG_REPORT_URL "${BUG_REPORT_URL}"
 
-/* Define if you want backtraces on crash */
-#cmakedefine ENABLE_BACKTRACES
+/* Define to 1 to enable backtraces, and to 0 otherwise. */
+#cmakedefine01 ENABLE_BACKTRACES
 
-/* Define to enable crash overrides */
-#cmakedefine ENABLE_CRASH_OVERRIDES
-
-/* Define if position independent code is enabled */
-#cmakedefine ENABLE_PIC
+/* Define to 1 to enable crash overrides, and to 0 otherwise. */
+#cmakedefine01 ENABLE_CRASH_OVERRIDES
 
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
@@ -105,14 +102,8 @@
 /* Define to 1 if you have the `isatty' function. */
 #cmakedefine HAVE_ISATTY 1
 
-/* Define if you have the libdl library or equivalent. */
-#cmakedefine HAVE_LIBDL ${HAVE_LIBDL}
-
-/* Define to 1 if you have the `m' library (-lm). */
-#undef HAVE_LIBM
-
-/* Define to 1 if you have the `ole32' library (-lole32). */
-#undef HAVE_LIBOLE32
+/* Define to 1 if you have the `edit' library (-ledit). */
+#cmakedefine HAVE_LIBEDIT ${HAVE_LIBEDIT}
 
 /* Define to 1 if you have the `psapi' library (-lpsapi). */
 #cmakedefine HAVE_LIBPSAPI ${HAVE_LIBPSAPI}
@@ -126,18 +117,8 @@
 /* Define to 1 if you have the `z' library (-lz). */
 #cmakedefine HAVE_LIBZ ${HAVE_LIBZ}
 
-/* Define to 1 if you have the 'edit' library (-ledit). */
-#cmakedefine HAVE_LIBEDIT ${HAVE_LIBEDIT}
-
 /* Define to 1 if you have the <link.h> header file. */
 #cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
-
-/* Define if you can use -rdynamic. */
-#define HAVE_LINK_EXPORT_DYNAMIC 1
-
-/* Define if you can use -Wl,-R. to pass -R. to the linker, in order to add
-   the current directory to the dynamic linker search path. */
-#undef HAVE_LINK_R
 
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
@@ -165,16 +146,6 @@
 
 /* Define to 1 if you have the `mktemp' function. */
 #cmakedefine HAVE_MKTEMP ${HAVE_MKTEMP}
-
-/* Define to 1 if you have a working `mmap' system call. */
-#undef HAVE_MMAP
-
-/* Define if mmap() uses MAP_ANONYMOUS to map anonymous pages, or undefine if
-   it uses MAP_ANON */
-#undef HAVE_MMAP_ANONYMOUS
-
-/* Define if mmap() can map files into memory */
-#undef HAVE_MMAP_FILE
 
 /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
 #cmakedefine HAVE_NDIR_H ${HAVE_NDIR_H}
@@ -230,9 +201,6 @@
 /* Define to 1 if you have the `strtoll' function. */
 #cmakedefine HAVE_STRTOLL ${HAVE_STRTOLL}
 
-/* Define to 1 if you have the `strtoq' function. */
-#cmakedefine HAVE_STRTOQ ${HAVE_STRTOQ}
-
 /* Define to 1 if you have the `sysconf' function. */
 #cmakedefine HAVE_SYSCONF ${HAVE_SYSCONF}
 
@@ -244,7 +212,7 @@
 #cmakedefine HAVE_SYS_IOCTL_H ${HAVE_SYS_IOCTL_H}
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
-#cmakedefine HAVE_SYS_MMAN_H ${}
+#cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
 
 /* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
    */
@@ -325,9 +293,6 @@
 /* Have host's __divdi3 */
 #cmakedefine HAVE___DIVDI3 ${HAVE___DIVDI3}
 
-/* Define to 1 if you have the `__dso_handle' function. */
-#undef HAVE___DSO_HANDLE
-
 /* Have host's __fixdfdi */
 #cmakedefine HAVE___FIXDFDI ${HAVE___FIXDFDI}
 
@@ -359,25 +324,17 @@
 #cmakedefine HAVE____CHKSTK_MS ${HAVE____CHKSTK_MS}
 
 /* Linker version detected at compile time. */
-#undef HOST_LINK_VERSION
+#cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
 
-/* Installation directory for binary executables */
-#cmakedefine LLVM_BINDIR "${LLVM_BINDIR}"
+/* Define if we link Polly to the tools */
+#cmakedefine LINK_POLLY_INTO_TOOLS
 
-/* Installation directory for data files */
-#cmakedefine LLVM_DATADIR "${LLVM_DATADIR}"
-
-/* Target triple LLVM will generate code for by default
- * Doesn't use `cmakedefine` because it is allowed to be empty.
- */
+/* Target triple LLVM will generate code for by default */
+/* Doesn't use `cmakedefine` because it is allowed to be empty. */
 #define LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
 
-/* Installation directory for documentation */
-#cmakedefine LLVM_DOCSDIR "${LLVM_DOCSDIR}"
-
-/* Define if LLVM is built with asserts and checks that change the layout of
-   client-visible data structures.  */
-#cmakedefine LLVM_ENABLE_ABI_BREAKING_CHECKS
+/* Define to enable checks that alter the LLVM C++ ABI */
+#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 /* Define if threads enabled */
 #cmakedefine01 LLVM_ENABLE_THREADS
@@ -385,23 +342,11 @@
 /* Define if zlib compression is available */
 #cmakedefine01 LLVM_ENABLE_ZLIB
 
-/* Installation directory for config files */
-#cmakedefine LLVM_ETCDIR "${LLVM_ETCDIR}"
-
 /* Has gcc/MSVC atomic intrinsics */
 #cmakedefine01 LLVM_HAS_ATOMICS
 
 /* Host triple LLVM will be executed on */
 #cmakedefine LLVM_HOST_TRIPLE "${LLVM_HOST_TRIPLE}"
-
-/* Installation directory for include files */
-#cmakedefine LLVM_INCLUDEDIR "${LLVM_INCLUDEDIR}"
-
-/* Installation directory for .info files */
-#cmakedefine LLVM_INFODIR "${LLVM_INFODIR}"
-
-/* Installation directory for man pages */
-#cmakedefine LLVM_MANDIR "${LLVM_MANDIR}"
 
 /* LLVM architecture name for the native architecture, if available */
 #cmakedefine LLVM_NATIVE_ARCH ${LLVM_NATIVE_ARCH}
@@ -434,10 +379,13 @@
 #cmakedefine LLVM_PREFIX "${LLVM_PREFIX}"
 
 /* Define if we have the Intel JIT API runtime support library */
-#cmakedefine LLVM_USE_INTEL_JITEVENTS 1
+#cmakedefine01 LLVM_USE_INTEL_JITEVENTS
 
 /* Define if we have the oprofile JIT-support library */
-#cmakedefine LLVM_USE_OPROFILE 1
+#cmakedefine01 LLVM_USE_OPROFILE
+
+/* LLVM version information */
+#cmakedefine LLVM_VERSION_INFO "${LLVM_VERSION_INFO}"
 
 /* Major version of the LLVM API */
 #define LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
@@ -451,21 +399,8 @@
 /* LLVM version string */
 #define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
 
-/* LLVM version information */
-#cmakedefine LLVM_VERSION_INFO "${LLVM_VERSION_INFO}"
-
-/* Define if we link Polly to the tools */
-#cmakedefine LINK_POLLY_INTO_TOOLS
-
 /* Define to the extension used for shared libraries, say, ".so". */
 #cmakedefine LTDL_SHLIB_EXT "${LTDL_SHLIB_EXT}"
-
-/* Define if /dev/zero should be used when mapping RWX memory, or undefine if
-   its not necessary */
-#undef NEED_DEV_ZERO_FOR_MMAP
-
-/* Define if dlsym() requires a leading underscore in symbol names. */
-#undef NEED_USCORE
 
 /* Define to the address where bug reports for this package should be sent. */
 #cmakedefine PACKAGE_BUGREPORT "${PACKAGE_BUGREPORT}"
@@ -487,24 +422,6 @@
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #cmakedefine RETSIGTYPE ${RETSIGTYPE}
-
-/* Define to 1 if the `S_IS*' macros in <sys/stat.h> do not work properly. */
-#undef STAT_MACROS_BROKEN
-
-/* Define to 1 if you have the ANSI C header files. */
-#undef STDC_HEADERS
-
-/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
-#undef TIME_WITH_SYS_TIME
-
-/* Define to 1 if your <sys/time.h> declares `struct tm'. */
-#undef TM_IN_SYS_TIME
-
-/* Define to `int' if <sys/types.h> does not define. */
-#undef pid_t
-
-/* Define to `unsigned int' if <sys/types.h> does not define. */
-#undef size_t
 
 /* Define to a function replacing strtoll */
 #cmakedefine strtoll ${strtoll}

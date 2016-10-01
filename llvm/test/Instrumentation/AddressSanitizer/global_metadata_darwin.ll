@@ -22,7 +22,12 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; CHECK: [[METADATA:@[0-9]+]] = internal global {{.*}} @global {{.*}} section "__DATA,__asan_globals,regular", align 1
 
 ; Find the liveness binder for @global and its metadata:
-; CHECK: @{{[0-9]+}} = internal global {{.*}} @global {{.*}} [[METADATA]] {{.*}} section "__DATA,__asan_liveness,regular,live_support"
+; CHECK: @__asan_binder_global = internal global {{.*}} @global {{.*}} [[METADATA]] {{.*}} section "__DATA,__asan_liveness,regular,live_support"
+
+; The binder has to be inserted to llvm.compiler.used to avoid being stripped
+; during LTO.
+; CHECK: @llvm.compiler.used {{.*}} @__asan_binder_global {{.*}} section "llvm.metadata"
+
 
 ; Test that __asan_register_image_globals is invoked from the constructor:
 ; CHECK-LABEL: define internal void @asan.module_ctor

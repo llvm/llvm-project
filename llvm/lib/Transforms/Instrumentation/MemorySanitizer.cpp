@@ -316,7 +316,7 @@ class MemorySanitizer : public FunctionPass {
       : FunctionPass(ID),
         TrackOrigins(std::max(TrackOrigins, (int)ClTrackOrigins)),
         WarningFn(nullptr) {}
-  const char *getPassName() const override { return "MemorySanitizer"; }
+  StringRef getPassName() const override { return "MemorySanitizer"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }

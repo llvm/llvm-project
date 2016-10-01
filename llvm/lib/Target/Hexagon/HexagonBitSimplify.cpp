@@ -144,7 +144,7 @@ namespace {
     HexagonBitSimplify() : MachineFunctionPass(ID), MDT(0) {
       initializeHexagonBitSimplifyPass(*PassRegistry::getPassRegistry());
     }
-    virtual const char *getPassName() const {
+    virtual StringRef getPassName() const {
       return "Hexagon bit simplification";
     }
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {

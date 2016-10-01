@@ -101,7 +101,7 @@ public:
                          std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this) {}
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "X86 Assembly / Object Emitter";
   }
 

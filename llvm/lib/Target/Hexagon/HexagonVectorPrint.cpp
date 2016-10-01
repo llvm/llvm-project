@@ -44,7 +44,7 @@ class HexagonVectorPrint : public MachineFunctionPass {
       initializeHexagonVectorPrintPass(*PassRegistry::getPassRegistry());
     }
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon VectorPrint pass";
     }
     bool runOnMachineFunction(MachineFunction &Fn) override;

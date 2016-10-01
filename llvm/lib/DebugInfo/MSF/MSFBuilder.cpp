@@ -19,12 +19,14 @@ const uint32_t kFreePageMap0Block = 1;
 const uint32_t kFreePageMap1Block = 2;
 const uint32_t kNumReservedPages = 3;
 
+const uint32_t kDefaultFreePageMap = kFreePageMap0Block;
 const uint32_t kDefaultBlockMapAddr = kNumReservedPages;
 }
 
 MSFBuilder::MSFBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,
                        BumpPtrAllocator &Allocator)
-    : Allocator(Allocator), IsGrowable(CanGrow), BlockSize(BlockSize),
+    : Allocator(Allocator), IsGrowable(CanGrow),
+      FreePageMap(kDefaultFreePageMap), BlockSize(BlockSize),
       MininumBlocks(MinBlockCount), BlockMapAddr(kDefaultBlockMapAddr),
       FreeBlocks(MinBlockCount, true) {
   FreeBlocks[kSuperBlockBlock] = false;

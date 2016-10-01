@@ -23,5 +23,5 @@ foreach(TARGET ${LLVM_TARGETS_TO_BUILD})
     "${LLVM_LIBRARY_DIR}/ocaml/META.llvm_${TARGET}")
 
   install(FILES "${LLVM_LIBRARY_DIR}/ocaml/META.llvm_${TARGET}"
-          DESTINATION lib/ocaml)
+          DESTINATION "${LLVM_OCAML_INSTALL_PATH}")
 endforeach()

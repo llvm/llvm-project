@@ -219,7 +219,7 @@ class OptimizeLEAPass : public MachineFunctionPass {
 public:
   OptimizeLEAPass() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override { return "X86 LEA Optimize"; }
+  StringRef getPassName() const override { return "X86 LEA Optimize"; }
 
   /// \brief Loop over all of the basic blocks, replacing address
   /// calculations in load and store instructions, if it's already

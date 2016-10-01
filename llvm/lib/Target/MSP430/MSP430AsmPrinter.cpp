@@ -42,9 +42,7 @@ namespace {
     MSP430AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
         : AsmPrinter(TM, std::move(Streamer)) {}
 
-    const char *getPassName() const override {
-      return "MSP430 Assembly Printer";
-    }
+    StringRef getPassName() const override { return "MSP430 Assembly Printer"; }
 
     void printOperand(const MachineInstr *MI, int OpNum,
                       raw_ostream &O, const char* Modifier = nullptr);

@@ -105,7 +105,7 @@ public:
     initializeAArch64PromoteConstantPass(*PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override { return "AArch64 Promote Constant"; }
+  StringRef getPassName() const override { return "AArch64 Promote Constant"; }
 
   /// Iterate over the functions and promote the interesting constants into
   /// global variables with module scope.

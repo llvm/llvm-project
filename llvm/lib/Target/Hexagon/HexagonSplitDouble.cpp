@@ -47,7 +47,7 @@ namespace {
         TII(nullptr) {
       initializeHexagonSplitDoubleRegsPass(*PassRegistry::getPassRegistry());
     }
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon Split Double Registers";
     }
     void getAnalysisUsage(AnalysisUsage &AU) const override {

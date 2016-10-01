@@ -79,8 +79,6 @@ void Fuzzer::PrepareCounters(Fuzzer::Coverage *C) {
 bool Fuzzer::RecordMaxCoverage(Fuzzer::Coverage *C) {
   bool Res = false;
 
-  TPC.FinalizeTrace();
-
   uint64_t NewBlockCoverage = EF->__sanitizer_get_total_unique_coverage();
   if (NewBlockCoverage > C->BlockCoverage) {
     Res = true;
@@ -106,12 +104,6 @@ bool Fuzzer::RecordMaxCoverage(Fuzzer::Coverage *C) {
       C->CounterBitmapBits += CounterDelta;
     }
   }
-
-  if (TPC.UpdateCounterMap(&C->TPCMap))
-    Res = true;
-
-  if (TPC.UpdateValueProfileMap(&C->VPMap))
-    Res = true;
 
   return Res;
 }
@@ -353,6 +345,16 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
   this->MaxMutationLen = MaxMutationLen;
 }
 
+void Fuzzer::CheckExitOnItem() {
+  if (!Options.ExitOnItem.empty()) {
+    if (Corpus.HasUnit(Options.ExitOnItem)) {
+      Printf("INFO: found item with checksum '%s', exiting.\n",
+             Options.ExitOnItem.c_str());
+      _Exit(0);
+    }
+  }
+}
+
 void Fuzzer::CheckExitOnSrcPos() {
   if (!Options.ExitOnSrcPos.empty()) {
     uintptr_t *PCIDs;
@@ -369,17 +371,6 @@ void Fuzzer::CheckExitOnSrcPos() {
   }
 }
 
-void Fuzzer::AddToCorpusAndMaybeRerun(const Unit &U) {
-  CheckExitOnSrcPos();
-  if (TPC.GetTotalPCCoverage()) {
-    TPC.ResetMaps();
-    TPC.ResetGuards();
-    ExecuteCallback(U.data(), U.size());
-    TPC.FinalizeTrace();
-  }
-  Corpus.AddToCorpus(U);
-}
-
 void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
   if (Options.OutputCorpus.empty() || !Options.Reload) return;
   std::vector<Unit> AdditionalCorpus;
@@ -387,12 +378,12 @@ void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
                          &EpochOfLastReadOfOutputCorpus, MaxSize);
   if (Options.Verbosity >= 2)
     Printf("Reload: read %zd new units.\n", AdditionalCorpus.size());
-  for (auto &X : AdditionalCorpus) {
-    if (X.size() > MaxSize)
-      X.resize(MaxSize);
-    if (!Corpus.HasUnit(X)) {
-      if (RunOne(X)) {
-        AddToCorpusAndMaybeRerun(X);
+  for (auto &U : AdditionalCorpus) {
+    if (U.size() > MaxSize)
+      U.resize(MaxSize);
+    if (!Corpus.HasUnit(U)) {
+      if (RunOne(U)) {
+        Corpus.AddToCorpus(U);
         PrintStats("RELOAD");
       }
     }
@@ -413,9 +404,8 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
     ShuffleCorpus(InitialCorpus);
 
   for (const auto &U : *InitialCorpus) {
-    bool NewCoverage = RunOne(U);
-    if (!Options.PruneCorpus || NewCoverage) {
-      AddToCorpusAndMaybeRerun(U);
+    if (RunOne(U)) {
+      Corpus.AddToCorpus(U);
       if (Options.Verbosity >= 2)
         Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
     }
@@ -434,8 +424,24 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   TotalNumberOfRuns++;
 
   ExecuteCallback(Data, Size);
-  bool Res = RecordMaxCoverage(&MaxCoverage);
+  bool Res = false;
 
+  if (TPC.FinalizeTrace(Size))
+    if (Options.Shrink)
+      Res = true;
+
+  if (!Res) {
+    if (TPC.UpdateCounterMap(&MaxCoverage.TPCMap))
+      Res = true;
+
+    if (TPC.UpdateValueProfileMap(&MaxCoverage.VPMap))
+      Res = true;
+  }
+
+  if (RecordMaxCoverage(&MaxCoverage))
+    Res = true;
+
+  CheckExitOnSrcPos();
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
@@ -546,7 +552,6 @@ void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   WriteToOutputCorpus(U);
   NumberOfNewUnitsAdded++;
   PrintNewPCs();
-  AddToCorpusAndMaybeRerun(U);
 }
 
 // Finds minimal number of units in 'Extra' that add coverage to 'Initial'.
@@ -676,8 +681,11 @@ void Fuzzer::MutateAndTestOne() {
     if (i == 0)
       StartTraceRecording();
     II.NumExecutedMutations++;
-    if (RunOne(CurrentUnitData, Size))
+    if (RunOne(CurrentUnitData, Size)) {
+      Corpus.AddToCorpus({CurrentUnitData, CurrentUnitData + Size});
       ReportNewCoverage(&II, {CurrentUnitData, CurrentUnitData + Size});
+      CheckExitOnItem();
+    }
     StopTraceRecording();
     TryDetectingAMemoryLeak(CurrentUnitData, Size,
                             /*DuringInitialCorpusExecution*/ false);

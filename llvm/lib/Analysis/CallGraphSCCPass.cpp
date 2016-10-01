@@ -67,9 +67,7 @@ public:
     Info.setPreservesAll();
   }
 
-  const char *getPassName() const override {
-    return "CallGraph Pass Manager";
-  }
+  StringRef getPassName() const override { return "CallGraph Pass Manager"; }
 
   PMDataManager *getAsPMDataManager() override { return this; }
   Pass *getAsPass() override { return this; }

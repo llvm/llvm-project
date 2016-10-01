@@ -27,6 +27,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -170,19 +171,22 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
   for (auto *CE : Shape.CoroEnds)
     getBlockData(CE->getParent()).End = true;
 
-  // Mark all suspend blocks and indicate that kill everything they consume.
-  // Note, that crossing coro.save is used to indicate suspend, as any code
+  // Mark all suspend blocks and indicate that they kill everything they
+  // consume. Note, that crossing coro.save also requires a spill, as any code
   // between coro.save and coro.suspend may resume the coroutine and all of the
   // state needs to be saved by that time.
-  for (CoroSuspendInst *CSI : Shape.CoroSuspends) {
-    CoroSaveInst *const CoroSave = CSI->getCoroSave();
-    BasicBlock *const CoroSaveBB = CoroSave->getParent();
-    auto &B = getBlockData(CoroSaveBB);
+  auto markSuspendBlock = [&](IntrinsicInst* BarrierInst) {
+    BasicBlock *SuspendBlock = BarrierInst->getParent();
+    auto &B = getBlockData(SuspendBlock);
     B.Suspend = true;
     B.Kills |= B.Consumes;
+  };
+  for (CoroSuspendInst *CSI : Shape.CoroSuspends) {
+    markSuspendBlock(CSI);
+    markSuspendBlock(CSI->getCoroSave());
   }
 
-  // Iterate propagating consumes and kills until they stop changing
+  // Iterate propagating consumes and kills until they stop changing.
   int Iteration = 0;
   (void)Iteration;
 
@@ -532,6 +536,13 @@ static bool materializable(Instruction &V) {
          isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<SelectInst>(&V);
 }
 
+// Check for structural coroutine intrinsics that should not be spilled into
+// the coroutine frame.
+static bool isCoroutineStructureIntrinsic(Instruction &I) {
+  return isa<CoroIdInst>(&I) || isa<CoroBeginInst>(&I) ||
+         isa<CoroSaveInst>(&I) || isa<CoroSuspendInst>(&I);
+}
+
 // For every use of the value that is across suspend point, recreate that value
 // after a suspend point.
 static void rewriteMaterializableInstructions(IRBuilder<> &IRB,
@@ -637,15 +648,22 @@ static void splitAround(Instruction *I, const Twine &Name) {
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
+  // Lower coro.dbg.declare to coro.dbg.value, since we are going to rewrite
+  // access to local variables.
+  LowerDbgDeclare(F);
+
   Shape.PromiseAlloca = Shape.CoroBegin->getId()->getPromise();
   if (Shape.PromiseAlloca) {
     Shape.CoroBegin->getId()->clearPromise();
   }
 
-  // Make sure that all coro.saves and the fallthrough coro.end are in their
-  // own block to simplify the logic of building up SuspendCrossing data.
-  for (CoroSuspendInst *CSI : Shape.CoroSuspends)
+  // Make sure that all coro.save, coro.suspend and the fallthrough coro.end
+  // intrinsics are in their own blocks to simplify the logic of building up
+  // SuspendCrossing data.
+  for (CoroSuspendInst *CSI : Shape.CoroSuspends) {
     splitAround(CSI->getCoroSave(), "CoroSave");
+    splitAround(CSI, "CoroSuspend");
+  }
 
   // Put fallthrough CoroEnd into its own block. Note: Shape::buildFrom places
   // the fallthrough coro.end as the first element of CoroEnds array.
@@ -681,18 +699,9 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
         Spills.emplace_back(&A, U);
 
   for (Instruction &I : instructions(F)) {
-    // token returned by CoroSave is an artifact of how we build save/suspend
-    // pairs and should not be part of the Coroutine Frame
-    if (isa<CoroSaveInst>(&I))
-      continue;
-    // CoroBeginInst returns a handle to a coroutine which is passed as a sole
-    // parameter to .resume and .cleanup parts and should not go into coroutine
-    // frame.
-    if (isa<CoroBeginInst>(&I))
-      continue;
-    // A token returned CoroIdInst is used to tie together structural intrinsics
-    // in a coroutine. It should not be saved to the coroutine frame.
-    if (isa<CoroIdInst>(&I))
+    // Values returned from coroutine structure intrinsics should not be part
+    // of the Coroutine Frame.
+    if (isCoroutineStructureIntrinsic(I))
       continue;
     // The Coroutine Promise always included into coroutine frame, no need to
     // check for suspend crossing.

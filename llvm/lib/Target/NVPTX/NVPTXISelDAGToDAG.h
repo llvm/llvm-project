@@ -40,7 +40,7 @@ public:
                              CodeGenOpt::Level   OptLevel);
 
   // Pass Name
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "NVPTX DAG->DAG Pattern Instruction Selection";
   }
   bool runOnMachineFunction(MachineFunction &MF) override;

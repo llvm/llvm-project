@@ -51,7 +51,7 @@ public:
   InsertNOPLoad(TargetMachine &tm);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "InsertNOPLoad: Erratum Fix LBR35: insert a NOP instruction after "
            "every single-cycle load instruction when the next instruction is "
            "another load/store instruction";
@@ -65,7 +65,7 @@ public:
   FixFSMULD(TargetMachine &tm);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "FixFSMULD: Erratum Fix LBR31: do not select FSMULD";
   }
 };
@@ -77,7 +77,7 @@ public:
   ReplaceFMULS(TargetMachine &tm);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "ReplaceFMULS: Erratum Fix LBR32: replace FMULS instruction with a "
            "routine using conversions/double precision operations to replace "
            "FMULS";
@@ -91,7 +91,7 @@ public:
   FixAllFDIVSQRT(TargetMachine &tm);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "FixAllFDIVSQRT: Erratum Fix LBR34: fix FDIVS/FDIVD/FSQRTS/FSQRTD "
            "instructions with NOPs and floating-point store";
   }

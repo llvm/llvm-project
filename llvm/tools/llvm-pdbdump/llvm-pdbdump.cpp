@@ -321,17 +321,9 @@ static void yamlToPdb(StringRef Path) {
     ExitOnErr(make_error<GenericError>(generic_error_code::unspecified,
                                        "Yaml does not contain MSF headers"));
 
-  auto OutFileOrError = FileOutputBuffer::create(
-      opts::yaml2pdb::YamlPdbOutputFile, YamlObj.Headers->FileSize);
-  if (OutFileOrError.getError())
-    ExitOnErr(make_error<GenericError>(generic_error_code::invalid_path,
-                                       opts::yaml2pdb::YamlPdbOutputFile));
-
-  auto FileByteStream =
-      llvm::make_unique<FileBufferByteStream>(std::move(*OutFileOrError));
   PDBFileBuilder Builder(Allocator);
 
-  ExitOnErr(Builder.initialize(YamlObj.Headers->SuperBlock));
+  ExitOnErr(Builder.initialize(YamlObj.Headers->SuperBlock.BlockSize));
   // Add each of the reserved streams.  We ignore stream metadata in the
   // yaml, because we will reconstruct our own view of the streams.  For
   // example, the YAML may say that there were 20 streams in the original
@@ -382,7 +374,7 @@ static void yamlToPdb(StringRef Path) {
       IpiBuilder.addTypeRecord(R.Record);
   }
 
-  ExitOnErr(Builder.commit(*FileByteStream));
+  ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile));
 }
 
 static void pdb2Yaml(StringRef Path) {

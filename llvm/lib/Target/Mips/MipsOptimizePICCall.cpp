@@ -61,7 +61,7 @@ class OptimizePICCall : public MachineFunctionPass {
 public:
   OptimizePICCall(TargetMachine &tm) : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override { return "Mips OptimizePICCall"; }
+  StringRef getPassName() const override { return "Mips OptimizePICCall"; }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

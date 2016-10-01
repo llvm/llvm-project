@@ -467,7 +467,7 @@ namespace {
     HexagonGenInsert() : MachineFunctionPass(ID), HII(0), HRI(0) {
       initializeHexagonGenInsertPass(*PassRegistry::getPassRegistry());
     }
-    virtual const char *getPassName() const {
+    virtual StringRef getPassName() const {
       return "Hexagon generate \"insert\" instructions";
     }
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {

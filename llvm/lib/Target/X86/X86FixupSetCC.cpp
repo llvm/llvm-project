@@ -39,7 +39,7 @@ class X86FixupSetCCPass : public MachineFunctionPass {
 public:
   X86FixupSetCCPass() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override { return "X86 Fixup SetCC"; }
+  StringRef getPassName() const override { return "X86 Fixup SetCC"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

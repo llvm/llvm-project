@@ -56,7 +56,7 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "ARM pseudo instruction expansion pass";
     }
 

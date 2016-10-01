@@ -42,7 +42,7 @@ struct Filler : public MachineFunctionPass {
   static char ID;
   explicit Filler() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override { return "Lanai Delay Slot Filler"; }
+  StringRef getPassName() const override { return "Lanai Delay Slot Filler"; }
 
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB);
 

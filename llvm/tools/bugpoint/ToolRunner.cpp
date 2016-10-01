@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ToolRunner.h"
-#include "llvm/Config/config.h" // for HAVE_LINK_R
+#include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -679,9 +679,6 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
 
   CCArgs.push_back("-lm"); // Hard-code the math library...
   CCArgs.push_back("-O2"); // Optimize the program a bit...
-#if defined(HAVE_LINK_R)
-  CCArgs.push_back("-Wl,-R."); // Search this dir for .so files
-#endif
   if (TargetTriple.getArch() == Triple::sparc)
     CCArgs.push_back("-mcpu=v9");
   CCArgs.push_back(nullptr); // NULL terminator

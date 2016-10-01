@@ -38,7 +38,7 @@ public:
   explicit BPFAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)) {}
 
-  const char *getPassName() const override { return "BPF Assembly Printer"; }
+  StringRef getPassName() const override { return "BPF Assembly Printer"; }
 
   void EmitInstruction(const MachineInstr *MI) override;
 };

@@ -192,9 +192,7 @@ namespace {
     Filler(TargetMachine &tm)
       : MachineFunctionPass(ID), TM(tm) { }
 
-    const char *getPassName() const override {
-      return "Mips Delay Slot Filler";
-    }
+    StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 
     bool runOnMachineFunction(MachineFunction &F) override {
       bool Changed = false;

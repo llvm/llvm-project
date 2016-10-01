@@ -232,6 +232,42 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ret void
 }
 
+declare i8* @llvm.stacksave()
+declare void @llvm.stackrestore(i8*)
+
+; CHECK-LABEL: llvm_stack_builtins:
+define void @llvm_stack_builtins(i32 %alloc) noredzone {
+ ; CHECK: i32.load $push[[L11:.+]]=, __stack_pointer($pop{{.+}})
+ ; CHECK-NEXT: tee_local $push[[L10:.+]]=, ${{.+}}=, $pop[[L11]]
+ ; CHECK-NEXT: copy_local $[[STACK:.+]]=, $pop[[L10]]
+ %stack = call i8* @llvm.stacksave()
+
+ ; Ensure we don't reassign the stacksave local
+ ; CHECK-NOT: $[[STACK]]=
+ %dynamic = alloca i32, i32 %alloc
+
+ ; CHECK: i32.store $drop=, __stack_pointer($pop{{.+}}), $[[STACK]]
+ call void @llvm.stackrestore(i8* %stack)
+
+ ret void
+}
+
+; Not actually using the alloca'd variables exposed an issue with register
+; stackification, where copying the stack pointer into the frame pointer was
+; moved after the stack pointer was updated for the dynamic alloca.
+; CHECK-LABEL: dynamic_alloca_nouse:
+define void @dynamic_alloca_nouse(i32 %alloc) noredzone {
+ ; CHECK: i32.load $push[[L11:.+]]=, __stack_pointer($pop{{.+}})
+ ; CHECK-NEXT: tee_local $push[[L10:.+]]=, ${{.+}}=, $pop[[L11]]
+ ; CHECK-NEXT: copy_local $[[FP:.+]]=, $pop[[L10]]
+ %dynamic = alloca i32, i32 %alloc
+
+ ; CHECK-NOT: $[[FP]]=,
+
+ ; CHECK: i32.store $drop=, __stack_pointer($pop{{.+}}), $[[FP]]
+ ret void
+}
+
 ; The use of the alloca in a phi causes a CopyToReg DAG node to be generated,
 ; which has to have special handling because CopyToReg can't have a FI operand
 ; CHECK-LABEL: copytoreg_fi:

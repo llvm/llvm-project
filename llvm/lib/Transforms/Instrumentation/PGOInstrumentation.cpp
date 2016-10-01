@@ -202,9 +202,7 @@ public:
         *PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override {
-    return "PGOInstrumentationGenPass";
-  }
+  StringRef getPassName() const override { return "PGOInstrumentationGenPass"; }
 
 private:
   bool runOnModule(Module &M) override;
@@ -227,9 +225,7 @@ public:
         *PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override {
-    return "PGOInstrumentationUsePass";
-  }
+  StringRef getPassName() const override { return "PGOInstrumentationUsePass"; }
 
 private:
   std::string ProfileFileName;

@@ -342,9 +342,7 @@ public:
   // Ctor, nothing fancy.
   IRTranslator();
 
-  const char *getPassName() const override {
-    return "IRTranslator";
-  }
+  StringRef getPassName() const override { return "IRTranslator"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

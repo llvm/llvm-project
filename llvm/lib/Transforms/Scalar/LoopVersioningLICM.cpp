@@ -200,7 +200,7 @@ struct LoopVersioningLICM : public LoopPass {
   bool isLoopAlreadyVisited();
   void setNoAliasToLoop(Loop *);
   bool instructionSafeForVersioning(Instruction *);
-  const char *getPassName() const override { return "Loop Versioning"; }
+  StringRef getPassName() const override { return "Loop Versioning"; }
 };
 }
 

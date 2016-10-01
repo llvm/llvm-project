@@ -58,6 +58,7 @@ class InputCorpus {
   ConstIter end() const { return Inputs.end(); }
 
   bool HasUnit(const Unit &U) { return Hashes.count(Hash(U)); }
+  bool HasUnit(const std::string &H) { return Hashes.count(H); }
   InputInfo &ChooseUnitToMutate(Random &Rand) {
     return Inputs[ChooseUnitIdxToMutate(Rand)];
   };
@@ -81,7 +82,7 @@ class InputCorpus {
   }
 
   void PrintFeatureSet() {
-    Printf("Features [id: cnt idx sz] ");
+    Printf("Features [id: idx sz] ");
     for (size_t i = 0; i < kFeatureSetSize; i++) {
       auto &Fe = FeatureSet[i];
       if (!Fe.Count) continue;

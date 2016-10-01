@@ -52,9 +52,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    const char *getPassName() const override {
-      return "ARM A15 S->D optimizer";
-    }
+    StringRef getPassName() const override { return "ARM A15 S->D optimizer"; }
 
   private:
     const ARMBaseInstrInfo *TII;

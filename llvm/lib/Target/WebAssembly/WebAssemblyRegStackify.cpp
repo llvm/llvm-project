@@ -39,7 +39,7 @@ using namespace llvm;
 
 namespace {
 class WebAssemblyRegStackify final : public MachineFunctionPass {
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Register Stackify";
   }
 
@@ -274,11 +274,11 @@ static bool HasOneUse(unsigned Reg, MachineInstr *Def,
 // TODO: Compute memory dependencies in a way that uses AliasAnalysis to be
 // more precise.
 static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
-                         AliasAnalysis &AA, const LiveIntervals &LIS,
-                         const MachineRegisterInfo &MRI) {
+                         AliasAnalysis &AA, const MachineRegisterInfo &MRI) {
   assert(Def->getParent() == Insert->getParent());
 
   // Check for register dependencies.
+  SmallVector<unsigned, 4> MutableRegisters;
   for (const MachineOperand &MO : Def->operands()) {
     if (!MO.isReg() || MO.isUndef())
       continue;
@@ -301,21 +301,11 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
       return false;
     }
 
-    // Ask LiveIntervals whether moving this virtual register use or def to
-    // Insert will change which value numbers are seen.
-    //
-    // If the operand is a use of a register that is also defined in the same
-    // instruction, test that the newly defined value reaches the insert point,
-    // since the operand will be moving along with the def.
-    const LiveInterval &LI = LIS.getInterval(Reg);
-    VNInfo *DefVNI =
-        (MO.isDef() || Def->definesRegister(Reg)) ?
-        LI.getVNInfoAt(LIS.getInstructionIndex(*Def).getRegSlot()) :
-        LI.getVNInfoBefore(LIS.getInstructionIndex(*Def));
-    assert(DefVNI && "Instruction input missing value number");
-    VNInfo *InsVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(*Insert));
-    if (InsVNI && DefVNI != InsVNI)
-      return false;
+    // If one of the operands isn't in SSA form, it has different values at
+    // different times, and we need to make sure we don't move our use across
+    // a different def.
+    if (!MO.isDef() && !MRI.hasOneDef(Reg))
+      MutableRegisters.push_back(Reg);
   }
 
   bool Read = false, Write = false, Effects = false, StackPointer = false;
@@ -323,7 +313,8 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
 
   // If the instruction does not access memory and has no side effects, it has
   // no additional dependencies.
-  if (!Read && !Write && !Effects && !StackPointer)
+  bool HasMutableRegisters = !MutableRegisters.empty();
+  if (!Read && !Write && !Effects && !StackPointer && !HasMutableRegisters)
     return true;
 
   // Scan through the intervening instructions between Def and Insert.
@@ -343,6 +334,11 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
       return false;
     if (StackPointer && InterveningStackPointer)
       return false;
+
+    for (unsigned Reg : MutableRegisters)
+      for (const MachineOperand &MO : I->operands())
+        if (MO.isReg() && MO.isDef() && MO.getReg() == Reg)
+          return false;
   }
 
   return true;
@@ -781,7 +777,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // supports intra-block moves) and it's MachineSink's job to catch all
         // the sinking opportunities anyway.
         bool SameBlock = Def->getParent() == &MBB;
-        bool CanMove = SameBlock && IsSafeToMove(Def, Insert, AA, LIS, MRI) &&
+        bool CanMove = SameBlock && IsSafeToMove(Def, Insert, AA, MRI) &&
                        !TreeWalker.IsOnStack(Reg);
         if (CanMove && HasOneUse(Reg, Def, MRI, MDT, LIS)) {
           Insert = MoveForSingleUse(Reg, Op, Def, MBB, Insert, LIS, MFI, MRI);

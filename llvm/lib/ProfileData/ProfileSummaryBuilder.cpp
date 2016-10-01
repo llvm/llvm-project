@@ -59,14 +59,14 @@ void SampleProfileSummaryBuilder::addRecord(
 void ProfileSummaryBuilder::computeDetailedSummary() {
   if (DetailedSummaryCutoffs.empty())
     return;
-  auto Iter = CountFrequencies.begin();
-  auto End = CountFrequencies.end();
   std::sort(DetailedSummaryCutoffs.begin(), DetailedSummaryCutoffs.end());
+  auto Iter = CountFrequencies.begin();
+  const auto End = CountFrequencies.end();
 
   uint32_t CountsSeen = 0;
   uint64_t CurrSum = 0, Count = 0;
 
-  for (uint32_t Cutoff : DetailedSummaryCutoffs) {
+  for (const uint32_t Cutoff : DetailedSummaryCutoffs) {
     assert(Cutoff <= 999999);
     APInt Temp(128, TotalCount);
     APInt N(128, Cutoff);

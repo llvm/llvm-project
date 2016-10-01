@@ -56,7 +56,7 @@ public:
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
   }
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AArch64 Redundant Copy Elimination";
   }
 };

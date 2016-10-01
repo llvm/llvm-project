@@ -99,9 +99,7 @@ public:
   }
 
   /// Return the pass name.
-  const char* getPassName() const override {
-    return "PBQP Register Allocator";
-  }
+  StringRef getPassName() const override { return "PBQP Register Allocator"; }
 
   /// PBQP analysis usage.
   void getAnalysisUsage(AnalysisUsage &au) const override;

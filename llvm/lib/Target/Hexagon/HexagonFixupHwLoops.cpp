@@ -50,7 +50,7 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon Hardware Loop Fixup";
     }
 

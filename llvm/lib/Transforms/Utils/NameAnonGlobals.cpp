@@ -91,7 +91,7 @@ public:
   static char ID;
 
   /// Specify pass name for debug output
-  const char *getPassName() const override { return "Name Anon Globals"; }
+  StringRef getPassName() const override { return "Name Anon Globals"; }
 
   explicit NameAnonGlobalLegacyPass() : ModulePass(ID) {}
 

@@ -22,7 +22,7 @@ subdirectories = TargetInfo
 type = TargetGroup
 name = AVR
 parent = Target
-has_asmprinter = 0
+has_asmprinter = 1
 has_asmparser = 1
 
 [component_1]

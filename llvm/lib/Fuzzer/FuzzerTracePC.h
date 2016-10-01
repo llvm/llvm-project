@@ -35,7 +35,7 @@ class TracePC {
   bool UpdateValueProfileMap(ValueBitMap *MaxValueProfileMap) {
     return UseValueProfile && MaxValueProfileMap->MergeFrom(ValueProfileMap);
   }
-  void FinalizeTrace();
+  bool FinalizeTrace(size_t InputSize);
 
   size_t GetNewPCIDs(uintptr_t **NewPCIDsPtr) {
     *NewPCIDsPtr = NewPCIDs;
@@ -90,6 +90,7 @@ private:
 
   ValueBitMap CounterMap;
   ValueBitMap ValueProfileMap;
+  uint32_t InputSizesPerFeature[kFeatureSetSize];
 };
 
 extern TracePC TPC;

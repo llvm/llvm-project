@@ -124,7 +124,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   NVPTXLowerArgs(const NVPTXTargetMachine *TM = nullptr)
       : FunctionPass(ID), TM(TM) {}
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
   }
 

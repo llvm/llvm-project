@@ -132,7 +132,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
     return Copy;
   }
 
-  const char *getPassName() const override { return TLSCLEANUP_PASS_NAME; }
+  StringRef getPassName() const override { return TLSCLEANUP_PASS_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
