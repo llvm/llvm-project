@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 {
   void *p, *old_p;
   // Those sizes will exercise both allocators (Primary & Secondary).
-  std::vector<size_t> sizes{1 << 5, 1 << 17};
+  std::vector<size_t> sizes{1, 1 << 5, 1 << 10, 1 << 15, 1 << 20};
 
   assert(argc == 2);
   for (size_t size : sizes) {
@@ -30,7 +30,8 @@ int main(int argc, char **argv)
         return 1;
       size = malloc_usable_size(p);
       // Our realloc implementation will return the same pointer if the size
-      // requested is lower or equal to the usable size of the associated chunk.
+      // requested is lower than or equal to the usable size of the associated
+      // chunk.
       p = realloc(p, size - 1);
       if (p != old_p)
         return 1;

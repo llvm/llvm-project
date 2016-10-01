@@ -15,17 +15,13 @@ extern "C" void *aligned_alloc (size_t alignment, size_t size);
 
 int main(int argc, char **argv)
 {
-  void *p;
+  void *p = nullptr;
   size_t alignment = 1U << 12;
-  size_t size = alignment;
+  size_t size = 1U << 12;
 
   assert(argc == 2);
+
   if (!strcmp(argv[1], "valid")) {
-    p = memalign(alignment, size);
-    if (!p)
-      return 1;
-    free(p);
-    p = nullptr;
     posix_memalign(&p, alignment, size);
     if (!p)
       return 1;
@@ -34,6 +30,19 @@ int main(int argc, char **argv)
     if (!p)
       return 1;
     free(p);
+    // Tests various combinations of alignment and sizes
+    for (int i = 4; i < 20; i++) {
+      alignment = 1U << i;
+      for (int j = 1; j < 33; j++) {
+        size = 0x800 * j;
+        for (int k = 0; k < 3; k++) {
+          p = memalign(alignment, size - (16 * k));
+          if (!p)
+            return 1;
+          free(p);
+        }
+      }
+    }
   }
   if (!strcmp(argv[1], "invalid")) {
     p = memalign(alignment - 1, size);
