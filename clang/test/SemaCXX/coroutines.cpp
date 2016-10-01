@@ -283,3 +283,11 @@ struct bad_promise_5 {
 coro<bad_promise_5> bad_final_suspend() { // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
   co_await a;
 }
+
+
+template<> struct std::coroutine_traits<int, int, const char**>
+{ using promise_type = promise; };
+
+int main(int, const char**) { // expected-error {{'main' cannot be a coroutine}}
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+}

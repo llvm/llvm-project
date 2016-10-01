@@ -170,8 +170,8 @@ public:
   emitTerminateForUnexpectedException(CodeGenFunction &CGF,
                                       llvm::Value *Exn) override;
 
-  void EmitFundamentalRTTIDescriptor(QualType Type);
-  void EmitFundamentalRTTIDescriptors();
+  void EmitFundamentalRTTIDescriptor(QualType Type, bool DLLExport);
+  void EmitFundamentalRTTIDescriptors(bool DLLExport);
   llvm::Constant *getAddrOfRTTIDescriptor(QualType Ty) override;
   CatchTypeInfo
   getAddrOfCXXCatchHandlerType(QualType Ty,
@@ -1500,7 +1500,7 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
       isa<NamespaceDecl>(DC) && cast<NamespaceDecl>(DC)->getIdentifier() &&
       cast<NamespaceDecl>(DC)->getIdentifier()->isStr("__cxxabiv1") &&
       DC->getParent()->isTranslationUnit())
-    EmitFundamentalRTTIDescriptors();
+    EmitFundamentalRTTIDescriptors(RD->hasAttr<DLLExportAttr>());
 
   if (!VTable->isDeclarationForLinker())
     CGM.EmitVTableTypeMetadata(VTable, VTLayout);
@@ -2472,7 +2472,9 @@ public:
   /// BuildTypeInfo - Build the RTTI type info struct for the given type.
   ///
   /// \param Force - true to force the creation of this RTTI value
-  llvm::Constant *BuildTypeInfo(QualType Ty, bool Force = false);
+  /// \param DLLExport - true to mark the RTTI value as DLLExport
+  llvm::Constant *BuildTypeInfo(QualType Ty, bool Force = false,
+                                bool DLLExport = false);
 };
 }
 
@@ -2904,7 +2906,8 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   llvm_unreachable("Invalid linkage!");
 }
 
-llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force) {
+llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
+                                                  bool DLLExport) {
   // We want to operate on the canonical type.
   Ty = Ty.getCanonicalType();
 
@@ -3089,6 +3092,8 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force) {
     llvmVisibility = CodeGenModule::GetLLVMVisibility(Ty->getVisibility());
   TypeName->setVisibility(llvmVisibility);
   GV->setVisibility(llvmVisibility);
+  if (DLLExport)
+    GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
 
   return llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy);
 }
@@ -3370,15 +3375,18 @@ llvm::Constant *ItaniumCXXABI::getAddrOfRTTIDescriptor(QualType Ty) {
   return ItaniumRTTIBuilder(*this).BuildTypeInfo(Ty);
 }
 
-void ItaniumCXXABI::EmitFundamentalRTTIDescriptor(QualType Type) {
+void ItaniumCXXABI::EmitFundamentalRTTIDescriptor(QualType Type,
+                                                  bool DLLExport) {
   QualType PointerType = getContext().getPointerType(Type);
   QualType PointerTypeConst = getContext().getPointerType(Type.withConst());
-  ItaniumRTTIBuilder(*this).BuildTypeInfo(Type, true);
-  ItaniumRTTIBuilder(*this).BuildTypeInfo(PointerType, true);
-  ItaniumRTTIBuilder(*this).BuildTypeInfo(PointerTypeConst, true);
+  ItaniumRTTIBuilder(*this).BuildTypeInfo(Type, /*Force=*/true, DLLExport);
+  ItaniumRTTIBuilder(*this).BuildTypeInfo(PointerType, /*Force=*/true,
+                                          DLLExport);
+  ItaniumRTTIBuilder(*this).BuildTypeInfo(PointerTypeConst, /*Force=*/true,
+                                          DLLExport);
 }
 
-void ItaniumCXXABI::EmitFundamentalRTTIDescriptors() {
+void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(bool DLLExport) {
   // Types added here must also be added to TypeInfoIsInStandardLibrary.
   QualType FundamentalTypes[] = {
       getContext().VoidTy,             getContext().NullPtrTy,
@@ -3395,7 +3403,7 @@ void ItaniumCXXABI::EmitFundamentalRTTIDescriptors() {
       getContext().Char16Ty,           getContext().Char32Ty
   };
   for (const QualType &FundamentalType : FundamentalTypes)
-    EmitFundamentalRTTIDescriptor(FundamentalType);
+    EmitFundamentalRTTIDescriptor(FundamentalType, DLLExport);
 }
 
 /// What sort of uniqueness rules should we use for the RTTI for the

@@ -234,4 +234,12 @@ template<bool B> struct X {
 X<true> x1;
 X<false> x2; // expected-note {{in instantiation}}
 
+template <typename Type>
+class E {
+  explicit E(const int &) = default;
+};
+
+template <typename Type>
+E<Type>::E(const int&) {}  // expected-error {{definition of explicitly defaulted function}}
+
 }
