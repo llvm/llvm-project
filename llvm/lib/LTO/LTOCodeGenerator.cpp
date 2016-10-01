@@ -131,7 +131,7 @@ void LTOCodeGenerator::initializeLTOPasses() {
 }
 
 void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
-  const std::vector<const char *> &undefs = Mod->getAsmUndefinedRefs();
+  const std::vector<StringRef> &undefs = Mod->getAsmUndefinedRefs();
   for (int i = 0, e = undefs.size(); i != e; ++i)
     AsmUndefinedRefs[undefs[i]] = 1;
 }
