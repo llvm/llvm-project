@@ -42,6 +42,8 @@ __constant__ __shared__ int z8;  // expected-error {{attributes are not compatib
 __shared__ __device__ int z9;
 __shared__ __constant__ int z10;  // expected-error {{attributes are not compatible}}
 // expected-note@-1 {{conflicting attribute is here}}
+__constant__ __shared__ int z10a;  // expected-error {{attributes are not compatible}}
+// expected-note@-1 {{conflicting attribute is here}}
 
 __global__ __device__ void z11();  // expected-error {{attributes are not compatible}}
 // expected-note@-1 {{conflicting attribute is here}}
@@ -59,3 +61,11 @@ __global__ static inline void foobar() {};
 #ifdef EXPECT_INLINE_WARNING
 // expected-warning@-2 {{ignored 'inline' attribute on kernel function 'foobar'}}
 #endif
+
+__constant__ int global_constant;
+void host_fn() {
+  __constant__ int c; // expected-error {{__constant__ variables must be global}}
+}
+__device__ void device_fn() {
+  __constant__ int c; // expected-error {{__constant__ variables must be global}}
+}

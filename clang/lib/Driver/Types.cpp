@@ -254,7 +254,7 @@ void types::getCompilationPhases(ID Id, llvm::SmallVectorImpl<phases::ID> &P) {
     }
   }
 
-  if (!onlyPrecompileType(Id) && Id != TY_CUDA_DEVICE) {
+  if (!onlyPrecompileType(Id)) {
     P.push_back(phases::Link);
   }
   assert(0 < P.size() && "Not enough phases in list");

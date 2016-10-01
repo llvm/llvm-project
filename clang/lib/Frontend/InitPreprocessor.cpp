@@ -392,6 +392,15 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     //   C++ translation unit.
     else
       Builder.defineMacro("__cplusplus", "199711L");
+
+    // C++1z [cpp.predefined]p1:
+    //   An integer literal of type std::size_t whose value is the alignment
+    //   guaranteed by a call to operator new(std::size_t)
+    //
+    // We provide this in all language modes, since it seems generally useful.
+    Builder.defineMacro("__STDCPP_DEFAULT_NEW_ALIGNMENT__",
+                        Twine(TI.getNewAlign() / TI.getCharWidth()) +
+                            TI.getTypeConstantSuffix(TI.getSizeType()));
   }
 
   // In C11 these are environment macros. In C++11 they are only defined

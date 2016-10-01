@@ -127,6 +127,11 @@ checkCoroutineContext(Sema &S, SourceLocation Loc, StringRef Keyword) {
     S.Diag(Loc, diag::err_coroutine_constexpr) << Keyword;
   } else if (FD->isVariadic()) {
     S.Diag(Loc, diag::err_coroutine_varargs) << Keyword;
+  } else if (FD->isMain()) {
+    S.Diag(FD->getLocStart(), diag::err_coroutine_main);
+    S.Diag(Loc, diag::note_declared_coroutine_here)
+      << (Keyword == "co_await" ? 0 :
+          Keyword == "co_yield" ? 1 : 2);
   } else {
     auto *ScopeInfo = S.getCurFunction();
     assert(ScopeInfo && "missing function scope for function");

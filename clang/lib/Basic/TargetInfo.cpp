@@ -39,6 +39,13 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   SuitableAlign = 64;
   DefaultAlignForAttributeAligned = 128;
   MinGlobalAlign = 0;
+  // From the glibc documentation, on GNU systems, malloc guarantees 16-byte
+  // alignment on 64-bit systems and 8-byte alignment on 32-bit systems. See
+  // https://www.gnu.org/software/libc/manual/html_node/Malloc-Examples.html
+  if (T.isGNUEnvironment())
+    NewAlign = Triple.isArch64Bit() ? 128 : Triple.isArch32Bit() ? 64 : 0;
+  else
+    NewAlign = 0; // Infer from basic type alignment.
   HalfWidth = 16;
   HalfAlign = 16;
   FloatWidth = 32;
@@ -320,6 +327,9 @@ void TargetInfo::adjust(const LangOptions &Opts) {
     FloatFormat = &llvm::APFloat::IEEEsingle;
     LongDoubleFormat = &llvm::APFloat::IEEEquad;
   }
+
+  if (Opts.NewAlignOverride)
+    NewAlign = Opts.NewAlignOverride * getCharWidth();
 }
 
 bool TargetInfo::initFeatureMap(

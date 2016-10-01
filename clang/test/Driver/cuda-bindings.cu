@@ -34,8 +34,8 @@
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefix=ASM %s
-// ASM: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-device-cuda-nvptx64-nvidia-cuda-sm_30.s"
-// ASM: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
+// ASM-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-device-cuda-nvptx64-nvidia-cuda-sm_30.s"
+// ASM-DAG: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
 
 //
 // Test two gpu architectures with complete compilation.
@@ -62,9 +62,9 @@
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefix=ASM2 %s
-// ASM2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-device-cuda-nvptx64-nvidia-cuda-sm_30.s"
-// ASM2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-device-cuda-nvptx64-nvidia-cuda-sm_35.s"
-// ASM2: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
+// ASM2-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-device-cuda-nvptx64-nvidia-cuda-sm_30.s"
+// ASM2-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-device-cuda-nvptx64-nvidia-cuda-sm_35.s"
+// ASM2-DAG: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
 
 //
 // Test one or more gpu architecture with complete compilation in host-only

@@ -443,7 +443,7 @@ bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
 //    system header, in which case we leave the constexpr function unattributed.
 void Sema::maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *NewD,
                                        const LookupResult &Previous) {
-  assert(getLangOpts().CUDA && "May be called only for CUDA compilations.");
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   if (!getLangOpts().CUDAHostDeviceConstexpr || !NewD->isConstexpr() ||
       NewD->isVariadic() || NewD->hasAttr<CUDAHostAttr>() ||
       NewD->hasAttr<CUDADeviceAttr>() || NewD->hasAttr<CUDAGlobalAttr>())
@@ -482,8 +482,7 @@ void Sema::maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *NewD,
 }
 
 bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
-  assert(getLangOpts().CUDA &&
-         "Should only be called during CUDA compilation.");
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   assert(Callee && "Callee may not be null.");
   FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext);
   if (!Caller)
@@ -558,4 +557,20 @@ bool Sema::CheckCUDAVLA(SourceLocation Loc) {
     return false;
   }
   return true;
+}
+
+void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  if (Method->hasAttr<CUDAHostAttr>() || Method->hasAttr<CUDADeviceAttr>())
+    return;
+  FunctionDecl *CurFn = dyn_cast<FunctionDecl>(CurContext);
+  if (!CurFn)
+    return;
+  CUDAFunctionTarget Target = IdentifyCUDATarget(CurFn);
+  if (Target == CFT_Global || Target == CFT_Device) {
+    Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+  } else if (Target == CFT_HostDevice) {
+    Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+    Method->addAttr(CUDAHostAttr::CreateImplicit(Context));
+  }
 }
