@@ -590,8 +590,8 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
   else
 #endif
   {
-    const char *prompt = GetPrompt();
 #ifdef _MSC_VER
+    const char *prompt = GetPrompt();
     if (prompt) {
       // Back up over previous prompt using Windows API
       CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
@@ -605,9 +605,11 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
     }
 #endif
     IOHandler::PrintAsync(stream, s, len);
+#ifdef _MSC_VER
     if (prompt)
       IOHandler::PrintAsync(GetOutputStreamFile().get(), prompt,
                             strlen(prompt));
+#endif
   }
 }
 

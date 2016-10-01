@@ -20,7 +20,6 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "test_throw.h"
 
 struct Counted {
   static int count;
@@ -43,7 +42,7 @@ struct ThrowsCounted {
   explicit ThrowsCounted(int&& x) {
       ++constructed;
       if (throw_after > 0 && --throw_after == 0) {
-          test_throw<int>();
+        TEST_THROW(1);
       }
       ++count;
       x = 0;
