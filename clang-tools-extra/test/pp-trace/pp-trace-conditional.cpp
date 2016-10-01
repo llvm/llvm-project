@@ -63,21 +63,21 @@
 
 // CHECK: ---
 // CHECK-NEXT: - Callback: MacroDefined
-// CHECK-NEXT:   MacroNameTok: __STDC__
+// CHECK:        MacroNameTok: __STDC__
 // CHECK-NEXT:   MacroDirective: MD_Define
 // CHECK-NEXT: - Callback: MacroDefined
-// CHECK-NEXT:   MacroNameTok: __STDC_HOSTED__
+// CHECK:        MacroNameTok: __STDC_HOSTED__
 // CHECK-NEXT:   MacroDirective: MD_Define
 // CHECK-NEXT: - Callback: MacroDefined
-// CHECK-NEXT:   MacroNameTok: __cplusplus
+// CHECK:        MacroNameTok: __cplusplus
 // CHECK-NEXT:   MacroDirective: MD_Define
 // CHECK-NEXT: - Callback: MacroDefined
-// CHECK-NEXT:   MacroNameTok: __STDC_UTF_16__
+// CHECK:        MacroNameTok: __STDC_UTF_16__
 // CHECK-NEXT:   MacroDirective: MD_Define
 // CHECK-NEXT: - Callback: MacroDefined
-// CHECK-NEXT:   MacroNameTok: __STDC_UTF_32__
+// CHECK:        MacroNameTok: __STDC_UTF_32__
 // CHECK-NEXT:   MacroDirective: MD_Define
-// CHECK-NEXT: - Callback: If
+// CHECK:      - Callback: If
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-conditional.cpp:3:2"
 // CHECK-NEXT:   ConditionRange: ["{{.*}}{{[/\\]}}pp-trace-conditional.cpp:3:4", "{{.*}}{{[/\\]}}pp-trace-conditional.cpp:4:1"]
 // CHECK-NEXT:   ConditionValue: CVK_True

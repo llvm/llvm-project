@@ -248,22 +248,26 @@ template <typename T> class IslPtr {
 private:
   T *Obj;
 
-  explicit IslPtr(__isl_take T *Obj, bool TakeOwnership)
-      : Obj(TakeOwnership ? Obj : Traits::copy(Obj)) {}
+  explicit IslPtr(__isl_take T *Obj) : Obj(Obj) {}
 
 public:
   IslPtr() : Obj(nullptr) {}
   /* implicit */ IslPtr(std::nullptr_t That) : IslPtr() {}
 
-  /* implicit */ IslPtr(const ThisTy &That) : IslPtr(That.Obj, false) {}
-  /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj, true) {
+  /* implicit */ IslPtr(const ThisTy &That)
+      : IslPtr(IslObjTraits<T>::copy(That.Obj)) {}
+  /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj) {
     That.Obj = nullptr;
   }
-  /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy(), true) {}
-  ~IslPtr() { Traits::free(Obj); }
+  /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy()) {}
+  ~IslPtr() {
+    if (Obj)
+      Traits::free(Obj);
+  }
 
   ThisTy &operator=(const ThisTy &That) {
-    Traits::free(this->Obj);
+    if (Obj)
+      Traits::free(Obj);
     this->Obj = Traits::copy(That.Obj);
     return *this;
   }
@@ -276,17 +280,27 @@ public:
 
   static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
 
-  static ThisTy give(T *Obj) { return ThisTy(Obj, true); }
+  static ThisTy give(__isl_take T *Obj) { return ThisTy(Obj); }
   T *keep() const { return Obj; }
-  T *take() {
+  __isl_give T *take() {
     auto *Result = Obj;
     Obj = nullptr;
     return Result;
   }
-  T *copy() const { return Traits::copy(Obj); }
+  __isl_give T *copy() const { return Traits::copy(Obj); }
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }
+
+  /// Print a string representation of this ISL object to stderr.
+  ///
+  /// This function is meant to be called from a debugger and therefore must
+  /// not be declared inline: The debugger needs a valid function pointer to
+  /// call, even if the method is not used.
+  ///
+  /// Note that the string representation of isl_*_dump is different than the
+  /// one for isl_printer/isl_*_to_str().
+  void dump() const;
 };
 
 template <typename T> static IslPtr<T> give(__isl_take T *Obj) {
@@ -330,10 +344,15 @@ public:
   static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
 
   T *keep() const { return Obj; }
-  T *copy() const { return Traits::copy(Obj); }
+  __isl_give T *copy() const { return Traits::copy(Obj); }
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }
+
+  /// Print a string representation of this ISL object to stderr.
+  ///
+  /// @see IslPtr<T>::dump()
+  void dump() const;
 };
 
 template <typename T>

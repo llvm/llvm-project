@@ -41,7 +41,7 @@ if(${LIBOMP_STANDALONE_BUILD})
   set(LIBOMP_TEST_OPENMP_FLAG -fopenmp CACHE STRING
     "OpenMP compiler flag to use for testing OpenMP library")
   find_program(LIBOMP_LLVM_LIT_EXECUTABLE
-    NAMES llvm-lit lit.py
+    NAMES llvm-lit lit.py lit
     PATHS ${OPENMP_LLVM_TOOLS_DIR})
   if(NOT LIBOMP_LLVM_LIT_EXECUTABLE)
     libomp_say("Cannot find llvm-lit.")

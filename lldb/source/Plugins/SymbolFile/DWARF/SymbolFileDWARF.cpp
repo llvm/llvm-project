@@ -2395,7 +2395,7 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
                      name.AsCString());
 
   // eFunctionNameTypeAuto should be pre-resolved by a call to
-  // Module::PrepareForFunctionNameLookup()
+  // Module::LookupInfo::LookupInfo()
   assert((name_type_mask & eFunctionNameTypeAuto) == 0);
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));

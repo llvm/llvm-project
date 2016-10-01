@@ -62,8 +62,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef Emul) {
 
   std::pair<ELFKind, uint16_t> Ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(S)
-          .Case("aarch64elf", {ELF64LEKind, EM_AARCH64})
-          .Case("aarch64linux", {ELF64LEKind, EM_AARCH64})
+          .Cases("aarch64elf", "aarch64linux", {ELF64LEKind, EM_AARCH64})
           .Case("armelf_linux_eabi", {ELF32LEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Case("elf32btsmip", {ELF32BEKind, EM_MIPS})
@@ -72,10 +71,9 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef Emul) {
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
-          .Case("elf_amd64", {ELF64LEKind, EM_X86_64})
+          .Cases("elf_amd64", "elf_x86_64", {ELF64LEKind, EM_X86_64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
           .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
-          .Case("elf_x86_64", {ELF64LEKind, EM_X86_64})
           .Default({ELFNoneKind, EM_NONE});
 
   if (Ret.first == ELFNoneKind) {

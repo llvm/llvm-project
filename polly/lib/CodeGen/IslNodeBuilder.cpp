@@ -720,6 +720,9 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     if (!MA->hasNewAccessRelation())
       continue;
 
+    assert(!MA->getLatestScopArrayInfo()->getBasePtrOriginSAI() &&
+           "Generating new index expressions to indirect arrays not working");
+
     auto Schedule = isl_ast_build_get_schedule(Build);
     auto PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
 

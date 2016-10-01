@@ -96,6 +96,7 @@ private:
   bool push_rbp_pattern_p();
   bool push_0_pattern_p();
   bool push_imm_pattern_p();
+  bool push_extended_pattern_p();
   bool mov_rsp_rbp_pattern_p();
   bool sub_rsp_pattern_p(int &amount);
   bool add_rsp_pattern_p(int &amount);

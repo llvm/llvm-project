@@ -545,16 +545,15 @@ protected:
   /// @param NewAccesses A map from memory access ids to new ast expressions,
   ///                    which may contain new access expressions for certain
   ///                    memory accesses.
-  Value *generateScalarLoad(ScopStmt &Stmt, LoadInst *load, ValueMapT &BBMap,
-                            LoopToScevMapT &LTS,
-                            isl_id_to_ast_expr *NewAccesses);
+  Value *generateArrayLoad(ScopStmt &Stmt, LoadInst *load, ValueMapT &BBMap,
+                           LoopToScevMapT &LTS,
+                           isl_id_to_ast_expr *NewAccesses);
 
   /// @param NewAccesses A map from memory access ids to new ast expressions,
   ///                    which may contain new access expressions for certain
   ///                    memory accesses.
-  void generateScalarStore(ScopStmt &Stmt, StoreInst *store, ValueMapT &BBMap,
-                           LoopToScevMapT &LTS,
-                           isl_id_to_ast_expr *NewAccesses);
+  void generateArrayStore(ScopStmt &Stmt, StoreInst *store, ValueMapT &BBMap,
+                          LoopToScevMapT &LTS, isl_id_to_ast_expr *NewAccesses);
 
   /// Copy a single PHI instruction.
   ///

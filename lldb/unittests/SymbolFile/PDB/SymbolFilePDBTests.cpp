@@ -154,7 +154,7 @@ protected:
   }
 };
 
-#if defined(HAVE_DIA_SDK)
+#if HAVE_DIA_SDK
 #define REQUIRES_DIA_SDK(TestName) TestName
 #else
 #define REQUIRES_DIA_SDK(TestName) DISABLED_##TestName
