@@ -1069,7 +1069,7 @@ size_t Symtab::FindFunctionSymbols(const ConstString &name,
   const char *name_cstr = name.GetCString();
 
   // eFunctionNameTypeAuto should be pre-resolved by a call to
-  // Module::PrepareForFunctionNameLookup()
+  // Module::LookupInfo::LookupInfo()
   assert((name_type_mask & eFunctionNameTypeAuto) == 0);
 
   if (name_type_mask & (eFunctionNameTypeBase | eFunctionNameTypeFull)) {

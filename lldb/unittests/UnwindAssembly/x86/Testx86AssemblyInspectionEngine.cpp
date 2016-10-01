@@ -447,9 +447,304 @@ TEST_F(Testx86AssemblyInspectionEngine, Test64bitFramelessBigStackFrame) {
   EXPECT_FALSE(row_sp->GetRegisterInfo(k_r13, regloc));
   EXPECT_FALSE(row_sp->GetRegisterInfo(k_r14, regloc));
   EXPECT_FALSE(row_sp->GetRegisterInfo(k_r15, regloc));
-
 }
 
+TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessBigStackFrame) {
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  // this source file:
+  //
+  // #include <stdio.h>
+  // int main (int argc, char **argv)
+  // {
+  //
+  //     const int arrsize = 60;
+  //     int buf[arrsize * arrsize];
+  //     int accum = argc;
+  //     for (int i = 0; i < arrsize; i++)
+  //         for (int j = 0; j < arrsize; j++)
+  //         {
+  //             if (i > 0 && j > 0)
+  //             {
+  //                 int n = buf[(i-1) * (j-1)] * 2;
+  //                 int m = buf[(i-1) * (j-1)] / 2;
+  //                 int j = buf[(i-1) * (j-1)] + 2;
+  //                 int k = buf[(i-1) * (j-1)] - 2;
+  //                 printf ("%d ", n + m + j + k);
+  //                 buf[(i-1) * (j-1)] += n - m + j - k;
+  //             }
+  //             buf[i*j] = accum++;
+  //         }
+  //
+  //     return buf[(arrsize * arrsize) - 2] + printf ("%d\n", buf[(arrsize *
+  //     arrsize) - 3]);
+  // }
+  //
+  // compiled 'clang -arch i386 -fomit-frame-pointer -Os' for i386-apple-macosx
+
+  // simplified assembly version of the above function, which is used as the
+  // input
+  // data:
+  //
+  // 	.section	__TEXT,__text,regular,pure_instructions
+  // 	.macosx_version_min 10, 12
+  // 	.globl	_main
+  // 	.align	4, 0x90
+  // _main:                                  ## @main
+  // ## BB#0:
+  // 	pushl %ebp
+  // 	pushl %ebx
+  // 	pushl %edi
+  // 	pushl %esi
+  // L0$pb:
+  // 	subl $0x386c, %esp
+  //     calll L1
+  // L1:
+  //     popl %ecx
+  //     movl %ecx, 0x8(%esp)
+  //     subl $0x8, %esp
+  //     pushl %eax
+  //     pushl 0x20(%esp)
+  //     calll _puts
+  //     addl $0x10, %esp
+  //     incl %ebx
+  //     addl $0x386c, %esp
+  //     popl %esi
+  //     popl %edi
+  //     popl %ebx
+  //     popl %ebp
+  //     retl
+  //
+  // 	.section	__TEXT,__cstring,cstring_literals
+  // L_.str:                                 ## @.str
+  // 	.asciz	"HI"
+  //
+  //
+  // .subsections_via_symbols
+
+  uint8_t data[] = {
+      0x55,
+      // offset 0 -- pushl %ebp
+
+      0x53,
+      // offset 1 -- pushl %ebx
+
+      0x57,
+      // offset 2 -- pushl %edi
+
+      0x56,
+      // offset 3 -- pushl %esi
+
+      0x81, 0xec, 0x6c, 0x38, 0x00, 0x00,
+      // offset 4 -- subl $0x386c, %esp
+
+      0xe8, 0x00, 0x00, 0x00, 0x00,
+      // offset 10 -- calll 0
+      // call the next instruction, to put the pc on the stack
+
+      0x59,
+      // offset 15 -- popl %ecx
+      // pop the saved pc address into ecx
+
+      0x89, 0x4c, 0x24, 0x08,
+      // offset 16 -- movl %ecx, 0x8(%esp)
+
+      // ....
+
+      0x83, 0xec, 0x08,
+      // offset 20 -- subl $0x8, %esp
+
+      0x50,
+      // offset 23 -- pushl %eax
+
+      0xff, 0x74, 0x24, 0x20,
+      // offset 24 -- pushl 0x20(%esp)
+
+      0xe8, 0x8c, 0x00, 0x00, 0x00,
+      // offset 28 -- calll puts
+
+      0x83, 0xc4, 0x10,
+      // offset 33 -- addl $0x10, %esp
+      // get esp back to the value it was before the
+      // alignment & argument saves for the puts call
+
+      0x43,
+      // offset 36 -- incl %ebx
+
+      // ....
+
+      0x81, 0xc4, 0x6c, 0x38, 0x00, 0x00,
+      // offset 37 -- addl $0x386c, %esp
+
+      0x5e,
+      // offset 43 -- popl %esi
+
+      0x5f,
+      // offset 44 -- popl %edi
+
+      0x5b,
+      // offset 45 -- popl %ebx
+
+      0x5d,
+      // offset 46 -- popl %ebp
+
+      0xc3,
+      // offset 47 -- retl
+
+      0xe8, 0x12, 0x34, 0x56, 0x78,
+      // offset 48 -- calll __stack_chk_fail
+  };
+
+  AddressRange sample_range(0x1000, sizeof(data));
+
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  // Unwind rules should look like
+  //
+  //   0: CFA=esp +4 => esp=CFA+0 eip=[CFA-4]
+  //   1: CFA=esp +8 => ebp=[CFA-8] esp=CFA+0 eip=[CFA-4]
+  //   2: CFA=esp+12 => ebx=[CFA-12] ebp=[CFA-8] esp=CFA+0 eip=[CFA-4]
+  //   3: CFA=esp+16 => ebx=[CFA-12] edi=[CFA-16] ebp=[CFA-8] esp=CFA+0
+  //   eip=[CFA-4]
+  //   4: CFA=esp+20 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //   esp=CFA+0 eip=[CFA-4]
+  //  10: CFA=esp+14464 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //  15: CFA=esp+14468 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //  16: CFA=esp+14464 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //
+  //  ....
+  //
+  //  23: CFA=esp+14472 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //  24: CFA=esp+14476 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //  28: CFA=esp+14480 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //  36: CFA=esp+14464 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //
+  //  .....
+  //
+  //  37: CFA=esp+14464 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //  43: CFA=esp+20 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+  //  44: CFA=esp+16 => ebx=[CFA-12] edi=[CFA-16] ebp=[CFA-8] esp=CFA+0
+  //  eip=[CFA-4]
+  //  45: CFA=esp+12 => ebx=[CFA-12] ebp=[CFA-8] esp=CFA+0 eip=[CFA-4]
+  //  46: CFA=esp +8 => ebp=[CFA-8] esp=CFA+0 eip=[CFA-4]
+  //  47: CFA=esp +4 => esp=CFA+0 eip=[CFA-4]
+  //  48: CFA=esp+14480 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  //  esp=CFA+0 eip=[CFA-4]
+
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+
+  // Check that we get the CFA correct for the pic base setup sequence
+
+  // CFA=esp+14464 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  // esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(10);
+  EXPECT_EQ(10, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(14464, row_sp->GetCFAValue().GetOffset());
+
+  // 15: CFA=esp+14468 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  // esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(15);
+  EXPECT_EQ(15, row_sp->GetOffset());
+  EXPECT_EQ(14468, row_sp->GetCFAValue().GetOffset());
+
+  // 16: CFA=esp+14464 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  // esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(16);
+  EXPECT_EQ(16, row_sp->GetOffset());
+  EXPECT_EQ(14464, row_sp->GetCFAValue().GetOffset());
+
+  // Check that the row for offset 16 has the registers saved that we expect
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_eip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-4, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_ebp, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_ebx, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-12, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_edi, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-16, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_esi, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-20, regloc.GetOffset());
+
+  //
+  // Check the pushing & popping around the call printf instruction
+
+  // 23: CFA=esp+14472 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  // esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(23);
+  EXPECT_EQ(23, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(14472, row_sp->GetCFAValue().GetOffset());
+
+  // 24: CFA=esp+14476 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  // esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(24);
+  EXPECT_EQ(24, row_sp->GetOffset());
+  EXPECT_EQ(14476, row_sp->GetCFAValue().GetOffset());
+
+  // 28: CFA=esp+14480 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  // esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(28);
+  EXPECT_EQ(28, row_sp->GetOffset());
+  EXPECT_EQ(14480, row_sp->GetCFAValue().GetOffset());
+
+  // 36: CFA=esp+14464 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
+  // esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(36);
+  EXPECT_EQ(36, row_sp->GetOffset());
+  EXPECT_EQ(14464, row_sp->GetCFAValue().GetOffset());
+
+  // Check that the epilogue gets us back to the original unwind state
+
+  //  47: CFA=esp +4 => esp=CFA+0 eip=[CFA-4]
+  row_sp = unwind_plan.GetRowForFunctionOffset(47);
+  EXPECT_EQ(47, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(4, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_eip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-4, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_esp, regloc));
+  EXPECT_TRUE(regloc.IsCFAPlusOffset());
+  EXPECT_EQ(0, regloc.GetOffset());
+
+  // Check that no unexpected registers were saved
+
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_eax, regloc));
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebx, regloc));
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ecx, regloc));
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_edx, regloc));
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_esi, regloc));
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_edi, regloc));
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebp, regloc));
+}
 
 TEST_F(Testx86AssemblyInspectionEngine, Test64bitFramelessSmallStackFrame) {
   std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
@@ -463,18 +758,18 @@ TEST_F(Testx86AssemblyInspectionEngine, Test64bitFramelessSmallStackFrame) {
   // compiled 'clang -fomit-frame-pointer' for x86_64-apple-macosx
 
   uint8_t data[] = {
-      0x50,       
+      0x50,
       // offset 0  -- pushq %rax
 
-      0x48, 0x8d, 0x3d, 0x32, 0x00, 0x00, 0x00, 
+      0x48, 0x8d, 0x3d, 0x32, 0x00, 0x00, 0x00,
       // offset 1 -- leaq 0x32(%rip), %rdi ; "HI"
 
-      0xe8, 0x0b, 0x00, 0x00, 0x00, 
+      0xe8, 0x0b, 0x00, 0x00, 0x00,
       // offset 8 -- callq 0x100000f58 ; puts
 
       0x31, 0xc9,
       // offset 13 -- xorl %ecx, %ecx
-      
+
       0x89, 0x44, 0x24, 0x04,
       // offset 15 -- movl %eax, 0x4(%rsp)
 
@@ -495,14 +790,14 @@ TEST_F(Testx86AssemblyInspectionEngine, Test64bitFramelessSmallStackFrame) {
       data, sizeof(data), sample_range, unwind_plan));
 
   // Unwind rules should look like
-  //     0: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8] 
-  //     1: CFA=rsp+16 => rsp=CFA+0 rip=[CFA-8] 
-  //    22: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8] 
+  //     0: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  //     1: CFA=rsp+16 => rsp=CFA+0 rip=[CFA-8]
+  //    22: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
 
   UnwindPlan::Row::RegisterLocation regloc;
 
   // grab the Row for when the prologue has finished executing:
-  //     1: CFA=rsp+16 => rsp=CFA+0 rip=[CFA-8] 
+  //     1: CFA=rsp+16 => rsp=CFA+0 rip=[CFA-8]
 
   UnwindPlan::RowSP row_sp = unwind_plan.GetRowForFunctionOffset(13);
 
@@ -548,7 +843,6 @@ TEST_F(Testx86AssemblyInspectionEngine, Test64bitFramelessSmallStackFrame) {
   EXPECT_EQ(-8, regloc.GetOffset());
 }
 
-
 TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessSmallStackFrame) {
   std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
 
@@ -563,7 +857,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessSmallStackFrame) {
   uint8_t data[] = {
       0x83, 0xec, 0x0c,
       // offset 0 -- subl $0xc, %esp
-      
+
       0xe8, 0x00, 0x00, 0x00, 0x00,
       // offset 3 -- calll 0 {call the next instruction, to put the pc on
       // the stack}
@@ -603,11 +897,11 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessSmallStackFrame) {
       data, sizeof(data), sample_range, unwind_plan));
 
   // Unwind rules should look like
-  // row[0]:    0: CFA=esp +4 => esp=CFA+0 eip=[CFA-4] 
-  // row[1]:    3: CFA=esp+16 => esp=CFA+0 eip=[CFA-4] 
-  // row[2]:    8: CFA=esp+20 => esp=CFA+0 eip=[CFA-4] 
-  // row[3]:    9: CFA=esp+16 => esp=CFA+0 eip=[CFA-4] 
-  // row[4]:   34: CFA=esp +4 => esp=CFA+0 eip=[CFA-4] 
+  // row[0]:    0: CFA=esp +4 => esp=CFA+0 eip=[CFA-4]
+  // row[1]:    3: CFA=esp+16 => esp=CFA+0 eip=[CFA-4]
+  // row[2]:    8: CFA=esp+20 => esp=CFA+0 eip=[CFA-4]
+  // row[3]:    9: CFA=esp+16 => esp=CFA+0 eip=[CFA-4]
+  // row[4]:   34: CFA=esp +4 => esp=CFA+0 eip=[CFA-4]
 
   UnwindPlan::Row::RegisterLocation regloc;
 
@@ -631,7 +925,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessSmallStackFrame) {
   EXPECT_EQ(20, row_sp->GetCFAValue().GetOffset());
 
   // Check unwind state after we pop the pic base value off the stack
-  // row[3]:    9: CFA=esp+16 => esp=CFA+0 eip=[CFA-4] 
+  // row[3]:    9: CFA=esp+16 => esp=CFA+0 eip=[CFA-4]
 
   row_sp = unwind_plan.GetRowForFunctionOffset(9);
   EXPECT_EQ(9, row_sp->GetOffset());
@@ -650,7 +944,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessSmallStackFrame) {
   EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebp, regloc));
 
   // verify that we get back to the original unwind state before the ret
-  //  34: CFA=esp +4 => esp=CFA+0 eip=[CFA-4] 
+  //  34: CFA=esp +4 => esp=CFA+0 eip=[CFA-4]
 
   row_sp = unwind_plan.GetRowForFunctionOffset(34);
   EXPECT_EQ(34, row_sp->GetOffset());

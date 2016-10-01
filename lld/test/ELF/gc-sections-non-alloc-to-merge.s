@@ -17,5 +17,11 @@ _start:
 .Lbar:
         .long 2
 
+        .section        .merge2,"aM",@progbits,4
+        .p2align        2
+.Lzed:
+        .long 1
+
         .section bar
         .quad .Lbar
+	.quad .Lzed

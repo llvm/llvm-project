@@ -6,15 +6,15 @@
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
 # CHECK-NEXT:     BlockSize:       4096
-# CHECK-NEXT:     FreeBlockMap:    2
-# CHECK-NEXT:     NumBlocks:       10
+# CHECK-NEXT:     FreeBlockMap:
+# CHECK-NEXT:     NumBlocks:       8
 # CHECK-NEXT:     NumDirectoryBytes: 28
 # CHECK-NEXT:     Unknown1:        0
-# CHECK-NEXT:     BlockMapAddr:    9
+# CHECK-NEXT:     BlockMapAddr:    3
 # CHECK-NEXT:     NumDirectoryBlocks: 1
-# CHECK-NEXT:     DirectoryBlocks: [ 8 ]
+# CHECK-NEXT:     DirectoryBlocks: [ 7 ]
 # CHECK-NEXT:     NumStreams:      3
-# CHECK-NEXT:     FileSize:        40960
+# CHECK-NEXT:     FileSize:        32768
 # CHECK-NEXT:   StreamSizes:     [ 1, 48, 56 ]
 # CHECK-NEXT:   StreamMap:
 # CHECK-NEXT:     - Stream:          [ 4 ]

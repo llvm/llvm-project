@@ -29,10 +29,9 @@ x86AssemblyInspectionEngine::x86AssemblyInspectionEngine(const ArchSpec &arch)
 
       m_reg_map(), m_arch(arch), m_cpu(k_cpu_unspecified), m_wordsize(-1),
       m_register_map_initialized(false), m_disasm_context() {
-  m_disasm_context = ::LLVMCreateDisasm("x86_64-apple-macosx", nullptr,
-                                        /*TagType=*/1, nullptr, nullptr);
-  //      ::LLVMCreateDisasm(arch.GetTriple().getTriple().c_str(), nullptr,
-  //                         /*TagType=*/1, nullptr, nullptr);
+  m_disasm_context =
+      ::LLVMCreateDisasm(arch.GetTriple().getTriple().c_str(), nullptr,
+                         /*TagType=*/1, nullptr, nullptr);
 }
 
 x86AssemblyInspectionEngine::~x86AssemblyInspectionEngine() {
@@ -320,6 +319,50 @@ bool x86AssemblyInspectionEngine::push_imm_pattern_p() {
   return false;
 }
 
+// pushl imm8(%esp)
+//
+// e.g. 0xff 0x74 0x24 0x20 - 'pushl 0x20(%esp)'
+// (same byte pattern for 'pushq 0x20(%rsp)' in an x86_64 program)
+//
+// 0xff (with opcode bits '6' in next byte, PUSH r/m32)
+// 0x74 (ModR/M byte with three bits used to specify the opcode)
+//      mod == b01, opcode == b110, R/M == b100
+//      "+disp8"
+// 0x24 (SIB byte - scaled index = 0, r32 == esp)
+// 0x20 imm8 value
+
+bool x86AssemblyInspectionEngine::push_extended_pattern_p() {
+  if (*m_cur_insn == 0xff) {
+    // Get the 3 opcode bits from the ModR/M byte
+    uint8_t opcode = (*(m_cur_insn + 1) >> 3) & 7;
+    if (opcode == 6) {
+      // I'm only looking for 0xff /6 here - I
+      // don't really care what value is being pushed,
+      // just that we're pushing a 32/64 bit value on
+      // to the stack is enough.
+      return true;
+    }
+  }
+  return false;
+}
+
+// pushq %rbx
+// pushl %ebx
+bool x86AssemblyInspectionEngine::push_reg_p(int &regno) {
+  uint8_t *p = m_cur_insn;
+  int regno_prefix_bit = 0;
+  // If we have a rex prefix byte, check to see if a B bit is set
+  if (m_wordsize == 8 && *p == 0x41) {
+    regno_prefix_bit = 1 << 3;
+    p++;
+  }
+  if (*p >= 0x50 && *p <= 0x57) {
+    regno = (*p - 0x50) | regno_prefix_bit;
+    return true;
+  }
+  return false;
+}
+
 // movq %rsp, %rbp [0x48 0x8b 0xec] or [0x48 0x89 0xe5]
 // movl %esp, %ebp [0x8b 0xec] or [0x89 0xe5]
 bool x86AssemblyInspectionEngine::mov_rsp_rbp_pattern_p() {
@@ -392,23 +435,6 @@ bool x86AssemblyInspectionEngine::lea_rsp_pattern_p(int &amount) {
     return true;
   }
 
-  return false;
-}
-
-// pushq %rbx
-// pushl %ebx
-bool x86AssemblyInspectionEngine::push_reg_p(int &regno) {
-  uint8_t *p = m_cur_insn;
-  int regno_prefix_bit = 0;
-  // If we have a rex prefix byte, check to see if a B bit is set
-  if (m_wordsize == 8 && *p == 0x41) {
-    regno_prefix_bit = 1 << 3;
-    p++;
-  }
-  if (*p >= 0x50 && *p <= 0x57) {
-    regno = (*p - 0x50) | regno_prefix_bit;
-    return true;
-  }
   return false;
 }
 
@@ -762,6 +788,14 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       in_epilogue = true;
     }
 
+    else if (push_extended_pattern_p() || push_imm_pattern_p()) {
+      current_sp_bytes_offset_from_cfa += m_wordsize;
+      if (row->GetCFAValue().GetRegisterNumber() == m_lldb_sp_regnum) {
+        row->GetCFAValue().SetOffset(current_sp_bytes_offset_from_cfa);
+        row_updated = true;
+      }
+    }
+
     else if (lea_rsp_pattern_p(stack_offset)) {
       current_sp_bytes_offset_from_cfa -= stack_offset;
       if (row->GetCFAValue().GetRegisterNumber() == m_lldb_sp_regnum) {
@@ -1002,6 +1036,16 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
         continue;
       }
 
+      // push extended
+      if (push_extended_pattern_p()) {
+        row->SetOffset(offset);
+        row->GetCFAValue().IncOffset(m_wordsize);
+        UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
+        unwind_plan.InsertRow(new_row);
+        unwind_plan_updated = true;
+        continue;
+      }
+
       // add/sub %rsp/%esp
       int amount;
       if (add_rsp_pattern_p(amount)) {
@@ -1045,16 +1089,16 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       //     [0x5d] pop %rbp/%ebp
       //  => [0xc3] ret
       if (pop_rbp_pattern_p() || leave_pattern_p()) {
-          offset += 1;
-          row->SetOffset(offset);
-          row->GetCFAValue().SetIsRegisterPlusOffset(
-              first_row->GetCFAValue().GetRegisterNumber(), m_wordsize);
+        offset += 1;
+        row->SetOffset(offset);
+        row->GetCFAValue().SetIsRegisterPlusOffset(
+            first_row->GetCFAValue().GetRegisterNumber(), m_wordsize);
 
-          UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
-          unwind_plan.InsertRow(new_row);
-          unwind_plan_updated = true;
-          reinstate_unwind_state = true;
-          continue;
+        UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
+        unwind_plan.InsertRow(new_row);
+        unwind_plan_updated = true;
+        reinstate_unwind_state = true;
+        continue;
       }
     } else {
       // CFA register is not sp or fp.

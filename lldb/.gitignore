@@ -16,6 +16,8 @@
 # Byte compiled python modules.
 *.pyc
 *.pyproj
+# pyenv settings
+.python-version
 *.sln
 *.suo
 # vim swap files

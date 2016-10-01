@@ -22,6 +22,7 @@ class SBDataAPICase(TestBase):
         self.line = line_number('main.cpp', '// set breakpoint here')
 
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(compiler="gcc", compiler_version=[">=", "4.9"])
     def test_with_run_command(self):
         """Test the SBData APIs."""
         self.build()

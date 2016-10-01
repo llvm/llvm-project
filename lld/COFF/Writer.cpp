@@ -852,10 +852,7 @@ OutputSection *Writer::createSection(StringRef Name) {
   uint32_t Perms = StringSwitch<uint32_t>(Name)
                        .Case(".bss", BSS | R | W)
                        .Case(".data", DATA | R | W)
-                       .Case(".didat", DATA | R)
-                       .Case(".edata", DATA | R)
-                       .Case(".idata", DATA | R)
-                       .Case(".rdata", DATA | R)
+                       .Cases(".didat", ".edata", ".idata", ".rdata", DATA | R)
                        .Case(".reloc", DATA | DISCARDABLE | R)
                        .Case(".text", CODE | R | X)
                        .Default(0);
