@@ -33,7 +33,7 @@ namespace llvm {
       return AsmPrinter::runOnMachineFunction(Fn);
     }
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon Assembly Printer";
     }
 

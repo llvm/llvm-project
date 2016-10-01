@@ -49,6 +49,7 @@ FUZZER_FLAG_INT(use_memmem, 1,
                 "Use hints from intercepting memmem, strstr, etc")
 FUZZER_FLAG_INT(use_value_profile, 0,
                 "Experimental. Use value profile to guide fuzzing.")
+FUZZER_FLAG_INT(shrink, 0, "Experimental. Try to shrink corpus elements.")
 FUZZER_FLAG_INT(jobs, 0, "Number of jobs to run. If jobs >= 1 we spawn"
                           " this number of jobs in separate worker processes"
                           " with stdout/stderr redirected to fuzz-JOB.log.")
@@ -92,10 +93,11 @@ FUZZER_FLAG_INT(detect_leaks, 1, "If 1, and if LeakSanitizer is enabled "
     "try to detect memory leaks during fuzzing (i.e. not only at shut down).")
 FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
     "reaching this limit of RSS memory usage.")
-FUZZER_FLAG_INT(prune_corpus, 1, "Prune corpus items without new coverage when "
-                                 "loading corpus.")
 FUZZER_FLAG_STRING(exit_on_src_pos, "Exit if a newly found PC originates"
     " from the given source location. Example: -exit_on_src_pos=foo.cc:123. "
+    "Used primarily for testing libFuzzer itself.")
+FUZZER_FLAG_STRING(exit_on_item, "Exit if an item with a given sha1 sum"
+    " was added to the corpus. "
     "Used primarily for testing libFuzzer itself.")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)

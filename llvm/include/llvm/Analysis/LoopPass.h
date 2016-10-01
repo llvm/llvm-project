@@ -107,9 +107,7 @@ public:
   // LPPassManager needs LoopInfo.
   void getAnalysisUsage(AnalysisUsage &Info) const override;
 
-  const char *getPassName() const override {
-    return "Loop Pass Manager";
-  }
+  StringRef getPassName() const override { return "Loop Pass Manager"; }
 
   PMDataManager *getAsPMDataManager() override { return this; }
   Pass *getAsPass() override { return this; }

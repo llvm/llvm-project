@@ -395,9 +395,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
     if (EnableSROA)
       addPass(createSROAPass());
-  }
 
-  addStraightLineScalarOptimizationPasses();
+    addStraightLineScalarOptimizationPasses();
+  }
 
   TargetPassConfig::addIRPasses();
 

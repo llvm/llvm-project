@@ -112,7 +112,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     if (OnlyIfDivergentTarget)
       return "Speculatively execute instructions if target has divergent "
              "branches";

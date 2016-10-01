@@ -138,7 +138,7 @@ static void emitComments(LLVMDisasmContext *DC,
   StringRef Comments = DC->CommentsToEmit.str();
   // Get the default information for printing a comment.
   const MCAsmInfo *MAI = DC->getAsmInfo();
-  const char *CommentBegin = MAI->getCommentString();
+  StringRef CommentBegin = MAI->getCommentString();
   unsigned CommentColumn = MAI->getCommentColumn();
   bool IsFirst = true;
   while (!Comments.empty()) {

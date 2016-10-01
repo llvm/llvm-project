@@ -674,7 +674,7 @@ int decodeInstruction(InternalInstruction *insn,
 /// \param s    The message to print.
 void Debug(const char *file, unsigned line, const char *s);
 
-const char *GetInstrName(unsigned Opcode, const void *mii);
+StringRef GetInstrName(unsigned Opcode, const void *mii);
 
 } // namespace X86Disassembler
 } // namespace llvm

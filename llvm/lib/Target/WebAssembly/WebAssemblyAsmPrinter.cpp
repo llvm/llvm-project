@@ -49,7 +49,7 @@ public:
       : AsmPrinter(TM, std::move(Streamer)), MRI(nullptr), MFI(nullptr) {}
 
 private:
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Assembly Printer";
   }
 

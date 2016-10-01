@@ -36,7 +36,7 @@ public:
 
   AMDGPUAnnotateKernelFeatures() : ModulePass(ID) { }
   bool runOnModule(Module &M) override;
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AMDGPU Annotate Kernel Features";
   }
 

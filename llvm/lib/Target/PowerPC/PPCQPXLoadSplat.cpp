@@ -44,7 +44,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "PowerPC QPX Load Splat Simplification";
     }
   };

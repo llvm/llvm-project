@@ -24,7 +24,7 @@ using namespace llvm;
 namespace {
 class OptimizeReturned final : public FunctionPass,
                                public InstVisitor<OptimizeReturned> {
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Optimize Returned";
   }
 

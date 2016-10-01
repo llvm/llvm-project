@@ -91,17 +91,9 @@ Memory::allocateMappedMemory(size_t NumBytes,
   const size_t NumPages = (NumBytes+PageSize-1)/PageSize;
 
   int fd = -1;
-#ifdef NEED_DEV_ZERO_FOR_MMAP
-  static int zero_fd = open("/dev/zero", O_RDWR);
-  if (zero_fd == -1) {
-    EC = std::error_code(errno, std::generic_category());
-    return MemoryBlock();
-  }
-  fd = zero_fd;
-#endif
 
   int MMFlags = MAP_PRIVATE |
-#ifdef HAVE_MMAP_ANONYMOUS
+#ifdef MAP_ANONYMOUS
   MAP_ANONYMOUS
 #else
   MAP_ANON
@@ -185,17 +177,9 @@ Memory::AllocateRWX(size_t NumBytes, const MemoryBlock* NearBlock,
   size_t NumPages = (NumBytes+PageSize-1)/PageSize;
 
   int fd = -1;
-#ifdef NEED_DEV_ZERO_FOR_MMAP
-  static int zero_fd = open("/dev/zero", O_RDWR);
-  if (zero_fd == -1) {
-    MakeErrMsg(ErrMsg, "Can't open /dev/zero device");
-    return MemoryBlock();
-  }
-  fd = zero_fd;
-#endif
 
   int flags = MAP_PRIVATE |
-#ifdef HAVE_MMAP_ANONYMOUS
+#ifdef MAP_ANONYMOUS
   MAP_ANONYMOUS
 #else
   MAP_ANON

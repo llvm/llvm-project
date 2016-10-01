@@ -287,6 +287,103 @@ for.end:
   ret void
 }
 
+; PR30542. Ensure we generate all the scalar steps for the induction variable.
+; The scalar induction variable is used by a getelementptr instruction
+; (uniform), and a udiv (non-uniform).
+;
+; int sum = 0;
+; for (int i = 0; i < n; ++i) {
+;   int x = a[i];
+;   if (c)
+;     x /= i;
+;   sum += x;
+; }
+;
+; CHECK-LABEL: @scalarize_induction_variable_05(
+; CHECK: vector.body:
+; CHECK:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue2 ]
+; CHECK:   %[[I0:.+]] = add i32 %index, 0
+; CHECK:   %[[I1:.+]] = add i32 %index, 1
+; CHECK:   getelementptr inbounds i32, i32* %a, i32 %[[I0]]
+; CHECK: pred.udiv.if:
+; CHECK:   udiv i32 {{.*}}, %[[I0]]
+; CHECK: pred.udiv.if1:
+; CHECK:   udiv i32 {{.*}}, %[[I1]]
+;
+; UNROLL-NO_IC-LABEL: @scalarize_induction_variable_05(
+; UNROLL-NO-IC: vector.body:
+; UNROLL-NO-IC:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue11 ]
+; UNROLL-NO-IC:   %[[I0:.+]] = add i32 %index, 0
+; UNROLL-NO-IC:   %[[I1:.+]] = add i32 %index, 1
+; UNROLL-NO-IC:   %[[I2:.+]] = add i32 %index, 2
+; UNROLL-NO-IC:   %[[I3:.+]] = add i32 %index, 3
+; UNROLL-NO-IC:   getelementptr inbounds i32, i32* %a, i32 %[[I0]]
+; UNROLL-NO-IC:   getelementptr inbounds i32, i32* %a, i32 %[[I2]]
+; UNROLL-NO-IC: pred.udiv.if:
+; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I0]]
+; UNROLL-NO-IC: pred.udiv.if6:
+; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I1]]
+; UNROLL-NO-IC: pred.udiv.if8:
+; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I2]]
+; UNROLL-NO-IC: pred.udiv.if10:
+; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I3]]
+;
+; IND-LABEL: @scalarize_induction_variable_05(
+; IND: vector.body:
+; IND:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue2 ]
+; IND:   %[[I1:.+]] = or i32 %index, 1
+; IND:   %[[E0:.+]] = sext i32 %index to i64
+; IND:   getelementptr inbounds i32, i32* %a, i64 %[[E0]]
+; IND: pred.udiv.if:
+; IND:   udiv i32 {{.*}}, %index
+; IND: pred.udiv.if1:
+; IND:   udiv i32 {{.*}}, %[[I1]]
+;
+; UNROLL-LABEL: @scalarize_induction_variable_05(
+; UNROLL: vector.body:
+; UNROLL:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue11 ]
+; UNROLL:   %[[I1:.+]] = or i32 %index, 1
+; UNROLL:   %[[I2:.+]] = or i32 %index, 2
+; UNROLL:   %[[I3:.+]] = or i32 %index, 3
+; UNROLL:   %[[E0:.+]] = sext i32 %index to i64
+; UNROLL:   %[[G0:.+]] = getelementptr inbounds i32, i32* %a, i64 %[[E0]]
+; UNROLL:   getelementptr i32, i32* %[[G0]], i64 2
+; UNROLL: pred.udiv.if:
+; UNROLL:   udiv i32 {{.*}}, %index
+; UNROLL: pred.udiv.if6:
+; UNROLL:   udiv i32 {{.*}}, %[[I1]]
+; UNROLL: pred.udiv.if8:
+; UNROLL:   udiv i32 {{.*}}, %[[I2]]
+; UNROLL: pred.udiv.if10:
+; UNROLL:   udiv i32 {{.*}}, %[[I3]]
+
+define i32 @scalarize_induction_variable_05(i32* %a, i32 %x, i1 %c, i32 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %if.end ]
+  %sum = phi i32 [ 0, %entry ], [ %tmp4, %if.end ]
+  %tmp0 = getelementptr inbounds i32, i32* %a, i32 %i
+  %tmp1 = load i32, i32* %tmp0, align 4
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  %tmp2 = udiv i32 %tmp1, %i
+  br label %if.end
+
+if.end:
+  %tmp3 = phi i32 [ %tmp2, %if.then ], [ %tmp1, %for.body ]
+  %tmp4 = add i32 %tmp3, %sum
+  %i.next = add nuw nsw i32 %i, 1
+  %cond = icmp slt i32 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  %tmp5  = phi i32 [ %tmp4, %if.end ]
+  ret i32 %tmp5
+}
+
 ; Ensure we generate both a vector and a scalar induction variable. In this
 ; test, the induction variable is used by an instruction that will be
 ; vectorized (trunc) as well as an instruction that will remain in scalar form

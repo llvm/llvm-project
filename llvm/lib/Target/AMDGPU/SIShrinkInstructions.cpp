@@ -45,9 +45,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
-    return "SI Shrink Instructions";
-  }
+  StringRef getPassName() const override { return "SI Shrink Instructions"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

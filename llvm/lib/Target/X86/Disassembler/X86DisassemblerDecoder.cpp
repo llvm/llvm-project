@@ -825,7 +825,7 @@ static int getIDWithAttrMask(uint16_t* instructionID,
  * @param orig  - The instruction that is not 16-bit
  * @param equiv - The instruction that is 16-bit
  */
-static bool is16BitEquivalent(const char* orig, const char* equiv) {
+static bool is16BitEquivalent(const char *orig, const char *equiv) {
   off_t i;
 
   for (i = 0;; i++) {
@@ -850,7 +850,7 @@ static bool is16BitEquivalent(const char* orig, const char* equiv) {
  *
  * @param name - The instruction that is not 16-bit
  */
-static bool is64Bit(const char* name) {
+static bool is64Bit(const char *name) {
   off_t i;
 
   for (i = 0;; ++i) {
@@ -1044,9 +1044,9 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
         return 0;
       }
 
-      const char *SpecName = GetInstrName(instructionIDWithREXW, miiArg);
+      auto SpecName = GetInstrName(instructionIDWithREXW, miiArg);
       // If not a 64-bit instruction. Switch the opcode.
-      if (!is64Bit(SpecName)) {
+      if (!is64Bit(SpecName.data())) {
         insn->instructionID = instructionIDWithREXW;
         insn->spec = specifierForUID(instructionIDWithREXW);
         return 0;
@@ -1092,7 +1092,7 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
 
     const struct InstructionSpecifier *spec;
     uint16_t instructionIDWithOpsize;
-    const char *specName, *specWithOpSizeName;
+    llvm::StringRef specName, specWithOpSizeName;
 
     spec = specifierForUID(instructionID);
 
@@ -1112,7 +1112,7 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
     specName = GetInstrName(instructionID, miiArg);
     specWithOpSizeName = GetInstrName(instructionIDWithOpsize, miiArg);
 
-    if (is16BitEquivalent(specName, specWithOpSizeName) &&
+    if (is16BitEquivalent(specName.data(), specWithOpSizeName.data()) &&
         (insn->mode == MODE_16BIT) ^ insn->prefixPresent[0x66]) {
       insn->instructionID = instructionIDWithOpsize;
       insn->spec = specifierForUID(instructionIDWithOpsize);

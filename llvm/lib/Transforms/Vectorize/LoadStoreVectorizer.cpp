@@ -148,7 +148,7 @@ public:
 
   bool runOnFunction(Function &F) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "GPU Load and Store Vectorizer";
   }
 

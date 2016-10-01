@@ -63,9 +63,9 @@ void ProfileSummaryInfo::computeSummary() {
   Summary.reset(ProfileSummary::getFromMD(SummaryMD));
 }
 
-// Returns true if the function is a hot function. If it returns false, it
-// either means it is not hot or it is unknown whether F is hot or not (for
-// example, no profile data is available).
+/// Returns true if the function is a hot function. If it returns false, it
+/// either means it is not hot or it is unknown whether F is hot or not (for
+/// example, no profile data is available).
 bool ProfileSummaryInfo::isHotFunction(const Function *F) {
   computeSummary();
   if (!F || !Summary)
@@ -79,9 +79,9 @@ bool ProfileSummaryInfo::isHotFunction(const Function *F) {
               (uint64_t)(0.3 * (double)Summary->getMaxFunctionCount()));
 }
 
-// Returns true if the function is a cold function. If it returns false, it
-// either means it is not cold or it is unknown whether F is cold or not (for
-// example, no profile data is available).
+/// Returns true if the function is a cold function. If it returns false, it
+/// either means it is not cold or it is unknown whether F is cold or not (for
+/// example, no profile data is available).
 bool ProfileSummaryInfo::isColdFunction(const Function *F) {
   computeSummary();
   if (!F)
@@ -100,7 +100,7 @@ bool ProfileSummaryInfo::isColdFunction(const Function *F) {
               (uint64_t)(0.01 * (double)Summary->getMaxFunctionCount()));
 }
 
-// Compute the hot and cold thresholds.
+/// Compute the hot and cold thresholds.
 void ProfileSummaryInfo::computeThresholds() {
   if (!Summary)
     computeSummary();

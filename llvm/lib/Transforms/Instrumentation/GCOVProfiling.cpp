@@ -142,7 +142,7 @@ public:
       : ModulePass(ID), Profiler(Opts) {
     initializeGCOVProfilerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
-  const char *getPassName() const override { return "GCOV Profiler"; }
+  StringRef getPassName() const override { return "GCOV Profiler"; }
 
   bool runOnModule(Module &M) override { return Profiler.runOnModule(M); }
 

@@ -165,7 +165,7 @@ namespace {
         : SelectionDAGISel(tm, OptLevel), OptForSize(false),
           OptForMinSize(false) {}
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "X86 DAG->DAG Instruction Selection";
     }
 

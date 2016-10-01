@@ -98,9 +98,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
-    return "SI Load / Store Optimizer";
-  }
+  StringRef getPassName() const override { return "SI Load / Store Optimizer"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

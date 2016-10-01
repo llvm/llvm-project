@@ -50,7 +50,7 @@ namespace {
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon RDF optimizations";
     }
     bool runOnMachineFunction(MachineFunction &MF) override;

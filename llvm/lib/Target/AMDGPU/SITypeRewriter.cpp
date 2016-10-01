@@ -42,9 +42,7 @@ public:
   SITypeRewriter() : FunctionPass(ID) { }
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
-  const char *getPassName() const override {
-    return "SI Type Rewriter";
-  }
+  StringRef getPassName() const override { return "SI Type Rewriter"; }
   void visitLoadInst(LoadInst &I);
   void visitCallInst(CallInst &I);
   void visitBitCast(BitCastInst &I);

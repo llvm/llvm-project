@@ -67,7 +67,7 @@ public:
     return false;
   }
 
-  const char *getValueName() const override { return "IR scalar type"; }
+  StringRef getValueName() const override { return "IR scalar type"; }
 };
 }
 

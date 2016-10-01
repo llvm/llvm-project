@@ -28,7 +28,7 @@ namespace llvm {
 class InstructionSelect : public MachineFunctionPass {
 public:
   static char ID;
-  const char *getPassName() const override { return "InstructionSelect"; }
+  StringRef getPassName() const override { return "InstructionSelect"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

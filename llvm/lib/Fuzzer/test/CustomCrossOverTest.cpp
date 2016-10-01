@@ -15,9 +15,15 @@
 static const char *Separator = "-_^_-";
 static const char *Target = "012-_^_-abc";
 
+static volatile int sink;
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   assert(Data);
   std::string Str(reinterpret_cast<const char *>(Data), Size);
+
+  // Ensure that two different elements exist in the corpus.
+  if (Size && Data[0] == '0') sink++;
+  if (Size && Data[0] == 'a') sink--;
 
   if (Str.find(Target) != std::string::npos) {
     std::cout << "BINGO; Found the target, exiting\n";

@@ -42,7 +42,7 @@ namespace {
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
     }
-    const char *getPassName() const override {return "X86 vzeroupper inserter";}
+    StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
 
   private:
 

@@ -102,9 +102,7 @@ class FixupBWInstPass : public MachineFunctionPass {
 public:
   static char ID;
 
-  const char *getPassName() const override {
-    return FIXUPBW_DESC;
-  }
+  StringRef getPassName() const override { return FIXUPBW_DESC; }
 
   FixupBWInstPass() : MachineFunctionPass(ID) {
     initializeFixupBWInstPassPass(*PassRegistry::getPassRegistry());

@@ -184,9 +184,7 @@ struct AArch64CollectLOH : public MachineFunctionPass {
         MachineFunctionProperties::Property::NoVRegs);
   }
 
-  const char *getPassName() const override {
-    return AARCH64_COLLECT_LOH_NAME;
-  }
+  StringRef getPassName() const override { return AARCH64_COLLECT_LOH_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

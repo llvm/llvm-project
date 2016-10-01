@@ -48,7 +48,7 @@ public:
   static char ID;
   RenameIndependentSubregs() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Rename Disconnected Subregister Components";
   }
 

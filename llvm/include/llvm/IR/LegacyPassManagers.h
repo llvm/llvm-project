@@ -486,9 +486,7 @@ public:
   // Print passes managed by this manager
   void dumpPassStructure(unsigned Offset) override;
 
-  const char *getPassName() const override {
-    return "Function Pass Manager";
-  }
+  StringRef getPassName() const override { return "Function Pass Manager"; }
 
   FunctionPass *getContainedPass(unsigned N) {
     assert ( N < PassVector.size() && "Pass number out of range!");

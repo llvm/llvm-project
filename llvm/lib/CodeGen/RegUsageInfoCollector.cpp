@@ -48,7 +48,7 @@ public:
     initializeRegUsageInfoCollectorPass(Registry);
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Register Usage Information Collector Pass";
   }
 

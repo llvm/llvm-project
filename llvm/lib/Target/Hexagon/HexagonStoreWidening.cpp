@@ -65,9 +65,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    const char *getPassName() const override {
-      return "Hexagon Store Widening";
-    }
+    StringRef getPassName() const override { return "Hexagon Store Widening"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<AAResultsWrapperPass>();

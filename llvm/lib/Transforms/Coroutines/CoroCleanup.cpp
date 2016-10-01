@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoroInternal.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
@@ -22,7 +23,8 @@ using namespace llvm;
 namespace {
 // Created on demand if CoroCleanup pass has work to do.
 struct Lowerer : coro::LowererBase {
-  Lowerer(Module &M) : LowererBase(M) {}
+  IRBuilder<> Builder;
+  Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
   bool lowerRemainingCoroIntrinsics(Function &F);
 };
 }
@@ -34,6 +36,23 @@ static void simplifyCFG(Function &F) {
   FPM.doInitialization();
   FPM.run(F);
   FPM.doFinalization();
+}
+
+static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
+  Builder.SetInsertPoint(SubFn);
+  Value *FrameRaw = SubFn->getFrame();
+  int Index = SubFn->getIndex();
+
+  auto *FrameTy = StructType::get(
+      SubFn->getContext(), {Builder.getInt8PtrTy(), Builder.getInt8PtrTy()});
+  PointerType *FramePtrTy = FrameTy->getPointerTo();
+
+  Builder.SetInsertPoint(SubFn);
+  auto *FramePtr = Builder.CreateBitCast(FrameRaw, FramePtrTy);
+  auto *Gep = Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, Index);
+  auto *Load = Builder.CreateLoad(Gep);
+
+  SubFn->replaceAllUsesWith(Load);
 }
 
 bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
@@ -56,6 +75,9 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
         break;
       case Intrinsic::coro_id:
         II->replaceAllUsesWith(ConstantTokenNone::get(Context));
+        break;
+      case Intrinsic::coro_subfn_addr:
+        lowerSubFn(Builder, cast<CoroSubFnInst>(II));
         break;
       }
       II->eraseFromParent();
@@ -87,7 +109,8 @@ struct CoroCleanup : FunctionPass {
   // in the module.
   bool doInitialization(Module &M) override {
     if (coro::declaresIntrinsics(M, {"llvm.coro.alloc", "llvm.coro.begin",
-                                     "llvm.coro.free", "llvm.coro.id"}))
+                                     "llvm.coro.subfn.addr", "llvm.coro.free",
+                                     "llvm.coro.id"}))
       L = llvm::make_unique<Lowerer>(M);
     return false;
   }

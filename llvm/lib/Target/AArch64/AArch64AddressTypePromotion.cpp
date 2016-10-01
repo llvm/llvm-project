@@ -68,9 +68,7 @@ public:
     initializeAArch64AddressTypePromotionPass(*PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override {
-    return AARCH64_TYPE_PROMO_NAME;
-  }
+  StringRef getPassName() const override { return AARCH64_TYPE_PROMO_NAME; }
 
   /// Iterate over the functions and promote the computation of interesting
   // sext instructions.

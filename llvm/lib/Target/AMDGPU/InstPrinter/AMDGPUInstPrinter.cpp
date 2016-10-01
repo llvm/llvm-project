@@ -9,19 +9,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUInstPrinter.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUAsmUtils.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 void AMDGPUInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                   StringRef Annot, const MCSubtargetInfo &STI) {
@@ -864,10 +867,12 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
+  IsaVersion IV = getIsaVersion(STI.getFeatureBits());
+
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
-  unsigned Vmcnt = SImm16 & 0xF;
-  unsigned Expcnt = (SImm16 >> 4) & 0x7;
-  unsigned Lgkmcnt = (SImm16 >> 8) & 0xF;
+  unsigned Vmcnt = (SImm16 >> getVmcntShift(IV)) & getVmcntMask(IV);
+  unsigned Expcnt = (SImm16 >> getExpcntShift(IV)) & getExpcntMask(IV);
+  unsigned Lgkmcnt = (SImm16 >> getLgkmcntShift(IV)) & getLgkmcntMask(IV);
 
   bool NeedSpace = false;
 

@@ -37,7 +37,9 @@ public:
     FunctionPass(ID) { }
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
-  const char *getPassName() const override { return "AMDGPU Annotate Uniform Values"; }
+  StringRef getPassName() const override {
+    return "AMDGPU Annotate Uniform Values";
+  }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DivergenceAnalysis>();
     AU.setPreservesAll();

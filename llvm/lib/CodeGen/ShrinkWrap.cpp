@@ -199,9 +199,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  const char *getPassName() const override {
-    return "Shrink Wrapping analysis";
-  }
+  StringRef getPassName() const override { return "Shrink Wrapping analysis"; }
 
   /// \brief Perform the shrink-wrapping analysis and update
   /// the MachineFrameInfo attached to \p MF with the results.

@@ -358,7 +358,7 @@ class AMDGPUOpenCLImageTypeLoweringPass : public ModulePass {
     return transformKernels(M);
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AMDGPU OpenCL Image Type Pass";
   }
 };

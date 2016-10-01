@@ -306,7 +306,7 @@ int HexagonMCInstrInfo::getMinValue(MCInstrInfo const &MCII,
     return 0;
 }
 
-char const *HexagonMCInstrInfo::getName(MCInstrInfo const &MCII,
+StringRef HexagonMCInstrInfo::getName(MCInstrInfo const &MCII,
                                         MCInst const &MCI) {
   return MCII.getName(MCI.getOpcode());
 }

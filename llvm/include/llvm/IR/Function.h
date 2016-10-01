@@ -110,11 +110,12 @@ public:
 
   ~Function() override;
 
-  /// \brief Provide fast operand accessors
+  // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  Type *getReturnType() const;           // Return the type of the ret val
-  FunctionType *getFunctionType() const; // Return the FunctionType for me
+  /// Returns the type of the ret val.
+  Type *getReturnType() const;
+  /// Returns the FunctionType for me.
+  FunctionType *getFunctionType() const;
 
   /// getContext - Return a reference to the LLVMContext associated with this
   /// function.
@@ -190,10 +191,16 @@ public:
         getContext(), AttributeSet::FunctionIndex, Kind));
   }
 
-  /// Set the entry count for this function.
+  /// \brief Set the entry count for this function.
+  ///
+  /// Entry count is the number of times this function was executed based on
+  /// pgo data.
   void setEntryCount(uint64_t Count);
 
-  /// Get the entry count for this function.
+  /// \brief Get the entry count for this function.
+  ///
+  /// Entry count is the number of times the function was executed based on
+  /// pgo data.
   Optional<uint64_t> getEntryCount() const;
 
   /// @brief Return true if the function has the attribute.
@@ -324,7 +331,7 @@ public:
   }
 
   /// @brief Determine if the function may only access memory that is
-  //  either inaccessible from the IR or pointed to by its arguments.
+  ///  either inaccessible from the IR or pointed to by its arguments.
   bool onlyAccessesInaccessibleMemOrArgMem() const {
     return hasFnAttribute(Attribute::InaccessibleMemOrArgMemOnly);
   }
@@ -647,8 +654,8 @@ private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);
 
-  // Shadow Value::setValueSubclassData with a private forwarding method so that
-  // subclasses cannot accidentally use it.
+  /// Shadow Value::setValueSubclassData with a private forwarding method so
+  /// that subclasses cannot accidentally use it.
   void setValueSubclassData(unsigned short D) {
     Value::setValueSubclassData(D);
   }

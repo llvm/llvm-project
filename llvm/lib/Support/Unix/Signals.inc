@@ -298,7 +298,7 @@ void llvm::sys::AddSignalHandler(void (*FnPtr)(void *), void *Cookie) {
   RegisterHandlers();
 }
 
-#if defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES) && HAVE_LINK_H &&    \
+#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&    \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
      defined(__FreeBSD_kernel__) || defined(__NetBSD__))
 struct DlIteratePhdrData {
@@ -353,9 +353,9 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   StringSaver &StrPool) {
   return false;
 }
-#endif // defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES) && ...
+#endif // defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && ...
 
-#if defined(ENABLE_BACKTRACES) && defined(HAVE__UNWIND_BACKTRACE)
+#if ENABLE_BACKTRACES && defined(HAVE__UNWIND_BACKTRACE)
 static int unwindBacktrace(void **StackTrace, int MaxEntries) {
   if (MaxEntries < 0)
     return 0;
@@ -393,7 +393,7 @@ static int unwindBacktrace(void **StackTrace, int MaxEntries) {
 // On glibc systems we have the 'backtrace' function, which works nicely, but
 // doesn't demangle symbols.
 void llvm::sys::PrintStackTrace(raw_ostream &OS) {
-#if defined(ENABLE_BACKTRACES)
+#if ENABLE_BACKTRACES
   static void *StackTrace[256];
   int depth = 0;
 #if defined(HAVE_BACKTRACE)
@@ -475,7 +475,7 @@ void llvm::sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
 
   AddSignalHandler(PrintStackTraceSignalHandler, nullptr);
 
-#if defined(__APPLE__) && defined(ENABLE_CRASH_OVERRIDES)
+#if defined(__APPLE__) && ENABLE_CRASH_OVERRIDES
   // Environment variable to disable any kind of crash dialog.
   if (DisableCrashReporting || getenv("LLVM_DISABLE_CRASH_REPORT")) {
     mach_port_t self = mach_task_self();

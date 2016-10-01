@@ -47,9 +47,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  const char *getPassName() const override {
-    return "R600 Packetizer";
-  }
+  StringRef getPassName() const override { return "R600 Packetizer"; }
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 };

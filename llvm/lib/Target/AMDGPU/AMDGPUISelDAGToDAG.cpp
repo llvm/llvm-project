@@ -50,7 +50,7 @@ public:
   virtual ~AMDGPUDAGToDAGISel();
   bool runOnMachineFunction(MachineFunction &MF) override;
   void Select(SDNode *N) override;
-  const char *getPassName() const override;
+  StringRef getPassName() const override;
   void PostprocessISelDAG() override;
 
 private:
@@ -494,7 +494,7 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
          Term->getMetadata("structurizecfg.uniform");
 }
 
-const char *AMDGPUDAGToDAGISel::getPassName() const {
+StringRef AMDGPUDAGToDAGISel::getPassName() const {
   return "AMDGPU DAG->DAG Pattern Instruction Selection";
 }
 

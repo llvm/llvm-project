@@ -47,7 +47,7 @@ namespace cl {
 // ParseCommandLineOptions - Command line option processing entry point.
 //
 bool ParseCommandLineOptions(int argc, const char *const *argv,
-                             const char *Overview = nullptr,
+                             StringRef Overview = "",
                              bool IgnoreErrors = false);
 
 //===----------------------------------------------------------------------===//
@@ -55,7 +55,7 @@ bool ParseCommandLineOptions(int argc, const char *const *argv,
 //                           entry point.
 //
 void ParseEnvironmentOptions(const char *progName, const char *envvar,
-                             const char *Overview = nullptr);
+                             const char *Overview = "");
 
 ///===---------------------------------------------------------------------===//
 /// SetVersionPrinter - Override the default (LLVM specific) version printer
@@ -89,7 +89,7 @@ class Option;
 ///
 /// Literal options are used by some parsers to register special option values.
 /// This is how the PassNameParser registers pass names for opt.
-void AddLiteralOption(Option &O, const char *Name);
+void AddLiteralOption(Option &O, StringRef Name);
 
 //===----------------------------------------------------------------------===//
 // Flags permitted to be passed to command line arguments
@@ -157,18 +157,18 @@ enum MiscFlags {             // Miscellaneous flags to adjust argument
 //
 class OptionCategory {
 private:
-  const char *const Name;
-  const char *const Description;
+  StringRef const Name;
+  StringRef const Description;
   void registerCategory();
 
 public:
-  OptionCategory(const char *const Name,
-                 const char *const Description = nullptr)
+  OptionCategory(StringRef const Name,
+                 StringRef const Description = "")
       : Name(Name), Description(Description) {
     registerCategory();
   }
-  const char *getName() const { return Name; }
-  const char *getDescription() const { return Description; }
+  StringRef getName() const { return Name; }
+  StringRef getDescription() const { return Description; }
 };
 
 // The general Option Category (used as default category).
@@ -179,17 +179,17 @@ extern OptionCategory GeneralCategory;
 //
 class SubCommand {
 private:
-  const char *const Name = nullptr;
-  const char *const Description = nullptr;
+  StringRef Name = "";
+  StringRef Description = "";
 
 protected:
   void registerSubCommand();
   void unregisterSubCommand();
 
 public:
-  SubCommand(const char *const Name, const char *const Description = nullptr)
+  SubCommand(StringRef Name, StringRef Description = "")
       : Name(Name), Description(Description) {
-    registerSubCommand();
+        registerSubCommand();
   }
   SubCommand() {}
 
@@ -197,8 +197,8 @@ public:
 
   operator bool() const;
 
-  const char *getName() const { return Name; }
-  const char *getDescription() const { return Description; }
+  StringRef getName() const { return Name; }
+  StringRef getDescription() const { return Description; }
 
   SmallVector<Option *, 4> PositionalOpts;
   SmallVector<Option *, 4> SinkOpts;
@@ -353,16 +353,16 @@ public:
 
 // desc - Modifier to set the description shown in the -help output...
 struct desc {
-  const char *Desc;
-  desc(const char *Str) : Desc(Str) {}
+  StringRef Desc;
+  desc(StringRef Str) : Desc(Str) {}
   void apply(Option &O) const { O.setDescription(Desc); }
 };
 
 // value_desc - Modifier to set the value description shown in the -help
 // output...
 struct value_desc {
-  const char *Desc;
-  value_desc(const char *Str) : Desc(Str) {}
+  StringRef Desc;
+  value_desc(StringRef Str) : Desc(Str) {}
   void apply(Option &O) const { O.setValueStr(Desc); }
 };
 
@@ -569,20 +569,20 @@ template <class DataType> class ValuesClass {
   // Use a vector instead of a map, because the lists should be short,
   // the overhead is less, and most importantly, it keeps them in the order
   // inserted so we can print our option out nicely.
-  SmallVector<std::pair<const char *, std::pair<int, const char *>>, 4> Values;
+  SmallVector<std::pair<StringRef , std::pair<int, StringRef >>, 4> Values;
   void processValues(va_list Vals);
 
 public:
-  ValuesClass(const char *EnumName, DataType Val, const char *Desc,
+  ValuesClass(StringRef EnumName, DataType Val, StringRef Desc,
               va_list ValueArgs) {
     // Insert the first value, which is required.
     Values.push_back(std::make_pair(EnumName, std::make_pair(Val, Desc)));
 
     // Process the varargs portion of the values...
-    while (const char *enumName = va_arg(ValueArgs, const char *)) {
+    while (const char *enumName = va_arg(ValueArgs, const char * )) {
       DataType EnumVal = static_cast<DataType>(va_arg(ValueArgs, int));
-      const char *EnumDesc = va_arg(ValueArgs, const char *);
-      Values.push_back(std::make_pair(enumName, // Add value to value map
+      auto EnumDesc = StringRef(va_arg(ValueArgs, const char * ));
+      Values.push_back(std::make_pair(StringRef(enumName), // Add value to value map
                                       std::make_pair(EnumVal, EnumDesc)));
     }
   }
@@ -596,7 +596,7 @@ public:
 
 template <class DataType>
 ValuesClass<DataType> LLVM_END_WITH_NULL
-values(const char *Arg, DataType Val, const char *Desc, ...) {
+values(StringRef Arg, DataType Val, StringRef Desc, ...) {
   va_list ValueArgs;
   va_start(ValueArgs, Desc);
   ValuesClass<DataType> Vals(Arg, Val, Desc, ValueArgs);
@@ -620,10 +620,10 @@ class generic_parser_base {
 protected:
   class GenericOptionInfo {
   public:
-    GenericOptionInfo(const char *name, const char *helpStr)
+    GenericOptionInfo(StringRef name, StringRef helpStr)
         : Name(name), HelpStr(helpStr) {}
-    const char *Name;
-    const char *HelpStr;
+    StringRef Name;
+    StringRef HelpStr;
   };
 
 public:
@@ -637,10 +637,10 @@ public:
   virtual unsigned getNumOptions() const = 0;
 
   // getOption - Return option name N.
-  virtual const char *getOption(unsigned N) const = 0;
+  virtual StringRef getOption(unsigned N) const = 0;
 
   // getDescription - Return description N
-  virtual const char *getDescription(unsigned N) const = 0;
+  virtual StringRef getDescription(unsigned N) const = 0;
 
   // Return the width of the option tag for printing...
   virtual size_t getOptionWidth(const Option &O) const;
@@ -699,7 +699,7 @@ public:
   // findOption - Return the option number corresponding to the specified
   // argument string.  If the option is not found, getNumOptions() is returned.
   //
-  unsigned findOption(const char *Name);
+  unsigned findOption(StringRef Name);
 
 protected:
   Option &Owner;
@@ -715,7 +715,7 @@ template <class DataType> class parser : public generic_parser_base {
 protected:
   class OptionInfo : public GenericOptionInfo {
   public:
-    OptionInfo(const char *name, DataType v, const char *helpStr)
+    OptionInfo(StringRef name, DataType v, StringRef helpStr)
         : GenericOptionInfo(name, helpStr), V(v) {}
     OptionValue<DataType> V;
   };
@@ -727,8 +727,8 @@ public:
 
   // Implement virtual functions needed by generic_parser_base
   unsigned getNumOptions() const override { return unsigned(Values.size()); }
-  const char *getOption(unsigned N) const override { return Values[N].Name; }
-  const char *getDescription(unsigned N) const override {
+  StringRef getOption(unsigned N) const override { return Values[N].Name; }
+  StringRef getDescription(unsigned N) const override {
     return Values[N].HelpStr;
   }
 
@@ -757,7 +757,7 @@ public:
   /// addLiteralOption - Add an entry to the mapping table.
   ///
   template <class DT>
-  void addLiteralOption(const char *Name, const DT &V, const char *HelpStr) {
+  void addLiteralOption(StringRef Name, const DT &V, StringRef HelpStr) {
     assert(findOption(Name) == Values.size() && "Option already exists!");
     OptionInfo X(Name, static_cast<DataType>(V), HelpStr);
     Values.push_back(X);
@@ -766,7 +766,7 @@ public:
 
   /// removeLiteralOption - Remove the specified option.
   ///
-  void removeLiteralOption(const char *Name) {
+  void removeLiteralOption(StringRef Name) {
     unsigned N = findOption(Name);
     assert(N != Values.size() && "Option not found!");
     Values.erase(Values.begin() + N);
@@ -802,7 +802,7 @@ public:
   void printOptionNoValue(const Option &O, size_t GlobalWidth) const;
 
   // getValueName - Overload in subclass to provide a better default value.
-  virtual const char *getValueName() const { return "value"; }
+  virtual StringRef getValueName() const { return "value"; }
 
   // An out-of-line virtual method to provide a 'home' for this class.
   virtual void anchor();
@@ -844,7 +844,7 @@ public:
   }
 
   // getValueName - Do not print =<value> at all.
-  const char *getValueName() const override { return nullptr; }
+  StringRef getValueName() const override { return StringRef(); }
 
   void printOptionDiff(const Option &O, bool V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -870,7 +870,7 @@ public:
   }
 
   // getValueName - Do not print =<value> at all.
-  const char *getValueName() const override { return nullptr; }
+  StringRef getValueName() const override { return StringRef(); }
 
   void printOptionDiff(const Option &O, boolOrDefault V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -892,7 +892,7 @@ public:
   bool parse(Option &O, StringRef ArgName, StringRef Arg, int &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  const char *getValueName() const override { return "int"; }
+  StringRef getValueName() const override { return "int"; }
 
   void printOptionDiff(const Option &O, int V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -914,7 +914,7 @@ public:
   bool parse(Option &O, StringRef ArgName, StringRef Arg, unsigned &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  const char *getValueName() const override { return "uint"; }
+  StringRef getValueName() const override { return "uint"; }
 
   void printOptionDiff(const Option &O, unsigned V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -939,7 +939,7 @@ public:
              unsigned long long &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  const char *getValueName() const override { return "uint"; }
+  StringRef getValueName() const override { return "uint"; }
 
   void printOptionDiff(const Option &O, unsigned long long V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -961,7 +961,7 @@ public:
   bool parse(Option &O, StringRef ArgName, StringRef Arg, double &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  const char *getValueName() const override { return "number"; }
+  StringRef getValueName() const override { return "number"; }
 
   void printOptionDiff(const Option &O, double V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -983,7 +983,7 @@ public:
   bool parse(Option &O, StringRef ArgName, StringRef Arg, float &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  const char *getValueName() const override { return "number"; }
+  StringRef getValueName() const override { return "number"; }
 
   void printOptionDiff(const Option &O, float V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1008,7 +1008,7 @@ public:
   }
 
   // getValueName - Overload in subclass to provide a better default value.
-  const char *getValueName() const override { return "string"; }
+  StringRef getValueName() const override { return "string"; }
 
   void printOptionDiff(const Option &O, StringRef V, const OptVal &Default,
                        size_t GlobalWidth) const;
@@ -1033,7 +1033,7 @@ public:
   }
 
   // getValueName - Overload in subclass to provide a better default value.
-  const char *getValueName() const override { return "char"; }
+  StringRef getValueName() const override { return "char"; }
 
   void printOptionDiff(const Option &O, char V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1101,17 +1101,17 @@ template <class Mod> struct applicator {
 
 // Handle const char* as a special case...
 template <unsigned n> struct applicator<char[n]> {
-  template <class Opt> static void opt(const char *Str, Opt &O) {
+  template <class Opt> static void opt(StringRef Str, Opt &O) {
     O.setArgStr(Str);
   }
 };
 template <unsigned n> struct applicator<const char[n]> {
-  template <class Opt> static void opt(const char *Str, Opt &O) {
+  template <class Opt> static void opt(StringRef Str, Opt &O) {
     O.setArgStr(Str);
   }
 };
-template <> struct applicator<const char *> {
-  template <class Opt> static void opt(const char *Str, Opt &O) {
+template <> struct applicator<StringRef > {
+  template <class Opt> static void opt(StringRef Str, Opt &O) {
     O.setArgStr(Str);
   }
 };
@@ -1688,8 +1688,8 @@ struct aliasopt {
 // printed to stderr at the end of the regular help, just before
 // exit is called.
 struct extrahelp {
-  const char *morehelp;
-  explicit extrahelp(const char *help);
+  StringRef morehelp;
+  explicit extrahelp(StringRef help);
 };
 
 void PrintVersionMessage();

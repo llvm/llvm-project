@@ -43,7 +43,7 @@ namespace {
       PassRegistry &R = *PassRegistry::getPassRegistry();
       initializeHexagonSplitConst32AndConst64Pass(R);
     }
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon Split Const32s and Const64s";
     }
     bool runOnMachineFunction(MachineFunction &Fn) override;

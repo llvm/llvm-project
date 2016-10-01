@@ -41,9 +41,7 @@ public:
   // Ctor, nothing fancy.
   MachineLegalizePass();
 
-  const char *getPassName() const override {
-    return "MachineLegalizePass";
-  }
+  StringRef getPassName() const override { return "MachineLegalizePass"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

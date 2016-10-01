@@ -35,9 +35,7 @@ namespace {
 
     MipsOs16() : ModulePass(ID) {}
 
-    const char *getPassName() const override {
-      return "MIPS Os16 Optimization";
-    }
+    StringRef getPassName() const override { return "MIPS Os16 Optimization"; }
 
     bool runOnModule(Module &M) override;
   };

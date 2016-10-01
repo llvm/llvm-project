@@ -44,9 +44,7 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
-    const char *getPassName() const override {
-      return "MSP430 Branch Selector";
-    }
+    StringRef getPassName() const override { return "MSP430 Branch Selector"; }
   };
   char MSP430BSel::ID = 0;
 }

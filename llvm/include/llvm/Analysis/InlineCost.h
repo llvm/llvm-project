@@ -29,13 +29,13 @@ class TargetTransformInfo;
 
 namespace InlineConstants {
 // Various thresholds used by inline cost analysis.
-// Use when optsize (-Os) is specified.
+/// Use when optsize (-Os) is specified.
 const int OptSizeThreshold = 75;
 
-// Use when minsize (-Oz) is specified.
+/// Use when minsize (-Oz) is specified.
 const int OptMinSizeThreshold = 25;
 
-// Use when -O3 is specified.
+/// Use when -O3 is specified.
 const int OptAggressiveThreshold = 275;
 
 // Various magic constants used to adjust heuristics.

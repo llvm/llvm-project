@@ -68,7 +68,8 @@ void TracePC::ResetGuards() {
   assert(N == NumGuards);
 }
 
-void TracePC::FinalizeTrace() {
+bool TracePC::FinalizeTrace(size_t InputSize) {
+  bool Res = false;
   if (TotalPCCoverage) {
     const size_t Step = 8;
     assert(reinterpret_cast<uintptr_t>(Counters) % Step == 0);
@@ -89,10 +90,17 @@ void TracePC::FinalizeTrace() {
         else if (Counter >= 4) Bit = 3;
         else if (Counter >= 3) Bit = 2;
         else if (Counter >= 2) Bit = 1;
-        CounterMap.AddValue(i * 8 + Bit);
+        size_t Feature = i * 8 + Bit;
+        CounterMap.AddValue(Feature);
+        uint32_t *SizePtr = &InputSizesPerFeature[Feature % kFeatureSetSize];
+        if (!*SizePtr || *SizePtr > InputSize) {
+          *SizePtr = InputSize;
+          Res = true;
+        }
       }
     }
   }
+  return Res;
 }
 
 void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {

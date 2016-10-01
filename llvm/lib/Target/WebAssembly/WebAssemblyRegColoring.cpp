@@ -35,7 +35,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   WebAssemblyRegColoring() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Register Coloring";
   }
 

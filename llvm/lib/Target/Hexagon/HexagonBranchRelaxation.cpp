@@ -44,7 +44,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon Branch Relaxation";
     }
 

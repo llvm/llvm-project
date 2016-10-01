@@ -2326,22 +2326,11 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   assert(ScalarIVTy->isIntegerTy() && ScalarIVTy == Step->getType() &&
          "Val and Step should have the same integer type");
 
-  auto scalarUserIsUniform = [&](User *U) -> bool {
-    auto *I = cast<Instruction>(U);
-    return !OrigLoop->contains(I) || !Legal->isScalarAfterVectorization(I) ||
-           Legal->isUniformAfterVectorization(I);
-  };
-
   // Determine the number of scalars we need to generate for each unroll
-  // iteration. If EntryVal is uniform or all it's scalar users are uniform, we
-  // only need to generate the first lane. Otherwise, we generate all VF
-  // values. We are essentially determining if the induction variable has no
-  // "multi-scalar" (non-uniform scalar) users.
+  // iteration. If EntryVal is uniform, we only need to generate the first
+  // lane. Otherwise, we generate all VF values.
   unsigned Lanes =
-      Legal->isUniformAfterVectorization(cast<Instruction>(EntryVal)) ||
-              all_of(EntryVal->users(), scalarUserIsUniform)
-          ? 1
-          : VF;
+      Legal->isUniformAfterVectorization(cast<Instruction>(EntryVal)) ? 1 : VF;
 
   // Compute the scalar steps and save the results in VectorLoopValueMap.
   ScalarParts Entry(UF);
