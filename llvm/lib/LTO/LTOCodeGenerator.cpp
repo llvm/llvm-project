@@ -199,7 +199,7 @@ void LTOCodeGenerator::setOptLevel(unsigned Level) {
   llvm_unreachable("Unknown optimization level!");
 }
 
-bool LTOCodeGenerator::writeMergedModules(const char *Path) {
+bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
   if (!determineTarget())
     return false;
 
@@ -240,7 +240,7 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   SmallString<128> Filename;
   int FD;
 
-  const char *Extension =
+  StringRef Extension
       (FileType == TargetMachine::CGFT_AssemblyFile ? "s" : "o");
 
   std::error_code EC =
@@ -251,7 +251,7 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   }
 
   // generate object file
-  tool_output_file objFile(Filename.c_str(), FD);
+  tool_output_file objFile(Filename, FD);
 
   bool genResult = compileOptimized(&objFile.os());
   objFile.os().close();
@@ -586,7 +586,7 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
 
 /// setCodeGenDebugOptions - Set codegen debugging options to aid in debugging
 /// LTO problems.
-void LTOCodeGenerator::setCodeGenDebugOptions(const char *Options) {
+void LTOCodeGenerator::setCodeGenDebugOptions(StringRef Options) {
   for (std::pair<StringRef, StringRef> o = getToken(Options); !o.first.empty();
        o = getToken(o.second))
     CodegenOptions.push_back(o.first);
