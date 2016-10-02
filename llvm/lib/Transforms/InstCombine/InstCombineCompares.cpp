@@ -2320,7 +2320,8 @@ Instruction *InstCombiner::foldICmpAddConstant(ICmpInst &Cmp,
   // Fold icmp pred (add X, C2), C.
   Value *X = Add->getOperand(0);
   Type *Ty = Add->getType();
-  auto CR = Cmp.makeConstantRange(Cmp.getPredicate(), *C).subtract(*C2);
+  auto CR =
+      ConstantRange::makeExactICmpRegion(Cmp.getPredicate(), *C).subtract(*C2);
   const APInt &Upper = CR.getUpper();
   const APInt &Lower = CR.getLower();
   if (Cmp.isSigned()) {

@@ -25,16 +25,15 @@ namespace llvm {
   /// no-argument constructor.
   template <typename T>
   class SimpleRegistryEntry {
-    const char *Name, *Desc;
+    StringRef Name, Desc;
     std::unique_ptr<T> (*Ctor)();
 
   public:
-    SimpleRegistryEntry(const char *N, const char *D, std::unique_ptr<T> (*C)())
-      : Name(N), Desc(D), Ctor(C)
-    {}
+    SimpleRegistryEntry(StringRef N, StringRef D, std::unique_ptr<T> (*C)())
+        : Name(N), Desc(D), Ctor(C) {}
 
-    const char *getName() const { return Name; }
-    const char *getDesc() const { return Desc; }
+    StringRef getName() const { return Name; }
+    StringRef getDesc() const { return Desc; }
     std::unique_ptr<T> instantiate() const { return Ctor(); }
   };
 
@@ -119,7 +118,7 @@ namespace llvm {
       static std::unique_ptr<T> CtorFn() { return make_unique<V>(); }
 
     public:
-      Add(const char *Name, const char *Desc)
+      Add(StringRef Name, StringRef Desc)
           : Entry(Name, Desc, CtorFn), Node(Entry) {
         add_node(&Node);
       }

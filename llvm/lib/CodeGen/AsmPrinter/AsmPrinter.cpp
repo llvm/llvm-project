@@ -2575,12 +2575,12 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
   if (GCPI != GCMap.end())
     return GCPI->second.get();
 
-  const char *Name = S.getName().c_str();
+  auto Name = S.getName();
 
   for (GCMetadataPrinterRegistry::iterator
          I = GCMetadataPrinterRegistry::begin(),
          E = GCMetadataPrinterRegistry::end(); I != E; ++I)
-    if (strcmp(Name, I->getName()) == 0) {
+    if (Name == I->getName()) {
       std::unique_ptr<GCMetadataPrinter> GMP = I->instantiate();
       GMP->S = &S;
       auto IterBool = GCMap.insert(std::make_pair(&S, std::move(GMP)));

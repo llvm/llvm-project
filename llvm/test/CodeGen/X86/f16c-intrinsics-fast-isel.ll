@@ -40,7 +40,7 @@ define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X32:       # BB#0:
 ; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X32-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %xmm0, %eax
 ; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -49,7 +49,7 @@ define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X64-LABEL: test_cvtss_sh:
 ; X64:       # BB#0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
