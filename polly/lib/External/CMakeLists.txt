@@ -231,6 +231,7 @@ set (ISL_FILES
     isl/isl_scan.c
     isl/isl_schedule.c
     isl/isl_schedule_band.c
+    isl/isl_schedule_constraints.c
     isl/isl_schedule_node.c
     isl/isl_schedule_read.c
     isl/isl_schedule_tree.c

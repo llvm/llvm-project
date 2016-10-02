@@ -15,6 +15,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -24,7 +26,7 @@ int main()
         assert(p1.second == 4);
     }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     {
         typedef std::pair<std::unique_ptr<int>, short> P1;
         P1 p1 = std::make_pair(std::unique_ptr<int>(new int(3)), 4);
@@ -37,9 +39,8 @@ int main()
         assert(p1.first == nullptr);
         assert(p1.second == 4);
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-#if _LIBCPP_STD_VER > 11
+#endif
+#if TEST_STD_VER >= 14
     {
         typedef std::pair<int, short> P1;
         constexpr P1 p1 = std::make_pair(3, 4);

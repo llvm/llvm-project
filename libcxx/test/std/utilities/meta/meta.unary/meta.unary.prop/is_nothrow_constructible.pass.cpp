@@ -92,7 +92,7 @@ struct C
     void operator=(C&);  // not const
 };
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
 struct Tuple {
     Tuple(Empty&&) noexcept {}
 };
@@ -104,15 +104,14 @@ int main()
     test_is_nothrow_constructible<int, const int&> ();
     test_is_nothrow_constructible<Empty> ();
     test_is_nothrow_constructible<Empty, const Empty&> ();
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    test_is_nothrow_constructible<Tuple &&, Empty> (); // See bug #19616.
-#endif
 
     test_is_not_nothrow_constructible<A, int> ();
     test_is_not_nothrow_constructible<A, int, double> ();
     test_is_not_nothrow_constructible<A> ();
     test_is_not_nothrow_constructible<C> ();
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
+    test_is_nothrow_constructible<Tuple &&, Empty> (); // See bug #19616.
+
     static_assert(!std::is_constructible<Tuple&, Empty>::value, "");
     test_is_not_nothrow_constructible<Tuple &, Empty> (); // See bug #19616.
 #endif

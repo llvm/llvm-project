@@ -625,7 +625,7 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
     for (unsigned i = 0, e = SearchList.size(); i != e; ++i) {
       if (i == NumQuoted)
         llvm::errs() << "#include <...> search starts here:\n";
-      const char *Name = SearchList[i].getName();
+      StringRef Name = SearchList[i].getName();
       const char *Suffix;
       if (SearchList[i].isNormalDir())
         Suffix = "";

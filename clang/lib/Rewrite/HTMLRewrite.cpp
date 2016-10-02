@@ -267,8 +267,8 @@ void html::AddLineNumbers(Rewriter& R, FileID FID) {
   RB.InsertTextAfter(FileEnd - FileBeg, "</table>");
 }
 
-void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
-                                             const char *title) {
+void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
+                                             StringRef title) {
 
   const llvm::MemoryBuffer *Buf = R.getSourceMgr().getBuffer(FID);
   const char* FileStart = Buf->getBufferStart();
@@ -282,7 +282,7 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
   os << "<!doctype html>\n" // Use HTML 5 doctype
         "<html>\n<head>\n";
 
-  if (title)
+  if (!title.empty())
     os << "<title>" << html::EscapeText(title) << "</title>\n";
 
   os << "<style type=\"text/css\">\n"

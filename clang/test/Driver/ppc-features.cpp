@@ -14,27 +14,27 @@
 
 // check -msoft-float option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT %s
-// CHECK-SOFTFLOAT: "-target-feature" "+soft-float"
+// CHECK-SOFTFLOAT: "-target-feature" "-hard-float"
 
 // check -mfloat-abi=soft option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT %s
-// CHECK-FLOATABISOFT: "-target-feature" "+soft-float"
+// CHECK-FLOATABISOFT: "-target-feature" "-hard-float"
 
 // check -mhard-float option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -mhard-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-HARDFLOAT %s
-// CHECK-HARDFLOAT-NOT: "-target-feature" "+soft-float"
+// CHECK-HARDFLOAT-NOT: "-target-feature" "-hard-float"
 
 // check -mfloat-abi=hard option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=hard -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABIHARD %s
-// CHECK-FLOATABIHARD-NOT: "-target-feature" "+soft-float"
+// CHECK-FLOATABIHARD-NOT: "-target-feature" "-hard-float"
 
 // check combine -mhard-float -msoft-float option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -mhard-float -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-HARDSOFT %s
-// CHECK-HARDSOFT: "-target-feature" "+soft-float"
+// CHECK-HARDSOFT: "-target-feature" "-hard-float"
 
 // check combine -msoft-float -mhard-float option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -mhard-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTHARD %s
-// CHECK-SOFTHARD-NOT: "-target-feature" "+soft-float"
+// CHECK-SOFTHARD-NOT: "-target-feature" "-hard-float"
 
 // check -mfloat-abi=x option
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=x -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ERRMSG %s
@@ -42,19 +42,19 @@
 
 // check -msoft-float option for ppc64
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT64 %s
-// CHECK-SOFTFLOAT64: error: invalid float ABI 'soft float is not supported for ppc64'
+// CHECK-SOFTFLOAT64: "-target-feature" "-hard-float"
 
 // check -mfloat-abi=soft option for ppc64
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT64 %s
-// CHECK-FLOATABISOFT64: error: invalid float ABI 'soft float is not supported for ppc64'
+// CHECK-FLOATABISOFT64: "-target-feature" "-hard-float"
 
 // check -msoft-float option for ppc64
 // RUN: %clang -target powerpc64le-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT64le %s
-// CHECK-SOFTFLOAT64le: error: invalid float ABI 'soft float is not supported for ppc64'
+// CHECK-SOFTFLOAT64le: "-target-feature" "-hard-float"
 
 // check -mfloat-abi=soft option for ppc64
 // RUN: %clang -target powerpc64le-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT64le %s
-// CHECK-FLOATABISOFT64le: error: invalid float ABI 'soft float is not supported for ppc64'
+// CHECK-FLOATABISOFT64le: "-target-feature" "-hard-float"
 
 // CHECK: invalid argument '-faltivec' only allowed with 'ppc/ppc64/ppc64le'
 

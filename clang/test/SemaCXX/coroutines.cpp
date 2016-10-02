@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -fcoroutines -verify %s
+// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -verify %s
 
 void no_coroutine_traits_bad_arg_await() {
   co_await a; // expected-error {{include <coroutine>}}

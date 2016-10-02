@@ -526,7 +526,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // TS features.
   if (LangOpts.ConceptsTS)
     Builder.defineMacro("__cpp_experimental_concepts", "1");
-  if (LangOpts.Coroutines)
+  if (LangOpts.CoroutinesTS)
     Builder.defineMacro("__cpp_coroutines", "1");
 }
 
