@@ -1707,8 +1707,8 @@ static LazyValueInfo::Tristate getPredicateResult(unsigned Pred, Constant *C,
     }
 
     // Handle more complex predicates.
-    ConstantRange TrueValues =
-        ICmpInst::makeConstantRange((ICmpInst::Predicate)Pred, CI->getValue());
+    ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(
+        (ICmpInst::Predicate)Pred, CI->getValue());
     if (TrueValues.contains(CR))
       return LazyValueInfo::True;
     if (TrueValues.inverse().contains(CR))

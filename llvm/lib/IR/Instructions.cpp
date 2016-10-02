@@ -3472,69 +3472,6 @@ ICmpInst::Predicate ICmpInst::getUnsignedPredicate(Predicate pred) {
   }
 }
 
-/// Initialize a set of values that all satisfy the condition with C.
-///
-ConstantRange 
-ICmpInst::makeConstantRange(Predicate pred, const APInt &C) {
-  APInt Lower(C);
-  APInt Upper(C);
-  uint32_t BitWidth = C.getBitWidth();
-  switch (pred) {
-  default: llvm_unreachable("Invalid ICmp opcode to ConstantRange ctor!");
-  case ICmpInst::ICMP_EQ: ++Upper; break;
-  case ICmpInst::ICMP_NE: ++Lower; break;
-  case ICmpInst::ICMP_ULT:
-    Lower = APInt::getMinValue(BitWidth);
-    // Check for an empty-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/false);
-    break;
-  case ICmpInst::ICMP_SLT:
-    Lower = APInt::getSignedMinValue(BitWidth);
-    // Check for an empty-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/false);
-    break;
-  case ICmpInst::ICMP_UGT: 
-    ++Lower; Upper = APInt::getMinValue(BitWidth);        // Min = Next(Max)
-    // Check for an empty-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/false);
-    break;
-  case ICmpInst::ICMP_SGT:
-    ++Lower; Upper = APInt::getSignedMinValue(BitWidth);  // Min = Next(Max)
-    // Check for an empty-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/false);
-    break;
-  case ICmpInst::ICMP_ULE: 
-    Lower = APInt::getMinValue(BitWidth); ++Upper; 
-    // Check for a full-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/true);
-    break;
-  case ICmpInst::ICMP_SLE: 
-    Lower = APInt::getSignedMinValue(BitWidth); ++Upper; 
-    // Check for a full-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/true);
-    break;
-  case ICmpInst::ICMP_UGE:
-    Upper = APInt::getMinValue(BitWidth);        // Min = Next(Max)
-    // Check for a full-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/true);
-    break;
-  case ICmpInst::ICMP_SGE:
-    Upper = APInt::getSignedMinValue(BitWidth);  // Min = Next(Max)
-    // Check for a full-set condition.
-    if (Lower == Upper)
-      return ConstantRange(BitWidth, /*isFullSet=*/true);
-    break;
-  }
-  return ConstantRange(Lower, Upper);
-}
-
 CmpInst::Predicate CmpInst::getSwappedPredicate(Predicate pred) {
   switch (pred) {
     default: llvm_unreachable("Unknown cmp predicate!");

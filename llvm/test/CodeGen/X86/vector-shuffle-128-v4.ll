@@ -2096,11 +2096,17 @@ define <4 x float> @insert_reg_and_zero_v4f32(float %a) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: insert_reg_and_zero_v4f32:
-; AVX:       # BB#0:
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    retq
+; AVX1OR2-LABEL: insert_reg_and_zero_v4f32:
+; AVX1OR2:       # BB#0:
+; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: insert_reg_and_zero_v4f32:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512VL-NEXT:    retq
   %v = insertelement <4 x float> undef, float %a, i32 0
   %shuffle = shufflevector <4 x float> %v, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %shuffle
@@ -2254,16 +2260,38 @@ define <4 x i32> @insert_mem_hi_v4i32(<2 x i32>* %ptr, <4 x i32> %b) {
 }
 
 define <4 x float> @insert_reg_lo_v4f32(double %a, <4 x float> %b) {
-; SSE-LABEL: insert_reg_lo_v4f32:
-; SSE:       # BB#0:
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: insert_reg_lo_v4f32:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: insert_reg_lo_v4f32:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX-NEXT:    retq
+; SSE3-LABEL: insert_reg_lo_v4f32:
+; SSE3:       # BB#0:
+; SSE3-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE3-NEXT:    movapd %xmm1, %xmm0
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: insert_reg_lo_v4f32:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSSE3-NEXT:    movapd %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: insert_reg_lo_v4f32:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    retq
+;
+; AVX1OR2-LABEL: insert_reg_lo_v4f32:
+; AVX1OR2:       # BB#0:
+; AVX1OR2-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: insert_reg_lo_v4f32:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512VL-NEXT:    retq
   %a.cast = bitcast double %a to <2 x float>
   %v = shufflevector <2 x float> %a.cast, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %shuffle = shufflevector <4 x float> %v, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 6, i32 7>

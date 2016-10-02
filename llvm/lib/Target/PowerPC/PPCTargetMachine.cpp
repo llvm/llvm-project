@@ -268,7 +268,7 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   // If the soft float attribute is set on the function turn on the soft float
   // subtarget feature.
   if (SoftFloat)
-    FS += FS.empty() ? "+soft-float" : ",+soft-float";
+    FS += FS.empty() ? "-hard-float" : ",-hard-float";
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {

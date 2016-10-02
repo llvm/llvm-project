@@ -142,7 +142,7 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
   // location to pull out the source line.
   SmallVector<std::pair<unsigned, unsigned>, 4> ColRanges;
   std::pair<unsigned, unsigned> LineAndCol;
-  const char *BufferID = "<unknown>";
+  StringRef BufferID = "<unknown>";
   std::string LineStr;
   
   if (Loc.isValid()) {
