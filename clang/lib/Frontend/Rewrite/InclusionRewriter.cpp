@@ -68,7 +68,7 @@ private:
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
                           const Module *Imported) override;
-  void WriteLineInfo(const char *Filename, int Line,
+  void WriteLineInfo(StringRef Filename, int Line,
                      SrcMgr::CharacteristicKind FileType,
                      StringRef Extra = StringRef());
   void WriteImplicitModuleImport(const Module *Mod);
@@ -102,7 +102,7 @@ InclusionRewriter::InclusionRewriter(Preprocessor &PP, raw_ostream &OS,
 /// markers depending on what mode we're in, including the \p Filename and
 /// \p Line we are located at, using the specified \p EOL line separator, and
 /// any \p Extra context specifiers in GNU line directives.
-void InclusionRewriter::WriteLineInfo(const char *Filename, int Line,
+void InclusionRewriter::WriteLineInfo(StringRef Filename, int Line,
                                       SrcMgr::CharacteristicKind FileType,
                                       StringRef Extra) {
   if (!ShowLineMarkers)
@@ -406,7 +406,7 @@ bool InclusionRewriter::Process(FileID FileId,
   bool Invalid;
   const MemoryBuffer &FromFile = *SM.getBuffer(FileId, &Invalid);
   assert(!Invalid && "Attempting to process invalid inclusion");
-  const char *FileName = FromFile.getBufferIdentifier();
+  StringRef FileName = FromFile.getBufferIdentifier();
   Lexer RawLex(FileId, &FromFile, PP.getSourceManager(), PP.getLangOpts());
   RawLex.SetCommentRetentionState(false);
 

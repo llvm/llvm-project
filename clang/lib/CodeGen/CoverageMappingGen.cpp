@@ -136,7 +136,7 @@ public:
 
   /// \brief Return true if \c Loc is a location in a built-in macro.
   bool isInBuiltin(SourceLocation Loc) {
-    return strcmp(SM.getBufferName(SM.getSpellingLoc(Loc)), "<built-in>") == 0;
+    return SM.getBufferName(SM.getSpellingLoc(Loc)) == "<built-in>";
   }
 
   /// \brief Check whether \c Loc is included or expanded from \c Parent.

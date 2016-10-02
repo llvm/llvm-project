@@ -481,6 +481,13 @@ def fno_autolink : Flag <["-"], "fno-autolink">, Group<f_Group>,
   Flags<[DriverOption, CC1Option]>,
   HelpText<"Disable generation of linker directives for automatic library linking">;
 
+// C++ Coroutines TS
+def fcoroutines_ts : Flag <["-"], "fcoroutines-ts">, Group<f_Group>,
+  Flags<[DriverOption, CC1Option]>,
+  HelpText<"Enable support for the C++ Coroutines TS">;
+def fno_coroutines_ts : Flag <["-"], "fno-coroutines-ts">, Group<f_Group>,
+  Flags<[DriverOption]>;
+
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<option>">,
     HelpText<"Embed LLVM bitcode (option: off, all, bitcode, marker)">;

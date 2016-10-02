@@ -257,7 +257,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch) {
 
 /// getName - Return the directory or filename corresponding to this lookup
 /// object.
-const char *DirectoryLookup::getName() const {
+StringRef DirectoryLookup::getName() const {
   if (isNormalDir())
     return getDir()->getName();
   if (isFramework())
