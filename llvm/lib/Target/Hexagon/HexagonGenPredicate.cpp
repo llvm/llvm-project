@@ -64,7 +64,7 @@ namespace {
     HexagonGenPredicate() : MachineFunctionPass(ID), TII(0), TRI(0), MRI(0) {
       initializeHexagonGenPredicatePass(*PassRegistry::getPassRegistry());
     }
-    virtual const char *getPassName() const {
+    virtual StringRef getPassName() const {
       return "Hexagon generate predicate operations";
     }
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {

@@ -657,7 +657,7 @@ namespace COFF {
     }
 
     ImportNameType getNameType() const {
-      return static_cast<ImportNameType>((TypeInfo & 0x1C) >> 3);
+      return static_cast<ImportNameType>((TypeInfo & 0x1C) >> 2);
     }
   };
 

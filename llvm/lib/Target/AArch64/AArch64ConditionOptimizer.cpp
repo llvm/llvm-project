@@ -105,7 +105,7 @@ public:
   bool adjustTo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp, MachineInstr *To,
                 int ToImm);
   bool runOnMachineFunction(MachineFunction &MF) override;
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AArch64 Condition Optimizer";
   }
 };

@@ -67,7 +67,7 @@ namespace {
     bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
                                       std::vector<SDValue> &OutOps) override;
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "XCore DAG->DAG Pattern Instruction Selection";
     }
 

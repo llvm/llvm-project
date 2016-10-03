@@ -30,7 +30,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   WebAssemblySetP2AlignOperands() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Set p2align Operands";
   }
 

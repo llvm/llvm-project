@@ -57,7 +57,7 @@ struct NVPTXPeephole : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "NVPTX optimize redundant cvta.to.local instruction";
   }
 

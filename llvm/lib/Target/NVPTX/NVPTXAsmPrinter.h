@@ -195,7 +195,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
   void emitSrcInText(StringRef filename, unsigned line);
 
 private:
-  const char *getPassName() const override { return "NVPTX Assembly Printer"; }
+  StringRef getPassName() const override { return "NVPTX Assembly Printer"; }
 
   const Function *F;
   std::string CurrentFnName;

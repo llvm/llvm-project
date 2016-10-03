@@ -102,9 +102,7 @@ public:
 
   bool runOnFunction(Function &F) override;
 
-  const char *getPassName() const override {
-    return "SI annotate control flow";
-  }
+  StringRef getPassName() const override { return "SI annotate control flow"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LoopInfoWrapperPass>();

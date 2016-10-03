@@ -63,7 +63,7 @@ public:
   static char ID;
   DetectDeadLanes() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override { return "Detect Dead Lanes"; }
+  StringRef getPassName() const override { return "Detect Dead Lanes"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

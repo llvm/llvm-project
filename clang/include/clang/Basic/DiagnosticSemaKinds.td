@@ -1142,10 +1142,9 @@ def warn_cxx14_compat_inline_variable : Warning<
   DefaultIgnore, InGroup<CXXPre1zCompat>;
 
 def warn_inline_namespace_reopened_noninline : Warning<
-  "inline namespace cannot be reopened as a non-inline namespace">;
+  "inline namespace reopened as a non-inline namespace">;
 def err_inline_namespace_mismatch : Error<
-  "%select{|non-}0inline namespace "
-  "cannot be reopened as %select{non-|}0inline">;
+  "non-inline namespace cannot be reopened as inline">;
 
 def err_unexpected_friend : Error<
   "friends can only be classes or functions">;
@@ -4358,7 +4357,7 @@ def err_definition_of_implicitly_declared_member : Error<
 def err_definition_of_explicitly_defaulted_member : Error<
   "definition of explicitly defaulted %select{default constructor|copy "
   "constructor|move constructor|copy assignment operator|move assignment "
-  "operator|destructor}0">;
+  "operator|destructor|function}0">;
 def err_redefinition_extern_inline : Error<
   "redefinition of a 'extern inline' function %0 is not supported in "
   "%select{C99 mode|C++}1">;
@@ -6723,6 +6722,8 @@ def err_device_static_local_var : Error<
 def err_cuda_vla : Error<
     "cannot use variable-length arrays in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
+def err_cuda_extern_shared : Error<"__shared__ variable %0 cannot be 'extern'">;
+def err_cuda_nonglobal_constant : Error<"__constant__ variables must be global">;
 
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "
@@ -8562,6 +8563,8 @@ def err_coroutine_ctor_dtor : Error<
   "'%1' cannot be used in a %select{constructor|destructor}0">;
 def err_coroutine_constexpr : Error<
   "'%0' cannot be used in a constexpr function">;
+def err_coroutine_main : Error<
+  "'main' cannot be a coroutine">;
 def err_coroutine_varargs : Error<
   "'%0' cannot be used in a varargs function">;
 def ext_coroutine_without_co_await_co_yield : ExtWarn<

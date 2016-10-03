@@ -673,11 +673,12 @@ You can get the coverage for your corpus like this:
 
 .. code-block:: console
 
-  ASAN_OPTIONS=coverage=1:html_cov_report=1 ./fuzzer CORPUS_DIR -runs=0
+  ASAN_OPTIONS=coverage=1 ./fuzzer CORPUS_DIR -runs=0
 
 This will run all tests in the CORPUS_DIR but will not perform any fuzzing.
-At the end of the process it will dump a single html file with coverage information.
-See SanitizerCoverage_ for details.
+At the end of the process it will dump a single ``.sancov`` file with coverage 
+information.  See SanitizerCoverage_ for details on querying the file using the
+``sancov`` tool.
 
 You may also use other ways to visualize coverage,
 e.g. using `Clang coverage <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_,

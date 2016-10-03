@@ -143,7 +143,7 @@ const DataLayout &AsmPrinter::getDataLayout() const {
 }
 
 // Do not use the cached DataLayout because some client use it without a Module
-// (llmv-dsymutil, llvm-dwarfdump).
+// (llvm-dsymutil, llvm-dwarfdump).
 unsigned AsmPrinter::getPointerSize() const { return TM.getPointerSize(); }
 
 const MCSubtargetInfo &AsmPrinter::getSubtargetInfo() const {
@@ -155,16 +155,10 @@ void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.EmitInstruction(Inst, getSubtargetInfo());
 }
 
-StringRef AsmPrinter::getTargetTriple() const {
-  return TM.getTargetTriple().str();
-}
-
 /// getCurrentSection() - Return the current section we are emitting to.
 const MCSection *AsmPrinter::getCurrentSection() const {
   return OutStreamer->getCurrentSection().first;
 }
-
-
 
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -192,7 +186,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // alternative is duplicated code in each of the target asm printers that
   // use the directive, where it would need the same conditionalization
   // anyway.
-  Triple TT(getTargetTriple());
+  const Triple &TT = TM.getTargetTriple();
   // If there is a version specified, Major will be non-zero.
   if (TT.isOSDarwin() && TT.getOSMajorVersion() != 0) {
     unsigned Major, Minor, Update;
@@ -2581,12 +2575,12 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
   if (GCPI != GCMap.end())
     return GCPI->second.get();
 
-  const char *Name = S.getName().c_str();
+  auto Name = S.getName();
 
   for (GCMetadataPrinterRegistry::iterator
          I = GCMetadataPrinterRegistry::begin(),
          E = GCMetadataPrinterRegistry::end(); I != E; ++I)
-    if (strcmp(Name, I->getName()) == 0) {
+    if (Name == I->getName()) {
       std::unique_ptr<GCMetadataPrinter> GMP = I->instantiate();
       GMP->S = &S;
       auto IterBool = GCMap.insert(std::make_pair(&S, std::move(GMP)));

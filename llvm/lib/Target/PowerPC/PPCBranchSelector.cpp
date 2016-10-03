@@ -53,9 +53,7 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
-    const char *getPassName() const override {
-      return "PowerPC Branch Selector";
-    }
+    StringRef getPassName() const override { return "PowerPC Branch Selector"; }
   };
   char PPCBSel::ID = 0;
 }

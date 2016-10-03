@@ -29,7 +29,7 @@ using namespace llvm;
 
 namespace {
 class WebAssemblyLowerBrUnless final : public MachineFunctionPass {
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Lower br_unless";
   }
 

@@ -1700,9 +1700,13 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
     ArgNum = 4;
     break;
   case X86::BI__builtin_ia32_fixupimmpd512_mask:
+  case X86::BI__builtin_ia32_fixupimmpd512_maskz:
   case X86::BI__builtin_ia32_fixupimmps512_mask:
+  case X86::BI__builtin_ia32_fixupimmps512_maskz:
   case X86::BI__builtin_ia32_fixupimmsd_mask:
+  case X86::BI__builtin_ia32_fixupimmsd_maskz:
   case X86::BI__builtin_ia32_fixupimmss_mask:
+  case X86::BI__builtin_ia32_fixupimmss_maskz:
   case X86::BI__builtin_ia32_rangepd512_mask:
   case X86::BI__builtin_ia32_rangeps512_mask:
   case X86::BI__builtin_ia32_rangesd128_round_mask:
@@ -1712,6 +1716,95 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_rndscalesd_round_mask:
   case X86::BI__builtin_ia32_rndscaless_round_mask:
     ArgNum = 5;
+    break;
+  case X86::BI__builtin_ia32_vcvtsd2si64:
+  case X86::BI__builtin_ia32_vcvtsd2si32:
+  case X86::BI__builtin_ia32_vcvtsd2usi32:
+  case X86::BI__builtin_ia32_vcvtsd2usi64:
+  case X86::BI__builtin_ia32_vcvtss2si32:
+  case X86::BI__builtin_ia32_vcvtss2si64:
+  case X86::BI__builtin_ia32_vcvtss2usi32:
+  case X86::BI__builtin_ia32_vcvtss2usi64:
+    ArgNum = 1;
+    HasRC = true;
+    break;
+  case X86::BI__builtin_ia32_cvtusi2sd64:
+  case X86::BI__builtin_ia32_cvtusi2ss32:
+  case X86::BI__builtin_ia32_cvtusi2ss64:
+    ArgNum = 2;
+    HasRC = true;
+    break;
+  case X86::BI__builtin_ia32_cvtdq2ps512_mask:
+  case X86::BI__builtin_ia32_cvtudq2ps512_mask:
+  case X86::BI__builtin_ia32_cvtpd2ps512_mask:
+  case X86::BI__builtin_ia32_cvtpd2qq512_mask:
+  case X86::BI__builtin_ia32_cvtpd2uqq512_mask:
+  case X86::BI__builtin_ia32_cvtps2qq512_mask:
+  case X86::BI__builtin_ia32_cvtps2uqq512_mask:
+  case X86::BI__builtin_ia32_cvtqq2pd512_mask:
+  case X86::BI__builtin_ia32_cvtqq2ps512_mask:
+  case X86::BI__builtin_ia32_cvtuqq2pd512_mask:
+  case X86::BI__builtin_ia32_cvtuqq2ps512_mask:
+    ArgNum = 3;
+    HasRC = true;
+    break;
+  case X86::BI__builtin_ia32_addpd512_mask:
+  case X86::BI__builtin_ia32_addps512_mask:
+  case X86::BI__builtin_ia32_divpd512_mask:
+  case X86::BI__builtin_ia32_divps512_mask:
+  case X86::BI__builtin_ia32_mulpd512_mask:
+  case X86::BI__builtin_ia32_mulps512_mask:
+  case X86::BI__builtin_ia32_subpd512_mask:
+  case X86::BI__builtin_ia32_subps512_mask:
+  case X86::BI__builtin_ia32_addss_round_mask:
+  case X86::BI__builtin_ia32_addsd_round_mask:
+  case X86::BI__builtin_ia32_divss_round_mask:
+  case X86::BI__builtin_ia32_divsd_round_mask:
+  case X86::BI__builtin_ia32_mulss_round_mask:
+  case X86::BI__builtin_ia32_mulsd_round_mask:
+  case X86::BI__builtin_ia32_subss_round_mask:
+  case X86::BI__builtin_ia32_subsd_round_mask:
+  case X86::BI__builtin_ia32_scalefpd512_mask:
+  case X86::BI__builtin_ia32_scalefps512_mask:
+  case X86::BI__builtin_ia32_scalefsd_round_mask:
+  case X86::BI__builtin_ia32_scalefss_round_mask:
+  case X86::BI__builtin_ia32_getmantpd512_mask:
+  case X86::BI__builtin_ia32_getmantps512_mask:
+  case X86::BI__builtin_ia32_vfmaddpd512_mask:
+  case X86::BI__builtin_ia32_vfmaddpd512_mask3:
+  case X86::BI__builtin_ia32_vfmaddpd512_maskz:
+  case X86::BI__builtin_ia32_vfmaddps512_mask:
+  case X86::BI__builtin_ia32_vfmaddps512_mask3:
+  case X86::BI__builtin_ia32_vfmaddps512_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubpd512_mask:
+  case X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
+  case X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubps512_mask:
+  case X86::BI__builtin_ia32_vfmaddsubps512_mask3:
+  case X86::BI__builtin_ia32_vfmaddsubps512_maskz:
+  case X86::BI__builtin_ia32_vfmsubpd512_mask3:
+  case X86::BI__builtin_ia32_vfmsubps512_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddps512_mask3:
+  case X86::BI__builtin_ia32_vfnmaddpd512_mask:
+  case X86::BI__builtin_ia32_vfnmaddps512_mask:
+  case X86::BI__builtin_ia32_vfnmsubpd512_mask:
+  case X86::BI__builtin_ia32_vfnmsubpd512_mask3:
+  case X86::BI__builtin_ia32_vfnmsubps512_mask:
+  case X86::BI__builtin_ia32_vfnmsubps512_mask3:
+  case X86::BI__builtin_ia32_vfmaddsd3_mask:
+  case X86::BI__builtin_ia32_vfmaddsd3_maskz:
+  case X86::BI__builtin_ia32_vfmaddsd3_mask3:
+  case X86::BI__builtin_ia32_vfmaddss3_mask:
+  case X86::BI__builtin_ia32_vfmaddss3_maskz:
+  case X86::BI__builtin_ia32_vfmaddss3_mask3:
+    ArgNum = 4;
+    HasRC = true;
+    break;
+  case X86::BI__builtin_ia32_getmantsd_round_mask:
+  case X86::BI__builtin_ia32_getmantss_round_mask:
+    ArgNum = 5;
+    HasRC = true;
     break;
   }
 

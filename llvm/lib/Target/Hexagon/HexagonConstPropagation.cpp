@@ -1888,7 +1888,7 @@ namespace {
       PassRegistry &Registry = *PassRegistry::getPassRegistry();
       initializeHexagonConstPropagationPass(Registry);
     }
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon Constant Propagation";
     }
     bool runOnMachineFunction(MachineFunction &MF) override {

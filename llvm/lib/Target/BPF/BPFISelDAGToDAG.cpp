@@ -38,7 +38,7 @@ class BPFDAGToDAGISel : public SelectionDAGISel {
 public:
   explicit BPFDAGToDAGISel(BPFTargetMachine &TM) : SelectionDAGISel(TM) {}
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "BPF DAG->DAG Pattern Instruction Selection";
   }
 

@@ -37,9 +37,7 @@ namespace {
     }
     bool runOnFunction(Function &F) override;
 
-    const char *getPassName() const override {
-      return "Remove sign extends";
-    }
+    StringRef getPassName() const override { return "Remove sign extends"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addPreserved<StackProtector>();

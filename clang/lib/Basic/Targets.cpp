@@ -1768,6 +1768,7 @@ public:
     LongLongWidth = HostTarget->getLongLongWidth();
     LongLongAlign = HostTarget->getLongLongAlign();
     MinGlobalAlign = HostTarget->getMinGlobalAlign();
+    NewAlign = HostTarget->getNewAlign();
     DefaultAlignForAttributeAligned =
         HostTarget->getDefaultAlignForAttributeAligned();
     SizeType = HostTarget->getSizeType();

@@ -51,7 +51,7 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   if (!CachedMCSymbol) {
     const MachineFunction *MF = getParent();
     MCContext &Ctx = MF->getContext();
-    const char *Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
+    auto Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
     assert(getNumber() >= 0 && "cannot get label for unreachable MBB");
     CachedMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB" +
                                            Twine(MF->getFunctionNumber()) +

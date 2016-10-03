@@ -177,6 +177,10 @@ system)
 	AC_CHECK_HEADER([clang/Basic/DiagnosticOptions.h],
 		[AC_DEFINE([HAVE_BASIC_DIAGNOSTICOPTIONS_H], [],
 			   [Define if clang/Basic/DiagnosticOptions.h exists])])
+	AC_CHECK_HEADER([clang/Lex/PreprocessorOptions.h],
+		[AC_DEFINE([HAVE_LEX_PREPROCESSOROPTIONS_H], [],
+			   [Define if clang/Lex/PreprocessorOptions.h exists])],
+		[], [#include <clang/Basic/LLVM.h>])
 	AC_TRY_COMPILE([#include <clang/Basic/TargetInfo.h>], [
 		using namespace clang;
 		std::shared_ptr<TargetOptions> TO;
@@ -231,7 +235,11 @@ system)
 		[clang/Basic/Builtins.h], [],
 		[AC_DEFINE([initializeBuiltins], [InitializeBuiltins],
 		[Define to InitializeBuiltins for older versions of clang])])
-	AC_TRY_COMPILE([#include <clang/Frontend/CompilerInstance.h>], [
+	AC_TRY_COMPILE([
+		#include <clang/Basic/TargetOptions.h>
+		#include <clang/Lex/PreprocessorOptions.h>
+		#include <clang/Frontend/CompilerInstance.h>
+	], [
 		using namespace clang;
 		CompilerInstance *Clang;
 		TargetOptions TO;
@@ -240,7 +248,7 @@ system)
 		CompilerInvocation::setLangDefaults(Clang->getLangOpts(), IK_C,
 				T, PO, LangStandard::lang_unspecified);
 	], [AC_DEFINE([SETLANGDEFAULTS_TAKES_5_ARGUMENTS], [],
-		[Define if HeaderSearchOptions::AddPath takes 4 arguments])])
+	    [Define if CompilerInvocation::setLangDefaults takes 5 arguments])])
 	AC_LANG_POP
 	CPPFLAGS="$SAVE_CPPFLAGS"
 

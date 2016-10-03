@@ -16,6 +16,7 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "count_new.hpp"
 
 class A
@@ -88,7 +89,7 @@ int main()
     assert(f2.target<int(*)(int)>() == 0);
     assert(f2.target<A>() == 0);
     }
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
     std::function<int(int)> f = A();
@@ -105,5 +106,5 @@ int main()
     assert(f.target<A>() == 0);
     assert(f.target<int(*)(int)>() == 0);
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
 }

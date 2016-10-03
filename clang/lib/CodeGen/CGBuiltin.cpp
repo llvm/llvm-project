@@ -2492,14 +2492,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   // See if we have a target specific intrinsic.
   const char *Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
-  if (const char *Prefix =
-          llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch())) {
-    IntrinsicID = Intrinsic::getIntrinsicForGCCBuiltin(Prefix, Name);
+  StringRef Prefix =
+      llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
+  if (!Prefix.empty()) {
+    IntrinsicID = Intrinsic::getIntrinsicForGCCBuiltin(Prefix.data(), Name);
     // NOTE we dont need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
     // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
     if (IntrinsicID == Intrinsic::not_intrinsic)
-      IntrinsicID = Intrinsic::getIntrinsicForMSBuiltin(Prefix, Name);
+      IntrinsicID = Intrinsic::getIntrinsicForMSBuiltin(Prefix.data(), Name);
   }
 
   if (IntrinsicID != Intrinsic::not_intrinsic) {

@@ -182,9 +182,7 @@ namespace {
     bool runOnFunction(Function &F) override;
     bool doFinalization(Module &M) override;
 
-    const char *getPassName() const override {
-      return "Merge internal globals";
-    }
+    StringRef getPassName() const override { return "Merge internal globals"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();

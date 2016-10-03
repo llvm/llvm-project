@@ -481,6 +481,13 @@ def fno_autolink : Flag <["-"], "fno-autolink">, Group<f_Group>,
   Flags<[DriverOption, CC1Option]>,
   HelpText<"Disable generation of linker directives for automatic library linking">;
 
+// C++ Coroutines TS
+def fcoroutines_ts : Flag <["-"], "fcoroutines-ts">, Group<f_Group>,
+  Flags<[DriverOption, CC1Option]>,
+  HelpText<"Enable support for the C++ Coroutines TS">;
+def fno_coroutines_ts : Flag <["-"], "fno-coroutines-ts">, Group<f_Group>,
+  Flags<[DriverOption]>;
+
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<option>">,
     HelpText<"Embed LLVM bitcode (option: off, all, bitcode, marker)">;
@@ -1046,6 +1053,17 @@ def fno_application_extension : Flag<["-"], "fno-application-extension">,
 def fsized_deallocation : Flag<["-"], "fsized-deallocation">, Flags<[CC1Option]>,
   HelpText<"Enable C++14 sized global deallocation functions">, Group<f_Group>;
 def fno_sized_deallocation: Flag<["-"], "fno-sized-deallocation">, Group<f_Group>;
+def faligned_allocation : Flag<["-"], "faligned-allocation">, Flags<[CC1Option]>,
+  HelpText<"Enable C++17 aligned allocation functions">, Group<f_Group>;
+def fno_aligned_allocation: Flag<["-"], "fno-aligned-allocation">,
+  Group<f_Group>, Flags<[CC1Option]>;
+def fnew_alignment_EQ : Joined<["-"], "fnew-alignment=">,
+  HelpText<"Specifies the largest alignment guaranteed by '::operator new(size_t)'">,
+  MetaVarName<"<align>">, Group<f_Group>, Flags<[CC1Option]>;
+def : Separate<["-"], "fnew-alignment">, Alias<fnew_alignment_EQ>;
+def : Flag<["-"], "faligned-new">, Alias<faligned_allocation>;
+def : Flag<["-"], "fno-aligned-new">, Alias<fno_aligned_allocation>;
+def faligned_new_EQ : Joined<["-"], "faligned-new=">;
 
 def fobjc_gc_only : Flag<["-"], "fobjc-gc-only">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Use GC exclusively for Objective-C related memory management">;

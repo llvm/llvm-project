@@ -133,9 +133,7 @@ public:
   SystemZLongBranch(const SystemZTargetMachine &tm)
     : MachineFunctionPass(ID), TII(nullptr) {}
 
-  const char *getPassName() const override {
-    return "SystemZ Long Branch";
-  }
+  StringRef getPassName() const override { return "SystemZ Long Branch"; }
 
   bool runOnMachineFunction(MachineFunction &F) override;
   MachineFunctionProperties getRequiredProperties() const override {

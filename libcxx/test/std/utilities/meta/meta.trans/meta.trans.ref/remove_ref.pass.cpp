@@ -37,11 +37,11 @@ int main()
     test_remove_reference<int*&, int*>();
     test_remove_reference<const int*&, const int*>();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     test_remove_reference<int&&, int>();
     test_remove_reference<const int&&, const int>();
     test_remove_reference<int(&&)[3], int[3]>();
     test_remove_reference<int*&&, int*>();
     test_remove_reference<const int*&&, const int*>();
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
 }

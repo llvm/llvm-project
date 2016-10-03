@@ -56,7 +56,7 @@ public:
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
-  const char *getPassName() const override { return "Machine InstCombiner"; }
+  StringRef getPassName() const override { return "Machine InstCombiner"; }
 
 private:
   bool doSubstitute(unsigned NewSize, unsigned OldSize);

@@ -49,7 +49,7 @@ CompilationDatabase::loadFromDirectory(StringRef BuildDirectory,
     if (std::unique_ptr<CompilationDatabase> DB =
             Plugin->loadFromDirectory(BuildDirectory, DatabaseErrorMessage))
       return DB;
-    ErrorStream << It->getName() << ": " << DatabaseErrorMessage << "\n";
+    ErrorStream << It->getName().data() << ": " << DatabaseErrorMessage << "\n";
   }
   ErrorMessage = ErrorStream.str();
   return nullptr;

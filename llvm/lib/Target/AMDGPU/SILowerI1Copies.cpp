@@ -41,9 +41,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
-    return "SI Lower i1 Copies";
-  }
+  StringRef getPassName() const override { return "SI Lower i1 Copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

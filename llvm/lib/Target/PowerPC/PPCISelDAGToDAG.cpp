@@ -215,7 +215,7 @@ namespace {
 
     void InsertVRSaveCode(MachineFunction &MF);
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "PowerPC DAG->DAG Pattern Instruction Selection";
     }
 

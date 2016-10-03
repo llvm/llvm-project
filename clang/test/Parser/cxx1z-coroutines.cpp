@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fcoroutines %s -verify
+// RUN: %clang_cc1 -std=c++11 -fcoroutines-ts %s -verify
 
 template<typename T, typename U>
 U f(T t) {

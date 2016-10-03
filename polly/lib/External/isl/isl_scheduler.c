@@ -18,6 +18,7 @@
 #include <isl/hash.h>
 #include <isl/constraint.h>
 #include <isl/schedule.h>
+#include <isl_schedule_constraints.h>
 #include <isl/schedule_node.h>
 #include <isl_mat_private.h>
 #include <isl_vec_private.h>
@@ -40,462 +41,6 @@
  * Parallelization and Locality Optimization in the Polyhedral Model".
  */
 
-enum isl_edge_type {
-	isl_edge_validity = 0,
-	isl_edge_first = isl_edge_validity,
-	isl_edge_coincidence,
-	isl_edge_condition,
-	isl_edge_conditional_validity,
-	isl_edge_proximity,
-	isl_edge_last = isl_edge_proximity,
-	isl_edge_local
-};
-
-/* The constraints that need to be satisfied by a schedule on "domain".
- *
- * "context" specifies extra constraints on the parameters.
- *
- * "validity" constraints map domain elements i to domain elements
- * that should be scheduled after i.  (Hard constraint)
- * "proximity" constraints map domain elements i to domains elements
- * that should be scheduled as early as possible after i (or before i).
- * (Soft constraint)
- *
- * "condition" and "conditional_validity" constraints map possibly "tagged"
- * domain elements i -> s to "tagged" domain elements j -> t.
- * The elements of the "conditional_validity" constraints, but without the
- * tags (i.e., the elements i -> j) are treated as validity constraints,
- * except that during the construction of a tilable band,
- * the elements of the "conditional_validity" constraints may be violated
- * provided that all adjacent elements of the "condition" constraints
- * are local within the band.
- * A dependence is local within a band if domain and range are mapped
- * to the same schedule point by the band.
- */
-struct isl_schedule_constraints {
-	isl_union_set *domain;
-	isl_set *context;
-
-	isl_union_map *constraint[isl_edge_last + 1];
-};
-
-__isl_give isl_schedule_constraints *isl_schedule_constraints_copy(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	isl_ctx *ctx;
-	isl_schedule_constraints *sc_copy;
-	enum isl_edge_type i;
-
-	ctx = isl_union_set_get_ctx(sc->domain);
-	sc_copy = isl_calloc_type(ctx, struct isl_schedule_constraints);
-	if (!sc_copy)
-		return NULL;
-
-	sc_copy->domain = isl_union_set_copy(sc->domain);
-	sc_copy->context = isl_set_copy(sc->context);
-	if (!sc_copy->domain || !sc_copy->context)
-		return isl_schedule_constraints_free(sc_copy);
-
-	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
-		sc_copy->constraint[i] = isl_union_map_copy(sc->constraint[i]);
-		if (!sc_copy->constraint[i])
-			return isl_schedule_constraints_free(sc_copy);
-	}
-
-	return sc_copy;
-}
-
-
-/* Construct an isl_schedule_constraints object for computing a schedule
- * on "domain".  The initial object does not impose any constraints.
- */
-__isl_give isl_schedule_constraints *isl_schedule_constraints_on_domain(
-	__isl_take isl_union_set *domain)
-{
-	isl_ctx *ctx;
-	isl_space *space;
-	isl_schedule_constraints *sc;
-	isl_union_map *empty;
-	enum isl_edge_type i;
-
-	if (!domain)
-		return NULL;
-
-	ctx = isl_union_set_get_ctx(domain);
-	sc = isl_calloc_type(ctx, struct isl_schedule_constraints);
-	if (!sc)
-		goto error;
-
-	space = isl_union_set_get_space(domain);
-	sc->domain = domain;
-	sc->context = isl_set_universe(isl_space_copy(space));
-	empty = isl_union_map_empty(space);
-	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
-		sc->constraint[i] = isl_union_map_copy(empty);
-		if (!sc->constraint[i])
-			sc->domain = isl_union_set_free(sc->domain);
-	}
-	isl_union_map_free(empty);
-
-	if (!sc->domain || !sc->context)
-		return isl_schedule_constraints_free(sc);
-
-	return sc;
-error:
-	isl_union_set_free(domain);
-	return NULL;
-}
-
-/* Replace the context of "sc" by "context".
- */
-__isl_give isl_schedule_constraints *isl_schedule_constraints_set_context(
-	__isl_take isl_schedule_constraints *sc, __isl_take isl_set *context)
-{
-	if (!sc || !context)
-		goto error;
-
-	isl_set_free(sc->context);
-	sc->context = context;
-
-	return sc;
-error:
-	isl_schedule_constraints_free(sc);
-	isl_set_free(context);
-	return NULL;
-}
-
-/* Replace the validity constraints of "sc" by "validity".
- */
-__isl_give isl_schedule_constraints *isl_schedule_constraints_set_validity(
-	__isl_take isl_schedule_constraints *sc,
-	__isl_take isl_union_map *validity)
-{
-	if (!sc || !validity)
-		goto error;
-
-	isl_union_map_free(sc->constraint[isl_edge_validity]);
-	sc->constraint[isl_edge_validity] = validity;
-
-	return sc;
-error:
-	isl_schedule_constraints_free(sc);
-	isl_union_map_free(validity);
-	return NULL;
-}
-
-/* Replace the coincidence constraints of "sc" by "coincidence".
- */
-__isl_give isl_schedule_constraints *isl_schedule_constraints_set_coincidence(
-	__isl_take isl_schedule_constraints *sc,
-	__isl_take isl_union_map *coincidence)
-{
-	if (!sc || !coincidence)
-		goto error;
-
-	isl_union_map_free(sc->constraint[isl_edge_coincidence]);
-	sc->constraint[isl_edge_coincidence] = coincidence;
-
-	return sc;
-error:
-	isl_schedule_constraints_free(sc);
-	isl_union_map_free(coincidence);
-	return NULL;
-}
-
-/* Replace the proximity constraints of "sc" by "proximity".
- */
-__isl_give isl_schedule_constraints *isl_schedule_constraints_set_proximity(
-	__isl_take isl_schedule_constraints *sc,
-	__isl_take isl_union_map *proximity)
-{
-	if (!sc || !proximity)
-		goto error;
-
-	isl_union_map_free(sc->constraint[isl_edge_proximity]);
-	sc->constraint[isl_edge_proximity] = proximity;
-
-	return sc;
-error:
-	isl_schedule_constraints_free(sc);
-	isl_union_map_free(proximity);
-	return NULL;
-}
-
-/* Replace the conditional validity constraints of "sc" by "condition"
- * and "validity".
- */
-__isl_give isl_schedule_constraints *
-isl_schedule_constraints_set_conditional_validity(
-	__isl_take isl_schedule_constraints *sc,
-	__isl_take isl_union_map *condition,
-	__isl_take isl_union_map *validity)
-{
-	if (!sc || !condition || !validity)
-		goto error;
-
-	isl_union_map_free(sc->constraint[isl_edge_condition]);
-	sc->constraint[isl_edge_condition] = condition;
-	isl_union_map_free(sc->constraint[isl_edge_conditional_validity]);
-	sc->constraint[isl_edge_conditional_validity] = validity;
-
-	return sc;
-error:
-	isl_schedule_constraints_free(sc);
-	isl_union_map_free(condition);
-	isl_union_map_free(validity);
-	return NULL;
-}
-
-__isl_null isl_schedule_constraints *isl_schedule_constraints_free(
-	__isl_take isl_schedule_constraints *sc)
-{
-	enum isl_edge_type i;
-
-	if (!sc)
-		return NULL;
-
-	isl_union_set_free(sc->domain);
-	isl_set_free(sc->context);
-	for (i = isl_edge_first; i <= isl_edge_last; ++i)
-		isl_union_map_free(sc->constraint[i]);
-
-	free(sc);
-
-	return NULL;
-}
-
-isl_ctx *isl_schedule_constraints_get_ctx(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	return sc ? isl_union_set_get_ctx(sc->domain) : NULL;
-}
-
-/* Return the domain of "sc".
- */
-__isl_give isl_union_set *isl_schedule_constraints_get_domain(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	if (!sc)
-		return NULL;
-
-	return isl_union_set_copy(sc->domain);
-}
-
-/* Return the validity constraints of "sc".
- */
-__isl_give isl_union_map *isl_schedule_constraints_get_validity(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	if (!sc)
-		return NULL;
-
-	return isl_union_map_copy(sc->constraint[isl_edge_validity]);
-}
-
-/* Return the coincidence constraints of "sc".
- */
-__isl_give isl_union_map *isl_schedule_constraints_get_coincidence(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	if (!sc)
-		return NULL;
-
-	return isl_union_map_copy(sc->constraint[isl_edge_coincidence]);
-}
-
-/* Return the proximity constraints of "sc".
- */
-__isl_give isl_union_map *isl_schedule_constraints_get_proximity(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	if (!sc)
-		return NULL;
-
-	return isl_union_map_copy(sc->constraint[isl_edge_proximity]);
-}
-
-/* Return the conditional validity constraints of "sc".
- */
-__isl_give isl_union_map *isl_schedule_constraints_get_conditional_validity(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	if (!sc)
-		return NULL;
-
-	return
-	    isl_union_map_copy(sc->constraint[isl_edge_conditional_validity]);
-}
-
-/* Return the conditions for the conditional validity constraints of "sc".
- */
-__isl_give isl_union_map *
-isl_schedule_constraints_get_conditional_validity_condition(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	if (!sc)
-		return NULL;
-
-	return isl_union_map_copy(sc->constraint[isl_edge_condition]);
-}
-
-/* Can a schedule constraint of type "type" be tagged?
- */
-static int may_be_tagged(enum isl_edge_type type)
-{
-	if (type == isl_edge_condition || type == isl_edge_conditional_validity)
-		return 1;
-	return 0;
-}
-
-/* Apply "umap" to the domains of the wrapped relations
- * inside the domain and range of "c".
- *
- * That is, for each map of the form
- *
- *	[D -> S] -> [E -> T]
- *
- * in "c", apply "umap" to D and E.
- *
- * D is exposed by currying the relation to
- *
- *	D -> [S -> [E -> T]]
- *
- * E is exposed by doing the same to the inverse of "c".
- */
-static __isl_give isl_union_map *apply_factor_domain(
-	__isl_take isl_union_map *c, __isl_keep isl_union_map *umap)
-{
-	c = isl_union_map_curry(c);
-	c = isl_union_map_apply_domain(c, isl_union_map_copy(umap));
-	c = isl_union_map_uncurry(c);
-
-	c = isl_union_map_reverse(c);
-	c = isl_union_map_curry(c);
-	c = isl_union_map_apply_domain(c, isl_union_map_copy(umap));
-	c = isl_union_map_uncurry(c);
-	c = isl_union_map_reverse(c);
-
-	return c;
-}
-
-/* Apply "umap" to domain and range of "c".
- * If "tag" is set, then "c" may contain tags and then "umap"
- * needs to be applied to the domains of the wrapped relations
- * inside the domain and range of "c".
- */
-static __isl_give isl_union_map *apply(__isl_take isl_union_map *c,
-	__isl_keep isl_union_map *umap, int tag)
-{
-	isl_union_map *t;
-
-	if (tag)
-		t = isl_union_map_copy(c);
-	c = isl_union_map_apply_domain(c, isl_union_map_copy(umap));
-	c = isl_union_map_apply_range(c, isl_union_map_copy(umap));
-	if (!tag)
-		return c;
-	t = apply_factor_domain(t, umap);
-	c = isl_union_map_union(c, t);
-	return c;
-}
-
-/* Apply "umap" to the domain of the schedule constraints "sc".
- *
- * The two sides of the various schedule constraints are adjusted
- * accordingly.
- */
-__isl_give isl_schedule_constraints *isl_schedule_constraints_apply(
-	__isl_take isl_schedule_constraints *sc,
-	__isl_take isl_union_map *umap)
-{
-	enum isl_edge_type i;
-
-	if (!sc || !umap)
-		goto error;
-
-	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
-		int tag = may_be_tagged(i);
-
-		sc->constraint[i] = apply(sc->constraint[i], umap, tag);
-		if (!sc->constraint[i])
-			goto error;
-	}
-	sc->domain = isl_union_set_apply(sc->domain, umap);
-	if (!sc->domain)
-		return isl_schedule_constraints_free(sc);
-
-	return sc;
-error:
-	isl_schedule_constraints_free(sc);
-	isl_union_map_free(umap);
-	return NULL;
-}
-
-void isl_schedule_constraints_dump(__isl_keep isl_schedule_constraints *sc)
-{
-	if (!sc)
-		return;
-
-	fprintf(stderr, "domain: ");
-	isl_union_set_dump(sc->domain);
-	fprintf(stderr, "context: ");
-	isl_set_dump(sc->context);
-	fprintf(stderr, "validity: ");
-	isl_union_map_dump(sc->constraint[isl_edge_validity]);
-	fprintf(stderr, "proximity: ");
-	isl_union_map_dump(sc->constraint[isl_edge_proximity]);
-	fprintf(stderr, "coincidence: ");
-	isl_union_map_dump(sc->constraint[isl_edge_coincidence]);
-	fprintf(stderr, "condition: ");
-	isl_union_map_dump(sc->constraint[isl_edge_condition]);
-	fprintf(stderr, "conditional_validity: ");
-	isl_union_map_dump(sc->constraint[isl_edge_conditional_validity]);
-}
-
-/* Align the parameters of the fields of "sc".
- */
-static __isl_give isl_schedule_constraints *
-isl_schedule_constraints_align_params(__isl_take isl_schedule_constraints *sc)
-{
-	isl_space *space;
-	enum isl_edge_type i;
-
-	if (!sc)
-		return NULL;
-
-	space = isl_union_set_get_space(sc->domain);
-	space = isl_space_align_params(space, isl_set_get_space(sc->context));
-	for (i = isl_edge_first; i <= isl_edge_last; ++i)
-		space = isl_space_align_params(space,
-				    isl_union_map_get_space(sc->constraint[i]));
-
-	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
-		sc->constraint[i] = isl_union_map_align_params(
-				    sc->constraint[i], isl_space_copy(space));
-		if (!sc->constraint[i])
-			space = isl_space_free(space);
-	}
-	sc->context = isl_set_align_params(sc->context, isl_space_copy(space));
-	sc->domain = isl_union_set_align_params(sc->domain, space);
-	if (!sc->context || !sc->domain)
-		return isl_schedule_constraints_free(sc);
-
-	return sc;
-}
-
-/* Return the total number of isl_maps in the constraints of "sc".
- */
-static __isl_give int isl_schedule_constraints_n_map(
-	__isl_keep isl_schedule_constraints *sc)
-{
-	enum isl_edge_type i;
-	int n = 0;
-
-	for (i = isl_edge_first; i <= isl_edge_last; ++i)
-		n += isl_union_map_n_map(sc->constraint[i]);
-
-	return n;
-}
 
 /* Internal information about a node that is used during the construction
  * of a schedule.
@@ -1138,42 +683,32 @@ static isl_stat init_n_maxvar(__isl_take isl_set *set, void *user)
 	return isl_stat_ok;
 }
 
-/* Add the number of basic maps in "map" to *n.
- */
-static isl_stat add_n_basic_map(__isl_take isl_map *map, void *user)
-{
-	int *n = user;
-
-	*n += isl_map_n_basic_map(map);
-	isl_map_free(map);
-
-	return isl_stat_ok;
-}
-
 /* Compute the number of rows that should be allocated for the schedule.
  * In particular, we need one row for each variable or one row
  * for each basic map in the dependences.
  * Note that it is practically impossible to exhaust both
  * the number of dependences and the number of variables.
  */
-static int compute_max_row(struct isl_sched_graph *graph,
+static isl_stat compute_max_row(struct isl_sched_graph *graph,
 	__isl_keep isl_schedule_constraints *sc)
 {
-	enum isl_edge_type i;
 	int n_edge;
+	isl_stat r;
+	isl_union_set *domain;
 
 	graph->n = 0;
 	graph->maxvar = 0;
-	if (isl_union_set_foreach_set(sc->domain, &init_n_maxvar, graph) < 0)
-		return -1;
-	n_edge = 0;
-	for (i = isl_edge_first; i <= isl_edge_last; ++i)
-		if (isl_union_map_foreach_map(sc->constraint[i],
-						&add_n_basic_map, &n_edge) < 0)
-			return -1;
+	domain = isl_schedule_constraints_get_domain(sc);
+	r = isl_union_set_foreach_set(domain, &init_n_maxvar, graph);
+	isl_union_set_free(domain);
+	if (r < 0)
+		return isl_stat_error;
+	n_edge = isl_schedule_constraints_n_basic_map(sc);
+	if (n_edge < 0)
+		return isl_stat_error;
 	graph->max_row = n_edge + graph->maxvar;
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Does "bset" have any defining equalities for its set variables?
@@ -1709,6 +1244,7 @@ static isl_stat graph_init(struct isl_sched_graph *graph,
 {
 	isl_ctx *ctx;
 	isl_union_set *domain;
+	isl_union_map *c;
 	struct isl_extract_edge_data data;
 	enum isl_edge_type i;
 	isl_stat r;
@@ -1732,23 +1268,32 @@ static isl_stat graph_init(struct isl_sched_graph *graph,
 	graph->n = 0;
 	domain = isl_schedule_constraints_get_domain(sc);
 	domain = isl_union_set_intersect_params(domain,
-						isl_set_copy(sc->context));
+				    isl_schedule_constraints_get_context(sc));
 	r = isl_union_set_foreach_set(domain, &extract_node, graph);
 	isl_union_set_free(domain);
 	if (r < 0)
 		return isl_stat_error;
 	if (graph_init_table(ctx, graph) < 0)
 		return isl_stat_error;
-	for (i = isl_edge_first; i <= isl_edge_last; ++i)
-		graph->max_edge[i] = isl_union_map_n_map(sc->constraint[i]);
+	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
+		c = isl_schedule_constraints_get(sc, i);
+		graph->max_edge[i] = isl_union_map_n_map(c);
+		isl_union_map_free(c);
+		if (!c)
+			return isl_stat_error;
+	}
 	if (graph_init_edge_tables(ctx, graph) < 0)
 		return isl_stat_error;
 	graph->n_edge = 0;
 	data.graph = graph;
 	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
+		isl_stat r;
+
 		data.type = i;
-		if (isl_union_map_foreach_map(sc->constraint[i],
-						&extract_edge, &data) < 0)
+		c = isl_schedule_constraints_get(sc, i);
+		r = isl_union_map_foreach_map(c, &extract_edge, &data);
+		isl_union_map_free(c);
+		if (r < 0)
 			return isl_stat_error;
 	}
 
@@ -5456,10 +5001,8 @@ static __isl_give isl_schedule_constraints *add_non_conditional_constraints(
 			continue;
 		if (!is_type(edge, t))
 			continue;
-		sc->constraint[t] = isl_union_map_union(sc->constraint[t],
+		sc = isl_schedule_constraints_add(sc, t,
 						    isl_union_map_copy(umap));
-		if (!sc->constraint[t])
-			return isl_schedule_constraints_free(sc);
 	}
 
 	return sc;
@@ -5488,10 +5031,9 @@ static __isl_give isl_schedule_constraints *add_conditional_constraints(
 		tagged = isl_union_map_apply_domain(tagged,
 					isl_union_map_copy(umap));
 		tagged = isl_union_map_zip(tagged);
-		sc->constraint[t] = isl_union_map_union(sc->constraint[t],
-						    tagged);
-		if (!sc->constraint[t])
-			return isl_schedule_constraints_free(sc);
+		sc = isl_schedule_constraints_add(sc, t, tagged);
+		if (!sc)
+			return NULL;
 	}
 
 	return sc;

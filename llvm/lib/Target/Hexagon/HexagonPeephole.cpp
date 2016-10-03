@@ -93,7 +93,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon optimize redundant zero and size extends";
     }
 

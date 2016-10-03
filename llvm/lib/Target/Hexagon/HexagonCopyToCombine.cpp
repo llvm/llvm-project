@@ -77,7 +77,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Hexagon Copy-To-Combine Pass";
   }
 

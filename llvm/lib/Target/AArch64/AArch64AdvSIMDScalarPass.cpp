@@ -90,9 +90,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
-  const char *getPassName() const override {
-    return AARCH64_ADVSIMD_NAME;
-  }
+  StringRef getPassName() const override { return AARCH64_ADVSIMD_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

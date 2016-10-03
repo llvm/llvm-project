@@ -180,10 +180,11 @@ function(add_ocaml_library name)
 
   set(install_files)
   set(install_shlibs)
-  foreach( ocaml_output ${ocaml_outputs} )
+  foreach( ocaml_output ${ocaml_inputs} ${ocaml_outputs} )
     get_filename_component(ext "${ocaml_output}" EXT)
 
     if( NOT (ext STREQUAL ".cmo" OR
+             ext STREQUAL ".ml" OR
              ext STREQUAL CMAKE_C_OUTPUT_EXTENSION OR
              ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX) )
       list(APPEND install_files "${ocaml_output}")

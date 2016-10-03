@@ -111,9 +111,7 @@ public:
         *PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override {
-    return "PGOIndirectCallPromotion";
-  }
+  StringRef getPassName() const override { return "PGOIndirectCallPromotion"; }
 
 private:
   bool runOnModule(Module &M) override;

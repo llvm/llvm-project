@@ -284,7 +284,7 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   if (ShadowFlag)
     *ShadowFlag = false;
   if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
-      (strcmp(SourceMgr.getBufferName(MacroNameLoc), "<built-in>") != 0)) {
+      (SourceMgr.getBufferName(MacroNameLoc) != "<built-in>")) {
     MacroDiag D = MD_NoWarn;
     if (isDefineUndef == MU_Define) {
       D = shouldWarnOnMacroDef(*this, II);
@@ -2114,7 +2114,7 @@ void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
   // This directive should only occur in the predefines buffer.  If not, emit an
   // error and reject it.
   SourceLocation Loc = IncludeMacrosTok.getLocation();
-  if (strcmp(SourceMgr.getBufferName(Loc), "<built-in>") != 0) {
+  if (SourceMgr.getBufferName(Loc) != "<built-in>") {
     Diag(IncludeMacrosTok.getLocation(),
          diag::pp_include_macros_out_of_predefines);
     DiscardUntilEndOfDirective();

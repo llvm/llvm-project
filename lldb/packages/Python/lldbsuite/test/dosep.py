@@ -1151,8 +1151,11 @@ def inprocess_exec_test_runner(test_work_items, session_dir, runner_context):
                                            runner_context)
 
     # We're always worker index 0
+    def get_single_worker_index():
+        return 0
+
     global GET_WORKER_INDEX
-    GET_WORKER_INDEX = lambda: 0
+    GET_WORKER_INDEX = get_single_worker_index
 
     # Run the listener and related channel maps in a separate thread.
     # global RUNNER_PROCESS_ASYNC_MAP
@@ -1443,7 +1446,8 @@ def adjust_inferior_options(dotest_argv):
         # every dotest invocation from creating its own directory
         import datetime
         # The windows platforms don't like ':' in the pathname.
-        timestamp_started = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
+        timestamp_started = (datetime.datetime.now()
+                             .strftime("%Y-%m-%d-%H_%M_%S"))
         dotest_argv.append('-s')
         dotest_argv.append(timestamp_started)
         dotest_options.s = timestamp_started
@@ -1627,7 +1631,8 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
         test_subdir = os.path.join(test_directory, test_subdir)
         if not os.path.isdir(test_subdir):
             print(
-                'specified test subdirectory {} is not a valid directory\n'.format(test_subdir))
+                'specified test subdirectory {} is not a valid directory\n'
+                .format(test_subdir))
     else:
         test_subdir = test_directory
 
@@ -1695,6 +1700,12 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
             rerun_file_count = len(tests_for_rerun)
             print("\n{} test files marked for rerun\n".format(
                 rerun_file_count))
+
+            # Clear errors charged to any of the files of the tests that
+            # we are rerunning.
+            # https://llvm.org/bugs/show_bug.cgi?id=27423
+            results_formatter.clear_file_level_issues(tests_for_rerun,
+                                                      sys.stdout)
 
             # Check if the number of files exceeds the max cutoff.  If so,
             # we skip the rerun step.

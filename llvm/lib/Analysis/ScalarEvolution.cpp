@@ -5994,8 +5994,8 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
     if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(LHS))
       if (AddRec->getLoop() == L) {
         // Form the constant range.
-        ConstantRange CompRange(
-            ICmpInst::makeConstantRange(Cond, RHSC->getAPInt()));
+        ConstantRange CompRange =
+            ConstantRange::makeExactICmpRegion(Cond, RHSC->getAPInt());
 
         const SCEV *Ret = AddRec->getNumIterationsInRange(CompRange, *this);
         if (!isa<SCEVCouldNotCompute>(Ret)) return Ret;
@@ -8907,9 +8907,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
     // Range.getUpper() is crossed.
     SmallVector<const SCEV *, 4> NewOps(op_begin(), op_end());
     NewOps[0] = SE.getNegativeSCEV(SE.getConstant(Range.getUpper()));
-    const SCEV *NewAddRec = SE.getAddRecExpr(NewOps, getLoop(),
-                                             // getNoWrapFlags(FlagNW)
-                                             FlagAnyWrap);
+    const SCEV *NewAddRec = SE.getAddRecExpr(NewOps, getLoop(), FlagAnyWrap);
 
     // Next, solve the constructed addrec
     if (auto Roots =

@@ -508,6 +508,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
 multiclass sse12_move_rr<RegisterClass RC, SDNode OpNode, ValueType vt,
                          X86MemOperand x86memop, string base_opc,
                          string asm_opr, Domain d = GenericDomain> {
+  let isCommutable = 1 in
   def rr : SI<0x10, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src1, RC:$src2),
               !strconcat(base_opc, asm_opr),
@@ -3216,9 +3217,15 @@ multiclass scalar_math_f32_patterns<SDNode Op, string OpcPrefix> {
 
   }
 
-  // Repeat everything for AVX, except for the movss + scalar combo...
-  // because that one shouldn't occur with AVX codegen?
+  // Repeat everything for AVX.
   let Predicates = [UseAVX] in {
+    // extracted scalar math op with insert via movss
+    def : Pat<(v4f32 (X86Movss (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
+          (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
+          FR32:$src))))),
+      (!cast<I>("V"#OpcPrefix#SSrr_Int) v4f32:$dst,
+          (COPY_TO_REGCLASS FR32:$src, VR128))>;
+
     // extracted scalar math op with insert via blend
     def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
           (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
@@ -5162,12 +5169,12 @@ let Predicates = [HasAVX] in {
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
 }
 
-let Predicates = [UseAVX, OptForSize] in {
-  def : Pat<(v2f64 (X86VBroadcast (loadf64 addr:$src))),
-            (VMOVDDUPrm addr:$src)>;
-  def : Pat<(v2i64 (X86VBroadcast (loadi64 addr:$src))),
-            (VMOVDDUPrm addr:$src)>;
-}
+let Predicates = [HasAVX, NoVLX] in
+def : Pat<(v2f64 (X86VBroadcast (loadf64 addr:$src))),
+          (VMOVDDUPrm addr:$src)>;
+let Predicates = [HasAVX1Only] in
+def : Pat<(v2i64 (X86VBroadcast (loadi64 addr:$src))),
+          (VMOVDDUPrm addr:$src)>;
 
 let Predicates = [UseSSE3] in {
   def : Pat<(X86Movddup (memopv2f64 addr:$src)),
@@ -8318,7 +8325,7 @@ defm VPBROADCASTD  : avx2_broadcast<0x58, "vpbroadcastd", i32mem, loadi32,
 defm VPBROADCASTQ  : avx2_broadcast<0x59, "vpbroadcastq", i64mem, loadi64,
                                     v2i64, v4i64, NoVLX>;
 
-let Predicates = [HasAVX2] in {
+let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
   // This means we'll encounter truncated i32 loads; match that here.
   def : Pat<(v8i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),
@@ -8331,7 +8338,9 @@ let Predicates = [HasAVX2] in {
   def : Pat<(v16i16 (X86VBroadcast
               (i16 (trunc (i32 (zextloadi16 addr:$src)))))),
             (VPBROADCASTWYrm addr:$src)>;
+}
 
+let Predicates = [HasAVX2] in {
   // Provide aliases for broadcast from the same register class that
   // automatically does the extract.
   def : Pat<(v8f32 (X86VBroadcast (v8f32 VR256:$src))),

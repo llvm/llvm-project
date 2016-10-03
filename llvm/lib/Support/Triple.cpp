@@ -17,7 +17,7 @@
 #include <cstring>
 using namespace llvm;
 
-const char *Triple::getArchTypeName(ArchType Kind) {
+StringRef Triple::getArchTypeName(ArchType Kind) {
   switch (Kind) {
   case UnknownArch:    return "unknown";
 
@@ -71,10 +71,10 @@ const char *Triple::getArchTypeName(ArchType Kind) {
   llvm_unreachable("Invalid ArchType!");
 }
 
-const char *Triple::getArchTypePrefix(ArchType Kind) {
+StringRef Triple::getArchTypePrefix(ArchType Kind) {
   switch (Kind) {
   default:
-    return nullptr;
+    return StringRef();
 
   case aarch64:
   case aarch64_be:  return "aarch64";
@@ -137,7 +137,7 @@ const char *Triple::getArchTypePrefix(ArchType Kind) {
   }
 }
 
-const char *Triple::getVendorTypeName(VendorType Kind) {
+StringRef Triple::getVendorTypeName(VendorType Kind) {
   switch (Kind) {
   case UnknownVendor: return "unknown";
 
@@ -160,7 +160,7 @@ const char *Triple::getVendorTypeName(VendorType Kind) {
   llvm_unreachable("Invalid VendorType!");
 }
 
-const char *Triple::getOSTypeName(OSType Kind) {
+StringRef Triple::getOSTypeName(OSType Kind) {
   switch (Kind) {
   case UnknownOS: return "unknown";
 
@@ -197,7 +197,7 @@ const char *Triple::getOSTypeName(OSType Kind) {
   llvm_unreachable("Invalid OSType");
 }
 
-const char *Triple::getEnvironmentTypeName(EnvironmentType Kind) {
+StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   switch (Kind) {
   case UnknownEnvironment: return "unknown";
   case GNU: return "gnu";
@@ -557,7 +557,7 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
   }
 }
 
-static const char *getObjectFormatTypeName(Triple::ObjectFormatType Kind) {
+static StringRef getObjectFormatTypeName(Triple::ObjectFormatType Kind) {
   switch (Kind) {
   case Triple::UnknownObjectFormat: return "";
   case Triple::COFF: return "coff";

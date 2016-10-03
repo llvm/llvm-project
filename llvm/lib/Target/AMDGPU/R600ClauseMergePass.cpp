@@ -66,7 +66,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override;
+  StringRef getPassName() const override;
 };
 
 char R600ClauseMergePass::ID = 0;
@@ -201,7 +201,7 @@ bool R600ClauseMergePass::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-const char *R600ClauseMergePass::getPassName() const {
+StringRef R600ClauseMergePass::getPassName() const {
   return "R600 Merge Clause Markers Pass";
 }
 

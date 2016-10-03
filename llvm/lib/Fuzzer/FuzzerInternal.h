@@ -115,8 +115,9 @@ private:
   void ShuffleCorpus(UnitVector *V);
   void TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
                                bool DuringInitialCorpusExecution);
-  void AddToCorpusAndMaybeRerun(const Unit &U);
+  void AddToCorpus(const Unit &U);
   void CheckExitOnSrcPos();
+  void CheckExitOnItem();
 
   // Trace-based fuzzing: we run a unit with some kind of tracing
   // enabled and record potentially useful mutations. Then

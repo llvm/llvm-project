@@ -52,7 +52,7 @@ public:
     initializeRegUsageInfoPropagationPassPass(Registry);
   }
 
-  const char *getPassName() const override { return RUIP_NAME; }
+  StringRef getPassName() const override { return RUIP_NAME; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

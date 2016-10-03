@@ -2340,7 +2340,7 @@ void Sema::DeclareGlobalNewDelete() {
                                         nullptr);
     getStdBadAlloc()->setImplicit(true);
   }
-  if (!StdAlignValT && getLangOpts().CPlusPlus1z) {
+  if (!StdAlignValT && getLangOpts().AlignedAllocation) {
     // The "std::align_val_t" enum class has not yet been declared, so build it
     // implicitly.
     auto *AlignValT = EnumDecl::Create(
@@ -2365,7 +2365,7 @@ void Sema::DeclareGlobalNewDelete() {
     // Create up to four variants of the function (sized/aligned).
     bool HasSizedVariant = getLangOpts().SizedDeallocation &&
                            (Kind == OO_Delete || Kind == OO_Array_Delete);
-    bool HasAlignedVariant = getLangOpts().CPlusPlus1z;
+    bool HasAlignedVariant = getLangOpts().AlignedAllocation;
 
     int NumSizeVariants = (HasSizedVariant ? 2 : 1);
     int NumAlignVariants = (HasAlignedVariant ? 2 : 1);

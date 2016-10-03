@@ -45,9 +45,7 @@ public:
     initializeHexagonCFGOptimizerPass(*PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override {
-    return "Hexagon CFG Optimizer";
-  }
+  StringRef getPassName() const override { return "Hexagon CFG Optimizer"; }
   bool runOnMachineFunction(MachineFunction &Fn) override;
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(

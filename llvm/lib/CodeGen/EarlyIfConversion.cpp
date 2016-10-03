@@ -602,7 +602,7 @@ public:
   EarlyIfConverter() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
-  const char *getPassName() const override { return "Early If-Conversion"; }
+  StringRef getPassName() const override { return "Early If-Conversion"; }
 
 private:
   bool tryConvertIf(MachineBasicBlock*);

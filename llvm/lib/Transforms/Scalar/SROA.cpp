@@ -4274,7 +4274,7 @@ public:
     AU.setPreservesCFG();
   }
 
-  const char *getPassName() const override { return "SROA"; }
+  StringRef getPassName() const override { return "SROA"; }
   static char ID;
 };
 

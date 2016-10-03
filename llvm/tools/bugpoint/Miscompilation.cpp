@@ -1084,12 +1084,8 @@ Error BugDriver::debugCodeGenerator() {
   } else {
     outs() << "  llc " << TestModuleBC << " -o " << TestModuleBC << ".s\n";
     outs() << "  cc " << *SharedObject << " " << TestModuleBC.str() << ".s -o "
-           << TestModuleBC << ".exe";
-#if defined(HAVE_LINK_R)
-    outs() << " -Wl,-R.";
-#endif
-    outs() << "\n";
-    outs() << "  " << TestModuleBC << ".exe";
+           << TestModuleBC << ".exe\n";
+    outs() << "  ./" << TestModuleBC << ".exe";
   }
   for (unsigned i = 0, e = InputArgv.size(); i != e; ++i)
     outs() << " " << InputArgv[i];

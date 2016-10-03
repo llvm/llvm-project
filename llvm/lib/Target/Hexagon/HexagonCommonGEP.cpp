@@ -82,9 +82,7 @@ namespace {
       initializeHexagonCommonGEPPass(*PassRegistry::getPassRegistry());
     }
     virtual bool runOnFunction(Function &F);
-    virtual const char *getPassName() const {
-      return "Hexagon Common GEP";
-    }
+    virtual StringRef getPassName() const { return "Hexagon Common GEP"; }
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
       AU.addRequired<DominatorTreeWrapperPass>();

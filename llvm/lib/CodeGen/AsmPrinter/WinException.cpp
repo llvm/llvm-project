@@ -72,17 +72,21 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
-  const Function *Per = nullptr;
-  if (F->hasPersonalityFn())
-    Per = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
 
-  bool forceEmitPersonality =
-    F->hasPersonalityFn() && !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
-    F->needsUnwindTableEntry();
+  EHPersonality Per = EHPersonality::Unknown;
+  const Function *PerFn = nullptr;
+  if (F->hasPersonalityFn()) {
+    PerFn = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+    Per = classifyEHPersonality(PerFn);
+  }
+
+  bool forceEmitPersonality = F->hasPersonalityFn() &&
+                              !isNoOpWithoutInvoke(Per) &&
+                              F->needsUnwindTableEntry();
 
   shouldEmitPersonality =
       forceEmitPersonality || ((hasLandingPads || hasEHFunclets) &&
-                               PerEncoding != dwarf::DW_EH_PE_omit && Per);
+                               PerEncoding != dwarf::DW_EH_PE_omit && PerFn);
 
   unsigned LSDAEncoding = TLOF.getLSDAEncoding();
   shouldEmitLSDA = shouldEmitPersonality &&
@@ -90,7 +94,16 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
-  if (!Asm->MAI->usesWindowsCFI() || (!MF->hasWinCFI() && !Per)) {
+  if (!Asm->MAI->usesWindowsCFI() || (!MF->hasWinCFI() && !PerFn)) {
+    if (Per == EHPersonality::MSVC_X86SEH && !hasEHFunclets) {
+      // If this is 32-bit SEH and we don't have any funclets (really invokes),
+      // make sure we emit the parent offset label. Some unreferenced filter
+      // functions may still refer to it.
+      const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
+      StringRef FLinkageName =
+          GlobalValue::getRealLinkageName(MF->getFunction()->getName());
+      emitEHRegistrationOffsetLabel(FuncInfo, FLinkageName);
+    }
     shouldEmitLSDA = hasEHFunclets;
     shouldEmitPersonality = false;
     return;
@@ -108,7 +121,7 @@ void WinException::endFunction(const MachineFunction *MF) {
   const Function *F = MF->getFunction();
   EHPersonality Per = EHPersonality::Unknown;
   if (F->hasPersonalityFn())
-    Per = classifyEHPersonality(F->getPersonalityFn());
+    Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
 
   // Get rid of any dead landing pads if we're not using funclets. In funclet
   // schemes, the landing pad is not actually reachable. It only exists so
@@ -207,9 +220,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
         TLOF.getCFIPersonalitySymbol(PerFn, Asm->TM, MMI);
 
     // Classify the personality routine so that we may reason about it.
-    EHPersonality Per = EHPersonality::Unknown;
-    if (F->hasPersonalityFn())
-      Per = classifyEHPersonality(F->getPersonalityFn());
+    EHPersonality Per = classifyEHPersonality(PerFn);
 
     // Do not emit a .seh_handler directive if it is a C++ cleanup funclet.
     if (Per != EHPersonality::MSVC_CXX ||
@@ -227,7 +238,7 @@ void WinException::endFunclet() {
     const Function *F = Asm->MF->getFunction();
     EHPersonality Per = EHPersonality::Unknown;
     if (F->hasPersonalityFn())
-      Per = classifyEHPersonality(F->getPersonalityFn());
+      Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
 
     // The .seh_handlerdata directive implicitly switches section, push the
     // current section so that we may return to it.
@@ -905,15 +916,24 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   // registration in order to recover the parent frame pointer. Now that we know
   // we've code generated the parent, we can emit the label assignment that
   // those helpers use to get the offset of the registration node.
+
+  // Compute the parent frame offset. The EHRegNodeFrameIndex will be invalid if
+  // after optimization all the invokes were eliminated. We still need to emit
+  // the parent frame offset label, but it should be garbage and should never be
+  // used.
+  int64_t Offset = 0;
+  int FI = FuncInfo.EHRegNodeFrameIndex;
+  if (FI != INT_MAX) {
+    const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
+    unsigned UnusedReg;
+    Offset = TFI->getFrameIndexReference(*Asm->MF, FI, UnusedReg);
+  }
+
   MCContext &Ctx = Asm->OutContext;
   MCSymbol *ParentFrameOffset =
       Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
-  unsigned UnusedReg;
-  const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
-  int64_t Offset = TFI->getFrameIndexReference(
-      *Asm->MF, FuncInfo.EHRegNodeFrameIndex, UnusedReg);
-  const MCExpr *MCOffset = MCConstantExpr::create(Offset, Ctx);
-  Asm->OutStreamer->EmitAssignment(ParentFrameOffset, MCOffset);
+  Asm->OutStreamer->EmitAssignment(ParentFrameOffset,
+                                   MCConstantExpr::create(Offset, Ctx));
 }
 
 /// Emit the language-specific data that _except_handler3 and 4 expect. This is

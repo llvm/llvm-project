@@ -3899,6 +3899,7 @@ private:
   static const unsigned GPRBits = 64;
   ABIKind Kind;
   bool HasQPX;
+  bool IsSoftFloatABI;
 
   // A vector of float or double will be promoted to <4 x f32> or <4 x f64> and
   // will be passed in a QPX register.
@@ -3929,8 +3930,10 @@ private:
   }
 
 public:
-  PPC64_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind, bool HasQPX)
-      : ABIInfo(CGT), Kind(Kind), HasQPX(HasQPX) {}
+  PPC64_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind, bool HasQPX,
+                     bool SoftFloatABI)
+      : ABIInfo(CGT), Kind(Kind), HasQPX(HasQPX),
+        IsSoftFloatABI(SoftFloatABI) {}
 
   bool isPromotableTypeForABI(QualType Ty) const;
   CharUnits getParamTypeAlignment(QualType Ty) const;
@@ -3978,8 +3981,10 @@ class PPC64_SVR4_TargetCodeGenInfo : public TargetCodeGenInfo {
 
 public:
   PPC64_SVR4_TargetCodeGenInfo(CodeGenTypes &CGT,
-                               PPC64_SVR4_ABIInfo::ABIKind Kind, bool HasQPX)
-      : TargetCodeGenInfo(new PPC64_SVR4_ABIInfo(CGT, Kind, HasQPX)) {}
+                               PPC64_SVR4_ABIInfo::ABIKind Kind, bool HasQPX,
+                               bool SoftFloatABI)
+      : TargetCodeGenInfo(new PPC64_SVR4_ABIInfo(CGT, Kind, HasQPX,
+                                                 SoftFloatABI)) {}
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
     // This is recovered from gcc output.
@@ -4197,8 +4202,11 @@ bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
     if (BT->getKind() == BuiltinType::Float ||
         BT->getKind() == BuiltinType::Double ||
-        BT->getKind() == BuiltinType::LongDouble)
+        BT->getKind() == BuiltinType::LongDouble) {
+      if (IsSoftFloatABI)
+        return false;
       return true;
+    }
   }
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
     if (getContext().getTypeSize(VT) == 128 || IsQPXVectorTy(Ty))
@@ -8107,8 +8115,10 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
       if (getTarget().getABI() == "elfv2")
         Kind = PPC64_SVR4_ABIInfo::ELFv2;
       bool HasQPX = getTarget().getABI() == "elfv1-qpx";
+      bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
 
-      return SetCGInfo(new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX));
+      return SetCGInfo(new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX,
+                                                        IsSoftFloat));
     } else
       return SetCGInfo(new PPC64TargetCodeGenInfo(Types));
   case llvm::Triple::ppc64le: {
@@ -8117,8 +8127,10 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     if (getTarget().getABI() == "elfv1" || getTarget().getABI() == "elfv1-qpx")
       Kind = PPC64_SVR4_ABIInfo::ELFv1;
     bool HasQPX = getTarget().getABI() == "elfv1-qpx";
+    bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
 
-    return SetCGInfo(new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX));
+    return SetCGInfo(new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX,
+                                                      IsSoftFloat));
   }
 
   case llvm::Triple::nvptx:

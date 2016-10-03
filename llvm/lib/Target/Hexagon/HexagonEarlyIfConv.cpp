@@ -137,7 +137,7 @@ namespace {
         HII(0), TRI(0), MFN(0), MRI(0), MDT(0), MLI(0) {
       initializeHexagonEarlyIfConversionPass(*PassRegistry::getPassRegistry());
     }
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon early if conversion";
     }
     void getAnalysisUsage(AnalysisUsage &AU) const override {

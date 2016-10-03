@@ -458,7 +458,7 @@ public:
   /// in BackendConsumer::OptimizationRemarkHandler).
   virtual bool isEnabled() const = 0;
 
-  const char *getPassName() const { return PassName; }
+  StringRef getPassName() const { return PassName; }
   std::string getMsg() const;
   Optional<uint64_t> getHotness() const { return Hotness; }
   void setHotness(Optional<uint64_t> H) { Hotness = H; }

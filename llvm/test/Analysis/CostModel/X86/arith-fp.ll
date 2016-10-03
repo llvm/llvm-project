@@ -338,6 +338,116 @@ define i32 @fsqrt(i32 %arg) {
   ret i32 undef
 }
 
+; CHECK-LABEL: 'fabs'
+define i32 @fabs(i32 %arg) {
+  ; SSE2: cost of 2 {{.*}} %F32 = call float @llvm.fabs.f32
+  ; SSE42: cost of 2 {{.*}} %F32 = call float @llvm.fabs.f32
+  ; AVX: cost of 2 {{.*}} %F32 = call float @llvm.fabs.f32
+  ; AVX2: cost of 2 {{.*}} %F32 = call float @llvm.fabs.f32
+  ; AVX512: cost of 2 {{.*}} %F32 = call float @llvm.fabs.f32
+  %F32 = call float @llvm.fabs.f32(float undef)
+  ; SSE2: cost of 2 {{.*}} %V4F32 = call <4 x float> @llvm.fabs.v4f32
+  ; SSE42: cost of 2 {{.*}} %V4F32 = call <4 x float> @llvm.fabs.v4f32
+  ; AVX: cost of 2 {{.*}} %V4F32 = call <4 x float> @llvm.fabs.v4f32
+  ; AVX2: cost of 2 {{.*}} %V4F32 = call <4 x float> @llvm.fabs.v4f32
+  ; AVX512: cost of 2 {{.*}} %V4F32 = call <4 x float> @llvm.fabs.v4f32
+  %V4F32 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef)
+  ; SSE2: cost of 4 {{.*}} %V8F32 = call <8 x float> @llvm.fabs.v8f32
+  ; SSE42: cost of 4 {{.*}} %V8F32 = call <8 x float> @llvm.fabs.v8f32
+  ; AVX: cost of 2 {{.*}} %V8F32 = call <8 x float> @llvm.fabs.v8f32
+  ; AVX2: cost of 2 {{.*}} %V8F32 = call <8 x float> @llvm.fabs.v8f32
+  ; AVX512: cost of 2 {{.*}} %V8F32 = call <8 x float> @llvm.fabs.v8f32
+  %V8F32 = call <8 x float> @llvm.fabs.v8f32(<8 x float> undef)
+  ; SSE2: cost of 8 {{.*}} %V16F32 = call <16 x float> @llvm.fabs.v16f32
+  ; SSE42: cost of 8 {{.*}} %V16F32 = call <16 x float> @llvm.fabs.v16f32
+  ; AVX: cost of 4 {{.*}} %V16F32 = call <16 x float> @llvm.fabs.v16f32
+  ; AVX2: cost of 4 {{.*}} %V16F32 = call <16 x float> @llvm.fabs.v16f32
+  ; AVX512: cost of 2 {{.*}} %V16F32 = call <16 x float> @llvm.fabs.v16f32
+  %V16F32 = call <16 x float> @llvm.fabs.v16f32(<16 x float> undef)
+
+  ; SSE2: cost of 2 {{.*}} %F64 = call double @llvm.fabs.f64
+  ; SSE42: cost of 2 {{.*}} %F64 = call double @llvm.fabs.f64
+  ; AVX: cost of 2 {{.*}} %F64 = call double @llvm.fabs.f64
+  ; AVX2: cost of 2 {{.*}} %F64 = call double @llvm.fabs.f64
+  ; AVX512: cost of 2 {{.*}} %F64 = call double @llvm.fabs.f64
+  %F64 = call double @llvm.fabs.f64(double undef)
+  ; SSE2: cost of 2 {{.*}} %V2F64 = call <2 x double> @llvm.fabs.v2f64
+  ; SSE42: cost of 2 {{.*}} %V2F64 = call <2 x double> @llvm.fabs.v2f64
+  ; AVX: cost of 2 {{.*}} %V2F64 = call <2 x double> @llvm.fabs.v2f64
+  ; AVX2: cost of 2 {{.*}} %V2F64 = call <2 x double> @llvm.fabs.v2f64
+  ; AVX512: cost of 2 {{.*}} %V2F64 = call <2 x double> @llvm.fabs.v2f64
+  %V2F64 = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef)
+  ; SSE2: cost of 4 {{.*}} %V4F64 = call <4 x double> @llvm.fabs.v4f64
+  ; SSE42: cost of 4 {{.*}} %V4F64 = call <4 x double> @llvm.fabs.v4f64
+  ; AVX: cost of 2 {{.*}} %V4F64 = call <4 x double> @llvm.fabs.v4f64
+  ; AVX2: cost of 2 {{.*}} %V4F64 = call <4 x double> @llvm.fabs.v4f64
+  ; AVX512: cost of 2 {{.*}} %V4F64 = call <4 x double> @llvm.fabs.v4f64
+  %V4F64 = call <4 x double> @llvm.fabs.v4f64(<4 x double> undef)
+  ; SSE2: cost of 8 {{.*}} %V8F64 = call <8 x double> @llvm.fabs.v8f64
+  ; SSE42: cost of 8 {{.*}} %V8F64 = call <8 x double> @llvm.fabs.v8f64
+  ; AVX: cost of 4 {{.*}} %V8F64 = call <8 x double> @llvm.fabs.v8f64
+  ; AVX2: cost of 4 {{.*}} %V8F64 = call <8 x double> @llvm.fabs.v8f64
+  ; AVX512: cost of 2 {{.*}} %V8F64 = call <8 x double> @llvm.fabs.v8f64
+  %V8F64 = call <8 x double> @llvm.fabs.v8f64(<8 x double> undef)
+
+  ret i32 undef
+}
+
+; CHECK-LABEL: 'fcopysign'
+define i32 @fcopysign(i32 %arg) {
+  ; SSE2: cost of 2 {{.*}} %F32 = call float @llvm.copysign.f32
+  ; SSE42: cost of 2 {{.*}} %F32 = call float @llvm.copysign.f32
+  ; AVX: cost of 2 {{.*}} %F32 = call float @llvm.copysign.f32
+  ; AVX2: cost of 2 {{.*}} %F32 = call float @llvm.copysign.f32
+  ; AVX512: cost of 2 {{.*}} %F32 = call float @llvm.copysign.f32
+  %F32 = call float @llvm.copysign.f32(float undef, float undef)
+  ; SSE2: cost of 17 {{.*}} %V4F32 = call <4 x float> @llvm.copysign.v4f32
+  ; SSE42: cost of 17 {{.*}} %V4F32 = call <4 x float> @llvm.copysign.v4f32
+  ; AVX: cost of 17 {{.*}} %V4F32 = call <4 x float> @llvm.copysign.v4f32
+  ; AVX2: cost of 17 {{.*}} %V4F32 = call <4 x float> @llvm.copysign.v4f32
+  ; AVX512: cost of 17 {{.*}} %V4F32 = call <4 x float> @llvm.copysign.v4f32
+  %V4F32 = call <4 x float> @llvm.copysign.v4f32(<4 x float> undef, <4 x float> undef)
+  ; SSE2: cost of 34 {{.*}} %V8F32 = call <8 x float> @llvm.copysign.v8f32
+  ; SSE42: cost of 34 {{.*}} %V8F32 = call <8 x float> @llvm.copysign.v8f32
+  ; AVX: cost of 37 {{.*}} %V8F32 = call <8 x float> @llvm.copysign.v8f32
+  ; AVX2: cost of 37 {{.*}} %V8F32 = call <8 x float> @llvm.copysign.v8f32
+  ; AVX512: cost of 37 {{.*}} %V8F32 = call <8 x float> @llvm.copysign.v8f32
+  %V8F32 = call <8 x float> @llvm.copysign.v8f32(<8 x float> undef, <8 x float> undef)
+  ; SSE2: cost of 68 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
+  ; SSE42: cost of 68 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
+  ; AVX: cost of 74 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
+  ; AVX2: cost of 74 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
+  ; AVX512: cost of 77 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
+  %V16F32 = call <16 x float> @llvm.copysign.v16f32(<16 x float> undef, <16 x float> undef)
+
+  ; SSE2: cost of 2 {{.*}} %F64 = call double @llvm.copysign.f64
+  ; SSE42: cost of 2 {{.*}} %F64 = call double @llvm.copysign.f64
+  ; AVX: cost of 2 {{.*}} %F64 = call double @llvm.copysign.f64
+  ; AVX2: cost of 2 {{.*}} %F64 = call double @llvm.copysign.f64
+  ; AVX512: cost of 2 {{.*}} %F64 = call double @llvm.copysign.f64
+  %F64 = call double @llvm.copysign.f64(double undef, double undef)
+  ; SSE2: cost of 7 {{.*}} %V2F64 = call <2 x double> @llvm.copysign.v2f64
+  ; SSE42: cost of 7 {{.*}} %V2F64 = call <2 x double> @llvm.copysign.v2f64
+  ; AVX: cost of 7 {{.*}} %V2F64 = call <2 x double> @llvm.copysign.v2f64
+  ; AVX2: cost of 7 {{.*}} %V2F64 = call <2 x double> @llvm.copysign.v2f64
+  ; AVX512: cost of 7 {{.*}} %V2F64 = call <2 x double> @llvm.copysign.v2f64
+  %V2F64 = call <2 x double> @llvm.copysign.v2f64(<2 x double> undef, <2 x double> undef)
+  ; SSE2: cost of 14 {{.*}} %V4F64 = call <4 x double> @llvm.copysign.v4f64
+  ; SSE42: cost of 14 {{.*}} %V4F64 = call <4 x double> @llvm.copysign.v4f64
+  ; AVX: cost of 17 {{.*}} %V4F64 = call <4 x double> @llvm.copysign.v4f64
+  ; AVX2: cost of 17 {{.*}} %V4F64 = call <4 x double> @llvm.copysign.v4f64
+  ; AVX512: cost of 17 {{.*}} %V4F64 = call <4 x double> @llvm.copysign.v4f64
+  %V4F64 = call <4 x double> @llvm.copysign.v4f64(<4 x double> undef, <4 x double> undef)
+  ; SSE2: cost of 28 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
+  ; SSE42: cost of 28 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
+  ; AVX: cost of 34 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
+  ; AVX2: cost of 34 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
+  ; AVX512: cost of 37 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
+  %V8F64 = call <8 x double> @llvm.copysign.v8f64(<8 x double> undef, <8 x double> undef)
+
+  ret i32 undef
+}
+
 ; CHECK-LABEL: 'fma'
 define i32 @fma(i32 %arg) {
   ; SSE2: cost of 10 {{.*}} %F32 = call float @llvm.fma.f32
@@ -402,6 +512,26 @@ declare double @llvm.sqrt.f64(double)
 declare <2 x double> @llvm.sqrt.v2f64(<2 x double>)
 declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
 declare <8 x double> @llvm.sqrt.v8f64(<8 x double>)
+
+declare float @llvm.fabs.f32(float)
+declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
+declare <8 x float> @llvm.fabs.v8f32(<8 x float>)
+declare <16 x float> @llvm.fabs.v16f32(<16 x float>)
+
+declare double @llvm.fabs.f64(double)
+declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
+declare <4 x double> @llvm.fabs.v4f64(<4 x double>)
+declare <8 x double> @llvm.fabs.v8f64(<8 x double>)
+
+declare float @llvm.copysign.f32(float, float)
+declare <4 x float> @llvm.copysign.v4f32(<4 x float>, <4 x float>)
+declare <8 x float> @llvm.copysign.v8f32(<8 x float>, <8 x float>)
+declare <16 x float> @llvm.copysign.v16f32(<16 x float>, <16 x float>)
+
+declare double @llvm.copysign.f64(double, double)
+declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>)
+declare <4 x double> @llvm.copysign.v4f64(<4 x double>, <4 x double>)
+declare <8 x double> @llvm.copysign.v8f64(<8 x double>, <8 x double>)
 
 declare float @llvm.fma.f32(float, float, float)
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)

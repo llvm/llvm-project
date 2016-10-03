@@ -39,7 +39,7 @@ using namespace llvm;
 
 namespace {
 class WebAssemblyRegStackify final : public MachineFunctionPass {
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Register Stackify";
   }
 

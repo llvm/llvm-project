@@ -1,9 +1,6 @@
 #!/bin/bash
 set -x
-SCRIPT_DIR=$(dirname $0)
-EXECUTABLE_NAME_BASE=$(basename $SCRIPT_DIR)
-CORPUS=CORPUS-$EXECUTABLE_NAME_BASE
-JOBS=8
+. $(dirname $0)/../common.sh
 rm -rf $CORPUS
 mkdir $CORPUS
 [ -e $EXECUTABLE_NAME_BASE ] && ./$EXECUTABLE_NAME_BASE -artifact_prefix=$CORPUS/ -max_len=512  -jobs=$JOBS -workers=$JOBS $CORPUS

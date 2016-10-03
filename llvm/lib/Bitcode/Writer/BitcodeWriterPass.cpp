@@ -48,7 +48,7 @@ namespace {
       initializeWriteBitcodePassPass(*PassRegistry::getPassRegistry());
     }
 
-    const char *getPassName() const override { return "Bitcode Writer"; }
+    StringRef getPassName() const override { return "Bitcode Writer"; }
 
     bool runOnModule(Module &M) override {
       const ModuleSummaryIndex *Index =

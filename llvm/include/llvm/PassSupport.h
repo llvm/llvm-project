@@ -101,7 +101,7 @@ template <typename PassName> Pass *callTargetMachineCtor(TargetMachine *TM) {
 ///
 template <typename passName> struct RegisterPass : public PassInfo {
   // Register Pass using default constructor...
-  RegisterPass(const char *PassArg, const char *Name, bool CFGOnly = false,
+  RegisterPass(StringRef PassArg, StringRef Name, bool CFGOnly = false,
                bool is_analysis = false)
       : PassInfo(Name, PassArg, &passName::ID,
                  PassInfo::NormalCtor_t(callDefaultCtor<passName>), CFGOnly,
@@ -131,7 +131,7 @@ template <typename passName> struct RegisterPass : public PassInfo {
 ///
 class RegisterAGBase : public PassInfo {
 public:
-  RegisterAGBase(const char *Name, const void *InterfaceID,
+  RegisterAGBase(StringRef Name, const void *InterfaceID,
                  const void *PassID = nullptr, bool isDefault = false);
 };
 

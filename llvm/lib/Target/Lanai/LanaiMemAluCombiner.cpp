@@ -61,7 +61,7 @@ public:
     initializeLanaiMemAluCombinerPass(*PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Lanai load / store optimization pass";
   }
 

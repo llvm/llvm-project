@@ -64,7 +64,7 @@ void HTMLPrinter::HandleTranslationUnit(ASTContext &Ctx) {
   // Format the file.
   FileID FID = R.getSourceMgr().getMainFileID();
   const FileEntry* Entry = R.getSourceMgr().getFileEntryForID(FID);
-  const char* Name;
+  StringRef Name;
   // In some cases, in particular the case where the input is from stdin,
   // there is no entry.  Fall back to the memory buffer for a name in those
   // cases.

@@ -56,9 +56,7 @@ public:
       : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this),
         SM(*this), AArch64FI(nullptr) {}
 
-  const char *getPassName() const override {
-    return "AArch64 Assembly Printer";
-  }
+  StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
   /// \brief Wrapper for MCInstLowering.lowerOperand() for the
   /// tblgen'erated pseudo lowering.
@@ -162,7 +160,7 @@ MCSymbol *AArch64AsmPrinter::GetCPISymbol(unsigned CPID) const {
   // Darwin uses a linker-private symbol name for constant-pools (to
   // avoid addends on the relocation?), ELF has no such concept and
   // uses a normal private symbol.
-  if (getDataLayout().getLinkerPrivateGlobalPrefix()[0])
+  if (!getDataLayout().getLinkerPrivateGlobalPrefix().empty())
     return OutContext.getOrCreateSymbol(
         Twine(getDataLayout().getLinkerPrivateGlobalPrefix()) + "CPI" +
         Twine(getFunctionNumber()) + "_" + Twine(CPID));

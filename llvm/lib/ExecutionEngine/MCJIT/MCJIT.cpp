@@ -446,7 +446,7 @@ void MCJIT::runStaticConstructorsDestructors(bool isDtors) {
       isDtors, OwnedModules.begin_finalized(), OwnedModules.end_finalized());
 }
 
-Function *MCJIT::FindFunctionNamedInModulePtrSet(const char *FnName,
+Function *MCJIT::FindFunctionNamedInModulePtrSet(StringRef FnName,
                                                  ModulePtrSet::iterator I,
                                                  ModulePtrSet::iterator E) {
   for (; I != E; ++I) {
@@ -457,7 +457,7 @@ Function *MCJIT::FindFunctionNamedInModulePtrSet(const char *FnName,
   return nullptr;
 }
 
-GlobalVariable *MCJIT::FindGlobalVariableNamedInModulePtrSet(const char *Name,
+GlobalVariable *MCJIT::FindGlobalVariableNamedInModulePtrSet(StringRef Name,
                                                              bool AllowInternal,
                                                              ModulePtrSet::iterator I,
                                                              ModulePtrSet::iterator E) {
@@ -470,7 +470,7 @@ GlobalVariable *MCJIT::FindGlobalVariableNamedInModulePtrSet(const char *Name,
 }
 
 
-Function *MCJIT::FindFunctionNamed(const char *FnName) {
+Function *MCJIT::FindFunctionNamed(StringRef FnName) {
   Function *F = FindFunctionNamedInModulePtrSet(
       FnName, OwnedModules.begin_added(), OwnedModules.end_added());
   if (!F)
@@ -482,7 +482,7 @@ Function *MCJIT::FindFunctionNamed(const char *FnName) {
   return F;
 }
 
-GlobalVariable *MCJIT::FindGlobalVariableNamed(const char *Name, bool AllowInternal) {
+GlobalVariable *MCJIT::FindGlobalVariableNamed(StringRef Name, bool AllowInternal) {
   GlobalVariable *GV = FindGlobalVariableNamedInModulePtrSet(
       Name, AllowInternal, OwnedModules.begin_added(), OwnedModules.end_added());
   if (!GV)

@@ -737,7 +737,7 @@ public:
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AArch64 Conditional Compares";
   }
 

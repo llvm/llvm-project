@@ -48,9 +48,9 @@ public:
   }
 
   /// \brief Returns the name for the instructions with the given opcode.
-  const char *getName(unsigned Opcode) const {
+  StringRef getName(unsigned Opcode) const {
     assert(Opcode < NumOpcodes && "Invalid opcode!");
-    return &InstrNameData[InstrNameIndices[Opcode]];
+    return StringRef(&InstrNameData[InstrNameIndices[Opcode]]);
   }
 };
 

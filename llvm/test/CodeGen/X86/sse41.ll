@@ -177,7 +177,8 @@ define <4 x float> @blendps_not_insertps_1(<4 x float> %t1, float %t2) nounwind 
 define <4 x float> @insertps_or_blendps(<4 x float> %t1, float %t2) minsize nounwind {
 ; X32-LABEL: insertps_or_blendps:
 ; X32:       ## BB#0:
-; X32-NEXT:    insertps {{.*#+}} xmm0 = mem[0],xmm0[1,2,3]
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: insertps_or_blendps:

@@ -8052,6 +8052,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
 
   // If there's an ext-vector type and a scalar, try to convert the scalar to
   // the vector element type and splat.
+  // FIXME: this should also work for regular vector types as supported in GCC.
   if (!RHSVecType && isa<ExtVectorType>(LHSVecType)) {
     if (!tryVectorConvertAndSplat(*this, &RHS, RHSType,
                                   LHSVecType->getElementType(), LHSType))
@@ -8064,16 +8065,31 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       return RHSType;
   }
 
-  // If we're allowing lax vector conversions, only the total (data) size needs
-  // to be the same. If one of the types is scalar, the result is always the
-  // vector type. Don't allow this if the scalar operand is an lvalue.
+  // FIXME: The code below also handles convertion between vectors and
+  // non-scalars, we should break this down into fine grained specific checks
+  // and emit proper diagnostics.
   QualType VecType = LHSVecType ? LHSType : RHSType;
-  QualType ScalarType = LHSVecType ? RHSType : LHSType;
-  ExprResult *ScalarExpr = LHSVecType ? &RHS : &LHS;
-  if (isLaxVectorConversion(ScalarType, VecType) &&
-      !ScalarExpr->get()->isLValue()) {
-    *ScalarExpr = ImpCastExprToType(ScalarExpr->get(), VecType, CK_BitCast);
-    return VecType;
+  const VectorType *VT = LHSVecType ? LHSVecType : RHSVecType;
+  QualType OtherType = LHSVecType ? RHSType : LHSType;
+  ExprResult *OtherExpr = LHSVecType ? &RHS : &LHS;
+  if (isLaxVectorConversion(OtherType, VecType)) {
+    // If we're allowing lax vector conversions, only the total (data) size
+    // needs to be the same. For non compound assignment, if one of the types is
+    // scalar, the result is always the vector type.
+    if (!IsCompAssign) {
+      *OtherExpr = ImpCastExprToType(OtherExpr->get(), VecType, CK_BitCast);
+      return VecType;
+    // In a compound assignment, lhs += rhs, 'lhs' is a lvalue src, forbidding
+    // any implicit cast. Here, the 'rhs' should be implicit casted to 'lhs'
+    // type. Note that this is already done by non-compound assignments in
+    // CheckAssignmentConstraints. If it's a scalar type, only bitcast for
+    // <1 x T> -> T. The result is also a vector type.
+    } else if (OtherType->isExtVectorType() ||
+               (OtherType->isScalarType() && VT->getNumElements() == 1)) {
+      ExprResult *RHSExpr = &RHS;
+      *RHSExpr = ImpCastExprToType(RHSExpr->get(), LHSType, CK_BitCast);
+      return VecType;
+    }
   }
 
   // Okay, the expression is invalid.

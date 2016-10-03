@@ -1591,15 +1591,8 @@ static void getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_ppc_Features_Group);
 
   ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
-  if (FloatABI == ppc::FloatABI::Soft &&
-      !(Triple.getArch() == llvm::Triple::ppc64 ||
-        Triple.getArch() == llvm::Triple::ppc64le))
-    Features.push_back("+soft-float");
-  else if (FloatABI == ppc::FloatABI::Soft &&
-           (Triple.getArch() == llvm::Triple::ppc64 ||
-            Triple.getArch() == llvm::Triple::ppc64le))
-    D.Diag(diag::err_drv_invalid_mfloat_abi)
-        << "soft float is not supported for ppc64";
+  if (FloatABI == ppc::FloatABI::Soft)
+    Features.push_back("-hard-float");
 
   // Altivec is a bit weird, allow overriding of the Altivec feature here.
   AddTargetFeature(Args, Features, options::OPT_faltivec,
@@ -5423,6 +5416,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fblocks-runtime-optional");
   }
 
+  if (Args.hasFlag(options::OPT_fcoroutines_ts, options::OPT_fno_coroutines_ts,
+                   false) &&
+      types::isCXX(InputType)) {
+    CmdArgs.push_back("-fcoroutines-ts");
+  }
+
   // -fmodules enables the use of precompiled modules (off by default).
   // Users can pass -fno-cxx-modules to turn off modules support for
   // C++/Objective-C++ programs.
@@ -5820,6 +5819,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fsized_deallocation,
                    options::OPT_fno_sized_deallocation, false))
     CmdArgs.push_back("-fsized-deallocation");
+
+  // -faligned-allocation is on by default in C++17 onwards and otherwise off
+  // by default.
+  if (Arg *A = Args.getLastArg(options::OPT_faligned_allocation,
+                               options::OPT_fno_aligned_allocation,
+                               options::OPT_faligned_new_EQ)) {
+    if (A->getOption().matches(options::OPT_fno_aligned_allocation))
+      CmdArgs.push_back("-fno-aligned-allocation");
+    else
+      CmdArgs.push_back("-faligned-allocation");
+  }
+
+  // The default new alignment can be specified using a dedicated option or via
+  // a GCC-compatible option that also turns on aligned allocation.
+  if (Arg *A = Args.getLastArg(options::OPT_fnew_alignment_EQ,
+                               options::OPT_faligned_new_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-fnew-alignment=") + A->getValue()));
 
   // -fconstant-cfstrings is default, and may be subject to argument translation
   // on Darwin.

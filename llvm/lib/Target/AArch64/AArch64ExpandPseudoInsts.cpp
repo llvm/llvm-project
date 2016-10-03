@@ -37,9 +37,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  const char *getPassName() const override {
-    return AARCH64_EXPAND_PSEUDO_NAME;
-  }
+  StringRef getPassName() const override { return AARCH64_EXPAND_PSEUDO_NAME; }
 
 private:
   bool expandMBB(MachineBasicBlock &MBB);

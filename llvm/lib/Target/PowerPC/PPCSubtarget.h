@@ -91,7 +91,7 @@ protected:
   bool Has64BitSupport;
   bool Use64BitRegs;
   bool UseCRBits;
-  bool UseSoftFloat;
+  bool HasHardFloat;
   bool IsPPC64;
   bool HasAltivec;
   bool HasSPE;
@@ -205,7 +205,7 @@ public:
   /// instructions, regardless of whether we are in 32-bit or 64-bit mode.
   bool has64BitSupport() const { return Has64BitSupport; }
   // useSoftFloat - Return true if soft-float option is turned on.
-  bool useSoftFloat() const { return UseSoftFloat; }
+  bool useSoftFloat() const { return !HasHardFloat; }
 
   /// use64BitRegs - Return true if in 64-bit mode or if we should use 64-bit
   /// registers in 32-bit mode when possible.  This can only true if

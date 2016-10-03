@@ -30,9 +30,7 @@ namespace {
 
     Mips16HardFloat(MipsTargetMachine &TM_) : ModulePass(ID), TM(TM_) {}
 
-    const char *getPassName() const override {
-      return "MIPS16 Hard Float Pass";
-    }
+    StringRef getPassName() const override { return "MIPS16 Hard Float Pass"; }
 
     bool runOnModule(Module &M) override;
 

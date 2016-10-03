@@ -49,7 +49,7 @@ public:
         MachineFunctionProperties::Property::NoVRegs);
   }
 
-  const char *getPassName() const override { return AARCH64_DEAD_REG_DEF_NAME; }
+  StringRef getPassName() const override { return AARCH64_DEAD_REG_DEF_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

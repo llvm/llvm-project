@@ -189,7 +189,7 @@ public:
   bool runOnModule(Module &M) override;
   bool runOnFunction(Function &F);
   static char ID; // Pass identification, replacement for typeid
-  const char *getPassName() const override { return "SanitizerCoverageModule"; }
+  StringRef getPassName() const override { return "SanitizerCoverageModule"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DominatorTreeWrapperPass>();

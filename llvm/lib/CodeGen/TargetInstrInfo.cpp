@@ -84,8 +84,8 @@ unsigned TargetInstrInfo::getInlineAsmLength(const char *Str,
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
                                 strlen(MAI.getSeparatorString())) == 0) {
       atInsnStart = true;
-    } else if (strncmp(Str, MAI.getCommentString(),
-                       strlen(MAI.getCommentString())) == 0) {
+    } else if (strncmp(Str, MAI.getCommentString().data(),
+                       MAI.getCommentString().size()) == 0) {
       // Stop counting as an instruction after a comment until the next
       // separator.
       atInsnStart = false;

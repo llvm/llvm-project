@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only %s
-// RUN: %clang_cc1 -fcoroutines -DCORO -fsyntax-only %s
+// RUN: %clang_cc1 -fcoroutines-ts -DCORO -fsyntax-only %s
 
 #ifdef CORO
 #define CORO_KEYWORD(NAME) _Static_assert(!__is_identifier(NAME), #NAME)

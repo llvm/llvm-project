@@ -63,7 +63,7 @@ private:
   unsigned SlotSize;
   int64_t StackProbeSize;
 
-  const char *getPassName() const override { return "X86 WinAlloca Expander"; }
+  StringRef getPassName() const override { return "X86 WinAlloca Expander"; }
   static char ID;
 };
 

@@ -37,7 +37,7 @@ public:
   void emit(raw_ostream &OS) const {
     const MemoryBuffer *CurMB =
         SrcMgr.getMemoryBuffer(SrcMgr.FindBufferContainingLoc(Loc));
-    const char *BufferName = CurMB->getBufferIdentifier();
+    auto BufferName = CurMB->getBufferIdentifier();
     std::pair<unsigned, unsigned> LineAndColumn = SrcMgr.getLineAndColumn(Loc);
     OS << *Id << "\t" << BufferName << "\t" << LineAndColumn.first << "\n";
   }

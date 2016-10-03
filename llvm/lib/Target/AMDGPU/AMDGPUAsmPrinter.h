@@ -118,7 +118,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override;
+  StringRef getPassName() const override;
 
   /// Implemented in AMDGPUMCInstLower.cpp
   void EmitInstruction(const MachineInstr *MI) override;

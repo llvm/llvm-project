@@ -138,7 +138,7 @@ public:
     initializeAMDGPUCFGStructurizerPass(*PassRegistry::getPassRegistry());
   }
 
-   const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AMDGPU Control Flow Graph structurizer Pass";
   }
 

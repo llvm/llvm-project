@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // type_traits
 
 // rvalue_ref
@@ -39,11 +41,9 @@ struct incomplete_type;
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     test_rvalue_ref<int&&>();
     test_rvalue_ref<const int&&>();
 
 //  LWG#2582
     static_assert(!std::is_rvalue_reference<incomplete_type>::value, "");
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

@@ -75,15 +75,15 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   /// Profile summary information.
   ProfileSummaryInfo *PSI;
 
-  // The called function.
+  /// The called function.
   Function &F;
 
-  // The candidate callsite being analyzed. Please do not use this to do
-  // analysis in the caller function; we want the inline cost query to be
-  // easily cacheable. Instead, use the cover function paramHasAttr.
+  /// The candidate callsite being analyzed. Please do not use this to do
+  /// analysis in the caller function; we want the inline cost query to be
+  /// easily cacheable. Instead, use the cover function paramHasAttr.
   CallSite CandidateCS;
 
-  // Tunable parameters that control the analysis.
+  /// Tunable parameters that control the analysis.
   const InlineParams &Params;
 
   int Threshold;
@@ -104,25 +104,25 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   int FiftyPercentVectorBonus, TenPercentVectorBonus;
   int VectorBonus;
 
-  // While we walk the potentially-inlined instructions, we build up and
-  // maintain a mapping of simplified values specific to this callsite. The
-  // idea is to propagate any special information we have about arguments to
-  // this call through the inlinable section of the function, and account for
-  // likely simplifications post-inlining. The most important aspect we track
-  // is CFG altering simplifications -- when we prove a basic block dead, that
-  // can cause dramatic shifts in the cost of inlining a function.
+  /// While we walk the potentially-inlined instructions, we build up and
+  /// maintain a mapping of simplified values specific to this callsite. The
+  /// idea is to propagate any special information we have about arguments to
+  /// this call through the inlinable section of the function, and account for
+  /// likely simplifications post-inlining. The most important aspect we track
+  /// is CFG altering simplifications -- when we prove a basic block dead, that
+  /// can cause dramatic shifts in the cost of inlining a function.
   DenseMap<Value *, Constant *> SimplifiedValues;
 
-  // Keep track of the values which map back (through function arguments) to
-  // allocas on the caller stack which could be simplified through SROA.
+  /// Keep track of the values which map back (through function arguments) to
+  /// allocas on the caller stack which could be simplified through SROA.
   DenseMap<Value *, Value *> SROAArgValues;
 
-  // The mapping of caller Alloca values to their accumulated cost savings. If
-  // we have to disable SROA for one of the allocas, this tells us how much
-  // cost must be added.
+  /// The mapping of caller Alloca values to their accumulated cost savings. If
+  /// we have to disable SROA for one of the allocas, this tells us how much
+  /// cost must be added.
   DenseMap<Value *, int> SROAArgCosts;
 
-  // Keep track of values which map to a pointer base and constant offset.
+  /// Keep track of values which map to a pointer base and constant offset.
   DenseMap<Value *, std::pair<Value *, APInt>> ConstantOffsetPtrs;
 
   // Custom simplification helper routines.

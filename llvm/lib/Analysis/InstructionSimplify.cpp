@@ -2157,7 +2157,7 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
     return nullptr;
 
   // Rule out tautological comparisons (eg., ult 0 or uge 0).
-  ConstantRange RHS_CR = ICmpInst::makeConstantRange(Pred, *C);
+  ConstantRange RHS_CR = ConstantRange::makeExactICmpRegion(Pred, *C);
   if (RHS_CR.isEmptySet())
     return ConstantInt::getFalse(GetCompareTy(RHS));
   if (RHS_CR.isFullSet())

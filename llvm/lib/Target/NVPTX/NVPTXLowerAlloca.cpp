@@ -47,7 +47,7 @@ class NVPTXLowerAlloca : public BasicBlockPass {
 public:
   static char ID; // Pass identification, replacement for typeid
   NVPTXLowerAlloca() : BasicBlockPass(ID) {}
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "convert address space of alloca'ed memory to local";
   }
 };

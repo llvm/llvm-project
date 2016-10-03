@@ -339,7 +339,7 @@ public:
   }
 
   // Override MachineFunctionPass.
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "SystemZ DAG->DAG Pattern Instruction Selection";
   }
 
