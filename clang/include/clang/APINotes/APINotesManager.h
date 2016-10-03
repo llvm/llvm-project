@@ -16,6 +16,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -54,6 +55,9 @@ class APINotesManager {
   /// Whether to implicitly search for API notes files based on the
   /// source file from which an entity was declared.
   bool ImplicitAPINotes;
+
+  /// The Swift version to use when interpreting versioned API notes.
+  VersionTuple SwiftVersion;
 
   /// API notes readers for the current module.
   ///
@@ -108,6 +112,11 @@ class APINotesManager {
 public:
   APINotesManager(SourceManager &sourceMgr, const LangOptions &langOpts);
   ~APINotesManager();
+
+  /// Set the Swift version to use when filtering API notes.
+  void setSwiftVersion(VersionTuple swiftVersion) {
+    SwiftVersion = swiftVersion;
+  }
 
   /// Load the API notes for the current module.
   ///
