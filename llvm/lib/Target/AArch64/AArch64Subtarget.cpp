@@ -36,7 +36,8 @@ UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
 AArch64Subtarget &
-AArch64Subtarget::initializeSubtargetDependencies(StringRef FS) {
+AArch64Subtarget::initializeSubtargetDependencies(StringRef FS,
+                                                  StringRef CPUString) {
   // Determine default and user-specified characteristics
 
   if (CPUString.empty())
@@ -90,8 +91,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
                                    const TargetMachine &TM, bool LittleEndian)
     : AArch64GenSubtargetInfo(TT, CPU, FS), ReserveX18(TT.isOSDarwin()),
-      IsLittle(LittleEndian), CPUString(CPU), TargetTriple(TT), FrameLowering(),
-      InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
+      IsLittle(LittleEndian), TargetTriple(TT), FrameLowering(),
+      InstrInfo(initializeSubtargetDependencies(FS, CPU)), TSInfo(),
       TLInfo(TM, *this), GISel() {}
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

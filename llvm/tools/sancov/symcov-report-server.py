@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 #===- symcov-report-server.py - Coverage Reports HTTP Serve --*- python -*--===#
 #
 #                     The LLVM Compiler Infrastructure

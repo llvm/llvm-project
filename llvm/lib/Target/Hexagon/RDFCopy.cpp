@@ -79,7 +79,7 @@ void CopyPropagation::recordCopy(NodeAddr<StmtNode*> SA, EqualityMap &EM) {
   Copies.push_back(SA.Id);
 
   for (auto I : EM) {
-    auto FS = DefM.find(I.second);
+    auto FS = DefM.find(I.second.Reg);
     if (FS == DefM.end() || FS->second.empty())
       continue; // Undefined source
     RDefMap[I.second][SA.Id] = FS->second.top()->Id;
@@ -106,7 +106,7 @@ void CopyPropagation::updateMap(NodeAddr<InstrNode*> IA) {
   for (auto &R : RDefMap) {
     if (!RRs.count(R.first))
       continue;
-    auto F = DefM.find(R.first);
+    auto F = DefM.find(R.first.Reg);
     if (F == DefM.end() || F->second.empty())
       continue;
     R.second[IA.Id] = F->second.top()->Id;

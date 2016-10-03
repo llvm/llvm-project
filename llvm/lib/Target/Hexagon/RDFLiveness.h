@@ -35,15 +35,24 @@ namespace rdf {
 
     Liveness(MachineRegisterInfo &mri, const DataFlowGraph &g)
       : DFG(g), TRI(g.getTRI()), MDT(g.getDT()), MDF(g.getDF()),
-        RAI(g.getRAI()), MRI(mri), Empty(), Trace(false) {}
+        MRI(mri), Empty(), NoRegs(g.getLMI(), g.getTRI()),
+        Trace(false) {}
 
     NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
-        bool FullChain = false, const RegisterSet &DefRRs = RegisterSet());
-    NodeList getAllReachingDefs(NodeAddr<RefNode*> RefA);
+        bool FullChain, const RegisterAggr &DefRRs);
+    NodeList getAllReachingDefs(NodeAddr<RefNode*> RefA) {
+      return getAllReachingDefs(RefA.Addr->getRegRef(), RefA, false, NoRegs);
+    }
+    NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA) {
+      return getAllReachingDefs(RefRR, RefA, false, NoRegs);
+    }
     NodeSet getAllReachingDefsRec(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
         NodeSet &Visited, const NodeSet &Defs);
     NodeSet getAllReachedUses(RegisterRef RefRR, NodeAddr<DefNode*> DefA,
-        const RegisterSet &DefRRs = RegisterSet());
+        const RegisterAggr &DefRRs);
+    NodeSet getAllReachedUses(RegisterRef RefRR, NodeAddr<DefNode*> DefA) {
+      return getAllReachedUses(RefRR, DefA, NoRegs);
+    }
 
     LiveMapType &getLiveMap() { return LiveMap; }
     const LiveMapType &getLiveMap() const { return LiveMap; }
@@ -65,10 +74,10 @@ namespace rdf {
     const TargetRegisterInfo &TRI;
     const MachineDominatorTree &MDT;
     const MachineDominanceFrontier &MDF;
-    const RegisterAliasInfo &RAI;
     MachineRegisterInfo &MRI;
     LiveMapType LiveMap;
     const RefMap Empty;
+    const RegisterAggr NoRegs;
     bool Trace;
 
     // Cache of mapping from node ids (for RefNodes) to the containing
@@ -99,7 +108,6 @@ namespace rdf {
     bool isRestrictedToRef(NodeAddr<InstrNode*> IA, NodeAddr<RefNode*> RA,
         RegisterRef RR) const;
     RegisterRef getRestrictedRegRef(NodeAddr<RefNode*> RA) const;
-    unsigned getPhysReg(RegisterRef RR) const;
     MachineBasicBlock *getBlockWithRef(NodeId RN) const;
     void traverse(MachineBasicBlock *B, RefMap &LiveIn);
     void emptify(RefMap &M);

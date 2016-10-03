@@ -97,9 +97,6 @@ protected:
 
   bool IsLittle;
 
-  /// CPUString - String name of used CPU.
-  std::string CPUString;
-
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -116,7 +113,8 @@ private:
   /// initializeSubtargetDependencies - Initializes using CPUString and the
   /// passed in feature string so that we can use initializer lists for
   /// subtarget initialization.
-  AArch64Subtarget &initializeSubtargetDependencies(StringRef FS);
+  AArch64Subtarget &initializeSubtargetDependencies(StringRef FS,
+                                                    StringRef CPUString);
 
   /// Initialize properties based on the selected processor family.
   void initializeProperties();

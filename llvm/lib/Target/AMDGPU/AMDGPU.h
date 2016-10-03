@@ -11,6 +11,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
+#include "llvm/Target/TargetMachine.h"
+
 namespace llvm {
 
 class AMDGPUTargetMachine;
@@ -82,7 +84,8 @@ void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
 
 Pass *createAMDGPUStructurizeCFGPass();
-FunctionPass *createAMDGPUISelDag(TargetMachine &tm);
+FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
+                                  CodeGenOpt::Level OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass();
 ModulePass *createAMDGPUOpenCLImageTypeLoweringPass();
 FunctionPass *createAMDGPUAnnotateUniformValues();
