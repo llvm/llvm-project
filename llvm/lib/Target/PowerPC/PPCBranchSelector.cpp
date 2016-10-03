@@ -19,8 +19,10 @@
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
+#include "PPCSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -92,8 +94,19 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
     return AlignAmt + OffsetToAlignment(Offset, AlignAmt);
   };
 
+  // We need to be careful about the offset of the first block in the function
+  // because it might not have the function's alignment. This happens because,
+  // under the ELFv2 ABI, for functions which require a TOC pointer, we add a
+  // two-instruction sequence to the start of the function.
+  // Note: This needs to be synchronized with the check in
+  // PPCLinuxAsmPrinter::EmitFunctionBodyStart.
+  unsigned InitialOffset = 0;
+  if (Fn.getSubtarget<PPCSubtarget>().isELFv2ABI() &&
+      !Fn.getRegInfo().use_empty(PPC::X2))
+    InitialOffset = 8;
+
   // Measure each MBB and compute a size for the entire function.
-  unsigned FuncSize = 0;
+  unsigned FuncSize = InitialOffset;
   for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
        ++MFI) {
     MachineBasicBlock *MBB = &*MFI;
@@ -240,7 +253,7 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
     if (MadeChange) {
       // If we're going to iterate again, make sure we've updated our
       // padding-based contributions to the block sizes.
-      unsigned Offset = 0;
+      unsigned Offset = InitialOffset;
       for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
            ++MFI) {
         MachineBasicBlock *MBB = &*MFI;

@@ -9,4 +9,4 @@ breakpoint set --file call-function.cpp --line 14
 expression -i false -- returnsFive()
 # CHECK: Execution was interrupted, reason: breakpoint
 # CHECK: stop reason = User Expression thread plan
-# CHECK: Completed expression: (Five) $0 = (number = 5 {{.*}}, name = "five")
+# CHECK: Completed expression: (Five) $0 = (number = 5{{.*}}, name = "five")

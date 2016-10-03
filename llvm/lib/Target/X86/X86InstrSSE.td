@@ -774,13 +774,12 @@ def : InstAlias<"vmovsd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
 multiclass sse12_mov_packed<bits<8> opc, RegisterClass RC,
                             X86MemOperand x86memop, PatFrag ld_frag,
                             string asm, Domain d,
-                            OpndItins itins,
-                            bit IsReMaterializable = 1> {
+                            OpndItins itins> {
 let hasSideEffects = 0 in
   def rr : PI<opc, MRMSrcReg, (outs RC:$dst), (ins RC:$src),
               !strconcat(asm, "\t{$src, $dst|$dst, $src}"), [], itins.rr, d>,
            Sched<[WriteFShuffle]>;
-let canFoldAsLoad = 1, isReMaterializable = IsReMaterializable in
+let canFoldAsLoad = 1, isReMaterializable = 1 in
   def rm : PI<opc, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
               !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
                    [(set RC:$dst, (ld_frag addr:$src))], itins.rm, d>,
@@ -798,7 +797,7 @@ defm VMOVUPS : sse12_mov_packed<0x10, VR128, f128mem, loadv4f32,
                               "movups", SSEPackedSingle, SSE_MOVU_ITINS>,
                               PS, VEX;
 defm VMOVUPD : sse12_mov_packed<0x10, VR128, f128mem, loadv2f64,
-                              "movupd", SSEPackedDouble, SSE_MOVU_ITINS, 0>,
+                              "movupd", SSEPackedDouble, SSE_MOVU_ITINS>,
                               PD, VEX;
 
 defm VMOVAPSY : sse12_mov_packed<0x28, VR256, f256mem, alignedloadv8f32,
@@ -811,7 +810,7 @@ defm VMOVUPSY : sse12_mov_packed<0x10, VR256, f256mem, loadv8f32,
                               "movups", SSEPackedSingle, SSE_MOVU_ITINS>,
                               PS, VEX, VEX_L;
 defm VMOVUPDY : sse12_mov_packed<0x10, VR256, f256mem, loadv4f64,
-                              "movupd", SSEPackedDouble, SSE_MOVU_ITINS, 0>,
+                              "movupd", SSEPackedDouble, SSE_MOVU_ITINS>,
                               PD, VEX, VEX_L;
 }
 
@@ -828,7 +827,7 @@ defm MOVAPD : sse12_mov_packed<0x28, VR128, f128mem, alignedloadv2f64,
                               "movapd", SSEPackedDouble, SSE_MOVA_ITINS>,
                               PD;
 defm MOVUPD : sse12_mov_packed<0x10, VR128, f128mem, loadv2f64,
-                              "movupd", SSEPackedDouble, SSE_MOVU_ITINS, 0>,
+                              "movupd", SSEPackedDouble, SSE_MOVU_ITINS>,
                               PD;
 }
 
