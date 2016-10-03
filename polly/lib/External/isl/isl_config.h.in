@@ -85,6 +85,9 @@
 /* Define if Driver constructor takes IsProduction argument */
 #undef HAVE_ISPRODUCTION
 
+/* Define if clang/Lex/PreprocessorOptions.h exists */
+#undef HAVE_LEX_PREPROCESSOROPTIONS_H
+
 /* Define to 1 if you have the `gmp' library (-lgmp). */
 #undef HAVE_LIBGMP
 
@@ -148,7 +151,7 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Define if HeaderSearchOptions::AddPath takes 4 arguments */
+/* Define if CompilerInvocation::setLangDefaults takes 5 arguments */
 #undef SETLANGDEFAULTS_TAKES_5_ARGUMENTS
 
 /* The size of `char', as computed by sizeof. */

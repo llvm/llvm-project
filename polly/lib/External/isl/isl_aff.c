@@ -4251,6 +4251,8 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_product(
 /* Construct a map mapping the domain of the piecewise multi-affine expression
  * to its range, with each dimension in the range equated to the
  * corresponding affine expression on its cell.
+ *
+ * If the domain of "pma" is rational, then so is the constructed "map".
  */
 __isl_give isl_map *isl_map_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma)
 {
@@ -4263,12 +4265,16 @@ __isl_give isl_map *isl_map_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma)
 	map = isl_map_empty(isl_pw_multi_aff_get_space(pma));
 
 	for (i = 0; i < pma->n; ++i) {
+		isl_bool rational;
 		isl_multi_aff *maff;
 		isl_basic_map *bmap;
 		isl_map *map_i;
 
+		rational = isl_set_is_rational(pma->p[i].set);
+		if (rational < 0)
+			map = isl_map_free(map);
 		maff = isl_multi_aff_copy(pma->p[i].maff);
-		bmap = isl_basic_map_from_multi_aff(maff);
+		bmap = isl_basic_map_from_multi_aff2(maff, rational);
 		map_i = isl_map_from_basic_map(bmap);
 		map_i = isl_map_intersect_domain(map_i,
 						isl_set_copy(pma->p[i].set));

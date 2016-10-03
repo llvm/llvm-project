@@ -541,22 +541,82 @@ inline _LIBCPP_INLINE_VISIBILITY long double hypot( long double x, long double y
 
 template <class _A1, class _A2, class _A3>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::__lazy_enable_if
+typename __lazy_enable_if
 <
-    std::is_arithmetic<_A1>::value &&
-    std::is_arithmetic<_A2>::value &&
-    std::is_arithmetic<_A3>::value,
-    std::__promote<_A1, _A2, _A3>
+    is_arithmetic<_A1>::value &&
+    is_arithmetic<_A2>::value &&
+    is_arithmetic<_A3>::value,
+    __promote<_A1, _A2, _A3>
 >::type
 hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT
 {
-    typedef typename std::__promote<_A1, _A2, _A3>::type __result_type;
-    static_assert((!(std::is_same<_A1, __result_type>::value &&
-                     std::is_same<_A2, __result_type>::value &&
-                     std::is_same<_A3, __result_type>::value)), "");
+    typedef typename __promote<_A1, _A2, _A3>::type __result_type;
+    static_assert((!(is_same<_A1, __result_type>::value &&
+                     is_same<_A2, __result_type>::value &&
+                     is_same<_A3, __result_type>::value)), "");
     return hypot((__result_type)__lcpp_x, (__result_type)__lcpp_y, (__result_type)__lcpp_z);
 }
 #endif
+
+template <class _A1>
+_LIBCPP_ALWAYS_INLINE
+typename enable_if<is_floating_point<_A1>::value, bool>::type
+__libcpp_isnan(_A1 __lcpp_x) _NOEXCEPT
+{
+#if __has_builtin(__builtin_isnan)
+    return __builtin_isnan(__lcpp_x);
+#else
+    return isnan(__lcpp_x);
+#endif
+}
+
+template <class _A1>
+_LIBCPP_ALWAYS_INLINE
+typename enable_if<!is_floating_point<_A1>::value, bool>::type
+__libcpp_isnan(_A1 __lcpp_x) _NOEXCEPT
+{
+    return isnan(__lcpp_x);
+}
+
+template <class _A1>
+_LIBCPP_ALWAYS_INLINE
+typename enable_if<is_floating_point<_A1>::value, bool>::type
+__libcpp_isinf(_A1 __lcpp_x) _NOEXCEPT
+{
+#if __has_builtin(__builtin_isinf)
+    return __builtin_isinf(__lcpp_x);
+#else
+    return isinf(__lcpp_x);
+#endif
+}
+
+template <class _A1>
+_LIBCPP_ALWAYS_INLINE
+typename enable_if<!is_floating_point<_A1>::value, bool>::type
+__libcpp_isinf(_A1 __lcpp_x) _NOEXCEPT
+{
+    return isinf(__lcpp_x);
+}
+
+template <class _A1>
+_LIBCPP_ALWAYS_INLINE
+typename enable_if<is_floating_point<_A1>::value, bool>::type
+__libcpp_isfinite(_A1 __lcpp_x) _NOEXCEPT
+{
+#if __has_builtin(__builtin_isfinite)
+    return __builtin_isfinite(__lcpp_x);
+#else
+    return isfinite(__lcpp_x);
+#endif
+}
+
+template <class _A1>
+_LIBCPP_ALWAYS_INLINE
+typename enable_if<!is_floating_point<_A1>::value, bool>::type
+__libcpp_isfinite(_A1 __lcpp_x) _NOEXCEPT
+{
+    return isfinite(__lcpp_x);
+}
 
 _LIBCPP_END_NAMESPACE_STD
 

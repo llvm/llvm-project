@@ -50,7 +50,7 @@ int main()
 {
     test_is_nothrow_assignable<int&, int&> ();
     test_is_nothrow_assignable<int&, int> ();
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     test_is_nothrow_assignable<int&, double> ();
 #endif
 

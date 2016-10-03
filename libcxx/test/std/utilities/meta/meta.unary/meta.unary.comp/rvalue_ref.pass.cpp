@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // type_traits
 
 // rvalue_ref
@@ -27,8 +29,6 @@ void test_rvalue_ref()
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     test_rvalue_ref<int&&>();
     test_rvalue_ref<const int&&>();
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }
