@@ -8683,6 +8683,17 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     V = DAG.getLoad(SVT, DL, Ld->getChain(), NewAddr,
                     DAG.getMachineFunction().getMachineMemOperand(
                         Ld->getMemOperand(), Offset, SVT.getStoreSize()));
+
+    // Make sure the newly-created LOAD is in the same position as Ld in
+    // terms of dependency. We create a TokenFactor for Ld and V,
+    // and update uses of Ld's output chain to use the TokenFactor.
+    if (Ld->hasAnyUseOfValue(1)) {
+      SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                     SDValue(Ld, 1), SDValue(V.getNode(), 1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), NewChain);
+      DAG.UpdateNodeOperands(NewChain.getNode(), SDValue(Ld, 1),
+                             SDValue(V.getNode(), 1));
+    }
   } else if (!BroadcastFromReg) {
     // We can't broadcast from a vector register.
     return SDValue();
@@ -25433,11 +25444,31 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   if (Depth < 2)
     return false;
 
-  if (is128BitLaneCrossingShuffleMask(MaskVT, Mask))
-    return false;
-
   bool MaskContainsZeros =
       any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+
+  if (is128BitLaneCrossingShuffleMask(MaskVT, Mask)) {
+    // If we have a single input lane-crossing shuffle with 32-bit scalars then
+    // lower to VPERMD/VPERMPS.
+    if (UnaryShuffle && (Depth >= 3 || HasVariableMask) && !MaskContainsZeros &&
+        Subtarget.hasAVX2() && (MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) {
+      SDValue VPermIdx[8];
+      for (int i = 0; i < 8; ++i)
+        VPermIdx[i] = Mask[i] < 0 ? DAG.getUNDEF(MVT::i32)
+                                  : DAG.getConstant(Mask[i], DL, MVT::i32);
+
+      SDValue VPermMask = DAG.getBuildVector(MVT::v8i32, DL, VPermIdx);
+      DCI.AddToWorklist(VPermMask.getNode());
+      Res = DAG.getBitcast(MaskVT, V1);
+      DCI.AddToWorklist(Res.getNode());
+      Res = DAG.getNode(X86ISD::VPERMV, DL, MaskVT, VPermMask, Res);
+      DCI.AddToWorklist(Res.getNode());
+      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                    /*AddTo*/ true);
+      return true;
+    }
+    return false;
+  }
 
   // If we have a single input shuffle with different shuffle patterns in the
   // the 128-bit lanes use the variable mask to VPERMILPS.

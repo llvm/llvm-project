@@ -102,9 +102,18 @@ TEST_F(ConstantRangeTest, Equality) {
 TEST_F(ConstantRangeTest, SingleElement) {
   EXPECT_EQ(Full.getSingleElement(), static_cast<APInt *>(nullptr));
   EXPECT_EQ(Empty.getSingleElement(), static_cast<APInt *>(nullptr));
+  EXPECT_EQ(Full.getSingleMissingElement(), static_cast<APInt *>(nullptr));
+  EXPECT_EQ(Empty.getSingleMissingElement(), static_cast<APInt *>(nullptr));
+
   EXPECT_EQ(*One.getSingleElement(), APInt(16, 0xa));
   EXPECT_EQ(Some.getSingleElement(), static_cast<APInt *>(nullptr));
   EXPECT_EQ(Wrap.getSingleElement(), static_cast<APInt *>(nullptr));
+
+  EXPECT_EQ(One.getSingleMissingElement(), static_cast<APInt *>(nullptr));
+  EXPECT_EQ(Some.getSingleMissingElement(), static_cast<APInt *>(nullptr));
+
+  ConstantRange OneInverse = One.inverse();
+  EXPECT_EQ(*OneInverse.getSingleMissingElement(), *One.getSingleElement());
 
   EXPECT_FALSE(Full.isSingleElement());
   EXPECT_FALSE(Empty.isSingleElement());
@@ -760,6 +769,42 @@ TEST(ConstantRange, GetEquivalentICmp) {
   EXPECT_FALSE(ConstantRange(APInt::getMinValue(32) - APInt(32, 100),
                              APInt::getMinValue(32) + APInt(32, 100))
                    .getEquivalentICmp(Pred, RHS));
+
+  EXPECT_TRUE(ConstantRange(APInt(32, 100)).getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_EQ);
+  EXPECT_EQ(RHS, APInt(32, 100));
+
+  EXPECT_TRUE(
+      ConstantRange(APInt(32, 100)).inverse().getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_NE);
+  EXPECT_EQ(RHS, APInt(32, 100));
+
+  EXPECT_TRUE(
+      ConstantRange(APInt(512, 100)).inverse().getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_NE);
+  EXPECT_EQ(RHS, APInt(512, 100));
+
+  // NB!  It would be correct for the following four calls to getEquivalentICmp
+  // to return ordered predicates like CmpInst::ICMP_ULT or CmpInst::ICMP_UGT.
+  // However, that's not the case today.
+
+  EXPECT_TRUE(ConstantRange(APInt(32, 0)).getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_EQ);
+  EXPECT_EQ(RHS, APInt(32, 0));
+
+  EXPECT_TRUE(
+      ConstantRange(APInt(32, 0)).inverse().getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_NE);
+  EXPECT_EQ(RHS, APInt(32, 0));
+
+  EXPECT_TRUE(ConstantRange(APInt(32, -1)).getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_EQ);
+  EXPECT_EQ(RHS, APInt(32, -1));
+
+  EXPECT_TRUE(
+      ConstantRange(APInt(32, -1)).inverse().getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_NE);
+  EXPECT_EQ(RHS, APInt(32, -1));
 }
 
 }  // anonymous namespace
