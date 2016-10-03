@@ -32,7 +32,7 @@ class AsmLexer : public MCAsmLexer {
   bool IsAtStartOfLine;
   bool IsAtStartOfStatement;
   bool IsParsingMSInlineAsm;
-
+  bool IsPeeking;
   void operator=(const AsmLexer&) = delete;
   AsmLexer(const AsmLexer&) = delete;
 
