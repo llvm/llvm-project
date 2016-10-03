@@ -1318,7 +1318,7 @@ static void sortTopLevelItems(TopLevelItems &items) {
 bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
                                   llvm::raw_ostream &os) {
   // Try to read the file.
-  auto reader = APINotesReader::get(std::move(input));
+  auto reader = APINotesReader::get(std::move(input), VersionTuple());
   if (!reader) {
     llvm::errs() << "not a well-formed API notes binary file\n";
     return true;

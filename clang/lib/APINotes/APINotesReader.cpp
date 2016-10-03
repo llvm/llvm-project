@@ -486,6 +486,9 @@ public:
   /// Whether we own the input buffer.
   bool OwnsInputBuffer;
 
+  /// The Swift version to use for filtering.
+  VersionTuple SwiftVersion;
+
   /// The reader attached to \c InputBuffer.
   llvm::BitstreamReader InputReader;
 
@@ -1252,6 +1255,7 @@ bool APINotesReader::Implementation::readTypedefBlock(
 
 APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer, 
                                bool ownsInputBuffer,
+                               VersionTuple swiftVersion,
                                bool &failed) 
   : Impl(*new Implementation)
 {
@@ -1260,6 +1264,7 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
   // Initialize the input buffer.
   Impl.InputBuffer = inputBuffer;
   Impl.OwnsInputBuffer = ownsInputBuffer;
+  Impl.SwiftVersion = swiftVersion;
   Impl.InputReader.init(
     reinterpret_cast<const uint8_t *>(Impl.InputBuffer->getBufferStart()), 
     reinterpret_cast<const uint8_t *>(Impl.InputBuffer->getBufferEnd()));
@@ -1399,11 +1404,12 @@ APINotesReader::~APINotesReader() {
 }
 
 std::unique_ptr<APINotesReader> 
-APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer) {
+APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer,
+                    VersionTuple swiftVersion) {
   bool failed = false;
   std::unique_ptr<APINotesReader> 
     reader(new APINotesReader(inputBuffer.release(), /*ownsInputBuffer=*/true,
-                              failed));
+                              swiftVersion, failed));
   if (failed)
     return nullptr;
 
@@ -1411,11 +1417,12 @@ APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer) {
 }
 
 std::unique_ptr<APINotesReader> 
-APINotesReader::getUnmanaged(llvm::MemoryBuffer *inputBuffer) {
+APINotesReader::getUnmanaged(llvm::MemoryBuffer *inputBuffer,
+                             VersionTuple swiftVersion) {
   bool failed = false;
   std::unique_ptr<APINotesReader> 
     reader(new APINotesReader(inputBuffer, /*ownsInputBuffer=*/false,
-                              failed));
+                              swiftVersion, failed));
   if (failed)
     return nullptr;
 
@@ -1435,15 +1442,31 @@ ModuleOptions APINotesReader::getModuleOptions() const {
   return Impl.ModuleOpts;
 }
 
-namespace {
-  template<typename T>
-  Optional<T> getUnversioned(
-                const SmallVectorImpl<std::pair<VersionTuple, T>>& array) {
-    for (const auto &versioned : array) {
-      if (!versioned.first) return versioned.second;
+template<typename T>
+APINotesReader::VersionedInfo<T>::VersionedInfo(
+    VersionTuple version,
+    SmallVector<std::pair<VersionTuple, T>, 1> results)
+  : Results(std::move(results)) {
+
+  // Look for an exact version match.
+  Optional<unsigned> unversioned;
+  Selected = Results.size();
+  for (unsigned i = 0, n = Results.size(); i != n; ++i) {
+    if (Results[i].first == version) {
+      Selected = i;
+      break;
     }
-    return None;
+
+    if (!Results[i].first) {
+      assert(!unversioned && "Two unversioned entries?");
+      unversioned = i;
+    }
   }
+
+  // If we didn't find a match but we have an unversioned result, use the
+  // unversioned result.
+  if (Selected == Results.size() && unversioned)
+    Selected = *unversioned;
 }
 
 auto APINotesReader::lookupObjCClassID(StringRef name) -> Optional<ContextID> {
@@ -1462,7 +1485,7 @@ auto APINotesReader::lookupObjCClassID(StringRef name) -> Optional<ContextID> {
 }
 
 auto APINotesReader::lookupObjCClassInfo(StringRef name)
-       -> Optional<ObjCContextInfo> {
+       -> VersionedInfo<ObjCContextInfo> {
   if (!Impl.ObjCContextInfoTable)
     return None;
 
@@ -1474,7 +1497,7 @@ auto APINotesReader::lookupObjCClassInfo(StringRef name)
   if (knownInfo == Impl.ObjCContextInfoTable->end())
     return None;
 
-  return getUnversioned(*knownInfo);
+  return { Impl.SwiftVersion, *knownInfo };
 }
 
 auto APINotesReader::lookupObjCProtocolID(StringRef name)
@@ -1494,7 +1517,7 @@ auto APINotesReader::lookupObjCProtocolID(StringRef name)
 }
 
 auto APINotesReader::lookupObjCProtocolInfo(StringRef name)
-       -> Optional<ObjCContextInfo> {
+       -> VersionedInfo<ObjCContextInfo> {
    if (!Impl.ObjCContextInfoTable)
      return None;
 
@@ -1506,13 +1529,14 @@ auto APINotesReader::lookupObjCProtocolInfo(StringRef name)
    if (knownInfo == Impl.ObjCContextInfoTable->end())
      return None;
    
-   return getUnversioned(*knownInfo);
+   return { Impl.SwiftVersion, *knownInfo };
 }
 
-Optional<ObjCPropertyInfo> APINotesReader::lookupObjCProperty(
-                             ContextID contextID,
-                             StringRef name,
-                             bool isInstance) {
+
+auto APINotesReader::lookupObjCProperty(ContextID contextID,
+                                        StringRef name,
+                                        bool isInstance)
+    -> VersionedInfo<ObjCPropertyInfo> {
   if (!Impl.ObjCPropertyTable)
     return None;
 
@@ -1526,13 +1550,14 @@ Optional<ObjCPropertyInfo> APINotesReader::lookupObjCProperty(
   if (known == Impl.ObjCPropertyTable->end())
     return None;
 
-  return getUnversioned(*known);
+  return { Impl.SwiftVersion, *known };
 }
 
-Optional<ObjCMethodInfo> APINotesReader::lookupObjCMethod(
-                           ContextID contextID,
-                           ObjCSelectorRef selector,
-                           bool isInstanceMethod) {
+auto APINotesReader::lookupObjCMethod(
+                                      ContextID contextID,
+                                      ObjCSelectorRef selector,
+                                      bool isInstanceMethod)
+    -> VersionedInfo<ObjCMethodInfo> {
   if (!Impl.ObjCMethodTable)
     return None;
 
@@ -1546,11 +1571,12 @@ Optional<ObjCMethodInfo> APINotesReader::lookupObjCMethod(
   if (known == Impl.ObjCMethodTable->end())
     return None;
 
-  return getUnversioned(*known);
+  return { Impl.SwiftVersion, *known };
 }
 
-Optional<GlobalVariableInfo> APINotesReader::lookupGlobalVariable(
-                               StringRef name) {
+auto APINotesReader::lookupGlobalVariable(
+                                          StringRef name)
+    -> VersionedInfo<GlobalVariableInfo> {
   if (!Impl.GlobalVariableTable)
     return None;
 
@@ -1562,11 +1588,11 @@ Optional<GlobalVariableInfo> APINotesReader::lookupGlobalVariable(
   if (known == Impl.GlobalVariableTable->end())
     return None;
 
-  return getUnversioned(*known);
+  return { Impl.SwiftVersion, *known };
 }
 
-Optional<GlobalFunctionInfo> APINotesReader::lookupGlobalFunction(
-                               StringRef name) {
+auto APINotesReader::lookupGlobalFunction(StringRef name)
+    -> VersionedInfo<GlobalFunctionInfo> {
   if (!Impl.GlobalFunctionTable)
     return None;
 
@@ -1578,10 +1604,11 @@ Optional<GlobalFunctionInfo> APINotesReader::lookupGlobalFunction(
   if (known == Impl.GlobalFunctionTable->end())
     return None;
 
-  return getUnversioned(*known);
+  return { Impl.SwiftVersion, *known };
 }
 
-Optional<EnumConstantInfo> APINotesReader::lookupEnumConstant(StringRef name) {
+auto APINotesReader::lookupEnumConstant(StringRef name)
+    -> VersionedInfo<EnumConstantInfo> {
   if (!Impl.EnumConstantTable)
     return None;
 
@@ -1593,10 +1620,10 @@ Optional<EnumConstantInfo> APINotesReader::lookupEnumConstant(StringRef name) {
   if (known == Impl.EnumConstantTable->end())
     return None;
 
-  return getUnversioned(*known);
+  return { Impl.SwiftVersion, *known };
 }
 
-Optional<TagInfo> APINotesReader::lookupTag(StringRef name) {
+auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
   if (!Impl.TagTable)
     return None;
 
@@ -1608,10 +1635,11 @@ Optional<TagInfo> APINotesReader::lookupTag(StringRef name) {
   if (known == Impl.TagTable->end())
     return None;
 
-  return getUnversioned(*known);
+  return { Impl.SwiftVersion, *known };
 }
 
-Optional<TypedefInfo> APINotesReader::lookupTypedef(StringRef name) {
+auto APINotesReader::lookupTypedef(StringRef name)
+    -> VersionedInfo<TypedefInfo> {
   if (!Impl.TypedefTable)
     return None;
 
@@ -1623,7 +1651,7 @@ Optional<TypedefInfo> APINotesReader::lookupTypedef(StringRef name) {
   if (known == Impl.TypedefTable->end())
     return None;
 
-  return getUnversioned(*known);
+  return { Impl.SwiftVersion, *known };
 }
 
 APINotesReader::Visitor::~Visitor() { }
