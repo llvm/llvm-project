@@ -187,6 +187,8 @@ extern int OCKL_MANGLE_T(wfscan_xor,i32)(int x, bool inclusive);
 extern long OCKL_MANGLE_T(wfscan_xor,i64)(long x, bool inclusive);
 extern uint OCKL_MANGLE_T(wfscan_xor,u32)(uint x, bool inclusive);
 extern ulong OCKL_MANGLE_T(wfscan_xor,u64)(ulong x, bool inclusive);
+extern uint OCKL_MANGLE_U32(wfbcast)(uint x, uint i);
+extern ulong OCKL_MANGLE_U64(wfbcast)(ulong x, uint i);
 
 extern __attribute__((const)) bool OCKL_MANGLE_I32(wfany)(int e);
 extern __attribute__((const)) bool OCKL_MANGLE_I32(wfall)(int e);
