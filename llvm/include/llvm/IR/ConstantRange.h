@@ -166,6 +166,14 @@ public:
     return nullptr;
   }
 
+  /// If this set contains all but a single element, return it, otherwise return
+  /// null.
+  const APInt *getSingleMissingElement() const {
+    if (Lower == Upper + 1)
+      return &Upper;
+    return nullptr;
+  }
+
   /// Return true if this set contains exactly one member.
   ///
   bool isSingleElement() const { return getSingleElement() != nullptr; }

@@ -406,7 +406,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                             data = f.read()
                     except:
                         data = None
-                    if data != None:
+                    if data is not None:
                         output_files.append((name, path, data))
             
         results.append(ShellCommandResult(
@@ -786,7 +786,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     if exitCode == 0:
         status = Test.PASS
     else:
-        if timeoutInfo == None:
+        if timeoutInfo is None:
             status = Test.FAIL
         else:
             status = Test.TIMEOUT
@@ -795,7 +795,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (
         '\n'.join(script), exitCode)
 
-    if timeoutInfo != None:
+    if timeoutInfo is not None:
         output += """Timeout: %s\n""" % (timeoutInfo,)
     output += "\n"
 
