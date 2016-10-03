@@ -396,14 +396,20 @@ bool APINotesManager::loadCurrentModuleAPINotes(
     };
 
     if (module->IsFramework) {
-      // For frameworks, we search in the "APINotes" subdirectory.
+      // For frameworks, we search in the "Headers" or "PrivateHeaders"
+      // subdirectory.
       llvm::SmallString<128> path;
       path += module->Directory->getName();
-      llvm::sys::path::append(path, "APINotes");
-      if (auto apinotesDir = fileMgr.getDirectory(path)) {
+      unsigned pathLen = path.size();
+
+      llvm::sys::path::append(path, "Headers");
+      if (auto apinotesDir = fileMgr.getDirectory(path))
         tryAPINotes(apinotesDir, /*wantPublic=*/true);
-        tryAPINotes(apinotesDir, /*wantPublic=*/false);
-      }
+
+      path.resize(pathLen);
+      llvm::sys::path::append(path, "PrivateHeaders");
+      if (auto privateAPINotesDir = fileMgr.getDirectory(path))
+        tryAPINotes(privateAPINotesDir, /*wantPublic=*/false);
     } else {
       tryAPINotes(module->Directory, /*wantPublic=*/true);
       tryAPINotes(module->Directory, /*wantPublic=*/false);
