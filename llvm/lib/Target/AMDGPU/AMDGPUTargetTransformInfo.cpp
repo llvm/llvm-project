@@ -80,7 +80,7 @@ unsigned AMDGPUTTIImpl::getRegisterBitWidth(bool Vector) {
   return Vector ? 0 : 32;
 }
 
-unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) {
+unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   switch (AddrSpace) {
   case AMDGPUAS::GLOBAL_ADDRESS:
   case AMDGPUAS::CONSTANT_ADDRESS:
