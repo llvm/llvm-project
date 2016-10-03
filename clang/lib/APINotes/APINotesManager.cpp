@@ -153,7 +153,7 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     if (!buffer) return nullptr;
 
     // Load the binary form.
-    return APINotesReader::getUnmanaged(buffer);
+    return APINotesReader::getUnmanaged(buffer, SwiftVersion);
   }
 
   // If we haven't pruned the API notes cache yet during this execution, do
@@ -184,7 +184,8 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     // Load the file contents.
     if (auto buffer = fileMgr.getBufferForFile(compiledFile)) {
       // Load the file.
-      if (auto reader = APINotesReader::get(std::move(buffer.get()))) {
+      if (auto reader = APINotesReader::get(std::move(buffer.get()),
+                                            SwiftVersion)) {
         bool outOfDate = false;
         if (auto sizeAndModTime = reader->getSourceFileSizeAndModTime()) {
           if (sizeAndModTime->first != apiNotesFile->getSize() ||
@@ -272,7 +273,7 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   }
 
   // Load the binary form we just compiled.
-  auto reader = APINotesReader::get(std::move(compiledBuffer));
+  auto reader = APINotesReader::get(std::move(compiledBuffer), SwiftVersion);
   assert(reader && "Could not load the API notes we just generated?");
   return reader;
 }
@@ -395,14 +396,20 @@ bool APINotesManager::loadCurrentModuleAPINotes(
     };
 
     if (module->IsFramework) {
-      // For frameworks, we search in the "APINotes" subdirectory.
+      // For frameworks, we search in the "Headers" or "PrivateHeaders"
+      // subdirectory.
       llvm::SmallString<128> path;
       path += module->Directory->getName();
-      llvm::sys::path::append(path, "APINotes");
-      if (auto apinotesDir = fileMgr.getDirectory(path)) {
+      unsigned pathLen = path.size();
+
+      llvm::sys::path::append(path, "Headers");
+      if (auto apinotesDir = fileMgr.getDirectory(path))
         tryAPINotes(apinotesDir, /*wantPublic=*/true);
-        tryAPINotes(apinotesDir, /*wantPublic=*/false);
-      }
+
+      path.resize(pathLen);
+      llvm::sys::path::append(path, "PrivateHeaders");
+      if (auto privateAPINotesDir = fileMgr.getDirectory(path))
+        tryAPINotes(privateAPINotesDir, /*wantPublic=*/false);
     } else {
       tryAPINotes(module->Directory, /*wantPublic=*/true);
       tryAPINotes(module->Directory, /*wantPublic=*/false);

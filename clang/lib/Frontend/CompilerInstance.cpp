@@ -540,6 +540,9 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
 
+  // Set up API notes.
+  TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
+
   // If we're building a module and are supposed to load API notes,
   // notify the API notes manager.
   if (auto currentModule = getPreprocessor().getCurrentModule()) {
