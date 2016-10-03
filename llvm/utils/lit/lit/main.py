@@ -7,7 +7,12 @@ See lit.pod for more information.
 """
 
 from __future__ import absolute_import
-import math, os, platform, random, re, sys, time
+import os
+import platform
+import random
+import re
+import sys
+import time
 import tempfile
 import shutil
 
@@ -309,7 +314,7 @@ def main_with_tmp(builtinParameters):
         userParams[name] = val
 
     # Decide what the requested maximum indvidual test time should be
-    if opts.maxIndividualTestTime != None:
+    if opts.maxIndividualTestTime is not None:
         maxIndividualTestTime = opts.maxIndividualTestTime
     else:
         # Default is zero
@@ -340,7 +345,7 @@ def main_with_tmp(builtinParameters):
     # After test discovery the configuration might have changed
     # the maxIndividualTestTime. If we explicitly set this on the
     # command line then override what was set in the test configuration
-    if opts.maxIndividualTestTime != None:
+    if opts.maxIndividualTestTime is not None:
         if opts.maxIndividualTestTime != litConfig.maxIndividualTestTime:
             litConfig.note(('The test suite configuration requested an individual'
                 ' test timeout of {0} seconds but a timeout of {1} seconds was'

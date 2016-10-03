@@ -80,6 +80,9 @@
 
 @interface MyPropertyClass1 : NSObject
 @property (copy) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation MyPropertyClass1
@@ -93,6 +96,9 @@
 
 @interface MyPropertyClass2 : NSObject
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation MyPropertyClass2
@@ -108,10 +114,16 @@
   NSObject *_ivar;
 }
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation MyPropertyClass3
 @synthesize ivar = _ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is synthesized here}}
+#endif
 - (void)dealloc
 {
 #if NON_ARC
@@ -125,6 +137,9 @@
   void (^_blockPropertyIvar)(void);
 }
 @property (copy) void (^blockProperty)(void);
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @property (copy) void (^blockProperty2)(void);
 @property (copy) void (^blockProperty3)(void);
 
@@ -132,6 +147,9 @@
 
 @implementation MyPropertyClass4
 @synthesize blockProperty = _blockPropertyIvar;
+#if NON_ARC
+// expected-note@-2 {{Property is synthesized here}}
+#endif
 - (void)dealloc
 {
 #if NON_ARC
@@ -163,10 +181,16 @@
   NSObject *_ivar;
 }
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation MyPropertyClassWithReturnInDealloc
 @synthesize ivar = _ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is synthesized here}}
+#endif
 - (void)dealloc
 {
   return;
@@ -182,12 +206,18 @@
   MyPropertyClassWithReleaseInOtherInstance *_other;
 }
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 
 -(void)releaseIvars;
 @end
 
 @implementation MyPropertyClassWithReleaseInOtherInstance
 @synthesize ivar = _ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is synthesized here}}
+#endif
 
 -(void)releaseIvars; {
 #if NON_ARC
@@ -208,10 +238,16 @@
   NSObject *_ivar;
 }
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation MyPropertyClassWithNeitherReturnNorSuperDealloc
 @synthesize ivar = _ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is synthesized here}}
+#endif
 - (void)dealloc
 {
 }
@@ -246,6 +282,9 @@
   BOOL _ivar1;
 }
 @property (retain) NSObject *ivar2;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation ClassWithControlFlowInRelease
@@ -287,6 +326,9 @@
 
 @interface ClassWithNildOutIvar : NSObject
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation ClassWithNildOutIvar
@@ -305,6 +347,9 @@
 
 @interface ClassWithUpdatedIvar : NSObject
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation ClassWithUpdatedIvar
@@ -349,6 +394,9 @@
 @property (retain) NSObject *propNilledOutInFunction;
 
 @property (retain) NSObject *ivarNeverReleased;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 - (void)invalidateInMethod;
 @end
 
@@ -425,6 +473,9 @@ void NilOutPropertyHelper(ClassWithDeallocHelpers *o) {
 
 @interface ClassWhereSelfEscapesViaSynthesizedPropertyAccess : NSObject
 @property (retain) NSObject *ivar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @property (retain) NSObject *otherIvar;
 @end
 
@@ -442,6 +493,9 @@ void NilOutPropertyHelper(ClassWithDeallocHelpers *o) {
 
 @interface ClassWhereSelfEscapesViaCallToSystem : NSObject
 @property (retain) NSObject *ivar1;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @property (retain) NSObject *ivar2;
 @property (retain) NSObject *ivar3;
 @property (retain) NSObject *ivar4;
@@ -536,6 +590,9 @@ void ReleaseMe(id arg);
 
 @interface SuperClassOfClassWithInlinedSuperDealloc : NSObject
 @property (retain) NSObject *propInSuper;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation SuperClassOfClassWithInlinedSuperDealloc
@@ -548,6 +605,9 @@ void ReleaseMe(id arg);
 
 @interface ClassWithInlinedSuperDealloc : SuperClassOfClassWithInlinedSuperDealloc
 @property (retain) NSObject *propInSub;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation ClassWithInlinedSuperDealloc
@@ -605,6 +665,9 @@ void ReleaseMe(id arg);
 
 @interface SuperClassOfClassThatEscapesBeforeInliningSuper : NSObject
 @property (retain) NSObject *propInSuper;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation SuperClassOfClassThatEscapesBeforeInliningSuper
@@ -794,6 +857,9 @@ __attribute__((objc_root_class))
 
 @property(retain) NSObject *inputIvar;
 @property(retain) NSObject *nonInputIvar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @property(retain) NSObject *inputAutoSynthesizedIvar;
 @property(retain) NSObject *inputExplicitlySynthesizedToNonPrefixedIvar;
 @property(retain) NSObject *nonPrefixedPropertyBackedByExplicitlySynthesizedPrefixedIvar;
@@ -803,6 +869,9 @@ __attribute__((objc_root_class))
 @implementation ImmediateSubCIFilter
 @synthesize inputIvar = inputIvar;
 @synthesize nonInputIvar = nonInputIvar;
+#if NON_ARC
+// expected-note@-2 {{Property is synthesized here}}
+#endif
 @synthesize inputExplicitlySynthesizedToNonPrefixedIvar = notPrefixedButBackingPrefixedProperty;
 @synthesize nonPrefixedPropertyBackedByExplicitlySynthesizedPrefixedIvar = inputPrefixedButBackingNonPrefixedProperty;
 
@@ -841,6 +910,9 @@ __attribute__((objc_root_class))
 }
 
 @property(retain) NSObject *inputIvar;
+#if NON_ARC
+// expected-note@-2 {{Property is declared here}}
+#endif
 @end
 
 @implementation OverreleasingCIFilter

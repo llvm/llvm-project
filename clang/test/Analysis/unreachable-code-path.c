@@ -173,3 +173,13 @@ void varDecl(int X) {
   }
 }
 
+// Ensure that ExplodedGraph and unoptimized CFG match.
+void test12(int x) {
+  switch (x) {
+  case 1:
+    break; // not unreachable
+  case 2:
+    do { } while (0);
+    break;
+  }
+}

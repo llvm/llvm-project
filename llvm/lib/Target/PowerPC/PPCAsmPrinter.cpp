@@ -1199,6 +1199,9 @@ void PPCLinuxAsmPrinter::EmitFunctionBodyStart() {
   if (Subtarget->isELFv2ABI()
       // Only do all that if the function uses r2 in the first place.
       && !MF->getRegInfo().use_empty(PPC::X2)) {
+    // Note: The logic here must be synchronized with the code in the
+    // branch-selection pass which sets the offset of the first block in the
+    // function. This matters because it affects the alignment.
     const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
 
     MCSymbol *GlobalEntryLabel = PPCFI->getGlobalEPSymbol();

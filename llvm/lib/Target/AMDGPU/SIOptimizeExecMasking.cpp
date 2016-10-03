@@ -266,17 +266,14 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     MachineOperand &Src0 = SaveExecInst->getOperand(1);
     MachineOperand &Src1 = SaveExecInst->getOperand(2);
 
-    MachineOperand *CopyOp = nullptr;
     MachineOperand *OtherOp = nullptr;
 
     if (Src0.isReg() && Src0.getReg() == CopyFromExec) {
-      CopyOp = &Src0;
       OtherOp = &Src1;
     } else if (Src1.isReg() && Src1.getReg() == CopyFromExec) {
       if (!SaveExecInst->isCommutable())
         break;
 
-      CopyOp = &Src1;
       OtherOp = &Src0;
     } else
       llvm_unreachable("unexpected");
