@@ -24,11 +24,17 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/DataTypes.h"
 #include <tuple>
 #include <vector>
 using namespace clang;
 using namespace api_notes;
 using namespace llvm::support;
+
+namespace {
+  template<typename T> using VersionedSmallVector =
+    SmallVector<std::pair<VersionTuple, T>, 1>;
+}
 
 class APINotesWriter::Implementation {
   /// Mapping from strings to identifier IDs.
@@ -56,7 +62,8 @@ public:
   /// for a class (0) or protocol (1) and provides both the context ID and
   /// information describing the context within that module.
   llvm::DenseMap<std::pair<unsigned, char>,
-                 std::pair<unsigned, ObjCContextInfo>> ObjCContexts;
+                 std::pair<unsigned, VersionedSmallVector<ObjCContextInfo>>>
+    ObjCContexts;
 
   /// Mapping from context IDs to the identifier ID holding the name.
   llvm::DenseMap<unsigned, unsigned> ObjCContextNames;
@@ -65,40 +72,56 @@ public:
   ///
   /// Indexed by the context ID, property name, and whether this is an
   /// instance property.
-  llvm::DenseMap<std::tuple<unsigned, unsigned, char>, ObjCPropertyInfo> 
+  llvm::DenseMap<std::tuple<unsigned, unsigned, char>,
+                 llvm::SmallVector<std::pair<VersionTuple, ObjCPropertyInfo>,
+                 1>>
     ObjCProperties;
 
   /// Information about Objective-C methods.
   ///
   /// Indexed by the context ID, selector ID, and Boolean (stored as a
   /// char) indicating whether this is a class or instance method.
-  llvm::DenseMap<std::tuple<unsigned, unsigned, char>, ObjCMethodInfo> 
+  llvm::DenseMap<std::tuple<unsigned, unsigned, char>,
+                 llvm::SmallVector<std::pair<VersionTuple, ObjCMethodInfo>, 1>>
     ObjCMethods;
 
   /// Information about global variables.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned, GlobalVariableInfo> GlobalVariables;
+  llvm::DenseMap<unsigned,
+                 llvm::SmallVector<std::pair<VersionTuple, GlobalVariableInfo>,
+                                   1>>
+    GlobalVariables;
 
   /// Information about global functions.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned, GlobalFunctionInfo> GlobalFunctions;
+  llvm::DenseMap<unsigned,
+                 llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>,
+                                   1>>
+    GlobalFunctions;
 
   /// Information about enumerators.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned, EnumConstantInfo> EnumConstants;
+  llvm::DenseMap<unsigned,
+                 llvm::SmallVector<std::pair<VersionTuple, EnumConstantInfo>,
+                                   1>>
+    EnumConstants;
 
   /// Information about tags.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned, TagInfo> Tags;
+  llvm::DenseMap<unsigned,
+                 llvm::SmallVector<std::pair<VersionTuple, TagInfo>, 1>>
+    Tags;
 
   /// Information about typedefs.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned, TypedefInfo> Typedefs;
+  llvm::DenseMap<unsigned,
+                 llvm::SmallVector<std::pair<VersionTuple, TypedefInfo>, 1>>
+    Typedefs;
 
   /// Retrieve the ID for the given identifier.
   IdentifierID getIdentifier(StringRef identifier) {
@@ -194,7 +217,7 @@ void APINotesWriter::Implementation::writeBlockInfoBlock(
   BLOCK_RECORD(identifier_block, IDENTIFIER_DATA);
 
   BLOCK(OBJC_CONTEXT_BLOCK);
-  BLOCK_RECORD(objc_context_block, OBJC_CONTEXT_DATA);
+  BLOCK_RECORD(objc_context_block, OBJC_CONTEXT_ID_DATA);
 
   BLOCK(OBJC_PROPERTY_BLOCK);
   BLOCK_RECORD(objc_property_block, OBJC_PROPERTY_DATA);
@@ -336,17 +359,14 @@ namespace {
   }
 
   /// Used to serialize the on-disk Objective-C context table.
-  class ObjCContextTableInfo {
+  class ObjCContextIDTableInfo {
   public:
     using key_type = std::pair<unsigned, char>; // identifier ID, is-protocol
     using key_type_ref = key_type;
-    using data_type = std::pair<unsigned, ObjCContextInfo>;
+    using data_type = unsigned;
     using data_type_ref = const data_type &;
     using hash_value_type = size_t;
     using offset_type = unsigned;
-
-    /// The number of bytes in a data entry.
-    static const unsigned dataBytes = 3;
 
     hash_value_type ComputeHash(key_type_ref key) {
       return static_cast<size_t>(llvm::hash_value(key));
@@ -356,9 +376,7 @@ namespace {
                                                     key_type_ref key,
                                                     data_type_ref data) {
       uint32_t keyLength = sizeof(uint32_t) + 1;
-      uint32_t dataLength = sizeof(uint32_t)
-                          + getCommonTypeInfoSize(data.second)
-                          + dataBytes;
+      uint32_t dataLength = sizeof(uint32_t);
       endian::Writer<little> writer(out);
       writer.write<uint16_t>(keyLength);
       writer.write<uint16_t>(dataLength);
@@ -374,58 +392,92 @@ namespace {
     void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
                   unsigned len) {
       endian::Writer<little> writer(out);
-      writer.write<uint32_t>(data.first);
-
-      emitCommonTypeInfo(out, data.second);
-
-      // FIXME: Inefficient representation.
-      uint8_t bytes[dataBytes] = { 0, 0, 0 };
-      if (auto nullable = data.second.getDefaultNullability()) {
-        bytes[0] = 1;
-        bytes[1] = static_cast<uint8_t>(*nullable);
-      } else {
-        // Nothing to do.
-      }
-      bytes[2] = data.second.hasDesignatedInits();
-
-      out.write(reinterpret_cast<const char *>(bytes), dataBytes);
+      writer.write<uint32_t>(data);
     }
   };
 } // end anonymous namespace
 
-void APINotesWriter::Implementation::writeObjCContextBlock(
-       llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, OBJC_CONTEXT_BLOCK_ID, 3);
-
-  if (ObjCContexts.empty())
-    return;  
-
-  llvm::SmallString<4096> hashTableBlob;
-  uint32_t tableOffset;
-  {
-    llvm::OnDiskChainedHashTableGenerator<ObjCContextTableInfo> generator;
-    for (auto &entry : ObjCContexts)
-      generator.insert(entry.first, entry.second);
-
-    llvm::raw_svector_ostream blobStream(hashTableBlob);
-    // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
-    tableOffset = generator.Emit(blobStream);
+namespace {
+  /// Retrieve the serialized size of the given VersionTuple, for use in
+  /// on-disk hash tables.
+  unsigned getVersionTupleSize(const VersionTuple &version) {
+    unsigned size = sizeof(uint8_t) + /*major*/sizeof(uint32_t);
+    if (version.getMinor()) size += sizeof(uint32_t);
+    if (version.getSubminor()) size += sizeof(uint32_t);
+    if (version.getBuild()) size += sizeof(uint32_t);
+    return size;
   }
 
-  objc_context_block::ObjCContextDataLayout layout(writer);
-  layout.emit(ScratchRecord, tableOffset, hashTableBlob);
-}
+  /// Emit a serialized representation of a version tuple.
+  void emitVersionTuple(raw_ostream &out, const VersionTuple &version) {
+    endian::Writer<little> writer(out);
 
-namespace {
+    // First byte contains the number of components beyond the 'major'
+    // component.
+    uint8_t descriptor;
+    if (version.getBuild()) descriptor = 3;
+    else if (version.getSubminor()) descriptor = 2;
+    else if (version.getMinor()) descriptor = 1;
+    else descriptor = 0;
+    assert(!version.usesUnderscores() && "Not a serializable version");
+    writer.write<uint8_t>(descriptor);
+
+    // Write the components.
+    writer.write<uint32_t>(version.getMajor());
+    if (auto minor = version.getMinor())
+      writer.write<uint32_t>(*minor);
+    if (auto subminor = version.getSubminor())
+      writer.write<uint32_t>(*subminor);
+    if (auto build = version.getBuild())
+      writer.write<uint32_t>(*build);
+  }
+
+  /// Localized helper to make a type dependent, thwarting template argument
+  /// deduction.
+  template<typename T>
+  struct MakeDependent {
+    typedef T Type;
+  };
+
+  /// Determine the size of an array of versioned information,
+  template<typename T>
+  unsigned getVersionedInfoSize(
+             const SmallVectorImpl<std::pair<VersionTuple, T>> &infoArray,
+            llvm::function_ref<unsigned(const typename MakeDependent<T>::Type&)>
+              getInfoSize) {
+    unsigned result = sizeof(uint16_t); // # of elements
+    for (const auto &element : infoArray) {
+      result += getVersionTupleSize(element.first);
+      result += getInfoSize(element.second);
+    }
+
+    return result;
+  }
+
+  /// Emit versioned information.
+  template<typename T>
+  void emitVersionedInfo(
+         raw_ostream &out,
+         const SmallVectorImpl<std::pair<VersionTuple, T>> &infoArray,
+         llvm::function_ref<void(raw_ostream &out,
+                                 const typename MakeDependent<T>::Type& info)>
+           emitInfo) {
+    endian::Writer<little> writer(out);
+    writer.write<uint16_t>(infoArray.size());
+    for (const auto &element : infoArray) {
+      emitVersionTuple(out, element.first);
+      emitInfo(out, element.second);
+    }
+  }
+
   /// Retrieve the serialized size of the given VariableInfo, for use in
   /// on-disk hash tables.
-  static unsigned getVariableInfoSize(const VariableInfo &info) {
+  unsigned getVariableInfoSize(const VariableInfo &info) {
     return 2 + getCommonEntityInfoSize(info);
   }
 
   /// Emit a serialized representation of the variable information.
-  static void emitVariableInfo(raw_ostream &out, const VariableInfo &info) {
+  void emitVariableInfo(raw_ostream &out, const VariableInfo &info) {
     emitCommonEntityInfo(out, info);
 
     uint8_t bytes[2] = { 0, 0 };
@@ -439,30 +491,94 @@ namespace {
     out.write(reinterpret_cast<const char *>(bytes), 2);
   }
 
-  /// Used to serialize the on-disk Objective-C property table.
-  class ObjCPropertyTableInfo {
+  /// On-dish hash table info key base for handling versioned data.
+  template<typename Derived, typename KeyType, typename UnversionedDataType>
+  class VersionedTableInfo {
+    Derived &asDerived() {
+      return *static_cast<Derived *>(this);
+    }
+
+    const Derived &asDerived() const {
+      return *static_cast<const Derived *>(this);
+    }
+
   public:
-    // (class ID, name ID, isInstance)
-    using key_type = std::tuple<unsigned, unsigned, char>;
+    using key_type = KeyType;
     using key_type_ref = key_type;
-    using data_type = ObjCPropertyInfo;
+    using data_type =
+      SmallVector<std::pair<VersionTuple, UnversionedDataType>, 1>;
     using data_type_ref = const data_type &;
     using hash_value_type = size_t;
     using offset_type = unsigned;
 
     hash_value_type ComputeHash(key_type_ref key) {
-      return static_cast<size_t>(llvm::hash_value(key));
+      return llvm::hash_value(key);
     }
 
     std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
                                                     key_type_ref key,
                                                     data_type_ref data) {
-      uint32_t keyLength = sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint8_t);
-      uint32_t dataLength = getVariableInfoSize(data);
+      uint32_t keyLength = asDerived().getKeyLength(key);
+      uint32_t dataLength = getVersionedInfoSize(data,
+        [this](const UnversionedDataType &unversionedInfo) {
+          return asDerived().getUnversionedInfoSize(unversionedInfo);
+      });
+
       endian::Writer<little> writer(out);
       writer.write<uint16_t>(keyLength);
       writer.write<uint16_t>(dataLength);
       return { keyLength, dataLength };
+    }
+
+    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
+                  unsigned len) {
+      emitVersionedInfo(out, data,
+        [this](llvm::raw_ostream &out,
+               const UnversionedDataType &unversionedInfo) {
+          asDerived().emitUnversionedInfo(out, unversionedInfo);
+      });
+    }
+  };
+
+  /// Used to serialize the on-disk Objective-C property table.
+  class ObjCContextInfoTableInfo
+    : public VersionedTableInfo<ObjCContextInfoTableInfo,
+                                unsigned,
+                                ObjCContextInfo> {
+  public:
+    unsigned getKeyLength(key_type_ref) {
+      return sizeof(uint32_t);
+    }
+
+    void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
+      endian::Writer<little> writer(out);
+      writer.write<uint32_t>(key);
+    }
+
+    unsigned getUnversionedInfoSize(const ObjCContextInfo &info) {
+      return getCommonTypeInfoSize(info) + 1;
+    }
+
+    void emitUnversionedInfo(raw_ostream &out, const ObjCContextInfo &info) {
+      emitCommonTypeInfo(out, info);
+
+      uint8_t payload = 0;
+      if (auto nullable = info.getDefaultNullability()) {
+        payload = (0x01 << 2) | static_cast<uint8_t>(*nullable);
+      }
+      payload = (payload << 1) | (info.hasDesignatedInits() ? 1 : 0);
+      out << payload;
+    }
+  };
+
+  /// Used to serialize the on-disk Objective-C property table.
+  class ObjCPropertyTableInfo
+    : public VersionedTableInfo<ObjCPropertyTableInfo,
+                                std::tuple<unsigned, unsigned, char>,
+                                ObjCPropertyInfo> {
+  public:
+    unsigned getKeyLength(key_type_ref) {
+      return sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint8_t);
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
@@ -472,12 +588,60 @@ namespace {
       writer.write<uint8_t>(std::get<2>(key));
     }
 
-    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
-                  unsigned len) {
-      emitVariableInfo(out, data);
+    unsigned getUnversionedInfoSize(const ObjCPropertyInfo &info) {
+      return getVariableInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out, const ObjCPropertyInfo &info) {
+      emitVariableInfo(out, info);
     }
   };
 } // end anonymous namespace
+
+void APINotesWriter::Implementation::writeObjCContextBlock(
+       llvm::BitstreamWriter &writer) {
+  BCBlockRAII restoreBlock(writer, OBJC_CONTEXT_BLOCK_ID, 3);
+
+  if (ObjCContexts.empty())
+    return;  
+
+  {
+    llvm::SmallString<4096> hashTableBlob;
+    uint32_t tableOffset;
+    {
+      llvm::OnDiskChainedHashTableGenerator<ObjCContextIDTableInfo> generator;
+      for (auto &entry : ObjCContexts)
+        generator.insert(entry.first, entry.second.first);
+
+      llvm::raw_svector_ostream blobStream(hashTableBlob);
+      // Make sure that no bucket is at offset 0
+      endian::Writer<little>(blobStream).write<uint32_t>(0);
+      tableOffset = generator.Emit(blobStream);
+    }
+
+    objc_context_block::ObjCContextIDLayout layout(writer);
+    layout.emit(ScratchRecord, tableOffset, hashTableBlob);
+  }
+
+  {
+    llvm::SmallString<4096> hashTableBlob;
+    uint32_t tableOffset;
+    {
+      llvm::OnDiskChainedHashTableGenerator<ObjCContextInfoTableInfo>
+        generator;
+      for (auto &entry : ObjCContexts)
+        generator.insert(entry.second.first, entry.second.second);
+
+      llvm::raw_svector_ostream blobStream(hashTableBlob);
+      // Make sure that no bucket is at offset 0
+      endian::Writer<little>(blobStream).write<uint32_t>(0);
+      tableOffset = generator.Emit(blobStream);
+    }
+
+    objc_context_block::ObjCContextInfoLayout layout(writer);
+    layout.emit(ScratchRecord, tableOffset, hashTableBlob);
+  }
+}
 
 void APINotesWriter::Implementation::writeObjCPropertyBlock(
        llvm::BitstreamWriter &writer) {
@@ -536,31 +700,13 @@ namespace {
   }
 
   /// Used to serialize the on-disk Objective-C method table.
-  class ObjCMethodTableInfo {
+  class ObjCMethodTableInfo
+    : public VersionedTableInfo<ObjCMethodTableInfo,
+                                std::tuple<unsigned, unsigned, char>,
+                                ObjCMethodInfo> {
   public:
-    // (class ID, selector ID, is-instance)
-    using key_type = std::tuple<unsigned, unsigned, char>; 
-    using key_type_ref = key_type;
-    using data_type = ObjCMethodInfo;
-    using data_type_ref = const data_type &;
-    using hash_value_type = size_t;
-    using offset_type = unsigned;
-
-    hash_value_type ComputeHash(key_type_ref key) {
-      return llvm::hash_combine(std::get<0>(key), 
-                                std::get<1>(key), 
-                                std::get<2>(key));
-    }
-
-    std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
-                                                    key_type_ref key,
-                                                    data_type_ref data) {
-      uint32_t keyLength = sizeof(uint32_t) + sizeof(uint32_t) + 1;
-      uint32_t dataLength = getFunctionInfoSize(data) + 3;
-      endian::Writer<little> writer(out);
-      writer.write<uint16_t>(keyLength);
-      writer.write<uint16_t>(dataLength);
-      return { keyLength, dataLength };
+    unsigned getKeyLength(key_type_ref) {
+      return sizeof(uint32_t) + sizeof(uint32_t) + 1;
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
@@ -570,16 +716,18 @@ namespace {
       writer.write<uint8_t>(std::get<2>(key));
     }
 
-    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
-                  unsigned len) {
-      emitFunctionInfo(out, data);
+    unsigned getUnversionedInfoSize(const ObjCMethodInfo &info) {
+      return 1 + getFunctionInfoSize(info);
+    }
 
+    void emitUnversionedInfo(raw_ostream &out, const ObjCMethodInfo &info) {
+      uint8_t payload = info.FactoryAsInit << 2;
+      payload = (payload | info.DesignatedInit) << 1;
+      payload = (payload | info.Required);
       endian::Writer<little> writer(out);
+      writer.write<uint8_t>(payload);
 
-      // FIXME: Inefficient representation
-      writer.write<uint8_t>(data.DesignatedInit);
-      writer.write<uint8_t>(data.FactoryAsInit);
-      writer.write<uint8_t>(data.Required);
+      emitFunctionInfo(out, info);
     }
   };
 } // end anonymous namespace
@@ -678,28 +826,13 @@ void APINotesWriter::Implementation::writeObjCSelectorBlock(
 
 namespace {
   /// Used to serialize the on-disk global variable table.
-  class GlobalVariableTableInfo {
+  class GlobalVariableTableInfo
+    : public VersionedTableInfo<GlobalVariableTableInfo,
+                                unsigned,
+                                GlobalVariableInfo> {
   public:
-    using key_type = unsigned; // name ID
-    using key_type_ref = key_type;
-    using data_type = GlobalVariableInfo;
-    using data_type_ref = const data_type &;
-    using hash_value_type = size_t;
-    using offset_type = unsigned;
-
-    hash_value_type ComputeHash(key_type_ref key) {
-      return static_cast<size_t>(llvm::hash_value(key));
-    }
-
-    std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
-                                                    key_type_ref key,
-                                                    data_type_ref data) {
-      uint32_t keyLength = sizeof(uint32_t);
-      uint32_t dataLength = getVariableInfoSize(data);
-      endian::Writer<little> writer(out);
-      writer.write<uint16_t>(keyLength);
-      writer.write<uint16_t>(dataLength);
-      return { keyLength, dataLength };
+    unsigned getKeyLength(key_type_ref key) {
+      return sizeof(uint32_t);
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
@@ -707,9 +840,13 @@ namespace {
       writer.write<uint32_t>(key);
     }
 
-    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
-                  unsigned len) {
-      emitVariableInfo(out, data);
+    unsigned getUnversionedInfoSize(const GlobalVariableInfo &info) {
+      return getVariableInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out,
+                             const GlobalVariableInfo &info) {
+      emitVariableInfo(out, info);
     }
   };
 } // end anonymous namespace
@@ -740,28 +877,13 @@ void APINotesWriter::Implementation::writeGlobalVariableBlock(
 
 namespace {
   /// Used to serialize the on-disk global function table.
-  class GlobalFunctionTableInfo {
+  class GlobalFunctionTableInfo
+    : public VersionedTableInfo<GlobalFunctionTableInfo,
+                                unsigned,
+                                GlobalFunctionInfo> {
   public:
-    using key_type = unsigned; // name ID
-    using key_type_ref = key_type;
-    using data_type = GlobalFunctionInfo;
-    using data_type_ref = const data_type &;
-    using hash_value_type = size_t;
-    using offset_type = unsigned;
-
-    hash_value_type ComputeHash(key_type_ref key) {
-      return llvm::hash_value(key);
-    }
-
-    std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
-                                                    key_type_ref key,
-                                                    data_type_ref data) {
-      uint32_t keyLength = sizeof(uint32_t);
-      uint32_t dataLength = getFunctionInfoSize(data);
-      endian::Writer<little> writer(out);
-      writer.write<uint16_t>(keyLength);
-      writer.write<uint16_t>(dataLength);
-      return { keyLength, dataLength };
+    unsigned getKeyLength(key_type_ref) {
+      return sizeof(uint32_t);
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
@@ -769,9 +891,13 @@ namespace {
       writer.write<uint32_t>(key);
     }
 
-    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
-                  unsigned len) {
-      emitFunctionInfo(out, data);
+    unsigned getUnversionedInfoSize(const GlobalFunctionInfo &info) {
+      return getFunctionInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out,
+                             const GlobalFunctionInfo &info) {
+      emitFunctionInfo(out, info);
     }
   };
 } // end anonymous namespace
@@ -803,28 +929,13 @@ void APINotesWriter::Implementation::writeGlobalFunctionBlock(
 
 namespace {
   /// Used to serialize the on-disk global enum constant.
-  class EnumConstantTableInfo {
+  class EnumConstantTableInfo
+    : public VersionedTableInfo<EnumConstantTableInfo,
+                                unsigned,
+                                EnumConstantInfo> {
   public:
-    using key_type = unsigned; // name ID
-    using key_type_ref = key_type;
-    using data_type = EnumConstantInfo;
-    using data_type_ref = const data_type &;
-    using hash_value_type = size_t;
-    using offset_type = unsigned;
-
-    hash_value_type ComputeHash(key_type_ref key) {
-      return static_cast<size_t>(llvm::hash_value(key));
-    }
-
-    std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
-                                                    key_type_ref key,
-                                                    data_type_ref data) {
-      uint32_t keyLength = sizeof(uint32_t);
-      uint32_t dataLength = getCommonEntityInfoSize(data);
-      endian::Writer<little> writer(out);
-      writer.write<uint16_t>(keyLength);
-      writer.write<uint16_t>(dataLength);
-      return { keyLength, dataLength };
+    unsigned getKeyLength(key_type_ref) {
+      return sizeof(uint32_t);
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
@@ -832,9 +943,12 @@ namespace {
       writer.write<uint32_t>(key);
     }
 
-    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
-                  unsigned len) {
-      emitCommonEntityInfo(out, data);
+    unsigned getUnversionedInfoSize(const EnumConstantInfo &info) {
+      return getCommonEntityInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out, const EnumConstantInfo &info) {
+      emitCommonEntityInfo(out, info);
     }
   };
 } // end anonymous namespace
@@ -864,41 +978,32 @@ void APINotesWriter::Implementation::writeEnumConstantBlock(
 }
 
 namespace {
-  /// Used to serialize the on-disk tag table.
-  class TagTableInfo {
+  template<typename Derived, typename UnversionedDataType>
+  class CommonTypeTableInfo
+    : public VersionedTableInfo<Derived, unsigned, UnversionedDataType> {
   public:
-    using key_type = unsigned; // name ID
-    using key_type_ref = key_type;
-    using data_type = TagInfo;
-    using data_type_ref = const data_type &;
-    using hash_value_type = size_t;
-    using offset_type = unsigned;
+    using key_type_ref = typename CommonTypeTableInfo::key_type_ref;
 
-    hash_value_type ComputeHash(key_type_ref key) {
-      return static_cast<size_t>(llvm::hash_value(key));
+    unsigned getKeyLength(key_type_ref) {
+      return sizeof(IdentifierID);
     }
-
-    std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
-                                                    key_type_ref key,
-                                                    data_type_ref data) {
-      uint32_t keyLength = sizeof(IdentifierID);
-      uint32_t dataLength = getCommonTypeInfoSize(data);
-      endian::Writer<little> writer(out);
-      writer.write<uint16_t>(keyLength);
-      writer.write<uint16_t>(dataLength);
-      return { keyLength, dataLength };
-    }
-
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer<little> writer(out);
       writer.write<IdentifierID>(key);
     }
 
-    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
-                  unsigned len) {
-      emitCommonTypeInfo(out, data);
+    unsigned getUnversionedInfoSize(const UnversionedDataType &info) {
+      return getCommonTypeInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out,
+                             const UnversionedDataType &info) {
+      emitCommonTypeInfo(out, info);
     }
   };
+
+  /// Used to serialize the on-disk tag table.
+  class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> { };
 } // end anonymous namespace
 
 void APINotesWriter::Implementation::writeTagBlock(
@@ -927,40 +1032,8 @@ void APINotesWriter::Implementation::writeTagBlock(
 
 namespace {
   /// Used to serialize the on-disk typedef table.
-  class TypedefTableInfo {
-  public:
-    using key_type = unsigned; // name ID
-    using key_type_ref = key_type;
-    using data_type = TypedefInfo;
-    using data_type_ref = const data_type &;
-    using hash_value_type = size_t;
-    using offset_type = unsigned;
-
-    hash_value_type ComputeHash(key_type_ref key) {
-      return static_cast<size_t>(llvm::hash_value(key));
-    }
-
-    std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
-                                                    key_type_ref key,
-                                                    data_type_ref data) {
-      uint32_t keyLength = sizeof(IdentifierID);
-      uint32_t dataLength = getCommonTypeInfoSize(data);
-      endian::Writer<little> writer(out);
-      writer.write<uint16_t>(keyLength);
-      writer.write<uint16_t>(dataLength);
-      return { keyLength, dataLength };
-    }
-
-    void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
-      writer.write<IdentifierID>(key);
-    }
-
-    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
-                  unsigned len) {
-      emitCommonTypeInfo(out, data);
-    }
-  };
+  class TypedefTableInfo
+    : public CommonTypeTableInfo<TypedefTableInfo, TypedefInfo> { };
 } // end anonymous namespace
 
 void APINotesWriter::Implementation::writeTypedefBlock(
@@ -1033,106 +1106,115 @@ void APINotesWriter::writeToStream(raw_ostream &os) {
   Impl.writeToStream(os);
 }
 
-ContextID APINotesWriter::addObjCClass(StringRef name,
-                                       const ObjCContextInfo &info) {
-  IdentifierID classID = Impl.getIdentifier(name);
+ContextID APINotesWriter::addObjCContext(StringRef name, bool isClass,
+                                         const ObjCContextInfo &info,
+                                         VersionTuple swiftVersion) {
+  IdentifierID nameID = Impl.getIdentifier(name);
 
-  std::pair<unsigned, char> key(classID, 0);
+  std::pair<unsigned, char> key(nameID, isClass ? 0 : 1);
   auto known = Impl.ObjCContexts.find(key);
-  if (known != Impl.ObjCContexts.end()) {
-    known->second.second |= info;
-  } else {
+  if (known == Impl.ObjCContexts.end()) {
     unsigned nextID = Impl.ObjCContexts.size() + 1;
 
+    VersionedSmallVector<ObjCContextInfo> emptyVersionedInfo;
     known = Impl.ObjCContexts.insert(
-              std::make_pair(key, std::make_pair(nextID, info)))
+              std::make_pair(key, std::make_pair(nextID, emptyVersionedInfo)))
               .first;
 
-    Impl.ObjCContextNames[nextID] = classID;
+    Impl.ObjCContextNames[nextID] = nameID;
   }
+
+  // Add this version information.
+  auto &versionedVec = known->second.second;
+  bool found = false;
+  for (auto &versioned : versionedVec){
+    if (versioned.first == swiftVersion) {
+      versioned.second |= info;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found)
+    versionedVec.push_back({swiftVersion, info});
 
   return ContextID(known->second.first);
 }
 
-ContextID APINotesWriter::addObjCProtocol(StringRef name,
-                                          const ObjCContextInfo &info) {
-  IdentifierID protocolID = Impl.getIdentifier(name);
-
-  std::pair<unsigned, char> key(protocolID, 1);
-  auto known = Impl.ObjCContexts.find(key);
-  if (known != Impl.ObjCContexts.end()) {
-    known->second.second |= info;
-  } else {
-    unsigned nextID = Impl.ObjCContexts.size() + 1;
-
-    known = Impl.ObjCContexts.insert(
-              std::make_pair(key, std::make_pair(nextID, info)))
-              .first;
-
-    Impl.ObjCContextNames[nextID] = protocolID;
-  }
-
-  return ContextID(known->second.first);
-}
 void APINotesWriter::addObjCProperty(ContextID contextID, StringRef name,
                                      bool isInstance,
-                                     const ObjCPropertyInfo &info) {
+                                     const ObjCPropertyInfo &info,
+                                     VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
-  assert(!Impl.ObjCProperties.count(std::make_tuple(contextID.Value, nameID, isInstance)));
-  Impl.ObjCProperties[std::make_tuple(contextID.Value, nameID, isInstance)] = info;
+  Impl.ObjCProperties[std::make_tuple(contextID.Value, nameID, isInstance)]
+    .push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addObjCMethod(ContextID contextID,
                                    ObjCSelectorRef selector,
                                    bool isInstanceMethod,
-                                   const ObjCMethodInfo &info) {
+                                   const ObjCMethodInfo &info,
+                                   VersionTuple swiftVersion) {
   SelectorID selectorID = Impl.getSelector(selector);
   auto key = std::tuple<unsigned, unsigned, char>{
       contextID.Value, selectorID, isInstanceMethod};
-  assert(!Impl.ObjCMethods.count(key));
-  Impl.ObjCMethods[key] = info;
+  Impl.ObjCMethods[key].push_back({swiftVersion, info});
 
   // If this method is a designated initializer, update the class to note that
   // it has designated initializers.
   if (info.DesignatedInit) {
     assert(Impl.ObjCContexts.count({Impl.ObjCContextNames[contextID.Value],
                                     (char)0}));
-    Impl.ObjCContexts[{Impl.ObjCContextNames[contextID.Value], (char)0}]
-      .second.setHasDesignatedInits(true);
+    auto &versionedVec =
+      Impl.ObjCContexts[{Impl.ObjCContextNames[contextID.Value], (char)0}]
+        .second;
+    bool found = false;
+    for (auto &versioned : versionedVec) {
+      if (versioned.first == swiftVersion) {
+        versioned.second.setHasDesignatedInits(true);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      versionedVec.push_back({swiftVersion, ObjCContextInfo()});
+      versionedVec.back().second.setHasDesignatedInits(true);
+    }
   }
 }
 
 void APINotesWriter::addGlobalVariable(llvm::StringRef name,
-                                       const GlobalVariableInfo &info) {
+                                       const GlobalVariableInfo &info,
+                                       VersionTuple swiftVersion) {
   IdentifierID variableID = Impl.getIdentifier(name);
-  assert(!Impl.GlobalVariables.count(variableID));
-  Impl.GlobalVariables[variableID] = info;
+  Impl.GlobalVariables[variableID].push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addGlobalFunction(llvm::StringRef name,
-                                       const GlobalFunctionInfo &info) {
+                                       const GlobalFunctionInfo &info,
+                                       VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
-  assert(!Impl.GlobalFunctions.count(nameID));
-  Impl.GlobalFunctions[nameID] = info;
+  Impl.GlobalFunctions[nameID].push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addEnumConstant(llvm::StringRef name,
-                                     const EnumConstantInfo &info) {
+                                     const EnumConstantInfo &info,
+                                     VersionTuple swiftVersion) {
   IdentifierID enumConstantID = Impl.getIdentifier(name);
-  assert(!Impl.EnumConstants.count(enumConstantID));
-  Impl.EnumConstants[enumConstantID] = info;
+  Impl.EnumConstants[enumConstantID].push_back({swiftVersion, info});
 }
 
-void APINotesWriter::addTag(llvm::StringRef name, const TagInfo &info) {
+void APINotesWriter::addTag(llvm::StringRef name, const TagInfo &info,
+                            VersionTuple swiftVersion) {
   IdentifierID tagID = Impl.getIdentifier(name);
-  assert(!Impl.Tags.count(tagID));
-  Impl.Tags[tagID] = info;
+  Impl.Tags[tagID].push_back({swiftVersion, info});
 }
 
-void APINotesWriter::addTypedef(llvm::StringRef name, const TypedefInfo &info) {
+void APINotesWriter::addTypedef(llvm::StringRef name, const TypedefInfo &info,
+                                VersionTuple swiftVersion) {
   IdentifierID typedefID = Impl.getIdentifier(name);
-  assert(!Impl.Typedefs.count(typedefID));
-  Impl.Typedefs[typedefID] = info;
+  Impl.Typedefs[typedefID].push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addModuleOptions(ModuleOptions opts) {
