@@ -551,6 +551,9 @@ def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Gr
 def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
   Group<i_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the API notes cache path">;
+def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
+  Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<version>">,
+  HelpText<"Specify the Swift version to use when filtering API notes">;
 
 def fblocks : Flag<["-"], "fblocks">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable the 'blocks' language feature">;

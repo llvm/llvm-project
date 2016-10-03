@@ -352,8 +352,8 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Objective-C classes.
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        if (auto Info = Reader->lookupObjCClass(Class->getName())) {
-          ::ProcessAPINotes(*this, Class, Info->second);
+        if (auto Info = Reader->lookupObjCClassInfo(Class->getName())) {
+          ::ProcessAPINotes(*this, Class, *Info);
         }
       }
 
@@ -363,8 +363,8 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Objective-C protocols.
     if (auto Protocol = dyn_cast<ObjCProtocolDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        if (auto Info = Reader->lookupObjCProtocol(Protocol->getName())) {
-          ::ProcessAPINotes(*this, Protocol, Info->second);
+        if (auto Info = Reader->lookupObjCProtocolInfo(Protocol->getName())) {
+          ::ProcessAPINotes(*this, Protocol, *Info);
         }
       }
 
@@ -414,8 +414,8 @@ void Sema::ProcessAPINotes(Decl *D) {
     auto GetContext = [&](api_notes::APINotesReader *Reader)
                         -> Optional<api_notes::ContextID> {
       if (auto Protocol = dyn_cast<ObjCProtocolDecl>(ObjCContainer)) {
-        if (auto Found = Reader->lookupObjCProtocol(Protocol->getName()))
-          return Found->first;
+        if (auto Found = Reader->lookupObjCProtocolID(Protocol->getName()))
+          return *Found;
 
         return None;
       }
@@ -442,8 +442,8 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       if (auto Class = dyn_cast<ObjCInterfaceDecl>(ObjCContainer)) {
-        if (auto Found = Reader->lookupObjCClass(Class->getName()))
-          return Found->first;
+        if (auto Found = Reader->lookupObjCClassID(Class->getName()))
+          return *Found;
 
         return None;
 

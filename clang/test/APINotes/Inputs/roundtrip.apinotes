@@ -146,3 +146,22 @@ Typedefs:
     SwiftName:       Typedef
     SwiftBridge:     ''
     NSErrorDomain:   ''
+SwiftVersions:   
+  - Version:         3.0
+    Classes:         
+      - Name:            NSCell
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       NSBox
+        SwiftBridge:     ''
+        NSErrorDomain:   ''
+        Methods:         
+          - Selector:        init
+            MethodKind:      Instance
+            NullabilityOfRet: N
+            Availability:    available
+            AvailabilityMsg: ''
+            SwiftPrivate:    true
+            SwiftName:       ''
+            DesignatedInit:  true
