@@ -14,6 +14,7 @@
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/APINotes/Types.h"
 #include "clang/APINotes/APINotesWriter.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
@@ -262,9 +263,7 @@ namespace {
   };
   typedef std::vector<Typedef> TypedefsSeq;
 
-  struct Module {
-    StringRef Name;
-    AvailabilityItem Availability;
+  struct TopLevelItems {
     ClassesSeq Classes;
     ClassesSeq Protocols;
     FunctionsSeq Functions;
@@ -272,6 +271,20 @@ namespace {
     EnumConstantsSeq EnumConstants;
     TagsSeq Tags;
     TypedefsSeq Typedefs;
+  };
+
+  struct Versioned {
+    VersionTuple Version;
+    TopLevelItems Items;
+  };
+
+  typedef std::vector<Versioned> VersionedSeq;
+
+  struct Module {
+    StringRef Name;
+    AvailabilityItem Availability;
+    TopLevelItems TopLevel;
+    VersionedSeq SwiftVersions;
 
     llvm::Optional<bool> SwiftInferImportAsMember = {llvm::None};
 
@@ -291,6 +304,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(GlobalVariable)
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumConstant)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Tag)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Typedef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(Versioned)
 
 namespace llvm {
   namespace yaml {
@@ -333,6 +347,24 @@ namespace llvm {
         io.enumCase(value, "nonswift",  APIAvailability::NonSwift);
         io.enumCase(value, "available", APIAvailability::Available);
       }
+    };
+
+    template <>
+    struct ScalarTraits<VersionTuple> {
+      static void output(const VersionTuple &value, void*,
+                         llvm::raw_ostream &out) {
+        out << value;
+      }
+      static StringRef input(StringRef scalar, void*, VersionTuple &value) {
+        if (value.tryParse(scalar))
+          return "not a version number in the form XX.YY";
+
+        // Canonicalize on '.' as a separator.
+        value.UseDotAsSeparator();
+        return StringRef();
+      }
+
+      static bool mustQuote(StringRef) { return false; }
     };
 
     template <>
@@ -460,6 +492,24 @@ namespace llvm {
       }
     };
 
+    static void mapTopLevelItems(IO &io, TopLevelItems &i) {
+      io.mapOptional("Classes",         i.Classes);
+      io.mapOptional("Protocols",       i.Protocols);
+      io.mapOptional("Functions",       i.Functions);
+      io.mapOptional("Globals",         i.Globals);
+      io.mapOptional("Enumerators",     i.EnumConstants);
+      io.mapOptional("Tags",            i.Tags);
+      io.mapOptional("Typedefs",        i.Typedefs);
+    }
+
+    template <>
+    struct MappingTraits<Versioned> {
+      static void mapping(IO &io, Versioned& v) {
+        io.mapRequired("Version", v.Version);
+        mapTopLevelItems(io, v.Items);
+      }
+    };
+
     template <>
     struct MappingTraits<Module> {
       static void mapping(IO &io, Module& m) {
@@ -467,13 +517,10 @@ namespace llvm {
         io.mapOptional("Availability",    m.Availability.Mode);
         io.mapOptional("AvailabilityMsg", m.Availability.Msg);
         io.mapOptional("SwiftInferImportAsMember", m.SwiftInferImportAsMember);
-        io.mapOptional("Classes",         m.Classes);
-        io.mapOptional("Protocols",       m.Protocols);
-        io.mapOptional("Functions",       m.Functions);
-        io.mapOptional("Globals",         m.Globals);
-        io.mapOptional("Enumerators",     m.EnumConstants);
-        io.mapOptional("Tags",            m.Tags);
-        io.mapOptional("Typedefs",        m.Typedefs);
+
+        mapTopLevelItems(io, m.TopLevel);
+
+        io.mapOptional("SwiftVersions",  m.SwiftVersions);
       }
     };
   }
@@ -624,7 +671,8 @@ namespace {
 
     // Translate from Method into ObjCMethodInfo and write it out.
     void convertMethod(const Method &meth,
-                       ContextID classID, StringRef className) {
+                       ContextID classID, StringRef className,
+                       VersionTuple swiftVersion) {
       ObjCMethodInfo mInfo;
 
       if (convertCommon(meth, mInfo, meth.Selector))
@@ -662,10 +710,11 @@ namespace {
       // Write it.
       Writer->addObjCMethod(classID, selectorRef,
                             meth.Kind == MethodKind::Instance,
-                            mInfo);
+                            mInfo, swiftVersion);
     }
 
-    void convertContext(const Class &cl, bool isClass) {
+    void convertContext(const Class &cl, bool isClass,
+                        VersionTuple swiftVersion) {
       // Write the class.
       ObjCContextInfo cInfo;
 
@@ -675,8 +724,8 @@ namespace {
       if (cl.AuditedForNullability)
         cInfo.setDefaultNullability(*DefaultNullability);
 
-      ContextID clID = isClass ? Writer->addObjCClass(cl.Name, cInfo) :
-                                 Writer->addObjCProtocol(cl.Name, cInfo);
+      ContextID clID = Writer->addObjCContext(cl.Name, isClass, cInfo,
+                                              swiftVersion);
 
       // Write all methods.
       llvm::StringMap<std::pair<bool, bool>> knownMethods;
@@ -693,7 +742,7 @@ namespace {
         }
         known = true;
 
-        convertMethod(method, clID, cl.Name);
+        convertMethod(method, clID, cl.Name, swiftVersion);
       }
 
       // Write all properties.
@@ -726,51 +775,45 @@ namespace {
           pInfo.setNullabilityAudited(*prop.Nullability);
         if (prop.Kind) {
           Writer->addObjCProperty(clID, prop.Name,
-                                  *prop.Kind == MethodKind::Instance, pInfo);
+                                  *prop.Kind == MethodKind::Instance, pInfo,
+                                  swiftVersion);
         } else {
           // Add both instance and class properties with this name.
-          Writer->addObjCProperty(clID, prop.Name, true, pInfo);
-          Writer->addObjCProperty(clID, prop.Name, false, pInfo);
+          Writer->addObjCProperty(clID, prop.Name, true, pInfo, swiftVersion);
+          Writer->addObjCProperty(clID, prop.Name, false, pInfo, swiftVersion);
         }
       }
     }
 
-    bool convertModule() {
-      if (!isAvailable(TheModule.Availability))
-        return false;
-
-      // Set up the writer.
-      // FIXME: This is kindof ugly.
-      APINotesWriter writer(TheModule.Name, SourceFile);
-      Writer = &writer;
-
+    void convertTopLevelItems(const TopLevelItems &items,
+                              VersionTuple swiftVersion) {
       // Write all classes.
       llvm::StringSet<> knownClasses;
-      for (const auto &cl : TheModule.Classes) {
+      for (const auto &cl : items.Classes) {
         // Check for duplicate class definitions.
         if (!knownClasses.insert(cl.Name).second) {
           emitError("multiple definitions of class '" + cl.Name + "'");
           continue;
         }
 
-        convertContext(cl, /*isClass*/ true);
+        convertContext(cl, /*isClass*/ true, swiftVersion);
       }
 
       // Write all protocols.
       llvm::StringSet<> knownProtocols;
-      for (const auto &pr : TheModule.Protocols) {
+      for (const auto &pr : items.Protocols) {
         // Check for duplicate protocol definitions.
         if (!knownProtocols.insert(pr.Name).second) {
           emitError("multiple definitions of protocol '" + pr.Name + "'");
           continue;
         }
 
-        convertContext(pr, /*isClass*/ false);
+        convertContext(pr, /*isClass*/ false, swiftVersion);
       }
 
       // Write all global variables.
       llvm::StringSet<> knownGlobals;
-      for (const auto &global : TheModule.Globals) {
+      for (const auto &global : items.Globals) {
         // Check for duplicate global variables.
         if (!knownGlobals.insert(global.Name).second) {
           emitError("multiple definitions of global variable '" +
@@ -786,12 +829,12 @@ namespace {
         info.SwiftName = global.SwiftName;
         if (global.Nullability)
           info.setNullabilityAudited(*global.Nullability);
-        Writer->addGlobalVariable(global.Name, info);
+        Writer->addGlobalVariable(global.Name, info, swiftVersion);
       }
 
       // Write all global functions.
       llvm::StringSet<> knownFunctions;
-      for (const auto &function : TheModule.Functions) {
+      for (const auto &function : items.Functions) {
         // Check for duplicate global functions.
         if (!knownFunctions.insert(function.Name).second) {
           emitError("multiple definitions of global function '" +
@@ -810,12 +853,12 @@ namespace {
                            function.NullabilityOfRet,
                            info, function.Name);
 
-        Writer->addGlobalFunction(function.Name, info);
+        Writer->addGlobalFunction(function.Name, info, swiftVersion);
       }
 
       // Write all enumerators.
       llvm::StringSet<> knownEnumConstants;
-      for (const auto &enumConstant : TheModule.EnumConstants) {
+      for (const auto &enumConstant : items.EnumConstants) {
         // Check for duplicate enumerators
         if (!knownEnumConstants.insert(enumConstant.Name).second) {
           emitError("multiple definitions of enumerator '" +
@@ -829,12 +872,12 @@ namespace {
         convertAvailability(enumConstant.Availability, info, enumConstant.Name);
         info.SwiftPrivate = enumConstant.SwiftPrivate;
         info.SwiftName = enumConstant.SwiftName;
-        Writer->addEnumConstant(enumConstant.Name, info);
+        Writer->addEnumConstant(enumConstant.Name, info, swiftVersion);
       }
 
       // Write all tags.
       llvm::StringSet<> knownTags;
-      for (const auto &t : TheModule.Tags) {
+      for (const auto &t : items.Tags) {
         // Check for duplicate tag definitions.
         if (!knownTags.insert(t.Name).second) {
           emitError("multiple definitions Of tag '" + t.Name + "'");
@@ -845,12 +888,12 @@ namespace {
         if (convertCommonType(t, tagInfo, t.Name))
           continue;
 
-        Writer->addTag(t.Name, tagInfo);
+        Writer->addTag(t.Name, tagInfo, swiftVersion);
       }
 
       // Write all typedefs.
       llvm::StringSet<> knownTypedefs;
-      for (const auto &t : TheModule.Typedefs) {
+      for (const auto &t : items.Typedefs) {
         // Check for duplicate typedef definitions.
         if (!knownTypedefs.insert(t.Name).second) {
           emitError("multiple definitions of typedef '" + t.Name + "'");
@@ -860,14 +903,33 @@ namespace {
         TypedefInfo typedefInfo;
         if (convertCommonType(t, typedefInfo, t.Name))
           continue;
-
-        Writer->addTypedef(t.Name, typedefInfo);
+        
+        Writer->addTypedef(t.Name, typedefInfo, swiftVersion);
       }
+    }
+
+    bool convertModule() {
+      if (!isAvailable(TheModule.Availability))
+        return false;
+
+      // Set up the writer.
+      // FIXME: This is kindof ugly.
+      APINotesWriter writer(TheModule.Name, SourceFile);
+      Writer = &writer;
+
+      // Write the top-level items.
+      convertTopLevelItems(TheModule.TopLevel, VersionTuple());
 
       if (TheModule.SwiftInferImportAsMember) {
         ModuleOptions opts;
         opts.SwiftInferImportAsMember = true;
         Writer->addModuleOptions(opts);
+      }
+
+      // Convert the versioned information.
+      for (const auto &versioned : TheModule.SwiftVersions) {
+        convertTopLevelItems(versioned.Items, versioned.Version);
+
       }
 
       if (!ErrorOccured)
@@ -934,10 +996,34 @@ namespace {
     /// The module we're building.
     Module TheModule;
 
+    /// A known context, which tracks what we know about a context ID.
+    struct KnownContext {
+      /// Whether this is a protocol (vs. a class).
+      bool isProtocol;
+
+      /// The indices into the top-level items for this context at each
+      /// Swift version.
+      SmallVector<std::pair<VersionTuple, unsigned>, 1> indices;
+
+      Class &getContext(const VersionTuple &swiftVersion,
+                        TopLevelItems &items) {
+        ClassesSeq &seq = isProtocol ? items.Protocols : items.Classes;
+
+        for (auto &index : indices) {
+          if (index.first == swiftVersion)
+            return seq[index.second];
+        }
+
+        indices.push_back({swiftVersion, seq.size()});
+        seq.push_back(Class());
+        return seq.back();
+      }
+    };
+
     /// A mapping from context ID to a pair (index, is-protocol) that indicates
     /// the index of that class or protocol in the global "classes" or
     /// "protocols" list.
-    llvm::DenseMap<unsigned, std::pair<unsigned, bool>> knownContexts;
+    llvm::DenseMap<unsigned, KnownContext> knownContexts;
 
     /// Copy a string into allocated memory so it does disappear on us.
     StringRef copyString(StringRef string) {
@@ -1015,30 +1101,46 @@ namespace {
       }
     }
 
+    TopLevelItems &getTopLevelItems(VersionTuple swiftVersion) {
+      if (!swiftVersion) return TheModule.TopLevel;
+
+      for (auto &versioned : TheModule.SwiftVersions) {
+        if (versioned.Version == swiftVersion)
+          return versioned.Items;
+      }
+
+      TheModule.SwiftVersions.push_back(Versioned());
+      TheModule.SwiftVersions.back().Version = swiftVersion;
+      return TheModule.SwiftVersions.back().Items;
+    }
+
   public:
     virtual void visitObjCClass(ContextID contextID, StringRef name,
-                                const ObjCContextInfo &info) {
+                                const ObjCContextInfo &info,
+                                VersionTuple swiftVersion) {
       // Record this known context.
-      knownContexts[contextID.Value] = { TheModule.Classes.size(), false };
+      auto &items = getTopLevelItems(swiftVersion);
+      auto &known = knownContexts[contextID.Value];
+      known.isProtocol = false;
 
-      // Add the class.
-      TheModule.Classes.push_back(Class());
-      handleObjCContext(TheModule.Classes.back(), name, info);
+      handleObjCContext(known.getContext(swiftVersion, items), name, info);
     }
 
     virtual void visitObjCProtocol(ContextID contextID, StringRef name,
-                                   const ObjCContextInfo &info) {
+                                   const ObjCContextInfo &info,
+                                   VersionTuple swiftVersion) {
       // Record this known context.
-      knownContexts[contextID.Value] = { TheModule.Protocols.size(), true };
+      auto &items = getTopLevelItems(swiftVersion);
+      auto &known = knownContexts[contextID.Value];
+      known.isProtocol = true;
 
-      // Add the protocol.
-      TheModule.Protocols.push_back(Class());
-      handleObjCContext(TheModule.Protocols.back(), name, info);
+      handleObjCContext(known.getContext(swiftVersion, items), name, info);
     }
 
     virtual void visitObjCMethod(ContextID contextID, StringRef selector,
                                  bool isInstanceMethod,
-                                 const ObjCMethodInfo &info) {
+                                 const ObjCMethodInfo &info,
+                                 VersionTuple swiftVersion) {
       Method method;
       method.Selector = copyString(selector);
       method.Kind = isInstanceMethod ? MethodKind::Instance : MethodKind::Class;
@@ -1051,16 +1153,15 @@ namespace {
       method.DesignatedInit = info.DesignatedInit;
       method.Required = info.Required;
 
-      auto known = knownContexts[contextID.Value];
-      if (known.second)
-        TheModule.Protocols[known.first].Methods.push_back(method);
-      else
-        TheModule.Classes[known.first].Methods.push_back(method);
+      auto &items = getTopLevelItems(swiftVersion);
+      knownContexts[contextID.Value].getContext(swiftVersion, items)
+        .Methods.push_back(method);
     }
 
     virtual void visitObjCProperty(ContextID contextID, StringRef name,
                                    bool isInstance,
-                                   const ObjCPropertyInfo &info) {
+                                   const ObjCPropertyInfo &info,
+                                   VersionTuple swiftVersion) {
       Property property;
       property.Name = name;
       property.Kind = isInstance ? MethodKind::Instance : MethodKind::Class;
@@ -1071,15 +1172,14 @@ namespace {
         property.Nullability = *nullability;
       }
 
-      auto known = knownContexts[contextID.Value];
-      if (known.second)
-        TheModule.Protocols[known.first].Properties.push_back(property);
-      else
-        TheModule.Classes[known.first].Properties.push_back(property);
+      auto &items = getTopLevelItems(swiftVersion);
+      knownContexts[contextID.Value].getContext(swiftVersion, items)
+        .Properties.push_back(property);
     }
 
     virtual void visitGlobalFunction(StringRef name,
-                                     const GlobalFunctionInfo &info) {
+                                     const GlobalFunctionInfo &info,
+                                     VersionTuple swiftVersion) {
       Function function;
       function.Name = name;
       handleCommon(function, info);
@@ -1088,11 +1188,13 @@ namespace {
         handleNullability(function.Nullability, function.NullabilityOfRet,
                           info, info.NumAdjustedNullable-1);
 
-      TheModule.Functions.push_back(function);
+      auto &items = getTopLevelItems(swiftVersion);
+      items.Functions.push_back(function);
     }
 
     virtual void visitGlobalVariable(StringRef name,
-                                     const GlobalVariableInfo &info) {
+                                     const GlobalVariableInfo &info,
+                                     VersionTuple swiftVersion) {
       GlobalVariable global;
       global.Name = name;
       handleCommon(global, info);
@@ -1102,30 +1204,37 @@ namespace {
         global.Nullability = *nullability;
       }
 
-      TheModule.Globals.push_back(global);
+      auto &items = getTopLevelItems(swiftVersion);
+      items.Globals.push_back(global);
     }
 
     virtual void visitEnumConstant(StringRef name,
-                                   const EnumConstantInfo &info) {
+                                   const EnumConstantInfo &info,
+                                   VersionTuple swiftVersion) {
       EnumConstant enumConstant;
       enumConstant.Name = name;
       handleCommon(enumConstant, info);
 
-      TheModule.EnumConstants.push_back(enumConstant);
+      auto &items = getTopLevelItems(swiftVersion);
+      items.EnumConstants.push_back(enumConstant);
     }
 
-    virtual void visitTag(StringRef name, const TagInfo &info) {
+    virtual void visitTag(StringRef name, const TagInfo &info,
+                          VersionTuple swiftVersion) {
       Tag tag;
       tag.Name = name;
       handleCommonType(tag, info);
-      TheModule.Tags.push_back(tag);
+      auto &items = getTopLevelItems(swiftVersion);
+      items.Tags.push_back(tag);
     }
 
-    virtual void visitTypedef(StringRef name, const TypedefInfo &info) {
+    virtual void visitTypedef(StringRef name, const TypedefInfo &info,
+                              VersionTuple swiftVersion) {
       Typedef td;
       td.Name = name;
       handleCommonType(td, info);
-      TheModule.Typedefs.push_back(td);
+      auto &items = getTopLevelItems(swiftVersion);
+      items.Typedefs.push_back(td);
     }
 
     /// Retrieve the module.
@@ -1136,6 +1245,74 @@ namespace {
 /// Produce a flattened, numeric value for optional method/property kinds.
 static unsigned flattenPropertyKind(llvm::Optional<MethodKind> kind) {
   return kind ? (*kind == MethodKind::Instance ? 2 : 1) : 0;
+}
+
+/// Sort the items in the given block of "top-level" items.
+static void sortTopLevelItems(TopLevelItems &items) {
+  // Sort classes.
+  std::sort(items.Classes.begin(), items.Classes.end(),
+            [](const Class &lhs, const Class &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort protocols.
+  std::sort(items.Protocols.begin(), items.Protocols.end(),
+            [](const Class &lhs, const Class &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort methods and properties within each class and protocol.
+  auto sortMembers = [](Class &record) {
+    // Sort properties.
+    std::sort(record.Properties.begin(), record.Properties.end(),
+              [](const Property &lhs, const Property &rhs) -> bool {
+                return lhs.Name < rhs.Name ||
+                (lhs.Name == rhs.Name &&
+                 flattenPropertyKind(lhs.Kind) <
+                 flattenPropertyKind(rhs.Kind));
+              });
+
+    // Sort methods.
+    std::sort(record.Methods.begin(), record.Methods.end(),
+              [](const Method &lhs, const Method &rhs) -> bool {
+                return lhs.Selector < rhs.Selector ||
+                (lhs.Selector == rhs.Selector &&
+                 static_cast<unsigned>(lhs.Kind)
+                 < static_cast<unsigned>(rhs.Kind));
+              });
+  };
+  std::for_each(items.Classes.begin(), items.Classes.end(), sortMembers);
+  std::for_each(items.Protocols.begin(), items.Protocols.end(), sortMembers);
+
+  // Sort functions.
+  std::sort(items.Functions.begin(), items.Functions.end(),
+            [](const Function &lhs, const Function &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort global variables.
+  std::sort(items.Globals.begin(), items.Globals.end(),
+            [](const GlobalVariable &lhs, const GlobalVariable &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort enum constants.
+  std::sort(items.EnumConstants.begin(), items.EnumConstants.end(),
+            [](const EnumConstant &lhs, const EnumConstant &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort tags.
+  std::sort(items.Tags.begin(), items.Tags.end(),
+            [](const Tag &lhs, const Tag &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort typedefs.
+  std::sort(items.Typedefs.begin(), items.Typedefs.end(),
+            [](const Typedef &lhs, const Typedef &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
 }
 
 bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
@@ -1162,70 +1339,18 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
   if (opts.SwiftInferImportAsMember)
     module.SwiftInferImportAsMember = true;
 
-  // Sort classes.
-  std::sort(module.Classes.begin(), module.Classes.end(),
-            [](const Class &lhs, const Class &rhs) -> bool {
-              return lhs.Name < rhs.Name;
+  // Sort the top-level items.
+  sortTopLevelItems(module.TopLevel);
+
+  // Sort the Swift versions.
+  std::sort(module.SwiftVersions.begin(), module.SwiftVersions.end(),
+            [](const Versioned &lhs, const Versioned &rhs) -> bool {
+              return lhs.Version < rhs.Version;
             });
 
-  // Sort protocols.
-  std::sort(module.Protocols.begin(), module.Protocols.end(),
-            [](const Class &lhs, const Class &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort methods and properties within each class and protocol.
-  auto sortMembers = [](Class &record) {
-    // Sort properties.
-    std::sort(record.Properties.begin(), record.Properties.end(),
-              [](const Property &lhs, const Property &rhs) -> bool {
-                return lhs.Name < rhs.Name ||
-                  (lhs.Name == rhs.Name &&
-                   flattenPropertyKind(lhs.Kind) < 
-                     flattenPropertyKind(rhs.Kind));
-              });
-
-    // Sort methods.
-    std::sort(record.Methods.begin(), record.Methods.end(),
-              [](const Method &lhs, const Method &rhs) -> bool {
-                return lhs.Selector < rhs.Selector ||
-                       (lhs.Selector == rhs.Selector &&
-                        static_cast<unsigned>(lhs.Kind)
-                          < static_cast<unsigned>(rhs.Kind));
-              });
-  };
-  std::for_each(module.Classes.begin(), module.Classes.end(), sortMembers);
-  std::for_each(module.Protocols.begin(), module.Protocols.end(), sortMembers);
-
-  // Sort functions.
-  std::sort(module.Functions.begin(), module.Functions.end(),
-            [](const Function &lhs, const Function &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort global variables.
-  std::sort(module.Globals.begin(), module.Globals.end(),
-            [](const GlobalVariable &lhs, const GlobalVariable &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort enum constants.
-  std::sort(module.EnumConstants.begin(), module.EnumConstants.end(),
-            [](const EnumConstant &lhs, const EnumConstant &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort tags.
-  std::sort(module.Tags.begin(), module.Tags.end(),
-            [](const Tag &lhs, const Tag &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
-
-  // Sort typedefs.
-  std::sort(module.Typedefs.begin(), module.Typedefs.end(),
-            [](const Typedef &lhs, const Typedef &rhs) -> bool {
-              return lhs.Name < rhs.Name;
-            });
+  // Sort the top-level items within each Swift version.
+  for (auto &versioned : module.SwiftVersions)
+    sortTopLevelItems(versioned.Items);
 
   // Output the YAML representation.
   Output yout(os);
