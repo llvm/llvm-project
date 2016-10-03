@@ -12,6 +12,13 @@ Classes:
     SwiftBridge:     ''
     NSErrorDomain:   ''
     Methods:         
+      - Selector:        'cellWithImage:'
+        MethodKind:      Class
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       ''
+        FactoryAsInit:   C
       - Selector:        init
         MethodKind:      Instance
         NullabilityOfRet: U
