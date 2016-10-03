@@ -40,7 +40,7 @@ public:
   static char ID;
   explicit AMDGPUPrintfRuntimeBinding();
   SmallVector<Value*, 32> Printfs;
-  const char* getPassName() const override;
+  StringRef getPassName() const override;
   bool runOnModule(Module &M) override;
   bool doInitialization(Module &M) override;
   bool doFinalization(Module &M) override;
@@ -673,7 +673,7 @@ bool AMDGPUPrintfRuntimeBinding::runOnModule(Module &M) {
    return lowerPrintfForGpu(M);
 }
 
-const char* AMDGPUPrintfRuntimeBinding::getPassName() const {
+StringRef AMDGPUPrintfRuntimeBinding::getPassName() const {
   return "AMD Printf lowering part 1";
 }
 
