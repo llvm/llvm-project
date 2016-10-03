@@ -412,9 +412,9 @@ static std::map<unsigned, PerBlockIDStats> BlockIDStats;
 
 
 
-/// Error - All bitcode analysis errors go through this function, making this a
+/// ReportError - All bitcode analysis errors go through this function, making this a
 /// good place to breakpoint if debugging.
-static bool Error(const Twine &Err) {
+static bool ReportError(const Twine &Err) {
   errs() << Err << "\n";
   return true;
 }
@@ -443,11 +443,11 @@ static bool decodeMetadataStringsBlob(BitstreamReader &Reader, StringRef Indent,
   StringRef Strings = Blob.drop_front(StringsOffset);
   do {
     if (R.AtEndOfStream())
-      return Error("bad length");
+      return ReportError("bad length");
 
     unsigned Size = R.ReadVBR(6);
     if (Strings.size() < Size)
-      return Error("truncated chars");
+      return ReportError("truncated chars");
 
     outs() << Indent << "    '";
     outs().write_escaped(Strings.slice(0, Size), /*hex=*/true);
@@ -486,14 +486,14 @@ static bool ParseBlock(BitstreamCursor &Stream, unsigned BlockID,
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
     if (Dump) outs() << Indent << "<BLOCKINFO_BLOCK/>\n";
     if (BitstreamCursor(Stream).ReadBlockInfoBlock())
-      return Error("Malformed BlockInfoBlock");
+      return ReportError("Malformed BlockInfoBlock");
     // It's not really interesting to dump the contents of the blockinfo block.
     DumpRecords = false;
   }
 
   unsigned NumWords = 0;
   if (Stream.EnterSubBlock(BlockID, &NumWords))
-    return Error("Malformed block record");
+    return ReportError("Malformed block record");
 
   // Keep it for later, when we see a MODULE_HASH record
   uint64_t BlockEntryPos = Stream.getCurrentByteNo();
@@ -519,7 +519,7 @@ static bool ParseBlock(BitstreamCursor &Stream, unsigned BlockID,
   // Read all the records for this block.
   while (1) {
     if (Stream.AtEndOfStream())
-      return Error("Premature end of bitstream");
+      return ReportError("Premature end of bitstream");
 
     uint64_t RecordStartBit = Stream.GetCurrentBitNo();
 
@@ -528,7 +528,7 @@ static bool ParseBlock(BitstreamCursor &Stream, unsigned BlockID,
     
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
-      return Error("malformed bitcode file");
+      return ReportError("malformed bitcode file");
     case BitstreamEntry::EndBlock: {
       uint64_t BlockBitEnd = Stream.GetCurrentBitNo();
       BlockStats.NumBits += BlockBitEnd-BlockBitStart;
@@ -701,11 +701,11 @@ static bool openBitcodeFile(StringRef Path,
   ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
       MemoryBuffer::getFileOrSTDIN(Path);
   if (std::error_code EC = MemBufOrErr.getError())
-    return Error(Twine("Error reading '") + Path + "': " + EC.message());
+    return ReportError(Twine("ReportError reading '") + Path + "': " + EC.message());
   MemBuf = std::move(MemBufOrErr.get());
 
   if (MemBuf->getBufferSize() & 3)
-    return Error("Bitcode stream should be a multiple of 4 bytes in length");
+    return ReportError("Bitcode stream should be a multiple of 4 bytes in length");
 
   const unsigned char *BufPtr = (const unsigned char *)MemBuf->getBufferStart();
   const unsigned char *EndBufPtr = BufPtr + MemBuf->getBufferSize();
@@ -714,7 +714,7 @@ static bool openBitcodeFile(StringRef Path,
   // The magic number is 0x0B17C0DE stored in little endian.
   if (isBitcodeWrapper(BufPtr, EndBufPtr)) {
     if (MemBuf->getBufferSize() < BWH_HeaderSize)
-      return Error("Invalid bitcode wrapper header");
+      return ReportError("Invalid bitcode wrapper header");
 
     if (Dump) {
       unsigned Magic = support::endian::read32le(&BufPtr[BWH_MagicField]);
@@ -732,7 +732,7 @@ static bool openBitcodeFile(StringRef Path,
     }
 
     if (SkipBitcodeWrapperHeader(BufPtr, EndBufPtr, true))
-      return Error("Invalid bitcode wrapper header");
+      return ReportError("Invalid bitcode wrapper header");
   }
 
   StreamFile = BitstreamReader(BufPtr, EndBufPtr);
@@ -782,12 +782,12 @@ static int AnalyzeBitcode() {
     while (!BlockInfoCursor.AtEndOfStream()) {
       unsigned Code = BlockInfoCursor.ReadCode();
       if (Code != bitc::ENTER_SUBBLOCK)
-        return Error("Invalid record at top-level in block info file");
+        return ReportError("Invalid record at top-level in block info file");
 
       unsigned BlockID = BlockInfoCursor.ReadSubBlockID();
       if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
         if (BlockInfoCursor.ReadBlockInfoBlock())
-          return Error("Malformed BlockInfoBlock in block info file");
+          return ReportError("Malformed BlockInfoBlock in block info file");
         break;
       }
 
@@ -803,7 +803,7 @@ static int AnalyzeBitcode() {
   while (!Stream.AtEndOfStream()) {
     unsigned Code = Stream.ReadCode();
     if (Code != bitc::ENTER_SUBBLOCK)
-      return Error("Invalid record at top-level");
+      return ReportError("Invalid record at top-level");
 
     unsigned BlockID = Stream.ReadSubBlockID();
 

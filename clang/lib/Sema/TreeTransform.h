@@ -1013,11 +1013,8 @@ public:
         case LookupResult::FoundOverloaded:
         case LookupResult::FoundUnresolvedValue: {
           NamedDecl *SomeDecl = Result.getRepresentativeDecl();
-          unsigned Kind = 0;
-          if (isa<TypedefDecl>(SomeDecl)) Kind = 1;
-          else if (isa<TypeAliasDecl>(SomeDecl)) Kind = 2;
-          else if (isa<ClassTemplateDecl>(SomeDecl)) Kind = 3;
-          SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag) << Kind;
+          Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl);
+          SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag) << NTK;
           SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
           break;
         }
@@ -5703,7 +5700,8 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
       if (TypeAliasTemplateDecl *TAT = dyn_cast_or_null<TypeAliasTemplateDecl>(
               Template.getAsTemplateDecl())) {
         SemaRef.Diag(TL.getNamedTypeLoc().getBeginLoc(),
-                     diag::err_tag_reference_non_tag) << 4;
+                     diag::err_tag_reference_non_tag)
+            << Sema::NTK_TypeAliasTemplate;
         SemaRef.Diag(TAT->getLocation(), diag::note_declared_at);
       }
     }

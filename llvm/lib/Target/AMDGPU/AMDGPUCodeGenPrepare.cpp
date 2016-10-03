@@ -172,8 +172,8 @@ bool AMDGPUCodeGenPrepare::isI32Ty(const Type *T) const {
 }
 
 bool AMDGPUCodeGenPrepare::isSigned(const BinaryOperator &I) const {
-  return I.getOpcode() == Instruction::SDiv ||
-      I.getOpcode() == Instruction::SRem;
+  return I.getOpcode() == Instruction::AShr ||
+      I.getOpcode() == Instruction::SDiv || I.getOpcode() == Instruction::SRem;
 }
 
 bool AMDGPUCodeGenPrepare::isSigned(const SelectInst &I) const {

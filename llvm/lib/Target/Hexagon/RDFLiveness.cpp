@@ -530,7 +530,7 @@ void Liveness::computePhiInfo() {
         RegisterSet UpReached;
         for (const std::pair<RegisterRef,NodeSet> &T : RUM) {
           RegisterRef R = T.first;
-          if (!isRestrictedToRef(PA, UA, R))
+          if (UA.Addr->getFlags() & NodeAttrs::Shadow)
             R = getRestrictedRegRef(UA);
           if (!MidDefs.hasCoverOf(R))
             UpReached.insert(R);
@@ -648,7 +648,7 @@ void Liveness::computeLiveIns() {
         auto &LOX = PhiLOX[PrA.Addr->getCode()];
         for (auto R : RUs) {
           RegisterRef RR = R.first;
-          if (!isRestrictedToRef(PA, UA, RR))
+          if (UA.Addr->getFlags() & NodeAttrs::Shadow)
             RR = getRestrictedRegRef(UA);
           // The restricted ref may be different from the ref that was
           // accessed in the "real use". This means that this phi use
@@ -770,29 +770,6 @@ void Liveness::resetKills(MachineBasicBlock *B) {
 }
 
 
-// For shadows, determine if RR is aliased to a reaching def of any other
-// shadow associated with RA. The register ref on RA will be "larger" than
-// each individual reaching def, and to determine the data-flow between defs
-// and uses of RR it may be necessary to visit all shadows. If RR is not
-// aliased to the reaching def of any other shadow, then visiting only RA
-// is sufficient. In that sense, the data flow of RR would be restricted to
-// the reference RA.
-// For non-shadows, this function returns "true".
-bool Liveness::isRestrictedToRef(NodeAddr<InstrNode*> IA, NodeAddr<RefNode*> RA,
-      RegisterRef RR) const {
-  NodeId Start = RA.Id;
-  for (NodeAddr<RefNode*> TA = DFG.getNextShadow(IA, RA);
-       TA.Id != 0 && TA.Id != Start; TA = DFG.getNextShadow(IA, TA)) {
-    NodeId RD = TA.Addr->getReachingDef();
-    if (RD == 0)
-      continue;
-    if (DFG.alias(RR, DFG.addr<DefNode*>(RD).Addr->getRegRef()))
-      return false;
-  }
-  return true;
-}
-
-
 RegisterRef Liveness::getRestrictedRegRef(NodeAddr<RefNode*> RA) const {
   assert(DFG.IsRef<NodeAttrs::Use>(RA));
   if (RA.Addr->getFlags() & NodeAttrs::Shadow) {
@@ -850,12 +827,13 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
   }
 
   if (Trace) {
-    dbgs() << LLVM_FUNCTION_NAME << " in BB#" << B->getNumber()
-           << " after recursion into";
+    dbgs() << "\n-- BB#" << B->getNumber() << ": " << LLVM_FUNCTION_NAME
+           << " after recursion into: {";
     for (auto I : *N)
       dbgs() << ' ' << I->getBlock()->getNumber();
-    dbgs() << "\n  LiveIn: " << Print<RefMap>(LiveIn, DFG);
-    dbgs() << "\n  Local:  " << Print<RegisterSet>(LiveMap[B], DFG) << '\n';
+    dbgs() << " }\n";
+    dbgs() << "  LiveIn: " << Print<RefMap>(LiveIn, DFG) << '\n';
+    dbgs() << "  Local:  " << Print<RegisterSet>(LiveMap[B], DFG) << '\n';
   }
 
   // Add phi uses that are live on exit from this block.

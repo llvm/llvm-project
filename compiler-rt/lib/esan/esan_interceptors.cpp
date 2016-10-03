@@ -461,28 +461,35 @@ INTERCEPTOR(int, pthread_sigmask, int how, __sanitizer_sigset_t *set,
 // Malloc interceptors
 //===----------------------------------------------------------------------===//
 
-static char early_alloc_buf[128];
-static bool used_early_alloc_buf;
+static const uptr early_alloc_buf_size = 1024;
+static uptr allocated_bytes;
+static char early_alloc_buf[early_alloc_buf_size];
+
+static bool isInEarlyAllocBuf(const void *ptr) {
+  return ((uptr)ptr >= (uptr)early_alloc_buf &&
+          ((uptr)ptr - (uptr)early_alloc_buf) < sizeof(early_alloc_buf));
+}
 
 static void *handleEarlyAlloc(uptr size) {
   // If esan is initialized during an interceptor (which happens with some
   // tcmalloc implementations that call pthread_mutex_lock), the call from
-  // dlsym to calloc will deadlock.  There is only one such calloc (dlsym
-  // allocates a single pthread key), so we work around it by using a
-  // static buffer for the calloc request.  The loader currently needs
-  // 32 bytes but we size at 128 to allow for future changes.
+  // dlsym to calloc will deadlock.
+  // dlsym may also call malloc before REAL(malloc) is retrieved from dlsym.
+  // We work around it by using a static buffer for the early malloc/calloc
+  // requests.
   // This solution will also allow us to deliberately intercept malloc & family
   // in the future (to perform tool actions on each allocation, without
   // replacing the allocator), as it also solves the problem of intercepting
   // calloc when it will itself be called before its REAL pointer is
   // initialized.
-  CHECK(!used_early_alloc_buf && size < sizeof(early_alloc_buf));
   // We do not handle multiple threads here.  This only happens at process init
   // time, and while it's possible for a shared library to create early threads
   // that race here, we consider that to be a corner case extreme enough that
   // it's not worth the effort to handle.
-  used_early_alloc_buf = true;
-  return (void *)early_alloc_buf;
+  void *mem = (void *)&early_alloc_buf[allocated_bytes];
+  allocated_bytes += size;
+  CHECK_LT(allocated_bytes, early_alloc_buf_size);
+  return mem;
 }
 
 INTERCEPTOR(void*, calloc, uptr size, uptr n) {
@@ -496,14 +503,20 @@ INTERCEPTOR(void*, calloc, uptr size, uptr n) {
   return res;
 }
 
+INTERCEPTOR(void*, malloc, uptr size) {
+  if (EsanDuringInit && REAL(malloc) == nullptr)
+    return handleEarlyAlloc(size);
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, malloc, size);
+  return REAL(malloc)(size);
+}
+
 INTERCEPTOR(void, free, void *p) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, free, p);
-  if (p == (void *)early_alloc_buf) {
-    // We expect just a singleton use but we clear this for cleanliness.
-    used_early_alloc_buf = false;
+  // There are only a few early allocation requests, so we simply skip the free.
+  if (isInEarlyAllocBuf(p))
     return;
-  }
+  COMMON_INTERCEPTOR_ENTER(ctx, free, p);
   REAL(free)(p);
 }
 
@@ -534,6 +547,7 @@ void initializeInterceptors() {
   ESAN_MAYBE_INTERCEPT_PTHREAD_SIGMASK;
 
   INTERCEPT_FUNCTION(calloc);
+  INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(free);
 
   // TODO(bruening): intercept routines that other sanitizers intercept that

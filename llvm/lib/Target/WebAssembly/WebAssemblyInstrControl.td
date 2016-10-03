@@ -88,6 +88,7 @@ multiclass SIMD_RETURN<ValueType vt> {
 }
 
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
+
 let isReturn = 1 in {
   defm : RETURN<I32>;
   defm : RETURN<I64>;
@@ -104,7 +105,9 @@ let isReturn = 1 in {
   let isCodeGenOnly = 1 in
   def FALLTHROUGH_RETURN_VOID : I<(outs), (ins), []>;
 } // isReturn = 1
-  def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable">;
+
+def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable">;
+
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 } // Defs = [ARGUMENTS]

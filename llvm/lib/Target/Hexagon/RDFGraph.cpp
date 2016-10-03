@@ -213,18 +213,21 @@ raw_ostream &operator<< (raw_ostream &OS,
   const MachineInstr &MI = *P.Obj.Addr->getCode();
   unsigned Opc = MI.getOpcode();
   OS << Print<NodeId>(P.Obj.Id, P.G) << ": " << P.G.getTII().getName(Opc);
-  // Print the target for calls (for readability).
-  if (MI.getDesc().isCall()) {
-    MachineInstr::const_mop_iterator Fn =
+  // Print the target for calls and branches (for readability).
+  if (MI.isCall() || MI.isBranch()) {
+    MachineInstr::const_mop_iterator T =
           find_if(MI.operands(),
                   [] (const MachineOperand &Op) -> bool {
-                    return Op.isGlobal() || Op.isSymbol();
+                    return Op.isMBB() || Op.isGlobal() || Op.isSymbol();
                   });
-    if (Fn != MI.operands_end()) {
-      if (Fn->isGlobal())
-        OS << ' ' << Fn->getGlobal()->getName();
-      else if (Fn->isSymbol())
-        OS << ' ' << Fn->getSymbolName();
+    if (T != MI.operands_end()) {
+      OS << ' ';
+      if (T->isMBB())
+        OS << "BB#" << T->getMBB()->getNumber();
+      else if (T->isGlobal())
+        OS << T->getGlobal()->getName();
+      else if (T->isSymbol())
+        OS << T->getSymbolName();
     }
   }
   OS << " [" << PrintListV<RefNode*>(P.Obj.Addr->members(P.G), P.G) << ']';
@@ -263,8 +266,8 @@ raw_ostream &operator<< (raw_ostream &OS,
     }
   };
 
-  OS << Print<NodeId>(P.Obj.Id, P.G) << ": === BB#" << BB->getNumber()
-     << " === preds(" << NP << "): ";
+  OS << Print<NodeId>(P.Obj.Id, P.G) << ": --- BB#" << BB->getNumber()
+     << " --- preds(" << NP << "): ";
   for (auto I : BB->predecessors())
     Ns.push_back(I->getNumber());
   PrintBBs(Ns);
