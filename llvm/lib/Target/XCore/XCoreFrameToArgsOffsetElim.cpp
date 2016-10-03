@@ -32,7 +32,7 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "XCore FRAME_TO_ARGS_OFFSET Elimination";
     }
   };

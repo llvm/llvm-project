@@ -45,7 +45,7 @@ public:
   static char ID;
 
   LowerIntrinsics();
-  const char *getPassName() const override;
+  StringRef getPassName() const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool doInitialization(Module &M) override;
@@ -93,7 +93,7 @@ LowerIntrinsics::LowerIntrinsics() : FunctionPass(ID) {
   initializeLowerIntrinsicsPass(*PassRegistry::getPassRegistry());
 }
 
-const char *LowerIntrinsics::getPassName() const {
+StringRef LowerIntrinsics::getPassName() const {
   return "Lower Garbage Collection Instructions";
 }
 

@@ -66,9 +66,7 @@ namespace {
         : MachineFunctionPass(ID), TM(tm), IsPIC(TM.isPositionIndependent()),
           ABI(static_cast<const MipsTargetMachine &>(TM).getABI()) {}
 
-    const char *getPassName() const override {
-      return "Mips Long Branch";
-    }
+    StringRef getPassName() const override { return "Mips Long Branch"; }
 
     bool runOnMachineFunction(MachineFunction &F) override;
 

@@ -5994,8 +5994,8 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
     if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(LHS))
       if (AddRec->getLoop() == L) {
         // Form the constant range.
-        ConstantRange CompRange(
-            ICmpInst::makeConstantRange(Cond, RHSC->getAPInt()));
+        ConstantRange CompRange =
+            ConstantRange::makeExactICmpRegion(Cond, RHSC->getAPInt());
 
         const SCEV *Ret = AddRec->getNumIterationsInRange(CompRange, *this);
         if (!isa<SCEVCouldNotCompute>(Ret)) return Ret;
@@ -7337,149 +7337,77 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
   // cases, and canonicalize *-or-equal comparisons to regular comparisons.
   if (const SCEVConstant *RC = dyn_cast<SCEVConstant>(RHS)) {
     const APInt &RA = RC->getAPInt();
-    switch (Pred) {
-    default: llvm_unreachable("Unexpected ICmpInst::Predicate value!");
-    case ICmpInst::ICMP_EQ:
-    case ICmpInst::ICMP_NE:
-      // Fold ((-1) * %a) + %b == 0 (equivalent to %b-%a == 0) into %a == %b.
-      if (!RA)
-        if (const SCEVAddExpr *AE = dyn_cast<SCEVAddExpr>(LHS))
-          if (const SCEVMulExpr *ME = dyn_cast<SCEVMulExpr>(AE->getOperand(0)))
-            if (AE->getNumOperands() == 2 && ME->getNumOperands() == 2 &&
-                ME->getOperand(0)->isAllOnesValue()) {
-              RHS = AE->getOperand(1);
-              LHS = ME->getOperand(1);
-              Changed = true;
-            }
-      break;
-    case ICmpInst::ICMP_UGE:
-      if ((RA - 1).isMinValue()) {
-        Pred = ICmpInst::ICMP_NE;
+
+    bool SimplifiedByConstantRange = false;
+
+    if (!ICmpInst::isEquality(Pred)) {
+      ConstantRange ExactCR = ConstantRange::makeExactICmpRegion(Pred, RA);
+      if (ExactCR.isFullSet())
+        goto trivially_true;
+      else if (ExactCR.isEmptySet())
+        goto trivially_false;
+
+      APInt NewRHS;
+      CmpInst::Predicate NewPred;
+      if (ExactCR.getEquivalentICmp(NewPred, NewRHS) &&
+          ICmpInst::isEquality(NewPred)) {
+        // We were able to convert an inequality to an equality.
+        Pred = NewPred;
+        RHS = getConstant(NewRHS);
+        Changed = SimplifiedByConstantRange = true;
+      }
+    }
+
+    if (!SimplifiedByConstantRange) {
+      switch (Pred) {
+      default:
+        break;
+      case ICmpInst::ICMP_EQ:
+      case ICmpInst::ICMP_NE:
+        // Fold ((-1) * %a) + %b == 0 (equivalent to %b-%a == 0) into %a == %b.
+        if (!RA)
+          if (const SCEVAddExpr *AE = dyn_cast<SCEVAddExpr>(LHS))
+            if (const SCEVMulExpr *ME =
+                    dyn_cast<SCEVMulExpr>(AE->getOperand(0)))
+              if (AE->getNumOperands() == 2 && ME->getNumOperands() == 2 &&
+                  ME->getOperand(0)->isAllOnesValue()) {
+                RHS = AE->getOperand(1);
+                LHS = ME->getOperand(1);
+                Changed = true;
+              }
+        break;
+
+
+        // The "Should have been caught earlier!" messages refer to the fact
+        // that the ExactCR.isFullSet() or ExactCR.isEmptySet() check above
+        // should have fired on the corresponding cases, and canonicalized the
+        // check to trivially_true or trivially_false.
+
+      case ICmpInst::ICMP_UGE:
+        assert(!RA.isMinValue() && "Should have been caught earlier!");
+        Pred = ICmpInst::ICMP_UGT;
         RHS = getConstant(RA - 1);
         Changed = true;
         break;
-      }
-      if (RA.isMaxValue()) {
-        Pred = ICmpInst::ICMP_EQ;
-        Changed = true;
-        break;
-      }
-      if (RA.isMinValue()) goto trivially_true;
-
-      Pred = ICmpInst::ICMP_UGT;
-      RHS = getConstant(RA - 1);
-      Changed = true;
-      break;
-    case ICmpInst::ICMP_ULE:
-      if ((RA + 1).isMaxValue()) {
-        Pred = ICmpInst::ICMP_NE;
+      case ICmpInst::ICMP_ULE:
+        assert(!RA.isMaxValue() && "Should have been caught earlier!");
+        Pred = ICmpInst::ICMP_ULT;
         RHS = getConstant(RA + 1);
         Changed = true;
         break;
-      }
-      if (RA.isMinValue()) {
-        Pred = ICmpInst::ICMP_EQ;
-        Changed = true;
-        break;
-      }
-      if (RA.isMaxValue()) goto trivially_true;
-
-      Pred = ICmpInst::ICMP_ULT;
-      RHS = getConstant(RA + 1);
-      Changed = true;
-      break;
-    case ICmpInst::ICMP_SGE:
-      if ((RA - 1).isMinSignedValue()) {
-        Pred = ICmpInst::ICMP_NE;
+      case ICmpInst::ICMP_SGE:
+        assert(!RA.isMinSignedValue() && "Should have been caught earlier!");
+        Pred = ICmpInst::ICMP_SGT;
         RHS = getConstant(RA - 1);
         Changed = true;
         break;
-      }
-      if (RA.isMaxSignedValue()) {
-        Pred = ICmpInst::ICMP_EQ;
-        Changed = true;
-        break;
-      }
-      if (RA.isMinSignedValue()) goto trivially_true;
-
-      Pred = ICmpInst::ICMP_SGT;
-      RHS = getConstant(RA - 1);
-      Changed = true;
-      break;
-    case ICmpInst::ICMP_SLE:
-      if ((RA + 1).isMaxSignedValue()) {
-        Pred = ICmpInst::ICMP_NE;
+      case ICmpInst::ICMP_SLE:
+        assert(!RA.isMaxSignedValue() && "Should have been caught earlier!");
+        Pred = ICmpInst::ICMP_SLT;
         RHS = getConstant(RA + 1);
         Changed = true;
         break;
       }
-      if (RA.isMinSignedValue()) {
-        Pred = ICmpInst::ICMP_EQ;
-        Changed = true;
-        break;
-      }
-      if (RA.isMaxSignedValue()) goto trivially_true;
-
-      Pred = ICmpInst::ICMP_SLT;
-      RHS = getConstant(RA + 1);
-      Changed = true;
-      break;
-    case ICmpInst::ICMP_UGT:
-      if (RA.isMinValue()) {
-        Pred = ICmpInst::ICMP_NE;
-        Changed = true;
-        break;
-      }
-      if ((RA + 1).isMaxValue()) {
-        Pred = ICmpInst::ICMP_EQ;
-        RHS = getConstant(RA + 1);
-        Changed = true;
-        break;
-      }
-      if (RA.isMaxValue()) goto trivially_false;
-      break;
-    case ICmpInst::ICMP_ULT:
-      if (RA.isMaxValue()) {
-        Pred = ICmpInst::ICMP_NE;
-        Changed = true;
-        break;
-      }
-      if ((RA - 1).isMinValue()) {
-        Pred = ICmpInst::ICMP_EQ;
-        RHS = getConstant(RA - 1);
-        Changed = true;
-        break;
-      }
-      if (RA.isMinValue()) goto trivially_false;
-      break;
-    case ICmpInst::ICMP_SGT:
-      if (RA.isMinSignedValue()) {
-        Pred = ICmpInst::ICMP_NE;
-        Changed = true;
-        break;
-      }
-      if ((RA + 1).isMaxSignedValue()) {
-        Pred = ICmpInst::ICMP_EQ;
-        RHS = getConstant(RA + 1);
-        Changed = true;
-        break;
-      }
-      if (RA.isMaxSignedValue()) goto trivially_false;
-      break;
-    case ICmpInst::ICMP_SLT:
-      if (RA.isMaxSignedValue()) {
-        Pred = ICmpInst::ICMP_NE;
-        Changed = true;
-        break;
-      }
-      if ((RA - 1).isMinSignedValue()) {
-       Pred = ICmpInst::ICMP_EQ;
-       RHS = getConstant(RA - 1);
-        Changed = true;
-       break;
-      }
-      if (RA.isMinSignedValue()) goto trivially_false;
-      break;
     }
   }
 
@@ -8907,9 +8835,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
     // Range.getUpper() is crossed.
     SmallVector<const SCEV *, 4> NewOps(op_begin(), op_end());
     NewOps[0] = SE.getNegativeSCEV(SE.getConstant(Range.getUpper()));
-    const SCEV *NewAddRec = SE.getAddRecExpr(NewOps, getLoop(),
-                                             // getNoWrapFlags(FlagNW)
-                                             FlagAnyWrap);
+    const SCEV *NewAddRec = SE.getAddRecExpr(NewOps, getLoop(), FlagAnyWrap);
 
     // Next, solve the constructed addrec
     if (auto Roots =

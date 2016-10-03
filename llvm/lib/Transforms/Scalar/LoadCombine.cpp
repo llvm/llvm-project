@@ -68,7 +68,7 @@ public:
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 
-  const char *getPassName() const override { return LDCOMBINE_NAME; }
+  StringRef getPassName() const override { return LDCOMBINE_NAME; }
   static char ID;
 
   typedef IRBuilder<TargetFolder> BuilderTy;

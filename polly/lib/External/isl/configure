@@ -2436,6 +2436,37 @@ fi
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_cxx_check_header_mongrel
+
+# ac_fn_cxx_check_header_compile LINENO HEADER VAR INCLUDES
+# ---------------------------------------------------------
+# Tests whether HEADER exists and can be compiled using the include files in
+# INCLUDES, setting the cache variable VAR accordingly.
+ac_fn_cxx_check_header_compile ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+#include <$2>
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  eval "$3=yes"
+else
+  eval "$3=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_cxx_check_header_compile
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -18704,6 +18735,15 @@ $as_echo "#define HAVE_BASIC_DIAGNOSTICOPTIONS_H /**/" >>confdefs.h
 fi
 
 
+	ac_fn_cxx_check_header_compile "$LINENO" "clang/Lex/PreprocessorOptions.h" "ac_cv_header_clang_Lex_PreprocessorOptions_h" "#include <clang/Basic/LLVM.h>
+"
+if test "x$ac_cv_header_clang_Lex_PreprocessorOptions_h" = xyes; then :
+
+$as_echo "#define HAVE_LEX_PREPROCESSOROPTIONS_H /**/" >>confdefs.h
+
+fi
+
+
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Basic/TargetInfo.h>
@@ -18883,7 +18923,11 @@ rm -f conftest*
 
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <clang/Frontend/CompilerInstance.h>
+
+		#include <clang/Basic/TargetOptions.h>
+		#include <clang/Lex/PreprocessorOptions.h>
+		#include <clang/Frontend/CompilerInstance.h>
+
 int
 main ()
 {

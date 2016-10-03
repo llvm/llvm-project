@@ -33,7 +33,7 @@ public:
   SystemZLDCleanup(const SystemZTargetMachine &tm)
     : MachineFunctionPass(ID), TII(nullptr), MF(nullptr) {}
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "SystemZ Local Dynamic TLS Access Clean-up";
   }
 

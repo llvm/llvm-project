@@ -46,9 +46,7 @@ namespace {
                              std::unique_ptr<MCStreamer> Streamer)
         : AsmPrinter(TM, std::move(Streamer)) {}
 
-    const char *getPassName() const override {
-      return "Sparc Assembly Printer";
-    }
+    StringRef getPassName() const override { return "Sparc Assembly Printer"; }
 
     void printOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
     void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS,

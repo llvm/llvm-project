@@ -36,9 +36,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
-    return "SI Fold Operands";
-  }
+  StringRef getPassName() const override { return "SI Fold Operands"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

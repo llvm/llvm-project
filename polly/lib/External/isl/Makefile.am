@@ -11,7 +11,7 @@ lib_LTLIBRARIES = libisl.la
 noinst_PROGRAMS = isl_test isl_polyhedron_sample isl_pip \
 	isl_polyhedron_minimize isl_polytope_scan \
 	isl_polyhedron_detect_equalities isl_cat \
-	isl_closure isl_bound isl_codegen isl_test_int
+	isl_closure isl_bound isl_schedule isl_codegen isl_test_int
 TESTS = isl_test codegen_test.sh pip_test.sh bound_test.sh isl_test_int
 
 if IMATH_FOR_MP
@@ -161,6 +161,8 @@ libisl_la_SOURCES = \
 	isl_schedule_tree.c \
 	isl_schedule_tree.h \
 	isl_schedule_private.h \
+	isl_schedule_constraints.c \
+	isl_schedule_constraints.h \
 	isl_scheduler.c \
 	isl_set_list.c \
 	isl_sort.c \
@@ -210,6 +212,11 @@ isl_pip_LDFLAGS = @MP_LDFLAGS@
 isl_pip_LDADD = libisl.la @MP_LIBS@
 isl_pip_SOURCES = \
 	pip.c
+
+isl_schedule_LDFLAGS = @MP_LDFLAGS@
+isl_schedule_LDADD = libisl.la @MP_LIBS@
+isl_schedule_SOURCES = \
+	schedule.c
 
 isl_codegen_LDFLAGS = @MP_LDFLAGS@
 isl_codegen_LDADD = libisl.la @MP_LIBS@
@@ -354,6 +361,7 @@ EXTRA_DIST = \
 	isl_pw_templ.c \
 	isl_pw_hash.c \
 	isl_pw_union_opt.c \
+	read_in_string_templ.c \
 	isl_tab_lexopt_templ.c \
 	isl_union_macro.h \
 	isl_union_templ.c \

@@ -121,7 +121,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "R600 Vector Registers Merge Pass";
   }
 

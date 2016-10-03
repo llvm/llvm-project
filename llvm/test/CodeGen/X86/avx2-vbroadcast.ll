@@ -250,8 +250,7 @@ define <8 x i16> @broadcast_mem_v4i16_v8i16(<4 x i16>* %ptr) {
 ; X32-AVX2-LABEL: broadcast_mem_v4i16_v8i16:
 ; X32-AVX2:       ## BB#0:
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: broadcast_mem_v4i16_v8i16:

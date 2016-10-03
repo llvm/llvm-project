@@ -91,11 +91,17 @@ define <4 x float> @test_sqrt_ss(<4 x float> %a) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: test_sqrt_ss:
-; AVX:       # BB#0:
-; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_sqrt_ss:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vsqrtss %xmm0, %xmm0, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_sqrt_ss:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vsqrtss %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX512-NEXT:    retq
   %1 = extractelement <4 x float> %a, i32 0
   %2 = call float @llvm.sqrt.f32(float %1)
   %3 = insertelement <4 x float> %a, float %2, i32 0
@@ -172,17 +178,29 @@ define <2 x double> @test_div_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_sqrt_sd(<2 x double> %a) {
-; SSE-LABEL: test_sqrt_sd:
-; SSE:       # BB#0:
-; SSE-NEXT:    sqrtsd %xmm0, %xmm1
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_sqrt_sd:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    sqrtsd %xmm0, %xmm1
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: test_sqrt_sd:
-; AVX:       # BB#0:
-; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX-NEXT:    retq
+; SSE41-LABEL: test_sqrt_sd:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    sqrtsd %xmm0, %xmm1
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: test_sqrt_sd:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
+; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_sqrt_sd:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX512-NEXT:    retq
   %1 = extractelement <2 x double> %a, i32 0
   %2 = call double @llvm.sqrt.f64(double %1)
   %3 = insertelement <2 x double> %a, double %2, i32 0

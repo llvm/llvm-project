@@ -98,9 +98,7 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
-    const char *getPassName() const override {
-      return ARM_LOAD_STORE_OPT_NAME;
-    }
+    StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
 
   private:
     /// A set of load/store MachineInstrs with same base register sorted by
@@ -1953,7 +1951,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return ARM_PREALLOC_LOAD_STORE_OPT_NAME;
     }
 

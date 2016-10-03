@@ -64,7 +64,7 @@ public:
 
   bool runOnFunction(Function &Fn) override;
 
-  const char *getPassName() const override { return "Constant Hoisting"; }
+  StringRef getPassName() const override { return "Constant Hoisting"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

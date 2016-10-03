@@ -95,7 +95,7 @@ namespace {
     MSP430DAGToDAGISel(MSP430TargetMachine &TM, CodeGenOpt::Level OptLevel)
         : SelectionDAGISel(TM, OptLevel) {}
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "MSP430 DAG->DAG Pattern Instruction Selection";
     }
 

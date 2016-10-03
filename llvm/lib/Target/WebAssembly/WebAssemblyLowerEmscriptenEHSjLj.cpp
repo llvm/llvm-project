@@ -260,7 +260,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   // Set of whitelisted function names for exception handling
   std::set<std::string> EHWhitelistSet;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Lower Emscripten Exceptions";
   }
 

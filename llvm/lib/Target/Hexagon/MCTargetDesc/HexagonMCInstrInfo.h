@@ -133,7 +133,7 @@ int getMaxValue(MCInstrInfo const &MCII, MCInst const &MCI);
 int getMinValue(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Return instruction name
-char const *getName(MCInstrInfo const &MCII, MCInst const &MCI);
+StringRef getName(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Return the operand index for the new value.
 unsigned short getNewValueOp(MCInstrInfo const &MCII, MCInst const &MCI);

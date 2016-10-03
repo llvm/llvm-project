@@ -70,7 +70,7 @@ public:
   explicit ARMAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer);
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "ARM Assembly / Object Emitter";
   }
 

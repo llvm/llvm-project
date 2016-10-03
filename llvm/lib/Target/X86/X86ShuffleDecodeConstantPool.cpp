@@ -69,9 +69,10 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
   }
 
   // Now extract the undef/constant bit data into the raw shuffle masks.
-  assert((CstSizeInBits % MaskEltSizeInBits) == 0 && "");
-  unsigned NumMaskElts = CstSizeInBits / MaskEltSizeInBits;
+  assert((CstSizeInBits % MaskEltSizeInBits) == 0 &&
+         "Unaligned shuffle mask size");
 
+  unsigned NumMaskElts = CstSizeInBits / MaskEltSizeInBits;
   UndefElts = SmallBitVector(NumMaskElts, false);
   RawMask.resize(NumMaskElts, 0);
 
@@ -99,7 +100,8 @@ void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
   Type *MaskTy = C->getType();
   unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
   (void)MaskTySize;
-  assert(MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512);
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
+         "Unexpected vector size.");
 
   // The shuffle mask requires a byte vector.
   SmallBitVector UndefElts;
@@ -138,8 +140,9 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
   Type *MaskTy = C->getType();
   unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
   (void)MaskTySize;
-  assert(MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512);
-  assert(ElSize == 32 || ElSize == 64);
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
+         "Unexpected vector size.");
+  assert((ElSize == 32 || ElSize == 64) && "Unexpected vector element size.");
 
   // The shuffle mask requires elements the same size as the target.
   SmallBitVector UndefElts;
@@ -174,7 +177,7 @@ void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
   Type *MaskTy = C->getType();
   unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
   (void)MaskTySize;
-  assert(MaskTySize == 128 || MaskTySize == 256);
+  assert((MaskTySize == 128 || MaskTySize == 256) && "Unexpected vector size.");
 
   // The shuffle mask requires elements the same size as the target.
   SmallBitVector UndefElts;
@@ -224,7 +227,8 @@ void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
 }
 
 void DecodeVPPERMMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
-  assert(C->getType()->getPrimitiveSizeInBits() == 128);
+  assert(C->getType()->getPrimitiveSizeInBits() == 128 &&
+         "Unexpected vector size.");
 
   // The shuffle mask requires a byte vector.
   SmallBitVector UndefElts;

@@ -39,7 +39,7 @@ public:
   WebAssemblyReplacePhysRegs() : MachineFunctionPass(ID) {}
 
 private:
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly Replace Physical Registers";
   }
 

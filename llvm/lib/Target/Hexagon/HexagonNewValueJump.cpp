@@ -78,9 +78,7 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
-    const char *getPassName() const override {
-      return "Hexagon NewValueJump";
-    }
+    StringRef getPassName() const override { return "Hexagon NewValueJump"; }
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
     MachineFunctionProperties getRequiredProperties() const override {

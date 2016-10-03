@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <memory>
 
 // shared_ptr
@@ -15,6 +17,8 @@
 
 #include <memory>
 #include <cassert>
+
+#include "test_macros.h"
 
 struct A
 {
@@ -37,22 +41,22 @@ int main()
             A* p = pA.get();
             std::shared_ptr<A> pA2(std::move(pA));
             assert(A::count == 1);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
             assert(pA.use_count() == 0);
             assert(pA2.use_count() == 1);
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#else
             assert(pA.use_count() == 2);
             assert(pA2.use_count() == 2);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
             assert(pA2.get() == p);
         }
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
         assert(pA.use_count() == 0);
         assert(A::count == 0);
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#else
         assert(pA.use_count() == 1);
         assert(A::count == 1);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
     }
     assert(A::count == 0);
     {

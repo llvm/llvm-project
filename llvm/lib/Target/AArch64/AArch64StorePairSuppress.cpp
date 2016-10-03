@@ -42,7 +42,7 @@ public:
     initializeAArch64StorePairSuppressPass(*PassRegistry::getPassRegistry());
   }
 
-  const char *getPassName() const override { return STPSUPPRESS_PASS_NAME; }
+  StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

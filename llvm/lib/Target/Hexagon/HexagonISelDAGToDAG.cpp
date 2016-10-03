@@ -82,7 +82,7 @@ public:
   bool SelectGlobalAddress(SDValue &N, SDValue &R, bool UseGP);
   bool SelectAddrFI(SDValue &N, SDValue &R);
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Hexagon DAG->DAG Pattern Instruction Selection";
   }
 

@@ -6397,7 +6397,7 @@ static void emitComments(raw_svector_ostream &CommentStream,
   // Flush the stream before taking its content.
   StringRef Comments = CommentsToEmit.str();
   // Get the default information for printing a comment.
-  const char *CommentBegin = MAI.getCommentString();
+  StringRef CommentBegin = MAI.getCommentString();
   unsigned CommentColumn = MAI.getCommentColumn();
   bool IsFirst = true;
   while (!Comments.empty()) {

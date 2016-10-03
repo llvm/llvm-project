@@ -34,7 +34,7 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
   MachineFunctionPrinterPass(raw_ostream &os, const std::string &banner)
       : MachineFunctionPass(ID), OS(os), Banner(banner) {}
 
-  const char *getPassName() const override { return "MachineFunction Printer"; }
+  StringRef getPassName() const override { return "MachineFunction Printer"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

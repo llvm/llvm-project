@@ -147,6 +147,14 @@ bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
     Pred = isEmptySet() ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     RHS = APInt(getBitWidth(), 0);
     Success = true;
+  } else if (auto *OnlyElt = getSingleElement()) {
+    Pred = CmpInst::ICMP_EQ;
+    RHS = *OnlyElt;
+    Success = true;
+  } else if (auto *OnlyMissingElt = getSingleMissingElement()) {
+    Pred = CmpInst::ICMP_NE;
+    RHS = *OnlyMissingElt;
+    Success = true;
   } else if (getLower().isMinSignedValue() || getLower().isMinValue()) {
     Pred =
         getLower().isMinSignedValue() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;

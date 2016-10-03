@@ -247,6 +247,7 @@
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=arm64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64 -check-prefix AARCH64-CXX %s
 //
 // AARCH64:#define _LP64 1
 // AARCH64-NOT:#define __AARCH64EB__ 1
@@ -393,6 +394,7 @@
 // AARCH64:#define __SIZE_MAX__ 18446744073709551615UL
 // AARCH64:#define __SIZE_TYPE__ long unsigned int
 // AARCH64:#define __SIZE_WIDTH__ 64
+// AARCH64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // AARCH64:#define __UINT16_C_SUFFIX__
 // AARCH64:#define __UINT16_MAX__ 65535
 // AARCH64:#define __UINT16_TYPE__ unsigned short
@@ -1206,6 +1208,7 @@
 // AARCH64-DARWIN: #define __aarch64__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM -check-prefix ARM-CXX %s
 //
 // ARM-NOT:#define _LP64
 // ARM:#define __APCS_32__ 1
@@ -1351,6 +1354,7 @@
 // ARM:#define __SIZE_MAX__ 4294967295U
 // ARM:#define __SIZE_TYPE__ unsigned int
 // ARM:#define __SIZE_WIDTH__ 32
+// ARM-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // ARM:#define __UINT16_C_SUFFIX__
 // ARM:#define __UINT16_MAX__ 65535
 // ARM:#define __UINT16_TYPE__ unsigned short
@@ -2431,6 +2435,7 @@
 // I386:#define i386 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-pc-linux-gnu -target-cpu pentium4 < /dev/null | FileCheck -match-full-lines -check-prefix I386-LINUX %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=i386-pc-linux-gnu -target-cpu pentium4 < /dev/null | FileCheck -match-full-lines -check-prefix I386-LINUX -check-prefix I386-LINUX-CXX %s
 //
 // I386-LINUX-NOT:#define _LP64
 // I386-LINUX:#define __BIGGEST_ALIGNMENT__ 16
@@ -2572,6 +2577,7 @@
 // I386-LINUX:#define __SIZE_MAX__ 4294967295U
 // I386-LINUX:#define __SIZE_TYPE__ unsigned int
 // I386-LINUX:#define __SIZE_WIDTH__ 32
+// I386-LINUX-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // I386-LINUX:#define __UINT16_C_SUFFIX__
 // I386-LINUX:#define __UINT16_MAX__ 65535
 // I386-LINUX:#define __UINT16_TYPE__ unsigned short
@@ -2618,6 +2624,7 @@
 // I386-LINUX:#define i386 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=i386-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix I386-NETBSD -check-prefix I386-NETBSD-CXX %s
 //
 // I386-NETBSD-NOT:#define _LP64
 // I386-NETBSD:#define __BIGGEST_ALIGNMENT__ 16
@@ -2759,6 +2766,7 @@
 // I386-NETBSD:#define __SIZE_MAX__ 4294967295U
 // I386-NETBSD:#define __SIZE_TYPE__ unsigned int
 // I386-NETBSD:#define __SIZE_WIDTH__ 32
+// I386-NETBSD-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
 // I386-NETBSD:#define __UINT16_C_SUFFIX__
 // I386-NETBSD:#define __UINT16_MAX__ 65535
 // I386-NETBSD:#define __UINT16_TYPE__ unsigned short
@@ -2818,7 +2826,8 @@
 // I386-DECLSPEC: #define __declspec{{.*}}
 
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MIPS32BE %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MIPS32BE -check-prefix MIPS32BE-C %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=mips-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MIPS32BE -check-prefix MIPS32BE-CXX %s
 //
 // MIPS32BE:#define MIPSEB 1
 // MIPS32BE:#define _ABIO32 1
@@ -2973,8 +2982,9 @@
 // MIPS32BE:#define __SIZE_MAX__ 4294967295U
 // MIPS32BE:#define __SIZE_TYPE__ unsigned int
 // MIPS32BE:#define __SIZE_WIDTH__ 32
+// MIPS32BE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // MIPS32BE:#define __STDC_HOSTED__ 0
-// MIPS32BE:#define __STDC_VERSION__ 201112L
+// MIPS32BE-C:#define __STDC_VERSION__ 201112L
 // MIPS32BE:#define __STDC__ 1
 // MIPS32BE:#define __UINT16_C_SUFFIX__
 // MIPS32BE:#define __UINT16_MAX__ 65535
@@ -3235,7 +3245,10 @@
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding \
 // RUN:            -triple=mips64-none-none -target-abi n32 < /dev/null \
-// RUN:   | FileCheck -match-full-lines -check-prefix MIPSN32BE %s
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPSN32BE -check-prefix MIPSN32BE-C %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding \
+// RUN:            -triple=mips64-none-none -target-abi n32 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPSN32BE -check-prefix MIPSN32BE-CXX %s
 //
 // MIPSN32BE: #define MIPSEB 1
 // MIPSN32BE: #define _ABIN32 2
@@ -3304,7 +3317,7 @@
 // MIPSN32BE: #define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
 // MIPSN32BE: #define __GNUC_MINOR__ 2
 // MIPSN32BE: #define __GNUC_PATCHLEVEL__ 1
-// MIPSN32BE: #define __GNUC_STDC_INLINE__ 1
+// MIPSN32BE-C: #define __GNUC_STDC_INLINE__ 1
 // MIPSN32BE: #define __GNUC__ 4
 // MIPSN32BE: #define __GXX_ABI_VERSION 1002
 // MIPSN32BE: #define __ILP32__ 1
@@ -3424,10 +3437,11 @@
 // MIPSN32BE: #define __SIZE_MAX__ 4294967295U
 // MIPSN32BE: #define __SIZE_TYPE__ unsigned int
 // MIPSN32BE: #define __SIZE_WIDTH__ 32
+// MIPSN32BE-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16U
 // MIPSN32BE: #define __STDC_HOSTED__ 0
 // MIPSN32BE: #define __STDC_UTF_16__ 1
 // MIPSN32BE: #define __STDC_UTF_32__ 1
-// MIPSN32BE: #define __STDC_VERSION__ 201112L
+// MIPSN32BE-C: #define __STDC_VERSION__ 201112L
 // MIPSN32BE: #define __STDC__ 1
 // MIPSN32BE: #define __UINT16_C_SUFFIX__
 // MIPSN32BE: #define __UINT16_FMTX__ "hX"
@@ -3846,6 +3860,7 @@
 // MIPSN32EL: #define mips 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MIPS64BE %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=mips64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MIPS64BE -check-prefix MIPS64BE-CXX %s
 //
 // MIPS64BE:#define MIPSEB 1
 // MIPS64BE:#define _ABI64 3
@@ -4001,6 +4016,7 @@
 // MIPS64BE:#define __SIZE_MAX__ 18446744073709551615UL
 // MIPS64BE:#define __SIZE_TYPE__ long unsigned int
 // MIPS64BE:#define __SIZE_WIDTH__ 64
+// MIPS64BE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // MIPS64BE:#define __UINT16_C_SUFFIX__
 // MIPS64BE:#define __UINT16_MAX__ 65535
 // MIPS64BE:#define __UINT16_TYPE__ unsigned short
@@ -4489,6 +4505,7 @@
 // MIPS-XXR6:#define __mips_nan2008 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=msp430-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MSP430 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=msp430-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MSP430 -check-prefix MSP430-CXX %s
 //
 // MSP430:#define MSP430 1
 // MSP430-NOT:#define _LP64
@@ -4630,6 +4647,7 @@
 // MSP430:#define __SIZE_MAX__ 65535U
 // MSP430:#define __SIZE_TYPE__ unsigned int
 // MSP430:#define __SIZE_WIDTH__ 16
+// MSP430-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // MSP430:#define __UINT16_C_SUFFIX__ U
 // MSP430:#define __UINT16_MAX__ 65535U
 // MSP430:#define __UINT16_TYPE__ unsigned short
@@ -4674,6 +4692,7 @@
 // MSP430:#define __clang__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=nvptx-none-none < /dev/null | FileCheck -match-full-lines -check-prefix NVPTX32 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=nvptx-none-none < /dev/null | FileCheck -match-full-lines -check-prefix NVPTX32 -check-prefix NVPTX32-CXX %s
 //
 // NVPTX32-NOT:#define _LP64
 // NVPTX32:#define __BIGGEST_ALIGNMENT__ 8
@@ -4818,6 +4837,7 @@
 // NVPTX32:#define __SIZE_MAX__ 4294967295U
 // NVPTX32:#define __SIZE_TYPE__ unsigned int
 // NVPTX32:#define __SIZE_WIDTH__ 32
+// NVPTX32-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // NVPTX32:#define __UINT16_C_SUFFIX__
 // NVPTX32:#define __UINT16_MAX__ 65535
 // NVPTX32:#define __UINT16_TYPE__ unsigned short
@@ -4861,6 +4881,7 @@
 // NVPTX32:#define __WINT_WIDTH__ 32
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=nvptx64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix NVPTX64 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=nvptx64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix NVPTX64 -check-prefix NVPTX64-CXX %s
 //
 // NVPTX64:#define _LP64 1
 // NVPTX64:#define __BIGGEST_ALIGNMENT__ 8
@@ -5005,6 +5026,7 @@
 // NVPTX64:#define __SIZE_MAX__ 18446744073709551615UL
 // NVPTX64:#define __SIZE_TYPE__ long unsigned int
 // NVPTX64:#define __SIZE_WIDTH__ 64
+// NVPTX64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8UL
 // NVPTX64:#define __UINT16_C_SUFFIX__
 // NVPTX64:#define __UINT16_MAX__ 65535
 // NVPTX64:#define __UINT16_TYPE__ unsigned short
@@ -5048,6 +5070,7 @@
 // NVPTX64:#define __WINT_WIDTH__ 32
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-none-none -target-cpu 603e < /dev/null | FileCheck -match-full-lines -check-prefix PPC603E %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=powerpc-none-none -target-cpu 603e < /dev/null | FileCheck -match-full-lines -check-prefix PPC603E-CXX %s
 //
 // PPC603E:#define _ARCH_603 1
 // PPC603E:#define _ARCH_603E 1
@@ -5197,6 +5220,7 @@
 // PPC603E:#define __SIZE_MAX__ 4294967295UL
 // PPC603E:#define __SIZE_TYPE__ long unsigned int
 // PPC603E:#define __SIZE_WIDTH__ 32
+// PPC603E-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // PPC603E:#define __UINT16_C_SUFFIX__
 // PPC603E:#define __UINT16_MAX__ 65535
 // PPC603E:#define __UINT16_TYPE__ unsigned short
@@ -5242,6 +5266,7 @@
 // PPC603E:#define __ppc__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu pwr7 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC64 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu pwr7 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC64 -check-prefix PPC64-CXX %s
 //
 // PPC64:#define _ARCH_PPC 1
 // PPC64:#define _ARCH_PPC64 1
@@ -5397,6 +5422,7 @@
 // PPC64:#define __SIZE_MAX__ 18446744073709551615UL
 // PPC64:#define __SIZE_TYPE__ long unsigned int
 // PPC64:#define __SIZE_WIDTH__ 64
+// PPC64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // PPC64:#define __UINT16_C_SUFFIX__
 // PPC64:#define __UINT16_MAX__ 65535
 // PPC64:#define __UINT16_TYPE__ unsigned short
@@ -6662,6 +6688,7 @@
 // AMDGPU:#define cl_khr_local_int32_extended_atomics 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=s390x-none-none -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix S390X %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=s390x-none-none -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix S390X -check-prefix S390X-CXX %s
 //
 // S390X:#define __BIGGEST_ALIGNMENT__ 8
 // S390X:#define __CHAR16_TYPE__ unsigned short
@@ -6798,6 +6825,7 @@
 // S390X:#define __SIZEOF_WINT_T__ 4
 // S390X:#define __SIZE_TYPE__ long unsigned int
 // S390X:#define __SIZE_WIDTH__ 64
+// S390X-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8UL
 // S390X:#define __UINT16_C_SUFFIX__
 // S390X:#define __UINT16_MAX__ 65535
 // S390X:#define __UINT16_TYPE__ unsigned short
@@ -6846,6 +6874,8 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-rtems-elf < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-DEFAULT-CXX %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=sparc-none-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD -check-prefix SPARC-NETOPENBSD-CXX %s
 //
 // SPARC-NOT:#define _LP64
 // SPARC:#define __BIGGEST_ALIGNMENT__ 8
@@ -6993,6 +7023,8 @@
 // SPARC-NETOPENBSD:#define __SIZE_MAX__ 4294967295UL
 // SPARC-NETOPENBSD:#define __SIZE_TYPE__ long unsigned int
 // SPARC:#define __SIZE_WIDTH__ 32
+// SPARC-DEFAULT-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
+// SPARC-NETOPENBSD-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8UL
 // SPARC:#define __UINT16_C_SUFFIX__
 // SPARC:#define __UINT16_MAX__ 65535
 // SPARC:#define __UINT16_TYPE__ unsigned short
@@ -7043,6 +7075,7 @@
 // SPARC:#define sparc 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=tce-none-none < /dev/null | FileCheck -match-full-lines -check-prefix TCE %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=tce-none-none < /dev/null | FileCheck -match-full-lines -check-prefix TCE -check-prefix TCE-CXX %s
 //
 // TCE-NOT:#define _LP64
 // TCE:#define __BIGGEST_ALIGNMENT__ 4
@@ -7169,6 +7202,7 @@
 // TCE:#define __SIZE_MAX__ 4294967295U
 // TCE:#define __SIZE_TYPE__ unsigned int
 // TCE:#define __SIZE_WIDTH__ 32
+// TCE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
 // TCE:#define __TCE_V1__ 1
 // TCE:#define __TCE__ 1
 // TCE:#define __UINT16_C_SUFFIX__
@@ -7210,6 +7244,7 @@
 // TCE:#define tce 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix X86_64 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=x86_64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix X86_64 -check-prefix X86_64-CXX %s
 //
 // X86_64:#define _LP64 1
 // X86_64-NOT:#define _LP32 1
@@ -7358,6 +7393,7 @@
 // X86_64:#define __SSE2__ 1
 // X86_64:#define __SSE_MATH__ 1
 // X86_64:#define __SSE__ 1
+// X86_64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // X86_64:#define __UINT16_C_SUFFIX__
 // X86_64:#define __UINT16_MAX__ 65535
 // X86_64:#define __UINT16_TYPE__ unsigned short
@@ -7412,6 +7448,7 @@
 // X86_64H:#define __x86_64h__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 -check-prefix X32-CXX %s
 //
 // X32:#define _ILP32 1
 // X32-NOT:#define _LP64 1
@@ -7560,6 +7597,7 @@
 // X32:#define __SSE2__ 1
 // X32:#define __SSE_MATH__ 1
 // X32:#define __SSE__ 1
+// X32-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16U
 // X32:#define __UINT16_C_SUFFIX__
 // X32:#define __UINT16_MAX__ 65535
 // X32:#define __UINT16_TYPE__ unsigned short
@@ -8459,6 +8497,12 @@
 //
 // RUN: %clang_cc1 -triple arm-linux-androideabi -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix ANDROID %s
 // ANDROID:#define __ANDROID__ 1
+//
+// RUN: %clang_cc1 -x c++ -triple i686-linux-android -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix I386-ANDROID-CXX %s
+// I386-ANDROID-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
+//
+// RUN: %clang_cc1 -x c++ -triple x86_64-linux-android -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix X86_64-ANDROID-CXX %s
+// X86_64-ANDROID-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 //
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix LANAI %s
 // LANAI: #define __lanai__ 1

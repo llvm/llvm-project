@@ -2074,14 +2074,13 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
         // the reader side).
         const llvm::MemoryBuffer *Buffer
           = Content->getBuffer(PP.getDiagnostics(), PP.getSourceManager());
-        const char *Name = Buffer->getBufferIdentifier();
+        StringRef Name = Buffer->getBufferIdentifier();
         Stream.EmitRecordWithBlob(SLocBufferAbbrv, Record,
-                                  StringRef(Name, strlen(Name) + 1));
+                                  StringRef(Name.data(), Name.size() + 1));
         EmitBlob = true;
 
-        if (strcmp(Name, "<built-in>") == 0) {
+        if (Name == "<built-in>")
           PreloadSLocs.push_back(SLocEntryOffsets.size());
-        }
       }
 
       if (EmitBlob) {

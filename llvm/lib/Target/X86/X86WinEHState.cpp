@@ -57,7 +57,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Windows 32-bit x86 EH state insertion";
   }
 

@@ -814,7 +814,7 @@ public:
   static char ID;
 
   /// Specify pass name for debug output
-  const char *getPassName() const override { return "Function Importing"; }
+  StringRef getPassName() const override { return "Function Importing"; }
 
   explicit FunctionImportLegacyPass(const ModuleSummaryIndex *Index = nullptr)
       : ModulePass(ID), Index(Index) {}

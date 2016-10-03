@@ -52,7 +52,7 @@ public:
     PassRegistry &R = *PassRegistry::getPassRegistry();
     initializeHexagonOptAddrModePass(R);
   }
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Optimize addressing mode of load/store";
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {

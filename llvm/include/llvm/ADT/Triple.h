@@ -691,7 +691,7 @@ public:
   /// @{
 
   /// getArchTypeName - Get the canonical name for the \p Kind architecture.
-  static const char *getArchTypeName(ArchType Kind);
+  static StringRef getArchTypeName(ArchType Kind);
 
   /// getArchTypePrefix - Get the "prefix" canonical name for the \p Kind
   /// architecture. This is the prefix used by the architecture specific
@@ -699,17 +699,17 @@ public:
   /// Intrinsic::getIntrinsicForGCCBuiltin().
   ///
   /// \return - The architecture prefix, or 0 if none is defined.
-  static const char *getArchTypePrefix(ArchType Kind);
+  static StringRef getArchTypePrefix(ArchType Kind);
 
   /// getVendorTypeName - Get the canonical name for the \p Kind vendor.
-  static const char *getVendorTypeName(VendorType Kind);
+  static StringRef getVendorTypeName(VendorType Kind);
 
   /// getOSTypeName - Get the canonical name for the \p Kind operating system.
-  static const char *getOSTypeName(OSType Kind);
+  static StringRef getOSTypeName(OSType Kind);
 
   /// getEnvironmentTypeName - Get the canonical name for the \p Kind
   /// environment.
-  static const char *getEnvironmentTypeName(EnvironmentType Kind);
+  static StringRef getEnvironmentTypeName(EnvironmentType Kind);
 
   /// @}
   /// @name Static helpers for converting alternate architecture names.

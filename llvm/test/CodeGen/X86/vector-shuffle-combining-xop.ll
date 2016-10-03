@@ -262,15 +262,13 @@ define <2 x double> @constant_fold_vpermil2pd() {
 ; X32-LABEL: constant_fold_vpermil2pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    vmovapd {{.*#+}} xmm0 = [-2.000000e+00,-1.000000e+00]
-; X32-NEXT:    vmovapd {{.*#+}} xmm1 = [1.000000e+00,2.000000e+00]
-; X32-NEXT:    vpermil2pd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; X32-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermil2pd:
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovapd {{.*#+}} xmm0 = [-2.000000e+00,-1.000000e+00]
-; X64-NEXT:    vmovapd {{.*#+}} xmm1 = [1.000000e+00,2.000000e+00]
-; X64-NEXT:    vpermil2pd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; X64-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; X64-NEXT:    retq
   %1 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> <double 1.0, double 2.0>, <2 x double> <double -2.0, double -1.0>, <2 x i64> <i64 4, i64 2>, i8 2)
   ret <2 x double> %1

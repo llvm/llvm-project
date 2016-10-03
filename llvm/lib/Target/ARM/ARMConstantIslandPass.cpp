@@ -200,7 +200,7 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "ARM constant island placement and branch shortening pass";
     }
 

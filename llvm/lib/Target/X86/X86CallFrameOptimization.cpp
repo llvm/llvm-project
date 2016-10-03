@@ -100,7 +100,7 @@ private:
                                          const X86RegisterInfo &RegInfo,
                                          DenseSet<unsigned int> &UsedRegs);
 
-  const char *getPassName() const override { return "X86 Optimize Call Frame"; }
+  StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
 
   const TargetInstrInfo *TII;
   const X86FrameLowering *TFL;

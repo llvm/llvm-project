@@ -27,7 +27,7 @@ class BreakpointCaseSensitivityTestCase(TestBase):
 
     @skipIf(oslist=['windows'])  # Skip for windows platforms
     # Failing for unknown reason on non-Windows platforms.
-    @expectedFailureAll()
+
     def test_breakpoint_doesnt_match_file_with_different_case(self):
         """Set breakpoint on file, shouldn't match files with different case on POSIX systems"""
         self.build()
@@ -98,7 +98,8 @@ class BreakpointCaseSensitivityTestCase(TestBase):
         # Get the breakpoint location from breakpoint after we verified that,
         # indeed, it has one location.
         location = breakpoint.GetLocationAtIndex(0)
-        self.assertEqual(location and location.IsEnabled(),
+
+        self.assertEqual(location.IsValid(),
                          should_hit,
                          VALID_BREAKPOINT_LOCATION + desc)
 

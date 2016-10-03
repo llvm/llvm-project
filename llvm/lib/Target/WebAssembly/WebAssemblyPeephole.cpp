@@ -31,7 +31,7 @@ static cl::opt<bool> DisableWebAssemblyFallthroughReturnOpt(
 
 namespace {
 class WebAssemblyPeephole final : public MachineFunctionPass {
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "WebAssembly late peephole optimizer";
   }
 

@@ -27,7 +27,7 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "Intel SVML library"),
                clEnumValEnd));
 
-const char *const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] = {
+StringRef const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] = {
 #define TLI_DEFINE_STRING
 #include "llvm/Analysis/TargetLibraryInfo.def"
 };
@@ -54,11 +54,11 @@ static bool hasSinCosPiStret(const Triple &T) {
 /// specified target triple.  This should be carefully written so that a missing
 /// target triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<const char *> StandardNames) {
+                       ArrayRef<StringRef> StandardNames) {
   // Verify that the StandardNames array is in alphabetical order.
   assert(std::is_sorted(StandardNames.begin(), StandardNames.end(),
-                        [](const char *LHS, const char *RHS) {
-                          return strcmp(LHS, RHS) < 0;
+                        [](StringRef LHS, StringRef RHS) {
+                          return LHS < RHS;
                         }) &&
          "TargetLibraryInfoImpl function names must be sorted");
 
@@ -472,16 +472,16 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
 
 bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName,
                                        LibFunc::Func &F) const {
-  const char *const *Start = &StandardNames[0];
-  const char *const *End = &StandardNames[LibFunc::NumLibFuncs];
+  StringRef const *Start = &StandardNames[0];
+  StringRef const *End = &StandardNames[LibFunc::NumLibFuncs];
 
   funcName = sanitizeFunctionName(funcName);
   if (funcName.empty())
     return false;
 
-  const char *const *I = std::lower_bound(
-      Start, End, funcName, [](const char *LHS, StringRef RHS) {
-        return std::strncmp(LHS, RHS.data(), RHS.size()) < 0;
+  StringRef const *I = std::lower_bound(
+      Start, End, funcName, [](StringRef LHS, StringRef RHS) {
+        return LHS < RHS;
       });
   if (I != End && *I == funcName) {
     F = (LibFunc::Func)(I - Start);
@@ -1011,21 +1011,19 @@ void TargetLibraryInfoImpl::disableAllFunctions() {
 }
 
 static bool compareByScalarFnName(const VecDesc &LHS, const VecDesc &RHS) {
-  return std::strncmp(LHS.ScalarFnName, RHS.ScalarFnName,
-                      std::strlen(RHS.ScalarFnName)) < 0;
+  return LHS.ScalarFnName < RHS.ScalarFnName;
 }
 
 static bool compareByVectorFnName(const VecDesc &LHS, const VecDesc &RHS) {
-  return std::strncmp(LHS.VectorFnName, RHS.VectorFnName,
-                      std::strlen(RHS.VectorFnName)) < 0;
+  return LHS.VectorFnName < RHS.VectorFnName;
 }
 
 static bool compareWithScalarFnName(const VecDesc &LHS, StringRef S) {
-  return std::strncmp(LHS.ScalarFnName, S.data(), S.size()) < 0;
+  return LHS.ScalarFnName < S;
 }
 
 static bool compareWithVectorFnName(const VecDesc &LHS, StringRef S) {
-  return std::strncmp(LHS.VectorFnName, S.data(), S.size()) < 0;
+  return LHS.VectorFnName < S;
 }
 
 void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {

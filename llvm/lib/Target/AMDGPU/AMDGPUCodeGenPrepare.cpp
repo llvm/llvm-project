@@ -114,9 +114,7 @@ public:
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
 
-  const char *getPassName() const override {
-    return "AMDGPU IR optimizations";
-  }
+  StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DivergenceAnalysis>();

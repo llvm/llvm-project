@@ -103,9 +103,7 @@ public:
       : AsmPrinter(TM, std::move(Streamer)), MCP(nullptr),
         InConstantPool(false), MCInstLowering(*this) {}
 
-  const char *getPassName() const override {
-    return "Mips Assembly Printer";
-  }
+  StringRef getPassName() const override { return "Mips Assembly Printer"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

@@ -256,9 +256,7 @@ public:
 
   bool runOnRegion(Region *R, RGPassManager &RGM) override;
 
-  const char *getPassName() const override {
-    return "Structurize control flow";
-  }
+  StringRef getPassName() const override { return "Structurize control flow"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     if (SkipUniformRegions)

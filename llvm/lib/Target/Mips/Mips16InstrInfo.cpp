@@ -510,8 +510,8 @@ unsigned Mips16InstrInfo::getInlineAsmLength(const char *Str,
       Length += MAI.getMaxInstLength();
       atInsnStart = false;
     }
-    if (atInsnStart && strncmp(Str, MAI.getCommentString(),
-                               strlen(MAI.getCommentString())) == 0)
+    if (atInsnStart && strncmp(Str, MAI.getCommentString().data(),
+                               MAI.getCommentString().size()) == 0)
       atInsnStart = false;
   }
 

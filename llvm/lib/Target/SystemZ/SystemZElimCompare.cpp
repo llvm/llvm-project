@@ -58,7 +58,7 @@ public:
   SystemZElimCompare(const SystemZTargetMachine &tm)
     : MachineFunctionPass(ID), TII(nullptr), TRI(nullptr) {}
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "SystemZ Comparison Elimination";
   }
 

@@ -89,9 +89,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
-    return "SI Fix SGPR copies";
-  }
+  StringRef getPassName() const override { return "SI Fix SGPR copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

@@ -25,8 +25,8 @@ template <typename T> class ArrayRef;
 /// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
 /// by a factor 'VectorizationFactor'.
 struct VecDesc {
-  const char *ScalarFnName;
-  const char *VectorFnName;
+  StringRef ScalarFnName;
+  StringRef VectorFnName;
   unsigned VectorizationFactor;
 };
 
@@ -50,7 +50,7 @@ class TargetLibraryInfoImpl {
 
   unsigned char AvailableArray[(LibFunc::NumLibFuncs+3)/4];
   llvm::DenseMap<unsigned, std::string> CustomNames;
-  static const char *const StandardNames[LibFunc::NumLibFuncs];
+  static StringRef const StandardNames[LibFunc::NumLibFuncs];
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)

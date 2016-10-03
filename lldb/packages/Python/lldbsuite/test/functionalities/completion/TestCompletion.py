@@ -300,7 +300,7 @@ class CommandLineCompletionTestCase(TestBase):
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
     @expectedFailureAll(
         oslist=lldbplatform.darwin_all,
-        bugnumber="llvm.org/pr25485")
+        bugnumber="llvm.org/pr25485,<rdar://problem/28573448>")
     def test_symbol_name(self):
         self.build()
         self.complete_from_to('''file a.out

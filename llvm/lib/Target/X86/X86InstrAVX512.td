@@ -1009,6 +1009,21 @@ multiclass avx512_subvec_broadcast_rm<bits<8> opc, string OpcodeStr,
                             AVX5128IBase, EVEX;
 }
 
+let Predicates = [HasVLX, HasBWI] in {
+  // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
+  // This means we'll encounter truncated i32 loads; match that here.
+  def : Pat<(v8i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),
+            (VPBROADCASTWZ128m addr:$src)>;
+  def : Pat<(v16i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),
+            (VPBROADCASTWZ256m addr:$src)>;
+  def : Pat<(v8i16 (X86VBroadcast
+              (i16 (trunc (i32 (zextloadi16 addr:$src)))))),
+            (VPBROADCASTWZ128m addr:$src)>;
+  def : Pat<(v16i16 (X86VBroadcast
+              (i16 (trunc (i32 (zextloadi16 addr:$src)))))),
+            (VPBROADCASTWZ256m addr:$src)>;
+}
+
 //===----------------------------------------------------------------------===//
 // AVX-512 BROADCAST SUBVECTORS
 //
@@ -8520,6 +8535,13 @@ defm VFIXUPIMMPD : avx512_fixupimm_packed_all<avx512vl_f64_info>,
 // patterns we have to try to match.
 multiclass AVX512_scalar_math_f32_patterns<SDNode Op, string OpcPrefix> {
   let Predicates = [HasAVX512] in {
+    // extracted scalar math op with insert via movss
+    def : Pat<(v4f32 (X86Movss (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
+          (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
+          FR32:$src))))),
+      (!cast<I>("V"#OpcPrefix#SSZrr_Int) v4f32:$dst,
+          (COPY_TO_REGCLASS FR32:$src, VR128))>;
+
     // extracted scalar math op with insert via blend
     def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
           (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),

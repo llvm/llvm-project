@@ -76,9 +76,7 @@ public:
   RABasic();
 
   /// Return the pass name.
-  const char* getPassName() const override {
-    return "Basic Register Allocator";
-  }
+  StringRef getPassName() const override { return "Basic Register Allocator"; }
 
   /// RABasic analysis usage.
   void getAnalysisUsage(AnalysisUsage &AU) const override;

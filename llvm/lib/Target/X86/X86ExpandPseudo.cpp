@@ -54,7 +54,7 @@ public:
         MachineFunctionProperties::Property::NoVRegs);
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "X86 pseudo instruction expansion pass";
   }
 

@@ -131,6 +131,7 @@ in debug info of the binary. Thus the ``.sancov`` has to be symbolized
 to produce a ``.symcov`` file first:
 
 .. code-block:: console
+
     sancov -symbolize my_program.123.sancov my_program > my_program.123.symcov
 
 The ``.symcov`` file can be browsed overlayed over the source code by

@@ -58,7 +58,7 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {}
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "SJLJ Exception Handling preparation";
   }
 

@@ -53,7 +53,7 @@ public:
   InstrProfilingLegacyPass() : ModulePass(ID), InstrProf() {}
   InstrProfilingLegacyPass(const InstrProfOptions &Options)
       : ModulePass(ID), InstrProf(Options) {}
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "Frontend instrumentation-based coverage lowering";
   }
 

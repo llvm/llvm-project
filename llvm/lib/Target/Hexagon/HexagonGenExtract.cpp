@@ -52,7 +52,7 @@ namespace {
     HexagonGenExtract() : FunctionPass(ID), ExtractCount(0) {
       initializeHexagonGenExtractPass(*PassRegistry::getPassRegistry());
     }
-    virtual const char *getPassName() const override {
+    virtual StringRef getPassName() const override {
       return "Hexagon generate \"extract\" instructions";
     }
     virtual bool runOnFunction(Function &F) override;

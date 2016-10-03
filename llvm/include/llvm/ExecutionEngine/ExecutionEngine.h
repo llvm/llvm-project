@@ -205,12 +205,12 @@ public:
   /// FindFunctionNamed - Search all of the active modules to find the function that
   /// defines FnName.  This is very slow operation and shouldn't be used for
   /// general code.
-  virtual Function *FindFunctionNamed(const char *FnName);
+  virtual Function *FindFunctionNamed(StringRef FnName);
 
   /// FindGlobalVariableNamed - Search all of the active modules to find the global variable
   /// that defines Name.  This is very slow operation and shouldn't be used for
   /// general code.
-  virtual GlobalVariable *FindGlobalVariableNamed(const char *Name, bool AllowInternal = false);
+  virtual GlobalVariable *FindGlobalVariableNamed(StringRef Name, bool AllowInternal = false);
 
   /// runFunction - Execute the specified function with the specified arguments,
   /// and return the result.

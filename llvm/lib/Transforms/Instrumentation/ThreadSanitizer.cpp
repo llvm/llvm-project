@@ -83,7 +83,7 @@ namespace {
 /// ThreadSanitizer: instrument the code in module to find races.
 struct ThreadSanitizer : public FunctionPass {
   ThreadSanitizer() : FunctionPass(ID) {}
-  const char *getPassName() const override;
+  StringRef getPassName() const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
   bool doInitialization(Module &M) override;
@@ -135,9 +135,7 @@ INITIALIZE_PASS_END(
     "ThreadSanitizer: detects data races.",
     false, false)
 
-const char *ThreadSanitizer::getPassName() const {
-  return "ThreadSanitizer";
-}
+StringRef ThreadSanitizer::getPassName() const { return "ThreadSanitizer"; }
 
 void ThreadSanitizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetLibraryInfoWrapperPass>();

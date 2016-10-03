@@ -27,7 +27,7 @@ class AMDGPUAlwaysInline : public ModulePass {
 public:
   AMDGPUAlwaysInline() : ModulePass(ID) { }
   bool runOnModule(Module &M) override;
-  const char *getPassName() const override { return "AMDGPU Always Inline Pass"; }
+  StringRef getPassName() const override { return "AMDGPU Always Inline Pass"; }
 };
 
 } // End anonymous namespace

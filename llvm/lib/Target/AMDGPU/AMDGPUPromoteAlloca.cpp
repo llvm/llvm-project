@@ -76,9 +76,7 @@ public:
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
 
-  const char *getPassName() const override {
-    return "AMDGPU Promote Alloca";
-  }
+  StringRef getPassName() const override { return "AMDGPU Promote Alloca"; }
 
   void handleAlloca(AllocaInst &I);
 

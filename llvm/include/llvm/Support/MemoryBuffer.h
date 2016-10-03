@@ -56,9 +56,7 @@ public:
 
   /// Return an identifier for this buffer, typically the filename it was read
   /// from.
-  virtual const char *getBufferIdentifier() const {
-    return "Unknown buffer";
-  }
+  virtual StringRef getBufferIdentifier() const { return "Unknown buffer"; }
 
   /// Open the specified file as a MemoryBuffer, returning a new MemoryBuffer
   /// if successful, otherwise returning null. If FileSize is specified, this

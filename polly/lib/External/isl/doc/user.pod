@@ -9092,6 +9092,8 @@ using the following functions.
 	__isl_give isl_union_set *
 	isl_schedule_constraints_get_domain(
 		__isl_keep isl_schedule_constraints *sc);
+	__isl_give isl_set *isl_schedule_constraints_get_context(
+		__isl_keep isl_schedule_constraints *sc);
 	__isl_give isl_union_map *
 	isl_schedule_constraints_get_validity(
 		__isl_keep isl_schedule_constraints *sc);
@@ -9106,6 +9108,28 @@ using the following functions.
 		__isl_keep isl_schedule_constraints *sc);
 	__isl_give isl_union_map *
 	isl_schedule_constraints_get_conditional_validity_condition(
+		__isl_keep isl_schedule_constraints *sc);
+
+An C<isl_schedule_constraints> object can be read from input
+using the following functions.
+
+	#include <isl/schedule.h>
+	__isl_give isl_schedule_constraints *
+	isl_schedule_constraints_read_from_str(isl_ctx *ctx,
+		const char *str);
+	__isl_give isl_schedule_constraints *
+	isl_schedule_constraints_read_from_file(isl_ctx *ctx,
+		FILE *input);
+
+The contents of an C<isl_schedule_constraints> object can be printed
+using the following functions.
+
+	#include <isl/schedule.h>
+	__isl_give isl_printer *
+	isl_printer_print_schedule_constraints(
+		__isl_take isl_printer *p,
+		__isl_keep isl_schedule_constraints *sc);
+	__isl_give char *isl_schedule_constraints_to_str(
 		__isl_keep isl_schedule_constraints *sc);
 
 The following function computes a schedule directly from
@@ -10595,7 +10619,8 @@ C<isl_ast_build_get_schedule> having any particular value.
 Although C<isl> is mainly meant to be used as a library,
 it also contains some basic applications that use some
 of the functionality of C<isl>.
-The input may be specified in either the L<isl format>
+For applications that take one or more polytopes or polyhedra
+as input, this input may be specified in either the L<isl format>
 or the L<PolyLib format>.
 
 =head2 C<isl_polyhedron_sample>
@@ -10632,7 +10657,14 @@ all integer points in the polytope.
 
 =head2 C<isl_codegen>
 
-Given a schedule, a context set and an options relation,
+Given either a schedule tree or a sequence consisting of
+a schedule map, a context set and an options relation,
 C<isl_codegen> prints out an AST that scans the domain elements
 of the schedule in the order of their image(s) taking into account
 the constraints in the context set.
+
+=head2 C<isl_schedule>
+
+Given an C<isl_schedule_constraints> object as input,
+C<isl_schedule> prints out a schedule that satisfies the given
+constraints.

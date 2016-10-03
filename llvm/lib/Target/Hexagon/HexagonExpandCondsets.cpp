@@ -136,9 +136,7 @@ namespace {
       initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
     }
 
-    const char *getPassName() const override {
-      return "Hexagon Expand Condsets";
-    }
+    StringRef getPassName() const override { return "Hexagon Expand Condsets"; }
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<LiveIntervals>();
       AU.addPreserved<LiveIntervals>();

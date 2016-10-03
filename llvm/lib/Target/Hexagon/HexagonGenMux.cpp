@@ -42,7 +42,7 @@ namespace {
     HexagonGenMux() : MachineFunctionPass(ID), HII(0), HRI(0) {
       initializeHexagonGenMuxPass(*PassRegistry::getPassRegistry());
     }
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon generate mux instructions";
     }
     void getAnalysisUsage(AnalysisUsage &AU) const override {

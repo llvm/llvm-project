@@ -517,7 +517,7 @@ void BackendConsumer::EmitOptimizationMessage(
     MsgStream << " (hotness: " << *D.getHotness() << ")";
 
   Diags.Report(Loc, DiagID)
-      << AddFlagValue(D.getPassName() ? D.getPassName() : "")
+      << AddFlagValue(D.getPassName())
       << MsgStream.str();
 
   if (BadDebugInfo)

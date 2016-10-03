@@ -45,7 +45,7 @@ public:
                            SmallVectorImpl<char> &DestPath) const;
 
   /// Return the filename of the headermap.
-  const char *getFileName() const;
+  StringRef getFileName() const;
 
   /// Print the contents of this headermap to stderr.
   void dump() const;

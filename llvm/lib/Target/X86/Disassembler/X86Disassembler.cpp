@@ -96,7 +96,7 @@ void llvm::X86Disassembler::Debug(const char *file, unsigned line,
   dbgs() << file << ":" << line << ": " << s;
 }
 
-const char *llvm::X86Disassembler::GetInstrName(unsigned Opcode,
+StringRef llvm::X86Disassembler::GetInstrName(unsigned Opcode,
                                                 const void *mii) {
   const MCInstrInfo *MII = static_cast<const MCInstrInfo *>(mii);
   return MII->getName(Opcode);

@@ -154,7 +154,7 @@ public:
   EfficiencySanitizer(
       const EfficiencySanitizerOptions &Opts = EfficiencySanitizerOptions())
       : ModulePass(ID), Options(OverrideOptionsFromCL(Opts)) {}
-  const char *getPassName() const override;
+  StringRef getPassName() const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;
   static char ID;
@@ -231,7 +231,7 @@ INITIALIZE_PASS_END(
     EfficiencySanitizer, "esan",
     "EfficiencySanitizer: finds performance issues.", false, false)
 
-const char *EfficiencySanitizer::getPassName() const {
+StringRef EfficiencySanitizer::getPassName() const {
   return "EfficiencySanitizer";
 }
 

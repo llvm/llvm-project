@@ -1488,8 +1488,8 @@ void MDFieldPrinter::printDIFlags(StringRef Name, DINode::DIFlags Flags) {
 
   FieldSeparator FlagsFS(" | ");
   for (auto F : SplitFlags) {
-    const char *StringF = DINode::getFlagString(F);
-    assert(StringF && "Expected valid flag");
+    auto StringF = DINode::getFlagString(F);
+    assert(!StringF.empty() && "Expected valid flag");
     Out << FlagsFS << StringF;
   }
   if (Extra || SplitFlags.empty())

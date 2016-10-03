@@ -62,7 +62,7 @@ struct A
 
 struct B
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     B(B&&);
 #endif
 };

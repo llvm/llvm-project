@@ -120,10 +120,6 @@
 /* Define to 1 if you have the <link.h> header file. */
 #cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
 
-/* Define if you can use -Wl,-R. to pass -R. to the linker, in order to add
-   the current directory to the dynamic linker search path. */
-#undef HAVE_LINK_R
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
 
@@ -204,9 +200,6 @@
 
 /* Define to 1 if you have the `strtoll' function. */
 #cmakedefine HAVE_STRTOLL ${HAVE_STRTOLL}
-
-/* Define to 1 if you have the `strtoq' function. */
-#cmakedefine HAVE_STRTOQ ${HAVE_STRTOQ}
 
 /* Define to 1 if you have the `sysconf' function. */
 #cmakedefine HAVE_SYSCONF ${HAVE_SYSCONF}
@@ -336,19 +329,9 @@
 /* Define if we link Polly to the tools */
 #cmakedefine LINK_POLLY_INTO_TOOLS
 
-/* Installation directory for binary executables */
-#cmakedefine LLVM_BINDIR "${LLVM_BINDIR}"
-
-/* Installation directory for data files */
-#cmakedefine LLVM_DATADIR "${LLVM_DATADIR}"
-
-/* Target triple LLVM will generate code for by default
- * Doesn't use `cmakedefine` because it is allowed to be empty.
- */
+/* Target triple LLVM will generate code for by default */
+/* Doesn't use `cmakedefine` because it is allowed to be empty. */
 #define LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
-
-/* Installation directory for documentation */
-#cmakedefine LLVM_DOCSDIR "${LLVM_DOCSDIR}"
 
 /* Define to enable checks that alter the LLVM C++ ABI */
 #cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -359,23 +342,11 @@
 /* Define if zlib compression is available */
 #cmakedefine01 LLVM_ENABLE_ZLIB
 
-/* Installation directory for config files */
-#cmakedefine LLVM_ETCDIR "${LLVM_ETCDIR}"
-
 /* Has gcc/MSVC atomic intrinsics */
 #cmakedefine01 LLVM_HAS_ATOMICS
 
 /* Host triple LLVM will be executed on */
 #cmakedefine LLVM_HOST_TRIPLE "${LLVM_HOST_TRIPLE}"
-
-/* Installation directory for include files */
-#cmakedefine LLVM_INCLUDEDIR "${LLVM_INCLUDEDIR}"
-
-/* Installation directory for .info files */
-#cmakedefine LLVM_INFODIR "${LLVM_INFODIR}"
-
-/* Installation directory for man pages */
-#cmakedefine LLVM_MANDIR "${LLVM_MANDIR}"
 
 /* LLVM architecture name for the native architecture, if available */
 #cmakedefine LLVM_NATIVE_ARCH ${LLVM_NATIVE_ARCH}
