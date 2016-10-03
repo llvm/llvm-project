@@ -82,6 +82,10 @@ SourceLocation StmtSequence::getStartLoc() const {
 
 SourceLocation StmtSequence::getEndLoc() const { return back()->getLocEnd(); }
 
+SourceRange StmtSequence::getSourceRange() const {
+  return SourceRange(getStartLoc(), getEndLoc());
+}
+
 namespace {
 
 /// \brief Analyzes the pattern of the referenced variables in a statement.
@@ -91,11 +95,11 @@ class VariablePattern {
   struct VariableOccurence {
     /// The index of the associated VarDecl in the Variables vector.
     size_t KindID;
-    /// The source range in the code where the variable was referenced.
-    SourceRange Range;
+    /// The statement in the code where the variable was referenced.
+    const Stmt *Mention;
 
-    VariableOccurence(size_t KindID, SourceRange Range)
-        : KindID(KindID), Range(Range) {}
+    VariableOccurence(size_t KindID, const Stmt *Mention)
+        : KindID(KindID), Mention(Mention) {}
   };
 
   /// All occurences of referenced variables in the order of appearance.
@@ -107,19 +111,19 @@ class VariablePattern {
   /// \brief Adds a new variable referenced to this pattern.
   /// \param VarDecl The declaration of the variable that is referenced.
   /// \param Range The SourceRange where this variable is referenced.
-  void addVariableOccurence(const VarDecl *VarDecl, SourceRange Range) {
+  void addVariableOccurence(const VarDecl *VarDecl, const Stmt *Mention) {
     // First check if we already reference this variable
     for (size_t KindIndex = 0; KindIndex < Variables.size(); ++KindIndex) {
       if (Variables[KindIndex] == VarDecl) {
         // If yes, add a new occurence that points to the existing entry in
         // the Variables vector.
-        Occurences.emplace_back(KindIndex, Range);
+        Occurences.emplace_back(KindIndex, Mention);
         return;
       }
     }
     // If this variable wasn't already referenced, add it to the list of
     // referenced variables and add a occurence that points to this new entry.
-    Occurences.emplace_back(Variables.size(), Range);
+    Occurences.emplace_back(Variables.size(), Mention);
     Variables.push_back(VarDecl);
   }
 
@@ -134,7 +138,7 @@ class VariablePattern {
     // Check if S is a reference to a variable. If yes, add it to the pattern.
     if (auto D = dyn_cast<DeclRefExpr>(S)) {
       if (auto VD = dyn_cast<VarDecl>(D->getDecl()->getCanonicalDecl()))
-        addVariableOccurence(VD, D->getSourceRange());
+        addVariableOccurence(VD, D);
     }
 
     // Recursively check all children of the given statement.
@@ -208,7 +212,7 @@ public:
       // Store information about the first clone.
       FirstMismatch->FirstCloneInfo =
           CloneDetector::SuspiciousClonePair::SuspiciousCloneInfo(
-              Variables[ThisOccurence.KindID], ThisOccurence.Range,
+              Variables[ThisOccurence.KindID], ThisOccurence.Mention,
               FirstSuggestion);
 
       // Same as above but with the other clone. We do this for both clones as
@@ -221,7 +225,7 @@ public:
       // Store information about the second clone.
       FirstMismatch->SecondCloneInfo =
           CloneDetector::SuspiciousClonePair::SuspiciousCloneInfo(
-              Variables[ThisOccurence.KindID], OtherOccurence.Range,
+              Other.Variables[OtherOccurence.KindID], OtherOccurence.Mention,
               SecondSuggestion);
 
       // SuspiciousClonePair guarantees that the first clone always has a

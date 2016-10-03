@@ -8,14 +8,14 @@ int max(int a, int b) {
   log();
   if (a > b)
     return a;
-  return b; // expected-note{{suggestion is based on the usage of this variable in a similar piece of code}}
+  return b; // expected-note{{Similar code using 'b' here}}
 }
 
 int maxClone(int x, int y, int z) {
   log();
   if (x > y)
     return x;
-  return z; // expected-warning{{suspicious code clone detected; did you mean to use 'y'?}}
+  return z; // expected-warning{{Potential copy-paste error; did you really mean to use 'z' here?}}
 }
 
 // Tests finding a suspicious clone that references global variables.
@@ -33,7 +33,7 @@ void busyIncrement() {
   while (true) {
     if (m1.try_lock()) {
       ++i;
-      m1.unlock(); // expected-note{{suggestion is based on the usage of this variable in a similar piece of code}}
+      m1.unlock(); // expected-note{{Similar code using 'm1' here}}
       if (i > 1000) {
         return;
       }
@@ -45,7 +45,7 @@ void faultyBusyIncrement() {
   while (true) {
     if (m1.try_lock()) {
       ++i;
-      m2.unlock();  // expected-warning{{suspicious code clone detected; did you mean to use 'm1'?}}
+      m2.unlock();  // expected-warning{{Potential copy-paste error; did you really mean to use 'm2' here?}}
       if (i > 1000) {
         return;
       }
@@ -58,14 +58,14 @@ void faultyBusyIncrement() {
 int foo(int a, int b, int c) {
   a += b + c;
   b /= a + b;
-  c -= b * a; // expected-warning{{suspicious code clone detected; did you mean to use 'a'?}}
+  c -= b * a; // expected-warning{{Potential copy-paste error; did you really mean to use 'b' here?}}
   return c;
 }
 
 int fooClone(int a, int b, int c) {
   a += b + c;
   b /= a + b;
-  c -= a * a; // expected-note{{suggestion is based on the usage of this variable in a similar piece of code; did you mean to use 'b'?}}
+  c -= a * a; // expected-note{{Similar code using 'a' here}}
   return c;
 }
 
@@ -77,21 +77,21 @@ int fooClone(int a, int b, int c) {
 long bar1(long a, long b, long c, long d) {
   c = a - b;
   c = c / d * a;
-  d = b * b - c; // expected-warning{{suspicious code clone detected; did you mean to use 'c'?}}
+  d = b * b - c; // expected-warning{{Potential copy-paste error; did you really mean to use 'b' here?}}
   return d;
 }
 
 long bar2(long a, long b, long c, long d) {
   c = a - b;
   c = c / d * a;
-  d = c * b - c; // expected-note{{suggestion is based on the usage of this variable in a similar piece of code; did you mean to use 'b'?}} \
-                 // expected-warning{{suspicious code clone detected; did you mean to use 'a'?}}
+  d = c * b - c; // expected-note{{Similar code using 'c' here}} \
+                 // expected-warning{{Potential copy-paste error; did you really mean to use 'c' here?}}
   return d;
 }
 
 long bar3(long a, long b, long c, long d) {
   c = a - b;
   c = c / d * a;
-  d = a * b - c; // expected-note{{suggestion is based on the usage of this variable in a similar piece of code; did you mean to use 'c'?}}
+  d = a * b - c; // expected-note{{Similar code using 'a' here}}
   return d;
 }
