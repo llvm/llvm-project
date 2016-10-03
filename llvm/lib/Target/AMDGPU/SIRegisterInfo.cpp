@@ -750,7 +750,7 @@ bool SIRegisterInfo::shouldRewriteCopySrc(
   // We want to prefer the smallest register class possible, so we don't want to
   // stop and rewrite on anything that looks like a subregister
   // extract. Operations mostly don't care about the super register class, so we
-  // only want to stop on the most basic of copies between the smae register
+  // only want to stop on the most basic of copies between the same register
   // class.
   //
   // e.g. if we have something like

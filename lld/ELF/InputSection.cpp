@@ -45,6 +45,8 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
       Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
+  if (Header->sh_addralign > UINT32_MAX)
+    fatal(getFilename(File) + ": section sh_addralign is too large");
   Alignment = std::max<uintX_t>(Header->sh_addralign, 1);
 }
 

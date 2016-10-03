@@ -251,10 +251,6 @@ unsigned TargetTransformInfo::getRegisterBitWidth(bool Vector) const {
   return TTIImpl->getRegisterBitWidth(Vector);
 }
 
-unsigned TargetTransformInfo::getLoadStoreVecRegBitWidth(unsigned AS) const {
-  return TTIImpl->getLoadStoreVecRegBitWidth(AS);
-}
-
 unsigned TargetTransformInfo::getCacheLineSize() const {
   return TTIImpl->getCacheLineSize();
 }
@@ -421,6 +417,44 @@ Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
 bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
                                               const Function *Callee) const {
   return TTIImpl->areInlineCompatible(Caller, Callee);
+}
+
+unsigned TargetTransformInfo::getLoadStoreVecRegBitWidth(unsigned AS) const {
+  return TTIImpl->getLoadStoreVecRegBitWidth(AS);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeLoad(LoadInst *LI) const {
+  return TTIImpl->isLegalToVectorizeLoad(LI);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeStore(StoreInst *SI) const {
+  return TTIImpl->isLegalToVectorizeStore(SI);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeLoadChain(
+    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+  return TTIImpl->isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment,
+                                              AddrSpace);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeStoreChain(
+    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+  return TTIImpl->isLegalToVectorizeStoreChain(ChainSizeInBytes, Alignment,
+                                               AddrSpace);
+}
+
+unsigned TargetTransformInfo::getLoadVectorFactor(unsigned VF,
+                                                  unsigned LoadSize,
+                                                  unsigned ChainSizeInBytes,
+                                                  VectorType *VecTy) const {
+  return TTIImpl->getLoadVectorFactor(VF, LoadSize, ChainSizeInBytes, VecTy);
+}
+
+unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
+                                                   unsigned StoreSize,
+                                                   unsigned ChainSizeInBytes,
+                                                   VectorType *VecTy) const {
+  return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
 TargetTransformInfo::Concept::~Concept() {}
