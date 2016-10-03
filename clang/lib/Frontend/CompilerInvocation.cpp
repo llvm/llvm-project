@@ -2502,7 +2502,9 @@ std::string CompilerInvocation::getModuleHash() const {
   // Extend the signature with the module file extensions.
   const FrontendOptions &frontendOpts = getFrontendOpts();
   for (const auto &ext : frontendOpts.ModuleFileExtensions) {
-    code = ext->hashExtension(code);
+    code = hash_combine(code, ext->hashExtension(code));
+  }
+
   }
 
   // Darwin-specific hack: if we have a sysroot, use the contents and
