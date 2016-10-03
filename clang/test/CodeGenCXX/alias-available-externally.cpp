@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O1 -std=c++11 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O1 -std=c++11 -emit-llvm -triple %itanium_abi_triple -disable-llvm-passes -o - %s | FileCheck %s
 // Clang should not generate alias to available_externally definitions.
 // Check that the destructor of Foo is defined.
 // The destructors have different return type for different targets.

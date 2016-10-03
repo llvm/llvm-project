@@ -11,11 +11,11 @@
 // This confirms that with the current configuration the macro body would be
 // considered large enough to pass the MinimumCloneComplexity constraint.
 
-int manualMacro(int a, int b) { // expected-warning{{Detected code clone.}}
+int manualMacro(int a, int b) { // expected-warning{{Duplicate code detected}}
   return a > b ? -a * a : -b * b;
 }
 
-int manualMacroClone(int a, int b) { // expected-note{{Related code clone is here.}}
+int manualMacroClone(int a, int b) { // expected-note{{Similar code here}}
   return a > b ? -a * a : -b * b;
 }
 
@@ -41,10 +41,10 @@ int macroClone(int a, int b) {
 
 #define NEG(A) -(A)
 
-int nestedMacros() { // expected-warning{{Detected code clone.}}
+int nestedMacros() { // expected-warning{{Duplicate code detected}}
   return NEG(NEG(NEG(NEG(NEG(NEG(NEG(NEG(NEG(NEG(1))))))))));
 }
 
-int nestedMacrosClone() { // expected-note{{Related code clone is here.}}
+int nestedMacrosClone() { // expected-note{{Similar code here}}
   return NEG(NEG(NEG(NEG(NEG(NEG(NEG(NEG(NEG(NEG(1))))))))));
 }

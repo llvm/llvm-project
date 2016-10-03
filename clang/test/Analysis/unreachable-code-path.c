@@ -161,7 +161,7 @@ void testInlined() {
 
 // Don't warn about unreachable VarDecl.
 void dostuff(int*A);
-void varDecl(int X) {
+void varDecl1(int X) {
   switch (X) {
     int A; // No warning here.
   case 1:
@@ -172,4 +172,25 @@ void varDecl(int X) {
     break;
   }
 }
+void varDecl2(int X) {
+  switch (X) {
+    int A=1; // expected-warning {{never executed}}
+  case 1:
+    dostuff(&A);
+    break;
+  case 2:
+    dostuff(&A);
+    break;
+  }
+}
 
+// Ensure that ExplodedGraph and unoptimized CFG match.
+void test12(int x) {
+  switch (x) {
+  case 1:
+    break; // not unreachable
+  case 2:
+    do { } while (0);
+    break;
+  }
+}
