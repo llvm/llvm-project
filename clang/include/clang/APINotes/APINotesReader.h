@@ -17,6 +17,7 @@
 #define LLVM_CLANG_API_NOTES_READER_H
 
 #include "clang/APINotes/Types.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -32,7 +33,7 @@ class APINotesReader {
   Implementation &Impl;
 
   APINotesReader(llvm::MemoryBuffer *inputBuffer, bool ownsInputBuffer,
-                 bool &failed);
+                 VersionTuple swiftVersion, bool &failed);
 
 public:
   /// Create a new API notes reader from the given member buffer, which
@@ -40,14 +41,16 @@ public:
   ///
   /// \returns the new API notes reader, or null if an error occurred.
   static std::unique_ptr<APINotesReader>
-  get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer);
+  get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer,
+      VersionTuple swiftVersion);
 
   /// Create a new API notes reader from the given member buffer, which
   /// contains the contents of a binary API notes file.
   ///
   /// \returns the new API notes reader, or null if an error occurred.
   static std::unique_ptr<APINotesReader>
-  getUnmanaged(llvm::MemoryBuffer *inputBuffer);
+  getUnmanaged(llvm::MemoryBuffer *inputBuffer,
+               VersionTuple swiftVersion);
 
   ~APINotesReader();
 
@@ -65,21 +68,83 @@ public:
   /// Retrieve the module options
   ModuleOptions getModuleOptions() const;
 
+  /// Captures the completed versioned information for a particular part of
+  /// API notes, including both unversioned API notes and each versioned API
+  /// note for that particular entity.
+  template<typename T>
+  class VersionedInfo {
+    /// The complete set of results.
+    SmallVector<std::pair<VersionTuple, T>, 1> Results;
+
+    /// The index of the result that is the "selected" set based on the desired
+    /// Swift version, or \c Results.size() if nothing matched.
+    unsigned Selected;
+
+  public:
+    /// Form an empty set of versioned information.
+    VersionedInfo(llvm::NoneType) : Selected(0) { }
+    
+    /// Form a versioned info set given the desired version and a set of
+    /// results.
+    VersionedInfo(VersionTuple version,
+                  SmallVector<std::pair<VersionTuple, T>, 1> results);
+
+    /// Determine whether there is a result that should be applied directly
+    /// to the AST.
+    explicit operator bool() const { return Selected != size(); }
+
+    /// Retrieve the information to apply directly to the AST.
+    const T& operator*() const {
+      assert(*this && "No result to apply directly");
+      return (*this)[Selected].second;
+    }
+
+    /// Retrieve the selected index in the result set.
+    Optional<unsigned> getSelected() const {
+      if (Selected == Results.size()) return None;
+      return Selected;
+    }
+
+    /// Return the number of versioned results we know about.
+    unsigned size() const { return Results.size(); }
+
+    /// Access all versioned results.
+    const std::pair<VersionTuple, T> *begin() const { return Results.begin(); }
+    const std::pair<VersionTuple, T> *end() const { return Results.end(); }
+
+    /// Access a specific versioned result.
+    const std::pair<VersionTuple, T> &operator[](unsigned index) const {
+      return Results[index];
+    }
+  };
+
+  /// Look for the context ID of the given Objective-C class.
+  ///
+  /// \param name The name of the class we're looking for.
+  ///
+  /// \returns The ID, if known.
+  Optional<ContextID> lookupObjCClassID(StringRef name);
+
   /// Look for information regarding the given Objective-C class.
   ///
   /// \param name The name of the class we're looking for.
   ///
-  /// \returns The ID and information about the class, if known.
-  Optional<std::pair<ContextID, ObjCContextInfo>>
-  lookupObjCClass(StringRef name);
+  /// \returns The information about the class, if known.
+  VersionedInfo<ObjCContextInfo> lookupObjCClassInfo(StringRef name);
+
+  /// Look for the context ID of the given Objective-C protocol.
+  ///
+  /// \param name The name of the protocol we're looking for.
+  ///
+  /// \returns The ID of the protocol, if known.
+  Optional<ContextID> lookupObjCProtocolID(StringRef name);
 
   /// Look for information regarding the given Objective-C protocol.
   ///
   /// \param name The name of the protocol we're looking for.
   ///
-  /// \returns The ID and information about the protocol, if known.
-  Optional<std::pair<ContextID, ObjCContextInfo>>
-  lookupObjCProtocol(StringRef name);
+  /// \returns The information about the protocol, if known.
+  VersionedInfo<ObjCContextInfo> lookupObjCProtocolInfo(StringRef name);
 
   /// Look for information regarding the given Objective-C property in
   /// the given context.
@@ -88,11 +153,12 @@ public:
   /// \param name The name of the property we're looking for.
   /// \param isInstance Whether we are looking for an instance property (vs.
   /// a class property).
+  /// \param swiftVersion The Swift version to filter for, if any.
   ///
   /// \returns Information about the property, if known.
-  Optional<ObjCPropertyInfo> lookupObjCProperty(ContextID contextID,
-                                                StringRef name,
-                                                bool isInstance);
+  VersionedInfo<ObjCPropertyInfo> lookupObjCProperty(ContextID contextID,
+                                                     StringRef name,
+                                                     bool isInstance);
 
   /// Look for information regarding the given Objective-C method in
   /// the given context.
@@ -102,30 +168,30 @@ public:
   /// \param isInstanceMethod Whether we are looking for an instance method.
   ///
   /// \returns Information about the method, if known.
-  Optional<ObjCMethodInfo> lookupObjCMethod(ContextID contextID,
-                                            ObjCSelectorRef selector,
-                                            bool isInstanceMethod);
+  VersionedInfo<ObjCMethodInfo> lookupObjCMethod(ContextID contextID,
+                                                 ObjCSelectorRef selector,
+                                                 bool isInstanceMethod);
 
   /// Look for information regarding the given global variable.
   ///
   /// \param name The name of the global variable.
   ///
   /// \returns information about the global variable, if known.
-  Optional<GlobalVariableInfo> lookupGlobalVariable(StringRef name);
+  VersionedInfo<GlobalVariableInfo> lookupGlobalVariable(StringRef name);
 
   /// Look for information regarding the given global function.
   ///
   /// \param name The name of the global function.
   ///
   /// \returns information about the global function, if known.
-  Optional<GlobalFunctionInfo> lookupGlobalFunction(StringRef name);
+  VersionedInfo<GlobalFunctionInfo> lookupGlobalFunction(StringRef name);
 
   /// Look for information regarding the given enumerator.
   ///
   /// \param name The name of the enumerator.
   ///
   /// \returns information about the enumerator, if known.
-  Optional<EnumConstantInfo> lookupEnumConstant(StringRef name);
+  VersionedInfo<EnumConstantInfo> lookupEnumConstant(StringRef name);
 
   /// Look for information regarding the given tag
   /// (struct/union/enum/C++ class).
@@ -133,14 +199,14 @@ public:
   /// \param name The name of the tag.
   ///
   /// \returns information about the tag, if known.
-  Optional<TagInfo> lookupTag(StringRef name);
+  VersionedInfo<TagInfo> lookupTag(StringRef name);
 
   /// Look for information regarding the given typedef.
   ///
   /// \param name The name of the typedef.
   ///
   /// \returns information about the typedef, if known.
-  Optional<TypedefInfo> lookupTypedef(StringRef name);
+  VersionedInfo<TypedefInfo> lookupTypedef(StringRef name);
 
   /// Visitor used when walking the contents of the API notes file.
   class Visitor {
@@ -149,39 +215,48 @@ public:
 
     /// Visit an Objective-C class.
     virtual void visitObjCClass(ContextID contextID, StringRef name,
-                                const ObjCContextInfo &info);
+                                const ObjCContextInfo &info,
+                                VersionTuple swiftVersion);
 
     /// Visit an Objective-C protocol.
     virtual void visitObjCProtocol(ContextID contextID, StringRef name,
-                                   const ObjCContextInfo &info);
+                                   const ObjCContextInfo &info,
+                                   VersionTuple swiftVersion);
 
     /// Visit an Objective-C method.
     virtual void visitObjCMethod(ContextID contextID, StringRef selector,
                                  bool isInstanceMethod,
-                                 const ObjCMethodInfo &info);
+                                 const ObjCMethodInfo &info,
+                                 VersionTuple swiftVersion);
 
     /// Visit an Objective-C property.
     virtual void visitObjCProperty(ContextID contextID, StringRef name,
                                    bool isInstance,
-                                   const ObjCPropertyInfo &info);
+                                   const ObjCPropertyInfo &info,
+                                   VersionTuple swiftVersion);
 
     /// Visit a global variable.
     virtual void visitGlobalVariable(StringRef name,
-                                     const GlobalVariableInfo &info);
+                                     const GlobalVariableInfo &info,
+                                     VersionTuple swiftVersion);
 
     /// Visit a global function.
     virtual void visitGlobalFunction(StringRef name,
-                                     const GlobalFunctionInfo &info);
+                                     const GlobalFunctionInfo &info,
+                                     VersionTuple swiftVersion);
 
     /// Visit an enumerator.
     virtual void visitEnumConstant(StringRef name,
-                                   const EnumConstantInfo &info);
+                                   const EnumConstantInfo &info,
+                                   VersionTuple swiftVersion);
 
     /// Visit a tag.
-    virtual void visitTag(StringRef name, const TagInfo &info);
+    virtual void visitTag(StringRef name, const TagInfo &info,
+                          VersionTuple swiftVersion);
 
     /// Visit a typedef.
-    virtual void visitTypedef(StringRef name, const TypedefInfo &info);
+    virtual void visitTypedef(StringRef name, const TypedefInfo &info,
+                              VersionTuple swiftVersion);
   };
 
   /// Visit the contents of the API notes file, passing each entity to the

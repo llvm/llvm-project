@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_API_NOTES_WRITER_H
 #define LLVM_CLANG_API_NOTES_WRITER_H
 
+#include "clang/Basic/VersionTuple.h"
 #include "clang/APINotes/Types.h"
 
 namespace llvm {
@@ -46,23 +47,17 @@ public:
   /// Write the API notes data to the given stream.
   void writeToStream(llvm::raw_ostream &os);
 
-  /// Add information about a specific Objective-C class.
+  /// Add information about a specific Objective-C class or protocol.
   ///
-  /// \param name The name of this class.
-  /// \param info Information about this class.
+  /// \param name The name of this class/protocol.
+  /// \param isClass Whether this is a class (vs. a protocol).
+  /// \param info Information about this class/protocol.
   ///
-  /// \returns the ID of the class, which can be used to add properties and
-  /// methods to the class.
-  ContextID addObjCClass(StringRef name, const ObjCContextInfo &info);
-
-  /// Add information about a specific Objective-C protocol.
-  ///
-  /// \param name The name of this protocol.
-  /// \param info Information about this protocol.
-  ///
-  /// \returns the ID of the protocol, which can be used to add properties and
-  /// methods to the protocol.
-  ContextID addObjCProtocol(StringRef name, const ObjCContextInfo &info);
+  /// \returns the ID of the class or protocol, which can be used to add
+  /// properties and methods to the class/protocol.
+  ContextID addObjCContext(StringRef name, bool isClass,
+                           const ObjCContextInfo &info,
+                           VersionTuple swiftVersion);
 
   /// Add information about a specific Objective-C property.
   ///
@@ -71,7 +66,8 @@ public:
   /// \param info Information about this property.
   void addObjCProperty(ContextID contextID, StringRef name,
                        bool isInstanceProperty,
-                       const ObjCPropertyInfo &info);
+                       const ObjCPropertyInfo &info,
+                       VersionTuple swiftVersion);
 
   /// Add information about a specific Objective-C method.
   ///
@@ -81,37 +77,43 @@ public:
   /// (vs. a class method).
   /// \param info Information about this method.
   void addObjCMethod(ContextID contextID, ObjCSelectorRef selector,
-                     bool isInstanceMethod, const ObjCMethodInfo &info);
+                     bool isInstanceMethod, const ObjCMethodInfo &info,
+                     VersionTuple swiftVersion);
 
   /// Add information about a global variable.
   ///
   /// \param name The name of this global variable.
   /// \param info Information about this global variable.
-  void addGlobalVariable(StringRef name, const GlobalVariableInfo &info);
+  void addGlobalVariable(StringRef name, const GlobalVariableInfo &info,
+                         VersionTuple swiftVersion);
 
   /// Add information about a global function.
   ///
   /// \param name The name of this global function.
   /// \param info Information about this global function.
-  void addGlobalFunction(StringRef name, const GlobalFunctionInfo &info);
+  void addGlobalFunction(StringRef name, const GlobalFunctionInfo &info,
+                         VersionTuple swiftVersion);
 
   /// Add information about an enumerator.
   ///
   /// \param name The name of this enumerator.
   /// \param info Information about this enumerator.
-  void addEnumConstant(StringRef name, const EnumConstantInfo &info);
+  void addEnumConstant(StringRef name, const EnumConstantInfo &info,
+                       VersionTuple swiftVersion);
 
   /// Add information about a tag (struct/union/enum/C++ class).
   ///
   /// \param name The name of this tag.
   /// \param info Information about this tag.
-  void addTag(StringRef name, const TagInfo &info);
+  void addTag(StringRef name, const TagInfo &info,
+              VersionTuple swiftVersion);
 
   /// Add information about a typedef.
   ///
   /// \param name The name of this typedef.
   /// \param info Information about this typedef.
-  void addTypedef(StringRef name, const TypedefInfo &info);
+  void addTypedef(StringRef name, const TypedefInfo &info,
+                  VersionTuple swiftVersion);
 
   /// Add module options
   void addModuleOptions(ModuleOptions opts);
