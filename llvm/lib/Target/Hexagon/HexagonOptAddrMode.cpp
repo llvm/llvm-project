@@ -587,7 +587,7 @@ void HexagonOptAddrMode::updateMap(NodeAddr<InstrNode *> IA) {
     return;
 
   for (auto &R : RDefMap) {
-    auto F = DefM.find(R.first);
+    auto F = DefM.find(R.first.Reg);
     if (F == DefM.end() || F->second.empty())
       continue;
     R.second[IA.Id] = F->second.top()->Id;
@@ -622,8 +622,7 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   const auto &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetOperandInfo TOI(*HII);
 
-  RegisterAliasInfo RAI(TRI);
-  DataFlowGraph G(MF, *HII, TRI, *MDT, MDF, RAI, TOI);
+  DataFlowGraph G(MF, *HII, TRI, *MDT, MDF, TOI);
   G.build();
   DFG = &G;
 
