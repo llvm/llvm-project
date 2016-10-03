@@ -31,3 +31,12 @@ Classes:
       - Selector: "initWithA:"
         MethodKind: Instance
         DesignatedInit: true
+SwiftVersions:
+  - Version: 3.0
+    Classes:
+      - Name: A
+        Methods:
+          - Selector: "transform:integer:"
+            MethodKind:      Instance
+            NullabilityOfRet: O
+            Nullability:      [ O, S ]

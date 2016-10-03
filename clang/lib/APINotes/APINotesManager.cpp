@@ -153,7 +153,7 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     if (!buffer) return nullptr;
 
     // Load the binary form.
-    return APINotesReader::getUnmanaged(buffer);
+    return APINotesReader::getUnmanaged(buffer, SwiftVersion);
   }
 
   // If we haven't pruned the API notes cache yet during this execution, do
@@ -184,7 +184,8 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     // Load the file contents.
     if (auto buffer = fileMgr.getBufferForFile(compiledFile)) {
       // Load the file.
-      if (auto reader = APINotesReader::get(std::move(buffer.get()))) {
+      if (auto reader = APINotesReader::get(std::move(buffer.get()),
+                                            SwiftVersion)) {
         bool outOfDate = false;
         if (auto sizeAndModTime = reader->getSourceFileSizeAndModTime()) {
           if (sizeAndModTime->first != apiNotesFile->getSize() ||
@@ -272,7 +273,7 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   }
 
   // Load the binary form we just compiled.
-  auto reader = APINotesReader::get(std::move(compiledBuffer));
+  auto reader = APINotesReader::get(std::move(compiledBuffer), SwiftVersion);
   assert(reader && "Could not load the API notes we just generated?");
   return reader;
 }
