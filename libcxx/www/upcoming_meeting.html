@@ -88,7 +88,7 @@
 	 <tr><td><a href="http://wg21.link/LWG2584">2584</a></td><td><regex> ECMAScript IdentityEscape is ambiguous</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2589">2589</a></td><td>match_results can't satisfy the requirements of a container</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2591">2591</a></td><td>std::function's member template target() should not lead to undefined behaviour</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2598">2598</a></td><td>addressof works on temporaries</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2598">2598</a></td><td>addressof works on temporaries</td><td>Issaquah</td><td>Patch ready</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2664">2664</a></td><td>operator/ (and other append) semantics not useful if argument has root</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2665">2665</a></td><td>remove_filename() post condition is incorrect</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2672">2672</a></td><td>Should is_empty use error_code in its specification?</td><td>Issaquah</td><td></td></tr>
@@ -109,7 +109,7 @@
 	 <tr><td><a href="http://wg21.link/LWG2735">2735</a></td><td>std::abs(short), std::abs(signed char) and others should return int instead of double in order to be compatible with C++98 and C</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2736">2736</a></td><td>nullopt_t insufficiently constrained</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2738">2738</a></td><td>is_constructible with void types</td><td>Issaquah</td><td>We already do this</td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2739">2739</a></td><td>Issue with time_point non-member subtraction with an unsigned duration</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2739">2739</a></td><td>Issue with time_point non-member subtraction with an unsigned duration</td><td>Issaquah</td><td>Patch Ready</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2740">2740</a></td><td>constexpr optional<T>::operator-></td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2742">2742</a></td><td>Inconsistent string interface taking string_view</td><td>Issaquah</td><td>Patch Ready</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2744">2744</a></td><td>any's in_place constructors</td><td>Issaquah</td><td></td></tr>
@@ -121,9 +121,9 @@
 	 <tr><td><a href="http://wg21.link/LWG2752">2752</a></td><td>"Throws:" clauses of async and packaged_task are unimplementable</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2753">2753</a></td><td>Optional's constructors and assignments need constraints</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2754">2754</a></td><td>The in_place constructors and emplace functions added by P0032R3 don't require CopyConstructible</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2755">2755</a></td><td>§[string.view.io] uses non-existent basic_string_view::to_string function</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2755">2755</a></td><td>§[string.view.io] uses non-existent basic_string_view::to_string function</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2756">2756</a></td><td>C++ WP optional<T> should 'forward' T's implicit conversions</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2759">2759</a></td><td>gcd / lcm and bool for the WP</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2759">2759</a></td><td>gcd / lcm and bool for the WP</td><td>Issaquah</td><td>Patch ready</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2760">2760</a></td><td>non-const basic_string::data should not invalidate iterators</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2765">2765</a></td><td>Did LWG 1123 go too far?</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2767">2767</a></td><td>not_fn call_wrapper can form invalid types</td><td>Issaquah</td><td></td></tr>
@@ -162,7 +162,7 @@
 <li>2584 - </li>
 <li>2589 - </li>
 <li>2591 - </li>
-<li>2598 - </li>
+<li>2598 - Patch and tests ready</li>
 <li>2664 - </li>
 <li>2665 - </li>
 <li>2672 - </li>
@@ -174,7 +174,7 @@
 <li>2686 - </li>
 <li>2694 - </li>
 <li>2696 - </li>
-<li>2699 - </li>
+<li>2699 - I don't think this requires any code changes; look more closely.</li>
 <li>2712 - </li>
 <li>2722 - </li>
 <li>2729 - </li>
@@ -183,7 +183,7 @@
 <li>2735 - </li>
 <li>2736 - </li>
 <li>2738 - We already do this; I added tests for cv-void</li>
-<li>2739 - </li>
+<li>2739 - Patch and tests ready</li>
 <li>2740 - </li>
 <li>2742 - Patch and tests ready</li>
 <li>2744 - </li>
@@ -195,9 +195,9 @@
 <li>2752 - </li>
 <li>2753 - </li>
 <li>2754 - </li>
-<li>2755 - </li>
+<li>2755 - Both string and string_view call a common routine for output; so no code changes needed.</li>
 <li>2756 - </li>
-<li>2759 - </li>
+<li>2759 - Patch and tests ready</li>
 <li>2760 - This is just wording cleanup; no code or test changes needed.</li>
 <li>2765 - </li>
 <li>2767 - </li>
@@ -205,7 +205,7 @@
 <li>2769 - </li>
 </ul>
 
-<p>Last Updated: 3-Oct-2016</p>
+<p>Last Updated: 4-Oct-2016</p>
 </div>
 </body>
 </html>
