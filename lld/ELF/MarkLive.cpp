@@ -160,8 +160,8 @@ scanEhFrameSection(EhInputSection<ELFT> &EH,
 }
 
 // We do not garbage-collect two types of sections:
-// 1) Sections used by the loader (.init, .fini, .ctors, .dtors, .jcr)
-// 2) Not allocatable sections which typically contain debugging information
+// 1) Sections used by the loader (.init, .fini, .ctors, .dtors or .jcr)
+// 2) Non-allocatable sections which typically contain debugging information
 template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
   switch (Sec->getSectionHdr()->sh_type) {
   case SHT_FINI_ARRAY:
@@ -170,15 +170,16 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
   case SHT_PREINIT_ARRAY:
     return true;
   default:
-    StringRef S = Sec->Name;
+    if (!(Sec->getSectionHdr()->sh_flags & SHF_ALLOC))
+      return true;
 
     // We do not want to reclaim sections if they can be referred
     // by __start_* and __stop_* symbols.
+    StringRef S = Sec->Name;
     if (isValidCIdentifier(S))
       return true;
 
-    bool IsAllocSec = Sec->getSectionHdr()->sh_flags & SHF_ALLOC;
-    return !IsAllocSec || S.startswith(".ctors") || S.startswith(".dtors") ||
+    return S.startswith(".ctors") || S.startswith(".dtors") ||
            S.startswith(".init") || S.startswith(".fini") ||
            S.startswith(".jcr");
   }

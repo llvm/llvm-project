@@ -346,6 +346,20 @@ bool x86AssemblyInspectionEngine::push_extended_pattern_p() {
   return false;
 }
 
+// instructions only valid in 32-bit mode:
+// 0x0e - push cs
+// 0x16 - push ss
+// 0x1e - push ds
+// 0x06 - push es
+bool x86AssemblyInspectionEngine::push_misc_reg_p() {
+  uint8_t p = *m_cur_insn;
+  if (m_wordsize == 4) {
+    if (p == 0x0e || p == 0x16 || p == 0x1e || p == 0x06)
+      return true;
+  }
+  return false;
+}
+
 // pushq %rbx
 // pushl %ebx
 bool x86AssemblyInspectionEngine::push_reg_p(int &regno) {
@@ -460,6 +474,19 @@ bool x86AssemblyInspectionEngine::pop_reg_p(int &regno) {
 bool x86AssemblyInspectionEngine::pop_rbp_pattern_p() {
   uint8_t *p = m_cur_insn;
   return (*p == 0x5d);
+}
+
+// instructions valid only in 32-bit mode:
+// 0x1f - pop ds
+// 0x07 - pop es
+// 0x17 - pop ss
+bool x86AssemblyInspectionEngine::pop_misc_reg_p() {
+  uint8_t p = *m_cur_insn;
+  if (m_wordsize == 4) {
+    if (p == 0x1f || p == 0x07 || p == 0x17)
+      return true;
+  }
+  return false;
 }
 
 // leave [0xc9]
@@ -725,6 +752,15 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       }
     }
 
+    else if (pop_misc_reg_p()) {
+      current_sp_bytes_offset_from_cfa -= m_wordsize;
+      if (row->GetCFAValue().GetRegisterNumber() == m_lldb_sp_regnum) {
+        row->GetCFAValue().SetIsRegisterPlusOffset(
+            m_lldb_sp_regnum, current_sp_bytes_offset_from_cfa);
+        row_updated = true;
+      }
+    }
+
     // The LEAVE instruction moves the value from rbp into rsp and pops
     // a value off the stack into rbp (restoring the caller's rbp value).
     // It is the opposite of ENTER, or 'push rbp, mov rsp rbp'.
@@ -788,7 +824,8 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       in_epilogue = true;
     }
 
-    else if (push_extended_pattern_p() || push_imm_pattern_p()) {
+    else if (push_extended_pattern_p() || push_imm_pattern_p() ||
+             push_misc_reg_p()) {
       current_sp_bytes_offset_from_cfa += m_wordsize;
       if (row->GetCFAValue().GetRegisterNumber() == m_lldb_sp_regnum) {
         row->GetCFAValue().SetOffset(current_sp_bytes_offset_from_cfa);
@@ -1026,6 +1063,16 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
         continue;
       }
 
+      if (pop_misc_reg_p()) {
+        row->SetOffset(offset);
+        row->GetCFAValue().IncOffset(-m_wordsize);
+
+        UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
+        unwind_plan.InsertRow(new_row);
+        unwind_plan_updated = true;
+        continue;
+      }
+
       // push imm
       if (push_imm_pattern_p()) {
         row->SetOffset(offset);
@@ -1037,7 +1084,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       }
 
       // push extended
-      if (push_extended_pattern_p()) {
+      if (push_extended_pattern_p() || push_misc_reg_p()) {
         row->SetOffset(offset);
         row->GetCFAValue().IncOffset(m_wordsize);
         UnwindPlan::RowSP new_row(new UnwindPlan::Row(*row));
