@@ -1,6 +1,18 @@
 Name: SomeKit
 SwiftVersions:
   - Version: 3.0
+    Classes:
+      - Name: MyReferenceType
+        SwiftBridge: ''
     Functions:
       - Name: moveToPoint
         SwiftName: 'moveTo(a:b:)'
+      - Name: acceptClosure
+        Parameters:      
+          - Position:        0
+            NoEscape:        false
+    Tags:
+      - Name: MyErrorCode
+        NSErrorDomain: ''
+
+  

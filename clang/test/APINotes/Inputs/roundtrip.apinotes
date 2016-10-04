@@ -9,8 +9,6 @@ Classes:
     AvailabilityMsg: ''
     SwiftPrivate:    false
     SwiftName:       ''
-    SwiftBridge:     ''
-    NSErrorDomain:   ''
     Methods:         
       - Selector:        'cellWithImage:'
         MethodKind:      Class
@@ -62,7 +60,6 @@ Classes:
     SwiftPrivate:    false
     SwiftName:       ''
     SwiftBridge:     View
-    NSErrorDomain:   ''
     Methods:         
       - Selector:        'addSubview:'
         MethodKind:      Instance
@@ -78,7 +75,6 @@ Classes:
           - Position:        0
             NoEscape:        false
           - Position:        1
-            NoEscape:        false
           - Position:        2
             NoEscape:        true
         Nullability:     [ N, N, O ]
@@ -136,14 +132,12 @@ Tags:
     AvailabilityMsg: ''
     SwiftPrivate:    false
     SwiftName:       SomeEnum
-    SwiftBridge:     ''
     NSErrorDomain:   some_error_domain
   - Name:            NSSomeStruct
     Availability:    available
     AvailabilityMsg: ''
     SwiftPrivate:    false
     SwiftName:       SomeStruct
-    SwiftBridge:     ''
     NSErrorDomain:   ''
 Typedefs:        
   - Name:            NSTypedef
@@ -152,7 +146,6 @@ Typedefs:
     SwiftPrivate:    false
     SwiftName:       Typedef
     SwiftBridge:     ''
-    NSErrorDomain:   ''
 SwiftVersions:   
   - Version:         3.0
     Classes:         
@@ -162,7 +155,6 @@ SwiftVersions:
         SwiftPrivate:    false
         SwiftName:       NSBox
         SwiftBridge:     ''
-        NSErrorDomain:   ''
         Methods:         
           - Selector:        init
             MethodKind:      Instance
