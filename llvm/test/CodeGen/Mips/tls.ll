@@ -1,8 +1,8 @@
-; RUN: llc -march=mipsel -disable-mips-delay-filler -relocation-model=pic < %s | \
+; RUN: llc -mtriple=mipsel-- -disable-mips-delay-filler -relocation-model=pic < %s | \
 ; RUN:     FileCheck %s -check-prefixes=PIC,CHECK
-; RUN: llc -march=mipsel -relocation-model=static -disable-mips-delay-filler < \
+; RUN: llc -mtriple=mipsel-- -relocation-model=static -disable-mips-delay-filler < \
 ; RUN:     %s | FileCheck %s -check-prefixes=STATIC,CHECK
-; RUN: llc -march=mipsel -relocation-model=static -disable-mips-delay-filler \
+; RUN: llc -mtriple=mipsel-- -relocation-model=static -disable-mips-delay-filler \
 ; RUN:     -mips-fix-global-base-reg=false < %s  | \
 ; RUN:     FileCheck %s -check-prefixes=STATICGP,CHECK
 

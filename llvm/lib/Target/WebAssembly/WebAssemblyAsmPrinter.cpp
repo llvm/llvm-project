@@ -82,7 +82,6 @@ private:
                              raw_ostream &OS) override;
 
   MVT getRegType(unsigned RegNo) const;
-  const char *toString(MVT VT) const;
   std::string regToString(const MachineOperand &MO);
   WebAssemblyTargetStreamer *getTargetStreamer();
 };
@@ -102,10 +101,6 @@ MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
   DEBUG(errs() << "Unknown type for register number: " << RegNo);
   llvm_unreachable("Unknown register type");
   return MVT::Other;
-}
-
-const char *WebAssemblyAsmPrinter::toString(MVT VT) const {
-  return WebAssembly::TypeToString(VT);
 }
 
 std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {

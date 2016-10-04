@@ -101,7 +101,7 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
                             const LoopSafetyInfo *SafetyInfo);
 static bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA,
-                               DominatorTree *DT, TargetLibraryInfo *TLI,
+                               DominatorTree *DT,
                                Loop *CurLoop, AliasSetTracker *CurAST,
                                LoopSafetyInfo *SafetyInfo);
 
@@ -337,7 +337,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     // operands of the instruction are loop invariant.
     //
     if (isNotUsedInLoop(I, CurLoop, SafetyInfo) &&
-        canSinkOrHoistInst(I, AA, DT, TLI, CurLoop, CurAST, SafetyInfo)) {
+        canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo)) {
       ++II;
       Changed |= sink(I, LI, DT, CurLoop, CurAST, SafetyInfo);
     }
@@ -390,7 +390,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // is safe to hoist the instruction.
       //
       if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, TLI, CurLoop, CurAST, SafetyInfo) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo) &&
           isSafeToExecuteUnconditionally(
               I, DT, CurLoop, SafetyInfo,
               CurLoop->getLoopPreheader()->getTerminator()))
@@ -436,12 +436,16 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
         SafetyInfo->BlockColors = colorEHFunclets(*Fn);
 }
 
-/// canSinkOrHoistInst - Return true if the hoister and sinker can handle this
-/// instruction.
+/// Returns true if the hoister and sinker can handle this instruction.
+/// If SafetyInfo is nullptr, we are checking for sinking instructions from
+/// preheader to loop body (no speculation).
+/// If SafetyInfo is not nullptr, we are checking for hoisting/sinking
+/// instructions from loop body to preheader/exit. Check if the instruction
+/// can execute specultatively.
 ///
-bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
-                        TargetLibraryInfo *TLI, Loop *CurLoop,
-                        AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo) {
+bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
+                        Loop *CurLoop, AliasSetTracker *CurAST,
+                        LoopSafetyInfo *SafetyInfo) {
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (!LI->isUnordered())
@@ -514,6 +518,11 @@ bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
       !isa<ShuffleVectorInst>(I) && !isa<ExtractValueInst>(I) &&
       !isa<InsertValueInst>(I))
     return false;
+
+  // SafetyInfo is nullptr if we are checking for sinking from preheader to
+  // loop body. It will be always safe as there is no speculative execution.
+  if (!SafetyInfo)
+    return true;
 
   // TODO: Plumb the context instruction through to make hoisting and sinking
   // more powerful. Hoisting of loads already works due to the special casing

@@ -226,8 +226,8 @@ define i16 @lshr_exact_i16(i16 %a, i16 %b) {
 }
 
 ; VI-LABEL: @ashr_i16(
-; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
-; VI: %[[B_32:[0-9]+]] = zext i16 %b to i32
+; VI: %[[A_32:[0-9]+]] = sext i16 %a to i32
+; VI: %[[B_32:[0-9]+]] = sext i16 %b to i32
 ; VI: %[[R_32:[0-9]+]] = ashr i32 %[[A_32]], %[[B_32]]
 ; VI: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI: ret i16 %[[R_16]]
@@ -237,8 +237,8 @@ define i16 @ashr_i16(i16 %a, i16 %b) {
 }
 
 ; VI-LABEL: @ashr_exact_i16(
-; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
-; VI: %[[B_32:[0-9]+]] = zext i16 %b to i32
+; VI: %[[A_32:[0-9]+]] = sext i16 %a to i32
+; VI: %[[B_32:[0-9]+]] = sext i16 %b to i32
 ; VI: %[[R_32:[0-9]+]] = ashr exact i32 %[[A_32]], %[[B_32]]
 ; VI: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI: ret i16 %[[R_16]]
@@ -651,8 +651,8 @@ define <3 x i16> @lshr_exact_3xi16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 ; VI-LABEL: @ashr_3xi16(
-; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
-; VI: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
+; VI: %[[A_32:[0-9]+]] = sext <3 x i16> %a to <3 x i32>
+; VI: %[[B_32:[0-9]+]] = sext <3 x i16> %b to <3 x i32>
 ; VI: %[[R_32:[0-9]+]] = ashr <3 x i32> %[[A_32]], %[[B_32]]
 ; VI: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI: ret <3 x i16> %[[R_16]]
@@ -662,8 +662,8 @@ define <3 x i16> @ashr_3xi16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 ; VI-LABEL: @ashr_exact_3xi16(
-; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
-; VI: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
+; VI: %[[A_32:[0-9]+]] = sext <3 x i16> %a to <3 x i32>
+; VI: %[[B_32:[0-9]+]] = sext <3 x i16> %b to <3 x i32>
 ; VI: %[[R_32:[0-9]+]] = ashr exact <3 x i32> %[[A_32]], %[[B_32]]
 ; VI: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI: ret <3 x i16> %[[R_16]]

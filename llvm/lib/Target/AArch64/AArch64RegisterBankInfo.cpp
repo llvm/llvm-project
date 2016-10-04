@@ -292,6 +292,47 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
 }
 
 RegisterBankInfo::InstructionMapping
+AArch64RegisterBankInfo::getSameKindOfOperandsMapping(const MachineInstr &MI) {
+  const unsigned Opc = MI.getOpcode();
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  unsigned NumOperands = MI.getNumOperands();
+  assert(NumOperands <= 3 &&
+         "This code is for instructions with 3 or less operands");
+
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  unsigned Size = Ty.getSizeInBits();
+  bool IsFPR = Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
+
+#ifndef NDEBUG
+  // Make sure all the operands are using similar size and type.
+  // Should probably be checked by the machine verifier.
+  // This code won't catch cases where the number of lanes is
+  // different between the operands.
+  // If we want to go to that level of details, it is probably
+  // best to check that the types are the same, period.
+  // Currently, we just check that the register banks are the same
+  // for each types.
+  for (unsigned Idx = 1; Idx != NumOperands; ++Idx) {
+    LLT OpTy = MRI.getType(MI.getOperand(Idx).getReg());
+    assert(AArch64::getRegBankBaseIdxOffset(OpTy.getSizeInBits()) ==
+               AArch64::getRegBankBaseIdxOffset(Size) &&
+           "Operand has incompatible size");
+    bool OpIsFPR = OpTy.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
+    (void)OpIsFPR;
+    assert(IsFPR == OpIsFPR && "Operand has incompatible type");
+  }
+#endif // End NDEBUG.
+
+  AArch64::PartialMappingIdx RBIdx =
+      IsFPR ? AArch64::FirstFPR : AArch64::FirstGPR;
+
+  return InstructionMapping{DefaultMappingID, 1,
+                            AArch64::getValueMapping(RBIdx, Size), NumOperands};
+}
+
+RegisterBankInfo::InstructionMapping
 AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
   const MachineFunction &MF = *MI.getParent()->getParent();
@@ -305,7 +346,6 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return Mapping;
   }
 
-  unsigned NumOperands = MI.getNumOperands();
   switch (Opc) {
     // G_{F|S|U}REM are not listed because they are not legal.
     // Arithmetic ops.
@@ -327,35 +367,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:{
-    assert(NumOperands == 3 && "This code is for 3-operands instructions");
-
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    unsigned Size = Ty.getSizeInBits();
-    // Make sure all the operands are using similar size.
-    // Should probably be checked by the machine verifier.
-    assert(AArch64::getRegBankBaseIdxOffset(
-               MRI.getType(MI.getOperand(1).getReg()).getSizeInBits()) ==
-               AArch64::getRegBankBaseIdxOffset(Size) &&
-           "Operand 1 has incompatible size");
-    assert(AArch64::getRegBankBaseIdxOffset(
-               MRI.getType(MI.getOperand(2).getReg()).getSizeInBits()) ==
-               AArch64::getRegBankBaseIdxOffset(Size) &&
-           "Operand 2 has incompatible size");
-
-    bool IsFPR = Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
-
-    AArch64::PartialMappingIdx RBIdx =
-        IsFPR ? AArch64::FirstFPR : AArch64::FirstGPR;
-
-    return InstructionMapping{DefaultMappingID, 1,
-                              AArch64::getValueMapping(RBIdx, Size),
-                              NumOperands};
-  }
+  case TargetOpcode::G_FDIV:
+    return getSameKindOfOperandsMapping(MI);
   default:
     break;
   }
 
+  unsigned NumOperands = MI.getNumOperands();
   RegisterBankInfo::InstructionMapping Mapping =
       InstructionMapping{DefaultMappingID, 1, nullptr, NumOperands};
 

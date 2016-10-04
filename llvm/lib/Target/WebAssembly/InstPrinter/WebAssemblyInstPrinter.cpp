@@ -171,12 +171,12 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     assert(Desc.TSFlags == 0 &&
            "WebAssembly variable_ops floating point ops don't use TSFlags");
     const MCOperandInfo &Info = Desc.OpInfo[OpNo];
-    if (Info.OperandType == WebAssembly::OPERAND_FP32IMM) {
+    if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
       // TODO: MC converts all floating point immediate operands to double.
       // This is fine for numeric values, but may cause NaNs to change bits.
       O << toString(APFloat(float(Op.getFPImm())));
     } else {
-      assert(Info.OperandType == WebAssembly::OPERAND_FP64IMM);
+      assert(Info.OperandType == WebAssembly::OPERAND_F64IMM);
       O << toString(APFloat(Op.getFPImm()));
     }
   } else {

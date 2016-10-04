@@ -45,9 +45,9 @@ enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
   /// 32-bit floating-point immediates.
-  OPERAND_FP32IMM,
+  OPERAND_F32IMM,
   /// 64-bit floating-point immediates.
-  OPERAND_FP64IMM,
+  OPERAND_F64IMM,
   /// p2align immediate for load and store address alignment.
   OPERAND_P2ALIGN
 };

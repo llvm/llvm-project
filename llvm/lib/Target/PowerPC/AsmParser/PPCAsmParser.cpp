@@ -83,6 +83,16 @@ static const MCPhysReg FRegs[32] = {
   PPC::F24, PPC::F25, PPC::F26, PPC::F27,
   PPC::F28, PPC::F29, PPC::F30, PPC::F31
 };
+static const MCPhysReg VFRegs[32] = {
+  PPC::VF0,  PPC::VF1,  PPC::VF2,  PPC::VF3,
+  PPC::VF4,  PPC::VF5,  PPC::VF6,  PPC::VF7,
+  PPC::VF8,  PPC::VF9,  PPC::VF10, PPC::VF11,
+  PPC::VF12, PPC::VF13, PPC::VF14, PPC::VF15,
+  PPC::VF16, PPC::VF17, PPC::VF18, PPC::VF19,
+  PPC::VF20, PPC::VF21, PPC::VF22, PPC::VF23,
+  PPC::VF24, PPC::VF25, PPC::VF26, PPC::VF27,
+  PPC::VF28, PPC::VF29, PPC::VF30, PPC::VF31
+};
 static const MCPhysReg VRegs[32] = {
   PPC::V0,  PPC::V1,  PPC::V2,  PPC::V3,
   PPC::V4,  PPC::V5,  PPC::V6,  PPC::V7,
@@ -103,14 +113,14 @@ static const MCPhysReg VSRegs[64] = {
   PPC::VSL24, PPC::VSL25, PPC::VSL26, PPC::VSL27,
   PPC::VSL28, PPC::VSL29, PPC::VSL30, PPC::VSL31,
 
-  PPC::VSH0,  PPC::VSH1,  PPC::VSH2,  PPC::VSH3,
-  PPC::VSH4,  PPC::VSH5,  PPC::VSH6,  PPC::VSH7,
-  PPC::VSH8,  PPC::VSH9,  PPC::VSH10, PPC::VSH11,
-  PPC::VSH12, PPC::VSH13, PPC::VSH14, PPC::VSH15,
-  PPC::VSH16, PPC::VSH17, PPC::VSH18, PPC::VSH19,
-  PPC::VSH20, PPC::VSH21, PPC::VSH22, PPC::VSH23,
-  PPC::VSH24, PPC::VSH25, PPC::VSH26, PPC::VSH27,
-  PPC::VSH28, PPC::VSH29, PPC::VSH30, PPC::VSH31
+  PPC::V0,  PPC::V1,  PPC::V2,  PPC::V3,
+  PPC::V4,  PPC::V5,  PPC::V6,  PPC::V7,
+  PPC::V8,  PPC::V9,  PPC::V10, PPC::V11,
+  PPC::V12, PPC::V13, PPC::V14, PPC::V15,
+  PPC::V16, PPC::V17, PPC::V18, PPC::V19,
+  PPC::V20, PPC::V21, PPC::V22, PPC::V23,
+  PPC::V24, PPC::V25, PPC::V26, PPC::V27,
+  PPC::V28, PPC::V29, PPC::V30, PPC::V31
 };
 static const MCPhysReg VSFRegs[64] = {
   PPC::F0,  PPC::F1,  PPC::F2,  PPC::F3,
@@ -595,6 +605,11 @@ public:
   void addRegF8RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
+  }
+
+  void addRegVFRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(VFRegs[getReg()]));
   }
 
   void addRegVRRCOperands(MCInst &Inst, unsigned N) const {

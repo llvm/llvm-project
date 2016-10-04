@@ -23,15 +23,15 @@ bar:
 // SEC-NEXT:   SHF_ALLOC
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x2098
-// SEC-NEXT: Offset: 0x2098
+// SEC-NEXT: Address: 0x20098
+// SEC-NEXT: Offset: 0x20098
 // SEC-NEXT: Size: 16
 
-// page(0x2098) - page(0x1000) = 4096
+// page(0x20098) - page(0x10000) = 65536
 // 0x98 = 152
 
 // CHECK:      foo:
-// CHECK-NEXT: 1000: {{.*}} adrp x0, #4096
-// CHECK-NEXT: 1004: {{.*}} ldr  x1, [x0, #152]
-// CHECK-NEXT: 1008: {{.*}} add  x0, x0, #152
-// CHECK-NEXT: 100c: {{.*}} blr  x1
+// CHECK-NEXT: 10000: {{.*}} adrp x0, #65536
+// CHECK-NEXT: 10004: {{.*}} ldr  x1, [x0, #152]
+// CHECK-NEXT: 10008: {{.*}} add  x0, x0, #152
+// CHECK-NEXT: 1000c: {{.*}} blr  x1

@@ -859,28 +859,10 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       llvm_unreachable("nop VSX copy");
 
     DestReg = SuperReg;
-  } else if (PPC::VRRCRegClass.contains(DestReg) &&
-             PPC::VSRCRegClass.contains(SrcReg)) {
-    unsigned SuperReg =
-      TRI->getMatchingSuperReg(DestReg, PPC::sub_128, &PPC::VSRCRegClass);
-
-    if (VSXSelfCopyCrash && SrcReg == SuperReg)
-      llvm_unreachable("nop VSX copy");
-
-    DestReg = SuperReg;
   } else if (PPC::F8RCRegClass.contains(SrcReg) &&
              PPC::VSRCRegClass.contains(DestReg)) {
     unsigned SuperReg =
       TRI->getMatchingSuperReg(SrcReg, PPC::sub_64, &PPC::VSRCRegClass);
-
-    if (VSXSelfCopyCrash && DestReg == SuperReg)
-      llvm_unreachable("nop VSX copy");
-
-    SrcReg = SuperReg;
-  } else if (PPC::VRRCRegClass.contains(SrcReg) &&
-             PPC::VSRCRegClass.contains(DestReg)) {
-    unsigned SuperReg =
-      TRI->getMatchingSuperReg(SrcReg, PPC::sub_128, &PPC::VSRCRegClass);
 
     if (VSXSelfCopyCrash && DestReg == SuperReg)
       llvm_unreachable("nop VSX copy");
@@ -1073,6 +1055,15 @@ PPCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   FuncInfo->setHasSpills();
 
+  // We need to avoid a situation in which the value from a VRRC register is
+  // spilled using an Altivec instruction and reloaded into a VSRC register
+  // using a VSX instruction. The issue with this is that the VSX
+  // load/store instructions swap the doublewords in the vector and the Altivec
+  // ones don't. The register classes on the spill/reload may be different if
+  // the register is defined using an Altivec instruction and is then used by a
+  // VSX instruction.
+  RC = updatedRC(RC);
+
   bool NonRI = false, SpillsVRS = false;
   if (StoreRegToStackSlot(MF, SrcReg, isKill, FrameIdx, RC, NewMIs,
                           NonRI, SpillsVRS))
@@ -1184,6 +1175,16 @@ PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   FuncInfo->setHasSpills();
+
+  // We need to avoid a situation in which the value from a VRRC register is
+  // spilled using an Altivec instruction and reloaded into a VSRC register
+  // using a VSX instruction. The issue with this is that the VSX
+  // load/store instructions swap the doublewords in the vector and the Altivec
+  // ones don't. The register classes on the spill/reload may be different if
+  // the register is defined using an Altivec instruction and is then used by a
+  // VSX instruction.
+  if (Subtarget.hasVSX() && RC == &PPC::VRRCRegClass)
+    RC = &PPC::VSRCRegClass;
 
   bool NonRI = false, SpillsVRS = false;
   if (LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs,
@@ -1883,4 +1884,11 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   }
   return false;
+}
+
+const TargetRegisterClass *
+PPCInstrInfo::updatedRC(const TargetRegisterClass *RC) const {
+  if (Subtarget.hasVSX() && RC == &PPC::VRRCRegClass)
+    return &PPC::VSRCRegClass;
+  return RC;
 }

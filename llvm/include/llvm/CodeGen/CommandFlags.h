@@ -155,8 +155,8 @@ EnableNoTrappingFPMath("enable-no-trapping-fp-math",
                                 "attribute not to use exceptions"),
                        cl::init(false));
 
-cl::opt<llvm::FPDenormal::DenormalType>
-DenormalType("denormal-fp-math",
+cl::opt<llvm::FPDenormal::DenormalMode>
+DenormalMode("denormal-fp-math",
           cl::desc("Select which denormal numbers the code is permitted to require"),
           cl::init(FPDenormal::IEEE),
           cl::values(
@@ -310,7 +310,7 @@ static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.NoInfsFPMath = EnableNoInfsFPMath;
   Options.NoNaNsFPMath = EnableNoNaNsFPMath;
   Options.NoTrappingFPMath = EnableNoTrappingFPMath;
-  Options.FPDenormalType = DenormalType;
+  Options.FPDenormalMode = DenormalMode;
   Options.HonorSignDependentRoundingFPMathOption =
       EnableHonorSignDependentRoundingFPMath;
   if (FloatABIForCalls != FloatABI::Default)

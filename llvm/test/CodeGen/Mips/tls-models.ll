@@ -1,5 +1,5 @@
-; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck -check-prefix=CHECK-PIC %s
-; RUN: llc -march=mipsel -relocation-model=static < %s | FileCheck -check-prefix=CHECK-NONPIC %s
+; RUN: llc -mtriple=mipsel-- -relocation-model=pic < %s | FileCheck -check-prefix=CHECK-PIC %s
+; RUN: llc -mtriple=mipsel-- -relocation-model=static < %s | FileCheck -check-prefix=CHECK-NONPIC %s
 
 @external_gd = external thread_local global i32
 @internal_gd = internal thread_local global i32 42

@@ -429,10 +429,13 @@ void Vectorizer::eraseInstructions(ArrayRef<Instruction *> Chain) {
 std::pair<ArrayRef<Instruction *>, ArrayRef<Instruction *>>
 Vectorizer::splitOddVectorElts(ArrayRef<Instruction *> Chain,
                                unsigned ElementSizeBits) {
-  unsigned ElemSizeInBytes = ElementSizeBits / 8;
-  unsigned SizeInBytes = ElemSizeInBytes * Chain.size();
-  unsigned NumRight = (SizeInBytes % 4) / ElemSizeInBytes;
-  unsigned NumLeft = Chain.size() - NumRight;
+  unsigned ElementSizeBytes = ElementSizeBits / 8;
+  unsigned SizeBytes = ElementSizeBytes * Chain.size();
+  unsigned NumLeft = (SizeBytes - (SizeBytes % 4)) / ElementSizeBytes;
+  if (NumLeft == Chain.size())
+    --NumLeft;
+  else if (NumLeft == 0)
+    NumLeft = 1;
   return std::make_pair(Chain.slice(0, NumLeft), Chain.slice(NumLeft));
 }
 
@@ -540,6 +543,10 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       if (!LI->isSimple())
         continue;
 
+      // Skip if it's not legal.
+      if (!TTI.isLegalToVectorizeLoad(LI))
+        continue;
+
       Type *Ty = LI->getType();
       if (!VectorType::isValidElementType(Ty->getScalarType()))
         continue;
@@ -565,14 +572,16 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
           }))
         continue;
 
-      // TODO: Target hook to filter types.
-
       // Save the load locations.
       Value *ObjPtr = GetUnderlyingObject(Ptr, DL);
       LoadRefs[ObjPtr].push_back(LI);
 
     } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
+        continue;
+
+      // Skip if it's not legal.
+      if (!TTI.isLegalToVectorizeStore(SI))
         continue;
 
       Type *Ty = SI->getValueOperand()->getType();
@@ -719,6 +728,7 @@ bool Vectorizer::vectorizeStoreChain(
   unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
   unsigned VF = VecRegSize / Sz;
   unsigned ChainSize = Chain.size();
+  unsigned Alignment = getAlignment(S0);
 
   if (!isPowerOf2_32(Sz) || VF < 2 || ChainSize < 2) {
     InstructionsProcessed->insert(Chain.begin(), Chain.end());
@@ -741,17 +751,11 @@ bool Vectorizer::vectorizeStoreChain(
   Chain = NewChain;
   ChainSize = Chain.size();
 
-  // Store size should be 1B, 2B or multiple of 4B.
-  // TODO: Target hook for size constraint?
+  // Check if it's legal to vectorize this chain. If not, split the chain and
+  // try again.
   unsigned EltSzInBytes = Sz / 8;
   unsigned SzInBytes = EltSzInBytes * ChainSize;
-  if (SzInBytes > 2 && SzInBytes % 4 != 0) {
-    DEBUG(dbgs() << "LSV: Size should be 1B, 2B "
-                    "or multiple of 4B. Splitting.\n");
-    if (SzInBytes == 3)
-      return vectorizeStoreChain(Chain.slice(0, ChainSize - 1),
-                                 InstructionsProcessed);
-
+  if (!TTI.isLegalToVectorizeStoreChain(SzInBytes, Alignment, AS)) {
     auto Chains = splitOddVectorElts(Chain, Sz);
     return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
            vectorizeStoreChain(Chains.second, InstructionsProcessed);
@@ -765,13 +769,15 @@ bool Vectorizer::vectorizeStoreChain(
   else
     VecTy = VectorType::get(StoreTy, Chain.size());
 
-  // If it's more than the max vector size, break it into two pieces.
-  // TODO: Target hook to control types to split to.
-  if (ChainSize > VF) {
-    DEBUG(dbgs() << "LSV: Vector factor is too big."
+  // If it's more than the max vector size or the target has a better
+  // vector factor, break it into two pieces.
+  unsigned TargetVF = TTI.getStoreVectorFactor(VF, Sz, SzInBytes, VecTy);
+  if (ChainSize > VF || (VF != TargetVF && TargetVF < ChainSize)) {
+    DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
                     " Creating two separate arrays.\n");
-    return vectorizeStoreChain(Chain.slice(0, VF), InstructionsProcessed) |
-           vectorizeStoreChain(Chain.slice(VF), InstructionsProcessed);
+    return vectorizeStoreChain(Chain.slice(0, TargetVF),
+                               InstructionsProcessed) |
+           vectorizeStoreChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
 
   DEBUG({
@@ -783,9 +789,6 @@ bool Vectorizer::vectorizeStoreChain(
   // We won't try again to vectorize the elements of the chain, regardless of
   // whether we succeed below.
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
-
-  // Check alignment restrictions.
-  unsigned Alignment = getAlignment(S0);
 
   // If the store is going to be misaligned, don't vectorize it.
   if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
@@ -873,6 +876,7 @@ bool Vectorizer::vectorizeLoadChain(
   unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
   unsigned VF = VecRegSize / Sz;
   unsigned ChainSize = Chain.size();
+  unsigned Alignment = getAlignment(L0);
 
   if (!isPowerOf2_32(Sz) || VF < 2 || ChainSize < 2) {
     InstructionsProcessed->insert(Chain.begin(), Chain.end());
@@ -895,16 +899,11 @@ bool Vectorizer::vectorizeLoadChain(
   Chain = NewChain;
   ChainSize = Chain.size();
 
-  // Load size should be 1B, 2B or multiple of 4B.
-  // TODO: Should size constraint be a target hook?
+  // Check if it's legal to vectorize this chain. If not, split the chain and
+  // try again.
   unsigned EltSzInBytes = Sz / 8;
   unsigned SzInBytes = EltSzInBytes * ChainSize;
-  if (SzInBytes > 2 && SzInBytes % 4 != 0) {
-    DEBUG(dbgs() << "LSV: Size should be 1B, 2B "
-                    "or multiple of 4B. Splitting.\n");
-    if (SzInBytes == 3)
-      return vectorizeLoadChain(Chain.slice(0, ChainSize - 1),
-                                InstructionsProcessed);
+  if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment, AS)) {
     auto Chains = splitOddVectorElts(Chain, Sz);
     return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
            vectorizeLoadChain(Chains.second, InstructionsProcessed);
@@ -918,21 +917,19 @@ bool Vectorizer::vectorizeLoadChain(
   else
     VecTy = VectorType::get(LoadTy, Chain.size());
 
-  // If it's more than the max vector size, break it into two pieces.
-  // TODO: Target hook to control types to split to.
-  if (ChainSize > VF) {
-    DEBUG(dbgs() << "LSV: Vector factor is too big. "
-                    "Creating two separate arrays.\n");
-    return vectorizeLoadChain(Chain.slice(0, VF), InstructionsProcessed) |
-           vectorizeLoadChain(Chain.slice(VF), InstructionsProcessed);
+  // If it's more than the max vector size or the target has a better
+  // vector factor, break it into two pieces.
+  unsigned TargetVF = TTI.getLoadVectorFactor(VF, Sz, SzInBytes, VecTy);
+  if (ChainSize > VF || (VF != TargetVF && TargetVF < ChainSize)) {
+    DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
+                    " Creating two separate arrays.\n");
+    return vectorizeLoadChain(Chain.slice(0, TargetVF), InstructionsProcessed) |
+           vectorizeLoadChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
 
   // We won't try again to vectorize the elements of the chain, regardless of
   // whether we succeed below.
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
-
-  // Check alignment restrictions.
-  unsigned Alignment = getAlignment(L0);
 
   // If the load is going to be misaligned, don't vectorize it.
   if (accessIsMisaligned(SzInBytes, AS, Alignment)) {

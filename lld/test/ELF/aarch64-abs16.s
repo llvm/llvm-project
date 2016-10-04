@@ -18,7 +18,7 @@ _start:
 //        S + A = 0xffff
 // 11002: S = 0x100, A = -0x8100
 //        S + A = 0x8000
-// CHECK-NEXT: 11000 ffff0080
+// CHECK-NEXT: 20000 ffff0080
 
 // RUN: not ld.lld %t.o %t255.o -o %t2
 //   | FileCheck %s --check-prefix=OVERFLOW

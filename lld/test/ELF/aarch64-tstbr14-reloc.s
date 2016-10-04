@@ -7,25 +7,25 @@
 # RUN: llvm-readobj -s -r %t3 | FileCheck -check-prefix=DSOREL %s
 # REQUIRES: aarch64
 
-# 0x1101c - 28 = 0x11000
-# 0x11020 - 16 = 0x11010
-# 0x11024 - 36 = 0x11000
-# 0x11028 - 24 = 0x11010
+# 0x1101c - 28 = 0x20000
+# 0x11020 - 16 = 0x20010
+# 0x11024 - 36 = 0x20000
+# 0x11028 - 24 = 0x20010
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: _foo:
-# CHECK-NEXT:  11000: {{.*}} nop
-# CHECK-NEXT:  11004: {{.*}} nop
-# CHECK-NEXT:  11008: {{.*}} nop
-# CHECK-NEXT:  1100c: {{.*}} nop
+# CHECK-NEXT:  20000: {{.*}} nop
+# CHECK-NEXT:  20004: {{.*}} nop
+# CHECK-NEXT:  20008: {{.*}} nop
+# CHECK-NEXT:  2000c: {{.*}} nop
 # CHECK:      _bar:
-# CHECK-NEXT:  11010: {{.*}} nop
-# CHECK-NEXT:  11014: {{.*}} nop
-# CHECK-NEXT:  11018: {{.*}} nop
+# CHECK-NEXT:  20010: {{.*}} nop
+# CHECK-NEXT:  20014: {{.*}} nop
+# CHECK-NEXT:  20018: {{.*}} nop
 # CHECK:      _start:
-# CHECK-NEXT:  1101c: {{.*}} tbnz w3, #15, #-28
-# CHECK-NEXT:  11020: {{.*}} tbnz w3, #15, #-16
-# CHECK-NEXT:  11024: {{.*}} tbz x6, #45, #-36
-# CHECK-NEXT:  11028: {{.*}} tbz x6, #45, #-24
+# CHECK-NEXT:  2001c: {{.*}} tbnz w3, #15, #-28
+# CHECK-NEXT:  20020: {{.*}} tbnz w3, #15, #-16
+# CHECK-NEXT:  20024: {{.*}} tbz x6, #45, #-36
+# CHECK-NEXT:  20028: {{.*}} tbz x6, #45, #-24
 
 #DSOREL:      Section {
 #DSOREL:        Index:
@@ -35,8 +35,8 @@
 #DSOREL-NEXT:     SHF_ALLOC
 #DSOREL-NEXT:     SHF_WRITE
 #DSOREL-NEXT:   ]
-#DSOREL-NEXT:   Address: 0x3000
-#DSOREL-NEXT:   Offset: 0x3000
+#DSOREL-NEXT:   Address: 0x30000
+#DSOREL-NEXT:   Offset: 0x30000
 #DSOREL-NEXT:   Size: 40
 #DSOREL-NEXT:   Link: 0
 #DSOREL-NEXT:   Info: 0
@@ -45,48 +45,48 @@
 #DSOREL-NEXT:  }
 #DSOREL:      Relocations [
 #DSOREL-NEXT:  Section ({{.*}}) .rela.plt {
-#DSOREL-NEXT:    0x3018 R_AARCH64_JUMP_SLOT _foo
-#DSOREL-NEXT:    0x3020 R_AARCH64_JUMP_SLOT _bar
+#DSOREL-NEXT:    0x30018 R_AARCH64_JUMP_SLOT _foo
+#DSOREL-NEXT:    0x30020 R_AARCH64_JUMP_SLOT _bar
 #DSOREL-NEXT:  }
 #DSOREL-NEXT:]
 
 #DSO:      Disassembly of section .text:
 #DSO-NEXT: _foo:
-#DSO-NEXT:  1000: {{.*}} nop
-#DSO-NEXT:  1004: {{.*}} nop
-#DSO-NEXT:  1008: {{.*}} nop
-#DSO-NEXT:  100c: {{.*}} nop
+#DSO-NEXT:  10000: {{.*}} nop
+#DSO-NEXT:  10004: {{.*}} nop
+#DSO-NEXT:  10008: {{.*}} nop
+#DSO-NEXT:  1000c: {{.*}} nop
 #DSO:      _bar:
-#DSO-NEXT:  1010: {{.*}} nop
-#DSO-NEXT:  1014: {{.*}} nop
-#DSO-NEXT:  1018: {{.*}} nop
+#DSO-NEXT:  10010: {{.*}} nop
+#DSO-NEXT:  10014: {{.*}} nop
+#DSO-NEXT:  10018: {{.*}} nop
 #DSO:      _start:
-# 0x101c + 52 = 0x1050 = PLT[1]
-# 0x1020 + 64 = 0x1060 = PLT[2]
-# 0x1024 + 44 = 0x1050 = PLT[1]
-# 0x1028 + 56 = 0x1060 = PLT[2]
-#DSO-NEXT:  101c: {{.*}} tbnz w3, #15, #52
-#DSO-NEXT:  1020: {{.*}} tbnz w3, #15, #64
-#DSO-NEXT:  1024: {{.*}} tbz x6, #45, #44
-#DSO-NEXT:  1028: {{.*}} tbz x6, #45, #56
+# 0x1001c + 52 = 0x10050 = PLT[1]
+# 0x10020 + 64 = 0x10060 = PLT[2]
+# 0x10024 + 44 = 0x10050 = PLT[1]
+# 0x10028 + 56 = 0x10060 = PLT[2]
+#DSO-NEXT:  1001c: {{.*}} tbnz w3, #15, #52
+#DSO-NEXT:  10020: {{.*}} tbnz w3, #15, #64
+#DSO-NEXT:  10024: {{.*}} tbz x6, #45, #44
+#DSO-NEXT:  10028: {{.*}} tbz x6, #45, #56
 #DSO-NEXT: Disassembly of section .plt:
 #DSO-NEXT: .plt:
-#DSO-NEXT:  1030: {{.*}} stp x16, x30, [sp, #-16]!
-#DSO-NEXT:  1034: {{.*}} adrp x16, #8192
-#DSO-NEXT:  1038: {{.*}} ldr x17, [x16, #16]
-#DSO-NEXT:  103c: {{.*}} add x16, x16, #16
-#DSO-NEXT:  1040: {{.*}} br x17
-#DSO-NEXT:  1044: {{.*}} nop
-#DSO-NEXT:  1048: {{.*}} nop
-#DSO-NEXT:  104c: {{.*}} nop
-#DSO-NEXT:  1050: {{.*}} adrp x16, #8192
-#DSO-NEXT:  1054: {{.*}} ldr x17, [x16, #24]
-#DSO-NEXT:  1058: {{.*}} add x16, x16, #24
-#DSO-NEXT:  105c: {{.*}} br x17
-#DSO-NEXT:  1060: {{.*}} adrp x16, #8192
-#DSO-NEXT:  1064: {{.*}} ldr x17, [x16, #32]
-#DSO-NEXT:  1068: {{.*}} add x16, x16, #32
-#DSO-NEXT:  106c: {{.*}} br x17
+#DSO-NEXT:  10030: {{.*}} stp x16, x30, [sp, #-16]!
+#DSO-NEXT:  10034: {{.*}} adrp x16, #131072
+#DSO-NEXT:  10038: {{.*}} ldr x17, [x16, #16]
+#DSO-NEXT:  1003c: {{.*}} add x16, x16, #16
+#DSO-NEXT:  10040: {{.*}} br x17
+#DSO-NEXT:  10044: {{.*}} nop
+#DSO-NEXT:  10048: {{.*}} nop
+#DSO-NEXT:  1004c: {{.*}} nop
+#DSO-NEXT:  10050: {{.*}} adrp x16, #131072
+#DSO-NEXT:  10054: {{.*}} ldr x17, [x16, #24]
+#DSO-NEXT:  10058: {{.*}} add x16, x16, #24
+#DSO-NEXT:  1005c: {{.*}} br x17
+#DSO-NEXT:  10060: {{.*}} adrp x16, #131072
+#DSO-NEXT:  10064: {{.*}} ldr x17, [x16, #32]
+#DSO-NEXT:  10068: {{.*}} add x16, x16, #32
+#DSO-NEXT:  1006c: {{.*}} br x17
 
 .globl _start
 _start:
