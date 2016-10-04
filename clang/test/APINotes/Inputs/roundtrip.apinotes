@@ -81,7 +81,6 @@ Classes:
         NullabilityOfRet: N
         Availability:    available
         AvailabilityMsg: ''
-        SwiftPrivate:    false
         SwiftName:       ''
       - Selector:        'beginDraggingSessionWithItems:event:source:'
         MethodKind:      Instance
@@ -97,7 +96,6 @@ Classes:
         Nullability:     O
         Availability:    available
         AvailabilityMsg: ''
-        SwiftPrivate:    false
         SwiftName:       enclosing
       - Name:            makeBackingLayer
         PropertyKind:    Class
@@ -111,7 +109,6 @@ Functions:
     NullabilityOfRet: N
     Availability:    available
     AvailabilityMsg: ''
-    SwiftPrivate:    false
     SwiftName:       'availableWindowDepths()'
 Globals:         
   - Name:            NSCalibratedWhiteColorSpace
