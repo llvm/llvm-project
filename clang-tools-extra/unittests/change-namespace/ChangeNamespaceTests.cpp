@@ -513,6 +513,27 @@ TEST_F(ChangeNamespaceTest, DoNotFixStaticVariableOfClass) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, NoMisplaceAtEOF) {
+  std::string Code = "namespace na {\n"
+                     "namespace nb {\n"
+                     "class A;\n"
+                     "class B {};\n"
+                     "}"
+                     "}";
+  std::string Expected = "namespace na {\n"
+                         "namespace nb {\n"
+                         "class A;\n"
+                         "}\n"
+                         "}\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "\n"
+                         "class B {};\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

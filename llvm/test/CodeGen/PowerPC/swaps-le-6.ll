@@ -34,9 +34,9 @@ entry:
 
 ; CHECK-P9-LABEL: @bar0
 ; CHECK-P9-DAG: lxvx [[REG1:[0-9]+]]
-; CHECK-P9-DAG: lxsdx [[REG2:[0-9]+]]
+; CHECK-P9-DAG: lfd [[REG2:[0-9]+]], 0(3)
 ; CHECK-P9: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
-; CHECK-P9: xxpermdi [[REG5:[0-9]+]], [[REG4]], [[REG1]], 1
+; CHECK-P9: xxpermdi [[REG5:[0-9]+]], [[REG1]], [[REG4]], 1
 ; CHECK-P9: stxvx [[REG5]]
 
 define void @bar1() {
@@ -57,8 +57,8 @@ entry:
 
 ; CHECK-P9-LABEL: @bar1
 ; CHECK-P9-DAG: lxvx [[REG1:[0-9]+]]
-; CHECK-P9-DAG: lxsdx [[REG2:[0-9]+]]
+; CHECK-P9-DAG: lfd [[REG2:[0-9]+]], 0(3)
 ; CHECK-P9: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
-; CHECK-P9: xxmrghd [[REG5:[0-9]+]], [[REG1]], [[REG4]]
+; CHECK-P9: xxmrgld [[REG5:[0-9]+]], [[REG4]], [[REG1]]
 ; CHECK-P9: stxvx [[REG5]]
 

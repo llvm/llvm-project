@@ -81,6 +81,8 @@ private:
 
   TypeID   ID : 8;            // The current base type of this type.
   unsigned SubclassData : 24; // Space for subclasses to store data.
+                              // Note that this should be synchronized with
+                              // MAX_INT_BITS value in IntegerType class.
 
 protected:
   friend class LLVMContextImpl;

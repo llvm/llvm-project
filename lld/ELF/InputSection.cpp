@@ -694,6 +694,8 @@ MipsOptionsInputSection<ELFT>::MipsOptionsInputSection(elf::ObjectFile<ELFT> *F,
         error(getName(this) + ": unsupported non-zero ri_gp_value");
       break;
     }
+    if (!O->size)
+      fatal(getName(this) + ": zero option descriptor size");
     D = D.slice(O->size);
   }
 }
