@@ -126,15 +126,19 @@ namespace {
 
     unsigned swiftBridgeLength =
         endian::readNext<uint16_t, little, unaligned>(data);
-    info.setSwiftBridge(
-        StringRef(reinterpret_cast<const char *>(data), swiftBridgeLength));
-    data += swiftBridgeLength;
+    if (swiftBridgeLength > 0) {
+      info.setSwiftBridge(
+        std::string(reinterpret_cast<const char *>(data), swiftBridgeLength-1));
+      data += swiftBridgeLength-1;
+    }
 
     unsigned errorDomainLength =
       endian::readNext<uint16_t, little, unaligned>(data);
-    info.setNSErrorDomain(
-        StringRef(reinterpret_cast<const char *>(data), errorDomainLength));
-    data += errorDomainLength;
+    if (errorDomainLength > 0) {
+      info.setNSErrorDomain(
+        std::string(reinterpret_cast<const char *>(data), errorDomainLength-1));
+      data += errorDomainLength-1;
+    }
   }
 
   /// Used to deserialize the on-disk identifier table.
@@ -303,8 +307,10 @@ namespace {
       if (payload & 0x01)
         pi.setNullabilityAudited(static_cast<NullabilityKind>(nullabilityValue));
       payload >>= 1;
-      pi.setNoEscape(payload & 0x01);
-      payload >>= 1; assert(payload == 0 && "Bad API notes");
+      if (payload & 0x01) {
+        pi.setNoEscape(payload & 0x02);
+      }
+      payload >>= 2; assert(payload == 0 && "Bad API notes");
 
       info.Params.push_back(pi);
       --numParams;
@@ -1451,9 +1457,14 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
   // Look for an exact version match.
   Optional<unsigned> unversioned;
   Selected = Results.size();
+  SelectedRole = VersionedInfoRole::Versioned;
+
   for (unsigned i = 0, n = Results.size(); i != n; ++i) {
     if (Results[i].first == version) {
       Selected = i;
+
+      if (version) SelectedRole = VersionedInfoRole::ReplaceSource;
+      else SelectedRole = VersionedInfoRole::AugmentSource;
       break;
     }
 
@@ -1465,9 +1476,11 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
 
   // If we didn't find a match but we have an unversioned result, use the
   // unversioned result.
-  if (Selected == Results.size() && unversioned)
+  if (Selected == Results.size() && unversioned) {
     Selected = *unversioned;
-}
+    SelectedRole = VersionedInfoRole::AugmentSource;
+  }
+  }
 
 auto APINotesReader::lookupObjCClassID(StringRef name) -> Optional<ContextID> {
   if (!Impl.ObjCContextIDTable)
