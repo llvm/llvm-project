@@ -2620,6 +2620,7 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default: break;
   case X86::MOV8rm:
+  case X86::MOV8rm_NOREX:
   case X86::MOV16rm:
   case X86::MOV32rm:
   case X86::MOV64rm:

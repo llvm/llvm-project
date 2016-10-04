@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PPCInstrInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "llvm/ADT/Statistic.h"
@@ -350,7 +351,6 @@ get_crbitm_encoding(const MCInst &MI, unsigned OpNo,
   return 0x80 >> CTX.getRegisterInfo()->getEncodingValue(MO.getReg());
 }
 
-
 unsigned PPCMCCodeEmitter::
 getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                   SmallVectorImpl<MCFixup> &Fixups,
@@ -361,7 +361,14 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     assert((MI.getOpcode() != PPC::MTOCRF && MI.getOpcode() != PPC::MTOCRF8 &&
             MI.getOpcode() != PPC::MFOCRF && MI.getOpcode() != PPC::MFOCRF8) ||
            MO.getReg() < PPC::CR0 || MO.getReg() > PPC::CR7);
-    return CTX.getRegisterInfo()->getEncodingValue(MO.getReg());
+    unsigned Reg = MO.getReg();
+    unsigned Encode = CTX.getRegisterInfo()->getEncodingValue(Reg);
+
+    if ((MCII.get(MI.getOpcode()).TSFlags & PPCII::UseVSXReg))
+      if (PPCInstrInfo::isVRRegister(Reg))
+        Encode += 32;
+
+    return Encode;
   }
   
   assert(MO.isImm() &&

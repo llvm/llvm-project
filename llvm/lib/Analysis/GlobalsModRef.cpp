@@ -366,6 +366,8 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
     } else if (ICmpInst *ICI = dyn_cast<ICmpInst>(I)) {
       if (!isa<ConstantPointerNull>(ICI->getOperand(1)))
         return true; // Allow comparison against null.
+    } else if (Constant *C = dyn_cast<Constant>(I)) {
+      return C->isConstantUsed();
     } else {
       return true;
     }

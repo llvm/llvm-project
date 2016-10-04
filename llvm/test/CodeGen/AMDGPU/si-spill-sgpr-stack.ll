@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
 
 ; Make sure this doesn't crash.
 ; CHECK: {{^}}test:

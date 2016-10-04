@@ -13,6 +13,7 @@ import random
 import re
 import sys
 import time
+import argparse
 import tempfile
 import shutil
 
@@ -164,123 +165,121 @@ def main(builtinParameters = {}):
             shutil.rmtree(lit_tmp)
 
 def main_with_tmp(builtinParameters):
-    global options
-    from optparse import OptionParser, OptionGroup
-    parser = OptionParser("usage: %prog [options] {file-or-path}")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('test_paths',
+                        nargs='*',
+                        help='Files or paths to include in the test suite')
 
-    parser.add_option("", "--version", dest="show_version",
+    parser.add_argument("--version", dest="show_version",
                       help="Show version and exit",
                       action="store_true", default=False)
-    parser.add_option("-j", "--threads", dest="numThreads", metavar="N",
+    parser.add_argument("-j", "--threads", dest="numThreads", metavar="N",
                       help="Number of testing threads",
-                      type=int, action="store", default=None)
-    parser.add_option("", "--config-prefix", dest="configPrefix",
+                      type=int, default=None)
+    parser.add_argument("--config-prefix", dest="configPrefix",
                       metavar="NAME", help="Prefix for 'lit' config files",
                       action="store", default=None)
-    parser.add_option("-D", "--param", dest="userParameters",
+    parser.add_argument("-D", "--param", dest="userParameters",
                       metavar="NAME=VAL",
                       help="Add 'NAME' = 'VAL' to the user defined parameters",
                       type=str, action="append", default=[])
 
-    group = OptionGroup(parser, "Output Format")
+    format_group = parser.add_argument_group("Output Format")
     # FIXME: I find these names very confusing, although I like the
     # functionality.
-    group.add_option("-q", "--quiet", dest="quiet",
+    format_group.add_argument("-q", "--quiet",
                      help="Suppress no error output",
                      action="store_true", default=False)
-    group.add_option("-s", "--succinct", dest="succinct",
+    format_group.add_argument("-s", "--succinct",
                      help="Reduce amount of output",
                      action="store_true", default=False)
-    group.add_option("-v", "--verbose", dest="showOutput",
+    format_group.add_argument("-v", "--verbose", dest="showOutput",
                      help="Show test output for failures",
                      action="store_true", default=False)
-    group.add_option("-a", "--show-all", dest="showAllOutput",
+    format_group.add_argument("-a", "--show-all", dest="showAllOutput",
                      help="Display all commandlines and output",
                      action="store_true", default=False)
-    group.add_option("-o", "--output", dest="output_path",
+    format_group.add_argument("-o", "--output", dest="output_path",
                      help="Write test results to the provided path",
-                     action="store", type=str, metavar="PATH")
-    group.add_option("", "--no-progress-bar", dest="useProgressBar",
+                     action="store", metavar="PATH")
+    format_group.add_argument("--no-progress-bar", dest="useProgressBar",
                      help="Do not use curses based progress bar",
                      action="store_false", default=True)
-    group.add_option("", "--show-unsupported", dest="show_unsupported",
+    format_group.add_argument("--show-unsupported",
                      help="Show unsupported tests",
                      action="store_true", default=False)
-    group.add_option("", "--show-xfail", dest="show_xfail",
+    format_group.add_argument("--show-xfail",
                      help="Show tests that were expected to fail",
                      action="store_true", default=False)
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Test Execution")
-    group.add_option("", "--path", dest="path",
+    execution_group = parser.add_argument_group("Test Execution")
+    execution_group.add_argument("--path",
                      help="Additional paths to add to testing environment",
                      action="append", type=str, default=[])
-    group.add_option("", "--vg", dest="useValgrind",
+    execution_group.add_argument("--vg", dest="useValgrind",
                      help="Run tests under valgrind",
                      action="store_true", default=False)
-    group.add_option("", "--vg-leak", dest="valgrindLeakCheck",
+    execution_group.add_argument("--vg-leak", dest="valgrindLeakCheck",
                      help="Check for memory leaks under valgrind",
                      action="store_true", default=False)
-    group.add_option("", "--vg-arg", dest="valgrindArgs", metavar="ARG",
+    execution_group.add_argument("--vg-arg", dest="valgrindArgs", metavar="ARG",
                      help="Specify an extra argument for valgrind",
                      type=str, action="append", default=[])
-    group.add_option("", "--time-tests", dest="timeTests",
+    execution_group.add_argument("--time-tests", dest="timeTests",
                      help="Track elapsed wall time for each test",
                      action="store_true", default=False)
-    group.add_option("", "--no-execute", dest="noExecute",
+    execution_group.add_argument("--no-execute", dest="noExecute",
                      help="Don't execute any tests (assume PASS)",
                      action="store_true", default=False)
-    group.add_option("", "--xunit-xml-output", dest="xunit_output_file",
+    execution_group.add_argument("--xunit-xml-output", dest="xunit_output_file",
                       help=("Write XUnit-compatible XML test reports to the"
                             " specified file"), default=None)
-    group.add_option("", "--timeout", dest="maxIndividualTestTime",
+    execution_group.add_argument("--timeout", dest="maxIndividualTestTime",
                      help="Maximum time to spend running a single test (in seconds)."
                      "0 means no time limit. [Default: 0]",
                     type=int, default=None)
-    group.add_option("", "--max-failures", dest="maxFailures",
+    execution_group.add_argument("--max-failures", dest="maxFailures",
                      help="Stop execution after the given number of failures.",
                      action="store", type=int, default=None)
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Test Selection")
-    group.add_option("", "--max-tests", dest="maxTests", metavar="N",
+    selection_group = parser.add_argument_group("Test Selection")
+    selection_group.add_argument("--max-tests", dest="maxTests", metavar="N",
                      help="Maximum number of tests to run",
                      action="store", type=int, default=None)
-    group.add_option("", "--max-time", dest="maxTime", metavar="N",
+    selection_group.add_argument("--max-time", dest="maxTime", metavar="N",
                      help="Maximum time to spend testing (in seconds)",
                      action="store", type=float, default=None)
-    group.add_option("", "--shuffle", dest="shuffle",
+    selection_group.add_argument("--shuffle",
                      help="Run tests in random order",
                      action="store_true", default=False)
-    group.add_option("-i", "--incremental", dest="incremental",
+    selection_group.add_argument("-i", "--incremental",
                      help="Run modified and failing tests first (updates "
                      "mtimes)",
                      action="store_true", default=False)
-    group.add_option("", "--filter", dest="filter", metavar="REGEX",
+    selection_group.add_argument("--filter", metavar="REGEX",
                      help=("Only run tests with paths matching the given "
                            "regular expression"),
                      action="store", default=None)
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Debug and Experimental Options")
-    group.add_option("", "--debug", dest="debug",
+    debug_group = parser.add_argument_group("Debug and Experimental Options")
+    debug_group.add_argument("--debug",
                       help="Enable debugging (for 'lit' development)",
                       action="store_true", default=False)
-    group.add_option("", "--show-suites", dest="showSuites",
+    debug_group.add_argument("--show-suites", dest="showSuites",
                       help="Show discovered test suites",
                       action="store_true", default=False)
-    group.add_option("", "--show-tests", dest="showTests",
+    debug_group.add_argument("--show-tests", dest="showTests",
                       help="Show all discovered tests",
                       action="store_true", default=False)
-    group.add_option("", "--use-processes", dest="useProcesses",
+    debug_group.add_argument("--use-processes", dest="useProcesses",
                       help="Run tests in parallel with processes (not threads)",
                       action="store_true", default=True)
-    group.add_option("", "--use-threads", dest="useProcesses",
+    debug_group.add_argument("--use-threads", dest="useProcesses",
                       help="Run tests in parallel with threads (not processes)",
                       action="store_false", default=True)
-    parser.add_option_group(group)
 
-    (opts, args) = parser.parse_args()
+    opts = parser.parse_args()
+    args = opts.test_paths
 
     if opts.show_version:
         print("lit %s" % (lit.__version__,))
@@ -290,14 +289,7 @@ def main_with_tmp(builtinParameters):
         parser.error('No inputs specified')
 
     if opts.numThreads is None:
-# Python <2.5 has a race condition causing lit to always fail with numThreads>1
-# http://bugs.python.org/issue1731717
-# I haven't seen this bug occur with 2.5.2 and later, so only enable multiple
-# threads by default there.
-       if sys.hexversion >= 0x2050200:
-               opts.numThreads = lit.util.detectCPUs()
-       else:
-               opts.numThreads = 1
+        opts.numThreads = lit.util.detectCPUs()
 
     if opts.maxFailures == 0:
         parser.error("Setting --max-failures to 0 does not have any effect.")

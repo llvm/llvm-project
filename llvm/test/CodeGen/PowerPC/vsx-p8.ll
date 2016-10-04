@@ -34,8 +34,7 @@ define <4 x float> @test32u(<4 x float>* %a) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test32u
-; CHECK-FISL: lxvw4x 0, 0, 3
-; CHECK-FISL: xxlor 34, 0, 0
+; CHECK-FISL: lxvw4x 34, 0, 3
 ; CHECK-FISL: blr
 }
 
@@ -48,8 +47,7 @@ define void @test33u(<4 x float>* %a, <4 x float> %b) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test33u
-; CHECK-FISL: vor 3, 2, 2
-; CHECK-FISL: stxvw4x 35, 0, 3
+; CHECK-FISL: stxvw4x 34, 0, 3
 ; CHECK-FISL: blr
 }
 

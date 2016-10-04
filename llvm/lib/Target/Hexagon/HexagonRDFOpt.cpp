@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonInstrInfo.h"
-#include "HexagonRDF.h"
 #include "HexagonSubtarget.h"
 #include "RDFCopy.h"
 #include "RDFDeadCode.h"
@@ -286,9 +285,8 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   if (RDFDump)
     MF.print(dbgs() << "Before " << getPassName() << "\n", nullptr);
 
-  HexagonRegisterAliasInfo HAI(HRI);
   TargetOperandInfo TOI(HII);
-  DataFlowGraph G(MF, HII, HRI, *MDT, MDF, HAI, TOI);
+  DataFlowGraph G(MF, HII, HRI, *MDT, MDF, TOI);
   // Dead phi nodes are necessary for copy propagation: we can add a use
   // of a register in a block where it would need a phi node, but which
   // was dead (and removed) during the graph build time.

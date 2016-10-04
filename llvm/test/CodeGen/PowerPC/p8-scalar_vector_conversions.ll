@@ -63,7 +63,7 @@ entry:
   ret <2 x i64> %splat.splat
 ; CHECK: mtvsrd {{[0-9]+}}, 3
 ; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxspltd [[REG1]], [[REG1]], 0
+; CHECK-LE: xxspltd 34, [[REG1]], 0
 }
 
 ; Function Attrs: nounwind
@@ -75,9 +75,10 @@ entry:
   %splat.splatinsert = insertelement <4 x float> undef, float %0, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %splat.splat
-; CHECK: xscvdpspn {{[0-9]+}}, 1
+; CHECK: xscvdpspn [[REG1:[0-9]+]], 1
+; CHECK: xxspltw 34, [[REG1]]
 ; CHECK-LE: xscvdpspn [[REG1:[0-9]+]], 1
-; CHECK-LE: xxsldwi {{[0-9]+}}, [[REG1]], [[REG1]], 1
+; CHECK-LE: xxspltw 34, [[REG1]]
 }
 
 ; The optimization to remove stack operations from PPCDAGToDAGISel::Select

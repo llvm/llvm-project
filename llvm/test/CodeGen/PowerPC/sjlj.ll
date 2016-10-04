@@ -66,7 +66,7 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK-NOT: mfspr
 
 ; CHECK-DAG: stfd
-; CHECK-DAG: stvx
+; CHECK-DAG: stxvd2x
 
 ; CHECK-DAG: addis [[REG:[0-9]+]], 2, env_sigill@toc@ha
 ; CHECK-DAG: std 31, env_sigill@toc@l([[REG]])
@@ -82,7 +82,7 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: .LBB1_4:
 
 ; CHECK: lfd
-; CHECK: lvx
+; CHECK: lxvd2x
 ; CHECK: ld
 ; CHECK: blr
 
@@ -93,11 +93,11 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: li 3, 0
 
 ; CHECK-NOAV: @main
-; CHECK-NOAV-NOT: stvx
+; CHECK-NOAV-NOT: stxvd2x
 ; CHECK-NOAV: bcl
 ; CHECK-NOAV: mflr
 ; CHECK-NOAV: bl foo
-; CHECK-NOAV-NOT: lvx
+; CHECK-NOAV-NOT: lxvd2x
 ; CHECK-NOAV: blr
 }
 

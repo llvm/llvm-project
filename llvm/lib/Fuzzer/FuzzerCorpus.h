@@ -127,6 +127,7 @@ private:
       if (!Fe.SmallestElementSize ||
           Fe.SmallestElementSize > Size) {
         II.NumFeatures++;
+        CountingFeatures = true;
         if (Fe.SmallestElementSize > Size) {
           auto &OlderII = Inputs[Fe.SmallestElementIdx];
           assert(OlderII.NumFeatures > 0);
@@ -147,14 +148,21 @@ private:
   // Must be called whenever the corpus or unit weights are changed.
   void UpdateCorpusDistribution() {
     size_t N = Inputs.size();
-    std::vector<double> Intervals(N + 1);
-    std::vector<double> Weights(N);
+    Intervals.resize(N + 1);
+    Weights.resize(N);
     std::iota(Intervals.begin(), Intervals.end(), 0);
-    std::iota(Weights.begin(), Weights.end(), 1);
+    if (CountingFeatures)
+      for (size_t i = 0; i < N; i++)
+        Weights[i] = Inputs[i].NumFeatures * (i + 1);
+    else
+      std::iota(Weights.begin(), Weights.end(), 1);
     CorpusDistribution = std::piecewise_constant_distribution<double>(
         Intervals.begin(), Intervals.end(), Weights.begin());
   }
   std::piecewise_constant_distribution<double> CorpusDistribution;
+
+  std::vector<double> Intervals;
+  std::vector<double> Weights;
 
   std::unordered_set<std::string> Hashes;
   std::vector<InputInfo> Inputs;
@@ -164,6 +172,7 @@ private:
     size_t SmallestElementIdx;
     size_t SmallestElementSize;
   };
+  bool CountingFeatures = false;
   Feature FeatureSet[kFeatureSetSize];
 };
 

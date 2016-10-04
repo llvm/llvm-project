@@ -46,7 +46,9 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   const AMDGPUSubtarget *Subtarget;
 
 public:
-  AMDGPUDAGToDAGISel(TargetMachine &TM);
+  explicit AMDGPUDAGToDAGISel(TargetMachine &TM, CodeGenOpt::Level OptLevel)
+      : SelectionDAGISel(TM, OptLevel) {}
+
   virtual ~AMDGPUDAGToDAGISel();
   bool runOnMachineFunction(MachineFunction &MF) override;
   void Select(SDNode *N) override;
@@ -149,12 +151,10 @@ private:
 
 /// \brief This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
-FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM) {
-  return new AMDGPUDAGToDAGISel(TM);
+FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
+                                        CodeGenOpt::Level OptLevel) {
+  return new AMDGPUDAGToDAGISel(TM, OptLevel);
 }
-
-AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM)
-    : SelectionDAGISel(TM) {}
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AMDGPUSubtarget>();

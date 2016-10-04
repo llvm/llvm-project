@@ -41,9 +41,9 @@ def F64_0 : WebAssemblyReg<"%f64.0">;
 
 def V128_0: WebAssemblyReg<"%v128">;
 
-// The expression stack "register". This is an opaque entity which serves to
-// order uses and defs that must remain in LIFO order.
-def EXPR_STACK : WebAssemblyReg<"STACK">;
+// The value stack "register". This is an opaque entity which serves to order
+// uses and defs that must remain in LIFO order.
+def VALUE_STACK : WebAssemblyReg<"STACK">;
 
 // The incoming arguments "register". This is an opaque entity which serves to
 // order the ARGUMENT instructions that are emulating live-in registers and

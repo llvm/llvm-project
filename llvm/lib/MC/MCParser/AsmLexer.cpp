@@ -11,29 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/MC/MCParser/AsmLexer.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
-#include <tuple>
 #include <string>
+#include <tuple>
 #include <utility>
 
 using namespace llvm;
 
-AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
-  CurPtr = nullptr;
-  IsAtStartOfLine = true;
-  IsAtStartOfStatement = true;
-  IsParsingMSInlineAsm = false;
+AsmLexer::AsmLexer(const MCAsmInfo &MAI)
+    : MAI(MAI), CurPtr(nullptr), IsAtStartOfLine(true),
+      IsAtStartOfStatement(true), IsParsingMSInlineAsm(false),
+      IsPeeking(false) {
   AllowAtInIdentifier = !StringRef(MAI.getCommentString()).startswith("@");
 }
 
@@ -487,16 +487,14 @@ StringRef AsmLexer::LexUntilEndOfLine() {
 
 size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
                             bool ShouldSkipSpace) {
-  const char *SavedTokStart = TokStart;
-  const char *SavedCurPtr = CurPtr;
-  bool SavedAtStartOfLine = IsAtStartOfLine;
-  bool SavedAtStartOfStatement = IsAtStartOfStatement;
-  bool SavedSkipSpace = SkipSpace;
-
+  SaveAndRestore<const char *> SavedTokenStart(TokStart);
+  SaveAndRestore<const char *> SavedCurPtr(CurPtr);
+  SaveAndRestore<bool> SavedAtStartOfLine(IsAtStartOfLine);
+  SaveAndRestore<bool> SavedAtStartOfStatement(IsAtStartOfStatement);
+  SaveAndRestore<bool> SavedSkipSpace(SkipSpace, ShouldSkipSpace);
+  SaveAndRestore<bool> SavedIsPeeking(IsPeeking, true);
   std::string SavedErr = getErr();
   SMLoc SavedErrLoc = getErrLoc();
-
-  SkipSpace = ShouldSkipSpace;
 
   size_t ReadCount;
   for (ReadCount = 0; ReadCount < Buf.size(); ++ReadCount) {
@@ -509,13 +507,6 @@ size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
   }
 
   SetError(SavedErrLoc, SavedErr);
-
-  SkipSpace = SavedSkipSpace;
-  IsAtStartOfLine = SavedAtStartOfLine;
-  IsAtStartOfStatement = SavedAtStartOfStatement;
-  CurPtr = SavedCurPtr;
-  TokStart = SavedTokStart;
-
   return ReadCount;
 }
 
@@ -525,7 +516,7 @@ bool AsmLexer::isAtStartOfComment(const char *Ptr) {
   if (CommentString.size() == 1)
     return CommentString[0] == Ptr[0];
 
-  // FIXME: special case for the bogus "##" comment string in X86MCAsmInfoDarwin
+  // Allow # preprocessor commments also be counted as comments for "##" cases
   if (CommentString[1] == '#')
     return CommentString[0] == Ptr[0];
 
@@ -542,7 +533,7 @@ AsmToken AsmLexer::LexToken() {
   // This always consumes at least one character.
   int CurChar = getNextChar();
 
-  if (CurChar == '#' && IsAtStartOfStatement) {
+  if (!IsPeeking && CurChar == '#' && IsAtStartOfStatement) {
     // If this starts with a '#', this may be a cpp
     // hash directive and otherwise a line comment.
     AsmToken TokenBuf[2];

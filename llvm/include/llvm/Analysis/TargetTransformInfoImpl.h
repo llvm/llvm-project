@@ -290,8 +290,6 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) { return 32; }
 
-  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) { return 128; }
-
   unsigned getCacheLineSize() { return 0; }
 
   unsigned getPrefetchDistance() { return 0; }
@@ -392,6 +390,36 @@ public:
             Callee->getFnAttribute("target-cpu")) &&
            (Caller->getFnAttribute("target-features") ==
             Callee->getFnAttribute("target-features"));
+  }
+
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const { return 128; }
+
+  bool isLegalToVectorizeLoad(LoadInst *LI) const { return true; }
+
+  bool isLegalToVectorizeStore(StoreInst *SI) const { return true; }
+
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+                                   unsigned Alignment,
+                                   unsigned AddrSpace) const {
+    return true;
+  }
+
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                    unsigned Alignment,
+                                    unsigned AddrSpace) const {
+    return true;
+  }
+
+  unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
+                               unsigned ChainSizeInBytes,
+                               VectorType *VecTy) const {
+    return VF;
+  }
+
+  unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
+                                unsigned ChainSizeInBytes,
+                                VectorType *VecTy) const {
+    return VF;
   }
 };
 

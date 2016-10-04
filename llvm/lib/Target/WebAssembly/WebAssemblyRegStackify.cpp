@@ -13,10 +13,10 @@
 /// This pass reorders instructions to put register uses and defs in an order
 /// such that they form single-use expression trees. Registers fitting this form
 /// are then marked as "stackified", meaning references to them are replaced by
-/// "push" and "pop" from the stack.
+/// "push" and "pop" from the value stack.
 ///
 /// This is primarily a code size optimization, since temporary values on the
-/// expression don't need to be named.
+/// value stack don't need to be named.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -73,15 +73,15 @@ FunctionPass *llvm::createWebAssemblyRegStackify() {
 // expression stack ordering constraints for an instruction which is on
 // the expression stack.
 static void ImposeStackOrdering(MachineInstr *MI) {
-  // Write the opaque EXPR_STACK register.
-  if (!MI->definesRegister(WebAssembly::EXPR_STACK))
-    MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
+  // Write the opaque VALUE_STACK register.
+  if (!MI->definesRegister(WebAssembly::VALUE_STACK))
+    MI->addOperand(MachineOperand::CreateReg(WebAssembly::VALUE_STACK,
                                              /*isDef=*/true,
                                              /*isImp=*/true));
 
-  // Also read the opaque EXPR_STACK register.
-  if (!MI->readsRegister(WebAssembly::EXPR_STACK))
-    MI->addOperand(MachineOperand::CreateReg(WebAssembly::EXPR_STACK,
+  // Also read the opaque VALUE_STACK register.
+  if (!MI->readsRegister(WebAssembly::VALUE_STACK))
+    MI->addOperand(MachineOperand::CreateReg(WebAssembly::VALUE_STACK,
                                              /*isDef=*/false,
                                              /*isImp=*/true));
 }
@@ -747,8 +747,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (TargetRegisterInfo::isPhysicalRegister(Reg))
           continue;
 
-        // Identify the definition for this register at this point. Most
-        // registers are in SSA form here so we try a quick MRI query first.
+        // Identify the definition for this register at this point.
         MachineInstr *Def = GetVRegDef(Reg, Insert, MRI, LIS);
         if (!Def)
           continue;
@@ -814,12 +813,12 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // If we used EXPR_STACK anywhere, add it to the live-in sets everywhere so
+  // If we used VALUE_STACK anywhere, add it to the live-in sets everywhere so
   // that it never looks like a use-before-def.
   if (Changed) {
-    MF.getRegInfo().addLiveIn(WebAssembly::EXPR_STACK);
+    MF.getRegInfo().addLiveIn(WebAssembly::VALUE_STACK);
     for (MachineBasicBlock &MBB : MF)
-      MBB.addLiveIn(WebAssembly::EXPR_STACK);
+      MBB.addLiveIn(WebAssembly::VALUE_STACK);
   }
 
 #ifndef NDEBUG

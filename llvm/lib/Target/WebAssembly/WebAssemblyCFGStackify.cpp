@@ -519,7 +519,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
 
   const auto &MLI = getAnalysis<MachineLoopInfo>();
   auto &MDT = getAnalysis<MachineDominatorTree>();
-  // Liveness is not tracked for EXPR_STACK physreg.
+  // Liveness is not tracked for VALUE_STACK physreg.
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MF.getRegInfo().invalidateLiveness();

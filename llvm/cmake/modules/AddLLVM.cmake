@@ -450,6 +450,18 @@ function(llvm_add_library name)
         PREFIX ""
         )
     endif()
+
+    # Set SOVERSION on shared libraries that lack explicit SONAME
+    # specifier, on *nix systems that are not Darwin.
+    if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
+      set_target_properties(${name}
+        PROPERTIES
+		# Concatenate the version numbers since ldconfig expects exactly
+		# one component indicating the ABI version, while LLVM uses
+		# major+minor for that.
+        SOVERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}
+        VERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
+    endif()
   endif()
 
   if(ARG_MODULE OR ARG_SHARED)

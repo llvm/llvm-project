@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon -relocation-model=static < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon-- -relocation-model=static < %s | FileCheck %s
 
 @dst_le = thread_local global i32 0, align 4
 @src_le = thread_local global i32 0, align 4

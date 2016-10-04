@@ -466,10 +466,6 @@ public:
   /// \return The width of the largest scalar or vector register type.
   unsigned getRegisterBitWidth(bool Vector) const;
 
-  /// \return The bitwidth of the largest vector type that should be used to
-  /// load/store in the given address space.
-  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
-
   /// \return The size of a cache line in bytes.
   unsigned getCacheLineSize() const;
 
@@ -620,6 +616,38 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
+  /// \returns The bitwidth of the largest vector type that should be used to
+  /// load/store in the given address space.
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
+
+  /// \returns True if the load instruction is legal to vectorize.
+  bool isLegalToVectorizeLoad(LoadInst *LI) const;
+
+  /// \returns True if the store instruction is legal to vectorize.
+  bool isLegalToVectorizeStore(StoreInst *SI) const;
+
+  /// \returns True if it is legal to vectorize the given load chain.
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+                                   unsigned Alignment,
+                                   unsigned AddrSpace) const;
+
+  /// \returns True if it is legal to vectorize the given store chain.
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                    unsigned Alignment,
+                                    unsigned AddrSpace) const;
+
+  /// \returns The new vector factor value if the target doesn't support \p
+  /// SizeInBytes loads or has a better vector factor.
+  unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
+                               unsigned ChainSizeInBytes,
+                               VectorType *VecTy) const;
+
+  /// \returns The new vector factor value if the target doesn't support \p
+  /// SizeInBytes stores or has a better vector factor.
+  unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
+                                unsigned ChainSizeInBytes,
+                                VectorType *VecTy) const;
+
   /// @}
 
 private:
@@ -695,7 +723,6 @@ public:
                             Type *Ty) = 0;
   virtual unsigned getNumberOfRegisters(bool Vector) = 0;
   virtual unsigned getRegisterBitWidth(bool Vector) = 0;
-  virtual unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) = 0;
   virtual unsigned getCacheLineSize() = 0;
   virtual unsigned getPrefetchDistance() = 0;
   virtual unsigned getMinPrefetchStride() = 0;
@@ -748,6 +775,21 @@ public:
                                                    Type *ExpectedType) = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
+  virtual unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const = 0;
+  virtual bool isLegalToVectorizeLoad(LoadInst *LI) const = 0;
+  virtual bool isLegalToVectorizeStore(StoreInst *SI) const = 0;
+  virtual bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+                                           unsigned Alignment,
+                                           unsigned AddrSpace) const = 0;
+  virtual bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                            unsigned Alignment,
+                                            unsigned AddrSpace) const = 0;
+  virtual unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
+                                       unsigned ChainSizeInBytes,
+                                       VectorType *VecTy) const = 0;
+  virtual unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
+                                        unsigned ChainSizeInBytes,
+                                        VectorType *VecTy) const = 0;
 };
 
 template <typename T>
@@ -890,10 +932,6 @@ public:
     return Impl.getRegisterBitWidth(Vector);
   }
 
-  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) override {
-    return Impl.getLoadStoreVecRegBitWidth(AddrSpace);
-  }
-
   unsigned getCacheLineSize() override {
     return Impl.getCacheLineSize();
   }
@@ -992,6 +1030,37 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override {
     return Impl.areInlineCompatible(Caller, Callee);
+  }
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override {
+    return Impl.getLoadStoreVecRegBitWidth(AddrSpace);
+  }
+  bool isLegalToVectorizeLoad(LoadInst *LI) const override {
+    return Impl.isLegalToVectorizeLoad(LI);
+  }
+  bool isLegalToVectorizeStore(StoreInst *SI) const override {
+    return Impl.isLegalToVectorizeStore(SI);
+  }
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+                                   unsigned Alignment,
+                                   unsigned AddrSpace) const override {
+    return Impl.isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment,
+                                            AddrSpace);
+  }
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                    unsigned Alignment,
+                                    unsigned AddrSpace) const override {
+    return Impl.isLegalToVectorizeStoreChain(ChainSizeInBytes, Alignment,
+                                             AddrSpace);
+  }
+  unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
+                               unsigned ChainSizeInBytes,
+                               VectorType *VecTy) const override {
+    return Impl.getLoadVectorFactor(VF, LoadSize, ChainSizeInBytes, VecTy);
+  }
+  unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
+                                unsigned ChainSizeInBytes,
+                                VectorType *VecTy) const override {
+    return Impl.getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
   }
 };
 
