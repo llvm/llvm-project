@@ -127,26 +127,48 @@ class CommonTypeInfo : public CommonEntityInfo {
   /// The Swift type to which a given type is bridged.
   ///
   /// Reflects the swift_bridge attribute.
-  std::string SwiftBridge;
+  Optional<std::string> SwiftBridge;
 
   /// The NS error domain for this type.
-  std::string NSErrorDomain;
+  Optional<std::string> NSErrorDomain;
 
 public:
   CommonTypeInfo() : CommonEntityInfo() { }
 
-  const std::string &getSwiftBridge() const { return SwiftBridge; }
-  void setSwiftBridge(const std::string &swiftType) { SwiftBridge = swiftType; }
+  const Optional<std::string> &getSwiftBridge() const { return SwiftBridge; }
 
-  const std::string &getNSErrorDomain() const { return NSErrorDomain; }
-  void setNSErrorDomain(const std::string &domain) { NSErrorDomain = domain; }
+  void setSwiftBridge(const Optional<std::string> &swiftType) {
+    SwiftBridge = swiftType;
+  }
+
+  void setSwiftBridge(const Optional<StringRef> &swiftType) {
+    if (swiftType)
+      SwiftBridge = *swiftType;
+    else
+      SwiftBridge = None;
+  }
+
+  const Optional<std::string> &getNSErrorDomain() const {
+    return NSErrorDomain;
+  }
+
+  void setNSErrorDomain(const Optional<std::string> &domain) {
+    NSErrorDomain = domain;
+  }
+
+  void setNSErrorDomain(const Optional<StringRef> &domain) {
+    if (domain)
+      NSErrorDomain = *domain;
+    else
+      NSErrorDomain = None;
+  }
 
   friend CommonTypeInfo &operator|=(CommonTypeInfo &lhs,
                                     const CommonTypeInfo &rhs) {
     static_cast<CommonEntityInfo &>(lhs) |= rhs;
-    if (lhs.SwiftBridge.empty() && !rhs.SwiftBridge.empty())
+    if (!lhs.SwiftBridge && rhs.SwiftBridge)
       lhs.SwiftBridge = rhs.SwiftBridge;
-    if (lhs.NSErrorDomain.empty() && !rhs.NSErrorDomain.empty())
+    if (!lhs.NSErrorDomain && rhs.NSErrorDomain)
       lhs.NSErrorDomain = rhs.NSErrorDomain;
     return lhs;
   }
@@ -308,24 +330,41 @@ public:
 
 /// Describes a function or method parameter.
 class ParamInfo : public VariableInfo {
+  /// Whether noescape was specified.
+  unsigned NoEscapeSpecified : 1;
+
   /// Whether the this parameter has the 'noescape' attribute.
   unsigned NoEscape : 1;
 
 public:
-  ParamInfo() : VariableInfo(), NoEscape(false) { }
+  ParamInfo() : VariableInfo(), NoEscapeSpecified(false), NoEscape(false) { }
 
-  bool isNoEscape() const { return NoEscape; }
-  void setNoEscape(bool noescape) { NoEscape = noescape; }
+  Optional<bool> isNoEscape() const {
+    if (!NoEscapeSpecified) return None;
+    return NoEscape;
+  }
+  void setNoEscape(Optional<bool> noescape) {
+    if (noescape) {
+      NoEscapeSpecified = true;
+      NoEscape = *noescape;
+    } else {
+      NoEscapeSpecified = false;
+      NoEscape = false;
+    }
+  }
 
   friend ParamInfo &operator|=(ParamInfo &lhs, const ParamInfo &rhs) {
     static_cast<VariableInfo &>(lhs) |= rhs;
-    if (!lhs.NoEscape && rhs.NoEscape)
-      lhs.NoEscape = true;
+    if (!lhs.NoEscapeSpecified && rhs.NoEscapeSpecified) {
+      lhs.NoEscapeSpecified = true;
+      lhs.NoEscape = rhs.NoEscape;
+    }
     return lhs;
   }
 
   friend bool operator==(const ParamInfo &lhs, const ParamInfo &rhs) {
     return static_cast<const VariableInfo &>(lhs) == rhs &&
+           lhs.NoEscapeSpecified == rhs.NoEscapeSpecified &&
            lhs.NoEscape == rhs.NoEscape;
   }
 

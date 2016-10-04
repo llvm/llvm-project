@@ -343,8 +343,8 @@ namespace {
   // Retrieve the serialized size of the given CommonTypeInfo, for use
   // in on-disk hash tables.
   static unsigned getCommonTypeInfoSize(const CommonTypeInfo &info) {
-    return 2 + info.getSwiftBridge().size() +
-           2 + info.getNSErrorDomain().size() +
+    return 2 + (info.getSwiftBridge() ? info.getSwiftBridge()->size() : 0) +
+           2 + (info.getNSErrorDomain() ? info.getNSErrorDomain()->size() : 0) +
            getCommonEntityInfoSize(info);
   }
 
@@ -352,10 +352,18 @@ namespace {
   static void emitCommonTypeInfo(raw_ostream &out, const CommonTypeInfo &info) {
     emitCommonEntityInfo(out, info);
     endian::Writer<little> writer(out);
-    writer.write<uint16_t>(info.getSwiftBridge().size());
-    out.write(info.getSwiftBridge().c_str(), info.getSwiftBridge().size());
-    writer.write<uint16_t>(info.getNSErrorDomain().size());
-    out.write(info.getNSErrorDomain().c_str(), info.getNSErrorDomain().size());
+    if (auto swiftBridge = info.getSwiftBridge()) {
+      writer.write<uint16_t>(swiftBridge->size() + 1);
+      out.write(swiftBridge->c_str(), swiftBridge->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto nsErrorDomain = info.getNSErrorDomain()) {
+      writer.write<uint16_t>(nsErrorDomain->size() + 1);
+      out.write(nsErrorDomain->c_str(), info.getNSErrorDomain()->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
   }
 
   /// Used to serialize the on-disk Objective-C context table.
@@ -687,7 +695,12 @@ namespace {
     // Parameters.
     writer.write<uint16_t>(info.Params.size());
     for (const auto &pi : info.Params) {
-      uint8_t payload = pi.isNoEscape();
+      uint8_t payload = 0;
+      if (auto noescape = pi.isNoEscape()) {
+        payload |= 0x01;
+        if (*noescape)
+          payload |= 0x02;
+      }
 
       auto nullability = pi.getNullability();
       payload = (payload << 1) | nullability.hasValue();
