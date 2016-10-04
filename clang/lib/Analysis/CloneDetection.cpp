@@ -106,7 +106,7 @@ class VariablePattern {
 
   /// \brief Adds a new variable referenced to this pattern.
   /// \param VarDecl The declaration of the variable that is referenced.
-  /// \param Mention The statement in the code where the variable was referenced.
+  /// \param Range The SourceRange where this variable is referenced.
   void addVariableOccurence(const VarDecl *VarDecl, SourceRange Range) {
     // First check if we already reference this variable
     for (size_t KindIndex = 0; KindIndex < Variables.size(); ++KindIndex) {

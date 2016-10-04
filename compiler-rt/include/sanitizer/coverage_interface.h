@@ -59,14 +59,6 @@ extern "C" {
   uintptr_t
   __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
 
-  // EXPERIMENTAL API
-  // Set allocated buffer to record new coverage PCs as they are executed.
-  // Buffer length is specified in uptrs.
-  void __sanitizer_set_coverage_pc_buffer(uintptr_t *buffer, uintptr_t length);
-  // Number of pcs recorded in the buffer.
-  // Reset by __sanitizer_reset_coverage();
-  uintptr_t __sanitizer_get_coverage_pc_buffer_pos();
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif

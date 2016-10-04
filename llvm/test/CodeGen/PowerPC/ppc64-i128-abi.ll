@@ -55,9 +55,12 @@ define <1 x i128> @v1i128_increment_by_one(<1 x i128> %a) nounwind {
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @v1i128_increment_by_one
-; CHECK-P9-DAG: li [[R1:r[0-9]+]], 1
-; CHECK-P9-DAG: li [[R2:r[0-9]+]], 0
-; CHECK-P9: mtvsrdd [[V1:v[0-9]+]], [[R2]], [[R1]]
+; The below FIXME is due to the lowering for BUILD_VECTOR that will be fixed
+; in a subsequent patch.
+; FIXME: li [[R1:r[0-9]+]], 1
+; FIXME: li [[R2:r[0-9]+]], 0
+; FIXME: mtvsrdd [[V1:v[0-9]+]], [[R2]], [[R1]]
+; CHECK-P9: lxvx [[V1:v[0-9]+]]
 ; CHECK-P9: vadduqm v2, v2, [[V1]]
 ; CHECK-P9: blr
 

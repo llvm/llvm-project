@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCInstPrinter.h"
+#include "PPCInstrInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "llvm/MC/MCExpr.h"
@@ -447,7 +448,7 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
 /// stripRegisterPrefix - This method strips the character prefix from a
 /// register name so that only the number is left.  Used by for linux asm.
 static const char *stripRegisterPrefix(const char *RegName) {
-  if (FullRegNames)
+  if (FullRegNames || ShowVSRNumsAsVR)
     return RegName;
 
   switch (RegName[0]) {
@@ -468,15 +469,24 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    const char *RegName = getRegisterName(Op.getReg());
-    if (ShowVSRNumsAsVR) {
-      unsigned RegNum = Op.getReg();
-      if (RegNum >= PPC::VSH0 && RegNum <= PPC::VSH31)
-        O << 'v' << RegNum - PPC::VSH0;
-      else
-        O << RegName;
-      return;
+    unsigned Reg = Op.getReg();
+
+    // There are VSX instructions that use VSX register numbering (vs0 - vs63)
+    // as well as those that use VMX register numbering (v0 - v31 which
+    // correspond to vs32 - vs63). If we have an instruction that uses VSX
+    // numbering, we need to convert the VMX registers to VSX registers.
+    // Namely, we print 32-63 when the instruction operates on one of the
+    // VMX registers.
+    // (Please synchronize with PPCAsmPrinter::printOperand)
+    if ((MII.get(MI->getOpcode()).TSFlags & PPCII::UseVSXReg) &&
+        !ShowVSRNumsAsVR) {
+      if (PPCInstrInfo::isVRRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::V0);
+      else if (PPCInstrInfo::isVFRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::VF0);
     }
+
+    const char *RegName = getRegisterName(Reg);
     // The linux and AIX assembler does not take register prefixes.
     if (!isDarwinSyntax())
       RegName = stripRegisterPrefix(RegName);

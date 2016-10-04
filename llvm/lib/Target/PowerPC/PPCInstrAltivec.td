@@ -706,6 +706,12 @@ def VSPLTW : VXForm_1<652, (outs vrrc:$vD), (ins u5imm:$UIMM, vrrc:$vB),
                       "vspltw $vD, $vB, $UIMM", IIC_VecPerm,
                       [(set v16i8:$vD, 
                         (vspltw_shuffle:$UIMM v16i8:$vB, (undef)))]>;
+let isCodeGenOnly = 1 in {
+  def VSPLTBs : VXForm_1<524, (outs vrrc:$vD), (ins u5imm:$UIMM, vfrc:$vB),
+                         "vspltb $vD, $vB, $UIMM", IIC_VecPerm, []>;
+  def VSPLTHs : VXForm_1<588, (outs vrrc:$vD), (ins u5imm:$UIMM, vfrc:$vB),
+                         "vsplth $vD, $vB, $UIMM", IIC_VecPerm, []>;
+}
 
 def VSR    : VX1_Int_Ty< 708, "vsr"  , int_ppc_altivec_vsr,  v4i32>;
 def VSRO   : VX1_Int_Ty<1100, "vsro" , int_ppc_altivec_vsro, v4i32>;
@@ -1270,6 +1276,9 @@ def VINSERTD : VX1_VT5_UIM5_VB5<973, "vinsertd", []>;
 class VX_VT5_EO5_VB5<bits<11> xo, bits<5> eo, string opc, list<dag> pattern>
   : VXForm_RD5_XO5_RS5<xo, eo, (outs vrrc:$vD), (ins vrrc:$vB),
                        !strconcat(opc, " $vD, $vB"), IIC_VecGeneral, pattern>;
+class VX_VT5_EO5_VB5s<bits<11> xo, bits<5> eo, string opc, list<dag> pattern>
+  : VXForm_RD5_XO5_RS5<xo, eo, (outs vfrc:$vD), (ins vfrc:$vB),
+                       !strconcat(opc, " $vD, $vB"), IIC_VecGeneral, pattern>;
 
 // Vector Count Leading/Trailing Zero LSB. Result is placed into GPR[rD]
 def VCLZLSBB : VXForm_RD5_XO5_RS5<1538, 0, (outs g8rc:$rD), (ins vrrc:$vB),
@@ -1292,6 +1301,13 @@ def VEXTSH2W : VX_VT5_EO5_VB5<1538, 17, "vextsh2w", []>;
 def VEXTSB2D : VX_VT5_EO5_VB5<1538, 24, "vextsb2d", []>;
 def VEXTSH2D : VX_VT5_EO5_VB5<1538, 25, "vextsh2d", []>;
 def VEXTSW2D : VX_VT5_EO5_VB5<1538, 26, "vextsw2d", []>;
+let isCodeGenOnly = 1 in {
+  def VEXTSB2Ws : VX_VT5_EO5_VB5s<1538, 16, "vextsb2w", []>;
+  def VEXTSH2Ws : VX_VT5_EO5_VB5s<1538, 17, "vextsh2w", []>;
+  def VEXTSB2Ds : VX_VT5_EO5_VB5s<1538, 24, "vextsb2d", []>;
+  def VEXTSH2Ds : VX_VT5_EO5_VB5s<1538, 25, "vextsh2d", []>;
+  def VEXTSW2Ds : VX_VT5_EO5_VB5s<1538, 26, "vextsw2d", []>;
+}
 
 // Vector Integer Negate
 def VNEGW : VX_VT5_EO5_VB5<1538, 6, "vnegw", []>;

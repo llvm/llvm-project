@@ -54,3 +54,7 @@ INVALID-SYMTAB-SIZE: Invalid symbol table size
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 INVALID-XINDEX-SIZE: Invalid data was encountered while parsing the file.
+
+RUN: not llvm-readobj -t %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
+INVALID-EXT-SYMTAB-INDEX: Invalid symbol table index

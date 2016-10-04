@@ -1002,6 +1002,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushImm) {
 
   uint8_t data[] = {
       0x68, 0xff, 0xff, 0x01, 0x69, // pushq $0x6901ffff
+      0x6a, 0x7d,                   // pushl $0x7d
       0x90                          // nop
   };
 
@@ -1013,22 +1014,32 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushImm) {
       data, sizeof(data), sample_range, unwind_plan));
 
   row_sp = unwind_plan.GetRowForFunctionOffset(5);
-
   EXPECT_EQ(5, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(7);
+  EXPECT_EQ(7, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(24, row_sp->GetCFAValue().GetOffset());
 
   std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
   EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
       data, sizeof(data), sample_range, unwind_plan));
 
   row_sp = unwind_plan.GetRowForFunctionOffset(5);
-
   EXPECT_EQ(5, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(7);
+  EXPECT_EQ(7, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(12, row_sp->GetCFAValue().GetOffset());
 }
 
 // We treat 'pushq $0' / 'pushl $0' specially - this shows up
@@ -1070,8 +1081,10 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushExtended) {
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
-      0xff, 0x74, 0x24, 0x20, // pushl 0x20(%esp)
-      0x90                    // nop
+      0xff, 0x74, 0x24, 0x20,             // pushl 0x20(%esp)
+      0xff, 0xb6, 0xce, 0x01, 0xf0, 0x00, // pushl  0xf001ce(%esi)
+      0xff, 0x30,                         // pushl  (%eax)
+      0x90                                // nop
   };
 
   AddressRange sample_range(0x1000, sizeof(data));
@@ -1093,11 +1106,22 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushExtended) {
       data, sizeof(data), sample_range, unwind_plan));
 
   row_sp = unwind_plan.GetRowForFunctionOffset(4);
-
   EXPECT_EQ(4, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(10);
+  EXPECT_EQ(10, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(12, row_sp->GetCFAValue().GetOffset());
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(12);
+  EXPECT_EQ(12, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushR15) {
@@ -1238,6 +1262,205 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushRBX) {
   EXPECT_TRUE(row_sp->GetRegisterInfo(k_rbx, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-16, regloc.GetOffset());
+}
+
+// The ABI is hardcoded in x86AssemblyInspectionEngine such that
+// eax, ecx, edx are all considered volatile and push/pops of them are
+// not tracked (except to keep track of stack pointer movement)
+TEST_F(Testx86AssemblyInspectionEngine, TestPushEAX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x50, // pushl %eax
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_eax, regloc));
+}
+
+// The ABI is hardcoded in x86AssemblyInspectionEngine such that
+// eax, ecx, edx are all considered volatile and push/pops of them are
+// not tracked (except to keep track of stack pointer movement)
+TEST_F(Testx86AssemblyInspectionEngine, TestPushECX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x51, // pushl %ecx
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ecx, regloc));
+}
+
+// The ABI is hardcoded in x86AssemblyInspectionEngine such that
+// eax, ecx, edx are all considered volatile and push/pops of them are
+// not tracked (except to keep track of stack pointer movement)
+TEST_F(Testx86AssemblyInspectionEngine, TestPushEDX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x52, // pushl %edx
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_edx, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPushEBX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x53, // pushl %ebx
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_ebx, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPushEBP) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x55, // pushl %ebp
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_ebp, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPushESI) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x56, // pushl %esi
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_esi, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPushEDI) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x57, // pushl %edi
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_edi, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestMovRSPtoRBP) {
@@ -1440,7 +1663,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestAddESP) {
   std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
 
   uint8_t data1[] = {
-      0x81, 0xc4, 0x00, 0x01, 0x00, 0x00, // addq $0x100, %esp
+      0x81, 0xc4, 0x00, 0x01, 0x00, 0x00, // addl $0x100, %esp
       0x90                                // nop
   };
 
@@ -1470,4 +1693,445 @@ TEST_F(Testx86AssemblyInspectionEngine, TestAddESP) {
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(4 - 16, row_sp->GetCFAValue().GetOffset());
+}
+
+// FIXME add test for lea_rsp_pattern_p
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopRBX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x53, // pushq %rbx
+      0x5b, // popq %rbx
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_rbx, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopRBP) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x55, // pushq %rbp
+      0x5d, // popq %rbp
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_rbp, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopR12) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x41, 0x54, // pushq %r12
+      0x41, 0x5c, // popq %r12
+      0x90        // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_r12, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopR13) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x41, 0x55, // pushq %r13
+      0x41, 0x5d, // popq %r13
+      0x90        // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_r13, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopR14) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x41, 0x56, // pushq %r14
+      0x41, 0x5e, // popq %r14
+      0x90        // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_r14, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopR15) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x41, 0x57, // pushq %r15
+      0x41, 0x5f, // popq %r15
+      0x90        // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_r15, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopEBX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x53, // pushl %ebx
+      0x5b, // popl %ebx
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(4, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebx, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopEBP) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x55, // pushl %ebp
+      0x5d, // popl %ebp
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(4, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebp, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopESI) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x56, // pushl %esi
+      0x5e, // popl %esi
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(4, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_esi, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestPopEDI) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x57, // pushl %edi
+      0x5f, // popl %edi
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(4, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_edi, regloc));
+}
+
+// We don't track these registers, but make sure the CFA address is updated
+// if we're defining the CFA in term of esp.
+TEST_F(Testx86AssemblyInspectionEngine, Testi386IgnoredRegisters) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x0e, // push cs
+      0x16, // push ss
+      0x1e, // push ds
+      0x06, // push es
+
+      0x07, // pop es
+      0x1f, // pop ds
+      0x17, // pop ss
+
+      0x90 // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(20, row_sp->GetCFAValue().GetOffset());
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(7);
+  EXPECT_EQ(7, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestLEAVE) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x55, // push %rbp/ebp
+      0xc9, // leave
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine64->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_rbp, regloc));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(4, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebp, regloc));
+}
+
+// In i386, which lacks pc-relative addressing, a common code sequence
+// is to call the next instruction (i.e. call imm32, value of 0) which
+// pushes the addr of the next insn on the stack, and then pop that value
+// into a register (the "pic base" register).
+TEST_F(Testx86AssemblyInspectionEngine, TestCALLNextInsn) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0xe8, 0x00, 0x00, 0x00, 0x00, // call 0
+      0x90                          // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(5);
+  EXPECT_EQ(5, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebp, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVx86_64) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x55,                                     // pushq %rbp
+      0x48, 0x89, 0xe5,                         // movq %rsp, %rbp
+      0x4c, 0x89, 0x75, 0xc0,                   // movq   %r14, -0x40(%rbp)
+      0x4c, 0x89, 0xbd, 0x28, 0xfa, 0xff, 0xff, // movq   %r15, -0x5d8(%rbp)
+      0x48, 0x89, 0x5d, 0xb8,                   // movq %rbx, -0x48(%rbp)
+      0x90                                      // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine64->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(19);
+  EXPECT_EQ(19, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rbp);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_r14, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-80, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_r15, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-1512, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rbx, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-88, regloc.GetOffset());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVi386) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x55,                               // pushq %ebp
+      0x89, 0xe5,                         // movq %esp, %ebp
+      0x89, 0x9d, 0xb0, 0xfe, 0xff, 0xff, // movl %ebx, -0x150(%ebp)
+      0x89, 0x75, 0xe0,                   // movl %esi, -0x20(%ebp)
+      0x90                                      // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(12);
+  EXPECT_EQ(12, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rbp);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_ebx, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-344, regloc.GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_esi, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-40, regloc.GetOffset());
 }

@@ -57,7 +57,7 @@ namespace llvm {
   }
 
   namespace FPDenormal {
-    enum DenormalType {
+    enum DenormalMode {
       IEEE,           // IEEE 754 denormal numbers
       PreserveSign,   // the sign of a flushed-to-zero number is preserved in
                       // the sign of 0
@@ -114,7 +114,7 @@ namespace llvm {
           AllowFPOpFusion(FPOpFusion::Standard), Reciprocals(TargetRecip()),
           JTType(JumpTable::Single), ThreadModel(ThreadModel::POSIX),
           EABIVersion(EABI::Default), DebuggerTuning(DebuggerKind::Default),
-          FPDenormalType(FPDenormal::IEEE),
+          FPDenormalMode(FPDenormal::IEEE),
           ExceptionModel(ExceptionHandling::None) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
@@ -269,9 +269,9 @@ namespace llvm {
     /// Which debugger to tune for.
     DebuggerKind DebuggerTuning;
 
-    /// FPDenormalType - This flags specificies which denormal numbers the code
+    /// FPDenormalMode - This flags specificies which denormal numbers the code
     /// is permitted to require.
-    FPDenormal::DenormalType FPDenormalType;
+    FPDenormal::DenormalMode FPDenormalMode;
 
     /// What exception model to use
     ExceptionHandling ExceptionModel;
@@ -306,7 +306,7 @@ inline bool operator==(const TargetOptions &LHS,
     ARE_EQUAL(ThreadModel) &&
     ARE_EQUAL(EABIVersion) &&
     ARE_EQUAL(DebuggerTuning) &&
-    ARE_EQUAL(FPDenormalType) &&
+    ARE_EQUAL(FPDenormalMode) &&
     ARE_EQUAL(ExceptionModel) &&
     ARE_EQUAL(MCOptions) &&
     ARE_EQUAL(EnableIPRA);

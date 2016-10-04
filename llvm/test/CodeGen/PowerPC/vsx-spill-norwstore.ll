@@ -4,6 +4,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 @.str1 = external unnamed_addr constant [5 x i8], align 1
 @.str10 = external unnamed_addr constant [9 x i8], align 1
+@.v2f64 = external unnamed_addr constant <2 x double>, align 16
 
 ; Function Attrs: nounwind
 define void @main() #0 {
@@ -12,6 +13,7 @@ define void @main() #0 {
 ; CHECK: stxvd2x
 
 entry:
+  %val = load <2 x double>, <2 x double>* @.v2f64, align 16
   %0 = tail call <8 x i16> @llvm.ppc.altivec.vupkhsb(<16 x i8> <i8 0, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1>) #0
   %1 = tail call <8 x i16> @llvm.ppc.altivec.vupklsb(<16 x i8> <i8 0, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 -1, i8 0, i8 -1, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1>) #0
   br i1 false, label %if.then.i68.i, label %check.exit69.i
@@ -23,7 +25,7 @@ check.exit69.i:                                   ; preds = %entry
   br i1 undef, label %if.then.i63.i, label %check.exit64.i
 
 if.then.i63.i:                                    ; preds = %check.exit69.i
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str10, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0)) #0
+  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str10, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str1, i64 0, i64 0), <2 x double> %val) #0
   br label %check.exit64.i
 
 check.exit64.i:                                   ; preds = %if.then.i63.i, %check.exit69.i

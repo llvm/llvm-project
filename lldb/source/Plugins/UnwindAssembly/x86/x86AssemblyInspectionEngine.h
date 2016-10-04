@@ -97,6 +97,7 @@ private:
   bool push_0_pattern_p();
   bool push_imm_pattern_p();
   bool push_extended_pattern_p();
+  bool push_misc_reg_p();
   bool mov_rsp_rbp_pattern_p();
   bool sub_rsp_pattern_p(int &amount);
   bool add_rsp_pattern_p(int &amount);
@@ -104,6 +105,7 @@ private:
   bool push_reg_p(int &regno);
   bool pop_reg_p(int &regno);
   bool pop_rbp_pattern_p();
+  bool pop_misc_reg_p();
   bool leave_pattern_p();
   bool call_next_insn_pattern_p();
   bool mov_reg_to_local_stack_frame_p(int &regno, int &rbp_offset);

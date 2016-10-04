@@ -225,7 +225,8 @@ uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
     ArrayRef<Elf_Word> ShndxTable) const {
   assert(Sym->st_shndx == ELF::SHN_XINDEX);
   unsigned Index = Sym - FirstSym;
-
+  if (Index >= ShndxTable.size())
+    report_fatal_error("Invalid symbol table index");
   // The size of the table was checked in getSHNDXTable.
   return ShndxTable[Index];
 }

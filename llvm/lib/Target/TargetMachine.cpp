@@ -82,11 +82,11 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
   StringRef Denormal =
     F.getFnAttribute("denormal-fp-math").getValueAsString();
   if (Denormal == "ieee")
-    Options.FPDenormalType = FPDenormal::IEEE;
+    Options.FPDenormalMode = FPDenormal::IEEE;
   else if (Denormal == "preserve-sign")
-    Options.FPDenormalType = FPDenormal::PreserveSign;
+    Options.FPDenormalMode = FPDenormal::PreserveSign;
   else if (Denormal == "positive-zero")
-    Options.FPDenormalType = FPDenormal::PositiveZero;
+    Options.FPDenormalMode = FPDenormal::PositiveZero;
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,

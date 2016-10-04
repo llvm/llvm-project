@@ -167,7 +167,23 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register: {
-    const char *RegName = PPCInstPrinter::getRegisterName(MO.getReg());
+    unsigned Reg = MO.getReg();
+
+    // There are VSX instructions that use VSX register numbering (vs0 - vs63)
+    // as well as those that use VMX register numbering (v0 - v31 which
+    // correspond to vs32 - vs63). If we have an instruction that uses VSX
+    // numbering, we need to convert the VMX registers to VSX registers.
+    // Namely, we print 32-63 when the instruction operates on one of the
+    // VMX registers.
+    // (Please synchronize with PPCInstPrinter::printOperand)
+    if (MI->getDesc().TSFlags & PPCII::UseVSXReg) {
+      if (PPCInstrInfo::isVRRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::V0);
+      else if (PPCInstrInfo::isVFRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::VF0);
+    }
+    const char *RegName = PPCInstPrinter::getRegisterName(Reg);
+
     // Linux assembler (Others?) does not take register mnemonics.
     // FIXME - What about special registers used in mfspr/mtspr?
     if (!Subtarget->isDarwin())
