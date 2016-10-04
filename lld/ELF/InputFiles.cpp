@@ -226,7 +226,10 @@ void elf::ObjectFile<ELFT>::initializeSections(
     if (Sections[I] == &InputSection<ELFT>::Discarded)
       continue;
 
-    if (!Config->Relocatable && (Sec.sh_flags & SHF_EXCLUDE)) {
+    // SHF_EXCLUDE'ed sections are discarded by the linker. However,
+    // if -r is given, we'll let the final link discard such sections.
+    // This is compatible with GNU.
+    if ((Sec.sh_flags & SHF_EXCLUDE) && !Config->Relocatable) {
       Sections[I] = &InputSection<ELFT>::Discarded;
       continue;
     }

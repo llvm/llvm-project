@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2,fma -recip=sqrt:2 -stop-after=expand-isel-pseudos 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2,fma -stop-after=expand-isel-pseudos 2>&1 | FileCheck %s
 
 declare float @llvm.sqrt.f32(float) #0
 
@@ -48,5 +48,5 @@ define float @rfoo(float %f) #0 {
   ret float %div
 }
 
-attributes #0 = { "unsafe-fp-math"="true" }
+attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt:2" }
 attributes #1 = { nounwind readnone }

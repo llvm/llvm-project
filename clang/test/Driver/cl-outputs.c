@@ -2,12 +2,14 @@
 // command-line option, e.g. on Mac where %s is commonly under /Users.
 
 // RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
+// RUN: %clang_cl /c -flto -### -- %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
 // DEFAULT: "-o" "cl-outputs.obj"
 
 // RUN: %clang_cl /Fo -### -- %s 2>&1 | FileCheck -check-prefix=FoEMPTY %s
 // FoEMPTY:  "-o" "cl-outputs.obj"
 
 // RUN: %clang_cl /Foa -### -- %s 2>&1 | FileCheck -check-prefix=FoNAME %s
+// RUN: %clang_cl /Foa -flto -### -- %s 2>&1 | FileCheck -check-prefix=FoNAME %s
 // FoNAME:  "-o" "a.obj"
 
 // RUN: %clang_cl /Foa.ext /Fob.ext -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEEXT %s

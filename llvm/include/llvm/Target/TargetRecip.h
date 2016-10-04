@@ -17,7 +17,6 @@
 #ifndef LLVM_TARGET_TARGETRECIP_H
 #define LLVM_TARGET_TARGETRECIP_H
 
-#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <map>
 #include <string>
@@ -25,22 +24,21 @@
 
 namespace llvm {
 
+class StringRef;
+
 struct TargetRecip {
 public:
   TargetRecip();
 
-  /// Initialize all or part of the operations from command-line options or
-  /// a front end.
-  TargetRecip(const std::vector<std::string> &Args);
+  /// Parse a comma-separated string of reciprocal settings to set values in
+  /// this struct.
+  void set(StringRef &Args);
 
-  /// Set whether a particular reciprocal operation is enabled and how many
-  /// refinement steps are needed when using it. Use "all" to set enablement
-  /// and refinement steps for all operations.
-  void setDefaults(StringRef Key, bool Enable, unsigned RefSteps);
+  /// Set enablement and refinement steps for a particular reciprocal operation.
+  /// Use "all" to give all operations the same values.
+  void set(StringRef Key, bool Enable, unsigned RefSteps);
 
-  /// Return true if the reciprocal operation has been enabled by default or
-  /// from the command-line. Return false if the operation has been disabled
-  /// by default or from the command-line.
+  /// Return true if the reciprocal operation has been enabled.
   bool isEnabled(StringRef Key) const;
 
   /// Return the number of iterations necessary to refine the
@@ -50,15 +48,14 @@ public:
   bool operator==(const TargetRecip &Other) const;
 
 private:
-  enum {
-    Uninitialized = -1
-  };
-
+  // TODO: We should be able to use special values (enums) to simplify this into
+  // just an int, but we have to be careful because the user is allowed to
+  // specify "default" as a setting and just change the refinement step count.
   struct RecipParams {
-    int8_t Enabled;
+    bool Enabled;
     int8_t RefinementSteps;
 
-    RecipParams() : Enabled(Uninitialized), RefinementSteps(Uninitialized) {}
+    RecipParams() : Enabled(false), RefinementSteps(0) {}
   };
 
   std::map<StringRef, RecipParams> RecipMap;

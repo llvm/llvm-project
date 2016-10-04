@@ -51,3 +51,6 @@
 // NONEXISTENT: link.exe
 // NONEXISTENT: "/libpath:somepath"
 // NONEXISTENT: nonexistent
+
+// RUN: %clang_cl /Tc%s -fuse-ld=lld -### 2>&1 | FileCheck --check-prefix=USE_LLD %s
+// USE_LLD: lld-link.exe

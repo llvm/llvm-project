@@ -97,6 +97,18 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
                   COMMENT "Running Polly unit tests")
       set_target_properties(check-polly-unittests PROPERTIES FOLDER "Polly")
     endif ()
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/UnitIsl/lit.site.cfg.in
+      ${CMAKE_CURRENT_BINARY_DIR}/UnitIsl/lit.site.cfg)
+
+    add_custom_target(check-polly-isl
+      command ${LLVM_LIT}
+                --param polly_site_config=${CMAKE_CURRENT_BINARY_DIR}/UnitIsl/lit.site.cfg
+                --param build_config=${CMAKE_CFG_INTDIR}
+                -sv ${POLLY_TEST_EXTRA_ARGS}
+                ${CMAKE_CURRENT_BINARY_DIR}
+                DEPENDS polly-isl-test
+                COMMENT "Running isl unit tests")
   endif()
 
 else (NOT DEFINED LLVM_MAIN_SRC_DIR)
@@ -140,6 +152,17 @@ else (NOT DEFINED LLVM_MAIN_SRC_DIR)
       )
     set_target_properties(check-polly-unittests PROPERTIES FOLDER "Polly")
   endif ()
+
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/UnitIsl/lit.site.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/UnitIsl/lit.site.cfg)
+
+  add_lit_testsuite(check-polly-isl "Running isl unit tests only"
+    ${CMAKE_CURRENT_BINARY_DIR}/UnitIsl
+    PARAMS polly_site_config=${CMAKE_CURRENT_BINARY_DIR}/UnitIsl/lit.site.cfg
+    DEPENDS polly-isl-test
+    )
+  set_target_properties(check-polly-isl PROPERTIES FOLDER "Polly")
 
   # Run polly-check-format as part of polly-check only if we are compiling with
   # clang, so clang-format is available.

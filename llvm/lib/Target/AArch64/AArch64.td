@@ -94,9 +94,13 @@ def FeatureAlternateSExtLoadCVTF32Pattern : SubtargetFeature<
     "alternate-sextload-cvt-f32-pattern", "UseAlternateSExtLoadCVTF32Pattern",
     "true", "Use alternative pattern for sextload convert to f32">;
 
-def FeatureMacroOpFusion : SubtargetFeature<
-    "macroop-fusion", "HasMacroOpFusion", "true",
-    "CPU supports macro op fusion">;
+def FeatureArithmeticBccFusion : SubtargetFeature<
+    "arith-bcc-fusion", "HasArithmeticBccFusion", "true",
+    "CPU fuses arithmetic+bcc operations">;
+
+def FeatureArithmeticCbzFusion : SubtargetFeature<
+    "arith-cbz-fusion", "HasArithmeticCbzFusion", "true",
+    "CPU fuses arithmetic + cbz/cbnz operations">;
 
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
@@ -204,7 +208,8 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    FeatureCrypto,
                                    FeatureDisableLatencySchedHeuristic,
                                    FeatureFPARMv8,
-                                   FeatureMacroOpFusion,
+                                   FeatureArithmeticBccFusion,
+                                   FeatureArithmeticCbzFusion,
                                    FeatureNEON,
                                    FeaturePerfMon,
                                    FeatureSlowMisaligned128Store,
@@ -244,7 +249,7 @@ def ProcVulcan  : SubtargetFeature<"vulcan", "ARMProcFamily", "Vulcan",
                                    FeatureCRC,
                                    FeatureCrypto,
                                    FeatureFPARMv8,
-                                   FeatureMacroOpFusion,
+                                   FeatureArithmeticBccFusion,
                                    FeatureNEON,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,

@@ -166,16 +166,6 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   if ((TT.isOSWindows() && TT.getArch() == Triple::x86_64) || TT.isPS4())
     this->Options.TrapUnreachable = true;
 
-  // By default (and when -ffast-math is on), enable estimate codegen for
-  // everything except scalar division. By default, use 1 refinement step for
-  // all operations. Defaults may be overridden by using command-line options.
-  // Scalar division estimates are disabled because they break too much
-  // real-world code. These defaults match GCC behavior.
-  this->Options.Reciprocals.setDefaults("sqrtf", true, 1);
-  this->Options.Reciprocals.setDefaults("divf", false, 1);
-  this->Options.Reciprocals.setDefaults("vec-sqrtf", true, 1);
-  this->Options.Reciprocals.setDefaults("vec-divf", true, 1);
-
   initAsmInfo();
 }
 

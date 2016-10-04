@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-unsafe-fp-math -mattr=-vsx | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-unsafe-fp-math -mattr=-vsx -recip=sqrtf:0,sqrtd:0 | FileCheck %s -check-prefix=CHECK-NONR
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck -check-prefix=CHECK-SAFE %s
+
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -25,18 +25,25 @@ define double @foo(double %a, double %b) nounwind {
 ; CHECK-NEXT: fmul
 ; CHECK: blr
 
-; CHECK-NONR: @foo
-; CHECK-NONR: frsqrte
-; CHECK-NONR-NOT: fmadd
-; CHECK-NONR: fmul
-; CHECK-NONR-NOT: fmadd
-; CHECK-NONR: blr
-
 ; CHECK-SAFE: @foo
 ; CHECK-SAFE: fsqrt
 ; CHECK-SAFE: fdiv
 ; CHECK-SAFE: blr
 }
+
+define double @no_estimate_refinement_f64(double %a, double %b) #0 {
+  %x = call double @llvm.sqrt.f64(double %b)
+  %r = fdiv double %a, %x
+  ret double %r
+
+; CHECK-LABEL: @no_estimate_refinement_f64
+; CHECK: frsqrte
+; CHECK-NOT: fmadd
+; CHECK: fmul
+; CHECK-NOT: fmadd
+; CHECK: blr
+}
+
 
 define double @foof(double %a, float %b) nounwind {
   %x = call float @llvm.sqrt.f32(float %b)
@@ -98,17 +105,24 @@ define float @goo(float %a, float %b) nounwind {
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
 
-; CHECK-NONR: @goo
-; CHECK-NONR: frsqrtes
-; CHECK-NONR-NOT: fmadds
-; CHECK-NONR: fmuls
-; CHECK-NONR-NOT: fmadds
-; CHECK-NONR: blr
-
 ; CHECK-SAFE: @goo
 ; CHECK-SAFE: fsqrts
 ; CHECK-SAFE: fdivs
 ; CHECK-SAFE: blr
+}
+
+
+define float @no_estimate_refinement_f32(float %a, float %b) #0 {
+  %x = call float @llvm.sqrt.f32(float %b)
+  %r = fdiv float %a, %x
+  ret float %r
+
+; CHECK-LABEL: @no_estimate_refinement_f32
+; CHECK: frsqrtes
+; CHECK-NOT: fmadds
+; CHECK: fmuls
+; CHECK-NOT: fmadds
+; CHECK: blr
 }
 
 ; Recognize that this is rsqrt(a) * rcp(b) * c, 
@@ -251,4 +265,6 @@ define <4 x float> @hoo3(<4 x float> %a) nounwind {
 ; CHECK-SAFE-NOT: vrsqrtefp
 ; CHECK-SAFE: blr
 }
+
+attributes #0 = { nounwind "reciprocal-estimates"="sqrtf:0,sqrtd:0" }
 
