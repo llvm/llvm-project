@@ -5364,6 +5364,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     const char Arg[] = "-fapinotes-cache-path=";
     APINotesCachePath.insert(APINotesCachePath.begin(), Arg, Arg + strlen(Arg));
     CmdArgs.push_back(Args.MakeArgString(APINotesCachePath));
+
+    Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
   }
 
   // -fblocks=0 is default.
