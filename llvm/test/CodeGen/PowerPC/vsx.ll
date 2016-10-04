@@ -70,10 +70,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test5
-; CHECK-FISL: vor
-; CHECK-FISL: vor
-; CHECK-FISL: xxlxor
-; CHECK-FISL: vor 2
+; CHECK-FISL: xxlxor 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test5
@@ -91,10 +88,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test6
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlxor 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlxor 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test6
@@ -112,10 +106,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test7
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlxor 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlxor 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test7
@@ -133,10 +124,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test8
-; CHECK-FISL: vor
-; CHECK-FISL: vor
-; CHECK-FISL: xxlor
-; CHECK-FISL: vor 2
+; CHECK-FISL: xxlor 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test8
@@ -154,10 +142,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test9
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlor 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlor 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test9
@@ -175,10 +160,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test10
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlor 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlor 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test10
@@ -196,10 +178,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test11
-; CHECK-FISL: vor
-; CHECK-FISL: vor
-; CHECK-FISL: xxland
-; CHECK-FISL: vor 2
+; CHECK-FISL: xxland 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test11
@@ -217,10 +196,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test12
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxland 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxland 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test12
@@ -238,10 +214,7 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test13
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxland 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxland 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test13
@@ -260,11 +233,8 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test14
-; CHECK-FISL: vor 4, 3, 3
-; CHECK-FISL: vor 5, 2, 2
-; CHECK-FISL: xxlor 0, 37, 36
-; CHECK-FISL: xxlnor 36, 37, 36
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlor 0, 34, 35
+; CHECK-FISL: xxlnor 34, 34, 35
 ; CHECK-FISL: lis 0, -1
 ; CHECK-FISL: ori 0, 0, 65520
 ; CHECK-FISL: stxvd2x 0, 1, 0
@@ -286,17 +256,13 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test15
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlor 36, 36, 37
-; CHECK-FISL: vor 0, 4, 4
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlnor 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlor 0, 34, 35
+; CHECK-FISL: xxlor 36, 0, 0
+; CHECK-FISL: xxlnor 0, 34, 35
+; CHECK-FISL: xxlor 34, 0, 0
 ; CHECK-FISL: lis 0, -1
 ; CHECK-FISL: ori 0, 0, 65520
-; CHECK-FISL: stvx 0, 1, 0
+; CHECK-FISL: stxvd2x 36, 1, 0
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test15
@@ -315,17 +281,13 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test16
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlor 36, 36, 37
-; CHECK-FISL: vor 0, 4, 4
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlnor 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlor 0, 34, 35
+; CHECK-FISL: xxlor 36, 0, 0
+; CHECK-FISL: xxlnor 0, 34, 35
+; CHECK-FISL: xxlor 34, 0, 0
 ; CHECK-FISL: lis 0, -1
 ; CHECK-FISL: ori 0, 0, 65520
-; CHECK-FISL: stvx 0, 1, 0
+; CHECK-FISL: stxvd2x 36, 1, 0
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test16
@@ -344,11 +306,8 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test17
-; CHECK-FISL: vor 4, 3, 3
-; CHECK-FISL: vor 5, 2, 2
-; CHECK-FISL: xxlnor 36, 36, 36
-; CHECK-FISL: xxland 36, 37, 36
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlnor 35, 35, 35
+; CHECK-FISL: xxland 34, 34, 35
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test17
@@ -367,17 +326,13 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test18
-; CHECK-FISL: vor 4, 3, 3
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlnor 36, 36, 37
-; CHECK-FISL: vor 0, 4, 4
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlandc 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlnor 0, 35, 35
+; CHECK-FISL: xxlor 36, 0, 0
+; CHECK-FISL: xxlandc 0, 34, 35
+; CHECK-FISL: xxlor 34, 0, 0
 ; CHECK-FISL: lis 0, -1
 ; CHECK-FISL: ori 0, 0, 65520
-; CHECK-FISL: stvx 0, 1, 0
+; CHECK-FISL: stxvd2x 36, 1, 0
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test18
@@ -396,17 +351,13 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test19
-; CHECK-FISL: vor 4, 3, 3
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlnor 36, 36, 37
-; CHECK-FISL: vor 0, 4, 4
-; CHECK-FISL: vor 4, 2, 2
-; CHECK-FISL: vor 5, 3, 3
-; CHECK-FISL: xxlandc 36, 36, 37
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: xxlnor 0, 35, 35
+; CHECK-FISL: xxlor 36, 0, 0
+; CHECK-FISL: xxlandc 0, 34, 35
+; CHECK-FISL: xxlor 34, 0, 0
 ; CHECK-FISL: lis 0, -1
 ; CHECK-FISL: ori 0, 0, 65520
-; CHECK-FISL: stvx 0, 1, 0
+; CHECK-FISL: stxvd2x 36, 1, 0
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test19
@@ -425,19 +376,9 @@ entry:
 ; CHECK-REG: xxsel 34, 35, 34, {{[0-9]+}}
 ; CHECK-REG: blr
 
-; FIXME: The fast-isel code is pretty miserable for this one.
-
 ; CHECK-FISL-LABEL: @test20
-; CHECK-FISL: vor 0, 5, 5
-; CHECK-FISL: vor 1, 4, 4
-; CHECK-FISL: vor 6, 3, 3
-; CHECK-FISL: vor 7, 2, 2
-; CHECK-FISL: vor 2, 1, 1
-; CHECK-FISL: vor 3, 0, 0
-; CHECK-FISL: vcmpequw 2, 2, 3
-; CHECK-FISL: vor 0, 2, 2
-; CHECK-FISL: xxsel 32, 38, 39, 32
-; CHECK-FISL: vor 2, 0, 0
+; CHECK-FISL: vcmpequw {{[0-9]+}}, 4, 5
+; CHECK-FISL: xxsel 34, 35, 34, {{[0-9]+}}
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test20
@@ -458,13 +399,8 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test21
-; CHECK-FISL: vor 0, 5, 5
-; CHECK-FISL: vor 1, 4, 4
-; CHECK-FISL: vor 6, 3, 3
-; CHECK-FISL: vor 7, 2, 2
-; CHECK-FISL: xvcmpeqsp 32, 33, 32
-; CHECK-FISL: xxsel 32, 38, 39, 32
-; CHECK-FISL: vor 2, 0, 0
+; CHECK-FISL: xvcmpeqsp [[V1:[0-9]+]], 36, 37
+; CHECK-FISL: xxsel 34, 35, 34, [[V1]]
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test21
@@ -491,14 +427,14 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test22
-; CHECK-FISL-DAG: xvcmpeqsp {{[0-9]+}}, 33, 32
-; CHECK-FISL-DAG: xvcmpeqsp {{[0-9]+}}, 32, 32
-; CHECK-FISL-DAG: xvcmpeqsp {{[0-9]+}}, 33, 33
+; CHECK-FISL-DAG: xvcmpeqsp {{[0-9]+}}, 37, 37
+; CHECK-FISL-DAG: xvcmpeqsp {{[0-9]+}}, 36, 36
+; CHECK-FISL-DAG: xvcmpeqsp {{[0-9]+}}, 36, 37
 ; CHECK-FISL-DAG: xxlnor
 ; CHECK-FISL-DAG: xxlnor
 ; CHECK-FISL-DAG: xxlor
 ; CHECK-FISL-DAG: xxlor
-; CHECK-FISL: xxsel 0, 38, 39, {{[0-9]+}}
+; CHECK-FISL: xxsel 34, 35, 34, {{[0-9]+}}
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test22
@@ -526,11 +462,7 @@ entry:
 
 ; CHECK-FISL-LABEL: @test23
 ; CHECK-FISL: vcmpequh 4, 4, 5
-; CHECK-FISL: vor 0, 3, 3
-; CHECK-FISL: vor 1, 2, 2
-; CHECK-FISL: vor 6, 4, 4
-; CHECK-FISL: xxsel 32, 32, 33, 38
-; CHECK-FISL: vor 2, 0, 
+; CHECK-FISL: xxsel 34, 35, 34, 36
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test23
@@ -552,11 +484,7 @@ entry:
 
 ; CHECK-FISL-LABEL: @test24
 ; CHECK-FISL: vcmpequb 4, 4, 5
-; CHECK-FISL: vor 0, 3, 3
-; CHECK-FISL: vor 1, 2, 2
-; CHECK-FISL: vor 6, 4, 4
-; CHECK-FISL: xxsel 32, 32, 33, 38
-; CHECK-FISL: vor 2, 0, 0
+; CHECK-FISL: xxsel 34, 35, 34, 36
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test24
@@ -682,8 +610,6 @@ define <2 x i64> @test30(<2 x i64>* %a) {
 ; CHECK-FISL-LABEL: @test30
 ; CHECK-FISL: lxvd2x 0, 0, 3
 ; CHECK-FISL: xxlor 34, 0, 0
-; CHECK-FISL: vor 3, 2, 2
-; CHECK-FISL: vor 2, 3, 3
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test30
@@ -715,8 +641,7 @@ define <4 x float> @test32(<4 x float>* %a) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test32
-; CHECK-FISL: lxvw4x 0, 0, 3
-; CHECK-FISL: xxlor 34, 0, 0
+; CHECK-FISL: lxvw4x 34, 0, 3
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test32
@@ -734,8 +659,7 @@ define void @test33(<4 x float>* %a, <4 x float> %b) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test33
-; CHECK-FISL: vor 3, 2, 2
-; CHECK-FISL: stxvw4x 35, 0, 3
+; CHECK-FISL: stxvw4x 34, 0, 3
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test33
@@ -770,8 +694,7 @@ define void @test33u(<4 x float>* %a, <4 x float> %b) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test33u
-; CHECK-FISL: vor 3, 2, 2
-; CHECK-FISL: stxvw4x 35, 0, 3
+; CHECK-FISL: stxvw4x 34, 0, 3
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test33u
@@ -789,8 +712,7 @@ define <4 x i32> @test34(<4 x i32>* %a) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test34
-; CHECK-FISL: lxvw4x 0, 0, 3
-; CHECK-FISL: xxlor 34, 0, 0
+; CHECK-FISL: lxvw4x 34, 0, 3
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test34
@@ -808,8 +730,7 @@ define void @test35(<4 x i32>* %a, <4 x i32> %b) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test35
-; CHECK-FISL: vor 3, 2, 2
-; CHECK-FISL: stxvw4x 35, 0, 3
+; CHECK-FISL: stxvw4x 34, 0, 3
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test35
@@ -1086,10 +1007,7 @@ define <2 x i1> @test65(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test65
-; CHECK-FISL: vor 4, 3, 3
-; CHECK-FISL: vor 5, 2, 2
-; CHECK-FISL: vcmpequw 4, 5, 4
-; CHECK-FISL: vor 2, 4, 4
+; CHECK-FISL: vcmpequw 2, 2, 3
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test65
@@ -1107,8 +1025,8 @@ define <2 x i1> @test66(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test66
-; CHECK-FISL: vcmpequw {{[0-9]+}}, 5, 4
-; CHECK-FISL: xxlnor 34, {{[0-9]+}}, {{[0-9]+}}
+; CHECK-FISL: vcmpequw 2, 2, 3
+; CHECK-FISL: xxlnor 34, 34, 34
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test66

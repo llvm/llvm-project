@@ -170,7 +170,64 @@ bool PPCMIPeephole::simplifyCode(void) {
                 ToErase = &MI;
                 Simplified = true;
               }
+            } else if ((Immed == 0 || Immed == 3) &&
+                       DefMI && DefMI->getOpcode() == PPC::XXPERMDIs) {
+              // Splat fed by another splat - switch the output of the first
+              // and remove the second.
+              DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
+              ToErase = &MI;
+              Simplified = true;
+              DEBUG(dbgs() << "Removing redundant splat: ");
+              DEBUG(MI.dump());
             }
+          }
+        }
+        break;
+      }
+      case PPC::VSPLTB:
+      case PPC::VSPLTH:
+      case PPC::XXSPLTW: {
+        unsigned MyOpcode = MI.getOpcode();
+        unsigned OpNo = MyOpcode == PPC::XXSPLTW ? 1 : 2;
+        unsigned TrueReg = lookThruCopyLike(MI.getOperand(OpNo).getReg());
+        MachineInstr *DefMI = MRI->getVRegDef(TrueReg);
+        if (!DefMI)
+          break;
+        unsigned DefOpcode = DefMI->getOpcode();
+        bool SameOpcode = (MyOpcode == DefOpcode) ||
+          (MyOpcode == PPC::VSPLTB && DefOpcode == PPC::VSPLTBs) ||
+          (MyOpcode == PPC::VSPLTH && DefOpcode == PPC::VSPLTHs) ||
+          (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::XXSPLTWs);
+        // Splat fed by another splat - switch the output of the first
+        // and remove the second.
+        if (SameOpcode) {
+          DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
+          ToErase = &MI;
+          Simplified = true;
+          DEBUG(dbgs() << "Removing redundant splat: ");
+          DEBUG(MI.dump());
+        }
+        // Splat fed by a shift. Usually when we align value to splat into
+        // vector element zero.
+        if (DefOpcode == PPC::XXSLDWI) {
+          unsigned ShiftRes = DefMI->getOperand(0).getReg();
+          unsigned ShiftOp1 = DefMI->getOperand(1).getReg();
+          unsigned ShiftOp2 = DefMI->getOperand(2).getReg();
+          unsigned ShiftImm = DefMI->getOperand(3).getImm();
+          unsigned SplatImm = MI.getOperand(2).getImm();
+          if (ShiftOp1 == ShiftOp2) {
+            unsigned NewElem = (SplatImm + ShiftImm) & 0x3;
+            if (MRI->hasOneNonDBGUse(ShiftRes)) {
+              DEBUG(dbgs() << "Removing redundant shift: ");
+              DEBUG(DefMI->dump());
+              ToErase = DefMI;
+            }
+            Simplified = true;
+            DEBUG(dbgs() << "Changing splat immediate from " << SplatImm <<
+                  " to " << NewElem << " in instruction: ");
+            DEBUG(MI.dump());
+            MI.getOperand(1).setReg(ShiftOp1);
+            MI.getOperand(2).setImm(NewElem);
           }
         }
         break;

@@ -50,6 +50,10 @@ namespace llvm {
       /// unsigned integers.
       FCTIDUZ, FCTIWUZ,
 
+      /// VEXTS, ByteWidth - takes an input in VSFRC and produces an output in
+      /// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
+      VEXTS,
+
       /// Reciprocal estimate instructions (unary FP ops).
       FRE, FRSQRTE,
 
@@ -364,6 +368,16 @@ namespace llvm {
       /// load which zero-extends from a 32-bit integer value into the
       /// destination 64-bit register.
       LFIWZX,
+
+      /// GPRC, CHAIN = LXSIZX, CHAIN, Ptr, ByteWidth - This is a load of an
+      /// integer smaller than 64 bits into a VSR. The integer is zero-extended.
+      /// This can be used for converting loaded integers to floating point.
+      LXSIZX,
+
+      /// STXSIX - The STXSI[bh]X instruction. The first operand is an input
+      /// chain, then an f64 value to store, then an address to store it to,
+      /// followed by a byte-width for the store.
+      STXSIX,
 
       /// VSRC, CHAIN = LXVD2X_LE CHAIN, Ptr - Occurs only for little endian.
       /// Maps directly to an lxvd2x instruction that will be followed by

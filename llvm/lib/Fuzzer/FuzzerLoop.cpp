@@ -470,7 +470,6 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   memcpy(DataCopy, Data, Size);
   if (CurrentUnitData && CurrentUnitData != Data)
     memcpy(CurrentUnitData, Data, Size);
-  AssignTaintLabels(DataCopy, Size);
   CurrentUnitSize = Size;
   AllocTracer.Start();
   UnitStartTime = system_clock::now();

@@ -156,9 +156,12 @@ runClangMoveOnCode(const move::ClangMoveTool::MoveDefinitionSpec &Spec) {
   CreateFiles(Spec.OldCC, TestCC);
 
   std::map<std::string, tooling::Replacements> FileToReplacements;
-  ClangMoveTool MoveTool(Spec, FileToReplacements);
+  llvm::SmallString<128> InitialDirectory;
+  std::error_code EC = llvm::sys::fs::current_path(InitialDirectory);
+  assert(!EC);
+  (void)EC;
   auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
-      Spec, FileToReplacements);
+      Spec, FileToReplacements, InitialDirectory.str());
 
   tooling::runToolOnCodeWithArgs(
       Factory->create(), TestCC, {"-std=c++11"}, TestCCName, "clang-move",

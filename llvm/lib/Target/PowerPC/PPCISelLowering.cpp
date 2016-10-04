@@ -685,7 +685,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
 
     if (Subtarget.isISA3_0() && Subtarget.hasDirectMove())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Legal);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
   }
 
   if (Subtarget.hasQPX()) {
@@ -1075,6 +1075,9 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::STBRX:           return "PPCISD::STBRX";
   case PPCISD::LFIWAX:          return "PPCISD::LFIWAX";
   case PPCISD::LFIWZX:          return "PPCISD::LFIWZX";
+  case PPCISD::LXSIZX:          return "PPCISD::LXSIZX";
+  case PPCISD::STXSIX:          return "PPCISD::STXSIX";
+  case PPCISD::VEXTS:           return "PPCISD::VEXTS";
   case PPCISD::LXVD2X:          return "PPCISD::LXVD2X";
   case PPCISD::STXVD2X:         return "PPCISD::STXVD2X";
   case PPCISD::COND_BRANCH:     return "PPCISD::COND_BRANCH";
@@ -2986,7 +2989,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
           break;
         case MVT::v2f64:
         case MVT::v2i64:
-          RC = &PPC::VSHRCRegClass;
+          RC = &PPC::VRRCRegClass;
           break;
         case MVT::v4f64:
           RC = &PPC::QFRCRegClass;
@@ -3168,10 +3171,6 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
   static const MCPhysReg VR[] = {
     PPC::V2, PPC::V3, PPC::V4, PPC::V5, PPC::V6, PPC::V7, PPC::V8,
     PPC::V9, PPC::V10, PPC::V11, PPC::V12, PPC::V13
-  };
-  static const MCPhysReg VSRH[] = {
-    PPC::VSH2, PPC::VSH3, PPC::VSH4, PPC::VSH5, PPC::VSH6, PPC::VSH7, PPC::VSH8,
-    PPC::VSH9, PPC::VSH10, PPC::VSH11, PPC::VSH12, PPC::VSH13
   };
 
   const unsigned Num_GPR_Regs = array_lengthof(GPR);
@@ -3448,9 +3447,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
       // passed directly.  The latter are used to implement ELFv2 homogenous
       // vector aggregates.
       if (VR_idx != Num_VR_Regs) {
-        unsigned VReg = (ObjectVT == MVT::v2f64 || ObjectVT == MVT::v2i64) ?
-                        MF.addLiveIn(VSRH[VR_idx], &PPC::VSHRCRegClass) :
-                        MF.addLiveIn(VR[VR_idx], &PPC::VRRCRegClass);
+        unsigned VReg = MF.addLiveIn(VR[VR_idx], &PPC::VRRCRegClass);
         ArgVal = DAG.getCopyFromReg(Chain, dl, VReg, ObjectVT);
         ++VR_idx;
       } else {
@@ -5056,10 +5053,6 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
     PPC::V2, PPC::V3, PPC::V4, PPC::V5, PPC::V6, PPC::V7, PPC::V8,
     PPC::V9, PPC::V10, PPC::V11, PPC::V12, PPC::V13
   };
-  static const MCPhysReg VSRH[] = {
-    PPC::VSH2, PPC::VSH3, PPC::VSH4, PPC::VSH5, PPC::VSH6, PPC::VSH7, PPC::VSH8,
-    PPC::VSH9, PPC::VSH10, PPC::VSH11, PPC::VSH12, PPC::VSH13
-  };
 
   const unsigned NumGPRs = array_lengthof(GPR);
   const unsigned NumFPRs = 13;
@@ -5486,13 +5479,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
           SDValue Load =
               DAG.getLoad(MVT::v4f32, dl, Store, PtrOff, MachinePointerInfo());
           MemOpChains.push_back(Load.getValue(1));
-
-          unsigned VReg = (Arg.getSimpleValueType() == MVT::v2f64 ||
-                           Arg.getSimpleValueType() == MVT::v2i64) ?
-                          VSRH[VR_idx] : VR[VR_idx];
-          ++VR_idx;
-
-          RegsToPass.push_back(std::make_pair(VReg, Load));
+          RegsToPass.push_back(std::make_pair(VR[VR_idx++], Load));
         }
         ArgOffset += 16;
         for (unsigned i=0; i<16; i+=PtrByteSize) {
@@ -5510,12 +5497,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
 
       // Non-varargs Altivec params go into VRs or on the stack.
       if (VR_idx != NumVRs) {
-        unsigned VReg = (Arg.getSimpleValueType() == MVT::v2f64 ||
-                         Arg.getSimpleValueType() == MVT::v2i64) ?
-                        VSRH[VR_idx] : VR[VR_idx];
-        ++VR_idx;
-
-        RegsToPass.push_back(std::make_pair(VReg, Arg));
+        RegsToPass.push_back(std::make_pair(VR[VR_idx++], Arg));
       } else {
         if (CallConv == CallingConv::Fast)
           ComputePtrOff();
@@ -7094,7 +7076,7 @@ static SDValue BuildVSLDOI(SDValue LHS, SDValue RHS, unsigned Amt, EVT VT,
 }
 
 static bool isNonConstSplatBV(BuildVectorSDNode *BVN, EVT Type) {
-  if (BVN->getValueType(0) != Type)
+  if (BVN->isConstant() || BVN->getValueType(0) != Type)
     return false;
   auto OpZero = BVN->getOperand(0);
   for (int i = 1, e = BVN->getNumOperands(); i < e; i++)
@@ -7230,8 +7212,9 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     auto OpZero = BVN->getOperand(0);
     bool CanLoadAndSplat = OpZero.getOpcode() == ISD::LOAD &&
       BVN->isOnlyUserOf(OpZero.getNode());
-    if (Subtarget.isISA3_0() &&
-        isNonConstSplatBV(BVN, MVT::v4i32) && !CanLoadAndSplat)
+    if (Subtarget.isISA3_0() && !CanLoadAndSplat &&
+        (isNonConstSplatBV(BVN, MVT::v4i32) ||
+         isNonConstSplatBV(BVN, MVT::v2i64)))
       return Op;
     return SDValue();
   }
@@ -10571,6 +10554,34 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
   SDLoc dl(N);
   SDValue Op(N, 0);
 
+  SDValue FirstOperand(Op.getOperand(0));
+  bool SubWordLoad = FirstOperand.getOpcode() == ISD::LOAD &&
+    (FirstOperand.getValueType() == MVT::i8 ||
+     FirstOperand.getValueType() == MVT::i16);
+  if (Subtarget.hasP9Vector() && Subtarget.hasP9Altivec() && SubWordLoad) {
+    bool Signed = N->getOpcode() == ISD::SINT_TO_FP;
+    bool DstDouble = Op.getValueType() == MVT::f64;
+    unsigned ConvOp = Signed ?
+      (DstDouble ? PPCISD::FCFID  : PPCISD::FCFIDS) :
+      (DstDouble ? PPCISD::FCFIDU : PPCISD::FCFIDUS);
+    SDValue WidthConst =
+      DAG.getIntPtrConstant(FirstOperand.getValueType() == MVT::i8 ? 1 : 2,
+                            dl, false);
+    LoadSDNode *LDN = cast<LoadSDNode>(FirstOperand.getNode());
+    SDValue Ops[] = { LDN->getChain(), LDN->getBasePtr(), WidthConst };
+    SDValue Ld = DAG.getMemIntrinsicNode(PPCISD::LXSIZX, dl,
+                                         DAG.getVTList(MVT::f64, MVT::Other),
+                                         Ops, MVT::i8, LDN->getMemOperand());
+
+    // For signed conversion, we need to sign-extend the value in the VSR
+    if (Signed) {
+      SDValue ExtOps[] = { Ld, WidthConst };
+      SDValue Ext = DAG.getNode(PPCISD::VEXTS, dl, MVT::f64, ExtOps);
+      return DAG.getNode(ConvOp, dl, DstDouble ? MVT::f64 : MVT::f32, Ext);
+    } else
+      return DAG.getNode(ConvOp, dl, DstDouble ? MVT::f64 : MVT::f32, Ld);
+  }
+
   // Don't handle ppc_fp128 here or i1 conversions.
   if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
     return SDValue();
@@ -10783,10 +10794,14 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UINT_TO_FP:
     return combineFPToIntToFP(N, DCI);
   case ISD::STORE: {
+    EVT Op1VT = N->getOperand(1).getValueType();
+    bool ValidTypeForStoreFltAsInt = (Op1VT == MVT::i32) ||
+      (Subtarget.hasP9Vector() && (Op1VT == MVT::i8 || Op1VT == MVT::i16));
+
     // Turn STORE (FP_TO_SINT F) -> STFIWX(FCTIWZ(F)).
     if (Subtarget.hasSTFIWX() && !cast<StoreSDNode>(N)->isTruncatingStore() &&
         N->getOperand(1).getOpcode() == ISD::FP_TO_SINT &&
-        N->getOperand(1).getValueType() == MVT::i32 &&
+        ValidTypeForStoreFltAsInt &&
         N->getOperand(1).getOperand(0).getValueType() != MVT::ppcf128) {
       SDValue Val = N->getOperand(1).getOperand(0);
       if (Val.getValueType() == MVT::f32) {
@@ -10796,15 +10811,31 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       Val = DAG.getNode(PPCISD::FCTIWZ, dl, MVT::f64, Val);
       DCI.AddToWorklist(Val.getNode());
 
-      SDValue Ops[] = {
-        N->getOperand(0), Val, N->getOperand(2),
-        DAG.getValueType(N->getOperand(1).getValueType())
-      };
+      if (Op1VT == MVT::i32) {
+        SDValue Ops[] = {
+          N->getOperand(0), Val, N->getOperand(2),
+          DAG.getValueType(N->getOperand(1).getValueType())
+        };
 
-      Val = DAG.getMemIntrinsicNode(PPCISD::STFIWX, dl,
-              DAG.getVTList(MVT::Other), Ops,
-              cast<StoreSDNode>(N)->getMemoryVT(),
-              cast<StoreSDNode>(N)->getMemOperand());
+        Val = DAG.getMemIntrinsicNode(PPCISD::STFIWX, dl,
+                DAG.getVTList(MVT::Other), Ops,
+                cast<StoreSDNode>(N)->getMemoryVT(),
+                cast<StoreSDNode>(N)->getMemOperand());
+      } else {
+        unsigned WidthInBytes =
+          N->getOperand(1).getValueType() == MVT::i8 ? 1 : 2;
+        SDValue WidthConst = DAG.getIntPtrConstant(WidthInBytes, dl, false);
+
+        SDValue Ops[] = {
+          N->getOperand(0), Val, N->getOperand(2), WidthConst,
+          DAG.getValueType(N->getOperand(1).getValueType())
+        };
+        Val = DAG.getMemIntrinsicNode(PPCISD::STXSIX, dl,
+                                      DAG.getVTList(MVT::Other), Ops,
+                                      cast<StoreSDNode>(N)->getMemoryVT(),
+                                      cast<StoreSDNode>(N)->getMemOperand());
+      }
+
       DCI.AddToWorklist(Val.getNode());
       return Val;
     }

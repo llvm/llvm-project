@@ -400,6 +400,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
                                               /*CanOmitFromDynSym*/ false, this)
         ->body();
   case SHN_COMMON:
+    if (Sym->st_value == 0)
+      fatal(getFilename(this) + ": common symbol '" + Name +
+            "' alignment is 0");
     return elf::Symtab<ELFT>::X->addCommon(Name, Sym->st_size, Sym->st_value,
                                            Binding, Sym->st_other,
                                            Sym->getType(), this)

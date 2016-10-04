@@ -16,12 +16,59 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang {
 namespace move {
 namespace {
+
+// Make the Path absolute using the CurrentDir if the Path is not an absolute
+// path. An empty Path will result in an empty string.
+std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
+  if (Path.empty())
+    return "";
+  llvm::SmallString<128> InitialDirectory(CurrentDir);
+  llvm::SmallString<128> AbsolutePath(Path);
+  if (std::error_code EC =
+          llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath))
+    llvm::errs() << "Warning: could not make absolute file: '" <<  EC.message()
+                 << '\n';
+  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
+  return AbsolutePath.str();
+}
+
+// Make the Path absolute using the current working directory of the given
+// SourceManager if the Path is not an absolute path.
+//
+// The Path can be a path relative to the build directory, or retrieved from
+// the SourceManager.
+std::string MakeAbsolutePath(const SourceManager& SM, StringRef Path) {
+  llvm::SmallString<128> AbsolutePath(Path);
+  if (std::error_code EC =
+       SM.getFileManager().getVirtualFileSystem()->makeAbsolute(AbsolutePath))
+    llvm::errs() << "Warning: could not make absolute file: '" <<  EC.message()
+                 << '\n';
+  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
+  return AbsolutePath.str();
+}
+
+// Matches AST nodes that are expanded within the given AbsoluteFilePath.
+AST_POLYMORPHIC_MATCHER_P(isExpansionInFile,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
+                          std::string, AbsoluteFilePath) {
+  auto &SourceManager = Finder->getASTContext().getSourceManager();
+  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getLocStart());
+  if (ExpansionLoc.isInvalid())
+    return false;
+  auto FileEntry =
+      SourceManager.getFileEntryForID(SourceManager.getFileID(ExpansionLoc));
+  if (!FileEntry)
+    return false;
+  return MakeAbsolutePath(SourceManager, FileEntry->getName()) ==
+         AbsoluteFilePath;
+}
 
 class FindAllIncludes : public clang::PPCallbacks {
 public:
@@ -33,10 +80,11 @@ public:
                           StringRef FileName, bool IsAngled,
                           clang::CharSourceRange /*FilenameRange*/,
                           const clang::FileEntry * /*File*/,
-                          StringRef /*SearchPath*/, StringRef /*RelativePath*/,
+                          StringRef SearchPath, StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/) override {
     if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc)))
-      MoveTool->addIncludes(FileName, IsAngled, FileEntry->getName());
+      MoveTool->addIncludes(FileName, IsAngled, SearchPath,
+                            FileEntry->getName(), SM);
   }
 
 private:
@@ -65,16 +113,19 @@ void addOrMergeReplacement(const clang::tooling::Replacement &Replacement,
   }
 }
 
-bool IsInHeaderFile(const clang::SourceManager &SM, const clang::Decl *D,
-                    llvm::StringRef HeaderFile) {
-  if (HeaderFile.empty())
+bool isInHeaderFile(const clang::SourceManager &SM, const clang::Decl *D,
+                    llvm::StringRef OriginalRunningDirectory,
+                    llvm::StringRef OldHeader) {
+  if (OldHeader.empty())
     return false;
   auto ExpansionLoc = SM.getExpansionLoc(D->getLocStart());
   if (ExpansionLoc.isInvalid())
     return false;
 
-  if (const auto *FE = SM.getFileEntryForID(SM.getFileID(ExpansionLoc)))
-    return llvm::StringRef(FE->getName()).endswith(HeaderFile);
+  if (const auto *FE = SM.getFileEntryForID(SM.getFileID(ExpansionLoc))) {
+    return MakeAbsolutePath(SM, FE->getName()) ==
+           MakeAbsolutePath(OriginalRunningDirectory, OldHeader);
+  }
 
   return false;
 }
@@ -186,11 +237,12 @@ ClangMoveAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
   return MatchFinder.newASTConsumer();
 }
 
-
 ClangMoveTool::ClangMoveTool(
       const MoveDefinitionSpec &MoveSpec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements)
-      : Spec(MoveSpec), FileToReplacements(FileToReplacements) {
+      std::map<std::string, tooling::Replacements> &FileToReplacements,
+      llvm::StringRef OriginalRunningDirectory)
+      : Spec(MoveSpec), FileToReplacements(FileToReplacements),
+        OriginalRunningDirectory(OriginalRunningDirectory) {
   Spec.Name = llvm::StringRef(Spec.Name).ltrim(':');
   if (!Spec.NewHeader.empty())
     CCIncludes.push_back("#include \"" + Spec.NewHeader + "\"\n");
@@ -198,8 +250,10 @@ ClangMoveTool::ClangMoveTool(
 
 void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   std::string FullyQualifiedName = "::" + Spec.Name;
-  auto InOldHeader = isExpansionInFileMatching(Spec.OldHeader);
-  auto InOldCC = isExpansionInFileMatching(Spec.OldCC);
+  auto InOldHeader = isExpansionInFile(
+      MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader));
+  auto InOldCC = isExpansionInFile(
+      MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC));
   auto InOldFiles = anyOf(InOldHeader, InOldCC);
   auto InMovedClass =
       hasDeclContext(cxxRecordDecl(hasName(FullyQualifiedName)));
@@ -279,22 +333,31 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   }
 }
 
-void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
-                                llvm::StringRef FileName) {
+void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader,
+                                bool IsAngled,
+                                llvm::StringRef SearchPath,
+                                llvm::StringRef FileName,
+                                const SourceManager& SM) {
+  auto AbsoluteSearchPath = MakeAbsolutePath(SM, SearchPath);
   // FIXME: Add old.h to the new.cc/h when the new target has dependencies on
   // old.h/c. For instance, when moved class uses another class defined in
   // old.h, the old.h should be added in new.h.
-  if (!Spec.OldHeader.empty() &&
-      llvm::StringRef(Spec.OldHeader).endswith(IncludeHeader))
+  if (MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader) ==
+      MakeAbsolutePath(AbsoluteSearchPath, IncludeHeader))
     return;
 
   std::string IncludeLine =
       IsAngled ? ("#include <" + IncludeHeader + ">\n").str()
                : ("#include \"" + IncludeHeader + "\"\n").str();
-  if (!Spec.OldHeader.empty() && FileName.endswith(Spec.OldHeader))
+
+  std::string AbsolutePath = MakeAbsolutePath(SM, FileName);
+  if (MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader) ==
+      AbsolutePath) {
     HeaderIncludes.push_back(IncludeLine);
-  else if (!Spec.OldCC.empty() && FileName.endswith(Spec.OldCC))
+  } else if (MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC) ==
+             AbsolutePath) {
     CCIncludes.push_back(IncludeLine);
+  }
 }
 
 void ClangMoveTool::removeClassDefinitionInOldFiles() {
@@ -313,7 +376,8 @@ void ClangMoveTool::moveClassDefinitionToNewFiles() {
   std::vector<MovedDecl> NewHeaderDecls;
   std::vector<MovedDecl> NewCCDecls;
   for (const auto &MovedDecl : MovedDecls) {
-    if (IsInHeaderFile(*MovedDecl.SM, MovedDecl.Decl, Spec.OldHeader))
+    if (isInHeaderFile(*MovedDecl.SM, MovedDecl.Decl, OriginalRunningDirectory,
+                       Spec.OldHeader))
       NewHeaderDecls.push_back(MovedDecl);
     else
       NewCCDecls.push_back(MovedDecl);

@@ -17,6 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/Path.h"
 #include <set>
 #include <string>
 
@@ -24,6 +25,7 @@ using namespace clang;
 using namespace llvm;
 
 namespace {
+
 std::error_code CreateNewFile(const llvm::Twine &path) {
   int fd = 0;
   if (std::error_code ec =
@@ -38,17 +40,23 @@ cl::OptionCategory ClangMoveCategory("clang-move options");
 cl::opt<std::string> Name("name", cl::desc("The name of class being moved."),
                           cl::cat(ClangMoveCategory));
 
-cl::opt<std::string> OldHeader("old_header", cl::desc("Old header."),
-                               cl::cat(ClangMoveCategory));
+cl::opt<std::string>
+    OldHeader("old_header",
+              cl::desc("The relative/absolute file path of old header."),
+              cl::cat(ClangMoveCategory));
 
-cl::opt<std::string> OldCC("old_cc", cl::desc("Old CC file."),
-                           cl::cat(ClangMoveCategory));
+cl::opt<std::string>
+    OldCC("old_cc", cl::desc("The relative/absolute file path of old cc."),
+          cl::cat(ClangMoveCategory));
 
-cl::opt<std::string> NewHeader("new_header", cl::desc("New header."),
-                               cl::cat(ClangMoveCategory));
+cl::opt<std::string>
+    NewHeader("new_header",
+              cl::desc("The relative/absolute file path of new header."),
+              cl::cat(ClangMoveCategory));
 
-cl::opt<std::string> NewCC("new_cc", cl::desc("New CC file."),
-                           cl::cat(ClangMoveCategory));
+cl::opt<std::string>
+    NewCC("new_cc", cl::desc("The relative/absolute file path of new cc."),
+          cl::cat(ClangMoveCategory));
 
 cl::opt<std::string>
     Style("style",
@@ -71,8 +79,15 @@ int main(int argc, const char **argv) {
   Spec.NewHeader = NewHeader;
   Spec.OldCC = OldCC;
   Spec.NewCC = NewCC;
+
+  llvm::SmallString<128> InitialDirectory;
+  if (std::error_code EC = llvm::sys::fs::current_path(InitialDirectory))
+    llvm::report_fatal_error("Cannot detect current path: " +
+                             Twine(EC.message()));
+
   auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
-      Spec, Tool.getReplacements());
+      Spec, Tool.getReplacements(), InitialDirectory.str());
+
   int CodeStatus = Tool.run(Factory.get());
   if (CodeStatus)
     return CodeStatus;

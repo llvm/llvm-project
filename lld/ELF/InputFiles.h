@@ -151,6 +151,8 @@ public:
   InputSectionBase<ELFT> *getSection(const Elf_Sym &Sym) const;
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
+    if (SymbolIndex >= SymbolBodies.size())
+      fatal(getFilename(this) + ": invalid symbol index");
     return *SymbolBodies[SymbolIndex];
   }
 

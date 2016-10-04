@@ -3462,8 +3462,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       // pre-lowered to the correct types. This all depends upon WideVT not
       // being a legal type for the architecture and thus has to be split to
       // two arguments.
-      SDValue Args[] = { LHS, HiLHS, RHS, HiRHS };
-      SDValue Ret = ExpandLibCall(LC, WideVT, Args, 4, isSigned, dl);
+      SDValue Ret;
+      if(DAG.getDataLayout().isLittleEndian()) {
+        // Halves of WideVT are packed into registers in different order
+        // depending on platform endianness. This is usually handled by
+        // the C calling convention, but we can't defer to it in
+        // the legalizer.
+        SDValue Args[] = { LHS, HiLHS, RHS, HiRHS };
+        Ret = ExpandLibCall(LC, WideVT, Args, 4, isSigned, dl);
+      } else {
+        SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
+        Ret = ExpandLibCall(LC, WideVT, Args, 4, isSigned, dl);
+      }
       BottomHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT, Ret,
                                DAG.getIntPtrConstant(0, dl));
       TopHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT, Ret,

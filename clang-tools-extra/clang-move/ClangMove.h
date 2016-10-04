@@ -37,15 +37,20 @@ public:
   struct MoveDefinitionSpec {
     // A fully qualified name, e.g. "X", "a::X".
     std::string Name;
+    // The file path of old header, can be relative path and absolute path.
     std::string OldHeader;
+    // The file path of old cc, can be relative path and absolute path.
     std::string OldCC;
+    // The file path of new header, can be relative path and absolute path.
     std::string NewHeader;
+    // The file path of new cc, can be relative path and absolute path.
     std::string NewCC;
   };
 
   ClangMoveTool(
       const MoveDefinitionSpec &MoveSpec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements);
+      std::map<std::string, tooling::Replacements> &FileToReplacements,
+      llvm::StringRef OriginalRunningDirectory);
 
   void registerMatchers(ast_matchers::MatchFinder *Finder);
 
@@ -53,10 +58,20 @@ public:
 
   void onEndOfTranslationUnit() override;
 
-  // Add #includes from old.h/cc files. The FileName is where the #include
-  // comes from.
-  void addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
-                   llvm::StringRef FileName);
+  /// Add #includes from old.h/cc files.
+  ///
+  /// \param IncludeHeader The name of the file being included, as written in
+  /// the source code.
+  /// \param IsAngled Whether the file name was enclosed in angle brackets.
+  /// \param SearchPath The search path which was used to find the IncludeHeader
+  /// in the file system. It can be a relative path or an absolute path.
+  /// \param FileName The name of file where the IncludeHeader comes from.
+  /// \param SourceManager The SourceManager.
+  void addIncludes(llvm::StringRef IncludeHeader,
+                   bool IsAngled,
+                   llvm::StringRef SearchPath,
+                   llvm::StringRef FileName,
+                   const SourceManager& SM);
 
 private:
   void removeClassDefinitionInOldFiles();
@@ -74,14 +89,21 @@ private:
   std::vector<std::string> HeaderIncludes;
   // The #includes in old_cc.cc.
   std::vector<std::string> CCIncludes;
+  // The original working directory where the local clang-move binary runs.
+  //
+  // clang-move will change its current working directory to the build
+  // directory when analyzing the source file. We save the original working
+  // directory in order to get the absolute file path for the fields in Spec.
+  std::string OriginalRunningDirectory;
 };
 
 class ClangMoveAction : public clang::ASTFrontendAction {
 public:
   ClangMoveAction(
       const ClangMoveTool::MoveDefinitionSpec &spec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements)
-      : MoveTool(spec, FileToReplacements) {
+      std::map<std::string, tooling::Replacements> &FileToReplacements,
+      llvm::StringRef OriginalRunningDirectory)
+      : MoveTool(spec, FileToReplacements, OriginalRunningDirectory) {
     MoveTool.registerMatchers(&MatchFinder);
   }
 
@@ -100,16 +122,19 @@ class ClangMoveActionFactory : public tooling::FrontendActionFactory {
 public:
   ClangMoveActionFactory(
       const ClangMoveTool::MoveDefinitionSpec &Spec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements)
-      : Spec(Spec), FileToReplacements(FileToReplacements) {}
+      std::map<std::string, tooling::Replacements> &FileToReplacements,
+      llvm::StringRef OriginalRunningDirectory)
+      : Spec(Spec), FileToReplacements(FileToReplacements),
+        OriginalRunningDirectory(OriginalRunningDirectory) {}
 
   clang::FrontendAction *create() override {
-    return new ClangMoveAction(Spec, FileToReplacements);
+    return new ClangMoveAction(Spec, FileToReplacements, OriginalRunningDirectory);
   }
 
 private:
   const ClangMoveTool::MoveDefinitionSpec &Spec;
   std::map<std::string, tooling::Replacements> &FileToReplacements;
+  std::string OriginalRunningDirectory;
 };
 
 } // namespace move
