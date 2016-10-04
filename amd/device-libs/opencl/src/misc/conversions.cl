@@ -34,14 +34,21 @@ extern __attribute__((const)) uint __cvt_f16_rtz_f64(double);
     NOPN(2,TO,TI,S,R) \
     NOPN(,TO,TI,S,R)
 
-#define CAST_LIST_ x
-#define CAST_LIST_2 x.s0, x.s1
-#define CAST_LIST_3 CAST_LIST_2, x.s2
-#define CAST_LIST_4 CAST_LIST_3, x.s3
-#define CAST_LIST_8 CAST_LIST_4, x.s4, x.s5, x.s6, x.s7
-#define CAST_LIST_16 CAST_LIST_8, x.s8, x.s9, x.sa, x.sb, x.sc, x.sd, x.se, x.sf
+#define XLIST x
+#define XLIST2 x.s0, x.s1
+#define XLIST3 XLIST2, x.s2
+#define XLIST4 XLIST3, x.s3
+#define XLIST8 XLIST4, x.s4, x.s5, x.s6, x.s7
+#define XLIST16 XLIST8, x.s8, x.s9, x.sa, x.sb, x.sc, x.sd, x.se, x.sf
 
-#define CASTN(N,TO,TI,S,R)  ATTR TO##N convert_##TO##N##S##R(TI##N x)  {  return (TO##N)(CAST_LIST_##N); }
+#define YLIST y
+#define YLIST2 y.s0, y.s1
+#define YLIST3 YLIST2, y.s2
+#define YLIST4 YLIST3, y.s3
+#define YLIST8 YLIST4, y.s4, y.s5, y.s6, y.s7
+#define YLIST16 YLIST8, y.s8, y.s9, y.sa, y.sb, y.sc, y.sd, y.se, y.sf
+
+#define CASTN(N,TO,TI,S,R)  ATTR TO##N convert_##TO##N##S##R(TI##N x)  {  return (TO##N)(XLIST##N); }
 
 #define CAST(TO,TI,S,R) \
     CASTN(16,TO,TI,S,R) \
@@ -176,11 +183,47 @@ convert_##TO##N##S##R(TI##N x) \
     MMN(max,2,TO,TI,S,R) \
     MMN(max,,TO,TI,S,R)
 
+#define CLAMPN(N,TO,TI,S,R) \
+ATTR TO##N \
+convert_##TO##N##S##R(TI##N x) \
+{ \
+    return convert_##TO##N(min(max(x, (TI##N) TO##_##TI##_lb), (TI##N) TO##_##TI##_ub)); \
+}
+
+#define CLAMP(TO,TI,S,R) \
+    CLAMPN(16,TO,TI,S,R) \
+    CLAMPN(8,TO,TI,S,R) \
+    CLAMPN(4,TO,TI,S,R) \
+    CLAMPN(3,TO,TI,S,R) \
+    CLAMPN(2,TO,TI,S,R) \
+    CLAMPN(,TO,TI,S,R)
+
+#define F2IEN(E,N,TO,TI,S,R) \
+ATTR TO##N \
+convert_##TO##N##S##R(TI##N x) \
+{ \
+    return convert_##TO##N##_sat##E(x); \
+}
+
+#define F2IE(E,TO,TI,S,R) \
+    F2IEN(E,16,TO,TI,S,R) \
+    F2IEN(E,8,TO,TI,S,R) \
+    F2IEN(E,4,TO,TI,S,R) \
+    F2IEN(E,3,TO,TI,S,R) \
+    F2IEN(E,2,TO,TI,S,R) \
+    F2IEN(E,,TO,TI,S,R)
+
+#define EF2I(TO,TI,S,R) F2IE(_rte,TO,TI,S,R)
+#define NF2I(TO,TI,S,R) F2IE(_rtn,TO,TI,S,R)
+#define PF2I(TO,TI,S,R) F2IE(_rtp,TO,TI,S,R)
+#define ZF2I(TO,TI,S,R) F2IE(_rtz,TO,TI,S,R)
+
 #define CLAMPFN(F,N,TO,TI,S,R) \
 ATTR TO##N \
 convert_##TO##N##S##R(TI##N x) \
 { \
-    return convert_##TO##N(min(max(F(x), (TI##N) TO##_##TI##_lb), (TI##N) TO##_##TI##_ub)); \
+    x = min(max(F(x), (TI##N) TO##_##TI##_lb), (TI##N) TO##_##TI##_ub); \
+    return (TO##N)(XLIST##N); \
 }
 
 #define CLAMPF(F,TO,TI,S,R) \
@@ -191,10 +234,10 @@ convert_##TO##N##S##R(TI##N x) \
     CLAMPFN(F,2,TO,TI,S,R) \
     CLAMPFN(F,,TO,TI,S,R)
 
-#define CLAMP(TO,TI,S,R) CLAMPF(,TO,TI,S,R)
 #define ECLAMP(TO,TI,S,R) CLAMPF(rint,TO,TI,S,R)
 #define NCLAMP(TO,TI,S,R) CLAMPF(floor,TO,TI,S,R)
 #define PCLAMP(TO,TI,S,R) CLAMPF(ceil,TO,TI,S,R)
+#define ZCLAMP(TO,TI,S,R) CLAMPF(,TO,TI,S,R)
 
 #define SEL_(A,B,C) C ? B : A
 #define SEL_2(A,B,C) select(A,B,C)
@@ -211,15 +254,23 @@ convert_##TO##N##S##R(TI##N x) \
 #define nou_ulong long
 
 #define CMP(N,TO,TI,X,OP,B) \
-    C(convert_,C(nou_##TO, N))(X OP (TI) TO##_##TI##_##B)
+    C(convert_,C(nou_##TO, N))(X OP (TI##N) TO##_##TI##_##B)
+
+#define CMP_(TO,TI,X,OP,B) (X OP (TI) TO##_##TI##_##B)
+#define CMP_2(TO,TI,X,OP,B) CMP(2,TO,TI,X,OP,B)
+#define CMP_3(TO,TI,X,OP,B) CMP(3,TO,TI,X,OP,B)
+#define CMP_4(TO,TI,X,OP,B) CMP(4,TO,TI,X,OP,B)
+#define CMP_8(TO,TI,X,OP,B) CMP(8,TO,TI,X,OP,B)
+#define CMP_16(TO,TI,X,OP,B) CMP(16,TO,TI,X,OP,B)
 
 #define CLAMP2FN(F,N,TO,TI,S,R) \
 ATTR TO##N \
 convert_##TO##N##S##R(TI##N x) \
 { \
-    TO##N y = convert_##TO##N(F(x)); \
-    y = SEL_##N(y, (TO##N) TO##_minbnd, CMP(N,TO,TI,x,>,ub)); \
-    return SEL_##N(y, (TO##N) TO##_maxbnd, CMP(N,TO,TI,x,<,lb)); \
+    TI##N y = min(max(F(x), (TI##N) TO##_##TI##_lb), (TI##N) TO##_##TI##_ub); \
+    TO##N z = (TO##N)(YLIST##N); \
+    z = SEL_##N(z, (TO##N) TO##_minbnd, CMP_##N(TO,TI,x,>,ub)); \
+    return SEL_##N(z, (TO##N) TO##_maxbnd, CMP_##N(TO,TI,x,<,lb)); \
 }
 
 #define CLAMP2F(F,TO,TI,S,R) \
@@ -230,29 +281,10 @@ convert_##TO##N##S##R(TI##N x) \
     CLAMP2FN(F,2,TO,TI,S,R) \
     CLAMP2FN(F,,TO,TI,S,R)
 
-#define CLAMP2(TO,TI,S,R) CLAMP2F(,TO,TI,S,R)
 #define ECLAMP2(TO,TI,S,R) CLAMP2F(rint,TO,TI,S,R)
 #define NCLAMP2(TO,TI,S,R) CLAMP2F(floor,TO,TI,S,R)
 #define PCLAMP2(TO,TI,S,R) CLAMP2F(ceil,TO,TI,S,R)
-
-#define CASTFN(F,N,TO,TI,S,R) \
-ATTR TO##N \
-convert_##TO##N##S##R(TI##N x) \
-{ \
-    return convert_##TO##N(F(x)); \
-}
-
-#define CASTF(F,TO,TI,S,R) \
-    CASTFN(F,16,TO,TI,S,R) \
-    CASTFN(F,8,TO,TI,S,R) \
-    CASTFN(F,4,TO,TI,S,R) \
-    CASTFN(F,3,TO,TI,S,R) \
-    CASTFN(F,2,TO,TI,S,R) \
-    CASTFN(F,,TO,TI,S,R)
-
-#define ECAST(TO,TI,S,R) CASTF(rint,TO,TI,S,R)
-#define NCAST(TO,TI,S,R) CASTF(floor,TO,TI,S,R)
-#define PCAST(TO,TI,S,R) CASTF(ceil,TO,TI,S,R)
+#define ZCLAMP2(TO,TI,S,R) CLAMP2F(,TO,TI,S,R)
 
 #define EXPAND2(TO,TI,S,R) \
 ATTR TO##2 \
@@ -381,36 +413,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_char_rtn_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_char_rtp_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_char_rtz_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_char_float(TO,TI,S,R) 	CAST(TO,TI,S,R)
-#define G_char_sat_float(TO,TI,S,R)     CLAMP(TO,TI,S,R)
+#define G_char_float(TO,TI,S,R) 	ZF2I(TO,TI,S,R)
+#define G_char_sat_float(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 #define G_char_sat_rte_float(TO,TI,S,R) ECLAMP(TO,TI,S,R)
 #define G_char_sat_rtn_float(TO,TI,S,R) NCLAMP(TO,TI,S,R)
 #define G_char_sat_rtp_float(TO,TI,S,R) PCLAMP(TO,TI,S,R)
-#define G_char_sat_rtz_float(TO,TI,S,R) CLAMP(TO,TI,S,R)
-#define G_char_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_char_rtn_float(TO,TI,S,R)     NCAST(TO,TI,S,R)
-#define G_char_rtp_float(TO,TI,S,R)     PCAST(TO,TI,S,R)
-#define G_char_rtz_float(TO,TI,S,R)     CAST(TO,TI,S,R)
-#define G_char_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_char_sat_double(TO,TI,S,R)    CLAMP(TO,TI,S,R)
+#define G_char_sat_rtz_float(TO,TI,S,R) ZCLAMP(TO,TI,S,R)
+#define G_char_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_char_rtn_float(TO,TI,S,R)     NF2I(TO,TI,S,R)
+#define G_char_rtp_float(TO,TI,S,R)     PF2I(TO,TI,S,R)
+#define G_char_rtz_float(TO,TI,S,R)     ZF2I(TO,TI,S,R)
+#define G_char_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_char_sat_double(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 #define G_char_sat_rte_double(TO,TI,S,R)        ECLAMP(TO,TI,S,R)
 #define G_char_sat_rtn_double(TO,TI,S,R)        NCLAMP(TO,TI,S,R)
 #define G_char_sat_rtp_double(TO,TI,S,R)        PCLAMP(TO,TI,S,R)
-#define G_char_sat_rtz_double(TO,TI,S,R)        CLAMP(TO,TI,S,R)
-#define G_char_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_char_rtn_double(TO,TI,S,R)    NCAST(TO,TI,S,R)
-#define G_char_rtp_double(TO,TI,S,R)    PCAST(TO,TI,S,R)
-#define G_char_rtz_double(TO,TI,S,R)    CAST(TO,TI,S,R)
-#define G_char_half(TO,TI,S,R)  	CAST(TO,TI,S,R)
-#define G_char_sat_half(TO,TI,S,R)      CLAMP(TO,TI,S,R)
+#define G_char_sat_rtz_double(TO,TI,S,R)        ZCLAMP(TO,TI,S,R)
+#define G_char_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_char_rtn_double(TO,TI,S,R)    NF2I(TO,TI,S,R)
+#define G_char_rtp_double(TO,TI,S,R)    PF2I(TO,TI,S,R)
+#define G_char_rtz_double(TO,TI,S,R)    ZF2I(TO,TI,S,R)
+#define G_char_half(TO,TI,S,R)  	ZF2I(TO,TI,S,R)
+#define G_char_sat_half(TO,TI,S,R)      ZF2I(TO,TI,S,R)
 #define G_char_sat_rte_half(TO,TI,S,R)  ECLAMP(TO,TI,S,R)
 #define G_char_sat_rtn_half(TO,TI,S,R)  NCLAMP(TO,TI,S,R)
 #define G_char_sat_rtp_half(TO,TI,S,R)  PCLAMP(TO,TI,S,R)
-#define G_char_sat_rtz_half(TO,TI,S,R)  CLAMP(TO,TI,S,R)
-#define G_char_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_char_rtn_half(TO,TI,S,R)      NCAST(TO,TI,S,R)
-#define G_char_rtp_half(TO,TI,S,R)      PCAST(TO,TI,S,R)
-#define G_char_rtz_half(TO,TI,S,R)      CAST(TO,TI,S,R)
+#define G_char_sat_rtz_half(TO,TI,S,R)  ZCLAMP(TO,TI,S,R)
+#define G_char_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_char_rtn_half(TO,TI,S,R)      NF2I(TO,TI,S,R)
+#define G_char_rtp_half(TO,TI,S,R)      PF2I(TO,TI,S,R)
+#define G_char_rtz_half(TO,TI,S,R)      ZF2I(TO,TI,S,R)
 
 #define G_uchar_char(TO,TI,S,R) 	CAST(TO,TI,S,R)
 #define G_uchar_sat_char(TO,TI,S,R)     MAX(TO,TI,S,R)
@@ -492,36 +524,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_uchar_rtn_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_uchar_rtp_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_uchar_rtz_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uchar_float(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uchar_sat_float(TO,TI,S,R)    CLAMP(TO,TI,S,R)
+#define G_uchar_float(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_uchar_sat_float(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 #define G_uchar_sat_rte_float(TO,TI,S,R)        ECLAMP(TO,TI,S,R)
 #define G_uchar_sat_rtn_float(TO,TI,S,R)        NCLAMP(TO,TI,S,R)
 #define G_uchar_sat_rtp_float(TO,TI,S,R)        PCLAMP(TO,TI,S,R)
-#define G_uchar_sat_rtz_float(TO,TI,S,R)        CLAMP(TO,TI,S,R)
-#define G_uchar_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_uchar_rtn_float(TO,TI,S,R)    NCAST(TO,TI,S,R)
-#define G_uchar_rtp_float(TO,TI,S,R)    PCAST(TO,TI,S,R)
-#define G_uchar_rtz_float(TO,TI,S,R)    CAST(TO,TI,S,R)
-#define G_uchar_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uchar_sat_double(TO,TI,S,R)   CLAMP(TO,TI,S,R)
+#define G_uchar_sat_rtz_float(TO,TI,S,R)        ZCLAMP(TO,TI,S,R)
+#define G_uchar_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_uchar_rtn_float(TO,TI,S,R)    NF2I(TO,TI,S,R)
+#define G_uchar_rtp_float(TO,TI,S,R)    PF2I(TO,TI,S,R)
+#define G_uchar_rtz_float(TO,TI,S,R)    ZF2I(TO,TI,S,R)
+#define G_uchar_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_uchar_sat_double(TO,TI,S,R)   ZF2I(TO,TI,S,R)
 #define G_uchar_sat_rte_double(TO,TI,S,R)       ECLAMP(TO,TI,S,R)
 #define G_uchar_sat_rtn_double(TO,TI,S,R)       NCLAMP(TO,TI,S,R)
 #define G_uchar_sat_rtp_double(TO,TI,S,R)       PCLAMP(TO,TI,S,R)
-#define G_uchar_sat_rtz_double(TO,TI,S,R)       CLAMP(TO,TI,S,R)
-#define G_uchar_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_uchar_rtn_double(TO,TI,S,R)   NCAST(TO,TI,S,R)
-#define G_uchar_rtp_double(TO,TI,S,R)   PCAST(TO,TI,S,R)
-#define G_uchar_rtz_double(TO,TI,S,R)   CAST(TO,TI,S,R)
-#define G_uchar_half(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uchar_sat_half(TO,TI,S,R)     CLAMP(TO,TI,S,R)
+#define G_uchar_sat_rtz_double(TO,TI,S,R)       ZCLAMP(TO,TI,S,R)
+#define G_uchar_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_uchar_rtn_double(TO,TI,S,R)   NF2I(TO,TI,S,R)
+#define G_uchar_rtp_double(TO,TI,S,R)   PF2I(TO,TI,S,R)
+#define G_uchar_rtz_double(TO,TI,S,R)   ZF2I(TO,TI,S,R)
+#define G_uchar_half(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_uchar_sat_half(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 #define G_uchar_sat_rte_half(TO,TI,S,R) ECLAMP(TO,TI,S,R)
 #define G_uchar_sat_rtn_half(TO,TI,S,R) NCLAMP(TO,TI,S,R)
 #define G_uchar_sat_rtp_half(TO,TI,S,R) PCLAMP(TO,TI,S,R)
-#define G_uchar_sat_rtz_half(TO,TI,S,R) CLAMP(TO,TI,S,R)
-#define G_uchar_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_uchar_rtn_half(TO,TI,S,R)     NCAST(TO,TI,S,R)
-#define G_uchar_rtp_half(TO,TI,S,R)     PCAST(TO,TI,S,R)
-#define G_uchar_rtz_half(TO,TI,S,R)     CAST(TO,TI,S,R)
+#define G_uchar_sat_rtz_half(TO,TI,S,R) ZCLAMP(TO,TI,S,R)
+#define G_uchar_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_uchar_rtn_half(TO,TI,S,R)     NF2I(TO,TI,S,R)
+#define G_uchar_rtp_half(TO,TI,S,R)     PF2I(TO,TI,S,R)
+#define G_uchar_rtz_half(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 
 #define G_short_char(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_short_sat_char(TO,TI,S,R)	CAST(TO,TI,S,R)
@@ -603,36 +635,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_short_rtn_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_short_rtp_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_short_rtz_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_short_float(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_short_sat_float(TO,TI,S,R)    CLAMP(TO,TI,S,R)
+#define G_short_float(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_short_sat_float(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 #define G_short_sat_rte_float(TO,TI,S,R)        ECLAMP(TO,TI,S,R)
 #define G_short_sat_rtn_float(TO,TI,S,R)        NCLAMP(TO,TI,S,R)
 #define G_short_sat_rtp_float(TO,TI,S,R)        PCLAMP(TO,TI,S,R)
-#define G_short_sat_rtz_float(TO,TI,S,R)        CLAMP(TO,TI,S,R)
-#define G_short_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_short_rtn_float(TO,TI,S,R)    NCAST(TO,TI,S,R)
-#define G_short_rtp_float(TO,TI,S,R)    PCAST(TO,TI,S,R)
-#define G_short_rtz_float(TO,TI,S,R)    CAST(TO,TI,S,R)
-#define G_short_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_short_sat_double(TO,TI,S,R)   CLAMP(TO,TI,S,R)
+#define G_short_sat_rtz_float(TO,TI,S,R)        ZCLAMP(TO,TI,S,R)
+#define G_short_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_short_rtn_float(TO,TI,S,R)    NF2I(TO,TI,S,R)
+#define G_short_rtp_float(TO,TI,S,R)    PF2I(TO,TI,S,R)
+#define G_short_rtz_float(TO,TI,S,R)    ZF2I(TO,TI,S,R)
+#define G_short_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_short_sat_double(TO,TI,S,R)   ZF2I(TO,TI,S,R)
 #define G_short_sat_rte_double(TO,TI,S,R)       ECLAMP(TO,TI,S,R)
 #define G_short_sat_rtn_double(TO,TI,S,R)       NCLAMP(TO,TI,S,R)
 #define G_short_sat_rtp_double(TO,TI,S,R)       PCLAMP(TO,TI,S,R)
-#define G_short_sat_rtz_double(TO,TI,S,R)       CLAMP(TO,TI,S,R)
-#define G_short_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_short_rtn_double(TO,TI,S,R)   NCAST(TO,TI,S,R)
-#define G_short_rtp_double(TO,TI,S,R)   PCAST(TO,TI,S,R)
-#define G_short_rtz_double(TO,TI,S,R)   CAST(TO,TI,S,R)
-#define G_short_half(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_short_sat_half(TO,TI,S,R)     CLAMP2(TO,TI,S,R)
+#define G_short_sat_rtz_double(TO,TI,S,R)       ZCLAMP(TO,TI,S,R)
+#define G_short_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_short_rtn_double(TO,TI,S,R)   NF2I(TO,TI,S,R)
+#define G_short_rtp_double(TO,TI,S,R)   PF2I(TO,TI,S,R)
+#define G_short_rtz_double(TO,TI,S,R)   ZF2I(TO,TI,S,R)
+#define G_short_half(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_short_sat_half(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 #define G_short_sat_rte_half(TO,TI,S,R) ECLAMP2(TO,TI,S,R)
 #define G_short_sat_rtn_half(TO,TI,S,R) NCLAMP2(TO,TI,S,R)
 #define G_short_sat_rtp_half(TO,TI,S,R) PCLAMP2(TO,TI,S,R)
-#define G_short_sat_rtz_half(TO,TI,S,R) CLAMP2(TO,TI,S,R)
-#define G_short_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_short_rtn_half(TO,TI,S,R)     NCAST(TO,TI,S,R)
-#define G_short_rtp_half(TO,TI,S,R)     PCAST(TO,TI,S,R)
-#define G_short_rtz_half(TO,TI,S,R)     CAST(TO,TI,S,R)
+#define G_short_sat_rtz_half(TO,TI,S,R) ZCLAMP2(TO,TI,S,R)
+#define G_short_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_short_rtn_half(TO,TI,S,R)     NF2I(TO,TI,S,R)
+#define G_short_rtp_half(TO,TI,S,R)     PF2I(TO,TI,S,R)
+#define G_short_rtz_half(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 
 #define G_ushort_char(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_ushort_sat_char(TO,TI,S,R)    MAX(TO,TI,S,R)
@@ -714,36 +746,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_ushort_rtn_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_ushort_rtp_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_ushort_rtz_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_ushort_float(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_ushort_sat_float(TO,TI,S,R)   CLAMP(TO,TI,S,R)
+#define G_ushort_float(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_ushort_sat_float(TO,TI,S,R)   ZF2I(TO,TI,S,R)
 #define G_ushort_sat_rte_float(TO,TI,S,R)       ECLAMP(TO,TI,S,R)
 #define G_ushort_sat_rtn_float(TO,TI,S,R)       NCLAMP(TO,TI,S,R)
 #define G_ushort_sat_rtp_float(TO,TI,S,R)       PCLAMP(TO,TI,S,R)
-#define G_ushort_sat_rtz_float(TO,TI,S,R)       CLAMP(TO,TI,S,R)
-#define G_ushort_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_ushort_rtn_float(TO,TI,S,R)   NCAST(TO,TI,S,R)
-#define G_ushort_rtp_float(TO,TI,S,R)   PCAST(TO,TI,S,R)
-#define G_ushort_rtz_float(TO,TI,S,R)   CAST(TO,TI,S,R)
-#define G_ushort_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_ushort_sat_double(TO,TI,S,R)  CLAMP(TO,TI,S,R)
+#define G_ushort_sat_rtz_float(TO,TI,S,R)       ZCLAMP(TO,TI,S,R)
+#define G_ushort_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_ushort_rtn_float(TO,TI,S,R)   NF2I(TO,TI,S,R)
+#define G_ushort_rtp_float(TO,TI,S,R)   PF2I(TO,TI,S,R)
+#define G_ushort_rtz_float(TO,TI,S,R)   ZF2I(TO,TI,S,R)
+#define G_ushort_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_ushort_sat_double(TO,TI,S,R)  ZF2I(TO,TI,S,R)
 #define G_ushort_sat_rte_double(TO,TI,S,R)      ECLAMP(TO,TI,S,R)
 #define G_ushort_sat_rtn_double(TO,TI,S,R)      NCLAMP(TO,TI,S,R)
 #define G_ushort_sat_rtp_double(TO,TI,S,R)      PCLAMP(TO,TI,S,R)
-#define G_ushort_sat_rtz_double(TO,TI,S,R)      CLAMP(TO,TI,S,R)
-#define G_ushort_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_ushort_rtn_double(TO,TI,S,R)  NCAST(TO,TI,S,R)
-#define G_ushort_rtp_double(TO,TI,S,R)  PCAST(TO,TI,S,R)
-#define G_ushort_rtz_double(TO,TI,S,R)  CAST(TO,TI,S,R)
-#define G_ushort_half(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_ushort_sat_half(TO,TI,S,R)    CLAMP2(TO,TI,S,R)
+#define G_ushort_sat_rtz_double(TO,TI,S,R)      ZCLAMP(TO,TI,S,R)
+#define G_ushort_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_ushort_rtn_double(TO,TI,S,R)  NF2I(TO,TI,S,R)
+#define G_ushort_rtp_double(TO,TI,S,R)  PF2I(TO,TI,S,R)
+#define G_ushort_rtz_double(TO,TI,S,R)  ZF2I(TO,TI,S,R)
+#define G_ushort_half(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_ushort_sat_half(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 #define G_ushort_sat_rte_half(TO,TI,S,R)        ECLAMP2(TO,TI,S,R)
 #define G_ushort_sat_rtn_half(TO,TI,S,R)        NCLAMP2(TO,TI,S,R)
 #define G_ushort_sat_rtp_half(TO,TI,S,R)        PCLAMP2(TO,TI,S,R)
-#define G_ushort_sat_rtz_half(TO,TI,S,R)        CLAMP2(TO,TI,S,R)
-#define G_ushort_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_ushort_rtn_half(TO,TI,S,R)    NCAST(TO,TI,S,R)
-#define G_ushort_rtp_half(TO,TI,S,R)    PCAST(TO,TI,S,R)
-#define G_ushort_rtz_half(TO,TI,S,R)    CAST(TO,TI,S,R)
+#define G_ushort_sat_rtz_half(TO,TI,S,R)        ZCLAMP2(TO,TI,S,R)
+#define G_ushort_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_ushort_rtn_half(TO,TI,S,R)    NF2I(TO,TI,S,R)
+#define G_ushort_rtp_half(TO,TI,S,R)    PF2I(TO,TI,S,R)
+#define G_ushort_rtz_half(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 
 #define G_int_char(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_int_sat_char(TO,TI,S,R)	CAST(TO,TI,S,R)
@@ -825,36 +857,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_int_rtn_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_int_rtp_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_int_rtz_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_int_float(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_int_sat_float(TO,TI,S,R)      CLAMP2(TO,TI,S,R)
+#define G_int_float(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_int_sat_float(TO,TI,S,R)      ZF2I(TO,TI,S,R)
 #define G_int_sat_rte_float(TO,TI,S,R)  ECLAMP2(TO,TI,S,R)
 #define G_int_sat_rtn_float(TO,TI,S,R)  NCLAMP2(TO,TI,S,R)
 #define G_int_sat_rtp_float(TO,TI,S,R)  PCLAMP2(TO,TI,S,R)
-#define G_int_sat_rtz_float(TO,TI,S,R)  CLAMP2(TO,TI,S,R)
-#define G_int_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_int_rtn_float(TO,TI,S,R)      NCAST(TO,TI,S,R)
-#define G_int_rtp_float(TO,TI,S,R)      PCAST(TO,TI,S,R)
-#define G_int_rtz_float(TO,TI,S,R)      CAST(TO,TI,S,R)
-#define G_int_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_int_sat_double(TO,TI,S,R)     CLAMP(TO,TI,S,R)
+#define G_int_sat_rtz_float(TO,TI,S,R)  ZCLAMP2(TO,TI,S,R)
+#define G_int_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_int_rtn_float(TO,TI,S,R)      NF2I(TO,TI,S,R)
+#define G_int_rtp_float(TO,TI,S,R)      PF2I(TO,TI,S,R)
+#define G_int_rtz_float(TO,TI,S,R)      ZF2I(TO,TI,S,R)
+#define G_int_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_int_sat_double(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 #define G_int_sat_rte_double(TO,TI,S,R) ECLAMP(TO,TI,S,R)
 #define G_int_sat_rtn_double(TO,TI,S,R) NCLAMP(TO,TI,S,R)
 #define G_int_sat_rtp_double(TO,TI,S,R) PCLAMP(TO,TI,S,R)
-#define G_int_sat_rtz_double(TO,TI,S,R) CLAMP(TO,TI,S,R)
-#define G_int_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_int_rtn_double(TO,TI,S,R)     NCAST(TO,TI,S,R)
-#define G_int_rtp_double(TO,TI,S,R)     PCAST(TO,TI,S,R)
-#define G_int_rtz_double(TO,TI,S,R)     CAST(TO,TI,S,R)
-#define G_int_half(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_int_sat_half(TO,TI,S,R)       CLAMP2(TO,TI,S,R)
+#define G_int_sat_rtz_double(TO,TI,S,R) ZCLAMP(TO,TI,S,R)
+#define G_int_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_int_rtn_double(TO,TI,S,R)     NF2I(TO,TI,S,R)
+#define G_int_rtp_double(TO,TI,S,R)     PF2I(TO,TI,S,R)
+#define G_int_rtz_double(TO,TI,S,R)     ZF2I(TO,TI,S,R)
+#define G_int_half(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_int_sat_half(TO,TI,S,R)       ZF2I(TO,TI,S,R)
 #define G_int_sat_rte_half(TO,TI,S,R)   ECLAMP2(TO,TI,S,R)
 #define G_int_sat_rtn_half(TO,TI,S,R)   NCLAMP2(TO,TI,S,R)
 #define G_int_sat_rtp_half(TO,TI,S,R)   PCLAMP2(TO,TI,S,R)
-#define G_int_sat_rtz_half(TO,TI,S,R)   CLAMP2(TO,TI,S,R)
-#define G_int_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_int_rtn_half(TO,TI,S,R)       NCAST(TO,TI,S,R)
-#define G_int_rtp_half(TO,TI,S,R)       PCAST(TO,TI,S,R)
-#define G_int_rtz_half(TO,TI,S,R)       CAST(TO,TI,S,R)
+#define G_int_sat_rtz_half(TO,TI,S,R)   ZCLAMP2(TO,TI,S,R)
+#define G_int_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_int_rtn_half(TO,TI,S,R)       NF2I(TO,TI,S,R)
+#define G_int_rtp_half(TO,TI,S,R)       PF2I(TO,TI,S,R)
+#define G_int_rtz_half(TO,TI,S,R)       ZF2I(TO,TI,S,R)
 
 #define G_uint_char(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_uint_sat_char(TO,TI,S,R)      MAX(TO,TI,S,R)
@@ -936,36 +968,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_uint_rtn_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_uint_rtp_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_uint_rtz_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uint_float(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uint_sat_float(TO,TI,S,R)     CLAMP2(TO,TI,S,R)
+#define G_uint_float(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_uint_sat_float(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 #define G_uint_sat_rte_float(TO,TI,S,R) ECLAMP2(TO,TI,S,R)
 #define G_uint_sat_rtn_float(TO,TI,S,R) NCLAMP2(TO,TI,S,R)
 #define G_uint_sat_rtp_float(TO,TI,S,R) PCLAMP2(TO,TI,S,R)
-#define G_uint_sat_rtz_float(TO,TI,S,R) CLAMP2(TO,TI,S,R)
-#define G_uint_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_uint_rtn_float(TO,TI,S,R)     NCAST(TO,TI,S,R)
-#define G_uint_rtp_float(TO,TI,S,R)     PCAST(TO,TI,S,R)
-#define G_uint_rtz_float(TO,TI,S,R)     CAST(TO,TI,S,R)
-#define G_uint_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uint_sat_double(TO,TI,S,R)    CLAMP(TO,TI,S,R)
+#define G_uint_sat_rtz_float(TO,TI,S,R) ZCLAMP2(TO,TI,S,R)
+#define G_uint_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_uint_rtn_float(TO,TI,S,R)     NF2I(TO,TI,S,R)
+#define G_uint_rtp_float(TO,TI,S,R)     PF2I(TO,TI,S,R)
+#define G_uint_rtz_float(TO,TI,S,R)     ZF2I(TO,TI,S,R)
+#define G_uint_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_uint_sat_double(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 #define G_uint_sat_rte_double(TO,TI,S,R)        ECLAMP(TO,TI,S,R)
 #define G_uint_sat_rtn_double(TO,TI,S,R)        NCLAMP(TO,TI,S,R)
 #define G_uint_sat_rtp_double(TO,TI,S,R)        PCLAMP(TO,TI,S,R)
-#define G_uint_sat_rtz_double(TO,TI,S,R)        CLAMP(TO,TI,S,R)
-#define G_uint_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_uint_rtn_double(TO,TI,S,R)    NCAST(TO,TI,S,R)
-#define G_uint_rtp_double(TO,TI,S,R)    PCAST(TO,TI,S,R)
-#define G_uint_rtz_double(TO,TI,S,R)    CAST(TO,TI,S,R)
-#define G_uint_half(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_uint_sat_half(TO,TI,S,R)      CLAMP2(TO,TI,S,R)
+#define G_uint_sat_rtz_double(TO,TI,S,R)        ZCLAMP(TO,TI,S,R)
+#define G_uint_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_uint_rtn_double(TO,TI,S,R)    NF2I(TO,TI,S,R)
+#define G_uint_rtp_double(TO,TI,S,R)    PF2I(TO,TI,S,R)
+#define G_uint_rtz_double(TO,TI,S,R)    ZF2I(TO,TI,S,R)
+#define G_uint_half(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_uint_sat_half(TO,TI,S,R)      ZF2I(TO,TI,S,R)
 #define G_uint_sat_rte_half(TO,TI,S,R)  ECLAMP2(TO,TI,S,R)
 #define G_uint_sat_rtn_half(TO,TI,S,R)  NCLAMP2(TO,TI,S,R)
 #define G_uint_sat_rtp_half(TO,TI,S,R)  PCLAMP2(TO,TI,S,R)
-#define G_uint_sat_rtz_half(TO,TI,S,R)  CLAMP2(TO,TI,S,R)
-#define G_uint_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_uint_rtn_half(TO,TI,S,R)      NCAST(TO,TI,S,R)
-#define G_uint_rtp_half(TO,TI,S,R)      PCAST(TO,TI,S,R)
-#define G_uint_rtz_half(TO,TI,S,R)      CAST(TO,TI,S,R)
+#define G_uint_sat_rtz_half(TO,TI,S,R)  ZCLAMP2(TO,TI,S,R)
+#define G_uint_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_uint_rtn_half(TO,TI,S,R)      NF2I(TO,TI,S,R)
+#define G_uint_rtp_half(TO,TI,S,R)      PF2I(TO,TI,S,R)
+#define G_uint_rtz_half(TO,TI,S,R)      ZF2I(TO,TI,S,R)
 
 #define G_long_char(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_long_sat_char(TO,TI,S,R)	CAST(TO,TI,S,R)
@@ -1047,36 +1079,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_long_rtn_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_long_rtp_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_long_rtz_ulong(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_long_float(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_long_sat_float(TO,TI,S,R)     CLAMP2(TO,TI,S,R)
+#define G_long_float(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_long_sat_float(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 #define G_long_sat_rte_float(TO,TI,S,R) ECLAMP2(TO,TI,S,R)
 #define G_long_sat_rtn_float(TO,TI,S,R) NCLAMP2(TO,TI,S,R)
 #define G_long_sat_rtp_float(TO,TI,S,R) PCLAMP2(TO,TI,S,R)
-#define G_long_sat_rtz_float(TO,TI,S,R) CLAMP2(TO,TI,S,R)
-#define G_long_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_long_rtn_float(TO,TI,S,R)     NCAST(TO,TI,S,R)
-#define G_long_rtp_float(TO,TI,S,R)     PCAST(TO,TI,S,R)
-#define G_long_rtz_float(TO,TI,S,R)     CAST(TO,TI,S,R)
-#define G_long_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_long_sat_double(TO,TI,S,R)    CLAMP2(TO,TI,S,R)
+#define G_long_sat_rtz_float(TO,TI,S,R) ZCLAMP2(TO,TI,S,R)
+#define G_long_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_long_rtn_float(TO,TI,S,R)     NF2I(TO,TI,S,R)
+#define G_long_rtp_float(TO,TI,S,R)     PF2I(TO,TI,S,R)
+#define G_long_rtz_float(TO,TI,S,R)     ZF2I(TO,TI,S,R)
+#define G_long_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_long_sat_double(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 #define G_long_sat_rte_double(TO,TI,S,R)        ECLAMP2(TO,TI,S,R)
 #define G_long_sat_rtn_double(TO,TI,S,R)        NCLAMP2(TO,TI,S,R)
 #define G_long_sat_rtp_double(TO,TI,S,R)        PCLAMP2(TO,TI,S,R)
-#define G_long_sat_rtz_double(TO,TI,S,R)        CLAMP2(TO,TI,S,R)
-#define G_long_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_long_rtn_double(TO,TI,S,R)    NCAST(TO,TI,S,R)
-#define G_long_rtp_double(TO,TI,S,R)    PCAST(TO,TI,S,R)
-#define G_long_rtz_double(TO,TI,S,R)    CAST(TO,TI,S,R)
-#define G_long_half(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_long_sat_half(TO,TI,S,R)      CLAMP2(TO,TI,S,R)
+#define G_long_sat_rtz_double(TO,TI,S,R)        ZCLAMP2(TO,TI,S,R)
+#define G_long_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_long_rtn_double(TO,TI,S,R)    NF2I(TO,TI,S,R)
+#define G_long_rtp_double(TO,TI,S,R)    PF2I(TO,TI,S,R)
+#define G_long_rtz_double(TO,TI,S,R)    ZF2I(TO,TI,S,R)
+#define G_long_half(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_long_sat_half(TO,TI,S,R)      ZF2I(TO,TI,S,R)
 #define G_long_sat_rte_half(TO,TI,S,R)  ECLAMP2(TO,TI,S,R)
 #define G_long_sat_rtn_half(TO,TI,S,R)  NCLAMP2(TO,TI,S,R)
 #define G_long_sat_rtp_half(TO,TI,S,R)  PCLAMP2(TO,TI,S,R)
-#define G_long_sat_rtz_half(TO,TI,S,R)  CLAMP2(TO,TI,S,R)
-#define G_long_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_long_rtn_half(TO,TI,S,R)      NCAST(TO,TI,S,R)
-#define G_long_rtp_half(TO,TI,S,R)      PCAST(TO,TI,S,R)
-#define G_long_rtz_half(TO,TI,S,R)      CAST(TO,TI,S,R)
+#define G_long_sat_rtz_half(TO,TI,S,R)  ZCLAMP2(TO,TI,S,R)
+#define G_long_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_long_rtn_half(TO,TI,S,R)      NF2I(TO,TI,S,R)
+#define G_long_rtp_half(TO,TI,S,R)      PF2I(TO,TI,S,R)
+#define G_long_rtz_half(TO,TI,S,R)      ZF2I(TO,TI,S,R)
 
 #define G_ulong_char(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_ulong_sat_char(TO,TI,S,R)     MAX(TO,TI,S,R)
@@ -1158,36 +1190,36 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_ulong_rtn_ulong(TO,TI,S,R)	NOP(TO,TI,S,R)
 #define G_ulong_rtp_ulong(TO,TI,S,R)	NOP(TO,TI,S,R)
 #define G_ulong_rtz_ulong(TO,TI,S,R)	NOP(TO,TI,S,R)
-#define G_ulong_float(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_ulong_sat_float(TO,TI,S,R)    CLAMP2(TO,TI,S,R)
+#define G_ulong_float(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_ulong_sat_float(TO,TI,S,R)    ZF2I(TO,TI,S,R)
 #define G_ulong_sat_rte_float(TO,TI,S,R)        ECLAMP2(TO,TI,S,R)
 #define G_ulong_sat_rtn_float(TO,TI,S,R)        NCLAMP2(TO,TI,S,R)
 #define G_ulong_sat_rtp_float(TO,TI,S,R)        PCLAMP2(TO,TI,S,R)
-#define G_ulong_sat_rtz_float(TO,TI,S,R)        CLAMP2(TO,TI,S,R)
-#define G_ulong_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_ulong_rtn_float(TO,TI,S,R)    NCAST(TO,TI,S,R)
-#define G_ulong_rtp_float(TO,TI,S,R)    PCAST(TO,TI,S,R)
-#define G_ulong_rtz_float(TO,TI,S,R)    CAST(TO,TI,S,R)
-#define G_ulong_double(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_ulong_sat_double(TO,TI,S,R)   CLAMP2(TO,TI,S,R)
+#define G_ulong_sat_rtz_float(TO,TI,S,R)        ZCLAMP2(TO,TI,S,R)
+#define G_ulong_rte_float(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_ulong_rtn_float(TO,TI,S,R)    NF2I(TO,TI,S,R)
+#define G_ulong_rtp_float(TO,TI,S,R)    PF2I(TO,TI,S,R)
+#define G_ulong_rtz_float(TO,TI,S,R)    ZF2I(TO,TI,S,R)
+#define G_ulong_double(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_ulong_sat_double(TO,TI,S,R)   ZF2I(TO,TI,S,R)
 #define G_ulong_sat_rte_double(TO,TI,S,R)       ECLAMP2(TO,TI,S,R)
 #define G_ulong_sat_rtn_double(TO,TI,S,R)       NCLAMP2(TO,TI,S,R)
 #define G_ulong_sat_rtp_double(TO,TI,S,R)       PCLAMP2(TO,TI,S,R)
-#define G_ulong_sat_rtz_double(TO,TI,S,R)       CLAMP2(TO,TI,S,R)
-#define G_ulong_rte_double(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_ulong_rtn_double(TO,TI,S,R)   NCAST(TO,TI,S,R)
-#define G_ulong_rtp_double(TO,TI,S,R)   PCAST(TO,TI,S,R)
-#define G_ulong_rtz_double(TO,TI,S,R)   CAST(TO,TI,S,R)
-#define G_ulong_half(TO,TI,S,R)	CAST(TO,TI,S,R)
-#define G_ulong_sat_half(TO,TI,S,R)     CLAMP2(TO,TI,S,R)
+#define G_ulong_sat_rtz_double(TO,TI,S,R)       ZCLAMP2(TO,TI,S,R)
+#define G_ulong_rte_double(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_ulong_rtn_double(TO,TI,S,R)   NF2I(TO,TI,S,R)
+#define G_ulong_rtp_double(TO,TI,S,R)   PF2I(TO,TI,S,R)
+#define G_ulong_rtz_double(TO,TI,S,R)   ZF2I(TO,TI,S,R)
+#define G_ulong_half(TO,TI,S,R)	ZF2I(TO,TI,S,R)
+#define G_ulong_sat_half(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 #define G_ulong_sat_rte_half(TO,TI,S,R) ECLAMP2(TO,TI,S,R)
 #define G_ulong_sat_rtn_half(TO,TI,S,R) NCLAMP2(TO,TI,S,R)
 #define G_ulong_sat_rtp_half(TO,TI,S,R) PCLAMP2(TO,TI,S,R)
-#define G_ulong_sat_rtz_half(TO,TI,S,R) CLAMP2(TO,TI,S,R)
-#define G_ulong_rte_half(TO,TI,S,R)	ECAST(TO,TI,S,R)
-#define G_ulong_rtn_half(TO,TI,S,R)     NCAST(TO,TI,S,R)
-#define G_ulong_rtp_half(TO,TI,S,R)     PCAST(TO,TI,S,R)
-#define G_ulong_rtz_half(TO,TI,S,R)     CAST(TO,TI,S,R)
+#define G_ulong_sat_rtz_half(TO,TI,S,R) ZCLAMP2(TO,TI,S,R)
+#define G_ulong_rte_half(TO,TI,S,R)	EF2I(TO,TI,S,R)
+#define G_ulong_rtn_half(TO,TI,S,R)     NF2I(TO,TI,S,R)
+#define G_ulong_rtp_half(TO,TI,S,R)     PF2I(TO,TI,S,R)
+#define G_ulong_rtz_half(TO,TI,S,R)     ZF2I(TO,TI,S,R)
 
 #define G_float_char(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_float_sat_char(TO,TI,S,R)
@@ -1955,4 +1987,3 @@ convert_half_rtz(double a)
 {
     return as_half((ushort)__cvt_f16_rtz_f64(a));
 }
-
