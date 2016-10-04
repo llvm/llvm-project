@@ -112,15 +112,15 @@ static void removeRedundantMsgs(PathPieces &path) {
     path.pop_front();
 
     switch (piece->getKind()) {
-      case PathDiagnosticPiece::Call:
+      case clang::ento::PathDiagnosticPiece::Call:
         removeRedundantMsgs(cast<PathDiagnosticCallPiece>(piece)->path);
         break;
-      case PathDiagnosticPiece::Macro:
+      case clang::ento::PathDiagnosticPiece::Macro:
         removeRedundantMsgs(cast<PathDiagnosticMacroPiece>(piece)->subPieces);
         break;
-      case PathDiagnosticPiece::ControlFlow:
+      case clang::ento::PathDiagnosticPiece::ControlFlow:
         break;
-      case PathDiagnosticPiece::Event: {
+      case clang::ento::PathDiagnosticPiece::Event: {
         if (i == N-1)
           break;
 
@@ -140,8 +140,6 @@ static void removeRedundantMsgs(PathPieces &path) {
         }
         break;
       }
-      case PathDiagnosticPiece::Note:
-        break;
     }
     path.push_back(piece);
   }
@@ -198,9 +196,6 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
         break;
       }
       case PathDiagnosticPiece::ControlFlow:
-        break;
-
-      case PathDiagnosticPiece::Note:
         break;
     }
 
@@ -3408,28 +3403,25 @@ void BugReporter::FlushReport(BugReport *exampleReport,
       exampleReport->getUniqueingLocation(),
       exampleReport->getUniqueingDecl()));
 
-  if (exampleReport->isPathSensitive()) {
-    // Generate the full path diagnostic, using the generation scheme
-    // specified by the PathDiagnosticConsumer. Note that we have to generate
-    // path diagnostics even for consumers which do not support paths, because
-    // the BugReporterVisitors may mark this bug as a false positive.
-    assert(!bugReports.empty());
+  MaxBugClassSize = std::max(bugReports.size(),
+                             static_cast<size_t>(MaxBugClassSize));
 
-    MaxBugClassSize =
-        std::max(bugReports.size(), static_cast<size_t>(MaxBugClassSize));
-
+  // Generate the full path diagnostic, using the generation scheme
+  // specified by the PathDiagnosticConsumer. Note that we have to generate
+  // path diagnostics even for consumers which do not support paths, because
+  // the BugReporterVisitors may mark this bug as a false positive.
+  if (!bugReports.empty())
     if (!generatePathDiagnostic(*D.get(), PD, bugReports))
       return;
 
-    MaxValidBugClassSize =
-        std::max(bugReports.size(), static_cast<size_t>(MaxValidBugClassSize));
+  MaxValidBugClassSize = std::max(bugReports.size(),
+                                  static_cast<size_t>(MaxValidBugClassSize));
 
-    // Examine the report and see if the last piece is in a header. Reset the
-    // report location to the last piece in the main source file.
-    AnalyzerOptions &Opts = getAnalyzerOptions();
-    if (Opts.shouldReportIssuesInMainSourceFile() && !Opts.AnalyzeAll)
-      D->resetDiagnosticLocationToMainFile();
-  }
+  // Examine the report and see if the last piece is in a header. Reset the
+  // report location to the last piece in the main source file.
+  AnalyzerOptions& Opts = getAnalyzerOptions();
+  if (Opts.shouldReportIssuesInMainSourceFile() && !Opts.AnalyzeAll)
+    D->resetDiagnosticLocationToMainFile();
 
   // If the path is empty, generate a single step path with the location
   // of the issue.
@@ -3440,27 +3432,6 @@ void BugReporter::FlushReport(BugReport *exampleReport,
     for (SourceRange Range : exampleReport->getRanges())
       piece->addRange(Range);
     D->setEndOfPath(std::move(piece));
-  }
-
-  PathPieces &Pieces = D->getMutablePieces();
-  if (getAnalyzerOptions().shouldDisplayNotesAsEvents()) {
-    // For path diagnostic consumers that don't support extra notes,
-    // we may optionally convert those to path notes.
-    for (auto I = exampleReport->getNotes().rbegin(),
-              E = exampleReport->getNotes().rend(); I != E; ++I) {
-      PathDiagnosticNotePiece *Piece = I->get();
-      PathDiagnosticEventPiece *ConvertedPiece =
-          new PathDiagnosticEventPiece(Piece->getLocation(),
-                                       Piece->getString());
-      for (const auto &R: Piece->getRanges())
-        ConvertedPiece->addRange(R);
-
-      Pieces.push_front(ConvertedPiece);
-    }
-  } else {
-    for (auto I = exampleReport->getNotes().rbegin(),
-              E = exampleReport->getNotes().rend(); I != E; ++I)
-      Pieces.push_front(*I);
   }
 
   // Get the meta data.
@@ -3545,13 +3516,6 @@ LLVM_DUMP_METHOD void PathDiagnosticControlFlowPiece::dump() const {
 LLVM_DUMP_METHOD void PathDiagnosticMacroPiece::dump() const {
   llvm::errs() << "MACRO\n--------------\n";
   // FIXME: Print which macro is being invoked.
-}
-
-LLVM_DUMP_METHOD void PathDiagnosticNotePiece::dump() const {
-  llvm::errs() << "NOTE\n--------------\n";
-  llvm::errs() << getString() << "\n";
-  llvm::errs() << " ---- at ----\n";
-  getLocation().dump();
 }
 
 LLVM_DUMP_METHOD void PathDiagnosticLocation::dump() const {

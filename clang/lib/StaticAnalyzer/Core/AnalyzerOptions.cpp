@@ -344,10 +344,3 @@ bool AnalyzerOptions::shouldWidenLoops() {
     WidenLoops = getBooleanOption("widen-loops", /*Default=*/false);
   return WidenLoops.getValue();
 }
-
-bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
-  if (!DisplayNotesAsEvents.hasValue())
-    DisplayNotesAsEvents =
-        getBooleanOption("notes-as-events", /*Default=*/false);
-  return DisplayNotesAsEvents.getValue();
-}
