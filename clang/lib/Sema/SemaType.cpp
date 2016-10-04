@@ -5797,11 +5797,31 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   return false;
 }
 
+/// Rebuild an attributed type without the nullability attribute on it.
+static QualType rebuildAttributedTypeWithoutNullability(ASTContext &ctx,
+                                                        QualType type) {
+  auto attributed = dyn_cast<AttributedType>(type.getTypePtr());
+  if (!attributed) return type;
+
+  // Skip the nullability attribute; we're done.
+  if (attributed->getImmediateNullability()) {
+    return attributed->getModifiedType();
+  }
+
+  // Build the modified type.
+  auto modified = rebuildAttributedTypeWithoutNullability(
+                    ctx, attributed->getModifiedType());
+  assert(modified.getTypePtr() != attributed->getModifiedType().getTypePtr());
+  return ctx.getAttributedType(attributed->getAttrKind(), modified,
+                                   attributed->getEquivalentType());
+}
+
 bool Sema::checkNullabilityTypeSpecifier(QualType &type,
                                          NullabilityKind nullability,
                                          SourceLocation nullabilityLoc,
                                          bool isContextSensitive,
-                                         bool implicit) {
+                                         bool implicit,
+                                         bool overrideExisting) {
   if (!implicit) {
     // We saw a nullability type specifier. If this is the first one for
     // this file, note that.
@@ -5838,11 +5858,16 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
         break;
       } 
 
-      // Conflicting nullability.
-      Diag(nullabilityLoc, diag::err_nullability_conflicting)
-        << DiagNullabilityKind(nullability, isContextSensitive)
-        << DiagNullabilityKind(*existingNullability, false);
-      return true;
+      if (!overrideExisting) {
+        // Conflicting nullability.
+        Diag(nullabilityLoc, diag::err_nullability_conflicting)
+          << DiagNullabilityKind(nullability, isContextSensitive)
+          << DiagNullabilityKind(*existingNullability, false);
+        return true;
+      }
+
+      // Rebuild the attributed type, dropping the existing nullability.
+      type  = rebuildAttributedTypeWithoutNullability(Context, type);
     }
 
     desugared = attributed->getModifiedType();
