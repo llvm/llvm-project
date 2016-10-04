@@ -25,95 +25,12 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
-// Args constructor
-//----------------------------------------------------------------------
-Args::Args(llvm::StringRef command) : m_args(), m_argv(), m_args_quote_char() {
-  SetCommandString(command);
-}
-
-//----------------------------------------------------------------------
-// We have to be very careful on the copy constructor of this class
-// to make sure we copy all of the string values, but we can't copy the
-// rhs.m_argv into m_argv since it will point to the "const char *" c
-// strings in rhs.m_args. We need to copy the string list and update our
-// own m_argv appropriately.
-//----------------------------------------------------------------------
-Args::Args(const Args &rhs)
-    : m_args(rhs.m_args), m_argv(), m_args_quote_char(rhs.m_args_quote_char) {
-  UpdateArgvFromArgs();
-}
-
-//----------------------------------------------------------------------
-// We have to be very careful on the copy constructor of this class
-// to make sure we copy all of the string values, but we can't copy the
-// rhs.m_argv into m_argv since it will point to the "const char *" c
-// strings in rhs.m_args. We need to copy the string list and update our
-// own m_argv appropriately.
-//----------------------------------------------------------------------
-const Args &Args::operator=(const Args &rhs) {
-  // Make sure we aren't assigning to self
-  if (this != &rhs) {
-    m_args = rhs.m_args;
-    m_args_quote_char = rhs.m_args_quote_char;
-    UpdateArgvFromArgs();
-  }
-  return *this;
-}
-
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-Args::~Args() {}
-
-void Args::Dump(Stream &s, const char *label_name) const {
-  if (!label_name)
-    return;
-
-  const size_t argc = m_argv.size();
-  for (size_t i = 0; i < argc; ++i) {
-    s.Indent();
-    const char *arg_cstr = m_argv[i];
-    if (arg_cstr)
-      s.Printf("%s[%zi]=\"%s\"\n", label_name, i, arg_cstr);
-    else
-      s.Printf("%s[%zi]=NULL\n", label_name, i);
-  }
-  s.EOL();
-}
-
-bool Args::GetCommandString(std::string &command) const {
-  command.clear();
-  const size_t argc = GetArgumentCount();
-  for (size_t i = 0; i < argc; ++i) {
-    if (i > 0)
-      command += ' ';
-    command += m_argv[i];
-  }
-  return argc > 0;
-}
-
-bool Args::GetQuotedCommandString(std::string &command) const {
-  command.clear();
-  const size_t argc = GetArgumentCount();
-  for (size_t i = 0; i < argc; ++i) {
-    if (i > 0)
-      command.append(1, ' ');
-    char quote_char = GetArgumentQuoteCharAtIndex(i);
-    if (quote_char) {
-      command.append(1, quote_char);
-      command.append(m_argv[i]);
-      command.append(1, quote_char);
-    } else
-      command.append(m_argv[i]);
-  }
-  return argc > 0;
-}
 
 // A helper function for argument parsing.
 // Parses the initial part of the first argument using normal double quote
@@ -159,22 +76,27 @@ static llvm::StringRef ParseDoubleQuotes(llvm::StringRef quoted,
   return quoted;
 }
 
-// A helper function for SetCommandString.
-// Parses a single argument from the command string, processing quotes and
-// backslashes in a
-// shell-like manner. The parsed argument is appended to the m_args array. The
-// function returns
-// the unparsed portion of the string, starting at the first unqouted, unescaped
-// whitespace
-// character.
-llvm::StringRef Args::ParseSingleArgument(llvm::StringRef command) {
-  // Argument can be split into multiple discontiguous pieces,
-  // for example:
-  //  "Hello ""World"
-  // this would result in a single argument "Hello World" (without/
-  // the quotes) since the quotes would be removed and there is
-  // not space between the strings.
+static size_t ArgvToArgc(const char **argv) {
+  if (!argv)
+    return 0;
+  size_t count = 0;
+  while (*argv++)
+    ++count;
+  return count;
+}
 
+// A helper function for SetCommandString. Parses a single argument from the
+// command string, processing quotes and backslashes in a shell-like manner.
+// The function returns a tuple consisting of the parsed argument, the quote
+// char used, and the unparsed portion of the string starting at the first
+// unqouted, unescaped whitespace character.
+static std::tuple<std::string, char, llvm::StringRef>
+ParseSingleArgument(llvm::StringRef command) {
+  // Argument can be split into multiple discontiguous pieces, for example:
+  //  "Hello ""World"
+  // this would result in a single argument "Hello World" (without the quotes)
+  // since the quotes would be removed and there is not space between the
+  // strings.
   std::string arg;
 
   // Since we can have multiple quotes that form a single command
@@ -246,77 +168,132 @@ llvm::StringRef Args::ParseSingleArgument(llvm::StringRef command) {
     }
   } while (!arg_complete);
 
-  m_args.push_back(arg);
-  m_args_quote_char.push_back(first_quote_char);
-  return command;
+  return std::make_tuple(arg, first_quote_char, command);
 }
 
-void Args::SetCommandString(llvm::StringRef command) {
-  m_args.clear();
-  m_argv.clear();
-  m_args_quote_char.clear();
+Args::ArgEntry::ArgEntry(llvm::StringRef str, char quote) : quote(quote) {
+  size_t size = str.size();
+  ptr.reset(new char[size + 1]);
 
-  static const char *k_space_separators = " \t";
-  command = command.ltrim(k_space_separators);
-  while (!command.empty()) {
-    command = ParseSingleArgument(command);
-    command = command.ltrim(k_space_separators);
+  ::memcpy(data(), str.data() ? str.data() : "", size);
+  ptr[size] = 0;
+  ref = llvm::StringRef(c_str(), size);
+}
+
+//----------------------------------------------------------------------
+// Args constructor
+//----------------------------------------------------------------------
+Args::Args(llvm::StringRef command) { SetCommandString(command); }
+
+Args::Args(const Args &rhs) { *this = rhs; }
+
+Args &Args::operator=(const Args &rhs) {
+  Clear();
+
+  m_argv.clear();
+  m_entries.clear();
+  for (auto &entry : rhs.m_entries) {
+    m_entries.emplace_back(entry.ref, entry.quote);
+    m_argv.push_back(m_entries.back().data());
+  }
+  m_argv.push_back(nullptr);
+  return *this;
+}
+
+//----------------------------------------------------------------------
+// Destructor
+//----------------------------------------------------------------------
+Args::~Args() {}
+
+void Args::Dump(Stream &s, const char *label_name) const {
+  if (!label_name)
+    return;
+
+  int i = 0;
+  for (auto &entry : m_entries) {
+    s.Indent();
+    s.Printf("%s[%zi]=\"%*s\"\n", label_name, i++, entry.ref.size(),
+             entry.ref.data());
+  }
+  s.Printf("%s[%zi]=NULL\n", label_name, i);
+  s.EOL();
+}
+
+bool Args::GetCommandString(std::string &command) const {
+  command.clear();
+
+  for (size_t i = 0; i < m_entries.size(); ++i) {
+    if (i > 0)
+      command += ' ';
+    command += m_entries[i].ref;
   }
 
-  UpdateArgvFromArgs();
+  return !m_entries.empty();
 }
 
-void Args::UpdateArgsAfterOptionParsing() {
-  // Now m_argv might be out of date with m_args, so we need to fix that
-  arg_cstr_collection::const_iterator argv_pos, argv_end = m_argv.end();
-  arg_sstr_collection::iterator args_pos;
-  arg_quote_char_collection::iterator quotes_pos;
+bool Args::GetQuotedCommandString(std::string &command) const {
+  command.clear();
 
-  for (argv_pos = m_argv.begin(), args_pos = m_args.begin(),
-      quotes_pos = m_args_quote_char.begin();
-       argv_pos != argv_end && args_pos != m_args.end(); ++argv_pos) {
-    const char *argv_cstr = *argv_pos;
-    if (argv_cstr == nullptr)
-      break;
+  for (size_t i = 0; i < m_entries.size(); ++i) {
+    if (i > 0)
+      command += ' ';
 
-    while (args_pos != m_args.end()) {
-      const char *args_cstr = args_pos->c_str();
-      if (args_cstr == argv_cstr) {
-        // We found the argument that matches the C string in the
-        // vector, so we can now look for the next one
-        ++args_pos;
-        ++quotes_pos;
-        break;
-      } else {
-        quotes_pos = m_args_quote_char.erase(quotes_pos);
-        args_pos = m_args.erase(args_pos);
-      }
+    if (m_entries[i].quote) {
+      command += m_entries[i].quote;
+      command += m_entries[i].ref;
+      command += m_entries[i].quote;
+    } else {
+      command += m_entries[i].ref;
     }
   }
 
-  if (args_pos != m_args.end())
-    m_args.erase(args_pos, m_args.end());
-
-  if (quotes_pos != m_args_quote_char.end())
-    m_args_quote_char.erase(quotes_pos, m_args_quote_char.end());
+  return !m_entries.empty();
 }
 
-void Args::UpdateArgvFromArgs() {
+void Args::SetCommandString(llvm::StringRef command) {
+  Clear();
   m_argv.clear();
-  arg_sstr_collection::const_iterator pos, end = m_args.end();
-  for (pos = m_args.begin(); pos != end; ++pos)
-    m_argv.push_back(pos->c_str());
+
+  static const char *k_space_separators = " \t";
+  command = command.ltrim(k_space_separators);
+  std::string arg;
+  char quote;
+  while (!command.empty()) {
+    std::tie(arg, quote, command) = ParseSingleArgument(command);
+    m_entries.emplace_back(arg, quote);
+    m_argv.push_back(m_entries.back().data());
+    command = command.ltrim(k_space_separators);
+  }
   m_argv.push_back(nullptr);
-  // Make sure we have enough arg quote chars in the array
-  if (m_args_quote_char.size() < m_args.size())
-    m_args_quote_char.resize(m_argv.size());
 }
 
-size_t Args::GetArgumentCount() const {
-  if (m_argv.empty())
-    return 0;
-  return m_argv.size() - 1;
+void Args::UpdateArgsAfterOptionParsing() {
+  assert(!m_argv.empty());
+  assert(m_argv.back() == nullptr);
+
+  // Now m_argv might be out of date with m_entries, so we need to fix that.
+  // This happens because getopt_long_only may permute the order of the
+  // arguments in argv, so we need to re-order the quotes and the refs array
+  // to match.
+  for (int i = 0; i < m_argv.size() - 1; ++i) {
+    const char *argv = m_argv[i];
+    auto pos =
+        std::find_if(m_entries.begin() + i, m_entries.end(),
+                     [argv](const ArgEntry &D) { return D.c_str() == argv; });
+    assert(pos != m_entries.end());
+    size_t distance = std::distance(m_entries.begin(), pos);
+    if (i == distance)
+      continue;
+
+    assert(distance > i);
+
+    std::swap(m_entries[i], m_entries[distance]);
+    assert(m_entries[i].ref.data() == m_argv[i]);
+  }
+  m_entries.resize(m_argv.size() - 1);
 }
+
+size_t Args::GetArgumentCount() const { return m_entries.size(); }
 
 const char *Args::GetArgumentAtIndex(size_t idx) const {
   if (idx < m_argv.size())
@@ -325,52 +302,62 @@ const char *Args::GetArgumentAtIndex(size_t idx) const {
 }
 
 char Args::GetArgumentQuoteCharAtIndex(size_t idx) const {
-  if (idx < m_args_quote_char.size())
-    return m_args_quote_char[idx];
+  if (idx < m_entries.size())
+    return m_entries[idx].quote;
   return '\0';
 }
 
 char **Args::GetArgumentVector() {
-  if (!m_argv.empty())
-    return const_cast<char **>(&m_argv[0]);
-  return nullptr;
+  assert(!m_argv.empty());
+  // TODO: functions like execve and posix_spawnp exhibit undefined behavior
+  // when argv or envp is null.  So the code below is actually wrong.  However,
+  // other code in LLDB depends on it being null.  The code has been acting this
+  // way for some time, so it makes sense to leave it this way until someone
+  // has the time to come along and fix it.
+  return (m_argv.size() > 1) ? m_argv.data() : nullptr;
 }
 
 const char **Args::GetConstArgumentVector() const {
-  if (!m_argv.empty())
-    return const_cast<const char **>(&m_argv[0]);
-  return nullptr;
+  assert(!m_argv.empty());
+  return (m_argv.size() > 1) ? const_cast<const char **>(m_argv.data())
+                             : nullptr;
 }
 
 void Args::Shift() {
   // Don't pop the last NULL terminator from the argv array
-  if (m_argv.size() > 1) {
-    m_argv.erase(m_argv.begin());
-    m_args.pop_front();
-    if (!m_args_quote_char.empty())
-      m_args_quote_char.erase(m_args_quote_char.begin());
-  }
+  if (m_entries.empty())
+    return;
+  m_argv.erase(m_argv.begin());
+  m_entries.erase(m_entries.begin());
 }
 
 llvm::StringRef Args::Unshift(llvm::StringRef arg_str, char quote_char) {
-  m_args.push_front(arg_str);
-  m_argv.insert(m_argv.begin(), m_args.front().c_str());
-  m_args_quote_char.insert(m_args_quote_char.begin(), quote_char);
-  return llvm::StringRef::withNullAsEmpty(GetArgumentAtIndex(0));
+  return InsertArgumentAtIndex(0, arg_str, quote_char);
 }
 
 void Args::AppendArguments(const Args &rhs) {
-  const size_t rhs_argc = rhs.GetArgumentCount();
-  for (size_t i = 0; i < rhs_argc; ++i)
-    AppendArgument(llvm::StringRef(rhs.GetArgumentAtIndex(i)),
-                   rhs.GetArgumentQuoteCharAtIndex(i));
+  assert(m_argv.size() == m_entries.size() + 1);
+  assert(m_argv.back() == nullptr);
+  m_argv.pop_back();
+  for (auto &entry : rhs.m_entries) {
+    m_entries.emplace_back(entry.ref, entry.quote);
+    m_argv.push_back(m_entries.back().data());
+  }
+  m_argv.push_back(nullptr);
 }
 
 void Args::AppendArguments(const char **argv) {
-  if (argv) {
-    for (uint32_t i = 0; argv[i]; ++i)
-      AppendArgument(llvm::StringRef::withNullAsEmpty(argv[i]));
+  size_t argc = ArgvToArgc(argv);
+
+  assert(m_argv.size() == m_entries.size() + 1);
+  assert(m_argv.back() == nullptr);
+  m_argv.pop_back();
+  for (int i = 0; i < argc; ++i) {
+    m_entries.emplace_back(argv[i], '\0');
+    m_argv.push_back(m_entries.back().data());
   }
+
+  m_argv.push_back(nullptr);
 }
 
 llvm::StringRef Args::AppendArgument(llvm::StringRef arg_str, char quote_char) {
@@ -379,103 +366,65 @@ llvm::StringRef Args::AppendArgument(llvm::StringRef arg_str, char quote_char) {
 
 llvm::StringRef Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
                                             char quote_char) {
-  // Since we are using a std::list to hold onto the copied C string and
-  // we don't have direct access to the elements, we have to iterate to
-  // find the value.
-  arg_sstr_collection::iterator pos, end = m_args.end();
-  size_t i = idx;
-  for (pos = m_args.begin(); i > 0 && pos != end; ++pos)
-    --i;
+  assert(m_argv.size() == m_entries.size() + 1);
+  assert(m_argv.back() == nullptr);
 
-  pos = m_args.insert(pos, arg_str);
-
-  if (idx >= m_args_quote_char.size()) {
-    m_args_quote_char.resize(idx + 1);
-    m_args_quote_char[idx] = quote_char;
-  } else
-    m_args_quote_char.insert(m_args_quote_char.begin() + idx, quote_char);
-
-  UpdateArgvFromArgs();
-  return GetArgumentAtIndex(idx);
+  if (idx > m_entries.size())
+    return llvm::StringRef();
+  m_entries.emplace(m_entries.begin() + idx, arg_str, quote_char);
+  m_argv.insert(m_argv.begin() + idx, m_entries[idx].data());
+  return m_entries[idx].ref;
 }
 
 llvm::StringRef Args::ReplaceArgumentAtIndex(size_t idx,
                                              llvm::StringRef arg_str,
                                              char quote_char) {
-  // Since we are using a std::list to hold onto the copied C string and
-  // we don't have direct access to the elements, we have to iterate to
-  // find the value.
-  arg_sstr_collection::iterator pos, end = m_args.end();
-  size_t i = idx;
-  for (pos = m_args.begin(); i > 0 && pos != end; ++pos)
-    --i;
+  assert(m_argv.size() == m_entries.size() + 1);
+  assert(m_argv.back() == nullptr);
 
-  if (pos != end) {
-    pos->assign(arg_str);
-    assert(idx < m_argv.size() - 1);
-    m_argv[idx] = pos->c_str();
-    if (idx >= m_args_quote_char.size())
-      m_args_quote_char.resize(idx + 1);
-    m_args_quote_char[idx] = quote_char;
-    return GetArgumentAtIndex(idx);
+  if (idx >= m_entries.size())
+    return llvm::StringRef();
+
+  if (arg_str.size() > m_entries[idx].ref.size()) {
+    m_entries[idx] = ArgEntry(arg_str, quote_char);
+    m_argv[idx] = m_entries[idx].data();
+  } else {
+    const char *src_data = arg_str.data() ? arg_str.data() : "";
+    ::memcpy(m_entries[idx].data(), src_data, arg_str.size());
+    m_entries[idx].ptr[arg_str.size()] = 0;
+    m_entries[idx].ref = m_entries[idx].ref.take_front(arg_str.size());
   }
-  return llvm::StringRef();
+
+  return m_entries[idx].ref;
 }
 
 void Args::DeleteArgumentAtIndex(size_t idx) {
-  // Since we are using a std::list to hold onto the copied C string and
-  // we don't have direct access to the elements, we have to iterate to
-  // find the value.
-  arg_sstr_collection::iterator pos, end = m_args.end();
-  size_t i = idx;
-  for (pos = m_args.begin(); i > 0 && pos != end; ++pos)
-    --i;
+  if (idx >= m_entries.size())
+    return;
 
-  if (pos != end) {
-    m_args.erase(pos);
-    assert(idx < m_argv.size() - 1);
-    m_argv.erase(m_argv.begin() + idx);
-    if (idx < m_args_quote_char.size())
-      m_args_quote_char.erase(m_args_quote_char.begin() + idx);
-  }
+  m_argv.erase(m_argv.begin() + idx);
+  m_entries.erase(m_entries.begin() + idx);
 }
 
 void Args::SetArguments(size_t argc, const char **argv) {
-  // m_argv will be rebuilt in UpdateArgvFromArgs() below, so there is
-  // no need to clear it here.
-  m_args.clear();
-  m_args_quote_char.clear();
+  Clear();
 
-  // First copy each string
-  for (size_t i = 0; i < argc; ++i) {
-    m_args.push_back(argv[i]);
-    if ((argv[i][0] == '\'') || (argv[i][0] == '"') || (argv[i][0] == '`'))
-      m_args_quote_char.push_back(argv[i][0]);
-    else
-      m_args_quote_char.push_back('\0');
+  auto args = llvm::makeArrayRef(argv, argc);
+  m_entries.resize(argc);
+  m_argv.resize(argc + 1);
+  for (int i = 0; i < args.size(); ++i) {
+    char quote =
+        ((args[i][0] == '\'') || (args[i][0] == '"') || (args[i][0] == '`'))
+            ? args[i][0]
+            : '\0';
+
+    m_entries[i] = ArgEntry(args[i], quote);
+    m_argv[i] = m_entries[i].data();
   }
-
-  UpdateArgvFromArgs();
 }
 
 void Args::SetArguments(const char **argv) {
-  // m_argv will be rebuilt in UpdateArgvFromArgs() below, so there is
-  // no need to clear it here.
-  m_args.clear();
-  m_args_quote_char.clear();
-
-  if (argv) {
-    // First copy each string
-    for (size_t i = 0; argv[i]; ++i) {
-      m_args.push_back(argv[i]);
-      if ((argv[i][0] == '\'') || (argv[i][0] == '"') || (argv[i][0] == '`'))
-        m_args_quote_char.push_back(argv[i][0]);
-      else
-        m_args_quote_char.push_back('\0');
-    }
-  }
-
-  UpdateArgvFromArgs();
+  SetArguments(ArgvToArgc(argv), argv);
 }
 
 Error Args::ParseOptions(Options &options, ExecutionContext *execution_context,
@@ -598,9 +547,9 @@ Error Args::ParseOptions(Options &options, ExecutionContext *execution_context,
 }
 
 void Args::Clear() {
-  m_args.clear();
+  m_entries.clear();
   m_argv.clear();
-  m_args_quote_char.clear();
+  m_argv.push_back(nullptr);
 }
 
 lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
@@ -947,36 +896,6 @@ uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
   return result;
 }
 
-void Args::LongestCommonPrefix(std::string &common_prefix) {
-  arg_sstr_collection::iterator pos, end = m_args.end();
-  pos = m_args.begin();
-  if (pos == end)
-    common_prefix.clear();
-  else
-    common_prefix = (*pos);
-
-  for (++pos; pos != end; ++pos) {
-    size_t new_size = (*pos).size();
-
-    // First trim common_prefix if it is longer than the current element:
-    if (common_prefix.size() > new_size)
-      common_prefix.erase(new_size);
-
-    // Then trim it at the first disparity:
-
-    for (size_t i = 0; i < common_prefix.size(); i++) {
-      if ((*pos)[i] != common_prefix[i]) {
-        common_prefix.erase(i);
-        break;
-      }
-    }
-
-    // If we've emptied the common prefix, we're done.
-    if (common_prefix.empty())
-      break;
-  }
-}
-
 void Args::AddOrReplaceEnvironmentVariable(llvm::StringRef env_var_name,
                                            llvm::StringRef new_value) {
   if (env_var_name.empty())
@@ -1096,6 +1015,7 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
 
   std::unique_lock<std::mutex> lock;
   OptionParser::Prepare(lock);
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
   int val;
   while (1) {
     int long_options_index = -1;
@@ -1130,95 +1050,73 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
     }
 
     // See if the option takes an argument, and see if one was supplied.
-    if (long_options_index >= 0) {
-      StreamString option_str;
-      option_str.Printf("-%c", val);
-      const OptionDefinition *def = long_options[long_options_index].definition;
-      int has_arg =
-          (def == nullptr) ? OptionParser::eNoArgument : def->option_has_arg;
-
-      switch (has_arg) {
-      case OptionParser::eNoArgument:
-        option_arg_vector->push_back(OptionArgPair(
-            std::string(option_str.GetData()),
-            OptionArgValue(OptionParser::eNoArgument, "<no-argument>")));
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        break;
-      case OptionParser::eRequiredArgument:
-        if (OptionParser::GetOptionArgument() != nullptr) {
-          option_arg_vector->push_back(OptionArgPair(
-              std::string(option_str.GetData()),
-              OptionArgValue(OptionParser::eRequiredArgument,
-                             std::string(OptionParser::GetOptionArgument()))));
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        } else {
-          result.AppendErrorWithFormat(
-              "Option '%s' is missing argument specifier.\n",
-              option_str.GetData());
-          result.SetStatus(eReturnStatusFailed);
-        }
-        break;
-      case OptionParser::eOptionalArgument:
-        if (OptionParser::GetOptionArgument() != nullptr) {
-          option_arg_vector->push_back(OptionArgPair(
-              std::string(option_str.GetData()),
-              OptionArgValue(OptionParser::eOptionalArgument,
-                             std::string(OptionParser::GetOptionArgument()))));
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        } else {
-          option_arg_vector->push_back(
-              OptionArgPair(std::string(option_str.GetData()),
-                            OptionArgValue(OptionParser::eOptionalArgument,
-                                           "<no-argument>")));
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        }
-        break;
-      default:
-        result.AppendErrorWithFormat("error with options table; invalid value "
-                                     "in has_arg field for option '%c'.\n",
-                                     val);
-        result.SetStatus(eReturnStatusFailed);
-        break;
-      }
-    } else {
+    if (long_options_index == -1) {
       result.AppendErrorWithFormat("Invalid option with value '%c'.\n", val);
       result.SetStatus(eReturnStatusFailed);
+      return;
     }
 
-    if (long_options_index >= 0) {
-      // Find option in the argument list; also see if it was supposed to take
-      // an argument and if one was
-      // supplied.  Remove option (and argument, if given) from the argument
-      // list.  Also remove them from
-      // the raw_input_string, if one was passed in.
-      size_t idx = FindArgumentIndexForOption(long_options, long_options_index);
-      if (idx < GetArgumentCount()) {
+    StreamString option_str;
+    option_str.Printf("-%c", val);
+    const OptionDefinition *def = long_options[long_options_index].definition;
+    int has_arg =
+        (def == nullptr) ? OptionParser::eNoArgument : def->option_has_arg;
+
+    const char *option_arg = nullptr;
+    switch (has_arg) {
+    case OptionParser::eRequiredArgument:
+      if (OptionParser::GetOptionArgument() == nullptr) {
+        result.AppendErrorWithFormat(
+            "Option '%s' is missing argument specifier.\n",
+            option_str.GetData());
+        result.SetStatus(eReturnStatusFailed);
+        return;
+      }
+      LLVM_FALLTHROUGH;
+    case OptionParser::eOptionalArgument:
+      option_arg = OptionParser::GetOptionArgument();
+      LLVM_FALLTHROUGH;
+    case OptionParser::eNoArgument:
+      break;
+    default:
+      result.AppendErrorWithFormat("error with options table; invalid value "
+                                   "in has_arg field for option '%c'.\n",
+                                   val);
+      result.SetStatus(eReturnStatusFailed);
+      return;
+    }
+    if (!option_arg)
+      option_arg = "<no-argument>";
+    option_arg_vector->emplace_back(option_str.GetData(), has_arg, option_arg);
+
+    // Find option in the argument list; also see if it was supposed to take
+    // an argument and if one was supplied.  Remove option (and argument, if
+    // given) from the argument list.  Also remove them from the
+    // raw_input_string, if one was passed in.
+    size_t idx = FindArgumentIndexForOption(long_options, long_options_index);
+    if (idx < GetArgumentCount()) {
+      if (raw_input_string.size() > 0) {
+        const char *tmp_arg = GetArgumentAtIndex(idx);
+        size_t pos = raw_input_string.find(tmp_arg);
+        if (pos != std::string::npos)
+          raw_input_string.erase(pos, strlen(tmp_arg));
+      }
+      ReplaceArgumentAtIndex(idx, llvm::StringRef());
+      if ((long_options[long_options_index].definition->option_has_arg !=
+           OptionParser::eNoArgument) &&
+          (OptionParser::GetOptionArgument() != nullptr) &&
+          (idx + 1 < GetArgumentCount()) &&
+          (strcmp(OptionParser::GetOptionArgument(),
+                  GetArgumentAtIndex(idx + 1)) == 0)) {
         if (raw_input_string.size() > 0) {
-          const char *tmp_arg = GetArgumentAtIndex(idx);
+          const char *tmp_arg = GetArgumentAtIndex(idx + 1);
           size_t pos = raw_input_string.find(tmp_arg);
           if (pos != std::string::npos)
             raw_input_string.erase(pos, strlen(tmp_arg));
         }
-        ReplaceArgumentAtIndex(idx, llvm::StringRef());
-        if ((long_options[long_options_index].definition->option_has_arg !=
-             OptionParser::eNoArgument) &&
-            (OptionParser::GetOptionArgument() != nullptr) &&
-            (idx + 1 < GetArgumentCount()) &&
-            (strcmp(OptionParser::GetOptionArgument(),
-                    GetArgumentAtIndex(idx + 1)) == 0)) {
-          if (raw_input_string.size() > 0) {
-            const char *tmp_arg = GetArgumentAtIndex(idx + 1);
-            size_t pos = raw_input_string.find(tmp_arg);
-            if (pos != std::string::npos)
-              raw_input_string.erase(pos, strlen(tmp_arg));
-          }
-          ReplaceArgumentAtIndex(idx + 1, llvm::StringRef());
-        }
+        ReplaceArgumentAtIndex(idx + 1, llvm::StringRef());
       }
     }
-
-    if (!result.Succeeded())
-      break;
   }
 }
 
@@ -1415,10 +1313,10 @@ void Args::ParseArgsForCompletion(Options &options,
   // it is AT the cursor position.
   // Note, a single quoted dash is not the same as a single dash...
 
+  const ArgEntry &cursor = m_entries[cursor_index];
   if ((static_cast<int32_t>(dash_dash_pos) == -1 ||
        cursor_index < dash_dash_pos) &&
-      m_args_quote_char[cursor_index] == '\0' &&
-      strcmp(GetArgumentAtIndex(cursor_index), "-") == 0) {
+      cursor.quote == '\0' && cursor.ref == "-") {
     option_element_vector.push_back(
         OptionArgElement(OptionArgElement::eBareDash, cursor_index,
                          OptionArgElement::eBareDash));

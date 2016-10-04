@@ -55,15 +55,13 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
 
   if (!options_string.empty()) {
     if (cmd_obj_sp->WantsRawCommandString())
-      option_arg_vector->push_back(
-          OptionArgPair("<argument>", OptionArgValue(-1, options_string)));
+      option_arg_vector->emplace_back("<argument>", -1, options_string);
     else {
       const size_t argc = args.GetArgumentCount();
       for (size_t i = 0; i < argc; ++i)
         if (strcmp(args.GetArgumentAtIndex(i), "") != 0)
-          option_arg_vector->push_back(OptionArgPair(
-              "<argument>",
-              OptionArgValue(-1, std::string(args.GetArgumentAtIndex(i)))));
+          option_arg_vector->emplace_back("<argument>", -1,
+                                          args.GetArgumentAtIndex(i));
     }
   }
 
@@ -149,21 +147,24 @@ void CommandAlias::GetAliasExpansion(StreamString &help_string) {
   const char *command_name = m_underlying_command_sp->GetCommandName();
   help_string.Printf("'%s", command_name);
 
-  if (m_option_args_sp) {
-    OptionArgVector *options = m_option_args_sp.get();
-    for (size_t i = 0; i < options->size(); ++i) {
-      OptionArgPair cur_option = (*options)[i];
-      std::string opt = cur_option.first;
-      OptionArgValue value_pair = cur_option.second;
-      std::string value = value_pair.second;
-      if (opt.compare("<argument>") == 0) {
+  if (!m_option_args_sp) {
+    help_string.Printf("'");
+    return;
+  }
+
+  OptionArgVector *options = m_option_args_sp.get();
+  std::string opt;
+  std::string value;
+
+  for (const auto &opt_entry : *options) {
+    std::tie(opt, std::ignore, value) = opt_entry;
+    if (opt == "<argument>") {
+      help_string.Printf(" %s", value.c_str());
+    } else {
+      help_string.Printf(" %s", opt.c_str());
+      if ((value.compare("<no-argument>") != 0) &&
+          (value.compare("<need-argument") != 0)) {
         help_string.Printf(" %s", value.c_str());
-      } else {
-        help_string.Printf(" %s", opt.c_str());
-        if ((value.compare("<no-argument>") != 0) &&
-            (value.compare("<need-argument") != 0)) {
-          help_string.Printf(" %s", value.c_str());
-        }
       }
     }
   }
@@ -172,24 +173,30 @@ void CommandAlias::GetAliasExpansion(StreamString &help_string) {
 }
 
 bool CommandAlias::IsDashDashCommand() {
-  if (m_is_dashdash_alias == eLazyBoolCalculate) {
-    m_is_dashdash_alias = eLazyBoolNo;
-    if (IsValid()) {
-      for (const OptionArgPair &opt_arg : *GetOptionArguments()) {
-        if (opt_arg.first == "<argument>" && !opt_arg.second.second.empty() &&
-            llvm::StringRef(opt_arg.second.second).endswith("--")) {
-          m_is_dashdash_alias = eLazyBoolYes;
-          break;
-        }
-      }
-      // if this is a nested alias, it may be adding arguments on top of an
-      // already dash-dash alias
-      if ((m_is_dashdash_alias == eLazyBoolNo) && IsNestedAlias())
-        m_is_dashdash_alias =
-            (GetUnderlyingCommand()->IsDashDashCommand() ? eLazyBoolYes
-                                                         : eLazyBoolNo);
+  if (m_is_dashdash_alias != eLazyBoolCalculate)
+    return (m_is_dashdash_alias == eLazyBoolYes);
+  m_is_dashdash_alias = eLazyBoolNo;
+  if (!IsValid())
+    return false;
+
+  std::string opt;
+  std::string value;
+
+  for (const auto &opt_entry : *GetOptionArguments()) {
+    std::tie(opt, std::ignore, value) = opt_entry;
+    if (opt == "<argument>" && !value.empty() &&
+        llvm::StringRef(value).endswith("--")) {
+      m_is_dashdash_alias = eLazyBoolYes;
+      break;
     }
   }
+
+  // if this is a nested alias, it may be adding arguments on top of an
+  // already dash-dash alias
+  if ((m_is_dashdash_alias == eLazyBoolNo) && IsNestedAlias())
+    m_is_dashdash_alias =
+        (GetUnderlyingCommand()->IsDashDashCommand() ? eLazyBoolYes
+                                                     : eLazyBoolNo);
   return (m_is_dashdash_alias == eLazyBoolYes);
 }
 

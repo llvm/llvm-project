@@ -53,8 +53,7 @@ std::string elf::getFilename(const InputFile *F) {
   return F->getName();
 }
 
-template <class ELFT>
-static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
+template <class ELFT> static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   std::error_code EC;
   ELFFile<ELFT> F(MB.getBuffer(), EC);
   if (EC)
@@ -396,14 +395,14 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return elf::Symtab<ELFT>::X
-        ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
-                       /*CanOmitFromDynSym*/ false, this)
+    return elf::Symtab<ELFT>::X->addUndefined(Name, Binding, Sym->st_other,
+                                              Sym->getType(),
+                                              /*CanOmitFromDynSym*/ false, this)
         ->body();
   case SHN_COMMON:
-    return elf::Symtab<ELFT>::X
-        ->addCommon(Name, Sym->st_size, Sym->st_value, Binding, Sym->st_other,
-                    Sym->getType(), this)
+    return elf::Symtab<ELFT>::X->addCommon(Name, Sym->st_size, Sym->st_value,
+                                           Binding, Sym->st_other,
+                                           Sym->getType(), this)
         ->body();
   }
 
@@ -414,9 +413,10 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection<ELFT>::Discarded)
-      return elf::Symtab<ELFT>::X
-          ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
-                         /*CanOmitFromDynSym*/ false, this)
+      return elf::Symtab<ELFT>::X->addUndefined(Name, Binding, Sym->st_other,
+                                                Sym->getType(),
+                                                /*CanOmitFromDynSym*/ false,
+                                                this)
           ->body();
     return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec)->body();
   }
@@ -781,8 +781,7 @@ MemoryBufferRef LazyObjectFile::getBuffer() {
   return MB;
 }
 
-template <class ELFT>
-void LazyObjectFile::parse() {
+template <class ELFT> void LazyObjectFile::parse() {
   for (StringRef Sym : getSymbols())
     Symtab<ELFT>::X->addLazyObject(Sym, *this);
 }

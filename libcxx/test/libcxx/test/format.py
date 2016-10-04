@@ -65,9 +65,11 @@ class LibcxxTestFormat(object):
 
     def _execute(self, test, lit_config):
         name = test.path_in_suite[-1]
-        is_sh_test = name.endswith('.sh.cpp')
+        name_root, name_ext = os.path.splitext(name)
+        is_sh_test = name_root.endswith('.sh')
         is_pass_test = name.endswith('.pass.cpp')
         is_fail_test = name.endswith('.fail.cpp')
+        assert is_sh_test or name_ext == '.cpp', 'non-cpp file must be sh test'
 
         if test.config.unsupported:
             return (lit.Test.UNSUPPORTED,

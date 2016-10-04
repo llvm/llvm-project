@@ -727,6 +727,10 @@ public:
   /// standard library.
   LazyDeclPtr StdAlignValT;
 
+  /// \brief The C++ "std::experimental" namespace, where the experimental parts
+  /// of the standard library resides.
+  NamespaceDecl *StdExperimentalNamespaceCache;
+
   /// \brief The C++ "std::initializer_list" template, which is defined in
   /// \<initializer_list>.
   ClassTemplateDecl *StdInitializerList;
@@ -1989,6 +1993,21 @@ public:
 
   Decl *BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
                                        RecordDecl *Record);
+
+  /// Common ways to introduce type names without a tag for use in diagnostics.
+  /// Keep in sync with err_tag_reference_non_tag.
+  enum NonTagKind {
+    NTK_Unknown,
+    NTK_Typedef,
+    NTK_TypeAlias,
+    NTK_Template,
+    NTK_TypeAliasTemplate,
+    NTK_TemplateTemplateArgument,
+  };
+
+  /// Given a non-tag type declaration, returns an enum useful for indicating
+  /// what kind of non-tag type this is.
+  NonTagKind getNonTagTypeDeclKind(const Decl *D);
 
   bool isAcceptableTagRedeclaration(const TagDecl *Previous,
                                     TagTypeKind NewTag, bool isDefinition,
@@ -4269,6 +4288,8 @@ public:
 
   NamespaceDecl *getStdNamespace() const;
   NamespaceDecl *getOrCreateStdNamespace();
+
+  NamespaceDecl *lookupStdExperimentalNamespace();
 
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;

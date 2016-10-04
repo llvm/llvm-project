@@ -176,6 +176,8 @@ class Replacements {
   ///   - are insertions at the same offset and applying them in either order
   ///     has the same effect, i.e. X + Y = Y + X when inserting X and Y
   ///     respectively.
+  ///   - are identical replacements, i.e. applying the same replacement twice
+  ///     is equivalent to applying it once.
   /// Examples:
   /// 1. Replacement A(0, 0, "a") and B(0, 0, "aa") are order-independent since
   ///    applying them in either order gives replacement (0, 0, "aaa").
@@ -186,6 +188,8 @@ class Replacements {
   ///    since applying them in either order gives (0, 2, "123").
   /// 3. Replacement A(0, 3, "123") and B(2, 3, "321") are order-independent
   ///    since either order gives (0, 5, "12321").
+  /// 4. Replacement A(0, 3, "ab") and B(0, 3, "ab") are order-independent since
+  ///    applying the same replacement twice is equivalent to applying it once.
   /// Replacements with offset UINT_MAX are special - we do not detect conflicts
   /// for such replacements since users may add them intentionally as a special
   /// category of replacements.

@@ -16,8 +16,6 @@ int x;
 struct s_cd_dh {
   __host__ s_cd_dh() { x = 11; }
   __device__ s_cd_dh() { x = 12; }
-  __host__ ~s_cd_dh() { x = 21; }
-  __device__ ~s_cd_dh() { x = 22; }
 };
 
 struct s_cd_hd {
@@ -38,7 +36,6 @@ void wrapper() {
   // CHECK-BOTH: call void @_ZN7s_cd_hdC1Ev
 
   // CHECK-BOTH: call void @_ZN7s_cd_hdD1Ev(
-  // CHECK-BOTH: call void @_ZN7s_cd_dhD1Ev(
 }
 // CHECK-BOTH: ret void
 
@@ -55,9 +52,4 @@ void wrapper() {
 
 // CHECK-BOTH: define linkonce_odr void @_ZN7s_cd_hdD2Ev(
 // CHECK-BOTH: store i32 32,
-// CHECK-BOTH: ret void
-
-// CHECK-BOTH: define linkonce_odr void @_ZN7s_cd_dhD2Ev(
-// CHECK-HOST:   store i32 21,
-// CHECK-DEVICE: store i32 22,
 // CHECK-BOTH: ret void

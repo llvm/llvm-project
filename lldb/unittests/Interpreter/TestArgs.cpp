@@ -66,6 +66,109 @@ TEST(ArgsTest, TestAppendArg) {
   EXPECT_STREQ(args.GetArgumentAtIndex(1), "second_arg");
 }
 
+TEST(ArgsTest, TestInsertArg) {
+  Args args;
+  args.AppendArgument("1");
+  args.AppendArgument("2");
+  args.AppendArgument("3");
+  args.InsertArgumentAtIndex(1, "1.5");
+  args.InsertArgumentAtIndex(4, "3.5");
+
+  ASSERT_EQ(5u, args.GetArgumentCount());
+  EXPECT_STREQ("1", args.GetArgumentAtIndex(0));
+  EXPECT_STREQ("1.5", args.GetArgumentAtIndex(1));
+  EXPECT_STREQ("2", args.GetArgumentAtIndex(2));
+  EXPECT_STREQ("3", args.GetArgumentAtIndex(3));
+  EXPECT_STREQ("3.5", args.GetArgumentAtIndex(4));
+}
+
+TEST(ArgsTest, TestArgv) {
+  Args args;
+  EXPECT_EQ(nullptr, args.GetArgumentVector());
+
+  args.AppendArgument("1");
+  EXPECT_NE(nullptr, args.GetArgumentVector()[0]);
+  EXPECT_EQ(nullptr, args.GetArgumentVector()[1]);
+
+  args.AppendArgument("2");
+  EXPECT_NE(nullptr, args.GetArgumentVector()[0]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[1]);
+  EXPECT_EQ(nullptr, args.GetArgumentVector()[2]);
+
+  args.AppendArgument("3");
+  EXPECT_NE(nullptr, args.GetArgumentVector()[0]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[1]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[2]);
+  EXPECT_EQ(nullptr, args.GetArgumentVector()[3]);
+
+  args.InsertArgumentAtIndex(1, "1.5");
+  EXPECT_NE(nullptr, args.GetArgumentVector()[0]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[1]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[2]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[3]);
+  EXPECT_EQ(nullptr, args.GetArgumentVector()[4]);
+
+  args.InsertArgumentAtIndex(4, "3.5");
+  EXPECT_NE(nullptr, args.GetArgumentVector()[0]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[1]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[2]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[3]);
+  EXPECT_NE(nullptr, args.GetArgumentVector()[4]);
+  EXPECT_EQ(nullptr, args.GetArgumentVector()[5]);
+}
+
+TEST(ArgsTest, GetQuotedCommandString) {
+  Args args;
+  const char *str = "process launch -o stdout.txt -- \"a b c\"";
+  args.SetCommandString(str);
+
+  std::string stdstr;
+  ASSERT_TRUE(args.GetQuotedCommandString(stdstr));
+  EXPECT_EQ(str, stdstr);
+}
+
+TEST(ArgsTest, BareSingleQuote) {
+  Args args;
+  args.SetCommandString("a\\'b");
+  EXPECT_EQ(1u, args.GetArgumentCount());
+
+  EXPECT_STREQ("a'b", args.GetArgumentAtIndex(0));
+}
+
+TEST(ArgsTest, DoubleQuotedItem) {
+  Args args;
+  args.SetCommandString("\"a b c\"");
+  EXPECT_EQ(1u, args.GetArgumentCount());
+
+  EXPECT_STREQ("a b c", args.GetArgumentAtIndex(0));
+}
+
+TEST(ArgsTest, AppendArguments) {
+  Args args;
+  const char *argv[] = {"1", "2", nullptr};
+  const char *argv2[] = {"3", "4", nullptr};
+
+  args.AppendArguments(argv);
+  ASSERT_EQ(2u, args.GetArgumentCount());
+  EXPECT_STREQ("1", args.GetArgumentVector()[0]);
+  EXPECT_STREQ("2", args.GetArgumentVector()[1]);
+  EXPECT_EQ(nullptr, args.GetArgumentVector()[2]);
+  EXPECT_STREQ("1", args.GetArgumentAtIndex(0));
+  EXPECT_STREQ("2", args.GetArgumentAtIndex(1));
+
+  args.AppendArguments(argv2);
+  ASSERT_EQ(4u, args.GetArgumentCount());
+  EXPECT_STREQ("1", args.GetArgumentVector()[0]);
+  EXPECT_STREQ("2", args.GetArgumentVector()[1]);
+  EXPECT_STREQ("3", args.GetArgumentVector()[2]);
+  EXPECT_STREQ("4", args.GetArgumentVector()[3]);
+  EXPECT_EQ(nullptr, args.GetArgumentVector()[4]);
+  EXPECT_STREQ("1", args.GetArgumentAtIndex(0));
+  EXPECT_STREQ("2", args.GetArgumentAtIndex(1));
+  EXPECT_STREQ("3", args.GetArgumentAtIndex(2));
+  EXPECT_STREQ("4", args.GetArgumentAtIndex(3));
+}
+
 TEST(ArgsTest, StringToBoolean) {
   bool success = false;
   EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("true"), false, nullptr));

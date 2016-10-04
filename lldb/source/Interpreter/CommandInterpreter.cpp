@@ -1325,61 +1325,63 @@ CommandObject *CommandInterpreter::BuildAliasResult(
   alias_cmd_obj = GetCommandObject(alias_name);
   StreamString result_str;
 
-  if (alias_cmd_obj && alias_cmd_obj->IsAlias()) {
-    std::pair<CommandObjectSP, OptionArgVectorSP> desugared =
-        ((CommandAlias *)alias_cmd_obj)->Desugar();
-    OptionArgVectorSP option_arg_vector_sp = desugared.second;
-    alias_cmd_obj = desugared.first.get();
-    std::string alias_name_str = alias_name;
-    if ((cmd_args.GetArgumentCount() == 0) ||
-        (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0))
-      cmd_args.Unshift(alias_name_str);
+  if (!alias_cmd_obj || !alias_cmd_obj->IsAlias()) {
+    alias_result.clear();
+    return alias_cmd_obj;
+  }
+  std::pair<CommandObjectSP, OptionArgVectorSP> desugared =
+      ((CommandAlias *)alias_cmd_obj)->Desugar();
+  OptionArgVectorSP option_arg_vector_sp = desugared.second;
+  alias_cmd_obj = desugared.first.get();
+  std::string alias_name_str = alias_name;
+  if ((cmd_args.GetArgumentCount() == 0) ||
+      (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0))
+    cmd_args.Unshift(alias_name_str);
 
-    result_str.Printf("%s", alias_cmd_obj->GetCommandName());
+  result_str.Printf("%s", alias_cmd_obj->GetCommandName());
 
-    if (option_arg_vector_sp.get()) {
-      OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
+  if (!option_arg_vector_sp.get()) {
+    alias_result = result_str.GetData();
+    return alias_cmd_obj;
+  }
+  OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
 
-      for (size_t i = 0; i < option_arg_vector->size(); ++i) {
-        OptionArgPair option_pair = (*option_arg_vector)[i];
-        OptionArgValue value_pair = option_pair.second;
-        int value_type = value_pair.first;
-        std::string option = option_pair.first;
-        std::string value = value_pair.second;
-        if (option.compare("<argument>") == 0)
-          result_str.Printf(" %s", value.c_str());
-        else {
-          result_str.Printf(" %s", option.c_str());
-          if (value_type != OptionParser::eNoArgument) {
-            if (value_type != OptionParser::eOptionalArgument)
-              result_str.Printf(" ");
-            int index = GetOptionArgumentPosition(value.c_str());
-            if (index == 0)
-              result_str.Printf("%s", value.c_str());
-            else if (static_cast<size_t>(index) >=
-                     cmd_args.GetArgumentCount()) {
-
-              result.AppendErrorWithFormat("Not enough arguments provided; you "
-                                           "need at least %d arguments to use "
-                                           "this alias.\n",
-                                           index);
-              result.SetStatus(eReturnStatusFailed);
-              return nullptr;
-            } else {
-              size_t strpos =
-                  raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
-              if (strpos != std::string::npos)
-                raw_input_string = raw_input_string.erase(
-                    strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
-              result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
-            }
-          }
-        }
-      }
+  int value_type;
+  std::string option;
+  std::string value;
+  for (const auto &entry : *option_arg_vector) {
+    std::tie(option, value_type, value) = entry;
+    if (option == "<argument>") {
+      result_str.Printf(" %s", value.c_str());
+      continue;
     }
 
-    alias_result = result_str.GetData();
+    result_str.Printf(" %s", option.c_str());
+    if (value_type == OptionParser::eNoArgument)
+      continue;
+
+    if (value_type != OptionParser::eOptionalArgument)
+      result_str.Printf(" ");
+    int index = GetOptionArgumentPosition(value.c_str());
+    if (index == 0)
+      result_str.Printf("%s", value.c_str());
+    else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
+
+      result.AppendErrorWithFormat("Not enough arguments provided; you "
+                                   "need at least %d arguments to use "
+                                   "this alias.\n",
+                                   index);
+      result.SetStatus(eReturnStatusFailed);
+      return nullptr;
+    }
+    size_t strpos = raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
+    if (strpos != std::string::npos)
+      raw_input_string = raw_input_string.erase(
+          strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
+    result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
   }
+
+  alias_result = result_str.GetData();
   return alias_cmd_obj;
 }
 
@@ -1977,73 +1979,68 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
 
     used[0] = true;
 
-    for (size_t i = 0; i < option_arg_vector->size(); ++i) {
-      OptionArgPair option_pair = (*option_arg_vector)[i];
-      OptionArgValue value_pair = option_pair.second;
-      int value_type = value_pair.first;
-      std::string option = option_pair.first;
-      std::string value = value_pair.second;
-      if (option.compare("<argument>") == 0) {
-        if (!wants_raw_input || (value.compare("--") != 0)) // Since we inserted
-                                                            // this above, make
-                                                            // sure we don't
-                                                            // insert it twice
-                                                            new_args
-                                                                .AppendArgument(
-                                                                    value);
-      } else {
-        if (value_type != OptionParser::eOptionalArgument)
-          new_args.AppendArgument(option);
-        if (value.compare("<no-argument>") != 0) {
-          int index = GetOptionArgumentPosition(value.c_str());
-          if (index == 0) {
-            // value was NOT a positional argument; must be a real value
-            if (value_type != OptionParser::eOptionalArgument)
-              new_args.AppendArgument(value);
-            else {
-              char buffer[255];
-              ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                         value.c_str());
-              new_args.AppendArgument(llvm::StringRef(buffer));
-            }
-
-          } else if (static_cast<size_t>(index) >=
-                     cmd_args.GetArgumentCount()) {
-            result.AppendErrorWithFormat("Not enough arguments provided; you "
-                                         "need at least %d arguments to use "
-                                         "this alias.\n",
-                                         index);
-            result.SetStatus(eReturnStatusFailed);
-            return;
-          } else {
-            // Find and remove cmd_args.GetArgumentAtIndex(i) from
-            // raw_input_string
-            size_t strpos =
-                raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
-            if (strpos != std::string::npos) {
-              raw_input_string = raw_input_string.erase(
-                  strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
-            }
-
-            if (value_type != OptionParser::eOptionalArgument)
-              new_args.AppendArgument(llvm::StringRef::withNullAsEmpty(
-                  cmd_args.GetArgumentAtIndex(index)));
-            else {
-              char buffer[255];
-              ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                         cmd_args.GetArgumentAtIndex(index));
-              new_args.AppendArgument(llvm::StringRef(buffer));
-            }
-            used[index] = true;
-          }
+    int value_type;
+    std::string option;
+    std::string value;
+    for (const auto &option_entry : *option_arg_vector) {
+      std::tie(option, value_type, value) = option_entry;
+      if (option == "<argument>") {
+        if (!wants_raw_input || (value != "--")) {
+          // Since we inserted this above, make sure we don't insert it twice
+          new_args.AppendArgument(value);
         }
+        continue;
+      }
+
+      if (value_type != OptionParser::eOptionalArgument)
+        new_args.AppendArgument(option);
+
+      if (value == "<no-argument>")
+        continue;
+
+      int index = GetOptionArgumentPosition(value.c_str());
+      if (index == 0) {
+        // value was NOT a positional argument; must be a real value
+        if (value_type != OptionParser::eOptionalArgument)
+          new_args.AppendArgument(value);
+        else {
+          char buffer[255];
+          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
+                     value.c_str());
+          new_args.AppendArgument(llvm::StringRef(buffer));
+        }
+
+      } else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
+        result.AppendErrorWithFormat("Not enough arguments provided; you "
+                                     "need at least %d arguments to use "
+                                     "this alias.\n",
+                                     index);
+        result.SetStatus(eReturnStatusFailed);
+        return;
+      } else {
+        // Find and remove cmd_args.GetArgumentAtIndex(i) from raw_input_string
+        size_t strpos =
+            raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
+        if (strpos != std::string::npos) {
+          raw_input_string = raw_input_string.erase(
+              strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
+        }
+
+        if (value_type != OptionParser::eOptionalArgument)
+          new_args.AppendArgument(cmd_args.GetArgumentAtIndex(index));
+        else {
+          char buffer[255];
+          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
+                     cmd_args.GetArgumentAtIndex(index));
+          new_args.AppendArgument(buffer);
+        }
+        used[index] = true;
       }
     }
 
     for (size_t j = 0; j < cmd_args.GetArgumentCount(); ++j) {
       if (!used[j] && !wants_raw_input)
-        new_args.AppendArgument(
-            llvm::StringRef(cmd_args.GetArgumentAtIndex(j)));
+        new_args.AppendArgument(cmd_args.GetArgumentAtIndex(j));
     }
 
     cmd_args.Clear();

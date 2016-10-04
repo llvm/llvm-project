@@ -897,9 +897,13 @@ ObjCMethodDecl *ObjCMethodDecl::getCanonicalDecl() {
         return MD;
   }
 
-  if (isRedeclaration())
-    return cast<ObjCContainerDecl>(CtxD)->getMethod(getSelector(),
-                                                    isInstanceMethod());
+  if (isRedeclaration()) {
+    // It is possible that we have not done deserializing the ObjCMethod yet.
+    ObjCMethodDecl *MD =
+        cast<ObjCContainerDecl>(CtxD)->getMethod(getSelector(),
+                                                 isInstanceMethod());
+    return MD ? MD : this;
+  }
 
   return this;
 }

@@ -116,6 +116,9 @@ int main()
 #endif
     test_is_not_constructible<A, void> ();
     test_is_not_constructible<void> ();
+    test_is_not_constructible<const void> ();  // LWG 2738
+    test_is_not_constructible<volatile void> ();
+    test_is_not_constructible<const volatile void> ();
     test_is_not_constructible<int&> ();
     test_is_not_constructible<Abstract> ();
     test_is_not_constructible<AbstractDestructor> ();
