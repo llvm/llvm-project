@@ -22,9 +22,9 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: foo
-; YAML-NEXT:   - String:  will not be inlined into
+; YAML-NEXT:   - String: ' will not be inlined into '
 ; YAML-NEXT:   - Caller: baz
-; YAML-NEXT:   - String:  because its definition is unavailable
+; YAML-NEXT:   - String: ' because its definition is unavailable'
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Missed
 ; YAML-NEXT: Pass:            inline
@@ -34,9 +34,9 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: bar
-; YAML-NEXT:   - String:  will not be inlined into
+; YAML-NEXT:   - String: ' will not be inlined into '
 ; YAML-NEXT:   - Caller: baz
-; YAML-NEXT:   - String:  because its definition is unavailable
+; YAML-NEXT:   - String: ' because its definition is unavailable'
 ; YAML-NEXT: ...
 
 ; ModuleID = '/tmp/s.c'

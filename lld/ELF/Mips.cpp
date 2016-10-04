@@ -285,6 +285,8 @@ template <class ELFT> uint32_t elf::getMipsEFlags() {
   std::vector<FileFlags> V;
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     V.push_back({F->getName(), F->getObj().getHeader()->e_flags});
+  if (V.empty())
+    return 0;
   checkFlags(V);
   return getMiscFlags(V) | getPicFlags(V) | getArchFlags(V);
 }

@@ -676,7 +676,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
 #ifndef NDEBUG
   auto isExpectedBDVType = [](Value *BDV) {
     return isa<PHINode>(BDV) || isa<SelectInst>(BDV) ||
-           isa<ExtractElementInst>(BDV) || isa<InsertElementInst>(BDV);
+           isa<ExtractElementInst>(BDV) || isa<InsertElementInst>(BDV) ||
+           isa<ShuffleVectorInst>(BDV);
   };
 #endif
 
@@ -719,9 +720,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
       } else if (auto *IE = dyn_cast<InsertElementInst>(Current)) {
         visitIncomingValue(IE->getOperand(0)); // vector operand
         visitIncomingValue(IE->getOperand(1)); // scalar operand
-      } else {
-        // There is one known class of instructions we know we don't handle.
-        assert(isa<ShuffleVectorInst>(Current));
+      } else if (auto *SV = dyn_cast<ShuffleVectorInst>(Current)) {
+        visitIncomingValue(SV->getOperand(0));
+        visitIncomingValue(SV->getOperand(1));
+      }
+      else {
         llvm_unreachable("Unimplemented instruction case");
       }
     }
@@ -778,12 +781,17 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
         // useful in that it drives us to conflict if our input is.
         NewState =
             meetBDVState(NewState, getStateForInput(EE->getVectorOperand()));
-      } else {
+      } else if (auto *IE = dyn_cast<InsertElementInst>(BDV)){
         // Given there's a inherent type mismatch between the operands, will
         // *always* produce Conflict.
-        auto *IE = cast<InsertElementInst>(BDV);
         NewState = meetBDVState(NewState, getStateForInput(IE->getOperand(0)));
         NewState = meetBDVState(NewState, getStateForInput(IE->getOperand(1)));
+      } else {
+        // The only instance this does not return a Conflict is when both the
+        // vector operands are the same vector.
+        auto *SV = cast<ShuffleVectorInst>(BDV);
+        NewState = meetBDVState(NewState, getStateForInput(SV->getOperand(0)));
+        NewState = meetBDVState(NewState, getStateForInput(SV->getOperand(1)));
       }
 
       BDVState OldState = States[BDV];
@@ -855,13 +863,18 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
         std::string Name = suffixed_name_or(I, ".base", "base_ee");
         return ExtractElementInst::Create(Undef, EE->getIndexOperand(), Name,
                                           EE);
-      } else {
-        auto *IE = cast<InsertElementInst>(I);
+      } else if (auto *IE = dyn_cast<InsertElementInst>(I)) {
         UndefValue *VecUndef = UndefValue::get(IE->getOperand(0)->getType());
         UndefValue *ScalarUndef = UndefValue::get(IE->getOperand(1)->getType());
         std::string Name = suffixed_name_or(I, ".base", "base_ie");
         return InsertElementInst::Create(VecUndef, ScalarUndef,
                                          IE->getOperand(2), Name, IE);
+      } else {
+        auto *SV = cast<ShuffleVectorInst>(I);
+        UndefValue *VecUndef = UndefValue::get(SV->getOperand(0)->getType());
+        std::string Name = suffixed_name_or(I, ".base", "base_sv");
+        return new ShuffleVectorInst(VecUndef, VecUndef, SV->getOperand(2),
+                                     Name, SV);
       }
     };
     Instruction *BaseInst = MakeBaseInstPlaceholder(I);
@@ -963,8 +976,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
       // Find the instruction which produces the base for each input.  We may
       // need to insert a bitcast.
       BaseEE->setOperand(0, getBaseForInput(InVal, BaseEE));
-    } else {
-      auto *BaseIE = cast<InsertElementInst>(State.getBaseValue());
+    } else if (auto *BaseIE = dyn_cast<InsertElementInst>(State.getBaseValue())){
       auto *BdvIE = cast<InsertElementInst>(BDV);
       auto UpdateOperand = [&](int OperandIdx) {
         Value *InVal = BdvIE->getOperand(OperandIdx);
@@ -973,6 +985,16 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
       };
       UpdateOperand(0); // vector operand
       UpdateOperand(1); // scalar operand
+    } else {
+      auto *BaseSV = cast<ShuffleVectorInst>(State.getBaseValue());
+      auto *BdvSV = cast<ShuffleVectorInst>(BDV);
+      auto UpdateOperand = [&](int OperandIdx) {
+        Value *InVal = BdvSV->getOperand(OperandIdx);
+        Value *Base = getBaseForInput(InVal, BaseSV);
+        BaseSV->setOperand(OperandIdx, Base);
+      };
+      UpdateOperand(0); // vector operand
+      UpdateOperand(1); // vector operand
     }
   }
 

@@ -377,3 +377,49 @@ void Bug30487()
 {
   NegativeInClassInitializedDefaulted s;
 }
+
+struct PositiveVirtualMethod {
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: constructor does not initialize these fields: F
+  int F;
+  // CHECK-FIXES: int F{};
+  virtual int f() = 0;
+};
+
+struct PositiveVirtualDestructor {
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: constructor does not initialize these fields: F
+  PositiveVirtualDestructor() = default;
+  int F;
+  // CHECK-FIXES: int F{};
+  virtual ~PositiveVirtualDestructor() {}
+};
+
+struct PositiveVirtualBase : public virtual NegativeAggregateType {
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: constructor does not initialize these bases: NegativeAggregateType
+  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: constructor does not initialize these fields: F
+  int F;
+  // CHECK-FIXES: int F{};
+};
+
+template <typename T>
+struct PositiveTemplateVirtualDestructor {
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: constructor does not initialize these fields: F
+  T Val;
+  int F;
+  // CHECK-FIXES: int F{};
+  virtual ~PositiveTemplateVirtualDestructor() = default;
+};
+
+template struct PositiveTemplateVirtualDestructor<int>;
+
+#define UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(FIELD) \
+  struct UninitializedFieldVirtual##FIELD {              \
+    int FIELD;                                           \
+    virtual ~UninitializedFieldVirtual##FIELD() {}       \
+  };                                                     \
+// Ensure FIELD is not initialized since fixes inside of macros are disabled.
+// CHECK-FIXES: int FIELD;
+
+UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(F);
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
+UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(G);
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: G

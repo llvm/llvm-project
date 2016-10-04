@@ -46,11 +46,13 @@ private:
   // To fix: Write a data member initializer, or mention it in the member
   // initializer list.
   void checkMissingMemberInitializer(ASTContext &Context,
+                                     const CXXRecordDecl &ClassDecl,
                                      const CXXConstructorDecl *Ctor);
 
   // A subtle side effect of Type.6 part 2:
   // Make sure to initialize trivially constructible base classes.
   void checkMissingBaseClassInitializer(const ASTContext &Context,
+                                        const CXXRecordDecl &ClassDecl,
                                         const CXXConstructorDecl *Ctor);
 
   // Checks Type.6 part 2:

@@ -3518,7 +3518,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           // To be compatible with MSVC, hex integer literals ending with the
           // LL or i64 suffix are always signed in Microsoft mode.
           if (!Literal.isUnsigned && (ResultVal[LongLongSize-1] == 0 ||
-              (getLangOpts().MicrosoftExt && Literal.isLongLong)))
+              (getLangOpts().MSVCCompat && Literal.isLongLong)))
             Ty = Context.LongLongTy;
           else if (AllowUnsigned)
             Ty = Context.UnsignedLongLongTy;

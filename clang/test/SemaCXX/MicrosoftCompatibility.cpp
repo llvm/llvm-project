@@ -242,3 +242,14 @@ namespace IntToNullPtrConv {
   template<int N> int *get_n() { return N; }   // expected-warning {{expression which evaluates to zero treated as a null pointer constant}}
   int *g_nullptr = get_n<0>();  // expected-note {{in instantiation of function template specialization}}
 }
+
+namespace signed_hex_i64 {
+void f(long long);
+void f(int);
+void g() {
+  // This is an ambiguous call in standard C++.
+  // This calls f(long long) in Microsoft mode because LL is always signed.
+  f(0xffffffffffffffffLL);
+  f(0xffffffffffffffffi64);
+}
+}

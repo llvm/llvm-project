@@ -9,6 +9,12 @@ bool foobool(int argc) {
   return argc;
 }
 
+void foobar(int &ref) {
+#pragma omp target
+#pragma omp teams distribute reduction(+:ref)
+  for (int j=0; j<100; j++) foo();
+}
+
 struct S1; // expected-note {{declared here}} expected-note 4 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
