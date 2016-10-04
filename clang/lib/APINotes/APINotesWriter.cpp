@@ -331,9 +331,18 @@ namespace {
   static void emitCommonEntityInfo(raw_ostream &out,
                                    const CommonEntityInfo &info) {
     endian::Writer<little> writer(out);
-    writer.write<uint8_t>(info.SwiftPrivate << 2
-                          | info.Unavailable << 1 
-                          | info.UnavailableInSwift);
+    uint8_t payload = 0;
+    if (auto swiftPrivate = info.isSwiftPrivate()) {
+      payload |= 0x01;
+      if (*swiftPrivate) payload |= 0x02;
+    }
+    payload <<= 1;
+    payload |= info.Unavailable;
+    payload <<= 1;
+    payload |= info.UnavailableInSwift;
+
+    writer.write<uint8_t>(payload);
+
     writer.write<uint16_t>(info.UnavailableMsg.size());
     out.write(info.UnavailableMsg.c_str(), info.UnavailableMsg.size());
     writer.write<uint16_t>(info.SwiftName.size());
