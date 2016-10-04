@@ -112,18 +112,12 @@ template <> struct MappingTraits<DebugLoc> {
   static const bool flow = true;
 };
 
-template <> struct ScalarTraits<DiagnosticInfoOptimizationBase::Argument> {
-  static void output(const DiagnosticInfoOptimizationBase::Argument &Arg,
-                     void *, llvm::raw_ostream &out) {
-    out << Arg.Key << ": " << Arg.Val;
+// Implement this as a mapping for now to get proper quotation for the value.
+template <> struct MappingTraits<DiagnosticInfoOptimizationBase::Argument> {
+  static void mapping(IO &io, DiagnosticInfoOptimizationBase::Argument &A) {
+    assert(io.outputting() && "input not yet implemented");
+    io.mapRequired(A.Key.data(), A.Val);
   }
-
-  static StringRef input(StringRef scalar, void *,
-                         DiagnosticInfoOptimizationBase::Argument &Arg) {
-    llvm_unreachable("input not yet implemented");
-  }
-
-  static bool mustQuote(StringRef) { return false; }
 };
 
 } // end namespace yaml
