@@ -8572,9 +8572,9 @@ def ext_coroutine_without_co_await_co_yield : ExtWarn<
   "that uses neither 'co_await' nor 'co_yield'">,
   InGroup<DiagGroup<"coreturn-without-coawait">>;
 def err_implied_std_coroutine_traits_not_found : Error<
-  "you need to include <coroutine> before defining a coroutine">;
+  "you need to include <experimental/coroutine> before defining a coroutine">;
 def err_malformed_std_coroutine_traits : Error<
-  "'std::coroutine_traits' must be a class template">;
+  "'std::experimental::coroutine_traits' must be a class template">;
 def err_implied_std_coroutine_traits_promise_type_not_found : Error<
   "this function cannot be a coroutine: %q0 has no member named 'promise_type'">;
 def err_implied_std_coroutine_traits_promise_type_not_class : Error<

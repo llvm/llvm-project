@@ -25,7 +25,6 @@ bb1:                                              ; preds = %bb
   br label %bb2
 
 bb2:                                              ; preds = %bb1, %entry
-; CHECK: bb2
 ; CHECK: cmp [[REG]], #0
 ; CHECK: ble
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %entry ]

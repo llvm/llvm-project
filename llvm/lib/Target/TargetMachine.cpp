@@ -131,7 +131,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   // Make an exception for windows OS in the triple: Some firmwares builds use
   // *-win32-macho triples. This (accidentally?) produced windows relocations
   // without GOT tables in older clang versions; Keep this behaviour.
-  if (TT.isOSBinFormatCOFF() || TT.isOSWindows())
+  if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
     return true;
 
   if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))

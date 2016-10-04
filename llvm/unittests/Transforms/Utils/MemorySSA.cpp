@@ -42,14 +42,17 @@ protected:
     AssumptionCache AC;
     AAResults AA;
     BasicAAResult BAA;
-    MemorySSA MSSA;
+    // We need to defer MSSA construction until AA is *entirely* set up, which
+    // requires calling addAAResult. Hence, we just use a pointer here.
+    std::unique_ptr<MemorySSA> MSSA;
     MemorySSAWalker *Walker;
 
     TestAnalyses(MemorySSATest &Test)
         : DT(*Test.F), AC(*Test.F), AA(Test.TLI),
-          BAA(Test.DL, Test.TLI, AC, &DT), MSSA(*Test.F, &AA, &DT) {
+          BAA(Test.DL, Test.TLI, AC, &DT) {
       AA.addAAResult(BAA);
-      Walker = MSSA.getWalker();
+      MSSA = make_unique<MemorySSA>(*Test.F, &AA, &DT);
+      Walker = MSSA->getWalker();
     }
   };
 
@@ -85,7 +88,7 @@ TEST_F(MemorySSATest, CreateALoad) {
   BranchInst::Create(Merge, Right);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   // Add the load
   B.SetInsertPoint(Merge);
   LoadInst *LoadInst = B.CreateLoad(PointerArg);
@@ -124,7 +127,7 @@ TEST_F(MemorySSATest, MoveAStore) {
   B.SetInsertPoint(Merge);
   B.CreateLoad(PointerArg);
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
 
   // Move the store
   SideStore->moveBefore(Entry->getTerminator());
@@ -159,7 +162,7 @@ TEST_F(MemorySSATest, RemoveAPhi) {
   LoadInst *LoadInst = B.CreateLoad(PointerArg);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   // Before, the load will be a use of a phi<store, liveonentry>.
   MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(LoadInst));
   MemoryDef *StoreAccess = cast<MemoryDef>(MSSA.getMemoryAccess(StoreInst));
@@ -202,7 +205,7 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   LoadInst *LoadInst = B.CreateLoad(PointerArg);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
 
   // Before, the load will be a use of a phi<store, liveonentry>. It should be
@@ -261,7 +264,7 @@ TEST_F(MemorySSATest, TestTripleStore) {
   StoreInst *S3 = B.CreateStore(ConstantInt::get(Int8, 2), Alloca);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
 
   unsigned I = 0;
@@ -292,7 +295,7 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
   Instruction *LI = B.CreateLoad(Alloca);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
 
   MemoryAccess *LoadClobber = Walker->getClobberingMemoryAccess(LI);
@@ -321,7 +324,7 @@ TEST_F(MemorySSATest, TestStoreDoubleQuery) {
   StoreInst *SI = B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
 
   MemoryAccess *StoreAccess = MSSA.getMemoryAccess(SI);
@@ -385,7 +388,7 @@ TEST_F(MemorySSATest, PartialWalkerCacheWithPhis) {
   Instruction *BelowPhi = B.CreateStore(Zero, AllocA);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
 
   // Kill `KillStore`; it exists solely so that the load after it won't be
@@ -431,7 +434,7 @@ TEST_F(MemorySSATest, WalkerInvariantLoadOpt) {
   Instruction *Load = B.CreateLoad(AllocA);
 
   setupAnalyses();
-  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
 
   auto *LoadMA = cast<MemoryUse>(MSSA.getMemoryAccess(Load));
@@ -445,4 +448,26 @@ TEST_F(MemorySSATest, WalkerInvariantLoadOpt) {
 
   MemoryAccess *LoadClobber = Walker->getClobberingMemoryAccess(LoadMA);
   EXPECT_EQ(LoadClobber, MSSA.getLiveOnEntryDef());
+}
+
+// At one point, we were building MSSA with 0 AA passes. This ensures that we
+// actually use BasicAA.
+TEST_F(MemorySSATest, AAIsPresentAtBuildTime) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+
+  Type *Int8 = Type::getInt8Ty(C);
+  Constant *One = ConstantInt::get(Int8, 1);
+  Value *AllocaA = B.CreateAlloca(Int8);
+  Instruction *StoreA = B.CreateStore(One, AllocaA);
+
+  Value *AllocaB = B.CreateAlloca(Int8);
+  B.CreateStore(One, AllocaB);
+  Instruction *LoadA = B.CreateLoad(AllocaA);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  auto *MU = cast<MemoryUse>(MSSA.getMemoryAccess(LoadA));
+  EXPECT_EQ(MU->getDefiningAccess(), MSSA.getMemoryAccess(StoreA));
 }
