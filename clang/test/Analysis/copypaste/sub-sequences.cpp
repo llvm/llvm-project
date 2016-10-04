@@ -7,14 +7,14 @@ void log();
 
 int max(int a, int b) {
   log2(a);
-  log(); // expected-warning{{Duplicate code detected}}
+  log(); // expected-warning{{Detected code clone.}}
   if (a > b)
     return a;
   return b;
 }
 
 int maxClone(int a, int b) {
-  log(); // expected-note{{Similar code here}}
+  log(); // expected-note{{Related code clone is here.}}
   if (a > b)
     return a;
   return b;

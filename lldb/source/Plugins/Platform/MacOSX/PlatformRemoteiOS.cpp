@@ -748,6 +748,10 @@ Error PlatformRemoteiOS::GetSharedModule(
 
     size_t num_module_search_paths = module_search_paths_ptr->GetSize();
     for (size_t i = 0; i < num_module_search_paths; ++i) {
+      Log *log_verbose = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
+                                                    LIBLLDB_LOG_VERBOSE);
+      if (log_verbose)
+          log_verbose->Printf ("PlatformRemoteiOS::GetSharedModule searching for binary in search-path %s", module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
       // Create a new FileSpec with this module_search_paths_ptr
       // plus just the filename ("UIFoundation"), then the parent
       // dir plus filename ("UIFoundation.framework/UIFoundation")

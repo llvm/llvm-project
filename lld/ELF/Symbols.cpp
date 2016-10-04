@@ -59,8 +59,12 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       Addend = 0;
     }
     uintX_t VA = (SC->OutSec ? SC->OutSec->getVA() : 0) + SC->getOffset(Offset);
-    if (D.isTls() && !Config->Relocatable)
+    if (D.isTls() && !Config->Relocatable) {
+      if (!Out<ELFT>::TlsPhdr)
+        fatal(getFilename(D.File) +
+              " has a STT_TLS symbol but doesn't have a PT_TLS section");
       return VA - Out<ELFT>::TlsPhdr->p_vaddr;
+    }
     return VA;
   }
   case SymbolBody::DefinedCommonKind:
