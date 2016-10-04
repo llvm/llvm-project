@@ -128,10 +128,6 @@ public:
   /// This method should only be called on a non-empty StmtSequence object.
   SourceLocation getEndLoc() const;
 
-  /// Returns the source range of the whole sequence - from the beginning
-  /// of the first statement to the end of the last statement.
-  SourceRange getSourceRange() const;
-
   bool operator==(const StmtSequence &Other) const {
     return std::tie(S, StartIndex, EndIndex) ==
            std::tie(Other.S, Other.StartIndex, Other.EndIndex);
@@ -254,14 +250,14 @@ public:
       /// The variable which referencing in this clone was against the pattern.
       const VarDecl *Variable;
       /// Where the variable was referenced.
-      const Stmt *Mention;
+      SourceRange VarRange;
       /// The variable that should have been referenced to follow the pattern.
       /// If Suggestion is a nullptr then it's not possible to fix the pattern
       /// by referencing a different variable in this clone.
       const VarDecl *Suggestion;
-      SuspiciousCloneInfo(const VarDecl *Variable, const Stmt *Mention,
+      SuspiciousCloneInfo(const VarDecl *Variable, SourceRange Range,
                           const VarDecl *Suggestion)
-          : Variable(Variable), Mention(Mention), Suggestion(Suggestion) {}
+          : Variable(Variable), VarRange(Range), Suggestion(Suggestion) {}
       SuspiciousCloneInfo() {}
     };
     /// The first clone in the pair which always has a suggested variable.
