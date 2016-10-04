@@ -1,0 +1,6 @@
+Name: SomeKit
+SwiftVersions:
+  - Version: 3.0
+    Functions:
+      - Name: moveToPoint
+        SwiftName: 'moveTo(a:b:)'

@@ -929,7 +929,6 @@ namespace {
       // Convert the versioned information.
       for (const auto &versioned : TheModule.SwiftVersions) {
         convertTopLevelItems(versioned.Items, versioned.Version);
-
       }
 
       if (!ErrorOccured)
