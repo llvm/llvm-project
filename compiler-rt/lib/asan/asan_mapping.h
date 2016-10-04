@@ -168,7 +168,7 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #    if SANITIZER_IOSSIM
 #      define SHADOW_OFFSET kIosSimShadowOffset64
 #    else
-#      define SHADOW_OFFSET kIosShadowOffset64
+#      define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #    endif
 #  elif defined(__aarch64__)
 #    define SHADOW_OFFSET kAArch64_ShadowOffset64

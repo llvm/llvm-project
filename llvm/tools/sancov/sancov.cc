@@ -89,7 +89,7 @@ cl::opt<ActionType> Action(
         clEnumValN(StatsAction, "print-coverage-stats",
                    "Print coverage statistics."),
         clEnumValN(HtmlReportAction, "html-report",
-                   "REMOVED. Use -symbolize & symcov-report-server.py."),
+                   "REMOVED. Use -symbolize & coverage-report-server.py."),
         clEnumValN(SymbolizeAction, "symbolize",
                    "Produces a symbolized JSON report from binary report."),
         clEnumValN(MergeAction, "merge", "Merges reports."), clEnumValEnd));
@@ -1204,7 +1204,7 @@ int main(int Argc, char **Argv) {
   }
   case HtmlReportAction:
     errs() << "-html-report option is removed: "
-              "use -symbolize & symcov-report-server.py instead\n";
+              "use -symbolize & coverage-report-server.py instead\n";
     return 1;
   case PrintAction:
   case PrintCovPointsAction:

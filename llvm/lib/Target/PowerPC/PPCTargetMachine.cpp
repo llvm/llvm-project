@@ -204,23 +204,6 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
       TargetABI(computeTargetABI(TT, Options)),
       Subtarget(TargetTriple, CPU, computeFSAdditions(FS, OL, TT), *this) {
 
-  // For the estimates, convergence is quadratic, so we essentially double the
-  // number of digits correct after every iteration. For both FRE and FRSQRTE,
-  // the minimum architected relative accuracy is 2^-5. When hasRecipPrec(),
-  // this is 2^-14. IEEE float has 23 digits and double has 52 digits.
-  unsigned RefinementSteps = Subtarget.hasRecipPrec() ? 1 : 3,
-           RefinementSteps64 = RefinementSteps + 1;
-
-  this->Options.Reciprocals.setDefaults("sqrtf", true, RefinementSteps);
-  this->Options.Reciprocals.setDefaults("vec-sqrtf", true, RefinementSteps);
-  this->Options.Reciprocals.setDefaults("divf", true, RefinementSteps);
-  this->Options.Reciprocals.setDefaults("vec-divf", true, RefinementSteps);
-
-  this->Options.Reciprocals.setDefaults("sqrtd", true, RefinementSteps64);
-  this->Options.Reciprocals.setDefaults("vec-sqrtd", true, RefinementSteps64);
-  this->Options.Reciprocals.setDefaults("divd", true, RefinementSteps64);
-  this->Options.Reciprocals.setDefaults("vec-divd", true, RefinementSteps64);
-
   initAsmInfo();
 }
 

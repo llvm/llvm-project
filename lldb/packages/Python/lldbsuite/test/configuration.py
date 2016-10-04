@@ -102,10 +102,8 @@ parsable = False
 regexp = None
 
 # Sets of tests which are excluded at runtime
-skip_files = None
-skip_methods = None
-xfail_files = None
-xfail_methods = None
+skip_tests = None
+xfail_tests = None
 
 # By default, recorded session info for errored/failed test are dumped into its
 # own file under a session directory named after the timestamp of the test suite

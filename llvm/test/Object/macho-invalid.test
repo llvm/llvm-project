@@ -334,3 +334,18 @@ INVALID-ENTRY-BAD-SIZE: macho-invalid-entry-bad-size': truncated or malformed ob
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-entry-more-than-one 2>&1 | FileCheck -check-prefix INVALID-ENTRY-MORE-THAN-ONE %s
 INVALID-ENTRY-MORE-THAN-ONE: macho-invalid-entry-more-than-one': truncated or malformed object (more than one LC_MAIN command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-encrypt-bad-size 2>&1 | FileCheck -check-prefix INVALID-ENCRYPT-BAD-SIZE %s
+INVALID-ENCRYPT-BAD-SIZE: macho-invalid-encrypt-bad-size': truncated or malformed object (LC_ENCRYPTION_INFO command 0 has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-encrypt64-bad-size 2>&1 | FileCheck -check-prefix INVALID-ENCRYPT64-BAD-SIZE %s
+INVALID-ENCRYPT64-BAD-SIZE: macho-invalid-encrypt64-bad-size': truncated or malformed object (LC_ENCRYPTION_INFO_64 command 0 has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-encrypt-more-than-one 2>&1 | FileCheck -check-prefix INVALID-ENCRYPT-MORE-THAN-ONE %s
+INVALID-ENCRYPT-MORE-THAN-ONE: macho-invalid-encrypt-more-than-one': truncated or malformed object (more than one LC_ENCRYPTION_INFO and or LC_ENCRYPTION_INFO_64 command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-encrypt-cryptoff 2>&1 | FileCheck -check-prefix INVALID-ENCRYPT-CRYPTOFF %s
+INVALID-ENCRYPT-CRYPTOFF: macho-invalid-encrypt-cryptoff': truncated or malformed object (cryptoff field of LC_ENCRYPTION_INFO command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-encrypt64-cryptoff-cryptsize 2>&1 | FileCheck -check-prefix INVALID-ENCRYPT-CRYPTOFF-CRYPTSIZE %s
+INVALID-ENCRYPT-CRYPTOFF-CRYPTSIZE: macho-invalid-encrypt64-cryptoff-cryptsize': truncated or malformed object (cryptoff field plus cryptsize field of LC_ENCRYPTION_INFO_64 command 0 extends past the end of the file)

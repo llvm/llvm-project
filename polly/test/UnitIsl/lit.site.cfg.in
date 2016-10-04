@@ -1,0 +1,9 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.polly_obj_root = "@POLLY_BINARY_DIR@"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@POLLY_SOURCE_DIR@/test/UnitIsl/lit.cfg")

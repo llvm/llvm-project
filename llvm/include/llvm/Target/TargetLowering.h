@@ -61,6 +61,7 @@ namespace llvm {
   class MCSymbol;
   template<typename T> class SmallVectorImpl;
   class DataLayout;
+  struct TargetRecip;
   class TargetRegisterClass;
   class TargetLibraryInfo;
   class TargetLoweringObjectFile;
@@ -540,6 +541,12 @@ public:
       }
     }
   }
+
+  /// Return the reciprocal estimate code generation preferences for this target
+  /// after potentially overriding settings using the function's attributes.
+  /// FIXME: Like all unsafe-math target settings, this should really be an
+  /// instruction-level attribute/metadata/FMF.
+  TargetRecip getTargetRecipForFunc(MachineFunction &MF) const;
 
   /// Vector types are broken down into some number of legal first class types.
   /// For example, EVT::v8f32 maps to 2 EVT::v4f32 with Altivec or SSE1, or 8
@@ -2174,6 +2181,7 @@ protected:
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
   MachineBasicBlock *emitPatchPoint(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const;
+  TargetRecip ReciprocalEstimates;
 };
 
 /// This class defines information used to lower LLVM code to legal SelectionDAG
