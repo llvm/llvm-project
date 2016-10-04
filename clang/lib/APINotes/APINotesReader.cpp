@@ -88,7 +88,7 @@ namespace {
       result.reserve(numElements);
       for (unsigned i = 0; i != numElements; ++i) {
         auto version = readVersionTuple(data);
-        auto dataBefore = data; (void)data;
+        auto dataBefore = data; (void)dataBefore;
         auto unversionedData = Derived::readUnversioned(key, data);
         assert(data != dataBefore
                && "Unversioned data reader didn't move pointer");
