@@ -1968,24 +1968,26 @@ void ExprEngine::VisitLvalArraySubscriptExpr(const ArraySubscriptExpr *A,
   const Expr *Base = A->getBase()->IgnoreParens();
   const Expr *Idx  = A->getIdx()->IgnoreParens();
 
-  ExplodedNodeSet checkerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(checkerPreStmt, Pred, A, *this);
+  ExplodedNodeSet CheckerPreStmt;
+  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
 
-  StmtNodeBuilder Bldr(checkerPreStmt, Dst, *currBldrCtx);
+  ExplodedNodeSet EvalSet;
+  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
   assert(A->isGLValue() ||
           (!AMgr.getLangOpts().CPlusPlus &&
            A->getType().isCForbiddenLValueType()));
 
-  for (ExplodedNodeSet::iterator it = checkerPreStmt.begin(),
-                                 ei = checkerPreStmt.end(); it != ei; ++it) {
-    const LocationContext *LCtx = (*it)->getLocationContext();
-    ProgramStateRef state = (*it)->getState();
+  for (auto *Node : CheckerPreStmt) {
+    const LocationContext *LCtx = Node->getLocationContext();
+    ProgramStateRef state = Node->getState();
     SVal V = state->getLValue(A->getType(),
                               state->getSVal(Idx, LCtx),
                               state->getSVal(Base, LCtx));
-    Bldr.generateNode(A, *it, state->BindExpr(A, LCtx, V), nullptr,
+    Bldr.generateNode(A, Node, state->BindExpr(A, LCtx, V), nullptr,
                       ProgramPoint::PostLValueKind);
   }
+
+  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }
 
 /// VisitMemberExpr - Transfer function for member expressions.
