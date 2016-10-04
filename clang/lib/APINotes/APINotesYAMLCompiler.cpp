@@ -171,7 +171,7 @@ namespace {
 
   struct Param {
     unsigned Position;
-    bool NoEscape = false;
+    Optional<bool> NoEscape = false;
     llvm::Optional<NullabilityKind> Nullability;
   };
   typedef std::vector<Param> ParamsSeq;
@@ -208,8 +208,8 @@ namespace {
     AvailabilityItem Availability;
     bool SwiftPrivate = false;
     StringRef SwiftName;
-    StringRef SwiftBridge;
-    StringRef NSErrorDomain;
+    Optional<StringRef> SwiftBridge;
+    Optional<StringRef> NSErrorDomain;
     MethodsSeq Methods;
     PropertiesSeq Properties;
   };
@@ -248,8 +248,8 @@ namespace {
     AvailabilityItem Availability;
     StringRef SwiftName;
     bool SwiftPrivate = false;
-    StringRef SwiftBridge;
-    StringRef NSErrorDomain;
+    Optional<StringRef> SwiftBridge;
+    Optional<StringRef> NSErrorDomain;
   };
   typedef std::vector<Tag> TagsSeq;
 
@@ -258,8 +258,8 @@ namespace {
     AvailabilityItem Availability;
     StringRef SwiftName;
     bool SwiftPrivate = false;
-    StringRef SwiftBridge;
-    StringRef NSErrorDomain;
+    Optional<StringRef> SwiftBridge;
+    Optional<StringRef> NSErrorDomain;
   };
   typedef std::vector<Typedef> TypedefsSeq;
 
@@ -1033,6 +1033,20 @@ namespace {
       return StringRef(reinterpret_cast<const char *>(ptr), string.size());
     }
 
+    /// Copy an optional string into allocated memory so it does disappear on us.
+    Optional<StringRef> maybeCopyString(Optional<StringRef> string) {
+      if (!string) return None;
+
+      return copyString(*string);
+    }
+
+    /// Copy an optional string into allocated memory so it does disappear on us.
+    Optional<StringRef> maybeCopyString(Optional<std::string> string) {
+      if (!string) return None;
+
+      return copyString(*string);
+    }
+
     template<typename T>
     void handleCommon(T &record, const CommonEntityInfo &info) {
       handleAvailability(record.Availability, info);
@@ -1043,8 +1057,8 @@ namespace {
     template<typename T>
     void handleCommonType(T &record, const CommonTypeInfo &info) {
       handleCommon(record, info);
-      record.SwiftBridge = copyString(info.getSwiftBridge());      
-      record.NSErrorDomain = copyString(info.getNSErrorDomain());
+      record.SwiftBridge = maybeCopyString(info.getSwiftBridge());
+      record.NSErrorDomain = maybeCopyString(info.getNSErrorDomain());
     }
 
     /// Map Objective-C context info.

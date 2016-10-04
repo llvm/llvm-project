@@ -241,20 +241,22 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                             const api_notes::CommonTypeInfo &info,
                             VersionedInfoRole role) {
   // swift_bridge
-  if (!info.getSwiftBridge().empty()) {
-    handleAPINotedAttribute<SwiftBridgeAttr>(S, D, true, role, [&] {
+  if (auto swiftBridge = info.getSwiftBridge()) {
+    handleAPINotedAttribute<SwiftBridgeAttr>(S, D, !swiftBridge->empty(), role,
+                                             [&] {
       return SwiftBridgeAttr::CreateImplicit(S.Context,
                                              CopyString(S.Context,
-                                                        info.getSwiftBridge()));
+                                                        *swiftBridge));
     });
   }
 
   // ns_error_domain
-  if (!info.getNSErrorDomain().empty()) {
-    handleAPINotedAttribute<NSErrorDomainAttr>(S, D, true, role, [&] {
+  if (auto nsErrorDomain = info.getNSErrorDomain()) {
+    handleAPINotedAttribute<NSErrorDomainAttr>(S, D, !nsErrorDomain->empty(),
+                                               role, [&] {
       return NSErrorDomainAttr::CreateImplicit(
                S.Context,
-               &S.Context.Idents.get(info.getNSErrorDomain()));
+               &S.Context.Idents.get(*nsErrorDomain));
     });
   }
 
@@ -281,8 +283,8 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
                             const api_notes::ParamInfo &info,
                             VersionedInfoRole role) {
   // noescape
-  if (info.isNoEscape()) {
-    handleAPINotedAttribute<NoEscapeAttr>(S, D, true, role, [&] {
+  if (auto noescape = info.isNoEscape()) {
+    handleAPINotedAttribute<NoEscapeAttr>(S, D, *noescape, role, [&] {
       return NoEscapeAttr::CreateImplicit(S.Context);
     });
   }
