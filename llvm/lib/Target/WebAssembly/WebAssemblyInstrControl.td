@@ -59,14 +59,14 @@ def BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Placemarkers to indicate the start or end of a block or loop scope. These
-// use/clobber EXPR_STACK to prevent them from being moved into the middle of
+// use/clobber VALUE_STACK to prevent them from being moved into the middle of
 // an expression tree.
-let Uses = [EXPR_STACK], Defs = [EXPR_STACK] in {
+let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
 def BLOCK     : I<(outs), (ins), [], "block">;
 def LOOP      : I<(outs), (ins), [], "loop">;
 def END_BLOCK : I<(outs), (ins), [], "end_block">;
 def END_LOOP  : I<(outs), (ins), [], "end_loop">;
-} // Uses = [EXPR_STACK], Defs = [EXPR_STACK]
+} // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
 multiclass RETURN<WebAssemblyRegClass vt> {
   def RETURN_#vt : I<(outs), (ins vt:$val), [(WebAssemblyreturn vt:$val)],

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon-- -mcpu=hexagonv5 -relocation-model=pic < %s | FileCheck %s
 
 ; CHECK-DAG: r{{[0-9]+}} = add({{pc|PC}}, ##_GLOBAL_OFFSET_TABLE_@PCREL)
 ; CHECK-DAG: r{{[0-9]+}} = add({{pc|PC}}, ##x@PCREL)

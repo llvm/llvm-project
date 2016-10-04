@@ -84,7 +84,7 @@
 	 <tr><td><a href="http://wg21.link/LWG2567">2567</a></td><td>Specification of logical operator traits uses BaseCharacteristic, which is defined only for UnaryTypeTraits and BinaryTypeTraits</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2569">2569</a></td><td>conjunction and disjunction requirements are too strict</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2570">2570</a></td><td>[fund.ts.v2] conjunction and disjunction requirements are too strict</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2578">2578</a></td><td>Iterator requirements should reference iterator traits</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2578">2578</a></td><td>Iterator requirements should reference iterator traits</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2584">2584</a></td><td><regex> ECMAScript IdentityEscape is ambiguous</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2589">2589</a></td><td>match_results can't satisfy the requirements of a container</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2591">2591</a></td><td>std::function's member template target() should not lead to undefined behaviour</td><td>Issaquah</td><td></td></tr>
@@ -108,7 +108,7 @@
 	 <tr><td><a href="http://wg21.link/LWG2733">2733</a></td><td>[fund.ts.v2] gcd / lcm and bool</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2735">2735</a></td><td>std::abs(short), std::abs(signed char) and others should return int instead of double in order to be compatible with C++98 and C</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2736">2736</a></td><td>nullopt_t insufficiently constrained</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2738">2738</a></td><td>is_constructible with void types</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2738">2738</a></td><td>is_constructible with void types</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2739">2739</a></td><td>Issue with time_point non-member subtraction with an unsigned duration</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2740">2740</a></td><td>constexpr optional<T>::operator-></td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2742">2742</a></td><td>Inconsistent string interface taking string_view</td><td>Issaquah</td><td>Patch Ready</td></tr>
@@ -158,7 +158,7 @@
 <li>2567 - </li>
 <li>2569 - </li>
 <li>2570 - </li>
-<li>2578 - </li>
+<li>2578 - This is just wording cleanup. </li>
 <li>2584 - </li>
 <li>2589 - </li>
 <li>2591 - </li>
@@ -182,7 +182,7 @@
 <li>2733 - </li>
 <li>2735 - </li>
 <li>2736 - </li>
-<li>2738 - </li>
+<li>2738 - We already do this; I added tests for cv-void</li>
 <li>2739 - </li>
 <li>2740 - </li>
 <li>2742 - Patch and tests ready</li>

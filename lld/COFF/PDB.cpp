@@ -35,9 +35,9 @@ void coff::createPDB(StringRef Path) {
   pdb::PDBFileBuilder Builder(Alloc);
   ExitOnErr(Builder.initialize(4096)); // 4096 is blocksize
 
-  ExitOnErr(Builder.getMsfBuilder().addStream(1, {4}));
-  ExitOnErr(Builder.getMsfBuilder().addStream(1, {5}));
-  ExitOnErr(Builder.getMsfBuilder().addStream(1, {6}));
+  ExitOnErr(Builder.getMsfBuilder().addStream(1));
+  ExitOnErr(Builder.getMsfBuilder().addStream(1));
+  ExitOnErr(Builder.getMsfBuilder().addStream(1));
 
   // Add an Info stream.
   auto &InfoBuilder = Builder.getInfoBuilder();

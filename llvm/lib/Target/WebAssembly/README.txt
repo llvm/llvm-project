@@ -24,13 +24,13 @@ test suite. The tests can be run locally using:
 
 //===---------------------------------------------------------------------===//
 
-Br, br_if, and br_table instructions can support having a value on the
-expression stack across the jump (sometimes). We should (a) model this, and
-(b) extend the stackifier to utilize it.
+Br, br_if, and br_table instructions can support having a value on the value
+stack across the jump (sometimes). We should (a) model this, and (b) extend
+the stackifier to utilize it.
 
 //===---------------------------------------------------------------------===//
 
-The min/max operators aren't exactly a<b?a:b because of NaN and negative zero
+The min/max instructions aren't exactly a<b?a:b because of NaN and negative zero
 behavior. The ARM target has the same kind of min/max instructions and has
 implemented optimizations for them; we should do similar optimizations for
 WebAssembly.
@@ -44,7 +44,7 @@ us too?
 
 //===---------------------------------------------------------------------===//
 
-Register stackification uses the EXPR_STACK physical register to impose
+Register stackification uses the VALUE_STACK physical register to impose
 ordering dependencies on instructions with stack operands. This is pessimistic;
 we should consider alternate ways to model stack dependencies.
 
@@ -127,5 +127,13 @@ Instruction ordering has a significant influence on register stackification and
 coloring. Consider experimenting with the MachineScheduler (enable via
 enableMachineScheduler) and determine if it can be configured to schedule
 instructions advantageously for this purpose.
+
+//===---------------------------------------------------------------------===//
+
+WebAssembly is now officially a stack machine, rather than an AST, and this
+comes with additional opportunities for WebAssemblyRegStackify. Specifically,
+the stack doesn't need to be empty after an instruction with no return values.
+WebAssemblyRegStackify could be extended, or possibly rewritten, to take
+advantage of the new opportunities.
 
 //===---------------------------------------------------------------------===//

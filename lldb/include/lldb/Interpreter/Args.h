@@ -27,9 +27,7 @@
 
 namespace lldb_private {
 
-typedef std::pair<int, std::string> OptionArgValue;
-typedef std::pair<std::string, OptionArgValue> OptionArgPair;
-typedef std::vector<OptionArgPair> OptionArgVector;
+typedef std::vector<std::tuple<std::string, int, std::string>> OptionArgVector;
 typedef std::shared_ptr<OptionArgVector> OptionArgVectorSP;
 
 struct OptionArgElement {
@@ -58,6 +56,22 @@ typedef std::vector<OptionArgElement> OptionElementVector;
 //----------------------------------------------------------------------
 class Args {
 public:
+  struct ArgEntry {
+  private:
+    friend class Args;
+    std::unique_ptr<char[]> ptr;
+
+    char *data() { return ptr.get(); }
+
+  public:
+    ArgEntry() = default;
+    ArgEntry(llvm::StringRef str, char quote);
+
+    llvm::StringRef ref;
+    char quote;
+    const char *c_str() const { return ptr.get(); }
+  };
+
   //------------------------------------------------------------------
   /// Construct with an option command string.
   ///
@@ -71,7 +85,7 @@ public:
 
   Args(const Args &rhs);
 
-  const Args &operator=(const Args &rhs);
+  Args &operator=(const Args &rhs);
 
   //------------------------------------------------------------------
   /// Destructor.
@@ -185,50 +199,6 @@ public:
   void AppendArguments(const Args &rhs);
 
   void AppendArguments(const char **argv);
-
-  // Delete const char* versions of StringRef functions.  Normally this would
-  // not be necessary, as const char * is implicitly convertible to StringRef.
-  // However, since the use of const char* is so pervasive, and since StringRef
-  // will assert if you try to construct one from nullptr, this allows the
-  // compiler to catch instances of the function being invoked with a
-  // const char *, allowing us to replace them with explicit conversions at each
-  // call-site.  This ensures that no callsites slip through the cracks where
-  // we would be trying to implicitly convert from nullptr, since it will force
-  // us to evaluate and explicitly convert each one.
-  //
-  // Once StringRef use becomes more pervasive, there will be fewer
-  // implicit conversions because we will be using StringRefs across the whole
-  // pipeline, so we won't have to have this "glue" that converts between the
-  // two, and at that point it becomes easy to just make sure you don't pass
-  // nullptr into the function on the odd occasion that you do pass a
-  // const char *.
-  // Call-site fixing methodology:
-  //   1. If you know the string cannot be null (e.g. it's a const char[], or
-  //      it's been checked for null), use llvm::StringRef(ptr).
-  //   2. If you don't know if it can be null (e.g. it's returned from a
-  //      function whose semantics are unclear), use
-  //      llvm::StringRef::withNullAsEmpty(ptr).
-  //   3. If it's .c_str() of a std::string, just pass the std::string directly.
-  //   4. If it's .str().c_str() of a StringRef, just pass the StringRef
-  //      directly.
-  void ReplaceArgumentAtIndex(size_t, const char *, char = '\0') = delete;
-  void AppendArgument(const char *arg_str, char quote_char = '\0') = delete;
-  void InsertArgumentAtIndex(size_t, const char *, char = '\0') = delete;
-  static bool StringToBoolean(const char *, bool, bool *) = delete;
-  static lldb::ScriptLanguage
-  StringToScriptLanguage(const char *, lldb::ScriptLanguage, bool *) = delete;
-  static lldb::Encoding
-  StringToEncoding(const char *,
-                   lldb::Encoding = lldb::eEncodingInvalid) = delete;
-  static uint32_t StringToGenericRegister(const char *) = delete;
-  static bool StringToVersion(const char *, uint32_t &, uint32_t &,
-                              uint32_t &) = delete;
-  const char *Unshift(const char *, char = '\0') = delete;
-  void AddOrReplaceEnvironmentVariable(const char *, const char *) = delete;
-  bool ContainsEnvironmentVariable(const char *,
-                                   size_t * = nullptr) const = delete;
-  static int64_t StringToOptionEnum(const char *, OptionEnumValueElement *,
-                                    int32_t, Error &) = delete;
 
   //------------------------------------------------------------------
   /// Insert the argument value at index \a idx to \a arg_cstr.
@@ -456,11 +426,6 @@ public:
   static std::string EscapeLLDBCommandArgument(const std::string &arg,
                                                char quote_char);
 
-  // This one isn't really relevant to Arguments per se, but we're using the
-  // Args as a
-  // general strings container, so...
-  void LongestCommonPrefix(std::string &common_prefix);
-
   //------------------------------------------------------------------
   /// Add or replace an environment variable with the given value.
   ///
@@ -493,22 +458,11 @@ public:
   bool ContainsEnvironmentVariable(llvm::StringRef env_var_name,
                                    size_t *argument_index = nullptr) const;
 
-protected:
-  //------------------------------------------------------------------
-  // Classes that inherit from Args can see and modify these
-  //------------------------------------------------------------------
-  typedef std::list<std::string> arg_sstr_collection;
-  typedef std::vector<const char *> arg_cstr_collection;
-  typedef std::vector<char> arg_quote_char_collection;
-  arg_sstr_collection m_args;
-  arg_cstr_collection m_argv; ///< The current argument vector.
-  arg_quote_char_collection m_args_quote_char;
+private:
+  std::vector<ArgEntry> m_entries;
+  std::vector<char *> m_argv;
 
   void UpdateArgsAfterOptionParsing();
-
-  void UpdateArgvFromArgs();
-
-  llvm::StringRef ParseSingleArgument(llvm::StringRef command);
 };
 
 } // namespace lldb_private

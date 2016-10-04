@@ -23,15 +23,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
 TARGE_DIR=$(readlink -f $1)
 
-LLVM_SRC=$(readlink -f $SCRIPT_DIR/../../../../../..)
+LLVM_SRC="${LLVM_SRC:-$SCRIPT_DIR/../../../../../..}"
+LLVM_SRC=$(readlink -f $LLVM_SRC)
 
-if [[ "$LLVM_SRC" == "" ||
-      ! -d "${LLVM_SRC}/projects/libcxxabi" ||
+if [[ ! -d "${LLVM_SRC}/projects/libcxxabi" ||
       ! -d "${LLVM_SRC}/projects/libcxx" ]]; then
   echo "Missing or incomplete LLVM_SRC"
   exit 1
 fi
-LLVM_SRC=$(readlink -f $LLVM_SRC)
 
 if [[ "$ZLIB_SRC" == ""  ||
       ! -x "${ZLIB_SRC}/configure" ||

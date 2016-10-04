@@ -93,7 +93,7 @@ void lldb_private::DisableLog(const char **categories, Stream *feedback_strm) {
 
   if (log != nullptr) {
     uint32_t flag_bits = 0;
-    if (categories[0] != nullptr) {
+    if (categories && categories[0]) {
       flag_bits = log->GetMask().Get();
       for (size_t i = 0; categories[i] != nullptr; ++i) {
         const char *arg = categories[i];

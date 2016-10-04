@@ -46,7 +46,7 @@ class BreakpointCaseSensitivityTestCase(TestBase):
         # Create a target by the debugger.
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
-        cwd = self.get_process_working_directory()
+        cwd = os.getcwd()
 
         # try both BreakpointCreateByLocation and BreakpointCreateBySourceRegex
         for regex in [False, True]:

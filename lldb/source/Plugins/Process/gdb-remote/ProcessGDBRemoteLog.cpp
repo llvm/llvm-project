@@ -66,7 +66,7 @@ void ProcessGDBRemoteLog::DisableLog(const char **categories,
   if (log) {
     uint32_t flag_bits = 0;
 
-    if (categories[0] != NULL) {
+    if (categories && categories[0]) {
       flag_bits = log->GetMask().Get();
       for (size_t i = 0; categories[i] != NULL; ++i) {
         const char *arg = categories[i];

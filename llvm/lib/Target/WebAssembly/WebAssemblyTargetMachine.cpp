@@ -73,10 +73,10 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
                         TT, CPU, FS, Options, getEffectiveRelocModel(RM),
                         CM, OL),
       TLOF(make_unique<WebAssemblyTargetObjectFile>()) {
-  // WebAssembly type-checks expressions, but a noreturn function with a return
+  // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
-  // 'unreachable' expression which is meant for that case.
+  // 'unreachable' instructions which is meant for that case.
   this->Options.TrapUnreachable = true;
 
   initAsmInfo();
@@ -237,7 +237,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
     // Prepare store instructions for register stackifying.
     addPass(createWebAssemblyStoreResults());
 
-    // Mark registers as representing wasm's expression stack. This is a key
+    // Mark registers as representing wasm's value stack. This is a key
     // code-compression technique in WebAssembly. We run this pass (and
     // StoreResults above) very late, so that it sees as much code as possible,
     // including code emitted by PEI and expanded by late tail duplication.
