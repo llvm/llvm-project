@@ -226,7 +226,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
     if (Sections[I] == &InputSection<ELFT>::Discarded)
       continue;
 
-    if (Sec.sh_flags & SHF_EXCLUDE) {
+    if (!Config->Relocatable && (Sec.sh_flags & SHF_EXCLUDE)) {
       Sections[I] = &InputSection<ELFT>::Discarded;
       continue;
     }

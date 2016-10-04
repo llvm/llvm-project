@@ -216,7 +216,7 @@ public:
                         !Subtarget->inMicroMipsMode() && Subtarget->hasMips32();
     TargetSupported =
         ISASupported && TM.isPositionIndependent() && getABI().IsO32();
-    UnsupportedFPMode = Subtarget->isFP64bit();
+    UnsupportedFPMode = Subtarget->isFP64bit() || Subtarget->useSoftFloat();
   }
 
   unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
@@ -1365,6 +1365,10 @@ bool MipsFastISel::fastLowerArguments() {
       break;
 
     case MVT::f32:
+      if (UnsupportedFPMode) {
+        DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode)\n");
+        return false;
+      }
       if (NextFGR32 == FGR32ArgRegs.end()) {
         DEBUG(dbgs() << ".. .. gave up (ran out of FGR32 arguments)\n");
         return false;
@@ -1381,7 +1385,7 @@ bool MipsFastISel::fastLowerArguments() {
 
     case MVT::f64:
       if (UnsupportedFPMode) {
-        DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode\n");
+        DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode)\n");
         return false;
       }
       if (NextAFGR64 == AFGR64ArgRegs.end()) {

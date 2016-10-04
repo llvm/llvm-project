@@ -137,6 +137,8 @@ public:
   const Elf_Rela *rela_begin(const Elf_Shdr *sec) const {
     if (sec->sh_entsize != sizeof(Elf_Rela))
       report_fatal_error("Invalid relocation entry size");
+    if (sec->sh_offset >= Buf.size())
+      report_fatal_error("Invalid relocation entry offset");
     return reinterpret_cast<const Elf_Rela *>(base() + sec->sh_offset);
   }
 
@@ -154,6 +156,8 @@ public:
   const Elf_Rel *rel_begin(const Elf_Shdr *sec) const {
     if (sec->sh_entsize != sizeof(Elf_Rel))
       report_fatal_error("Invalid relocation entry size");
+    if (sec->sh_offset >= Buf.size())
+      report_fatal_error("Invalid relocation entry offset");
     return reinterpret_cast<const Elf_Rel *>(base() + sec->sh_offset);
   }
 

@@ -86,10 +86,9 @@ void StringTableBuilder::finalizeInOrder() {
 }
 
 void StringTableBuilder::finalizeStringTable(bool Optimize) {
-  typedef std::pair<CachedHash<StringRef>, size_t> StringOffsetPair;
-  std::vector<StringOffsetPair *> Strings;
+  std::vector<StringPair *> Strings;
   Strings.reserve(StringIndexMap.size());
-  for (StringOffsetPair &P : StringIndexMap)
+  for (StringPair &P : StringIndexMap)
     Strings.push_back(&P);
 
   if (!Strings.empty()) {
@@ -99,7 +98,7 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
       multikey_qsort(&Strings[0], &Strings[0] + Strings.size(), 0);
     } else {
       std::sort(Strings.begin(), Strings.end(),
-                [](const StringOffsetPair *LHS, const StringOffsetPair *RHS) {
+                [](const StringPair *LHS, const StringPair *RHS) {
                   return LHS->second < RHS->second;
                 });
     }
@@ -120,7 +119,7 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
   }
 
   StringRef Previous;
-  for (StringOffsetPair *P : Strings) {
+  for (StringPair *P : Strings) {
     StringRef S = P->first.Val;
     if (K == WinCOFF)
       assert(S.size() > COFF::NameSize && "Short string in COFF string table!");

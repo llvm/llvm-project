@@ -1,7 +1,15 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=medium -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=MEDIUM %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=medium -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=MEDIUM-VSX %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=large -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=LARGE %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=large -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=LARGE-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=medium \
+; RUN:   -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=MEDIUM %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=medium \
+; RUN:   -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=MEDIUM-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=large \
+; RUN:   -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=LARGE %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=large \
+; RUN:   -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=LARGE-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O0 -code-model=medium \
+; RUN:   -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=MEDIUM-P9 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O0 -code-model=large \
+; RUN:   -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=LARGE-P9 %s
 
 ; Test correct code generation for medium and large code model
 ; for loading a value from the constant pool (TOC-relative).
@@ -41,3 +49,17 @@ entry:
 ; LARGE-VSX: addis [[REG1:[0-9]+]], 2, [[VAR2:[a-z0-9A-Z_.]+]]@toc@ha
 ; LARGE-VSX: ld [[REG2:[0-9]+]], [[VAR2]]@toc@l([[REG1]])
 ; LARGE-VSX: lxsdx {{[0-9]+}}, 0, [[REG2]]
+
+; MEDIUM-P9: [[VAR:[a-z0-9A-Z_.]+]]:
+; MEDIUM-P9: .quad 4562098671269285104
+; MEDIUM-P9-LABEL: test_double_const:
+; MEDIUM-P9: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
+; MEDIUM-P9: addi [[REG2:[0-9]+]], [[REG1]], [[VAR]]@toc@l
+; MEDIUM-P9: lfd {{[0-9]+}}, 0([[REG2]])
+
+; LARGE-P9: [[VAR:[a-z0-9A-Z_.]+]]:
+; LARGE-P9: .quad 4562098671269285104
+; LARGE-P9-LABEL: test_double_const:
+; LARGE-P9: addis [[REG1:[0-9]+]], 2, [[VAR2:[a-z0-9A-Z_.]+]]@toc@ha
+; LARGE-P9: ld [[REG2:[0-9]+]], [[VAR2]]@toc@l([[REG1]])
+; LARGE-P9: lfd {{[0-9]+}}, 0([[REG2]])
