@@ -266,9 +266,6 @@ private:
   /// \sa shouldWidenLoops
   Optional<bool> WidenLoops;
 
-  /// \sa shouldDisplayNotesAsEvents
-  Optional<bool> DisplayNotesAsEvents;
-
   /// A helper function that retrieves option for a given full-qualified
   /// checker name.
   /// Options for checkers can be specified via 'analyzer-config' command-line
@@ -536,14 +533,6 @@ public:
   /// Returns true if the analysis should try to widen loops.
   /// This is controlled by the 'widen-loops' config option.
   bool shouldWidenLoops();
-
-  /// Returns true if the bug reporter should transparently treat extra note
-  /// diagnostic pieces as event diagnostic pieces. Useful when the diagnostic
-  /// consumer doesn't support the extra note pieces.
-  ///
-  /// This is controlled by the 'notes-as-events' option, which defaults
-  /// to false when unset.
-  bool shouldDisplayNotesAsEvents();
 
 public:
   AnalyzerOptions() :

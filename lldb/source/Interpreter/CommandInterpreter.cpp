@@ -1373,12 +1373,13 @@ CommandObject *CommandInterpreter::BuildAliasResult(
                                    index);
       result.SetStatus(eReturnStatusFailed);
       return nullptr;
+    } else {
+      size_t strpos = raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
+      if (strpos != std::string::npos)
+        raw_input_string = raw_input_string.erase(
+            strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
+      result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
     }
-    size_t strpos = raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
-    if (strpos != std::string::npos)
-      raw_input_string = raw_input_string.erase(
-          strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
-    result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
   }
 
   alias_result = result_str.GetData();

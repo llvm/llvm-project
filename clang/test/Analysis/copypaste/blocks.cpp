@@ -4,14 +4,14 @@
 
 void log();
 
-auto BlockA = ^(int a, int b){ // expected-warning{{Duplicate code detected}}
+auto BlockA = ^(int a, int b){ // expected-warning{{Detected code clone.}}
   log();
   if (a > b)
     return a;
   return b;
 };
 
-auto BlockB = ^(int a, int b){ // expected-note{{Similar code here}}
+auto BlockB = ^(int a, int b){ // expected-note{{Related code clone is here.}}
   log();
   if (a > b)
     return a;

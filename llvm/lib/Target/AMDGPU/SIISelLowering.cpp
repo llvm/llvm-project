@@ -1118,18 +1118,18 @@ MachineBasicBlock *SITargetLowering::splitKillBlock(MachineInstr &MI,
 // will only do one iteration. In the worst case, this will loop 64 times.
 //
 // TODO: Just use v_readlane_b32 if we know the VGPR has a uniform value.
-static void emitLoadM0FromVGPRLoop(const SIInstrInfo *TII,
-                                   MachineRegisterInfo &MRI,
-                                   MachineBasicBlock &OrigBB,
-                                   MachineBasicBlock &LoopBB,
-                                   const DebugLoc &DL,
-                                   MachineInstr *MovRel,
-                                   const MachineOperand &IdxReg,
-                                   unsigned InitReg,
-                                   unsigned ResultReg,
-                                   unsigned PhiReg,
-                                   unsigned InitSaveExecReg,
-                                   int Offset) {
+static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
+  const SIInstrInfo *TII,
+  MachineRegisterInfo &MRI,
+  MachineBasicBlock &OrigBB,
+  MachineBasicBlock &LoopBB,
+  const DebugLoc &DL,
+  const MachineOperand &IdxReg,
+  unsigned InitReg,
+  unsigned ResultReg,
+  unsigned PhiReg,
+  unsigned InitSaveExecReg,
+  int Offset) {
   MachineBasicBlock::iterator I = LoopBB.begin();
 
   unsigned PhiExec = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
@@ -1174,11 +1174,9 @@ static void emitLoadM0FromVGPRLoop(const SIInstrInfo *TII,
 
   MRI.setSimpleHint(NewExec, CondReg);
 
-  // Do the actual move.
-  LoopBB.insert(I, MovRel);
-
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
+  MachineInstr *InsertPt =
+    BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
     .addReg(AMDGPU::EXEC)
     .addReg(NewExec);
 
@@ -1188,6 +1186,8 @@ static void emitLoadM0FromVGPRLoop(const SIInstrInfo *TII,
   // Loop back to V_READFIRSTLANE_B32 if there are still variants to cover.
   BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
     .addMBB(&LoopBB);
+
+  return InsertPt->getIterator();
 }
 
 // This has slightly sub-optimal regalloc when the source vector is killed by
@@ -1195,13 +1195,12 @@ static void emitLoadM0FromVGPRLoop(const SIInstrInfo *TII,
 // per-workitem, so is kept alive for the whole loop so we end up not re-using a
 // subregister from it, using 1 more VGPR than necessary. This was saved when
 // this was expanded after register allocation.
-static MachineBasicBlock *loadM0FromVGPR(const SIInstrInfo *TII,
-                                         MachineBasicBlock &MBB,
-                                         MachineInstr &MI,
-                                         MachineInstr *MovRel,
-                                         unsigned InitResultReg,
-                                         unsigned PhiReg,
-                                         int Offset) {
+static MachineBasicBlock::iterator loadM0FromVGPR(const SIInstrInfo *TII,
+                                                  MachineBasicBlock &MBB,
+                                                  MachineInstr &MI,
+                                                  unsigned InitResultReg,
+                                                  unsigned PhiReg,
+                                                  int Offset) {
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -1238,8 +1237,9 @@ static MachineBasicBlock *loadM0FromVGPR(const SIInstrInfo *TII,
 
   const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
 
-  emitLoadM0FromVGPRLoop(TII, MRI, MBB, *LoopBB, DL, MovRel, *Idx,
-                         InitResultReg, DstReg, PhiReg, TmpExec, Offset);
+  auto InsPt = emitLoadM0FromVGPRLoop(TII, MRI, MBB, *LoopBB, DL, *Idx,
+                                      InitResultReg, DstReg, PhiReg, TmpExec,
+                                      Offset);
 
   MachineBasicBlock::iterator First = RemainderBB->begin();
   BuildMI(*RemainderBB, First, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
@@ -1247,7 +1247,7 @@ static MachineBasicBlock *loadM0FromVGPR(const SIInstrInfo *TII,
 
   MI.eraseFromParent();
 
-  return RemainderBB;
+  return InsPt;
 }
 
 // Returns subreg index, offset
@@ -1298,7 +1298,8 @@ static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
 // Control flow needs to be inserted if indexing with a VGPR.
 static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
                                           MachineBasicBlock &MBB,
-                                          const SIInstrInfo *TII) {
+                                          const SISubtarget &ST) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -1333,17 +1334,21 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
 
   BuildMI(MBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), InitReg);
 
-  MachineInstr *MovRel =
-    BuildMI(*MF, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
+
+  auto InsPt = loadM0FromVGPR(TII, MBB, MI, InitReg, PhiReg, Offset);
+
+  BuildMI(*InsPt->getParent(), InsPt, DL,
+          TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
     .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
     .addReg(SrcVec->getReg(), RegState::Implicit);
 
-  return loadM0FromVGPR(TII, MBB, MI, MovRel, InitReg, PhiReg, Offset);
+  return InsPt->getParent();
 }
 
 static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
                                           MachineBasicBlock &MBB,
-                                          const SIInstrInfo *TII) {
+                                          const SISubtarget &ST) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -1404,9 +1409,11 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   const DebugLoc &DL = MI.getDebugLoc();
   unsigned PhiReg = MRI.createVirtualRegister(VecRC);
 
+  auto InsPt = loadM0FromVGPR(TII, MBB, MI, SrcVec->getReg(), PhiReg, Offset);
+
   // vdst is not actually read and just provides the base register index.
   MachineInstr *MovRel =
-    BuildMI(*MF, DL, MovRelDesc)
+    BuildMI(*InsPt->getParent(), InsPt, DL, MovRelDesc)
     .addReg(PhiReg, RegState::Undef, SubReg) // vdst
     .addOperand(*Val)
     .addReg(Dst, RegState::ImplicitDefine)
@@ -1418,8 +1425,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
 
   MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
 
-  return loadM0FromVGPR(TII, MBB, MI, MovRel,
-                        SrcVec->getReg(), PhiReg, Offset);
+  return InsPt->getParent();
 }
 
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
@@ -1450,13 +1456,13 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::SI_INDIRECT_SRC_V4:
   case AMDGPU::SI_INDIRECT_SRC_V8:
   case AMDGPU::SI_INDIRECT_SRC_V16:
-    return emitIndirectSrc(MI, *BB, getSubtarget()->getInstrInfo());
+    return emitIndirectSrc(MI, *BB, *getSubtarget());
   case AMDGPU::SI_INDIRECT_DST_V1:
   case AMDGPU::SI_INDIRECT_DST_V2:
   case AMDGPU::SI_INDIRECT_DST_V4:
   case AMDGPU::SI_INDIRECT_DST_V8:
   case AMDGPU::SI_INDIRECT_DST_V16:
-    return emitIndirectDst(MI, *BB, getSubtarget()->getInstrInfo());
+    return emitIndirectDst(MI, *BB, *getSubtarget());
   case AMDGPU::SI_KILL:
     return splitKillBlock(MI, BB);
   case AMDGPU::V_CNDMASK_B64_PSEUDO: {

@@ -7,7 +7,7 @@
 @end
 
 @implementation A
-- (int) setOk : (int) a : (int) b {  // expected-warning{{Duplicate code detected}}
+- (int) setOk : (int) a : (int) b {  // expected-warning{{Detected code clone.}}
   if (a > b)
     return a;
   return b;
@@ -19,7 +19,7 @@
 @end
 
 @implementation B
-- (int) setOk : (int) a : (int) b { // expected-note{{Similar code here}}
+- (int) setOk : (int) a : (int) b { // expected-note{{Related code clone is here.}}
   if (a > b)
     return a;
   return b;

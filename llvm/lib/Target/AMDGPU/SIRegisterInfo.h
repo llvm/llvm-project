@@ -73,6 +73,12 @@ public:
   const TargetRegisterClass *getPointerRegClass(
     const MachineFunction &MF, unsigned Kind = 0) const override;
 
+  void spillSGPR(MachineBasicBlock::iterator MI,
+                 int FI, RegScavenger *RS) const;
+
+  void restoreSGPR(MachineBasicBlock::iterator MI,
+                   int FI, RegScavenger *RS) const;
+
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
