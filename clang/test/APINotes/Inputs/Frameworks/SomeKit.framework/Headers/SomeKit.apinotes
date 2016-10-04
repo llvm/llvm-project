@@ -40,3 +40,10 @@ SwiftVersions:
             MethodKind:      Instance
             NullabilityOfRet: O
             Nullability:      [ O, S ]
+        Properties:
+          - Name: explicitNonnullInstance
+            PropertyKind:    Instance
+            Nullability:     O
+          - Name: explicitNullableInstance
+            PropertyKind:    Instance
+            Nullability:     N

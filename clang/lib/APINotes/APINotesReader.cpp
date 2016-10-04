@@ -1451,9 +1451,14 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
   // Look for an exact version match.
   Optional<unsigned> unversioned;
   Selected = Results.size();
+  SelectedRole = VersionedInfoRole::Versioned;
+
   for (unsigned i = 0, n = Results.size(); i != n; ++i) {
     if (Results[i].first == version) {
       Selected = i;
+
+      if (version) SelectedRole = VersionedInfoRole::ReplaceSource;
+      else SelectedRole = VersionedInfoRole::AugmentSource;
       break;
     }
 
@@ -1465,9 +1470,11 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
 
   // If we didn't find a match but we have an unversioned result, use the
   // unversioned result.
-  if (Selected == Results.size() && unversioned)
+  if (Selected == Results.size() && unversioned) {
     Selected = *unversioned;
-}
+    SelectedRole = VersionedInfoRole::AugmentSource;
+  }
+  }
 
 auto APINotesReader::lookupObjCClassID(StringRef name) -> Optional<ContextID> {
   if (!Impl.ObjCContextIDTable)

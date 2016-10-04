@@ -15,6 +15,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/APINotes/APINotesReader.h"
 using namespace clang;
+using clang::api_notes::VersionedInfoRole;
 
 /// Determine whether this is a multi-level pointer type.
 static bool isMultiLevelPointerType(QualType type) {
@@ -27,7 +28,23 @@ static bool isMultiLevelPointerType(QualType type) {
 }
 
 // Apply nullability to the given declaration.
-static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability) {
+static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
+                             VersionedInfoRole role) {
+  bool overrideExisting;
+  switch (role) {
+  case VersionedInfoRole::AugmentSource:
+    overrideExisting = false;
+    break;
+
+  case VersionedInfoRole::ReplaceSource:
+    overrideExisting = true;
+    break;
+
+  case VersionedInfoRole::Versioned:
+    // FIXME: Record versioned info?
+    return;
+  }
+
   QualType type;
 
   // Nullability for a function/method appertains to the retain type.
@@ -47,7 +64,8 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability) {
   QualType origType = type;
   S.checkNullabilityTypeSpecifier(type, nullability, decl->getLocation(),
                                   /*isContextSensitive=*/false,
-                                  /*implicit=*/true);
+                                  /*implicit=*/true,
+                                  overrideExisting);
   if (type.getTypePtr() == origType.getTypePtr())
     return;
 
@@ -100,104 +118,196 @@ static StringRef CopyString(ASTContext &ctx, StringRef string) {
   return StringRef(static_cast<char *>(mem), string.size());
 }
 
-static void ProcessAPINotes(Sema &S, Decl *D,
-                            const api_notes::CommonEntityInfo &Info) {
-  // Availability
-  if (Info.Unavailable && !D->hasAttr<UnavailableAttr>()) {
-    D->addAttr(UnavailableAttr::CreateImplicit(S.Context,
-					       CopyString(S.Context,
-							  Info.UnavailableMsg)));
-  }
+namespace {
+  /// Handle an attribute introduced by API notes.
+  ///
+  /// \param shouldAddAttribute Whether we should add a new attribute
+  /// (otherwise, we might remove an existing attribute).
+  /// \param createAttr Create the new attribute to be added.
+  /// \param getExistingAttr Get an existing, matching attribute on the given
+  /// declaration.
+  template<typename A>
+  void handleAPINotedAttribute(
+         Sema &S, Decl *D, bool shouldAddAttribute,
+         VersionedInfoRole role,
+         llvm::function_ref<A *()> createAttr,
+         llvm::function_ref<specific_attr_iterator<A>(Decl *)> getExistingAttr =
+           [](Decl *decl) { return decl->specific_attr_begin<A>(); }) {
+    switch (role) {
+    case VersionedInfoRole::AugmentSource:
+      // If we're not adding an attribute, there's nothing to do.
+      if (!shouldAddAttribute) return;
 
-  if (Info.UnavailableInSwift) {
-    D->addAttr(AvailabilityAttr::CreateImplicit(
-		             S.Context,
-                 &S.Context.Idents.get("swift"),
-                 VersionTuple(),
-                 VersionTuple(),
-                 VersionTuple(),
-                 /*Unavailable=*/true,
-                 CopyString(S.Context, Info.UnavailableMsg),
-                 /*Strict=*/false,
-                 /*Replacement=*/StringRef()));
-  }
+      // If the attribute is already present, we're done.
+      if (getExistingAttr(D) != D->specific_attr_end<A>()) return;
 
-  // swift_private
-  if (Info.SwiftPrivate && !D->hasAttr<SwiftPrivateAttr>()) {
-    D->addAttr(SwiftPrivateAttr::CreateImplicit(S.Context));
-  }
+      // Add the attribute.
+      if (auto attr = createAttr())
+        D->addAttr(attr);
+      break;
 
-  // swift_name
-  if (!Info.SwiftName.empty() && !D->hasAttr<SwiftNameAttr>()) {
-    auto &APINoteName = S.getASTContext().Idents.get("SwiftName API Note");
-    
-    if (!S.DiagnoseSwiftName(D, Info.SwiftName, D->getLocation(),
-                             &APINoteName)) {
-      return;
+    case VersionedInfoRole::ReplaceSource: {
+      auto end = D->specific_attr_end<A>();
+      auto existing = getExistingAttr(D);
+      if (existing != end) {
+        // Remove the existing attribute.
+        D->getAttrs().erase(existing.getCurrent());
+      }
+
+      // If we're supposed to add a new attribute, do so.
+      if (shouldAddAttribute) {
+        if (auto attr = createAttr()) {
+          D->addAttr(attr);
+        }
+      }
+      break;
     }
-    D->addAttr(SwiftNameAttr::CreateImplicit(S.Context,
-                                       CopyString(S.Context, Info.SwiftName)));
+
+    case VersionedInfoRole::Versioned:
+      // FIXME: Retain versioned attributes separately.
+      break;
+    }
   }
 }
 
 static void ProcessAPINotes(Sema &S, Decl *D,
-                            const api_notes::CommonTypeInfo &Info) {
+                            const api_notes::CommonEntityInfo &info,
+                            VersionedInfoRole role) {
+  // Availability
+  if (info.Unavailable) {
+    handleAPINotedAttribute<UnavailableAttr>(S, D, true, role,
+      [&] {
+        return UnavailableAttr::CreateImplicit(S.Context,
+                                               CopyString(S.Context,
+                                                          info.UnavailableMsg));
+    });
+  }
+
+  if (info.UnavailableInSwift) {
+    handleAPINotedAttribute<AvailabilityAttr>(S, D, true, role, [&] {
+      return AvailabilityAttr::CreateImplicit(
+                   S.Context,
+                   &S.Context.Idents.get("swift"),
+                   VersionTuple(),
+                   VersionTuple(),
+                   VersionTuple(),
+                   /*Unavailable=*/true,
+                   CopyString(S.Context, info.UnavailableMsg),
+                   /*Strict=*/false,
+                   /*Replacement=*/StringRef());
+    },
+    [](Decl *decl) {
+      auto existing = decl->specific_attr_begin<AvailabilityAttr>(),
+        end = decl->specific_attr_end<AvailabilityAttr>();
+      while (existing != end) {
+        if (auto platform = (*existing)->getPlatform()) {
+          if (platform->isStr("swift"))
+            break;
+        }
+
+        ++existing;
+      }
+
+      return existing;
+    });
+  }
+
+  // swift_private
+  if (info.SwiftPrivate) {
+    handleAPINotedAttribute<SwiftPrivateAttr>(S, D, true, role, [&] {
+      return SwiftPrivateAttr::CreateImplicit(S.Context);
+    });
+  }
+
+  // swift_name
+  if (!info.SwiftName.empty()) {
+    handleAPINotedAttribute<SwiftNameAttr>(S, D, true, role,
+                                           [&]() -> SwiftNameAttr * {
+      auto &APINoteName = S.getASTContext().Idents.get("SwiftName API Note");
+      
+      if (!S.DiagnoseSwiftName(D, info.SwiftName, D->getLocation(),
+                               &APINoteName)) {
+        return nullptr;
+      }
+
+      return SwiftNameAttr::CreateImplicit(S.Context,
+                                           CopyString(S.Context,
+                                                      info.SwiftName));
+    });
+  }
+}
+
+static void ProcessAPINotes(Sema &S, Decl *D,
+                            const api_notes::CommonTypeInfo &info,
+                            VersionedInfoRole role) {
   // swift_bridge
-  if (!Info.getSwiftBridge().empty() &&
-      !D->getAttr<SwiftBridgeAttr>()) {
-    D->addAttr(
-      SwiftBridgeAttr::CreateImplicit(S.Context,
-                                      CopyString(S.Context,
-                                                 Info.getSwiftBridge())));
+  if (!info.getSwiftBridge().empty()) {
+    handleAPINotedAttribute<SwiftBridgeAttr>(S, D, true, role, [&] {
+      return SwiftBridgeAttr::CreateImplicit(S.Context,
+                                             CopyString(S.Context,
+                                                        info.getSwiftBridge()));
+    });
   }
 
   // ns_error_domain
-  if (!Info.getNSErrorDomain().empty() &&
-      !D->getAttr<NSErrorDomainAttr>()) {
-    D->addAttr(
-      NSErrorDomainAttr::CreateImplicit(
-        S.Context,
-        &S.Context.Idents.get(Info.getNSErrorDomain())));
+  if (!info.getNSErrorDomain().empty()) {
+    handleAPINotedAttribute<NSErrorDomainAttr>(S, D, true, role, [&] {
+      return NSErrorDomainAttr::CreateImplicit(
+               S.Context,
+               &S.Context.Idents.get(info.getNSErrorDomain()));
+    });
   }
 
-  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(info),
+                  role);
 }
 
 /// Process API notes for a variable or property.
 static void ProcessAPINotes(Sema &S, Decl *D,
-                            const api_notes::VariableInfo &Info) {
+                            const api_notes::VariableInfo &info,
+                            VersionedInfoRole role) {
   // Nullability.
-  if (auto Nullability = Info.getNullability()) {
-    applyNullability(S, D, *Nullability);
+  if (auto Nullability = info.getNullability()) {
+    applyNullability(S, D, *Nullability, role);
   }
 
   // Handle common entity information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(info),
+                  role);
 }
 
 /// Process API notes for a parameter.
 static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
-                            const api_notes::ParamInfo &Info) {
+                            const api_notes::ParamInfo &info,
+                            VersionedInfoRole role) {
   // noescape
-  if (Info.isNoEscape() && !D->getAttr<NoEscapeAttr>())
-    D->addAttr(NoEscapeAttr::CreateImplicit(S.Context));
+  if (info.isNoEscape()) {
+    handleAPINotedAttribute<NoEscapeAttr>(S, D, true, role, [&] {
+      return NoEscapeAttr::CreateImplicit(S.Context);
+    });
+  }
 
   // Handle common entity information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(info),
+                  role);
 }
 
 /// Process API notes for a global variable.
 static void ProcessAPINotes(Sema &S, VarDecl *D,
-                            const api_notes::GlobalVariableInfo &Info) {
+                            const api_notes::GlobalVariableInfo &info,
+                            VersionedInfoRole role) {
   // Handle common entity information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(info),
+                  role);
 }
 
 /// Process API notes for an Objective-C property.
 static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
-                            const api_notes::ObjCPropertyInfo &Info) {
+                            const api_notes::ObjCPropertyInfo &info,
+                            VersionedInfoRole role) {
   // Handle common entity information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(info),
+                  role);
 }
 
 namespace {
@@ -206,7 +316,8 @@ namespace {
 
 /// Process API notes for a function or method.
 static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
-                            const api_notes::FunctionInfo &Info) {
+                            const api_notes::FunctionInfo &info,
+                            VersionedInfoRole role) {
   // Find the declaration itself.
   FunctionDecl *FD = AnyFunc.dyn_cast<FunctionDecl *>();
   Decl *D = FD;
@@ -217,8 +328,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   }
 
   // Nullability of return type.
-  if (Info.NullabilityAudited) {
-    applyNullability(S, D, Info.getReturnTypeInfo());
+  if (info.NullabilityAudited) {
+    applyNullability(S, D, info.getReturnTypeInfo(), role);
   }
 
   // Parameters.
@@ -236,48 +347,57 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
       Param = MD->param_begin()[I];
     
     // Nullability.
-    if (Info.NullabilityAudited)
-      applyNullability(S, Param, Info.getParamTypeInfo(I));
+    if (info.NullabilityAudited)
+      applyNullability(S, Param, info.getParamTypeInfo(I), role);
 
-    if (I < Info.Params.size()) {
-      ProcessAPINotes(S, Param, Info.Params[I]);
+    if (I < info.Params.size()) {
+      ProcessAPINotes(S, Param, info.Params[I], role);
     }
   }
 
   // Handle common entity information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(info),
+                  role);
 }
 
 /// Process API notes for a global function.
 static void ProcessAPINotes(Sema &S, FunctionDecl *D,
-                            const api_notes::GlobalFunctionInfo &Info) {
+                            const api_notes::GlobalFunctionInfo &info,
+                            VersionedInfoRole role) {
 
   // Handle common function information.
   ProcessAPINotes(S, FunctionOrMethod(D),
-                  static_cast<const api_notes::FunctionInfo &>(Info));
+                  static_cast<const api_notes::FunctionInfo &>(info), role);
 }
 
 /// Process API notes for an enumerator.
 static void ProcessAPINotes(Sema &S, EnumConstantDecl *D,
-                            const api_notes::EnumConstantInfo &Info) {
+                            const api_notes::EnumConstantInfo &info,
+                            VersionedInfoRole role) {
 
   // Handle common information.
   ProcessAPINotes(S, D,
-                  static_cast<const api_notes::CommonEntityInfo &>(Info));
+                  static_cast<const api_notes::CommonEntityInfo &>(info),
+                  role);
 }
 
 /// Process API notes for an Objective-C method.
 static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
-                            const api_notes::ObjCMethodInfo &Info) {
+                            const api_notes::ObjCMethodInfo &info,
+                            VersionedInfoRole role) {
   // Designated initializers.
-  if (Info.DesignatedInit && !D->getAttr<ObjCDesignatedInitializerAttr>()) {
-    if (ObjCInterfaceDecl *IFace = D->getClassInterface()) {
-      D->addAttr(ObjCDesignatedInitializerAttr::CreateImplicit(S.Context));
-      IFace->setHasDesignatedInitializers();
-    }
+  if (info.DesignatedInit) {
+    handleAPINotedAttribute<ObjCDesignatedInitializerAttr>(S, D, true, role, [&] {
+      if (ObjCInterfaceDecl *IFace = D->getClassInterface()) {
+        IFace->setHasDesignatedInitializers();
+      }
+      return ObjCDesignatedInitializerAttr::CreateImplicit(S.Context);
+    });
   }
 
-  if (Info.getFactoryAsInitKind()
+  // FIXME: This doesn't work well with versioned API notes.
+  if (role == VersionedInfoRole::AugmentSource &&
+      info.getFactoryAsInitKind()
         == api_notes::FactoryAsInitKind::AsClassMethod &&
       !D->getAttr<SwiftNameAttr>()) {
     D->addAttr(SwiftSuppressFactoryAsInitAttr::CreateImplicit(S.Context));
@@ -285,36 +405,43 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
 
   // Handle common function information.
   ProcessAPINotes(S, FunctionOrMethod(D),
-                  static_cast<const api_notes::FunctionInfo &>(Info));
+                  static_cast<const api_notes::FunctionInfo &>(info), role);
 }
 
 /// Process API notes for a tag.
 static void ProcessAPINotes(Sema &S, TagDecl *D,
-                            const api_notes::TagInfo &Info) {
+                            const api_notes::TagInfo &info,
+                            VersionedInfoRole role) {
   // Handle common type information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(info),
+                  role);
 }
 
 /// Process API notes for a typedef.
 static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
-                            const api_notes::TypedefInfo &Info) {
+                            const api_notes::TypedefInfo &info,
+                            VersionedInfoRole role) {
   // Handle common type information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(info),
+                  role);
 }
 
 /// Process API notes for an Objective-C class or protocol.
 static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
-                            const api_notes::ObjCContextInfo &Info) {
+                            const api_notes::ObjCContextInfo &info,
+                            VersionedInfoRole role) {
 
   // Handle common type information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info));
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(info),
+                  role);
 }
 
 /// Process API notes for an Objective-C class.
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
-                            const api_notes::ObjCContextInfo &Info) {
+                            const api_notes::ObjCContextInfo &info,
+                            VersionedInfoRole role) {
   // Handle information common to Objective-C classes and protocols.
-  ProcessAPINotes(S, static_cast<clang::ObjCContainerDecl *>(D), Info);
+  ProcessAPINotes(S, static_cast<clang::ObjCContainerDecl *>(D), info, role);
 }
 
 /// Process API notes that are associated with this declaration, mapping them
@@ -329,7 +456,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupGlobalVariable(VD->getName())) {
-          ::ProcessAPINotes(*this, VD, *Info);
+          ::ProcessAPINotes(*this, VD, *Info, Info.getSelectedRole());
         }
       }
 
@@ -341,7 +468,7 @@ void Sema::ProcessAPINotes(Decl *D) {
       if (FD->getDeclName().isIdentifier()) {
         for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
           if (auto Info = Reader->lookupGlobalFunction(FD->getName())) {
-            ::ProcessAPINotes(*this, FD, *Info);
+            ::ProcessAPINotes(*this, FD, *Info, Info.getSelectedRole());
           }
         }
       }
@@ -353,7 +480,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupObjCClassInfo(Class->getName())) {
-          ::ProcessAPINotes(*this, Class, *Info);
+          ::ProcessAPINotes(*this, Class, *Info, Info.getSelectedRole());
         }
       }
 
@@ -364,7 +491,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto Protocol = dyn_cast<ObjCProtocolDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupObjCProtocolInfo(Protocol->getName())) {
-          ::ProcessAPINotes(*this, Protocol, *Info);
+          ::ProcessAPINotes(*this, Protocol, *Info, Info.getSelectedRole());
         }
       }
 
@@ -375,7 +502,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto Tag = dyn_cast<TagDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupTag(Tag->getName())) {
-          ::ProcessAPINotes(*this, Tag, *Info);
+          ::ProcessAPINotes(*this, Tag, *Info, Info.getSelectedRole());
         }
       }
 
@@ -386,7 +513,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupTypedef(Typedef->getName())) {
-          ::ProcessAPINotes(*this, Typedef, *Info);
+          ::ProcessAPINotes(*this, Typedef, *Info, Info.getSelectedRole());
         }
       }
 
@@ -401,7 +528,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         if (auto Info = Reader->lookupEnumConstant(EnumConstant->getName())) {
-          ::ProcessAPINotes(*this, EnumConstant, *Info);
+          ::ProcessAPINotes(*this, EnumConstant, *Info, Info.getSelectedRole());
         }
       }
 
@@ -472,7 +599,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
           if (auto Info = Reader->lookupObjCMethod(*Context, SelectorRef,
                                                    Method->isInstanceMethod())){
-            ::ProcessAPINotes(*this, Method, *Info);
+            ::ProcessAPINotes(*this, Method, *Info, Info.getSelectedRole());
           }
         }
       }
@@ -488,7 +615,7 @@ void Sema::ProcessAPINotes(Decl *D) {
           if (auto Info = Reader->lookupObjCProperty(*Context,
                                                      Property->getName(),
                                                      isInstanceProperty)) {
-            ::ProcessAPINotes(*this, Property, *Info);
+            ::ProcessAPINotes(*this, Property, *Info, Info.getSelectedRole());
           }
         }
       }

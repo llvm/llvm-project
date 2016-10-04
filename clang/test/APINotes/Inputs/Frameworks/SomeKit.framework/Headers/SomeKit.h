@@ -35,4 +35,6 @@ __attribute__((objc_root_class))
 @property (class, nonatomic, readwrite, retain) A *nonnullABoth;
 @end
 
+#import <SomeKit/SomeKitExplicitNullability.h>
+
 #endif
