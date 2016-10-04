@@ -69,6 +69,14 @@ template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
     else if (io.mapTag("!Analysis",
                        OptDiag->getKind() == DK_OptimizationRemarkAnalysis))
       ;
+    else if (io.mapTag("!AnalysisFPCommute",
+                       OptDiag->getKind() ==
+                           DK_OptimizationRemarkAnalysisFPCommute))
+      ;
+    else if (io.mapTag("!AnalysisAliasing",
+                       OptDiag->getKind() ==
+                           DK_OptimizationRemarkAnalysisAliasing))
+      ;
     else
       llvm_unreachable("todo");
 
