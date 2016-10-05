@@ -585,9 +585,18 @@ public:
   TagInfo() : CommonTypeInfo() { }
 };
 
+/// The kind of a swift_wrapper/swift_newtype.
+enum class SwiftWrapperKind {
+  None,
+  Struct,
+  Enum
+};
+
 /// Describes API notes data for a typedef.
 class TypedefInfo : public CommonTypeInfo {
 public:
+  Optional<SwiftWrapperKind> SwiftWrapper;
+
   TypedefInfo() : CommonTypeInfo() { }
 };
 
