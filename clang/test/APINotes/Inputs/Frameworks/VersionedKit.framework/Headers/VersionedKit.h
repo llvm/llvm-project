@@ -15,3 +15,5 @@ __attribute__((swift_bridge("MyValueType")))
 @end
 
 void privateFunc(void) __attribute__((swift_private));
+
+typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));

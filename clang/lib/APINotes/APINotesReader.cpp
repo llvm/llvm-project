@@ -479,6 +479,12 @@ namespace {
     static TypedefInfo readUnversioned(internal_key_type key,
                                        const uint8_t *&data) {
       TypedefInfo info;
+
+      uint8_t payload = *data++;
+      if (payload > 0) {
+        info.SwiftWrapper = static_cast<SwiftWrapperKind>((payload & 0x3) - 1);
+      }
+
       readCommonTypeInfo(data, info);
       return info;
     }

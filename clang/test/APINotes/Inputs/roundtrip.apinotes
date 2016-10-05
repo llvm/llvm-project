@@ -143,6 +143,7 @@ Typedefs:
     SwiftPrivate:    false
     SwiftName:       Typedef
     SwiftBridge:     ''
+    SwiftWrapper:    struct
 SwiftVersions:   
   - Version:         3.0
     Classes:         

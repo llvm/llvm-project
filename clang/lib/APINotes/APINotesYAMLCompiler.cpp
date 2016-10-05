@@ -260,6 +260,7 @@ namespace {
     Optional<bool> SwiftPrivate;
     Optional<StringRef> SwiftBridge;
     Optional<StringRef> NSErrorDomain;
+    Optional<api_notes::SwiftWrapperKind> SwiftWrapper;
   };
   typedef std::vector<Typedef> TypedefsSeq;
 
@@ -346,6 +347,15 @@ namespace llvm {
         io.enumCase(value, "none",      APIAvailability::None);
         io.enumCase(value, "nonswift",  APIAvailability::NonSwift);
         io.enumCase(value, "available", APIAvailability::Available);
+      }
+    };
+
+    template<>
+    struct ScalarEnumerationTraits<api_notes::SwiftWrapperKind> {
+      static void enumeration(IO &io, api_notes::SwiftWrapperKind &value) {
+        io.enumCase(value, "none",      api_notes::SwiftWrapperKind::None);
+        io.enumCase(value, "struct",    api_notes::SwiftWrapperKind::Struct);
+        io.enumCase(value, "enum",      api_notes::SwiftWrapperKind::Enum);
       }
     };
 
@@ -489,6 +499,7 @@ namespace llvm {
         io.mapOptional("SwiftName",             t.SwiftName);
         io.mapOptional("SwiftBridge",           t.SwiftBridge);
         io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
+        io.mapOptional("SwiftWrapper",         t.SwiftWrapper);
       }
     };
 
@@ -903,7 +914,8 @@ namespace {
         TypedefInfo typedefInfo;
         if (convertCommonType(t, typedefInfo, t.Name))
           continue;
-        
+        typedefInfo.SwiftWrapper = t.SwiftWrapper;
+
         Writer->addTypedef(t.Name, typedefInfo, swiftVersion);
       }
     }
@@ -1246,6 +1258,7 @@ namespace {
       Typedef td;
       td.Name = name;
       handleCommonType(td, info);
+      td.SwiftWrapper = info.SwiftWrapper;
       auto &items = getTopLevelItems(swiftVersion);
       items.Typedefs.push_back(td);
     }
