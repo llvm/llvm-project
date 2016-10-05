@@ -36,8 +36,8 @@ __host__ __device__ void bar() {
 // DEVICE: attributes [[BAZ_ATTR]] = {
 // DEVICE-SAME: convergent
 // DEVICE-SAME: }
-// DEVICE: attributes [[CALL_ATTR]] = { convergent }
-// DEVICE: attributes [[ASM_ATTR]] = { convergent
+// DEVICE-DAG: attributes [[CALL_ATTR]] = { convergent
+// DEVICE-DAG: attributes [[ASM_ATTR]] = { convergent
 
 // HOST: declare void @_Z3bazv() [[BAZ_ATTR:#[0-9]+]]
 // HOST: attributes [[BAZ_ATTR]] = {

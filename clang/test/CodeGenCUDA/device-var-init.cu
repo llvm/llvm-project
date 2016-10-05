@@ -182,9 +182,9 @@ __device__ void df() {
   df(); // CHECK: call void @_Z2dfv()
 
   // Verify that we only call non-empty destructors
-  // CHECK-NEXT: call void @_ZN8T_FA_NEDD1Ev(%struct.T_FA_NED* %t_fa_ned) #6
-  // CHECK-NEXT: call void @_ZN7T_F_NEDD1Ev(%struct.T_F_NED* %t_f_ned) #6
-  // CHECK-NEXT: call void @_ZN7T_B_NEDD1Ev(%struct.T_B_NED* %t_b_ned) #6
+  // CHECK-NEXT: call void @_ZN8T_FA_NEDD1Ev(%struct.T_FA_NED* %t_fa_ned)
+  // CHECK-NEXT: call void @_ZN7T_F_NEDD1Ev(%struct.T_F_NED* %t_f_ned)
+  // CHECK-NEXT: call void @_ZN7T_B_NEDD1Ev(%struct.T_B_NED* %t_b_ned)
   // CHECK-NEXT: call void @_ZN2VDD1Ev(%struct.VD* %vd)
   // CHECK-NEXT: call void @_ZN3NEDD1Ev(%struct.NED* %ned)
   // CHECK-NEXT: call void @_ZN2UDD1Ev(%struct.UD* %ud)

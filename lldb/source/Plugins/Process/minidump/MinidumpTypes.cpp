@@ -85,7 +85,7 @@ MinidumpThread::ParseThreadList(llvm::ArrayRef<uint8_t> &data) {
   if (error.Fail() || *thread_count * sizeof(MinidumpThread) > data.size())
     return {};
 
-  return llvm::ArrayRef<MinidumpThread>(
+  return llvm::makeArrayRef(
       reinterpret_cast<const MinidumpThread *>(data.data()), *thread_count);
 }
 
@@ -162,7 +162,7 @@ MinidumpModule::ParseModuleList(llvm::ArrayRef<uint8_t> &data) {
   if (error.Fail() || *modules_count * sizeof(MinidumpModule) > data.size())
     return {};
 
-  return llvm::ArrayRef<MinidumpModule>(
+  return llvm::makeArrayRef(
       reinterpret_cast<const MinidumpModule *>(data.data()), *modules_count);
 }
 
@@ -175,4 +175,17 @@ MinidumpExceptionStream::Parse(llvm::ArrayRef<uint8_t> &data) {
     return nullptr;
 
   return exception_stream;
+}
+
+llvm::ArrayRef<MinidumpMemoryDescriptor>
+MinidumpMemoryDescriptor::ParseMemoryList(llvm::ArrayRef<uint8_t> &data) {
+  const llvm::support::ulittle32_t *mem_ranges_count;
+  Error error = consumeObject(data, mem_ranges_count);
+  if (error.Fail() ||
+      *mem_ranges_count * sizeof(MinidumpMemoryDescriptor) > data.size())
+    return {};
+
+  return llvm::makeArrayRef(
+      reinterpret_cast<const MinidumpMemoryDescriptor *>(data.data()),
+      *mem_ranges_count);
 }

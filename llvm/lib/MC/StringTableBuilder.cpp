@@ -11,13 +11,37 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <vector>
 
 using namespace llvm;
 
-StringTableBuilder::StringTableBuilder(Kind K, unsigned Alignment)
-    : K(K), Alignment(Alignment) {
+namespace llvm {
+template <> struct DenseMapInfo<CachedHashString> {
+  static CachedHashString getEmptyKey() {
+    StringRef S = DenseMapInfo<StringRef>::getEmptyKey();
+    return {S, 0};
+  }
+  static CachedHashString getTombstoneKey() {
+    StringRef S = DenseMapInfo<StringRef>::getTombstoneKey();
+    return {S, 0};
+  }
+  static unsigned getHashValue(CachedHashString Val) {
+    assert(!isEqual(Val, getEmptyKey()) && "Cannot hash the empty key!");
+    assert(!isEqual(Val, getTombstoneKey()) &&
+           "Cannot hash the tombstone key!");
+    return Val.hash();
+  }
+  static bool isEqual(CachedHashString A, CachedHashString B) {
+    return DenseMapInfo<StringRef>::isEqual(A.val(), B.val());
+  }
+};
+}
+
+StringTableBuilder::~StringTableBuilder() {}
+
+void StringTableBuilder::initSize() {
   // Account for leading bytes in table so that offsets returned from add are
   // correct.
   switch (K) {
@@ -26,19 +50,45 @@ StringTableBuilder::StringTableBuilder(Kind K, unsigned Alignment)
     break;
   case MachO:
   case ELF:
+    // Start the table with a NUL byte.
     Size = 1;
     break;
   case WinCOFF:
+    // Make room to write the table size later.
     Size = 4;
     break;
   }
 }
 
-typedef std::pair<CachedHash<StringRef>, size_t> StringPair;
+StringTableBuilder::StringTableBuilder(Kind K, unsigned Alignment)
+    : K(K), Alignment(Alignment) {
+  initSize();
+}
+
+void StringTableBuilder::write(raw_ostream &OS) const {
+  assert(isFinalized());
+  SmallString<0> Data;
+  Data.resize(getSize());
+  write((uint8_t *)&Data[0]);
+  OS << Data;
+}
+
+typedef std::pair<CachedHashString, size_t> StringPair;
+
+void StringTableBuilder::write(uint8_t *Buf) const {
+  assert(isFinalized());
+  for (const StringPair &P : StringIndexMap) {
+    StringRef Data = P.first.val();
+    memcpy(Buf + P.second, Data.data(), Data.size());
+  }
+  if (K != WinCOFF)
+    return;
+  support::endian::write32le(Buf, Size);
+}
 
 // Returns the character at Pos from end of a string.
 static int charTailAt(StringPair *P, size_t Pos) {
-  StringRef S = P->first.Val;
+  StringRef S = P->first.val();
   if (Pos >= S.size())
     return -1;
   return (unsigned char)S[S.size() - Pos - 1];
@@ -86,90 +136,49 @@ void StringTableBuilder::finalizeInOrder() {
 }
 
 void StringTableBuilder::finalizeStringTable(bool Optimize) {
-  std::vector<StringPair *> Strings;
-  Strings.reserve(StringIndexMap.size());
-  for (StringPair &P : StringIndexMap)
-    Strings.push_back(&P);
+  Finalized = true;
 
-  if (!Strings.empty()) {
-    // If we're optimizing, sort by name. If not, sort by previously assigned
-    // offset.
-    if (Optimize) {
+  if (Optimize) {
+    std::vector<StringPair *> Strings;
+    Strings.reserve(StringIndexMap.size());
+    for (StringPair &P : StringIndexMap)
+      Strings.push_back(&P);
+
+    if (!Strings.empty()) {
+      // If we're optimizing, sort by name. If not, sort by previously assigned
+      // offset.
       multikey_qsort(&Strings[0], &Strings[0] + Strings.size(), 0);
-    } else {
-      std::sort(Strings.begin(), Strings.end(),
-                [](const StringPair *LHS, const StringPair *RHS) {
-                  return LHS->second < RHS->second;
-                });
     }
-  }
 
-  switch (K) {
-  case RAW:
-    break;
-  case ELF:
-  case MachO:
-    // Start the table with a NUL byte.
-    StringTable += '\x00';
-    break;
-  case WinCOFF:
-    // Make room to write the table size later.
-    StringTable.append(4, '\x00');
-    break;
-  }
+    initSize();
 
-  StringRef Previous;
-  for (StringPair *P : Strings) {
-    StringRef S = P->first.Val;
-    if (K == WinCOFF)
-      assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
-
-    if (Optimize && Previous.endswith(S)) {
-      size_t Pos = StringTable.size() - S.size() - (K != RAW);
-      if (!(Pos & (Alignment - 1))) {
-        P->second = Pos;
-        continue;
+    StringRef Previous;
+    for (StringPair *P : Strings) {
+      StringRef S = P->first.val();
+      if (Previous.endswith(S)) {
+        size_t Pos = Size - S.size() - (K != RAW);
+        if (!(Pos & (Alignment - 1))) {
+          P->second = Pos;
+          continue;
+        }
       }
-    }
 
-    if (Optimize) {
-      size_t Start = alignTo(StringTable.size(), Alignment);
-      P->second = Start;
-      StringTable.append(Start - StringTable.size(), '\0');
-    } else {
-      assert(P->second == StringTable.size() &&
-             "different strtab offset after finalization");
-    }
+      Size = alignTo(Size, Alignment);
+      P->second = Size;
 
-    StringTable += S;
-    if (K != RAW)
-      StringTable += '\x00';
-    Previous = S;
+      Size += S.size();
+      if (K != RAW)
+        ++Size;
+      Previous = S;
+    }
   }
 
-  switch (K) {
-  case RAW:
-  case ELF:
-    break;
-  case MachO:
-    // Pad to multiple of 4.
-    while (StringTable.size() % 4)
-      StringTable += '\x00';
-    break;
-  case WinCOFF:
-    // Write the table size in the first word.
-    assert(StringTable.size() <= std::numeric_limits<uint32_t>::max());
-    uint32_t Size = static_cast<uint32_t>(StringTable.size());
-    support::endian::write<uint32_t, support::little, support::unaligned>(
-        StringTable.data(), Size);
-    break;
-  }
-
-  Size = StringTable.size();
+  if (K == MachO)
+    Size = alignTo(Size, 4); // Pad to multiple of 4.
 }
 
 void StringTableBuilder::clear() {
-  StringTable.clear();
+  Finalized = false;
   StringIndexMap.clear();
 }
 
@@ -181,6 +190,9 @@ size_t StringTableBuilder::getOffset(StringRef S) const {
 }
 
 size_t StringTableBuilder::add(StringRef S) {
+  if (K == WinCOFF)
+    assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
+
   assert(!isFinalized());
   size_t Start = alignTo(Size, Alignment);
   auto P = StringIndexMap.insert(std::make_pair(S, Start));

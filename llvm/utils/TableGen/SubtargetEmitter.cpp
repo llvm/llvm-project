@@ -86,7 +86,7 @@ class SubtargetEmitter {
   void EmitItineraries(raw_ostream &OS,
                        std::vector<std::vector<InstrItinerary> >
                          &ProcItinLists);
-  void EmitProcessorProp(raw_ostream &OS, const Record *R, const char *Name,
+  void EmitProcessorProp(raw_ostream &OS, const Record *R, StringRef Name,
                          char Separator);
   void EmitProcessorResources(const CodeGenProcModel &ProcModel,
                               raw_ostream &OS);
@@ -587,7 +587,7 @@ EmitItineraries(raw_ostream &OS,
 // value defined in the C++ header. The Record is null if the processor does not
 // define a model.
 void SubtargetEmitter::EmitProcessorProp(raw_ostream &OS, const Record *R,
-                                         const char *Name, char Separator) {
+                                         StringRef Name, char Separator) {
   OS << "  ";
   int V = R ? R->getValueAsInt(Name) : -1;
   if (V >= 0)

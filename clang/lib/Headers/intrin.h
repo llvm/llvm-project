@@ -312,6 +312,7 @@ void __lwpval64(unsigned __int64, unsigned int, unsigned int);
 unsigned __int64 __lzcnt64(unsigned __int64);
 static __inline__
 void __movsq(unsigned long long *, unsigned long long const *, size_t);
+static __inline__
 __int64 __mulh(__int64, __int64);
 static __inline__
 unsigned __int64 __popcnt64(unsigned __int64);
@@ -426,12 +427,8 @@ _umul128(unsigned __int64 _Multiplier, unsigned __int64 _Multiplicand,
   *_HighProduct = _FullProduct >> 64;
   return _FullProduct;
 }
-static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
-__umulh(unsigned __int64 _Multiplier, unsigned __int64 _Multiplicand) {
-  unsigned __int128 _FullProduct =
-      (unsigned __int128)_Multiplier * (unsigned __int128)_Multiplicand;
-  return _FullProduct >> 64;
-}
+static __inline__
+unsigned __int64 __umulh(unsigned __int64, unsigned __int64);
 
 #endif /* __x86_64__ */
 

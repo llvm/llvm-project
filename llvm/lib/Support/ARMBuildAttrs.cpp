@@ -15,7 +15,7 @@ using namespace llvm;
 namespace {
 const struct {
   ARMBuildAttrs::AttrType Attr;
-  const char *TagName;
+  StringRef TagName;
 } ARMAttributeTags[] = {
   { ARMBuildAttrs::File, "Tag_File" },
   { ARMBuildAttrs::Section, "Tag_Section" },
@@ -78,17 +78,23 @@ StringRef AttrTypeAsString(unsigned Attr, bool HasTagPrefix) {
 StringRef AttrTypeAsString(AttrType Attr, bool HasTagPrefix) {
   for (unsigned TI = 0, TE = sizeof(ARMAttributeTags) / sizeof(*ARMAttributeTags);
        TI != TE; ++TI)
-    if (ARMAttributeTags[TI].Attr == Attr)
-      return ARMAttributeTags[TI].TagName + (HasTagPrefix ? 0 : 4);
+    if (ARMAttributeTags[TI].Attr == Attr) {
+      auto TagName = ARMAttributeTags[TI].TagName;
+      return HasTagPrefix ? TagName : TagName.drop_front(4);
+    }
   return "";
 }
 
 int AttrTypeFromString(StringRef Tag) {
   bool HasTagPrefix = Tag.startswith("Tag_");
-  for (unsigned TI = 0, TE = sizeof(ARMAttributeTags) / sizeof(*ARMAttributeTags);
-       TI != TE; ++TI)
-    if (StringRef(ARMAttributeTags[TI].TagName + (HasTagPrefix ? 0 : 4)) == Tag)
+  for (unsigned TI = 0,
+                TE = sizeof(ARMAttributeTags) / sizeof(*ARMAttributeTags);
+       TI != TE; ++TI) {
+    auto TagName = ARMAttributeTags[TI].TagName;
+    if (TagName.drop_front(HasTagPrefix ? 0 : 4) == Tag) {
       return ARMAttributeTags[TI].Attr;
+    }
+  }
   return -1;
 }
 }

@@ -19,15 +19,13 @@ class BreakpointCaseSensitivityTestCase(TestBase):
         TestBase.setUp(self)
         self.line = line_number('main.c', self.BREAKPOINT_TEXT)
 
-    @skipIf(oslist=no_match(['windows']))  # Skip for non-windows platforms
+    @skipIf(hostoslist=no_match(['windows']))  # Skip for non-windows platforms
     def test_breakpoint_matches_file_with_different_case(self):
         """Set breakpoint on file, should match files with different case on Windows"""
         self.build()
         self.case_sensitivity_breakpoint(True)
 
-    @skipIf(oslist=['windows'])  # Skip for windows platforms
-    # Failing for unknown reason on non-Windows platforms.
-
+    @skipIf(hostoslist=['windows'])  # Skip for windows platforms
     def test_breakpoint_doesnt_match_file_with_different_case(self):
         """Set breakpoint on file, shouldn't match files with different case on POSIX systems"""
         self.build()
