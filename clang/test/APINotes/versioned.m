@@ -23,9 +23,17 @@
 // CHECK-UNVERSIONED: __attribute__((swift_bridge("MyValueType")))
 // CHECK-UNVERSIONED: @interface MyReferenceType
 
+// CHECK-UNVERSIONED: void privateFunc() __attribute__((swift_private));
+
+// CHECK-UNVERSIONED: typedef double MyDoubleWrapper __attribute__((swift_wrapper("struct")));
+
 // CHECK-VERSIONED:      enum MyErrorCode {
 // CHECK-VERSIONED-NEXT:     MyErrorCodeFailed = 1
 // CHECK-VERSIONED-NEXT: };
 
 // CHECK-VERSIONED-NOT: __attribute__((swift_bridge("MyValueType")))
 // CHECK-VERSIONED: @interface MyReferenceType
+
+// CHECK-VERSIONED: void privateFunc();
+
+// CHECK-VERSIONED: typedef double MyDoubleWrapper;

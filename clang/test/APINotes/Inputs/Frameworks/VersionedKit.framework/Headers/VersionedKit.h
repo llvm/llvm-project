@@ -13,3 +13,7 @@ enum __attribute__((ns_error_domain(MyErrorDomain))) MyErrorCode {
 __attribute__((swift_bridge("MyValueType")))
 @interface MyReferenceType
 @end
+
+void privateFunc(void) __attribute__((swift_private));
+
+typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));

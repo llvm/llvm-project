@@ -88,7 +88,7 @@ namespace {
       result.reserve(numElements);
       for (unsigned i = 0; i != numElements; ++i) {
         auto version = readVersionTuple(data);
-        auto dataBefore = data; (void)data;
+        auto dataBefore = data; (void)dataBefore;
         auto unversionedData = Derived::readUnversioned(key, data);
         assert(data != dataBefore
                && "Unversioned data reader didn't move pointer");
@@ -104,7 +104,8 @@ namespace {
     uint8_t unavailableBits = *data++;
     info.Unavailable = (unavailableBits >> 1) & 0x01;
     info.UnavailableInSwift = unavailableBits & 0x01;
-    info.SwiftPrivate = (unavailableBits >> 2) & 0x01;
+    if ((unavailableBits >> 2) & 0x01)
+      info.setSwiftPrivate(static_cast<bool>((unavailableBits >> 3) & 0x01));
 
     unsigned msgLength = endian::readNext<uint16_t, little, unaligned>(data);
     info.UnavailableMsg
@@ -478,6 +479,12 @@ namespace {
     static TypedefInfo readUnversioned(internal_key_type key,
                                        const uint8_t *&data) {
       TypedefInfo info;
+
+      uint8_t payload = *data++;
+      if (payload > 0) {
+        info.SwiftWrapper = static_cast<SwiftWrapperKind>((payload & 0x3) - 1);
+      }
+
       readCommonTypeInfo(data, info);
       return info;
     }
