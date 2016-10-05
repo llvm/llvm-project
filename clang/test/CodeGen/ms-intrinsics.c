@@ -54,12 +54,17 @@ long test__readfsdword(unsigned long Offset) {
 #endif
 
 #if defined(__x86_64__)
+__int64 test__mulh(__int64 a, __int64 b) {
+  return __mulh(a, b);
+}
+// CHECK-X64-LABEL: define i64 @test__mulh(i64 %a, i64 %b)
+// CHECK-X64: = mul nsw i128 %
+
 unsigned __int64 test__umulh(unsigned __int64 a, unsigned __int64 b) {
   return __umulh(a, b);
 }
 // CHECK-X64-LABEL: define i64 @test__umulh(i64 %a, i64 %b)
 // CHECK-X64: = mul nuw i128 %
-
 #endif
 
 char test_InterlockedExchange8(char volatile *value, char mask) {

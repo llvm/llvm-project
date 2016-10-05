@@ -1780,6 +1780,7 @@ public:
   bool CheckFunctionDeclaration(Scope *S,
                                 FunctionDecl *NewFD, LookupResult &Previous,
                                 bool IsExplicitSpecialization);
+  bool shouldLinkDependentDeclWithPrevious(Decl *D, Decl *OldDecl);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
   Decl *ActOnParamDeclarator(Scope *S, Declarator &D);
@@ -9855,8 +9856,9 @@ public:
 
   /// \brief This function checks if the expression is in the sef of potentially
   /// misaligned members and it is converted to some pointer type T with lower
-  /// or equal alignment requirements.  If so it removes it. This is used when
-  /// we do not want to diagnose such misaligned access (e.g. in conversions to void*).
+  /// or equal alignment requirements. If so it removes it. This is used when
+  /// we do not want to diagnose such misaligned access (e.g. in conversions to
+  /// void*).
   void DiscardMisalignedMemberAddress(const Type *T, Expr *E);
 
   /// \brief This function calls Action when it determines that E designates a

@@ -1730,6 +1730,9 @@ void CodeGenModule::ConstructAttributeList(
 
     FuncAttrs.addAttribute("no-trapping-math",
                            llvm::toStringRef(CodeGenOpts.NoTrappingMath));
+
+    // TODO: Are these all needed?
+    // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
     FuncAttrs.addAttribute("no-infs-fp-math",
                            llvm::toStringRef(CodeGenOpts.NoInfsFPMath));
     FuncAttrs.addAttribute("no-nans-fp-math",
@@ -1745,6 +1748,12 @@ void CodeGenModule::ConstructAttributeList(
     FuncAttrs.addAttribute(
         "correctly-rounded-divide-sqrt-fp-math",
         llvm::toStringRef(CodeGenOpts.CorrectlyRoundedDivSqrt));
+
+    // TODO: Reciprocal estimate codegen options should apply to instructions?
+    std::vector<std::string> &Recips = getTarget().getTargetOpts().Reciprocals;
+    if (!Recips.empty())
+      FuncAttrs.addAttribute("reciprocal-estimates",
+                             llvm::join(Recips.begin(), Recips.end(), ","));
 
     if (CodeGenOpts.StackRealignment)
       FuncAttrs.addAttribute("stackrealign");
@@ -1804,6 +1813,9 @@ void CodeGenModule::ConstructAttributeList(
     // __syncthreads(), and so can't have certain optimizations applied around
     // them).  LLVM will remove this attribute where it safely can.
     FuncAttrs.addAttribute(llvm::Attribute::Convergent);
+
+    // Exceptions aren't supported in CUDA device code.
+    FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
 
     // Respect -fcuda-flush-denormals-to-zero.
     if (getLangOpts().CUDADeviceFlushDenormalsToZero)

@@ -698,6 +698,10 @@ llvm::BasicBlock *CodeGenFunction::getInvokeDestImpl() {
       return nullptr;
   }
 
+  // CUDA device code doesn't have exceptions.
+  if (LO.CUDA && LO.CUDAIsDevice)
+    return nullptr;
+
   // Check the innermost scope for a cached landing pad.  If this is
   // a non-EH cleanup, we'll check enclosing scopes in EmitLandingPad.
   llvm::BasicBlock *LP = EHStack.begin()->getCachedLandingPad();

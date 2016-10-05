@@ -185,6 +185,11 @@ public:
 /// Visitor that tries to report interesting diagnostics from conditions.
 class ConditionBRVisitor final
     : public BugReporterVisitorImpl<ConditionBRVisitor> {
+
+  // FIXME: constexpr initialization isn't supported by MSVC2013.
+  static const char *const GenericTrueMessage;
+  static const char *const GenericFalseMessage;
+
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -245,6 +250,8 @@ public:
                     BugReport &R,
                     const ExplodedNode *N,
                     Optional<bool> &prunable);
+
+  static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
 };
 
 /// \brief Suppress reports that might lead to known false positives.

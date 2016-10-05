@@ -2020,7 +2020,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                      Left.Previous->is(tok::r_paren)) ||
             (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
              (Style.PointerAlignment != FormatStyle::PAS_Left ||
-              (Line.IsMultiVariableDeclStmt && Left.NestingLevel == 0))));
+              (Line.IsMultiVariableDeclStmt &&
+               (Left.NestingLevel == 0 ||
+                (Left.NestingLevel == 1 && Line.First->is(tok::kw_for)))))));
   if (Right.is(TT_FunctionTypeLParen) && Left.isNot(tok::l_paren) &&
       (!Left.is(TT_PointerOrReference) ||
        (Style.PointerAlignment != FormatStyle::PAS_Right &&

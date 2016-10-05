@@ -137,7 +137,7 @@ void testNilReceiverHelper(int *x) {
 }
 
 void testNilReceiver(id *x) {
-  if (*x) {
+  if (*x) { // expected-note {{Assuming the condition is false}}
     // expected-note@-1 {{Taking false branch}}
     return;
   }
@@ -1165,6 +1165,69 @@ void testNullDereferenceInDispatch() {
 // CHECK-NEXT:           <dict>
 // CHECK-NEXT:            <key>line</key><integer>140</integer>
 // CHECK-NEXT:            <key>col</key><integer>4</integer>
+// CHECK-NEXT:            <key>file</key><integer>0</integer>
+// CHECK-NEXT:           </dict>
+// CHECK-NEXT:          </array>
+// CHECK-NEXT:         <key>end</key>
+// CHECK-NEXT:          <array>
+// CHECK-NEXT:           <dict>
+// CHECK-NEXT:            <key>line</key><integer>140</integer>
+// CHECK-NEXT:            <key>col</key><integer>7</integer>
+// CHECK-NEXT:            <key>file</key><integer>0</integer>
+// CHECK-NEXT:           </dict>
+// CHECK-NEXT:           <dict>
+// CHECK-NEXT:            <key>line</key><integer>140</integer>
+// CHECK-NEXT:            <key>col</key><integer>7</integer>
+// CHECK-NEXT:            <key>file</key><integer>0</integer>
+// CHECK-NEXT:           </dict>
+// CHECK-NEXT:          </array>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:       </array>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>kind</key><string>event</string>
+// CHECK-NEXT:      <key>location</key>
+// CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>line</key><integer>140</integer>
+// CHECK-NEXT:       <key>col</key><integer>7</integer>
+// CHECK-NEXT:       <key>file</key><integer>0</integer>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <key>ranges</key>
+// CHECK-NEXT:      <array>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>line</key><integer>140</integer>
+// CHECK-NEXT:          <key>col</key><integer>7</integer>
+// CHECK-NEXT:          <key>file</key><integer>0</integer>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>line</key><integer>140</integer>
+// CHECK-NEXT:          <key>col</key><integer>8</integer>
+// CHECK-NEXT:          <key>file</key><integer>0</integer>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </array>
+// CHECK-NEXT:      <key>depth</key><integer>0</integer>
+// CHECK-NEXT:      <key>extended_message</key>
+// CHECK-NEXT:      <string>Assuming the condition is false</string>
+// CHECK-NEXT:      <key>message</key>
+// CHECK-NEXT:      <string>Assuming the condition is false</string>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>kind</key><string>control</string>
+// CHECK-NEXT:      <key>edges</key>
+// CHECK-NEXT:       <array>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>start</key>
+// CHECK-NEXT:          <array>
+// CHECK-NEXT:           <dict>
+// CHECK-NEXT:            <key>line</key><integer>140</integer>
+// CHECK-NEXT:            <key>col</key><integer>7</integer>
+// CHECK-NEXT:            <key>file</key><integer>0</integer>
+// CHECK-NEXT:           </dict>
+// CHECK-NEXT:           <dict>
+// CHECK-NEXT:            <key>line</key><integer>140</integer>
+// CHECK-NEXT:            <key>col</key><integer>7</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:          </array>

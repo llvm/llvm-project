@@ -2329,18 +2329,22 @@ bool AMDGPUTargetInfo::initFeatureMap(
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec);
 }
 
-// Namespace for x86 abstract base class
-const Builtin::Info BuiltinInfo[] = {
+const Builtin::Info BuiltinInfoX86[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  { #ID, TYPE, ATTRS, HEADER, ALL_LANGUAGES, nullptr },
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
   { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE },
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
   { #ID, TYPE, ATTRS, HEADER, LANGS, FEATURE },
 #include "clang/Basic/BuiltinsX86.def"
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
+#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
+  { #ID, TYPE, ATTRS, HEADER, LANGS, FEATURE },
+#include "clang/Basic/BuiltinsX86_64.def"
 };
+
 
 static const char* const GCCRegNames[] = {
   "ax", "dx", "cx", "bx", "si", "di", "bp", "sp",
@@ -2704,10 +2708,6 @@ public:
   unsigned getFloatEvalMethod() const override {
     // X87 evaluates with 80 bits "long double" precision.
     return SSELevel == NoSSE ? 2 : 0;
-  }
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return llvm::makeArrayRef(BuiltinInfo,
-                             clang::X86::LastTSBuiltin-Builtin::FirstTSBuiltin);
   }
   ArrayRef<const char *> getGCCRegNames() const override {
     return llvm::makeArrayRef(GCCRegNames);
@@ -4127,6 +4127,10 @@ public:
 
     return X86TargetInfo::validateOperandSize(Constraint, Size);
   }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+    return llvm::makeArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
+                                                  Builtin::FirstTSBuiltin + 1);
+  }
 };
 
 class NetBSDI386TargetInfo : public NetBSDTargetInfo<X86_32TargetInfo> {
@@ -4481,6 +4485,10 @@ public:
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
+  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+    return llvm::makeArrayRef(BuiltinInfoX86,
+                              X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
   }
 };
 
