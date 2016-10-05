@@ -168,7 +168,7 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #    if SANITIZER_IOSSIM
 #      define SHADOW_OFFSET kIosSimShadowOffset64
 #    else
-#      define SHADOW_OFFSET kIosShadowOffset64
+#      define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #    endif
 #  elif defined(__aarch64__)
 #    define SHADOW_OFFSET kAArch64_ShadowOffset64
@@ -269,9 +269,25 @@ static inline bool AddrIsInMidMem(uptr a) {
   return kMidMemBeg && a >= kMidMemBeg && a <= kMidMemEnd;
 }
 
+static inline bool AddrIsInShadowGap(uptr a) {
+  PROFILE_ASAN_MAPPING();
+  if (kMidMemBeg) {
+    if (a <= kShadowGapEnd)
+      return SHADOW_OFFSET == 0 || a >= kShadowGapBeg;
+    return (a >= kShadowGap2Beg && a <= kShadowGap2End) ||
+           (a >= kShadowGap3Beg && a <= kShadowGap3End);
+  }
+  // In zero-based shadow mode we treat addresses near zero as addresses
+  // in shadow gap as well.
+  if (SHADOW_OFFSET == 0)
+    return a <= kShadowGapEnd;
+  return a >= kShadowGapBeg && a <= kShadowGapEnd;
+}
+
 static inline bool AddrIsInMem(uptr a) {
   PROFILE_ASAN_MAPPING();
-  return AddrIsInLowMem(a) || AddrIsInMidMem(a) || AddrIsInHighMem(a);
+  return AddrIsInLowMem(a) || AddrIsInMidMem(a) || AddrIsInHighMem(a) ||
+      (flags()->protect_shadow_gap == 0 && AddrIsInShadowGap(a));
 }
 
 static inline uptr MemToShadow(uptr p) {
@@ -293,21 +309,6 @@ static inline bool AddrIsInMidShadow(uptr a) {
 static inline bool AddrIsInShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
   return AddrIsInLowShadow(a) || AddrIsInMidShadow(a) || AddrIsInHighShadow(a);
-}
-
-static inline bool AddrIsInShadowGap(uptr a) {
-  PROFILE_ASAN_MAPPING();
-  if (kMidMemBeg) {
-    if (a <= kShadowGapEnd)
-      return SHADOW_OFFSET == 0 || a >= kShadowGapBeg;
-    return (a >= kShadowGap2Beg && a <= kShadowGap2End) ||
-           (a >= kShadowGap3Beg && a <= kShadowGap3End);
-  }
-  // In zero-based shadow mode we treat addresses near zero as addresses
-  // in shadow gap as well.
-  if (SHADOW_OFFSET == 0)
-    return a <= kShadowGapEnd;
-  return a >= kShadowGapBeg && a <= kShadowGapEnd;
 }
 
 static inline bool AddrIsAlignedByGranularity(uptr a) {
