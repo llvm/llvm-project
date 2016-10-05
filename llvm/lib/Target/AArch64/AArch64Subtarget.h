@@ -80,7 +80,8 @@ protected:
   bool Misaligned128StoreIsSlow = false;
   bool AvoidQuadLdStPairs = false;
   bool UseAlternateSExtLoadCVTF32Pattern = false;
-  bool HasMacroOpFusion = false;
+  bool HasArithmeticBccFusion = false;
+  bool HasArithmeticCbzFusion = false;
   bool DisableLatencySchedHeuristic = false;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 3;
@@ -188,7 +189,8 @@ public:
   bool useAlternateSExtLoadCVTF32Pattern() const {
     return UseAlternateSExtLoadCVTF32Pattern;
   }
-  bool hasMacroOpFusion() const { return HasMacroOpFusion; }
+  bool hasArithmeticBccFusion() const { return HasArithmeticBccFusion; }
+  bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const {
     return VectorInsertExtractBaseCost;

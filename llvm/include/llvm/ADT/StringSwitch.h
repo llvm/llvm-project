@@ -68,6 +68,7 @@ public:
 
   ~StringSwitch() = default;
 
+  // Case-sensitive case matchers
   template<unsigned N>
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   StringSwitch& Case(const char (&S)[N], const T& Value) {
@@ -182,8 +183,62 @@ public:
     return Case(S0, Value).Cases(S1, S2, S3, S4, S5, S6, S7, S8, S9, Value);
   }
 
+  // Case-insensitive case matchers.
+  template <unsigned N>
+  LLVM_ATTRIBUTE_ALWAYS_INLINE StringSwitch &CaseLower(const char (&S)[N],
+                                                       const T &Value) {
+    if (!Result && Str.equals_lower(StringRef(S, N - 1)))
+      Result = &Value;
+
+    return *this;
+  }
+
+  template <unsigned N>
+  LLVM_ATTRIBUTE_ALWAYS_INLINE StringSwitch &EndsWithLower(const char (&S)[N],
+                                                           const T &Value) {
+    if (!Result && Str.endswith_lower(StringRef(S, N - 1)))
+      Result = &Value;
+
+    return *this;
+  }
+
+  template <unsigned N>
+  LLVM_ATTRIBUTE_ALWAYS_INLINE StringSwitch &StartsWithLower(const char (&S)[N],
+                                                             const T &Value) {
+    if (!Result && Str.startswith_lower(StringRef(S, N - 1)))
+      Result = &Value;
+
+    return *this;
+  }
+  template <unsigned N0, unsigned N1>
+  LLVM_ATTRIBUTE_ALWAYS_INLINE StringSwitch &
+  CasesLower(const char (&S0)[N0], const char (&S1)[N1], const T &Value) {
+    return CaseLower(S0, Value).CaseLower(S1, Value);
+  }
+
+  template <unsigned N0, unsigned N1, unsigned N2>
+  LLVM_ATTRIBUTE_ALWAYS_INLINE StringSwitch &
+  CasesLower(const char (&S0)[N0], const char (&S1)[N1], const char (&S2)[N2],
+             const T &Value) {
+    return CaseLower(S0, Value).CasesLower(S1, S2, Value);
+  }
+
+  template <unsigned N0, unsigned N1, unsigned N2, unsigned N3>
+  LLVM_ATTRIBUTE_ALWAYS_INLINE StringSwitch &
+  CasesLower(const char (&S0)[N0], const char (&S1)[N1], const char (&S2)[N2],
+             const char (&S3)[N3], const T &Value) {
+    return CaseLower(S0, Value).CasesLower(S1, S2, S3, Value);
+  }
+
+  template <unsigned N0, unsigned N1, unsigned N2, unsigned N3, unsigned N4>
+  LLVM_ATTRIBUTE_ALWAYS_INLINE StringSwitch &
+  CasesLower(const char (&S0)[N0], const char (&S1)[N1], const char (&S2)[N2],
+             const char (&S3)[N3], const char (&S4)[N4], const T &Value) {
+    return CaseLower(S0, Value).CasesLower(S1, S2, S3, S4, Value);
+  }
+
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  R Default(const T& Value) const {
+  R Default(const T &Value) const {
     if (Result)
       return *Result;
     return Value;

@@ -1736,6 +1736,28 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 /// than just handing around a global list.
 StringMap<Option *> &getRegisteredOptions(SubCommand &Sub = *TopLevelSubCommand);
 
+/// \brief Use this to get all registered SubCommands from the provided parser.
+///
+/// \return A range of all SubCommand pointers registered with the parser.
+///
+/// Typical usage:
+/// \code
+/// main(int argc, char* argv[]) {
+///   llvm::cl::ParseCommandLineOptions(argc, argv);
+///   for (auto* S : llvm::cl::getRegisteredSubcommands()) {
+///     if (*S) {
+///       std::cout << "Executing subcommand: " << S->getName() << std::endl;
+///       // Execute some function based on the name...
+///     }
+///   }
+/// }
+/// \endcode
+///
+/// This interface is useful for defining subcommands in libraries and
+/// the dispatch from a single point (like in the main function).
+iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+getRegisteredSubcommands();
+
 //===----------------------------------------------------------------------===//
 // Standalone command line processing utilities.
 //

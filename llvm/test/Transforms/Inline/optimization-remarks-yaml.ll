@@ -1,6 +1,8 @@
 ; RUN: opt < %s -S -inline -pass-remarks-missed=inline -pass-remarks-with-hotness \
 ; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: opt < %s -S -inline -pass-remarks-with-hotness -pass-remarks-output=%t
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
 ; Check the YAML file generated for inliner remarks for this program:
 ;
@@ -22,9 +24,9 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: foo
-; YAML-NEXT:   - String:  will not be inlined into
+; YAML-NEXT:   - String: ' will not be inlined into '
 ; YAML-NEXT:   - Caller: baz
-; YAML-NEXT:   - String:  because its definition is unavailable
+; YAML-NEXT:   - String: ' because its definition is unavailable'
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Missed
 ; YAML-NEXT: Pass:            inline
@@ -34,9 +36,9 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: bar
-; YAML-NEXT:   - String:  will not be inlined into
+; YAML-NEXT:   - String: ' will not be inlined into '
 ; YAML-NEXT:   - Caller: baz
-; YAML-NEXT:   - String:  because its definition is unavailable
+; YAML-NEXT:   - String: ' because its definition is unavailable'
 ; YAML-NEXT: ...
 
 ; ModuleID = '/tmp/s.c'

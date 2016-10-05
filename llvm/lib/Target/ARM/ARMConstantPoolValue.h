@@ -92,7 +92,7 @@ public:
   ~ARMConstantPoolValue() override;
 
   ARMCP::ARMCPModifier getModifier() const { return Modifier; }
-  const char *getModifierText() const;
+  StringRef getModifierText() const;
   bool hasModifier() const { return Modifier != ARMCP::no_modifier; }
 
   bool mustAddCurrentAddress() const { return AddCurrentAddress; }
@@ -201,15 +201,15 @@ public:
 class ARMConstantPoolSymbol : public ARMConstantPoolValue {
   const std::string S;          // ExtSymbol being loaded.
 
-  ARMConstantPoolSymbol(LLVMContext &C, const char *s, unsigned id,
+  ARMConstantPoolSymbol(LLVMContext &C, StringRef s, unsigned id,
                         unsigned char PCAdj, ARMCP::ARMCPModifier Modifier,
                         bool AddCurrentAddress);
 
 public:
-  static ARMConstantPoolSymbol *Create(LLVMContext &C, const char *s,
-                                       unsigned ID, unsigned char PCAdj);
+  static ARMConstantPoolSymbol *Create(LLVMContext &C, StringRef s, unsigned ID,
+                                       unsigned char PCAdj);
 
-  const char *getSymbol() const { return S.c_str(); }
+  StringRef getSymbol() const { return S; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 unsigned Alignment) override;

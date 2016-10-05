@@ -117,6 +117,70 @@ void TracePC::PrintCoverage() {
   }
 }
 
+// Value profile.
+// We keep track of various values that affect control flow.
+// These values are inserted into a bit-set-based hash map.
+// Every new bit in the map is treated as a new coverage.
+//
+// For memcmp/strcmp/etc the interesting value is the length of the common
+// prefix of the parameters.
+// For cmp instructions the interesting value is a XOR of the parameters.
+// The interesting value is mixed up with the PC and is then added to the map.
+
+void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
+                              size_t n) {
+  if (!n) return;
+  size_t Len = std::min(n, (size_t)32);
+  const uint8_t *A1 = reinterpret_cast<const uint8_t *>(s1);
+  const uint8_t *A2 = reinterpret_cast<const uint8_t *>(s2);
+  size_t I = 0;
+  for (; I < Len; I++)
+    if (A1[I] != A2[I])
+      break;
+  size_t PC = reinterpret_cast<size_t>(caller_pc);
+  size_t Idx = I;
+  // if (I < Len)
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  TPC.HandleValueProfile((PC & 4095) | (Idx << 12));
+}
+
+void TracePC::AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
+                              size_t n) {
+  if (!n) return;
+  size_t Len = std::min(n, (size_t)32);
+  const uint8_t *A1 = reinterpret_cast<const uint8_t *>(s1);
+  const uint8_t *A2 = reinterpret_cast<const uint8_t *>(s2);
+  size_t I = 0;
+  for (; I < Len; I++)
+    if (A1[I] != A2[I] || A1[I] == 0)
+      break;
+  size_t PC = reinterpret_cast<size_t>(caller_pc);
+  size_t Idx = I;
+  // if (I < Len && A1[I])
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  TPC.HandleValueProfile((PC & 4095) | (Idx << 12));
+}
+
+ATTRIBUTE_TARGET_POPCNT
+static void AddValueForCmp(void *PCptr, uint64_t Arg1, uint64_t Arg2) {
+  if (Arg1 == Arg2)
+    return;
+  uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
+  uint64_t ArgDistance = __builtin_popcountl(Arg1 ^ Arg2) - 1; // [0,63]
+  uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
+  TPC.HandleValueProfile(Idx);
+}
+
+static void AddValueForSingleVal(void *PCptr, uintptr_t Val) {
+  if (!Val) return;
+  uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
+  uint64_t ArgDistance = __builtin_popcountl(Val) - 1; // [0,63]
+  uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
+  TPC.HandleValueProfile(Idx);
+}
+
+
+
 } // namespace fuzzer
 
 extern "C" {
@@ -136,4 +200,47 @@ void __sanitizer_cov_trace_pc_indir(uintptr_t Callee) {
   uintptr_t PC = (uintptr_t)__builtin_return_address(0);
   fuzzer::TPC.HandleCallerCallee(PC, Callee);
 }
+
+// TODO: this one will not be used with the newest clang. Remove it.
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1,
+                               uint64_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
 }
+
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp8(uint64_t Arg1, int64_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp4(uint32_t Arg1, int32_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp2(uint16_t Arg1, int16_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp1(uint8_t Arg1, int8_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+}
+
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
+  // TODO(kcc): support value profile here.
+}
+
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_div4(uint32_t Val) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_div8(uint64_t Val) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_gep(uintptr_t Idx) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Idx);
+}
+
+}  // extern "C"

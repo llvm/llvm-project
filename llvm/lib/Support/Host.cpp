@@ -73,10 +73,6 @@ static ssize_t LLVM_ATTRIBUTE_UNUSED readCpuInfo(void *Buf, size_t Size) {
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
 
-#if defined(__GNUC__) || defined(__clang__)
-#include <cpuid.h>
-#endif
-
 enum VendorSignatures {
   SIG_INTEL = 0x756e6547 /* Genu */,
   SIG_AMD = 0x68747541 /* Auth */
@@ -172,6 +168,41 @@ enum ProcessorFeatures {
   FEATURE_ADX,
   FEATURE_EM64T
 };
+
+// The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
+// Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
+// support. Consequently, for i386, the presence of CPUID is checked first
+// via the corresponding eflags bit.
+// Removal of cpuid.h header motivated by PR30384
+// Header cpuid.h and method __get_cpuid_max are not used in llvm, clang, openmp
+// or test-suite, but are used in external projects e.g. libstdcxx
+static bool isCpuIdSupported() {
+#if defined(__GNUC__) || defined(__clang__)
+#if defined(__i386__)
+  int __cpuid_supported;
+  __asm__("  pushfl\n"
+          "  popl   %%eax\n"
+          "  movl   %%eax,%%ecx\n"
+          "  xorl   $0x00200000,%%eax\n"
+          "  pushl  %%eax\n"
+          "  popfl\n"
+          "  pushfl\n"
+          "  popl   %%eax\n"
+          "  movl   $0,%0\n"
+          "  cmpl   %%eax,%%ecx\n"
+          "  je     1f\n"
+          "  movl   $1,%0\n"
+          "1:"
+          : "=r"(__cpuid_supported)
+          :
+          : "eax", "ecx");
+  if (!__cpuid_supported)
+    return false;
+#endif
+  return true;
+#endif
+  return true;
+}
 
 /// getX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
 /// the specified arguments.  If we can't run cpuid on the host, return true.
@@ -748,7 +779,8 @@ StringRef sys::getHostCPUName() {
   //FIXME: include cpuid.h from clang or copy __get_cpuid_max here
   // and simplify it to not invoke __cpuid (like cpu_model.c in
   // compiler-rt/lib/builtins/cpu_model.c?
-  if(!__get_cpuid_max(0, &Vendor))
+  // Opting for the second option.
+  if(!isCpuIdSupported())
     return "generic";
 #endif
   if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX))

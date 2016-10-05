@@ -39,9 +39,22 @@ class InputCorpus {
     memset(FeatureSet, 0, sizeof(FeatureSet));
   }
   size_t size() const { return Inputs.size(); }
+  size_t SizeInBytes() const {
+    size_t Res = 0;
+    for (auto &II : Inputs)
+      Res += II.U.size();
+    return Res;
+  }
+  size_t NumActiveUnits() const {
+    size_t Res = 0;
+    for (auto &II : Inputs)
+      Res += !II.U.empty();
+    return Res;
+  }
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx].U; }
   void AddToCorpus(const Unit &U) {
+    assert(!U.empty());
     uint8_t Hash[kSHA1NumBytes];
     ComputeSHA1(U.data(), U.size(), Hash);
     if (!Hashes.insert(Sha1ToString(Hash)).second) return;
@@ -60,7 +73,9 @@ class InputCorpus {
   bool HasUnit(const Unit &U) { return Hashes.count(Hash(U)); }
   bool HasUnit(const std::string &H) { return Hashes.count(H); }
   InputInfo &ChooseUnitToMutate(Random &Rand) {
-    return Inputs[ChooseUnitIdxToMutate(Rand)];
+    InputInfo &II = Inputs[ChooseUnitIdxToMutate(Rand)];
+    assert(!II.U.empty());
+    return II;
   };
 
   // Returns an index of random unit from the corpus to mutate.
@@ -132,8 +147,11 @@ private:
           auto &OlderII = Inputs[Fe.SmallestElementIdx];
           assert(OlderII.NumFeatures > 0);
           OlderII.NumFeatures--;
-          if (!OlderII.NumFeatures && FeatureDebug)
-            Printf("EVICTED %zd\n", Fe.SmallestElementIdx);
+          if (!OlderII.NumFeatures) {
+            OlderII.U.clear();  // Will be never used again.
+            if (FeatureDebug)
+              Printf("EVICTED %zd\n", Fe.SmallestElementIdx);
+          }
         }
         Fe.SmallestElementIdx = CurrentElementIdx;
         Fe.SmallestElementSize = Size;

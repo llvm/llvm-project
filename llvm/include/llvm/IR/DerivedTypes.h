@@ -46,9 +46,10 @@ public:
   /// This enum is just used to hold constants we need for IntegerType.
   enum {
     MIN_INT_BITS = 1,        ///< Minimum number of bits that can be specified
-    MAX_INT_BITS = (1<<23)-1 ///< Maximum number of bits that can be specified
+    MAX_INT_BITS = (1<<24)-1 ///< Maximum number of bits that can be specified
       ///< Note that bit width is stored in the Type classes SubclassData field
-      ///< which has 23 bits. This yields a maximum bit width of 8,388,607 bits.
+      ///< which has 24 bits. This yields a maximum bit width of 16,777,215
+      ///< bits.
   };
 
   /// This static method is the primary way of constructing an IntegerType.

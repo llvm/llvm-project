@@ -45,12 +45,12 @@ void DWARFDebugInfoEntryMinimal::dump(raw_ostream &OS, DWARFUnit *u,
 
     if (abbrCode) {
       if (AbbrevDecl) {
-          const char *tagString = TagString(getTag());
-          if (tagString)
-            WithColor(OS, syntax::Tag).get().indent(indent) << tagString;
-          else
-            WithColor(OS, syntax::Tag).get().indent(indent) <<
-              format("DW_TAG_Unknown_%x", getTag());
+        auto tagString = TagString(getTag());
+        if (!tagString.empty())
+          WithColor(OS, syntax::Tag).get().indent(indent) << tagString;
+        else
+          WithColor(OS, syntax::Tag).get().indent(indent)
+              << format("DW_TAG_Unknown_%x", getTag());
 
         OS << format(" [%u] %c\n", abbrCode,
                      AbbrevDecl->hasChildren() ? '*' : ' ');
@@ -83,7 +83,8 @@ static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
     uint64_t Shift = countTrailingZeros(Val);
     assert(Shift < 64 && "undefined behavior");
     uint64_t Bit = 1ULL << Shift;
-    if (const char *PropName = ApplePropertyString(Bit))
+    auto PropName = ApplePropertyString(Bit);
+    if (!PropName.empty())
       OS << PropName;
     else
       OS << format("DW_APPLE_PROPERTY_0x%" PRIx64, Bit);
@@ -116,14 +117,14 @@ void DWARFDebugInfoEntryMinimal::dumpAttribute(raw_ostream &OS,
   const char BaseIndent[] = "            ";
   OS << BaseIndent;
   OS.indent(indent+2);
-  const char *attrString = AttributeString(attr);
-  if (attrString)
+  auto attrString = AttributeString(attr);
+  if (!attrString.empty())
     WithColor(OS, syntax::Attribute) << attrString;
   else
     WithColor(OS, syntax::Attribute).get() << format("DW_AT_Unknown_%x", attr);
 
-  const char *formString = FormEncodingString(form);
-  if (formString)
+  auto formString = FormEncodingString(form);
+  if (!formString.empty())
     OS << " [" << formString << ']';
   else
     OS << format(" [DW_FORM_Unknown_%x]", form);
@@ -134,8 +135,8 @@ void DWARFDebugInfoEntryMinimal::dumpAttribute(raw_ostream &OS,
     return;
 
   OS << "\t(";
-  
-  const char *Name = nullptr;
+
+  StringRef Name;
   std::string File;
   auto Color = syntax::Enumerator;
   if (attr == DW_AT_decl_file || attr == DW_AT_call_file) {
@@ -146,12 +147,12 @@ void DWARFDebugInfoEntryMinimal::dumpAttribute(raw_ostream &OS,
              u->getCompilationDir(),
              DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, File)) {
         File = '"' + File + '"';
-        Name = File.c_str();
+        Name = File;
       }
   } else if (Optional<uint64_t> Val = formValue.getAsUnsignedConstant())
     Name = AttributeValueString(attr, *Val);
 
-  if (Name)
+  if (!Name.empty())
     WithColor(OS, Color) << Name;
   else if (attr == DW_AT_decl_line || attr == DW_AT_call_line)
     OS << *formValue.getAsUnsignedConstant();

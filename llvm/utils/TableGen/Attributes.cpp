@@ -156,7 +156,7 @@ void Attributes::printStrBoolAttrClasses(raw_ostream &OS,
   OS << "// StrBoolAttr classes\n";
   for (const auto *R : Records) {
     OS << "struct " << R->getName() << "Attr : StrBoolAttr {\n";
-    OS << "  static const char *getKind() {\n";
+    OS << "  static StringRef getKind() {\n";
     OS << "    return \"" << R->getValueAsString("AttrString") << "\";\n";
     OS << "  }\n";
     OS << "};\n";

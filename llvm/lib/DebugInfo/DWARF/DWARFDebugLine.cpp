@@ -42,8 +42,8 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
      << format("     opcode_base: %u\n", OpcodeBase);
 
   for (uint32_t i = 0; i < StandardOpcodeLengths.size(); ++i)
-    OS << format("standard_opcode_lengths[%s] = %u\n", LNStandardString(i + 1),
-                 StandardOpcodeLengths[i]);
+    OS << format("standard_opcode_lengths[%s] = %u\n",
+                 LNStandardString(i + 1).data(), StandardOpcodeLengths[i]);
 
   if (!IncludeDirectories.empty())
     for (uint32_t i = 0; i < IncludeDirectories.size(); ++i)

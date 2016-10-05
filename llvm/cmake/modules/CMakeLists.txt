@@ -20,6 +20,15 @@ foreach(lib ${LLVM_AVAILABLE_LIBS})
     "${all_llvm_lib_deps}\nset_property(GLOBAL PROPERTY LLVMBUILD_LIB_DEPS_${lib} ${llvm_lib_deps})")
 endforeach(lib)
 
+# CMake requires that all targets expressed as dependencies exist, so we can't
+# have intrinsics_gen in LLVM_COMMON_DEPENDS when it is written out, otherwise
+# projects building out of tree will have CMake errors. This only gets hit when
+# LLVM_ENABLE_MODULES=On. Eventually we should come up with a better solution to
+# this, but there is no easy solution.
+if(intrinsics_gen IN_LIST LLVM_COMMON_DEPENDS)
+  list(REMOVE_ITEM LLVM_COMMON_DEPENDS intrinsics_gen)
+endif()
+
 # Generate LLVMConfig.cmake for the build tree.
 set(LLVM_CONFIG_CODE "
 # LLVM_BUILD_* values available only from LLVM build tree.

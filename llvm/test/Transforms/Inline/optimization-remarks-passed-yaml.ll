@@ -23,13 +23,13 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: foo
-; YAML-NEXT:   - String:  can be inlined into
+; YAML-NEXT:   - String: ' can be inlined into '
 ; YAML-NEXT:   - Caller: bar
-; YAML-NEXT:   - String:  with cost=
-; YAML-NEXT:   - Cost: {{[0-9]+}}
-; YAML-NEXT:   - String:  (threshold=
-; YAML-NEXT:   - Threshold: {{[0-9]+}}
-; YAML-NEXT:   - String: )
+; YAML-NEXT:   - String: ' with cost='
+; YAML-NEXT:   - Cost: '{{[0-9]+}}'
+; YAML-NEXT:   - String: ' (threshold='
+; YAML-NEXT:   - Threshold: '{{[0-9]+}}'
+; YAML-NEXT:   - String: ')'
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Passed
 ; YAML-NEXT: Pass:            inline
@@ -39,7 +39,7 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: foo
-; YAML-NEXT:   - String:  inlined into
+; YAML-NEXT:   - String: ' inlined into '
 ; YAML-NEXT:   - Caller: bar
 ; YAML-NEXT: ...
 

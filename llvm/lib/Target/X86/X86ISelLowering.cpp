@@ -53,6 +53,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Target/TargetRecip.h"
 #include "X86IntrinsicsInfo.h"
 #include <bitset>
 #include <numeric>
@@ -83,6 +84,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
   // X86-SSE is even stranger. It uses -1 or 0 for vector masks.
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
+
+  // By default (and when -ffast-math is on), enable estimate codegen with 1
+  // refinement step for floats (not doubles) except scalar division. Scalar
+  // division estimates are disabled because they break too much real-world
+  // code. These defaults are intended to match GCC behavior.
+  ReciprocalEstimates.set("sqrtf", true, 1);
+  ReciprocalEstimates.set("divf", false, 1);
+  ReciprocalEstimates.set("vec-sqrtf", true, 1);
+  ReciprocalEstimates.set("vec-divf", true, 1);
 
   // For 64-bit, since we have so many registers, use the ILP scheduler.
   // For 32-bit, use the register pressure specific scheduling.
@@ -15206,7 +15216,7 @@ SDValue X86TargetLowering::getRsqrtEstimate(SDValue Op,
   else
     return SDValue();
 
-  TargetRecip Recips = DCI.DAG.getTarget().Options.Reciprocals;
+  TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
   if (!Recips.isEnabled(RecipOp))
     return SDValue();
 
@@ -15238,7 +15248,7 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op,
   else
     return SDValue();
 
-  TargetRecip Recips = DCI.DAG.getTarget().Options.Reciprocals;
+  TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
   if (!Recips.isEnabled(RecipOp))
     return SDValue();
 

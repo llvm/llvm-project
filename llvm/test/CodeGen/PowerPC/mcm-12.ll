@@ -1,5 +1,9 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium -mattr=-vsx < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium \
+; RUN:   -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium \
+; RUN:   -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O1 -code-model=medium < %s | \
+; RUN:   FileCheck -check-prefix=CHECK-P9 %s
 
 ; Test peephole optimization for medium code model (32-bit TOC offsets)
 ; for loading a value from the constant pool (TOC-relative).
@@ -24,3 +28,10 @@ entry:
 ; CHECK-VSX: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
 ; CHECK-VSX: addi [[REG1]], {{[0-9]+}}, [[VAR]]@toc@l
 ; CHECK-VSX: lxsdx {{[0-9]+}}, 0, [[REG1]]
+
+; CHECK-P9: [[VAR:[a-z0-9A-Z_.]+]]:
+; CHECK-P9: .quad 4562098671269285104
+; CHECK-P9-LABEL: test_double_const:
+; CHECK-P9: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
+; CHECK-P9: addi [[REG1]], {{[0-9]+}}, [[VAR]]@toc@l
+; CHECK-P9: lfd {{[0-9]+}}, 0([[REG1]])
