@@ -213,8 +213,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   }
 
   // swift_private
-  if (info.SwiftPrivate) {
-    handleAPINotedAttribute<SwiftPrivateAttr>(S, D, true, role, [&] {
+  if (auto swiftPrivate = info.isSwiftPrivate()) {
+    handleAPINotedAttribute<SwiftPrivateAttr>(S, D, *swiftPrivate, role, [&] {
       return SwiftPrivateAttr::CreateImplicit(S.Context);
     });
   }

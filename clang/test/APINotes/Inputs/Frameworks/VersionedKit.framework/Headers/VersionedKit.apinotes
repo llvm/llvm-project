@@ -11,6 +11,8 @@ SwiftVersions:
         Parameters:      
           - Position:        0
             NoEscape:        false
+      - Name: privateFunc
+        SwiftPrivate: false
     Tags:
       - Name: MyErrorCode
         NSErrorDomain: ''

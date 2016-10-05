@@ -104,7 +104,8 @@ namespace {
     uint8_t unavailableBits = *data++;
     info.Unavailable = (unavailableBits >> 1) & 0x01;
     info.UnavailableInSwift = unavailableBits & 0x01;
-    info.SwiftPrivate = (unavailableBits >> 2) & 0x01;
+    if ((unavailableBits >> 2) & 0x01)
+      info.setSwiftPrivate(static_cast<bool>((unavailableBits >> 3) & 0x01));
 
     unsigned msgLength = endian::readNext<uint16_t, little, unaligned>(data);
     info.UnavailableMsg
