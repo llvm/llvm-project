@@ -137,7 +137,7 @@ template <> struct CanCopy<false> {
 
   CanCopy() = default;
   // FIXME: Use '= default' when we drop MSVC 2013.
-  CanCopy(CanCopy &&) {};
+  CanCopy(CanCopy &&) {}
 };
 
 template <bool Moveable, bool Copyable>
