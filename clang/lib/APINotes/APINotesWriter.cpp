@@ -331,9 +331,18 @@ namespace {
   static void emitCommonEntityInfo(raw_ostream &out,
                                    const CommonEntityInfo &info) {
     endian::Writer<little> writer(out);
-    writer.write<uint8_t>(info.SwiftPrivate << 2
-                          | info.Unavailable << 1 
-                          | info.UnavailableInSwift);
+    uint8_t payload = 0;
+    if (auto swiftPrivate = info.isSwiftPrivate()) {
+      payload |= 0x01;
+      if (*swiftPrivate) payload |= 0x02;
+    }
+    payload <<= 1;
+    payload |= info.Unavailable;
+    payload <<= 1;
+    payload |= info.UnavailableInSwift;
+
+    writer.write<uint8_t>(payload);
+
     writer.write<uint16_t>(info.UnavailableMsg.size());
     out.write(info.UnavailableMsg.c_str(), info.UnavailableMsg.size());
     writer.write<uint16_t>(info.SwiftName.size());
@@ -1017,6 +1026,7 @@ namespace {
 
   /// Used to serialize the on-disk tag table.
   class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> { };
+
 } // end anonymous namespace
 
 void APINotesWriter::Implementation::writeTagBlock(
@@ -1046,7 +1056,27 @@ void APINotesWriter::Implementation::writeTagBlock(
 namespace {
   /// Used to serialize the on-disk typedef table.
   class TypedefTableInfo
-    : public CommonTypeTableInfo<TypedefTableInfo, TypedefInfo> { };
+    : public CommonTypeTableInfo<TypedefTableInfo, TypedefInfo> {
+
+  public:
+    unsigned getUnversionedInfoSize(const TypedefInfo &info) {
+      return 1 + getCommonTypeInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out, const TypedefInfo &info) {
+      endian::Writer<little> writer(out);
+
+      uint8_t payload = 0;
+      if (auto swiftWrapper = info.SwiftWrapper) {
+        payload |= static_cast<uint8_t>(*swiftWrapper) + 1;
+      }
+
+      writer.write<uint8_t>(payload);
+
+      emitCommonTypeInfo(out, info);
+    }
+
+  };
 } // end anonymous namespace
 
 void APINotesWriter::Implementation::writeTypedefBlock(
