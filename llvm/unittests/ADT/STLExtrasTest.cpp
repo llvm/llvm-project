@@ -43,26 +43,28 @@ TEST(STLExtrasTest, EnumerateLValue) {
   // Test that a simple LValue can be enumerated and gives correct results with
   // multiple types, including the empty container.
   std::vector<char> foo = {'a', 'b', 'c'};
-  std::vector<std::pair<std::size_t, char>> CharResults;
+  typedef std::pair<std::size_t, char> CharPairType;
+  std::vector<CharPairType> CharResults;
 
   for (auto X : llvm::enumerate(foo)) {
     CharResults.emplace_back(X.Index, X.Value);
   }
   ASSERT_EQ(3u, CharResults.size());
-  EXPECT_EQ(std::make_pair(0u, 'a'), CharResults[0]);
-  EXPECT_EQ(std::make_pair(1u, 'b'), CharResults[1]);
-  EXPECT_EQ(std::make_pair(2u, 'c'), CharResults[2]);
+  EXPECT_EQ(CharPairType(0u, 'a'), CharResults[0]);
+  EXPECT_EQ(CharPairType(1u, 'b'), CharResults[1]);
+  EXPECT_EQ(CharPairType(2u, 'c'), CharResults[2]);
 
   // Test a const range of a different type.
-  std::vector<std::pair<std::size_t, int>> IntResults;
+  typedef std::pair<std::size_t, int> IntPairType;
+  std::vector<IntPairType> IntResults;
   const std::vector<int> bar = {1, 2, 3};
   for (auto X : llvm::enumerate(bar)) {
     IntResults.emplace_back(X.Index, X.Value);
   }
   ASSERT_EQ(3u, IntResults.size());
-  EXPECT_EQ(std::make_pair(0u, 1), IntResults[0]);
-  EXPECT_EQ(std::make_pair(1u, 2), IntResults[1]);
-  EXPECT_EQ(std::make_pair(2u, 3), IntResults[2]);
+  EXPECT_EQ(IntPairType(0u, 1), IntResults[0]);
+  EXPECT_EQ(IntPairType(1u, 2), IntResults[1]);
+  EXPECT_EQ(IntPairType(2u, 3), IntResults[2]);
 
   // Test an empty range.
   IntResults.clear();
@@ -88,7 +90,8 @@ TEST(STLExtrasTest, EnumerateModifyLValue) {
 
 TEST(STLExtrasTest, EnumerateRValueRef) {
   // Test that an rvalue can be enumerated.
-  std::vector<std::pair<std::size_t, int>> Results;
+  typedef std::pair<std::size_t, int> PairType;
+  std::vector<PairType> Results;
 
   auto Enumerator = llvm::enumerate(std::vector<int>{1, 2, 3});
 
@@ -97,16 +100,17 @@ TEST(STLExtrasTest, EnumerateRValueRef) {
   }
 
   ASSERT_EQ(3u, Results.size());
-  EXPECT_EQ(std::make_pair(0u, 1), Results[0]);
-  EXPECT_EQ(std::make_pair(1u, 2), Results[1]);
-  EXPECT_EQ(std::make_pair(2u, 3), Results[2]);
+  EXPECT_EQ(PairType(0u, 1), Results[0]);
+  EXPECT_EQ(PairType(1u, 2), Results[1]);
+  EXPECT_EQ(PairType(2u, 3), Results[2]);
 }
 
 TEST(STLExtrasTest, EnumerateModifyRValue) {
   // Test that when enumerating an rvalue, modification still works (even if
   // this isn't terribly useful, it at least shows that we haven't snuck an
   // extra const in there somewhere.
-  std::vector<std::pair<std::size_t, char>> Results;
+  typedef std::pair<std::size_t, char> PairType;
+  std::vector<PairType> Results;
 
   for (auto X : llvm::enumerate(std::vector<char>{'1', '2', '3'})) {
     ++X.Value;
@@ -114,9 +118,9 @@ TEST(STLExtrasTest, EnumerateModifyRValue) {
   }
 
   ASSERT_EQ(3u, Results.size());
-  EXPECT_EQ(std::make_pair(0u, '2'), Results[0]);
-  EXPECT_EQ(std::make_pair(1u, '3'), Results[1]);
-  EXPECT_EQ(std::make_pair(2u, '4'), Results[2]);
+  EXPECT_EQ(PairType(0u, '2'), Results[0]);
+  EXPECT_EQ(PairType(1u, '3'), Results[1]);
+  EXPECT_EQ(PairType(2u, '4'), Results[2]);
 }
 
 template <bool B> struct CanMove {};
