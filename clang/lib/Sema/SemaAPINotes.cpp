@@ -213,8 +213,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   }
 
   // swift_private
-  if (info.SwiftPrivate) {
-    handleAPINotedAttribute<SwiftPrivateAttr>(S, D, true, role, [&] {
+  if (auto swiftPrivate = info.isSwiftPrivate()) {
+    handleAPINotedAttribute<SwiftPrivateAttr>(S, D, *swiftPrivate, role, [&] {
       return SwiftPrivateAttr::CreateImplicit(S.Context);
     });
   }
@@ -423,6 +423,33 @@ static void ProcessAPINotes(Sema &S, TagDecl *D,
 static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
                             const api_notes::TypedefInfo &info,
                             VersionedInfoRole role) {
+  // swift_wrapper
+  using SwiftWrapperKind = api_notes::SwiftWrapperKind;
+
+  if (auto swiftWrapper = info.SwiftWrapper) {
+    handleAPINotedAttribute<SwiftNewtypeAttr>(S, D,
+      *swiftWrapper != SwiftWrapperKind::None, role,
+      [&] {
+        SwiftNewtypeAttr::NewtypeKind kind;
+        switch (*swiftWrapper) {
+        case SwiftWrapperKind::None:
+          llvm_unreachable("Shouldn't build an attribute");
+
+        case SwiftWrapperKind::Struct:
+          kind = SwiftNewtypeAttr::NK_Struct;
+          break;
+
+        case SwiftWrapperKind::Enum:
+          kind = SwiftNewtypeAttr::NK_Enum;
+          break;
+        }
+        return SwiftNewtypeAttr::CreateImplicit(
+                 S.Context,
+                 SwiftNewtypeAttr::GNU_swift_wrapper,
+                 kind);
+    });
+  }
+
   // Handle common type information.
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(info),
                   role);

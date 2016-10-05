@@ -183,7 +183,7 @@ namespace {
     NullabilitySeq Nullability;
     llvm::Optional<NullabilityKind> NullabilityOfRet;
     AvailabilityItem Availability;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     StringRef SwiftName;
     api_notes::FactoryAsInitKind FactoryAsInit
       = api_notes::FactoryAsInitKind::Infer;
@@ -197,7 +197,7 @@ namespace {
     llvm::Optional<MethodKind> Kind;
     llvm::Optional<NullabilityKind> Nullability;
     AvailabilityItem Availability;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     StringRef SwiftName;
   };
   typedef std::vector<Property> PropertiesSeq;
@@ -206,7 +206,7 @@ namespace {
     StringRef Name;
     bool AuditedForNullability = false;
     AvailabilityItem Availability;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     StringRef SwiftName;
     Optional<StringRef> SwiftBridge;
     Optional<StringRef> NSErrorDomain;
@@ -221,7 +221,7 @@ namespace {
     NullabilitySeq Nullability;
     llvm::Optional<NullabilityKind> NullabilityOfRet;
     AvailabilityItem Availability;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     StringRef SwiftName;
   };
   typedef std::vector<Function> FunctionsSeq;
@@ -230,7 +230,7 @@ namespace {
     StringRef Name;
     llvm::Optional<NullabilityKind> Nullability;
     AvailabilityItem Availability;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     StringRef SwiftName;
   };
   typedef std::vector<GlobalVariable> GlobalVariablesSeq;
@@ -238,7 +238,7 @@ namespace {
   struct EnumConstant {
     StringRef Name;
     AvailabilityItem Availability;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     StringRef SwiftName;
   };
   typedef std::vector<EnumConstant> EnumConstantsSeq;
@@ -247,7 +247,7 @@ namespace {
     StringRef Name;
     AvailabilityItem Availability;
     StringRef SwiftName;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     Optional<StringRef> SwiftBridge;
     Optional<StringRef> NSErrorDomain;
   };
@@ -257,9 +257,10 @@ namespace {
     StringRef Name;
     AvailabilityItem Availability;
     StringRef SwiftName;
-    bool SwiftPrivate = false;
+    Optional<bool> SwiftPrivate;
     Optional<StringRef> SwiftBridge;
     Optional<StringRef> NSErrorDomain;
+    Optional<api_notes::SwiftWrapperKind> SwiftWrapper;
   };
   typedef std::vector<Typedef> TypedefsSeq;
 
@@ -346,6 +347,15 @@ namespace llvm {
         io.enumCase(value, "none",      APIAvailability::None);
         io.enumCase(value, "nonswift",  APIAvailability::NonSwift);
         io.enumCase(value, "available", APIAvailability::Available);
+      }
+    };
+
+    template<>
+    struct ScalarEnumerationTraits<api_notes::SwiftWrapperKind> {
+      static void enumeration(IO &io, api_notes::SwiftWrapperKind &value) {
+        io.enumCase(value, "none",      api_notes::SwiftWrapperKind::None);
+        io.enumCase(value, "struct",    api_notes::SwiftWrapperKind::Struct);
+        io.enumCase(value, "enum",      api_notes::SwiftWrapperKind::Enum);
       }
     };
 
@@ -489,6 +499,7 @@ namespace llvm {
         io.mapOptional("SwiftName",             t.SwiftName);
         io.mapOptional("SwiftBridge",           t.SwiftBridge);
         io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
+        io.mapOptional("SwiftWrapper",         t.SwiftWrapper);
       }
     };
 
@@ -652,7 +663,7 @@ namespace {
         return true;
 
       convertAvailability(common.Availability, info, apiName);
-      info.SwiftPrivate = common.SwiftPrivate;
+      info.setSwiftPrivate(common.SwiftPrivate);
       info.SwiftName = common.SwiftName;
       return false;
     }
@@ -769,7 +780,7 @@ namespace {
         if (!isAvailable(prop.Availability))
           continue;
         convertAvailability(prop.Availability, pInfo, prop.Name);
-        pInfo.SwiftPrivate = prop.SwiftPrivate;
+        pInfo.setSwiftPrivate(prop.SwiftPrivate);
         pInfo.SwiftName = prop.SwiftName;
         if (prop.Nullability)
           pInfo.setNullabilityAudited(*prop.Nullability);
@@ -825,7 +836,7 @@ namespace {
         if (!isAvailable(global.Availability))
           continue;
         convertAvailability(global.Availability, info, global.Name);
-        info.SwiftPrivate = global.SwiftPrivate;
+        info.setSwiftPrivate(global.SwiftPrivate);
         info.SwiftName = global.SwiftName;
         if (global.Nullability)
           info.setNullabilityAudited(*global.Nullability);
@@ -846,7 +857,7 @@ namespace {
         if (!isAvailable(function.Availability))
           continue;
         convertAvailability(function.Availability, info, function.Name);
-        info.SwiftPrivate = function.SwiftPrivate;
+        info.setSwiftPrivate(function.SwiftPrivate);
         info.SwiftName = function.SwiftName;
         convertParams(function.Params, info);
         convertNullability(function.Nullability,
@@ -870,7 +881,7 @@ namespace {
         if (!isAvailable(enumConstant.Availability))
           continue;
         convertAvailability(enumConstant.Availability, info, enumConstant.Name);
-        info.SwiftPrivate = enumConstant.SwiftPrivate;
+        info.setSwiftPrivate(enumConstant.SwiftPrivate);
         info.SwiftName = enumConstant.SwiftName;
         Writer->addEnumConstant(enumConstant.Name, info, swiftVersion);
       }
@@ -903,7 +914,8 @@ namespace {
         TypedefInfo typedefInfo;
         if (convertCommonType(t, typedefInfo, t.Name))
           continue;
-        
+        typedefInfo.SwiftWrapper = t.SwiftWrapper;
+
         Writer->addTypedef(t.Name, typedefInfo, swiftVersion);
       }
     }
@@ -1050,7 +1062,7 @@ namespace {
     template<typename T>
     void handleCommon(T &record, const CommonEntityInfo &info) {
       handleAvailability(record.Availability, info);
-      record.SwiftPrivate = info.SwiftPrivate;
+      record.SwiftPrivate = info.isSwiftPrivate();
       record.SwiftName = copyString(info.SwiftName);
     }
 
@@ -1246,6 +1258,7 @@ namespace {
       Typedef td;
       td.Name = name;
       handleCommonType(td, info);
+      td.SwiftWrapper = info.SwiftWrapper;
       auto &items = getTopLevelItems(swiftVersion);
       items.Typedefs.push_back(td);
     }
