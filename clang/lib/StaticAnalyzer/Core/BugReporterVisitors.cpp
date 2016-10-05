@@ -1294,31 +1294,49 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
                                   BugReporterContext &BRC,
                                   BugReport &R,
                                   const ExplodedNode *N) {
-
-  const Expr *Ex = Cond;
+  // These will be modified in code below, but we need to preserve the original
+  //  values in case we want to throw the generic message.
+  const Expr *CondTmp = Cond;
+  bool tookTrueTmp = tookTrue;
 
   while (true) {
-    Ex = Ex->IgnoreParenCasts();
-    switch (Ex->getStmtClass()) {
+    CondTmp = CondTmp->IgnoreParenCasts();
+    switch (CondTmp->getStmtClass()) {
       default:
-        return nullptr;
+        break;
       case Stmt::BinaryOperatorClass:
-        return VisitTrueTest(Cond, cast<BinaryOperator>(Ex), tookTrue, BRC,
-                             R, N);
+        if (PathDiagnosticPiece *P = VisitTrueTest(
+                Cond, cast<BinaryOperator>(CondTmp), tookTrueTmp, BRC, R, N))
+          return P;
+        break;
       case Stmt::DeclRefExprClass:
-        return VisitTrueTest(Cond, cast<DeclRefExpr>(Ex), tookTrue, BRC,
-                             R, N);
+        if (PathDiagnosticPiece *P = VisitTrueTest(
+                Cond, cast<DeclRefExpr>(CondTmp), tookTrueTmp, BRC, R, N))
+          return P;
+        break;
       case Stmt::UnaryOperatorClass: {
-        const UnaryOperator *UO = cast<UnaryOperator>(Ex);
+        const UnaryOperator *UO = cast<UnaryOperator>(CondTmp);
         if (UO->getOpcode() == UO_LNot) {
-          tookTrue = !tookTrue;
-          Ex = UO->getSubExpr();
+          tookTrueTmp = !tookTrueTmp;
+          CondTmp = UO->getSubExpr();
           continue;
         }
-        return nullptr;
+        break;
       }
     }
+    break;
   }
+
+  // Condition too complex to explain? Just say something so that the user
+  // knew we've made some path decision at this point.
+  const LocationContext *LCtx = N->getLocationContext();
+  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
+  if (!Loc.isValid() || !Loc.asLocation().isValid())
+    return nullptr;
+
+  PathDiagnosticEventPiece *Event = new PathDiagnosticEventPiece(
+      Loc, tookTrue ? GenericTrueMessage : GenericFalseMessage);
+  return Event;
 }
 
 bool ConditionBRVisitor::patternMatch(const Expr *Ex, raw_ostream &Out,
@@ -1550,6 +1568,12 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
     }
   }
   return event;
+}
+
+bool ConditionBRVisitor::isPieceMessageGeneric(
+    const PathDiagnosticPiece *Piece) {
+  return Piece->getString() == GenericTrueMessage ||
+         Piece->getString() == GenericFalseMessage;
 }
 
 std::unique_ptr<PathDiagnosticPiece>
