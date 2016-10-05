@@ -45,24 +45,12 @@ void f3(t3 Y) {
 }
 
 typedef float float2 __attribute__ ((vector_size (8)));
-typedef __attribute__((vector_size(8))) double float64x1_t;
-typedef __attribute__((vector_size(16))) double float64x2_t;
-float64x1_t vget_low_f64(float64x2_t __p0);
 
 void f4() {
   float2 f2;
-  double d, a, b, c;
-  float64x2_t v = {0.0, 1.0};
-  // FIXME: These diagnostics are inaccurate: should complain that 'double' to vector 'float2' involves truncation
-  f2 += d; // expected-error {{cannot convert between vector values of different size ('float2' (vector of 2 'float' values) and 'double')}}
-  d += f2; // expected-error {{cannot convert between vector values of different size}}
-  a = 3.0 + vget_low_f64(v);
-  b = vget_low_f64(v) + 3.0;
-  c = vget_low_f64(v);
-  c -= vget_low_f64(v);
-  // LAX conversions between scalar and vector types require same size and one element sized vectors.
-  d = f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
-  d = d + f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
+  double d;
+  f2 += d;
+  d += f2;
 }
 
 // rdar://15931426
