@@ -32,7 +32,11 @@ TEST(StringTableBuilderTest, BasicELF) {
   Expected += "foo";
   Expected += '\x00';
 
-  EXPECT_EQ(Expected, B.data());
+  SmallString<64> Data;
+  raw_svector_ostream OS(Data);
+  B.write(OS);
+
+  EXPECT_EQ(Expected, Data);
   EXPECT_EQ(1U, B.getOffset("foobar"));
   EXPECT_EQ(4U, B.getOffset("bar"));
   EXPECT_EQ(8U, B.getOffset("foo"));
@@ -50,7 +54,7 @@ TEST(StringTableBuilderTest, BasicWinCOFF) {
 
   // size_field + "pygmy hippopotamus\0" + "river horse\0"
   uint32_t ExpectedSize = 4 + 19 + 12;
-  EXPECT_EQ(ExpectedSize, B.data().size());
+  EXPECT_EQ(ExpectedSize, B.getSize());
 
   std::string Expected;
 
@@ -62,7 +66,11 @@ TEST(StringTableBuilderTest, BasicWinCOFF) {
   Expected += "river horse";
   Expected += '\x00';
 
-  EXPECT_EQ(Expected, B.data());
+  SmallString<64> Data;
+  raw_svector_ostream OS(Data);
+  B.write(OS);
+
+  EXPECT_EQ(Expected, Data);
   EXPECT_EQ(4U, B.getOffset("pygmy hippopotamus"));
   EXPECT_EQ(10U, B.getOffset("hippopotamus"));
   EXPECT_EQ(23U, B.getOffset("river horse"));
@@ -85,7 +93,11 @@ TEST(StringTableBuilderTest, ELFInOrder) {
   Expected += "foobar";
   Expected += '\x00';
 
-  EXPECT_EQ(Expected, B.data());
+  SmallString<64> Data;
+  raw_svector_ostream OS(Data);
+  B.write(OS);
+
+  EXPECT_EQ(Expected, Data);
   EXPECT_EQ(1U, B.getOffset("foo"));
   EXPECT_EQ(5U, B.getOffset("bar"));
   EXPECT_EQ(9U, B.getOffset("foobar"));

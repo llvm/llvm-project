@@ -1,8 +1,20 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
-; RUN:   grep "b LBB.*" | count 4
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | FileCheck %s
 
 target datalayout = "E-p:32:32"
 target triple = "powerpc-apple-darwin8.7.0"
+
+;CHECK-LABEL: foo:
+; There are 4 inner loops (%bb, %bb12, %bb25, %bb38) that all exit to %cond_next48
+; The last (whichever it is) should have a fallthrough exit, and the other three
+; need an unconditional branch. No other block should have an unconditional
+; branch to cond_next48
+; One of the blocks ends up with a loop exit block that gets a tail-duplicated copy
+; of %cond_next48, so there should only be two unconditional branches.
+
+;CHECK: b LBB0_13
+;CHECK: b LBB0_13
+;CHECK-NOT: b LBB0_13
+;CHECK: LBB0_13: ; %cond_next48
 
 define void @foo(i32 %W, i32 %X, i32 %Y, i32 %Z) {
 entry:

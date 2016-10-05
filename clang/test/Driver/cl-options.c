@@ -521,6 +521,7 @@
 // RUN:     -fmacro-backtrace-limit=0 \
 // RUN:     -fstandalone-debug \
 // RUN:     -flimit-debug-info \
+// RUN:     -flto \
 // RUN:     -Werror /Zs -- %s 2>&1
 
 

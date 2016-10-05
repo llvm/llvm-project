@@ -325,12 +325,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   };
   llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
 
-  /// Diagnostics that are emitted if and only if the given function is
-  /// codegen'ed.  Access these through FunctionDecl::addDeferredDiag() and
-  /// FunctionDecl::takeDeferredDiags().
-  llvm::DenseMap<const FunctionDecl *, std::vector<PartialDiagnosticAt>>
-      DeferredDiags;
-
 public:
   /// \brief A type synonym for the TemplateOrInstantiation mapping.
   typedef llvm::PointerUnion<VarTemplateDecl *, MemberSpecializationInfo *>
@@ -453,6 +447,12 @@ private:
 
   /// \brief Allocator for partial diagnostics.
   PartialDiagnostic::StorageAllocator DiagAllocator;
+
+  /// Diagnostics that are emitted if and only if the given function is
+  /// codegen'ed.  Access these through FunctionDecl::addDeferredDiag() and
+  /// FunctionDecl::takeDeferredDiags().
+  llvm::DenseMap<const FunctionDecl *, std::vector<PartialDiagnosticAt>>
+      DeferredDiags;
 
   /// \brief The current C++ ABI.
   std::unique_ptr<CXXABI> ABI;

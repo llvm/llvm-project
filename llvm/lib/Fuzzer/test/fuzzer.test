@@ -54,6 +54,6 @@ DSO: INFO: Loaded 3 modules
 DSO: BINGO
 
 RUN: LLVMFuzzer-SimpleTest-TracePC  -exit_on_src_pos=SimpleTest.cpp:17                 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
-RUN: LLVMFuzzer-MinimizeCorpusTest-TracePC  -exit_on_src_pos=MinimizeCorpusTest.cpp:23 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
+RUN: LLVMFuzzer-ShrinkControlFlowTest-TracePC  -exit_on_src_pos=ShrinkControlFlowTest.cpp:23 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
 EXIT_ON_SRC_POS: INFO: found line matching '{{.*}}', exiting.
 

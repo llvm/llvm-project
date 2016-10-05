@@ -56,11 +56,11 @@ define double @profile_metadata(double %x, double %y) {
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    jne .LBB1_1
 ; CHECK-NEXT:    jp .LBB1_1
-; CHECK-NEXT:  .LBB1_2: # %bb2
+; CHECK-NEXT:  # %bb2
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_1: # %bb1
 ; CHECK-NEXT:    addsd {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:    retq
 
 entry:
   %mul = fmul double %x, %y

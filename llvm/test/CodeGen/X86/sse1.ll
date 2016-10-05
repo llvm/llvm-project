@@ -58,21 +58,23 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X32-NEXT:    je .LBB1_1
 ; X32-NEXT:  # BB#2: # %entry
 ; X32-NEXT:    xorps %xmm1, %xmm1
-; X32-NEXT:    jmp .LBB1_3
+; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X32-NEXT:    jne .LBB1_5
+; X32-NEXT:    jmp .LBB1_4
 ; X32-NEXT:  .LBB1_1:
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:  .LBB1_3: # %entry
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    je .LBB1_4
-; X32-NEXT:  # BB#5: # %entry
+; X32-NEXT:  .LBB1_5: # %entry
 ; X32-NEXT:    xorps %xmm2, %xmm2
-; X32-NEXT:    jmp .LBB1_6
+; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X32-NEXT:    jne .LBB1_8
+; X32-NEXT:    jmp .LBB1_7
 ; X32-NEXT:  .LBB1_4:
 ; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:  .LBB1_6: # %entry
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    je .LBB1_7
-; X32-NEXT:  # BB#8: # %entry
+; X32-NEXT:  .LBB1_8: # %entry
 ; X32-NEXT:    xorps %xmm3, %xmm3
 ; X32-NEXT:    jmp .LBB1_9
 ; X32-NEXT:  .LBB1_7:
@@ -95,21 +97,23 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X64-NEXT:    je .LBB1_1
 ; X64-NEXT:  # BB#2: # %entry
 ; X64-NEXT:    xorps %xmm1, %xmm1
-; X64-NEXT:    jmp .LBB1_3
+; X64-NEXT:    testl %edx, %edx
+; X64-NEXT:    jne .LBB1_5
+; X64-NEXT:    jmp .LBB1_4
 ; X64-NEXT:  .LBB1_1:
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:  .LBB1_3: # %entry
 ; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    je .LBB1_4
-; X64-NEXT:  # BB#5: # %entry
+; X64-NEXT:  .LBB1_5: # %entry
 ; X64-NEXT:    xorps %xmm2, %xmm2
-; X64-NEXT:    jmp .LBB1_6
+; X64-NEXT:    testl %r8d, %r8d
+; X64-NEXT:    jne .LBB1_8
+; X64-NEXT:    jmp .LBB1_7
 ; X64-NEXT:  .LBB1_4:
 ; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:  .LBB1_6: # %entry
 ; X64-NEXT:    testl %r8d, %r8d
 ; X64-NEXT:    je .LBB1_7
-; X64-NEXT:  # BB#8: # %entry
+; X64-NEXT:  .LBB1_8: # %entry
 ; X64-NEXT:    xorps %xmm3, %xmm3
 ; X64-NEXT:    jmp .LBB1_9
 ; X64-NEXT:  .LBB1_7:

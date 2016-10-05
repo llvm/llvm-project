@@ -335,8 +335,21 @@ static void InitializeHighMemEnd() {
 }
 
 static void ProtectGap(uptr addr, uptr size) {
-  if (!flags()->protect_shadow_gap)
+  if (!flags()->protect_shadow_gap) {
+    // The shadow gap is unprotected, so there is a chance that someone
+    // is actually using this memory. Which means it needs a shadow...
+    uptr GapShadowBeg = RoundDownTo(MEM_TO_SHADOW(addr), GetPageSizeCached());
+    uptr GapShadowEnd =
+        RoundUpTo(MEM_TO_SHADOW(addr + size), GetPageSizeCached()) - 1;
+    if (Verbosity())
+      Printf("protect_shadow_gap=0:"
+             " not protecting shadow gap, allocating gap's shadow\n"
+             "|| `[%p, %p]` || ShadowGap's shadow ||\n", GapShadowBeg,
+             GapShadowEnd);
+    ReserveShadowMemoryRange(GapShadowBeg, GapShadowEnd,
+                             "unprotected gap shadow");
     return;
+  }
   void *res = MmapFixedNoAccess(addr, size, "shadow gap");
   if (addr == (uptr)res)
     return;

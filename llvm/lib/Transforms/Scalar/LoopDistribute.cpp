@@ -981,7 +981,7 @@ PreservedAnalyses LoopDistributePass::run(Function &F,
 }
 
 char LoopDistributeLegacy::ID;
-static const char ldist_name[] = "Loop Distribition";
+static const char ldist_name[] = "Loop Distribution";
 
 INITIALIZE_PASS_BEGIN(LoopDistributeLegacy, LDIST_NAME, ldist_name, false,
                       false)

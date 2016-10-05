@@ -154,7 +154,7 @@ public:
 
     CallLoweringInfo &setCallee(const DataLayout &DL, MCContext &Ctx,
                                 CallingConv::ID CC, Type *ResultTy,
-                                const char *Target, ArgListTy &&ArgsList,
+                                StringRef Target, ArgListTy &&ArgsList,
                                 unsigned FixedArgs = ~0U);
 
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultTy,

@@ -23,10 +23,10 @@ class StringSaver final {
 
 public:
   StringSaver(BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
-  const char *save(const char *S) { return save(StringRef(S)); }
-  const char *save(StringRef S);
-  const char *save(const Twine &S) { return save(StringRef(S.str())); }
-  const char *save(std::string &S) { return save(StringRef(S)); }
+  StringRef save(const char *S) { return save(StringRef(S)); }
+  StringRef save(StringRef S);
+  StringRef save(const Twine &S) { return save(StringRef(S.str())); }
+  StringRef save(std::string &S) { return save(StringRef(S)); }
 };
 }
 #endif

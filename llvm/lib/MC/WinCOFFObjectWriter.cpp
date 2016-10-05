@@ -1082,7 +1082,7 @@ void WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
     if (Symbol->getIndex() != -1)
       WriteSymbol(*Symbol);
 
-  getStream().write(Strings.data().data(), Strings.data().size());
+  Strings.write(getStream());
 }
 
 MCWinCOFFObjectTargetWriter::MCWinCOFFObjectTargetWriter(unsigned Machine_)

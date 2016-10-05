@@ -509,6 +509,9 @@ void CodeGenModule::Release() {
     DiagnosticBuilder Builder(getDiags().Report(Loc, PD.getDiagID()));
     PD.Emit(Builder);
   }
+  // Clear the deferred diags so they don't outlive the ASTContext's
+  // PartialDiagnostic allocator.
+  DeferredDiags.clear();
 }
 
 void CodeGenModule::UpdateCompletedType(const TagDecl *TD) {

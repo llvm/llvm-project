@@ -1814,6 +1814,9 @@ void CodeGenModule::ConstructAttributeList(
     // them).  LLVM will remove this attribute where it safely can.
     FuncAttrs.addAttribute(llvm::Attribute::Convergent);
 
+    // Exceptions aren't supported in CUDA device code.
+    FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
+
     // Respect -fcuda-flush-denormals-to-zero.
     if (getLangOpts().CUDADeviceFlushDenormalsToZero)
       FuncAttrs.addAttribute("nvptx-f32ftz", "true");
