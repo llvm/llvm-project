@@ -54,8 +54,10 @@ static void dumpPubSection(raw_ostream &OS, StringRef Name, StringRef Data,
       OS << format("0x%8.8x ", dieRef);
       if (GnuStyle) {
         PubIndexEntryDescriptor desc(pubNames.getU8(&offset));
-        OS << format("%-8s", dwarf::GDBIndexEntryLinkageString(desc.Linkage))
-           << ' ' << format("%-8s", dwarf::GDBIndexEntryKindString(desc.Kind))
+        OS << format("%-8s",
+                     dwarf::GDBIndexEntryLinkageString(desc.Linkage).data())
+           << ' '
+           << format("%-8s", dwarf::GDBIndexEntryKindString(desc.Kind).data())
            << ' ';
       }
       OS << '\"' << pubNames.getCStr(&offset) << "\"\n";

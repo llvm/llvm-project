@@ -1557,6 +1557,25 @@ Error Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     }
   }
 
+  if (module_spec.GetArchitecture().IsValid() == false) {
+    Error error;
+    // No valid architecture was specified, ask the platform for
+    // the architectures that we should be using (in the correct order)
+    // and see if we can find a match that way
+    ModuleSpec arch_module_spec(module_spec);
+    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
+             idx, arch_module_spec.GetArchitecture());
+         ++idx) {
+      error = ModuleList::GetSharedModule(arch_module_spec, module_sp, nullptr,
+                                          nullptr, nullptr);
+      // Did we find an executable using one of the
+      if (error.Success() && module_sp)
+        break;
+    }
+    if (module_sp)
+      got_module_spec = true;
+  }
+
   if (!got_module_spec) {
     // Get module information from a target.
     if (!GetModuleSpec(module_spec.GetFileSpec(), module_spec.GetArchitecture(),

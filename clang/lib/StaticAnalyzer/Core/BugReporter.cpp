@@ -78,7 +78,9 @@ static PathDiagnosticEventPiece *
 eventsDescribeSameCondition(PathDiagnosticEventPiece *X,
                             PathDiagnosticEventPiece *Y) {
   // Prefer diagnostics that come from ConditionBRVisitor over
-  // those that came from TrackConstraintBRVisitor.
+  // those that came from TrackConstraintBRVisitor,
+  // unless the one from ConditionBRVisitor is
+  // its generic fallback diagnostic.
   const void *tagPreferred = ConditionBRVisitor::getTag();
   const void *tagLesser = TrackConstraintBRVisitor::getTag();
 
@@ -86,10 +88,10 @@ eventsDescribeSameCondition(PathDiagnosticEventPiece *X,
     return nullptr;
 
   if (X->getTag() == tagPreferred && Y->getTag() == tagLesser)
-    return X;
+    return ConditionBRVisitor::isPieceMessageGeneric(X) ? Y : X;
 
   if (Y->getTag() == tagPreferred && X->getTag() == tagLesser)
-    return Y;
+    return ConditionBRVisitor::isPieceMessageGeneric(Y) ? X : Y;
 
   return nullptr;
 }

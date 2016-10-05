@@ -121,8 +121,7 @@ private:
   /// Declaration for objc_retainAutoreleaseReturnValue().
   Constant *RetainAutoreleaseRV;
 
-  Constant *getVoidRetI8XEntryPoint(Constant *&Decl,
-                                    const char *Name) {
+  Constant *getVoidRetI8XEntryPoint(Constant *&Decl, StringRef Name) {
     if (Decl)
       return Decl;
 
@@ -136,8 +135,7 @@ private:
     return Decl = TheModule->getOrInsertFunction(Name, Fty, Attr);
   }
 
-  Constant *getI8XRetI8XEntryPoint(Constant *& Decl,
-                                   const char *Name,
+  Constant *getI8XRetI8XEntryPoint(Constant *&Decl, StringRef Name,
                                    bool NoUnwind = false) {
     if (Decl)
       return Decl;
@@ -155,8 +153,7 @@ private:
     return Decl = TheModule->getOrInsertFunction(Name, Fty, Attr);
   }
 
-  Constant *getI8XRetI8XXI8XEntryPoint(Constant *&Decl,
-                                       const char *Name) {
+  Constant *getI8XRetI8XXI8XEntryPoint(Constant *&Decl, StringRef Name) {
     if (Decl)
       return Decl;
 

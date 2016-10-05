@@ -74,7 +74,8 @@ void ModuleDebugInfoPrinter::print(raw_ostream &O, const Module *M) const {
   // filenames), so just print a few useful things.
   for (DICompileUnit *CU : Finder.compile_units()) {
     O << "Compile unit: ";
-    if (const char *Lang = dwarf::LanguageString(CU->getSourceLanguage()))
+    auto Lang = dwarf::LanguageString(CU->getSourceLanguage());
+    if (!Lang.empty())
       O << Lang;
     else
       O << "unknown-language(" << CU->getSourceLanguage() << ")";
@@ -105,14 +106,15 @@ void ModuleDebugInfoPrinter::print(raw_ostream &O, const Module *M) const {
     printFile(O, T->getFilename(), T->getDirectory(), T->getLine());
     if (auto *BT = dyn_cast<DIBasicType>(T)) {
       O << " ";
-      if (const char *Encoding =
-              dwarf::AttributeEncodingString(BT->getEncoding()))
+      auto Encoding = dwarf::AttributeEncodingString(BT->getEncoding());
+      if (!Encoding.empty())
         O << Encoding;
       else
         O << "unknown-encoding(" << BT->getEncoding() << ')';
     } else {
       O << ' ';
-      if (const char *Tag = dwarf::TagString(T->getTag()))
+      auto Tag = dwarf::TagString(T->getTag());
+      if (!Tag.empty())
         O << Tag;
       else
         O << "unknown-tag(" << T->getTag() << ")";

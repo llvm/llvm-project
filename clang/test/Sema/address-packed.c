@@ -161,3 +161,38 @@ struct AlignedTo2Bis* g7(struct AlignedTo2 *s)
 {
     return (struct AlignedTo2Bis*)&s->x; // no-warning
 }
+
+typedef struct {
+  char c;
+  int x;
+} __attribute__((packed)) TypedefStructArguable;
+
+typedef union {
+  char c;
+  int x;
+} __attribute((packed)) TypedefUnionArguable;
+
+typedef TypedefStructArguable TypedefStructArguableTheSecond;
+
+int *typedef1(TypedefStructArguable *s) {
+    return &s->x; // expected-warning {{packed member 'x' of class or structure 'TypedefStructArguable'}}
+}
+
+int *typedef2(TypedefStructArguableTheSecond *s) {
+    return &s->x; // expected-warning {{packed member 'x' of class or structure 'TypedefStructArguable'}}
+}
+
+int *typedef3(TypedefUnionArguable *s) {
+    return &s->x; // expected-warning {{packed member 'x' of class or structure 'TypedefUnionArguable'}}
+}
+
+struct S6 {
+  union {
+    char c;
+    int x;
+  } __attribute__((packed));
+};
+
+int *anonymousInnerUnion(struct S6 *s) {
+  return &s->x; // expected-warning {{packed member 'x' of class or structure 'S6::(anonymous)'}}
+}

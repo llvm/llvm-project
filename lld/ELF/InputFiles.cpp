@@ -177,6 +177,15 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   if (Config->Optimize == 0)
     return false;
 
+  // Do not merge sections if generating a relocatable object. It makes
+  // the code simpler because we do not need to update relocation addends
+  // to reflect changes introduced by merging. Instead of that we write
+  // such "merge" sections into separate OutputSections and keep SHF_MERGE
+  // / SHF_STRINGS flags and sh_entsize value to be able to perform merging
+  // later during a final linking.
+  if (Config->Relocatable)
+    return false;
+
   // A mergeable section with size 0 is useless because they don't have
   // any data to merge. A mergeable string section with size 0 can be
   // argued as invalid because it doesn't end with a null character.
