@@ -39,51 +39,152 @@ TEST(STLExtrasTest, Rank) {
   EXPECT_EQ(4, f(rank<6>()));
 }
 
-TEST(STLExtrasTest, Enumerate) {
+TEST(STLExtrasTest, EnumerateLValue) {
+  // Test that a simple LValue can be enumerated and gives correct results with
+  // multiple types, including the empty container.
   std::vector<char> foo = {'a', 'b', 'c'};
-
-  std::vector<std::pair<std::size_t, char>> results;
+  std::vector<std::pair<std::size_t, char>> CharResults;
 
   for (auto X : llvm::enumerate(foo)) {
-    results.push_back(std::make_pair(X.Index, X.Value));
+    CharResults.emplace_back(X.Index, X.Value);
   }
-  ASSERT_EQ(3u, results.size());
-  EXPECT_EQ(0u, results[0].first);
-  EXPECT_EQ('a', results[0].second);
-  EXPECT_EQ(1u, results[1].first);
-  EXPECT_EQ('b', results[1].second);
-  EXPECT_EQ(2u, results[2].first);
-  EXPECT_EQ('c', results[2].second);
+  ASSERT_EQ(3u, CharResults.size());
+  EXPECT_EQ(std::make_pair(0u, 'a'), CharResults[0]);
+  EXPECT_EQ(std::make_pair(1u, 'b'), CharResults[1]);
+  EXPECT_EQ(std::make_pair(2u, 'c'), CharResults[2]);
 
-  results.clear();
-  const std::vector<int> bar = {'1', '2', '3'};
+  // Test a const range of a different type.
+  std::vector<std::pair<std::size_t, int>> IntResults;
+  const std::vector<int> bar = {1, 2, 3};
   for (auto X : llvm::enumerate(bar)) {
-    results.push_back(std::make_pair(X.Index, X.Value));
+    IntResults.emplace_back(X.Index, X.Value);
   }
-  EXPECT_EQ(0u, results[0].first);
-  EXPECT_EQ('1', results[0].second);
-  EXPECT_EQ(1u, results[1].first);
-  EXPECT_EQ('2', results[1].second);
-  EXPECT_EQ(2u, results[2].first);
-  EXPECT_EQ('3', results[2].second);
+  ASSERT_EQ(3u, IntResults.size());
+  EXPECT_EQ(std::make_pair(0u, 1), IntResults[0]);
+  EXPECT_EQ(std::make_pair(1u, 2), IntResults[1]);
+  EXPECT_EQ(std::make_pair(2u, 3), IntResults[2]);
 
-  results.clear();
+  // Test an empty range.
+  IntResults.clear();
   const std::vector<int> baz;
   for (auto X : llvm::enumerate(baz)) {
-    results.push_back(std::make_pair(X.Index, X.Value));
+    IntResults.emplace_back(X.Index, X.Value);
   }
-  EXPECT_TRUE(baz.empty());
+  EXPECT_TRUE(IntResults.empty());
 }
 
-TEST(STLExtrasTest, EnumerateModify) {
+TEST(STLExtrasTest, EnumerateModifyLValue) {
+  // Test that you can modify the underlying entries of an lvalue range through
+  // the enumeration iterator.
   std::vector<char> foo = {'a', 'b', 'c'};
 
   for (auto X : llvm::enumerate(foo)) {
     ++X.Value;
   }
-
   EXPECT_EQ('b', foo[0]);
   EXPECT_EQ('c', foo[1]);
   EXPECT_EQ('d', foo[2]);
+}
+
+TEST(STLExtrasTest, EnumerateRValueRef) {
+  // Test that an rvalue can be enumerated.
+  std::vector<std::pair<std::size_t, int>> Results;
+
+  auto Enumerator = llvm::enumerate(std::vector<int>{1, 2, 3});
+
+  for (auto X : llvm::enumerate(std::vector<int>{1, 2, 3})) {
+    Results.emplace_back(X.Index, X.Value);
+  }
+
+  ASSERT_EQ(3u, Results.size());
+  EXPECT_EQ(std::make_pair(0u, 1), Results[0]);
+  EXPECT_EQ(std::make_pair(1u, 2), Results[1]);
+  EXPECT_EQ(std::make_pair(2u, 3), Results[2]);
+}
+
+TEST(STLExtrasTest, EnumerateModifyRValue) {
+  // Test that when enumerating an rvalue, modification still works (even if
+  // this isn't terribly useful, it at least shows that we haven't snuck an
+  // extra const in there somewhere.
+  std::vector<std::pair<std::size_t, char>> Results;
+
+  for (auto X : llvm::enumerate(std::vector<char>{'1', '2', '3'})) {
+    ++X.Value;
+    Results.emplace_back(X.Index, X.Value);
+  }
+
+  ASSERT_EQ(3u, Results.size());
+  EXPECT_EQ(std::make_pair(0u, '2'), Results[0]);
+  EXPECT_EQ(std::make_pair(1u, '3'), Results[1]);
+  EXPECT_EQ(std::make_pair(2u, '4'), Results[2]);
+}
+
+template <bool B> struct CanMove {};
+template <> struct CanMove<false> {
+  CanMove(CanMove &&) = delete;
+
+  CanMove() = default;
+  CanMove(const CanMove &) = default;
+};
+
+template <bool B> struct CanCopy {};
+template <> struct CanCopy<false> {
+  CanCopy(const CanCopy &) = delete;
+
+  CanCopy() = default;
+  CanCopy(CanCopy &&) = default;
+};
+
+template <bool Moveable, bool Copyable>
+struct Range : CanMove<Moveable>, CanCopy<Copyable> {
+  explicit Range(int &C, int &M, int &D) : C(C), M(M), D(D) {}
+  Range(const Range &R) : CanCopy<Copyable>(R), C(R.C), M(R.M), D(R.D) { ++C; }
+  Range(Range &&R) : CanMove<Moveable>(std::move(R)), C(R.C), M(R.M), D(R.D) {
+    ++M;
+  }
+  ~Range() { ++D; }
+
+  int &C;
+  int &M;
+  int &D;
+
+  int *begin() { return nullptr; }
+  int *end() { return nullptr; }
+};
+
+TEST(STLExtrasTest, EnumerateLifetimeSemantics) {
+  // Test that when enumerating lvalues and rvalues, there are no surprise
+  // copies or moves.
+
+  // With an rvalue, it should not be destroyed until the end of the scope.
+  int Copies = 0;
+  int Moves = 0;
+  int Destructors = 0;
+  {
+    auto E1 = enumerate(Range<true, false>(Copies, Moves, Destructors));
+    // Doesn't compile.  rvalue ranges must be moveable.
+    // auto E2 = enumerate(Range<false, true>(Copies, Moves, Destructors));
+    EXPECT_EQ(0, Copies);
+    EXPECT_EQ(1, Moves);
+    EXPECT_EQ(1, Destructors);
+  }
+  EXPECT_EQ(0, Copies);
+  EXPECT_EQ(1, Moves);
+  EXPECT_EQ(2, Destructors);
+
+  Copies = Moves = Destructors = 0;
+  // With an lvalue, it should not be destroyed even after the end of the scope.
+  // lvalue ranges need be neither copyable nor moveable.
+  Range<false, false> R(Copies, Moves, Destructors);
+  {
+    auto Enumerator = enumerate(R);
+    (void)Enumerator;
+    EXPECT_EQ(0, Copies);
+    EXPECT_EQ(0, Moves);
+    EXPECT_EQ(0, Destructors);
+  }
+  EXPECT_EQ(0, Copies);
+  EXPECT_EQ(0, Moves);
+  EXPECT_EQ(0, Destructors);
 }
 }

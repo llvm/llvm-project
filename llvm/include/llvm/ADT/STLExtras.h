@@ -35,7 +35,7 @@ namespace llvm {
 namespace detail {
 
 template <typename RangeT>
-using IterOfRange = decltype(std::begin(std::declval<RangeT>()));
+using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
 
 } // End detail namespace
 
@@ -614,7 +614,7 @@ template <typename T> struct deref {
 };
 
 namespace detail {
-template <typename I, typename V> class enumerator_impl {
+template <typename R> class enumerator_impl {
 public:
   template <typename X> struct result_pair {
     result_pair(std::size_t Index, X Value) : Index(Index), Value(Value) {}
@@ -623,13 +623,16 @@ public:
     X Value;
   };
 
-  struct iterator {
-    iterator(I Iter, std::size_t Index) : Iter(Iter), Index(Index) {}
+  class iterator {
+    typedef
+        typename std::iterator_traits<IterOfRange<R>>::reference iter_reference;
+    typedef result_pair<iter_reference> result_type;
 
-    result_pair<const V> operator*() const {
-      return result_pair<const V>(Index, *Iter);
-    }
-    result_pair<V> operator*() { return result_pair<V>(Index, *Iter); }
+  public:
+    iterator(IterOfRange<R> &&Iter, std::size_t Index)
+        : Iter(Iter), Index(Index) {}
+
+    result_type operator*() const { return result_type(Index, *Iter); }
 
     iterator &operator++() {
       ++Iter;
@@ -640,28 +643,19 @@ public:
     bool operator!=(const iterator &RHS) const { return Iter != RHS.Iter; }
 
   private:
-    I Iter;
+    IterOfRange<R> Iter;
     std::size_t Index;
   };
 
-  enumerator_impl(I Begin, I End)
-      : Begin(std::move(Begin)), End(std::move(End)) {}
+public:
+  explicit enumerator_impl(R &&Range) : Range(std::forward<R>(Range)) {}
 
-  iterator begin() { return iterator(Begin, 0); }
-  iterator end() { return iterator(End, std::size_t(-1)); }
-
-  iterator begin() const { return iterator(Begin, 0); }
-  iterator end() const { return iterator(End, std::size_t(-1)); }
+  iterator begin() { return iterator(std::begin(Range), 0); }
+  iterator end() { return iterator(std::end(Range), std::size_t(-1)); }
 
 private:
-  I Begin;
-  I End;
+  R Range;
 };
-
-template <typename I>
-auto make_enumerator(I Begin, I End) -> enumerator_impl<I, decltype(*Begin)> {
-  return enumerator_impl<I, decltype(*Begin)>(std::move(Begin), std::move(End));
-}
 }
 
 /// Given an input range, returns a new range whose values are are pair (A,B)
@@ -679,10 +673,8 @@ auto make_enumerator(I Begin, I End) -> enumerator_impl<I, decltype(*Begin)> {
 ///   Item 2 - C
 ///   Item 3 - D
 ///
-template <typename R>
-auto enumerate(R &&Range)
-    -> decltype(detail::make_enumerator(std::begin(Range), std::end(Range))) {
-  return detail::make_enumerator(std::begin(Range), std::end(Range));
+template <typename R> detail::enumerator_impl<R> enumerate(R &&Range) {
+  return detail::enumerator_impl<R>(std::forward<R>(Range));
 }
 
 } // End llvm namespace
