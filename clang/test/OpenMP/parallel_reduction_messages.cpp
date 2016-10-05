@@ -9,6 +9,11 @@ bool foobool(int argc) {
   return argc;
 }
 
+void foobar(int &ref) {
+#pragma omp parallel reduction(+:ref)
+  foo();
+}
+
 struct S1; // expected-note {{declared here}} expected-note 4 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {

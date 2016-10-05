@@ -158,18 +158,15 @@ void m1() {
 }
 
 
-
-
-
-void f(long long);
-void f(int);
-
-int main()
-{
-  // This is an ambiguous call in standard C++.
-  // This calls f(long long) in Microsoft mode because LL is always signed.
-  f(0xffffffffffffffffLL);
+namespace signed_hex_i64 {
+void f(long long); // expected-note {{candidate function}}
+void f(int); // expected-note {{candidate function}}
+void g() {
+  // This used to be controlled by -fms-extensions, but it is now under
+  // -fms-compatibility.
+  f(0xffffffffffffffffLL); // expected-error {{call to 'f' is ambiguous}}
   f(0xffffffffffffffffi64);
+}
 }
 
 // Enumeration types with a fixed underlying type.

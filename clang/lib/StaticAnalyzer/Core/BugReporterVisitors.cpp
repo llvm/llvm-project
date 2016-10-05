@@ -1271,7 +1271,22 @@ ConditionBRVisitor::VisitTerminator(const Stmt *Term,
                                     BugReporterContext &BRC) {
   const Expr *Cond = nullptr;
 
+  // In the code below, Term is a CFG terminator and Cond is a branch condition
+  // expression upon which the decision is made on this terminator.
+  //
+  // For example, in "if (x == 0)", the "if (x == 0)" statement is a terminator,
+  // and "x == 0" is the respective condition.
+  //
+  // Another example: in "if (x && y)", we've got two terminators and two
+  // conditions due to short-circuit nature of operator "&&":
+  // 1. The "if (x && y)" statement is a terminator,
+  //    and "y" is the respective condition.
+  // 2. Also "x && ..." is another terminator,
+  //    and "x" is its condition.
+
   switch (Term->getStmtClass()) {
+  // FIXME: Stmt::SwitchStmtClass is worth handling, however it is a bit
+  // more tricky because there are more than two branches to account for.
   default:
     return nullptr;
   case Stmt::IfStmtClass:
@@ -1280,6 +1295,24 @@ ConditionBRVisitor::VisitTerminator(const Stmt *Term,
   case Stmt::ConditionalOperatorClass:
     Cond = cast<ConditionalOperator>(Term)->getCond();
     break;
+  case Stmt::BinaryOperatorClass:
+    // When we encounter a logical operator (&& or ||) as a CFG terminator,
+    // then the condition is actually its LHS; otheriwse, we'd encounter
+    // the parent, such as if-statement, as a terminator.
+    const auto *BO = cast<BinaryOperator>(Term);
+    assert(BO->isLogicalOp() &&
+           "CFG terminator is not a short-circuit operator!");
+    Cond = BO->getLHS();
+    break;
+  }
+
+  // However, when we encounter a logical operator as a branch condition,
+  // then the condition is actually its RHS, because LHS would be
+  // the condition for the logical operator terminator.
+  while (const auto *InnerBO = dyn_cast<BinaryOperator>(Cond)) {
+    if (!InnerBO->isLogicalOp())
+      break;
+    Cond = InnerBO->getRHS()->IgnoreParens();
   }
 
   assert(Cond);
@@ -1294,31 +1327,49 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
                                   BugReporterContext &BRC,
                                   BugReport &R,
                                   const ExplodedNode *N) {
-
-  const Expr *Ex = Cond;
+  // These will be modified in code below, but we need to preserve the original
+  //  values in case we want to throw the generic message.
+  const Expr *CondTmp = Cond;
+  bool tookTrueTmp = tookTrue;
 
   while (true) {
-    Ex = Ex->IgnoreParenCasts();
-    switch (Ex->getStmtClass()) {
+    CondTmp = CondTmp->IgnoreParenCasts();
+    switch (CondTmp->getStmtClass()) {
       default:
-        return nullptr;
+        break;
       case Stmt::BinaryOperatorClass:
-        return VisitTrueTest(Cond, cast<BinaryOperator>(Ex), tookTrue, BRC,
-                             R, N);
+        if (PathDiagnosticPiece *P = VisitTrueTest(
+                Cond, cast<BinaryOperator>(CondTmp), tookTrueTmp, BRC, R, N))
+          return P;
+        break;
       case Stmt::DeclRefExprClass:
-        return VisitTrueTest(Cond, cast<DeclRefExpr>(Ex), tookTrue, BRC,
-                             R, N);
+        if (PathDiagnosticPiece *P = VisitTrueTest(
+                Cond, cast<DeclRefExpr>(CondTmp), tookTrueTmp, BRC, R, N))
+          return P;
+        break;
       case Stmt::UnaryOperatorClass: {
-        const UnaryOperator *UO = cast<UnaryOperator>(Ex);
+        const UnaryOperator *UO = cast<UnaryOperator>(CondTmp);
         if (UO->getOpcode() == UO_LNot) {
-          tookTrue = !tookTrue;
-          Ex = UO->getSubExpr();
+          tookTrueTmp = !tookTrueTmp;
+          CondTmp = UO->getSubExpr();
           continue;
         }
-        return nullptr;
+        break;
       }
     }
+    break;
   }
+
+  // Condition too complex to explain? Just say something so that the user
+  // knew we've made some path decision at this point.
+  const LocationContext *LCtx = N->getLocationContext();
+  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
+  if (!Loc.isValid() || !Loc.asLocation().isValid())
+    return nullptr;
+
+  PathDiagnosticEventPiece *Event = new PathDiagnosticEventPiece(
+      Loc, tookTrue ? GenericTrueMessage : GenericFalseMessage);
+  return Event;
 }
 
 bool ConditionBRVisitor::patternMatch(const Expr *Ex, raw_ostream &Out,
@@ -1550,6 +1601,17 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
     }
   }
   return event;
+}
+
+const char *const ConditionBRVisitor::GenericTrueMessage =
+    "Assuming the condition is true";
+const char *const ConditionBRVisitor::GenericFalseMessage =
+    "Assuming the condition is false";
+
+bool ConditionBRVisitor::isPieceMessageGeneric(
+    const PathDiagnosticPiece *Piece) {
+  return Piece->getString() == GenericTrueMessage ||
+         Piece->getString() == GenericFalseMessage;
 }
 
 std::unique_ptr<PathDiagnosticPiece>

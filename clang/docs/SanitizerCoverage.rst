@@ -135,7 +135,7 @@ to produce a ``.symcov`` file first:
     sancov -symbolize my_program.123.sancov my_program > my_program.123.symcov
 
 The ``.symcov`` file can be browsed overlayed over the source code by
-running ``tools/sancov/sancov-report-server.py`` script that will start
+running ``tools/sancov/coverage-report-server.py`` script that will start
 an HTTP server.
 
 

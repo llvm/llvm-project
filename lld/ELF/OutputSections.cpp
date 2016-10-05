@@ -894,6 +894,10 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   Sections.push_back(S);
   S->OutSec = this;
   this->updateAlignment(S->Alignment);
+  // Keep sh_entsize value of the input section to be able to perform merging
+  // later during a final linking using the generated relocatable object.
+  if (Config->Relocatable && (S->getSectionHdr()->sh_flags & SHF_MERGE))
+    this->Header.sh_entsize = S->getSectionHdr()->sh_entsize;
 }
 
 // This function is called after we sort input sections
@@ -1836,8 +1840,12 @@ static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
   // For SHF_MERGE we create different output sections for each alignment.
   // This makes each output section simple and keeps a single level mapping from
   // input to output.
+  // In case of relocatable object generation we do not try to perform merging
+  // and treat SHF_MERGE sections as regular ones, but also create different
+  // output sections for them to allow merging at final linking stage.
   uintX_t Alignment = 0;
-  if (isa<MergeInputSection<ELFT>>(C))
+  if (isa<MergeInputSection<ELFT>>(C) ||
+      (Config->Relocatable && (H->sh_flags & SHF_MERGE)))
     Alignment = std::max(H->sh_addralign, H->sh_entsize);
 
   uint32_t Type = H->sh_type;

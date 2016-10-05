@@ -53,12 +53,19 @@ types::ID types::getPrecompiledType(ID Id) {
 }
 
 const char *types::getTypeTempSuffix(ID Id, bool CLMode) {
-  if (Id == TY_Object && CLMode)
-    return "obj";
-  if (Id == TY_Image && CLMode)
-    return "exe";
-  if (Id == TY_PP_Asm && CLMode)
-    return "asm";
+  if (CLMode) {
+    switch (Id) {
+    case TY_Object:
+    case TY_LTO_BC:
+      return "obj";
+    case TY_Image:
+      return "exe";
+    case TY_PP_Asm:
+      return "asm";
+    default:
+      break;
+    }
+  }
   return getInfo(Id).TempSuffix;
 }
 

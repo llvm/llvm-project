@@ -9,6 +9,12 @@ bool foobool(int argc) {
   return argc;
 }
 
+void foobar(int &ref) {
+#pragma omp target simd reduction(+:ref)
+  for (int i = 0; i < 10; ++i)
+    foo();
+}
+
 struct S1; // expected-note {{declared here}} expected-note 4 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
