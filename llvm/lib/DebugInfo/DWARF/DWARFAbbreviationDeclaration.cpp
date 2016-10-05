@@ -62,23 +62,23 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data, uint32_t* OffsetPtr) {
 }
 
 void DWARFAbbreviationDeclaration::dump(raw_ostream &OS) const {
-  const char *tagString = TagString(getTag());
+  auto tagString = TagString(getTag());
   OS << '[' << getCode() << "] ";
-  if (tagString)
+  if (!tagString.empty())
     OS << tagString;
   else
     OS << format("DW_TAG_Unknown_%x", getTag());
   OS << "\tDW_CHILDREN_" << (hasChildren() ? "yes" : "no") << '\n';
   for (const AttributeSpec &Spec : AttributeSpecs) {
     OS << '\t';
-    const char *attrString = AttributeString(Spec.Attr);
-    if (attrString)
+    auto attrString = AttributeString(Spec.Attr);
+    if (!attrString.empty())
       OS << attrString;
     else
       OS << format("DW_AT_Unknown_%x", Spec.Attr);
     OS << '\t';
-    const char *formString = FormEncodingString(Spec.Form);
-    if (formString)
+    auto formString = FormEncodingString(Spec.Form);
+    if (!formString.empty())
       OS << formString;
     else
       OS << format("DW_FORM_Unknown_%x", Spec.Form);

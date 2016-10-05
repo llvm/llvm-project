@@ -62,6 +62,11 @@ class TracePC {
 
   bool HasFeature(size_t Idx) { return CounterMap.Get(Idx); }
 
+  void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
+                         size_t n);
+  void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
+                         size_t n);
+
 private:
   bool UseCounters = false;
   bool UseValueProfile = false;

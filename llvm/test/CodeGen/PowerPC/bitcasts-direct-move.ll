@@ -1,6 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s \
 ; RUN:  --check-prefix=CHECK-P7
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s
 
 define signext i32 @f32toi32(float %a) {
 entry:

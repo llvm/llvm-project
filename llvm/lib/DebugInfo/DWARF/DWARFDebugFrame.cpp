@@ -394,13 +394,15 @@ static void printOperand(raw_ostream &OS, uint8_t Opcode, unsigned OperandIdx,
   OperandType Type = OpTypes[Opcode][OperandIdx];
 
   switch (Type) {
-  case OT_Unset:
+  case OT_Unset: {
     OS << " Unsupported " << (OperandIdx ? "second" : "first") << " operand to";
-    if (const char *OpcodeName = CallFrameString(Opcode))
+    auto OpcodeName = CallFrameString(Opcode);
+    if (!OpcodeName.empty())
       OS << " " << OpcodeName;
     else
       OS << format(" Opcode %x",  Opcode);
     break;
+  }
   case OT_None:
     break;
   case OT_Address:

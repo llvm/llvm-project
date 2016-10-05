@@ -28,14 +28,15 @@ using namespace lldb_private;
 static void FixupEnvironment(Args &env) {
 #ifdef __ANDROID_NDK__
   // If there is no PATH variable specified inside the environment then set the
-  // path to /system/bin.
-  // It is required because the default path used by execve() is wrong on
-  // android.
+  // path to /system/bin. It is required because the default path used by
+  // execve() is wrong on android.
   static const char *path = "PATH=";
   static const int path_len = ::strlen(path);
-  for (const char **args = env.GetConstArgumentVector(); *args; ++args)
-    if (::strncmp(path, *args, path_len) == 0)
+  for (size_t i = 0; i < env.GetArgumentCount(); ++i) {
+    const char *arg = env.GetArgumentAtIndex(i);
+    if (::strncmp(path, arg, path_len) == 0)
       return;
+  }
   env.AppendArgument(llvm::StringRef("PATH=/system/bin"));
 #endif
 }

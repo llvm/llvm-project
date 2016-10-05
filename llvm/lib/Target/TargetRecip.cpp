@@ -16,7 +16,9 @@
 
 #include "llvm/Target/TargetRecip.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -36,9 +38,7 @@ static const char *const RecipOps[] = {
   "vec-sqrtf",
 };
 
-// The uninitialized state is needed for the enabled settings and refinement
-// steps because custom settings may arrive via the command-line before target
-// defaults are set.
+/// All operations are disabled by default and refinement steps are set to zero.
 TargetRecip::TargetRecip() {
   unsigned NumStrings = llvm::array_lengthof(RecipOps);
   for (unsigned i = 0; i < NumStrings; ++i)
@@ -137,17 +137,7 @@ void TargetRecip::parseIndividualParams(const std::vector<std::string> &Args) {
         assert(Iter == RecipMap.end() && "Float entry missing from map");
         report_fatal_error("Invalid option for -recip.");
       }
-      
-      // The option was specified without a float or double suffix.
-      if (RecipMap[Val.str() + 'd'].Enabled != Uninitialized) {
-        // Make sure that the double entry was not already specified.
-        // The float entry will be checked below.
-        report_fatal_error("Duplicate option for -recip.");
-      }
     }
-    
-    if (Iter->second.Enabled != Uninitialized)
-      report_fatal_error("Duplicate option for -recip.");
     
     // Mark the matched option as found. Do not allow duplicate specifiers.
     Iter->second.Enabled = !IsDisabled;
@@ -164,50 +154,45 @@ void TargetRecip::parseIndividualParams(const std::vector<std::string> &Args) {
   }
 }
 
-TargetRecip::TargetRecip(const std::vector<std::string> &Args) :
-  TargetRecip() {
-  unsigned NumArgs = Args.size();
+void TargetRecip::set(StringRef &RecipString) {
+  SmallVector<StringRef, 4> RecipStringVector;
+  SplitString(RecipString, RecipStringVector, ",");
+  std::vector<std::string> RecipVector;
+  for (unsigned i = 0; i < RecipStringVector.size(); ++i)
+    RecipVector.push_back(RecipStringVector[i].str());
+
+  unsigned NumArgs = RecipVector.size();
 
   // Check if "all", "default", or "none" was specified.
-  if (NumArgs == 1 && parseGlobalParams(Args[0]))
+  if (NumArgs == 1 && parseGlobalParams(RecipVector[0]))
     return;
- 
-  parseIndividualParams(Args);
+
+  parseIndividualParams(RecipVector);
 }
 
 bool TargetRecip::isEnabled(StringRef Key) const {
   ConstRecipIter Iter = RecipMap.find(Key);
   assert(Iter != RecipMap.end() && "Unknown name for reciprocal map");
-  assert(Iter->second.Enabled != Uninitialized &&
-         "Enablement setting was not initialized");
   return Iter->second.Enabled;
 }
 
 unsigned TargetRecip::getRefinementSteps(StringRef Key) const {
   ConstRecipIter Iter = RecipMap.find(Key);
   assert(Iter != RecipMap.end() && "Unknown name for reciprocal map");
-  assert(Iter->second.RefinementSteps != Uninitialized &&
-         "Refinement step setting was not initialized");
   return Iter->second.RefinementSteps;
 }
 
-/// Custom settings (previously initialized values) override target defaults.
-void TargetRecip::setDefaults(StringRef Key, bool Enable,
-                              unsigned RefSteps) {
+void TargetRecip::set(StringRef Key, bool Enable, unsigned RefSteps) {
   if (Key == "all") {
     for (auto &KV : RecipMap) {
       RecipParams &RP = KV.second;
-      if (RP.Enabled == Uninitialized)
-        RP.Enabled = Enable;
-      if (RP.RefinementSteps == Uninitialized)
-        RP.RefinementSteps = RefSteps;
+      RP.Enabled = Enable;
+      RP.RefinementSteps = RefSteps;
     }
   } else {
     RecipParams &RP = RecipMap[Key];
-    if (RP.Enabled == Uninitialized)
-      RP.Enabled = Enable;
-    if (RP.RefinementSteps == Uninitialized)
-      RP.RefinementSteps = RefSteps;
+    RP.Enabled = Enable;
+    RP.RefinementSteps = RefSteps;
   }
 }
 

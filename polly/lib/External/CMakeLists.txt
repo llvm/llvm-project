@@ -261,23 +261,37 @@ add_polly_library(PollyISL
   ${ISL_FILES}
 )
 
+add_executable(polly-isl-test
+  isl/isl_test.c
+)
+
+target_link_libraries(polly-isl-test
+  PollyISL
+)
+
 if (MSVC)
   # Disable common warnings; ideally, they should be fixed upstream
-  target_compile_options(PollyISL PRIVATE
+  set(DISABLE_WARNING_FLAGS
     -wd4018 # 'expression' : signed/unsigned mismatch
     -wd4090 # 'operation' : different 'modifier' qualifiers
     -wd4200 # nonstandard extension used: zero-sized array in struct/union
     -wd4201 # nonstandard extension used: nameless struct/union
     -wd4334 # 'operator': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
   )
+  target_compile_options(PollyISL PRIVATE ${DISABLE_WARNING_FLAGS})
+  target_compile_options(polly-isl-test PRIVATE ${DISABLE_WARNING_FLAGS})
 endif ()
 
 # ISL requires at least C99 to compile. gcc < 5.0 use -std=gnu89 as default.
 target_enable_c99(PollyISL)
+target_enable_c99(polly-isl-test)
 
 # Disable warnings which should be coped with upstream for isl and imath.
 if (NOT MSVC)
   set_target_properties(PollyISL PROPERTIES
+    COMPILE_FLAGS "-w"
+  )
+  set_target_properties(polly-isl-test PROPERTIES
     COMPILE_FLAGS "-w"
   )
 endif ()

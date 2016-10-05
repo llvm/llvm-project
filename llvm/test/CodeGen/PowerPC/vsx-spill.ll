@@ -1,7 +1,14 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-REG %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | FileCheck -check-prefix=CHECK-FISL %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx < %s | FileCheck \
+; RUN:   -check-prefix=CHECK-REG %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | \
+; RUN:   FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | \
+; RUN:   FileCheck -check-prefix=CHECK-FISL %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 < %s | FileCheck \
+; RUN:   -check-prefix=CHECK-P9-REG %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -fast-isel -O0 < %s | FileCheck \
+; RUN:   -check-prefix=CHECK-P9-FISL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -20,6 +27,15 @@ entry:
 ; CHECK-FISL: ori 0, 0, 65384
 ; CHECK-FISL: stxsdx 1, 1, 0
 ; CHECK-FISL: blr
+
+; CHECK-P9-REG: @foo1
+; CHECK-P9-REG: xxlor [[R1:[0-9]+]], 1, 1
+; CHECK-P9-REG: xxlor 1, [[R1]], [[R1]]
+; CHECK-P9-REG: blr
+
+; CHECK-P9-FISL: @foo1
+; CHECK-P9-FISL: stfd 31, -8(1)
+; CHECK-P9-FISL: blr
 
 return:                                           ; preds = %entry
   ret double %a
@@ -42,6 +58,17 @@ entry:
 ; CHECK-FISL: lxsdx [[R1]], [[R1]], 0
 ; CHECK-FISL: blr
 
+; CHECK-P9-REG: @foo2
+; CHECK-P9-REG: {{xxlor|xsadddp}} [[R1:[0-9]+]], 1, 1
+; CHECK-P9-REG: {{xxlor|xsadddp}} 1, [[R1]], [[R1]]
+; CHECK-P9-REG: blr
+
+; CHECK-P9-FISL: @foo2
+; CHECK-P9-FISL: xsadddp [[R1:[0-9]+]], 1, 1
+; CHECK-P9-FISL: stfd [[R1]], [[OFF:[0-9\-]+]](1)
+; CHECK-P9-FISL: lfd [[R1]], [[OFF]](1)
+; CHECK-P9-FISL: blr
+
 return:                                           ; preds = %entry
   ret double %b
 }
@@ -57,6 +84,15 @@ entry:
 ; CHECK: xsadddp 1, [[R1]], [[R1]]
 ; CHECK: blr
 
+; CHECK-P9-REG-LABEL: foo3
+; CHECK-P9-REG: stfd 1, [[OFF:[0-9\-]+]](1)
+; CHECK-P9-REG: lfd [[FPR:[0-9]+]], [[OFF]](1)
+; CHECK-P9-REG: xsadddp 1, [[FPR]], [[FPR]]
+
+; CHECK-P9-FISL-LABEL: foo3
+; CHECK-P9-FISL: stfd 1, [[OFF:[0-9\-]+]](1)
+; CHECK-P9-FISL: lfd [[FPR:[0-9]+]], [[OFF]](1)
+; CHECK-P9-FISL: xsadddp 1, [[FPR]], [[FPR]]
 return:                                           ; preds = %entry
   %b = fadd double %a, %a
   ret double %b

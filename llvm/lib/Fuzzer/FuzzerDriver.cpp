@@ -511,7 +511,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   }
 
   if (InitialCorpus.empty()) {
-    InitialCorpus.push_back(Unit());
+    InitialCorpus.push_back(Unit({0}));
     if (Options.Verbosity)
       Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
   }

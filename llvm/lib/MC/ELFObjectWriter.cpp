@@ -1127,7 +1127,7 @@ void ELFObjectWriter::writeRelocations(const MCAssembler &Asm,
 
 const MCSectionELF *ELFObjectWriter::createStringTable(MCContext &Ctx) {
   const MCSectionELF *StrtabSection = SectionTable[StringTableIndex - 1];
-  getStream() << StrTabBuilder.data();
+  StrTabBuilder.write(getStream());
   return StrtabSection;
 }
 

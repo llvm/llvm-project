@@ -118,6 +118,7 @@ let Uses = [RM] in {
 
   // Load indexed instructions
   let mayLoad = 1 in {
+    let CodeSize = 3 in
     def LXSDX : XX1Form<31, 588,
                         (outs vsfrc:$XT), (ins memrr:$src),
                         "lxsdx $XT, $src", IIC_LdStLFD,
@@ -142,6 +143,7 @@ let Uses = [RM] in {
 
   // Store indexed instructions
   let mayStore = 1 in {
+    let CodeSize = 3 in
     def STXSDX : XX1Form<31, 716,
                         (outs), (ins vsfrc:$XT, memrr:$dst),
                         "stxsdx $XT, $dst", IIC_LdStSTFD,
@@ -1150,6 +1152,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
 
   // VSX scalar loads introduced in ISA 2.07
   let mayLoad = 1 in {
+    let CodeSize = 3 in
     def LXSSPX : XX1Form<31, 524, (outs vssrc:$XT), (ins memrr:$src),
                          "lxsspx $XT, $src", IIC_LdStLFD,
                          [(set f32:$XT, (load xoaddr:$src))]>;
@@ -1163,6 +1166,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
 
   // VSX scalar stores introduced in ISA 2.07
   let mayStore = 1 in {
+    let CodeSize = 3 in
     def STXSSPX : XX1Form<31, 652, (outs), (ins vssrc:$XT, memrr:$dst),
                           "stxsspx $XT, $dst", IIC_LdStSTFD,
                           [(store f32:$XT, xoaddr:$dst)]>;
@@ -2245,6 +2249,8 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   //===--------------------------------------------------------------------===//
   // Vector/Scalar Load/Store Instructions
 
+  // When adding new D-Form loads/stores, be sure to update the ImmToIdxMap in
+  // PPCRegisterInfo::PPCRegisterInfo and maybe save yourself some debugging.
   let mayLoad = 1 in {
   // Load Vector
   def LXV : DQ_RD6_RS5_DQ12<61, 1, (outs vsrc:$XT), (ins memrix16:$src),
@@ -2285,6 +2291,8 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def LXVWSX  : X_XT6_RA5_RB5<31, 364, "lxvwsx" , vsrc, []>;
   } // mayLoad
 
+  // When adding new D-Form loads/stores, be sure to update the ImmToIdxMap in
+  // PPCRegisterInfo::PPCRegisterInfo and maybe save yourself some debugging.
   let mayStore = 1 in {
   // Store Vector
   def STXV : DQ_RD6_RS5_DQ12<61, 5, (outs), (ins vsrc:$XT, memrix16:$dst),
@@ -2556,6 +2564,22 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (f64 (COPY_TO_REGCLASS (VEXTSB2Ds $A), VSFRC))>;
   def : Pat<(f64 (PPCVexts f64:$A, 2)),
             (f64 (COPY_TO_REGCLASS (VEXTSH2Ds $A), VSFRC))>;
+  let isPseudo = 1 in {
+    def DFLOADf32  : Pseudo<(outs vssrc:$XT), (ins memrix:$src),
+                            "#DFLOADf32",
+                            [(set f32:$XT, (load iaddr:$src))]>;
+    def DFLOADf64  : Pseudo<(outs vsfrc:$XT), (ins memrix:$src),
+                            "#DFLOADf64",
+                            [(set f64:$XT, (load iaddr:$src))]>;
+    def DFSTOREf32 : Pseudo<(outs), (ins vssrc:$XT, memrix:$dst),
+                            "#DFSTOREf32",
+                            [(store f32:$XT, iaddr:$dst)]>;
+    def DFSTOREf64 : Pseudo<(outs), (ins vsfrc:$XT, memrix:$dst),
+                            "#DFSTOREf64",
+                            [(store f64:$XT, iaddr:$dst)]>;
+  }
+  def : Pat<(f64 (extloadf32 iaddr:$src)),
+            (COPY_TO_REGCLASS (DFLOADf32 iaddr:$src), VSFRC)>;
 } // end HasP9Vector, AddedComplexity
 
 let Predicates = [IsISA3_0, HasDirectMove, IsLittleEndian] in {

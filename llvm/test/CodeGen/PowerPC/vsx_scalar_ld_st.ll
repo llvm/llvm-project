@@ -1,5 +1,9 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr9 -mattr=-direct-move | FileCheck %s -check-prefix=CHECK-P9
 
 @d = common global double 0.000000e+00, align 8
 @f = common global float 0.000000e+00, align 4
@@ -121,6 +125,9 @@ entry:
 ; CHECK-LABEL: @dblToFloat
 ; CHECK: lxsdx [[REGLD5:[0-9]+]],
 ; CHECK: stxsspx [[REGLD5]],
+; CHECK-P9-LABEL: @dblToFloat
+; CHECK-P9: lfd [[REGLD5:[0-9]+]],
+; CHECK-P9: stfs [[REGLD5]],
 }
 
 ; Function Attrs: nounwind
@@ -134,4 +141,7 @@ entry:
 ; CHECK-LABEL: @floatToDbl
 ; CHECK: lxsspx [[REGLD5:[0-9]+]],
 ; CHECK: stxsdx [[REGLD5]],
+; CHECK-P9-LABEL: @floatToDbl
+; CHECK-P9: lfs [[REGLD5:[0-9]+]],
+; CHECK-P9: stfd [[REGLD5]],
 }

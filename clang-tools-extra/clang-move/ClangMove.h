@@ -66,7 +66,7 @@ public:
   /// \param SearchPath The search path which was used to find the IncludeHeader
   /// in the file system. It can be a relative path or an absolute path.
   /// \param FileName The name of file where the IncludeHeader comes from.
-  /// \param SourceManager The SourceManager.
+  /// \param SM The SourceManager.
   void addIncludes(llvm::StringRef IncludeHeader,
                    bool IsAngled,
                    llvm::StringRef SearchPath,

@@ -309,10 +309,20 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {
     Printf(" bits: %zd", MaxCoverage.TPCMap.GetNumBitsSinceLastMerge());
   if (MaxCoverage.CallerCalleeCoverage)
     Printf(" indir: %zd", MaxCoverage.CallerCalleeCoverage);
-  if (size_t N = Corpus.size())
-    Printf(" units: %zd", N);
+  if (size_t N = Corpus.size()) {
+    Printf(" corpus: %zd", Corpus.NumActiveUnits());
+    if (size_t N = Corpus.SizeInBytes()) {
+      if (N < (1<<14))
+        Printf("/%zdb", N);
+      else if (N < (1 << 24))
+        Printf("/%zdKb", N >> 10);
+      else
+        Printf("/%zdMb", N >> 20);
+    }
+  }
   if (Units)
     Printf(" units: %zd", Units);
+
   Printf(" exec/s: %zd", ExecPerSec);
   Printf("%s", End);
 }
@@ -402,6 +412,10 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
   Printf("#0\tREAD units: %zd\n", InitialCorpus->size());
   if (Options.ShuffleAtStartUp)
     ShuffleCorpus(InitialCorpus);
+
+  // Test the callback with empty input and never try it again.
+  uint8_t dummy;
+  ExecuteCallback(&dummy, 0);
 
   for (const auto &U : *InitialCorpus) {
     if (RunOne(U)) {

@@ -37,7 +37,7 @@ class DarwinAsmParser : public MCAsmParserExtension {
     getParser().addDirectiveHandler(Directive, Handler);
   }
 
-  bool parseSectionSwitch(const char *Segment, const char *Section,
+  bool parseSectionSwitch(StringRef Segment, StringRef Section,
                           unsigned TAA = 0, unsigned ImplicitAlign = 0,
                           unsigned StubSize = 0);
 
@@ -389,8 +389,7 @@ public:
 
 } // end anonymous namespace
 
-bool DarwinAsmParser::parseSectionSwitch(const char *Segment,
-                                         const char *Section,
+bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
                                          unsigned TAA, unsigned Align,
                                          unsigned StubSize) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
@@ -700,7 +699,7 @@ bool DarwinAsmParser::parseDirectiveSecureLogUnique(StringRef, SMLoc IDLoc) {
   if (!OS) {
     std::error_code EC;
     auto NewOS = llvm::make_unique<raw_fd_ostream>(
-        SecureLogFile, EC, sys::fs::F_Append | sys::fs::F_Text);
+        StringRef(SecureLogFile), EC, sys::fs::F_Append | sys::fs::F_Text);
     if (EC)
        return Error(IDLoc, Twine("can't open secure log file: ") +
                                SecureLogFile + " (" + EC.message() + ")");

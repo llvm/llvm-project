@@ -104,6 +104,11 @@ static cl::opt<bool>
                     cl::desc("Abort if an isl error is encountered"),
                     cl::init(true), cl::cat(PollyCategory));
 
+static cl::opt<bool> UnprofitableScalarAccs(
+    "polly-unprofitable-scalar-accs",
+    cl::desc("Count statements with scalar accesses as not optimizable"),
+    cl::Hidden, cl::init(true), cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 // Create a sequence of two schedules. Either argument may be null and is
@@ -179,7 +184,7 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
 
   updateSizes(Sizes);
 
-  if (!BasePtr) {
+  if (!BasePtr || Kind != MK_Array) {
     BasePtrOriginSAI = nullptr;
     return;
   }
@@ -3650,7 +3655,7 @@ bool Scop::isProfitable() const {
       ContainsScalarAccs |= MA->isScalarKind();
     }
 
-    if (ContainsArrayAccs && !ContainsScalarAccs)
+    if (!UnprofitableScalarAccs || (ContainsArrayAccs && !ContainsScalarAccs))
       OptimizableStmtsOrLoops += Stmt.getNumIterators();
   }
 

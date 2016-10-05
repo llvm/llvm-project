@@ -698,6 +698,30 @@ static Error checkRpathCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+static Error checkEncryptCommand(const MachOObjectFile *Obj,
+                                 const MachOObjectFile::LoadCommandInfo &Load,
+                                 uint32_t LoadCommandIndex,
+                                 uint64_t cryptoff, uint64_t cryptsize,
+                                 const char **LoadCmd, const char *CmdName) {
+  if (*LoadCmd != nullptr)
+    return malformedError("more than one LC_ENCRYPTION_INFO and or "
+                          "LC_ENCRYPTION_INFO_64 command");
+  uint64_t FileSize = Obj->getData().size();
+  if (cryptoff > FileSize)
+    return malformedError("cryptoff field of " + Twine(CmdName) +
+                          " command " + Twine(LoadCommandIndex) + " extends "
+                          "past the end of the file");
+  uint64_t BigSize = cryptoff;
+  BigSize += cryptsize;
+  if (BigSize > FileSize)
+    return malformedError("cryptoff field plus cryptsize field of " +
+                          Twine(CmdName) + " command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  *LoadCmd = Load.Ptr;
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -752,6 +776,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
   const char *VersLoadCmd = nullptr;
   const char *SourceLoadCmd = nullptr;
   const char *EntryPointLoadCmd = nullptr;
+  const char *EncryptLoadCmd = nullptr;
   for (unsigned I = 0; I < LoadCommandCount; ++I) {
     if (is64Bit()) {
       if (Load.C.cmdsize % 8 != 0) {
@@ -903,6 +928,28 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         return;
       }
       EntryPointLoadCmd = Load.Ptr;
+    } else if (Load.C.cmd == MachO::LC_ENCRYPTION_INFO) {
+      if (Load.C.cmdsize != sizeof(MachO::encryption_info_command)) {
+        Err = malformedError("LC_ENCRYPTION_INFO command " + Twine(I) +
+                             " has incorrect cmdsize");
+        return;
+      }
+      MachO::encryption_info_command E =
+        getStruct<MachO::encryption_info_command>(this, Load.Ptr);
+      if ((Err = checkEncryptCommand(this, Load, I, E.cryptoff, E.cryptsize,
+                                     &EncryptLoadCmd, "LC_ENCRYPTION_INFO")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_ENCRYPTION_INFO_64) {
+      if (Load.C.cmdsize != sizeof(MachO::encryption_info_command_64)) {
+        Err = malformedError("LC_ENCRYPTION_INFO_64 command " + Twine(I) +
+                             " has incorrect cmdsize");
+        return;
+      }
+      MachO::encryption_info_command_64 E =
+        getStruct<MachO::encryption_info_command_64>(this, Load.Ptr);
+      if ((Err = checkEncryptCommand(this, Load, I, E.cryptoff, E.cryptsize,
+                                     &EncryptLoadCmd, "LC_ENCRYPTION_INFO_64")))
+        return;
     }
     if (I < LoadCommandCount - 1) {
       if (auto LoadOrErr = getNextLoadCommandInfo(this, I, Load))

@@ -606,31 +606,31 @@ enum GDBIndexEntryLinkage {
 /// known.
 ///
 /// @{
-const char *TagString(unsigned Tag);
-const char *ChildrenString(unsigned Children);
-const char *AttributeString(unsigned Attribute);
-const char *FormEncodingString(unsigned Encoding);
-const char *OperationEncodingString(unsigned Encoding);
-const char *AttributeEncodingString(unsigned Encoding);
-const char *DecimalSignString(unsigned Sign);
-const char *EndianityString(unsigned Endian);
-const char *AccessibilityString(unsigned Access);
-const char *VisibilityString(unsigned Visibility);
-const char *VirtualityString(unsigned Virtuality);
-const char *LanguageString(unsigned Language);
-const char *CaseString(unsigned Case);
-const char *ConventionString(unsigned Convention);
-const char *InlineCodeString(unsigned Code);
-const char *ArrayOrderString(unsigned Order);
-const char *DiscriminantString(unsigned Discriminant);
-const char *LNStandardString(unsigned Standard);
-const char *LNExtendedString(unsigned Encoding);
-const char *MacinfoString(unsigned Encoding);
-const char *CallFrameString(unsigned Encoding);
-const char *ApplePropertyString(unsigned);
-const char *AtomTypeString(unsigned Atom);
-const char *GDBIndexEntryKindString(GDBIndexEntryKind Kind);
-const char *GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
+StringRef TagString(unsigned Tag);
+StringRef ChildrenString(unsigned Children);
+StringRef AttributeString(unsigned Attribute);
+StringRef FormEncodingString(unsigned Encoding);
+StringRef OperationEncodingString(unsigned Encoding);
+StringRef AttributeEncodingString(unsigned Encoding);
+StringRef DecimalSignString(unsigned Sign);
+StringRef EndianityString(unsigned Endian);
+StringRef AccessibilityString(unsigned Access);
+StringRef VisibilityString(unsigned Visibility);
+StringRef VirtualityString(unsigned Virtuality);
+StringRef LanguageString(unsigned Language);
+StringRef CaseString(unsigned Case);
+StringRef ConventionString(unsigned Convention);
+StringRef InlineCodeString(unsigned Code);
+StringRef ArrayOrderString(unsigned Order);
+StringRef DiscriminantString(unsigned Discriminant);
+StringRef LNStandardString(unsigned Standard);
+StringRef LNExtendedString(unsigned Encoding);
+StringRef MacinfoString(unsigned Encoding);
+StringRef CallFrameString(unsigned Encoding);
+StringRef ApplePropertyString(unsigned);
+StringRef AtomTypeString(unsigned Atom);
+StringRef GDBIndexEntryKindString(GDBIndexEntryKind Kind);
+StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
@@ -654,7 +654,7 @@ unsigned getMacinfo(StringRef MacinfoString);
 
 /// \brief Returns the symbolic string representing Val when used as a value
 /// for attribute Attr.
-const char *AttributeValueString(uint16_t Attr, unsigned Val);
+StringRef AttributeValueString(uint16_t Attr, unsigned Val);
 
 /// \brief Decsribes an entry of the various gnu_pub* debug sections.
 ///

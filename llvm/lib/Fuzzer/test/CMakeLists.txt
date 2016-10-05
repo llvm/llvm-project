@@ -80,7 +80,6 @@ set(Tests
   LeakTest
   LeakTimeoutTest
   LoadTest
-  MinimizeCorpusTest
   NullDerefTest
   NullDerefOnEmptyTest
   NthRunCrashTest
@@ -98,6 +97,8 @@ set(Tests
   SingleStrcmpTest
   SingleStrncmpTest
   SpamyTest
+  ShrinkControlFlowTest
+  ShrinkValueProfileTest
   StrcmpTest
   StrncmpTest
   StrstrTest

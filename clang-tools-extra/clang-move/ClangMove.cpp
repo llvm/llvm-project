@@ -36,6 +36,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
     llvm::errs() << "Warning: could not make absolute file: '" <<  EC.message()
                  << '\n';
   llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
+  llvm::sys::path::native(AbsolutePath);
   return AbsolutePath.str();
 }
 
@@ -51,6 +52,7 @@ std::string MakeAbsolutePath(const SourceManager& SM, StringRef Path) {
     llvm::errs() << "Warning: could not make absolute file: '" <<  EC.message()
                  << '\n';
   llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
+  llvm::sys::path::native(AbsolutePath);
   return AbsolutePath.str();
 }
 

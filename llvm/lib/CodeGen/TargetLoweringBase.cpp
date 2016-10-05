@@ -838,6 +838,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);
   InitLibcallCallingConvs(LibcallCallingConvs);
+  ReciprocalEstimates.set("all", false, 0);
 }
 
 void TargetLoweringBase::initActions() {
@@ -1483,6 +1484,22 @@ EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 
 MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
   return MVT::i32; // return the default value
+}
+
+TargetRecip
+TargetLoweringBase::getTargetRecipForFunc(MachineFunction &MF) const {
+  const Function *F = MF.getFunction();
+  StringRef RecipAttrName = "reciprocal-estimates";
+  if (!F->hasFnAttribute(RecipAttrName))
+    return ReciprocalEstimates;
+
+  // Make a copy of the target's default reciprocal codegen settings.
+  TargetRecip Recips = ReciprocalEstimates;
+
+  // Override any settings that are customized for this function.
+  StringRef RecipString = F->getFnAttribute(RecipAttrName).getValueAsString();
+  Recips.set(RecipString);
+  return Recips;
 }
 
 /// getVectorTypeBreakdown - Vector types are broken down into some number of

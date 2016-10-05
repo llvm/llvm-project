@@ -901,6 +901,23 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTargetDAGCombine(ISD::FSQRT);
   }
 
+  // For the estimates, convergence is quadratic, so we essentially double the
+  // number of digits correct after every iteration. For both FRE and FRSQRTE,
+  // the minimum architected relative accuracy is 2^-5. When hasRecipPrec(),
+  // this is 2^-14. IEEE float has 23 digits and double has 52 digits.
+  unsigned RefinementSteps = Subtarget.hasRecipPrec() ? 1 : 3,
+           RefinementSteps64 = RefinementSteps + 1;
+
+  ReciprocalEstimates.set("sqrtf", true, RefinementSteps);
+  ReciprocalEstimates.set("vec-sqrtf", true, RefinementSteps);
+  ReciprocalEstimates.set("divf", true, RefinementSteps);
+  ReciprocalEstimates.set("vec-divf", true, RefinementSteps);
+
+  ReciprocalEstimates.set("sqrtd", true, RefinementSteps64);
+  ReciprocalEstimates.set("vec-sqrtd", true, RefinementSteps64);
+  ReciprocalEstimates.set("divd", true, RefinementSteps64);
+  ReciprocalEstimates.set("vec-divd", true, RefinementSteps64);
+
   // Darwin long double math library functions have $LDBL128 appended.
   if (Subtarget.isDarwin()) {
     setLibcallName(RTLIB::COS_PPCF128, "cosl$LDBL128");
@@ -9646,7 +9663,7 @@ SDValue PPCTargetLowering::getRsqrtEstimate(SDValue Operand,
       (VT == MVT::v2f64 && Subtarget.hasVSX()) ||
       (VT == MVT::v4f32 && Subtarget.hasQPX()) ||
       (VT == MVT::v4f64 && Subtarget.hasQPX())) {
-    TargetRecip Recips = DCI.DAG.getTarget().Options.Reciprocals;
+    TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
     std::string RecipOp = getRecipOp("sqrt", VT);
     if (!Recips.isEnabled(RecipOp))
       return SDValue();
@@ -9668,7 +9685,7 @@ SDValue PPCTargetLowering::getRecipEstimate(SDValue Operand,
       (VT == MVT::v2f64 && Subtarget.hasVSX()) ||
       (VT == MVT::v4f32 && Subtarget.hasQPX()) ||
       (VT == MVT::v4f64 && Subtarget.hasQPX())) {
-    TargetRecip Recips = DCI.DAG.getTarget().Options.Reciprocals;
+    TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
     std::string RecipOp = getRecipOp("div", VT);
     if (!Recips.isEnabled(RecipOp))
       return SDValue();
