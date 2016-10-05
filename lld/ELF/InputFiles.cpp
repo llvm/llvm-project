@@ -226,7 +226,10 @@ void elf::ObjectFile<ELFT>::initializeSections(
     if (Sections[I] == &InputSection<ELFT>::Discarded)
       continue;
 
-    if (Sec.sh_flags & SHF_EXCLUDE) {
+    // SHF_EXCLUDE'ed sections are discarded by the linker. However,
+    // if -r is given, we'll let the final link discard such sections.
+    // This is compatible with GNU.
+    if ((Sec.sh_flags & SHF_EXCLUDE) && !Config->Relocatable) {
       Sections[I] = &InputSection<ELFT>::Discarded;
       continue;
     }
@@ -400,6 +403,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
                                               /*CanOmitFromDynSym*/ false, this)
         ->body();
   case SHN_COMMON:
+    if (Sym->st_value == 0)
+      fatal(getFilename(this) + ": common symbol '" + Name +
+            "' alignment is 0");
     return elf::Symtab<ELFT>::X->addCommon(Name, Sym->st_size, Sym->st_value,
                                            Binding, Sym->st_other,
                                            Sym->getType(), this)

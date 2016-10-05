@@ -10,15 +10,15 @@
         .tlsdesccall a
         blr     x1
 
-// CHECK:      1000: {{.*}}  adrp    x0, #4096
-// CHECK-NEXT: 1004: {{.*}}  ldr     x1, [x0, #144]
-// CHECK-NEXT: 1008: {{.*}}  add     x0, x0, #144
-// CHECK-NEXT: 100c: {{.*}}  blr     x1
+// CHECK:      10000: {{.*}}  adrp    x0, #65536
+// CHECK-NEXT: 10004: {{.*}}  ldr     x1, [x0, #144]
+// CHECK-NEXT: 10008: {{.*}}  add     x0, x0, #144
+// CHECK-NEXT: 1000c: {{.*}}  blr     x1
 
 // 0x1000 + 4096 + 144 = 0x2090
 
 // REL:      Relocations [
 // REL-NEXT:   Section (4) .rela.dyn {
-// REL-NEXT:     0x2090 R_AARCH64_TLSDESC a 0x0
+// REL-NEXT:     0x20090 R_AARCH64_TLSDESC a 0x0
 // REL-NEXT:   }
 // REL-NEXT: ]

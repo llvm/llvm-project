@@ -100,10 +100,8 @@ template <class ELFT> std::size_t ELFCreator<ELFT>::layout() {
 
 template <class ELFT> void ELFCreator<ELFT>::write(uint8_t *Out) {
   std::memcpy(Out, &Header, sizeof(Elf_Ehdr));
-  std::copy(SecHdrStrTabBuilder.data().begin(),
-            SecHdrStrTabBuilder.data().end(), Out + ShStrTab->sh_offset);
-  std::copy(StrTabBuilder.data().begin(), StrTabBuilder.data().end(),
-            Out + StrTab->sh_offset);
+  SecHdrStrTabBuilder.write(Out + ShStrTab->sh_offset);
+  StrTabBuilder.write(Out + StrTab->sh_offset);
 
   Elf_Sym *Sym = reinterpret_cast<Elf_Sym *>(Out + SymTab->sh_offset);
   // Skip null.

@@ -1151,6 +1151,7 @@ AArch64TargetInfo::AArch64TargetInfo() {
   GotPltEntrySize = 8;
   PltEntrySize = 16;
   PltHeaderSize = 32;
+  MaxPageSize = 65536;
 
   // It doesn't seem to be documented anywhere, but tls on aarch64 uses variant
   // 1 of the tls structures and the tcb size is 16.

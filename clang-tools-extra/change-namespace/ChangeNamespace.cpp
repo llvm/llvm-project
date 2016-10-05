@@ -106,8 +106,9 @@ SourceLocation getStartOfNextLine(SourceLocation Loc, const SourceManager &SM,
   // FIXME: this is a bit hacky to get ReadToEndOfLine work.
   Lex.setParsingPreprocessorDirective(true);
   Lex.ReadToEndOfLine(&Line);
-  // FIXME: should not +1 at EOF.
-  return Loc.getLocWithOffset(Line.size() + 1);
+  auto End = Loc.getLocWithOffset(Line.size());
+  return SM.getLocForEndOfFile(LocInfo.first) == End ? End
+                                                     : End.getLocWithOffset(1);
 }
 
 // Returns `R` with new range that refers to code after `Replaces` being

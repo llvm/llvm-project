@@ -18,8 +18,6 @@ import os
 # Third-party modules
 import unittest2
 
-from unittest2.util import strclass
-
 # LLDB Modules
 from . import configuration
 from lldbsuite.test_event.event_builder import EventBuilder
@@ -139,8 +137,7 @@ class LLDBTestResult(unittest2.TextTestResult):
                 self.getCategoriesForTest(test)):
             self.hardMarkAsSkipped(test)
         if self.checkExclusion(
-                configuration.skip_methods,
-                test._testMethodName):
+                configuration.skip_tests, test.id()):
             self.hardMarkAsSkipped(test)
 
         configuration.setCrashInfoHook(
@@ -161,11 +158,7 @@ class LLDBTestResult(unittest2.TextTestResult):
 
     def addSuccess(self, test):
         if self.checkExclusion(
-                configuration.xfail_files,
-                strclass(
-                    test.__class__)) or self.checkExclusion(
-                configuration.xfail_methods,
-                test._testMethodName):
+                configuration.xfail_tests, test.id()):
             self.addUnexpectedSuccess(test, None)
             return
 
@@ -239,11 +232,7 @@ class LLDBTestResult(unittest2.TextTestResult):
 
     def addFailure(self, test, err):
         if self.checkExclusion(
-                configuration.xfail_files,
-                strclass(
-                    test.__class__)) or self.checkExclusion(
-                configuration.xfail_methods,
-                test._testMethodName):
+                configuration.xfail_tests, test.id()):
             self.addExpectedFailure(test, err, None)
             return
 

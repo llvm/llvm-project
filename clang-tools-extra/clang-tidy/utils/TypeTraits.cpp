@@ -58,6 +58,9 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
   // constructible.
   if (ClassDecl->hasUserProvidedDefaultConstructor())
     return false;
+  // A polymorphic class is not trivially constructible
+  if (ClassDecl->isPolymorphic())
+    return false;
   // A class is trivially constructible if it has a trivial default constructor.
   if (ClassDecl->hasTrivialDefaultConstructor())
     return true;
@@ -72,6 +75,8 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
   // If all its direct bases are trivially constructible.
   for (const CXXBaseSpecifier &Base : ClassDecl->bases()) {
     if (!isTriviallyDefaultConstructible(Base.getType(), Context))
+      return false;
+    if (Base.isVirtual())
       return false;
   }
 

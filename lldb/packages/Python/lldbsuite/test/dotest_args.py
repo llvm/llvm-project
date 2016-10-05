@@ -96,7 +96,7 @@ def create_parser():
         '-p',
         metavar='pattern',
         help='Specify a regexp filename pattern for inclusion in the test suite')
-    group.add_argument('--excluded', metavar='exclusion-file', help=textwrap.dedent(
+    group.add_argument('--excluded', metavar='exclusion-file', action='append', help=textwrap.dedent(
         '''Specify a file for tests to exclude. File should contain lists of regular expressions for test files or methods,
                                 with each list under a matching header (xfail files, xfail methods, skip files, skip methods)'''))
     group.add_argument(

@@ -1222,15 +1222,7 @@ MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t Type,
       Builder(StringTableBuilder::RAW, Alignment) {}
 
 template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  if (shouldTailMerge()) {
-    StringRef Data = Builder.data();
-    memcpy(Buf, Data.data(), Data.size());
-    return;
-  }
-  for (const std::pair<CachedHash<StringRef>, size_t> &P : Builder.getMap()) {
-    StringRef Data = P.first.Val;
-    memcpy(Buf + P.second, Data.data(), Data.size());
-  }
+  Builder.write(Buf);
 }
 
 static StringRef toStringRef(ArrayRef<uint8_t> A) {
@@ -1268,6 +1260,8 @@ template <class ELFT> bool MergeOutputSection<ELFT>::shouldTailMerge() const {
 template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
   if (shouldTailMerge())
     Builder.finalize();
+  else
+    Builder.finalizeInOrder();
   this->Header.sh_size = Builder.getSize();
 }
 

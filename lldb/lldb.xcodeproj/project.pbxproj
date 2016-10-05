@@ -735,6 +735,8 @@
 		4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C56543419D2297A002E9C44 /* SBThreadPlan.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
 		4C6649A314EEE81000B0316F /* StreamCallback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C6649A214EEE81000B0316F /* StreamCallback.cpp */; };
+		4C6966101DA47BCE004FAE72 /* ThreadMinidump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C6966081DA47BB4004FAE72 /* ThreadMinidump.cpp */; };
+		4C6966111DA47BDB004FAE72 /* ProcessMinidump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C69660A1DA47BB4004FAE72 /* ProcessMinidump.cpp */; };
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
 		4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CABA9DF134A8BCD00539BDD /* ValueObjectMemory.cpp */; };
@@ -956,7 +958,6 @@
 		AFCB2BBD1BF577F40018B553 /* PythonExceptionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */; };
 		AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */ = {isa = PBXBuildFile; fileRef = AFCB2BBC1BF577F40018B553 /* PythonExceptionState.h */; };
 		AFD65C811D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD65C7F1D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp */; };
-		AFD65C821D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h in Headers */ = {isa = PBXBuildFile; fileRef = AFD65C801D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h */; };
 		AFDCDBCB19DD0F42005EA55E /* SBExecutionContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 940B02F419DC96CB00AD0F52 /* SBExecutionContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AFDFDFD119E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */; };
 		AFEC3362194A8ABA00FF05C6 /* StructuredData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */; };
@@ -1335,7 +1336,6 @@
 		23E2E5201D903726006F38BB /* linux-x86_64.dmp */ = {isa = PBXFileReference; lastKnownFileType = file; path = "linux-x86_64.dmp"; sourceTree = "<group>"; };
 		23E2E52D1D90382B006F38BB /* BreakpointIDTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BreakpointIDTest.cpp; sourceTree = "<group>"; };
 		23E2E52E1D90382B006F38BB /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		23E2E5361D9048FB006F38BB /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		23E2E5371D9048FB006F38BB /* MinidumpParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MinidumpParser.cpp; sourceTree = "<group>"; };
 		23E2E5381D9048FB006F38BB /* MinidumpParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MinidumpParser.h; sourceTree = "<group>"; };
 		23E2E5391D9048FB006F38BB /* MinidumpTypes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MinidumpTypes.cpp; sourceTree = "<group>"; };
@@ -2531,6 +2531,10 @@
 		4C626533130F1B0A00C889F6 /* StreamTee.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StreamTee.h; path = include/lldb/Core/StreamTee.h; sourceTree = "<group>"; };
 		4C66499F14EEE7F100B0316F /* StreamCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StreamCallback.h; path = include/lldb/Core/StreamCallback.h; sourceTree = "<group>"; };
 		4C6649A214EEE81000B0316F /* StreamCallback.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StreamCallback.cpp; path = source/Core/StreamCallback.cpp; sourceTree = "<group>"; };
+		4C6966071DA47BB4004FAE72 /* ThreadMinidump.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreadMinidump.h; sourceTree = "<group>"; };
+		4C6966081DA47BB4004FAE72 /* ThreadMinidump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ThreadMinidump.cpp; sourceTree = "<group>"; };
+		4C6966091DA47BB4004FAE72 /* ProcessMinidump.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProcessMinidump.h; sourceTree = "<group>"; };
+		4C69660A1DA47BB4004FAE72 /* ProcessMinidump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessMinidump.cpp; sourceTree = "<group>"; };
 		4C73152119B7D71700F865A4 /* Iterable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Iterable.h; path = include/lldb/Utility/Iterable.h; sourceTree = "<group>"; };
 		4C7CF7E31295E10E00B4FBB5 /* ThreadPlanCallUserExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanCallUserExpression.h; path = include/lldb/Target/ThreadPlanCallUserExpression.h; sourceTree = "<group>"; };
 		4C7CF7E51295E12B00B4FBB5 /* ThreadPlanCallUserExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanCallUserExpression.cpp; path = source/Target/ThreadPlanCallUserExpression.cpp; sourceTree = "<group>"; };
@@ -3538,9 +3542,12 @@
 		23E2E5351D9048E7006F38BB /* minidump */ = {
 			isa = PBXGroup;
 			children = (
+				4C6966071DA47BB4004FAE72 /* ThreadMinidump.h */,
+				4C6966081DA47BB4004FAE72 /* ThreadMinidump.cpp */,
+				4C6966091DA47BB4004FAE72 /* ProcessMinidump.h */,
+				4C69660A1DA47BB4004FAE72 /* ProcessMinidump.cpp */,
 				AFD65C7F1D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp */,
 				AFD65C801D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h */,
-				23E2E5361D9048FB006F38BB /* CMakeLists.txt */,
 				23E2E5371D9048FB006F38BB /* MinidumpParser.cpp */,
 				23E2E5381D9048FB006F38BB /* MinidumpParser.h */,
 				23E2E5391D9048FB006F38BB /* MinidumpTypes.cpp */,
@@ -6431,7 +6438,6 @@
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */,
-				AFD65C821D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h in Headers */,
 				238F2BA11D2C835A001FF92A /* StructuredDataPlugin.h in Headers */,
 				AF415AE81D949E4400FCE0D4 /* x86AssemblyInspectionEngine.h in Headers */,
 				AF8AD62F1BEC28A400150209 /* PlatformAppleTVSimulator.h in Headers */,
@@ -7323,6 +7329,7 @@
 				268900CB13353E5F00698AC0 /* LogChannelDWARF.cpp in Sources */,
 				268900CC13353E5F00698AC0 /* SymbolFileDWARFDebugMap.cpp in Sources */,
 				268900CD13353E5F00698AC0 /* UniqueDWARFASTType.cpp in Sources */,
+				4C6966101DA47BCE004FAE72 /* ThreadMinidump.cpp in Sources */,
 				944372DC171F6B4300E57C32 /* RegisterContextDummy.cpp in Sources */,
 				4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */,
 				49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */,
@@ -7582,6 +7589,7 @@
 				23D0658F1D4A7BEE0008EDE6 /* RenderScriptExpressionOpts.cpp in Sources */,
 				945215DF17F639EE00521C0B /* ValueObjectPrinter.cpp in Sources */,
 				26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */,
+				4C6966111DA47BDB004FAE72 /* ProcessMinidump.cpp in Sources */,
 				AFD65C811D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp in Sources */,
 				260CC64815D0440D002BF2E0 /* OptionValueArgs.cpp in Sources */,
 				260CC64915D0440D002BF2E0 /* OptionValueArray.cpp in Sources */,
