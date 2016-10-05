@@ -16,5 +16,9 @@ SwiftVersions:
     Tags:
       - Name: MyErrorCode
         NSErrorDomain: ''
+    Typedefs:
+      - Name: MyDoubleWrapper
+        SwiftWrapper: none
+
 
   
