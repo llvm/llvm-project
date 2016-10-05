@@ -1271,7 +1271,22 @@ ConditionBRVisitor::VisitTerminator(const Stmt *Term,
                                     BugReporterContext &BRC) {
   const Expr *Cond = nullptr;
 
+  // In the code below, Term is a CFG terminator and Cond is a branch condition
+  // expression upon which the decision is made on this terminator.
+  //
+  // For example, in "if (x == 0)", the "if (x == 0)" statement is a terminator,
+  // and "x == 0" is the respective condition.
+  //
+  // Another example: in "if (x && y)", we've got two terminators and two
+  // conditions due to short-circuit nature of operator "&&":
+  // 1. The "if (x && y)" statement is a terminator,
+  //    and "y" is the respective condition.
+  // 2. Also "x && ..." is another terminator,
+  //    and "x" is its condition.
+
   switch (Term->getStmtClass()) {
+  // FIXME: Stmt::SwitchStmtClass is worth handling, however it is a bit
+  // more tricky because there are more than two branches to account for.
   default:
     return nullptr;
   case Stmt::IfStmtClass:
@@ -1280,6 +1295,24 @@ ConditionBRVisitor::VisitTerminator(const Stmt *Term,
   case Stmt::ConditionalOperatorClass:
     Cond = cast<ConditionalOperator>(Term)->getCond();
     break;
+  case Stmt::BinaryOperatorClass:
+    // When we encounter a logical operator (&& or ||) as a CFG terminator,
+    // then the condition is actually its LHS; otheriwse, we'd encounter
+    // the parent, such as if-statement, as a terminator.
+    const auto *BO = cast<BinaryOperator>(Term);
+    assert(BO->isLogicalOp() &&
+           "CFG terminator is not a short-circuit operator!");
+    Cond = BO->getLHS();
+    break;
+  }
+
+  // However, when we encounter a logical operator as a branch condition,
+  // then the condition is actually its RHS, because LHS would be
+  // the condition for the logical operator terminator.
+  while (const auto *InnerBO = dyn_cast<BinaryOperator>(Cond)) {
+    if (!InnerBO->isLogicalOp())
+      break;
+    Cond = InnerBO->getRHS()->IgnoreParens();
   }
 
   assert(Cond);
