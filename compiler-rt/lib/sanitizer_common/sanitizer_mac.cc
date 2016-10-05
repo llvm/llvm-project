@@ -80,7 +80,7 @@ extern "C" {
 
 // From <mach/mach_vm.h>, but we don't have that file on iOS.
 extern "C" {
-  extern kern_return_t mach_vm_region_recurse (
+  extern kern_return_t mach_vm_region_recurse(
     vm_map_t target_task,
     mach_vm_address_t *address,
     mach_vm_size_t *size,
