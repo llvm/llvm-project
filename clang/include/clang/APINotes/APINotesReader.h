@@ -175,7 +175,6 @@ public:
   /// \param name The name of the property we're looking for.
   /// \param isInstance Whether we are looking for an instance property (vs.
   /// a class property).
-  /// \param swiftVersion The Swift version to filter for, if any.
   ///
   /// \returns Information about the property, if known.
   VersionedInfo<ObjCPropertyInfo> lookupObjCProperty(ContextID contextID,
