@@ -14,23 +14,11 @@
 int
 main(int argc, char const *argv[])
 {
-    unsigned int rax, rbx, rcx, rdx;
-
-    // Check if XSAVE is enabled.
-    if (!__get_cpuid(1, &rax, &rbx, &rcx, &rdx) || (rcx & bit_OSXSAVE) != bit_OSXSAVE)
+    // This call returns 0 only if the CPU and the kernel support Intel(R) MPX.
+    if (prctl(PR_MPX_ENABLE_MANAGEMENT, 0, 0, 0, 0) != 0)
         return -1;
 
-    // Check if MPX is enabled.
-    if (__get_cpuid_max(0, NULL) > 7)
-    {
-        __cpuid_count(7, 0, rax, rbx, rcx, rdx);
-        if ((rbx & bit_MPX) != bit_MPX)
-            return -1;
-    }
-    else
-        return -1;
-
-// Run MPX test code.
+// Run Intel(R) MPX test code.
 #if defined(__x86_64__)
     asm("mov $16, %rax\n\t"
         "mov $9, %rdx\n\t"

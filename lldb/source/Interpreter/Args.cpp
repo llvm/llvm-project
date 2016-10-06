@@ -213,7 +213,7 @@ void Args::Dump(Stream &s, const char *label_name) const {
   int i = 0;
   for (auto &entry : m_entries) {
     s.Indent();
-    s.Printf("%s[%zi]=\"%*s\"\n", label_name, i++, entry.ref.size(),
+    s.Printf("%s[%zi]=\"%*s\"\n", label_name, i++, int(entry.ref.size()),
              entry.ref.data());
   }
   s.Printf("%s[%zi]=NULL\n", label_name, i);

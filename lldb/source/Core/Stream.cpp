@@ -97,12 +97,14 @@ size_t Stream::PutULEB128(uint64_t uval) {
 //------------------------------------------------------------------
 // Print a raw NULL terminated C string to the stream.
 //------------------------------------------------------------------
-size_t Stream::PutCString(const char *cstr) {
-  size_t cstr_len = strlen(cstr);
+size_t Stream::PutCString(llvm::StringRef str) {
+  size_t bytes_written = 0;
+  bytes_written = Write(str.data(), str.size());
+
   // when in binary mode, emit the NULL terminator
   if (m_flags.Test(eBinary))
-    ++cstr_len;
-  return Write(cstr, cstr_len);
+    bytes_written += PutChar('\0');
+  return bytes_written;
 }
 
 //------------------------------------------------------------------
