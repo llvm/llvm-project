@@ -607,7 +607,7 @@ namespace __sanitizer {
   typedef __sanitizer_sigset_t __sanitizer_kernel_sigset_t;
 #elif defined(__mips__)
   struct __sanitizer_kernel_sigset_t {
-    u8 sig[16];
+    uptr sig[2];
   };
 #else
   struct __sanitizer_kernel_sigset_t {
@@ -616,6 +616,17 @@ namespace __sanitizer {
 #endif
 
   // Linux system headers define the 'sa_handler' and 'sa_sigaction' macros.
+#if SANITIZER_MIPS
+  struct __sanitizer_kernel_sigaction_t {
+    unsigned int sa_flags;
+    union {
+      void (*handler)(int signo);
+      void (*sigaction)(int signo, void *info, void *ctx);
+    };
+    __sanitizer_kernel_sigset_t sa_mask;
+    void (*sa_restorer)(void);
+  };
+#else
   struct __sanitizer_kernel_sigaction_t {
     union {
       void (*handler)(int signo);
@@ -625,6 +636,7 @@ namespace __sanitizer {
     void (*sa_restorer)(void);
     __sanitizer_kernel_sigset_t sa_mask;
   };
+#endif
 
   extern uptr sig_ign;
   extern uptr sig_dfl;
