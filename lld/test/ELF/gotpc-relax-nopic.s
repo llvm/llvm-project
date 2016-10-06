@@ -49,7 +49,7 @@
 # SEC-PIC-NEXT:     0x20A0 R_X86_64_RELATIVE - 0x3000
 # SEC-PIC-NEXT:   }
 # SEC-PIC-NEXT: ]
-# SEC-PIC:      0x000000006FFFFFF9 RELACOUNT            1 
+# SEC-PIC:      0x000000006FFFFFF9 RELACOUNT            1
 
 ## Check that there was no relaxation performed. All values refer to got entry.
 ## Ex: 0x1000 + 4249 + 7 = 0x20A0

@@ -569,14 +569,11 @@ protected:
         return false;
       }
 
-      for (uint32_t arg_idx = 0; arg_idx < argc; ++arg_idx) {
-        const char *target_idx_arg = args.GetArgumentAtIndex(arg_idx);
-        bool success = false;
-        uint32_t target_idx =
-            StringConvert::ToUInt32(target_idx_arg, UINT32_MAX, 0, &success);
-        if (!success) {
+      for (auto &entry : args.entries()) {
+        uint32_t target_idx;
+        if (entry.ref.getAsInteger(0, target_idx)) {
           result.AppendErrorWithFormat("invalid target index '%s'\n",
-                                       target_idx_arg);
+                                       entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
@@ -799,6 +796,8 @@ protected:
 
     if (argc > 0) {
 
+      // TODO: Convert to entry-based iteration.  Requires converting
+      // DumpValueObject.
       for (size_t idx = 0; idx < argc; ++idx) {
         VariableList variable_list;
         ValueObjectList valobj_list;
@@ -2479,48 +2478,48 @@ protected:
           return false;
         }
       } else {
-        for (size_t i = 0; i < argc; ++i) {
-          const char *path = args.GetArgumentAtIndex(i);
-          if (path) {
-            FileSpec file_spec(path, true);
-            if (file_spec.Exists()) {
-              ModuleSpec module_spec(file_spec);
-              if (m_uuid_option_group.GetOptionValue().OptionWasSet())
-                module_spec.GetUUID() =
-                    m_uuid_option_group.GetOptionValue().GetCurrentValue();
-              if (m_symbol_file.GetOptionValue().OptionWasSet())
-                module_spec.GetSymbolFileSpec() =
-                    m_symbol_file.GetOptionValue().GetCurrentValue();
-              if (!module_spec.GetArchitecture().IsValid())
-                module_spec.GetArchitecture() = target->GetArchitecture();
-              Error error;
-              ModuleSP module_sp(target->GetSharedModule(module_spec, &error));
-              if (!module_sp) {
-                const char *error_cstr = error.AsCString();
-                if (error_cstr)
-                  result.AppendError(error_cstr);
-                else
-                  result.AppendErrorWithFormat("unsupported module: %s", path);
-                result.SetStatus(eReturnStatusFailed);
-                return false;
-              } else {
-                flush = true;
-              }
-              result.SetStatus(eReturnStatusSuccessFinishResult);
-            } else {
-              char resolved_path[PATH_MAX];
+        for (auto &entry : args.entries()) {
+          if (entry.ref.empty())
+            continue;
+
+          FileSpec file_spec(entry.ref, true);
+          if (file_spec.Exists()) {
+            ModuleSpec module_spec(file_spec);
+            if (m_uuid_option_group.GetOptionValue().OptionWasSet())
+              module_spec.GetUUID() =
+                  m_uuid_option_group.GetOptionValue().GetCurrentValue();
+            if (m_symbol_file.GetOptionValue().OptionWasSet())
+              module_spec.GetSymbolFileSpec() =
+                  m_symbol_file.GetOptionValue().GetCurrentValue();
+            if (!module_spec.GetArchitecture().IsValid())
+              module_spec.GetArchitecture() = target->GetArchitecture();
+            Error error;
+            ModuleSP module_sp(target->GetSharedModule(module_spec, &error));
+            if (!module_sp) {
+              const char *error_cstr = error.AsCString();
+              if (error_cstr)
+                result.AppendError(error_cstr);
+              else
+                result.AppendErrorWithFormat("unsupported module: %s",
+                                             entry.c_str());
               result.SetStatus(eReturnStatusFailed);
-              if (file_spec.GetPath(resolved_path, sizeof(resolved_path))) {
-                if (strcmp(resolved_path, path) != 0) {
-                  result.AppendErrorWithFormat(
-                      "invalid module path '%s' with resolved path '%s'\n",
-                      path, resolved_path);
-                  break;
-                }
-              }
-              result.AppendErrorWithFormat("invalid module path '%s'\n", path);
+              return false;
+            } else {
+              flush = true;
+            }
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+          } else {
+            std::string resolved_path = file_spec.GetPath();
+            result.SetStatus(eReturnStatusFailed);
+            if (resolved_path != entry.ref) {
+              result.AppendErrorWithFormat(
+                  "invalid module path '%s' with resolved path '%s'\n",
+                  entry.ref.str().c_str(), resolved_path.c_str());
               break;
             }
+            result.AppendErrorWithFormat("invalid module path '%s'\n",
+                                         entry.c_str());
+            break;
           }
         }
       }
@@ -2921,6 +2920,8 @@ protected:
           module_list_ptr = &target->GetImages();
         }
       } else {
+        // TODO: Convert to entry based iteration.  Requires converting
+        // FindModulesByName.
         for (size_t i = 0; i < argc; ++i) {
           // Dump specified images (by basename or fullpath)
           const char *arg_cstr = command.GetArgumentAtIndex(i);
@@ -4226,10 +4227,9 @@ protected:
       } else {
         PlatformSP platform_sp(target->GetPlatform());
 
-        for (size_t i = 0; i < argc; ++i) {
-          const char *symfile_path = args.GetArgumentAtIndex(i);
-          if (symfile_path) {
-            module_spec.GetSymbolFileSpec().SetFile(symfile_path, true);
+        for (auto &entry : args.entries()) {
+          if (!entry.ref.empty()) {
+            module_spec.GetSymbolFileSpec().SetFile(entry.ref, true);
             if (platform_sp) {
               FileSpec symfile_spec;
               if (platform_sp
@@ -4245,18 +4245,16 @@ protected:
               if (!AddModuleSymbols(target, module_spec, flush, result))
                 break;
             } else {
-              char resolved_symfile_path[PATH_MAX];
-              if (module_spec.GetSymbolFileSpec().GetPath(
-                      resolved_symfile_path, sizeof(resolved_symfile_path))) {
-                if (strcmp(resolved_symfile_path, symfile_path) != 0) {
-                  result.AppendErrorWithFormat(
-                      "invalid module path '%s' with resolved path '%s'\n",
-                      symfile_path, resolved_symfile_path);
-                  break;
-                }
+              std::string resolved_symfile_path =
+                  module_spec.GetSymbolFileSpec().GetPath();
+              if (resolved_symfile_path != entry.ref) {
+                result.AppendErrorWithFormat(
+                    "invalid module path '%s' with resolved path '%s'\n",
+                    entry.c_str(), resolved_symfile_path.c_str());
+                break;
               }
               result.AppendErrorWithFormat("invalid module path '%s'\n",
-                                           symfile_path);
+                                           entry.c_str());
               break;
             }
           }

@@ -1,5 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/keep.s -o %t2.o
 
 ## First check that section "keep" is garbage collected without using KEEP
 # RUN: echo "SECTIONS { \
@@ -68,6 +69,16 @@
 # MIXED2-NEXT:   4 .symtab       00000060 0000000000000000
 # MIXED2-NEXT:   5 .shstrtab     0000002f 0000000000000000
 # MIXED2-NEXT:   6 .strtab       00000012 0000000000000000
+
+# Check file pattern for kept sections.
+# RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
+# RUN:  .keep : { KEEP(*2.o(.keep)) } \
+# RUN:  }" > %t.script
+# RUN: ld.lld --gc-sections -o %t1 --script %t.script %t2.o %t
+# RUN: llvm-objdump -s %t1 | FileCheck -check-prefix=FILEMATCH %s
+# FILEMATCH:        Contents of section .keep:
+# FILEMATCH-NEXT:   00e8 41414141  AAAA
 
 .global _start
 _start:

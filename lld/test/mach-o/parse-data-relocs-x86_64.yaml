@@ -60,7 +60,7 @@ sections:
     type:            S_REGULAR
     attributes:      [  ]
     address:         0x000000000000000A
-    content:         [ 
+    content:         [
 #  .quad   _foo
 # No addend is needed here as we are referencing _foo directly and that is
 # encoded entirely in the X86_64_RELOC_UNSIGNED
@@ -301,7 +301,7 @@ page-size:       0x00000000
 ...
 
 
-# CHECK:defined-atoms:   
+# CHECK:defined-atoms:
 # CHECK:  - name:            _d
 # CHECK:    type:            data
 # CHECK:    content:         [ 00, 00, 00, 00, 00, 00, 00, 00, 04, 00, 00, 00,
@@ -313,7 +313,7 @@ page-size:       0x00000000
 # CHECK:                       B8, FF, FF, FF, B4, FF, FF, FF, B4, FF, FF, FF,
 # CHECK:                       {{..}}, {{..}}, {{..}}, {{..}} ]
 # CHECK:    dead-strip:      never
-# CHECK:    references:      
+# CHECK:    references:
 # CHECK:      - kind:            pointer64
 # CHECK:        offset:          0
 # CHECK:        target:          _foo

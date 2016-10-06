@@ -26,10 +26,12 @@ class LinuxCoreTestCase(TestBase):
     _x86_64_regions = 5
     _s390x_regions = 2
 
+    @skipIf(oslist=['windows'])
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("i386", self._i386_pid, self._i386_regions)
 
+    @skipIf(oslist=['windows'])
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("x86_64", self._x86_64_pid, self._x86_64_regions)
@@ -41,6 +43,7 @@ class LinuxCoreTestCase(TestBase):
         """Test that lldb can read the process information from an s390x linux core file."""
         self.do_test("s390x", self._s390x_pid, self._s390x_regions)
 
+    @skipIf(oslist=['windows'])
     def test_same_pid_running(self):
         """Test that we read the information from the core correctly even if we have a running
         process with the same PID around"""
@@ -68,6 +71,7 @@ class LinuxCoreTestCase(TestBase):
             self.RemoveTempFile("x86_64-pid.out")
             self.RemoveTempFile("x86_64-pid.core")
 
+    @skipIf(oslist=['windows'])
     def test_two_cores_same_pid(self):
         """Test that we handle the situation if we have two core files with the same PID
         around"""

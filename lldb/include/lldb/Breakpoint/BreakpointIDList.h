@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <utility>
 #include <vector>
 
 // Other libraries and framework includes
@@ -28,6 +29,7 @@ namespace lldb_private {
 
 class BreakpointIDList {
 public:
+  // TODO: Convert this class to StringRef.
   typedef std::vector<BreakpointID> BreakpointIDArray;
 
   BreakpointIDList();
@@ -46,6 +48,7 @@ public:
 
   bool AddBreakpointID(const char *bp_id);
 
+  // TODO: This should take a const BreakpointID.
   bool FindBreakpointID(BreakpointID &bp_id, size_t *position) const;
 
   bool FindBreakpointID(const char *bp_id, size_t *position) const;
@@ -53,9 +56,11 @@ public:
   void InsertStringArray(const char **string_array, size_t array_size,
                          CommandReturnObject &result);
 
-  static bool StringContainsIDRangeExpression(const char *in_string,
-                                              size_t *range_start_len,
-                                              size_t *range_end_pos);
+  // Returns a pair consisting of the beginning and end of a breakpoint
+  // ID range expression.  If the input string is not a valid specification,
+  // returns an empty pair.
+  static std::pair<llvm::StringRef, llvm::StringRef>
+  SplitIDRangeExpression(llvm::StringRef in_string);
 
   static void FindAndReplaceIDRanges(Args &old_args, Target *target,
                                      bool allow_locations,

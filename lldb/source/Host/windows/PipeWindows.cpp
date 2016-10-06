@@ -134,7 +134,7 @@ Error PipeWindows::OpenNamedPipe(llvm::StringRef name,
 
   assert(is_read ? !CanRead() : !CanWrite());
 
-  SECURITY_ATTRIBUTES attributes = {0};
+  SECURITY_ATTRIBUTES attributes = {};
   attributes.bInheritHandle = child_process_inherit;
 
   std::string pipe_path = "\\\\.\\Pipe\\";

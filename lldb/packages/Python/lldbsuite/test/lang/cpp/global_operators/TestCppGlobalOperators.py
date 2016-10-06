@@ -89,6 +89,7 @@ class TestCppGlobalOperators(TestBase):
         self.assertTrue(got_type.IsPointerType())
         self.assertEqual(got_type.GetPointeeType().GetName(), "Struct")
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_operator_new(self):
         frame = self.prepare_executable_and_get_frame()
 

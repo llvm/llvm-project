@@ -770,28 +770,22 @@ public:
             process->GetThreadList().GetMutex());
         const uint32_t num_threads = process->GetThreadList().GetSize();
         std::vector<Thread *> resume_threads;
-        for (uint32_t i = 0; i < argc; ++i) {
-          bool success;
-          const int base = 0;
-          uint32_t thread_idx =
-              StringConvert::ToUInt32(command.GetArgumentAtIndex(i),
-                                      LLDB_INVALID_INDEX32, base, &success);
-          if (success) {
-            Thread *thread =
-                process->GetThreadList().FindThreadByIndexID(thread_idx).get();
-
-            if (thread) {
-              resume_threads.push_back(thread);
-            } else {
-              result.AppendErrorWithFormat("invalid thread index %u.\n",
-                                           thread_idx);
-              result.SetStatus(eReturnStatusFailed);
-              return false;
-            }
-          } else {
+        for (auto &entry : command.entries()) {
+          uint32_t thread_idx;
+          if (entry.ref.getAsInteger(0, thread_idx)) {
             result.AppendErrorWithFormat(
-                "invalid thread index argument: \"%s\".\n",
-                command.GetArgumentAtIndex(i));
+                "invalid thread index argument: \"%s\".\n", entry.c_str());
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+          }
+          Thread *thread =
+              process->GetThreadList().FindThreadByIndexID(thread_idx).get();
+
+          if (thread) {
+            resume_threads.push_back(thread);
+          } else {
+            result.AppendErrorWithFormat("invalid thread index %u.\n",
+                                         thread_idx);
             result.SetStatus(eReturnStatusFailed);
             return false;
           }

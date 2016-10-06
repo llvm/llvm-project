@@ -1037,11 +1037,10 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
 
-    const size_t argc = command.GetArgumentCount();
-    for (uint32_t i = 0; i < argc; ++i) {
+    for (auto &entry : command.entries()) {
       Error error;
       PlatformSP platform = process->GetTarget().GetPlatform();
-      const char *image_path = command.GetArgumentAtIndex(i);
+      llvm::StringRef image_path = entry.ref;
       uint32_t image_token = LLDB_INVALID_IMAGE_TOKEN;
 
       if (!m_options.do_install) {
@@ -1063,10 +1062,12 @@ protected:
 
       if (image_token != LLDB_INVALID_IMAGE_TOKEN) {
         result.AppendMessageWithFormat(
-            "Loading \"%s\"...ok\nImage %u loaded.\n", image_path, image_token);
+            "Loading \"%s\"...ok\nImage %u loaded.\n", image_path.str().c_str(),
+            image_token);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendErrorWithFormat("failed to load '%s': %s", image_path,
+        result.AppendErrorWithFormat("failed to load '%s': %s",
+                                     image_path.str().c_str(),
                                      error.AsCString());
         result.SetStatus(eReturnStatusFailed);
       }
@@ -1099,15 +1100,11 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
 
-    const size_t argc = command.GetArgumentCount();
-
-    for (uint32_t i = 0; i < argc; ++i) {
-      const char *image_token_cstr = command.GetArgumentAtIndex(i);
-      uint32_t image_token = StringConvert::ToUInt32(
-          image_token_cstr, LLDB_INVALID_IMAGE_TOKEN, 0);
-      if (image_token == LLDB_INVALID_IMAGE_TOKEN) {
+    for (auto &entry : command.entries()) {
+      uint32_t image_token;
+      if (entry.ref.getAsInteger(0, image_token)) {
         result.AppendErrorWithFormat("invalid image index argument '%s'",
-                                     image_token_cstr);
+                                     entry.ref.str().c_str());
         result.SetStatus(eReturnStatusFailed);
         break;
       } else {

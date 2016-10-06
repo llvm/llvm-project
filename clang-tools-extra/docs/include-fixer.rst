@@ -121,26 +121,19 @@ in your ``.emacs``:
  (add-to-list 'load-path "path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/"
  (require 'clang-include-fixer)
 
-Within Emacs the tool can be invoked with the command ``M-x clang-include-fixer``.
+Within Emacs the tool can be invoked with the command
+``M-x clang-include-fixer``.  This will insert the header that defines the
+first undefined symbol; if there is more than one header that would define the
+symbol, the user is prompted to select one.
+
+To include the header that defines the symbol at point, run
+``M-x clang-include-fixer-at-point``.
 
 Make sure Emacs can find :program:`clang-include-fixer`:
 
-- Add the path to :program:`clang-include-fixer` to the PATH environment variable.
-
-Customized settings in `.emacs`:
-
-- ``(custom-set-variables '(clang-include-fixer-executable "/path/to/include-fixer"))``
-
-  Set clang-include-fixer binary file path.
-
-- ``(custom-set-variables '(clang-include-fixer-query-mode t))``
-
-  Set to `t` if you want to insert ``#include`` for the symbol under the cursor.
-  Default is `nil`. Compared to normal mode, this mode won't parse the source
-  file and only search the sysmbol from database, which is faster than normal
-  mode.
-
-See ``clang-include-fixer.el`` for more details.
+- Either add the parent directory of :program:`clang-include-fixer` to the PATH
+  environment variable, or customize the Emacs user option
+  ``clang-include-fixer-executable`` to point to the file name of the program.
 
 How it Works
 ============

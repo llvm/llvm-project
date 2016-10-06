@@ -21,7 +21,7 @@ Error fileLock(HANDLE file_handle, DWORD flags, const uint64_t start,
   if (start != 0)
     return Error("Non-zero start lock regions are not supported");
 
-  OVERLAPPED overlapped = {0};
+  OVERLAPPED overlapped = {};
 
   if (!::LockFileEx(file_handle, flags, 0, len, 0, &overlapped) &&
       ::GetLastError() != ERROR_IO_PENDING)
@@ -64,7 +64,7 @@ Error LockFileWindows::DoTryReadLock(const uint64_t start, const uint64_t len) {
 }
 
 Error LockFileWindows::DoUnlock() {
-  OVERLAPPED overlapped = {0};
+  OVERLAPPED overlapped = {};
 
   if (!::UnlockFileEx(m_file, 0, m_len, 0, &overlapped) &&
       ::GetLastError() != ERROR_IO_PENDING)

@@ -441,6 +441,7 @@ public:
   ///     output the indentation characters.
   //------------------------------------------------------------------
   size_t Indent(const char *s = nullptr);
+  size_t Indent(llvm::StringRef s);
 
   //------------------------------------------------------------------
   /// Decrement the current indentation level.

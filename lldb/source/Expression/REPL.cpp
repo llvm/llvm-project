@@ -552,7 +552,7 @@ Error REPL::RunLoop() {
     // dedicated REPL mode...
     m_dedicated_repl_mode = true;
     debugger.StartIOHandlerThread();
-    std::string command_name_str("quit");
+    llvm::StringRef command_name_str("quit");
     CommandObject *cmd_obj =
         debugger.GetCommandInterpreter().GetCommandObjectForCommand(
             command_name_str);

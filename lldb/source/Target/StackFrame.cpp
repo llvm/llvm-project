@@ -1279,6 +1279,7 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
     }
   }
   }
+  return std::make_pair(nullptr, 0);
 }
 
 std::pair<const Instruction::Operand *, int64_t>

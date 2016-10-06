@@ -1,5 +1,4 @@
-//===-- CommandAlias.cpp ------------------------------------------*- C++
-//-*-===//
+//===-- CommandAlias.cpp -----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,16 +21,16 @@ using namespace lldb;
 using namespace lldb_private;
 
 static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
-                                    const char *options_args,
+                                    llvm::StringRef options_args,
                                     OptionArgVectorSP &option_arg_vector_sp) {
   bool success = true;
   OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
 
-  if (!options_args || (strlen(options_args) < 1))
+  if (options_args.size() < 1)
     return true;
 
-  std::string options_string(options_args);
   Args args(options_args);
+  std::string options_string(options_args);
   CommandReturnObject result;
   // Check to see if the command being aliased can take any command options.
   Options *options = cmd_obj_sp->GetOptions();
@@ -42,7 +41,8 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
         cmd_obj_sp->GetCommandInterpreter().GetExecutionContext();
     options->NotifyOptionParsingStarting(&exe_ctx);
     args.Unshift(llvm::StringRef("dummy_arg"));
-    args.ParseAliasOptions(*options, result, option_arg_vector, options_string);
+    options_string = args.ParseAliasOptions(*options, result, option_arg_vector,
+                                            options_args);
     args.Shift();
     if (result.Succeeded())
       options->VerifyPartialOptions(result);
@@ -57,11 +57,10 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
     if (cmd_obj_sp->WantsRawCommandString())
       option_arg_vector->emplace_back("<argument>", -1, options_string);
     else {
-      const size_t argc = args.GetArgumentCount();
-      for (size_t i = 0; i < argc; ++i)
-        if (strcmp(args.GetArgumentAtIndex(i), "") != 0)
-          option_arg_vector->emplace_back("<argument>", -1,
-                                          args.GetArgumentAtIndex(i));
+      for (auto &entry : args.entries()) {
+        if (!entry.ref.empty())
+          option_arg_vector->emplace_back("<argument>", -1, entry.ref);
+      }
     }
   }
 
@@ -70,11 +69,11 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
 
 CommandAlias::CommandAlias(CommandInterpreter &interpreter,
                            lldb::CommandObjectSP cmd_sp,
-                           const char *options_args, const char *name,
-                           const char *help, const char *syntax, uint32_t flags)
+                           llvm::StringRef options_args, llvm::StringRef name,
+                           llvm::StringRef help, llvm::StringRef syntax,
+                           uint32_t flags)
     : CommandObject(interpreter, name, help, syntax, flags),
-      m_underlying_command_sp(),
-      m_option_string(options_args ? options_args : ""),
+      m_underlying_command_sp(), m_option_string(options_args),
       m_option_args_sp(new OptionArgVector),
       m_is_dashdash_alias(eLazyBoolCalculate), m_did_set_help(false),
       m_did_set_help_long(false) {
@@ -85,7 +84,7 @@ CommandAlias::CommandAlias(CommandInterpreter &interpreter,
          i++) {
       m_arguments.push_back(*cmd_entry);
     }
-    if (!help || !help[0]) {
+    if (!help.empty()) {
       StreamString sstr;
       StreamString translation_and_help;
       GetAliasExpansion(sstr);
@@ -143,9 +142,9 @@ bool CommandAlias::Execute(const char *args_string,
   llvm_unreachable("CommandAlias::Execute is not to be called");
 }
 
-void CommandAlias::GetAliasExpansion(StreamString &help_string) {
-  const char *command_name = m_underlying_command_sp->GetCommandName();
-  help_string.Printf("'%s", command_name);
+void CommandAlias::GetAliasExpansion(StreamString &help_string) const {
+  llvm::StringRef command_name = m_underlying_command_sp->GetCommandName();
+  help_string.Printf("'%*s", (int)command_name.size(), command_name.data());
 
   if (!m_option_args_sp) {
     help_string.Printf("'");
