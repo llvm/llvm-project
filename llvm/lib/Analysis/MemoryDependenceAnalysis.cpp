@@ -180,7 +180,7 @@ MemDepResult MemoryDependenceResults::getCallSiteDependencyFrom(
     BasicBlock *BB) {
   unsigned Limit = BlockScanLimit;
 
-  // Walk backwards through the block, looking for dependencies
+  // Walk backwards through the block, looking for dependencies.
   while (ScanIt != BB->begin()) {
     // Limit the amount of scanning we do so we don't end up with quadratic
     // running time on extreme testcases.

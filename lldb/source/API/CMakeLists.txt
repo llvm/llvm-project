@@ -78,6 +78,14 @@ add_lldb_library(liblldb SHARED
   ${LLDB_WRAP_PYTHON}
   )
 
+if (LLVM_ENABLE_WERROR)
+  if (MSVC)
+    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
+  else()
+    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
+  endif()
+endif()
+
 # This should not be part of LLDBDependencies.cmake, because we don't
 # want every single library taking a dependency on the script interpreters.
 target_link_libraries(liblldb PRIVATE

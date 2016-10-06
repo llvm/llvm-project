@@ -206,7 +206,7 @@ Error ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch) {
   ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
-        "NT_PRSTATUS size should be %lu, but the remaining bytes are: %" PRIu64,
+        "NT_PRSTATUS size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;
   }
@@ -271,7 +271,7 @@ Error ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch) {
   ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
-        "NT_PRPSINFO size should be %lu, but the remaining bytes are: %" PRIu64,
+        "NT_PRPSINFO size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;
   }

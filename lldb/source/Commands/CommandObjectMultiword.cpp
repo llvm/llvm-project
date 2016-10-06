@@ -143,7 +143,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
         }
       } else {
         result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
-                                     GetCommandName());
+                                     GetCommandName().str().c_str());
         result.SetStatus(eReturnStatusFailed);
       }
     }

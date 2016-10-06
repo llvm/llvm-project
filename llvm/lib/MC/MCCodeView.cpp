@@ -358,6 +358,13 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   SmallVectorImpl<char> &Buffer = Frag.getContents();
   Buffer.clear(); // Clear old contents if we went through relaxation.
   for (const MCCVLineEntry &Loc : Locs) {
+    // Exit early if our line table would produce an oversized InlineSiteSym
+    // record. Account for the ChangeCodeLength annotation emitted after the
+    // loop ends.
+    size_t MaxBufferSize = MaxRecordLength - sizeof(InlineSiteSym::Hdr) - 8;
+    if (Buffer.size() >= MaxBufferSize)
+      break;
+
     if (Loc.getFunctionId() == Frag.SiteFuncId) {
       CurSourceLoc.File = Loc.getFileNum();
       CurSourceLoc.Line = Loc.getLine();

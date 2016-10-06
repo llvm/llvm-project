@@ -27,6 +27,8 @@ template <typename T> struct CountedSet {
   }
 
   size_t count(const T &Item) const { return S.count(Item); }
+  
+  void completed(T) { }
 };
 
 template <typename T> class df_iterator_storage<CountedSet<T>, true> {

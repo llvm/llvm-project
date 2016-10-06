@@ -34,9 +34,11 @@ struct InputInfo {
 
 class InputCorpus {
  public:
+  static const size_t kFeatureSetSize = 1 << 16;
   InputCorpus() {
     Inputs.reserve(1 << 14);  // Avoid too many resizes.
-    memset(FeatureSet, 0, sizeof(FeatureSet));
+    memset(InputSizesPerFeature, 0, sizeof(InputSizesPerFeature));
+    memset(SmallestElementPerFeature, 0, sizeof(SmallestElementPerFeature));
   }
   size_t size() const { return Inputs.size(); }
   size_t SizeInBytes() const {
@@ -53,17 +55,20 @@ class InputCorpus {
   }
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx].U; }
-  void AddToCorpus(const Unit &U) {
+  void AddToCorpus(const Unit &U, size_t NumFeatures) {
     assert(!U.empty());
     uint8_t Hash[kSHA1NumBytes];
+    if (FeatureDebug)
+      Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
     ComputeSHA1(U.data(), U.size(), Hash);
-    if (!Hashes.insert(Sha1ToString(Hash)).second) return;
+    Hashes.insert(Sha1ToString(Hash));
     Inputs.push_back(InputInfo());
     InputInfo &II = Inputs.back();
     II.U = U;
+    II.NumFeatures = NumFeatures;
     memcpy(II.Sha1, Hash, kSHA1NumBytes);
-    UpdateFeatureSet(Inputs.size() - 1);
     UpdateCorpusDistribution();
+    ValidateFeatureSet();
   }
 
   typedef const std::vector<InputInfo>::const_iterator ConstIter;
@@ -97,12 +102,9 @@ class InputCorpus {
   }
 
   void PrintFeatureSet() {
-    Printf("Features [id: idx sz] ");
     for (size_t i = 0; i < kFeatureSetSize; i++) {
-      auto &Fe = FeatureSet[i];
-      if (!Fe.Count) continue;
-      Printf("[%zd: %zd %zd] ", i, Fe.SmallestElementIdx,
-             Fe.SmallestElementSize);
+      if(size_t Sz = GetFeature(i))
+        Printf("[%zd: id %zd sz%zd] ", i, SmallestElementPerFeature[i], Sz);
     }
     Printf("\n\t");
     for (size_t i = 0; i < Inputs.size(); i++)
@@ -111,55 +113,57 @@ class InputCorpus {
     Printf("\n");
   }
 
+  bool AddFeature(size_t Idx, uint32_t NewSize, bool Shrink) {
+    assert(NewSize);
+    Idx = Idx % kFeatureSetSize;
+    uint32_t OldSize = GetFeature(Idx);
+    if (OldSize == 0 || (Shrink && OldSize > NewSize)) {
+      if (OldSize > 0) {
+        InputInfo &II = Inputs[SmallestElementPerFeature[Idx]];
+        assert(II.NumFeatures > 0);
+        II.NumFeatures--;
+        if (II.NumFeatures == 0) {
+          Unit().swap(II.U);
+          if (FeatureDebug)
+            Printf("EVICTED %zd\n", SmallestElementPerFeature[Idx]);
+        }
+      }
+      if (FeatureDebug)
+        Printf("ADD FEATURE %zd sz %d\n", Idx, NewSize);
+      SmallestElementPerFeature[Idx] = Inputs.size();
+      InputSizesPerFeature[Idx] = NewSize;
+      CountingFeatures = true;
+      return true;
+    }
+    return false;
+  }
+
+  size_t NumFeatures() const {
+    size_t Res = 0;
+    for (size_t i = 0; i < kFeatureSetSize; i++)
+      Res += GetFeature(i) != 0;
+    return Res;
+  }
+
 private:
 
   static const bool FeatureDebug = false;
-  static const size_t kFeatureSetSize = TracePC::kFeatureSetSize;
+
+  size_t GetFeature(size_t Idx) const { return InputSizesPerFeature[Idx]; }
 
   void ValidateFeatureSet() {
-    for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++) {
-      Feature &Fe = FeatureSet[Idx];
-      if(Fe.Count && Fe.SmallestElementSize)
-        Inputs[Fe.SmallestElementIdx].Tmp++;
-    }
+    if (!CountingFeatures) return;
+    if (FeatureDebug)
+      PrintFeatureSet();
+    for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++)
+      if (GetFeature(Idx))
+        Inputs[SmallestElementPerFeature[Idx]].Tmp++;
     for (auto &II: Inputs) {
+      if (II.Tmp != II.NumFeatures)
+        Printf("ZZZ %zd %zd\n", II.Tmp, II.NumFeatures);
       assert(II.Tmp == II.NumFeatures);
       II.Tmp = 0;
     }
-  }
-
-  void UpdateFeatureSet(size_t CurrentElementIdx) {
-    auto &II = Inputs[CurrentElementIdx];
-    size_t Size = II.U.size();
-    if (!Size)
-      return;
-    bool Updated = false;
-    for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++) {
-      if (!TPC.HasFeature(Idx))
-        continue;
-      Feature &Fe = FeatureSet[Idx];
-      Fe.Count++;
-      if (!Fe.SmallestElementSize ||
-          Fe.SmallestElementSize > Size) {
-        II.NumFeatures++;
-        CountingFeatures = true;
-        if (Fe.SmallestElementSize > Size) {
-          auto &OlderII = Inputs[Fe.SmallestElementIdx];
-          assert(OlderII.NumFeatures > 0);
-          OlderII.NumFeatures--;
-          if (!OlderII.NumFeatures) {
-            OlderII.U.clear();  // Will be never used again.
-            if (FeatureDebug)
-              Printf("EVICTED %zd\n", Fe.SmallestElementIdx);
-          }
-        }
-        Fe.SmallestElementIdx = CurrentElementIdx;
-        Fe.SmallestElementSize = Size;
-        Updated = true;
-      }
-    }
-    if (Updated && FeatureDebug) PrintFeatureSet();
-    ValidateFeatureSet();
   }
 
   // Updates the probability distribution for the units in the corpus.
@@ -185,13 +189,9 @@ private:
   std::unordered_set<std::string> Hashes;
   std::vector<InputInfo> Inputs;
 
-  struct Feature {
-    size_t Count;
-    size_t SmallestElementIdx;
-    size_t SmallestElementSize;
-  };
   bool CountingFeatures = false;
-  Feature FeatureSet[kFeatureSetSize];
+  uint32_t InputSizesPerFeature[kFeatureSetSize];
+  uint32_t SmallestElementPerFeature[kFeatureSetSize];
 };
 
 }  // namespace fuzzer

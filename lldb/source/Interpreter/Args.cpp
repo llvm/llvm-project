@@ -25,6 +25,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
@@ -275,7 +276,7 @@ void Args::UpdateArgsAfterOptionParsing() {
   // This happens because getopt_long_only may permute the order of the
   // arguments in argv, so we need to re-order the quotes and the refs array
   // to match.
-  for (int i = 0; i < m_argv.size() - 1; ++i) {
+  for (size_t i = 0; i < m_argv.size() - 1; ++i) {
     const char *argv = m_argv[i];
     auto pos =
         std::find_if(m_entries.begin() + i, m_entries.end(),
@@ -352,8 +353,8 @@ void Args::AppendArguments(const char **argv) {
   assert(m_argv.size() == m_entries.size() + 1);
   assert(m_argv.back() == nullptr);
   m_argv.pop_back();
-  for (int i = 0; i < argc; ++i) {
-    m_entries.emplace_back(argv[i], '\0');
+  for (auto arg : llvm::makeArrayRef(argv, argc)) {
+    m_entries.emplace_back(arg, '\0');
     m_argv.push_back(m_entries.back().data());
   }
 
@@ -412,7 +413,7 @@ void Args::SetArguments(size_t argc, const char **argv) {
   auto args = llvm::makeArrayRef(argv, argc);
   m_entries.resize(argc);
   m_argv.resize(argc + 1);
-  for (int i = 0; i < args.size(); ++i) {
+  for (size_t i = 0; i < args.size(); ++i) {
     char quote =
         ((args[i][0] == '\'') || (args[i][0] == '"') || (args[i][0] == '`'))
             ? args[i][0]
@@ -925,16 +926,15 @@ bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
     return false;
 
   // Check each arg to see if it matches the env var name.
-  for (size_t i = 0; i < GetArgumentCount(); ++i) {
-    auto arg_value = llvm::StringRef::withNullAsEmpty(GetArgumentAtIndex(i));
-
+  for (auto arg : llvm::enumerate(m_entries)) {
     llvm::StringRef name, value;
-    std::tie(name, value) = arg_value.split('=');
-    if (name == env_var_name) {
-      if (argument_index)
-        *argument_index = i;
-      return true;
-    }
+    std::tie(name, value) = arg.Value.ref.split('=');
+    if (name != env_var_name)
+      continue;
+
+    if (argument_index)
+      *argument_index = arg.Index;
+    return true;
   }
 
   // We didn't find a match.
@@ -942,26 +942,21 @@ bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
 }
 
 size_t Args::FindArgumentIndexForOption(Option *long_options,
-                                        int long_options_index) {
+                                        int long_options_index) const {
   char short_buffer[3];
   char long_buffer[255];
   ::snprintf(short_buffer, sizeof(short_buffer), "-%c",
              long_options[long_options_index].val);
   ::snprintf(long_buffer, sizeof(long_buffer), "--%s",
              long_options[long_options_index].definition->long_option);
-  size_t end = GetArgumentCount();
-  size_t idx = 0;
-  while (idx < end) {
-    if ((::strncmp(GetArgumentAtIndex(idx), short_buffer,
-                   strlen(short_buffer)) == 0) ||
-        (::strncmp(GetArgumentAtIndex(idx), long_buffer, strlen(long_buffer)) ==
-         0)) {
-      return idx;
-    }
-    ++idx;
+
+  for (auto entry : llvm::enumerate(m_entries)) {
+    if (entry.Value.ref.startswith(short_buffer) ||
+        entry.Value.ref.startswith(long_buffer))
+      return entry.Index;
   }
 
-  return end;
+  return size_t(-1);
 }
 
 bool Args::IsPositionalArgument(const char *arg) {
@@ -983,9 +978,11 @@ bool Args::IsPositionalArgument(const char *arg) {
   return is_positional;
 }
 
-void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
-                             OptionArgVector *option_arg_vector,
-                             std::string &raw_input_string) {
+std::string Args::ParseAliasOptions(Options &options,
+                                    CommandReturnObject &result,
+                                    OptionArgVector *option_arg_vector,
+                                    llvm::StringRef raw_input_string) {
+  std::string result_string(raw_input_string);
   StreamString sstr;
   int i;
   Option *long_options = options.GetLongOptions();
@@ -993,7 +990,7 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
   if (long_options == nullptr) {
     result.AppendError("invalid long options");
     result.SetStatus(eReturnStatusFailed);
-    return;
+    return result_string;
   }
 
   for (i = 0; long_options[i].definition != nullptr; ++i) {
@@ -1053,7 +1050,7 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
     if (long_options_index == -1) {
       result.AppendErrorWithFormat("Invalid option with value '%c'.\n", val);
       result.SetStatus(eReturnStatusFailed);
-      return;
+      return result_string;
     }
 
     StreamString option_str;
@@ -1070,7 +1067,7 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
             "Option '%s' is missing argument specifier.\n",
             option_str.GetData());
         result.SetStatus(eReturnStatusFailed);
-        return;
+        return result_string;
       }
       LLVM_FALLTHROUGH;
     case OptionParser::eOptionalArgument:
@@ -1083,7 +1080,7 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
                                    "in has_arg field for option '%c'.\n",
                                    val);
       result.SetStatus(eReturnStatusFailed);
-      return;
+      return result_string;
     }
     if (!option_arg)
       option_arg = "<no-argument>";
@@ -1094,30 +1091,32 @@ void Args::ParseAliasOptions(Options &options, CommandReturnObject &result,
     // given) from the argument list.  Also remove them from the
     // raw_input_string, if one was passed in.
     size_t idx = FindArgumentIndexForOption(long_options, long_options_index);
-    if (idx < GetArgumentCount()) {
-      if (raw_input_string.size() > 0) {
-        const char *tmp_arg = GetArgumentAtIndex(idx);
-        size_t pos = raw_input_string.find(tmp_arg);
+    if (idx == size_t(-1))
+      continue;
+
+    if (!result_string.empty()) {
+      const char *tmp_arg = GetArgumentAtIndex(idx);
+      size_t pos = result_string.find(tmp_arg);
+      if (pos != std::string::npos)
+        result_string.erase(pos, strlen(tmp_arg));
+    }
+    ReplaceArgumentAtIndex(idx, llvm::StringRef());
+    if ((long_options[long_options_index].definition->option_has_arg !=
+         OptionParser::eNoArgument) &&
+        (OptionParser::GetOptionArgument() != nullptr) &&
+        (idx + 1 < GetArgumentCount()) &&
+        (strcmp(OptionParser::GetOptionArgument(),
+                GetArgumentAtIndex(idx + 1)) == 0)) {
+      if (result_string.size() > 0) {
+        const char *tmp_arg = GetArgumentAtIndex(idx + 1);
+        size_t pos = result_string.find(tmp_arg);
         if (pos != std::string::npos)
-          raw_input_string.erase(pos, strlen(tmp_arg));
+          result_string.erase(pos, strlen(tmp_arg));
       }
-      ReplaceArgumentAtIndex(idx, llvm::StringRef());
-      if ((long_options[long_options_index].definition->option_has_arg !=
-           OptionParser::eNoArgument) &&
-          (OptionParser::GetOptionArgument() != nullptr) &&
-          (idx + 1 < GetArgumentCount()) &&
-          (strcmp(OptionParser::GetOptionArgument(),
-                  GetArgumentAtIndex(idx + 1)) == 0)) {
-        if (raw_input_string.size() > 0) {
-          const char *tmp_arg = GetArgumentAtIndex(idx + 1);
-          size_t pos = raw_input_string.find(tmp_arg);
-          if (pos != std::string::npos)
-            raw_input_string.erase(pos, strlen(tmp_arg));
-        }
-        ReplaceArgumentAtIndex(idx + 1, llvm::StringRef());
-      }
+      ReplaceArgumentAtIndex(idx + 1, llvm::StringRef());
     }
   }
+  return result_string;
 }
 
 void Args::ParseArgsForCompletion(Options &options,
@@ -1160,13 +1159,10 @@ void Args::ParseArgsForCompletion(Options &options,
   auto opt_defs = options.GetDefinitions();
 
   // Fooey... OptionParser::Parse permutes the GetArgumentVector to move the
-  // options to the front.
-  // So we have to build another Arg and pass that to OptionParser::Parse so it
-  // doesn't
-  // change the one we have.
+  // options to the front. So we have to build another Arg and pass that to
+  // OptionParser::Parse so it doesn't change the one we have.
 
-  std::vector<const char *> dummy_vec(
-      GetArgumentVector(), GetArgumentVector() + GetArgumentCount() + 1);
+  std::vector<char *> dummy_vec = m_argv;
 
   bool failed_once = false;
   uint32_t dash_dash_pos = -1;
@@ -1175,9 +1171,9 @@ void Args::ParseArgsForCompletion(Options &options,
     bool missing_argument = false;
     int long_options_index = -1;
 
-    val = OptionParser::Parse(
-        dummy_vec.size() - 1, const_cast<char *const *>(&dummy_vec.front()),
-        sstr.GetData(), long_options, &long_options_index);
+    val =
+        OptionParser::Parse(dummy_vec.size() - 1, &dummy_vec[0], sstr.GetData(),
+                            long_options, &long_options_index);
 
     if (val == -1) {
       // When we're completing a "--" which is the last option on line,

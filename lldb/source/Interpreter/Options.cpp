@@ -406,7 +406,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
   auto opt_defs = GetDefinitions();
   const uint32_t save_indent_level = strm.GetIndentLevel();
-  const char *name;
+  llvm::StringRef name;
 
   StreamString arguments_str;
 

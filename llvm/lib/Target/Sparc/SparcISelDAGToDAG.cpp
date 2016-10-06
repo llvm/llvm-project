@@ -363,19 +363,6 @@ void SparcDAGToDAGISel::Select(SDNode *N) {
     CurDAG->SelectNodeTo(N, Opcode, MVT::i32, DivLHS, DivRHS, TopPart);
     return;
   }
-  case ISD::MULHU:
-  case ISD::MULHS: {
-    // FIXME: Handle mul by immediate.
-    SDValue MulLHS = N->getOperand(0);
-    SDValue MulRHS = N->getOperand(1);
-    unsigned Opcode = N->getOpcode() == ISD::MULHU ? SP::UMULrr : SP::SMULrr;
-    SDNode *Mul =
-        CurDAG->getMachineNode(Opcode, dl, MVT::i32, MVT::i32, MulLHS, MulRHS);
-    SDValue ResultHigh = SDValue(Mul, 1);
-    ReplaceUses(SDValue(N, 0), ResultHigh);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
   }
 
   SelectCode(N);

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
@@ -19,6 +18,8 @@
 
 #include <future>
 #include <cassert>
+
+#include "test_macros.h"
 
 class A
 {
@@ -38,6 +39,7 @@ int main()
         p(3, 'a');
         assert(f.get() == 105.0);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
@@ -63,4 +65,5 @@ int main()
             assert(e.code() ==  make_error_code(std::future_errc::no_state));
         }
     }
+#endif
 }

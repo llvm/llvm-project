@@ -28,6 +28,10 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+ArrayRef<uint8_t> InputSectionData::getData(const SectionPiece &P) const {
+  return Data.slice(P.InputOff, P.size());
+}
+
 template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
                                             const typename ELFT::Shdr *Hdr) {
@@ -533,12 +537,13 @@ std::vector<SectionPiece>
 MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
   std::vector<SectionPiece> V;
   size_t Off = 0;
+  bool IsAlloca = this->getSectionHdr()->sh_flags & SHF_ALLOC;
   while (!Data.empty()) {
     size_t End = findNull(Data, EntSize);
     if (End == StringRef::npos)
       fatal(getName(this) + ": string is not null terminated");
     size_t Size = End + EntSize;
-    V.emplace_back(Off, Data.slice(0, Size));
+    V.emplace_back(Off, Data.slice(0, Size), !IsAlloca);
     Data = Data.slice(Size);
     Off += Size;
   }
@@ -573,16 +578,9 @@ template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   else
     this->Pieces = splitNonStrings(Data, EntSize);
 
-  if (Config->GcSections) {
-    if (this->getSectionHdr()->sh_flags & SHF_ALLOC) {
-      for (uintX_t Off : LiveOffsets)
-        this->getSectionPiece(Off)->Live = true;
-      return;
-    }
-
-    for (SectionPiece &Piece : this->Pieces)
-      Piece.Live = true;
-  }
+  if (Config->GcSections && this->getSectionHdr()->sh_flags & SHF_ALLOC)
+    for (uintX_t Off : LiveOffsets)
+      this->getSectionPiece(Off)->Live = true;
 }
 
 template <class ELFT>
@@ -644,9 +642,10 @@ template <class ELFT> void  MergeInputSection<ELFT>::finalizePieces() {
     if (Piece.OutputOff == size_t(-1)) {
       // Offsets of tail-merged strings are computed lazily.
       auto *OutSec = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
-      ArrayRef<uint8_t> D = Piece.data();
+      ArrayRef<uint8_t> D = this->getData(Piece);
       StringRef S((const char *)D.data(), D.size());
-      Piece.OutputOff = OutSec->getOffset(S);
+      CachedHashString V(S, Piece.Hash);
+      Piece.OutputOff = OutSec->getOffset(V);
     }
     OffsetMap[Piece.InputOff] = Piece.OutputOff;
   }

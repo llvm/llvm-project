@@ -734,8 +734,8 @@ let Defs = [ICC], rd = 0 in {
 
 // Section B.18 - Multiply Instructions, p. 113
 let Defs = [Y] in {
-  defm UMUL : F3_12np<"umul", 0b001010, IIC_iu_umul>;
-  defm SMUL : F3_12  <"smul", 0b001011, mul, IntRegs, i32, simm13Op, IIC_iu_smul>;
+  defm UMUL : F3_12<"umul", 0b001010, umullohi, IntRegs, i32, simm13Op, IIC_iu_umul>;
+  defm SMUL : F3_12<"smul", 0b001011, smullohi, IntRegs, i32, simm13Op, IIC_iu_smul>;
 }
 
 let Defs = [Y, ICC] in {

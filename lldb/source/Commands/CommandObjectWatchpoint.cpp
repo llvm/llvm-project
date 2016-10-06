@@ -65,7 +65,7 @@ static bool CheckTargetForWatchpointOperations(Target *target,
 static const char *RSA[4] = {"-", "to", "To", "TO"};
 
 // Return the index to RSA if found; otherwise -1 is returned.
-static int32_t WithRSAIndex(llvm::StringRef &Arg) {
+static int32_t WithRSAIndex(llvm::StringRef Arg) {
 
   uint32_t i;
   for (i = 0; i < 4; ++i)
@@ -92,24 +92,24 @@ bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
 
   llvm::StringRef Minus("-");
   std::vector<llvm::StringRef> StrRefArgs;
-  std::pair<llvm::StringRef, llvm::StringRef> Pair;
+  llvm::StringRef first;
+  llvm::StringRef second;
   size_t i;
   int32_t idx;
   // Go through the arguments and make a canonical form of arg list containing
   // only numbers with possible "-" in between.
-  for (i = 0; i < args.GetArgumentCount(); ++i) {
-    llvm::StringRef Arg(args.GetArgumentAtIndex(i));
-    if ((idx = WithRSAIndex(Arg)) == -1) {
-      StrRefArgs.push_back(Arg);
+  for (auto &entry : args.entries()) {
+    if ((idx = WithRSAIndex(entry.ref)) == -1) {
+      StrRefArgs.push_back(entry.ref);
       continue;
     }
     // The Arg contains the range specifier, split it, then.
-    Pair = Arg.split(RSA[idx]);
-    if (!Pair.first.empty())
-      StrRefArgs.push_back(Pair.first);
+    std::tie(first, second) = entry.ref.split(RSA[idx]);
+    if (!first.empty())
+      StrRefArgs.push_back(first);
     StrRefArgs.push_back(Minus);
-    if (!Pair.second.empty())
-      StrRefArgs.push_back(Pair.second);
+    if (!second.empty())
+      StrRefArgs.push_back(second);
   }
   // Now process the canonical list and fill in the vector of uint32_t's.
   // If there is any error, return false and the client should ignore wp_ids.
@@ -990,7 +990,7 @@ public:
             "If watchpoint setting fails, consider disable/delete existing "
             "ones "
             "to free up resources.",
-            nullptr,
+            "",
             eCommandRequiresFrame | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
         m_option_group(), m_option_watchpoint() {

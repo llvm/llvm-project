@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
@@ -73,7 +72,7 @@ std::unique_ptr<int> f4(std::unique_ptr<int>&& p)
 void f5(int j)
 {
     std::this_thread::sleep_for(ms(200));
-    throw j;
+    TEST_THROW(j);
 }
 
 template <class Ret, class CheckLamdba, class ...Args>
@@ -140,6 +139,7 @@ int main()
         test<Ret>(checkUPtr, DPID, f3, 3);
         test<Ret>(checkUPtr, DPID, f4, std::unique_ptr<int>(new int(3)));
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::future<void> f = std::async(f5, 3);
         std::this_thread::sleep_for(ms(300));
@@ -150,4 +150,5 @@ int main()
         std::this_thread::sleep_for(ms(300));
         try { f.get(); assert (false); } catch ( int ) {}
     }
+#endif
 }

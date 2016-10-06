@@ -74,7 +74,7 @@ int main(int argc, const char **argv) {
   const auto &Files = OptionsParser.getSourcePathList();
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(), Files);
   change_namespace::ChangeNamespaceTool NamespaceTool(
-      OldNamespace, NewNamespace, FilePattern, &Tool.getReplacements());
+      OldNamespace, NewNamespace, FilePattern, &Tool.getReplacements(), Style);
   ast_matchers::MatchFinder Finder;
   NamespaceTool.registerMatchers(&Finder);
   std::unique_ptr<tooling::FrontendActionFactory> Factory =

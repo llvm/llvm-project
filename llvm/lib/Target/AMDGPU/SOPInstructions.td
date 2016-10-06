@@ -575,8 +575,8 @@ def S_SETREG_B32 : SOPK_Pseudo <
 def S_SETREG_IMM32_B32 : SOPK_Pseudo <
   "s_setreg_imm32_b32",
   (outs), (ins i32imm:$imm, hwreg:$simm16),
-  "$simm16, $imm"
-> {
+  "$simm16, $imm"> {
+  let Size = 8; // Unlike every other SOPK instruction.
   let has_sdst = 0;
 }
 
@@ -688,6 +688,7 @@ class SOPP <bits<7> op, dag ins, string asm, list<dag> pattern = []> :
   let hasSideEffects = 0;
   let SALU = 1;
   let SOPP = 1;
+  let Size = 4;
   let SchedRW = [WriteSALU];
 
   let UseNamedOperandTable = 1;

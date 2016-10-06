@@ -15,26 +15,26 @@
 let Defs = [ARGUMENTS] in {
 
 let isCommutable = 1 in
-defm ADD : BinaryFP<fadd, "add ">;
-defm SUB : BinaryFP<fsub, "sub ">;
+defm ADD : BinaryFP<fadd, "add ", 0x75, 0x89>;
+defm SUB : BinaryFP<fsub, "sub ", 0x76, 0x8a>;
 let isCommutable = 1 in
-defm MUL : BinaryFP<fmul, "mul ">;
-defm DIV : BinaryFP<fdiv, "div ">;
-defm SQRT : UnaryFP<fsqrt, "sqrt">;
+defm MUL : BinaryFP<fmul, "mul ", 0x77, 0x8b>;
+defm DIV : BinaryFP<fdiv, "div ", 0x78, 0x8c>;
+defm SQRT : UnaryFP<fsqrt, "sqrt", 0x82, 0x96>;
 
-defm ABS : UnaryFP<fabs, "abs ">;
-defm NEG : UnaryFP<fneg, "neg ">;
-defm COPYSIGN : BinaryFP<fcopysign, "copysign">;
+defm ABS : UnaryFP<fabs, "abs ", 0x7b, 0x8f>;
+defm NEG : UnaryFP<fneg, "neg ", 0x7c, 0x90>;
+defm COPYSIGN : BinaryFP<fcopysign, "copysign", 0x7d, 0x91>;
 
 let isCommutable = 1 in {
-defm MIN : BinaryFP<fminnan, "min ">;
-defm MAX : BinaryFP<fmaxnan, "max ">;
+defm MIN : BinaryFP<fminnan, "min ", 0x79, 0x8d>;
+defm MAX : BinaryFP<fmaxnan, "max ", 0x7a, 0x8e>;
 } // isCommutable = 1
 
-defm CEIL : UnaryFP<fceil, "ceil">;
-defm FLOOR : UnaryFP<ffloor, "floor">;
-defm TRUNC : UnaryFP<ftrunc, "trunc">;
-defm NEAREST : UnaryFP<fnearbyint, "nearest">;
+defm CEIL : UnaryFP<fceil, "ceil", 0x7e, 0x92>;
+defm FLOOR : UnaryFP<ffloor, "floor", 0x7f, 0x93>;
+defm TRUNC : UnaryFP<ftrunc, "trunc", 0x80, 0x94>;
+defm NEAREST : UnaryFP<fnearbyint, "nearest", 0x81, 0x95>;
 
 } // Defs = [ARGUMENTS]
 
@@ -51,13 +51,13 @@ def : Pat<(frint f64:$src), (NEAREST_F64 f64:$src)>;
 let Defs = [ARGUMENTS] in {
 
 let isCommutable = 1 in {
-defm EQ : ComparisonFP<SETOEQ, "eq  ">;
-defm NE : ComparisonFP<SETUNE, "ne  ">;
+defm EQ : ComparisonFP<SETOEQ, "eq  ", 0x83, 0x97>;
+defm NE : ComparisonFP<SETUNE, "ne  ", 0x84, 0x98>;
 } // isCommutable = 1
-defm LT : ComparisonFP<SETOLT, "lt  ">;
-defm LE : ComparisonFP<SETOLE, "le  ">;
-defm GT : ComparisonFP<SETOGT, "gt  ">;
-defm GE : ComparisonFP<SETOGE, "ge  ">;
+defm LT : ComparisonFP<SETOLT, "lt  ", 0x85, 0x99>;
+defm LE : ComparisonFP<SETOLE, "le  ", 0x86, 0x9a>;
+defm GT : ComparisonFP<SETOGT, "gt  ", 0x87, 0x9b>;
+defm GE : ComparisonFP<SETOGE, "ge  ", 0x88, 0x9c>;
 
 } // Defs = [ARGUMENTS]
 

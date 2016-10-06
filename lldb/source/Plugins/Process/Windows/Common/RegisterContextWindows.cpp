@@ -124,13 +124,12 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
           &m_context)) {
     WINERR_IFALL(
         WINDOWS_LOG_REGISTERS,
-        "GetThreadContext failed with error %u while caching register values.",
+        "GetThreadContext failed with error %lu while caching register values.",
         ::GetLastError());
     return false;
   }
   WINLOG_IFALL(WINDOWS_LOG_REGISTERS,
-               "GetThreadContext successfully updated the register values.",
-               ::GetLastError());
+               "GetThreadContext successfully updated the register values.");
   m_context_stale = false;
   return true;
 }

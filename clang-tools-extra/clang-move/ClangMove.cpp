@@ -94,6 +94,64 @@ private:
   ClangMoveTool *const MoveTool;
 };
 
+// Expand to get the end location of the line where the EndLoc of the given
+// Decl.
+SourceLocation
+getLocForEndOfDecl(const clang::Decl *D, const SourceManager *SM,
+                   const LangOptions &LangOpts = clang::LangOptions()) {
+  std::pair<FileID, unsigned> LocInfo = SM->getDecomposedLoc(D->getLocEnd());
+  // Try to load the file buffer.
+  bool InvalidTemp = false;
+  llvm::StringRef File = SM->getBufferData(LocInfo.first, &InvalidTemp);
+  if (InvalidTemp)
+    return SourceLocation();
+
+  const char *TokBegin = File.data() + LocInfo.second;
+  // Lex from the start of the given location.
+  Lexer Lex(SM->getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
+            TokBegin, File.end());
+
+  llvm::SmallVector<char, 16> Line;
+  // FIXME: this is a bit hacky to get ReadToEndOfLine work.
+  Lex.setParsingPreprocessorDirective(true);
+  Lex.ReadToEndOfLine(&Line);
+  SourceLocation EndLoc  = D->getLocEnd().getLocWithOffset(Line.size());
+  // If we already reach EOF, just return the EOF SourceLocation;
+  // otherwise, move 1 offset ahead to include the trailing newline character
+  // '\n'.
+  return SM->getLocForEndOfFile(LocInfo.first) == EndLoc
+             ? EndLoc
+             : EndLoc.getLocWithOffset(1);
+}
+
+// Get full range of a Decl including the comments associated with it.
+clang::CharSourceRange
+GetFullRange(const clang::SourceManager *SM, const clang::Decl *D,
+             const clang::LangOptions &options = clang::LangOptions()) {
+  clang::SourceRange Full = D->getSourceRange();
+  Full.setEnd(getLocForEndOfDecl(D, SM));
+  // Expand to comments that are associated with the Decl.
+  if (const auto* Comment =
+          D->getASTContext().getRawCommentForDeclNoCache(D)) {
+    if (SM->isBeforeInTranslationUnit(Full.getEnd(), Comment->getLocEnd()))
+      Full.setEnd(Comment->getLocEnd());
+    // FIXME: Don't delete a preceding comment, if there are no other entities
+    // it could refer to.
+    if (SM->isBeforeInTranslationUnit(Comment->getLocStart(),
+                                      Full.getBegin()))
+      Full.setBegin(Comment->getLocStart());
+  }
+
+  return clang::CharSourceRange::getCharRange(Full);
+}
+
+std::string getDeclarationSourceText(const clang::Decl *D,
+                                     const clang::SourceManager *SM) {
+  llvm::StringRef SourceText = clang::Lexer::getSourceText(
+      GetFullRange(SM, D), *SM, clang::LangOptions());
+  return SourceText.str();
+}
+
 clang::tooling::Replacement
 getReplacementInChangedCode(const clang::tooling::Replacements &Replacements,
                             const clang::tooling::Replacement &Replacement) {
@@ -147,26 +205,6 @@ std::vector<std::string> GetNamespaces(const clang::Decl *D) {
   return Namespaces;
 }
 
-SourceLocation getLocForEndOfDecl(const clang::Decl *D,
-                                  const clang::SourceManager *SM) {
-  auto End = D->getLocEnd();
-  clang::SourceLocation AfterSemi = clang::Lexer::findLocationAfterToken(
-      End, clang::tok::semi, *SM, clang::LangOptions(),
-      /*SkipTrailingWhitespaceAndNewLine=*/true);
-  if (AfterSemi.isValid())
-    End = AfterSemi.getLocWithOffset(-1);
-  return End;
-}
-
-std::string getDeclarationSourceText(const clang::Decl *D,
-                                     const clang::SourceManager *SM) {
-  auto EndLoc = getLocForEndOfDecl(D, SM);
-  llvm::StringRef SourceText = clang::Lexer::getSourceText(
-      clang::CharSourceRange::getTokenRange(D->getLocStart(), EndLoc), *SM,
-      clang::LangOptions());
-  return SourceText.str() + "\n";
-}
-
 clang::tooling::Replacements
 createInsertedReplacements(const std::vector<std::string> &Includes,
                            const std::vector<ClangMoveTool::MovedDecl> &Decls,
@@ -178,8 +216,12 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
   // FIXME: Add header guard.
   for (const auto &Include : Includes)
     AllIncludesString += Include;
-  clang::tooling::Replacement InsertInclude(FileName, 0, 0, AllIncludesString);
-  addOrMergeReplacement(InsertInclude, &InsertedReplacements);
+
+  if (!AllIncludesString.empty()) {
+    clang::tooling::Replacement InsertInclude(FileName, 0, 0,
+                                              AllIncludesString + "\n");
+    addOrMergeReplacement(InsertInclude, &InsertedReplacements);
+  }
 
   // Add moved class definition and its related declarations. All declarations
   // in same namespace are grouped together.
@@ -213,7 +255,6 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
       ++DeclIt;
     }
 
-    // FIXME: consider moving comments of the moved declaration.
     clang::tooling::Replacement InsertedReplacement(
         FileName, 0, 0, getDeclarationSourceText(MovedDecl.Decl, MovedDecl.SM));
     addOrMergeReplacement(InsertedReplacement, &InsertedReplacements);
@@ -240,11 +281,12 @@ ClangMoveAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
 }
 
 ClangMoveTool::ClangMoveTool(
-      const MoveDefinitionSpec &MoveSpec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements,
-      llvm::StringRef OriginalRunningDirectory)
-      : Spec(MoveSpec), FileToReplacements(FileToReplacements),
-        OriginalRunningDirectory(OriginalRunningDirectory) {
+    const MoveDefinitionSpec &MoveSpec,
+    std::map<std::string, tooling::Replacements> &FileToReplacements,
+    llvm::StringRef OriginalRunningDirectory, llvm::StringRef FallbackStyle)
+    : Spec(MoveSpec), FileToReplacements(FileToReplacements),
+      OriginalRunningDirectory(OriginalRunningDirectory),
+      FallbackStyle(FallbackStyle) {
   Spec.Name = llvm::StringRef(Spec.Name).ltrim(':');
   if (!Spec.NewHeader.empty())
     CCIncludes.push_back("#include \"" + Spec.NewHeader + "\"\n");
@@ -364,13 +406,27 @@ void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader,
 
 void ClangMoveTool::removeClassDefinitionInOldFiles() {
   for (const auto &MovedDecl : RemovedDecls) {
-    auto EndLoc = getLocForEndOfDecl(MovedDecl.Decl, MovedDecl.SM);
+    const auto &SM = *MovedDecl.SM;
+    auto Range = GetFullRange(&SM, MovedDecl.Decl);
     clang::tooling::Replacement RemoveReplacement(
-        *MovedDecl.SM, clang::CharSourceRange::getTokenRange(
-                           MovedDecl.Decl->getLocStart(), EndLoc),
+        *MovedDecl.SM, clang::CharSourceRange::getCharRange(
+                           Range.getBegin(), Range.getEnd()),
         "");
     std::string FilePath = RemoveReplacement.getFilePath().str();
     addOrMergeReplacement(RemoveReplacement, &FileToReplacements[FilePath]);
+
+    llvm::StringRef Code =
+        SM.getBufferData(SM.getFileID(MovedDecl.Decl->getLocation()));
+    format::FormatStyle Style =
+        format::getStyle("file", FilePath, FallbackStyle);
+    auto CleanReplacements = format::cleanupAroundReplacements(
+        Code, FileToReplacements[FilePath], Style);
+
+    if (!CleanReplacements) {
+      llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";
+      continue;
+    }
+    FileToReplacements[FilePath] = *CleanReplacements;
   }
 }
 

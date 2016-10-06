@@ -223,7 +223,7 @@ private:
   // Before executing jobs, sets up response files for commands that need them.
   void setUpResponseFiles(Compilation &C, Command &Cmd);
 
-  void generatePrefixedToolNames(const char *Tool, const ToolChain &TC,
+  void generatePrefixedToolNames(StringRef Tool, const ToolChain &TC,
                                  SmallVectorImpl<std::string> &Names) const;
 
 public:
@@ -369,7 +369,7 @@ public:
   /// directories to search.
   //
   // FIXME: This should be in CompilationInfo.
-  std::string GetFilePath(const char *Name, const ToolChain &TC) const;
+  std::string GetFilePath(StringRef Name, const ToolChain &TC) const;
 
   /// GetProgramPath - Lookup \p Name in the list of program search paths.
   ///
@@ -377,7 +377,7 @@ public:
   /// directories to search.
   //
   // FIXME: This should be in CompilationInfo.
-  std::string GetProgramPath(const char *Name, const ToolChain &TC) const;
+  std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
 
   /// HandleImmediateArgs - Handle any arguments which should be
   /// treated before building actions or binding tools.
@@ -427,7 +427,7 @@ public:
   /// as part of compilation; the file will have the given prefix and suffix.
   ///
   /// GCC goes to extra lengths here to be a bit more robust.
-  std::string GetTemporaryPath(StringRef Prefix, const char *Suffix) const;
+  std::string GetTemporaryPath(StringRef Prefix, StringRef Suffix) const;
 
   /// Return the pathname of the pch file in clang-cl mode.
   std::string GetClPchPath(Compilation &C, StringRef BaseName) const;
@@ -483,9 +483,8 @@ public:
   /// \return True if the entire string was parsed (9.2), or all
   /// groups were parsed (10.3.5extrastuff). HadExtra is true if all
   /// groups were parsed but extra characters remain at the end.
-  static bool GetReleaseVersion(const char *Str, unsigned &Major,
-                                unsigned &Minor, unsigned &Micro,
-                                bool &HadExtra);
+  static bool GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
+                                unsigned &Micro, bool &HadExtra);
 
   /// Parse digits from a string \p Str and fulfill \p Digits with
   /// the parsed numbers. This method assumes that the max number of
@@ -493,7 +492,7 @@ public:
   ///
   /// \return True if the entire string was parsed and there are
   /// no extra characters remaining at the end.
-  static bool GetReleaseVersion(const char *Str,
+  static bool GetReleaseVersion(StringRef Str,
                                 MutableArrayRef<unsigned> Digits);
 };
 

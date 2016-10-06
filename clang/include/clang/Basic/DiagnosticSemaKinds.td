@@ -1745,8 +1745,10 @@ def warn_uninit_byref_blockvar_captured_by_block : Warning<
 def note_block_var_fixit_add_initialization : Note<
   "did you mean to use __block %0?">;
 def note_in_omitted_aggregate_initializer : Note<
-  "in implicit initialization of %select{array element %1|field %1}0 "
-  "with omitted initializer">;
+  "in implicit initialization of %select{"
+  "array element %1 with omitted initializer|"
+  "field %1 with omitted initializer|"
+  "trailing array elements in runtime-sized array new}0">;
 def note_in_reference_temporary_list_initializer : Note<
   "in initialization of temporary of type %0 created to "
   "list-initialize this reference">;
@@ -4556,9 +4558,6 @@ def err_vm_func_decl : Error<
   "function declaration cannot have variably modified type">;
 def err_array_too_large : Error<
   "array is too large (%0 elements)">;
-def warn_array_new_too_large : Warning<"array is too large (%0 elements)">,
-  // FIXME PR11644: ", will throw std::bad_array_new_length at runtime"
-  InGroup<BadArrayNewLength>;
 
 // -Wpadded, -Wpacked
 def warn_padded_struct_field : Warning<
@@ -4576,9 +4575,6 @@ def warn_unnecessary_packed : Warning<
   "packed attribute is unnecessary for %0">, InGroup<Packed>, DefaultIgnore;
 
 def err_typecheck_negative_array_size : Error<"array size is negative">;
-def warn_typecheck_negative_array_new_size : Warning<"array size is negative">,
-  // FIXME PR11644: ", will throw std::bad_array_new_length at runtime"
-  InGroup<BadArrayNewLength>;
 def warn_typecheck_function_qualifiers_ignored : Warning<
   "'%0' qualifier on function type %1 has no effect">,
   InGroup<IgnoredQualifiers>;

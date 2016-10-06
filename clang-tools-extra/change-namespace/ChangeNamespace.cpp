@@ -173,21 +173,24 @@ tooling::Replacement createInsertion(SourceLocation Loc,
 // Returns the shortest qualified name for declaration `DeclName` in the
 // namespace `NsName`. For example, if `DeclName` is "a::b::X" and `NsName`
 // is "a::c::d", then "b::X" will be returned.
+// \param DeclName A fully qualified name, "::a::b::X" or "a::b::X".
+// \param NsName A fully qualified name, "::a::b" or "a::b". Global namespace
+//        will have empty name.
 std::string getShortestQualifiedNameInNamespace(llvm::StringRef DeclName,
                                                 llvm::StringRef NsName) {
-  llvm::SmallVector<llvm::StringRef, 4> DeclNameSplitted;
-  DeclName.split(DeclNameSplitted, "::");
-  if (DeclNameSplitted.size() == 1)
-    return DeclName;
-  const auto UnqualifiedName = DeclNameSplitted.back();
-  while (true) {
+  DeclName = DeclName.ltrim(':');
+  NsName = NsName.ltrim(':');
+  // If `DeclName` is a global variable, we prepend "::" to it if it is not in
+  // the global namespace.
+  if (DeclName.find(':') == llvm::StringRef::npos)
+    return NsName.empty() ? DeclName.str() : ("::" + DeclName).str();
+
+  while (!DeclName.consume_front((NsName + "::").str())) {
     const auto Pos = NsName.find_last_of(':');
     if (Pos == llvm::StringRef::npos)
       return DeclName;
-    const auto Prefix = NsName.substr(0, Pos - 1);
-    if (DeclName.startswith(Prefix))
-      return (Prefix + "::" + UnqualifiedName).str();
-    NsName = Prefix;
+    assert(Pos > 0);
+    NsName = NsName.substr(0, Pos - 1);
   }
   return DeclName;
 }

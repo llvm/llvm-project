@@ -40,15 +40,23 @@ struct RSReductionDescriptor;
 typedef std::shared_ptr<RSModuleDescriptor> RSModuleDescriptorSP;
 typedef std::shared_ptr<RSGlobalDescriptor> RSGlobalDescriptorSP;
 typedef std::shared_ptr<RSKernelDescriptor> RSKernelDescriptorSP;
-typedef std::array<uint32_t, 3> RSCoordinate;
+struct RSCoordinate {
+  uint32_t x, y, z;
 
-// Breakpoint Resolvers decide where a breakpoint is placed,
-// so having our own allows us to limit the search scope to RS kernel modules.
-// As well as check for .expand kernels as a fallback.
+  RSCoordinate() : x(), y(), z(){};
+
+  bool operator==(const lldb_renderscript::RSCoordinate &rhs) {
+    return x == rhs.x && y == rhs.y && z == rhs.z;
+  }
+};
+
+// Breakpoint Resolvers decide where a breakpoint is placed, so having our own
+// allows us to limit the search scope to RS kernel modules. As well as check
+// for .expand kernels as a fallback.
 class RSBreakpointResolver : public BreakpointResolver {
 public:
-  RSBreakpointResolver(Breakpoint *bkpt, ConstString name)
-      : BreakpointResolver(bkpt, BreakpointResolver::NameResolver),
+  RSBreakpointResolver(Breakpoint *bp, ConstString name)
+      : BreakpointResolver(bp, BreakpointResolver::NameResolver),
         m_kernel_name(name) {}
 
   void GetDescription(Stream *strm) override {
@@ -74,6 +82,58 @@ public:
 
 protected:
   ConstString m_kernel_name;
+};
+
+class RSReduceBreakpointResolver : public BreakpointResolver {
+public:
+  enum ReduceKernelTypeFlags {
+    eKernelTypeAll = ~(0),
+    eKernelTypeNone = 0,
+    eKernelTypeAccum = (1 << 0),
+    eKernelTypeInit = (1 << 1),
+    eKernelTypeComb = (1 << 2),
+    eKernelTypeOutC = (1 << 3),
+    eKernelTypeHalter = (1 << 4)
+  };
+
+  RSReduceBreakpointResolver(
+      Breakpoint *breakpoint, ConstString reduce_name,
+      std::vector<lldb_renderscript::RSModuleDescriptorSP> *rs_modules,
+      int kernel_types = eKernelTypeAll)
+      : BreakpointResolver(breakpoint, BreakpointResolver::NameResolver),
+        m_reduce_name(reduce_name), m_rsmodules(rs_modules),
+        m_kernel_types(kernel_types) {
+    // The reduce breakpoint resolver handles adding breakpoints for named
+    // reductions.
+    // Breakpoints will be resolved for all constituent kernels in the named
+    // reduction
+  }
+
+  void GetDescription(Stream *strm) override {
+    if (strm)
+      strm->Printf("RenderScript reduce breakpoint for '%s'",
+                   m_reduce_name.AsCString());
+  }
+
+  void Dump(Stream *s) const override {}
+
+  Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
+                                          SymbolContext &context, Address *addr,
+                                          bool containing) override;
+
+  Searcher::Depth GetDepth() override { return Searcher::eDepthModule; }
+
+  lldb::BreakpointResolverSP
+  CopyForBreakpoint(Breakpoint &breakpoint) override {
+    lldb::BreakpointResolverSP ret_sp(new RSReduceBreakpointResolver(
+        &breakpoint, m_reduce_name, m_rsmodules, m_kernel_types));
+    return ret_sp;
+  }
+
+private:
+  ConstString m_reduce_name; // The name of the reduction
+  std::vector<lldb_renderscript::RSModuleDescriptorSP> *m_rsmodules;
+  int m_kernel_types;
 };
 
 struct RSKernelDescriptor {
@@ -216,7 +276,7 @@ public:
 
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
 
-  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bp,
                                                      bool catch_bp,
                                                      bool throw_bp) override;
 
@@ -235,9 +295,14 @@ public:
 
   bool RecomputeAllAllocations(Stream &strm, StackFrame *frame_ptr);
 
-  void PlaceBreakpointOnKernel(Stream &strm, const char *name,
-                               const std::array<int, 3> coords, Error &error,
-                               lldb::TargetSP target);
+  bool PlaceBreakpointOnKernel(
+      lldb::TargetSP target, Stream &messages, const char *name,
+      const lldb_renderscript::RSCoordinate *coords = nullptr);
+
+  bool PlaceBreakpointOnReduction(
+      lldb::TargetSP target, Stream &messages, const char *reduce_name,
+      const lldb_renderscript::RSCoordinate *coords = nullptr,
+      int kernel_types = ~(0));
 
   void SetBreakAllKernels(bool do_break, lldb::TargetSP target);
 
@@ -279,12 +344,15 @@ protected:
 
   void LoadRuntimeHooks(lldb::ModuleSP module, ModuleKind kind);
 
-  bool RefreshAllocation(AllocationDetails *allocation, StackFrame *frame_ptr);
+  bool RefreshAllocation(AllocationDetails *alloc, StackFrame *frame_ptr);
 
   bool EvalRSExpression(const char *expression, StackFrame *frame_ptr,
                         uint64_t *result);
 
   lldb::BreakpointSP CreateKernelBreakpoint(const ConstString &name);
+
+  lldb::BreakpointSP CreateReductionBreakpoint(const ConstString &name,
+                                               int kernel_types);
 
   void BreakOnModuleKernels(
       const lldb_renderscript::RSModuleDescriptorSP rsmodule_sp);
@@ -322,7 +390,8 @@ protected:
   std::map<lldb::addr_t, lldb_renderscript::RSModuleDescriptorSP>
       m_scriptMappings;
   std::map<lldb::addr_t, RuntimeHookSP> m_runtimeHooks;
-  std::map<lldb::user_id_t, std::shared_ptr<uint32_t>> m_conditional_breaks;
+  std::map<lldb::user_id_t, std::unique_ptr<lldb_renderscript::RSCoordinate>>
+      m_conditional_breaks;
 
   lldb::SearchFilterSP
       m_filtersp; // Needed to create breakpoints through Target API
@@ -361,7 +430,7 @@ private:
 
   AllocationDetails *FindAllocByID(Stream &strm, const uint32_t alloc_id);
 
-  std::shared_ptr<uint8_t> GetAllocationData(AllocationDetails *allocation,
+  std::shared_ptr<uint8_t> GetAllocationData(AllocationDetails *alloc,
                                              StackFrame *frame_ptr);
 
   void SetElementSize(Element &elem);
@@ -376,27 +445,28 @@ private:
 
   size_t CalculateElementHeaderSize(const Element &elem);
 
+  void SetConditional(lldb::BreakpointSP bp, lldb_private::Stream &messages,
+                      const lldb_renderscript::RSCoordinate &coord);
   //
   // Helper functions for jitting the runtime
   //
 
-  bool JITDataPointer(AllocationDetails *allocation, StackFrame *frame_ptr,
+  bool JITDataPointer(AllocationDetails *alloc, StackFrame *frame_ptr,
                       uint32_t x = 0, uint32_t y = 0, uint32_t z = 0);
 
-  bool JITTypePointer(AllocationDetails *allocation, StackFrame *frame_ptr);
+  bool JITTypePointer(AllocationDetails *alloc, StackFrame *frame_ptr);
 
-  bool JITTypePacked(AllocationDetails *allocation, StackFrame *frame_ptr);
+  bool JITTypePacked(AllocationDetails *alloc, StackFrame *frame_ptr);
 
   bool JITElementPacked(Element &elem, const lldb::addr_t context,
                         StackFrame *frame_ptr);
 
-  bool JITAllocationSize(AllocationDetails *allocation, StackFrame *frame_ptr);
+  bool JITAllocationSize(AllocationDetails *alloc, StackFrame *frame_ptr);
 
   bool JITSubelements(Element &elem, const lldb::addr_t context,
                       StackFrame *frame_ptr);
 
-  bool JITAllocationStride(AllocationDetails *allocation,
-                           StackFrame *frame_ptr);
+  bool JITAllocationStride(AllocationDetails *alloc, StackFrame *frame_ptr);
 
   // Search for a script detail object using a target address.
   // If a script does not currently exist this function will return nullptr.

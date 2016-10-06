@@ -562,7 +562,7 @@ protected:
       return false;
     }
 
-    if (command.GetArgumentCount() == 0) {
+    if (command.empty()) {
       result.AppendError(
           "No breakpoint specified from which to delete the commands");
       result.SetStatus(eReturnStatusFailed);
@@ -653,7 +653,7 @@ protected:
       return false;
     }
 
-    if (command.GetArgumentCount() == 0) {
+    if (command.empty()) {
       result.AppendError(
           "No breakpoint specified for which to list the commands");
       result.SetStatus(eReturnStatusFailed);

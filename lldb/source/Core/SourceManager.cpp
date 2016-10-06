@@ -654,7 +654,7 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
           }
         }
         if (!m_offsets.empty()) {
-          if (m_offsets.back() < end - start)
+          if (m_offsets.back() < size_t(end - start))
             m_offsets.push_back(end - start);
         }
         return true;

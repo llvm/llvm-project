@@ -626,12 +626,14 @@ public:
   /// are direct children of this Region. It does not iterate over any
   /// RegionNodes that are also element of a subregion of this Region.
   //@{
-  typedef df_iterator<RegionNodeT *, SmallPtrSet<RegionNodeT *, 8>, false,
-                      GraphTraits<RegionNodeT *>> element_iterator;
+  typedef df_iterator<RegionNodeT *, df_iterator_default_set<RegionNodeT *>,
+                      false, GraphTraits<RegionNodeT *>>
+      element_iterator;
 
-  typedef df_iterator<const RegionNodeT *, SmallPtrSet<const RegionNodeT *, 8>,
-                      false,
-                      GraphTraits<const RegionNodeT *>> const_element_iterator;
+  typedef df_iterator<const RegionNodeT *,
+                      df_iterator_default_set<const RegionNodeT *>, false,
+                      GraphTraits<const RegionNodeT *>>
+      const_element_iterator;
 
   element_iterator element_begin();
   element_iterator element_end();

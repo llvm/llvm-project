@@ -12,20 +12,19 @@
 // Implementation of ARM-specific routines (32-bit).
 //
 //===----------------------------------------------------------------------===//
-#include "xray_interface_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "xray_interface_internal.h"
 #include <atomic>
 #include <cassert>
 
 namespace __xray {
 
 // The machine codes for some instructions used in runtime patching.
-enum class PatchOpcodes : uint32_t
-{
+enum class PatchOpcodes : uint32_t {
   PO_PushR0Lr = 0xE92D4001, // PUSH {r0, lr}
-  PO_BlxIp = 0xE12FFF3C, // BLX ip
-  PO_PopR0Lr = 0xE8BD4001, // POP {r0, lr}
-  PO_B20 = 0xEA000005 // B #20
+  PO_BlxIp = 0xE12FFF3C,    // BLX ip
+  PO_PopR0Lr = 0xE8BD4001,  // POP {r0, lr}
+  PO_B20 = 0xEA000005       // B #20
 };
 
 // 0xUUUUWXYZ -> 0x000W0XYZ
@@ -41,15 +40,15 @@ inline static uint32_t getMovtMask(const uint32_t Value) {
 // Writes the following instructions:
 //   MOVW R<regNo>, #<lower 16 bits of the |Value|>
 //   MOVT R<regNo>, #<higher 16 bits of the |Value|>
-inline static uint32_t* write32bitLoadReg(uint8_t regNo, uint32_t* Address,
-    const uint32_t Value) {
-  //This is a fatal error: we cannot just report it and continue execution.
+inline static uint32_t *write32bitLoadReg(uint8_t regNo, uint32_t *Address,
+                                          const uint32_t Value) {
+  // This is a fatal error: we cannot just report it and continue execution.
   assert(regNo <= 15 && "Register number must be 0 to 15.");
   // MOVW R, #0xWXYZ in machine code is 0xE30WRXYZ
-  *Address = (0xE3000000 | (uint32_t(regNo)<<12) | getMovwMask(Value));
+  *Address = (0xE3000000 | (uint32_t(regNo) << 12) | getMovwMask(Value));
   Address++;
   // MOVT R, #0xWXYZ in machine code is 0xE34WRXYZ
-  *Address = (0xE3400000 | (uint32_t(regNo)<<12) | getMovtMask(Value));
+  *Address = (0xE3400000 | (uint32_t(regNo) << 12) | getMovtMask(Value));
   return Address + 1;
 }
 

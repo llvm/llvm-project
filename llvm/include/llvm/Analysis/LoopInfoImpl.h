@@ -228,9 +228,9 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
   // Setup for using a depth-first iterator to visit every block in the loop.
   SmallVector<BlockT*, 8> ExitBBs;
   getExitBlocks(ExitBBs);
-  llvm::SmallPtrSet<BlockT*, 8> VisitSet;
+  df_iterator_default_set<BlockT*> VisitSet;
   VisitSet.insert(ExitBBs.begin(), ExitBBs.end());
-  df_ext_iterator<BlockT*, llvm::SmallPtrSet<BlockT*, 8> >
+  df_ext_iterator<BlockT*, df_iterator_default_set<BlockT*>>
     BI = df_ext_begin(getHeader(), VisitSet),
     BE = df_ext_end(getHeader(), VisitSet);
 

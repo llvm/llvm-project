@@ -15,8 +15,8 @@
 #ifndef XRAY_INTERFACE_INTERNAL_H
 #define XRAY_INTERFACE_INTERNAL_H
 
-#include "xray/xray_interface.h"
 #include "sanitizer_common/sanitizer_platform.h"
+#include "xray/xray_interface.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -36,10 +36,9 @@ struct XRaySledEntry {
   unsigned char AlwaysInstrument;
   unsigned char Padding[6]; // Need 16 bytes
 #else
-	#error "Unsupported word size."
+#error "Unsupported word size."
 #endif
 };
-
 }
 
 namespace __xray {
@@ -49,8 +48,10 @@ struct XRaySledMap {
   size_t Entries;
 };
 
-bool patchFunctionEntry(const bool Enable, const uint32_t FuncId, const XRaySledEntry& Sled);
-bool patchFunctionExit(const bool Enable, const uint32_t FuncId, const XRaySledEntry& Sled);
+bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
+                        const XRaySledEntry &Sled);
+bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
+                       const XRaySledEntry &Sled);
 
 } // namespace __xray
 

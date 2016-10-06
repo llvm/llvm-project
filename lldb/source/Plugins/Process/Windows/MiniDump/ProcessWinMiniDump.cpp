@@ -162,25 +162,21 @@ bool ProcessWinMiniDump::Impl::UpdateThreadList(ThreadList &old_thread_list,
 
         if (m_is_wow64) {
           // On Windows, a 32-bit process can run on a 64-bit machine under
-          // WOW64.
-          // If the minidump was captured with a 64-bit debugger, then the
-          // CONTEXT
-          // we just grabbed from the mini_dump_thread is the one for the 64-bit
-          // "native" process rather than the 32-bit "guest" process we care
-          // about.
-          // In this case, we can get the 32-bit CONTEXT from the TEB (Thread
-          // Environment Block) of the 64-bit process.
+          // WOW64. If the minidump was captured with a 64-bit debugger, then
+          // the CONTEXT we just grabbed from the mini_dump_thread is the one
+          // for the 64-bit "native" process rather than the 32-bit "guest"
+          // process we care about.  In this case, we can get the 32-bit CONTEXT
+          // from the TEB (Thread Environment Block) of the 64-bit process.
           Error error;
-          TEB64 wow64teb = {0};
+          TEB64 wow64teb = {};
           m_self->ReadMemory(mini_dump_thread.Teb, &wow64teb, sizeof(wow64teb),
                              error);
           if (error.Success()) {
             // Slot 1 of the thread-local storage in the 64-bit TEB points to a
-            // structure
-            // that includes the 32-bit CONTEXT (after a ULONG).
+            // structure that includes the 32-bit CONTEXT (after a ULONG).
             // See:  https://msdn.microsoft.com/en-us/library/ms681670.aspx
-            const size_t addr = wow64teb.TlsSlots[1];
-            Range range = {0};
+            const lldb::addr_t addr = wow64teb.TlsSlots[1];
+            Range range = {};
             if (FindMemoryRange(addr, &range)) {
               lldbassert(range.start <= addr);
               const size_t offset = addr - range.start + sizeof(ULONG);
@@ -234,7 +230,7 @@ size_t ProcessWinMiniDump::Impl::DoReadMemory(lldb::addr_t addr, void *buf,
   // ranges a mini dump typically has, so I'm not sure if searching for the
   // appropriate range linearly each time is stupid.  Perhaps we should build
   // an index for faster lookups.
-  Range range = {0};
+  Range range = {};
   if (!FindMemoryRange(addr, &range)) {
     return 0;
   }
@@ -275,7 +271,7 @@ Error ProcessWinMiniDump::Impl::GetMemoryRegionInfo(
 
   const MINIDUMP_MEMORY_INFO *next_entry = nullptr;
 
-  for (int i = 0; i < list->NumberOfEntries; ++i) {
+  for (uint64_t i = 0; i < list->NumberOfEntries; ++i) {
     const auto entry = reinterpret_cast<const MINIDUMP_MEMORY_INFO *>(
         reinterpret_cast<const char *>(list) + list->SizeOfHeader +
         i * list->SizeOfEntry);

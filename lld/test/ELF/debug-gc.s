@@ -18,7 +18,7 @@ _start:
   .asciz "BBB"
 .Linfo_string2:
   .asciz "CCC"
-  
+
 .section  .debug_info,"",@progbits
   .long .Linfo_string0
   .long .Linfo_string1

@@ -300,7 +300,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
 
-  if (command.GetArgumentCount() != 0) {
+  if (!command.empty()) {
     result.AppendErrorWithFormat(
         "\"disassemble\" arguments are specified as options.\n");
     const int terminal_width =

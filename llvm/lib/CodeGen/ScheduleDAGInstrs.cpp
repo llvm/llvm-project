@@ -1309,7 +1309,13 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
     // register is used multiple times we only set the kill flag on
     // the first use. Don't set kill flags on undef operands.
     killedRegs.reset();
-    for (MachineOperand &MO : MI.operands()) {
+
+    // toggleKillFlag can append new operands (implicit defs), so using
+    // a range-based loop is not safe. The new operands will be appended
+    // at the end of the operand list and they don't need to be visited,
+    // so iterating until the currently last operand is ok.
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MI.getOperand(i);
       if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
       unsigned Reg = MO.getReg();
       if ((Reg == 0) || MRI.isReserved(Reg)) continue;
@@ -1333,7 +1339,6 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
 
       if (MO.isKill() != kill) {
         DEBUG(dbgs() << "Fixing " << MO << " in ");
-        // Warning: toggleKillFlag may invalidate MO.
         toggleKillFlag(&MI, MO);
         DEBUG(MI.dump());
         DEBUG({

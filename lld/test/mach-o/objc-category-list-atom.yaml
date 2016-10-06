@@ -17,9 +17,9 @@ sections:
     attributes:      [ S_ATTR_NO_DEAD_STRIP ]
     alignment:       8
     address:         0x00000000000003F8
-    content:         [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    content:         [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ]
-    relocations:     
+    relocations:
       - offset:          0x00000008
         type:            X86_64_RELOC_UNSIGNED
         length:          3
@@ -32,7 +32,7 @@ sections:
         pc-rel:          false
         extern:          true
         symbol:          1
-undefined-symbols: 
+undefined-symbols:
   - name:            __category1
     type:            N_UNDF
     scope:           [ N_EXT ]
@@ -47,12 +47,12 @@ page-size:       0x00000000
 # Make sure we atomize the category list section by pointer sized atoms.
 
 # CHECK: path:            '<linker-internal>'
-# CHECK: defined-atoms:   
+# CHECK: defined-atoms:
 # CHECK:   - type:            objc-category-list
 # CHECK:     content:         [ 00, 00, 00, 00, 00, 00, 00, 00 ]
 # CHECK:     merge:           by-content
 # CHECK:     alignment:       8
-# CHECK:     references:      
+# CHECK:     references:
 # CHECK:       - kind:            pointer64
 # CHECK:         offset:          0
 # CHECK:         target:          __category2
@@ -60,11 +60,11 @@ page-size:       0x00000000
 # CHECK:     content:         [ 00, 00, 00, 00, 00, 00, 00, 00 ]
 # CHECK:     merge:           by-content
 # CHECK:     alignment:       8
-# CHECK:     references:      
+# CHECK:     references:
 # CHECK:       - kind:            pointer64
 # CHECK:         offset:          0
 # CHECK:         target:          __category1
-# CHECK: undefined-atoms: 
+# CHECK: undefined-atoms:
 # CHECK:   - name:            __category1
 # CHECK:   - name:            __category2
 # CHECK: ...
