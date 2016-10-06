@@ -405,14 +405,14 @@ public:
   CXXNameMangler(CXXNameMangler &Outer, raw_ostream &Out_)
       : Context(Outer.Context), Out(Out_), NullOut(false),
         Structor(Outer.Structor), StructorType(Outer.StructorType),
-        SeqID(Outer.SeqID), AbiTagsRoot(AbiTags),
-        Substitutions(Outer.Substitutions) {}
+        SeqID(Outer.SeqID), FunctionTypeDepth(Outer.FunctionTypeDepth),
+        AbiTagsRoot(AbiTags), Substitutions(Outer.Substitutions) {}
 
   CXXNameMangler(CXXNameMangler &Outer, llvm::raw_null_ostream &Out_)
       : Context(Outer.Context), Out(Out_), NullOut(true),
         Structor(Outer.Structor), StructorType(Outer.StructorType),
-        SeqID(Outer.SeqID), AbiTagsRoot(AbiTags),
-        Substitutions(Outer.Substitutions) {}
+        SeqID(Outer.SeqID), FunctionTypeDepth(Outer.FunctionTypeDepth),
+        AbiTagsRoot(AbiTags), Substitutions(Outer.Substitutions) {}
 
 #if MANGLE_CHECKER
   ~CXXNameMangler() {
