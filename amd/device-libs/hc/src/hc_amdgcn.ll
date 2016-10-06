@@ -3,10 +3,10 @@
 target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
 target triple = "amdgcn--amdhsa"
 
-;define i64 @__activelanemask_v4_b64_b1(i32 %input) #5 {
-;  %a = tail call i64 asm "v_cmp_ne_i32_e64 $0, 0, $1", "=s,v"(i32 %input) #9
-;  ret i64 %a
-;}
+define i64 @__activelanemask_v4_b64_b1(i32 %input) #5 {
+  %a = tail call i64 asm "v_cmp_ne_i32_e64 $0, 0, $1", "=s,v"(i32 %input) #9
+  ret i64 %a
+}
 
 define i32 @__amdgcn_wave_sr1(i32 %v, i1 %b) #3  {
   %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 312, i32 15, i32 15, i1 %b)
