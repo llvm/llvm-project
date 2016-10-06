@@ -26,11 +26,11 @@
 #include <unistd.h>
 
 #if defined(__x86_64__)
-  #include <x86intrin.h>
+#include <x86intrin.h>
 #elif defined(__arm__)
-  static const int64_t NanosecondsPerSecond = 1000LL*1000*1000;
+static const int64_t NanosecondsPerSecond = 1000LL * 1000 * 1000;
 #else
-  #error "Unsupported CPU Architecture"
+#error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
 
 #include "sanitizer_common/sanitizer_libc.h"
@@ -197,7 +197,7 @@ void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type) {
     //   one TSC tick is 1 nanosecond.
     CPUFrequency = NanosecondsPerSecond;
 #else
-  #error "Unsupported CPU Architecture"
+#error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
 
     // Since we're here, we get to write the header. We set it up so that the
@@ -237,8 +237,7 @@ void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type) {
   {
     timespec TS;
     int result = clock_gettime(CLOCK_REALTIME, &TS);
-    if(result != 0)
-    {
+    if (result != 0) {
       Report("clock_gettime() returned %d, errno=%d.", result, int(errno));
       TS.tv_sec = 0;
       TS.tv_nsec = 0;
@@ -247,7 +246,7 @@ void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type) {
     R.CPU = 0;
   }
 #else
-  #error "Unsupported CPU Architecture"
+#error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
   R.TId = TId;
   R.Type = Type;

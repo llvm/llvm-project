@@ -58,7 +58,6 @@ extern "C" {
 #include <libkern/OSAtomic.h>
 #include <mach-o/dyld.h>
 #include <mach/mach.h>
-#include <mach/mach_vm.h>
 #include <mach/vm_statistics.h>
 #include <pthread.h>
 #include <sched.h>
@@ -73,10 +72,21 @@ extern "C" {
 #include <unistd.h>
 #include <util.h>
 
-// from <crt_externs.h>, but we don't have that file on iOS
+// From <crt_externs.h>, but we don't have that file on iOS.
 extern "C" {
   extern char ***_NSGetArgv(void);
   extern char ***_NSGetEnviron(void);
+}
+
+// From <mach/mach_vm.h>, but we don't have that file on iOS.
+extern "C" {
+  extern kern_return_t mach_vm_region_recurse(
+    vm_map_t target_task,
+    mach_vm_address_t *address,
+    mach_vm_size_t *size,
+    natural_t *nesting_depth,
+    vm_region_recurse_info_t info,
+    mach_msg_type_number_t *infoCnt);
 }
 
 namespace __sanitizer {
