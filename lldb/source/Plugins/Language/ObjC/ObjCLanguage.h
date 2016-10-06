@@ -38,6 +38,11 @@ public:
           m_type(eTypeUnspecified), m_category_is_valid(false) {
       SetName(name, strict);
     }
+    MethodName(llvm::StringRef name, bool strict)
+        : m_full(), m_class(), m_category(), m_selector(),
+          m_type(eTypeUnspecified), m_category_is_valid(false) {
+      SetName(name, strict);
+    }
 
     void Clear();
 
@@ -60,6 +65,7 @@ public:
     ConstString GetFullNameWithoutCategory(bool empty_if_no_category);
 
     bool SetName(const char *name, bool strict);
+    bool SetName(llvm::StringRef name, bool strict);
 
     const ConstString &GetClassName();
 

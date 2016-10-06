@@ -1898,3 +1898,209 @@ define <8 x i32> @fptoui_8f32_to_8i32_const(<8 x float> %a) {
   %cvt = fptoui <8 x float> <float 1.0, float 2.0, float 4.0, float 6.0, float 8.0, float 6.0, float 4.0, float 1.0> to <8 x i32>
   ret <8 x i32> %cvt
 }
+
+;
+; Special Cases
+;
+
+define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
+; SSE-LABEL: fptosi_2f16_to_4i32:
+; SSE:       # BB#0:
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    movss %xmm1, {{[0-9]+}}(%rsp) # 4-byte Spill
+; SSE-NEXT:    callq __gnu_f2h_ieee
+; SSE-NEXT:    movzwl %ax, %edi
+; SSE-NEXT:    callq __gnu_h2f_ieee
+; SSE-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
+; SSE-NEXT:    movss {{[0-9]+}}(%rsp), %xmm0 # 4-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    callq __gnu_f2h_ieee
+; SSE-NEXT:    movzwl %ax, %edi
+; SSE-NEXT:    callq __gnu_h2f_ieee
+; SSE-NEXT:    cvttss2si %xmm0, %rax
+; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    cvttss2si (%rsp), %rax # 4-byte Folded Reload
+; SSE-NEXT:    movd %rax, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,2]
+; SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fptosi_2f16_to_4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    vmovss %xmm1, {{[0-9]+}}(%rsp) # 4-byte Spill
+; AVX-NEXT:    callq __gnu_f2h_ieee
+; AVX-NEXT:    movzwl %ax, %edi
+; AVX-NEXT:    callq __gnu_h2f_ieee
+; AVX-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
+; AVX-NEXT:    vmovss {{[0-9]+}}(%rsp), %xmm0 # 4-byte Reload
+; AVX-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    callq __gnu_f2h_ieee
+; AVX-NEXT:    movzwl %ax, %edi
+; AVX-NEXT:    callq __gnu_h2f_ieee
+; AVX-NEXT:    vcvttss2si %xmm0, %rax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vcvttss2si (%rsp), %rax # 4-byte Folded Reload
+; AVX-NEXT:    vmovq %rax, %xmm1
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fptosi_2f16_to_4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512-NEXT:    vcvttss2si %xmm1, %rax
+; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512-NEXT:    vmovq %rax, %xmm0
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    retq
+  %cvt = fptosi <2 x half> %a to <2 x i32>
+  %ext = shufflevector <2 x i32> %cvt, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %ext
+}
+
+define <4 x i32> @fptosi_2f80_to_4i32(<2 x x86_fp80> %a) nounwind {
+; SSE-LABEL: fptosi_2f80_to_4i32:
+; SSE:       # BB#0:
+; SSE-NEXT:    fldt {{[0-9]+}}(%rsp)
+; SSE-NEXT:    fldt {{[0-9]+}}(%rsp)
+; SSE-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; SSE-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
+; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    fistpll -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; SSE-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
+; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    fistpll -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,2]
+; SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fptosi_2f80_to_4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fptosi_2f80_to_4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    retq
+  %cvt = fptosi <2 x x86_fp80> %a to <2 x i32>
+  %ext = shufflevector <2 x i32> %cvt, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %ext
+}
+
+define <4 x i32> @fptosi_2f128_to_4i32(<2 x fp128> %a) nounwind {
+; SSE-LABEL: fptosi_2f128_to_4i32:
+; SSE:       # BB#0:
+; SSE-NEXT:    pushq %r14
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    subq $24, %rsp
+; SSE-NEXT:    movq %rsi, %r14
+; SSE-NEXT:    movq %rdi, %rbx
+; SSE-NEXT:    movq %rdx, %rdi
+; SSE-NEXT:    movq %rcx, %rsi
+; SSE-NEXT:    callq __fixtfdi
+; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movq %rbx, %rdi
+; SSE-NEXT:    movq %r14, %rsi
+; SSE-NEXT:    callq __fixtfdi
+; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    punpcklqdq (%rsp), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm0 = xmm0[0],mem[0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
+; SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    addq $24, %rsp
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    popq %r14
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fptosi_2f128_to_4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    pushq %r14
+; AVX-NEXT:    pushq %rbx
+; AVX-NEXT:    subq $24, %rsp
+; AVX-NEXT:    movq %rsi, %r14
+; AVX-NEXT:    movq %rdi, %rbx
+; AVX-NEXT:    movq %rdx, %rdi
+; AVX-NEXT:    movq %rcx, %rsi
+; AVX-NEXT:    callq __fixtfdi
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    movq %rbx, %rdi
+; AVX-NEXT:    movq %r14, %rsi
+; AVX-NEXT:    callq __fixtfdi
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vpunpcklqdq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    addq $24, %rsp
+; AVX-NEXT:    popq %rbx
+; AVX-NEXT:    popq %r14
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fptosi_2f128_to_4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    pushq %r14
+; AVX512-NEXT:    pushq %rbx
+; AVX512-NEXT:    subq $24, %rsp
+; AVX512-NEXT:    movq %rsi, %r14
+; AVX512-NEXT:    movq %rdi, %rbx
+; AVX512-NEXT:    movq %rdx, %rdi
+; AVX512-NEXT:    movq %rcx, %rsi
+; AVX512-NEXT:    callq __fixtfdi
+; AVX512-NEXT:    vmovq %rax, %xmm0
+; AVX512-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
+; AVX512-NEXT:    movq %rbx, %rdi
+; AVX512-NEXT:    movq %r14, %rsi
+; AVX512-NEXT:    callq __fixtfdi
+; AVX512-NEXT:    vmovq %rax, %xmm0
+; AVX512-NEXT:    vmovdqa64 (%rsp), %xmm1 # 16-byte Reload
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    addq $24, %rsp
+; AVX512-NEXT:    popq %rbx
+; AVX512-NEXT:    popq %r14
+; AVX512-NEXT:    retq
+  %cvt = fptosi <2 x fp128> %a to <2 x i32>
+  %ext = shufflevector <2 x i32> %cvt, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %ext
+}

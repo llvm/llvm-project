@@ -379,6 +379,9 @@ namespace {
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
     SDValue reduceBuildVecConvertToConvertBuildVec(SDNode *N);
     SDValue reduceBuildVecToShuffle(SDNode *N);
+    SDValue createBuildVecShuffle(SDLoc DL, SDNode *N, ArrayRef<int> VectorMask,
+                                  SDValue VecIn1, SDValue VecIn2,
+                                  unsigned LeftIdx);
 
     SDValue GetDemandedBits(SDValue V, const APInt &Mask);
 
@@ -12874,24 +12877,105 @@ SDValue DAGCombiner::reduceBuildVecConvertToConvertBuildVec(SDNode *N) {
   return DAG.getNode(Opcode, dl, VT, BV);
 }
 
-// If Vec holds a reference to a non-null node, return Vec.
-// Otherwise, return either a zero or an undef node of the appropriate type.
-static SDValue getRightHandValue(SelectionDAG &DAG, SDLoc DL, SDValue Vec,
-                                 EVT VT, bool Zero) {
-  if (Vec.getNode())
-    return Vec;
+SDValue DAGCombiner::createBuildVecShuffle(SDLoc DL, SDNode *N,
+                                           ArrayRef<int> VectorMask,
+                                           SDValue VecIn1, SDValue VecIn2,
+                                           unsigned LeftIdx) {
+  MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
+  SDValue ZeroIdx = DAG.getConstant(0, DL, IdxTy);
 
-  if (Zero)
-    return VT.isInteger() ? DAG.getConstant(0, DL, VT)
-                          : DAG.getConstantFP(0.0, DL, VT);
+  EVT VT = N->getValueType(0);
+  EVT InVT1 = VecIn1.getValueType();
+  EVT InVT2 = VecIn2.getNode() ? VecIn2.getValueType() : InVT1;
 
-  return DAG.getUNDEF(VT);
+  unsigned Vec2Offset = InVT1.getVectorNumElements();
+  unsigned NumElems = VT.getVectorNumElements();
+  unsigned ShuffleNumElems = NumElems;
+
+  // We can't generate a shuffle node with mismatched input and output types.
+  // Try to make the types match the type of the output.
+  if (InVT1 != VT || InVT2 != VT) {
+    if (InVT1.getSizeInBits() * 2 == VT.getSizeInBits() && InVT1 == InVT2) {
+      // If both input vectors are exactly half the size of the output, concat
+      // them. If we have only one (non-zero) input, concat it with undef.
+      VecIn1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, VecIn1,
+                           VecIn2.getNode() ? VecIn2 : DAG.getUNDEF(InVT1));
+      VecIn2 = SDValue();
+    } else if (InVT1.getSizeInBits() == VT.getSizeInBits() * 2) {
+      if (!TLI.isExtractSubvectorCheap(VT, NumElems))
+        return SDValue();
+
+      if (!VecIn2.getNode()) {
+        // If we only have one input vector, and it's twice the size of the
+        // output, split it in two.
+        VecIn2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, VecIn1,
+                             DAG.getConstant(NumElems, DL, IdxTy));
+        VecIn1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, VecIn1, ZeroIdx);
+        // Since we now have shorter input vectors, adjust the offset of the
+        // second vector's start.
+        Vec2Offset = NumElems;
+      } else if (InVT2.getSizeInBits() <= InVT1.getSizeInBits()) {
+        // VecIn1 is wider than the output, and we have another, possibly
+        // smaller input. Pad the smaller input with undefs, shuffle at the
+        // input vector width, and extract the output.
+        // The shuffle type is different than VT, so check legality again.
+        if (LegalOperations &&
+            !TLI.isOperationLegal(ISD::VECTOR_SHUFFLE, InVT1))
+          return SDValue();
+
+        if (InVT1 != InVT2)
+          VecIn2 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InVT1,
+                               DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
+        ShuffleNumElems = NumElems * 2;
+      }
+    } else {
+      // TODO: Support cases where the length mismatch isn't exactly by a
+      // factor of 2.
+      // TODO: Move this check upwards, so that if we have bad type
+      // mismatches, we don't create any DAG nodes.
+      return SDValue();
+    }
+  }
+
+  // Initialize mask to undef.
+  SmallVector<int, 8> Mask(ShuffleNumElems, -1);
+
+  // Only need to run up to the number of elements actually used, not the
+  // total number of elements in the shuffle - if we are shuffling a wider
+  // vector, the high lanes should be set to undef.
+  for (unsigned i = 0; i != NumElems; ++i) {
+    if (VectorMask[i] <= 0)
+      continue;
+
+    SDValue Extract = N->getOperand(i);
+    unsigned ExtIndex =
+        cast<ConstantSDNode>(Extract.getOperand(1))->getZExtValue();
+
+    if (VectorMask[i] == (int)LeftIdx) {
+      Mask[i] = ExtIndex;
+    } else if (VectorMask[i] == (int)LeftIdx + 1) {
+      Mask[i] = Vec2Offset + ExtIndex;
+    }
+  }
+
+  // The type the input vectors may have changed above.
+  InVT1 = VecIn1.getValueType();
+
+  // If we already have a VecIn2, it should have the same type as VecIn1.
+  // If we don't, get an undef/zero vector of the appropriate type.
+  VecIn2 = VecIn2.getNode() ? VecIn2 : DAG.getUNDEF(InVT1);
+  assert(InVT1 == VecIn2.getValueType() && "Unexpected second input type.");
+
+  SDValue Shuffle = DAG.getVectorShuffle(InVT1, DL, VecIn1, VecIn2, Mask);
+  if (ShuffleNumElems > NumElems)
+    Shuffle = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shuffle, ZeroIdx);
+
+  return Shuffle;
 }
 
 // Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT
-// operations.  If so, and if the EXTRACT_VECTOR_ELT vector inputs come from
-// at most two distinct vectors, turn this into a shuffle node.
-// TODO: Support more than two inputs by constructing a tree of shuffles.
+// operations. If the types of the vectors we're extracting from allow it,
+// turn this into a vector_shuffle node.
 SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
@@ -12904,26 +12988,31 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   if (LegalOperations && !TLI.isOperationLegal(ISD::VECTOR_SHUFFLE, VT))
     return SDValue();
 
-  SDValue VecIn1, VecIn2;
   bool UsesZeroVector = false;
   unsigned NumElems = N->getNumOperands();
 
-  // Record, for each element of newly built vector, which input it uses.
-  // 0 stands for the zero vector, 1 and 2 for the two input vectors, and -1
-  // for undef.
-  SmallVector<int, 8> VectorMask;
+  // Record, for each element of the newly built vector, which input vector
+  // that element comes from. -1 stands for undef, 0 for the zero vector,
+  // and positive values for the input vectors.
+  // VectorMask maps each element to its vector number, and VecIn maps vector
+  // numbers to their initial SDValues.
+
+  SmallVector<int, 8> VectorMask(NumElems, -1);
+  SmallVector<SDValue, 8> VecIn;
+  VecIn.push_back(SDValue());
+
   for (unsigned i = 0; i != NumElems; ++i) {
     SDValue Op = N->getOperand(i);
 
-    if (Op.isUndef()) {
-      VectorMask.push_back(-1);
+    if (Op.isUndef())
       continue;
-    }
 
-    // See if we can combine this into a blend with a zero vector.
-    if (!VecIn2.getNode() && (isNullConstant(Op) || isNullFPConstant(Op))) {
+    // See if we can use a blend with a zero vector.
+    // TODO: Should we generalize this to a blend with an arbitrary constant
+    // vector?
+    if (isNullConstant(Op) || isNullFPConstant(Op)) {
       UsesZeroVector = true;
-      VectorMask.push_back(0);
+      VectorMask[i] = 0;
       continue;
     }
 
@@ -12933,151 +13022,118 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
         !isa<ConstantSDNode>(Op.getOperand(1)))
       return SDValue();
 
-    // We only allow up to two distinct input vectors.
     SDValue ExtractedFromVec = Op.getOperand(0);
-    if (ExtractedFromVec == VecIn1) {
-      VectorMask.push_back(1);
-      continue;
-    }
-    if (ExtractedFromVec == VecIn2) {
-      VectorMask.push_back(2);
-      continue;
-    }
 
-    if (!VecIn1.getNode()) {
-      VecIn1 = ExtractedFromVec;
-      VectorMask.push_back(1);
-    } else if (!VecIn2.getNode() && !UsesZeroVector) {
-      VecIn2 = ExtractedFromVec;
-      VectorMask.push_back(2);
-    } else {
+    // All inputs must have the same element type as the output.
+    if (VT.getVectorElementType() !=
+        ExtractedFromVec.getValueType().getVectorElementType())
       return SDValue();
-    }
+
+    // Have we seen this input vector before?
+    // The vectors are expected to be tiny (usually 1 or 2 elements), so using
+    // a map back from SDValues to numbers isn't worth it.
+    unsigned Idx = std::distance(
+        VecIn.begin(), std::find(VecIn.begin(), VecIn.end(), ExtractedFromVec));
+    if (Idx == VecIn.size())
+      VecIn.push_back(ExtractedFromVec);
+
+    VectorMask[i] = Idx;
   }
 
   // If we didn't find at least one input vector, bail out.
-  if (!VecIn1.getNode())
+  if (VecIn.size() < 2)
     return SDValue();
 
-  EVT InVT1 = VecIn1.getValueType();
-  EVT InVT2 = VecIn2.getNode() ? VecIn2.getValueType() : InVT1;
-  unsigned Vec2Offset = InVT1.getVectorNumElements();
-  unsigned ShuffleNumElems = NumElems;
+  // TODO: We want to sort the vectors by descending length, so that adjacent
+  // pairs have similar length, and the longer vector is always first in the
+  // pair.
 
-  MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
-  SDValue ZeroIdx = DAG.getConstant(0, dl, IdxTy);
+  // TODO: Should this fire if some of the input vectors has illegal type (like
+  // it does now), or should we let legalization run its course first?
 
-  // We can't generate a shuffle node with mismatched input and output types.
-  // Try to make the types match.
-  // TODO: Should this fire if InVT1/InVT2 are not legal types, or should
-  // we let legalization run its course first?
-  if (InVT1 != VT || InVT2 != VT) {
-    // Both inputs and the output must have the same base element type.
-    EVT ElemType = VT.getVectorElementType();
-    if (ElemType != InVT1.getVectorElementType() ||
-        ElemType != InVT2.getVectorElementType())
+  // Shuffle phase:
+  // Take pairs of vectors, and shuffle them so that the result has elements
+  // from these vectors in the correct places.
+  // For example, given:
+  // t10: i32 = extract_vector_elt t1, Constant:i64<0>
+  // t11: i32 = extract_vector_elt t2, Constant:i64<0>
+  // t12: i32 = extract_vector_elt t3, Constant:i64<0>
+  // t13: i32 = extract_vector_elt t1, Constant:i64<1>
+  // t14: v4i32 = BUILD_VECTOR t10, t11, t12, t13
+  // We will generate:
+  // t20: v4i32 = vector_shuffle<0,4,u,1> t1, t2
+  // t21: v4i32 = vector_shuffle<u,u,0,u> t3, undef
+  SmallVector<SDValue, 4> Shuffles;
+  for (unsigned In = 0, Len = (VecIn.size() / 2); In < Len; ++In) {
+    unsigned LeftIdx = 2 * In + 1;
+    SDValue VecLeft = VecIn[LeftIdx];
+    SDValue VecRight =
+        (LeftIdx + 1) < VecIn.size() ? VecIn[LeftIdx + 1] : SDValue();
+
+    if (SDValue Shuffle = createBuildVecShuffle(dl, N, VectorMask, VecLeft,
+                                                VecRight, LeftIdx))
+      Shuffles.push_back(Shuffle);
+    else
       return SDValue();
+  }
 
-    // TODO: Canonicalize this so that if the vectors have different lengths,
-    // VecIn1 is always longer.
+  // If we need the zero vector as an "ingredient" in the blend tree, add it
+  // to the list of shuffles.
+  if (UsesZeroVector)
+    Shuffles.push_back(VT.isInteger() ? DAG.getConstant(0, dl, VT)
+                                      : DAG.getConstantFP(0.0, dl, VT));
 
-    // The element types match, now figure out the lengths.
-    if (InVT1.getSizeInBits() * 2 == VT.getSizeInBits() && InVT1 == InVT2) {
-      // If both input vectors are exactly half the size of the output, concat
-      // them. If we have only one (non-zero) input, concat it with undef.
-      VecIn1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, VecIn1,
-                           getRightHandValue(DAG, dl, VecIn2, InVT1, false));
-      VecIn2 = SDValue();
-      // If we have one "real" input and are blending with zero, we need the
-      // zero elements to come from the second input, not the undef part of the
-      // first input.
-      if (UsesZeroVector)
-        Vec2Offset = NumElems;
-    } else if (InVT1.getSizeInBits() == VT.getSizeInBits() * 2) {
-      if (!TLI.isExtractSubvectorCheap(VT, NumElems))
-        return SDValue();
+  // If we only have one shuffle, we're done.
+  if (Shuffles.size() == 1)
+    return Shuffles[0];
 
-      if (UsesZeroVector)
-        return SDValue();
+  // Update the vector mask to point to the post-shuffle vectors.
+  for (int &Vec : VectorMask)
+    if (Vec == 0)
+      Vec = Shuffles.size() - 1;
+    else
+      Vec = (Vec - 1) / 2;
 
-      if (!VecIn2.getNode()) {
-        // If we only have one input vector, and it's twice the size of the
-        // output, split it in two.        
-        VecIn2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, VecIn1,
-                             DAG.getConstant(NumElems, dl, IdxTy));
-        VecIn1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, VecIn1, ZeroIdx);
-        // Since we now have shorter input vectors, adjust the offset of the
-        // second vector's start.
-        Vec2Offset = NumElems;
-      } else if (InVT2.getSizeInBits() <= InVT1.getSizeInBits()) {
-        // VecIn1 is wider than the output, and we have another, possibly
-        // smaller input. Pad the smaller input with undefs, shuffle at the
-        // input vector width, and extract the output.
+  // More than one shuffle. Generate a binary tree of blends, e.g. if from
+  // the previous step we got the set of shuffles t10, t11, t12, t13, we will
+  // generate:
+  // t10: v8i32 = vector_shuffle<0,8,u,u,u,u,u,u> t1, t2
+  // t11: v8i32 = vector_shuffle<u,u,0,8,u,u,u,u> t3, t4
+  // t12: v8i32 = vector_shuffle<u,u,u,u,0,8,u,u> t5, t6
+  // t13: v8i32 = vector_shuffle<u,u,u,u,u,u,0,8> t7, t8  
+  // t20: v8i32 = vector_shuffle<0,1,10,11,u,u,u,u> t10, t11
+  // t21: v8i32 = vector_shuffle<u,u,u,u,4,5,14,15> t12, t13
+  // t30: v8i32 = vector_shuffle<0,1,2,3,12,13,14,15> t20, t21
 
-        // The shuffle type is different than VT, so check legality again.
-        if (LegalOperations &&
-            !TLI.isOperationLegal(ISD::VECTOR_SHUFFLE, InVT1))
-          return SDValue();
+  // Make sure the initial size of the shuffle list is even.
+  if (Shuffles.size() % 2)
+    Shuffles.push_back(DAG.getUNDEF(VT));
 
-        if (InVT1 != InVT2)
-          VecIn2 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, InVT1,
-                               DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
-        ShuffleNumElems = NumElems * 2;
+  for (unsigned CurSize = Shuffles.size(); CurSize > 1; CurSize /= 2) {
+    if (CurSize % 2) {
+      Shuffles[CurSize] = DAG.getUNDEF(VT);
+      CurSize++;
+    }
+    for (unsigned In = 0, Len = CurSize / 2; In < Len; ++In) {
+      int Left = 2 * In;
+      int Right = 2 * In + 1;
+      SmallVector<int, 8> Mask(NumElems, -1);
+      for (unsigned i = 0; i != NumElems; ++i) {
+        if (VectorMask[i] == Left) {
+          Mask[i] = i;
+          VectorMask[i] = In;
+        } else if (VectorMask[i] == Right) {
+          Mask[i] = i + NumElems;
+          VectorMask[i] = In;
+        }
       }
-    } else {
-      // TODO: Support cases where the length mismatch isn't exactly by a
-      // factor of 2.
-      return SDValue();
+
+      Shuffles[In] =
+          DAG.getVectorShuffle(VT, dl, Shuffles[Left], Shuffles[Right], Mask);
     }
   }
 
-  // Initialize mask to undef.
-  SmallVector<int, 8> Mask(ShuffleNumElems, -1);
-
-  // Only need to run up to the number of elements actually used, not the
-  // total number of elements in the shuffle - if we are shuffling a wider
-  // vector, the high lanes should be set to undef.
-  for (unsigned i = 0; i != NumElems; ++i) {
-    if (VectorMask[i] == -1)
-      continue;
-
-    // If we are trying to blend with zero, we need to take a zero from the
-    // correct position in the second input.
-    if (VectorMask[i] == 0) {
-      Mask[i] = Vec2Offset + i;
-      continue;
-    }
-
-    SDValue Extract = N->getOperand(i);
-    unsigned ExtIndex =
-        cast<ConstantSDNode>(Extract.getOperand(1))->getZExtValue();
-
-    if (VectorMask[i] == 1) {
-      Mask[i] = ExtIndex;
-      continue;
-    }
-
-    assert(VectorMask[i] == 2 && "Expected input to be from second vector");
-    Mask[i] = Vec2Offset + ExtIndex;
-  }
-
-  // The type the input vectors may have changed above.
-  InVT1 = VecIn1.getValueType();
-
-  // If we already have a VecIn2, it should have the same type as VecIn1.
-  // If we don't, get an undef/zero vector of the appropriate type.
-  VecIn2 = getRightHandValue(DAG, dl, VecIn2, InVT1, UsesZeroVector);
-  assert(InVT1 == VecIn2.getValueType() && "Unexpected second input type.");
-
-  // Return the new VECTOR_SHUFFLE node.
-  SDValue Ops[2];
-  Ops[0] = VecIn1;
-  Ops[1] = VecIn2;
-  SDValue Shuffle = DAG.getVectorShuffle(InVT1, dl, Ops[0], Ops[1], Mask);
-  if (ShuffleNumElems > NumElems)
-    Shuffle = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Shuffle, ZeroIdx);
-
-  return Shuffle;
+  return Shuffles[0];
 }
 
 SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {

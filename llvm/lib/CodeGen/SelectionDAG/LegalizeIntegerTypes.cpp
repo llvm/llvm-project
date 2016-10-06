@@ -102,6 +102,11 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::CONCAT_VECTORS:
                          Res = PromoteIntRes_CONCAT_VECTORS(N); break;
 
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+                         Res = PromoteIntRes_EXTEND_VECTOR_INREG(N); break;
+
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND:  Res = PromoteIntRes_INT_EXTEND(N); break;
@@ -3321,6 +3326,25 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
   }
 
   return DAG.getNode(ISD::BUILD_VECTOR, dl, NOutVT, Ops);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  assert(NVT.isVector() && "This type must be promoted to a vector type");
+
+  SDLoc dl(N);
+
+  // For operands whose TypeAction is to promote, the promoted node to construct
+  // a new *_EXTEND_VECTOR_INREG node.
+  if (getTypeAction(N->getOperand(0).getValueType())
+      == TargetLowering::TypePromoteInteger) {
+    SDValue Promoted = GetPromotedInteger(N->getOperand(0));
+    return DAG.getNode(N->getOpcode(), dl, NVT, Promoted);
+  }
+
+  // Directly extend to the appropriate transform-to type.
+  return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N) {

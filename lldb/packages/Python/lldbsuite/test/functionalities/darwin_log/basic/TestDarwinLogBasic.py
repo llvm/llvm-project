@@ -21,6 +21,7 @@ class TestDarwinLogBasic(darwin_log.DarwinLogEventBasedTestBase):
 
     @decorators.add_test_categories(['pyapi'])
     @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(archs=["i386"], bugnumber="rdar://28655626")
     def test_SBStructuredData_gets_broadcasted(self):
         """Exercise SBStructuredData API."""
 

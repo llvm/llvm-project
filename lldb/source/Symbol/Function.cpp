@@ -347,8 +347,6 @@ bool Function::IsTopLevelFunction() {
 }
 
 ConstString Function::GetDisplayName() const {
-  if (!m_mangled)
-    return ConstString();
   return m_mangled.GetDisplayDemangledName(GetLanguage());
 }
 
