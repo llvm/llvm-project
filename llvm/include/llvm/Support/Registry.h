@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_REGISTRY_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"

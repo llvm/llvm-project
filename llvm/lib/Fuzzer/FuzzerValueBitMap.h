@@ -68,6 +68,15 @@ struct ValueBitMap {
     return OldNumBits < NumBits;
   }
 
+  template <class Callback>
+  void ForEach(Callback CB) {
+    for (size_t i = 0; i < kMapSizeInWords; i++)
+      if (uintptr_t M = Map[i])
+        for (size_t j = 0; j < sizeof(M) * 8; j++)
+          if (M & ((uintptr_t)1 << j))
+            CB(i * sizeof(M) * 8 + j);
+  }
+
  private:
   size_t NumBits = 0;
   uintptr_t Map[kMapSizeInWords] __attribute__((aligned(512)));

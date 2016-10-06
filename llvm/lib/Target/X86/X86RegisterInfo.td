@@ -345,6 +345,8 @@ def GR32 : RegisterClass<"X86", [i32], 32,
 // GR64 - 64-bit GPRs. This oddly includes RIP, which isn't accurate, since
 // RIP isn't really a register and it can't be used anywhere except in an
 // address, but it doesn't cause trouble.
+// FIXME: it *does* cause trouble - CheckBaseRegAndIndexReg() has extra
+// tests because of the inclusion of RIP in this register class.
 def GR64 : RegisterClass<"X86", [i64], 64,
                          (add RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
                               RBX, R14, R15, R12, R13, RBP, RSP, RIP)>;

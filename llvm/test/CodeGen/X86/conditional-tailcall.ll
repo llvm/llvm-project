@@ -1,6 +1,5 @@
-; RUN: llc < %s -mtriple=i686-linux -show-mc-encoding | FileCheck -check-prefix=CHECK %s
-; RUN: llc < %s -mtriple=x86_64-linux -show-mc-encoding | FileCheck -check-prefix=CHECK %s
-; RUN: llc < %s -mtriple=x86_64-win32 -show-mc-encoding | FileCheck -check-prefix=CHECK -check-prefix=WIN64 %s
+; RUN: llc < %s -mtriple=i686-linux -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux -show-mc-encoding | FileCheck %s
 
 declare void @foo()
 declare void @bar()
@@ -24,28 +23,6 @@ bb2:
 ; CHECK: jmp foo
 }
 
-define void @f_non_leaf(i32 %x, i32 %y) optsize {
-entry:
-  ; Force %ebx to be spilled on the stack, turning this into
-  ; not a "leaf" function for Win64.
-  tail call void asm sideeffect "", "~{ebx}"()
-
-	%p = icmp eq i32 %x, %y
-  br i1 %p, label %bb1, label %bb2
-bb1:
-  tail call void @foo()
-  ret void
-bb2:
-  tail call void @bar()
-  ret void
-
-; CHECK-LABEL: f_non_leaf:
-; WIN64-NOT: je foo
-; WIN64-NOT: jne bar
-; WIN64: jne
-; WIN64: jmp foo
-; WIN64: jmp bar
-}
 
 declare x86_thiscallcc zeroext i1 @baz(i8*, i32)
 define x86_thiscallcc zeroext i1 @BlockPlacementTest(i8* %this, i32 %x) optsize {

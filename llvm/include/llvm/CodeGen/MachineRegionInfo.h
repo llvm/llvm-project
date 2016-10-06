@@ -142,7 +142,7 @@ RegionGraphTraits(const MachineRegion, const MachineRegionNode);
 
 template <> struct GraphTraits<MachineRegionInfo*>
   : public GraphTraits<FlatIt<MachineRegionNode*> > {
-  typedef df_iterator<NodeRef, SmallPtrSet<NodeRef, 8>, false,
+  typedef df_iterator<NodeRef, df_iterator_default_set<NodeRef>, false,
                       GraphTraits<FlatIt<NodeRef>>>
       nodes_iterator;
 
@@ -159,7 +159,7 @@ template <> struct GraphTraits<MachineRegionInfo*>
 
 template <> struct GraphTraits<MachineRegionInfoPass*>
   : public GraphTraits<MachineRegionInfo *> {
-  typedef df_iterator<NodeRef, SmallPtrSet<NodeRef, 8>, false,
+  typedef df_iterator<NodeRef, df_iterator_default_set<NodeRef>, false,
                       GraphTraits<FlatIt<NodeRef>>>
       nodes_iterator;
 

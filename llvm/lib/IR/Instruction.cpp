@@ -126,47 +126,31 @@ bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
 }
 
-/// Set or clear the unsafe-algebra flag on this instruction, which must be an
-/// operator which supports this flag. See LangRef.html for the meaning of this
-/// flag.
 void Instruction::setHasUnsafeAlgebra(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasUnsafeAlgebra(B);
 }
 
-/// Set or clear the NoNaNs flag on this instruction, which must be an operator
-/// which supports this flag. See LangRef.html for the meaning of this flag.
 void Instruction::setHasNoNaNs(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasNoNaNs(B);
 }
 
-/// Set or clear the no-infs flag on this instruction, which must be an operator
-/// which supports this flag. See LangRef.html for the meaning of this flag.
 void Instruction::setHasNoInfs(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasNoInfs(B);
 }
 
-/// Set or clear the no-signed-zeros flag on this instruction, which must be an
-/// operator which supports this flag. See LangRef.html for the meaning of this
-/// flag.
 void Instruction::setHasNoSignedZeros(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasNoSignedZeros(B);
 }
 
-/// Set or clear the allow-reciprocal flag on this instruction, which must be an
-/// operator which supports this flag. See LangRef.html for the meaning of this
-/// flag.
 void Instruction::setHasAllowReciprocal(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasAllowReciprocal(B);
 }
 
-/// Convenience function for setting all the fast-math flags on this
-/// instruction, which must be an operator which supports these flags. See
-/// LangRef.html for the meaning of these flats.
 void Instruction::setFastMathFlags(FastMathFlags FMF) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setFastMathFlags(FMF);
@@ -177,45 +161,36 @@ void Instruction::copyFastMathFlags(FastMathFlags FMF) {
   cast<FPMathOperator>(this)->copyFastMathFlags(FMF);
 }
 
-/// Determine whether the unsafe-algebra flag is set.
 bool Instruction::hasUnsafeAlgebra() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasUnsafeAlgebra();
 }
 
-/// Determine whether the no-NaNs flag is set.
 bool Instruction::hasNoNaNs() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasNoNaNs();
 }
 
-/// Determine whether the no-infs flag is set.
 bool Instruction::hasNoInfs() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasNoInfs();
 }
 
-/// Determine whether the no-signed-zeros flag is set.
 bool Instruction::hasNoSignedZeros() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasNoSignedZeros();
 }
 
-/// Determine whether the allow-reciprocal flag is set.
 bool Instruction::hasAllowReciprocal() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasAllowReciprocal();
 }
 
-/// Convenience function for getting all the fast-math flags, which must be an
-/// operator which supports these flags. See LangRef.html for the meaning of
-/// these flags.
 FastMathFlags Instruction::getFastMathFlags() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->getFastMathFlags();
 }
 
-/// Copy I's fast-math flags
 void Instruction::copyFastMathFlags(const Instruction *I) {
   copyFastMathFlags(I->getFastMathFlags());
 }
@@ -349,7 +324,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   }
 }
 
-/// Return true if both instructions have the same special state This must be
+/// Return true if both instructions have the same special state. This must be
 /// kept in sync with FunctionComparator::cmpOperations in
 /// lib/Transforms/IPO/MergeFunctions.cpp.
 static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
@@ -408,17 +383,11 @@ static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
   return true;
 }
 
-/// isIdenticalTo - Return true if the specified instruction is exactly
-/// identical to the current one.  This means that all operands match and any
-/// extra information (e.g. load is volatile) agree.
 bool Instruction::isIdenticalTo(const Instruction *I) const {
   return isIdenticalToWhenDefined(I) &&
          SubclassOptionalData == I->SubclassOptionalData;
 }
 
-/// isIdenticalToWhenDefined - This is like isIdenticalTo, except that it
-/// ignores the SubclassOptionalData flags, which specify conditions
-/// under which the instruction's result is undefined.
 bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
@@ -469,9 +438,6 @@ bool Instruction::isSameOperationAs(const Instruction *I,
   return haveSameSpecialState(this, I, IgnoreAlignment);
 }
 
-/// isUsedOutsideOfBlock - Return true if there are any uses of I outside of the
-/// specified block.  Note that PHI nodes are considered to evaluate their
-/// operands in the corresponding predecessor block.
 bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
   for (const Use &U : uses()) {
     // PHI nodes uses values in the corresponding predecessor block.  For other
@@ -490,8 +456,6 @@ bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
   return false;
 }
 
-/// mayReadFromMemory - Return true if this instruction may read memory.
-///
 bool Instruction::mayReadFromMemory() const {
   switch (getOpcode()) {
   default: return false;
@@ -512,8 +476,6 @@ bool Instruction::mayReadFromMemory() const {
   }
 }
 
-/// mayWriteToMemory - Return true if this instruction may modify memory.
-///
 bool Instruction::mayWriteToMemory() const {
   switch (getOpcode()) {
   default: return false;
@@ -559,7 +521,7 @@ bool Instruction::mayThrow() const {
   return isa<ResumeInst>(this);
 }
 
-/// isAssociative - Return true if the instruction is associative:
+/// Return true if the instruction is associative:
 ///
 ///   Associative operators satisfy:  x op (y op z) === (x op y) op z
 ///
@@ -584,7 +546,7 @@ bool Instruction::isAssociative() const {
   }
 }
 
-/// isCommutative - Return true if the instruction is commutative:
+/// Return true if the instruction is commutative:
 ///
 ///   Commutative operators satisfy: (x op y) === (y op x)
 ///
@@ -606,7 +568,7 @@ bool Instruction::isCommutative(unsigned op) {
   }
 }
 
-/// isIdempotent - Return true if the instruction is idempotent:
+/// Return true if the instruction is idempotent:
 ///
 ///   Idempotent operators satisfy:  x op x === x
 ///
@@ -616,7 +578,7 @@ bool Instruction::isIdempotent(unsigned Opcode) {
   return Opcode == And || Opcode == Or;
 }
 
-/// isNilpotent - Return true if the instruction is nilpotent:
+/// Return true if the instruction is nilpotent:
 ///
 ///   Nilpotent operators satisfy:  x op x === Id,
 ///
@@ -650,8 +612,6 @@ void Instruction::swapProfMetadata() {
               MDNode::get(ProfileData->getContext(), Ops));
 }
 
-/// Copy meta data from \p SrcInst to this instruction. If WL is empty, all
-/// data will be copied, otherwise only ones specified in WL will be copied.
 void Instruction::copyMetadata(const Instruction &SrcInst,
                                ArrayRef<unsigned> WL) {
   if (!SrcInst.hasMetadata())

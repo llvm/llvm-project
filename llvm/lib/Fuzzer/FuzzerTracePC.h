@@ -29,13 +29,11 @@ class TracePC {
   void ResetTotalPCCoverage() { TotalPCCoverage = 0; }
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
-  bool UpdateCounterMap(ValueBitMap *MaxCounterMap) {
-    return MaxCounterMap->MergeFrom(CounterMap);
-  }
+  size_t FinalizeTrace(InputCorpus *C, size_t InputSize, bool Shrink);
   bool UpdateValueProfileMap(ValueBitMap *MaxValueProfileMap) {
     return UseValueProfile && MaxValueProfileMap->MergeFrom(ValueProfileMap);
-  }
-  bool FinalizeTrace(size_t InputSize);
+    }
+
 
   size_t GetNewPCIDs(uintptr_t **NewPCIDsPtr) {
     *NewPCIDsPtr = NewPCIDs;
@@ -46,7 +44,6 @@ class TracePC {
 
   void ResetMaps() {
     NumNewPCIDs = 0;
-    CounterMap.Reset();
     ValueProfileMap.Reset();
     memset(Counters, 0, sizeof(Counters));
   }
@@ -60,12 +57,12 @@ class TracePC {
 
   void PrintCoverage();
 
-  bool HasFeature(size_t Idx) { return CounterMap.Get(Idx); }
-
   void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                          size_t n);
   void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
                          size_t n);
+
+  bool UsingTracePcGuard() const {return NumModules; }
 
 private:
   bool UseCounters = false;
@@ -93,9 +90,7 @@ private:
   static const size_t kNumPCs = 1 << 20;
   uintptr_t PCs[kNumPCs];
 
-  ValueBitMap CounterMap;
   ValueBitMap ValueProfileMap;
-  uint32_t InputSizesPerFeature[kFeatureSetSize];
 };
 
 extern TracePC TPC;

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerCorpus.h"
 #include "FuzzerDefs.h"
 #include "FuzzerTracePC.h"
 #include "FuzzerValueBitMap.h"
@@ -68,45 +69,46 @@ void TracePC::ResetGuards() {
   assert(N == NumGuards);
 }
 
-bool TracePC::FinalizeTrace(size_t InputSize) {
-  bool Res = false;
-  if (TotalPCCoverage) {
-    const size_t Step = 8;
-    assert(reinterpret_cast<uintptr_t>(Counters) % Step == 0);
-    size_t N = Min(kNumCounters, NumGuards + 1);
-    N = (N + Step - 1) & ~(Step - 1);  // Round up.
-    for (size_t Idx = 0; Idx < N; Idx += Step) {
-      uint64_t Bundle = *reinterpret_cast<uint64_t*>(&Counters[Idx]);
-      if (!Bundle) continue;
-      for (size_t i = Idx; i < Idx + Step; i++) {
-        uint8_t Counter = (Bundle >> (i * 8)) & 0xff;
-        if (!Counter) continue;
-        Counters[i] = 0;
-        unsigned Bit = 0;
-        /**/ if (Counter >= 128) Bit = 7;
-        else if (Counter >= 32) Bit = 6;
-        else if (Counter >= 16) Bit = 5;
-        else if (Counter >= 8) Bit = 4;
-        else if (Counter >= 4) Bit = 3;
-        else if (Counter >= 3) Bit = 2;
-        else if (Counter >= 2) Bit = 1;
-        size_t Feature = i * 8 + Bit;
-        CounterMap.AddValue(Feature);
-        uint32_t *SizePtr = &InputSizesPerFeature[Feature % kFeatureSetSize];
-        if (!*SizePtr || *SizePtr > InputSize) {
-          *SizePtr = InputSize;
-          Res = true;
-        }
-      }
+size_t TracePC::FinalizeTrace(InputCorpus *C, size_t InputSize, bool Shrink) {
+  if (!UsingTracePcGuard()) return 0;
+  size_t Res = 0;
+  const size_t Step = 8;
+  assert(reinterpret_cast<uintptr_t>(Counters) % Step == 0);
+  size_t N = Min(kNumCounters, NumGuards + 1);
+  N = (N + Step - 1) & ~(Step - 1);  // Round up.
+  for (size_t Idx = 0; Idx < N; Idx += Step) {
+    uint64_t Bundle = *reinterpret_cast<uint64_t*>(&Counters[Idx]);
+    if (!Bundle) continue;
+    for (size_t i = Idx; i < Idx + Step; i++) {
+      uint8_t Counter = (Bundle >> (i * 8)) & 0xff;
+      if (!Counter) continue;
+      Counters[i] = 0;
+      unsigned Bit = 0;
+      /**/ if (Counter >= 128) Bit = 7;
+      else if (Counter >= 32) Bit = 6;
+      else if (Counter >= 16) Bit = 5;
+      else if (Counter >= 8) Bit = 4;
+      else if (Counter >= 4) Bit = 3;
+      else if (Counter >= 3) Bit = 2;
+      else if (Counter >= 2) Bit = 1;
+      size_t Feature = (i * 8 + Bit);
+      if (C->AddFeature(Feature, InputSize, Shrink))
+        Res++;
     }
   }
+  if (UseValueProfile)
+    ValueProfileMap.ForEach([&](size_t Idx) {
+      if (C->AddFeature(NumGuards + Idx, InputSize, Shrink))
+        Res++;
+    });
   return Res;
 }
 
 void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   const uintptr_t kBits = 12;
   const uintptr_t kMask = (1 << kBits) - 1;
-  CounterMap.AddValue((Caller & kMask) | ((Callee & kMask) << kBits));
+  uintptr_t Idx = (Caller & kMask) | ((Callee & kMask) << kBits);
+  HandleValueProfile(Idx);
 }
 
 void TracePC::PrintCoverage() {
@@ -163,11 +165,9 @@ void TracePC::AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
 
 ATTRIBUTE_TARGET_POPCNT
 static void AddValueForCmp(void *PCptr, uint64_t Arg1, uint64_t Arg2) {
-  if (Arg1 == Arg2)
-    return;
   uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
-  uint64_t ArgDistance = __builtin_popcountl(Arg1 ^ Arg2) - 1; // [0,63]
-  uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
+  uint64_t ArgDistance = __builtin_popcountl(Arg1 ^ Arg2) + 1; // [1,65]
+  uintptr_t Idx = ((PC & 4095) + 1) * ArgDistance;
   TPC.HandleValueProfile(Idx);
 }
 

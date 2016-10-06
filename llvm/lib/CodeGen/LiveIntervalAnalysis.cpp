@@ -599,7 +599,7 @@ void LiveIntervals::pruneValue(LiveRange &LR, SlotIndex Kill,
   // Find all blocks that are reachable from KillMBB without leaving VNI's live
   // range. It is possible that KillMBB itself is reachable, so start a DFS
   // from each successor.
-  typedef SmallPtrSet<MachineBasicBlock*, 9> VisitedTy;
+  typedef df_iterator_default_set<MachineBasicBlock*,9> VisitedTy;
   VisitedTy Visited;
   for (MachineBasicBlock::succ_iterator
        SuccI = KillMBB->succ_begin(), SuccE = KillMBB->succ_end();

@@ -1188,6 +1188,7 @@ ARMDAGToDAGISel::SelectThumbAddrModeImm5S(SDValue N, unsigned Scale,
     } else if (N.getOpcode() == ARMISD::Wrapper &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
         N.getOperand(0).getOpcode() != ISD::TargetExternalSymbol &&
+        N.getOperand(0).getOpcode() != ISD::TargetConstantPool &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
       Base = N.getOperand(0);
     } else {

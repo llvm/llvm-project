@@ -17,14 +17,14 @@ let Defs = [ARGUMENTS] in {
 
 def I32_WRAP_I64 : I<(outs I32:$dst), (ins I64:$src),
                       [(set I32:$dst, (trunc I64:$src))],
-                      "i32.wrap/i64\t$dst, $src">;
+                      "i32.wrap/i64\t$dst, $src", 0xa1>;
 
 def I64_EXTEND_S_I32 : I<(outs I64:$dst), (ins I32:$src),
                           [(set I64:$dst, (sext I32:$src))],
-                          "i64.extend_s/i32\t$dst, $src">;
+                          "i64.extend_s/i32\t$dst, $src", 0xa6>;
 def I64_EXTEND_U_I32 : I<(outs I64:$dst), (ins I32:$src),
                          [(set I64:$dst, (zext I32:$src))],
-                         "i64.extend_u/i32\t$dst, $src">;
+                         "i64.extend_u/i32\t$dst, $src", 0xa7>;
 
 } // defs = [ARGUMENTS]
 
@@ -39,73 +39,73 @@ let Defs = [ARGUMENTS] in {
 let hasSideEffects = 1 in {
 def I32_TRUNC_S_F32 : I<(outs I32:$dst), (ins F32:$src),
                         [(set I32:$dst, (fp_to_sint F32:$src))],
-                        "i32.trunc_s/f32\t$dst, $src">;
+                        "i32.trunc_s/f32\t$dst, $src", 0x9d>;
 def I32_TRUNC_U_F32 : I<(outs I32:$dst), (ins F32:$src),
                         [(set I32:$dst, (fp_to_uint F32:$src))],
-                        "i32.trunc_u/f32\t$dst, $src">;
+                        "i32.trunc_u/f32\t$dst, $src", 0x9f>;
 def I64_TRUNC_S_F32 : I<(outs I64:$dst), (ins F32:$src),
                         [(set I64:$dst, (fp_to_sint F32:$src))],
-                        "i64.trunc_s/f32\t$dst, $src">;
+                        "i64.trunc_s/f32\t$dst, $src", 0xa2>;
 def I64_TRUNC_U_F32 : I<(outs I64:$dst), (ins F32:$src),
                         [(set I64:$dst, (fp_to_uint F32:$src))],
-                        "i64.trunc_u/f32\t$dst, $src">;
+                        "i64.trunc_u/f32\t$dst, $src", 0xa4>;
 def I32_TRUNC_S_F64 : I<(outs I32:$dst), (ins F64:$src),
                         [(set I32:$dst, (fp_to_sint F64:$src))],
-                        "i32.trunc_s/f64\t$dst, $src">;
+                        "i32.trunc_s/f64\t$dst, $src", 0x9e>;
 def I32_TRUNC_U_F64 : I<(outs I32:$dst), (ins F64:$src),
                         [(set I32:$dst, (fp_to_uint F64:$src))],
-                        "i32.trunc_u/f64\t$dst, $src">;
+                        "i32.trunc_u/f64\t$dst, $src", 0xa0>;
 def I64_TRUNC_S_F64 : I<(outs I64:$dst), (ins F64:$src),
                         [(set I64:$dst, (fp_to_sint F64:$src))],
-                        "i64.trunc_s/f64\t$dst, $src">;
+                        "i64.trunc_s/f64\t$dst, $src", 0xa3>;
 def I64_TRUNC_U_F64 : I<(outs I64:$dst), (ins F64:$src),
                         [(set I64:$dst, (fp_to_uint F64:$src))],
-                        "i64.trunc_u/f64\t$dst, $src">;
+                        "i64.trunc_u/f64\t$dst, $src", 0xa5>;
 } // hasSideEffects = 1
 
 def F32_CONVERT_S_I32 : I<(outs F32:$dst), (ins I32:$src),
                           [(set F32:$dst, (sint_to_fp I32:$src))],
-                          "f32.convert_s/i32\t$dst, $src">;
+                          "f32.convert_s/i32\t$dst, $src", 0xa8>;
 def F32_CONVERT_U_I32 : I<(outs F32:$dst), (ins I32:$src),
                           [(set F32:$dst, (uint_to_fp I32:$src))],
-                          "f32.convert_u/i32\t$dst, $src">;
+                          "f32.convert_u/i32\t$dst, $src", 0xa9>;
 def F64_CONVERT_S_I32 : I<(outs F64:$dst), (ins I32:$src),
                           [(set F64:$dst, (sint_to_fp I32:$src))],
-                          "f64.convert_s/i32\t$dst, $src">;
+                          "f64.convert_s/i32\t$dst, $src", 0xae>;
 def F64_CONVERT_U_I32 : I<(outs F64:$dst), (ins I32:$src),
                           [(set F64:$dst, (uint_to_fp I32:$src))],
-                          "f64.convert_u/i32\t$dst, $src">;
+                          "f64.convert_u/i32\t$dst, $src", 0xaf>;
 def F32_CONVERT_S_I64 : I<(outs F32:$dst), (ins I64:$src),
                           [(set F32:$dst, (sint_to_fp I64:$src))],
-                          "f32.convert_s/i64\t$dst, $src">;
+                          "f32.convert_s/i64\t$dst, $src", 0xaa>;
 def F32_CONVERT_U_I64 : I<(outs F32:$dst), (ins I64:$src),
                           [(set F32:$dst, (uint_to_fp I64:$src))],
-                          "f32.convert_u/i64\t$dst, $src">;
+                          "f32.convert_u/i64\t$dst, $src", 0xab>;
 def F64_CONVERT_S_I64 : I<(outs F64:$dst), (ins I64:$src),
                           [(set F64:$dst, (sint_to_fp I64:$src))],
-                          "f64.convert_s/i64\t$dst, $src">;
+                          "f64.convert_s/i64\t$dst, $src", 0xb0>;
 def F64_CONVERT_U_I64 : I<(outs F64:$dst), (ins I64:$src),
                           [(set F64:$dst, (uint_to_fp I64:$src))],
-                          "f64.convert_u/i64\t$dst, $src">;
+                          "f64.convert_u/i64\t$dst, $src", 0xb1>;
 
 def F64_PROMOTE_F32 : I<(outs F64:$dst), (ins F32:$src),
                         [(set F64:$dst, (fpextend F32:$src))],
-                        "f64.promote/f32\t$dst, $src">;
+                        "f64.promote/f32\t$dst, $src", 0xb2>;
 def F32_DEMOTE_F64 : I<(outs F32:$dst), (ins F64:$src),
                        [(set F32:$dst, (fpround F64:$src))],
-                       "f32.demote/f64\t$dst, $src">;
+                       "f32.demote/f64\t$dst, $src", 0xac>;
 
 def I32_REINTERPRET_F32 : I<(outs I32:$dst), (ins F32:$src),
                             [(set I32:$dst, (bitconvert F32:$src))],
-                            "i32.reinterpret/f32\t$dst, $src">;
+                            "i32.reinterpret/f32\t$dst, $src", 0xb4>;
 def F32_REINTERPRET_I32 : I<(outs F32:$dst), (ins I32:$src),
                             [(set F32:$dst, (bitconvert I32:$src))],
-                            "f32.reinterpret/i32\t$dst, $src">;
+                            "f32.reinterpret/i32\t$dst, $src", 0xad>;
 def I64_REINTERPRET_F64 : I<(outs I64:$dst), (ins F64:$src),
                             [(set I64:$dst, (bitconvert F64:$src))],
-                            "i64.reinterpret/f64\t$dst, $src">;
+                            "i64.reinterpret/f64\t$dst, $src", 0xb5>;
 def F64_REINTERPRET_I64 : I<(outs F64:$dst), (ins I64:$src),
                             [(set F64:$dst, (bitconvert I64:$src))],
-                            "f64.reinterpret/i64\t$dst, $src">;
+                            "f64.reinterpret/i64\t$dst, $src", 0xb3>;
 
 } // Defs = [ARGUMENTS]

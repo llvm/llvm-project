@@ -4277,9 +4277,9 @@ bool X86InstrInfo::canMakeTailCallConditional(
     return false;
   }
 
-  const MachineFunction *MF = TailCall.getParent()->getParent();
-  if (Subtarget.isTargetWin64() && MF->hasWinCFI()) {
+  if (Subtarget.isTargetWin64()) {
     // Conditional tail calls confuse the Win64 unwinder.
+    // TODO: Allow them for "leaf" functions; PR30337.
     return false;
   }
 
@@ -4289,7 +4289,8 @@ bool X86InstrInfo::canMakeTailCallConditional(
     return false;
   }
 
-  const X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
+  const X86MachineFunctionInfo *X86FI =
+      TailCall.getParent()->getParent()->getInfo<X86MachineFunctionInfo>();
   if (X86FI->getTCReturnAddrDelta() != 0 ||
       TailCall.getOperand(1).getImm() != 0) {
     // A conditional tail call cannot do any stack adjustment.

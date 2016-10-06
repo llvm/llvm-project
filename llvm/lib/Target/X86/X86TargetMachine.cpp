@@ -54,6 +54,8 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
     return make_unique<X86FreeBSDTargetObjectFile>();
   if (TT.isOSLinux() || TT.isOSNaCl())
     return make_unique<X86LinuxNaClTargetObjectFile>();
+  if (TT.isOSFuchsia())
+    return make_unique<X86FuchsiaTargetObjectFile>();
   if (TT.isOSBinFormatELF())
     return make_unique<X86ELFTargetObjectFile>();
   if (TT.isKnownWindowsMSVCEnvironment() || TT.isWindowsCoreCLREnvironment())

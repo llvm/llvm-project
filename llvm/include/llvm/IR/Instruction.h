@@ -462,7 +462,7 @@ public:
   bool isIdenticalTo(const Instruction *I) const;
 
   /// This is like isIdenticalTo, except that it ignores the
-  /// SubclassOptionalData flags, which specify conditions under which the
+  /// SubclassOptionalData flags, which may specify conditions under which the
   /// instruction's result is undefined.
   bool isIdenticalToWhenDefined(const Instruction *I) const;
 

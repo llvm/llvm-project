@@ -836,7 +836,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
     dbgs() << "  Local:  " << Print<RegisterSet>(LiveMap[B], DFG) << '\n';
   }
 
-  // Add phi uses that are live on exit from this block.
+  // Add reaching defs of phi uses that are live on exit from this block.
   RefMap &PUs = PhiLOX[B];
   for (auto S : PUs)
     LiveIn[S.first].insert(S.second.begin(), S.second.end());
@@ -847,62 +847,77 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
     dbgs() << "  Local:  " << Print<RegisterSet>(LiveMap[B], DFG) << '\n';
   }
 
-  // Stop tracking all uses defined in this block: erase those records
-  // where the reaching def is located in B and which cover all reached
-  // uses.
-  auto Copy = LiveIn;
+  // The LiveIn map at this point has all defs that are live-on-exit from B,
+  // as if they were live-on-entry to B. First, we need to filter out all
+  // defs that are present in this block. Then we will add reaching defs of
+  // all upward-exposed uses.
+
+  // To filter out the defs, first make a copy of LiveIn, and then re-populate
+  // LiveIn with the defs that should remain.
+  RefMap LiveInCopy = LiveIn;
   LiveIn.clear();
 
-  for (auto I : Copy) {
-    auto &Defs = LiveIn[I.first];
-    NodeSet Rest;
-    for (auto R : I.second) {
+  for (const std::pair<RegisterRef,NodeSet> &LE : LiveInCopy) {
+    RegisterRef LRef = LE.first;
+    NodeSet &NewDefs = LiveIn[LRef]; // To be filled.
+    const NodeSet &OldDefs = LE.second;
+    for (NodeId R : OldDefs) {
+      // R is a def node that was live-on-exit
       auto DA = DFG.addr<DefNode*>(R);
-      RegisterRef DDR = DA.Addr->getRegRef();
       NodeAddr<InstrNode*> IA = DA.Addr->getOwner(DFG);
       NodeAddr<BlockNode*> BA = IA.Addr->getOwner(DFG);
-      // Defs from a different block need to be preserved. Defs from this
-      // block will need to be processed further, except for phi defs, the
-      // liveness of which is handled through the PhiLON/PhiLOX maps.
-      if (B != BA.Addr->getCode())
-        Defs.insert(R);
-      else {
-        bool IsPreserving = DFG.IsPreservingDef(DA);
-        if (IA.Addr->getKind() != NodeAttrs::Phi && !IsPreserving) {
-          bool Covering = RegisterAggr::isCoverOf(DDR, I.first,
-                                                  DFG.getLMI(), TRI);
-          NodeId U = DA.Addr->getReachedUse();
-          while (U && Covering) {
-            auto DUA = DFG.addr<UseNode*>(U);
-            if (!(DUA.Addr->getFlags() & NodeAttrs::Undef)) {
-              RegisterRef Q = DUA.Addr->getRegRef();
-              Covering = RegisterAggr::isCoverOf(DA.Addr->getRegRef(), Q,
-                                                 DFG.getLMI(), TRI);
-            }
-            U = DUA.Addr->getSibling();
-          }
-          if (!Covering)
-            Rest.insert(R);
-        }
+      if (B != BA.Addr->getCode()) {
+        // Defs from a different block need to be preserved. Defs from this
+        // block will need to be processed further, except for phi defs, the
+        // liveness of which is handled through the PhiLON/PhiLOX maps.
+        NewDefs.insert(R);
+        continue;
       }
-    }
 
-    // Non-covering defs from B.
-    for (auto R : Rest) {
-      auto DA = DFG.addr<DefNode*>(R);
-      RegisterRef DRR = DA.Addr->getRegRef();
+      // Defs from this block need to stop the liveness from being
+      // propagated upwards. This only applies to non-preserving defs,
+      // and to the parts of the register actually covered by those defs.
+      // (Note that phi defs should always be preserving.)
       RegisterAggr RRs(DFG.getLMI(), TRI);
+
+      if (!DFG.IsPreservingDef(DA)) {
+        assert(!(IA.Addr->getFlags() & NodeAttrs::Phi));
+        // DA is a non-phi def that is live-on-exit from this block, and
+        // that is also located in this block. LRef is a register ref
+        // whose use this def reaches. If DA covers LRef, then no part
+        // of LRef is exposed upwards.
+        if (RRs.insert(DA.Addr->getRegRef()).hasCoverOf(LRef))
+          continue;
+      }
+
+      // DA itself was not sufficient to cover LRef. In general, it is
+      // the last in a chain of aliased defs before the exit from this block.
+      // There could be other defs in this block that are a part of that
+      // chain. Check that now: accumulate the registers from these defs,
+      // and if they all together cover LRef, it is not live-on-entry.
       for (NodeAddr<DefNode*> TA : getAllReachingDefs(DA)) {
-        NodeAddr<InstrNode*> IA = TA.Addr->getOwner(DFG);
-        NodeAddr<BlockNode*> BA = IA.Addr->getOwner(DFG);
-        // Preserving defs do not count towards covering.
+        // DefNode -> InstrNode -> BlockNode.
+        NodeAddr<InstrNode*> ITA = TA.Addr->getOwner(DFG);
+        NodeAddr<BlockNode*> BTA = ITA.Addr->getOwner(DFG);
+        // Reaching defs are ordered in the upward direction.
+        if (BTA.Addr->getCode() != B) {
+          // We have reached past the beginning of B, and the accumulated
+          // registers are not covering LRef. The first def from the
+          // upward chain will be live.
+          // FIXME: This is where the live-in lane mask could be set.
+          //        It cannot be be changed directly, because it is a part
+          //        of the map key (LRef).
+          NewDefs.insert(TA.Id);
+          break;
+        }
+
+        // TA is in B. Only add this def to the accumulated cover if it is
+        // not preserving.
         if (!(TA.Addr->getFlags() & NodeAttrs::Preserving))
           RRs.insert(TA.Addr->getRegRef());
-        if (BA.Addr->getCode() == B)
-          continue;
-        if (RRs.hasCoverOf(DRR))
+        // If this is enough to cover LRef, then stop.
+        if (RRs.hasCoverOf(LRef))
           break;
-        Defs.insert(TA.Id);
       }
     }
   }
