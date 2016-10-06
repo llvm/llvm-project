@@ -143,60 +143,50 @@ define i32 @__amdgcn_move_dpp(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_
 ; llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #4
 
-;; Function Attrs: nounwind argmemonly
-;define i32 @__atomic_wrapinc_global(i32 addrspace(1)* nocapture %addr, i32 %val) #8 {
-;  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
-;  ret i32 %ret
-;}
-;
-;; Function Attrs: nounwind argmemonly
-;declare i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture, i32) #8
-;
-;; Function Attrs: nounwind argmemonly
-;define i32 @__atomic_wrapinc_local(i32 addrspace(3)* nocapture %addr, i32 %val) #8 {
-;  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
-;  ret i32 %ret
-;}
-;
-;; Function Attrs: nounwind argmemonly
-;declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32) #8
-;
-;; Function Attrs: nounwind argmemonly
-;define i32 @__atomic_wrapdec_global(i32 addrspace(1)* nocapture %addr, i32 %val) #8 {
-;  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
-;  ret i32 %ret
-;}
-;
-;; Function Attrs: nounwind argmemonly
-;declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32) #8
-;
-;; Function Attrs: nounwind argmemonly
-;define i32 @__atomic_wrapdec_local(i32 addrspace(3)* nocapture %addr, i32 %val) #8 {
-;  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
-;  ret i32 %ret
-;}
-;
-;; Function Attrs: nounwind argmemonly
-;declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32) #8
-;
-;; Function Attrs: nounwind readnone
-;define i64 @__clock_u64() #1 {
-;  %ret = tail call i64 @llvm.amdgcn.s.memrealtime()
-;  ret i64 %ret
-;}
-;
-;; Function Attrs: nounwind readnone
-;declare i64 @llvm.amdgcn.s.memrealtime() #1
-;
-;; Function Attrs: nounwind readnone
-;define i64 @__cycle_u64() #1 {
-;  %ret = tail call i64 @llvm.amdgcn.s.memtime()
-;  ret i64 %ret
-;}
-;
-;; Function Attrs: nounwind readnone
-;declare i64 @llvm.amdgcn.s.memtime() #1
-;
+define i32 @__atomic_wrapinc_global(i32 addrspace(1)* nocapture %addr, i32 %val) #1 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+declare i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture, i32) #4
+
+; Function Attrs: nounwind argmemonly
+define i32 @__atomic_wrapinc_local(i32 addrspace(3)* nocapture %addr, i32 %val) #1 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32) #4
+
+define i32 @__atomic_wrapdec_global(i32 addrspace(1)* nocapture %addr, i32 %val) #1 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32) #4
+
+define i32 @__atomic_wrapdec_local(i32 addrspace(3)* nocapture %addr, i32 %val) #1 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32) #4
+
+define i64 @__clock_u64() #1 {
+  %ret = tail call i64 @llvm.amdgcn.s.memrealtime()
+  ret i64 %ret
+}
+
+declare i64 @llvm.amdgcn.s.memrealtime() #1
+
+
+define i64 @__cycle_u64() #1 {
+  %ret = tail call i64 @llvm.amdgcn.s.memtime()
+  ret i64 %ret
+}
+
+declare i64 @llvm.amdgcn.s.memtime() #1
+
 ;; Function Attrs: alwaysinline nounwind readonly
 ;define i32 @get_group_segment_size() #0 {
 ;  %1 = call i32 @llvm.amdgcn.s.getreg(i32 17158) #0
@@ -240,12 +230,10 @@ declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #4
 ;declare i32 @llvm.amdgcn.groupstaticsize() #1
 
 attributes #0 = { alwaysinline nounwind readonly }
-attributes #1 = { nounwind readnone }
-attributes #2 = { alwaysinline nounwind readnone }
+attributes #1 = { alwaysinline nounwind readnone }
 attributes #3 = { alwaysinline convergent nounwind }
 attributes #4 = { convergent nounwind }
 attributes #5 = { alwaysinline nounwind }
 attributes #6 = { alwaysinline norecurse nounwind readnone }
 attributes #7 = { norecurse nounwind readnone }
-attributes #8 = { nounwind argmemonly }
 attributes #9 = { convergent nounwind readnone }
