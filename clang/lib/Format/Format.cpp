@@ -1041,11 +1041,12 @@ private:
 
   // Iterate through all lines and remove any empty (nested) namespaces.
   void checkEmptyNamespace(SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
+    std::set<unsigned> DeletedLines;
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
       auto &Line = *AnnotatedLines[i];
       if (Line.startsWith(tok::kw_namespace) ||
           Line.startsWith(tok::kw_inline, tok::kw_namespace)) {
-        checkEmptyNamespace(AnnotatedLines, i, i);
+        checkEmptyNamespace(AnnotatedLines, i, i, DeletedLines);
       }
     }
 
@@ -1063,7 +1064,8 @@ private:
   // sets \p NewLine to the last line checked.
   // Returns true if the current namespace is empty.
   bool checkEmptyNamespace(SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-                           unsigned CurrentLine, unsigned &NewLine) {
+                           unsigned CurrentLine, unsigned &NewLine,
+                           std::set<unsigned> &DeletedLines) {
     unsigned InitLine = CurrentLine, End = AnnotatedLines.size();
     if (Style.BraceWrapping.AfterNamespace) {
       // If the left brace is in a new line, we should consume it first so that
@@ -1083,7 +1085,8 @@ private:
       if (AnnotatedLines[CurrentLine]->startsWith(tok::kw_namespace) ||
           AnnotatedLines[CurrentLine]->startsWith(tok::kw_inline,
                                                   tok::kw_namespace)) {
-        if (!checkEmptyNamespace(AnnotatedLines, CurrentLine, NewLine))
+        if (!checkEmptyNamespace(AnnotatedLines, CurrentLine, NewLine,
+                                 DeletedLines))
           return false;
         CurrentLine = NewLine;
         continue;
@@ -1208,8 +1211,6 @@ private:
 
   // Tokens to be deleted.
   std::set<FormatToken *, FormatTokenLess> DeletedTokens;
-  // The line numbers of lines to be deleted.
-  std::set<unsigned> DeletedLines;
 };
 
 struct IncludeDirective {
@@ -1662,6 +1663,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     if (CategoryEndOffsets.find(*I) == CategoryEndOffsets.end())
       CategoryEndOffsets[*I] = CategoryEndOffsets[*std::prev(I)];
 
+  bool NeedNewLineAtEnd = !Code.empty() && Code.back() != '\n';
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
     bool Matched = IncludeRegex.match(IncludeDirective, &Matches);
@@ -1680,10 +1682,18 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     std::string NewInclude = !IncludeDirective.endswith("\n")
                                  ? (IncludeDirective + "\n").str()
                                  : IncludeDirective.str();
+    // When inserting headers at end of the code, also append '\n' to the code
+    // if it does not end with '\n'.
+    if (NeedNewLineAtEnd && Offset == Code.size()) {
+      NewInclude = "\n" + NewInclude;
+      NeedNewLineAtEnd = false;
+    }
     auto NewReplace = tooling::Replacement(FileName, Offset, 0, NewInclude);
     auto Err = Result.add(NewReplace);
     if (Err) {
       llvm::consumeError(std::move(Err));
+      unsigned NewOffset = Result.getShiftedCodePosition(Offset);
+      NewReplace = tooling::Replacement(FileName, NewOffset, 0, NewInclude);
       Result = Result.merge(tooling::Replacements(NewReplace));
     }
   }

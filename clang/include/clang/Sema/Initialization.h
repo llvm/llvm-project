@@ -395,6 +395,12 @@ public:
     return Base & 0x1;
   }
 
+  /// \brief Determine whether this is an array new with an unknown bound.
+  bool isVariableLengthArrayNew() const {
+    return getKind() == EK_New && dyn_cast_or_null<IncompleteArrayType>(
+                                      getType()->getAsArrayTypeUnsafe());
+  }
+
   /// \brief Determine the location of the 'return' keyword when initializing
   /// the result of a function call.
   SourceLocation getReturnLoc() const {

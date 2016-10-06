@@ -2908,7 +2908,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   }
 }
 
-std::string Driver::GetFilePath(const char *Name, const ToolChain &TC) const {
+std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   // Respect a limited subset of the '-Bprefix' functionality in GCC by
   // attempting to use this prefix when looking for file paths.
   for (const std::string &Dir : PrefixDirs) {
@@ -2938,16 +2938,16 @@ std::string Driver::GetFilePath(const char *Name, const ToolChain &TC) const {
 }
 
 void Driver::generatePrefixedToolNames(
-    const char *Tool, const ToolChain &TC,
+    StringRef Tool, const ToolChain &TC,
     SmallVectorImpl<std::string> &Names) const {
   // FIXME: Needs a better variable than DefaultTargetTriple
-  Names.emplace_back(DefaultTargetTriple + "-" + Tool);
+  Names.emplace_back((DefaultTargetTriple + "-" + Tool).str());
   Names.emplace_back(Tool);
 
   // Allow the discovery of tools prefixed with LLVM's default target triple.
   std::string LLVMDefaultTargetTriple = llvm::sys::getDefaultTargetTriple();
   if (LLVMDefaultTargetTriple != DefaultTargetTriple)
-    Names.emplace_back(LLVMDefaultTargetTriple + "-" + Tool);
+    Names.emplace_back((LLVMDefaultTargetTriple + "-" + Tool).str());
 }
 
 static bool ScanDirForExecutable(SmallString<128> &Dir,
@@ -2961,8 +2961,7 @@ static bool ScanDirForExecutable(SmallString<128> &Dir,
   return false;
 }
 
-std::string Driver::GetProgramPath(const char *Name,
-                                   const ToolChain &TC) const {
+std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   SmallVector<std::string, 2> TargetSpecificExecutables;
   generatePrefixedToolNames(Name, TC, TargetSpecificExecutables);
 
@@ -2974,7 +2973,7 @@ std::string Driver::GetProgramPath(const char *Name,
       if (ScanDirForExecutable(P, TargetSpecificExecutables))
         return P.str();
     } else {
-      SmallString<128> P(PrefixDir + Name);
+      SmallString<128> P((PrefixDir + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))
         return P.str();
     }
@@ -2996,8 +2995,7 @@ std::string Driver::GetProgramPath(const char *Name,
   return Name;
 }
 
-std::string Driver::GetTemporaryPath(StringRef Prefix,
-                                     const char *Suffix) const {
+std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
   SmallString<128> Path;
   std::error_code EC = llvm::sys::fs::createTemporaryFile(Prefix, Suffix, Path);
   if (EC) {
@@ -3076,6 +3074,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::NaCl:
       TC = new toolchains::NaClToolChain(*this, Target, Args);
+      break;
+    case llvm::Triple::Fuchsia:
+      TC = new toolchains::Fuchsia(*this, Target, Args);
       break;
     case llvm::Triple::Solaris:
       TC = new toolchains::Solaris(*this, Target, Args);
@@ -3165,36 +3166,35 @@ bool Driver::ShouldUseClangCompiler(const JobAction &JA) const {
 ///
 /// \return True if the entire string was parsed (9.2), or all groups were
 /// parsed (10.3.5extrastuff).
-bool Driver::GetReleaseVersion(const char *Str, unsigned &Major,
-                               unsigned &Minor, unsigned &Micro,
-                               bool &HadExtra) {
+bool Driver::GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
+                               unsigned &Micro, bool &HadExtra) {
   HadExtra = false;
 
   Major = Minor = Micro = 0;
-  if (*Str == '\0')
+  if (Str.empty())
     return false;
 
-  char *End;
-  Major = (unsigned)strtol(Str, &End, 10);
-  if (*Str != '\0' && *End == '\0')
+  if (Str.consumeInteger(10, Major))
+    return false;
+  if (Str.empty())
     return true;
-  if (*End != '.')
+  if (Str[0] != '.')
     return false;
 
-  Str = End + 1;
-  Minor = (unsigned)strtol(Str, &End, 10);
-  if (*Str != '\0' && *End == '\0')
-    return true;
-  if (*End != '.')
-    return false;
+  Str = Str.drop_front(1);
 
-  Str = End + 1;
-  Micro = (unsigned)strtol(Str, &End, 10);
-  if (*Str != '\0' && *End == '\0')
-    return true;
-  if (Str == End)
+  if (Str.consumeInteger(10, Minor))
     return false;
-  HadExtra = true;
+  if (Str.empty())
+    return true;
+  if (Str[0] != '.')
+    return false;
+  Str = Str.drop_front(1);
+
+  if (Str.consumeInteger(10, Micro))
+    return false;
+  if (!Str.empty())
+    HadExtra = true;
   return true;
 }
 
@@ -3204,21 +3204,22 @@ bool Driver::GetReleaseVersion(const char *Str, unsigned &Major,
 ///
 /// \return True if the entire string was parsed and there are
 /// no extra characters remaining at the end.
-bool Driver::GetReleaseVersion(const char *Str,
+bool Driver::GetReleaseVersion(StringRef Str,
                                MutableArrayRef<unsigned> Digits) {
-  if (*Str == '\0')
+  if (Str.empty())
     return false;
 
-  char *End;
   unsigned CurDigit = 0;
   while (CurDigit < Digits.size()) {
-    unsigned Digit = (unsigned)strtol(Str, &End, 10);
-    Digits[CurDigit] = Digit;
-    if (*Str != '\0' && *End == '\0')
-      return true;
-    if (*End != '.' || Str == End)
+    unsigned Digit;
+    if (Str.consumeInteger(10, Digit))
       return false;
-    Str = End + 1;
+    Digits[CurDigit] = Digit;
+    if (Str.empty())
+      return true;
+    if (Str[0] != '.')
+      return false;
+    Str = Str.drop_front(1);
     CurDigit++;
   }
 
