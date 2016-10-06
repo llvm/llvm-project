@@ -7,19 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/DenseSet.h"
+#include "gtest/gtest.h"
+#include <type_traits>
 
 using namespace llvm;
 
 namespace {
 
-// Test fixture
-class DenseSetTest : public testing::Test {
-};
-
 // Test hashing with a set of only two entries.
-TEST_F(DenseSetTest, DoubleEntrySetTest) {
+TEST(DenseSetTest, DoubleEntrySetTest) {
   llvm::DenseSet<unsigned> set(2);
   set.insert(0);
   set.insert(1);
@@ -42,12 +39,29 @@ struct TestDenseSetInfo {
   }
 };
 
-TEST(DenseSetCustomTest, FindAsTest) {
-  DenseSet<unsigned, TestDenseSetInfo> set;
-  set.insert(0);
-  set.insert(1);
-  set.insert(2);
+// Test fixture
+template <typename T> class DenseSetTest : public testing::Test {
+protected:
+  T Set = GetTestSet();
 
+private:
+  static T GetTestSet() {
+    typename std::remove_const<T>::type Set;
+    Set.insert(0);
+    Set.insert(1);
+    Set.insert(2);
+    return Set;
+  }
+};
+
+// Register these types for testing.
+typedef ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
+                         const DenseSet<unsigned, TestDenseSetInfo>>
+    DenseSetTestTypes;
+TYPED_TEST_CASE(DenseSetTest, DenseSetTestTypes);
+
+TYPED_TEST(DenseSetTest, FindAsTest) {
+  auto &set = this->Set;
   // Size tests
   EXPECT_EQ(3u, set.size());
 

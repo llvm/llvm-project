@@ -326,7 +326,7 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
 
   // Process the function in depth first order so that we process at least one
   // of the predecessors for every reachable block in the function.
-  SmallPtrSet<MachineBasicBlock*, 8> Processed;
+  df_iterator_default_set<MachineBasicBlock*> Processed;
   MachineBasicBlock *Entry = &MF.front();
 
   bool Changed = false;

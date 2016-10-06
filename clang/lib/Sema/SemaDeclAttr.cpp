@@ -3044,10 +3044,14 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D,
     return;
   }
 
+  if (FirstType->isIncompleteType())
+    return;
   uint64_t FirstSize = S.Context.getTypeSize(FirstType);
   uint64_t FirstAlign = S.Context.getTypeAlign(FirstType);
   for (; Field != FieldEnd; ++Field) {
     QualType FieldType = Field->getType();
+    if (FieldType->isIncompleteType())
+      return;
     // FIXME: this isn't fully correct; we also need to test whether the
     // members of the union would all have the same calling convention as the
     // first member of the union. Checking just the size and alignment isn't

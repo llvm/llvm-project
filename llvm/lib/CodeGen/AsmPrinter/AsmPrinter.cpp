@@ -711,21 +711,21 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   int64_t Offset = Deref ? MI->getOperand(1).getImm() : 0;
 
   for (unsigned i = 0; i < Expr->getNumElements(); ++i) {
-    if (Deref) {
+    uint64_t Op = Expr->getElement(i);
+    if (Op == dwarf::DW_OP_bit_piece) {
+      // There can't be any operands after this in a valid expression
+      break;
+    } else if (Deref) {
       // We currently don't support extra Offsets or derefs after the first
       // one. Bail out early instead of emitting an incorrect comment
       OS << " [complex expression]";
       AP.OutStreamer->emitRawComment(OS.str());
       return true;
-    }
-    uint64_t Op = Expr->getElement(i);
-    if (Op == dwarf::DW_OP_deref) {
+    } else if (Op == dwarf::DW_OP_deref) {
       Deref = true;
       continue;
-    } else if (Op == dwarf::DW_OP_bit_piece) {
-      // There can't be any operands after this in a valid expression
-      break;
     }
+
     uint64_t ExtraOffset = Expr->getElement(i++);
     if (Op == dwarf::DW_OP_plus)
       Offset += ExtraOffset;

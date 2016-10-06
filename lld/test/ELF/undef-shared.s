@@ -12,3 +12,8 @@
 # CHECK: undefined symbol: protected in {{.*}}
 .global protected
 .protected protected
+
+.section .data, "a"
+ .quad hidden
+ .quad internal
+ .quad protected

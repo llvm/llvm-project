@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
@@ -20,6 +19,8 @@
 #include <future>
 #include <cassert>
 
+#include "test_macros.h"
+
 class A
 {
     long data_;
@@ -30,7 +31,7 @@ public:
     long operator()(long i, long j) const
     {
         if (j == 'z')
-            throw A(6);
+            TEST_THROW(A(6));
         return data_ + i + j;
     }
 };
@@ -49,6 +50,7 @@ void func1(std::packaged_task<double(int, char)> p)
 
 void func2(std::packaged_task<double(int, char)> p)
 {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     p.make_ready_at_thread_exit(3, 'a');
     try
     {
@@ -58,10 +60,12 @@ void func2(std::packaged_task<double(int, char)> p)
     {
         assert(e.code() == make_error_code(std::future_errc::promise_already_satisfied));
     }
+#endif
 }
 
 void func3(std::packaged_task<double(int, char)> p)
 {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         p.make_ready_at_thread_exit(3, 'a');
@@ -70,6 +74,7 @@ void func3(std::packaged_task<double(int, char)> p)
     {
         assert(e.code() == make_error_code(std::future_errc::no_state));
     }
+#endif
 }
 
 int main()
@@ -80,6 +85,7 @@ int main()
         std::thread(func0, std::move(p)).detach();
         assert(f.get() == 105.0);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
@@ -105,4 +111,5 @@ int main()
         std::thread t(func3, std::move(p));
         t.join();
     }
+#endif
 }

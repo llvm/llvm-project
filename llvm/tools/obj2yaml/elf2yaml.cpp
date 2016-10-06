@@ -24,6 +24,8 @@ class ELFDumper {
   typedef object::Elf_Sym_Impl<ELFT> Elf_Sym;
   typedef typename object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename object::ELFFile<ELFT>::Elf_Word Elf_Word;
+  typedef typename object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
+  typedef typename object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
 
   const object::ELFFile<ELFT> &Obj;
   ArrayRef<Elf_Word> ShndxTable;
@@ -284,9 +286,9 @@ ELFDumper<ELFT>::dumpRelSection(const Elf_Shdr *Shdr) {
     return EC;
   const Elf_Shdr *SymTab = *SymTabOrErr;
 
-  for (auto RI = Obj.rel_begin(Shdr), RE = Obj.rel_end(Shdr); RI != RE; ++RI) {
+  for (const Elf_Rel &Rel : Obj.rels(Shdr)) {
     ELFYAML::Relocation R;
-    if (std::error_code EC = dumpRelocation(&*RI, SymTab, R))
+    if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
       return EC;
     S->Relocations.push_back(R);
   }
@@ -308,12 +310,11 @@ ELFDumper<ELFT>::dumpRelaSection(const Elf_Shdr *Shdr) {
     return EC;
   const Elf_Shdr *SymTab = *SymTabOrErr;
 
-  for (auto RI = Obj.rela_begin(Shdr), RE = Obj.rela_end(Shdr); RI != RE;
-       ++RI) {
+  for (const Elf_Rela &Rel : Obj.relas(Shdr)) {
     ELFYAML::Relocation R;
-    if (std::error_code EC = dumpRelocation(&*RI, SymTab, R))
+    if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
       return EC;
-    R.Addend = RI->r_addend;
+    R.Addend = Rel.r_addend;
     S->Relocations.push_back(R);
   }
 

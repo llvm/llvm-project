@@ -1,11 +1,11 @@
-//===-- MinidumpParser.cpp -------------------------------------*- C++ -*-===//
+//===-- MinidumpParser.cpp ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 // Project includes
 #include "MinidumpParser.h"
@@ -65,7 +65,8 @@ MinidumpParser::MinidumpParser(
 }
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
-  return m_data_sp->GetData();
+  return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes(),
+                                 m_data_sp->GetByteSize());
 }
 
 llvm::ArrayRef<uint8_t>
@@ -75,14 +76,15 @@ MinidumpParser::GetStream(MinidumpStreamType stream_type) {
     return {};
 
   // check if there is enough data
-  if (iter->second.rva + iter->second.data_size > GetData().size())
+  if (iter->second.rva + iter->second.data_size > m_data_sp->GetByteSize())
     return {};
 
-  return GetData().slice(iter->second.rva, iter->second.data_size);
+  return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes() + iter->second.rva,
+                                 iter->second.data_size);
 }
 
 llvm::Optional<std::string> MinidumpParser::GetMinidumpString(uint32_t rva) {
-  auto arr_ref = GetData();
+  auto arr_ref = m_data_sp->GetData();
   if (rva > arr_ref.size())
     return llvm::None;
   arr_ref = arr_ref.drop_front(rva);
@@ -96,14 +98,6 @@ llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
     return llvm::None;
 
   return MinidumpThread::ParseThreadList(data);
-}
-
-llvm::ArrayRef<uint8_t>
-MinidumpParser::GetThreadContext(const MinidumpThread &td) {
-  if (td.thread_context.rva + td.thread_context.data_size > GetData().size())
-    return llvm::None;
-
-  return GetData().slice(td.thread_context.rva, td.thread_context.data_size);
 }
 
 const MinidumpSystemInfo *MinidumpParser::GetSystemInfo() {
@@ -229,34 +223,4 @@ const MinidumpExceptionStream *MinidumpParser::GetExceptionStream() {
     return nullptr;
 
   return MinidumpExceptionStream::Parse(data);
-}
-
-llvm::Optional<Range> MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::MemoryList);
-
-  if (data.size() == 0)
-    return llvm::None;
-
-  llvm::ArrayRef<MinidumpMemoryDescriptor> memory_list =
-      MinidumpMemoryDescriptor::ParseMemoryList(data);
-
-  if (memory_list.size() == 0)
-    return llvm::None;
-
-  for (auto memory_desc : memory_list) {
-    const MinidumpLocationDescriptor &loc_desc = memory_desc.memory;
-    const lldb::addr_t range_start = memory_desc.start_of_memory_range;
-    const size_t range_size = loc_desc.data_size;
-
-    if (loc_desc.rva + loc_desc.data_size > GetData().size())
-      return llvm::None;
-
-    if (range_start <= addr && addr < range_start + range_size) {
-      return Range(range_start, GetData().slice(loc_desc.rva, range_size));
-    }
-  }
-
-  // TODO parse Memory64List which is present in full-memory Minidumps
-
-  return llvm::None;
 }

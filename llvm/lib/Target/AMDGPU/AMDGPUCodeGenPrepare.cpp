@@ -77,14 +77,14 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   ///
   /// \returns True if 16 bit binary operation is promoted to equivalent 32 bit
   /// binary operation, false otherwise.
-  bool promoteUniformI16OpToI32Op(BinaryOperator &I) const;
+  bool promoteUniformI16OpToI32(BinaryOperator &I) const;
 
   /// \brief Promotes uniform 16 bit 'icmp' operation \p I to 32 bit 'icmp'
   /// operation by sign or zero extending operands to 32 bits, and replacing 16
   /// bit operation with 32 bit operation.
   ///
   /// \returns True.
-  bool promoteUniformI16OpToI32Op(ICmpInst &I) const;
+  bool promoteUniformI16OpToI32(ICmpInst &I) const;
 
   /// \brief Promotes uniform 16 bit 'select' operation \p I to 32 bit 'select'
   /// operation by sign or zero extending operands to 32 bits, replacing 16 bit
@@ -92,7 +92,16 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// operation back to 16 bits.
   ///
   /// \returns True.
-  bool promoteUniformI16OpToI32Op(SelectInst &I) const;
+  bool promoteUniformI16OpToI32(SelectInst &I) const;
+
+  /// \brief Promotes uniform 16 bit 'bitreverse' intrinsic \p I to 32 bit
+  /// 'bitreverse' intrinsic by zero extending operand to 32 bits, replacing 16
+  /// bit intrinsic with 32 bit intrinsic, shifting the result of 32 bit
+  /// intrinsic 16 bits to the right with zero fill, and truncating the result
+  /// of shift operation back to 16 bits.
+  ///
+  /// \returns True.
+  bool promoteUniformI16BitreverseIntrinsicToI32(IntrinsicInst &I) const;
 
 public:
   static char ID;
@@ -110,6 +119,9 @@ public:
   bool visitBinaryOperator(BinaryOperator &I);
   bool visitICmpInst(ICmpInst &I);
   bool visitSelectInst(SelectInst &I);
+
+  bool visitIntrinsicInst(IntrinsicInst &I);
+  bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
 
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
@@ -181,8 +193,8 @@ bool AMDGPUCodeGenPrepare::isSigned(const SelectInst &I) const {
       cast<ICmpInst>(I.getOperand(0))->isSigned() : false;
 }
 
-bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32Op(BinaryOperator &I) const {
-  assert(isI16Ty(I.getType()) && "Op must be 16 bits");
+bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32(BinaryOperator &I) const {
+  assert(isI16Ty(I.getType()) && "I must be 16 bits");
 
   if (I.getOpcode() == Instruction::SDiv || I.getOpcode() == Instruction::UDiv)
     return false;
@@ -212,7 +224,7 @@ bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32Op(BinaryOperator &I) const {
   return true;
 }
 
-bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32Op(ICmpInst &I) const {
+bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32(ICmpInst &I) const {
   assert(isI16Ty(I.getOperand(0)->getType()) && "Op0 must be 16 bits");
   assert(isI16Ty(I.getOperand(1)->getType()) && "Op1 must be 16 bits");
 
@@ -240,8 +252,8 @@ bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32Op(ICmpInst &I) const {
   return true;
 }
 
-bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32Op(SelectInst &I) const {
-  assert(isI16Ty(I.getType()) && "Op must be 16 bits");
+bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32(SelectInst &I) const {
+  assert(isI16Ty(I.getType()) && "I must be 16 bits");
 
   IRBuilder<> Builder(&I);
   Builder.SetCurrentDebugLocation(I.getDebugLoc());
@@ -261,6 +273,29 @@ bool AMDGPUCodeGenPrepare::promoteUniformI16OpToI32Op(SelectInst &I) const {
   }
   ExtRes = Builder.CreateSelect(I.getOperand(0), ExtOp1, ExtOp2);
   TruncRes = Builder.CreateTrunc(ExtRes, getI16Ty(Builder, ExtRes->getType()));
+
+  I.replaceAllUsesWith(TruncRes);
+  I.eraseFromParent();
+
+  return true;
+}
+
+bool AMDGPUCodeGenPrepare::promoteUniformI16BitreverseIntrinsicToI32(
+    IntrinsicInst &I) const {
+  assert(I.getIntrinsicID() == Intrinsic::bitreverse && "I must be bitreverse");
+  assert(isI16Ty(I.getType()) && "I must be 16 bits");
+
+  IRBuilder<> Builder(&I);
+  Builder.SetCurrentDebugLocation(I.getDebugLoc());
+
+  Type *I32Ty = getI32Ty(Builder, I.getType());
+  Function *I32 =
+      Intrinsic::getDeclaration(Mod, Intrinsic::bitreverse, { I32Ty });;
+  Value *ExtOp = Builder.CreateZExt(I.getOperand(0), I32Ty);
+  Value *ExtRes = Builder.CreateCall(I32, { ExtOp });
+  Value *LShrOp = Builder.CreateLShr(ExtRes, 16);
+  Value *TruncRes =
+      Builder.CreateTrunc(LShrOp, getI16Ty(Builder, ExtRes->getType()));
 
   I.replaceAllUsesWith(TruncRes);
   I.eraseFromParent();
@@ -357,7 +392,7 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
 
   // TODO: Should we promote smaller types that will be legalized to i16?
   if (ST->has16BitInsts() && isI16Ty(I.getType()) && DA->isUniform(&I))
-    Changed |= promoteUniformI16OpToI32Op(I);
+    Changed |= promoteUniformI16OpToI32(I);
 
   return Changed;
 }
@@ -368,7 +403,7 @@ bool AMDGPUCodeGenPrepare::visitICmpInst(ICmpInst &I) {
   // TODO: Should we promote smaller types that will be legalized to i16?
   if (ST->has16BitInsts() && isI16Ty(I.getOperand(0)->getType()) &&
           isI16Ty(I.getOperand(1)->getType()) && DA->isUniform(&I))
-    Changed |= promoteUniformI16OpToI32Op(I);
+    Changed |= promoteUniformI16OpToI32(I);
 
   return Changed;
 }
@@ -378,7 +413,26 @@ bool AMDGPUCodeGenPrepare::visitSelectInst(SelectInst &I) {
 
   // TODO: Should we promote smaller types that will be legalized to i16?
   if (ST->has16BitInsts() && isI16Ty(I.getType()) && DA->isUniform(&I))
-    Changed |= promoteUniformI16OpToI32Op(I);
+    Changed |= promoteUniformI16OpToI32(I);
+
+  return Changed;
+}
+
+bool AMDGPUCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+  switch (I.getIntrinsicID()) {
+  case Intrinsic::bitreverse:
+    return visitBitreverseIntrinsicInst(I);
+  default:
+    return false;
+  }
+}
+
+bool AMDGPUCodeGenPrepare::visitBitreverseIntrinsicInst(IntrinsicInst &I) {
+  bool Changed = false;
+
+  // TODO: Should we promote smaller types that will be legalized to i16?
+  if (ST->has16BitInsts() && isI16Ty(I.getType()) && DA->isUniform(&I))
+    Changed |= promoteUniformI16BitreverseIntrinsicToI32(I);
 
   return Changed;
 }

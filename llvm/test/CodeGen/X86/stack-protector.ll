@@ -3887,6 +3887,22 @@ entry:
 
 define void @test32() #1 !dbg !7 {
 entry:
+; LINUX-I386-LABEL: test32:
+; LINUX-I386:       .loc 1 0 0 prologue_end
+; LINUX-I386-NEXT:  calll __stack_chk_fail
+
+; LINUX-X64-LABEL: test32:
+; LINUX-X64:       .loc 1 0 0 prologue_end
+; LINUX-X64-NEXT:  callq __stack_chk_fail
+
+; LINUX-KERNEL-X64-LABEL: test32:
+; LINUX-KERNEL-X64:       .loc 1 0 0 prologue_end
+; LINUX-KERNEL-X64-NEXT:  callq __stack_chk_fail
+
+; OPENBSD-AMD64-LABEL: test32:
+; OPENBSD-AMD64:       .loc 1 0 0 prologue_end
+; OPENBSD-AMD64-NEXT:  movl
+; OPENBSD-AMD64-NEXT:  callq __stack_smash_handler
   %0 = alloca [5 x i8], align 1
   ret void
 }
@@ -3915,11 +3931,12 @@ attributes #5 = { ssp "stack-protector-buffer-size"="6" }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.c", directory: "/tmp")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!"clang version x.y.z"}
-!6 = distinct !DISubprogram(name: "__stack_chk_fail", scope: !1, unit: !0)
-!7 = distinct !DISubprogram(name: "foo", scope: !1, unit: !0)
+!6 = distinct !DISubprogram(name: "__stack_chk_fail", scope: !1, type: !8, unit: !0)
+!7 = distinct !DISubprogram(name: "test32", scope: !1, type: !8, unit: !0)
+!8 = !DISubroutineType(types: !2)

@@ -60,7 +60,7 @@ public:
   std::unique_ptr<MinidumpParser> parser;
 };
 
-TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
+TEST_F(MinidumpParserTest, GetThreads) {
   SetUpData("linux-x86_64.dmp");
   llvm::ArrayRef<MinidumpThread> thread_list;
 
@@ -68,10 +68,7 @@ TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
   ASSERT_EQ(1UL, thread_list.size());
 
   const MinidumpThread thread = thread_list[0];
-  EXPECT_EQ(16001UL, thread.thread_id);
-
-  llvm::ArrayRef<uint8_t> context = parser->GetThreadContext(thread);
-  EXPECT_EQ(1232, context.size());
+  ASSERT_EQ(16001UL, thread.thread_id);
 }
 
 TEST_F(MinidumpParserTest, GetThreadsTruncatedFile) {
@@ -142,24 +139,6 @@ TEST_F(MinidumpParserTest, GetExceptionStream) {
   ASSERT_EQ(11UL, exception_stream->exception_record.exception_code);
 }
 
-TEST_F(MinidumpParserTest, GetMemoryRange) {
-  SetUpData("linux-x86_64.dmp");
-  // There are two memory ranges in the file (size is in bytes, decimal):
-  // 1) 0x7ffceb34a000 12288
-  // 2) 0x401d46 256
-  EXPECT_TRUE(parser->FindMemoryRange(0x7ffceb34a000).hasValue());
-  EXPECT_TRUE(parser->FindMemoryRange(0x7ffceb34a000 + 12288 / 2).hasValue());
-  EXPECT_TRUE(parser->FindMemoryRange(0x7ffceb34a000 + 12288 - 1).hasValue());
-  EXPECT_FALSE(parser->FindMemoryRange(0x7ffceb34a000 + 12288).hasValue());
-
-  EXPECT_TRUE(parser->FindMemoryRange(0x401d46).hasValue());
-  EXPECT_TRUE(parser->FindMemoryRange(0x401d46 + 256 / 2).hasValue());
-  EXPECT_TRUE(parser->FindMemoryRange(0x401d46 + 256 - 1).hasValue());
-  EXPECT_FALSE(parser->FindMemoryRange(0x401d46 + 256).hasValue());
-
-  EXPECT_FALSE(parser->FindMemoryRange(0x2a).hasValue());
-}
-
 // Windows Minidump tests
 // fizzbuzz_no_heap.dmp is copied from the WinMiniDump tests
 TEST_F(MinidumpParserTest, GetArchitectureWindows) {
@@ -193,6 +172,7 @@ TEST_F(MinidumpParserTest, GetPidWindows) {
 }
 
 // Register stuff
+// TODO probably split register stuff tests into different file?
 #define REG_VAL(x) *(reinterpret_cast<uint64_t *>(x))
 
 TEST_F(MinidumpParserTest, ConvertRegisterContext) {

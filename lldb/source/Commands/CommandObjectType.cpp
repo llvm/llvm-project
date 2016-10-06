@@ -15,9 +15,6 @@
 #include <cctype>
 #include <functional>
 
-// Other libraries and framework includes
-#include "llvm/ADT/StringRef.h"
-
 // Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/Debugger.h"
@@ -41,6 +38,9 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
+
+// Other libraries and framework includes
+#include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -78,20 +78,20 @@ public:
 
 static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
                                                 CommandReturnObject &result) {
-  for (unsigned idx = 0; idx < command.GetArgumentCount(); idx++) {
-    const char *arg = command.GetArgumentAtIndex(idx);
-    if (idx + 1 < command.GetArgumentCount()) {
-      if (arg && 0 == strcmp(arg, "unsigned")) {
-        const char *next = command.GetArgumentAtIndex(idx + 1);
-        if (next && (0 == strcmp(next, "int") || 0 == strcmp(next, "short") ||
-                     0 == strcmp(next, "char") || 0 == strcmp(next, "long"))) {
-          result.AppendWarningWithFormat("%s %s being treated as two types. if "
-                                         "you meant the combined type name use "
-                                         "quotes, as in \"%s %s\"\n",
-                                         arg, next, arg, next);
-          return true;
-        }
-      }
+  if (command.empty())
+    return false;
+
+  for (auto entry : llvm::enumerate(command.entries().drop_back())) {
+    if (entry.Value.ref != "unsigned")
+      continue;
+    auto next = command.entries()[entry.Index + 1].ref;
+    if (next == "int" || next == "short" || next == "char" || next == "long") {
+      result.AppendWarningWithFormat(
+          "unsigned %s being treated as two types. if you meant the combined "
+          "type "
+          "name use  quotes, as in \"unsigned %s\"\n",
+          next.str().c_str(), next.str().c_str());
+      return true;
     }
   }
   return false;
@@ -727,27 +727,26 @@ protected:
 
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
-    for (size_t i = 0; i < argc; i++) {
-      const char *typeA = command.GetArgumentAtIndex(i);
-      ConstString typeCS(typeA);
-      if (typeCS) {
-        if (m_command_options.m_regex) {
-          RegularExpressionSP typeRX(new RegularExpression());
-          if (!typeRX->Compile(typeCS.GetStringRef())) {
-            result.AppendError(
-                "regex format error (maybe this is not really a regex?)");
-            result.SetStatus(eReturnStatusFailed);
-            return false;
-          }
-          category_sp->GetRegexTypeSummariesContainer()->Delete(typeCS);
-          category_sp->GetRegexTypeFormatsContainer()->Add(typeRX, entry);
-        } else
-          category_sp->GetTypeFormatsContainer()->Add(typeCS, entry);
-      } else {
+    for (auto &arg_entry : command.entries()) {
+      if (arg_entry.ref.empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
+
+      ConstString typeCS(arg_entry.ref);
+      if (m_command_options.m_regex) {
+        RegularExpressionSP typeRX(new RegularExpression());
+        if (!typeRX->Compile(arg_entry.ref)) {
+          result.AppendError(
+              "regex format error (maybe this is not really a regex?)");
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
+        category_sp->GetRegexTypeSummariesContainer()->Delete(typeCS);
+        category_sp->GetRegexTypeFormatsContainer()->Add(typeRX, entry);
+      } else
+        category_sp->GetTypeFormatsContainer()->Add(typeCS, entry);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -1406,15 +1405,14 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
         new ScriptAddOptions(m_options.m_flags, m_options.m_regex,
                              m_options.m_name, m_options.m_category);
 
-    for (size_t i = 0; i < argc; i++) {
-      const char *typeA = command.GetArgumentAtIndex(i);
-      if (typeA && *typeA)
-        options->m_target_types << typeA;
-      else {
+    for (auto &entry : command.entries()) {
+      if (entry.ref.empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
+
+      options->m_target_types << entry.ref;
     }
 
     m_interpreter.GetPythonCommandsFromIOHandler(
@@ -1433,10 +1431,9 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
 
   Error error;
 
-  for (size_t i = 0; i < command.GetArgumentCount(); i++) {
-    const char *type_name = command.GetArgumentAtIndex(i);
+  for (auto &entry : command.entries()) {
     CommandObjectTypeSummaryAdd::AddSummary(
-        ConstString(type_name), script_format,
+        ConstString(entry.ref), script_format,
         (m_options.m_regex ? eRegexSummary : eRegularSummary),
         m_options.m_category, &error);
     if (error.Fail()) {
@@ -1508,14 +1505,13 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
 
   // now I have a valid format, let's add it to every type
   Error error;
-  for (size_t i = 0; i < argc; i++) {
-    const char *typeA = command.GetArgumentAtIndex(i);
-    if (!typeA || typeA[0] == '\0') {
+  for (auto &arg_entry : command.entries()) {
+    if (arg_entry.ref.empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
-    ConstString typeCS(typeA);
+    ConstString typeCS(arg_entry.ref);
 
     AddSummary(typeCS, entry,
                (m_options.m_regex ? eRegexSummary : eRegularSummary),
@@ -1880,10 +1876,9 @@ protected:
       return false;
     }
 
-    for (size_t i = 0; i < argc; i++) {
-      const char *cateName = command.GetArgumentAtIndex(i);
+    for (auto &entry : command.entries()) {
       TypeCategoryImplSP category_sp;
-      if (DataVisualization::Categories::GetCategory(ConstString(cateName),
+      if (DataVisualization::Categories::GetCategory(ConstString(entry.ref),
                                                      category_sp) &&
           category_sp) {
         category_sp->AddLanguage(m_options.m_cate_language.GetCurrentValue());
@@ -2358,17 +2353,14 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
       m_options.m_skip_pointers, m_options.m_skip_references,
       m_options.m_cascade, m_options.m_regex, m_options.m_category);
 
-  const size_t argc = command.GetArgumentCount();
-
-  for (size_t i = 0; i < argc; i++) {
-    const char *typeA = command.GetArgumentAtIndex(i);
-    if (typeA && *typeA)
-      options->m_target_types << typeA;
-    else {
+  for (auto &entry : command.entries()) {
+    if (entry.ref.empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
+
+    options->m_target_types << entry.ref;
   }
 
   m_interpreter.GetPythonCommandsFromIOHandler(
@@ -2426,19 +2418,18 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
 
   Error error;
 
-  for (size_t i = 0; i < argc; i++) {
-    const char *typeA = command.GetArgumentAtIndex(i);
-    ConstString typeCS(typeA);
-    if (typeCS) {
-      if (!AddSynth(typeCS, entry,
-                    m_options.m_regex ? eRegexSynth : eRegularSynth,
-                    m_options.m_category, &error)) {
-        result.AppendError(error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
-    } else {
+  for (auto &arg_entry : command.entries()) {
+    if (arg_entry.ref.empty()) {
       result.AppendError("empty typenames not allowed");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    ConstString typeCS(arg_entry.ref);
+    if (!AddSynth(typeCS, entry,
+                  m_options.m_regex ? eRegexSynth : eRegularSynth,
+                  m_options.m_category, &error)) {
+      result.AppendError(error.AsCString());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
@@ -2740,19 +2731,18 @@ protected:
 
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
-    for (size_t i = 0; i < argc; i++) {
-      const char *typeA = command.GetArgumentAtIndex(i);
-      ConstString typeCS(typeA);
-      if (typeCS) {
-        if (!AddFilter(typeCS, entry,
-                       m_options.m_regex ? eRegexFilter : eRegularFilter,
-                       m_options.m_category, &error)) {
-          result.AppendError(error.AsCString());
-          result.SetStatus(eReturnStatusFailed);
-          return false;
-        }
-      } else {
+    for (auto &arg_entry : command.entries()) {
+      if (arg_entry.ref.empty()) {
         result.AppendError("empty typenames not allowed");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+
+      ConstString typeCS(arg_entry.ref);
+      if (!AddFilter(typeCS, entry,
+                     m_options.m_regex ? eRegexFilter : eRegularFilter,
+                     m_options.m_category, &error)) {
+        result.AppendError(error.AsCString());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
@@ -3026,7 +3016,7 @@ public:
   CommandObjectFormatterInfo(CommandInterpreter &interpreter,
                              const char *formatter_name,
                              DiscoveryFunction discovery_func)
-      : CommandObjectRaw(interpreter, nullptr, nullptr, nullptr,
+      : CommandObjectRaw(interpreter, "", "", "",
                          eCommandRequiresFrame),
         m_formatter_name(formatter_name ? formatter_name : ""),
         m_discovery_function(discovery_func) {

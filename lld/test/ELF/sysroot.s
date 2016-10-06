@@ -34,3 +34,4 @@
 
 .globl _start,_bar
 _start:
+  call _bar

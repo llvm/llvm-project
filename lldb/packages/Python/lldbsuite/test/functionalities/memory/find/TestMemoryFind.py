@@ -24,6 +24,7 @@ class MemoryFindTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// break here')
 
+    @expectedFailureAll(oslist=["windows"])
     def test_memory_find(self):
         """Test the 'memory find' command."""
         self.build()

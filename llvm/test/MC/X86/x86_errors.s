@@ -74,3 +74,11 @@ movl %edx, %cr8
 
 // 32: error: register %dr8 is only available in 64-bit mode
 movl %edx, %dr8
+
+// 32: error: register %rip is only available in 64-bit mode
+// 64: error: %rip can only be used as a base register
+mov %rip, %rax
+
+// 32: error: register %rax is only available in 64-bit mode
+// 64: error: %rip is not allowed as an index register
+mov (%rax,%rip), %rbx

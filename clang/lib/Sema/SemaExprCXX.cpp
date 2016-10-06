@@ -1600,6 +1600,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   //   conversion function to integral or unscoped enumeration type exists.
   // C++1y [expr.new]p6: The expression [...] is implicitly converted to
   //   std::size_t.
+  llvm::Optional<uint64_t> KnownArraySize;
   if (ArraySize && !ArraySize->isTypeDependent()) {
     ExprResult ConvertedSize;
     if (getLangOpts().CPlusPlus14) {
@@ -1684,44 +1685,34 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     //   The expression in a direct-new-declarator shall have integral type
     //   with a non-negative value.
     //
-    // Let's see if this is a constant < 0. If so, we reject it out of
-    // hand. Otherwise, if it's not a constant, we must have an unparenthesized
-    // array type.
-    //
-    // Note: such a construct has well-defined semantics in C++11: it throws
-    // std::bad_array_new_length.
+    // Let's see if this is a constant < 0. If so, we reject it out of hand,
+    // per CWG1464. Otherwise, if it's not a constant, we must have an
+    // unparenthesized array type.
     if (!ArraySize->isValueDependent()) {
       llvm::APSInt Value;
       // We've already performed any required implicit conversion to integer or
       // unscoped enumeration type.
+      // FIXME: Per CWG1464, we are required to check the value prior to
+      // converting to size_t. This will never find a negative array size in
+      // C++14 onwards, because Value is always unsigned here!
       if (ArraySize->isIntegerConstantExpr(Value, Context)) {
-        if (Value < llvm::APSInt(
-                        llvm::APInt::getNullValue(Value.getBitWidth()),
-                                 Value.isUnsigned())) {
-          if (getLangOpts().CPlusPlus11)
-            Diag(ArraySize->getLocStart(),
-                 diag::warn_typecheck_negative_array_new_size)
-              << ArraySize->getSourceRange();
-          else
-            return ExprError(Diag(ArraySize->getLocStart(),
-                                  diag::err_typecheck_negative_array_size)
-                             << ArraySize->getSourceRange());
-        } else if (!AllocType->isDependentType()) {
+        if (Value.isSigned() && Value.isNegative()) {
+          return ExprError(Diag(ArraySize->getLocStart(),
+                                diag::err_typecheck_negative_array_size)
+                           << ArraySize->getSourceRange());
+        }
+
+        if (!AllocType->isDependentType()) {
           unsigned ActiveSizeBits =
             ConstantArrayType::getNumAddressingBits(Context, AllocType, Value);
-          if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
-            if (getLangOpts().CPlusPlus11)
-              Diag(ArraySize->getLocStart(),
-                   diag::warn_array_new_too_large)
-                << Value.toString(10)
-                << ArraySize->getSourceRange();
-            else
-              return ExprError(Diag(ArraySize->getLocStart(),
-                                    diag::err_array_too_large)
-                               << Value.toString(10)
-                               << ArraySize->getSourceRange());
-          }
+          if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
+            return ExprError(Diag(ArraySize->getLocStart(),
+                                  diag::err_array_too_large)
+                             << Value.toString(10)
+                             << ArraySize->getSourceRange());
         }
+
+        KnownArraySize = Value.getZExtValue();
       } else if (TypeIdParens.isValid()) {
         // Can't have dynamic array size when the type-id is in parentheses.
         Diag(ArraySize->getLocStart(), diag::ext_new_paren_array_nonconst)
@@ -1794,26 +1785,14 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     }
   }
 
-  QualType InitType = AllocType;
   // Array 'new' can't have any initializers except empty parentheses.
   // Initializer lists are also allowed, in C++11. Rely on the parser for the
   // dialect distinction.
-  if (ResultType->isArrayType() || ArraySize) {
-    if (!isLegalArrayNewInitializer(initStyle, Initializer)) {
-      SourceRange InitRange(Inits[0]->getLocStart(),
-                            Inits[NumInits - 1]->getLocEnd());
-      Diag(StartLoc, diag::err_new_array_init_args) << InitRange;
-      return ExprError();
-    }
-    if (InitListExpr *ILE = dyn_cast_or_null<InitListExpr>(Initializer)) {
-      // We do the initialization typechecking against the array type
-      // corresponding to the number of initializers + 1 (to also check
-      // default-initialization).
-      unsigned NumElements = ILE->getNumInits() + 1;
-      InitType = Context.getConstantArrayType(AllocType,
-          llvm::APInt(Context.getTypeSize(Context.getSizeType()), NumElements),
-                                              ArrayType::Normal, 0);
-    }
+  if (ArraySize && !isLegalArrayNewInitializer(initStyle, Initializer)) {
+    SourceRange InitRange(Inits[0]->getLocStart(),
+                          Inits[NumInits - 1]->getLocEnd());
+    Diag(StartLoc, diag::err_new_array_init_args) << InitRange;
+    return ExprError();
   }
 
   // If we can perform the initialization, and we've not already done so,
@@ -1821,6 +1800,19 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (!AllocType->isDependentType() &&
       !Expr::hasAnyTypeDependentArguments(
           llvm::makeArrayRef(Inits, NumInits))) {
+    // The type we initialize is the complete type, including the array bound.
+    QualType InitType;
+    if (KnownArraySize)
+      InitType = Context.getConstantArrayType(
+          AllocType, llvm::APInt(Context.getTypeSize(Context.getSizeType()),
+                                 *KnownArraySize),
+          ArrayType::Normal, 0);
+    else if (ArraySize)
+      InitType =
+          Context.getIncompleteArrayType(AllocType, ArrayType::Normal, 0);
+    else
+      InitType = AllocType;
+
     // C++11 [expr.new]p15:
     //   A new-expression that creates an object of type T initializes that
     //   object as follows:
@@ -1840,7 +1832,8 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     InitializedEntity Entity
       = InitializedEntity::InitializeNew(StartLoc, InitType);
-    InitializationSequence InitSeq(*this, Entity, Kind, MultiExprArg(Inits, NumInits));
+    InitializationSequence InitSeq(*this, Entity, Kind,
+                                   MultiExprArg(Inits, NumInits));
     ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind,
                                           MultiExprArg(Inits, NumInits));
     if (FullInit.isInvalid())
@@ -1848,6 +1841,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     // FullInit is our initializer; strip off CXXBindTemporaryExprs, because
     // we don't want the initialized object to be destructed.
+    // FIXME: We should not create these in the first place.
     if (CXXBindTemporaryExpr *Binder =
             dyn_cast_or_null<CXXBindTemporaryExpr>(FullInit.get()))
       FullInit = Binder->getSubExpr();

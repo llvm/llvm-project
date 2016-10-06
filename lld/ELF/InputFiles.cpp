@@ -177,6 +177,15 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   if (Config->Optimize == 0)
     return false;
 
+  // Do not merge sections if generating a relocatable object. It makes
+  // the code simpler because we do not need to update relocation addends
+  // to reflect changes introduced by merging. Instead of that we write
+  // such "merge" sections into separate OutputSections and keep SHF_MERGE
+  // / SHF_STRINGS flags and sh_entsize value to be able to perform merging
+  // later during a final linking.
+  if (Config->Relocatable)
+    return false;
+
   // A mergeable section with size 0 is useless because they don't have
   // any data to merge. A mergeable string section with size 0 can be
   // argued as invalid because it doesn't end with a null character.
@@ -368,17 +377,22 @@ template <class ELFT>
 InputSectionBase<ELFT> *
 elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
-  if (Index == 0)
-    return nullptr;
   if (Index >= Sections.size())
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   InputSectionBase<ELFT> *S = Sections[Index];
+
   // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03
   // could generate broken objects. STT_SECTION symbols can be
   // associated with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
   // In this case it is fine for section to be null here as we
   // do not allocate sections of these types.
-  if (!S || S == &InputSectionBase<ELFT>::Discarded)
+  if (!S) {
+    if (Index == 0 || Sym.getType() == STT_SECTION)
+      return nullptr;
+    fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
+  }
+
+  if (S == &InputSectionBase<ELFT>::Discarded)
     return S;
   return S->Repl;
 }

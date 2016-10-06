@@ -182,22 +182,24 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
-    } else {
-      std::string channel(args.GetArgumentAtIndex(0));
-      args.Shift(); // Shift off the channel
-      char log_file[PATH_MAX];
-      if (m_options.log_file)
-        m_options.log_file.GetPath(log_file, sizeof(log_file));
-      else
-        log_file[0] = '\0';
-      bool success = m_interpreter.GetDebugger().EnableLog(
-          channel.c_str(), args.GetConstArgumentVector(), log_file,
-          m_options.log_options, result.GetErrorStream());
-      if (success)
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      else
-        result.SetStatus(eReturnStatusFailed);
+      return false;
     }
+
+    // Store into a std::string since we're about to shift the channel off.
+    std::string channel = args.GetArgumentAtIndex(0);
+    args.Shift(); // Shift off the channel
+    char log_file[PATH_MAX];
+    if (m_options.log_file)
+      m_options.log_file.GetPath(log_file, sizeof(log_file));
+    else
+      log_file[0] = '\0';
+    bool success = m_interpreter.GetDebugger().EnableLog(
+        channel.c_str(), args.GetConstArgumentVector(), log_file,
+        m_options.log_options, result.GetErrorStream());
+    if (success)
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    else
+      result.SetStatus(eReturnStatusFailed);
     return result.Succeeded();
   }
 
@@ -240,33 +242,32 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    const size_t argc = args.GetArgumentCount();
-    if (argc == 0) {
+    if (args.empty()) {
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
-    } else {
-      Log::Callbacks log_callbacks;
+      return false;
+    }
 
-      std::string channel(args.GetArgumentAtIndex(0));
-      args.Shift(); // Shift off the channel
-      if (Log::GetLogChannelCallbacks(ConstString(channel.c_str()),
-                                      log_callbacks)) {
-        log_callbacks.disable(args.GetConstArgumentVector(),
-                              &result.GetErrorStream());
+    Log::Callbacks log_callbacks;
+
+    const std::string channel = args.GetArgumentAtIndex(0);
+    args.Shift(); // Shift off the channel
+    if (Log::GetLogChannelCallbacks(ConstString(channel), log_callbacks)) {
+      log_callbacks.disable(args.GetConstArgumentVector(),
+                            &result.GetErrorStream());
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    } else if (channel == "all") {
+      Log::DisableAllLogChannels(&result.GetErrorStream());
+    } else {
+      LogChannelSP log_channel_sp(LogChannel::FindPlugin(channel.data()));
+      if (log_channel_sp) {
+        log_channel_sp->Disable(args.GetConstArgumentVector(),
+                                &result.GetErrorStream());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      } else if (channel == "all") {
-        Log::DisableAllLogChannels(&result.GetErrorStream());
-      } else {
-        LogChannelSP log_channel_sp(LogChannel::FindPlugin(channel.c_str()));
-        if (log_channel_sp) {
-          log_channel_sp->Disable(args.GetConstArgumentVector(),
-                                  &result.GetErrorStream());
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        } else
-          result.AppendErrorWithFormat("Invalid log channel '%s'.\n",
-                                       args.GetArgumentAtIndex(0));
-      }
+      } else
+        result.AppendErrorWithFormat("Invalid log channel '%s'.\n",
+                                     channel.data());
     }
     return result.Succeeded();
   }
@@ -301,30 +302,28 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    const size_t argc = args.GetArgumentCount();
-    if (argc == 0) {
+    if (args.empty()) {
       Log::ListAllLogChannels(&result.GetOutputStream());
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      for (size_t i = 0; i < argc; ++i) {
+      for (auto &entry : args.entries()) {
         Log::Callbacks log_callbacks;
 
-        std::string channel(args.GetArgumentAtIndex(i));
-        if (Log::GetLogChannelCallbacks(ConstString(channel.c_str()),
+        if (Log::GetLogChannelCallbacks(ConstString(entry.ref),
                                         log_callbacks)) {
           log_callbacks.list_categories(&result.GetOutputStream());
           result.SetStatus(eReturnStatusSuccessFinishResult);
-        } else if (channel == "all") {
+        } else if (entry.ref == "all") {
           Log::ListAllLogChannels(&result.GetOutputStream());
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          LogChannelSP log_channel_sp(LogChannel::FindPlugin(channel.c_str()));
+          LogChannelSP log_channel_sp(LogChannel::FindPlugin(entry.c_str()));
           if (log_channel_sp) {
             log_channel_sp->ListCategories(&result.GetOutputStream());
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
           } else
             result.AppendErrorWithFormat("Invalid log channel '%s'.\n",
-                                         args.GetArgumentAtIndex(0));
+                                         entry.c_str());
         }
       }
     }
@@ -348,45 +347,41 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    const size_t argc = args.GetArgumentCount();
     result.SetStatus(eReturnStatusFailed);
 
-    if (argc == 1) {
-      const char *sub_command = args.GetArgumentAtIndex(0);
+    if (args.GetArgumentCount() == 1) {
+      llvm::StringRef sub_command = args.GetArgumentAtIndex(0);
 
-      if (strcasecmp(sub_command, "enable") == 0) {
+      if (sub_command.equals_lower("enable")) {
         Timer::SetDisplayDepth(UINT32_MAX);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      } else if (strcasecmp(sub_command, "disable") == 0) {
+      } else if (sub_command.equals_lower("disable")) {
         Timer::DumpCategoryTimes(&result.GetOutputStream());
         Timer::SetDisplayDepth(0);
         result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else if (strcasecmp(sub_command, "dump") == 0) {
+      } else if (sub_command.equals_lower("dump")) {
         Timer::DumpCategoryTimes(&result.GetOutputStream());
         result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else if (strcasecmp(sub_command, "reset") == 0) {
+      } else if (sub_command.equals_lower("reset")) {
         Timer::ResetCategoryTimes();
         result.SetStatus(eReturnStatusSuccessFinishResult);
       }
-    } else if (argc == 2) {
-      const char *sub_command = args.GetArgumentAtIndex(0);
+    } else if (args.GetArgumentCount() == 2) {
+      llvm::StringRef sub_command = args.GetArgumentAtIndex(0);
+      llvm::StringRef param = args.GetArgumentAtIndex(1);
 
-      if (strcasecmp(sub_command, "enable") == 0) {
-        bool success;
-        uint32_t depth =
-            StringConvert::ToUInt32(args.GetArgumentAtIndex(1), 0, 0, &success);
-        if (success) {
-          Timer::SetDisplayDepth(depth);
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        } else
+      if (sub_command.equals_lower("enable")) {
+        uint32_t depth;
+        if (param.consumeInteger(0, depth)) {
           result.AppendError(
               "Could not convert enable depth to an unsigned integer.");
-      }
-      if (strcasecmp(sub_command, "increment") == 0) {
+        } else {
+          Timer::SetDisplayDepth(depth);
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
+        }
+      } else if (sub_command.equals_lower("increment")) {
         bool success;
-        bool increment = Args::StringToBoolean(
-            llvm::StringRef::withNullAsEmpty(args.GetArgumentAtIndex(1)), false,
-            &success);
+        bool increment = Args::StringToBoolean(param, false, &success);
         if (success) {
           Timer::SetQuiet(!increment);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

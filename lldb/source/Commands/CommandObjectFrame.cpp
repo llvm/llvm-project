@@ -533,7 +533,7 @@ protected:
       const Format format = m_option_format.GetFormat();
       options.SetFormat(format);
 
-      if (command.GetArgumentCount() > 0) {
+      if (!command.empty()) {
         VariableList regex_var_list;
 
         // If we have any args to the variable command, we will make

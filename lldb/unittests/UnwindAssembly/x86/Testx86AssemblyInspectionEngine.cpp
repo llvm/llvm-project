@@ -958,7 +958,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushRBP) {
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
-      0x55, // pushq $rbp
+      0x55, // pushq %rbp
       0x90  // nop
   };
 
@@ -1583,7 +1583,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSubESP) {
   std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
 
   uint8_t data1[] = {
-      0x81, 0xec, 0x00, 0x01, 0x00, 0x00, // subq $0x100, $esp
+      0x81, 0xec, 0x00, 0x01, 0x00, 0x00, // subl $0x100, %esp
       0x90                                // nop
   };
 
@@ -2110,11 +2110,11 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVi386) {
   std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
 
   uint8_t data[] = {
-      0x55,                               // pushq %ebp
-      0x89, 0xe5,                         // movq %esp, %ebp
+      0x55,                               // pushl %ebp
+      0x89, 0xe5,                         // movl %esp, %ebp
       0x89, 0x9d, 0xb0, 0xfe, 0xff, 0xff, // movl %ebx, -0x150(%ebp)
       0x89, 0x75, 0xe0,                   // movl %esi, -0x20(%ebp)
-      0x90                                      // nop
+      0x90                                // nop
   };
 
   sample_range = AddressRange(0x1000, sizeof(data));
@@ -2134,4 +2134,207 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVi386) {
   EXPECT_TRUE(row_sp->GetRegisterInfo(k_esi, regloc));
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-40, regloc.GetOffset());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x55,             // pushq %rbp
+      0x48, 0x89, 0xe5, // movq %rsp, %rbp
+
+      // x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite
+      // has a bug where it can't augment a function that is just
+      // prologue+epilogue - it needs at least one other instruction
+      // in between.
+      0x90, // nop
+
+      0x5d, // popq %rbp
+      0xc3  // retq
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  unwind_plan.SetSourceName("unit testing hand-created unwind plan");
+  unwind_plan.SetPlanValidAddressRange(sample_range);
+  unwind_plan.SetRegisterKind(eRegisterKindLLDB);
+
+  row_sp.reset(new UnwindPlan::Row);
+
+  // Describe offset 0
+  row_sp->SetOffset(0);
+  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 8);
+
+  regloc.SetAtCFAPlusOffset(-8);
+  row_sp->SetRegisterInfo(k_rip, regloc);
+
+  unwind_plan.AppendRow(row_sp);
+
+  // Allocate a new Row, populate it with the existing Row contents.
+  UnwindPlan::Row *new_row = new UnwindPlan::Row;
+  *new_row = *row_sp.get();
+  row_sp.reset(new_row);
+
+  // Describe offset 1
+  row_sp->SetOffset(1);
+  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 16);
+  regloc.SetAtCFAPlusOffset(-16);
+  row_sp->SetRegisterInfo(k_rbp, regloc);
+  unwind_plan.AppendRow(row_sp);
+
+  // Allocate a new Row, populate it with the existing Row contents.
+  new_row = new UnwindPlan::Row;
+  *new_row = *row_sp.get();
+  row_sp.reset(new_row);
+
+  // Describe offset 4
+  row_sp->SetOffset(4);
+  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rbp, 16);
+  unwind_plan.AppendRow(row_sp);
+
+  RegisterContextSP reg_ctx_sp;
+  EXPECT_TRUE(engine64->AugmentUnwindPlanFromCallSite(
+      data, sizeof(data), sample_range, unwind_plan, reg_ctx_sp));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(6);
+  EXPECT_EQ(6, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  // x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite
+  // doesn't track register restores (pop'ing a reg value back from
+  // the stack) - it was just written to make stepping work correctly.
+  // Technically we should be able to do the following test, but it
+  // won't work today - the unwind plan will still say that the caller's
+  // rbp is on the stack.
+  // EXPECT_FALSE(row_sp->GetRegisterInfo(k_rbp, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x55,       // pushl %ebp
+      0x89, 0xe5, // movl %esp, %ebp
+
+      // x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite
+      // has a bug where it can't augment a function that is just
+      // prologue+epilogue - it needs at least one other instruction
+      // in between.
+      0x90, // nop
+
+      0x5d, // popl %ebp
+      0xc3  // retl
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  unwind_plan.SetSourceName("unit testing hand-created unwind plan");
+  unwind_plan.SetPlanValidAddressRange(sample_range);
+  unwind_plan.SetRegisterKind(eRegisterKindLLDB);
+
+  row_sp.reset(new UnwindPlan::Row);
+
+  // Describe offset 0
+  row_sp->SetOffset(0);
+  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_esp, 4);
+
+  regloc.SetAtCFAPlusOffset(-4);
+  row_sp->SetRegisterInfo(k_eip, regloc);
+
+  unwind_plan.AppendRow(row_sp);
+
+  // Allocate a new Row, populate it with the existing Row contents.
+  UnwindPlan::Row *new_row = new UnwindPlan::Row;
+  *new_row = *row_sp.get();
+  row_sp.reset(new_row);
+
+  // Describe offset 1
+  row_sp->SetOffset(1);
+  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_esp, 8);
+  regloc.SetAtCFAPlusOffset(-8);
+  row_sp->SetRegisterInfo(k_ebp, regloc);
+  unwind_plan.AppendRow(row_sp);
+
+  // Allocate a new Row, populate it with the existing Row contents.
+  new_row = new UnwindPlan::Row;
+  *new_row = *row_sp.get();
+  row_sp.reset(new_row);
+
+  // Describe offset 3
+  row_sp->SetOffset(3);
+  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_ebp, 8);
+  unwind_plan.AppendRow(row_sp);
+
+  RegisterContextSP reg_ctx_sp;
+  EXPECT_TRUE(engine32->AugmentUnwindPlanFromCallSite(
+      data, sizeof(data), sample_range, unwind_plan, reg_ctx_sp));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(5);
+  EXPECT_EQ(5, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_EQ(4, row_sp->GetCFAValue().GetOffset());
+
+  // x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite
+  // doesn't track register restores (pop'ing a reg value back from
+  // the stack) - it was just written to make stepping work correctly.
+  // Technically we should be able to do the following test, but it
+  // won't work today - the unwind plan will still say that the caller's
+  // ebp is on the stack.
+  // EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebp, regloc));
+}
+
+// Check that the i386 disassembler disassembles past an opcode that
+// is only valid in 32-bit mode (non-long mode), and the x86_64 disassembler
+// stops
+// disassembling at that point (long-mode).
+TEST_F(Testx86AssemblyInspectionEngine, Test32BitOnlyInstruction) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+  std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x43, // incl $ebx --- an invalid opcode in 64-bit mode
+      0x55, // pushl %ebp
+      0x90  // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(2, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_esp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_ebp, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  unwind_plan.Clear();
+
+  EXPECT_TRUE(engine64->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+  EXPECT_EQ(0, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_rbp, regloc));
 }

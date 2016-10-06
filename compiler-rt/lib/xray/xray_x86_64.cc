@@ -1,5 +1,5 @@
-#include "xray_interface_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "xray_interface_internal.h"
 #include <atomic>
 #include <cstdint>
 #include <limits>
@@ -15,8 +15,8 @@ static constexpr uint8_t RetOpCode = 0xc3;
 static constexpr int64_t MinOffset{std::numeric_limits<int32_t>::min()};
 static constexpr int64_t MaxOffset{std::numeric_limits<int32_t>::max()};
 
-bool patchFunctionEntry(const bool Enable, const uint32_t FuncId, const XRaySledEntry& Sled)
-{
+bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
+                        const XRaySledEntry &Sled) {
   // Here we do the dance of replacing the following sled:
   //
   // xray_sled_n:
@@ -39,9 +39,8 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId, const XRaySled
   //
   // Prerequisite is to compute the relative offset to the
   // __xray_FunctionEntry function's address.
-  int64_t TrampolineOffset =
-      reinterpret_cast<int64_t>(__xray_FunctionEntry) -
-      (static_cast<int64_t>(Sled.Address) + 11);
+  int64_t TrampolineOffset = reinterpret_cast<int64_t>(__xray_FunctionEntry) -
+                             (static_cast<int64_t>(Sled.Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Entry trampoline (%p) too far from sled (%p); distance = "
            "%ld\n",
@@ -65,8 +64,8 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId, const XRaySled
   return true;
 }
 
-bool patchFunctionExit(const bool Enable, const uint32_t FuncId, const XRaySledEntry& Sled)
-{
+bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
+                       const XRaySledEntry &Sled) {
   // Here we do the dance of replacing the following sled:
   //
   // xray_sled_n:
@@ -87,9 +86,8 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId, const XRaySledE
   //
   // Prerequisite is to compute the relative offset fo the
   // __xray_FunctionExit function's address.
-  int64_t TrampolineOffset =
-      reinterpret_cast<int64_t>(__xray_FunctionExit) -
-      (static_cast<int64_t>(Sled.Address) + 11);
+  int64_t TrampolineOffset = reinterpret_cast<int64_t>(__xray_FunctionExit) -
+                             (static_cast<int64_t>(Sled.Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Exit trampoline (%p) too far from sled (%p); distance = "
            "%ld\n",

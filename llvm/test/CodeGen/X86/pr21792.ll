@@ -34,8 +34,8 @@ entry:
 ; CHECK-LABEL: func:
 ; CHECK: pextrq  $1, %xmm0,
 ; CHECK-NEXT: movd    %xmm0, %r[[AX:..]]
-; CHECK-NEXT: movslq  %e[[AX]],
-; CHECK-NEXT: sarq    $32, %r[[AX]]
+; CHECK-NEXT: movq    %r[[AX]],
+; CHECK-NEXT: shrq    $32, %r9
 }
 
 declare void @toto(double*, double*, double*, double*, double*, double*)

@@ -219,3 +219,16 @@ void f19_test(N19::C<N19::A,  &N19::foo>, N19::F, N19::D) {
 }
 // f19_test(N19::C<N19::A, &N19::foo[abi:B]>, N19::F, N19::D)
 // CHECK-DAG: define void @_Z8f19_testN3N191CINS_1AEXadL_ZNS_3fooB1BES1_NS_1DEEEEENS_1FES2_(
+
+namespace pr30440 {
+
+template<class F> void g(F);
+template<class ...A> auto h(A ...a)->decltype (g (0, g < a > (a) ...)) {
+}
+// CHECK-DAG: define {{.*}} @_ZN7pr304401hIJEEEDTcl1gLi0Espcl1gIL_ZZNS_1hEDpT_E1aEEfp_EEES2_(
+
+void pr30440_test () {
+  h();
+}
+
+}

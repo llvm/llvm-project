@@ -287,12 +287,10 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
           command_callback(parent->GetCommandInterpreter());
       if (command) {
         // the CommandObject vended by a Language plugin cannot be created once
-        // and cached because
-        // we may create multiple debuggers and need one instance of the command
-        // each - the implementing function
-        // is meant to create a new instance of the command each time it is
-        // invoked
-        parent->LoadSubCommand(command->GetCommandName(), command);
+        // and cached because we may create multiple debuggers and need one
+        // instance of the command each - the implementing function is meant to
+        // create a new instance of the command each time it is invoked.
+        parent->LoadSubCommand(command->GetCommandName().str().c_str(), command);
       }
     }
   }

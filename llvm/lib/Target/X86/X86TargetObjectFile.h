@@ -55,6 +55,11 @@ namespace llvm {
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
   };
 
+  /// \brief This implementation is used for Fuchsia on x86-64.
+  class X86FuchsiaTargetObjectFile : public X86ELFTargetObjectFile {
+    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  };
+
   /// X86LinuxNaClTargetObjectFile - This implementation is used for linux and
   /// Native Client on x86 and x86-64.
   class X86LinuxNaClTargetObjectFile : public X86ELFTargetObjectFile {

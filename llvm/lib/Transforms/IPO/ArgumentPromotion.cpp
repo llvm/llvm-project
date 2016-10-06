@@ -600,7 +600,7 @@ static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
 
   // Because there could be several/many load instructions, remember which
   // blocks we know to be transparent to the load.
-  SmallPtrSet<BasicBlock*, 16> TranspBlocks;
+  df_iterator_default_set<BasicBlock*, 16> TranspBlocks;
 
   for (LoadInst *Load : Loads) {
     // Check to see if the load is invalidated from the start of the block to

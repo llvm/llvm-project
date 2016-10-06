@@ -306,8 +306,11 @@ Archive::Child::Child(const Archive *Parent, StringRef Data,
 }
 
 Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
-    : Parent(Parent), Header(Parent, Start, Parent->getData().size() -
-                             (Start - Parent->getData().data()), Err) {
+    : Parent(Parent),
+      Header(Parent, Start,
+             Parent
+               ? Parent->getData().size() - (Start - Parent->getData().data())
+               : 0, Err) {
   if (!Start)
     return;
 
@@ -441,7 +444,7 @@ Expected<Archive::Child> Archive::Child::getNext() const {
 
   // Check to see if this is at the end of the archive.
   if (NextLoc == Parent->Data.getBufferEnd())
-    return Child(Parent, nullptr, nullptr);
+    return Child(nullptr, nullptr, nullptr);
 
   // Check to see if this is past the end of the archive.
   if (NextLoc > Parent->Data.getBufferEnd()) {
@@ -768,7 +771,7 @@ Archive::child_iterator Archive::child_begin(Error &Err,
 }
 
 Archive::child_iterator Archive::child_end() const {
-  return child_iterator(Child(this, nullptr, nullptr), nullptr);
+  return child_iterator(Child(nullptr, nullptr, nullptr), nullptr);
 }
 
 StringRef Archive::Symbol::getName() const {

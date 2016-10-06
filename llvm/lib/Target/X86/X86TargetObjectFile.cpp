@@ -73,6 +73,13 @@ X86FreeBSDTargetObjectFile::Initialize(MCContext &Ctx,
 }
 
 void
+X86FuchsiaTargetObjectFile::Initialize(MCContext &Ctx,
+                                       const TargetMachine &TM) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  InitializeELF(TM.Options.UseInitArray);
+}
+
+void
 X86LinuxNaClTargetObjectFile::Initialize(MCContext &Ctx,
                                          const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);

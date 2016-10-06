@@ -135,6 +135,9 @@ public:
   const_iterator end() const { return ConstIterator(TheMap.end()); }
 
   iterator find(const ValueT &V) { return Iterator(TheMap.find(V)); }
+  const_iterator find(const ValueT &V) const {
+    return ConstIterator(TheMap.find(V));
+  }
 
   /// Alternative version of find() which allows a different, and possibly less
   /// expensive, key type.

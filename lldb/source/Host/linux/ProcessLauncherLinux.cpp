@@ -31,10 +31,8 @@ static void FixupEnvironment(Args &env) {
   // path to /system/bin. It is required because the default path used by
   // execve() is wrong on android.
   static const char *path = "PATH=";
-  static const int path_len = ::strlen(path);
-  for (size_t i = 0; i < env.GetArgumentCount(); ++i) {
-    const char *arg = env.GetArgumentAtIndex(i);
-    if (::strncmp(path, arg, path_len) == 0)
+  for (auto &entry : env.entries()) {
+    if (entry.ref.startswith(path))
       return;
   }
   env.AppendArgument(llvm::StringRef("PATH=/system/bin"));

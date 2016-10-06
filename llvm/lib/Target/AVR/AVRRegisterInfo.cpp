@@ -253,4 +253,14 @@ AVRRegisterInfo::getPointerRegClass(const MachineFunction &MF,
   return &AVR::PTRDISPREGSRegClass;
 }
 
+void AVRRegisterInfo::splitReg(unsigned Reg,
+                               unsigned &LoReg,
+                               unsigned &HiReg) const {
+    assert(AVR::DREGSRegClass.contains(Reg) && "can only split 16-bit registers");
+
+    LoReg = getSubReg(Reg, AVR::sub_lo);
+    HiReg = getSubReg(Reg, AVR::sub_hi);
+}
+
 } // end of namespace llvm
+

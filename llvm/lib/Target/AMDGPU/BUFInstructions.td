@@ -66,6 +66,7 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
+  let Size = 8;
   let UseNamedOperandTable = 1;
 
   string Mnemonic = opName;
@@ -77,7 +78,6 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
   let Uses = [EXEC];
 
   let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
   let SchedRW = [WriteVMEM];
 }
 
@@ -159,6 +159,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
+  let Size = 8;
   let UseNamedOperandTable = 1;
 
   string Mnemonic = opName;

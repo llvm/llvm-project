@@ -1008,7 +1008,7 @@ void PEI::replaceFrameIndices(MachineFunction &Fn) {
   // Store SPAdj at exit of a basic block.
   SmallVector<int, 8> SPState;
   SPState.resize(Fn.getNumBlockIDs());
-  SmallPtrSet<MachineBasicBlock*, 8> Reachable;
+  df_iterator_default_set<MachineBasicBlock*> Reachable;
 
   // Iterate over the reachable blocks in DFS order.
   for (auto DFI = df_ext_begin(&Fn, Reachable), DFE = df_ext_end(&Fn, Reachable);

@@ -239,15 +239,15 @@ template <class ELFT> void elf::markLive() {
   // script KEEP command.
   for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     for (InputSectionBase<ELFT> *Sec : F->getSections()) {
-      if (Sec && Sec != &InputSection<ELFT>::Discarded) {
-        // .eh_frame is always marked as live now, but also it can reference to
-        // sections that contain personality. We preserve all non-text sections
-        // referred by .eh_frame here.
-        if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
-          scanEhFrameSection<ELFT>(*EH, Enqueue);
-        if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
-          Enqueue({Sec, 0});
-      }
+      if (!Sec || Sec == &InputSection<ELFT>::Discarded)
+        continue;
+      // .eh_frame is always marked as live now, but also it can reference to
+      // sections that contain personality. We preserve all non-text sections
+      // referred by .eh_frame here.
+      if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
+        scanEhFrameSection<ELFT>(*EH, Enqueue);
+      if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
+        Enqueue({Sec, 0});
     }
   }
 

@@ -2082,19 +2082,19 @@ template <class ELFT> void MipsGOTParser<ELFT>::parsePLT() {
 
     switch (PLTRelShdr->sh_type) {
     case ELF::SHT_REL:
-      for (const Elf_Rel *RI = Obj->rel_begin(PLTRelShdr),
-                         *RE = Obj->rel_end(PLTRelShdr);
-           RI != RE && It != PLTEnd; ++RI, ++It) {
-        const Elf_Sym *Sym = Obj->getRelocationSymbol(&*RI, SymTable);
+      for (const Elf_Rel &Rel : Obj->rels(PLTRelShdr)) {
+        const Elf_Sym *Sym = Obj->getRelocationSymbol(&Rel, SymTable);
         printPLTEntry(PLTShdr->sh_addr, PLTBegin, It, StrTable, Sym);
+        if (++It == PLTEnd)
+          break;
       }
       break;
     case ELF::SHT_RELA:
-      for (const Elf_Rela *RI = Obj->rela_begin(PLTRelShdr),
-                          *RE = Obj->rela_end(PLTRelShdr);
-           RI != RE && It != PLTEnd; ++RI, ++It) {
-        const Elf_Sym *Sym = Obj->getRelocationSymbol(&*RI, SymTable);
+      for (const Elf_Rela &Rel : Obj->relas(PLTRelShdr)) {
+        const Elf_Sym *Sym = Obj->getRelocationSymbol(&Rel, SymTable);
         printPLTEntry(PLTShdr->sh_addr, PLTBegin, It, StrTable, Sym);
+        if (++It == PLTEnd)
+          break;
       }
       break;
     }

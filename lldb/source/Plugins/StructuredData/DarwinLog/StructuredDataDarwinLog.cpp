@@ -1447,7 +1447,7 @@ void StructuredDataDarwinLog::DebuggerInitialize(Debugger &debugger) {
 
   // Get parent command.
   auto &interpreter = debugger.GetCommandInterpreter();
-  std::string parent_command_text = "plugin structured-data";
+  llvm::StringRef parent_command_text = "plugin structured-data";
   auto parent_command =
       interpreter.GetCommandObjectForCommand(parent_command_text);
   if (!parent_command) {

@@ -469,9 +469,14 @@ ExprResult InitListChecker::PerformEmptyInit(Sema &SemaRef,
         SemaRef.Diag(Entity.getDecl()->getLocation(),
                      diag::note_in_omitted_aggregate_initializer)
           << /*field*/1 << Entity.getDecl();
-      else if (Entity.getKind() == InitializedEntity::EK_ArrayElement)
+      else if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
+        bool IsTrailingArrayNewMember =
+            Entity.getParent() &&
+            Entity.getParent()->isVariableLengthArrayNew();
         SemaRef.Diag(Loc, diag::note_in_omitted_aggregate_initializer)
-          << /*array element*/0 << Entity.getElementIndex();
+          << (IsTrailingArrayNewMember ? 2 : /*array element*/0)
+          << Entity.getElementIndex();
+      }
     }
     return ExprError();
   }
@@ -685,8 +690,12 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
   unsigned NumElements = NumInits;
   if (const ArrayType *AType = SemaRef.Context.getAsArrayType(ILE->getType())) {
     ElementType = AType->getElementType();
-    if (const ConstantArrayType *CAType = dyn_cast<ConstantArrayType>(AType))
+    if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
       NumElements = CAType->getSize().getZExtValue();
+    // For an array new with an unknown bound, ask for one additional element
+    // in order to populate the array filler.
+    if (Entity.isVariableLengthArrayNew())
+      ++NumElements;
     ElementEntity = InitializedEntity::InitializeElement(SemaRef.Context,
                                                          0, Entity);
   } else if (const VectorType *VType = ILE->getType()->getAs<VectorType>()) {
@@ -1685,10 +1694,13 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
                                                      ArrayType::Normal, 0);
   }
   if (!hadError && VerifyOnly) {
-    // Check if there are any members of the array that get value-initialized.
-    // If so, check if doing that is possible.
+    // If there are any members of the array that get value-initialized, check
+    // that is possible. That happens if we know the bound and don't have
+    // enough elements, or if we're performing an array new with an unknown
+    // bound.
     // FIXME: This needs to detect holes left by designated initializers too.
-    if (maxElementsKnown && elementIndex < maxElements)
+    if ((maxElementsKnown && elementIndex < maxElements) ||
+        Entity.isVariableLengthArrayNew())
       CheckEmptyInitializable(InitializedEntity::InitializeElement(
                                                   SemaRef.Context, 0, Entity),
                               IList->getLocEnd());

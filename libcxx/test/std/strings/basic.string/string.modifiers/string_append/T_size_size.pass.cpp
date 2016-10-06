@@ -164,6 +164,10 @@ int main()
     sv = s;
     s.append(sv, 0, std::string::npos);
     assert(s == "ABCDABCDABCDABCD");
+
+    sv = s;
+    s.append(sv, sv.size());
+    assert(s == "ABCDABCDABCDABCD");
     }
     
     {

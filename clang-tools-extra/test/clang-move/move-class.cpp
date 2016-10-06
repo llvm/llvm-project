@@ -7,7 +7,7 @@
 // RUN: FileCheck -input-file=%T/clang-move/new_test.cpp -check-prefix=CHECK-NEW-TEST-CPP %s
 // RUN: FileCheck -input-file=%T/clang-move/new_test.h -check-prefix=CHECK-NEW-TEST-H %s
 // RUN: FileCheck -input-file=%T/clang-move/test.cpp -check-prefix=CHECK-OLD-TEST-CPP %s
-// RUN: FileCheck -input-file=%T/clang-move/test.h -check-prefix=CHECK-OLD-TEST-H %s
+// RUN: FileCheck -input-file=%T/clang-move/test.h %s -implicit-check-not='{{namespace.*}}'
 //
 // RUN: cp %S/Inputs/test*  %T/clang-move/
 // RUN: cd %T/clang-move
@@ -15,7 +15,7 @@
 // RUN: FileCheck -input-file=%T/clang-move/new_test.cpp -check-prefix=CHECK-NEW-TEST-CPP %s
 // RUN: FileCheck -input-file=%T/clang-move/new_test.h -check-prefix=CHECK-NEW-TEST-H %s
 // RUN: FileCheck -input-file=%T/clang-move/test.cpp -check-prefix=CHECK-OLD-TEST-CPP %s
-// RUN: FileCheck -input-file=%T/clang-move/test.h -check-prefix=CHECK-OLD-TEST-H %s
+// RUN: FileCheck -input-file=%T/clang-move/test.h %s -implicit-check-not='{{namespace.*}}'
 //
 // CHECK-NEW-TEST-H: namespace a {
 // CHECK-NEW-TEST-H: class Foo {
@@ -30,10 +30,5 @@
 // CHECK-NEW-TEST-CPP: int Foo::f() { return 0; }
 // CHECK-NEW-TEST-CPP: } // namespace a
 //
-// CHECK-OLD-TEST-H: namespace a {
-// CHECK-OLD-TEST-H: } // namespace a
-//
 // CHECK-OLD-TEST-CPP: #include "test.h"
 // CHECK-OLD-TEST-CPP: #include "test2.h"
-// CHECK-OLD-TEST-CPP: namespace a {
-// CHECK-OLD-TEST-CPP: } // namespace a

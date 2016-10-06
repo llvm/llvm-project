@@ -47,6 +47,7 @@
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Thunks.h"
+#include "Strings.h"
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
@@ -519,6 +520,25 @@ static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
   return Addend;
 }
 
+static void reportUndefined(SymbolBody &Sym) {
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore)
+    return;
+
+  if (Config->Shared && Sym.symbol()->Visibility == STV_DEFAULT &&
+      Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
+    return;
+
+  std::string Msg = "undefined symbol: ";
+  Msg += Config->Demangle ? demangle(Sym.getName()) : Sym.getName().str();
+
+  if (Sym.File)
+    Msg += " in " + getFilename(Sym.File);
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
+    warn(Msg);
+  else
+    error(Msg);
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -557,6 +577,10 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     const RelTy &RI = *I;
     SymbolBody &Body = File.getRelocTargetSym(RI);
     uint32_t Type = RI.getType(Config->Mips64EL);
+
+    // We only report undefined symbols if they are referenced somewhere in the code.
+    if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
+      reportUndefined(Body);
 
     RelExpr Expr = Target->getRelExpr(Type, Body);
     bool Preemptible = isPreemptible(Body, Type);

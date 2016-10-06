@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
@@ -19,6 +18,8 @@
 
 #include <future>
 #include <cassert>
+
+#include "test_macros.h"
 
 int main()
 {
@@ -32,6 +33,7 @@ int main()
         }
         assert(f.get() == 3);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         typedef int T;
         std::future<T> f;
@@ -49,6 +51,7 @@ int main()
             assert(e.code() == make_error_code(std::future_errc::broken_promise));
         }
     }
+#endif
 
     {
         typedef int& T;
@@ -61,6 +64,7 @@ int main()
         }
         assert(&f.get() == &i);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         typedef int& T;
         std::future<T> f;
@@ -78,6 +82,7 @@ int main()
             assert(e.code() == make_error_code(std::future_errc::broken_promise));
         }
     }
+#endif
 
     {
         typedef void T;
@@ -90,6 +95,7 @@ int main()
         f.get();
         assert(true);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         typedef void T;
         std::future<T> f;
@@ -115,4 +121,5 @@ int main()
                 e.code() == std::error_code(0, std::future_category()));
         }
     }
+#endif
 }

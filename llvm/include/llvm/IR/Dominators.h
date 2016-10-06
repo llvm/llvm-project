@@ -157,7 +157,7 @@ public:
 template <class Node, class ChildIterator> struct DomTreeGraphTraitsBase {
   typedef Node *NodeRef;
   typedef ChildIterator ChildIteratorType;
-  typedef df_iterator<Node *, SmallPtrSet<NodeRef, 8>> nodes_iterator;
+  typedef df_iterator<Node *, df_iterator_default_set<Node*>> nodes_iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
   static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }

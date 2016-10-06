@@ -254,12 +254,12 @@ raw_ostream &operator<< (raw_ostream &OS,
 template<>
 raw_ostream &operator<< (raw_ostream &OS,
       const Print<NodeAddr<BlockNode*>> &P) {
-  auto *BB = P.Obj.Addr->getCode();
+  MachineBasicBlock *BB = P.Obj.Addr->getCode();
   unsigned NP = BB->pred_size();
   std::vector<int> Ns;
   auto PrintBBs = [&OS,&P] (std::vector<int> Ns) -> void {
     unsigned N = Ns.size();
-    for (auto I : Ns) {
+    for (int I : Ns) {
       OS << "BB#" << I;
       if (--N)
         OS << ", ";
@@ -268,15 +268,15 @@ raw_ostream &operator<< (raw_ostream &OS,
 
   OS << Print<NodeId>(P.Obj.Id, P.G) << ": --- BB#" << BB->getNumber()
      << " --- preds(" << NP << "): ";
-  for (auto I : BB->predecessors())
-    Ns.push_back(I->getNumber());
+  for (MachineBasicBlock *B : BB->predecessors())
+    Ns.push_back(B->getNumber());
   PrintBBs(Ns);
 
   unsigned NS = BB->succ_size();
   OS << "  succs(" << NS << "): ";
   Ns.clear();
-  for (auto I : BB->successors())
-    Ns.push_back(I->getNumber());
+  for (MachineBasicBlock *B : BB->successors())
+    Ns.push_back(B->getNumber());
   PrintBBs(Ns);
   OS << '\n';
 
@@ -468,7 +468,7 @@ NodeAddr<NodeBase*> CodeNode::getLastMember(const DataFlowGraph &G) const {
 
 // Add node NA at the end of the member list of the given code node.
 void CodeNode::addMember(NodeAddr<NodeBase*> NA, const DataFlowGraph &G) {
-  auto ML = getLastMember(G);
+  NodeAddr<NodeBase*> ML = getLastMember(G);
   if (ML.Id != 0) {
     ML.Addr->append(NA);
   } else {
@@ -489,7 +489,7 @@ void CodeNode::addMemberAfter(NodeAddr<NodeBase*> MA, NodeAddr<NodeBase*> NA,
 
 // Remove member node NA from the given code node.
 void CodeNode::removeMember(NodeAddr<NodeBase*> NA, const DataFlowGraph &G) {
-  auto MA = getFirstMember(G);
+  NodeAddr<NodeBase*> MA = getFirstMember(G);
   assert(MA.Id != 0);
 
   // Special handling if the member to remove is the first member.
@@ -540,7 +540,7 @@ NodeAddr<NodeBase*> InstrNode::getOwner(const DataFlowGraph &G) {
 
 // Add the phi node PA to the given block node.
 void BlockNode::addPhi(NodeAddr<PhiNode*> PA, const DataFlowGraph &G) {
-  auto M = getFirstMember(G);
+  NodeAddr<NodeBase*> M = getFirstMember(G);
   if (M.Id == 0) {
     addMember(PA, G);
     return;
@@ -613,7 +613,7 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
     return true;
   // Check for a tail call.
   if (In.isBranch())
-    for (auto &O : In.operands())
+    for (const MachineOperand &O : In.operands())
       if (O.isGlobal() || O.isSymbol())
         return true;
 
@@ -709,7 +709,7 @@ RegisterAggr &RegisterAggr::insert(RegisterRef RR) {
 }
 
 RegisterAggr &RegisterAggr::insert(const RegisterAggr &RG) {
-  for (auto P : RG.Masks)
+  for (std::pair<uint32_t,LaneBitmask> P : RG.Masks)
     setMaskRaw(P.first, P.second);
   return *this;
 }
@@ -978,10 +978,10 @@ void DataFlowGraph::build(unsigned Options) {
   if (MF.empty())
     return;
 
-  for (auto &B : MF) {
-    auto BA = newBlock(Func, &B);
+  for (MachineBasicBlock &B : MF) {
+    NodeAddr<BlockNode*> BA = newBlock(Func, &B);
     BlockNodes.insert(std::make_pair(&B, BA));
-    for (auto &I : B) {
+    for (MachineInstr &I : B) {
       if (I.isDebugValue())
         continue;
       buildStmt(BA, I);
@@ -1111,7 +1111,7 @@ void DataFlowGraph::pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DefM) {
     // Assert if the register is defined in two or more unrelated defs.
     // This could happen if there are two or more def operands defining it.
     if (!Defined.insert(RR).second) {
-      auto *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
+      MachineInstr *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
       dbgs() << "Multiple definitions of register: "
              << Print<RegisterRef>(RR, *this) << " in\n  " << *MI
              << "in BB#" << MI->getParent()->getNumber() << '\n';
@@ -1313,14 +1313,14 @@ NodeAddr<RefNode*> DataFlowGraph::getNextShadow(NodeAddr<InstrNode*> IA,
 // Create a new statement node in the block node BA that corresponds to
 // the machine instruction MI.
 void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
-  auto SA = newStmt(BA, &In);
+  NodeAddr<StmtNode*> SA = newStmt(BA, &In);
 
   auto isCall = [] (const MachineInstr &In) -> bool {
     if (In.isCall())
       return true;
     // Is tail call?
     if (In.isBranch())
-      for (auto &Op : In.operands())
+      for (const MachineOperand &Op : In.operands())
         if (Op.isGlobal() || Op.isSymbol())
           return true;
     return false;
@@ -1474,14 +1474,9 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &RefM,
   // This is done to make sure that each defined reference gets only one
   // phi node, even if it is defined multiple times.
   RegisterSet Defs;
-  for (auto I : BA.Addr->members(*this)) {
-    assert(I.Addr->getType() == NodeAttrs::Code);
-    assert(I.Addr->getKind() == NodeAttrs::Phi ||
-           I.Addr->getKind() == NodeAttrs::Stmt);
-    NodeAddr<InstrNode*> IA = I;
+  for (NodeAddr<InstrNode*> IA : BA.Addr->members(*this))
     for (NodeAddr<RefNode*> RA : IA.Addr->members_if(IsDef, *this))
       Defs.insert(RA.Addr->getRegRef());
-  }
 
   // Calculate the iterated dominance frontier of BB.
   const MachineDominanceFrontier::DomSetType &DF = DFLoc->second;
@@ -1523,19 +1518,19 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
   // are not covered by another ref (i.e. maximal with respect to covering).
 
   auto MaxCoverIn = [this] (RegisterRef RR, RegisterSet &RRs) -> RegisterRef {
-    for (auto I : RRs)
+    for (RegisterRef I : RRs)
       if (I != RR && RegisterAggr::isCoverOf(I, RR, LMI, TRI))
         RR = I;
     return RR;
   };
 
   RegisterSet MaxDF;
-  for (auto I : HasDF->second)
+  for (RegisterRef I : HasDF->second)
     MaxDF.insert(MaxCoverIn(I, HasDF->second));
 
   std::vector<RegisterRef> MaxRefs;
-  auto &RefB = RefM[BA.Id];
-  for (auto I : MaxDF)
+  RegisterSet &RefB = RefM[BA.Id];
+  for (RegisterRef I : MaxDF)
     MaxRefs.push_back(MaxCoverIn(I, RefB));
 
   // Now, for each R in MaxRefs, get the alias closure of R. If the closure
@@ -1550,7 +1545,7 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
 
   auto Aliased = [this,&MaxRefs](RegisterRef RR,
                                  std::vector<unsigned> &Closure) -> bool {
-    for (auto I : Closure)
+    for (unsigned I : Closure)
       if (alias(RR, MaxRefs[I]))
         return true;
     return false;
@@ -1559,7 +1554,7 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
   // Prepare a list of NodeIds of the block's predecessors.
   NodeList Preds;
   const MachineBasicBlock *MBB = BA.Addr->getCode();
-  for (auto PB : MBB->predecessors())
+  for (MachineBasicBlock *PB : MBB->predecessors())
     Preds.push_back(findBlock(PB));
 
   while (!MaxRefs.empty()) {
@@ -1614,7 +1609,7 @@ void DataFlowGraph::removeUnusedPhis() {
   }
 
   static auto HasUsedDef = [](NodeList &Ms) -> bool {
-    for (auto M : Ms) {
+    for (NodeAddr<NodeBase*> M : Ms) {
       if (M.Addr->getKind() != NodeAttrs::Def)
         continue;
       NodeAddr<DefNode*> DA = M;
@@ -1751,7 +1746,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
   MachineDomTreeNode *N = MDT.getNode(BA.Addr->getCode());
   for (auto I : *N) {
     MachineBasicBlock *SB = I->getBlock();
-    auto SBA = findBlock(SB);
+    NodeAddr<BlockNode*> SBA = findBlock(SB);
     linkBlockRefs(DefM, SBA);
   }
 
@@ -1767,7 +1762,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
   RegisterSet EHLiveIns = getLandingPadLiveIns();
   MachineBasicBlock *MBB = BA.Addr->getCode();
 
-  for (auto SB : MBB->successors()) {
+  for (MachineBasicBlock *SB : MBB->successors()) {
     bool IsEHPad = SB->isEHPad();
     NodeAddr<BlockNode*> SBA = findBlock(SB);
     for (NodeAddr<InstrNode*> IA : SBA.Addr->members_if(IsPhi, *this)) {

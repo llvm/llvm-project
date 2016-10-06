@@ -81,7 +81,7 @@ Using Visual Studio IDE/MSBuild
 Alternatively, you can use msbuild if you don't like to work in an IDE::
 
   msbuild LLVM.sln /m /target:"lld executables\lld"
-  
+
 MSBuild.exe had been shipped as a component of the .NET framework, but since
 2013 it's part of Visual Studio. You can find it at "C:\\Program Files
 (x86)\\msbuild".

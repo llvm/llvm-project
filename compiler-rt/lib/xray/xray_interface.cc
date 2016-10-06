@@ -27,12 +27,13 @@
 namespace __xray {
 
 #if defined(__x86_64__)
-  // FIXME: The actual length is 11 bytes. Why was length 12 passed to mprotect() ?
-  static const int16_t cSledLength = 12;
+// FIXME: The actual length is 11 bytes. Why was length 12 passed to mprotect()
+// ?
+static const int16_t cSledLength = 12;
 #elif defined(__arm__)
-  static const int16_t cSledLength = 28;
+static const int16_t cSledLength = 28;
 #else
-  #error "Unsupported CPU Architecture"
+#error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
 
 // This is the function to call when we encounter the entry or exit sleds.
@@ -136,7 +137,7 @@ XRayPatchingStatus ControlPatching(bool Enable) {
     return XRayPatchingStatus::NOT_INITIALIZED;
 
   const uint64_t PageSize = GetPageSizeCached();
-  if((PageSize == 0) || ( (PageSize & (PageSize-1)) != 0) ) {
+  if ((PageSize == 0) || ((PageSize & (PageSize - 1)) != 0)) {
     Report("System page size is not a power of two: %lld", PageSize);
     return XRayPatchingStatus::FAILED;
   }
@@ -156,9 +157,9 @@ XRayPatchingStatus ControlPatching(bool Enable) {
     // While we're here, we should patch the nop sled. To do that we mprotect
     // the page containing the function to be writeable.
     void *PageAlignedAddr =
-        reinterpret_cast<void *>(Sled.Address & ~(PageSize-1));
-    std::size_t MProtectLen =
-        (Sled.Address + cSledLength) - reinterpret_cast<uint64_t>(PageAlignedAddr);
+        reinterpret_cast<void *>(Sled.Address & ~(PageSize - 1));
+    std::size_t MProtectLen = (Sled.Address + cSledLength) -
+                              reinterpret_cast<uint64_t>(PageAlignedAddr);
     MProtectHelper Protector(PageAlignedAddr, MProtectLen);
     if (Protector.MakeWriteable() == -1) {
       printf("Failed mprotect: %d\n", errno);
@@ -166,7 +167,7 @@ XRayPatchingStatus ControlPatching(bool Enable) {
     }
 
     bool Success = false;
-    switch(Sled.Kind) {
+    switch (Sled.Kind) {
     case XRayEntryType::ENTRY:
       Success = patchFunctionEntry(Enable, FuncId, Sled);
       break;

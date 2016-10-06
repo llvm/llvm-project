@@ -65,7 +65,7 @@ Error FileSystem::DeleteDirectory(const FileSpec &file_spec, bool recurse) {
     path_buffer.push_back(0);
     path_buffer.push_back(0);
 
-    SHFILEOPSTRUCTW shfos = {0};
+    SHFILEOPSTRUCTW shfos = {};
     shfos.wFunc = FO_DELETE;
     shfos.pFrom = (LPCWSTR)path_buffer.data();
     shfos.fFlags = FOF_NO_UI;

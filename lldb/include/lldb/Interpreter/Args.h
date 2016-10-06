@@ -18,6 +18,7 @@
 #include <vector>
 
 // Other libraries and framework includes
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 // Project includes
 #include "lldb/Core/Error.h"
@@ -136,6 +137,7 @@ public:
   ///     The number or arguments in this object.
   //------------------------------------------------------------------
   size_t GetArgumentCount() const;
+  bool empty() const { return GetArgumentCount() == 0; }
 
   //------------------------------------------------------------------
   /// Gets the NULL terminated C string argument pointer for the
@@ -146,6 +148,8 @@ public:
   ///     valid argument index, NULL otherwise.
   //------------------------------------------------------------------
   const char *GetArgumentAtIndex(size_t idx) const;
+
+  llvm::ArrayRef<ArgEntry> entries() const { return m_entries; }
 
   char GetArgumentQuoteCharAtIndex(size_t idx) const;
 
@@ -315,18 +319,15 @@ public:
   Error ParseOptions(Options &options, ExecutionContext *execution_context,
                      lldb::PlatformSP platform_sp, bool require_validation);
 
-  size_t FindArgumentIndexForOption(Option *long_options,
-                                    int long_options_index);
-
   bool IsPositionalArgument(const char *arg);
 
   // The following works almost identically to ParseOptions, except that no
-  // option is required to have arguments,
-  // and it builds up the option_arg_vector as it parses the options.
+  // option is required to have arguments, and it builds up the
+  // option_arg_vector as it parses the options.
 
-  void ParseAliasOptions(Options &options, CommandReturnObject &result,
-                         OptionArgVector *option_arg_vector,
-                         std::string &raw_input_line);
+  std::string ParseAliasOptions(Options &options, CommandReturnObject &result,
+                                OptionArgVector *option_arg_vector,
+                                llvm::StringRef raw_input_line);
 
   void ParseArgsForCompletion(Options &options,
                               OptionElementVector &option_element_vector,
@@ -459,6 +460,9 @@ public:
                                    size_t *argument_index = nullptr) const;
 
 private:
+  size_t FindArgumentIndexForOption(Option *long_options,
+                                    int long_options_index) const;
+
   std::vector<ArgEntry> m_entries;
   std::vector<char *> m_argv;
 

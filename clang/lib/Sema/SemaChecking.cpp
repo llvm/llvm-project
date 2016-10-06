@@ -11372,8 +11372,13 @@ void Sema::AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
 
 void Sema::DiagnoseMisalignedMembers() {
   for (MisalignedMember &m : MisalignedMembers) {
+    const NamedDecl *ND = m.RD;
+    if (ND->getName().empty()) {
+      if (const TypedefNameDecl *TD = m.RD->getTypedefNameForAnonDecl())
+        ND = TD;
+    }
     Diag(m.E->getLocStart(), diag::warn_taking_address_of_packed_member)
-        << m.MD << m.RD << m.E->getSourceRange();
+        << m.MD << ND << m.E->getSourceRange();
   }
   MisalignedMembers.clear();
 }

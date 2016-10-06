@@ -122,9 +122,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         Op = X86::TAILJMPd_CC;
         break;
       case X86::TCRETURNdi64cc:
-        assert(!MBB.getParent()->hasWinCFI() &&
-               "Conditional tail calls confuse "
-               "the Win64 unwinder.");
+        assert(!IsWin64 && "Conditional tail calls confuse the Win64 unwinder.");
+        // TODO: We could do it for Win64 "leaf" functions though; PR30337.
         Op = X86::TAILJMPd64_CC;
         break;
       default:

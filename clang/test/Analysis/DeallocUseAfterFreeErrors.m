@@ -202,7 +202,7 @@ static void _invalidate(NSObject *object) {
 - (void)_invalidate {
 }
 - (void)dealloc {
-  if (_ivar) { // expected-note {{Taking false branch}}
+  if (_ivar) { // expected-note {{Assuming the condition is false}} expected-note {{Taking false branch}}
     [_ivar release];
     [super dealloc];
     return;
@@ -223,7 +223,7 @@ static void _invalidate(NSObject *object) {
 
 @implementation MissingReturnCausesDoubleSuperDeallocClass
 - (void)dealloc {
-  if (_ivar) { // expected-note {{Taking true branch}}
+  if (_ivar) { // expected-note {{Assuming the condition is true}} expected-note {{Taking true branch}}
     [_ivar release];
     [super dealloc]; // expected-note {{[super dealloc] called here}}
     // return;

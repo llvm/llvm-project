@@ -87,7 +87,7 @@ undefined-symbols:
 ...
 
 
-# CHECK:   BindOpcodes:     
+# CHECK:   BindOpcodes:
 # CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 # CHECK:       Imm:             1
 # CHECK:       Symbol:          ''
@@ -99,7 +99,7 @@ undefined-symbols:
 # CHECK:       Symbol:          ''
 # CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 # CHECK:       Imm:             2
-# CHECK:       ULEBExtraData:   
+# CHECK:       ULEBExtraData:
 # CHECK:         - 0x0000000000000000
 # CHECK:       Symbol:          ''
 # CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
@@ -110,7 +110,7 @@ undefined-symbols:
 # CHECK:       Symbol:          ___stdoutp
 # CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 # CHECK:       Imm:             2
-# CHECK:       ULEBExtraData:   
+# CHECK:       ULEBExtraData:
 # CHECK:         - 0x0000000000000010
 # CHECK:       Symbol:          ''
 # CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
@@ -120,10 +120,10 @@ undefined-symbols:
 # CHECK:       Imm:             0
 # CHECK:       Symbol:          ''
 
-# CHECK:   LazyBindOpcodes: 
+# CHECK:   LazyBindOpcodes:
 # CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 # CHECK:       Imm:             2
-# CHECK:       ULEBExtraData:   
+# CHECK:       ULEBExtraData:
 # CHECK:         - 0x0000000000000018
 # CHECK:       Symbol:          ''
 # CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
