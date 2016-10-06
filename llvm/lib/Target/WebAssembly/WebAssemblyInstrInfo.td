@@ -71,6 +71,12 @@ let OperandNamespace = "WebAssembly" in {
 let OperandType = "OPERAND_BASIC_BLOCK" in
 def bb_op : Operand<OtherVT>;
 
+let OperandType = "OPERAND_I32IMM" in
+def i32imm_op : Operand<i32>;
+
+let OperandType = "OPERAND_I64IMM" in
+def i64imm_op : Operand<i64>;
+
 let OperandType = "OPERAND_F32IMM" in
 def f32imm_op : Operand<f32>;
 
@@ -144,10 +150,10 @@ defm : LOCAL<F64>;
 defm : LOCAL<V128>, Requires<[HasSIMD128]>;
 
 let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1 in {
-def CONST_I32 : I<(outs I32:$res), (ins i32imm:$imm),
+def CONST_I32 : I<(outs I32:$res), (ins i32imm_op:$imm),
                   [(set I32:$res, imm:$imm)],
                   "i32.const\t$res, $imm">;
-def CONST_I64 : I<(outs I64:$res), (ins i64imm:$imm),
+def CONST_I64 : I<(outs I64:$res), (ins i64imm_op:$imm),
                   [(set I64:$res, imm:$imm)],
                   "i64.const\t$res, $imm">;
 def CONST_F32 : I<(outs F32:$res), (ins f32imm_op:$imm),

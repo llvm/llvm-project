@@ -44,6 +44,10 @@ namespace WebAssembly {
 enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
+  /// 32-bit integer immediates.
+  OPERAND_I32IMM,
+  /// 64-bit integer immediates.
+  OPERAND_I64IMM,
   /// 32-bit floating-point immediates.
   OPERAND_F32IMM,
   /// 64-bit floating-point immediates.

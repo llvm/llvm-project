@@ -79,7 +79,8 @@ void StringTableBuilder::write(uint8_t *Buf) const {
   assert(isFinalized());
   for (const StringPair &P : StringIndexMap) {
     StringRef Data = P.first.val();
-    memcpy(Buf + P.second, Data.data(), Data.size());
+    if (!Data.empty())
+      memcpy(Buf + P.second, Data.data(), Data.size());
   }
   if (K != WinCOFF)
     return;
@@ -182,14 +183,14 @@ void StringTableBuilder::clear() {
   StringIndexMap.clear();
 }
 
-size_t StringTableBuilder::getOffset(StringRef S) const {
+size_t StringTableBuilder::getOffset(CachedHashString S) const {
   assert(isFinalized());
   auto I = StringIndexMap.find(S);
   assert(I != StringIndexMap.end() && "String is not in table!");
   return I->second;
 }
 
-size_t StringTableBuilder::add(StringRef S) {
+size_t StringTableBuilder::add(CachedHashString S) {
   if (K == WinCOFF)
     assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
 

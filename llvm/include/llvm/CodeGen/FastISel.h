@@ -356,19 +356,6 @@ protected:
   virtual unsigned fastEmit_ri(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
                                bool Op0IsKill, uint64_t Imm);
 
-  /// \brief This method is called by target-independent code to request that an
-  /// instruction with the given type, opcode, and register and floating-point
-  /// immediate operands be emitted.
-  virtual unsigned fastEmit_rf(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
-                               bool Op0IsKill, const ConstantFP *FPImm);
-
-  /// \brief This method is called by target-independent code to request that an
-  /// instruction with the given type, opcode, and register and immediate
-  /// operands be emitted.
-  virtual unsigned fastEmit_rri(MVT VT, MVT RetVT, unsigned Opcode,
-                                unsigned Op0, bool Op0IsKill, unsigned Op1,
-                                bool Op1IsKill, uint64_t Imm);
-
   /// \brief This method is a wrapper of fastEmit_ri.
   ///
   /// It first tries to emit an instruction with an immediate operand using

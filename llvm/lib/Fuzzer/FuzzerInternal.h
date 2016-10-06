@@ -42,17 +42,13 @@ public:
       CounterBitmapBits = 0;
       CounterBitmap.clear();
       VPMap.Reset();
-      TPCMap.Reset();
     }
-
-    std::string DebugString() const;
 
     size_t BlockCoverage;
     size_t CallerCalleeCoverage;
     // Precalculated number of bits in CounterBitmap.
     size_t CounterBitmapBits;
     std::vector<uint8_t> CounterBitmap;
-    ValueBitMap TPCMap;
     ValueBitMap VPMap;
   };
 
@@ -80,7 +76,7 @@ public:
   static void StaticInterruptCallback();
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
-  bool RunOne(const uint8_t *Data, size_t Size);
+  size_t RunOne(const uint8_t *Data, size_t Size);
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
@@ -106,7 +102,7 @@ private:
   void ReportNewCoverage(InputInfo *II, const Unit &U);
   void PrintNewPCs();
   void PrintOneNewPC(uintptr_t PC);
-  bool RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
+  size_t RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n", size_t Units = 0);

@@ -643,7 +643,7 @@ bool LiveVariables::runOnMachineFunction(MachineFunction &mf) {
   // register before its uses due to dominance properties of SSA (except for PHI
   // nodes, which are treated as a special case).
   MachineBasicBlock *Entry = &MF->front();
-  SmallPtrSet<MachineBasicBlock*,16> Visited;
+  df_iterator_default_set<MachineBasicBlock*,16> Visited;
 
   for (MachineBasicBlock *MBB : depth_first_ext(Entry, Visited)) {
     runOnBlock(MBB, NumRegs);

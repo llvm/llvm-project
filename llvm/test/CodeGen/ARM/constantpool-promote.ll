@@ -15,6 +15,7 @@ target triple = "armv7--linux-gnueabihf"
 @.arr2 = private unnamed_addr constant [2 x i16] [i16 7, i16 8], align 2
 @.arr3 = private unnamed_addr constant [2 x i16*] [i16* null, i16* null], align 4
 @.ptr = private unnamed_addr constant [2 x i16*] [i16* getelementptr inbounds ([2 x i16], [2 x i16]* @.arr2, i32 0, i32 0), i16* null], align 2
+@.arr4 = private unnamed_addr constant [2 x i16] [i16 3, i16 4], align 16
 
 ; CHECK-LABEL: @test1
 ; CHECK: adr r0, [[x:.*]]
@@ -124,6 +125,15 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* bitcast ([8 x i8]* @fn2.a to i8*), i32 16, i32 1, i1 false)
   ret void
 }
+
+; This shouldn't be promoted, as the global requires >4 byte alignment.
+; CHECK-LABEL: @test9
+; CHECK-NOT: adr
+define void @test9() #0 {
+  tail call void @c(i16* getelementptr inbounds ([2 x i16], [2 x i16]* @.arr4, i32 0, i32 0)) #2
+  ret void
+}
+
 
 declare void @b(i8*) #1
 declare void @c(i16*) #1

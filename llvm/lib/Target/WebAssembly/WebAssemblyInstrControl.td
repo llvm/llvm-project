@@ -18,14 +18,13 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
 // The condition operand is a boolean value which WebAssembly represents as i32.
 def BR_IF : I<(outs), (ins bb_op:$dst, I32:$cond),
               [(brcond I32:$cond, bb:$dst)],
-               "br_if   \t$dst, $cond">;
+               "br_if   \t$dst, $cond", 0x07>;
 let isCodeGenOnly = 1 in
-def BR_UNLESS : I<(outs), (ins bb_op:$dst, I32:$cond), [],
-                   "br_unless\t$dst, $cond">;
+def BR_UNLESS : I<(outs), (ins bb_op:$dst, I32:$cond), []>;
 let isBarrier = 1 in {
 def BR   : I<(outs), (ins bb_op:$dst),
              [(br bb:$dst)],
-             "br      \t$dst">;
+             "br      \t$dst", 0x06>;
 } // isBarrier = 1
 } // isBranch = 1, isTerminator = 1, hasCtrlDep = 1
 
@@ -46,7 +45,7 @@ let Defs = [ARGUMENTS] in {
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 def BR_TABLE_I32 : I<(outs), (ins I32:$index, variable_ops),
                      [(WebAssemblybr_table I32:$index)],
-                     "br_table \t$index"> {
+                     "br_table \t$index", 0x08> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
@@ -62,8 +61,8 @@ def BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
 // use/clobber VALUE_STACK to prevent them from being moved into the middle of
 // an expression tree.
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
-def BLOCK     : I<(outs), (ins), [], "block">;
-def LOOP      : I<(outs), (ins), [], "loop">;
+def BLOCK     : I<(outs), (ins), [], "block", 0x01>;
+def LOOP      : I<(outs), (ins), [], "loop", 0x02>;
 def END_BLOCK : I<(outs), (ins), [], "end_block">;
 def END_LOOP  : I<(outs), (ins), [], "end_loop">;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]

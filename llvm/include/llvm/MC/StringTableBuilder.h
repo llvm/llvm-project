@@ -31,6 +31,7 @@ public:
   }
 
   StringRef val() const { return StringRef(P, Size); }
+  uint32_t size() const { return Size; }
   uint32_t hash() const { return Hash; }
 };
 
@@ -56,7 +57,8 @@ public:
   /// \brief Add a string to the builder. Returns the position of S in the
   /// table. The position will be changed if finalize is used.
   /// Can only be used before the table is finalized.
-  size_t add(StringRef S);
+  size_t add(CachedHashString S);
+  size_t add(StringRef S) { return add(CachedHashString(S)); }
 
   /// \brief Analyze the strings and build the final table. No more strings can
   /// be added after this point.
@@ -68,7 +70,8 @@ public:
 
   /// \brief Get the offest of a string in the string table. Can only be used
   /// after the table is finalized.
-  size_t getOffset(StringRef S) const;
+  size_t getOffset(CachedHashString S) const;
+  size_t getOffset(StringRef S) const { return getOffset(CachedHashString(S)); }
 
   size_t getSize() const { return Size; }
   void clear();

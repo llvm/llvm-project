@@ -40,7 +40,7 @@
 using namespace llvm;
 
 static bool eliminateUnreachableBlock(Function &F) {
-  SmallPtrSet<BasicBlock*, 8> Reachable;
+  df_iterator_default_set<BasicBlock*> Reachable;
 
   // Mark all reachable blocks.
   for (BasicBlock *BB : depth_first_ext(&F, Reachable))
@@ -130,7 +130,7 @@ void UnreachableMachineBlockElim::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
-  SmallPtrSet<MachineBasicBlock*, 8> Reachable;
+  df_iterator_default_set<MachineBasicBlock*> Reachable;
   bool ModifiedPHI = false;
 
   MMI = getAnalysisIfAvailable<MachineModuleInfo>();

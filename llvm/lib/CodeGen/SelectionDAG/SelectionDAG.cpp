@@ -2448,6 +2448,26 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     KnownOne = KnownOne.trunc(BitWidth);
     break;
   }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    // At the moment we keep this simple and skip tracking the specific
+    // element. This way we get the lowest common denominator for all elements
+    // of the vector.
+    // TODO: get information for given vector element
+    const unsigned BitWidth = Op.getValueSizeInBits();
+    const unsigned EltBitWidth = Op.getOperand(0).getScalarValueSizeInBits();
+    // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
+    // anything about the extended bits.
+    if (BitWidth > EltBitWidth) {
+      KnownZero = KnownZero.trunc(EltBitWidth);
+      KnownOne = KnownOne.trunc(EltBitWidth);
+    }
+    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
+    if (BitWidth > EltBitWidth) {
+      KnownZero = KnownZero.zext(BitWidth);
+      KnownOne = KnownOne.zext(BitWidth);
+    }
+    break;
+  }
   case ISD::BSWAP: {
     computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, Depth+1);
     KnownZero = KnownZero2.byteSwap();
@@ -2714,6 +2734,20 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     // If the sign portion ends in our element the subtraction gives correct
     // result. Otherwise it gives either negative or > bitwidth result
     return std::max(std::min(KnownSign - rIndex * BitWidth, BitWidth), 0);
+  }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    // At the moment we keep this simple and skip tracking the specific
+    // element. This way we get the lowest common denominator for all elements
+    // of the vector.
+    // TODO: get information for given vector element
+    const unsigned BitWidth = Op.getValueSizeInBits();
+    const unsigned EltBitWidth = Op.getOperand(0).getScalarValueSizeInBits();
+    // If BitWidth > EltBitWidth the value is anyext:ed, and we do not know
+    // anything about sign bits. But if the sizes match we can derive knowledge
+    // about sign bits from the vector operand.
+    if (BitWidth == EltBitWidth)
+      return ComputeNumSignBits(Op.getOperand(0), Depth+1);
+    break;
   }
   }
 

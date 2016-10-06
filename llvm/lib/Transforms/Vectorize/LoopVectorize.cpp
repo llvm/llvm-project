@@ -342,6 +342,14 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL, unsigned VF) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
+/// A helper function that returns the reciprocal of the block probability of
+/// predicated blocks. If we return X, we are assuming the predicated block
+/// will execute once for for every X iterations of the loop header.
+///
+/// TODO: We should use actual block probability here, if available. Currently,
+///       we always assume predicated blocks have a 50% chance of executing.
+static unsigned getReciprocalPredBlockProb() { return 2; }
+
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
 /// This class performs the widening of scalars into vectors, or multiple
@@ -363,28 +371,20 @@ public:
                       const TargetLibraryInfo *TLI,
                       const TargetTransformInfo *TTI, AssumptionCache *AC,
                       OptimizationRemarkEmitter *ORE, unsigned VecWidth,
-                      unsigned UnrollFactor)
+                      unsigned UnrollFactor, LoopVectorizationLegality *LVL,
+                      LoopVectorizationCostModel *CM)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
         AC(AC), ORE(ORE), VF(VecWidth), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Induction(nullptr),
         OldInduction(nullptr), VectorLoopValueMap(UnrollFactor, VecWidth),
-        TripCount(nullptr), VectorTripCount(nullptr), Legal(nullptr),
+        TripCount(nullptr), VectorTripCount(nullptr), Legal(LVL), Cost(CM),
         AddedSafetyChecks(false) {}
 
   // Perform the actual loop widening (vectorization).
-  // MinimumBitWidths maps scalar integer values to the smallest bitwidth they
-  // can be validly truncated to. The cost model has assumed this truncation
-  // will happen when vectorizing. VecValuesToIgnore contains scalar values
-  // that the cost model has chosen to ignore because they will not be
-  // vectorized.
-  void vectorize(LoopVectorizationLegality *L,
-                 const MapVector<Instruction *, uint64_t> &MinimumBitWidths) {
-    MinBWs = &MinimumBitWidths;
-    Legal = L;
+  void vectorize() {
     // Create a new empty loop. Unlink the old loop and connect the new one.
     createEmptyLoop();
     // Widen each instruction in the old loop to a new one in the new loop.
-    // Use the Legality module to find the induction and reduction variables.
     vectorizeLoop();
   }
 
@@ -440,8 +440,9 @@ protected:
   /// Predicate conditional instructions that require predication on their
   /// respective conditions.
   void predicateInstructions();
- 
-  /// Shrinks vector element sizes based on information in "MinBWs".
+
+  /// Shrinks vector element sizes to the smallest bitwidth they can be legally
+  /// represented as.
   void truncateToMinimalBitwidths();
 
   /// A helper function that computes the predicate of the block BB, assuming
@@ -754,12 +755,11 @@ protected:
   /// Trip count of the widened loop (TripCount - TripCount % (VF*UF))
   Value *VectorTripCount;
 
-  /// Map of scalar integer values to the smallest bitwidth they can be legally
-  /// represented as. The vector equivalents of these values should be truncated
-  /// to this type.
-  const MapVector<Instruction *, uint64_t> *MinBWs;
-
+  /// The legality analysis.
   LoopVectorizationLegality *Legal;
+
+  /// The profitablity analysis.
+  LoopVectorizationCostModel *Cost;
 
   // Record whether runtime checks are added.
   bool AddedSafetyChecks;
@@ -771,9 +771,11 @@ public:
                     LoopInfo *LI, DominatorTree *DT,
                     const TargetLibraryInfo *TLI,
                     const TargetTransformInfo *TTI, AssumptionCache *AC,
-                    OptimizationRemarkEmitter *ORE, unsigned UnrollFactor)
+                    OptimizationRemarkEmitter *ORE, unsigned UnrollFactor,
+                    LoopVectorizationLegality *LVL,
+                    LoopVectorizationCostModel *CM)
       : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, 1,
-                            UnrollFactor) {}
+                            UnrollFactor, LVL, CM) {}
 
 private:
   void scalarizeInstruction(Instruction *Instr,
@@ -1658,9 +1660,10 @@ public:
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
   unsigned getNumPredStores() const { return NumPredStores; }
 
-  /// Returns true if \p I is a store instruction in a predicated block that
-  /// will be scalarized during vectorization.
-  bool isPredicatedStore(Instruction *I);
+  /// Returns true if \p I is an instruction that will be scalarized with
+  /// predication. Such instructions include conditional stores and
+  /// instructions that may divide by zero.
+  bool isScalarWithPredication(Instruction *I);
 
   /// Returns true if \p I is a memory instruction that has a consecutive or
   /// consecutive-like pointer operand. Consecutive-like pointers are pointers
@@ -1882,6 +1885,13 @@ public:
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
+  /// \returns The smallest bitwidth each instruction can be represented with.
+  /// The vector equivalents of these instructions should be truncated to this
+  /// type.
+  const MapVector<Instruction *, uint64_t> &getMinimalBitwidths() const {
+    return MinBWs;
+  }
+
 private:
   /// The vectorization cost is a combination of the cost itself and a boolean
   /// indicating whether any of the contributing operations will actually
@@ -1919,12 +1929,12 @@ private:
                                   RemarkName, TheLoop);
   }
 
-public:
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
   /// to this type.
   MapVector<Instruction *, uint64_t> MinBWs;
 
+public:
   /// The loop that we evaluate.
   Loop *TheLoop;
   /// Predicated scalar evolution analysis.
@@ -2762,7 +2772,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
 
   // Scalarize the memory instruction if necessary.
   if (Legal->memoryInstructionMustBeScalarized(Instr, VF))
-    return scalarizeInstruction(Instr, Legal->isPredicatedStore(Instr));
+    return scalarizeInstruction(Instr, Legal->isScalarWithPredication(Instr));
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -3553,12 +3563,11 @@ static unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract,
     }
   }
 
-  // We assume that if-converted blocks have a 50% chance of being executed.
-  // Predicated scalarized instructions are avoided due to the CF that bypasses
-  // turned off lanes. The extracts and inserts will be sinked/hoisted to the
-  // predicated basic-block and are subjected to the same assumption.
+  // If we have a predicated instruction, it may not be executed for each
+  // vector lane. Scale the cost by the probability of executing the
+  // predicated block.
   if (Predicated)
-    Cost /= 2;
+    Cost /= getReciprocalPredBlockProb();
 
   return Cost;
 }
@@ -3683,7 +3692,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
   // later and will remove any ext/trunc pairs.
   //
   SmallPtrSet<Value *, 4> Erased;
-  for (const auto &KV : *MinBWs) {
+  for (const auto &KV : Cost->getMinimalBitwidths()) {
     VectorParts &Parts = VectorLoopValueMap.getVector(KV.first);
     for (Value *&I : Parts) {
       if (Erased.count(I) || I->use_empty() || !isa<Instruction>(I))
@@ -3775,7 +3784,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
   }
 
   // We'll have created a bunch of ZExts that are now parentless. Clean up.
-  for (const auto &KV : *MinBWs) {
+  for (const auto &KV : Cost->getMinimalBitwidths()) {
     VectorParts &Parts = VectorLoopValueMap.getVector(KV.first);
     for (Value *&I : Parts) {
       ZExtInst *Inst = dyn_cast<ZExtInst>(I);
@@ -4566,7 +4575,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
     case Instruction::URem:
       // Scalarize with predication if this instruction may divide by zero and
       // block execution is conditional, otherwise fallthrough.
-      if (mayDivideByZero(I) && Legal->blockNeedsPredication(I.getParent())) {
+      if (Legal->isScalarWithPredication(&I)) {
         scalarizeInstruction(&I, true);
         continue;
       }
@@ -5305,9 +5314,21 @@ bool LoopVectorizationLegality::hasConsecutiveLikePtrOperand(Instruction *I) {
   return false;
 }
 
-bool LoopVectorizationLegality::isPredicatedStore(Instruction *I) {
-  auto *SI = dyn_cast<StoreInst>(I);
-  return SI && blockNeedsPredication(SI->getParent()) && !isMaskRequired(SI);
+bool LoopVectorizationLegality::isScalarWithPredication(Instruction *I) {
+  if (!blockNeedsPredication(I->getParent()))
+    return false;
+  switch(I->getOpcode()) {
+  default:
+    break;
+  case Instruction::Store:
+    return !isMaskRequired(I);
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::SRem:
+  case Instruction::URem:
+    return mayDivideByZero(*I);
+  }
+  return false;
 }
 
 bool LoopVectorizationLegality::memoryInstructionMustBeScalarized(
@@ -5336,7 +5357,7 @@ bool LoopVectorizationLegality::memoryInstructionMustBeScalarized(
 
   // If the instruction is a store located in a predicated block, it will be
   // scalarized.
-  if (isPredicatedStore(I))
+  if (isScalarWithPredication(I))
     return true;
 
   // If the instruction's allocated size doesn't equal it's type size, it
@@ -6384,11 +6405,14 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
                    << VF << " For instruction: " << I << '\n');
     }
 
-    // We assume that if-converted blocks have a 50% chance of being executed.
-    // When the code is scalar then some of the blocks are avoided due to CF.
-    // When the code is vectorized we execute all code paths.
+    // If we are vectorizing a predicated block, it will have been
+    // if-converted. This means that the block's instructions (aside from
+    // stores and instructions that may divide by zero) will now be
+    // unconditionally executed. For the scalar case, we may not always execute
+    // the predicated block. Thus, scale the block's cost by the probability of
+    // executing it.
     if (VF == 1 && Legal->blockNeedsPredication(BB))
-      BlockCost.first /= 2;
+      BlockCost.first /= getReciprocalPredBlockProb();
 
     Cost.first += BlockCost.first;
     Cost.second |= BlockCost.second;
@@ -6505,12 +6529,13 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    // We assume that if-converted blocks have a 50% chance of being executed.
-    // Predicated scalarized instructions are avoided due to the CF that
-    // bypasses turned off lanes. If we are not predicating, fallthrough.
-    if (VF > 1 && mayDivideByZero(*I) &&
-        Legal->blockNeedsPredication(I->getParent()))
-      return VF * TTI.getArithmeticInstrCost(I->getOpcode(), RetTy) / 2 +
+    // If we have a predicated instruction, it may not be executed for each
+    // vector lane. Get the scalarization cost and scale this amount by the
+    // probability of executing the predicated block. If the instruction is not
+    // predicated, we fall through to the next case.
+    if (VF > 1 && Legal->isScalarWithPredication(I))
+      return VF * TTI.getArithmeticInstrCost(I->getOpcode(), RetTy) /
+                 getReciprocalPredBlockProb() +
              getScalarizationOverhead(I, VF, true, TTI);
   case Instruction::Add:
   case Instruction::FAdd:
@@ -6652,27 +6677,23 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
     // Check if the memory instruction will be scalarized.
     if (Legal->memoryInstructionMustBeScalarized(I, VF)) {
+      unsigned Cost = 0;
+      Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
+
+      // True if the memory instruction's address computation is complex.
       bool IsComplexComputation =
           isLikelyComplexAddressComputation(Ptr, Legal, SE, TheLoop);
-      unsigned Cost = 0;
-      // The cost of extracting from the value vector and pointer vector.
-      Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
-      for (unsigned i = 0; i < VF; ++i) {
-        //  The cost of extracting the pointer operand.
-        Cost += TTI.getVectorInstrCost(Instruction::ExtractElement, PtrTy, i);
-        // In case of STORE, the cost of ExtractElement from the vector.
-        // In case of LOAD, the cost of InsertElement into the returned
-        // vector.
-        Cost += TTI.getVectorInstrCost(SI ? Instruction::ExtractElement
-                                          : Instruction::InsertElement,
-                                       VectorTy, i);
-      }
 
-      // The cost of the scalar loads/stores.
+      // Get the cost of the scalar memory instruction and address computation.
       Cost += VF * TTI.getAddressComputationCost(PtrTy, IsComplexComputation);
       Cost += VF *
               TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
                                   Alignment, AS);
+
+      // Get the overhead of the extractelement and insertelement instructions
+      // we might create due to scalarization.
+      Cost += getScalarizationOverhead(I, VF, false, TTI);
+
       return Cost;
     }
 
@@ -7145,8 +7166,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     assert(IC > 1 && "interleave count should not be 1 or 0");
     // If we decided that it is not legal to vectorize the loop, then
     // interleave it.
-    InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC);
-    Unroller.vectorize(&LVL, CM.MinBWs);
+    InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
+                               &CM);
+    Unroller.vectorize();
 
     ORE->emit(OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
                                  L->getHeader())
@@ -7154,8 +7176,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
               << NV("InterleaveCount", IC) << ")");
   } else {
     // If we decided that it is *legal* to vectorize the loop, then do it.
-    InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, IC);
-    LB.vectorize(&LVL, CM.MinBWs);
+    InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, IC,
+                           &LVL, &CM);
+    LB.vectorize();
     ++LoopsVectorized;
 
     // Add metadata to disable runtime unrolling a scalar loop when there are
