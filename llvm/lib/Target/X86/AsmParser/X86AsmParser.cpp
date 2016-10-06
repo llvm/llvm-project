@@ -2784,6 +2784,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   assert(Op.isToken() && "Leading operand should always be a mnemonic!");
   StringRef Mnemonic = Op.getToken();
   SMRange EmptyRange = None;
+  StringRef Base = Op.getToken();
 
   // First, handle aliases that expand to multiple instructions.
   MatchFPUWaitAlias(IDLoc, Op, Operands, Out, MatchingInlineAsm);
@@ -2810,11 +2811,37 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
   }
 
+  SmallVector<unsigned, 8> Match;
+  uint64_t ErrorInfoMissingFeature = 0;
+
+  // If unsized push has immediate operand we should default the default pointer
+  // size for the size.
+  if (Mnemonic == "push" && Operands.size() == 2) {
+    auto *X86Op = static_cast<X86Operand *>(Operands[1].get());
+    if (X86Op->isImm()) {
+      // If it's not a constant fall through and let remainder take care of it.
+      const auto *CE = dyn_cast<MCConstantExpr>(X86Op->getImm());
+      unsigned Size = getPointerWidth();
+      if (CE &&
+          (isIntN(Size, CE->getValue()) || isUIntN(Size, CE->getValue()))) {
+        SmallString<16> Tmp;
+        Tmp += Base;
+        Tmp += (is64BitMode())
+                   ? "q"
+                   : (is32BitMode()) ? "l" : (is16BitMode()) ? "w" : " ";
+        Op.setTokenValue(Tmp);
+        // Do match in ATT mode to allow explicit suffix usage.
+        Match.push_back(MatchInstruction(Operands, Inst, ErrorInfo,
+                                         MatchingInlineAsm,
+                                         false /*isParsingIntelSyntax()*/));
+        Op.setTokenValue(Base);
+      }
+    }
+  }
+
   // If an unsized memory operand is present, try to match with each memory
   // operand size.  In Intel assembly, the size is not part of the instruction
   // mnemonic.
-  SmallVector<unsigned, 8> Match;
-  uint64_t ErrorInfoMissingFeature = 0;
   if (UnsizedMemOp && UnsizedMemOp->isMemUnsized()) {
     static const unsigned MopSizes[] = {8, 16, 32, 64, 80, 128, 256, 512};
     for (unsigned Size : MopSizes) {

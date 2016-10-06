@@ -453,7 +453,7 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   if (isa<CallInst>(I) || isa<InvokeInst>(I))
     return BaseDefiningValueResult(I, true);
 
-  // I have absolutely no idea how to implement this part yet.  It's not
+  // TODO: I have absolutely no idea how to implement this part yet.  It's not
   // necessarily hard, I just haven't really looked at it yet.
   assert(!isa<LandingPadInst>(I) && "Landing Pad is unimplemented");
 

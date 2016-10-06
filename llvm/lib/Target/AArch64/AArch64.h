@@ -30,7 +30,6 @@ FunctionPass *createAArch64DeadRegisterDefinitions();
 FunctionPass *createAArch64RedundantCopyEliminationPass();
 FunctionPass *createAArch64ConditionalCompares();
 FunctionPass *createAArch64AdvSIMDScalar();
-FunctionPass *createAArch64BranchRelaxation();
 FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
                                  CodeGenOpt::Level OptLevel);
 FunctionPass *createAArch64StorePairSuppressPass();
@@ -50,7 +49,6 @@ void initializeAArch64A53Fix835769Pass(PassRegistry&);
 void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
 void initializeAArch64AddressTypePromotionPass(PassRegistry&);
 void initializeAArch64AdvSIMDScalarPass(PassRegistry&);
-void initializeAArch64BranchRelaxationPass(PassRegistry&);
 void initializeAArch64CollectLOHPass(PassRegistry&);
 void initializeAArch64ConditionalComparesPass(PassRegistry&);
 void initializeAArch64ConditionOptimizerPass(PassRegistry&);
