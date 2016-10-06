@@ -373,9 +373,10 @@ private:
   /// it.
   llvm::SmallSetVector<const DeclContext *, 16> UpdatedDeclContexts;
 
-  /// \brief Keeps track of visible decls that were added in DeclContexts
-  /// coming from another AST file.
-  SmallVector<const Decl *, 16> UpdatingVisibleDecls;
+  /// \brief Keeps track of declarations that we must emit, even though we're
+  /// not guaranteed to be able to find them by walking the AST starting at the
+  /// translation unit.
+  SmallVector<const Decl *, 16> DeclsToEmitEvenIfUnreferenced;
 
   /// \brief The set of Objective-C class that have categories we
   /// should serialize.
@@ -667,6 +668,14 @@ private:
   void CompletedTagDefinition(const TagDecl *D) override;
   void AddedVisibleDecl(const DeclContext *DC, const Decl *D) override;
   void AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) override;
+  void AddedCXXTemplateSpecialization(
+      const ClassTemplateDecl *TD,
+      const ClassTemplateSpecializationDecl *D) override;
+  void AddedCXXTemplateSpecialization(
+      const VarTemplateDecl *TD,
+      const VarTemplateSpecializationDecl *D) override;
+  void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
+                                      const FunctionDecl *D) override;
   void ResolvedExceptionSpec(const FunctionDecl *FD) override;
   void DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) override;
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
