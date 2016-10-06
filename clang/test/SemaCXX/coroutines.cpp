@@ -78,8 +78,13 @@ double bad_promise_type_2(int) {
 }
 
 struct promise; // expected-note 2{{forward declaration}}
+struct promise_void;
+struct void_tag {};
 template <typename... T>
 struct std::experimental::coroutine_traits<void, T...> { using promise_type = promise; };
+template <typename... T>
+struct std::experimental::coroutine_traits<void, void_tag, T...>
+{ using promise_type = promise_void; };
 
 namespace std {
 namespace experimental {
@@ -106,8 +111,17 @@ struct promise {
   awaitable yield_value(int); // expected-note 2{{candidate}}
   awaitable yield_value(yielded_thing); // expected-note 2{{candidate}}
   not_awaitable yield_value(void()); // expected-note 2{{candidate}}
-  void return_void();
   void return_value(int); // expected-note 2{{here}}
+};
+
+struct promise_void {
+  void get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  awaitable yield_value(int);
+  awaitable yield_value(yielded_thing);
+  not_awaitable yield_value(void());
+  void return_void();
 };
 
 void yield() {
@@ -126,10 +140,10 @@ void coreturn(int n) {
   if (n == 0)
     co_return 3;
   if (n == 1)
-    co_return {4};
+    co_return {4}; // expected-warning {{braces around scalar initializer}}
   if (n == 2)
     co_return "foo"; // expected-error {{cannot initialize a parameter of type 'int' with an lvalue of type 'const char [4]'}}
-  co_return;
+  co_return 42;
 }
 
 void mixed_yield() {
@@ -142,11 +156,11 @@ void mixed_await() {
   return; // expected-error {{not allowed in coroutine}}
 }
 
-void only_coreturn() {
+void only_coreturn(void_tag) {
   co_return; // expected-warning {{'co_return' used in a function that uses neither 'co_await' nor 'co_yield'}}
 }
 
-void mixed_coreturn(bool b) {
+void mixed_coreturn(void_tag, bool b) {
   if (b)
     // expected-warning@+1 {{'co_return' used in a function that uses neither}}
     co_return; // expected-note {{use of 'co_return'}}

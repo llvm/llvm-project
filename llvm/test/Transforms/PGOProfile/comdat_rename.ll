@@ -50,6 +50,12 @@ define linkonce_odr void @f_with_alias() comdat($f_with_alias) {
 
 ; Rename AvailableExternallyLinkage functions
 ; ELFONLY-DAG: $aef.[[SINGLEBB_HASH]] = comdat any
+
+; ELFONLY: @f = weak alias void (), void ()* @f.[[SINGLEBB_HASH]]
+; ELFONLY: @f_with_alias = weak alias void (), void ()* @f_with_alias.[[SINGLEBB_HASH]]
+; ELFONLY: @af = weak alias void (...), void (...)* @af.[[SINGLEBB_HASH]]
+; ELFONLY: @aef = weak alias void (), void ()* @aef.[[SINGLEBB_HASH]]
+
 define available_externally void @aef() {
 ; ELFONLY: define linkonce_odr void @aef.[[SINGLEBB_HASH]]() comdat {
 ; COFFONLY: define available_externally void @aef() {

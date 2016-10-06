@@ -117,8 +117,6 @@ bool Symbol::ValueIsAddress() const {
 }
 
 ConstString Symbol::GetDisplayName() const {
-  if (!m_mangled)
-    return ConstString();
   return m_mangled.GetDisplayDemangledName(GetLanguage());
 }
 

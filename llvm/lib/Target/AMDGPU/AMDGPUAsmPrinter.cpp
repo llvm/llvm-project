@@ -93,7 +93,7 @@ extern "C" void LLVMInitializeAMDGPUAsmPrinter() {
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)) {}
+  : AsmPrinter(TM, std::move(Streamer)) {}
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
   return "AMDGPU Assembly Printer";
@@ -119,6 +119,21 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
                                     "AMD", "AMDGPU");
   emitStartOfRuntimeMetadata(M);
 }
+
+bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
+  const MachineBasicBlock *MBB) const {
+  if (!AsmPrinter::isBlockOnlyReachableByFallthrough(MBB))
+    return false;
+
+  if (MBB->empty())
+    return true;
+
+  // If this is a block implementing a long branch, an expression relative to
+  // the start of the block is needed.  to the start of the block.
+  // XXX - Is there a smarter way to check this?
+  return (MBB->back().getOpcode() != AMDGPU::S_SETPC_B64);
+}
+
 
 void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();

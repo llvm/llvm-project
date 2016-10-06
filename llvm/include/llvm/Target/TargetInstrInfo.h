@@ -455,6 +455,19 @@ public:
     llvm_unreachable("target did not implement");
   }
 
+  /// Insert an unconditional indirect branch at the end of \p MBB to \p
+  /// NewDestBB.  \p BrOffset indicates the offset of \p NewDestBB relative to
+  /// the offset of the position to insert the new branch.
+  ///
+  /// \returns The number of bytes added to the block.
+  virtual unsigned insertIndirectBranch(MachineBasicBlock &MBB,
+                                        MachineBasicBlock &NewDestBB,
+                                        const DebugLoc &DL,
+                                        int64_t BrOffset = 0,
+                                        RegScavenger *RS = nullptr) const {
+    llvm_unreachable("target did not implement");
+  }
+
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't
   /// implemented for a target).  Upon success, this returns false and returns

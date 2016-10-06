@@ -25,6 +25,7 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let SALU = 1;
   let SOP1 = 1;
   let SchedRW = [WriteSALU];
+  let Size = 4;
   let UseNamedOperandTable = 1;
 
   string Mnemonic = opName;
@@ -41,6 +42,7 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let Size = 4;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;

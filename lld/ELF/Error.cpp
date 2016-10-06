@@ -47,8 +47,4 @@ void elf::fatal(const Twine &Msg) {
   exit(1);
 }
 
-void elf::fatal(const Twine &Msg, const Twine &Prefix) {
-  fatal(Prefix + ": " + Msg);
-}
-
 } // namespace lld

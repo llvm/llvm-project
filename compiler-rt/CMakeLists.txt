@@ -85,6 +85,8 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
 
+include(config-ix)
+
 if(APPLE AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
@@ -101,8 +103,6 @@ pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 #================================
 # Setup Compiler Flags
 #================================
-
-include(config-ix)
 
 if(MSVC)
   # Override any existing /W flags with /W4. This is what LLVM does.  Failing to
