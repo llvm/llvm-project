@@ -1,11 +1,12 @@
-//===-- MinidumpParser.h ---------------------------------------*- C++ -*-===//
+//===-- MinidumpParser.h -----------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef liblldb_MinidumpParser_h_
 #define liblldb_MinidumpParser_h_
@@ -24,21 +25,14 @@
 #include "llvm/ADT/StringRef.h"
 
 // C includes
+
 // C++ includes
+#include <cstring>
+#include <unordered_map>
 
 namespace lldb_private {
 
 namespace minidump {
-
-// Describes a range of memory captured in the Minidump
-struct Range {
-  lldb::addr_t start; // virtual address of the beginning of the range
-  // range_ref - absolute pointer to the first byte of the range and size
-  llvm::ArrayRef<uint8_t> range_ref;
-
-  Range(lldb::addr_t start, llvm::ArrayRef<uint8_t> range_ref)
-      : start(start), range_ref(range_ref) {}
-};
 
 class MinidumpParser {
 public:
@@ -53,8 +47,6 @@ public:
 
   llvm::ArrayRef<MinidumpThread> GetThreads();
 
-  llvm::ArrayRef<uint8_t> GetThreadContext(const MinidumpThread &td);
-
   const MinidumpSystemInfo *GetSystemInfo();
 
   ArchSpec GetArchitecture();
@@ -68,8 +60,6 @@ public:
   llvm::ArrayRef<MinidumpModule> GetModuleList();
 
   const MinidumpExceptionStream *GetExceptionStream();
-
-  llvm::Optional<Range> FindMemoryRange(lldb::addr_t addr);
 
 private:
   lldb::DataBufferSP m_data_sp;

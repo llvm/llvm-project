@@ -20,6 +20,7 @@ class TestCppScopes(TestBase):
     # since that is a odd failure, and I don't want it to mask the
     # real purpose of this test.
     @expectedFailureDarwin(bugnumber="<rdar://problem/28623427>")
+    @expectedFailureAll(oslist=["windows"])
     def test_c(self):
         self.do_test(True)
     

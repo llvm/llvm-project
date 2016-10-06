@@ -1113,7 +1113,7 @@ protected:
       return false;
     }
 
-    if (command.GetArgumentCount() == 0) {
+    if (command.empty()) {
       // No breakpoint selected; enable all currently set breakpoints.
       target->EnableAllBreakpoints();
       result.AppendMessageWithFormat("All breakpoints enabled. (%" PRIu64
@@ -1226,7 +1226,7 @@ protected:
       return false;
     }
 
-    if (command.GetArgumentCount() == 0) {
+    if (command.empty()) {
       // No breakpoint selected; disable all currently set breakpoints.
       target->DisableAllBreakpoints();
       result.AppendMessageWithFormat("All breakpoints disabled. (%" PRIu64
@@ -1400,7 +1400,7 @@ protected:
 
     Stream &output_stream = result.GetOutputStream();
 
-    if (command.GetArgumentCount() == 0) {
+    if (command.empty()) {
       // No breakpoint selected; show info about all currently set breakpoints.
       result.AppendMessage("Current breakpoints:");
       for (size_t i = 0; i < num_breakpoints; ++i) {
@@ -1693,7 +1693,7 @@ protected:
       return false;
     }
 
-    if (command.GetArgumentCount() == 0) {
+    if (command.empty()) {
       if (!m_options.m_force &&
           !m_interpreter.Confirm(
               "About to delete all breakpoints, do you want to do that?",
@@ -2295,7 +2295,7 @@ protected:
     target->GetBreakpointList().GetListMutex(lock);
 
     BreakpointIDList valid_bp_ids;
-    if (command.GetArgumentCount() > 0) {
+    if (!command.empty()) {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
           command, target, result, &valid_bp_ids);
 
@@ -2397,7 +2397,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(Args &args, Target *target,
 
   Args temp_args;
 
-  if (args.GetArgumentCount() == 0) {
+  if (args.empty()) {
     if (target->GetLastCreatedBreakpoint()) {
       valid_ids->AddBreakpointID(BreakpointID(
           target->GetLastCreatedBreakpoint()->GetID(), LLDB_INVALID_BREAK_ID));

@@ -41,8 +41,7 @@ struct PhdrEntry {
   bool HasLMA = false;
 };
 
-template <class ELFT>
-llvm::StringRef getOutputSectionName(InputSectionBase<ELFT> *S);
+llvm::StringRef getOutputSectionName(llvm::StringRef Name);
 
 template <class ELFT> void reportDiscarded(InputSectionBase<ELFT> *IS);
 

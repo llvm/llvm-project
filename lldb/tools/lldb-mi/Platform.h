@@ -13,9 +13,10 @@
 #include <eh.h>
 #include <inttypes.h>
 #include <io.h>
-#include <lldb/Host/HostGetOpt.h>
-#include <lldb/Host/windows/Windows.h>
 #include <signal.h>
+
+#include "lldb/Host/HostGetOpt.h"
+#include "lldb/Host/windows/windows.h"
 
 // This is not used by MI
 struct timeval {

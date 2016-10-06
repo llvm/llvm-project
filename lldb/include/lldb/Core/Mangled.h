@@ -63,7 +63,8 @@ public:
   ///     If \b true then \a name is a mangled name, if \b false then
   ///     \a name is demangled.
   //----------------------------------------------------------------------
-  explicit Mangled(const ConstString &name, bool is_mangled);
+  Mangled(const ConstString &name, bool is_mangled);
+  Mangled(llvm::StringRef name, bool is_mangled);
 
   //----------------------------------------------------------------------
   /// Construct with name.
@@ -75,6 +76,8 @@ public:
   ///     The already const name to copy into this object.
   //----------------------------------------------------------------------
   explicit Mangled(const ConstString &name);
+
+  explicit Mangled(llvm::StringRef name);
 
   //----------------------------------------------------------------------
   /// Destructor

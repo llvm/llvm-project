@@ -25,7 +25,7 @@ Error NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
     log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64
-                ", size_hint = %lu, hardware = %s",
+                ", size_hint = %zu, hardware = %s",
                 __FUNCTION__, addr, size_hint, hardware ? "true" : "false");
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -47,7 +47,7 @@ Error NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
   if (log)
     log->Printf(
         "NativeBreakpointList::%s creating breakpoint for addr = 0x%" PRIx64
-        ", size_hint = %lu, hardware = %s",
+        ", size_hint = %zu, hardware = %s",
         __FUNCTION__, addr, size_hint, hardware ? "true" : "false");
 
   NativeBreakpointSP breakpoint_sp;
@@ -56,7 +56,7 @@ Error NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
     if (log)
       log->Printf(
           "NativeBreakpointList::%s creating breakpoint for addr = 0x%" PRIx64
-          ", size_hint = %lu, hardware = %s -- FAILED: %s",
+          ", size_hint = %zu, hardware = %s -- FAILED: %s",
           __FUNCTION__, addr, size_hint, hardware ? "true" : "false",
           error.AsCString());
     return error;

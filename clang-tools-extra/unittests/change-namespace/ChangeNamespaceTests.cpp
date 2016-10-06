@@ -113,6 +113,24 @@ TEST_F(ChangeNamespaceTest, SimpleMoveIntoAnotherNestedNamespace) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, MoveIntoAnotherNestedNamespaceWithRef) {
+  NewNamespace = "na::nc";
+  std::string Code = "namespace na {\n"
+                     "class A {};\n"
+                     "namespace nb {\n"
+                     "class X { A a; };\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "class A {};\n"
+                         "\n"
+                         "namespace nc {\n"
+                         "class X { A a; };\n"
+                         "} // namespace nc\n"
+                         "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 TEST_F(ChangeNamespaceTest, SimpleMoveNestedNamespace) {
   NewNamespace = "na::x::y";
   std::string Code = "namespace na {\n"

@@ -89,9 +89,10 @@ private:
 };
 } // anonymous namespace
 
-template <class ELFT>
-StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
-  StringRef Name = S->Name;
+StringRef elf::getOutputSectionName(StringRef Name) {
+  if (Config->Relocatable)
+    return Name;
+
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
         ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
@@ -712,7 +713,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       }
       OutputSectionBase<ELFT> *Sec;
       bool IsNew;
-      std::tie(Sec, IsNew) = Factory.create(IS, getOutputSectionName(IS));
+      std::tie(Sec, IsNew) = Factory.create(IS, getOutputSectionName(IS->Name));
       if (IsNew)
         OutputSections.push_back(Sec);
       Sec->addSection(IS);
@@ -1443,11 +1444,6 @@ template bool elf::isRelroSection<ELF32LE>(OutputSectionBase<ELF32LE> *);
 template bool elf::isRelroSection<ELF32BE>(OutputSectionBase<ELF32BE> *);
 template bool elf::isRelroSection<ELF64LE>(OutputSectionBase<ELF64LE> *);
 template bool elf::isRelroSection<ELF64BE>(OutputSectionBase<ELF64BE> *);
-
-template StringRef elf::getOutputSectionName<ELF32LE>(InputSectionBase<ELF32LE> *);
-template StringRef elf::getOutputSectionName<ELF32BE>(InputSectionBase<ELF32BE> *);
-template StringRef elf::getOutputSectionName<ELF64LE>(InputSectionBase<ELF64LE> *);
-template StringRef elf::getOutputSectionName<ELF64BE>(InputSectionBase<ELF64BE> *);
 
 template void elf::reportDiscarded<ELF32LE>(InputSectionBase<ELF32LE> *);
 template void elf::reportDiscarded<ELF32BE>(InputSectionBase<ELF32BE> *);

@@ -207,9 +207,6 @@ static_assert(sizeof(MinidumpLocationDescriptor) == 8,
 struct MinidumpMemoryDescriptor {
   llvm::support::ulittle64_t start_of_memory_range;
   MinidumpLocationDescriptor memory;
-
-  static llvm::ArrayRef<MinidumpMemoryDescriptor>
-  ParseMemoryList(llvm::ArrayRef<uint8_t> &data);
 };
 static_assert(sizeof(MinidumpMemoryDescriptor) == 16,
               "sizeof MinidumpMemoryDescriptor is not correct!");
@@ -365,8 +362,7 @@ static_assert(sizeof(MinidumpModule) == 108,
 // Exception stuff
 struct MinidumpException {
   enum {
-    ExceptonInfoMaxParams = 15,
-    DumpRequested = 0xFFFFFFFF,
+    MaxParams = 15,
   };
 
   llvm::support::ulittle32_t exception_code;
@@ -375,7 +371,7 @@ struct MinidumpException {
   llvm::support::ulittle64_t exception_address;
   llvm::support::ulittle32_t number_parameters;
   llvm::support::ulittle32_t unused_alignment;
-  llvm::support::ulittle64_t exception_information[ExceptonInfoMaxParams];
+  llvm::support::ulittle64_t exception_information[MaxParams];
 };
 static_assert(sizeof(MinidumpException) == 152,
               "sizeof MinidumpException is not correct!");

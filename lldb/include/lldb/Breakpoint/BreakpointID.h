@@ -17,6 +17,8 @@
 
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
@@ -49,31 +51,24 @@ public:
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
-  static bool IsRangeIdentifier(const char *str);
-
-  static bool IsValidIDExpression(const char *str);
-
-  static const char *g_range_specifiers[];
+  static bool IsRangeIdentifier(llvm::StringRef str);
+  static bool IsValidIDExpression(llvm::StringRef str);
+  static llvm::ArrayRef<llvm::StringRef> GetRangeSpecifiers();
 
   //------------------------------------------------------------------
   /// Takes an input string containing the description of a breakpoint or
-  /// breakpoint and location
-  /// and returns the breakpoint ID and the breakpoint location id.
+  /// breakpoint and location and returns the a BreakpointID filled out with
+  /// the proper id and location.
   ///
   /// @param[in] input
   ///     A string containing JUST the breakpoint description.
-  /// @param[out] break_id
-  ///     This is the break id.
-  /// @param[out] break_loc_id
-  ///     This is breakpoint location id, or LLDB_INVALID_BREAK_ID is no
-  ///     location was specified.
   /// @return
-  ///     \b true if the call was able to extract a breakpoint location from the
-  ///     string.  \b false otherwise.
+  ///     If \p input was not a valid breakpoint ID string, returns
+  ///     \b llvm::None.  Otherwise returns a BreakpointID with members filled
+  ///     out accordingly.
   //------------------------------------------------------------------
-  static bool ParseCanonicalReference(const char *input,
-                                      lldb::break_id_t *break_id,
-                                      lldb::break_id_t *break_loc_id);
+  static llvm::Optional<BreakpointID>
+  ParseCanonicalReference(llvm::StringRef input);
 
   //------------------------------------------------------------------
   /// Takes an input string and checks to see whether it is a breakpoint name.

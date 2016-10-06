@@ -205,6 +205,10 @@ size_t Stream::Indent(const char *s) {
   return Printf("%*.*s%s", m_indent_level, m_indent_level, "", s ? s : "");
 }
 
+size_t Stream::Indent(llvm::StringRef str) {
+  return Printf("%*.*s%s", m_indent_level, m_indent_level, "", str.str().c_str());
+}
+
 //------------------------------------------------------------------
 // Stream a character "ch" out to this stream.
 //------------------------------------------------------------------

@@ -108,9 +108,15 @@ template <class ELFT> LinkerScript<ELFT>::~LinkerScript() {}
 
 template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
-  for (Regex *Re : Opt.KeptSections)
-    if (Re->match(S->Name))
-      return true;
+  for (InputSectionDescription *ID : Opt.KeptSections) {
+    StringRef Filename = S->getFile()->getName();
+    if (!ID->FileRe.match(sys::path::filename(Filename)))
+      continue;
+
+    for (SectionPattern &P : ID->SectionPatterns)
+      if (P.SectionRe.match(S->Name))
+        return true;
+  }
   return false;
 }
 
@@ -339,7 +345,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec)
-        addSection(Factory, S, getOutputSectionName(S));
+        addSection(Factory, S, getOutputSectionName(S->Name));
 }
 
 // Sets value of a section-defined symbol. Two kinds of
@@ -1247,8 +1253,7 @@ ScriptParser::readInputSectionDescription(StringRef Tok) {
     StringRef FilePattern = next();
     InputSectionDescription *Cmd = readInputSectionRules(FilePattern);
     expect(")");
-    for (SectionPattern &Pat : Cmd->SectionPatterns)
-      Opt.KeptSections.push_back(&Pat.SectionRe);
+    Opt.KeptSections.push_back(Cmd);
     return Cmd;
   }
   return readInputSectionRules(Tok);

@@ -220,7 +220,7 @@ CommandObjectExpression::CommandObjectExpression(
           interpreter, "expression", "Evaluate an expression on the current "
                                      "thread.  Displays any returned value "
                                      "with LLDB's default formatting.",
-          nullptr, eCommandProcessMustBePaused | eCommandTryTargetAPILock),
+          "", eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_option_group(), m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,

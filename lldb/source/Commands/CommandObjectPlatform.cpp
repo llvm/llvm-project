@@ -1453,12 +1453,14 @@ protected:
 
         if (platform_sp->IsConnected()) {
           Stream &ostrm = result.GetOutputStream();
-          bool success;
-          for (size_t i = 0; i < argc; ++i) {
-            const char *arg = args.GetArgumentAtIndex(i);
-            lldb::pid_t pid = StringConvert::ToUInt32(
-                arg, LLDB_INVALID_PROCESS_ID, 0, &success);
-            if (success) {
+          for (auto &entry : args.entries()) {
+            lldb::pid_t pid;
+            if (entry.ref.getAsInteger(0, pid)) {
+              result.AppendErrorWithFormat("invalid process ID argument '%s'",
+                                           entry.ref.str().c_str());
+              result.SetStatus(eReturnStatusFailed);
+              break;
+            } else {
               ProcessInstanceInfo proc_info;
               if (platform_sp->GetProcessInfo(pid, proc_info)) {
                 ostrm.Printf("Process information for process %" PRIu64 ":\n",
@@ -1470,11 +1472,6 @@ protected:
                              pid);
               }
               ostrm.EOL();
-            } else {
-              result.AppendErrorWithFormat("invalid process ID argument '%s'",
-                                           arg);
-              result.SetStatus(eReturnStatusFailed);
-              break;
             }
           }
         } else {

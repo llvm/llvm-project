@@ -4317,6 +4317,8 @@ ClangASTContext::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::Adjusted:
     break;
+  case clang::Type::ObjCTypeParam:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5122,6 +5124,8 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
   // pointer type decayed from an array or function type.
   case clang::Type::Decayed:
     break;
+  case clang::Type::ObjCTypeParam:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5268,6 +5272,8 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
 
   // pointer type decayed from an array or function type.
   case clang::Type::Decayed:
+    break;
+  case clang::Type::ObjCTypeParam:
     break;
   }
   // We don't know hot to display this type...

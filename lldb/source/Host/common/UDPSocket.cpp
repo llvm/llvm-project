@@ -102,7 +102,11 @@ Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
                           &service_info_list);
   if (err != 0) {
     error.SetErrorStringWithFormat(
+#if defined(_MSC_VER) && defined(UNICODE)
+        "getaddrinfo(%s, %s, &hints, &info) returned error %i (%S)",
+#else
         "getaddrinfo(%s, %s, &hints, &info) returned error %i (%s)",
+#endif
         host_str.c_str(), port_str.c_str(), err, gai_strerror(err));
     return error;
   }

@@ -12,15 +12,15 @@ compat-version:  0.0
 current-version: 0.0
 has-UUID:        false
 OS:              unknown
-sections:        
+sections:
   - segment:         __TEXT
     section:         __text
     type:            S_REGULAR
     attributes:      [ S_ATTR_PURE_INSTRUCTIONS, S_ATTR_SOME_INSTRUCTIONS ]
     alignment:       4
     address:         0x0000000000000000
-    content:         [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0xC0, 0x03, 0x5F, 0xD6, 0xC0, 0x03, 0x5F, 0xD6, 
+    content:         [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0xC0, 0x03, 0x5F, 0xD6, 0xC0, 0x03, 0x5F, 0xD6,
                        0xC0, 0x03, 0x5F, 0xD6 ]
   - segment:         __TEXT
     section:         __gcc_except_tab
@@ -40,15 +40,15 @@ sections:
     attributes:      [  ]
     alignment:       8
     address:         0x0000000000000020
-    content:         [ 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 
-                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 
-                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    content:         [ 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ]
-    relocations:     
+    relocations:
       - offset:          0x00000020
         type:            ARM64_RELOC_UNSIGNED
         length:          3
@@ -67,25 +67,25 @@ sections:
     attributes:      [  ]
     alignment:       8
     address:         0x0000000000000060
-    content:         [ 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0x03, 0x7A, 0x50, 0x4C, 0x52, 0x00, 0x01, 0x78, 
-                       0x1E, 0x07, 0x9B, 0xED, 0xFF, 0xFF, 0xFF, 0x10, 
-                       0x10, 0x0C, 0x1F, 0x00, 0x28, 0x00, 0x00, 0x00, 
-                       0x20, 0x00, 0x00, 0x00, 0xDC, 0xFF, 0xFF, 0xFF, 
-                       0xFF, 0xFF, 0xFF, 0xFF, 0x04, 0x00, 0x00, 0x00, 
-                       0x00, 0x00, 0x00, 0x00, 0x08, 0xCB, 0xFF, 0xFF, 
-                       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0E, 0x10, 0x9E, 
-                       0x01, 0x9D, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                       0x03, 0x7A, 0x50, 0x4C, 0x52, 0x00, 0x01, 0x78, 
-                       0x1E, 0x07, 0x9B, 0xA9, 0xFF, 0xFF, 0xFF, 0x10, 
-                       0x10, 0x0C, 0x1F, 0x00, 0x28, 0x00, 0x00, 0x00, 
-                       0x20, 0x00, 0x00, 0x00, 0x94, 0xFF, 0xFF, 0xFF, 
-                       0xFF, 0xFF, 0xFF, 0xFF, 0x04, 0x00, 0x00, 0x00, 
-                       0x00, 0x00, 0x00, 0x00, 0x08, 0x83, 0xFF, 0xFF, 
-                       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0E, 0x10, 0x9E, 
+    content:         [ 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x03, 0x7A, 0x50, 0x4C, 0x52, 0x00, 0x01, 0x78,
+                       0x1E, 0x07, 0x9B, 0xED, 0xFF, 0xFF, 0xFF, 0x10,
+                       0x10, 0x0C, 0x1F, 0x00, 0x28, 0x00, 0x00, 0x00,
+                       0x20, 0x00, 0x00, 0x00, 0xDC, 0xFF, 0xFF, 0xFF,
+                       0xFF, 0xFF, 0xFF, 0xFF, 0x04, 0x00, 0x00, 0x00,
+                       0x00, 0x00, 0x00, 0x00, 0x08, 0xCB, 0xFF, 0xFF,
+                       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0E, 0x10, 0x9E,
+                       0x01, 0x9D, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x03, 0x7A, 0x50, 0x4C, 0x52, 0x00, 0x01, 0x78,
+                       0x1E, 0x07, 0x9B, 0xA9, 0xFF, 0xFF, 0xFF, 0x10,
+                       0x10, 0x0C, 0x1F, 0x00, 0x28, 0x00, 0x00, 0x00,
+                       0x20, 0x00, 0x00, 0x00, 0x94, 0xFF, 0xFF, 0xFF,
+                       0xFF, 0xFF, 0xFF, 0xFF, 0x04, 0x00, 0x00, 0x00,
+                       0x00, 0x00, 0x00, 0x00, 0x08, 0x83, 0xFF, 0xFF,
+                       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0E, 0x10, 0x9E,
                        0x01, 0x9D, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00 ]
-    relocations:     
+    relocations:
       - offset:          0x0000007D
         type:            ARM64_RELOC_SUBTRACTOR
         length:          3
@@ -146,7 +146,7 @@ sections:
         pc-rel:          true
         extern:          true
         symbol:          9
-local-symbols:   
+local-symbols:
   - name:            ltmp0
     type:            N_SECT
     sect:            1
@@ -175,7 +175,7 @@ local-symbols:
     type:            N_SECT
     sect:            5
     value:           0x0000000000000060
-global-symbols:  
+global-symbols:
   - name:            __Z3fooi
     type:            N_SECT
     scope:           [ N_EXT ]
@@ -211,24 +211,24 @@ page-size:       0x00000000
 
 # CHECK: --- !native
 # CHECK: path:            '<linker-internal>'
-# CHECK: defined-atoms:   
+# CHECK: defined-atoms:
 # CHECK:   - ref-name:        L000
 # CHECK:     type:            unwind-cfi
-# CHECK:     content:         [ 18, 00, 00, 00, 00, 00, 00, 00, 03, 7A, 50, 4C, 
-# CHECK:                        52, 00, 01, 78, 1E, 07, 9B, {{..}}, {{..}}, {{..}}, {{..}}, 10, 
+# CHECK:     content:         [ 18, 00, 00, 00, 00, 00, 00, 00, 03, 7A, 50, 4C,
+# CHECK:                        52, 00, 01, 78, 1E, 07, 9B, {{..}}, {{..}}, {{..}}, {{..}}, 10,
 # CHECK:                        10, 0C, 1F, 00 ]
 # CHECK:     alignment:       8
-# CHECK:     references:      
+# CHECK:     references:
 # CHECK:       - kind:            unwindCIEToPersonalityFunction
 # CHECK:         offset:          19
 # CHECK:         target:          __gxx_personality_v0
 # CHECK:   - type:            unwind-cfi
-# CHECK:     content:         [ 28, 00, 00, 00, 20, 00, 00, 00, {{..}}, {{..}}, {{..}}, {{..}}, 
-# CHECK:                        {{..}}, {{..}}, {{..}}, {{..}}, 04, 00, 00, 00, 00, 00, 00, 00, 
-# CHECK:                        08, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, 0E, 10, 9E, 
+# CHECK:     content:         [ 28, 00, 00, 00, 20, 00, 00, 00, {{..}}, {{..}}, {{..}}, {{..}},
+# CHECK:                        {{..}}, {{..}}, {{..}}, {{..}}, 04, 00, 00, 00, 00, 00, 00, 00,
+# CHECK:                        08, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, 0E, 10, 9E,
 # CHECK:                        01, 9D, 02, 00, 00, 00, 00, 00 ]
 # CHECK:     alignment:       4 mod 8
-# CHECK:     references:      
+# CHECK:     references:
 # CHECK:       - kind:            negDelta32
 # CHECK:         offset:          4
 # CHECK:         target:          L000
@@ -240,21 +240,21 @@ page-size:       0x00000000
 # CHECK:         target:          _bar1
 # CHECK:   - ref-name:        L001
 # CHECK:     type:            unwind-cfi
-# CHECK:     content:         [ 18, 00, 00, 00, 00, 00, 00, 00, 03, 7A, 50, 4C, 
-# CHECK:                        52, 00, 01, 78, 1E, 07, 9B, {{..}}, {{..}}, {{..}}, {{..}}, 10, 
+# CHECK:     content:         [ 18, 00, 00, 00, 00, 00, 00, 00, 03, 7A, 50, 4C,
+# CHECK:                        52, 00, 01, 78, 1E, 07, 9B, {{..}}, {{..}}, {{..}}, {{..}}, 10,
 # CHECK:                        10, 0C, 1F, 00 ]
 # CHECK:     alignment:       8
-# CHECK:     references:      
+# CHECK:     references:
 # CHECK:       - kind:            unwindCIEToPersonalityFunction
 # CHECK:         offset:          19
 # CHECK:         target:          __gxx_personality_v1
 # CHECK:   - type:            unwind-cfi
-# CHECK:     content:         [ 28, 00, 00, 00, 20, 00, 00, 00, {{..}}, {{..}}, {{..}}, {{..}}, 
-# CHECK:                        {{..}}, {{..}}, {{..}}, {{..}}, 04, 00, 00, 00, 00, 00, 00, 00, 
-# CHECK:                        08, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, 0E, 10, 9E, 
+# CHECK:     content:         [ 28, 00, 00, 00, 20, 00, 00, 00, {{..}}, {{..}}, {{..}}, {{..}},
+# CHECK:                        {{..}}, {{..}}, {{..}}, {{..}}, 04, 00, 00, 00, 00, 00, 00, 00,
+# CHECK:                        08, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, 0E, 10, 9E,
 # CHECK:                        01, 9D, 02, 00, 00, 00, 00, 00 ]
 # CHECK:     alignment:       4 mod 8
-# CHECK:     references:      
+# CHECK:     references:
 # CHECK:       - kind:            negDelta32
 # CHECK:         offset:          4
 # CHECK:         target:          L001

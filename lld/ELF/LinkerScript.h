@@ -184,7 +184,7 @@ struct ScriptConfiguration {
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
-  std::vector<llvm::Regex *> KeptSections;
+  std::vector<InputSectionDescription *> KeptSections;
 };
 
 extern ScriptConfiguration *ScriptConfig;

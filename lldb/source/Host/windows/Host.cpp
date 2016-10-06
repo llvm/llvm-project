@@ -159,7 +159,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   if (!snapshot.IsValid())
     return 0;
 
-  PROCESSENTRY32W pe = {0};
+  PROCESSENTRY32W pe = {};
   pe.dwSize = sizeof(PROCESSENTRY32W);
   if (Process32FirstW(snapshot.get(), &pe)) {
     do {
