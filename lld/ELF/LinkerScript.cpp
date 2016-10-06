@@ -416,6 +416,12 @@ void LinkerScript<ELFT>::switchTo(OutputSectionBase<ELFT> *Sec) {
 
   Dot = alignTo(Dot, CurOutSec->getAlignment());
   CurOutSec->setVA(isTbss(CurOutSec) ? Dot + ThreadBssOffset : Dot);
+
+  // If neither AT nor AT> is specified for an allocatable section, the linker
+  // will set the LMA such that the difference between VMA and LMA for the
+  // section is the same as the preceding output section in the same region
+  // https://sourceware.org/binutils/docs-2.20/ld/Output-Section-LMA.html
+  CurOutSec->setLMAOffset(LMAOffset);
 }
 
 template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
@@ -466,12 +472,13 @@ findSections(OutputSectionCommand &Cmd,
 
 template <class ELFT>
 void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
+  if (Cmd->LMAExpr)
+    LMAOffset = Cmd->LMAExpr(Dot) - Dot;
   std::vector<OutputSectionBase<ELFT> *> Sections =
       findSections(*Cmd, *OutputSections);
   if (Sections.empty())
     return;
   switchTo(Sections[0]);
-
   // Find the last section output location. We will output orphan sections
   // there so that end symbols point to the correct location.
   auto E = std::find_if(Cmd->Commands.rbegin(), Cmd->Commands.rend(),
@@ -755,12 +762,12 @@ void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
       writeInt<ELFT>(&Buf[DataCmd->Offset], DataCmd->Data, DataCmd->Size);
 }
 
-template <class ELFT> Expr LinkerScript<ELFT>::getLma(StringRef Name) {
+template <class ELFT> bool LinkerScript<ELFT>::hasLMA(StringRef Name) {
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
-      if (Cmd->LmaExpr && Cmd->Name == Name)
-        return Cmd->LmaExpr;
-  return {};
+      if (Cmd->LMAExpr && Cmd->Name == Name)
+        return true;
+  return false;
 }
 
 // Returns the index of the given section name in linker script
@@ -787,6 +794,15 @@ uint64_t LinkerScript<ELFT>::getOutputSectionAddress(StringRef Name) {
   for (OutputSectionBase<ELFT> *Sec : *OutputSections)
     if (Sec->getName() == Name)
       return Sec->getVA();
+  error("undefined section " + Name);
+  return 0;
+}
+
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::getOutputSectionLMA(StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->getLMA();
   error("undefined section " + Name);
   return 0;
 }
@@ -899,6 +915,7 @@ private:
 
   Expr readExpr();
   Expr readExpr1(Expr Lhs, int MinPrec);
+  StringRef readParenLiteral();
   Expr readPrimary();
   Expr readTernary(Expr Cond);
   Expr readParenExpr();
@@ -1303,7 +1320,7 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   expect(":");
 
   if (skip("AT"))
-    Cmd->LmaExpr = readParenExpr();
+    Cmd->LMAExpr = readParenExpr();
   if (skip("ALIGN"))
     Cmd->AlignExpr = readParenExpr();
   if (skip("SUBALIGN"))
@@ -1538,6 +1555,13 @@ BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
   return new BytesDataCommand(Val, Size);
 }
 
+StringRef ScriptParser::readParenLiteral() {
+  expect("(");
+  StringRef Tok = next();
+  expect(")");
+  return Tok;
+}
+
 Expr ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
@@ -1556,11 +1580,13 @@ Expr ScriptParser::readPrimary() {
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
   if (Tok == "ADDR") {
-    expect("(");
-    StringRef Name = next();
-    expect(")");
+    StringRef Name = readParenLiteral();
     return
         [=](uint64_t Dot) { return ScriptBase->getOutputSectionAddress(Name); };
+  }
+  if (Tok == "LOADADDR") {
+    StringRef Name = readParenLiteral();
+    return [=](uint64_t Dot) { return ScriptBase->getOutputSectionLMA(Name); };
   }
   if (Tok == "ASSERT")
     return readAssert();
@@ -1569,10 +1595,8 @@ Expr ScriptParser::readPrimary() {
     return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
   }
   if (Tok == "CONSTANT") {
-    expect("(");
-    StringRef Tok = next();
-    expect(")");
-    return [=](uint64_t Dot) { return getConstant(Tok); };
+    StringRef Name = readParenLiteral();
+    return [=](uint64_t Dot) { return getConstant(Name); };
   }
   if (Tok == "DEFINED") {
     expect("(");
@@ -1614,15 +1638,11 @@ Expr ScriptParser::readPrimary() {
     return [](uint64_t Dot) { return alignTo(Dot, Target->PageSize); };
   }
   if (Tok == "SIZEOF") {
-    expect("(");
-    StringRef Name = next();
-    expect(")");
+    StringRef Name = readParenLiteral();
     return [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); };
   }
   if (Tok == "ALIGNOF") {
-    expect("(");
-    StringRef Name = next();
-    expect(")");
+    StringRef Name = readParenLiteral();
     return
         [=](uint64_t Dot) { return ScriptBase->getOutputSectionAlign(Name); };
   }

@@ -7863,6 +7863,34 @@ __m512d test_mm512_setzero_pd()
   return _mm512_setzero_pd();
 }
 
+__m128 test_mm_mask_move_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
+{
+  // CHECK-LABEL: @test_mm_mask_move_ss
+  // CHECK: @llvm.x86.avx512.mask.move.ss
+  return _mm_mask_move_ss ( __W,  __U,  __A,  __B);
+}
+
+__m128 test_mm_maskz_move_ss (__mmask8 __U, __m128 __A, __m128 __B)
+{
+  // CHECK-LABEL: @test_mm_maskz_move_ss
+  // CHECK: @llvm.x86.avx512.mask.move.ss
+  return _mm_maskz_move_ss (__U, __A, __B);
+}
+
+__m128d test_mm_mask_move_sd (__m128 __W, __mmask8 __U, __m128d __A, __m128d __B)
+{
+  // CHECK-LABEL: @test_mm_mask_move_sd
+  // CHECK: @llvm.x86.avx512.mask.move.sd
+  return _mm_mask_move_sd ( __W,  __U,  __A,  __B);
+}
+
+__m128d test_mm_maskz_move_sd (__mmask8 __U, __m128d __A, __m128d __B)
+{
+  // CHECK-LABEL: @test_mm_maskz_move_sd
+  // CHECK: @llvm.x86.avx512.mask.move.sd
+  return _mm_maskz_move_sd (__U, __A, __B);
+}
+
 __m512d test_mm512_abs_pd(__m512d a){
   // CHECK-LABEL: @test_mm512_abs_pd
   // CHECK: and <8 x i64> 

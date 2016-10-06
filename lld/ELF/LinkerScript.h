@@ -90,7 +90,7 @@ struct OutputSectionCommand : BaseCommand {
   StringRef Name;
   Expr AddrExpr;
   Expr AlignExpr;
-  Expr LmaExpr;
+  Expr LMAExpr;
   Expr SubalignExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
@@ -165,6 +165,7 @@ public:
   virtual uint64_t getOutputSectionAddress(StringRef Name) = 0;
   virtual uint64_t getOutputSectionSize(StringRef Name) = 0;
   virtual uint64_t getOutputSectionAlign(StringRef Name) = 0;
+  virtual uint64_t getOutputSectionLMA(StringRef Name) = 0;
   virtual uint64_t getHeaderSize() = 0;
   virtual uint64_t getSymbolValue(StringRef S) = 0;
   virtual bool isDefined(StringRef S) = 0;
@@ -205,7 +206,7 @@ public:
 
   ArrayRef<uint8_t> getFiller(StringRef Name);
   void writeDataBytes(StringRef Name, uint8_t *Buf);
-  Expr getLma(StringRef Name);
+  bool hasLMA(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignOffsets(OutputSectionCommand *Cmd);
   void assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs);
@@ -213,6 +214,7 @@ public:
   uint64_t getOutputSectionAddress(StringRef Name) override;
   uint64_t getOutputSectionSize(StringRef Name) override;
   uint64_t getOutputSectionAlign(StringRef Name) override;
+  uint64_t getOutputSectionLMA(StringRef Name) override;
   uint64_t getHeaderSize() override;
   uint64_t getSymbolValue(StringRef S) override;
   bool isDefined(StringRef S) override;
@@ -238,6 +240,7 @@ private:
   size_t getPhdrIndex(StringRef PhdrName);
 
   uintX_t Dot;
+  uintX_t LMAOffset = 0;
   OutputSectionBase<ELFT> *CurOutSec = nullptr;
   uintX_t ThreadBssOffset = 0;
   void switchTo(OutputSectionBase<ELFT> *Sec);

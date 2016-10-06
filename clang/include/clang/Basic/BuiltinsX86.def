@@ -2021,6 +2021,8 @@ TARGET_BUILTIN(__builtin_ia32_expandloadsi512_mask, "V16iV16iC*V16iUs","","avx51
 TARGET_BUILTIN(__builtin_ia32_expandsf512_mask, "V16fV16fV16fUs","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_expandsi512_mask, "V16iV16iV16iUs","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtps2pd512_mask, "V8dV8fV8dUcIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_movss_mask, "V4fV4fV4fV4fUc","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_movsd_mask, "V2dV2dV2dV2dUc","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_compressstoredf512_mask, "vV8d*V8dUc","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_compressstoredi512_mask, "vV8LLi*V8LLiUc","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_compressstoresf512_mask, "vV16f*V16fUs","","avx512f")

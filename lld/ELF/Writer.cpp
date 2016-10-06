@@ -307,25 +307,6 @@ template <class ELFT> void Writer<ELFT>::run() {
     error(EC, "failed to write to the output file");
 }
 
-template <class ELFT> static void reportUndefined(SymbolBody *Sym) {
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore)
-    return;
-
-  if (Config->Shared && Sym->symbol()->Visibility == STV_DEFAULT &&
-      Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
-    return;
-
-  std::string Msg = "undefined symbol: ";
-  Msg += Config->Demangle ? demangle(Sym->getName()) : Sym->getName().str();
-
-  if (Sym->File)
-    Msg += " in " + getFilename(Sym->File);
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
-    warn(Msg);
-  else
-    error(Msg);
-}
-
 template <class ELFT>
 static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
                                const SymbolBody &B) {
@@ -819,11 +800,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (Symbol *S : Symtab<ELFT>::X->getSymbols()) {
     SymbolBody *Body = S->body();
 
-    // We only report undefined symbols in regular objects. This means that we
-    // will accept an undefined reference in bitcode if it can be optimized out.
-    if (S->IsUsedInRegularObj && Body->isUndefined() && !S->isWeak())
-      reportUndefined<ELFT>(Body);
-
     if (!includeInSymtab<ELFT>(*Body))
       continue;
     if (Out<ELFT>::SymTab)
@@ -1034,7 +1010,6 @@ static typename ELFT::uint computeFlags(typename ELFT::uint F) {
 template <class ELFT>
 std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   std::vector<Phdr> Ret;
-
   auto AddHdr = [&](unsigned Type, unsigned Flags) -> Phdr * {
     Ret.emplace_back(Type, Flags);
     return &Ret.back();
@@ -1080,7 +1055,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
     uintX_t NewFlags = computeFlags<ELFT>(Sec->getPhdrFlags());
-    if (Script<ELFT>::X->getLma(Sec->getName()) || Flags != NewFlags) {
+    if (Script<ELFT>::X->hasLMA(Sec->getName()) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
@@ -1257,20 +1232,13 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       H.p_memsz = Last->getVA() + Last->getSize() - First->getVA();
       H.p_offset = First->getFileOff();
       H.p_vaddr = First->getVA();
+      if (!P.HasLMA)
+        H.p_paddr = First->getLMA();
     }
     if (H.p_type == PT_LOAD)
       H.p_align = Config->MaxPageSize;
     else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
-
-    if (!P.HasLMA) {
-    // The p_paddr field can be set using linker script AT command.
-    // By default, it is the same value as p_vaddr.
-      H.p_paddr = H.p_vaddr;
-      if (H.p_type == PT_LOAD && First)
-        if (Expr LmaExpr = Script<ELFT>::X->getLma(First->getName()))
-          H.p_paddr = LmaExpr(H.p_vaddr);
-    }
 
     // The TLS pointer goes after PT_TLS. At least glibc will align it,
     // so round up the size to make sure the offsets are correct.

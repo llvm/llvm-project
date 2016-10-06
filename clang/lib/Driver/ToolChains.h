@@ -1008,6 +1008,39 @@ private:
   std::string NaClArmMacrosPath;
 };
 
+class LLVM_LIBRARY_VISIBILITY Fuchsia : public Generic_ELF {
+public:
+  Fuchsia(const Driver &D, const llvm::Triple &Triple,
+          const llvm::opt::ArgList &Args);
+
+  bool isPIEDefault() const override { return true; }
+  bool HasNativeLLVMSupport() const override { return true; }
+  bool IsIntegratedAssemblerDefault() const override { return true; }
+  llvm::DebuggerKind getDefaultDebuggerTuning() const override {
+    return llvm::DebuggerKind::GDB;
+  }
+
+  RuntimeLibType
+  GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
+  CXXStdlibType
+  GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+
+  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const override;
+
+protected:
+  Tool *buildAssembler() const override;
+  Tool *buildLinker() const override;
+};
+
 /// TCEToolChain - A tool chain using the llvm bitcode tools to perform
 /// all subcommands. See http://tce.cs.tut.fi for our peculiar target.
 class LLVM_LIBRARY_VISIBILITY TCEToolChain : public ToolChain {

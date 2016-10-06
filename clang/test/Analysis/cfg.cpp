@@ -138,7 +138,7 @@ void test_deletedtor() {
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
 // CHECK-NEXT:   2: CFGNewAllocator(A *)
-// CHECK-NEXT:   3:  (CXXConstructExpr, class A)
+// CHECK-NEXT:   3:  (CXXConstructExpr, class A [5])
 // CHECK-NEXT:   4: new A {{\[\[}}B1.1]]
 // CHECK-NEXT:   5: A *a = new A [5];
 // CHECK-NEXT:   6: a
@@ -363,7 +363,7 @@ void test_placement_new() {
 // CHECK-NEXT:  4: [B1.3] (ImplicitCastExpr, BitCast, void *)
 // CHECK-NEXT:  5: 5
 // CHECK-NEXT:  6: CFGNewAllocator(MyClass *)
-// CHECK-NEXT:  7:  (CXXConstructExpr, class MyClass)
+// CHECK-NEXT:  7:  (CXXConstructExpr, class MyClass [5])
 // CHECK-NEXT:  8: new ([B1.4]) MyClass {{\[\[}}B1.5]]
 // CHECK-NEXT:  9: MyClass *obj = new (buffer) MyClass [5];
 // CHECK-NEXT:  Preds (1): B2

@@ -877,8 +877,68 @@ void CodeGenFunction::EmitNewArrayInitializer(
   CharUnits ElementAlign =
     BeginPtr.getAlignment().alignmentOfArrayElement(ElementSize);
 
+  // Attempt to perform zero-initialization using memset.
+  auto TryMemsetInitialization = [&]() -> bool {
+    // FIXME: If the type is a pointer-to-data-member under the Itanium ABI,
+    // we can initialize with a memset to -1.
+    if (!CGM.getTypes().isZeroInitializable(ElementType))
+      return false;
+
+    // Optimization: since zero initialization will just set the memory
+    // to all zeroes, generate a single memset to do it in one shot.
+
+    // Subtract out the size of any elements we've already initialized.
+    auto *RemainingSize = AllocSizeWithoutCookie;
+    if (InitListElements) {
+      // We know this can't overflow; we check this when doing the allocation.
+      auto *InitializedSize = llvm::ConstantInt::get(
+          RemainingSize->getType(),
+          getContext().getTypeSizeInChars(ElementType).getQuantity() *
+              InitListElements);
+      RemainingSize = Builder.CreateSub(RemainingSize, InitializedSize);
+    }
+
+    // Create the memset.
+    Builder.CreateMemSet(CurPtr, Builder.getInt8(0), RemainingSize, false);
+    return true;
+  };
+
   // If the initializer is an initializer list, first do the explicit elements.
   if (const InitListExpr *ILE = dyn_cast<InitListExpr>(Init)) {
+    // Initializing from a (braced) string literal is a special case; the init
+    // list element does not initialize a (single) array element.
+    if (ILE->isStringLiteralInit()) {
+      // Initialize the initial portion of length equal to that of the string
+      // literal. The allocation must be for at least this much; we emitted a
+      // check for that earlier.
+      AggValueSlot Slot =
+          AggValueSlot::forAddr(CurPtr, ElementType.getQualifiers(),
+                                AggValueSlot::IsDestructed,
+                                AggValueSlot::DoesNotNeedGCBarriers,
+                                AggValueSlot::IsNotAliased);
+      EmitAggExpr(ILE->getInit(0), Slot);
+
+      // Move past these elements.
+      InitListElements =
+          cast<ConstantArrayType>(ILE->getType()->getAsArrayTypeUnsafe())
+              ->getSize().getZExtValue();
+      CurPtr =
+          Address(Builder.CreateInBoundsGEP(CurPtr.getPointer(),
+                                            Builder.getSize(InitListElements),
+                                            "string.init.end"),
+                  CurPtr.getAlignment().alignmentAtOffset(InitListElements *
+                                                          ElementSize));
+
+      // Zero out the rest, if any remain.
+      llvm::ConstantInt *ConstNum = dyn_cast<llvm::ConstantInt>(NumElements);
+      if (!ConstNum || !ConstNum->equalsInt(InitListElements)) {
+        bool OK = TryMemsetInitialization();
+        (void)OK;
+        assert(OK && "couldn't memset character type?");
+      }
+      return;
+    }
+
     InitListElements = ILE->getNumInits();
 
     // If this is a multi-dimensional array new, we will initialize multiple
@@ -944,32 +1004,6 @@ void CodeGenFunction::EmitNewArrayInitializer(
     // Switch back to initializing one base element at a time.
     CurPtr = Builder.CreateBitCast(CurPtr, BeginPtr.getType());
   }
-
-  // Attempt to perform zero-initialization using memset.
-  auto TryMemsetInitialization = [&]() -> bool {
-    // FIXME: If the type is a pointer-to-data-member under the Itanium ABI,
-    // we can initialize with a memset to -1.
-    if (!CGM.getTypes().isZeroInitializable(ElementType))
-      return false;
-
-    // Optimization: since zero initialization will just set the memory
-    // to all zeroes, generate a single memset to do it in one shot.
-
-    // Subtract out the size of any elements we've already initialized.
-    auto *RemainingSize = AllocSizeWithoutCookie;
-    if (InitListElements) {
-      // We know this can't overflow; we check this when doing the allocation.
-      auto *InitializedSize = llvm::ConstantInt::get(
-          RemainingSize->getType(),
-          getContext().getTypeSizeInChars(ElementType).getQuantity() *
-              InitListElements);
-      RemainingSize = Builder.CreateSub(RemainingSize, InitializedSize);
-    }
-
-    // Create the memset.
-    Builder.CreateMemSet(CurPtr, Builder.getInt8(0), RemainingSize, false);
-    return true;
-  };
 
   // If all elements have already been initialized, skip any further
   // initialization.
@@ -1349,7 +1383,12 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // If there is a brace-initializer, cannot allocate fewer elements than inits.
   unsigned minElements = 0;
   if (E->isArray() && E->hasInitializer()) {
-    if (const InitListExpr *ILE = dyn_cast<InitListExpr>(E->getInitializer()))
+    const InitListExpr *ILE = dyn_cast<InitListExpr>(E->getInitializer());
+    if (ILE && ILE->isStringLiteralInit())
+      minElements =
+          cast<ConstantArrayType>(ILE->getType()->getAsArrayTypeUnsafe())
+              ->getSize().getZExtValue();
+    else if (ILE)
       minElements = ILE->getNumInits();
   }
 

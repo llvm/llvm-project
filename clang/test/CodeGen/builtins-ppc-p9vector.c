@@ -1,11 +1,11 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -faltivec -target-feature +power9-vector \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s \
-// RUN:   -O2 -o - | FileCheck %s -check-prefix=CHECK-BE
+// RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
 
 // RUN: %clang_cc1 -faltivec -target-feature +power9-vector \
 // RUN:   -triple powerpc64le-unknown-unknown -emit-llvm %s \
-// RUN:   -O2 -o - | FileCheck %s
+// RUN:   -o - | FileCheck %s
 
 #include <altivec.h>
 
@@ -31,7 +31,6 @@ unsigned test1(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpequb(<16 x i8>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -39,7 +38,6 @@ unsigned test1(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_match_index (vsca, vscb);
 }
@@ -50,7 +48,6 @@ unsigned test2(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpequb(<16 x i8>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -58,7 +55,6 @@ unsigned test2(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_match_index (vuca, vucb);
 }
@@ -69,7 +65,6 @@ unsigned test3(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpequw(<4 x i32>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -77,7 +72,6 @@ unsigned test3(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_match_index (vsia, vsib);
 }
@@ -88,7 +82,6 @@ unsigned test4(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpequw(<4 x i32>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -96,7 +89,6 @@ unsigned test4(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_match_index (vuia, vuib);
 }
@@ -107,7 +99,6 @@ unsigned test5(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpequh(<8 x i16>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -115,7 +106,6 @@ unsigned test5(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_match_index (vssa, vssb);
 }
@@ -126,7 +116,6 @@ unsigned test6(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpequh(<8 x i16>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -134,7 +123,6 @@ unsigned test6(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_match_index (vusa, vusb);
 }
@@ -149,7 +137,6 @@ unsigned test7(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpequb(<16 x i8>
 // CHECK: @llvm.ppc.altivec.vcmpequb(<16 x i8>
@@ -161,7 +148,6 @@ unsigned test7(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_match_or_eos_index (vsca, vscb);
 }
@@ -176,7 +162,6 @@ unsigned test8(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpequb(<16 x i8>
 // CHECK: @llvm.ppc.altivec.vcmpequb(<16 x i8>
@@ -188,7 +173,6 @@ unsigned test8(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_match_or_eos_index (vuca, vucb);
 }
@@ -203,7 +187,6 @@ unsigned test9(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpequw(<4 x i32>
 // CHECK: @llvm.ppc.altivec.vcmpequw(<4 x i32>
@@ -215,7 +198,6 @@ unsigned test9(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_match_or_eos_index (vsia, vsib);
 }
@@ -230,7 +212,6 @@ unsigned test10(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpequw(<4 x i32>
 // CHECK: @llvm.ppc.altivec.vcmpequw(<4 x i32>
@@ -242,7 +223,6 @@ unsigned test10(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_match_or_eos_index (vuia, vuib);
 }
@@ -257,7 +237,6 @@ unsigned test11(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpequh(<8 x i16>
 // CHECK: @llvm.ppc.altivec.vcmpequh(<8 x i16>
@@ -269,7 +248,6 @@ unsigned test11(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_match_or_eos_index (vssa, vssb);
 }
@@ -284,7 +262,6 @@ unsigned test12(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpequh(<8 x i16>
 // CHECK: @llvm.ppc.altivec.vcmpequh(<8 x i16>
@@ -296,7 +273,6 @@ unsigned test12(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_match_or_eos_index (vusa, vusb);
 }
@@ -307,7 +283,6 @@ unsigned test13(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpneb(<16 x i8>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -315,7 +290,6 @@ unsigned test13(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_mismatch_index (vsca, vscb);
 }
@@ -326,7 +300,6 @@ unsigned test14(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpneb(<16 x i8>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -334,7 +307,6 @@ unsigned test14(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_mismatch_index (vuca, vucb);
 }
@@ -345,7 +317,6 @@ unsigned test15(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpnew(<4 x i32>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -353,7 +324,6 @@ unsigned test15(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_mismatch_index (vsia, vsib);
 }
@@ -364,7 +334,6 @@ unsigned test16(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpnew(<4 x i32>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -372,7 +341,6 @@ unsigned test16(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_mismatch_index (vuia, vuib);
 }
@@ -383,7 +351,6 @@ unsigned test17(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpneh(<8 x i16>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -391,7 +358,6 @@ unsigned test17(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_mismatch_index (vssa, vssb);
 }
@@ -402,7 +368,6 @@ unsigned test18(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpneh(<8 x i16>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -410,7 +375,6 @@ unsigned test18(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_mismatch_index (vusa, vusb);
 }
@@ -421,7 +385,6 @@ unsigned test19(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpnezb(<16 x i8>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -429,7 +392,6 @@ unsigned test19(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_mismatch_or_eos_index (vsca, vscb);
 }
@@ -440,7 +402,6 @@ unsigned test20(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 3
 // CHECK: @llvm.ppc.altivec.vcmpnezb(<16 x i8>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -448,7 +409,6 @@ unsigned test20(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 3
   return vec_first_mismatch_or_eos_index (vuca, vucb);
 }
@@ -459,7 +419,6 @@ unsigned test21(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpnezw(<4 x i32>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -467,7 +426,6 @@ unsigned test21(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_mismatch_or_eos_index (vsia, vsib);
 }
@@ -478,7 +436,6 @@ unsigned test22(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 5
 // CHECK: @llvm.ppc.altivec.vcmpnezw(<4 x i32>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -486,7 +443,6 @@ unsigned test22(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 5
   return vec_first_mismatch_or_eos_index (vuia, vuib);
 }
@@ -497,7 +453,6 @@ unsigned test23(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpnezh(<8 x i16>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -505,7 +460,6 @@ unsigned test23(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_mismatch_or_eos_index (vssa, vssb);
 }
@@ -516,7 +470,6 @@ unsigned test24(void) {
 // CHECK-BE: icmp eq i64 {{.*}}, 64
 // CHECK-BE: extractelement <2 x i64>
 // CHECK-BE: add i64 {{.*}}, 64
-// CHECK-BE: select i1
 // CHECK-BE: lshr i64 {{.*}}, 4
 // CHECK: @llvm.ppc.altivec.vcmpnezh(<8 x i16>
 // CHECK: @llvm.cttz.v2i64(<2 x i64>
@@ -524,7 +477,6 @@ unsigned test24(void) {
 // CHECK: icmp eq i64 {{.*}}, 64
 // CHECK: extractelement <2 x i64>
 // CHECK: add i64 {{.*}}, 64
-// CHECK: select i1
 // CHECK: lshr i64 {{.*}}, 4
   return vec_first_mismatch_or_eos_index (vusa, vusb);
 }
