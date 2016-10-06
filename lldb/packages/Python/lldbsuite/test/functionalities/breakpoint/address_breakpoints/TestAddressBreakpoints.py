@@ -17,6 +17,8 @@ class AddressBreakpointTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     def test_address_breakpoints(self):
         """Test address breakpoints set with shared library of SBAddress work correctly."""
         self.build()

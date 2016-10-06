@@ -181,6 +181,10 @@ namespace llvm {
   /// branches.
   extern char &BranchFolderPassID;
 
+  /// BranchRelaxation - This pass replaces branches that need to jump further
+  /// than is supported by a branch instruction.
+  extern char &BranchRelaxationPassID;
+
   /// MachineFunctionPrinterPass - This pass prints out MachineInstr's.
   extern char &MachineFunctionPrinterPassID;
 

@@ -17,6 +17,8 @@ class BadAddressBreakpointTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     def test_bad_address_breakpoints(self):
         """Test that breakpoints set on a bad address say they are bad."""
         self.build()

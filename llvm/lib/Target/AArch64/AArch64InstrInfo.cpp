@@ -128,6 +128,8 @@ static unsigned getBranchDisplacementBits(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("unexpected opcode!");
+  case AArch64::B:
+    return 64;
   case AArch64::TBNZW:
   case AArch64::TBZW:
   case AArch64::TBNZX:
@@ -143,30 +145,33 @@ static unsigned getBranchDisplacementBits(unsigned Opc) {
   }
 }
 
-static unsigned getBranchMaxDisplacementBytes(unsigned Opc) {
-  if (Opc == AArch64::B)
-    return -1;
-
-  unsigned Bits = getBranchDisplacementBits(Opc);
-  unsigned MaxOffs = ((1 << (Bits - 1)) - 1) << 2;
-
-  // Verify the displacement bits options have sane values.
-  // XXX: Is there a better place for this?
-  assert(MaxOffs >= 8 &&
-         "max branch displacement must be enough to jump"
-         "over conditional branch expansion");
-
-  return MaxOffs;
+bool AArch64InstrInfo::isBranchOffsetInRange(unsigned BranchOp,
+                                             int64_t BrOffset) const {
+  unsigned Bits = getBranchDisplacementBits(BranchOp);
+  assert(Bits >= 3 && "max branch displacement must be enough to jump"
+                      "over conditional branch expansion");
+  return isIntN(Bits, BrOffset / 4);
 }
 
-bool AArch64InstrInfo::isBranchInRange(unsigned BranchOp, uint64_t BrOffset,
-                                       uint64_t DestOffset) const {
-  unsigned MaxOffs = getBranchMaxDisplacementBytes(BranchOp);
-
-  // Branch before the Dest.
-  if (BrOffset <= DestOffset)
-    return (DestOffset - BrOffset <= MaxOffs);
-  return (BrOffset - DestOffset <= MaxOffs);
+MachineBasicBlock *AArch64InstrInfo::getBranchDestBlock(
+  const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("unexpected opcode!");
+  case AArch64::B:
+    return MI.getOperand(0).getMBB();
+  case AArch64::TBZW:
+  case AArch64::TBNZW:
+  case AArch64::TBZX:
+  case AArch64::TBNZX:
+    return MI.getOperand(2).getMBB();
+  case AArch64::CBZW:
+  case AArch64::CBNZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZX:
+  case AArch64::Bcc:
+    return MI.getOperand(1).getMBB();
+  }
 }
 
 // Branch analysis.

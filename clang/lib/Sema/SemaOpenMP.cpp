@@ -10523,9 +10523,6 @@ static bool IsCXXRecordForMappable(Sema &SemaRef, SourceLocation Loc,
   if (!RD || RD->isInvalidDecl())
     return true;
 
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    if (auto *CTD = CTSD->getSpecializedTemplate())
-      RD = CTD->getTemplatedDecl();
   auto QTy = SemaRef.Context.getRecordType(RD);
   if (RD->isDynamicClass()) {
     SemaRef.Diag(Loc, diag::err_omp_not_mappable_type) << QTy;

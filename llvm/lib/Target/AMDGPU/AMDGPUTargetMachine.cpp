@@ -614,6 +614,7 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&SIInsertSkipsPassID);
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIDebuggerInsertNopsPass());
+  addPass(&BranchRelaxationPassID);
 }
 
 TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {
