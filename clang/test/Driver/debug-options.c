@@ -27,7 +27,7 @@
 // RUN: %clang -### -c -ggdb %s -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_DARWIN -check-prefix=G_GDB %s
 // RUN: %clang -### -c -ggdb1 %s -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
+// RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -ggdb3 %s -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_DARWIN %s
 
@@ -68,7 +68,7 @@
 // RUN: %clang -### -c -gline-tables-only %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -gline-tables-only %s -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
+// RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -gline-tables-only %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only %s -target x86_64-pc-freebsd10.0 2>&1 \
@@ -76,7 +76,7 @@
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
+// RUN:             | FileCheck -check-prefix=G_STANDALONE_DWARF4 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
@@ -113,7 +113,7 @@
 // G: "-debug-info-kind=limited"
 //
 // G_DARWIN: "-cc1"
-// G_DARWIN: "-dwarf-version=2"
+// G_DARWIN: "-dwarf-version=4"
 //
 // NOG_PS4: "-cc1"
 // NOG_PS4-NOT "-dwarf-version=
@@ -149,6 +149,10 @@
 // G_ONLY_DWARF2: "-cc1"
 // G_ONLY_DWARF2: "-debug-info-kind={{standalone|limited}}"
 // G_ONLY_DWARF2: "-dwarf-version=2"
+//
+// G_STANDALONE_DWARF4: "-cc1"
+// G_STANDALONE_DWARF4: "-debug-info-kind=standalone"
+// G_STANDALONE_DWARF4: "-dwarf-version=4"
 //
 // This tests asserts that "-gline-tables-only" "-g0" disables debug info.
 // GLTO_NO: "-cc1"
