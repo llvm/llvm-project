@@ -412,8 +412,12 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
         auto UStr = [UCDigits](OptReportLocationInfo &LLI) {
           std::string R;
           raw_string_ostream RS(R);
-          if (!Succinct)
-            RS << llvm::format_decimal(LLI.UnrollCount, UCDigits);
+
+          if (!Succinct) {
+            RS << LLI.UnrollCount;
+            RS << std::string(UCDigits - RS.str().size(), ' ');
+          }
+
           return RS.str();
         };
 
@@ -421,9 +425,12 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
                      ICDigits](OptReportLocationInfo &LLI) -> std::string {
           std::string R;
           raw_string_ostream RS(R);
-          if (!Succinct)
-           RS << llvm::format_decimal(LLI.VectorizationFactor, VFDigits) <<
-                   "," << llvm::format_decimal(LLI.InterleaveCount, ICDigits);
+
+          if (!Succinct) {
+            RS << LLI.VectorizationFactor << "," << LLI.InterleaveCount;
+            RS << std::string(VFDigits + ICDigits + 1 - RS.str().size(), ' ');
+          }
+
           return RS.str();
         };
 
