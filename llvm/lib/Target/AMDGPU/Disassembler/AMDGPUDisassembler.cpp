@@ -28,6 +28,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -46,6 +47,18 @@ addOperand(MCInst &Inst, const MCOperand& Opnd) {
   return Opnd.isValid() ?
     MCDisassembler::Success :
     MCDisassembler::SoftFail;
+}
+
+static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
+                                       uint64_t Addr, const void *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+
+  APInt SignedOffset(18, Imm * 4, true);
+  int64_t Offset = (SignedOffset.sext(64) + 4 + Addr).getSExtValue();
+
+  if (DAsm->tryAddingSymbolicOperand(Inst, Offset, Addr, true, 2, 2))
+    return MCDisassembler::Success;
+  return addOperand(Inst, MCOperand::createImm(Imm)); 
 }
 
 #define DECODE_OPERAND2(RegClass, DecName) \
@@ -431,6 +444,50 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   return errOperand(Val, "unknown operand encoding " + Twine(Val));
 }
 
+//===----------------------------------------------------------------------===//
+// AMDGPUSymbolizer
+//===----------------------------------------------------------------------===//
+  
+// Try to find symbol name for specified label
+bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
+                                raw_ostream &/*cStream*/, int64_t Value,
+                                uint64_t /*Address*/, bool IsBranch,
+                                uint64_t /*Offset*/, uint64_t /*InstSize*/) {
+  typedef std::tuple<uint64_t, StringRef, uint8_t> SymbolInfoTy;
+  typedef std::vector<SymbolInfoTy> SectionSymbolsTy;
+
+  if (!IsBranch) {
+    return false;
+  }
+
+  auto *Symbols = static_cast<SectionSymbolsTy *>(DisInfo);
+  auto Result = std::find_if(Symbols->begin(), Symbols->end(),
+                             [Value](const SymbolInfoTy& Val) {
+                                return std::get<0>(Val) == static_cast<uint64_t>(Value)
+                                    && std::get<2>(Val) == ELF::STT_NOTYPE;
+                             });
+  if (Result != Symbols->end()) {
+    auto *Sym = Ctx.getOrCreateSymbol(std::get<1>(*Result));
+    const auto *Add = MCSymbolRefExpr::create(Sym, Ctx);
+    Inst.addOperand(MCOperand::createExpr(Add));
+    return true;
+  }
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// Initialization
+//===----------------------------------------------------------------------===//
+
+static MCSymbolizer *createAMDGPUSymbolizer(const Triple &/*TT*/,
+                              LLVMOpInfoCallback /*GetOpInfo*/,
+                              LLVMSymbolLookupCallback /*SymbolLookUp*/,
+                              void *DisInfo, 
+                              MCContext *Ctx,
+                              std::unique_ptr<MCRelocationInfo> &&RelInfo) {
+  return new AMDGPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);
+}
+
 static MCDisassembler *createAMDGPUDisassembler(const Target &T,
                                                 const MCSubtargetInfo &STI,
                                                 MCContext &Ctx) {
@@ -439,4 +496,5 @@ static MCDisassembler *createAMDGPUDisassembler(const Target &T,
 
 extern "C" void LLVMInitializeAMDGPUDisassembler() {
   TargetRegistry::RegisterMCDisassembler(TheGCNTarget, createAMDGPUDisassembler);
+  TargetRegistry::RegisterMCSymbolizer(TheGCNTarget, createAMDGPUSymbolizer);
 }

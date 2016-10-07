@@ -1092,34 +1092,27 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
     return false;
 
   unsigned Opc;
-  const TargetRegisterClass *RC;
   bool VTIsi1 = false;
   switch (getSimpleType(Store->getValueOperand()->getType())) {
   case MVT::i1:
     VTIsi1 = true;
   case MVT::i8:
     Opc = WebAssembly::STORE8_I32;
-    RC = &WebAssembly::I32RegClass;
     break;
   case MVT::i16:
     Opc = WebAssembly::STORE16_I32;
-    RC = &WebAssembly::I32RegClass;
     break;
   case MVT::i32:
     Opc = WebAssembly::STORE_I32;
-    RC = &WebAssembly::I32RegClass;
     break;
   case MVT::i64:
     Opc = WebAssembly::STORE_I64;
-    RC = &WebAssembly::I64RegClass;
     break;
   case MVT::f32:
     Opc = WebAssembly::STORE_F32;
-    RC = &WebAssembly::F32RegClass;
     break;
   case MVT::f64:
     Opc = WebAssembly::STORE_F64;
-    RC = &WebAssembly::F64RegClass;
     break;
   default: return false;
   }
@@ -1132,9 +1125,7 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   if (VTIsi1)
     ValueReg = maskI1Value(ValueReg, Store->getValueOperand());
 
-  unsigned ResultReg = createResultReg(RC);
-  auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
-                     ResultReg);
+  auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc));
 
   addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Store));
 

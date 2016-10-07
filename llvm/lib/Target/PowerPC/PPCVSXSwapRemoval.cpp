@@ -962,7 +962,8 @@ void PPCVSXSwapRemoval::dumpSwapVector() {
     DEBUG(dbgs() << format("%6d", ID));
     DEBUG(dbgs() << format("%6d", EC->getLeaderValue(ID)));
     DEBUG(dbgs() << format(" BB#%3d", MI->getParent()->getNumber()));
-    DEBUG(dbgs() << format("  %14s  ", TII->getName(MI->getOpcode())));
+    DEBUG(dbgs() << format("  %14s  ",
+                           TII->getName(MI->getOpcode()).str().c_str()));
 
     if (SwapVector[EntryIdx].IsLoad)
       DEBUG(dbgs() << "load ");

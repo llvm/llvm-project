@@ -61,8 +61,8 @@ def BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
 // use/clobber VALUE_STACK to prevent them from being moved into the middle of
 // an expression tree.
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
-def BLOCK     : I<(outs), (ins), [], "block", 0x01>;
-def LOOP      : I<(outs), (ins), [], "loop", 0x02>;
+def BLOCK     : I<(outs), (ins Signature:$sig), [], "block   \t$sig", 0x01>;
+def LOOP      : I<(outs), (ins Signature:$sig), [], "loop    \t$sig", 0x02>;
 def END_BLOCK : I<(outs), (ins), [], "end_block">;
 def END_LOOP  : I<(outs), (ins), [], "end_loop">;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]

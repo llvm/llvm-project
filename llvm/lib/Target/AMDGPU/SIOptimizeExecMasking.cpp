@@ -248,14 +248,17 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
         if (J->readsRegister(CopyFromExec, TRI)) {
           SaveExecInst = &*J;
           DEBUG(dbgs() << "Found save exec op: " << *SaveExecInst << '\n');
+          continue;
         } else {
           DEBUG(dbgs() << "Instruction does not read exec copy: " << *J << '\n');
           break;
         }
       }
 
-      if (SaveExecInst && J->readsRegister(CopyToExec, TRI))
+      if (SaveExecInst && J->readsRegister(CopyToExec, TRI)) {
+        assert(SaveExecInst != &*J);
         OtherUseInsts.push_back(&*J);
+      }
     }
 
     if (!SaveExecInst)

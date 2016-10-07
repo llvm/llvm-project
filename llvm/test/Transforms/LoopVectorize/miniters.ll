@@ -2,7 +2,6 @@
 ; RUN: opt %s -loop-vectorize -force-vector-interleave=2 -force-vector-width=4 -S | FileCheck %s -check-prefix=UNROLL
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @b = common global [1000 x i32] zeroinitializer, align 16
 @c = common global [1000 x i32] zeroinitializer, align 16

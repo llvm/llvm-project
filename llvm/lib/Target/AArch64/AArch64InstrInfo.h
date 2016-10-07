@@ -174,10 +174,11 @@ public:
                         LiveIntervals *LIS = nullptr) const override;
 
   /// \returns true if a branch from an instruction with opcode \p BranchOpc
-  /// located at \p BrOffset bytes is capable of jumping to a position at \p
-  /// DestOffset.
-  bool isBranchInRange(unsigned BranchOpc, uint64_t BrOffset,
-                       uint64_t DestOffset) const;
+  ///  bytes is capable of jumping to a position \p BrOffset bytes away.
+  bool isBranchOffsetInRange(unsigned BranchOpc,
+                             int64_t BrOffset) const override;
+
+  MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,

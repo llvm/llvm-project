@@ -179,7 +179,7 @@ TEST(TargetParserTest, ARMDefaultExtensions) {
 }
 
 TEST(TargetParserTest, ARMExtensionFeatures) {
-  std::vector<const char *> Features;
+  std::vector<StringRef> Features;
   unsigned Extensions = ARM::AEK_CRC | ARM::AEK_CRYPTO | ARM::AEK_DSP |
                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_MP |
                         ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_RAS;
@@ -190,7 +190,7 @@ TEST(TargetParserTest, ARMExtensionFeatures) {
 }
 
 TEST(TargetParserTest, ARMFPUFeatures) {
-  std::vector<const char *> Features;
+  std::vector<StringRef> Features;
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
@@ -227,8 +227,8 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"xscale", "noxscale", nullptr, nullptr}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
-    EXPECT_STREQ(ArchExt[i][2], ARM::getArchExtFeature(ArchExt[i][0]));
-    EXPECT_STREQ(ArchExt[i][3], ARM::getArchExtFeature(ArchExt[i][1]));
+    EXPECT_EQ(StringRef(ArchExt[i][2]), ARM::getArchExtFeature(ArchExt[i][0]));
+    EXPECT_EQ(StringRef(ArchExt[i][3]), ARM::getArchExtFeature(ArchExt[i][1]));
   }
 }
 
@@ -431,7 +431,7 @@ TEST(TargetParserTest, AArch64DefaultExt) {
 }
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
-  std::vector<const char *> Features;
+  std::vector<StringRef> Features;
   unsigned Extensions = AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
                         AArch64::AEK_FP | AArch64::AEK_SIMD |
                         AArch64::AEK_FP16 | AArch64::AEK_PROFILE |
@@ -443,7 +443,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
-  std::vector<const char *> Features;
+  std::vector<StringRef> Features;
 
   for (unsigned AK = 0; AK < static_cast<unsigned>(AArch64::ArchKind::AK_LAST);
        AK++)
@@ -507,8 +507,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"ras", "noras", "+ras", "-ras"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
-    EXPECT_STREQ(ArchExt[i][2], AArch64::getArchExtFeature(ArchExt[i][0]));
-    EXPECT_STREQ(ArchExt[i][3], AArch64::getArchExtFeature(ArchExt[i][1]));
+    EXPECT_EQ(StringRef(ArchExt[i][2]), AArch64::getArchExtFeature(ArchExt[i][0]));
+    EXPECT_EQ(StringRef(ArchExt[i][3]), AArch64::getArchExtFeature(ArchExt[i][1]));
   }
 }
 

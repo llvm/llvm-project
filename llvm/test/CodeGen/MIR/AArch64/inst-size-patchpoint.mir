@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown -run-pass aarch64-branch-relax -aarch64-tbz-offset-bits=4 %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown -run-pass branch-relaxation -aarch64-tbz-offset-bits=4 %s -o - | FileCheck %s
 --- |
   ; ModuleID = '/tmp/test.ll'
   source_filename = "test.ll"

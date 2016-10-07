@@ -1793,7 +1793,10 @@ bool BoUpSLP::isFullyVectorizableTinyTree() {
   DEBUG(dbgs() << "SLP: Check whether the tree with height " <<
         VectorizableTree.size() << " is fully vectorizable .\n");
 
-  // We only handle trees of height 2.
+  // We only handle trees of heights 1 and 2.
+  if (VectorizableTree.size() == 1 && !VectorizableTree[0].NeedToGather)
+    return true;
+
   if (VectorizableTree.size() != 2)
     return false;
 
@@ -4165,12 +4168,21 @@ public:
 
       // Visit left or right.
       Value *NextV = TreeN->getOperand(EdgeToVist);
-      // We currently only allow BinaryOperator's and SelectInst's as reduction
-      // values in our tree.
-      if (isa<BinaryOperator>(NextV) || isa<SelectInst>(NextV))
-        Stack.push_back(std::make_pair(cast<Instruction>(NextV), 0));
-      else if (NextV != Phi)
+      if (NextV != Phi) {
+        auto *I = dyn_cast<Instruction>(NextV);
+        // Continue analysis if the next operand is a reduction operation or
+        // (possibly) a reduced value. If the reduced value opcode is not set,
+        // the first met operation != reduction operation is considered as the
+        // reduced value class.
+        if (I && (!ReducedValueOpcode || I->getOpcode() == ReducedValueOpcode ||
+                  I->getOpcode() == ReductionOpcode)) {
+          if (!ReducedValueOpcode && I->getOpcode() != ReductionOpcode)
+            ReducedValueOpcode = I->getOpcode();
+          Stack.push_back(std::make_pair(I, 0));
+          continue;
+        }
         return false;
+      }
     }
     return true;
   }
@@ -4571,8 +4583,10 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         if (BinaryOperator *BinOp =
                 dyn_cast<BinaryOperator>(RI->getOperand(0))) {
           DEBUG(dbgs() << "SLP: Found a return to vectorize.\n");
-          if (tryToVectorizePair(BinOp->getOperand(0),
-                                 BinOp->getOperand(1), R)) {
+          if (canMatchHorizontalReduction(nullptr, BinOp, R, TTI,
+                                          R.getMinVecRegSize()) ||
+              tryToVectorizePair(BinOp->getOperand(0), BinOp->getOperand(1),
+                                 R)) {
             Changed = true;
             it = BB->begin();
             e = BB->end();

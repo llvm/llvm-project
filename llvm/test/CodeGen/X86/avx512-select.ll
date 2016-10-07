@@ -158,3 +158,29 @@ define i64 @pr30249() {
   %v = select i1 undef , i64 1, i64 2
   ret i64 %v
 }
+
+define double @pr30561_f64(double %a, double %b, i1 %c) {
+; CHECK-LABEL: pr30561_f64:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    jne LBB11_2
+; CHECK-NEXT:  ## BB#1:
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:  LBB11_2:
+; CHECK-NEXT:    retq
+  %cond = select i1 %c, double %a, double %b
+  ret double %cond
+}
+
+define float @pr30561_f32(float %a, float %b, i1 %c) {
+; CHECK-LABEL: pr30561_f32:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    jne LBB12_2
+; CHECK-NEXT:  ## BB#1:
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:  LBB12_2:
+; CHECK-NEXT:    retq
+  %cond = select i1 %c, float %a, float %b
+  ret float %cond
+}

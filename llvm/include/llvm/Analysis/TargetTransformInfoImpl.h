@@ -248,6 +248,7 @@ public:
   unsigned getJumpBufSize() { return 0; }
 
   bool shouldBuildLookupTables() { return true; }
+  bool shouldBuildLookupTablesForConstant(Constant *C) { return true; }
 
   bool enableAggressiveInterleaving(bool LoopHasReductions) { return false; }
 

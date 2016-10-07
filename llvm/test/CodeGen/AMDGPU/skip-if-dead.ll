@@ -105,7 +105,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
 ; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
-; CHECK-NEXT: ; BB#3:
+; CHECK-NEXT: ; BB#2:
 ; CHECK-NEXT: exp 0, 9, 0, 1, 1, v0, v0, v0, v0
 ; CHECK-NEXT: s_endpgm
 
@@ -156,7 +156,7 @@ exit:
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
 ; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ; BB#4:
+; CHECK-NEXT: ; BB#2:
 ; CHECK-NEXT: exp 0, 9, 0, 1, 1, v0, v0, v0, v0
 ; CHECK-NEXT: s_endpgm
 
@@ -270,7 +270,7 @@ exit:
 ; CHECK: s_and_b64 vcc, exec, vcc
 ; CHECK: s_cbranch_vccz [[ENDBB:BB[0-9]+_[0-9]+]]
 
-; CHECK: ; BB#3: ; %bb10
+; CHECK: ; %bb10
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 9
 ; CHECK: buffer_store_dword
 
@@ -306,7 +306,7 @@ end:
 ; CHECK: s_and_b64 vcc, exec,
 ; CHECK: s_cbranch_vccz [[SKIPKILL:BB[0-9]+_[0-9]+]]
 
-; CHECK: ; BB#3: ; %bb6
+; CHECK: ; %bb6
 ; CHECK: s_mov_b64 exec, 0
 
 ; CHECK: [[SKIPKILL]]:

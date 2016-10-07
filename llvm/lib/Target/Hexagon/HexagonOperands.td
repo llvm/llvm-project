@@ -146,31 +146,6 @@ def s29_3ImmPred  : PatLeaf<(i32 imm), [{
   return isShiftedInt<29,3>(v);
 }]>;
 
-def s16ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isInt<16>(v);
-}]>;
-
-def s11_0ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isInt<11>(v);
-}]>;
-
-def s11_1ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedInt<11,1>(v);
-}]>;
-
-def s11_2ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedInt<11,2>(v);
-}]>;
-
-def s11_3ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedInt<11,3>(v);
-}]>;
-
 def s10ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isInt<10>(v);
@@ -211,39 +186,9 @@ def s4_3ImmPred  : PatLeaf<(i32 imm), [{
   return isShiftedInt<4,3>(v);
 }]>;
 
-def u64ImmPred  : PatLeaf<(i64 imm), [{
-  // Adding "N ||" to suppress gcc unused warning.
-  return (N || true);
-}]>;
-
 def u32ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isUInt<32>(v);
-}]>;
-
-def u32_0ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isUInt<32>(v);
-}]>;
-
-def u31_1ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedUInt<31,1>(v);
-}]>;
-
-def u30_2ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedUInt<30,2>(v);
-}]>;
-
-def u29_3ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedUInt<29,3>(v);
-}]>;
-
-def u26_6ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedUInt<26,6>(v);
 }]>;
 
 def u16_0ImmPred  : PatLeaf<(i32 imm), [{
@@ -251,24 +196,9 @@ def u16_0ImmPred  : PatLeaf<(i32 imm), [{
   return isUInt<16>(v);
 }]>;
 
-def u16_1ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedUInt<16,1>(v);
-}]>;
-
-def u16_2ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedUInt<16,2>(v);
-}]>;
-
 def u11_3ImmPred : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isShiftedUInt<11,3>(v);
-}]>;
-
-def u10ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isUInt<10>(v);
 }]>;
 
 def u9ImmPred  : PatLeaf<(i32 imm), [{
@@ -285,11 +215,6 @@ def u7StrictPosImmPred : ImmLeaf<i32, [{
   // u7StrictPosImmPred predicate - True if the immediate fits in an 7-bit
   // unsigned field and is strictly greater than 0.
   return isUInt<7>(Imm) && Imm > 0;
-}]>;
-
-def u7ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isUInt<7>(v);
 }]>;
 
 def u6ImmPred  : PatLeaf<(i32 imm), [{
@@ -312,11 +237,6 @@ def u6_2ImmPred  : PatLeaf<(i32 imm), [{
   return isShiftedUInt<6,2>(v);
 }]>;
 
-def u6_3ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isShiftedUInt<6,3>(v);
-}]>;
-
 def u5ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isUInt<5>(v);
@@ -335,16 +255,6 @@ def u3ImmPred  : PatLeaf<(i32 imm), [{
 def u2ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isUInt<2>(v);
-}]>;
-
-def u1ImmPred  : PatLeaf<(i1 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isUInt<1>(v);
-}]>;
-
-def u1ImmPred32  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  return isUInt<1>(v);
 }]>;
 
 def m5ImmPred  : PatLeaf<(i32 imm), [{
@@ -460,30 +370,12 @@ def s4_7ImmPred  : PatLeaf<(i32 imm), [{
   return false;
 }]>;
 
-def s3_7ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  if (HST->hasV60TOps())
-    // Return true if the immediate can fit in a 9-bit sign extended field and
-    // is 128-byte aligned.
-    return isShiftedInt<3,7>(v);
-  return false;
-}]>;
-
 def s4_6ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   if (HST->hasV60TOps())
     // Return true if the immediate can fit in a 10-bit sign extended field and
     // is 64-byte aligned.
     return isShiftedInt<4,6>(v);
-  return false;
-}]>;
-
-def s3_6ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  if (HST->hasV60TOps())
-    // Return true if the immediate can fit in a 9-bit sign extended field and
-    // is 64-byte aligned.
-    return isShiftedInt<3,6>(v);
   return false;
 }]>;
 

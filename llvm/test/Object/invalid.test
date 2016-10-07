@@ -35,7 +35,7 @@ SECTION-NEXT:    AddressAlignment:
 SECTION-NEXT:    EntrySize: 32
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
-INVALID-SYM-SIZE: Invalid symbol size
+INVALID-SYM-SIZE: Invalid data was encountered while parsing the file
 
 RUN: not llvm-readobj --dyn-symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-DYNSYM-SIZE %s
 INVALID-DYNSYM-SIZE: Invalid entity size
@@ -49,7 +49,7 @@ INVALID-SECTION-SIZE: Invalid section header entry size (e_shentsize) in ELF hea
 
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-symbol-table-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s
-INVALID-SYMTAB-SIZE: Invalid symbol table size
+INVALID-SYMTAB-SIZE: Invalid data was encountered while parsing the file
 
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
@@ -63,4 +63,4 @@ RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-i386 2>&
 RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
-INVALID-RELOC-SH-OFFSET: Invalid relocation entry offset
+INVALID-RELOC-SH-OFFSET: Invalid data was encountered while parsing the file

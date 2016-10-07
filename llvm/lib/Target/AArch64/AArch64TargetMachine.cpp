@@ -135,7 +135,6 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeAArch64A57FPLoadBalancingPass(*PR);
   initializeAArch64AddressTypePromotionPass(*PR);
   initializeAArch64AdvSIMDScalarPass(*PR);
-  initializeAArch64BranchRelaxationPass(*PR);
   initializeAArch64CollectLOHPass(*PR);
   initializeAArch64ConditionalComparesPass(*PR);
   initializeAArch64ConditionOptimizerPass(*PR);
@@ -463,7 +462,8 @@ void AArch64PassConfig::addPreEmitPass() {
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (BranchRelaxation)
-    addPass(createAArch64BranchRelaxation());
+    addPass(&BranchRelaxationPassID);
+
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());

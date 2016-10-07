@@ -291,6 +291,7 @@ def SoppBrTarget : AsmOperandClass {
 
 def sopp_brtarget : Operand<OtherVT> {
   let EncoderMethod = "getSOPPBrEncoding";
+  let DecoderMethod = "decodeSoppBrTarget";
   let OperandType = "OPERAND_PCREL";
   let ParserMatchClass = SoppBrTarget;
 }
