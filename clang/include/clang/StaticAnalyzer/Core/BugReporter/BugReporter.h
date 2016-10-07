@@ -248,7 +248,23 @@ public:
   void setDeclWithIssue(const Decl *declWithIssue) {
     DeclWithIssue = declWithIssue;
   }
-  
+
+  /// Add new item to the list of additional notes that need to be attached to
+  /// this path-insensitive report. If you want to add extra notes to a
+  /// path-sensitive report, you need to use a BugReporterVisitor because it
+  /// allows you to specify where exactly in the auto-generated path diagnostic
+  /// the extra note should appear.
+  void addNote(StringRef Msg, const PathDiagnosticLocation &Pos,
+                    ArrayRef<SourceRange> Ranges = {}) {
+    PathDiagnosticNotePiece *P =
+        new PathDiagnosticNotePiece(Pos, Msg);
+
+    for (const auto &R : Ranges)
+      P->addRange(R);
+
+    Notes.push_back(P);
+  }
+
   /// \brief This allows for addition of meta data to the diagnostic.
   ///
   /// Currently, only the HTMLDiagnosticClient knows how to display it. 
