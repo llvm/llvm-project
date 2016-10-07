@@ -4929,6 +4929,8 @@ class ARMTargetInfo : public TargetInfo {
       return "8M_BASE";
     case llvm::ARM::AK_ARMV8MMainline:
       return "8M_MAIN";
+    case llvm::ARM::AK_ARMV8R:
+      return "8R";
     }
   }
 

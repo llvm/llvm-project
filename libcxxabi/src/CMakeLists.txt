@@ -12,6 +12,7 @@ set(LIBCXXABI_SOURCES
   cxa_vector.cpp
   cxa_virtual.cpp
   exception.cpp
+  fallback_malloc.cpp
   private_typeinfo.cpp
   stdexcept.cpp
   typeinfo.cpp

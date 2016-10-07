@@ -8837,16 +8837,16 @@ public:
 
   /// Check assignment constraints for an assignment of RHS to LHSType.
   ///
-  /// \brief LHSType The destination type for the assignment.
-  /// \brief RHS The source expression for the assignment.
-  /// \brief Diagnose If \c true, diagnostics may be produced when checking
+  /// \param LHSType The destination type for the assignment.
+  /// \param RHS The source expression for the assignment.
+  /// \param Diagnose If \c true, diagnostics may be produced when checking
   ///        for assignability. If a diagnostic is produced, \p RHS will be
   ///        set to ExprError(). Note that this function may still return
   ///        without producing a diagnostic, even for an invalid assignment.
-  /// \brief DiagnoseCFAudited If \c true, the target is a function parameter
+  /// \param DiagnoseCFAudited If \c true, the target is a function parameter
   ///        in an audited Core Foundation API and does not need to be checked
   ///        for ARC retain issues.
-  /// \brief ConvertRHS If \c true, \p RHS will be updated to model the
+  /// \param ConvertRHS If \c true, \p RHS will be updated to model the
   ///        conversions necessary to perform the assignment. If \c false,
   ///        \p Diagnose must also be \c false.
   AssignConvertType CheckSingleAssignmentConstraints(

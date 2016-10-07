@@ -42,15 +42,13 @@ entry:
 ; DARWIN-DEFAULT: add [[sum:r[0-9]+]], r0, [[div]]
 ; DARWIN-O0: mov [[rem:r[0-9]+]], r0
 ; WINDOWS: __rt_sdiv
-; WINDOWS-DEFAULT: mls [[rem:r[0-9]+]], r0,
-; WINDOWS-DEFAULT: adds [[sum:r[0-9]+]], [[rem]], r0
-; WINDOWS-O0: mov [[div:r[0-9]+]], r0
-; WINDOWS-O0: mls [[rem:r[0-9]+]], [[div]],
+; WINDOWS: __rt_sdiv
+; WINDOWS-DEFAULT: add [[sum:r[0-9]+]], r1
+; WINDOWS-O0: mov [[rem:r[0-9]+]], r1
   %rem8 = srem i32 %conv1, %conv
 ; EABI: __aeabi_idivmod
 ; DARWIN: __modsi3
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem1:r[0-9]+]], r0,
   %add = add nsw i32 %rem, %div
   %add13 = add nsw i32 %add, %rem8
   %conv14 = trunc i32 %add13 to i16
@@ -60,9 +58,10 @@ entry:
 ; DARWIN-O0: add [[sum:r[0-9]+]], [[rem]], [[div]]
 ; DARWIN-O0: add [[res:r[0-9]+]], [[sum]], r0
 ; DARWIN: sxth r0, [[res]]
-; WINDOWS-O0: adds [[sum:r[0-9]+]], [[rem]], [[div]]
-; WINDOWS: add [[rem1]], [[sum]]
-; WINDOWS: sxth [[res:r[0-9]+]], [[rem1]]
+; WINDOWS-DEFAULT: adds [[sum1:r[0-9]+]], [[sum]], r1
+; WINDOWS-O0: adds [[sum:r[0-9]+]], [[rem]],
+; WINDOWS-O0: add [[sum1:r[0-9]+]], r1
+; WINDOWS: sxth [[res:r[0-9]+]], [[sum1]]
   ret i16 %conv14
 }
 
@@ -84,22 +83,20 @@ entry:
 ; WINDOWS: __rt_sdiv
 ; WINDOWS: mov [[div:r[0-9]+]], r0
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem:r[0-9]+]], r0,
-; WINDOWS-DEFAULT: add [[div]], [[rem]]
+; WINDOWS-DEFAULT: add [[div]], r1
   %rem1 = srem i32 %b, %a
 ; EABI: __aeabi_idivmod
 ; DARWIN: __modsi3
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem1:r[0-9]+]], r0,
   %add = add nsw i32 %rem, %div
   %add2 = add nsw i32 %add, %rem1
 ; EABI: add r0{{.*}}r1
 ; DARWIN-DEFAULT: add r0, [[sum]], r0
 ; DARWIN-O0: add [[sum:r[0-9]+]], [[rem]], [[div]]
 ; DARWIN-O0: add [[res:r[0-9]+]], [[sum]], r0
-; WINDOWS-DEFAULT: add [[rem1]], [[div]]
+; WINDOWS-DEFAULT: adds r0, [[div]], r1
 ; WINDOWS-O0: adds [[sum:r[0-9]+]], [[rem]], [[div]]
-; WINDOWS-O0: add [[rem1]], [[sum]]
+; WINDOWS-O0: add [[sum]], r1
   ret i32 %add2
 }
 
@@ -119,22 +116,20 @@ entry:
 ; WINDOWS: __rt_udiv
 ; WINDOWS: mov [[div:r[0-9]+]], r0
 ; WINDOWS: __rt_udiv
-; WINDOWS: mls [[rem:r[0-9]+]], r0,
-; WINDOWS-DEFAULT: add [[div]], [[rem]]
+; WINDOWS-DEFAULT: add [[div]], r1
   %rem1 = urem i32 %b, %a
 ; EABI: __aeabi_uidivmod
 ; DARWIN: __umodsi3
 ; WINDOWS: __rt_udiv
-; WINDOWS: mls [[rem1:r[0-9]+]], r0,
   %add = add nuw i32 %rem, %div
   %add2 = add nuw i32 %add, %rem1
 ; EABI: add r0{{.*}}r1
 ; DARWIN-DEFAULT: add r0, [[sum]], r0
 ; DARWIN-O0: add [[sum:r[0-9]+]], [[rem]], [[div]]
 ; DARWIN-O0: add [[res:r[0-9]+]], [[sum]], r0
-; WINDOWS-DEFAULT: add [[rem1]], [[div]]
-; WINDOWS-O0: adds [[sum:r[0-9]+]], [[rem]], [[div]]
-; WINDOWS-O0: add [[rem1]], [[sum]]
+; WINDOWS-DEFAULT: adds [[sum:r[0-9]+]], [[div]], r1
+; WINDOWS-O0: adds [[sum:r[0-9]+]],
+; WINDOWS-O0: add [[sum]], r1
   ret i32 %add2
 }
 
@@ -154,14 +149,11 @@ entry:
 ; DARWIN: mov [[div2:r[0-9]+]], r1
 ; DARWIN: __moddi3
 ; WINDOWS: __rt_sdiv64
-; WINDOWS: mov [[div1:r[0-9]+]], r0
-; WINDOWS: mov [[div2:r[0-9]+]], r1
-; WINDOWS: __moddi3
   %add = add nsw i64 %rem, %div
 ; DARWIN: adds r0{{.*}}[[div1]]
 ; DARWIN: adc r1{{.*}}[[div2]]
-; WINDOWS: adds.w r0, r0, [[div1]]
-; WINDOWS: adc.w r1, r1, [[div2]]
+; WINDOWS: adds r0, r0, r2
+; WINDOWS: adcs r1, r3
   ret i64 %add
 }
 
@@ -179,11 +171,10 @@ entry:
 ; WINDOWS: __rt_sdiv
 ; WINDOWS: mov [[div:r[0-9]+]], r0
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem:r[0-9]+]], r0,
   %add = add nsw i16 %rem, %div
 ; EABI: add r0, r1
 ; DARWIN: add r0{{.*}}[[div1]]
-; WINDOWS: add [[rem]], [[div]]
+; WINDOWS: adds r0, r1, [[div]]
   ret i16 %add
 }
 
@@ -201,11 +192,10 @@ entry:
 ; WINDOWS: __rt_sdiv
 ; WINDOWS: mov [[div:r[0-9]+]], r0
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem:r[0-9]+]], r0,
   %add = add nsw i32 %rem, %div
 ; EABI:	add	r0{{.*}}r1
 ; DARWIN: add r0{{.*}}[[sum]]
-; WINDOWS: add [[rem]], [[div]]
+; WINDOWS: adds r0, r1, [[div]]
   ret i32 %add
 }
 
@@ -221,7 +211,7 @@ entry:
 ; WINDOWS: __rt_sdiv
   ret i32 %rem
 ; EABI:	mov	r0, r1
-; WINDOWS: mls r0, r0,
+; WINDOWS: mov  r0, r1
 }
 
 define i32 @g3(i32 %a, i32 %b) {
@@ -235,16 +225,15 @@ entry:
 ; DARWIN: __modsi3
 ; DARWIN: mov [[sum:r[0-9]+]], r0
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem:r[0-9]+]], r0,
+; WINDOWS: mov [[rem:r[0-9]+]], r1
   %rem1 = srem i32 %b, %rem
 ; EABI: __aeabi_idivmod
 ; DARWIN: __modsi3
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem1:r[0-9]+]], r0,
   %add = add nsw i32 %rem1, %rem
 ; EABI: add r0, r1, [[mod]]
 ; DARWIN: add r0{{.*}}[[sum]]
-; WINDOWS: add [[rem1]], [[rem]]
+; WINDOWS: adds r0, r1, [[rem]]
   ret i32 %add
 }
 
@@ -264,10 +253,9 @@ entry:
 ; EABI: __aeabi_idivmod
 ; DARWIN: __modsi3
 ; WINDOWS: __rt_sdiv
-; WINDOWS: mls [[rem:r[0-9]+]], r0,
   %add = add nsw i32 %rem, %div
 ; EABI: add r0, r1, [[div]]
 ; DARWIN: add r0{{.*}}[[sum]]
-; WINDOWS: add [[rem]], [[div]]
+; WINDOWS: adds r0, r1, [[div]]
   ret i32 %add
 }

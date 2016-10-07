@@ -1,8 +1,7 @@
-// RUN: mkdir -p %T/clang-move/build
-// RUN: sed 's|$test_dir|%/T/clang-move|g' %S/Inputs/database_template.json > %T/clang-move/compile_commands.json
+// RUN: mkdir -p %T/clang-move
 // RUN: cp %S/Inputs/multiple_class_test*  %T/clang-move/
 // RUN: cd %T/clang-move
-// RUN: clang-move -names="a::Move1, b::Move2,c::Move3,c::Move4" -new_cc=%T/clang-move/new_multiple_class_test.cpp -new_header=%T/clang-move/new_multiple_class_test.h -old_cc=%T/clang-move/multiple_class_test.cpp -old_header=../clang-move/multiple_class_test.h %T/clang-move/multiple_class_test.cpp
+// RUN: clang-move -names="a::Move1, b::Move2,c::Move3,c::Move4" -new_cc=%T/clang-move/new_multiple_class_test.cpp -new_header=%T/clang-move/new_multiple_class_test.h -old_cc=%T/clang-move/multiple_class_test.cpp -old_header=../clang-move/multiple_class_test.h %T/clang-move/multiple_class_test.cpp --
 // RUN: FileCheck -input-file=%T/clang-move/new_multiple_class_test.cpp -check-prefix=CHECK-NEW-TEST-CPP %s
 // RUN: FileCheck -input-file=%T/clang-move/new_multiple_class_test.h -check-prefix=CHECK-NEW-TEST-H %s
 // RUN: FileCheck -input-file=%T/clang-move/multiple_class_test.cpp -check-prefix=CHECK-OLD-TEST-CPP %s
