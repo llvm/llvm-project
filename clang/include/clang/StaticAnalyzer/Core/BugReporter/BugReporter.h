@@ -255,7 +255,7 @@ public:
   /// allows you to specify where exactly in the auto-generated path diagnostic
   /// the extra note should appear.
   void addNote(StringRef Msg, const PathDiagnosticLocation &Pos,
-                    ArrayRef<SourceRange> Ranges = {}) {
+               ArrayRef<SourceRange> Ranges) {
     PathDiagnosticNotePiece *P =
         new PathDiagnosticNotePiece(Pos, Msg);
 
