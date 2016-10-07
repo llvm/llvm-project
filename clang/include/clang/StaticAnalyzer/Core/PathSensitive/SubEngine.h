@@ -109,7 +109,8 @@ public:
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has ended. Called for both inlined and and top-level functions.
   virtual void processEndOfFunction(NodeBuilderContext& BC,
-                                    ExplodedNode *Pred) = 0;
+                                    ExplodedNode *Pred,
+                                    const ReturnStmt *RS = nullptr) = 0;
 
   // Generate the entry node of the callee.
   virtual void processCallEnter(NodeBuilderContext& BC, CallEnter CE,
