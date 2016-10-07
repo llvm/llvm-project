@@ -19,10 +19,11 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo:
 ; CHECK-O0: orr w{{.*}}, wzr, #0x10
 ; CHECK-O0: malloc
-; CHECK-O0: mov [[ID2:x[0-9]+]], x0
+; CHECK-O0: mov x19, x0
+; CHECK-O0-NOT: x19
 ; CHECK-O0: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-O0-NOT: x19
 ; CHECK-O0: strb [[ID]], [x0, #8]
-; CHECK-O0: mov x19, [[ID2]]
 ; CHECK-O0-NOT: x19
 entry:
   %call = call i8* @malloc(i64 16)
@@ -50,7 +51,7 @@ define float @caller(i8* %error_ref) {
 ; CHECK-O0: mov x19
 ; CHECK-O0: bl {{.*}}foo
 ; CHECK-O0: mov [[ID:x[0-9]+]], x19
-; CHECK-O0: cbnz [[ID]]
+; CHECK-O0: cbnz x19
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*
   store %swift_error* null, %swift_error** %error_ptr_ref
@@ -89,7 +90,7 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0: mov x19
 ; CHECK-O0: bl {{.*}}foo
 ; CHECK-O0: mov [[ID:x[0-9]+]], x19
-; CHECK-O0: cbnz [[ID]]
+; CHECK-O0: cbnz x19
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*
   br label %bb_loop
@@ -128,7 +129,7 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 
 ; CHECK-O0-LABEL: foo_if:
 ; spill x19
-; CHECK-O0: str x19
+; CHECK-O0: str x19, [sp, [[SLOT:#[0-9]+]]]
 ; CHECK-O0: cbz w0
 ; CHECK-O0: orr w{{.*}}, wzr, #0x10
 ; CHECK-O0: malloc
@@ -138,7 +139,8 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0: mov x19, [[ID]]
 ; CHECK-O0: ret
 ; reload from stack
-; CHECK-O0: ldr x19
+; CHECK-O0: ldr [[ID3:x[0-9]+]], [sp, [[SLOT]]]
+; CHECK-O0: mov x19, [[ID3]]
 ; CHECK-O0: ret
 entry:
   %cond = icmp ne i32 %cc, 0
@@ -172,18 +174,26 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 
 ; CHECK-O0-LABEL: foo_loop:
 ; spill x19
-; CHECK-O0: str x19
-; CHECk-O0: cbz
+; CHECK-O0: str x19, [sp, [[SLOT:#[0-9]+]]]
+; CHECK-O0: b [[BB1:[A-Za-z0-9_]*]]
+; CHECK-O0: [[BB1]]:
+; CHECK-O0: ldr     x0, [sp, [[SLOT]]]
+; CHECK-O0: str     x0, [sp, [[SLOT2:#[0-9]+]]]
+; CHECK-O0: cbz {{.*}}, [[BB2:[A-Za-z0-9_]*]]
 ; CHECK-O0: orr w{{.*}}, wzr, #0x10
 ; CHECK-O0: malloc
 ; CHECK-O0: mov [[ID:x[0-9]+]], x0
 ; CHECK-O0: strb w{{.*}}, [{{.*}}[[ID]], #8]
 ; spill x0
-; CHECK-O0: str x0
+; CHECK-O0: str x0, [sp, [[SLOT2]]]
+; CHECK-O0:[[BB2]]:
+; CHECK-O0: ldr     x0, [sp, [[SLOT2]]]
 ; CHECK-O0: fcmp
-; CHECK-O0: b.le
+; CHECK-O0: str     x0, [sp]
+; CHECK-O0: b.le [[BB1]]
 ; reload from stack
-; CHECK-O0: ldr x19
+; CHECK-O0: ldr [[ID3:x[0-9]+]], [sp]
+; CHECK-O0: mov x19, [[ID3]]
 ; CHECK-O0: ret
 entry:
   br label %bb_loop
@@ -272,7 +282,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0: ldrb [[CODE:w[0-9]+]]
 ; CHECK-O0: ldr [[ID:x[0-9]+]]
 ; CHECK-O0: strb [[CODE]], [{{.*}}[[ID]]]
-; CHECK_O0: bl {{.*}}free
+; CHECK-O0: bl {{.*}}free
 entry:
   %s = alloca %struct.S, align 8
   %error_ptr_ref = alloca swifterror %swift_error*
