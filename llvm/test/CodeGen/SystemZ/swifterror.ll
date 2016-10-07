@@ -16,9 +16,8 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo:
 ; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
-; CHECK-O0: lgr %r[[REG1:[0-9]+]], %r2
+; CHECK-O0: lgr %r9, %r2
 ; CHECK-O0: mvi 8(%r2), 1
-; CHECK-O0: lgr %r9, %r[[REG1]]
 entry:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
@@ -130,7 +129,8 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0: lgr %r9, %r[[REG1]]
 ; CHECK-O0: br %r14
 ; reload from stack
-; CHECK-O0: lg %r9, [[OFFS]](%r15)
+; CHECK-O0: lg %r[[REG2:[0-9]+]], [[OFFS]](%r15)
+; CHECK-O0: lgr %r9, %r[[REG2]]
 ; CHECK-O0: br %r14
 entry:
   %cond = icmp ne i32 %cc, 0
@@ -172,7 +172,8 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0: mvi 8(%r2), 1
 ; CHECK-O0: jnh
 ; reload from stack
-; CHECK-O0: lg %r9, [[OFFS:[0-9]+]](%r15)
+; CHECK-O0: lg %r[[REG2:[0-9]+]], [[OFFS:[0-9]+]](%r15)
+; CHECK-O0: lgr %r9, %r[[REG2]]
 ; CHECK-O0: br %r14
 entry:
   br label %bb_loop
