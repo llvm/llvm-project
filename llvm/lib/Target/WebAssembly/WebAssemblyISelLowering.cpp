@@ -481,11 +481,11 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-  auto *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
-
   if (!CallingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  auto *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
 
   // Set up the incoming ARGUMENTS value, which serves to represent the liveness
   // of the incoming values before they're represented by virtual registers.
@@ -525,6 +525,13 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
                     DAG.getTargetConstant(Ins.size(), DL, MVT::i32)));
     MFI->addParam(PtrVT);
   }
+
+  // Record the number and types of results.
+  SmallVector<MVT, 4> Params;
+  SmallVector<MVT, 4> Results;
+  ComputeSignatureVTs(*MF.getFunction(), DAG.getTarget(), Params, Results);
+  for (MVT VT : Results)
+    MFI->addResult(VT);
 
   return Chain;
 }

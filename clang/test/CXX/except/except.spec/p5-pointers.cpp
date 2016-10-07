@@ -41,25 +41,25 @@ void fnptrs()
 {
   // Assignment and initialization of function pointers.
   void (*t1)() throw() = &s1;    // valid
-  t1 = &s2;                      // expected-error {{not superset}} expected-error {{incompatible type}}
-  t1 = &s3;                      // expected-error {{not superset}} expected-error {{incompatible type}}
+  t1 = &s2;                      // expected-error {{not superset}}
+  t1 = &s3;                      // expected-error {{not superset}}
   void (&t2)() throw() = s2;     // expected-error {{not superset}}
   void (*t3)() throw(int) = &s2; // valid
   void (*t4)() throw(A) = &s1;   // valid
   t4 = &s3;                      // valid
   t4 = &s4;                      // valid
-  t4 = &s5;                      // expected-error {{not superset}} expected-error {{incompatible type}}
+  t4 = &s5;                      // expected-error {{not superset}}
   void (*t5)() = &s1;            // valid
   t5 = &s2;                      // valid
   t5 = &s6;                      // valid
   t5 = &s7;                      // valid
-  t1 = t3;                       // expected-error {{not superset}} expected-error {{incompatible type}}
+  t1 = t3;                       // expected-error {{not superset}}
   t3 = t1;                       // valid
   void (*t6)() throw(B1);
-  t6 = t4;                       // expected-error {{not superset}} expected-error {{incompatible type}}
+  t6 = t4;                       // expected-error {{not superset}}
   t4 = t6;                       // valid
   t5 = t1;                       // valid
-  t1 = t5;                       // expected-error {{not superset}} expected-error {{incompatible type}}
+  t1 = t5;                       // expected-error {{not superset}}
 
   // return types and arguments must match exactly, no inheritance allowed
   void (*(*t7)())() throw(B1) = &s8;       // valid

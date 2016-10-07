@@ -25,7 +25,7 @@ b:
 
 ; CHECK: i32.const $push1=, 0
 ; CHECK: i32.const $push2=, 0
-; CHECK: i32.store $drop=, 0($pop1), $pop2
+; CHECK: i32.store 0($pop1), $pop2
 define hidden i32 @c() #0 {
 entry:
   store i32 zext (i1 icmp eq (void (...)* inttoptr (i32 10 to void (...)*), void (...)* null) to i32), i32* inttoptr (i32 0 to i32 *)

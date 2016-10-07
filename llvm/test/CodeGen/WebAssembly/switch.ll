@@ -14,13 +14,13 @@ declare void @foo4()
 declare void @foo5()
 
 ; CHECK-LABEL: bar32:
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
 ; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 0{{$}}
 ; CHECK: .LBB0_2:
 ; CHECK:   call foo0@FUNCTION{{$}}
@@ -94,13 +94,13 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 }
 
 ; CHECK-LABEL: bar64:
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
-; CHECK: block{{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
+; CHECK: block   {{$}}
 ; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 0{{$}}
 ; CHECK: .LBB1_2:
 ; CHECK:   call foo0@FUNCTION{{$}}

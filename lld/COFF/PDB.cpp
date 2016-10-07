@@ -49,8 +49,11 @@ void coff::createPDB(StringRef Path) {
 
   // Should be the current time, but set 0 for reproducibilty.
   InfoBuilder.setSignature(0);
-
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
+
+  // Add an empty DPI stream.
+  auto &DbiBuilder = Builder.getDbiBuilder();
+  DbiBuilder.setVersionHeader(pdb::PdbDbiV110);
 
   // Add an empty TPI stream.
   auto &TpiBuilder = Builder.getTpiBuilder();

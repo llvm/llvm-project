@@ -5901,43 +5901,10 @@ SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
 }
 
 SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
-                                   EVT VT1, EVT VT2, EVT VT3, EVT VT4,
-                                   ArrayRef<SDValue> Ops) {
-  SDVTList VTs = getVTList(VT1, VT2, VT3, VT4);
-  return SelectNodeTo(N, MachineOpc, VTs, Ops);
-}
-
-SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
-                                   EVT VT1, EVT VT2,
-                                   SDValue Op1) {
-  SDVTList VTs = getVTList(VT1, VT2);
-  SDValue Ops[] = { Op1 };
-  return SelectNodeTo(N, MachineOpc, VTs, Ops);
-}
-
-SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
                                    EVT VT1, EVT VT2,
                                    SDValue Op1, SDValue Op2) {
   SDVTList VTs = getVTList(VT1, VT2);
   SDValue Ops[] = { Op1, Op2 };
-  return SelectNodeTo(N, MachineOpc, VTs, Ops);
-}
-
-SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
-                                   EVT VT1, EVT VT2,
-                                   SDValue Op1, SDValue Op2,
-                                   SDValue Op3) {
-  SDVTList VTs = getVTList(VT1, VT2);
-  SDValue Ops[] = { Op1, Op2, Op3 };
-  return SelectNodeTo(N, MachineOpc, VTs, Ops);
-}
-
-SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
-                                   EVT VT1, EVT VT2, EVT VT3,
-                                   SDValue Op1, SDValue Op2,
-                                   SDValue Op3) {
-  SDVTList VTs = getVTList(VT1, VT2, VT3);
-  SDValue Ops[] = { Op1, Op2, Op3 };
   return SelectNodeTo(N, MachineOpc, VTs, Ops);
 }
 
@@ -6081,19 +6048,6 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &dl,
 }
 
 MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &dl,
-                                            EVT VT1, EVT VT2) {
-  SDVTList VTs = getVTList(VT1, VT2);
-  return getMachineNode(Opcode, dl, VTs, None);
-}
-
-MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &dl,
-                                            EVT VT1, EVT VT2, SDValue Op1) {
-  SDVTList VTs = getVTList(VT1, VT2);
-  SDValue Ops[] = { Op1 };
-  return getMachineNode(Opcode, dl, VTs, Ops);
-}
-
-MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &dl,
                                             EVT VT1, EVT VT2, SDValue Op1,
                                             SDValue Op2) {
   SDVTList VTs = getVTList(VT1, VT2);
@@ -6137,13 +6091,6 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &dl,
                                             EVT VT1, EVT VT2, EVT VT3,
                                             ArrayRef<SDValue> Ops) {
   SDVTList VTs = getVTList(VT1, VT2, VT3);
-  return getMachineNode(Opcode, dl, VTs, Ops);
-}
-
-MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &dl,
-                                            EVT VT1, EVT VT2, EVT VT3, EVT VT4,
-                                            ArrayRef<SDValue> Ops) {
-  SDVTList VTs = getVTList(VT1, VT2, VT3, VT4);
   return getMachineNode(Opcode, dl, VTs, Ops);
 }
 

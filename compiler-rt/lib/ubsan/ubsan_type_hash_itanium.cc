@@ -248,9 +248,9 @@ __ubsan::DynamicTypeInfo
 __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
   VtablePrefix *Vtable = getVtablePrefix(VtablePtr);
   if (!Vtable)
-    return DynamicTypeInfo(0, 0, 0);
+    return DynamicTypeInfo(nullptr, 0, nullptr);
   if (Vtable->Offset < -VptrMaxOffsetToTop || Vtable->Offset > VptrMaxOffsetToTop)
-    return DynamicTypeInfo(0, Vtable->Offset, 0);
+    return DynamicTypeInfo(nullptr, Vtable->Offset, nullptr);
   const abi::__class_type_info *ObjectType = findBaseAtOffset(
     static_cast<const abi::__class_type_info*>(Vtable->TypeInfo),
     -Vtable->Offset);

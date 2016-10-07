@@ -1,33 +1,41 @@
 # RUN: yaml2obj %s > %t.obj
 # RUN: lld-link /debug /pdb:%t.pdb /dll /out:%t.dll /entry:DllMain %t.obj
 # RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
-# RUN:   -ipi-stream %t.pdb | FileCheck %s
+# RUN:   -dbi-stream -ipi-stream %t.pdb | FileCheck %s
 
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
 # CHECK-NEXT:     BlockSize:       4096
 # CHECK-NEXT:     FreeBlockMap:
-# CHECK-NEXT:     NumBlocks:       8
-# CHECK-NEXT:     NumDirectoryBytes: 36
+# CHECK-NEXT:     NumBlocks:       9
+# CHECK-NEXT:     NumDirectoryBytes: 40
 # CHECK-NEXT:     Unknown1:        0
 # CHECK-NEXT:     BlockMapAddr:    3
 # CHECK-NEXT:     NumDirectoryBlocks: 1
-# CHECK-NEXT:     DirectoryBlocks: [ 7 ]
+# CHECK-NEXT:     DirectoryBlocks: [ 8 ]
 # CHECK-NEXT:     NumStreams:      5
-# CHECK-NEXT:     FileSize:        32768
-# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 0, 56 ]
+# CHECK-NEXT:     FileSize:        36864
+# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 68, 56 ]
 # CHECK-NEXT:   StreamMap:
 # CHECK-NEXT:     - Stream:          [ ]
 # CHECK-NEXT:     - Stream:          [ 4 ]
-# CHECK-NEXT:     - Stream:          [ 5 ]
-# CHECK-NEXT:     - Stream:          [ ]
 # CHECK-NEXT:     - Stream:          [ 6 ]
+# CHECK-NEXT:     - Stream:          [ 5 ]
+# CHECK-NEXT:     - Stream:          [ 7 ]
 # CHECK-NEXT:   PdbStream:
 # CHECK-NEXT:     Age:             1
 # CHECK-NEXT:     Guid:            '{00000000-0000-0000-0000-000000000000}'
 # CHECK-NEXT:     Signature:       0
 # CHECK-NEXT:     Version:         VC70
 # CHECK-NEXT:     NamedStreams:
+# CHECK-NEXT:   DbiStream:
+# CHECK-NEXT:     VerHeader:       V110
+# CHECK-NEXT:     Age:             1
+# CHECK-NEXT:     BuildNumber:     0
+# CHECK-NEXT:     PdbDllVersion:   0
+# CHECK-NEXT:     PdbDllRbld:      0
+# CHECK-NEXT:     Flags:           0
+# CHECK-NEXT:     MachineType:     x86
 # CHECK-NEXT:   IpiStream:
 # CHECK-NEXT:     Version:         VC80
 # CHECK-NEXT:     Records:

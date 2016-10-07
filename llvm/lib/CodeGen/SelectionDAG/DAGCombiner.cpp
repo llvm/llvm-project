@@ -541,10 +541,6 @@ void TargetLowering::DAGCombinerInfo::AddToWorklist(SDNode *N) {
   ((DAGCombiner*)DC)->AddToWorklist(N);
 }
 
-void TargetLowering::DAGCombinerInfo::RemoveFromWorklist(SDNode *N) {
-  ((DAGCombiner*)DC)->removeFromWorklist(N);
-}
-
 SDValue TargetLowering::DAGCombinerInfo::
 CombineTo(SDNode *N, ArrayRef<SDValue> To, bool AddTo) {
   return ((DAGCombiner*)DC)->CombineTo(N, &To[0], To.size(), AddTo);

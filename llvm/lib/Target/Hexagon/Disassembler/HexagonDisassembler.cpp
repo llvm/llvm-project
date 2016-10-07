@@ -417,46 +417,46 @@ void HexagonDisassembler::adjustExtendedInstructions(MCInst &MCI,
     // GP relative instruction in the absence of the corresponding immediate
     // extender.
     switch (MCI.getOpcode()) {
-    case Hexagon::S2_storerbabs:
+    case Hexagon::PS_storerbabs:
       opcode = Hexagon::S2_storerbgp;
       break;
-    case Hexagon::S2_storerhabs:
+    case Hexagon::PS_storerhabs:
       opcode = Hexagon::S2_storerhgp;
       break;
-    case Hexagon::S2_storerfabs:
+    case Hexagon::PS_storerfabs:
       opcode = Hexagon::S2_storerfgp;
       break;
-    case Hexagon::S2_storeriabs:
+    case Hexagon::PS_storeriabs:
       opcode = Hexagon::S2_storerigp;
       break;
-    case Hexagon::S2_storerbnewabs:
+    case Hexagon::PS_storerbnewabs:
       opcode = Hexagon::S2_storerbnewgp;
       break;
-    case Hexagon::S2_storerhnewabs:
+    case Hexagon::PS_storerhnewabs:
       opcode = Hexagon::S2_storerhnewgp;
       break;
-    case Hexagon::S2_storerinewabs:
+    case Hexagon::PS_storerinewabs:
       opcode = Hexagon::S2_storerinewgp;
       break;
-    case Hexagon::S2_storerdabs:
+    case Hexagon::PS_storerdabs:
       opcode = Hexagon::S2_storerdgp;
       break;
-    case Hexagon::L4_loadrb_abs:
+    case Hexagon::PS_loadrbabs:
       opcode = Hexagon::L2_loadrbgp;
       break;
-    case Hexagon::L4_loadrub_abs:
+    case Hexagon::PS_loadrubabs:
       opcode = Hexagon::L2_loadrubgp;
       break;
-    case Hexagon::L4_loadrh_abs:
+    case Hexagon::PS_loadrhabs:
       opcode = Hexagon::L2_loadrhgp;
       break;
-    case Hexagon::L4_loadruh_abs:
+    case Hexagon::PS_loadruhabs:
       opcode = Hexagon::L2_loadruhgp;
       break;
-    case Hexagon::L4_loadri_abs:
+    case Hexagon::PS_loadriabs:
       opcode = Hexagon::L2_loadrigp;
       break;
-    case Hexagon::L4_loadrd_abs:
+    case Hexagon::PS_loadrdabs:
       opcode = Hexagon::L2_loadrdgp;
       break;
     default:
@@ -811,20 +811,20 @@ static const unsigned int StoreConditionalOpcodeData[][2] = {
 // HexagonII::INST_ICLASS_LD
 
 // HexagonII::INST_ICLASS_LD_ST_2
-static unsigned int LoadStoreOpcodeData[][2] = {{L4_loadrd_abs, 0x49c00000},
-                                                {L4_loadri_abs, 0x49800000},
-                                                {L4_loadruh_abs, 0x49600000},
-                                                {L4_loadrh_abs, 0x49400000},
-                                                {L4_loadrub_abs, 0x49200000},
-                                                {L4_loadrb_abs, 0x49000000},
-                                                {S2_storerdabs, 0x48c00000},
-                                                {S2_storerinewabs, 0x48a01000},
-                                                {S2_storerhnewabs, 0x48a00800},
-                                                {S2_storerbnewabs, 0x48a00000},
-                                                {S2_storeriabs, 0x48800000},
-                                                {S2_storerfabs, 0x48600000},
-                                                {S2_storerhabs, 0x48400000},
-                                                {S2_storerbabs, 0x48000000}};
+static unsigned int LoadStoreOpcodeData[][2] = {{PS_loadrdabs, 0x49c00000},
+                                                {PS_loadriabs, 0x49800000},
+                                                {PS_loadruhabs, 0x49600000},
+                                                {PS_loadrhabs, 0x49400000},
+                                                {PS_loadrubabs, 0x49200000},
+                                                {PS_loadrbabs, 0x49000000},
+                                                {PS_storerdabs, 0x48c00000},
+                                                {PS_storerinewabs, 0x48a01000},
+                                                {PS_storerhnewabs, 0x48a00800},
+                                                {PS_storerbnewabs, 0x48a00000},
+                                                {PS_storeriabs, 0x48800000},
+                                                {PS_storerfabs, 0x48600000},
+                                                {PS_storerhabs, 0x48400000},
+                                                {PS_storerbabs, 0x48000000}};
 static const size_t NumCondS = array_lengthof(StoreConditionalOpcodeData);
 static const size_t NumLS = array_lengthof(LoadStoreOpcodeData);
 
@@ -982,15 +982,15 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       break;
 
     // op: g16_2
-    case (Hexagon::L4_loadri_abs):
+    case (Hexagon::PS_loadriabs):
       ++shift;
     // op: g16_1
-    case Hexagon::L4_loadrh_abs:
-    case Hexagon::L4_loadruh_abs:
+    case Hexagon::PS_loadrhabs:
+    case Hexagon::PS_loadruhabs:
       ++shift;
     // op: g16_0
-    case Hexagon::L4_loadrb_abs:
-    case Hexagon::L4_loadrub_abs: {
+    case Hexagon::PS_loadrbabs:
+    case Hexagon::PS_loadrubabs: {
       // op: Rd
       Value |= insn & UINT64_C(31);
       DecodeIntRegsRegisterClass(MI, Value, 0, 0);
@@ -1001,7 +1001,7 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       break;
     }
 
-    case Hexagon::L4_loadrd_abs: {
+    case Hexagon::PS_loadrdabs: {
       Value = insn & UINT64_C(31);
       DecodeDoubleRegsRegisterClass(MI, Value, 0, 0);
       Value = (insn >> 11) & UINT64_C(49152);
@@ -1011,7 +1011,7 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       break;
     }
 
-    case Hexagon::S2_storerdabs: {
+    case Hexagon::PS_storerdabs: {
       // op: g16_3
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
@@ -1025,13 +1025,13 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     }
 
     // op: g16_2
-    case Hexagon::S2_storerinewabs:
+    case Hexagon::PS_storerinewabs:
       ++shift;
     // op: g16_1
-    case Hexagon::S2_storerhnewabs:
+    case Hexagon::PS_storerhnewabs:
       ++shift;
     // op: g16_0
-    case Hexagon::S2_storerbnewabs: {
+    case Hexagon::PS_storerbnewabs: {
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(256);
@@ -1044,14 +1044,14 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     }
 
     // op: g16_2
-    case Hexagon::S2_storeriabs:
+    case Hexagon::PS_storeriabs:
       ++shift;
     // op: g16_1
-    case Hexagon::S2_storerhabs:
-    case Hexagon::S2_storerfabs:
+    case Hexagon::PS_storerhabs:
+    case Hexagon::PS_storerfabs:
       ++shift;
     // op: g16_0
-    case Hexagon::S2_storerbabs: {
+    case Hexagon::PS_storerbabs: {
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(256);

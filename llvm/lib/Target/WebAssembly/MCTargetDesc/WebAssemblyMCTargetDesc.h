@@ -53,7 +53,9 @@ enum OperandType {
   /// 64-bit floating-point immediates.
   OPERAND_F64IMM,
   /// p2align immediate for load and store address alignment.
-  OPERAND_P2ALIGN
+  OPERAND_P2ALIGN,
+  /// signature immediate for block/loop.
+  OPERAND_SIGNATURE
 };
 
 /// WebAssembly-specific directive identifiers.
@@ -63,7 +65,7 @@ enum Directive {
   DotResult = UINT64_MAX - 1,  ///< .result
   DotLocal = UINT64_MAX - 2,   ///< .local
   DotEndFunc = UINT64_MAX - 3, ///< .endfunc
-  DotIndIdx = UINT64_MAX - 4,  /// < .indidx
+  DotIndIdx = UINT64_MAX - 4,  ///< .indidx
 };
 
 } // end namespace WebAssembly
@@ -134,9 +136,27 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
 }
 
 /// The operand number of the load or store address in load/store instructions.
-static const unsigned MemOpAddressOperandNo = 2;
-/// The operand number of the stored value in a store instruction.
-static const unsigned StoreValueOperandNo = 4;
+static const unsigned LoadAddressOperandNo = 2;
+static const unsigned StoreAddressOperandNo = 1;
+
+/// The operand number of the load or store p2align in load/store instructions.
+static const unsigned LoadP2AlignOperandNo = 3;
+static const unsigned StoreP2AlignOperandNo = 2;
+
+/// This is used to indicate block signatures.
+enum ExprType {
+  Void = 0,
+  I32  = 1,
+  I64  = 2,
+  F32  = 3,
+  F64  = 4,
+  I8x16 = 5,
+  I16x8 = 6,
+  I32x4 = 7,
+  I64x2 = 8,
+  F32x4 = 9,
+  F64x2 = 10
+};
 
 } // end namespace WebAssembly
 } // end namespace llvm

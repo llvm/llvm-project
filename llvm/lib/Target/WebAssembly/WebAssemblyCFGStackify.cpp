@@ -306,12 +306,15 @@ static bool IsChild(const MachineInstr &MI,
 }
 
 /// Insert a BLOCK marker for branches to MBB (if needed).
-static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
-                             SmallVectorImpl<MachineBasicBlock *> &ScopeTops,
-                             const WebAssemblyInstrInfo &TII,
-                             const MachineLoopInfo &MLI,
-                             MachineDominatorTree &MDT,
-                             WebAssemblyFunctionInfo &MFI) {
+static void PlaceBlockMarker(
+    MachineBasicBlock &MBB, MachineFunction &MF,
+    SmallVectorImpl<MachineBasicBlock *> &ScopeTops,
+    DenseMap<const MachineInstr *, MachineInstr *> &BlockTops,
+    DenseMap<const MachineInstr *, MachineInstr *> &LoopTops,
+    const WebAssemblyInstrInfo &TII,
+    const MachineLoopInfo &MLI,
+    MachineDominatorTree &MDT,
+    WebAssemblyFunctionInfo &MFI) {
   // First compute the nearest common dominator of all forward non-fallthrough
   // predecessors so that we minimize the time that the BLOCK is on the stack,
   // which reduces overall stack height.
@@ -347,13 +350,6 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     }
   }
 
-  // If there's a loop which ends just before MBB which contains Header, we can
-  // reuse its label instead of inserting a new BLOCK.
-  for (MachineLoop *Loop = MLI.getLoopFor(LayoutPred);
-       Loop && Loop->contains(LayoutPred); Loop = Loop->getParentLoop())
-    if (Loop && LoopBottom(Loop) == LayoutPred && Loop->contains(Header))
-      return;
-
   // Decide where in Header to put the BLOCK.
   MachineBasicBlock::iterator InsertPos;
   MachineLoop *HeaderLoop = MLI.getLoopFor(Header);
@@ -361,7 +357,8 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     // Header is the header of a loop that does not lexically contain MBB, so
     // the BLOCK needs to be above the LOOP, after any END constructs.
     InsertPos = Header->begin();
-    while (InsertPos->getOpcode() != WebAssembly::LOOP)
+    while (InsertPos->getOpcode() == WebAssembly::END_BLOCK ||
+           InsertPos->getOpcode() == WebAssembly::END_LOOP)
       ++InsertPos;
   } else {
     // Otherwise, insert the BLOCK as late in Header as we can, but before the
@@ -376,14 +373,19 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
   }
 
   // Add the BLOCK.
-  BuildMI(*Header, InsertPos, DebugLoc(), TII.get(WebAssembly::BLOCK));
+  MachineInstr *Begin = BuildMI(*Header, InsertPos, DebugLoc(),
+                                TII.get(WebAssembly::BLOCK))
+      .addImm(WebAssembly::Void);
 
   // Mark the end of the block.
   InsertPos = MBB.begin();
   while (InsertPos != MBB.end() &&
-         InsertPos->getOpcode() == WebAssembly::END_LOOP)
+         InsertPos->getOpcode() == WebAssembly::END_LOOP &&
+         LoopTops[&*InsertPos]->getParent()->getNumber() >= Header->getNumber())
     ++InsertPos;
-  BuildMI(MBB, InsertPos, DebugLoc(), TII.get(WebAssembly::END_BLOCK));
+  MachineInstr *End = BuildMI(MBB, InsertPos, DebugLoc(),
+                              TII.get(WebAssembly::END_BLOCK));
+  BlockTops[End] = Begin;
 
   // Track the farthest-spanning scope that ends at this point.
   int Number = MBB.getNumber();
@@ -396,7 +398,7 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
 static void PlaceLoopMarker(
     MachineBasicBlock &MBB, MachineFunction &MF,
     SmallVectorImpl<MachineBasicBlock *> &ScopeTops,
-    DenseMap<const MachineInstr *, const MachineBasicBlock *> &LoopTops,
+    DenseMap<const MachineInstr *, MachineInstr *> &LoopTops,
     const WebAssemblyInstrInfo &TII, const MachineLoopInfo &MLI) {
   MachineLoop *Loop = MLI.getLoopFor(&MBB);
   if (!Loop || Loop->getHeader() != &MBB)
@@ -421,12 +423,14 @@ static void PlaceLoopMarker(
   while (InsertPos != MBB.end() &&
          InsertPos->getOpcode() == WebAssembly::END_LOOP)
     ++InsertPos;
-  BuildMI(MBB, InsertPos, DebugLoc(), TII.get(WebAssembly::LOOP));
+  MachineInstr *Begin = BuildMI(MBB, InsertPos, DebugLoc(),
+                                TII.get(WebAssembly::LOOP))
+      .addImm(WebAssembly::Void);
 
   // Mark the end of the loop.
   MachineInstr *End = BuildMI(*AfterLoop, AfterLoop->begin(), DebugLoc(),
                               TII.get(WebAssembly::END_LOOP));
-  LoopTops[End] = &MBB;
+  LoopTops[End] = Begin;
 
   assert((!ScopeTops[AfterLoop->getNumber()] ||
           ScopeTops[AfterLoop->getNumber()]->getNumber() < MBB.getNumber()) &&
@@ -448,6 +452,56 @@ GetDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
   return Depth;
 }
 
+/// In normal assembly languages, when the end of a function is unreachable,
+/// because the function ends in an infinite loop or a noreturn call or similar,
+/// it isn't necessary to worry about the function return type at the end of
+/// the function, because it's never reached. However, in WebAssembly, blocks
+/// that end at the function end need to have a return type signature that
+/// matches the function signature, even though it's unreachable. This function
+/// checks for such cases and fixes up the signatures.
+static void FixEndsAtEndOfFunction(
+    MachineFunction &MF,
+    const WebAssemblyFunctionInfo &MFI,
+    DenseMap<const MachineInstr *, MachineInstr *> &BlockTops,
+    DenseMap<const MachineInstr *, MachineInstr *> &LoopTops) {
+  assert(MFI.getResults().size() <= 1);
+
+  if (MFI.getResults().empty())
+    return;
+
+  WebAssembly::ExprType retType;
+  switch (MFI.getResults().front().SimpleTy) {
+  case MVT::i32: retType = WebAssembly::I32; break;
+  case MVT::i64: retType = WebAssembly::I64; break;
+  case MVT::f32: retType = WebAssembly::F32; break;
+  case MVT::f64: retType = WebAssembly::F64; break;
+  case MVT::v16i8: retType = WebAssembly::I8x16; break;
+  case MVT::v8i16: retType = WebAssembly::I16x8; break;
+  case MVT::v4i32: retType = WebAssembly::I32x4; break;
+  case MVT::v2i64: retType = WebAssembly::I64x2; break;
+  case MVT::v4f32: retType = WebAssembly::F32x4; break;
+  case MVT::v2f64: retType = WebAssembly::F64x2; break;
+  default: llvm_unreachable("unexpected return type");
+  }
+
+  for (MachineBasicBlock &MBB : reverse(MF)) {
+    for (MachineInstr &MI : reverse(MBB)) {
+      if (MI.isPosition() || MI.isDebugValue())
+        continue;
+      if (MI.getOpcode() == WebAssembly::END_BLOCK) {
+        BlockTops[&MI]->getOperand(0).setImm(int32_t(retType));
+        continue;
+      }
+      if (MI.getOpcode() == WebAssembly::END_LOOP) {
+        LoopTops[&MI]->getOperand(0).setImm(int32_t(retType));
+        continue;
+      }
+      // Something other than an `end`. We're done.
+      return;
+    }
+  }
+}
+
 /// Insert LOOP and BLOCK markers at appropriate places.
 static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
                          const WebAssemblyInstrInfo &TII,
@@ -460,15 +514,18 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
   // we may insert at the end.
   SmallVector<MachineBasicBlock *, 8> ScopeTops(MF.getNumBlockIDs() + 1);
 
-  // For eacn LOOP_END, the corresponding LOOP.
-  DenseMap<const MachineInstr *, const MachineBasicBlock *> LoopTops;
+  // For each LOOP_END, the corresponding LOOP.
+  DenseMap<const MachineInstr *, MachineInstr *> LoopTops;
+
+  // For each END_BLOCK, the corresponding BLOCK.
+  DenseMap<const MachineInstr *, MachineInstr *> BlockTops;
 
   for (auto &MBB : MF) {
     // Place the LOOP for MBB if MBB is the header of a loop.
     PlaceLoopMarker(MBB, MF, ScopeTops, LoopTops, TII, MLI);
 
     // Place the BLOCK for MBB if MBB is branched to from above.
-    PlaceBlockMarker(MBB, MF, ScopeTops, TII, MLI, MDT, MFI);
+    PlaceBlockMarker(MBB, MF, ScopeTops, BlockTops, LoopTops, TII, MLI, MDT, MFI);
   }
 
   // Now rewrite references to basic blocks to be depth immediates.
@@ -477,21 +534,19 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
     for (auto &MI : reverse(MBB)) {
       switch (MI.getOpcode()) {
       case WebAssembly::BLOCK:
-        assert(ScopeTops[Stack.back()->getNumber()] == &MBB &&
+        assert(ScopeTops[Stack.back()->getNumber()]->getNumber() <= MBB.getNumber() &&
                "Block should be balanced");
         Stack.pop_back();
         break;
       case WebAssembly::LOOP:
         assert(Stack.back() == &MBB && "Loop top should be balanced");
         Stack.pop_back();
-        Stack.pop_back();
         break;
       case WebAssembly::END_BLOCK:
         Stack.push_back(&MBB);
         break;
       case WebAssembly::END_LOOP:
-        Stack.push_back(&MBB);
-        Stack.push_back(LoopTops[&MI]);
+        Stack.push_back(LoopTops[&MI]->getParent());
         break;
       default:
         if (MI.isTerminator()) {
@@ -510,6 +565,10 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
     }
   }
   assert(Stack.empty() && "Control flow should be balanced");
+
+  // Fix up block/loop signatures at the end of the function to conform to
+  // WebAssembly's rules.
+  FixEndsAtEndOfFunction(MF, MFI, BlockTops, LoopTops);
 }
 
 bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {

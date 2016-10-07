@@ -19,7 +19,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; The offset should not be folded into the store.
 ; CHECK: i32.const $push{{[0-9]+}}=, args+128
 ; CHECK: i32.add
-; CHECK: i32.store $drop=, 0(
+; CHECK: i32.store 0(
   %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @args, i32 0, i32 %i.04
   store i32 1, i32* %arrayidx, align 4, !tbaa !1
   %inc = add nuw nsw i32 %i.04, 1

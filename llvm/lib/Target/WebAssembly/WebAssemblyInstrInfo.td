@@ -89,6 +89,12 @@ def P2Align : Operand<i32> {
 }
 } // OperandType = "OPERAND_P2ALIGN"
 
+let OperandType = "OPERAND_SIGNATURE" in {
+def Signature : Operand<i32> {
+  let PrintMethod = "printWebAssemblySignatureOperand";
+}
+} // OperandType = "OPERAND_SIGNATURE"
+
 } // OperandNamespace = "WebAssembly"
 
 //===----------------------------------------------------------------------===//
