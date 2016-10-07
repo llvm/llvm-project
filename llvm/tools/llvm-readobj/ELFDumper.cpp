@@ -56,6 +56,7 @@ using namespace ELF;
   typedef typename ELFO::Elf_Dyn_Range Elf_Dyn_Range;                          \
   typedef typename ELFO::Elf_Rel Elf_Rel;                                      \
   typedef typename ELFO::Elf_Rela Elf_Rela;                                    \
+  typedef typename ELFO::Elf_Rel_Range Elf_Rel_Range;                          \
   typedef typename ELFO::Elf_Rela_Range Elf_Rela_Range;                        \
   typedef typename ELFO::Elf_Phdr Elf_Phdr;                                    \
   typedef typename ELFO::Elf_Half Elf_Half;                                    \
@@ -63,6 +64,12 @@ using namespace ELF;
   typedef typename ELFO::Elf_Word Elf_Word;                                    \
   typedef typename ELFO::Elf_Hash Elf_Hash;                                    \
   typedef typename ELFO::Elf_GnuHash Elf_GnuHash;                              \
+  typedef typename ELFO::Elf_Sym_Range Elf_Sym_Range;                          \
+  typedef typename ELFO::Elf_Versym Elf_Versym;                                \
+  typedef typename ELFO::Elf_Verneed Elf_Verneed;                              \
+  typedef typename ELFO::Elf_Vernaux Elf_Vernaux;                              \
+  typedef typename ELFO::Elf_Verdef Elf_Verdef;                                \
+  typedef typename ELFO::Elf_Verdaux Elf_Verdaux;                              \
   typedef typename ELFO::uintX_t uintX_t;
 
 namespace {
@@ -130,28 +137,7 @@ public:
 
 private:
   std::unique_ptr<DumpStyle<ELFT>> ELFDumperStyle;
-  typedef ELFFile<ELFT> ELFO;
-  typedef typename ELFO::Elf_Shdr Elf_Shdr;
-  typedef typename ELFO::Elf_Sym Elf_Sym;
-  typedef typename ELFO::Elf_Sym_Range Elf_Sym_Range;
-  typedef typename ELFO::Elf_Dyn Elf_Dyn;
-  typedef typename ELFO::Elf_Dyn_Range Elf_Dyn_Range;
-  typedef typename ELFO::Elf_Rel Elf_Rel;
-  typedef typename ELFO::Elf_Rela Elf_Rela;
-  typedef typename ELFO::Elf_Rel_Range Elf_Rel_Range;
-  typedef typename ELFO::Elf_Rela_Range Elf_Rela_Range;
-  typedef typename ELFO::Elf_Phdr Elf_Phdr;
-  typedef typename ELFO::Elf_Half Elf_Half;
-  typedef typename ELFO::Elf_Hash Elf_Hash;
-  typedef typename ELFO::Elf_GnuHash Elf_GnuHash;
-  typedef typename ELFO::Elf_Ehdr Elf_Ehdr;
-  typedef typename ELFO::Elf_Word Elf_Word;
-  typedef typename ELFO::uintX_t uintX_t;
-  typedef typename ELFO::Elf_Versym Elf_Versym;
-  typedef typename ELFO::Elf_Verneed Elf_Verneed;
-  typedef typename ELFO::Elf_Vernaux Elf_Vernaux;
-  typedef typename ELFO::Elf_Verdef Elf_Verdef;
-  typedef typename ELFO::Elf_Verdaux Elf_Verdaux;
+  TYPEDEF_ELF_TYPES(ELFT)
 
   DynRegionInfo checkDRI(DynRegionInfo DRI) {
     if (DRI.Addr < Obj->base() ||
@@ -1889,14 +1875,8 @@ template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
 namespace {
 template <class ELFT> class MipsGOTParser {
 public:
-  typedef object::ELFFile<ELFT> ELFO;
-  typedef typename ELFO::Elf_Shdr Elf_Shdr;
-  typedef typename ELFO::Elf_Sym Elf_Sym;
-  typedef typename ELFO::Elf_Dyn_Range Elf_Dyn_Range;
+  TYPEDEF_ELF_TYPES(ELFT)
   typedef typename ELFO::Elf_Addr GOTEntry;
-  typedef typename ELFO::Elf_Rel Elf_Rel;
-  typedef typename ELFO::Elf_Rela Elf_Rela;
-
   MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
                 Elf_Dyn_Range DynTable, ScopedPrinter &W);
 
@@ -2082,19 +2062,19 @@ template <class ELFT> void MipsGOTParser<ELFT>::parsePLT() {
 
     switch (PLTRelShdr->sh_type) {
     case ELF::SHT_REL:
-      for (const Elf_Rel *RI = Obj->rel_begin(PLTRelShdr),
-                         *RE = Obj->rel_end(PLTRelShdr);
-           RI != RE && It != PLTEnd; ++RI, ++It) {
-        const Elf_Sym *Sym = Obj->getRelocationSymbol(&*RI, SymTable);
+      for (const Elf_Rel &Rel : Obj->rels(PLTRelShdr)) {
+        const Elf_Sym *Sym = Obj->getRelocationSymbol(&Rel, SymTable);
         printPLTEntry(PLTShdr->sh_addr, PLTBegin, It, StrTable, Sym);
+        if (++It == PLTEnd)
+          break;
       }
       break;
     case ELF::SHT_RELA:
-      for (const Elf_Rela *RI = Obj->rela_begin(PLTRelShdr),
-                          *RE = Obj->rela_end(PLTRelShdr);
-           RI != RE && It != PLTEnd; ++RI, ++It) {
-        const Elf_Sym *Sym = Obj->getRelocationSymbol(&*RI, SymTable);
+      for (const Elf_Rela &Rel : Obj->relas(PLTRelShdr)) {
+        const Elf_Sym *Sym = Obj->getRelocationSymbol(&Rel, SymTable);
         printPLTEntry(PLTShdr->sh_addr, PLTBegin, It, StrTable, Sym);
+        if (++It == PLTEnd)
+          break;
       }
       break;
     }
@@ -3513,7 +3493,7 @@ template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
         const Elf_Shdr *SymSec = unwrapOrError(
             Obj->getSection(&Sym, Symtab, this->dumper()->getShndxTable()));
         if (SymSec == &Sec)
-          printSymbol(Obj, &Sym, Obj->symbol_begin(Symtab), StrTable, false);
+          printSymbol(Obj, &Sym, Obj->symbols(Symtab).begin(), StrTable, false);
       }
     }
 

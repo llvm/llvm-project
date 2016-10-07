@@ -381,6 +381,10 @@ public:
   /// target.
   bool shouldBuildLookupTables() const;
 
+  /// \brief Return true if switches should be turned into lookup tables
+  /// containing this constant value for the target.
+  bool shouldBuildLookupTablesForConstant(Constant *C) const;
+
   /// \brief Don't restrict interleaved unrolling to small loops.
   bool enableAggressiveInterleaving(bool LoopHasReductions) const;
 
@@ -703,6 +707,7 @@ public:
   virtual unsigned getJumpBufAlignment() = 0;
   virtual unsigned getJumpBufSize() = 0;
   virtual bool shouldBuildLookupTables() = 0;
+  virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
@@ -887,6 +892,9 @@ public:
   unsigned getJumpBufSize() override { return Impl.getJumpBufSize(); }
   bool shouldBuildLookupTables() override {
     return Impl.shouldBuildLookupTables();
+  }
+  bool shouldBuildLookupTablesForConstant(Constant *C) override {
+    return Impl.shouldBuildLookupTablesForConstant(C);
   }
   bool enableAggressiveInterleaving(bool LoopHasReductions) override {
     return Impl.enableAggressiveInterleaving(LoopHasReductions);

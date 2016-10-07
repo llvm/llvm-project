@@ -242,20 +242,6 @@ def TEX_SHADOW_ARRAY : PatLeaf<
   }]
 >;
 
-def TEX_MSAA : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return TType == 14;
-  }]
->;
-
-def TEX_ARRAY_MSAA : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return TType == 15;
-  }]
->;
-
 class EG_CF_RAT <bits <8> cfinst, bits <6> ratinst, bits<4> ratid, bits<4> mask,
                  dag outs, dag ins, string asm, list<dag> pattern> :
     InstR600ISA <outs, ins, asm, pattern>,

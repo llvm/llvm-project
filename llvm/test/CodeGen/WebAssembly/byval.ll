@@ -31,10 +31,10 @@ define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L2]], $pop[[L3]]
  ; Ensure SP is stored back before the call
  ; CHECK-NEXT: tee_local $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
- ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L4]]), $pop[[L10]]{{$}}
+ ; CHECK-NEXT: i32.store __stack_pointer($pop[[L4]]), $pop[[L10]]{{$}}
  ; Copy the SmallStruct argument to the stack (SP+12, original SP-4)
  ; CHECK-NEXT: i32.load $push[[L0:.+]]=, 0($0)
- ; CHECK-NEXT: i32.store $drop=, 12($[[SP]]), $pop[[L0]]
+ ; CHECK-NEXT: i32.store 12($[[SP]]), $pop[[L0]]
  ; Pass a pointer to the stack slot to the function
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 12{{$}}
  ; CHECK-NEXT: i32.add $push[[ARG:.+]]=, $[[SP]], $pop[[L5]]{{$}}
@@ -44,7 +44,7 @@ define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK-NEXT: i32.const $push[[L7:.+]]=, 0
  ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 16
  ; CHECK-NEXT: i32.add $push[[L8:.+]]=, $[[SP]], $pop[[L6]]
- ; CHECK-NEXT: i32.store {{.*}}=, __stack_pointer($pop[[L7]]), $pop[[L8]]
+ ; CHECK-NEXT: i32.store __stack_pointer($pop[[L7]]), $pop[[L8]]
  ; CHECK-NEXT: return
  ret void
 }
@@ -56,10 +56,10 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, {{.+}}, $pop[[L1]]
  ; CHECK-NEXT: tee_local $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
- ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop{{.+}}), $pop[[L10]]{{$}}
+ ; CHECK-NEXT: i32.store __stack_pointer($pop{{.+}}), $pop[[L10]]{{$}}
  ; Copy the SmallStruct argument to the stack (SP+8, original SP-8)
  ; CHECK-NEXT: i32.load $push[[L0:.+]]=, 0($0){{$}}
- ; CHECK-NEXT: i32.store $drop=, 8($[[SP]]), $pop[[L0]]{{$}}
+ ; CHECK-NEXT: i32.store 8($[[SP]]), $pop[[L0]]{{$}}
  ; Pass a pointer to the stack slot to the function
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 8{{$}}
  ; CHECK-NEXT: i32.add $push[[ARG:.+]]=, $[[SP]], $pop[[L5]]{{$}}
@@ -75,11 +75,11 @@ define void @byval_arg_double(%AlignedStruct* %ptr) {
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L14:.+]]=, {{.+}}, $pop[[L1]]
  ; CHECK-NEXT: tee_local $push[[L13:.+]]=, $[[SP:.+]]=, $pop[[L14]]
- ; CHECK-NEXT: i32.store $drop=, {{.+}}, $pop[[L13]]
+ ; CHECK-NEXT: i32.store {{.+}}, $pop[[L13]]
  ; Copy the AlignedStruct argument to the stack (SP+0, original SP-16)
  ; Just check the last load/store pair of the memcpy
  ; CHECK: i64.load $push[[L4:.+]]=, 0($0)
- ; CHECK-NEXT: i64.store $drop=, 0($[[SP]]), $pop[[L4]]
+ ; CHECK-NEXT: i64.store 0($[[SP]]), $pop[[L4]]
  ; Pass a pointer to the stack slot to the function
  ; CHECK-NEXT: call ext_byval_func_alignedstruct@FUNCTION, $[[SP]]
  tail call void @ext_byval_func_alignedstruct(%AlignedStruct* byval %ptr)
@@ -119,7 +119,7 @@ define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
 ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 131072
 ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L2]], $pop[[L3]]
 ; CHECK-NEXT: tee_local $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
-; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L4]]), $pop[[L10]]{{$}}
+; CHECK-NEXT: i32.store __stack_pointer($pop[[L4]]), $pop[[L10]]{{$}}
 ; CHECK-NEXT: i32.const $push[[L0:.+]]=, 131072
 ; CHECK-NEXT: i32.call       $push[[L11:.+]]=, memcpy@FUNCTION, $[[SP]], ${{.+}}, $pop{{.+}}
 ; CHECK-NEXT: tee_local      $push[[L9:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}

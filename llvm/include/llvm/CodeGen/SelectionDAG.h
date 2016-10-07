@@ -1031,16 +1031,10 @@ public:
                        EVT VT2, ArrayRef<SDValue> Ops);
   SDNode *SelectNodeTo(SDNode *N, unsigned TargetOpc, EVT VT1,
                        EVT VT2, EVT VT3, ArrayRef<SDValue> Ops);
-  SDNode *SelectNodeTo(SDNode *N, unsigned MachineOpc, EVT VT1,
-                       EVT VT2, EVT VT3, EVT VT4, ArrayRef<SDValue> Ops);
   SDNode *SelectNodeTo(SDNode *N, unsigned TargetOpc, EVT VT1,
                        EVT VT2, SDValue Op1);
   SDNode *SelectNodeTo(SDNode *N, unsigned TargetOpc, EVT VT1,
                        EVT VT2, SDValue Op1, SDValue Op2);
-  SDNode *SelectNodeTo(SDNode *N, unsigned TargetOpc, EVT VT1,
-                       EVT VT2, SDValue Op1, SDValue Op2, SDValue Op3);
-  SDNode *SelectNodeTo(SDNode *N, unsigned TargetOpc, EVT VT1,
-                       EVT VT2, EVT VT3, SDValue Op1, SDValue Op2, SDValue Op3);
   SDNode *SelectNodeTo(SDNode *N, unsigned TargetOpc, SDVTList VTs,
                        ArrayRef<SDValue> Ops);
 
@@ -1065,10 +1059,6 @@ public:
   MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, EVT VT,
                                 ArrayRef<SDValue> Ops);
   MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, EVT VT1,
-                                EVT VT2);
-  MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, EVT VT1,
-                                EVT VT2, SDValue Op1);
-  MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, EVT VT1,
                                 EVT VT2, SDValue Op1, SDValue Op2);
   MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, EVT VT1,
                                 EVT VT2, SDValue Op1, SDValue Op2, SDValue Op3);
@@ -1081,9 +1071,6 @@ public:
                                 SDValue Op3);
   MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, EVT VT1,
                                 EVT VT2, EVT VT3, ArrayRef<SDValue> Ops);
-  MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, EVT VT1,
-                                EVT VT2, EVT VT3, EVT VT4,
-                                ArrayRef<SDValue> Ops);
   MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl,
                                 ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
   MachineSDNode *getMachineNode(unsigned Opcode, const SDLoc &dl, SDVTList VTs,

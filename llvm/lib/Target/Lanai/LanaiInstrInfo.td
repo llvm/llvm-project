@@ -115,9 +115,6 @@ def imm10 : Operand<i32>, PatLeaf<(imm), [{
   let ParserMatchClass = Imm10AsmOperand;
 }
 
-def immZExt21 : PatLeaf<(imm),
-                        [{return isUInt<21>(N->getZExtValue()); }], LO21>;
-
 def LoImm16AsmOperand : AsmOperandClass { let Name = "LoImm16"; }
 def i32lo16z : Operand<i32>, PatLeaf<(i32 imm), [{
     // i32lo16 predicate - true if the 32-bit immediate has only rightmost 16

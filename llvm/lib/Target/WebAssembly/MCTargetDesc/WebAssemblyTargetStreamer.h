@@ -39,8 +39,8 @@ public:
   virtual void emitEndFunc() = 0;
   /// .functype
   virtual void emitIndirectFunctionType(StringRef name,
-                                        SmallVectorImpl<MVT> &SignatureVTs,
-                                        size_t NumResults) {
+                                        SmallVectorImpl<MVT> &Params,
+                                        SmallVectorImpl<MVT> &Results) {
     llvm_unreachable("emitIndirectFunctionType not implemented");
   }
   /// .indidx
@@ -59,8 +59,8 @@ public:
   void emitLocal(ArrayRef<MVT> Types) override;
   void emitEndFunc() override;
   void emitIndirectFunctionType(StringRef name,
-                                SmallVectorImpl<MVT> &SignatureVTs,
-                                size_t NumResults) override;
+                                SmallVectorImpl<MVT> &Params,
+                                SmallVectorImpl<MVT> &Results) override;
   void emitIndIdx(const MCExpr *Value) override;
 };
 

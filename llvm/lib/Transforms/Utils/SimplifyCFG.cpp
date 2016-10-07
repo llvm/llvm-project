@@ -4425,18 +4425,25 @@ static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
 
 /// Return true if the backend will be able to handle
 /// initializing an array of constants like C.
-static bool ValidLookupTableConstant(Constant *C) {
+static bool ValidLookupTableConstant(Constant *C, const TargetTransformInfo &TTI) {
   if (C->isThreadDependent())
     return false;
   if (C->isDLLImportDependent())
     return false;
 
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
-    return CE->isGEPWithNoNotionalOverIndexing();
+  if (!isa<ConstantFP>(C) && !isa<ConstantInt>(C) &&
+      !isa<ConstantPointerNull>(C) && !isa<GlobalValue>(C) &&
+      !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
+    return false;
 
-  return isa<ConstantFP>(C) || isa<ConstantInt>(C) ||
-         isa<ConstantPointerNull>(C) || isa<GlobalValue>(C) ||
-         isa<UndefValue>(C);
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
+    if (!CE->isGEPWithNoNotionalOverIndexing())
+      return false;
+
+  if (!TTI.shouldBuildLookupTablesForConstant(C))
+    return false;
+
+  return true;
 }
 
 /// If V is a Constant, return it. Otherwise, try to look up
@@ -4490,8 +4497,8 @@ ConstantFold(Instruction *I, const DataLayout &DL,
 static bool
 GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
                BasicBlock **CommonDest,
-               SmallVectorImpl<std::pair<PHINode *, Constant *>> &Res,
-               const DataLayout &DL) {
+               SmallVectorImpl<std::pair<PHINode *, Constant *> > &Res,
+               const DataLayout &DL, const TargetTransformInfo &TTI) {
   // The block from which we enter the common destination.
   BasicBlock *Pred = SI->getParent();
 
@@ -4503,7 +4510,7 @@ GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
        ++I) {
     if (TerminatorInst *T = dyn_cast<TerminatorInst>(I)) {
       // If the terminator is a simple branch, continue to the next block.
-      if (T->getNumSuccessors() != 1)
+      if (T->getNumSuccessors() != 1 || T->isExceptional())
         return false;
       Pred = CaseDest;
       CaseDest = T->getSuccessor(0);
@@ -4553,7 +4560,7 @@ GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
       return false;
 
     // Be conservative about which kinds of constants we support.
-    if (!ValidLookupTableConstant(ConstVal))
+    if (!ValidLookupTableConstant(ConstVal, TTI))
       return false;
 
     Res.push_back(std::make_pair(PHI, ConstVal));
@@ -4585,14 +4592,15 @@ static bool InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
                                   BasicBlock *&CommonDest,
                                   SwitchCaseResultVectorTy &UniqueResults,
                                   Constant *&DefaultResult,
-                                  const DataLayout &DL) {
+                                  const DataLayout &DL,
+                                  const TargetTransformInfo &TTI) {
   for (auto &I : SI->cases()) {
     ConstantInt *CaseVal = I.getCaseValue();
 
     // Resulting value at phi nodes for this case value.
     SwitchCaseResultsTy Results;
     if (!GetCaseResults(SI, CaseVal, I.getCaseSuccessor(), &CommonDest, Results,
-                        DL))
+                        DL, TTI))
       return false;
 
     // Only one value per case is permitted
@@ -4610,7 +4618,7 @@ static bool InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
   SmallVector<std::pair<PHINode *, Constant *>, 1> DefaultResults;
   BasicBlock *DefaultDest = SI->getDefaultDest();
   GetCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest, DefaultResults,
-                 DL);
+                 DL, TTI);
   // If the default value is not found abort unless the default destination
   // is unreachable.
   DefaultResult =
@@ -4689,7 +4697,8 @@ static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
 /// phi nodes in a common successor block with only two different
 /// constant values, replace the switch with select.
 static bool SwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
-                           AssumptionCache *AC, const DataLayout &DL) {
+                           AssumptionCache *AC, const DataLayout &DL,
+                           const TargetTransformInfo &TTI) {
   Value *const Cond = SI->getCondition();
   PHINode *PHI = nullptr;
   BasicBlock *CommonDest = nullptr;
@@ -4697,7 +4706,7 @@ static bool SwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   SwitchCaseResultVectorTy UniqueResults;
   // Collect all the cases that will deliver the same value from the switch.
   if (!InitializeUniqueCases(SI, PHI, CommonDest, UniqueResults, DefaultResult,
-                             DL))
+                             DL, TTI))
     return false;
   // Selects choose between maximum two values.
   if (UniqueResults.size() != 2)
@@ -5135,7 +5144,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     typedef SmallVector<std::pair<PHINode *, Constant *>, 4> ResultsTy;
     ResultsTy Results;
     if (!GetCaseResults(SI, CaseVal, CI.getCaseSuccessor(), &CommonDest,
-                        Results, DL))
+                        Results, DL, TTI))
       return false;
 
     // Append the result from this case to the list for each phi.
@@ -5161,8 +5170,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // If the table has holes, we need a constant result for the default case
   // or a bitmask that fits in a register.
   SmallVector<std::pair<PHINode *, Constant *>, 4> DefaultResultsList;
-  bool HasDefaultResults = GetCaseResults(SI, nullptr, SI->getDefaultDest(),
-                                          &CommonDest, DefaultResultsList, DL);
+  bool HasDefaultResults =
+      GetCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest,
+                     DefaultResultsList, DL, TTI);
 
   bool NeedMask = (TableHasHoles && !HasDefaultResults);
   if (NeedMask) {
@@ -5458,7 +5468,7 @@ bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (EliminateDeadSwitchCases(SI, AC, DL))
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
-  if (SwitchToSelect(SI, Builder, AC, DL))
+  if (SwitchToSelect(SI, Builder, AC, DL, TTI))
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
   if (ForwardSwitchConditionToPHI(SI))

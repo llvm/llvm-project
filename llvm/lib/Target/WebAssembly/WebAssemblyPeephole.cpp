@@ -119,25 +119,6 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       default:
         break;
-      case WebAssembly::STORE8_I32:
-      case WebAssembly::STORE16_I32:
-      case WebAssembly::STORE8_I64:
-      case WebAssembly::STORE16_I64:
-      case WebAssembly::STORE32_I64:
-      case WebAssembly::STORE_F32:
-      case WebAssembly::STORE_F64:
-      case WebAssembly::STORE_I32:
-      case WebAssembly::STORE_I64: {
-        // Store instructions return their value operand. If we ended up using
-        // the same register for both, replace it with a dead def so that it
-        // can use $drop instead.
-        MachineOperand &MO = MI.getOperand(0);
-        unsigned OldReg = MO.getReg();
-        unsigned NewReg =
-            MI.getOperand(WebAssembly::StoreValueOperandNo).getReg();
-        Changed |= MaybeRewriteToDrop(OldReg, NewReg, MO, MFI, MRI);
-        break;
-      }
       case WebAssembly::CALL_I32:
       case WebAssembly::CALL_I64: {
         MachineOperand &Op1 = MI.getOperand(1);

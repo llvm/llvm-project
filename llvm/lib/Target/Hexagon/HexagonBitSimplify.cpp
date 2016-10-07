@@ -16,12 +16,16 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+
+static cl::opt<bool> PreserveTiedOps("hexbit-keep-tied", cl::Hidden,
+  cl::init(true), cl::desc("Preserve subregisters in tied operands"));
 
 namespace llvm {
   void initializeHexagonBitSimplifyPass(PassRegistry& Registry);
@@ -187,6 +191,8 @@ namespace {
     MachineDominatorTree *MDT;
 
     bool visitBlock(MachineBasicBlock &B, Transformation &T, RegisterSet &AVs);
+    static bool hasTiedUse(unsigned Reg, MachineRegisterInfo &MRI,
+        unsigned NewSub = Hexagon::NoSubRegister);
   };
 
   char HexagonBitSimplify::ID = 0;
@@ -328,6 +334,8 @@ bool HexagonBitSimplify::replaceRegWithSub(unsigned OldR, unsigned NewR,
   if (!TargetRegisterInfo::isVirtualRegister(OldR) ||
       !TargetRegisterInfo::isVirtualRegister(NewR))
     return false;
+  if (hasTiedUse(OldR, MRI, NewSR))
+    return false;
   auto Begin = MRI.use_begin(OldR), End = MRI.use_end();
   decltype(End) NextI;
   for (auto I = Begin; I != End; I = NextI) {
@@ -343,6 +351,8 @@ bool HexagonBitSimplify::replaceSubWithSub(unsigned OldR, unsigned OldSR,
       unsigned NewR, unsigned NewSR, MachineRegisterInfo &MRI) {
   if (!TargetRegisterInfo::isVirtualRegister(OldR) ||
       !TargetRegisterInfo::isVirtualRegister(NewR))
+    return false;
+  if (OldSR != NewSR && hasTiedUse(OldR, MRI, NewSR))
     return false;
   auto Begin = MRI.use_begin(OldR), End = MRI.use_end();
   decltype(End) NextI;
@@ -894,6 +904,16 @@ bool HexagonBitSimplify::isTransparentCopy(const BitTracker::RegisterRef &RD,
   return DRC == getFinalVRegClass(RS, MRI);
 }
 
+
+bool HexagonBitSimplify::hasTiedUse(unsigned Reg, MachineRegisterInfo &MRI,
+      unsigned NewSub) {
+  if (!PreserveTiedOps)
+    return false;
+  return any_of(MRI.use_operands(Reg),
+                [NewSub] (const MachineOperand &Op) -> bool {
+                  return Op.getSubReg() != NewSub && Op.isTied();
+                });
+}
 
 //
 // Dead code elimination

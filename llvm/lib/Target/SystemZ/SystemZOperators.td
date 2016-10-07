@@ -387,15 +387,6 @@ def zext8  : PatFrag<(ops node:$src), (and node:$src, 0xff)>;
 def zext16 : PatFrag<(ops node:$src), (and node:$src, 0xffff)>;
 def zext32 : PatFrag<(ops node:$src), (zext (i32 node:$src))>;
 
-// Match extensions of an i32 to an i64, followed by an AND of the low
-// i8 or i16 part.
-def zext8dbl : PatFrag<(ops node:$src), (zext8 (anyext node:$src))>;
-def zext16dbl : PatFrag<(ops node:$src), (zext16 (anyext node:$src))>;
-
-// Typed floating-point loads.
-def loadf32 : PatFrag<(ops node:$src), (f32 (load node:$src))>;
-def loadf64 : PatFrag<(ops node:$src), (f64 (load node:$src))>;
-
 // Extending loads in which the extension type can be signed.
 def asextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
   unsigned Type = cast<LoadSDNode>(N)->getExtensionType();

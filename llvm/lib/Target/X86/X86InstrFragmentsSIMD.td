@@ -29,7 +29,6 @@ def MMX_X86movw2d : SDNode<"X86ISD::MMX_MOVW2D", SDTypeProfile<1, 1,
 def load_mmx : PatFrag<(ops node:$ptr), (x86mmx (load node:$ptr))>;
 def load_mvmmx : PatFrag<(ops node:$ptr),
                          (x86mmx (MMX_X86movw2d (load node:$ptr)))>;
-def bc_mmx  : PatFrag<(ops node:$in), (x86mmx  (bitconvert node:$in))>;
 
 //===----------------------------------------------------------------------===//
 // SSE specific DAG Nodes.
@@ -613,9 +612,6 @@ def loadv4i64    : PatFrag<(ops node:$ptr), (v4i64 (load node:$ptr))>;
 // 512-bit load pattern fragments
 def loadv16f32   : PatFrag<(ops node:$ptr), (v16f32 (load node:$ptr))>;
 def loadv8f64    : PatFrag<(ops node:$ptr), (v8f64 (load node:$ptr))>;
-def loadv64i8    : PatFrag<(ops node:$ptr), (v64i8 (load node:$ptr))>;
-def loadv32i16   : PatFrag<(ops node:$ptr), (v32i16 (load node:$ptr))>;
-def loadv16i32   : PatFrag<(ops node:$ptr), (v16i32 (load node:$ptr))>;
 def loadv8i64    : PatFrag<(ops node:$ptr), (v8i64 (load node:$ptr))>;
 
 // 128-/256-/512-bit extload pattern fragments
@@ -686,8 +682,6 @@ def alignedloadv4i64 : PatFrag<(ops node:$ptr),
 // 512-bit aligned load pattern fragments
 def alignedloadv16f32 : PatFrag<(ops node:$ptr),
                                 (v16f32 (alignedload512 node:$ptr))>;
-def alignedloadv16i32 : PatFrag<(ops node:$ptr),
-                                (v16i32 (alignedload512 node:$ptr))>;
 def alignedloadv8f64  : PatFrag<(ops node:$ptr),
                                 (v8f64  (alignedload512 node:$ptr))>;
 def alignedloadv8i64  : PatFrag<(ops node:$ptr),
@@ -703,9 +697,6 @@ def memop : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   return    Subtarget->hasSSEUnalignedMem()
          || cast<LoadSDNode>(N)->getAlignment() >= 16;
 }]>;
-
-def memopfsf32 : PatFrag<(ops node:$ptr), (f32   (memop node:$ptr))>;
-def memopfsf64 : PatFrag<(ops node:$ptr), (f64   (memop node:$ptr))>;
 
 // 128-bit memop pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64

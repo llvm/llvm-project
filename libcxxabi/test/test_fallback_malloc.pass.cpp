@@ -16,7 +16,7 @@ typedef std::deque<void *> container;
 
 // #define  DEBUG_FALLBACK_MALLOC
 #define INSTRUMENT_FALLBACK_MALLOC
-#include "../src/fallback_malloc.ipp"
+#include "../src/fallback_malloc.cpp"
 
 container alloc_series ( size_t sz ) {
     container ptrs;

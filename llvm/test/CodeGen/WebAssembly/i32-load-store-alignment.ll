@@ -117,7 +117,7 @@ define i16 @ldi16_a4(i16 *%p) {
 
 ; CHECK-LABEL: sti32_a1:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($0):p2align=0, $1{{$}}
+; CHECK-NEXT: i32.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a1(i32 *%p, i32 %v) {
   store i32 %v, i32* %p, align 1
@@ -126,7 +126,7 @@ define void @sti32_a1(i32 *%p, i32 %v) {
 
 ; CHECK-LABEL: sti32_a2:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($0):p2align=1, $1{{$}}
+; CHECK-NEXT: i32.store 0($0):p2align=1, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a2(i32 *%p, i32 %v) {
   store i32 %v, i32* %p, align 2
@@ -137,7 +137,7 @@ define void @sti32_a2(i32 *%p, i32 %v) {
 
 ; CHECK-LABEL: sti32_a4:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($0), $1{{$}}
+; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a4(i32 *%p, i32 %v) {
   store i32 %v, i32* %p, align 4
@@ -148,7 +148,7 @@ define void @sti32_a4(i32 *%p, i32 %v) {
 
 ; CHECK-LABEL: sti32:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($0), $1{{$}}
+; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32(i32 *%p, i32 %v) {
   store i32 %v, i32* %p
@@ -157,7 +157,7 @@ define void @sti32(i32 *%p, i32 %v) {
 
 ; CHECK-LABEL: sti32_a8:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($0), $1{{$}}
+; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a8(i32 *%p, i32 %v) {
   store i32 %v, i32* %p, align 8
@@ -168,7 +168,7 @@ define void @sti32_a8(i32 *%p, i32 %v) {
 
 ; CHECK-LABEL: sti8_a1:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store8 $drop=, 0($0), $1{{$}}
+; CHECK-NEXT: i32.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti8_a1(i8 *%p, i8 %v) {
   store i8 %v, i8* %p, align 1
@@ -177,7 +177,7 @@ define void @sti8_a1(i8 *%p, i8 %v) {
 
 ; CHECK-LABEL: sti8_a2:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store8 $drop=, 0($0), $1{{$}}
+; CHECK-NEXT: i32.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti8_a2(i8 *%p, i8 %v) {
   store i8 %v, i8* %p, align 2
@@ -186,7 +186,7 @@ define void @sti8_a2(i8 *%p, i8 %v) {
 
 ; CHECK-LABEL: sti16_a1:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store16 $drop=, 0($0):p2align=0, $1{{$}}
+; CHECK-NEXT: i32.store16 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a1(i16 *%p, i16 %v) {
   store i16 %v, i16* %p, align 1
@@ -195,7 +195,7 @@ define void @sti16_a1(i16 *%p, i16 %v) {
 
 ; CHECK-LABEL: sti16_a2:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store16 $drop=, 0($0), $1{{$}}
+; CHECK-NEXT: i32.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a2(i16 *%p, i16 %v) {
   store i16 %v, i16* %p, align 2
@@ -204,7 +204,7 @@ define void @sti16_a2(i16 *%p, i16 %v) {
 
 ; CHECK-LABEL: sti16_a4:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: i32.store16 $drop=, 0($0), $1{{$}}
+; CHECK-NEXT: i32.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a4(i16 *%p, i16 %v) {
   store i16 %v, i16* %p, align 4

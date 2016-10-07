@@ -1,7 +1,6 @@
 ; RUN: opt < %s  -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -instcombine -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "arm64-apple-ios5.0.0"
 
 ; CHECK-LABEL: @foo(
 define void @foo(float* noalias %a, float* noalias %b, float* noalias %c, i32 %N) {

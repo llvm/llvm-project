@@ -1,7 +1,6 @@
 ; RUN: opt -S -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -verify-loop-info -simplifycfg < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 ; Test predication of non-void instructions, specifically (i) that these
 ; instructions permit vectorization and (ii) the creation of an insertelement

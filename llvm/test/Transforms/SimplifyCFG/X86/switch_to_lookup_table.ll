@@ -1334,3 +1334,63 @@ cleanup4:
   br label %while.body
 }
 
+declare void @throw(i1)
+
+define void @wineh_test(i64 %val) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  invoke void @throw(i1 false)
+          to label %unreachable unwind label %cleanup1
+
+unreachable:
+  unreachable
+
+cleanup1:
+  %cleanuppad1 = cleanuppad within none []
+  switch i64 %val, label %cleanupdone2 [
+    i64 0, label %cleanupdone1
+    i64 1, label %cleanupdone1
+    i64 6, label %cleanupdone1
+  ]
+
+cleanupdone1:
+  cleanupret from %cleanuppad1 unwind label %cleanup2
+
+cleanupdone2:
+  cleanupret from %cleanuppad1 unwind label %cleanup2
+
+cleanup2:
+  %phi = phi i1 [ true, %cleanupdone1 ], [ false, %cleanupdone2 ]
+  %cleanuppad2 = cleanuppad within none []
+  call void @throw(i1 %phi) [ "funclet"(token %cleanuppad2) ]
+  unreachable
+}
+
+; CHECK-LABEL: @wineh_test(
+; CHECK: entry:
+; CHECK:   invoke void @throw(i1 false)
+; CHECK:           to label %[[unreachable:.*]] unwind label %[[cleanup1:.*]]
+
+; CHECK: [[unreachable]]:
+; CHECK:   unreachable
+
+; CHECK: [[cleanup1]]:
+; CHECK:   %[[cleanuppad1:.*]] = cleanuppad within none []
+; CHECK:   switch i64 %val, label %[[cleanupdone2:.*]] [
+; CHECK:     i64 0, label %[[cleanupdone1:.*]]
+; CHECK:     i64 1, label %[[cleanupdone1]]
+; CHECK:     i64 6, label %[[cleanupdone1]]
+; CHECK:   ]
+
+; CHECK: [[cleanupdone1]]:
+; CHECK:   cleanupret from %[[cleanuppad1]] unwind label %[[cleanup2:.*]]
+
+; CHECK: [[cleanupdone2]]:
+; CHECK:   cleanupret from %[[cleanuppad1]] unwind label %[[cleanup2]]
+
+; CHECK: [[cleanup2]]:
+; CHECK:   %[[phi:.*]] = phi i1 [ true, %[[cleanupdone1]] ], [ false, %[[cleanupdone2]] ]
+; CHECK:   %[[cleanuppad2:.*]] = cleanuppad within none []
+; CHECK:   call void @throw(i1 %[[phi]]) [ "funclet"(token %[[cleanuppad2]]) ]
+; CHECK:   unreachable
+
+declare i32 @__CxxFrameHandler3(...)

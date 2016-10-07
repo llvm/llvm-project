@@ -15,11 +15,6 @@
 // Mips Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
-// Transformation Function - get Imm - 32.
-def Subtract32 : SDNodeXForm<imm, [{
-  return getImm(N, (unsigned)N->getZExtValue() - 32);
-}]>;
-
 // shamt must fit in 6 bits.
 def immZExt6 : ImmLeaf<i32, [{return Imm == (Imm & 0x3f);}]>;
 

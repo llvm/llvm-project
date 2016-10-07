@@ -15,6 +15,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
 
   let LGKM_CNT = 1;
   let DS = 1;
+  let Size = 8;
   let UseNamedOperandTable = 1;
   let Uses = [M0, EXEC];
 

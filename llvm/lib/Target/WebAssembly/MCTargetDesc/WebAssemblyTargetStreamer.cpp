@@ -65,14 +65,17 @@ void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<MVT> Types) {
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 
 void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
-    StringRef name, SmallVectorImpl<MVT> &SignatureVTs, size_t NumResults) {
+    StringRef name, SmallVectorImpl<MVT> &Params, SmallVectorImpl<MVT> &Results) {
   OS << "\t.functype\t" << name;
-  if (NumResults == 0)
+  if (Results.empty())
     OS << ", void";
-  for (auto Ty : SignatureVTs) {
-    OS << ", " << WebAssembly::TypeToString(Ty);
+  else {
+    assert(Results.size() == 1);
+    OS << ", " << WebAssembly::TypeToString(Results.front());
   }
-  OS << "\n";
+  for (auto Ty : Params)
+    OS << ", " << WebAssembly::TypeToString(Ty);
+  OS << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {

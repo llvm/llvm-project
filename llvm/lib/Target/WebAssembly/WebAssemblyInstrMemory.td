@@ -446,23 +446,19 @@ def : Pat<(i64 (extloadi32 (WebAssemblywrapper texternalsym:$off))),
 let Defs = [ARGUMENTS] in {
 
 // Basic store.
-// Note that we split the patterns out of the instruction definitions because
-// WebAssembly's stores return their operand value, and tablegen doesn't like
-// instruction definition patterns that don't reference all of the output
-// operands.
 // Note: WebAssembly inverts SelectionDAG's usual operand order.
-def STORE_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
-                                     P2Align:$p2align, I32:$val), [],
-                   "i32.store\t$dst, ${off}(${addr})${p2align}, $val", 0x33>;
-def STORE_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
-                                     P2Align:$p2align, I64:$val), [],
-                   "i64.store\t$dst, ${off}(${addr})${p2align}, $val", 0x34>;
-def STORE_F32  : I<(outs F32:$dst), (ins i32imm:$off, I32:$addr,
-                                     P2Align:$p2align, F32:$val), [],
-                   "f32.store\t$dst, ${off}(${addr})${p2align}, $val", 0x35>;
-def STORE_F64  : I<(outs F64:$dst), (ins i32imm:$off, I32:$addr,
-                                     P2Align:$p2align, F64:$val), [],
-                   "f64.store\t$dst, ${off}(${addr})${p2align}, $val", 0x36>;
+def STORE_I32  : I<(outs), (ins i32imm:$off, I32:$addr,
+                            P2Align:$p2align, I32:$val), [],
+                   "i32.store\t${off}(${addr})${p2align}, $val", 0x33>;
+def STORE_I64  : I<(outs), (ins i32imm:$off, I32:$addr,
+                            P2Align:$p2align, I64:$val), [],
+                   "i64.store\t${off}(${addr})${p2align}, $val", 0x34>;
+def STORE_F32  : I<(outs), (ins i32imm:$off, I32:$addr,
+                            P2Align:$p2align, F32:$val), [],
+                   "f32.store\t${off}(${addr})${p2align}, $val", 0x35>;
+def STORE_F64  : I<(outs), (ins i32imm:$off, I32:$addr,
+                            P2Align:$p2align, F64:$val), [],
+                   "f64.store\t${off}(${addr})${p2align}, $val", 0x36>;
 
 } // Defs = [ARGUMENTS]
 
@@ -543,21 +539,21 @@ def : Pat<(store F64:$val, (WebAssemblywrapper texternalsym:$off)),
 let Defs = [ARGUMENTS] in {
 
 // Truncating store.
-def STORE8_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
-                                      P2Align:$p2align, I32:$val), [],
-                    "i32.store8\t$dst, ${off}(${addr})${p2align}, $val", 0x2e>;
-def STORE16_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
-                                      P2Align:$p2align, I32:$val), [],
-                    "i32.store16\t$dst, ${off}(${addr})${p2align}, $val", 0x2f>;
-def STORE8_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
-                                      P2Align:$p2align, I64:$val), [],
-                    "i64.store8\t$dst, ${off}(${addr})${p2align}, $val", 0x30>;
-def STORE16_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
-                                      P2Align:$p2align, I64:$val), [],
-                    "i64.store16\t$dst, ${off}(${addr})${p2align}, $val", 0x31>;
-def STORE32_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
-                                      P2Align:$p2align, I64:$val), [],
-                    "i64.store32\t$dst, ${off}(${addr})${p2align}, $val", 0x32>;
+def STORE8_I32  : I<(outs), (ins i32imm:$off, I32:$addr,
+                             P2Align:$p2align, I32:$val), [],
+                    "i32.store8\t${off}(${addr})${p2align}, $val", 0x2e>;
+def STORE16_I32 : I<(outs), (ins i32imm:$off, I32:$addr,
+                             P2Align:$p2align, I32:$val), [],
+                    "i32.store16\t${off}(${addr})${p2align}, $val", 0x2f>;
+def STORE8_I64  : I<(outs), (ins i32imm:$off, I32:$addr,
+                             P2Align:$p2align, I64:$val), [],
+                    "i64.store8\t${off}(${addr})${p2align}, $val", 0x30>;
+def STORE16_I64 : I<(outs), (ins i32imm:$off, I32:$addr,
+                             P2Align:$p2align, I64:$val), [],
+                    "i64.store16\t${off}(${addr})${p2align}, $val", 0x31>;
+def STORE32_I64 : I<(outs), (ins i32imm:$off, I32:$addr,
+                             P2Align:$p2align, I64:$val), [],
+                    "i64.store32\t${off}(${addr})${p2align}, $val", 0x32>;
 
 } // Defs = [ARGUMENTS]
 

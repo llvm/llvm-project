@@ -118,9 +118,9 @@ let AddedComplexity = 20 in {
 }
 
 let AddedComplexity  = 80 in {
-  def: Loada_pat<load, f32, u32ImmPred, L4_loadri_abs>;
-  def: Loada_pat<load, f32, addrga, L4_loadri_abs>;
-  def: Loada_pat<load, f64, addrga, L4_loadrd_abs>;
+  def: Loada_pat<load, f32, u32ImmPred, PS_loadriabs>;
+  def: Loada_pat<load, f32, addrga, PS_loadriabs>;
+  def: Loada_pat<load, f64, addrga, PS_loadrdabs>;
 }
 
 let AddedComplexity = 100 in {
@@ -153,8 +153,8 @@ let AddedComplexity = 20 in {
 }
 
 let AddedComplexity = 80 in {
-  def: Storea_pat<store, F32, addrga, S2_storeriabs>;
-  def: Storea_pat<store, F64, addrga, S2_storerdabs>;
+  def: Storea_pat<store, F32, addrga, PS_storeriabs>;
+  def: Storea_pat<store, F64, addrga, PS_storerdabs>;
 }
 
 let AddedComplexity = 100 in {

@@ -439,9 +439,11 @@ template <class Edge, class BBInfo>
 void FuncPGOInstrumentation<Edge, BBInfo>::renameComdatFunction() {
   if (!canRenameComdat(F, ComdatMembers))
     return;
+  std::string OrigName = F.getName().str();
   std::string NewFuncName =
       Twine(F.getName() + "." + Twine(FunctionHash)).str();
   F.setName(Twine(NewFuncName));
+  GlobalAlias::create(GlobalValue::WeakAnyLinkage, OrigName, &F);
   FuncName = Twine(FuncName + "." + Twine(FunctionHash)).str();
   Comdat *NewComdat;
   Module *M = F.getParent();
@@ -467,7 +469,9 @@ void FuncPGOInstrumentation<Edge, BBInfo>::renameComdatFunction() {
     if (GlobalAlias *GA = dyn_cast<GlobalAlias>(CM.second)) {
       // For aliases, change the name directly.
       assert(dyn_cast<Function>(GA->getAliasee()->stripPointerCasts()) == &F);
+      std::string OrigGAName = GA->getName().str();
       GA->setName(Twine(GA->getName() + "." + Twine(FunctionHash)));
+      GlobalAlias::create(GlobalValue::WeakAnyLinkage, OrigGAName, GA);
       continue;
     }
     // Must be a function.

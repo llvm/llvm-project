@@ -1389,6 +1389,13 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       }
     }
     break;
+  case Instruction::ExtractElement:
+    // Look through extract element. At the moment we keep this simple and skip
+    // tracking the specific element. But at least we might find information
+    // valid for all elements of the vector (for example if vector is sign
+    // extended, shifted, etc).
+    computeKnownBits(I->getOperand(0), KnownZero, KnownOne, Depth + 1, Q);
+    break;
   case Instruction::ExtractValue:
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
       const ExtractValueInst *EVI = cast<ExtractValueInst>(I);
@@ -2220,6 +2227,13 @@ unsigned ComputeNumSignBits(const Value *V, unsigned Depth, const Query &Q) {
     // FIXME: it's tricky to do anything useful for this, but it is an important
     // case for targets like X86.
     break;
+
+  case Instruction::ExtractElement:
+    // Look through extract element. At the moment we keep this simple and skip
+    // tracking the specific element. But at least we might find information
+    // valid for all elements of the vector (for example if vector is sign
+    // extended, shifted, etc).
+    return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
   }
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,

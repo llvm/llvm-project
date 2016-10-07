@@ -25,6 +25,7 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let SALU = 1;
   let SOP1 = 1;
   let SchedRW = [WriteSALU];
+  let Size = 4;
   let UseNamedOperandTable = 1;
 
   string Mnemonic = opName;
@@ -41,6 +42,7 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let Size = 4;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
@@ -575,8 +577,8 @@ def S_SETREG_B32 : SOPK_Pseudo <
 def S_SETREG_IMM32_B32 : SOPK_Pseudo <
   "s_setreg_imm32_b32",
   (outs), (ins i32imm:$imm, hwreg:$simm16),
-  "$simm16, $imm"
-> {
+  "$simm16, $imm"> {
+  let Size = 8; // Unlike every other SOPK instruction.
   let has_sdst = 0;
 }
 
@@ -688,6 +690,7 @@ class SOPP <bits<7> op, dag ins, string asm, list<dag> pattern = []> :
   let hasSideEffects = 0;
   let SALU = 1;
   let SOPP = 1;
+  let Size = 4;
   let SchedRW = [WriteSALU];
 
   let UseNamedOperandTable = 1;

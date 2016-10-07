@@ -1,3 +1,4 @@
+// RUN: rm -rf %T/clang-move
 // RUN: mkdir -p %T/clang-move/build
 // RUN: sed 's|$test_dir|%/T/clang-move|g' %S/Inputs/database_template.json > %T/clang-move/compile_commands.json
 // RUN: cp %S/Inputs/multiple_class_test*  %T/clang-move/
