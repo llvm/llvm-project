@@ -76,6 +76,8 @@ public:
   OutputSectionBase(StringRef Name, uint32_t Type, uintX_t Flags);
   void setVA(uintX_t VA) { Header.sh_addr = VA; }
   uintX_t getVA() const { return Header.sh_addr; }
+  void setLMAOffset(uintX_t LMAOff) { LMAOffset = LMAOff; }
+  uintX_t getLMA() const { return Header.sh_addr + LMAOffset; }
   void setFileOffset(uintX_t Off) { Header.sh_offset = Off; }
   uintX_t getFileOffset() { return Header.sh_offset; }
   void setSHName(unsigned Val) { Header.sh_name = Val; }
@@ -126,6 +128,7 @@ public:
 protected:
   StringRef Name;
   Elf_Shdr Header;
+  uintX_t LMAOffset = 0;
 };
 
 template <class ELFT> class GotSection final : public OutputSectionBase<ELFT> {

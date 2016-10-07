@@ -33,15 +33,15 @@ namespace lldb_private {
 template <typename T> class UniqueCStringMap {
 public:
   struct Entry {
-    Entry() : cstring(nullptr), value() {}
+    Entry() {}
 
-    Entry(const char *cstr) : cstring(cstr), value() {}
+    Entry(llvm::StringRef cstr) : cstring(cstr), value() {}
 
-    Entry(const char *cstr, const T &v) : cstring(cstr), value(v) {}
+    Entry(llvm::StringRef cstr, const T &v) : cstring(cstr), value(v) {}
 
     bool operator<(const Entry &rhs) const { return cstring < rhs.cstring; }
 
-    const char *cstring;
+    llvm::StringRef cstring;
     T value;
   };
 
@@ -50,7 +50,7 @@ public:
   // this map, then later call UniqueCStringMap<T>::Sort() before doing
   // any searches by name.
   //------------------------------------------------------------------
-  void Append(const char *unique_cstr, const T &value) {
+  void Append(llvm::StringRef unique_cstr, const T &value) {
     m_map.push_back(typename UniqueCStringMap<T>::Entry(unique_cstr, value));
   }
 
@@ -62,7 +62,7 @@ public:
   // Call this function to always keep the map sorted when putting
   // entries into the map.
   //------------------------------------------------------------------
-  void Insert(const char *unique_cstr, const T &value) {
+  void Insert(llvm::StringRef unique_cstr, const T &value) {
     typename UniqueCStringMap<T>::Entry e(unique_cstr, value);
     m_map.insert(std::upper_bound(m_map.begin(), m_map.end(), e), e);
   }
@@ -85,7 +85,7 @@ public:
     return false;
   }
 
-  const char *GetCStringAtIndexUnchecked(uint32_t idx) const {
+  llvm::StringRef GetCStringAtIndexUnchecked(uint32_t idx) const {
     return m_map[idx].cstring;
   }
 
@@ -99,8 +99,8 @@ public:
     return m_map[idx].value;
   }
 
-  const char *GetCStringAtIndex(uint32_t idx) const {
-    return ((idx < m_map.size()) ? m_map[idx].cstring : nullptr);
+  llvm::StringRef GetCStringAtIndex(uint32_t idx) const {
+    return ((idx < m_map.size()) ? m_map[idx].cstring : llvm::StringRef());
   }
 
   //------------------------------------------------------------------
@@ -111,7 +111,7 @@ public:
   // T values and only if there is a sensible failure value that can
   // be returned and that won't match any existing values.
   //------------------------------------------------------------------
-  T Find(const char *unique_cstr, T fail_value) const {
+  T Find(llvm::StringRef unique_cstr, T fail_value) const {
     Entry search_entry(unique_cstr);
     const_iterator end = m_map.end();
     const_iterator pos = std::lower_bound(m_map.begin(), end, search_entry);
@@ -129,12 +129,12 @@ public:
   // The caller is responsible for ensuring that the collection does
   // not change during while using the returned pointer.
   //------------------------------------------------------------------
-  const Entry *FindFirstValueForName(const char *unique_cstr) const {
+  const Entry *FindFirstValueForName(llvm::StringRef unique_cstr) const {
     Entry search_entry(unique_cstr);
     const_iterator end = m_map.end();
     const_iterator pos = std::lower_bound(m_map.begin(), end, search_entry);
     if (pos != end) {
-      const char *pos_cstr = pos->cstring;
+      llvm::StringRef pos_cstr = pos->cstring;
       if (pos_cstr == unique_cstr)
         return &(*pos);
     }
@@ -162,7 +162,7 @@ public:
     return nullptr;
   }
 
-  size_t GetValues(const char *unique_cstr, std::vector<T> &values) const {
+  size_t GetValues(llvm::StringRef unique_cstr, std::vector<T> &values) const {
     const size_t start_size = values.size();
 
     Entry search_entry(unique_cstr);
@@ -238,7 +238,7 @@ public:
     }
   }
 
-  size_t Erase(const char *unique_cstr) {
+  size_t Erase(llvm::StringRef unique_cstr) {
     size_t num_removed = 0;
     Entry search_entry(unique_cstr);
     iterator end = m_map.end();

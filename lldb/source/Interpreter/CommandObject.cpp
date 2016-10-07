@@ -994,7 +994,7 @@ bool CommandObjectParsed::Execute(const char *args_string,
   }
   if (!handled) {
     for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (entry.Value.ref.front() == '`') {
+      if (!entry.Value.ref.empty() && entry.Value.ref.front() == '`') {
         cmd_args.ReplaceArgumentAtIndex(
             entry.Index,
             m_interpreter.ProcessEmbeddedScriptCommands(entry.Value.c_str()));

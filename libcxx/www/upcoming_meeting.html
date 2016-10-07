@@ -68,14 +68,14 @@
 	 <tr><td><a href="http://wg21.link/LWG2394">2394</a></td><td>locale::name specification unclear - what is implementation-defined?</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2460">2460</a></td><td>LWG issue 2408 and value categories</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2468">2468</a></td><td>Self-move-assignment of library types</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2475">2475</a></td><td>Allow overwriting of std::basic_string terminator with charT() to allow cleaner interoperation with legacy APIs</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2475">2475</a></td><td>Allow overwriting of std::basic_string terminator with charT() to allow cleaner interoperation with legacy APIs</td><td>Issaquah</td><td>Nothing to do.</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2503">2503</a></td><td>multiline option should be added to syntax_option_type</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2510">2510</a></td><td>Tag types should not be DefaultConstructible</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2514">2514</a></td><td>Type traits must not be final</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2519">2519</a></td><td>Iterator operator-= has gratuitous undefined behaviour</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2514">2514</a></td><td>Type traits must not be final</td><td>Issaquah</td><td>Nothing to do</td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2519">2519</a></td><td>Iterator operator-= has gratuitous undefined behaviour</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2531">2531</a></td><td>future::get should explicitly state that the shared state is released</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2534">2534</a></td><td>Constrain rvalue stream operators</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2536">2536</a></td><td>What should <complex.h> do?</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2536">2536</a></td><td>What should &lt;complex.h&gt; do?</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2540">2540</a></td><td>unordered_multimap::insert hint iterator</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2543">2543</a></td><td>LWG 2148 (hash support for enum types) seems under-specified</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2544">2544</a></td><td>istreambuf_iterator(basic_streambuf<charT, traits>* s) effects unclear when s is 0</td><td>Issaquah</td><td></td></tr>
@@ -141,15 +141,15 @@
 <li>2358 - We already do this; I improved the tests</li>
 <li>2394 - </li>
 <li>2460 - </li>
-<li>2468 - </li>
-<li>2475 - </li>
+<li>2468 - <i>I think we already do this; but will need to survey the libray to be sure</i></li>
+<li>2475 - Nothing to do here. </li>
 <li>2503 - </li>
-<li>2510 - </li>
-<li>2514 - </li>
-<li>2519 - </li>
+<li>2510 - <i>Need to write tests for all the tag types</i></li>
+<li>2514 - Nothing to do; We don't mark any of the type traits as final. </li>
+<li>2519 - This is just wording cleanup. </li>
 <li>2531 - </li>
 <li>2534 - </li>
-<li>2536 - </li>
+<li>2536 - We already do this. </li>
 <li>2540 - </li>
 <li>2543 - </li>
 <li>2544 - </li>

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
@@ -21,6 +20,8 @@
 
 #include <future>
 #include <cassert>
+
+#include "test_macros.h"
 
 void func1(std::promise<int> p)
 {
@@ -73,6 +74,7 @@ int main()
             assert(f.get() == 3);
             assert(!f.valid());
         }
+#ifndef TEST_HAS_NO_EXCEPTIONS
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
@@ -89,6 +91,7 @@ int main()
             }
             assert(!f.valid());
         }
+#endif
     }
     {
         typedef int& T;
@@ -100,6 +103,7 @@ int main()
             assert(f.get() == 5);
             assert(!f.valid());
         }
+#ifndef TEST_HAS_NO_EXCEPTIONS
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
@@ -116,6 +120,7 @@ int main()
             }
             assert(!f.valid());
         }
+#endif
     }
     {
         typedef void T;
@@ -127,6 +132,7 @@ int main()
             f.get();
             assert(!f.valid());
         }
+#ifndef TEST_HAS_NO_EXCEPTIONS
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
@@ -143,5 +149,6 @@ int main()
             }
             assert(!f.valid());
         }
+#endif
     }
 }

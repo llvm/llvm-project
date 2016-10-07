@@ -70,7 +70,19 @@ cl::opt<bool> Dump("dump_result",
 } // namespace
 
 int main(int argc, const char **argv) {
-  tooling::CommonOptionsParser OptionsParser(argc, argv, ClangMoveCategory);
+  // Add "-fparse-all-comments" compile option to make clang parse all comments,
+  // otherwise, ordinary comments like "//" and "/*" won't get parsed (This is
+  // a bit of hacky).
+  std::vector<std::string> ExtraArgs( argv, argv + argc );
+  ExtraArgs.insert(ExtraArgs.begin()+1, "-extra-arg=-fparse-all-comments");
+  std::unique_ptr<const char *[]> RawExtraArgs(
+      new const char *[ExtraArgs.size()]);
+  for (size_t i = 0; i < ExtraArgs.size(); ++i)
+    RawExtraArgs[i] = ExtraArgs[i].c_str();
+  int Argc = argc + 1;
+  tooling::CommonOptionsParser OptionsParser(Argc, RawExtraArgs.get(),
+                                             ClangMoveCategory);
+
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(),
                                 OptionsParser.getSourcePathList());
   move::ClangMoveTool::MoveDefinitionSpec Spec;
@@ -86,7 +98,7 @@ int main(int argc, const char **argv) {
                              Twine(EC.message()));
 
   auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
-      Spec, Tool.getReplacements(), InitialDirectory.str());
+      Spec, Tool.getReplacements(), InitialDirectory.str(), Style);
 
   int CodeStatus = Tool.run(Factory.get());
   if (CodeStatus)

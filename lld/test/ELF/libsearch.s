@@ -3,6 +3,8 @@
 // RUN:   %p/Inputs/libsearch-dyn.s -o %tdyn.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 // RUN:   %p/Inputs/libsearch-st.s -o %tst.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
+// RUN:   %p/Inputs/use-bar.s -o %tbar.o
 // RUN: mkdir -p %t.dir
 // RUN: ld.lld -shared %tdyn.o -o %t.dir/libls.so
 // RUN: cp -f %t.dir/libls.so %t.dir/libls2.so
@@ -15,8 +17,10 @@
 // RUN:   | FileCheck --check-prefix=NOLIBRARY %s
 // NOLIBRARY: missing arg value for "-l", expected 1 argument.
 
+// Should link normally, because _bar is not used
+// RUN: ld.lld -o %t3 %t.o
 // Should not link because of undefined symbol _bar
-// RUN: not ld.lld -o %t3 %t.o 2>&1 \
+// RUN: not ld.lld -o %t3 %t.o %tbar.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=UNDEFINED %s
 // UNDEFINED: undefined symbol: _bar
 

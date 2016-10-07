@@ -45,7 +45,6 @@ template <typename T> void error(const ErrorOr<T> &V, const Twine &Prefix) {
 }
 
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
-LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
 
 template <class T> T check(ErrorOr<T> E) {
   if (auto EC = E.getError())
@@ -61,13 +60,13 @@ template <class T> T check(Expected<T> E) {
 
 template <class T> T check(ErrorOr<T> E, const Twine &Prefix) {
   if (auto EC = E.getError())
-    fatal(EC.message(), Prefix);
+    fatal(Prefix + ": " + EC.message());
   return std::move(*E);
 }
 
 template <class T> T check(Expected<T> E, const Twine &Prefix) {
   if (!E)
-    fatal(errorToErrorCode(E.takeError()).message(), Prefix);
+    fatal(Prefix + ": " + errorToErrorCode(E.takeError()).message());
   return std::move(*E);
 }
 

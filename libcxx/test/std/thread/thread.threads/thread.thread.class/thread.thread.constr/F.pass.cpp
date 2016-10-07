@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 
 // <thread>
@@ -33,7 +32,7 @@ std::atomic<unsigned> outstanding_new(0);
 void* operator new(std::size_t s) throw(std::bad_alloc)
 {
     if (throw_one == 0)
-        throw std::bad_alloc();
+        TEST_THROW(std::bad_alloc());
     --throw_one;
     ++outstanding_new;
     void* ret = std::malloc(s);
@@ -118,6 +117,7 @@ public:
 //  3 Finally check that a thread runs successfully if we throw after 'N+1'
 //    allocations.
 void test_throwing_new_during_thread_creation() {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     throw_one = 0xFFF;
     {
         std::thread t(f);
@@ -142,6 +142,7 @@ void test_throwing_new_during_thread_creation() {
     }
     f_run = false;
     throw_one = 0xFFF;
+#endif
 }
 
 int main()
@@ -162,6 +163,7 @@ int main()
         assert(G::op_run);
     }
     G::op_run = false;
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         try
         {
@@ -178,6 +180,7 @@ int main()
             assert(!G::op_run);
         }
     }
+#endif
 #if TEST_STD_VER >= 11
     {
         assert(G::n_alive == 0);

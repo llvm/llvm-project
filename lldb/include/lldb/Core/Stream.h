@@ -364,7 +364,7 @@ public:
   /// @param[in] cstr
   ///     The string to be output to the stream.
   //------------------------------------------------------------------
-  size_t PutCString(const char *cstr);
+  size_t PutCString(llvm::StringRef cstr);
 
   //------------------------------------------------------------------
   /// Output and End of Line character to the stream.
