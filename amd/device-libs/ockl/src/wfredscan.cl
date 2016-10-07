@@ -338,7 +338,7 @@ GENMAX(ulong)
 // Input is x, l is lane, output is s
 #define ISCAN_DPP(T,OP,ID) \
     /* This branch is disabled since it is not working for some reason */ \
-    if (ID == (T)99) { \
+    if (ID == (T)0) { \
         T v; \
  \
         v = T##_dpp(x, DPP_ROW_SR(1), 0xf, 0xf, true); \
@@ -358,24 +358,25 @@ GENMAX(ulong)
         s = T##_##OP(s, v); \
  \
         v = T##_dpp(s, DPP_ROW_BCAST31, 0xf, 0xf, true); \
+        v = (l & 0x20) ? v : ID; \
         s = T##_##OP(s, v); \
     } else { \
         T v; \
  \
         v = T##_dpp(x, DPP_ROW_SR(1), 0xf, 0xf, true); \
-        v = l >= 1 ? v : ID; \
+        v = (l & 0xf) >= 1 ? v : ID; \
         s = T##_##OP(x, v); \
  \
         v = T##_dpp(s, DPP_ROW_SR(2), 0xf, 0xf, true); \
-        v = l >= 2 ? v : ID; \
+        v = (l & 0xf) >= 2 ? v : ID; \
         s = T##_##OP(s, v); \
  \
         v = T##_dpp(s, DPP_ROW_SR(4), 0xf, 0xf, true); \
-        v = l >= 4 ? v : ID; \
+        v = (l & 0xf) >= 4 ? v : ID; \
         s = T##_##OP(s, v); \
  \
         v = T##_dpp(s, DPP_ROW_SR(8), 0xf, 0xf, true); \
-        v = l >= 8 ? v : ID; \
+        v = (l & 0xf) >= 8 ? v : ID; \
         s = T##_##OP(s, v); \
  \
         v = T##_dpp(s, DPP_ROW_BCAST15, 0xf, 0xf, true); \
