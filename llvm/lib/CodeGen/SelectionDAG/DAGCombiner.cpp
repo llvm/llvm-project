@@ -334,6 +334,7 @@ namespace {
 
     SDValue visitShiftByConstant(SDNode *N, ConstantSDNode *Amt);
 
+    SDValue foldSelectOfConstants(SDNode *N);
     bool SimplifySelectOps(SDNode *SELECT, SDValue LHS, SDValue RHS);
     SDValue SimplifyBinOpWithSameOpcodeHands(SDNode *N);
     SDValue SimplifySelect(const SDLoc &DL, SDValue N0, SDValue N1, SDValue N2);
@@ -5105,24 +5106,14 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   }
 }
 
-SDValue DAGCombiner::visitSELECT(SDNode *N) {
+// TODO: We should handle other cases of selecting between {-1,0,1} here.
+SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
   EVT VT = N->getValueType(0);
   EVT VT0 = N0.getValueType();
 
-  // fold (select C, X, X) -> X
-  if (N1 == N2)
-    return N1;
-  if (const ConstantSDNode *N0C = dyn_cast<const ConstantSDNode>(N0)) {
-    // fold (select true, X, Y) -> X
-    // fold (select false, X, Y) -> Y
-    return !N0C->isNullValue() ? N1 : N2;
-  }
-  // fold (select C, 1, X) -> (or C, X)
-  if (VT == MVT::i1 && isOneConstant(N1))
-    return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N2);
   // fold (select C, 0, 1) -> (xor C, 1)
   // We can't do this reliably if integer based booleans have different contents
   // to floating point based booleans. This is because we can't tell whether we
@@ -5142,17 +5133,41 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     SDValue XORNode;
     if (VT == VT0) {
       SDLoc DL(N);
-      return DAG.getNode(ISD::XOR, DL, VT0,
-                         N0, DAG.getConstant(1, DL, VT0));
+      return DAG.getNode(ISD::XOR, DL, VT0, N0, DAG.getConstant(1, DL, VT0));
     }
     SDLoc DL0(N0);
-    XORNode = DAG.getNode(ISD::XOR, DL0, VT0,
-                          N0, DAG.getConstant(1, DL0, VT0));
+    XORNode = DAG.getNode(ISD::XOR, DL0, VT0, N0, DAG.getConstant(1, DL0, VT0));
     AddToWorklist(XORNode.getNode());
     if (VT.bitsGT(VT0))
       return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, XORNode);
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, XORNode);
   }
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitSELECT(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  EVT VT0 = N0.getValueType();
+
+  // fold (select C, X, X) -> X
+  if (N1 == N2)
+    return N1;
+  if (const ConstantSDNode *N0C = dyn_cast<const ConstantSDNode>(N0)) {
+    // fold (select true, X, Y) -> X
+    // fold (select false, X, Y) -> Y
+    return !N0C->isNullValue() ? N1 : N2;
+  }
+  // fold (select C, 1, X) -> (or C, X)
+  if (VT == MVT::i1 && isOneConstant(N1))
+    return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N2);
+
+  if (SDValue V = foldSelectOfConstants(N))
+    return V;
+
   // fold (select C, 0, X) -> (and (not C), X)
   if (VT == VT0 && VT == MVT::i1 && isNullConstant(N1)) {
     SDValue NOTNode = DAG.getNOT(SDLoc(N0), N0, VT);

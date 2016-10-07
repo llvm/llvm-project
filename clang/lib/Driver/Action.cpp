@@ -125,7 +125,7 @@ InputAction::InputAction(const Arg &_Input, types::ID _Type)
 
 void BindArchAction::anchor() {}
 
-BindArchAction::BindArchAction(Action *Input, const char *_ArchName)
+BindArchAction::BindArchAction(Action *Input, StringRef _ArchName)
     : Action(BindArchClass, Input), ArchName(_ArchName) {}
 
 void OffloadAction::anchor() {}

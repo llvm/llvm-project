@@ -62,6 +62,8 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_Data_4:
   case FK_SecRel_4:
     return ELF::R_AMDGPU_ABS32;
+  case FK_Data_8:
+    return ELF::R_AMDGPU_ABS64;
   }
 
   llvm_unreachable("unhandled relocation type");

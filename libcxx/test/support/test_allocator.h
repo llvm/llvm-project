@@ -88,10 +88,7 @@ public:
         {::new(static_cast<void*>(p)) T(std::forward<U>(val));}
 #endif
     void destroy(pointer p)
-        {
-            p->~T();
-            ((void)p); // Prevent MSVC's spurious unused warning
-        }
+        {p->~T();}
     friend bool operator==(const test_allocator& x, const test_allocator& y)
         {return x.data_ == y.data_;}
     friend bool operator!=(const test_allocator& x, const test_allocator& y)
@@ -291,10 +288,7 @@ public:
 
     template<typename U, typename... Args>
     void destroy(U* p)
-    {
-        p->~U();
-        ((void)p); // Prevent MSVC's spurious unused warning
-    }
+    { p->~U(); }
 };
 
 template<typename T, typename U>

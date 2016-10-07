@@ -170,7 +170,7 @@ bool types::isCuda(ID Id) {
   }
 }
 
-types::ID types::lookupTypeForExtension(const char *Ext) {
+types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
   return llvm::StringSwitch<types::ID>(Ext)
            .Case("c", TY_C)
            .Case("C", TY_CXX)

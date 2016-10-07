@@ -4081,7 +4081,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       if (log)
         log->Printf("warning: need to create artificial method for 0x%8.8x for "
                     "method '%s'",
-                    dst_die.GetOffset(), dst_name_artificial);
+                    dst_die.GetOffset(), dst_name_artificial.str().c_str());
 
       failures.Append(dst_die);
     }

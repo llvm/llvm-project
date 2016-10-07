@@ -56,6 +56,7 @@ public:
                    // Name: The null-terminated name follows.
   };
 
+  explicit ProcSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ProcSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
           StringRef Name)
       : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name) {
@@ -95,6 +96,7 @@ public:
                  // Variant portion of thunk
   };
 
+  explicit Thunk32Sym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   Thunk32Sym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
              StringRef Name, ArrayRef<uint8_t> VariantData)
       : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name),
@@ -130,6 +132,7 @@ public:
     ulittle16_t TargetSection;
   };
 
+  explicit TrampolineSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   TrampolineSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H)
       : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H) {}
 
@@ -160,6 +163,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit SectionSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   SectionSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
              StringRef Name)
       : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name) {
@@ -192,6 +196,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit CoffGroupSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   CoffGroupSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
                StringRef Name)
       : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name) {
@@ -215,6 +220,7 @@ public:
 
 class ScopeEndSym : public SymbolRecord {
 public:
+  explicit ScopeEndSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ScopeEndSym(SymbolRecordKind Kind, uint32_t RecordOffset)
       : SymbolRecord(Kind), RecordOffset(RecordOffset) {}
 
@@ -232,6 +238,7 @@ public:
     ulittle32_t Count;
   };
 
+  explicit CallerSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   CallerSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *Header,
             ArrayRef<TypeIndex> Indices)
       : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*Header),
@@ -441,6 +448,7 @@ public:
     // BinaryAnnotations
   };
 
+  explicit InlineSiteSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   InlineSiteSym(uint32_t RecordOffset, const Hdr *H,
                 ArrayRef<uint8_t> Annotations)
       : SymbolRecord(SymbolRecordKind::InlineSiteSym),
@@ -478,6 +486,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit PublicSym32(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   PublicSym32(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::PublicSym32), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -506,6 +515,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit RegisterSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   RegisterSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::RegisterSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -535,6 +545,7 @@ public:
                            // Name:  The null-terminated name follows.
   };
 
+  explicit ProcRefSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ProcRefSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::ProcRefSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -563,6 +574,7 @@ public:
                        // Name: The null-terminated name follows.
   };
 
+  explicit LocalSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   LocalSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::LocalSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -604,6 +616,7 @@ public:
     // LocalVariableAddrGap Gaps[];
   };
 
+  explicit DefRangeSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   DefRangeSym(uint32_t RecordOffset, const Hdr *H,
               ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeSym), RecordOffset(RecordOffset),
@@ -637,6 +650,7 @@ public:
     LocalVariableAddrRange Range;
     // LocalVariableAddrGap Gaps[];
   };
+  explicit DefRangeSubfieldSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   DefRangeSubfieldSym(uint32_t RecordOffset, const Hdr *H,
                       ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeSubfieldSym),
@@ -671,6 +685,7 @@ public:
     // LocalVariableAddrGap Gaps[];
   };
 
+  explicit DefRangeRegisterSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   DefRangeRegisterSym(uint32_t RecordOffset, const Hdr *H,
                       ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterSym),
@@ -715,6 +730,8 @@ public:
     // LocalVariableAddrGap Gaps[];
   };
 
+  explicit DefRangeSubfieldRegisterSym(SymbolRecordKind Kind)
+      : SymbolRecord(Kind) {}
   DefRangeSubfieldRegisterSym(uint32_t RecordOffset, const Hdr *H,
                               ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeSubfieldRegisterSym),
@@ -759,6 +776,8 @@ public:
     // LocalVariableAddrGap Gaps[];
   };
 
+  explicit DefRangeFramePointerRelSym(SymbolRecordKind Kind)
+      : SymbolRecord(Kind) {}
   DefRangeFramePointerRelSym(uint32_t RecordOffset, const Hdr *H,
                              ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeFramePointerRelSym),
@@ -794,6 +813,7 @@ public:
     // LocalVariableAddrGap Gaps[];
   };
 
+  explicit DefRangeRegisterRelSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   DefRangeRegisterRelSym(uint32_t RecordOffset, const Hdr *H,
                          ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelSym),
@@ -848,6 +868,8 @@ public:
     little32_t Offset; // Offset from the frame pointer register
   };
 
+  explicit DefRangeFramePointerRelFullScopeSym(SymbolRecordKind Kind)
+      : SymbolRecord(Kind) {}
   DefRangeFramePointerRelFullScopeSym(uint32_t RecordOffset, const Hdr *H)
       : SymbolRecord(SymbolRecordKind::DefRangeFramePointerRelFullScopeSym),
         RecordOffset(RecordOffset), Header(*H) {}
@@ -877,6 +899,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit BlockSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   BlockSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::BlockSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -910,6 +933,7 @@ public:
                    // Name: The null-terminated name follows.
   };
 
+  explicit LabelSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   LabelSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::LabelSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -941,6 +965,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit ObjNameSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ObjNameSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::ObjNameSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -968,6 +993,7 @@ public:
     // Sequence of zero terminated strings.
   };
 
+  explicit EnvBlockSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   EnvBlockSym(uint32_t RecordOffset, const Hdr *H,
               const std::vector<StringRef> &Fields)
       : SymbolRecord(SymbolRecordKind::EnvBlockSym), RecordOffset(RecordOffset),
@@ -997,6 +1023,7 @@ public:
                        // Name: The null-terminated name follows.
   };
 
+  explicit ExportSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ExportSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::ExportSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -1026,6 +1053,7 @@ public:
                                    // Name: The null-terminated name follows.
   };
 
+  explicit FileStaticSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   FileStaticSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::FileStaticSym),
         RecordOffset(RecordOffset), Header(*H), Name(Name) {}
@@ -1062,6 +1090,7 @@ public:
     // Optional block of zero terminated strings terminated with a double zero.
   };
 
+  explicit Compile2Sym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   Compile2Sym(uint32_t RecordOffset, const Hdr *H, StringRef Version)
       : SymbolRecord(SymbolRecordKind::Compile2Sym), RecordOffset(RecordOffset),
         Header(*H), Version(Version) {}
@@ -1099,6 +1128,7 @@ public:
     // VersionString: The null-terminated version string follows.
   };
 
+  explicit Compile3Sym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   Compile3Sym(uint32_t RecordOffset, const Hdr *H, StringRef Version)
       : SymbolRecord(SymbolRecordKind::Compile3Sym), RecordOffset(RecordOffset),
         Header(*H), Version(Version) {}
@@ -1131,6 +1161,7 @@ public:
     ulittle32_t Flags;
   };
 
+  explicit FrameProcSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   FrameProcSym(uint32_t RecordOffset, const Hdr *H)
       : SymbolRecord(SymbolRecordKind::FrameProcSym),
         RecordOffset(RecordOffset), Header(*H) {}
@@ -1158,6 +1189,7 @@ public:
     TypeIndex Type;
   };
 
+  explicit CallSiteInfoSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   CallSiteInfoSym(uint32_t RecordOffset, const Hdr *H)
       : SymbolRecord(SymbolRecordKind::CallSiteInfoSym),
         RecordOffset(RecordOffset), Header(*H) {}
@@ -1189,6 +1221,7 @@ public:
     TypeIndex Type;
   };
 
+  explicit HeapAllocationSiteSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   HeapAllocationSiteSym(uint32_t RecordOffset, const Hdr *H)
       : SymbolRecord(SymbolRecordKind::HeapAllocationSiteSym),
         RecordOffset(RecordOffset), Header(*H) {}
@@ -1220,6 +1253,7 @@ public:
     uint8_t Flags;
   };
 
+  explicit FrameCookieSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   FrameCookieSym(uint32_t RecordOffset, const Hdr *H)
       : SymbolRecord(SymbolRecordKind::FrameCookieSym),
         RecordOffset(RecordOffset), Header(*H) {}
@@ -1249,6 +1283,7 @@ public:
                     // Name: The null-terminated name follows.
   };
 
+  explicit UDTSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   UDTSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::UDTSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -1275,6 +1310,7 @@ public:
     ulittle32_t BuildId;
   };
 
+  explicit BuildInfoSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   BuildInfoSym(uint32_t RecordOffset, const Hdr *H)
       : SymbolRecord(SymbolRecordKind::BuildInfoSym),
         RecordOffset(RecordOffset), Header(*H) {}
@@ -1301,6 +1337,7 @@ public:
                        // Name: The null-terminated name follows.
   };
 
+  explicit BPRelativeSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   BPRelativeSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::BPRelativeSym),
         RecordOffset(RecordOffset), Header(*H), Name(Name) {}
@@ -1330,6 +1367,7 @@ public:
                           // Name: The null-terminated name follows.
   };
 
+  explicit RegRelativeSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   RegRelativeSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::RegRelativeSym),
         RecordOffset(RecordOffset), Header(*H), Name(Name) {}
@@ -1358,6 +1396,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit ConstantSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ConstantSym(uint32_t RecordOffset, const Hdr *H, const APSInt &Value,
               StringRef Name)
       : SymbolRecord(SymbolRecordKind::ConstantSym), RecordOffset(RecordOffset),
@@ -1390,6 +1429,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit DataSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   DataSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::DataSym), RecordOffset(RecordOffset),
         Header(*H), Name(Name) {}
@@ -1423,6 +1463,7 @@ public:
     // Name: The null-terminated name follows.
   };
 
+  explicit ThreadLocalDataSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ThreadLocalDataSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
       : SymbolRecord(SymbolRecordKind::ThreadLocalDataSym),
         RecordOffset(RecordOffset), Header(*H), Name(Name) {}

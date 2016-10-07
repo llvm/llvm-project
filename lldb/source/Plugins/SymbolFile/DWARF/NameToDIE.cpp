@@ -58,7 +58,7 @@ void NameToDIE::Dump(Stream *s) {
     llvm::StringRef cstr = m_map.GetCStringAtIndex(i);
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
     s->Printf("%p: {0x%8.8x/0x%8.8x} \"%s\"\n", (const void *)cstr.data(),
-              die_ref.cu_offset, die_ref.die_offset, cstr);
+              die_ref.cu_offset, die_ref.die_offset, cstr.str().c_str());
   }
 }
 

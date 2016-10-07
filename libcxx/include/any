@@ -197,30 +197,33 @@ public:
 
   template <
       class _ValueType
+    , class _Tp = decay_t<_ValueType>
     , class = enable_if_t<
-        !is_same<decay_t<_ValueType>, any>::value &&
+        !is_same<_Tp, any>::value &&
         !__is_inplace_type<_ValueType>::value &&
-        is_copy_constructible<_ValueType>::value>
+        is_copy_constructible<_Tp>::value>
     >
   _LIBCPP_INLINE_VISIBILITY
   any(_ValueType && __value);
 
-  template <class _Tp, class ..._Args,
+  template <class _ValueType, class ..._Args,
+    class _Tp = decay_t<_ValueType>,
     class = enable_if_t<
         is_constructible<_Tp, _Args...>::value &&
         is_copy_constructible<_Tp>::value
     >
   >
   _LIBCPP_INLINE_VISIBILITY
-  explicit any(in_place_type_t<_Tp>, _Args&&... __args);
+  explicit any(in_place_type_t<_ValueType>, _Args&&... __args);
 
-  template <class _Tp, class _Up, class ..._Args,
+  template <class _ValueType, class _Up, class ..._Args,
+    class _Tp = decay_t<_ValueType>,
     class = enable_if_t<
         is_constructible<_Tp, initializer_list<_Up>&, _Args...>::value &&
         is_copy_constructible<_Tp>::value>
   >
   _LIBCPP_INLINE_VISIBILITY
-  explicit any(in_place_type_t<_Tp>, initializer_list<_Up>, _Args&&... __args);
+  explicit any(in_place_type_t<_ValueType>, initializer_list<_Up>, _Args&&... __args);
 
   _LIBCPP_INLINE_VISIBILITY
   ~any() { this->reset(); }
@@ -242,15 +245,17 @@ public:
   // ValueType constructor?
   template <
       class _ValueType
+    , class _Tp = decay_t<_ValueType>
     , class = enable_if_t<
-          !is_same<decay_t<_ValueType>, any>::value
-          && is_copy_constructible<_ValueType>::value
+          !is_same<_Tp, any>::value
+          && is_copy_constructible<_Tp>::value
           && !__is_inplace_type<_ValueType>::value>
     >
   _LIBCPP_INLINE_VISIBILITY
   any & operator=(_ValueType && __rhs);
 
-  template <class _Tp, class ..._Args,
+  template <class _ValueType, class ..._Args,
+    class _Tp = decay_t<_ValueType>,
     class = enable_if_t<
         is_constructible<_Tp, _Args...>::value &&
         is_copy_constructible<_Tp>::value>
@@ -258,7 +263,8 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   void emplace(_Args&&... args);
 
-  template <class _Tp, class _Up, class ..._Args,
+  template <class _ValueType, class _Up, class ..._Args,
+    class _Tp = decay_t<_ValueType>,
     class = enable_if_t<
         is_constructible<_Tp, initializer_list<_Up>&, _Args...>::value &&
         is_copy_constructible<_Tp>::value>
@@ -490,60 +496,49 @@ namespace __any_imp
 } // namespace __any_imp
 
 
-template <class _ValueType, class>
+template <class _ValueType, class _Tp, class>
 any::any(_ValueType && __v) : __h(nullptr)
 {
-  typedef typename decay<_ValueType>::type _Tp;
-  static_assert(is_copy_constructible<_Tp>::value,
-                "_ValueType must be CopyConstructible.");
-  using _ForwardTp = conditional_t<
-      is_move_constructible<_Tp>::value, _ValueType, _ValueType&>;
-  typedef __any_imp::_Handler<_Tp> _HandlerType;
-  _HandlerType::__create(*this, _VSTD::forward<_ForwardTp>(__v));
+  __any_imp::_Handler<_Tp>::__create(*this, _VSTD::forward<_ValueType>(__v));
 }
 
-template <class _Tp, class ..._Args, class>
-any::any(in_place_type_t<_Tp>, _Args&&... __args) {
-  using _Hp = __any_imp::_Handler<_Tp>;
-  _Hp::__create(*this, _VSTD::forward<_Args>(__args)...);
+template <class _ValueType, class ..._Args, class _Tp, class>
+any::any(in_place_type_t<_ValueType>, _Args&&... __args) {
+  __any_imp::_Handler<_Tp>::__create(*this, _VSTD::forward<_Args>(__args)...);
 };
 
-template <class _Tp, class _Up, class ..._Args, class>
-any::any(in_place_type_t<_Tp>, initializer_list<_Up> __il, _Args&&... __args) {
-  using _Hp = __any_imp::_Handler<_Tp>;
-  _Hp::__create(*this, __il, _VSTD::forward<_Args>(__args)...);
+template <class _ValueType, class _Up, class ..._Args, class _Tp, class>
+any::any(in_place_type_t<_ValueType>, initializer_list<_Up> __il, _Args&&... __args) {
+  __any_imp::_Handler<_Tp>::__create(*this, __il, _VSTD::forward<_Args>(__args)...);
 }
 
-template <class _ValueType, class>
+template <class _ValueType, class, class>
 inline _LIBCPP_INLINE_VISIBILITY
 any & any::operator=(_ValueType && __v)
 {
-  typedef typename decay<_ValueType>::type _Tp;
-  static_assert(is_copy_constructible<_Tp>::value,
-                "_ValueType must be CopyConstructible.");
   any(_VSTD::forward<_ValueType>(__v)).swap(*this);
   return *this;
 }
 
-template <class _Tp, class ..._Args, class>
+template <class _ValueType, class ..._Args, class _Tp, class>
 inline _LIBCPP_INLINE_VISIBILITY
 void any::emplace(_Args&&... __args) {
-  using _Hp = __any_imp::_Handler<_Tp>;
   reset();
-  _Hp::__create(*this, _VSTD::forward<_Args>(__args)...);
+  __any_imp::_Handler<_Tp>::__create(*this, _VSTD::forward<_Args>(__args)...);
 }
 
-template <class _Tp, class _Up, class ..._Args, class>
+template <class _ValueType, class _Up, class ..._Args, class _Tp, class>
 inline _LIBCPP_INLINE_VISIBILITY
 void any::emplace(initializer_list<_Up> __il, _Args&&... __args) {
-  using _Hp = __any_imp::_Handler<_Tp>;
   reset();
-  _Hp::__create(*this, __il, _VSTD::forward<_Args>(__args)...);
+  __any_imp::_Handler<_Tp>::__create(*this, __il, _VSTD::forward<_Args>(__args)...);
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
 void any::swap(any & __rhs) _NOEXCEPT
 {
+    if (this == &__rhs)
+      return;
     if (__h && __rhs.__h) {
         any __tmp;
         __rhs.__call(_Action::_Move, &__tmp);
@@ -582,50 +577,39 @@ template <class _ValueType>
 inline _LIBCPP_INLINE_VISIBILITY
 _ValueType any_cast(any const & __v)
 {
-    static_assert(
-        is_reference<_ValueType>::value
-        || is_copy_constructible<_ValueType>::value,
-        "_ValueType is required to be a reference or a CopyConstructible type.");
-    using _Tp = add_const_t<remove_reference_t<_ValueType>>;
-    _Tp * __tmp = _VSTD::any_cast<_Tp>(&__v);
+    using _RawValueType = __uncvref_t<_ValueType>;
+    static_assert(is_constructible<_ValueType, _RawValueType const &>::value,
+                  "ValueType is required to be a reference or a CopyConstructible type");
+    auto __tmp = _VSTD::any_cast<add_const_t<_RawValueType>>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
-    return *__tmp;
+    return static_cast<_ValueType>(*__tmp);
 }
 
 template <class _ValueType>
 inline _LIBCPP_INLINE_VISIBILITY
 _ValueType any_cast(any & __v)
 {
-    static_assert(
-        is_reference<_ValueType>::value
-        || is_copy_constructible<_ValueType>::value,
-        "_ValueType is required to be a reference or a CopyConstructible type.");
-    typedef typename remove_reference<_ValueType>::type _Tp;
-    _Tp * __tmp = _VSTD::any_cast<_Tp>(&__v);
+    using _RawValueType = __uncvref_t<_ValueType>;
+    static_assert(is_constructible<_ValueType, _RawValueType &>::value,
+                  "ValueType is required to be a reference or a CopyConstructible type");
+    auto __tmp = _VSTD::any_cast<_RawValueType>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
-    return *__tmp;
+    return static_cast<_ValueType>(*__tmp);
 }
 
 template <class _ValueType>
 inline _LIBCPP_INLINE_VISIBILITY
 _ValueType any_cast(any && __v)
 {
-    static_assert(
-        is_reference<_ValueType>::value
-        || is_copy_constructible<_ValueType>::value,
-        "_ValueType is required to be a reference or a CopyConstructible type.");
-    typedef typename remove_reference<_ValueType>::type _Tp;
-    using _ForwardTp = conditional_t<
-        is_reference<_ValueType>::value,
-        _ValueType,
-        conditional_t<is_move_constructible<_Tp>::value, _Tp, _Tp&>
-    >;
-    _Tp * __tmp = _VSTD::any_cast<_Tp>(&__v);
+    using _RawValueType = __uncvref_t<_ValueType>;
+    static_assert(is_constructible<_ValueType, _RawValueType>::value,
+                  "ValueType is required to be an rvalue reference or a CopyConstructible type");
+    auto __tmp = _VSTD::any_cast<_RawValueType>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
-    return _VSTD::forward<_ForwardTp>(*__tmp);
+    return static_cast<_ValueType>(_VSTD::move(*__tmp));
 }
 
 template <class _ValueType>

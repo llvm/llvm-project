@@ -1122,6 +1122,11 @@ struct __unconstref {
     typedef typename remove_const<typename remove_reference<_Tp>::type>::type type;
 };
 
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp>
+using __uncvref_t = typename __uncvref<_Tp>::type;
+#endif
+
 // __is_same_uncvref
 
 template <class _Tp, class _Up>

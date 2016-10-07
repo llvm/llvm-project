@@ -288,8 +288,10 @@ typedef enum kmp_sched {
     kmp_sched_upper_std         = 5,     // upper bound for standard schedules
     kmp_sched_lower_ext         = 100,   // lower bound of Intel extension schedules
     kmp_sched_trapezoidal       = 101,   // mapped to kmp_sch_trapezoidal              (39)
-//  kmp_sched_static_steal      = 102,   // mapped to kmp_sch_static_steal             (44)
-    kmp_sched_upper             = 102,
+#if KMP_STATIC_STEAL_ENABLED
+    kmp_sched_static_steal      = 102,   // mapped to kmp_sch_static_steal             (44)
+#endif
+    kmp_sched_upper,
     kmp_sched_default = kmp_sched_static // default scheduling
 } kmp_sched_t;
 #endif
@@ -1026,8 +1028,6 @@ extern int __kmp_place_num_threads_per_core;
 # define KMP_DEFAULT_STKSIZE     ((size_t)(1024 * 1024))
 #endif
 
-#define KMP_DEFAULT_MONITOR_STKSIZE     ((size_t)(64 * 1024))
-
 #define KMP_DEFAULT_MALLOC_POOL_INCR    ((size_t) (1024 * 1024))
 #define KMP_MIN_MALLOC_POOL_INCR        ((size_t) (4 * 1024))
 #define KMP_MAX_MALLOC_POOL_INCR        (~((size_t)1<<((sizeof(size_t)*(1<<3))-1)))
@@ -1043,12 +1043,16 @@ extern int __kmp_place_num_threads_per_core;
 #define KMP_MIN_STKPADDING      (0)
 #define KMP_MAX_STKPADDING      (2 * 1024 * 1024)
 
-#define KMP_MIN_MONITOR_WAKEUPS      (1)       /* min number of times monitor wakes up per second */
-#define KMP_MAX_MONITOR_WAKEUPS      (1000)    /* maximum number of times monitor can wake up per second */
 #define KMP_BLOCKTIME_MULTIPLIER     (1000)    /* number of blocktime units per second */
 #define KMP_MIN_BLOCKTIME            (0)
 #define KMP_MAX_BLOCKTIME            (INT_MAX) /* Must be this for "infinite" setting the work */
 #define KMP_DEFAULT_BLOCKTIME        (200)     /*  __kmp_blocktime is in milliseconds  */
+
+#if KMP_USE_MONITOR
+#define KMP_DEFAULT_MONITOR_STKSIZE  ((size_t)(64 * 1024))
+#define KMP_MIN_MONITOR_WAKEUPS      (1)       /* min number of times monitor wakes up per second */
+#define KMP_MAX_MONITOR_WAKEUPS      (1000)    /* maximum number of times monitor can wake up per second */
+
 /* Calculate new number of monitor wakeups for a specific block time based on previous monitor_wakeups */
 /* Only allow increasing number of wakeups */
 #define KMP_WAKEUPS_FROM_BLOCKTIME(blocktime, monitor_wakeups) \
@@ -1061,6 +1065,7 @@ extern int __kmp_place_num_threads_per_core;
 #define KMP_INTERVALS_FROM_BLOCKTIME(blocktime, monitor_wakeups)  \
                                  ( ( (blocktime) + (KMP_BLOCKTIME_MULTIPLIER / (monitor_wakeups)) - 1 ) /  \
                                    (KMP_BLOCKTIME_MULTIPLIER / (monitor_wakeups)) )
+#endif // KMP_USE_MONITOR
 
 #define KMP_MIN_STATSCOLS       40
 #define KMP_MAX_STATSCOLS       4096
@@ -1808,7 +1813,9 @@ typedef struct kmp_internal_control {
     kmp_int8      dynamic;               /* internal control for dynamic adjustment of threads (per thread) */
     kmp_int8      bt_set;                /* internal control for whether blocktime is explicitly set */
     int           blocktime;             /* internal control for blocktime */
+#if KMP_USE_MONITOR
     int           bt_intervals;          /* internal control for blocktime intervals */
+#endif
     int           nproc;                 /* internal control for #threads for next parallel region (per thread) */
     int           max_active_levels;     /* internal control for max_active_levels */
     kmp_r_sched_t sched;                 /* internal control for runtime schedule {sched,chunk} pair */
@@ -1999,7 +2006,9 @@ typedef struct kmp_local {
 
 #define get__blocktime( xteam, xtid )     ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.blocktime)
 #define get__bt_set( xteam, xtid )        ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_set)
+#if KMP_USE_MONITOR
 #define get__bt_intervals( xteam, xtid )  ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_intervals)
+#endif
 
 #define get__nested_2(xteam,xtid)         ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.nested)
 #define get__dynamic_2(xteam,xtid)        ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.dynamic)
@@ -2009,8 +2018,10 @@ typedef struct kmp_local {
 #define set__blocktime_team( xteam, xtid, xval ) \
         ( ( (xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.blocktime )    = (xval) )
 
+#if KMP_USE_MONITOR
 #define set__bt_intervals_team( xteam, xtid, xval ) \
         ( ( (xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_intervals ) = (xval) )
+#endif
 
 #define set__bt_set_team( xteam, xtid, xval ) \
         ( ( (xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_set )       = (xval) )
@@ -2378,7 +2389,9 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
     /* at the start of a barrier, and the values stored in the team are used */
     /* at points in the code where the team struct is no longer guaranteed   */
     /* to exist (from the POV of worker threads).                            */
+#if KMP_USE_MONITOR
     int               th_team_bt_intervals;
+#endif
     int               th_team_bt_set;
 
 
@@ -2833,8 +2846,10 @@ extern int        __kmp_tp_capacity;    /* capacity of __kmp_threads if threadpr
 extern int        __kmp_tp_cached;      /* whether threadprivate cache has been created (__kmpc_threadprivate_cached()) */
 extern int        __kmp_dflt_nested;    /* nested parallelism enabled by default a la OMP_NESTED */
 extern int        __kmp_dflt_blocktime; /* number of milliseconds to wait before blocking (env setting) */
+#if KMP_USE_MONITOR
 extern int        __kmp_monitor_wakeups;/* number of times monitor wakes up per second */
 extern int        __kmp_bt_intervals;   /* number of monitor timestamp intervals before blocking */
+#endif
 #ifdef KMP_ADJUST_BLOCKTIME
 extern int        __kmp_zero_bt;        /* whether blocktime has been forced to zero */
 #endif /* KMP_ADJUST_BLOCKTIME */

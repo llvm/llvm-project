@@ -244,7 +244,7 @@ bool HexagonShuffler::check() {
       if (ISJ->Core.getUnits() == slotSingleStore)
         ++store0;
       break;
-    case HexagonII::TypeMEMOP:
+    case HexagonII::TypeV4LDST:
       ++loads;
       ++stores;
       ++store1;

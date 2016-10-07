@@ -48,11 +48,14 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                        Hdr->sh_flags & SHF_COMPRESSED, !Config->GcSections),
       Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
-  // no alignment constraits. Also we reject object files having insanely large
-  // alignment requirements and may want to relax this limitation in the future.
-  uintX_t V = std::max<uintX_t>(Header->sh_addralign, 1);
+  // no alignment constraits.
+  uint64_t V = std::max<uint64_t>(Header->sh_addralign, 1);
   if (!isPowerOf2_64(V))
     fatal(getFilename(File) + ": section sh_addralign is not a power of 2");
+
+  // We reject object files having insanely large alignments even though
+  // they are allowed by the spec. I think 4GB is a reasonable limitation.
+  // We might want to relax this in the future.
   if (V > UINT32_MAX)
     fatal(getFilename(File) + ": section sh_addralign is too large");
   Alignment = V;

@@ -21,3 +21,14 @@ entry:
   call void @baz() [ "deopt"(i32 13) ]
   ret void
 }
+
+; add deopt-lowering attribute as part of callsite
+define void @test2() gc "statepoint-example" {
+; CHECK-LABEL: @test2(
+; CHECK: @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 2, i32 0, i32 1, i32 57)
+
+entry:
+  call void @foo()  "deopt-lowering"="live-in"  [ "deopt"(i32 57) ]
+  ret void
+}
+
