@@ -15,7 +15,7 @@ define void @start(i8** %ap, ...) {
 entry:
   %0 = bitcast i8** %ap to i8*
 ; Store the second argument (the hidden vararg buffer pointer) into ap
-; CHECK: i32.store $drop=, 0($0), $1
+; CHECK: i32.store 0($0), $1
   call void @llvm.va_start(i8* %0)
   ret void
 }
@@ -37,7 +37,7 @@ entry:
 ; CHECK-LABEL: copy:
 ; CHECK-NEXT: .param i32, i32{{$}}
 ; CHECK-NEXT: i32.load  $push0=, 0($1){{$}}
-; CHECK-NEXT: i32.store $drop=, 0($0), $pop0{{$}}
+; CHECK-NEXT: i32.store 0($0), $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @copy(i8** %ap, i8** %bp) {
 entry:
@@ -57,7 +57,7 @@ entry:
 ; CHECK-NEXT: tee_local  $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: i32.const  $push[[NUM2:[0-9]+]]=, 4{{$}}
 ; CHECK-NEXT: i32.add    $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
-; CHECK-NEXT: i32.store  $drop=, 0($0), $pop[[NUM3]]{{$}}
+; CHECK-NEXT: i32.store  0($0), $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: i32.load   $push[[NUM4:[0-9]+]]=, 0($1){{$}}
 ; CHECK-NEXT: return     $pop[[NUM4]]{{$}}
 define i8 @arg_i8(i8** %ap) {
@@ -80,7 +80,7 @@ entry:
 ; CHECK-NEXT: tee_local  $push[[NUM5:[0-9]+]]=, $1=, $pop[[NUM4]]{{$}}
 ; CHECK-NEXT: i32.const  $push[[NUM6:[0-9]+]]=, 4{{$}}
 ; CHECK-NEXT: i32.add    $push[[NUM7:[0-9]+]]=, $pop[[NUM5]], $pop[[NUM6]]{{$}}
-; CHECK-NEXT: i32.store  $drop=, 0($0), $pop[[NUM7]]{{$}}
+; CHECK-NEXT: i32.store  0($0), $pop[[NUM7]]{{$}}
 ; CHECK-NEXT: i32.load   $push[[NUM8:[0-9]+]]=, 0($1){{$}}
 ; CHECK-NEXT: return     $pop[[NUM8]]{{$}}
 define i32 @arg_i32(i8** %ap) {
@@ -141,7 +141,7 @@ bb0:
 bb1:
   %0 = bitcast i8** %ap to i8*
 ; Store the second argument (the hidden vararg buffer pointer) into ap
-; CHECK: i32.store $drop=, 0($1), $2
+; CHECK: i32.store 0($1), $2
   call void @llvm.va_start(i8* %0)
   ret void
 }

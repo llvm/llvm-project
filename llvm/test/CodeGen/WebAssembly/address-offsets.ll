@@ -357,7 +357,7 @@ define i32 @load_test21(i32* %p, i32 %n) {
 ; CHECK-LABEL: store_test0:
 ; CHECK-NEXT: param     i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
-; CHECK-NEXT: i32.store $drop=, g+40($pop0), $0{{$}}
+; CHECK-NEXT: i32.store g+40($pop0), $0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test0(i32 %i) {
   store i32 %i, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), align 4
@@ -367,7 +367,7 @@ define void @store_test0(i32 %i) {
 ; CHECK-LABEL: store_test0_noinbounds:
 ; CHECK-NEXT: param     i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
-; CHECK-NEXT: i32.store $drop=, g+40($pop0), $0{{$}}
+; CHECK-NEXT: i32.store g+40($pop0), $0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test0_noinbounds(i32 %i) {
   store i32 %i, i32* getelementptr ([0 x i32], [0 x i32]* @g, i32 0, i32 10), align 4
@@ -378,7 +378,7 @@ define void @store_test0_noinbounds(i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test1(i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
@@ -391,7 +391,7 @@ define void @store_test1(i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test2(i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
@@ -404,7 +404,7 @@ define void @store_test2(i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test3(i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %n
@@ -417,7 +417,7 @@ define void @store_test3(i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test4(i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), i32 %n
@@ -429,7 +429,7 @@ define void @store_test4(i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test5(i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), i32 %n
@@ -441,7 +441,7 @@ define void @store_test5(i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test6(i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
@@ -454,7 +454,7 @@ define void @store_test6(i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test7(i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %n
@@ -467,7 +467,7 @@ define void @store_test7(i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
-; CHECK-NEX T: i32.store $drop=, g+40($pop1), $1{{$}}
+; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test8(i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
@@ -479,7 +479,7 @@ define void @store_test8(i32 %n, i32 %i) {
 ; CHECK-LABEL: store_test9:
 ; CHECK-NEXT: param     i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
-; CHECK-NEXT: i32.store $drop=, g-40($pop0), $0{{$}}
+; CHECK-NEXT: i32.store g-40($pop0), $0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test9(i32 %i) {
   store i32 %i, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 1073741814), align 4
@@ -492,7 +492,7 @@ define void @store_test9(i32 %i) {
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.const $push2=, g-40{{$}}
 ; CHECK-NEXT: i32.add   $push3=, $pop1, $pop2{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop3), $1{{$}}
+; CHECK-NEXT: i32.store 0($pop3), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test10(i32 %n, i32 %i) {
   %add = add nsw i32 %n, -10
@@ -503,7 +503,7 @@ define void @store_test10(i32 %n, i32 %i) {
 
 ; CHECK-LABEL: store_test11:
 ; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: i32.store $drop=, 40($0), $1{{$}}
+; CHECK-NEXT: i32.store 40($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test11(i32* %p, i32 %i) {
   %arrayidx = getelementptr inbounds i32, i32* %p, i32 10
@@ -515,7 +515,7 @@ define void @store_test11(i32* %p, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop1), $1{{$}}
+; CHECK-NEXT: i32.store 0($pop1), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test11_noinbounds(i32* %p, i32 %i) {
   %arrayidx = getelementptr i32, i32* %p, i32 10
@@ -530,7 +530,7 @@ define void @store_test11_noinbounds(i32* %p, i32 %i) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop4), $2{{$}}
+; CHECK-NEXT: i32.store 0($pop4), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test12(i32* %p, i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
@@ -546,7 +546,7 @@ define void @store_test12(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop4), $2{{$}}
+; CHECK-NEXT: i32.store 0($pop4), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test13(i32* %p, i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
@@ -560,7 +560,7 @@ define void @store_test13(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
-; CHECK-NEXT: i32.store $drop=, 40($pop2), $2{{$}}
+; CHECK-NEXT: i32.store 40($pop2), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test14(i32* %p, i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds i32, i32* %p, i32 %n
@@ -576,7 +576,7 @@ define void @store_test14(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop4), $2{{$}}
+; CHECK-NEXT: i32.store 0($pop4), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test15(i32* %p, i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds i32, i32* %p, i32 10
@@ -592,7 +592,7 @@ define void @store_test15(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop4), $2{{$}}
+; CHECK-NEXT: i32.store 0($pop4), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test16(i32* %p, i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds i32, i32* %p, i32 10
@@ -608,7 +608,7 @@ define void @store_test16(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop4), $2{{$}}
+; CHECK-NEXT: i32.store 0($pop4), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test17(i32* %p, i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
@@ -622,7 +622,7 @@ define void @store_test17(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
-; CHECK-NEXT: i32.store $drop=, 40($pop2), $2{{$}}
+; CHECK-NEXT: i32.store 40($pop2), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test18(i32* %p, i32 %n, i32 %i) {
   %add.ptr = getelementptr inbounds i32, i32* %p, i32 %n
@@ -638,7 +638,7 @@ define void @store_test18(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop4), $2{{$}}
+; CHECK-NEXT: i32.store 0($pop4), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test19(i32* %p, i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
@@ -651,7 +651,7 @@ define void @store_test19(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, -40{{$}}
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop1), $1{{$}}
+; CHECK-NEXT: i32.store 0($pop1), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test20(i32* %p, i32 %i) {
   %arrayidx = getelementptr inbounds i32, i32* %p, i32 -10
@@ -666,7 +666,7 @@ define void @store_test20(i32* %p, i32 %i) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, -40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.store $drop=, 0($pop4), $2{{$}}
+; CHECK-NEXT: i32.store 0($pop4), $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test21(i32* %p, i32 %n, i32 %i) {
   %add = add nsw i32 %n, -10

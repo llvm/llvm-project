@@ -2,7 +2,6 @@
 ; Note: -instsimplify -simplifycfg remove the (now dead) original loop, making
 ; it easy to test that the llvm.loop.unroll.disable hint is still present.
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: norecurse nounwind uwtable
 define void @foo(i32* nocapture %b) #0 {

@@ -71,10 +71,6 @@ def CmpLT   : PatLeaf<(i32 2)>;
 def CmpLE   : PatLeaf<(i32 3)>;
 def CmpGT   : PatLeaf<(i32 4)>;
 def CmpGE   : PatLeaf<(i32 5)>;
-def CmpLO   : PatLeaf<(i32 6)>;
-def CmpLS   : PatLeaf<(i32 7)>;
-def CmpHI   : PatLeaf<(i32 8)>;
-def CmpHS   : PatLeaf<(i32 9)>;
 def CmpEQU  : PatLeaf<(i32 10)>;
 def CmpNEU  : PatLeaf<(i32 11)>;
 def CmpLTU  : PatLeaf<(i32 12)>;
@@ -90,10 +86,6 @@ def CmpLT_FTZ   : PatLeaf<(i32 0x102)>;
 def CmpLE_FTZ   : PatLeaf<(i32 0x103)>;
 def CmpGT_FTZ   : PatLeaf<(i32 0x104)>;
 def CmpGE_FTZ   : PatLeaf<(i32 0x105)>;
-def CmpLO_FTZ   : PatLeaf<(i32 0x106)>;
-def CmpLS_FTZ   : PatLeaf<(i32 0x107)>;
-def CmpHI_FTZ   : PatLeaf<(i32 0x108)>;
-def CmpHS_FTZ   : PatLeaf<(i32 0x109)>;
 def CmpEQU_FTZ  : PatLeaf<(i32 0x10A)>;
 def CmpNEU_FTZ  : PatLeaf<(i32 0x10B)>;
 def CmpLTU_FTZ  : PatLeaf<(i32 0x10C)>;
@@ -106,13 +98,6 @@ def CmpNAN_FTZ  : PatLeaf<(i32 0x111)>;
 def CmpMode : Operand<i32> {
   let PrintMethod = "printCmpMode";
 }
-
-def F32ConstZero : Operand<f32>, PatLeaf<(f32 fpimm)>, SDNodeXForm<fpimm, [{
-    return CurDAG->getTargetConstantFP(0.0, MVT::f32);
-  }]>;
-def F32ConstOne : Operand<f32>, PatLeaf<(f32 fpimm)>, SDNodeXForm<fpimm, [{
-    return CurDAG->getTargetConstantFP(1.0, MVT::f32);
-  }]>;
 
 //===----------------------------------------------------------------------===//
 // NVPTX Instruction Predicate Definitions

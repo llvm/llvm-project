@@ -27,6 +27,7 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   MachineFunction &MF;
 
   std::vector<MVT> Params;
+  std::vector<MVT> Results;
 
   /// A mapping from CodeGen vreg index to WebAssembly register number.
   std::vector<unsigned> WARegs;
@@ -50,6 +51,9 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
 
   void addParam(MVT VT) { Params.push_back(VT); }
   const std::vector<MVT> &getParams() const { return Params; }
+
+  void addResult(MVT VT) { Results.push_back(VT); }
+  const std::vector<MVT> &getResults() const { return Results; }
 
   unsigned getVarargBufferVreg() const {
     assert(VarargVreg != -1U && "Vararg vreg hasn't been set");
@@ -87,6 +91,13 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
     return Reg & INT32_MAX;
   }
 };
+
+void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM,
+                          Type *Ty, SmallVectorImpl<MVT> &ValueVTs);
+
+void ComputeSignatureVTs(const Function &F, const TargetMachine &TM,
+                         SmallVectorImpl<MVT> &Params,
+                         SmallVectorImpl<MVT> &Results);
 
 } // end namespace llvm
 

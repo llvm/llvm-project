@@ -417,46 +417,46 @@ void HexagonDisassembler::adjustExtendedInstructions(MCInst &MCI,
     // GP relative instruction in the absence of the corresponding immediate
     // extender.
     switch (MCI.getOpcode()) {
-    case Hexagon::S2_storerbabs:
+    case Hexagon::PS_storerbabs:
       opcode = Hexagon::S2_storerbgp;
       break;
-    case Hexagon::S2_storerhabs:
+    case Hexagon::PS_storerhabs:
       opcode = Hexagon::S2_storerhgp;
       break;
-    case Hexagon::S2_storerfabs:
+    case Hexagon::PS_storerfabs:
       opcode = Hexagon::S2_storerfgp;
       break;
-    case Hexagon::S2_storeriabs:
+    case Hexagon::PS_storeriabs:
       opcode = Hexagon::S2_storerigp;
       break;
-    case Hexagon::S2_storerbnewabs:
+    case Hexagon::PS_storerbnewabs:
       opcode = Hexagon::S2_storerbnewgp;
       break;
-    case Hexagon::S2_storerhnewabs:
+    case Hexagon::PS_storerhnewabs:
       opcode = Hexagon::S2_storerhnewgp;
       break;
-    case Hexagon::S2_storerinewabs:
+    case Hexagon::PS_storerinewabs:
       opcode = Hexagon::S2_storerinewgp;
       break;
-    case Hexagon::S2_storerdabs:
+    case Hexagon::PS_storerdabs:
       opcode = Hexagon::S2_storerdgp;
       break;
-    case Hexagon::L4_loadrb_abs:
+    case Hexagon::PS_loadrbabs:
       opcode = Hexagon::L2_loadrbgp;
       break;
-    case Hexagon::L4_loadrub_abs:
+    case Hexagon::PS_loadrubabs:
       opcode = Hexagon::L2_loadrubgp;
       break;
-    case Hexagon::L4_loadrh_abs:
+    case Hexagon::PS_loadrhabs:
       opcode = Hexagon::L2_loadrhgp;
       break;
-    case Hexagon::L4_loadruh_abs:
+    case Hexagon::PS_loadruhabs:
       opcode = Hexagon::L2_loadruhgp;
       break;
-    case Hexagon::L4_loadri_abs:
+    case Hexagon::PS_loadriabs:
       opcode = Hexagon::L2_loadrigp;
       break;
-    case Hexagon::L4_loadrd_abs:
+    case Hexagon::PS_loadrdabs:
       opcode = Hexagon::L2_loadrdgp;
       break;
     default:
@@ -811,20 +811,20 @@ static const unsigned int StoreConditionalOpcodeData[][2] = {
 // HexagonII::INST_ICLASS_LD
 
 // HexagonII::INST_ICLASS_LD_ST_2
-static unsigned int LoadStoreOpcodeData[][2] = {{L4_loadrd_abs, 0x49c00000},
-                                                {L4_loadri_abs, 0x49800000},
-                                                {L4_loadruh_abs, 0x49600000},
-                                                {L4_loadrh_abs, 0x49400000},
-                                                {L4_loadrub_abs, 0x49200000},
-                                                {L4_loadrb_abs, 0x49000000},
-                                                {S2_storerdabs, 0x48c00000},
-                                                {S2_storerinewabs, 0x48a01000},
-                                                {S2_storerhnewabs, 0x48a00800},
-                                                {S2_storerbnewabs, 0x48a00000},
-                                                {S2_storeriabs, 0x48800000},
-                                                {S2_storerfabs, 0x48600000},
-                                                {S2_storerhabs, 0x48400000},
-                                                {S2_storerbabs, 0x48000000}};
+static unsigned int LoadStoreOpcodeData[][2] = {{PS_loadrdabs, 0x49c00000},
+                                                {PS_loadriabs, 0x49800000},
+                                                {PS_loadruhabs, 0x49600000},
+                                                {PS_loadrhabs, 0x49400000},
+                                                {PS_loadrubabs, 0x49200000},
+                                                {PS_loadrbabs, 0x49000000},
+                                                {PS_storerdabs, 0x48c00000},
+                                                {PS_storerinewabs, 0x48a01000},
+                                                {PS_storerhnewabs, 0x48a00800},
+                                                {PS_storerbnewabs, 0x48a00000},
+                                                {PS_storeriabs, 0x48800000},
+                                                {PS_storerfabs, 0x48600000},
+                                                {PS_storerhabs, 0x48400000},
+                                                {PS_storerbabs, 0x48000000}};
 static const size_t NumCondS = array_lengthof(StoreConditionalOpcodeData);
 static const size_t NumLS = array_lengthof(LoadStoreOpcodeData);
 
@@ -982,15 +982,15 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       break;
 
     // op: g16_2
-    case (Hexagon::L4_loadri_abs):
+    case (Hexagon::PS_loadriabs):
       ++shift;
     // op: g16_1
-    case Hexagon::L4_loadrh_abs:
-    case Hexagon::L4_loadruh_abs:
+    case Hexagon::PS_loadrhabs:
+    case Hexagon::PS_loadruhabs:
       ++shift;
     // op: g16_0
-    case Hexagon::L4_loadrb_abs:
-    case Hexagon::L4_loadrub_abs: {
+    case Hexagon::PS_loadrbabs:
+    case Hexagon::PS_loadrubabs: {
       // op: Rd
       Value |= insn & UINT64_C(31);
       DecodeIntRegsRegisterClass(MI, Value, 0, 0);
@@ -1001,7 +1001,7 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       break;
     }
 
-    case Hexagon::L4_loadrd_abs: {
+    case Hexagon::PS_loadrdabs: {
       Value = insn & UINT64_C(31);
       DecodeDoubleRegsRegisterClass(MI, Value, 0, 0);
       Value = (insn >> 11) & UINT64_C(49152);
@@ -1011,7 +1011,7 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       break;
     }
 
-    case Hexagon::S2_storerdabs: {
+    case Hexagon::PS_storerdabs: {
       // op: g16_3
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
@@ -1025,13 +1025,13 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     }
 
     // op: g16_2
-    case Hexagon::S2_storerinewabs:
+    case Hexagon::PS_storerinewabs:
       ++shift;
     // op: g16_1
-    case Hexagon::S2_storerhnewabs:
+    case Hexagon::PS_storerhnewabs:
       ++shift;
     // op: g16_0
-    case Hexagon::S2_storerbnewabs: {
+    case Hexagon::PS_storerbnewabs: {
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(256);
@@ -1044,14 +1044,14 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     }
 
     // op: g16_2
-    case Hexagon::S2_storeriabs:
+    case Hexagon::PS_storeriabs:
       ++shift;
     // op: g16_1
-    case Hexagon::S2_storerhabs:
-    case Hexagon::S2_storerfabs:
+    case Hexagon::PS_storerhabs:
+    case Hexagon::PS_storerfabs:
       ++shift;
     // op: g16_0
-    case Hexagon::S2_storerbabs: {
+    case Hexagon::PS_storerbabs: {
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(256);
@@ -1087,244 +1087,244 @@ static DecodeStatus decodeImmext(MCInst &MI, uint32_t insn,
 
 // These values are from HexagonGenMCCodeEmitter.inc and HexagonIsetDx.td
 enum subInstBinaryValues {
-  V4_SA1_addi_BITS = 0x0000,
-  V4_SA1_addi_MASK = 0x1800,
-  V4_SA1_addrx_BITS = 0x1800,
-  V4_SA1_addrx_MASK = 0x1f00,
-  V4_SA1_addsp_BITS = 0x0c00,
-  V4_SA1_addsp_MASK = 0x1c00,
-  V4_SA1_and1_BITS = 0x1200,
-  V4_SA1_and1_MASK = 0x1f00,
-  V4_SA1_clrf_BITS = 0x1a70,
-  V4_SA1_clrf_MASK = 0x1e70,
-  V4_SA1_clrfnew_BITS = 0x1a50,
-  V4_SA1_clrfnew_MASK = 0x1e70,
-  V4_SA1_clrt_BITS = 0x1a60,
-  V4_SA1_clrt_MASK = 0x1e70,
-  V4_SA1_clrtnew_BITS = 0x1a40,
-  V4_SA1_clrtnew_MASK = 0x1e70,
-  V4_SA1_cmpeqi_BITS = 0x1900,
-  V4_SA1_cmpeqi_MASK = 0x1f00,
-  V4_SA1_combine0i_BITS = 0x1c00,
-  V4_SA1_combine0i_MASK = 0x1d18,
-  V4_SA1_combine1i_BITS = 0x1c08,
-  V4_SA1_combine1i_MASK = 0x1d18,
-  V4_SA1_combine2i_BITS = 0x1c10,
-  V4_SA1_combine2i_MASK = 0x1d18,
-  V4_SA1_combine3i_BITS = 0x1c18,
-  V4_SA1_combine3i_MASK = 0x1d18,
-  V4_SA1_combinerz_BITS = 0x1d08,
-  V4_SA1_combinerz_MASK = 0x1d08,
-  V4_SA1_combinezr_BITS = 0x1d00,
-  V4_SA1_combinezr_MASK = 0x1d08,
-  V4_SA1_dec_BITS = 0x1300,
-  V4_SA1_dec_MASK = 0x1f00,
-  V4_SA1_inc_BITS = 0x1100,
-  V4_SA1_inc_MASK = 0x1f00,
-  V4_SA1_seti_BITS = 0x0800,
-  V4_SA1_seti_MASK = 0x1c00,
-  V4_SA1_setin1_BITS = 0x1a00,
-  V4_SA1_setin1_MASK = 0x1e40,
-  V4_SA1_sxtb_BITS = 0x1500,
-  V4_SA1_sxtb_MASK = 0x1f00,
-  V4_SA1_sxth_BITS = 0x1400,
-  V4_SA1_sxth_MASK = 0x1f00,
-  V4_SA1_tfr_BITS = 0x1000,
-  V4_SA1_tfr_MASK = 0x1f00,
-  V4_SA1_zxtb_BITS = 0x1700,
-  V4_SA1_zxtb_MASK = 0x1f00,
-  V4_SA1_zxth_BITS = 0x1600,
-  V4_SA1_zxth_MASK = 0x1f00,
-  V4_SL1_loadri_io_BITS = 0x0000,
-  V4_SL1_loadri_io_MASK = 0x1000,
-  V4_SL1_loadrub_io_BITS = 0x1000,
-  V4_SL1_loadrub_io_MASK = 0x1000,
-  V4_SL2_deallocframe_BITS = 0x1f00,
-  V4_SL2_deallocframe_MASK = 0x1fc0,
-  V4_SL2_jumpr31_BITS = 0x1fc0,
-  V4_SL2_jumpr31_MASK = 0x1fc4,
-  V4_SL2_jumpr31_f_BITS = 0x1fc5,
-  V4_SL2_jumpr31_f_MASK = 0x1fc7,
-  V4_SL2_jumpr31_fnew_BITS = 0x1fc7,
-  V4_SL2_jumpr31_fnew_MASK = 0x1fc7,
-  V4_SL2_jumpr31_t_BITS = 0x1fc4,
-  V4_SL2_jumpr31_t_MASK = 0x1fc7,
-  V4_SL2_jumpr31_tnew_BITS = 0x1fc6,
-  V4_SL2_jumpr31_tnew_MASK = 0x1fc7,
-  V4_SL2_loadrb_io_BITS = 0x1000,
-  V4_SL2_loadrb_io_MASK = 0x1800,
-  V4_SL2_loadrd_sp_BITS = 0x1e00,
-  V4_SL2_loadrd_sp_MASK = 0x1f00,
-  V4_SL2_loadrh_io_BITS = 0x0000,
-  V4_SL2_loadrh_io_MASK = 0x1800,
-  V4_SL2_loadri_sp_BITS = 0x1c00,
-  V4_SL2_loadri_sp_MASK = 0x1e00,
-  V4_SL2_loadruh_io_BITS = 0x0800,
-  V4_SL2_loadruh_io_MASK = 0x1800,
-  V4_SL2_return_BITS = 0x1f40,
-  V4_SL2_return_MASK = 0x1fc4,
-  V4_SL2_return_f_BITS = 0x1f45,
-  V4_SL2_return_f_MASK = 0x1fc7,
-  V4_SL2_return_fnew_BITS = 0x1f47,
-  V4_SL2_return_fnew_MASK = 0x1fc7,
-  V4_SL2_return_t_BITS = 0x1f44,
-  V4_SL2_return_t_MASK = 0x1fc7,
-  V4_SL2_return_tnew_BITS = 0x1f46,
-  V4_SL2_return_tnew_MASK = 0x1fc7,
-  V4_SS1_storeb_io_BITS = 0x1000,
-  V4_SS1_storeb_io_MASK = 0x1000,
-  V4_SS1_storew_io_BITS = 0x0000,
-  V4_SS1_storew_io_MASK = 0x1000,
-  V4_SS2_allocframe_BITS = 0x1c00,
-  V4_SS2_allocframe_MASK = 0x1e00,
-  V4_SS2_storebi0_BITS = 0x1200,
-  V4_SS2_storebi0_MASK = 0x1f00,
-  V4_SS2_storebi1_BITS = 0x1300,
-  V4_SS2_storebi1_MASK = 0x1f00,
-  V4_SS2_stored_sp_BITS = 0x0a00,
-  V4_SS2_stored_sp_MASK = 0x1e00,
-  V4_SS2_storeh_io_BITS = 0x0000,
-  V4_SS2_storeh_io_MASK = 0x1800,
-  V4_SS2_storew_sp_BITS = 0x0800,
-  V4_SS2_storew_sp_MASK = 0x1e00,
-  V4_SS2_storewi0_BITS = 0x1000,
-  V4_SS2_storewi0_MASK = 0x1f00,
-  V4_SS2_storewi1_BITS = 0x1100,
-  V4_SS2_storewi1_MASK = 0x1f00
+  SA1_addi_BITS = 0x0000,
+  SA1_addi_MASK = 0x1800,
+  SA1_addrx_BITS = 0x1800,
+  SA1_addrx_MASK = 0x1f00,
+  SA1_addsp_BITS = 0x0c00,
+  SA1_addsp_MASK = 0x1c00,
+  SA1_and1_BITS = 0x1200,
+  SA1_and1_MASK = 0x1f00,
+  SA1_clrf_BITS = 0x1a70,
+  SA1_clrf_MASK = 0x1e70,
+  SA1_clrfnew_BITS = 0x1a50,
+  SA1_clrfnew_MASK = 0x1e70,
+  SA1_clrt_BITS = 0x1a60,
+  SA1_clrt_MASK = 0x1e70,
+  SA1_clrtnew_BITS = 0x1a40,
+  SA1_clrtnew_MASK = 0x1e70,
+  SA1_cmpeqi_BITS = 0x1900,
+  SA1_cmpeqi_MASK = 0x1f00,
+  SA1_combine0i_BITS = 0x1c00,
+  SA1_combine0i_MASK = 0x1d18,
+  SA1_combine1i_BITS = 0x1c08,
+  SA1_combine1i_MASK = 0x1d18,
+  SA1_combine2i_BITS = 0x1c10,
+  SA1_combine2i_MASK = 0x1d18,
+  SA1_combine3i_BITS = 0x1c18,
+  SA1_combine3i_MASK = 0x1d18,
+  SA1_combinerz_BITS = 0x1d08,
+  SA1_combinerz_MASK = 0x1d08,
+  SA1_combinezr_BITS = 0x1d00,
+  SA1_combinezr_MASK = 0x1d08,
+  SA1_dec_BITS = 0x1300,
+  SA1_dec_MASK = 0x1f00,
+  SA1_inc_BITS = 0x1100,
+  SA1_inc_MASK = 0x1f00,
+  SA1_seti_BITS = 0x0800,
+  SA1_seti_MASK = 0x1c00,
+  SA1_setin1_BITS = 0x1a00,
+  SA1_setin1_MASK = 0x1e40,
+  SA1_sxtb_BITS = 0x1500,
+  SA1_sxtb_MASK = 0x1f00,
+  SA1_sxth_BITS = 0x1400,
+  SA1_sxth_MASK = 0x1f00,
+  SA1_tfr_BITS = 0x1000,
+  SA1_tfr_MASK = 0x1f00,
+  SA1_zxtb_BITS = 0x1700,
+  SA1_zxtb_MASK = 0x1f00,
+  SA1_zxth_BITS = 0x1600,
+  SA1_zxth_MASK = 0x1f00,
+  SL1_loadri_io_BITS = 0x0000,
+  SL1_loadri_io_MASK = 0x1000,
+  SL1_loadrub_io_BITS = 0x1000,
+  SL1_loadrub_io_MASK = 0x1000,
+  SL2_deallocframe_BITS = 0x1f00,
+  SL2_deallocframe_MASK = 0x1fc0,
+  SL2_jumpr31_BITS = 0x1fc0,
+  SL2_jumpr31_MASK = 0x1fc4,
+  SL2_jumpr31_f_BITS = 0x1fc5,
+  SL2_jumpr31_f_MASK = 0x1fc7,
+  SL2_jumpr31_fnew_BITS = 0x1fc7,
+  SL2_jumpr31_fnew_MASK = 0x1fc7,
+  SL2_jumpr31_t_BITS = 0x1fc4,
+  SL2_jumpr31_t_MASK = 0x1fc7,
+  SL2_jumpr31_tnew_BITS = 0x1fc6,
+  SL2_jumpr31_tnew_MASK = 0x1fc7,
+  SL2_loadrb_io_BITS = 0x1000,
+  SL2_loadrb_io_MASK = 0x1800,
+  SL2_loadrd_sp_BITS = 0x1e00,
+  SL2_loadrd_sp_MASK = 0x1f00,
+  SL2_loadrh_io_BITS = 0x0000,
+  SL2_loadrh_io_MASK = 0x1800,
+  SL2_loadri_sp_BITS = 0x1c00,
+  SL2_loadri_sp_MASK = 0x1e00,
+  SL2_loadruh_io_BITS = 0x0800,
+  SL2_loadruh_io_MASK = 0x1800,
+  SL2_return_BITS = 0x1f40,
+  SL2_return_MASK = 0x1fc4,
+  SL2_return_f_BITS = 0x1f45,
+  SL2_return_f_MASK = 0x1fc7,
+  SL2_return_fnew_BITS = 0x1f47,
+  SL2_return_fnew_MASK = 0x1fc7,
+  SL2_return_t_BITS = 0x1f44,
+  SL2_return_t_MASK = 0x1fc7,
+  SL2_return_tnew_BITS = 0x1f46,
+  SL2_return_tnew_MASK = 0x1fc7,
+  SS1_storeb_io_BITS = 0x1000,
+  SS1_storeb_io_MASK = 0x1000,
+  SS1_storew_io_BITS = 0x0000,
+  SS1_storew_io_MASK = 0x1000,
+  SS2_allocframe_BITS = 0x1c00,
+  SS2_allocframe_MASK = 0x1e00,
+  SS2_storebi0_BITS = 0x1200,
+  SS2_storebi0_MASK = 0x1f00,
+  SS2_storebi1_BITS = 0x1300,
+  SS2_storebi1_MASK = 0x1f00,
+  SS2_stored_sp_BITS = 0x0a00,
+  SS2_stored_sp_MASK = 0x1e00,
+  SS2_storeh_io_BITS = 0x0000,
+  SS2_storeh_io_MASK = 0x1800,
+  SS2_storew_sp_BITS = 0x0800,
+  SS2_storew_sp_MASK = 0x1e00,
+  SS2_storewi0_BITS = 0x1000,
+  SS2_storewi0_MASK = 0x1f00,
+  SS2_storewi1_BITS = 0x1100,
+  SS2_storewi1_MASK = 0x1f00
 };
 
 static unsigned GetSubinstOpcode(unsigned IClass, unsigned inst, unsigned &op,
                                  raw_ostream &os) {
   switch (IClass) {
   case HexagonII::HSIG_L1:
-    if ((inst & V4_SL1_loadri_io_MASK) == V4_SL1_loadri_io_BITS)
-      op = Hexagon::V4_SL1_loadri_io;
-    else if ((inst & V4_SL1_loadrub_io_MASK) == V4_SL1_loadrub_io_BITS)
-      op = Hexagon::V4_SL1_loadrub_io;
+    if ((inst & SL1_loadri_io_MASK) == SL1_loadri_io_BITS)
+      op = Hexagon::SL1_loadri_io;
+    else if ((inst & SL1_loadrub_io_MASK) == SL1_loadrub_io_BITS)
+      op = Hexagon::SL1_loadrub_io;
     else {
       os << "<unknown subinstruction>";
       return MCDisassembler::Fail;
     }
     break;
   case HexagonII::HSIG_L2:
-    if ((inst & V4_SL2_deallocframe_MASK) == V4_SL2_deallocframe_BITS)
-      op = Hexagon::V4_SL2_deallocframe;
-    else if ((inst & V4_SL2_jumpr31_MASK) == V4_SL2_jumpr31_BITS)
-      op = Hexagon::V4_SL2_jumpr31;
-    else if ((inst & V4_SL2_jumpr31_f_MASK) == V4_SL2_jumpr31_f_BITS)
-      op = Hexagon::V4_SL2_jumpr31_f;
-    else if ((inst & V4_SL2_jumpr31_fnew_MASK) == V4_SL2_jumpr31_fnew_BITS)
-      op = Hexagon::V4_SL2_jumpr31_fnew;
-    else if ((inst & V4_SL2_jumpr31_t_MASK) == V4_SL2_jumpr31_t_BITS)
-      op = Hexagon::V4_SL2_jumpr31_t;
-    else if ((inst & V4_SL2_jumpr31_tnew_MASK) == V4_SL2_jumpr31_tnew_BITS)
-      op = Hexagon::V4_SL2_jumpr31_tnew;
-    else if ((inst & V4_SL2_loadrb_io_MASK) == V4_SL2_loadrb_io_BITS)
-      op = Hexagon::V4_SL2_loadrb_io;
-    else if ((inst & V4_SL2_loadrd_sp_MASK) == V4_SL2_loadrd_sp_BITS)
-      op = Hexagon::V4_SL2_loadrd_sp;
-    else if ((inst & V4_SL2_loadrh_io_MASK) == V4_SL2_loadrh_io_BITS)
-      op = Hexagon::V4_SL2_loadrh_io;
-    else if ((inst & V4_SL2_loadri_sp_MASK) == V4_SL2_loadri_sp_BITS)
-      op = Hexagon::V4_SL2_loadri_sp;
-    else if ((inst & V4_SL2_loadruh_io_MASK) == V4_SL2_loadruh_io_BITS)
-      op = Hexagon::V4_SL2_loadruh_io;
-    else if ((inst & V4_SL2_return_MASK) == V4_SL2_return_BITS)
-      op = Hexagon::V4_SL2_return;
-    else if ((inst & V4_SL2_return_f_MASK) == V4_SL2_return_f_BITS)
-      op = Hexagon::V4_SL2_return_f;
-    else if ((inst & V4_SL2_return_fnew_MASK) == V4_SL2_return_fnew_BITS)
-      op = Hexagon::V4_SL2_return_fnew;
-    else if ((inst & V4_SL2_return_t_MASK) == V4_SL2_return_t_BITS)
-      op = Hexagon::V4_SL2_return_t;
-    else if ((inst & V4_SL2_return_tnew_MASK) == V4_SL2_return_tnew_BITS)
-      op = Hexagon::V4_SL2_return_tnew;
+    if ((inst & SL2_deallocframe_MASK) == SL2_deallocframe_BITS)
+      op = Hexagon::SL2_deallocframe;
+    else if ((inst & SL2_jumpr31_MASK) == SL2_jumpr31_BITS)
+      op = Hexagon::SL2_jumpr31;
+    else if ((inst & SL2_jumpr31_f_MASK) == SL2_jumpr31_f_BITS)
+      op = Hexagon::SL2_jumpr31_f;
+    else if ((inst & SL2_jumpr31_fnew_MASK) == SL2_jumpr31_fnew_BITS)
+      op = Hexagon::SL2_jumpr31_fnew;
+    else if ((inst & SL2_jumpr31_t_MASK) == SL2_jumpr31_t_BITS)
+      op = Hexagon::SL2_jumpr31_t;
+    else if ((inst & SL2_jumpr31_tnew_MASK) == SL2_jumpr31_tnew_BITS)
+      op = Hexagon::SL2_jumpr31_tnew;
+    else if ((inst & SL2_loadrb_io_MASK) == SL2_loadrb_io_BITS)
+      op = Hexagon::SL2_loadrb_io;
+    else if ((inst & SL2_loadrd_sp_MASK) == SL2_loadrd_sp_BITS)
+      op = Hexagon::SL2_loadrd_sp;
+    else if ((inst & SL2_loadrh_io_MASK) == SL2_loadrh_io_BITS)
+      op = Hexagon::SL2_loadrh_io;
+    else if ((inst & SL2_loadri_sp_MASK) == SL2_loadri_sp_BITS)
+      op = Hexagon::SL2_loadri_sp;
+    else if ((inst & SL2_loadruh_io_MASK) == SL2_loadruh_io_BITS)
+      op = Hexagon::SL2_loadruh_io;
+    else if ((inst & SL2_return_MASK) == SL2_return_BITS)
+      op = Hexagon::SL2_return;
+    else if ((inst & SL2_return_f_MASK) == SL2_return_f_BITS)
+      op = Hexagon::SL2_return_f;
+    else if ((inst & SL2_return_fnew_MASK) == SL2_return_fnew_BITS)
+      op = Hexagon::SL2_return_fnew;
+    else if ((inst & SL2_return_t_MASK) == SL2_return_t_BITS)
+      op = Hexagon::SL2_return_t;
+    else if ((inst & SL2_return_tnew_MASK) == SL2_return_tnew_BITS)
+      op = Hexagon::SL2_return_tnew;
     else {
       os << "<unknown subinstruction>";
       return MCDisassembler::Fail;
     }
     break;
   case HexagonII::HSIG_A:
-    if ((inst & V4_SA1_addi_MASK) == V4_SA1_addi_BITS)
-      op = Hexagon::V4_SA1_addi;
-    else if ((inst & V4_SA1_addrx_MASK) == V4_SA1_addrx_BITS)
-      op = Hexagon::V4_SA1_addrx;
-    else if ((inst & V4_SA1_addsp_MASK) == V4_SA1_addsp_BITS)
-      op = Hexagon::V4_SA1_addsp;
-    else if ((inst & V4_SA1_and1_MASK) == V4_SA1_and1_BITS)
-      op = Hexagon::V4_SA1_and1;
-    else if ((inst & V4_SA1_clrf_MASK) == V4_SA1_clrf_BITS)
-      op = Hexagon::V4_SA1_clrf;
-    else if ((inst & V4_SA1_clrfnew_MASK) == V4_SA1_clrfnew_BITS)
-      op = Hexagon::V4_SA1_clrfnew;
-    else if ((inst & V4_SA1_clrt_MASK) == V4_SA1_clrt_BITS)
-      op = Hexagon::V4_SA1_clrt;
-    else if ((inst & V4_SA1_clrtnew_MASK) == V4_SA1_clrtnew_BITS)
-      op = Hexagon::V4_SA1_clrtnew;
-    else if ((inst & V4_SA1_cmpeqi_MASK) == V4_SA1_cmpeqi_BITS)
-      op = Hexagon::V4_SA1_cmpeqi;
-    else if ((inst & V4_SA1_combine0i_MASK) == V4_SA1_combine0i_BITS)
-      op = Hexagon::V4_SA1_combine0i;
-    else if ((inst & V4_SA1_combine1i_MASK) == V4_SA1_combine1i_BITS)
-      op = Hexagon::V4_SA1_combine1i;
-    else if ((inst & V4_SA1_combine2i_MASK) == V4_SA1_combine2i_BITS)
-      op = Hexagon::V4_SA1_combine2i;
-    else if ((inst & V4_SA1_combine3i_MASK) == V4_SA1_combine3i_BITS)
-      op = Hexagon::V4_SA1_combine3i;
-    else if ((inst & V4_SA1_combinerz_MASK) == V4_SA1_combinerz_BITS)
-      op = Hexagon::V4_SA1_combinerz;
-    else if ((inst & V4_SA1_combinezr_MASK) == V4_SA1_combinezr_BITS)
-      op = Hexagon::V4_SA1_combinezr;
-    else if ((inst & V4_SA1_dec_MASK) == V4_SA1_dec_BITS)
-      op = Hexagon::V4_SA1_dec;
-    else if ((inst & V4_SA1_inc_MASK) == V4_SA1_inc_BITS)
-      op = Hexagon::V4_SA1_inc;
-    else if ((inst & V4_SA1_seti_MASK) == V4_SA1_seti_BITS)
-      op = Hexagon::V4_SA1_seti;
-    else if ((inst & V4_SA1_setin1_MASK) == V4_SA1_setin1_BITS)
-      op = Hexagon::V4_SA1_setin1;
-    else if ((inst & V4_SA1_sxtb_MASK) == V4_SA1_sxtb_BITS)
-      op = Hexagon::V4_SA1_sxtb;
-    else if ((inst & V4_SA1_sxth_MASK) == V4_SA1_sxth_BITS)
-      op = Hexagon::V4_SA1_sxth;
-    else if ((inst & V4_SA1_tfr_MASK) == V4_SA1_tfr_BITS)
-      op = Hexagon::V4_SA1_tfr;
-    else if ((inst & V4_SA1_zxtb_MASK) == V4_SA1_zxtb_BITS)
-      op = Hexagon::V4_SA1_zxtb;
-    else if ((inst & V4_SA1_zxth_MASK) == V4_SA1_zxth_BITS)
-      op = Hexagon::V4_SA1_zxth;
+    if ((inst & SA1_addi_MASK) == SA1_addi_BITS)
+      op = Hexagon::SA1_addi;
+    else if ((inst & SA1_addrx_MASK) == SA1_addrx_BITS)
+      op = Hexagon::SA1_addrx;
+    else if ((inst & SA1_addsp_MASK) == SA1_addsp_BITS)
+      op = Hexagon::SA1_addsp;
+    else if ((inst & SA1_and1_MASK) == SA1_and1_BITS)
+      op = Hexagon::SA1_and1;
+    else if ((inst & SA1_clrf_MASK) == SA1_clrf_BITS)
+      op = Hexagon::SA1_clrf;
+    else if ((inst & SA1_clrfnew_MASK) == SA1_clrfnew_BITS)
+      op = Hexagon::SA1_clrfnew;
+    else if ((inst & SA1_clrt_MASK) == SA1_clrt_BITS)
+      op = Hexagon::SA1_clrt;
+    else if ((inst & SA1_clrtnew_MASK) == SA1_clrtnew_BITS)
+      op = Hexagon::SA1_clrtnew;
+    else if ((inst & SA1_cmpeqi_MASK) == SA1_cmpeqi_BITS)
+      op = Hexagon::SA1_cmpeqi;
+    else if ((inst & SA1_combine0i_MASK) == SA1_combine0i_BITS)
+      op = Hexagon::SA1_combine0i;
+    else if ((inst & SA1_combine1i_MASK) == SA1_combine1i_BITS)
+      op = Hexagon::SA1_combine1i;
+    else if ((inst & SA1_combine2i_MASK) == SA1_combine2i_BITS)
+      op = Hexagon::SA1_combine2i;
+    else if ((inst & SA1_combine3i_MASK) == SA1_combine3i_BITS)
+      op = Hexagon::SA1_combine3i;
+    else if ((inst & SA1_combinerz_MASK) == SA1_combinerz_BITS)
+      op = Hexagon::SA1_combinerz;
+    else if ((inst & SA1_combinezr_MASK) == SA1_combinezr_BITS)
+      op = Hexagon::SA1_combinezr;
+    else if ((inst & SA1_dec_MASK) == SA1_dec_BITS)
+      op = Hexagon::SA1_dec;
+    else if ((inst & SA1_inc_MASK) == SA1_inc_BITS)
+      op = Hexagon::SA1_inc;
+    else if ((inst & SA1_seti_MASK) == SA1_seti_BITS)
+      op = Hexagon::SA1_seti;
+    else if ((inst & SA1_setin1_MASK) == SA1_setin1_BITS)
+      op = Hexagon::SA1_setin1;
+    else if ((inst & SA1_sxtb_MASK) == SA1_sxtb_BITS)
+      op = Hexagon::SA1_sxtb;
+    else if ((inst & SA1_sxth_MASK) == SA1_sxth_BITS)
+      op = Hexagon::SA1_sxth;
+    else if ((inst & SA1_tfr_MASK) == SA1_tfr_BITS)
+      op = Hexagon::SA1_tfr;
+    else if ((inst & SA1_zxtb_MASK) == SA1_zxtb_BITS)
+      op = Hexagon::SA1_zxtb;
+    else if ((inst & SA1_zxth_MASK) == SA1_zxth_BITS)
+      op = Hexagon::SA1_zxth;
     else {
       os << "<unknown subinstruction>";
       return MCDisassembler::Fail;
     }
     break;
   case HexagonII::HSIG_S1:
-    if ((inst & V4_SS1_storeb_io_MASK) == V4_SS1_storeb_io_BITS)
-      op = Hexagon::V4_SS1_storeb_io;
-    else if ((inst & V4_SS1_storew_io_MASK) == V4_SS1_storew_io_BITS)
-      op = Hexagon::V4_SS1_storew_io;
+    if ((inst & SS1_storeb_io_MASK) == SS1_storeb_io_BITS)
+      op = Hexagon::SS1_storeb_io;
+    else if ((inst & SS1_storew_io_MASK) == SS1_storew_io_BITS)
+      op = Hexagon::SS1_storew_io;
     else {
       os << "<unknown subinstruction>";
       return MCDisassembler::Fail;
     }
     break;
   case HexagonII::HSIG_S2:
-    if ((inst & V4_SS2_allocframe_MASK) == V4_SS2_allocframe_BITS)
-      op = Hexagon::V4_SS2_allocframe;
-    else if ((inst & V4_SS2_storebi0_MASK) == V4_SS2_storebi0_BITS)
-      op = Hexagon::V4_SS2_storebi0;
-    else if ((inst & V4_SS2_storebi1_MASK) == V4_SS2_storebi1_BITS)
-      op = Hexagon::V4_SS2_storebi1;
-    else if ((inst & V4_SS2_stored_sp_MASK) == V4_SS2_stored_sp_BITS)
-      op = Hexagon::V4_SS2_stored_sp;
-    else if ((inst & V4_SS2_storeh_io_MASK) == V4_SS2_storeh_io_BITS)
-      op = Hexagon::V4_SS2_storeh_io;
-    else if ((inst & V4_SS2_storew_sp_MASK) == V4_SS2_storew_sp_BITS)
-      op = Hexagon::V4_SS2_storew_sp;
-    else if ((inst & V4_SS2_storewi0_MASK) == V4_SS2_storewi0_BITS)
-      op = Hexagon::V4_SS2_storewi0;
-    else if ((inst & V4_SS2_storewi1_MASK) == V4_SS2_storewi1_BITS)
-      op = Hexagon::V4_SS2_storewi1;
+    if ((inst & SS2_allocframe_MASK) == SS2_allocframe_BITS)
+      op = Hexagon::SS2_allocframe;
+    else if ((inst & SS2_storebi0_MASK) == SS2_storebi0_BITS)
+      op = Hexagon::SS2_storebi0;
+    else if ((inst & SS2_storebi1_MASK) == SS2_storebi1_BITS)
+      op = Hexagon::SS2_storebi1;
+    else if ((inst & SS2_stored_sp_MASK) == SS2_stored_sp_BITS)
+      op = Hexagon::SS2_stored_sp;
+    else if ((inst & SS2_storeh_io_MASK) == SS2_storeh_io_BITS)
+      op = Hexagon::SS2_storeh_io;
+    else if ((inst & SS2_storew_sp_MASK) == SS2_storew_sp_BITS)
+      op = Hexagon::SS2_storew_sp;
+    else if ((inst & SS2_storewi0_MASK) == SS2_storewi0_BITS)
+      op = Hexagon::SS2_storewi0;
+    else if ((inst & SS2_storewi1_MASK) == SS2_storewi1_BITS)
+      op = Hexagon::SS2_storewi1;
     else {
       os << "<unknown subinstruction>";
       return MCDisassembler::Fail;
@@ -1362,25 +1362,25 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
   int64_t operand;
   MCOperand Op;
   switch (opcode) {
-  case Hexagon::V4_SL2_deallocframe:
-  case Hexagon::V4_SL2_jumpr31:
-  case Hexagon::V4_SL2_jumpr31_f:
-  case Hexagon::V4_SL2_jumpr31_fnew:
-  case Hexagon::V4_SL2_jumpr31_t:
-  case Hexagon::V4_SL2_jumpr31_tnew:
-  case Hexagon::V4_SL2_return:
-  case Hexagon::V4_SL2_return_f:
-  case Hexagon::V4_SL2_return_fnew:
-  case Hexagon::V4_SL2_return_t:
-  case Hexagon::V4_SL2_return_tnew:
+  case Hexagon::SL2_deallocframe:
+  case Hexagon::SL2_jumpr31:
+  case Hexagon::SL2_jumpr31_f:
+  case Hexagon::SL2_jumpr31_fnew:
+  case Hexagon::SL2_jumpr31_t:
+  case Hexagon::SL2_jumpr31_tnew:
+  case Hexagon::SL2_return:
+  case Hexagon::SL2_return_f:
+  case Hexagon::SL2_return_fnew:
+  case Hexagon::SL2_return_t:
+  case Hexagon::SL2_return_tnew:
     // no operands for these instructions
     break;
-  case Hexagon::V4_SS2_allocframe:
+  case Hexagon::SS2_allocframe:
     // u 8-4{5_3}
     operand = ((inst & 0x1f0) >> 4) << 3;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SL1_loadri_io:
+  case Hexagon::SL1_loadri_io:
     // Rd 3-0, Rs 7-4, u 11-8{4_2}
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1391,7 +1391,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = (inst & 0xf00) >> 6;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SL1_loadrub_io:
+  case Hexagon::SL1_loadrub_io:
     // Rd 3-0, Rs 7-4, u 11-8
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1402,7 +1402,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = (inst & 0xf00) >> 8;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SL2_loadrb_io:
+  case Hexagon::SL2_loadrb_io:
     // Rd 3-0, Rs 7-4, u 10-8
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1413,8 +1413,8 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = (inst & 0x700) >> 8;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SL2_loadrh_io:
-  case Hexagon::V4_SL2_loadruh_io:
+  case Hexagon::SL2_loadrh_io:
+  case Hexagon::SL2_loadruh_io:
     // Rd 3-0, Rs 7-4, u 10-8{3_1}
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1425,7 +1425,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = ((inst & 0x700) >> 8) << 1;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SL2_loadrd_sp:
+  case Hexagon::SL2_loadrd_sp:
     // Rdd 2-0, u 7-3{5_3}
     operand = getDRegFromSubinstEncoding(inst & 0x7);
     Op = MCOperand::createReg(operand);
@@ -1433,7 +1433,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = ((inst & 0x0f8) >> 3) << 3;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SL2_loadri_sp:
+  case Hexagon::SL2_loadri_sp:
     // Rd 3-0, u 8-4{5_2}
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1441,7 +1441,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = ((inst & 0x1f0) >> 4) << 2;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SA1_addi:
+  case Hexagon::SA1_addi:
     // Rx 3-0 (x2), s7 10-4
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1450,7 +1450,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = SignExtend64<7>((inst & 0x7f0) >> 4);
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SA1_addrx:
+  case Hexagon::SA1_addrx:
     // Rx 3-0 (x2), Rs 7-4
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1460,14 +1460,14 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
     break;
-  case Hexagon::V4_SA1_and1:
-  case Hexagon::V4_SA1_dec:
-  case Hexagon::V4_SA1_inc:
-  case Hexagon::V4_SA1_sxtb:
-  case Hexagon::V4_SA1_sxth:
-  case Hexagon::V4_SA1_tfr:
-  case Hexagon::V4_SA1_zxtb:
-  case Hexagon::V4_SA1_zxth:
+  case Hexagon::SA1_and1:
+  case Hexagon::SA1_dec:
+  case Hexagon::SA1_inc:
+  case Hexagon::SA1_sxtb:
+  case Hexagon::SA1_sxth:
+  case Hexagon::SA1_tfr:
+  case Hexagon::SA1_zxtb:
+  case Hexagon::SA1_zxth:
     // Rd 3-0, Rs 7-4
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1476,7 +1476,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
     break;
-  case Hexagon::V4_SA1_addsp:
+  case Hexagon::SA1_addsp:
     // Rd 3-0, u 9-4{6_2}
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1484,7 +1484,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = ((inst & 0x3f0) >> 4) << 2;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SA1_seti:
+  case Hexagon::SA1_seti:
     // Rd 3-0, u 9-4
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
@@ -1492,20 +1492,20 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = (inst & 0x3f0) >> 4;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SA1_clrf:
-  case Hexagon::V4_SA1_clrfnew:
-  case Hexagon::V4_SA1_clrt:
-  case Hexagon::V4_SA1_clrtnew:
-  case Hexagon::V4_SA1_setin1:
+  case Hexagon::SA1_clrf:
+  case Hexagon::SA1_clrfnew:
+  case Hexagon::SA1_clrt:
+  case Hexagon::SA1_clrtnew:
+  case Hexagon::SA1_setin1:
     // Rd 3-0
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
-    if (opcode == Hexagon::V4_SA1_setin1)
+    if (opcode == Hexagon::SA1_setin1)
       break;
     MI->addOperand(MCOperand::createReg(Hexagon::P0));
     break;
-  case Hexagon::V4_SA1_cmpeqi:
+  case Hexagon::SA1_cmpeqi:
     // Rs 7-4, u 1-0
     operand = getRegFromSubinstEncoding((inst & 0xf0) >> 4);
     Op = MCOperand::createReg(operand);
@@ -1513,10 +1513,10 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = inst & 0x3;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SA1_combine0i:
-  case Hexagon::V4_SA1_combine1i:
-  case Hexagon::V4_SA1_combine2i:
-  case Hexagon::V4_SA1_combine3i:
+  case Hexagon::SA1_combine0i:
+  case Hexagon::SA1_combine1i:
+  case Hexagon::SA1_combine2i:
+  case Hexagon::SA1_combine3i:
     // Rdd 2-0, u 6-5
     operand = getDRegFromSubinstEncoding(inst & 0x7);
     Op = MCOperand::createReg(operand);
@@ -1524,8 +1524,8 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = (inst & 0x060) >> 5;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SA1_combinerz:
-  case Hexagon::V4_SA1_combinezr:
+  case Hexagon::SA1_combinerz:
+  case Hexagon::SA1_combinezr:
     // Rdd 2-0, Rs 7-4
     operand = getDRegFromSubinstEncoding(inst & 0x7);
     Op = MCOperand::createReg(operand);
@@ -1534,7 +1534,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
     break;
-  case Hexagon::V4_SS1_storeb_io:
+  case Hexagon::SS1_storeb_io:
     // Rs 7-4, u 11-8, Rt 3-0
     operand = getRegFromSubinstEncoding((inst & 0xf0) >> 4);
     Op = MCOperand::createReg(operand);
@@ -1545,7 +1545,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
     break;
-  case Hexagon::V4_SS1_storew_io:
+  case Hexagon::SS1_storew_io:
     // Rs 7-4, u 11-8{4_2}, Rt 3-0
     operand = getRegFromSubinstEncoding((inst & 0xf0) >> 4);
     Op = MCOperand::createReg(operand);
@@ -1556,8 +1556,8 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
     break;
-  case Hexagon::V4_SS2_storebi0:
-  case Hexagon::V4_SS2_storebi1:
+  case Hexagon::SS2_storebi0:
+  case Hexagon::SS2_storebi1:
     // Rs 7-4, u 3-0
     operand = getRegFromSubinstEncoding((inst & 0xf0) >> 4);
     Op = MCOperand::createReg(operand);
@@ -1565,8 +1565,8 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = inst & 0xf;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SS2_storewi0:
-  case Hexagon::V4_SS2_storewi1:
+  case Hexagon::SS2_storewi0:
+  case Hexagon::SS2_storewi1:
     // Rs 7-4, u 3-0{4_2}
     operand = getRegFromSubinstEncoding((inst & 0xf0) >> 4);
     Op = MCOperand::createReg(operand);
@@ -1574,7 +1574,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = (inst & 0xf) << 2;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
     break;
-  case Hexagon::V4_SS2_stored_sp:
+  case Hexagon::SS2_stored_sp:
     // s 8-3{6_3}, Rtt 2-0
     operand = SignExtend64<9>(((inst & 0x1f8) >> 3) << 3);
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());
@@ -1582,7 +1582,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
     break;
-  case Hexagon::V4_SS2_storeh_io:
+  case Hexagon::SS2_storeh_io:
     // Rs 7-4, u 10-8{3_1}, Rt 3-0
     operand = getRegFromSubinstEncoding((inst & 0xf0) >> 4);
     Op = MCOperand::createReg(operand);
@@ -1593,7 +1593,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
     break;
-  case Hexagon::V4_SS2_storew_sp:
+  case Hexagon::SS2_storew_sp:
     // u 8-4{5_2}, Rd 3-0
     operand = ((inst & 0x1f0) >> 4) << 2;
     HexagonMCInstrInfo::addConstant(*MI, operand, getContext());

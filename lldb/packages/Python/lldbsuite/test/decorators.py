@@ -5,6 +5,7 @@ from __future__ import print_function
 from distutils.version import LooseVersion, StrictVersion
 from functools import wraps
 import os
+import platform
 import re
 import sys
 import tempfile
@@ -667,6 +668,9 @@ def skipUnlessThreadSanitizer(func):
         compiler = os.path.basename(compiler_path)
         if not compiler.startswith("clang"):
             return "Test requires clang as compiler"
+        # rdar://28659145 - TSAN tests don't look like they're supported on i386
+        if self.getArchitecture() == 'i386' and platform.system() == 'Darwin':
+            return "TSAN tests not compatible with i386 targets"
         f = tempfile.NamedTemporaryFile()
         cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
         if os.popen(cmd).close() is not None:

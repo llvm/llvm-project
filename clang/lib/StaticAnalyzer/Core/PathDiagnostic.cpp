@@ -211,6 +211,12 @@ void PathDiagnosticConsumer::HandlePathDiagnostic(
     const SourceManager &SMgr = D->path.front()->getLocation().getManager();
     SmallVector<const PathPieces *, 5> WorkList;
     WorkList.push_back(&D->path);
+    SmallString<128> buf;
+    llvm::raw_svector_ostream warning(buf);
+    warning << "warning: Path diagnostic report is not generated. Current "
+            << "output format does not support diagnostics that cross file "
+            << "boundaries. Refer to --analyzer-output for valid output "
+            << "formats\n";
 
     while (!WorkList.empty()) {
       const PathPieces &path = *WorkList.pop_back_val();
@@ -222,19 +228,25 @@ void PathDiagnosticConsumer::HandlePathDiagnostic(
 
         if (FID.isInvalid()) {
           FID = SMgr.getFileID(L);
-        } else if (SMgr.getFileID(L) != FID)
-          return; // FIXME: Emit a warning?
+        } else if (SMgr.getFileID(L) != FID) {
+          llvm::errs() << warning.str();
+          return;
+        }
 
         // Check the source ranges.
         ArrayRef<SourceRange> Ranges = piece->getRanges();
         for (ArrayRef<SourceRange>::iterator I = Ranges.begin(),
                                              E = Ranges.end(); I != E; ++I) {
           SourceLocation L = SMgr.getExpansionLoc(I->getBegin());
-          if (!L.isFileID() || SMgr.getFileID(L) != FID)
-            return; // FIXME: Emit a warning?
+          if (!L.isFileID() || SMgr.getFileID(L) != FID) {
+            llvm::errs() << warning.str();
+            return;
+          }
           L = SMgr.getExpansionLoc(I->getEnd());
-          if (!L.isFileID() || SMgr.getFileID(L) != FID)
-            return; // FIXME: Emit a warning?
+          if (!L.isFileID() || SMgr.getFileID(L) != FID) {
+            llvm::errs() << warning.str();
+            return;
+          }
         }
 
         if (const PathDiagnosticCallPiece *call =

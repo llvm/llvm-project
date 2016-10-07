@@ -50,6 +50,27 @@ FunctionPass *llvm::createWebAssemblySetP2AlignOperands() {
   return new WebAssemblySetP2AlignOperands();
 }
 
+static void RewriteP2Align(MachineInstr &MI, unsigned OperandNo) {
+  assert(MI.getOperand(OperandNo).getImm() == 0 &&
+         "ISel should set p2align operands to 0");
+  assert(MI.hasOneMemOperand() &&
+         "Load and store instructions have exactly one mem operand");
+  assert((*MI.memoperands_begin())->getSize() ==
+             (UINT64_C(1)
+              << WebAssembly::GetDefaultP2Align(MI.getOpcode())) &&
+         "Default p2align value should be natural");
+  assert(MI.getDesc().OpInfo[OperandNo].OperandType ==
+             WebAssembly::OPERAND_P2ALIGN &&
+         "Load and store instructions should have a p2align operand");
+  uint64_t P2Align = Log2_64((*MI.memoperands_begin())->getAlignment());
+
+  // WebAssembly does not currently support supernatural alignment.
+  P2Align = std::min(
+      P2Align, uint64_t(WebAssembly::GetDefaultP2Align(MI.getOpcode())));
+
+  MI.getOperand(OperandNo).setImm(P2Align);
+}
+
 bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({
     dbgs() << "********** Set p2align Operands **********\n"
@@ -75,6 +96,8 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::LOAD16_U_I64:
       case WebAssembly::LOAD32_S_I64:
       case WebAssembly::LOAD32_U_I64:
+        RewriteP2Align(MI, WebAssembly::LoadP2AlignOperandNo);
+        break;
       case WebAssembly::STORE_I32:
       case WebAssembly::STORE_I64:
       case WebAssembly::STORE_F32:
@@ -83,27 +106,9 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE16_I32:
       case WebAssembly::STORE8_I64:
       case WebAssembly::STORE16_I64:
-      case WebAssembly::STORE32_I64: {
-        assert(MI.getOperand(3).getImm() == 0 &&
-               "ISel should set p2align operands to 0");
-        assert(MI.hasOneMemOperand() &&
-               "Load and store instructions have exactly one mem operand");
-        assert((*MI.memoperands_begin())->getSize() ==
-                   (UINT64_C(1)
-                    << WebAssembly::GetDefaultP2Align(MI.getOpcode())) &&
-               "Default p2align value should be natural");
-        assert(MI.getDesc().OpInfo[3].OperandType ==
-                   WebAssembly::OPERAND_P2ALIGN &&
-               "Load and store instructions should have a p2align operand");
-        uint64_t P2Align = Log2_64((*MI.memoperands_begin())->getAlignment());
-
-        // WebAssembly does not currently support supernatural alignment.
-        P2Align = std::min(
-            P2Align, uint64_t(WebAssembly::GetDefaultP2Align(MI.getOpcode())));
-
-        MI.getOperand(3).setImm(P2Align);
+      case WebAssembly::STORE32_I64:
+        RewriteP2Align(MI, WebAssembly::StoreP2AlignOperandNo);
         break;
-      }
       default:
         break;
       }

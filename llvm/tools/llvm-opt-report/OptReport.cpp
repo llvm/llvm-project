@@ -59,8 +59,8 @@ static cl::opt<bool>
            cl::init(false), cl::cat(OptReportCategory));
 
 static cl::opt<bool>
-  Demangle("demangle", cl::desc("Demangle function names"), cl::init(true),
-           cl::cat(OptReportCategory));
+  NoDemangle("no-demangle", cl::desc("Don't demangle function names"),
+             cl::init(false), cl::cat(OptReportCategory));
 
 namespace {
 // For each location in the source file, the common per-transformation state
@@ -378,7 +378,7 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
               OS << ", ";
 
             bool Printed = false;
-            if (Demangle) {
+            if (!NoDemangle) {
               int Status = 0;
               char *Demangled =
                 itaniumDemangle(FuncName.c_str(), nullptr, nullptr, &Status);
