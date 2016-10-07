@@ -6906,10 +6906,10 @@ let Constraints = "$src1 = $dst" in {
 
 let Predicates = [HasAVX, NoVLX] in {
   defm VPMULLD  : SS48I_binop_rm<0x40, "vpmulld", mul, v4i32, VR128,
-                                 memopv2i64, i128mem, 0, SSE_PMULLD_ITINS>,
+                                 loadv2i64, i128mem, 0, SSE_PMULLD_ITINS>,
                                  VEX_4V;
   defm VPCMPEQQ : SS48I_binop_rm<0x29, "vpcmpeqq", X86pcmpeq, v2i64, VR128,
-                                 memopv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
+                                 loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
                                  VEX_4V;
 }
 let Predicates = [HasAVX2] in {

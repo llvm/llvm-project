@@ -777,7 +777,7 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
         DEBUG(llvm::dbgs()
               << Decl->getLocStart().printToString(*Result.SourceManager)
               << llvm::format(": unable to split words for %s '%s'\n",
-                              KindName.c_str(), Name));
+                              KindName.c_str(), Name.str().c_str()));
       }
     } else {
       NamingCheckFailure &Failure = NamingCheckFailures[NamingCheckId(
@@ -811,7 +811,7 @@ void IdentifierNamingCheck::checkMacro(SourceManager &SourceMgr,
       DEBUG(
           llvm::dbgs() << MacroNameTok.getLocation().printToString(SourceMgr)
                        << llvm::format(": unable to split words for %s '%s'\n",
-                                       KindName.c_str(), Name));
+                                       KindName.c_str(), Name.str().c_str()));
     }
   } else {
     NamingCheckId ID(MI->getDefinitionLoc(), Name);

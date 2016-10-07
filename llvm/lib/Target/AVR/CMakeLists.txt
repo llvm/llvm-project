@@ -10,6 +10,7 @@ add_public_tablegen_target(AVRCommonTableGen)
 add_llvm_target(AVRCodeGen
   AVRFrameLowering.cpp
   AVRInstrInfo.cpp
+  AVRMCInstLower.cpp
   AVRRegisterInfo.cpp
   AVRSubtarget.cpp
   AVRTargetMachine.cpp

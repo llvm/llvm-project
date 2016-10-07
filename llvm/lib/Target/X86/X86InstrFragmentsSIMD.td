@@ -612,9 +612,6 @@ def loadv4i64    : PatFrag<(ops node:$ptr), (v4i64 (load node:$ptr))>;
 // 512-bit load pattern fragments
 def loadv16f32   : PatFrag<(ops node:$ptr), (v16f32 (load node:$ptr))>;
 def loadv8f64    : PatFrag<(ops node:$ptr), (v8f64 (load node:$ptr))>;
-def loadv64i8    : PatFrag<(ops node:$ptr), (v64i8 (load node:$ptr))>;
-def loadv32i16   : PatFrag<(ops node:$ptr), (v32i16 (load node:$ptr))>;
-def loadv16i32   : PatFrag<(ops node:$ptr), (v16i32 (load node:$ptr))>;
 def loadv8i64    : PatFrag<(ops node:$ptr), (v8i64 (load node:$ptr))>;
 
 // 128-/256-/512-bit extload pattern fragments
@@ -685,8 +682,6 @@ def alignedloadv4i64 : PatFrag<(ops node:$ptr),
 // 512-bit aligned load pattern fragments
 def alignedloadv16f32 : PatFrag<(ops node:$ptr),
                                 (v16f32 (alignedload512 node:$ptr))>;
-def alignedloadv16i32 : PatFrag<(ops node:$ptr),
-                                (v16i32 (alignedload512 node:$ptr))>;
 def alignedloadv8f64  : PatFrag<(ops node:$ptr),
                                 (v8f64  (alignedload512 node:$ptr))>;
 def alignedloadv8i64  : PatFrag<(ops node:$ptr),
