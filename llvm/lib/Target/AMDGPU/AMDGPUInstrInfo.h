@@ -17,10 +17,10 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRINFO_H
 
 #include "llvm/Target/TargetInstrInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_OPERAND_ENUM
 #include "AMDGPUGenInstrInfo.inc"
 
 namespace llvm {
@@ -54,12 +54,6 @@ public:
   /// equivalent opcode that writes \p Channels Channels.
   int getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const;
 };
-
-namespace AMDGPU {
-  LLVM_READONLY
-  int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
-}  // End namespace AMDGPU
-
 } // End llvm namespace
 
 #endif

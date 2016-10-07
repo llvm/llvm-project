@@ -980,19 +980,26 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UREM,  MVT::i32, Expand);
   // Register based DivRem for AEABI (RTABI 4.2)
   if (Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
-      Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI()) {
+      Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
+      Subtarget->isTargetWindows()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
 
-    setLibcallName(RTLIB::SDIVREM_I8,  "__aeabi_idivmod");
-    setLibcallName(RTLIB::SDIVREM_I16, "__aeabi_idivmod");
-    setLibcallName(RTLIB::SDIVREM_I32, "__aeabi_idivmod");
-    setLibcallName(RTLIB::SDIVREM_I64, "__aeabi_ldivmod");
-    setLibcallName(RTLIB::UDIVREM_I8,  "__aeabi_uidivmod");
-    setLibcallName(RTLIB::UDIVREM_I16, "__aeabi_uidivmod");
-    setLibcallName(RTLIB::UDIVREM_I32, "__aeabi_uidivmod");
-    setLibcallName(RTLIB::UDIVREM_I64, "__aeabi_uldivmod");
+    for (const auto &LC :
+         {RTLIB::SDIVREM_I8, RTLIB::SDIVREM_I16, RTLIB::SDIVREM_I32})
+      setLibcallName(LC, Subtarget->isTargetWindows() ? "__rt_sdiv"
+                                                      : "__aeabi_idivmod");
+    setLibcallName(RTLIB::SDIVREM_I64, Subtarget->isTargetWindows()
+                                           ? "__rt_sdiv64"
+                                           : "__aeabi_ldivmod");
+    for (const auto &LC :
+         {RTLIB::UDIVREM_I8, RTLIB::UDIVREM_I16, RTLIB::UDIVREM_I32})
+      setLibcallName(LC, Subtarget->isTargetWindows() ? "__rt_udiv"
+                                                      : "__aeabi_uidivmod");
+    setLibcallName(RTLIB::UDIVREM_I64, Subtarget->isTargetWindows()
+                                           ? "__rt_udiv64"
+                                           : "__aeabi_uldivmod");
 
     setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::ARM_AAPCS);
     setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::ARM_AAPCS);
@@ -7388,6 +7395,19 @@ SDValue ARMTargetLowering::LowerDIV_Windows(SDValue Op, SelectionDAG &DAG,
   return LowerWindowsDIVLibCall(Op, DAG, Signed, DBZCHK);
 }
 
+static SDValue WinDBZCheckDenominator(SelectionDAG &DAG, SDNode *N, SDValue InChain) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(1);
+  if (N->getValueType(0) == MVT::i32)
+    return DAG.getNode(ARMISD::WIN__DBZCHK, DL, MVT::Other, InChain, Op);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op,
+                           DAG.getConstant(0, DL, MVT::i32));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op,
+                           DAG.getConstant(1, DL, MVT::i32));
+  return DAG.getNode(ARMISD::WIN__DBZCHK, DL, MVT::Other, InChain,
+                     DAG.getNode(ISD::OR, DL, MVT::i32, Lo, Hi));
+}
+
 void ARMTargetLowering::ExpandDIV_Windows(
     SDValue Op, SelectionDAG &DAG, bool Signed,
     SmallVectorImpl<SDValue> &Results) const {
@@ -7398,14 +7418,7 @@ void ARMTargetLowering::ExpandDIV_Windows(
          "unexpected type for custom lowering DIV");
   SDLoc dl(Op);
 
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op.getOperand(1),
-                           DAG.getConstant(0, dl, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op.getOperand(1),
-                           DAG.getConstant(1, dl, MVT::i32));
-  SDValue Or = DAG.getNode(ISD::OR, dl, MVT::i32, Lo, Hi);
-
-  SDValue DBZCHK =
-      DAG.getNode(ARMISD::WIN__DBZCHK, dl, MVT::Other, DAG.getEntryNode(), Or);
+  SDValue DBZCHK = WinDBZCheckDenominator(DAG, Op.getNode(), DAG.getEntryNode());
 
   SDValue Result = LowerWindowsDIVLibCall(Op, DAG, Signed, DBZCHK);
 
@@ -12406,7 +12419,7 @@ static RTLIB::Libcall getDivRemLibcall(
 }
 
 static TargetLowering::ArgListTy getDivRemArgList(
-    const SDNode *N, LLVMContext *Context) {
+    const SDNode *N, LLVMContext *Context, const ARMSubtarget *Subtarget) {
   assert((N->getOpcode() == ISD::SDIVREM || N->getOpcode() == ISD::UDIVREM ||
           N->getOpcode() == ISD::SREM    || N->getOpcode() == ISD::UREM) &&
          "Unhandled Opcode in getDivRemArgList");
@@ -12423,12 +12436,15 @@ static TargetLowering::ArgListTy getDivRemArgList(
     Entry.isZExt = !isSigned;
     Args.push_back(Entry);
   }
+  if (Subtarget->isTargetWindows() && Args.size() >= 2)
+    std::swap(Args[0], Args[1]);
   return Args;
 }
 
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
-          Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI()) &&
+          Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
+          Subtarget->isTargetWindows()) &&
          "Register-based DivRem lowering only");
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
@@ -12461,12 +12477,16 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args = getDivRemArgList(Op.getNode(),
-                                                    DAG.getContext());
+                                                    DAG.getContext(),
+                                                    Subtarget);
 
   SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
                                          getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = (Type*)StructType::get(Ty, Ty, nullptr);
+
+  if (Subtarget->isTargetWindows())
+    InChain = WinDBZCheckDenominator(DAG, Op.getNode(), InChain);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(InChain)
@@ -12500,10 +12520,14 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   RTLIB::Libcall LC = getDivRemLibcall(N, N->getValueType(0).getSimpleVT().
                                                              SimpleTy);
   SDValue InChain = DAG.getEntryNode();
-  TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext());
+  TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext(),
+                                                    Subtarget);
   bool isSigned = N->getOpcode() == ISD::SREM;
   SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
                                          getPointerTy(DAG.getDataLayout()));
+
+  if (Subtarget->isTargetWindows())
+    InChain = WinDBZCheckDenominator(DAG, N, InChain);
 
   // Lower call
   CallLoweringInfo CLI(DAG);

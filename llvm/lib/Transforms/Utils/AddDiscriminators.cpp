@@ -159,10 +159,7 @@ static bool addDiscriminators(Function &F) {
   // If the function has debug information, but the user has disabled
   // discriminators, do nothing.
   // Simlarly, if the function has no debug info, do nothing.
-  // Finally, if this module is built with dwarf versions earlier than 4,
-  // do nothing (discriminator support is a DWARF 4 feature).
-  if (NoDiscriminators || !F.getSubprogram() ||
-      F.getParent()->getDwarfVersion() < 4)
+  if (NoDiscriminators || !F.getSubprogram())
     return false;
 
   bool Changed = false;

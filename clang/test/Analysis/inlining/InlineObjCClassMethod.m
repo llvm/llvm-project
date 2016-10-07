@@ -174,12 +174,12 @@ int foo4() {
 @implementation MyClassSelf
 + (int)testClassMethodByKnownVarDecl {
   int y = [MyParentSelf testSelf];
-  return 5/y; // Should warn here.
+  return 5/y; // expected-warning{{Division by zero}}
 }
 @end
 int foo2() {
   int y = [MyParentSelf testSelf];
-  return 5/y; // Should warn here.
+  return 5/y; // expected-warning{{Division by zero}}
 }
 
 // TODO: We do not inline 'getNum' in the following case, where the value of 

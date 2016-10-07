@@ -1,0 +1,125 @@
+.red {
+  background-color: #ffd0d0;
+}
+.cyan {
+  background-color: cyan;
+}
+body {
+  font-family: -apple-system, sans-serif;
+}
+pre {
+  margin-top: 0px !important;
+  margin-bottom: 0px !important;
+}
+.source-name-title {
+  padding: 5px 10px;
+  border-bottom: 1px solid #dbdbdb;
+  background-color: #eee;
+  line-height: 35px;
+}
+.centered {
+  display: table;
+  margin-left: left;
+  margin-right: auto;
+  border: 1px solid #dbdbdb;
+  border-radius: 3px;
+}
+.expansion-view {
+  background-color: rgba(0, 0, 0, 0);
+  margin-left: 0px;
+  margin-top: 5px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  border: 1px solid #dbdbdb;
+  border-radius: 3px;
+}
+table {
+  border-collapse: collapse;
+}
+.light-row {
+  background: #ffffff;
+  border: 1px solid #dbdbdb;
+}
+.column-entry {
+  text-align: right;
+}
+.column-entry-left {
+  text-align: left;
+}
+.column-entry-white {
+  text-align: right;
+  background-color: #ffffff;
+}
+.column-entry-red {
+  text-align: right;
+  background-color: #ffd0d0;
+}
+.column-entry-green {
+  text-align: right;
+  background-color: #d0ffd0;
+}
+.column-entry-yellow {
+  text-align: left;
+  background-color: #ffe1a6;
+}
+.line-number {
+  text-align: right;
+  color: #aaa;
+}
+.covered-line {
+  text-align: right;
+  color: #0080ff;
+}
+.uncovered-line {
+  text-align: right;
+  color: #ff3300;
+}
+.tooltip {
+  position: relative;
+  display: inline;
+  background-color: #b3e6ff;
+  text-decoration: none;
+}
+.tooltip span.tooltip-content {
+  position: absolute;
+  width: 100px;
+  margin-left: -50px;
+  color: #FFFFFF;
+  background: #000000;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  visibility: hidden;
+  border-radius: 6px;
+}
+.tooltip span.tooltip-content:after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -8px;
+  width: 0; height: 0;
+  border-top: 8px solid #000000;
+  border-right: 8px solid transparent;
+  border-left: 8px solid transparent;
+}
+:hover.tooltip span.tooltip-content {
+  visibility: visible;
+  opacity: 0.8;
+  bottom: 30px;
+  left: 50%;
+  z-index: 999;
+}
+th, td {
+  vertical-align: top;
+  padding: 2px 5px;
+  border-collapse: collapse;
+  border-right: solid 1px #eee;
+  border-left: solid 1px #eee;
+}
+td:first-child {
+  border-left: none;
+}
+td:last-child {
+  border-right: none;
+}

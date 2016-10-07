@@ -1861,7 +1861,8 @@ def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">, Flags<[CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">;
 def print_libgcc_file_name : Flag<["-", "--"], "print-libgcc-file-name">,
-  HelpText<"Print the library path for \"libgcc.a\"">;
+  HelpText<"Print the library path for the currently used compiler runtime "
+           "library (\"libgcc.a\" or \"libclang_rt.builtins.*.a\")">;
 def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
 def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
 def print_multi_os_directory : Flag<["-", "--"], "print-multi-os-directory">,

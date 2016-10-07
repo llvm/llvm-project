@@ -13,6 +13,10 @@
 #include "AMDKernelCodeT.h"
 #include "llvm/IR/CallingConv.h"
 
+#define GET_INSTRINFO_OPERAND_ENUM
+#include "AMDGPUGenInstrInfo.inc"
+#undef GET_INSTRINFO_OPERAND_ENUM
+
 namespace llvm {
 
 class FeatureBitset;
@@ -25,6 +29,9 @@ class MCSection;
 class MCSubtargetInfo;
 
 namespace AMDGPU {
+
+LLVM_READONLY
+int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 
 struct IsaVersion {
   unsigned Major;

@@ -1,6 +1,9 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
+
 ; SI-LABEL: {{^}}load_i8_to_f32:
 ; SI: buffer_load_ubyte [[LOADREG:v[0-9]+]],
 ; SI-NOT: bfe
@@ -80,9 +83,10 @@ define void @load_v4i8_to_v4f32_unaligned(<4 x float> addrspace(1)* noalias %out
   ret void
 }
 
+; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; Instructions still emitted to repack bytes for add use.
 ; SI-LABEL: {{^}}load_v4i8_to_v4f32_2_uses:
-; SI: buffer_load_dword
+; SI: {{buffer|flat}}_load_dword
 ; SI-DAG: v_cvt_f32_ubyte0_e32
 ; SI-DAG: v_cvt_f32_ubyte1_e32
 ; SI-DAG: v_cvt_f32_ubyte2_e32
@@ -96,12 +100,14 @@ define void @load_v4i8_to_v4f32_unaligned(<4 x float> addrspace(1)* noalias %out
 ; SI-DAG: v_and_b32_e32 v{{[0-9]+}}, 0xff00,
 ; SI-DAG: v_add_i32
 
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dword
+; SI: {{buffer|flat}}_store_dwordx4
+; SI: {{buffer|flat}}_store_dword
 
 ; SI: s_endpgm
 define void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %out2, <4 x i8> addrspace(1)* noalias %in) nounwind {
-  %load = load <4 x i8>, <4 x i8> addrspace(1)* %in, align 4
+  %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.ptr = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
+  %load = load <4 x i8>, <4 x i8> addrspace(1)* %in.ptr, align 4
   %cvt = uitofp <4 x i8> %load to <4 x float>
   store <4 x float> %cvt, <4 x float> addrspace(1)* %out, align 16
   %add = add <4 x i8> %load, <i8 9, i8 9, i8 9, i8 9> ; Second use of %load

@@ -81,7 +81,7 @@ typename ELFT::SymRange ELFFileBase<ELFT>::getElfSymbols(bool OnlyGlobals) {
   Elf_Sym_Range Syms = ELFObj.symbols(Symtab);
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   uint32_t FirstNonLocal = Symtab->sh_info;
-  if (FirstNonLocal > NumSymbols)
+  if (FirstNonLocal == 0 || FirstNonLocal > NumSymbols)
     fatal(getFilename(this) + ": invalid sh_info in symbol table");
 
   if (OnlyGlobals)
