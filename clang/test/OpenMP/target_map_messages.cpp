@@ -347,6 +347,15 @@ public:
   S5(int v):a(v) { }
 };
 
+template <class T>
+struct S6;
+
+template<>
+struct S6<int>  // expected-note {{mappable type cannot be polymorphic}}
+{
+   virtual void foo();
+};
+
 S3 h;
 #pragma omp threadprivate(h) // expected-note 2 {{defined as threadprivate or thread local}}
 
@@ -451,6 +460,7 @@ int main(int argc, char **argv) {
   int i;
   int &j = i;
   int *k = &j;
+  S6<int> m;
   int x;
   int y;
   int to, tofrom, always;
@@ -512,6 +522,8 @@ int main(int argc, char **argv) {
 #pragma omp target private(j) map(j) // expected-error {{private variable cannot be in a map clause in '#pragma omp target' directive}}  expected-note {{defined as private}}
   {}
 #pragma omp target firstprivate(j) map(j)  // expected-error {{firstprivate variable cannot be in a map clause in '#pragma omp target' directive}} expected-note {{defined as firstprivate}}
+  {}
+#pragma omp target map(m) // expected-error {{type 'S6<int>' is not mappable to target}}
   {}
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }

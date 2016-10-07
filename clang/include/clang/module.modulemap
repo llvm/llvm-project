@@ -38,6 +38,7 @@ module Clang_Basic {
   textual header "Basic/BuiltinsSystemZ.def"
   textual header "Basic/BuiltinsWebAssembly.def"
   textual header "Basic/BuiltinsX86.def"
+  textual header "Basic/BuiltinsX86_64.def"
   textual header "Basic/BuiltinsXCore.def"
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/LangOptions.def"

@@ -3493,6 +3493,8 @@ Sema::ActOnObjCAtSynchronizedOperand(SourceLocation atLoc, Expr *operand) {
                    << type << operand->getSourceRange();
 
         ExprResult result = PerformContextuallyConvertToObjCPointer(operand);
+        if (result.isInvalid())
+          return ExprError();
         if (!result.isUsable())
           return Diag(atLoc, diag::error_objc_synchronized_expects_object)
                    << type << operand->getSourceRange();

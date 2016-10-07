@@ -287,31 +287,43 @@ ClangMoveTool::ClangMoveTool(
     : Spec(MoveSpec), FileToReplacements(FileToReplacements),
       OriginalRunningDirectory(OriginalRunningDirectory),
       FallbackStyle(FallbackStyle) {
-  Spec.Name = llvm::StringRef(Spec.Name).ltrim(':');
   if (!Spec.NewHeader.empty())
     CCIncludes.push_back("#include \"" + Spec.NewHeader + "\"\n");
 }
 
 void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
-  std::string FullyQualifiedName = "::" + Spec.Name;
+  SmallVector<StringRef, 4> ClassNames;
+  llvm::StringRef(Spec.Names).split(ClassNames, ',');
+  Optional<ast_matchers::internal::Matcher<NamedDecl>> InMovedClassNames;
+  for (StringRef ClassName : ClassNames) {
+    llvm::StringRef GlobalClassName = ClassName.trim().ltrim(':');
+    const auto HasName = hasName(("::" + GlobalClassName).str());
+    InMovedClassNames =
+        InMovedClassNames ? anyOf(*InMovedClassNames, HasName) : HasName;
+  }
+  if (!InMovedClassNames) {
+    llvm::errs() << "No classes being moved.\n";
+    return;
+  }
+
   auto InOldHeader = isExpansionInFile(
       MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader));
   auto InOldCC = isExpansionInFile(
       MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC));
   auto InOldFiles = anyOf(InOldHeader, InOldCC);
   auto InMovedClass =
-      hasDeclContext(cxxRecordDecl(hasName(FullyQualifiedName)));
+      hasDeclContext(cxxRecordDecl(*InMovedClassNames));
 
   // Match moved class declarations.
   auto MovedClass = cxxRecordDecl(
-      InOldFiles, hasName(FullyQualifiedName), isDefinition(),
+      InOldFiles, *InMovedClassNames, isDefinition(),
       hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())));
   Finder->addMatcher(MovedClass.bind("moved_class"), this);
 
   // Match moved class methods (static methods included) which are defined
   // outside moved class declaration.
   Finder->addMatcher(cxxMethodDecl(InOldFiles,
-                                   ofClass(hasName(FullyQualifiedName)),
+                                   ofClass(*InMovedClassNames),
                                    isDefinition())
                          .bind("class_method"),
                      this);
