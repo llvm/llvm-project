@@ -66,6 +66,8 @@ public:
   typedef SmallVector<std::unique_ptr<BugReporterVisitor>, 8> VisitorList;
   typedef VisitorList::iterator visitor_iterator;
   typedef SmallVector<StringRef, 2> ExtraTextList;
+  typedef SmallVector<llvm::IntrusiveRefCntPtr<PathDiagnosticNotePiece>, 4>
+      NoteList;
 
 protected:
   friend class BugReporter;
@@ -82,7 +84,8 @@ protected:
   const ExplodedNode *ErrorNode;
   SmallVector<SourceRange, 4> Ranges;
   ExtraTextList ExtraText;
-  
+  NoteList Notes;
+
   typedef llvm::DenseSet<SymbolRef> Symbols;
   typedef llvm::DenseSet<const MemRegion *> Regions;
 
