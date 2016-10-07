@@ -128,6 +128,16 @@ public:
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
                                  ArrayRef<unsigned> Indices, unsigned Alignment,
                                  unsigned AddressSpace);
+
+  bool shouldBuildLookupTablesForConstant(Constant *C) const {
+    // In the ROPI and RWPI relocation models we can't have pointers to global
+    // variables or functions in constant data, so don't convert switches to
+    // lookup tables if any of the values would need relocation.
+    if (ST->isROPI() || ST->isRWPI())
+      return !C->needsRelocation();
+
+    return true;
+  }
   /// @}
 };
 

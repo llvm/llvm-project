@@ -178,6 +178,9 @@ unsigned TargetTransformInfo::getJumpBufSize() const {
 bool TargetTransformInfo::shouldBuildLookupTables() const {
   return TTIImpl->shouldBuildLookupTables();
 }
+bool TargetTransformInfo::shouldBuildLookupTablesForConstant(Constant *C) const {
+  return TTIImpl->shouldBuildLookupTablesForConstant(C);
+}
 
 bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) const {
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);

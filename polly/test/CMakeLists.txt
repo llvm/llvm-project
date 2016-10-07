@@ -109,6 +109,7 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
                 ${CMAKE_CURRENT_BINARY_DIR}
                 DEPENDS polly-isl-test
                 COMMENT "Running isl unit tests")
+    set_target_properties(check-polly-isl PROPERTIES FOLDER "Polly")
   endif()
 
 else (NOT DEFINED LLVM_MAIN_SRC_DIR)
