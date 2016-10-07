@@ -335,7 +335,18 @@ v_cos_f16 v1, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // Check VOP2 opcodes
 //===----------------------------------------------------------------------===//
 // ToDo: VOP2bInst instructions: v_add_u32, v_sub_u32 ... (vcc and ApplyMnemonic in AsmMatcherEmitter.cpp)
-// ToDo: v_mac_f32 (VOP_MAC)
+
+// NOSICI: error:
+// VI: v_mac_f32_dpp v0, v0, v0  row_shl:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x00,0x00,0x2c,0x00,0x01,0x01,0xff]
+v_mac_f32 v0, v0, v0 row_shl:1
+
+// NOSICI: error:
+// VI: v_mac_f32_dpp v0, v0, v0  row_shr:15 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x00,0x00,0x2c,0x00,0x1f,0x01,0xff]
+v_mac_f32 v0, v0, v0 row_shr:0xf
+
+// NOSICI: error:
+// VI: v_mac_f32_dpp v0, v0, v0  quad_perm:[1,3,0,1] row_mask:0xa bank_mask:0xf bound_ctrl:0 ; encoding: [0xfa,0x00,0x00,0x2c,0x00,0x4d,0x08,0xaf]
+v_mac_f32 v0, v0, v0 quad_perm:[1,3,0,1] row_mask:0xa bound_ctrl:0
 
 // NOSICI: error:
 // VI: v_add_f32_dpp v0, v0, v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x00,0x00,0x02,0x00,0x01,0x09,0xa1]

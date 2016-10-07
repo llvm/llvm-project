@@ -27,6 +27,12 @@
 #include "AMDGPUGenRegisterInfo.inc"
 #undef GET_REGINFO_ENUM
 
+#define GET_INSTRINFO_NAMED_OPS
+#define GET_INSTRINFO_ENUM
+#include "AMDGPUGenInstrInfo.inc"
+#undef GET_INSTRINFO_NAMED_OPS
+#undef GET_INSTRINFO_ENUM
+
 namespace llvm {
 namespace AMDGPU {
 

@@ -194,3 +194,15 @@ void test12(int x) {
     break;
   }
 }
+
+// Don't merge return nodes in ExplodedGraph unless they are same.
+extern int table[];
+static int inlineFunction(const int i) {
+  if (table[i] != 0)
+    return 1;
+  return 0;
+}
+void test13(int i) {
+  int x = inlineFunction(i);
+  x && x < 10; // no-warning
+}

@@ -114,15 +114,15 @@ static void removeRedundantMsgs(PathPieces &path) {
     path.pop_front();
 
     switch (piece->getKind()) {
-      case clang::ento::PathDiagnosticPiece::Call:
+      case PathDiagnosticPiece::Call:
         removeRedundantMsgs(cast<PathDiagnosticCallPiece>(piece)->path);
         break;
-      case clang::ento::PathDiagnosticPiece::Macro:
+      case PathDiagnosticPiece::Macro:
         removeRedundantMsgs(cast<PathDiagnosticMacroPiece>(piece)->subPieces);
         break;
-      case clang::ento::PathDiagnosticPiece::ControlFlow:
+      case PathDiagnosticPiece::ControlFlow:
         break;
-      case clang::ento::PathDiagnosticPiece::Event: {
+      case PathDiagnosticPiece::Event: {
         if (i == N-1)
           break;
 
@@ -142,6 +142,8 @@ static void removeRedundantMsgs(PathPieces &path) {
         }
         break;
       }
+      case PathDiagnosticPiece::Note:
+        break;
     }
     path.push_back(piece);
   }
@@ -198,6 +200,9 @@ static bool removeUnneededCalls(PathPieces &pieces, BugReport *R,
         break;
       }
       case PathDiagnosticPiece::ControlFlow:
+        break;
+
+      case PathDiagnosticPiece::Note:
         break;
     }
 
@@ -3518,6 +3523,13 @@ LLVM_DUMP_METHOD void PathDiagnosticControlFlowPiece::dump() const {
 LLVM_DUMP_METHOD void PathDiagnosticMacroPiece::dump() const {
   llvm::errs() << "MACRO\n--------------\n";
   // FIXME: Print which macro is being invoked.
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticNotePiece::dump() const {
+  llvm::errs() << "NOTE\n--------------\n";
+  llvm::errs() << getString() << "\n";
+  llvm::errs() << " ---- at ----\n";
+  getLocation().dump();
 }
 
 LLVM_DUMP_METHOD void PathDiagnosticLocation::dump() const {

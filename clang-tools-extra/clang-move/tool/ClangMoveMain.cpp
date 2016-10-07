@@ -37,10 +37,8 @@ std::error_code CreateNewFile(const llvm::Twine &path) {
 
 cl::OptionCategory ClangMoveCategory("clang-move options");
 
-cl::opt<std::string>
-    Names("names", cl::desc("A comma-separated list of the names of classes "
-                            "being moved, e.g. \"Foo\", \"a::Foo, b::Foo\"."),
-          cl::cat(ClangMoveCategory));
+cl::opt<std::string> Name("name", cl::desc("The name of class being moved."),
+                          cl::cat(ClangMoveCategory));
 
 cl::opt<std::string>
     OldHeader("old_header",
@@ -88,7 +86,7 @@ int main(int argc, const char **argv) {
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(),
                                 OptionsParser.getSourcePathList());
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Names = Names;
+  Spec.Name = Name;
   Spec.OldHeader = OldHeader;
   Spec.NewHeader = NewHeader;
   Spec.OldCC = OldCC;

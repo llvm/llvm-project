@@ -77,12 +77,19 @@ define void @test_umul24_i16_vgpr(i32 addrspace(1)* %out, i16 addrspace(1)* %in)
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_umul24_i8:
+; FIXME: Need to handle non-uniform case for function below (load without gep).
+; FUNC-LABEL: {{^}}test_umul24_i8_vgpr:
 ; GCN: v_mul_u32_u24_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 8
-define void @test_umul24_i8(i32 addrspace(1)* %out, i8 %a, i8 %b) {
+define void @test_umul24_i8_vgpr(i32 addrspace(1)* %out, i8 addrspace(1)* %a, i8 addrspace(1)* %b) {
 entry:
-  %mul = mul i8 %a, %b
+  %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.y = call i32 @llvm.amdgcn.workitem.id.y()
+  %a.ptr = getelementptr i8, i8 addrspace(1)* %a, i32 %tid.x
+  %b.ptr = getelementptr i8, i8 addrspace(1)* %b, i32 %tid.y
+  %a.l = load i8, i8 addrspace(1)* %a.ptr
+  %b.l = load i8, i8 addrspace(1)* %b.ptr
+  %mul = mul i8 %a.l, %b.l
   %ext = sext i8 %mul to i32
   store i32 %ext, i32 addrspace(1)* %out
   ret void

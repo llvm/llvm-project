@@ -61,7 +61,7 @@ public:
 // The visited stated for the iteration is a simple set augmented with
 // one more method, completed, which is invoked when all children of a
 // node have been processed. It is intended to distinguish of back and
-// cross edges in the spanning tree but is not used in the common case.
+// cross edges in the spanning tree but is not used in the common case.
 template <typename NodeRef, unsigned SmallSize=8>
 struct df_iterator_default_set : public llvm::SmallPtrSet<NodeRef, SmallSize> {
   typedef llvm::SmallPtrSet<NodeRef, SmallSize>  BaseSet;

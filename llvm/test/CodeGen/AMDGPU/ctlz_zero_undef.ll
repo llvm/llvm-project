@@ -172,12 +172,15 @@ define void @v_ctlz_zero_undef_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out, i
   ret void
 }
 
+; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; FUNC-LABEL: {{^}}v_ctlz_zero_undef_i8_sel_eq_neg1:
-; SI: buffer_load_ubyte [[VAL:v[0-9]+]],
+; SI: {{buffer|flat}}_load_ubyte [[VAL:v[0-9]+]],
 ; SI: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
-; SI: buffer_store_byte [[FFBH]],
- define void @v_ctlz_zero_undef_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
-  %val = load i8, i8 addrspace(1)* %valptr
+; SI: {{buffer|flat}}_store_byte [[FFBH]],
+define void @v_ctlz_zero_undef_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %valptr.gep = getelementptr i8, i8 addrspace(1)* %valptr, i32 %tid
+  %val = load i8, i8 addrspace(1)* %valptr.gep
   %ctlz = call i8 @llvm.ctlz.i8(i8 %val, i1 true) nounwind readnone
   %cmp = icmp eq i8 %val, 0
   %sel = select i1 %cmp, i8 -1, i8 %ctlz
