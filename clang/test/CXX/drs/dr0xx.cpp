@@ -286,10 +286,9 @@ namespace dr25 { // dr25: yes
   void (A::*i2)() throw () = 0;
   void (A::*j)() throw (int, char) = &A::f;
   void x() {
-    // FIXME: Don't produce the second error here.
-    g2 = f; // expected-error {{is not superset}} expected-error {{incompatible}}
+    g2 = f; // expected-error {{is not superset}}
     h = f;
-    i2 = &A::f; // expected-error {{is not superset}} expected-error {{incompatible}}
+    i2 = &A::f; // expected-error {{is not superset}}
     j = &A::f;
   }
 }

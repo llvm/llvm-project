@@ -54,7 +54,7 @@ using namespace clang;
 using namespace llvm::opt;
 
 static void handleTargetFeaturesGroup(const ArgList &Args,
-                                      std::vector<const char *> &Features,
+                                      std::vector<StringRef> &Features,
                                       OptSpecifier Group) {
   for (const Arg *A : Args.filtered(Group)) {
     StringRef Name = A->getOption().getName();
@@ -694,7 +694,7 @@ static void getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
 // FIXME: Use ARMTargetParser.
 static void getARMHWDivFeatures(const Driver &D, const Arg *A,
                                 const ArgList &Args, StringRef HWDiv,
-                                std::vector<const char *> &Features) {
+                                std::vector<StringRef> &Features) {
   unsigned HWDivID = llvm::ARM::parseHWDiv(HWDiv);
   if (!llvm::ARM::getHWDivFeatures(HWDivID, Features))
     D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
@@ -703,7 +703,7 @@ static void getARMHWDivFeatures(const Driver &D, const Arg *A,
 // Handle -mfpu=.
 static void getARMFPUFeatures(const Driver &D, const Arg *A,
                               const ArgList &Args, StringRef FPU,
-                              std::vector<const char *> &Features) {
+                              std::vector<StringRef> &Features) {
   unsigned FPUID = llvm::ARM::parseFPU(FPU);
   if (!llvm::ARM::getFPUFeatures(FPUID, Features))
     D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
@@ -711,13 +711,13 @@ static void getARMFPUFeatures(const Driver &D, const Arg *A,
 
 // Decode ARM features from string like +[no]featureA+[no]featureB+...
 static bool DecodeARMFeatures(const Driver &D, StringRef text,
-                              std::vector<const char *> &Features) {
+                              std::vector<StringRef> &Features) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
   for (StringRef Feature : Split) {
-    const char *FeatureName = llvm::ARM::getArchExtFeature(Feature);
-    if (FeatureName)
+    StringRef FeatureName = llvm::ARM::getArchExtFeature(Feature);
+    if (!FeatureName.empty())
       Features.push_back(FeatureName);
     else
       return false;
@@ -730,7 +730,7 @@ static bool DecodeARMFeatures(const Driver &D, StringRef text,
 // to handle -march=native correctly.
 static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
                              llvm::StringRef ArchName,
-                             std::vector<const char *> &Features,
+                             std::vector<StringRef> &Features,
                              const llvm::Triple &Triple) {
   std::pair<StringRef, StringRef> Split = ArchName.split("+");
 
@@ -743,7 +743,7 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
 // Check -mcpu=. Needs ArchName to handle -mcpu=generic.
 static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
                             llvm::StringRef CPUName, llvm::StringRef ArchName,
-                            std::vector<const char *> &Features,
+                            std::vector<StringRef> &Features,
                             const llvm::Triple &Triple) {
   std::pair<StringRef, StringRef> Split = CPUName.split("+");
 
@@ -867,7 +867,7 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
 static void getARMTargetFeatures(const ToolChain &TC,
                                  const llvm::Triple &Triple,
                                  const ArgList &Args,
-                                 std::vector<const char *> &Features,
+                                 std::vector<StringRef> &Features,
                                  bool ForAS) {
   const Driver &D = TC.getDriver();
 
@@ -1363,7 +1363,7 @@ static mips::FloatABI getMipsFloatABI(const Driver &D, const ArgList &Args) {
 }
 
 static void AddTargetFeature(const ArgList &Args,
-                             std::vector<const char *> &Features,
+                             std::vector<StringRef> &Features,
                              OptSpecifier OnOpt, OptSpecifier OffOpt,
                              StringRef FeatureName) {
   if (Arg *A = Args.getLastArg(OnOpt, OffOpt)) {
@@ -1376,7 +1376,7 @@ static void AddTargetFeature(const ArgList &Args,
 
 static void getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                   const ArgList &Args,
-                                  std::vector<const char *> &Features) {
+                                  std::vector<StringRef> &Features) {
   StringRef CPUName;
   StringRef ABIName;
   mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
@@ -1587,7 +1587,7 @@ static std::string getPPCTargetCPU(const ArgList &Args) {
 
 static void getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args,
-                                 std::vector<const char *> &Features) {
+                                 std::vector<StringRef> &Features) {
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_ppc_Features_Group);
 
   ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
@@ -1750,7 +1750,7 @@ sparc::FloatABI sparc::getSparcFloatABI(const Driver &D,
 }
 
 static void getSparcTargetFeatures(const Driver &D, const ArgList &Args,
-                                 std::vector<const char *> &Features) {
+                                 std::vector<StringRef> &Features) {
   sparc::FloatABI FloatABI = sparc::getSparcFloatABI(D, Args);
   if (FloatABI == sparc::FloatABI::Soft)
     Features.push_back("+soft-float");
@@ -1787,7 +1787,7 @@ static const char *getSystemZTargetCPU(const ArgList &Args) {
 }
 
 static void getSystemZTargetFeatures(const ArgList &Args,
-                                     std::vector<const char *> &Features) {
+                                     std::vector<StringRef> &Features) {
   // -m(no-)htm overrides use of the transactional-execution facility.
   if (Arg *A = Args.getLastArg(options::OPT_mhtm, options::OPT_mno_htm)) {
     if (A->getOption().matches(options::OPT_mhtm))
@@ -2186,7 +2186,7 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
 
 static void getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args,
-                                 std::vector<const char *> &Features) {
+                                 std::vector<StringRef> &Features) {
   // If -march=native, autodetect the feature list.
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {
@@ -2345,12 +2345,13 @@ void Clang::AddWebAssemblyTargetArgs(const ArgList &Args,
 
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
-                                  std::vector<const char *> &Features) {
+                                  std::vector<StringRef> &Features) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
   for (StringRef Feature : Split) {
-    if (const char *FeatureName = llvm::AArch64::getArchExtFeature(Feature))
+    StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
+    if (!FeatureName.empty())
       Features.push_back(FeatureName);
     else if (Feature == "neon" || Feature == "noneon")
       D.Diag(diag::err_drv_no_neon_modifier);
@@ -2363,7 +2364,7 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
 // Check if the CPU name and feature modifiers in -mcpu are legal. If yes,
 // decode CPU and feature.
 static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
-                              std::vector<const char *> &Features) {
+                              std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
 
@@ -2386,7 +2387,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
 static bool
 getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
                                 const ArgList &Args,
-                                std::vector<const char *> &Features) {
+                                std::vector<StringRef> &Features) {
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
@@ -2402,7 +2403,7 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
 static bool
 getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
                                const ArgList &Args,
-                               std::vector<const char *> &Features) {
+                               std::vector<StringRef> &Features) {
   StringRef CPU;
   std::string McpuLowerCase = Mcpu.lower();
   if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, Features))
@@ -2414,7 +2415,7 @@ getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
 static bool
 getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
                                      const ArgList &Args,
-                                     std::vector<const char *> &Features) {
+                                     std::vector<StringRef> &Features) {
   std::string MtuneLowerCase = Mtune.lower();
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
@@ -2429,9 +2430,9 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
 static bool
 getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
                                     const ArgList &Args,
-                                    std::vector<const char *> &Features) {
+                                    std::vector<StringRef> &Features) {
   StringRef CPU;
-  std::vector<const char *> DecodedFeature;
+  std::vector<StringRef> DecodedFeature;
   std::string McpuLowerCase = Mcpu.lower();
   if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, DecodedFeature))
     return false;
@@ -2440,7 +2441,7 @@ getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
 }
 
 static void getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
-                                     std::vector<const char *> &Features) {
+                                     std::vector<StringRef> &Features) {
   Arg *A;
   bool success = true;
   // Enable NEON by default.
@@ -2490,7 +2491,7 @@ static void getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
 }
 
 static void getHexagonTargetFeatures(const ArgList &Args,
-                                     std::vector<const char *> &Features) {
+                                     std::vector<StringRef> &Features) {
   handleTargetFeaturesGroup(Args, Features,
                             options::OPT_m_hexagon_Features_Group);
 
@@ -2505,12 +2506,12 @@ static void getHexagonTargetFeatures(const ArgList &Args,
 }
 
 static void getWebAssemblyTargetFeatures(const ArgList &Args,
-                                         std::vector<const char *> &Features) {
+                                         std::vector<StringRef> &Features) {
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
 }
 
 static void getAMDGPUTargetFeatures(const Driver &D, const ArgList &Args,
-                                    std::vector<const char *> &Features) {
+                                    std::vector<StringRef> &Features) {
   if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi)) {
     StringRef value = dAbi->getValue();
     if (value == "1.0") {
@@ -2530,7 +2531,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
                               const ArgList &Args, ArgStringList &CmdArgs,
                               bool ForAS) {
   const Driver &D = TC.getDriver();
-  std::vector<const char *> Features;
+  std::vector<StringRef> Features;
   switch (Triple.getArch()) {
   default:
     break;
@@ -2585,22 +2586,22 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   // Find the last of each feature.
   llvm::StringMap<unsigned> LastOpt;
   for (unsigned I = 0, N = Features.size(); I < N; ++I) {
-    const char *Name = Features[I];
+    StringRef Name = Features[I];
     assert(Name[0] == '-' || Name[0] == '+');
-    LastOpt[Name + 1] = I;
+    LastOpt[Name.drop_front(1)] = I;
   }
 
   for (unsigned I = 0, N = Features.size(); I < N; ++I) {
     // If this feature was overridden, ignore it.
-    const char *Name = Features[I];
-    llvm::StringMap<unsigned>::iterator LastI = LastOpt.find(Name + 1);
+    StringRef Name = Features[I];
+    llvm::StringMap<unsigned>::iterator LastI = LastOpt.find(Name.drop_front(1));
     assert(LastI != LastOpt.end());
     unsigned Last = LastI->second;
     if (Last != I)
       continue;
 
     CmdArgs.push_back("-target-feature");
-    CmdArgs.push_back(Name);
+    CmdArgs.push_back(Name.data());
   }
 }
 

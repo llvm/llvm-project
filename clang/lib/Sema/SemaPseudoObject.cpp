@@ -770,7 +770,8 @@ ExprResult ObjCPropertyOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
       ExprResult opResult = op;
       Sema::AssignConvertType assignResult
         = S.CheckSingleAssignmentConstraints(paramType, opResult);
-      if (S.DiagnoseAssignmentResult(assignResult, opcLoc, paramType,
+      if (opResult.isInvalid() ||
+          S.DiagnoseAssignmentResult(assignResult, opcLoc, paramType,
                                      op->getType(), opResult.get(),
                                      Sema::AA_Assigning))
         return ExprError();

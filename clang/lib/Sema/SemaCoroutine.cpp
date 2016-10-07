@@ -362,7 +362,7 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E) {
   // of scope, we should treat the operand as an xvalue for this overload
   // resolution.
   ExprResult PC;
-  if (E && !E->getType()->isVoidType()) {
+  if (E && (isa<InitListExpr>(E) || !E->getType()->isVoidType())) {
     PC = buildPromiseCall(*this, Coroutine, Loc, "return_value", E);
   } else {
     E = MakeFullDiscardedValueExpr(E).get();
