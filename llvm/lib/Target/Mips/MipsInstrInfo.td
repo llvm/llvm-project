@@ -1081,10 +1081,6 @@ def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
 // e.g. addi, andi
 def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
 
-// Node immediate fits as 15-bit sign extended on target immediate.
-// e.g. addi, andi
-def immSExt15  : PatLeaf<(imm), [{ return isInt<15>(N->getSExtValue()); }]>;
-
 // Node immediate fits as 7-bit zero extended on target immediate.
 def immZExt7 : PatLeaf<(imm), [{ return isUInt<7>(N->getZExtValue()); }]>;
 

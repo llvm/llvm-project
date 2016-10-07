@@ -29,7 +29,6 @@
 ; ModuleID = '/tmp/s.c'
 source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.11.0"
 
 ; Function Attrs: norecurse nounwind ssp uwtable
 define void @cold(i8* nocapture %A, i8* nocapture readonly %B, i8* nocapture %C, i8* nocapture readonly %D, i8* nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !7 !prof !56 {

@@ -3,7 +3,6 @@
 ; RUN: opt -S -vectorize-num-stores-pred=1 -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -enable-cond-stores-vec -verify-loop-info -simplifycfg < %s | FileCheck %s --check-prefix=VEC
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.9.0"
 
 ; Test predication of stores.
 define i32 @test(i32* nocapture %f) #0 {

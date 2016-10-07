@@ -167,7 +167,7 @@ static const abi::__class_type_info *findBaseAtOffset(
     dynamic_cast<const abi::__vmi_class_type_info*>(Derived);
   if (!VTI)
     // No base class subobjects.
-    return 0;
+    return nullptr;
 
   for (unsigned int base = 0; base != VTI->base_count; ++base) {
     sptr OffsetHere = VTI->base_info[base].__offset_flags >>
@@ -182,7 +182,7 @@ static const abi::__class_type_info *findBaseAtOffset(
       return Base;
   }
 
-  return 0;
+  return nullptr;
 }
 
 namespace {
@@ -198,11 +198,11 @@ struct VtablePrefix {
 VtablePrefix *getVtablePrefix(void *Vtable) {
   VtablePrefix *Vptr = reinterpret_cast<VtablePrefix*>(Vtable);
   if (!Vptr)
-    return 0;
+    return nullptr;
   VtablePrefix *Prefix = Vptr - 1;
   if (!Prefix->TypeInfo)
     // This can't possibly be a valid vtable.
-    return 0;
+    return nullptr;
   return Prefix;
 }
 

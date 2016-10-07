@@ -59,8 +59,8 @@ static cl::opt<bool>
            cl::init(false), cl::cat(OptReportCategory));
 
 static cl::opt<bool>
-  Demangle("demangle", cl::desc("Demangle function names"), cl::init(true),
-           cl::cat(OptReportCategory));
+  NoDemangle("no-demangle", cl::desc("Don't demangle function names"),
+             cl::init(false), cl::cat(OptReportCategory));
 
 namespace {
 // For each location in the source file, the common per-transformation state
@@ -378,7 +378,7 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
               OS << ", ";
 
             bool Printed = false;
-            if (Demangle) {
+            if (!NoDemangle) {
               int Status = 0;
               char *Demangled =
                 itaniumDemangle(FuncName.c_str(), nullptr, nullptr, &Status);
@@ -412,8 +412,12 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
         auto UStr = [UCDigits](OptReportLocationInfo &LLI) {
           std::string R;
           raw_string_ostream RS(R);
-          if (!Succinct)
-            RS << llvm::format_decimal(LLI.UnrollCount, UCDigits);
+
+          if (!Succinct) {
+            RS << LLI.UnrollCount;
+            RS << std::string(UCDigits - RS.str().size(), ' ');
+          }
+
           return RS.str();
         };
 
@@ -421,9 +425,12 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
                      ICDigits](OptReportLocationInfo &LLI) -> std::string {
           std::string R;
           raw_string_ostream RS(R);
-          if (!Succinct)
-           RS << llvm::format_decimal(LLI.VectorizationFactor, VFDigits) <<
-                   "," << llvm::format_decimal(LLI.InterleaveCount, ICDigits);
+
+          if (!Succinct) {
+            RS << LLI.VectorizationFactor << "," << LLI.InterleaveCount;
+            RS << std::string(VFDigits + ICDigits + 1 - RS.str().size(), ' ');
+          }
+
           return RS.str();
         };
 

@@ -4503,7 +4503,7 @@ GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
        ++I) {
     if (TerminatorInst *T = dyn_cast<TerminatorInst>(I)) {
       // If the terminator is a simple branch, continue to the next block.
-      if (T->getNumSuccessors() != 1)
+      if (T->getNumSuccessors() != 1 || T->isExceptional())
         return false;
       Pred = CaseDest;
       CaseDest = T->getSuccessor(0);

@@ -3,5 +3,10 @@
   "directory": "$test_dir/build",
   "command": "clang++ -o test.o $test_dir/test.cpp",
   "file": "$test_dir/test.cpp"
+},
+{
+  "directory": "$test_dir/build",
+  "command": "clang++ -o test.o $test_dir/multiple_class_test.cpp",
+  "file": "$test_dir/multiple_class_test.cpp"
 }
 ]

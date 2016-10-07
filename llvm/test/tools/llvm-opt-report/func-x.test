@@ -1,4 +1,5 @@
 RUN: llvm-opt-report -r %p %p/Inputs/qx.yaml | FileCheck -strict-whitespace %s
+RUN: llvm-opt-report -no-demangle -r %p %p/Inputs/qx.yaml | FileCheck -strict-whitespace -check-prefix=CHECK-NODEM %s
 RUN: llvm-opt-report -s -r %p %p/Inputs/qx.yaml | FileCheck -strict-whitespace -check-prefix=CHECK-SUCCINCT %s
 
 ; CHECK: < {{.*[/\]}}q.cpp
@@ -21,6 +22,27 @@ RUN: llvm-opt-report -s -r %p %p/Inputs/qx.yaml | FileCheck -strict-whitespace -
 ; CHECK-NEXT: 12 I       |   foo(4);
 ; CHECK-NEXT: 13         | }
 ; CHECK-NEXT: 14         | 
+
+; CHECK-NODEM: < {{.*[/\]}}q.cpp
+; CHECK-NODEM-NEXT:  1         | void bar();
+; CHECK-NODEM-NEXT:  2         | void foo(int n) {
+; CHECK-NODEM-NEXT:  {{\[\[}}
+; CHECK-NODEM-NEXT:   > _Z3fooi:
+; CHECK-NODEM-NEXT:  3         |   for (int i = 0; i < n; ++i)
+; CHECK-NODEM-NEXT:   > _Z5quackv, _Z6quack2v:
+; CHECK-NODEM-NEXT:  3  U4     |   for (int i = 0; i < n; ++i)
+; CHECK-NODEM-NEXT:  {{\]\]}}
+; CHECK-NODEM-NEXT:  4         |     bar();
+; CHECK-NODEM-NEXT:  5         | }
+; CHECK-NODEM-NEXT:  6         | 
+; CHECK-NODEM-NEXT:  7         | void quack() {
+; CHECK-NODEM-NEXT:  8 I       |   foo(4);
+; CHECK-NODEM-NEXT:  9         | }
+; CHECK-NODEM-NEXT: 10         | 
+; CHECK-NODEM-NEXT: 11         | void quack2() {
+; CHECK-NODEM-NEXT: 12 I       |   foo(4);
+; CHECK-NODEM-NEXT: 13         | }
+; CHECK-NODEM-NEXT: 14         | 
 
 ; CHECK-SUCCINCT: < {{.*[/\]}}q.cpp
 ; CHECK-SUCCINCT-NEXT:  1     | void bar();

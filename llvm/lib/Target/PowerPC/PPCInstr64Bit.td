@@ -65,16 +65,6 @@ def SRL64 : SDNodeXForm<imm, [{
                            : getI32Imm(0, SDLoc(N));
 }]>;
 
-def HI32_48 : SDNodeXForm<imm, [{
-  // Transformation function: shift the immediate value down into the low bits.
-  return getI32Imm((unsigned short)(N->getZExtValue() >> 32, SDLoc(N)));
-}]>;
-
-def HI48_64 : SDNodeXForm<imm, [{
-  // Transformation function: shift the immediate value down into the low bits.
-  return getI32Imm((unsigned short)(N->getZExtValue() >> 48, SDLoc(N)));
-}]>;
-
 
 //===----------------------------------------------------------------------===//
 // Calls.

@@ -3,7 +3,6 @@
 ; ModuleID = '/tmp/kk.c'
 source_filename = "/tmp/kk.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.11.0"
 
 ;     1	void success (char *A, char *B, char *C, char *D, char *E, int N) {
 ;     2	  for(int i = 0; i < N; i++) {

@@ -389,10 +389,6 @@ def mulsub : PatFrag<(ops node:$wd, node:$ws, node:$wt),
 def mul_fexp2 : PatFrag<(ops node:$ws, node:$wt),
                         (fmul node:$ws, (fexp2 node:$wt))>;
 
-// Immediates
-def immSExt5 : ImmLeaf<i32, [{return isInt<5>(Imm);}]>;
-def immSExt10: ImmLeaf<i32, [{return isInt<10>(Imm);}]>;
-
 // Instruction encoding.
 class ADD_A_B_ENC : MSA_3R_FMT<0b000, 0b00, 0b010000>;
 class ADD_A_H_ENC : MSA_3R_FMT<0b000, 0b01, 0b010000>;
