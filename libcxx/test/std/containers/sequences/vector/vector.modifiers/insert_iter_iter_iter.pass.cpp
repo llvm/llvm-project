@@ -18,7 +18,7 @@
 
 #include <vector>
 #include <cassert>
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
@@ -96,7 +96,7 @@ int main()
             assert(v[j] == 0);
     }
     {
-        std::vector<int, stack_allocator<int, 308> > v(100);
+        std::vector<int, limited_allocator<int, 308> > v(100);
         int a[] = {1, 2, 3, 4, 5};
         const int N = sizeof(a)/sizeof(a[0]);
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, input_iterator<const int*>(a),
@@ -113,7 +113,7 @@ int main()
             assert(v[j] == 0);
     }
     {
-        std::vector<int, stack_allocator<int, 300> > v(100);
+        std::vector<int, limited_allocator<int, 300> > v(100);
         int a[] = {1, 2, 3, 4, 5};
         const int N = sizeof(a)/sizeof(a[0]);
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, forward_iterator<const int*>(a),

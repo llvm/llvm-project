@@ -32,6 +32,8 @@ public:
 
   Error reload();
 
+  uint32_t signature() const { return Signature; }
+
   iterator_range<codeview::CVSymbolArray::Iterator>
   symbols(bool *HadError) const;
 
@@ -42,6 +44,8 @@ public:
 
 private:
   const ModInfo &Mod;
+
+  uint32_t Signature;
 
   std::unique_ptr<msf::MappedBlockStream> Stream;
 

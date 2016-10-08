@@ -9267,16 +9267,27 @@ public:
   void maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *FD,
                                    const LookupResult &Previous);
 
+private:
+  /// Raw encodings of SourceLocations for which CheckCUDACall has emitted a
+  /// deferred "bad call" diagnostic.  We use this to avoid emitting the same
+  /// deferred diag twice.
+  llvm::DenseSet<unsigned> LocsWithCUDACallDeferredDiags;
+
+public:
   /// Check whether we're allowed to call Callee from the current context.
   ///
-  /// If the call is never allowed in a semantically-correct program
-  /// (CFP_Never), emits an error and returns false.
+  /// - If the call is never allowed in a semantically-correct program
+  ///   (CFP_Never), emits an error and returns false.
   ///
-  /// If the call is allowed in semantically-correct programs, but only if it's
-  /// never codegen'ed (CFP_WrongSide), creates a deferred diagnostic to be
-  /// emitted if and when the caller is codegen'ed, and returns true.
+  /// - If the call is allowed in semantically-correct programs, but only if
+  ///   it's never codegen'ed (CFP_WrongSide), creates a deferred diagnostic to
+  ///   be emitted if and when the caller is codegen'ed, and returns true.
   ///
-  /// Otherwise, returns true without emitting any diagnostics.
+  ///   Will only create deferred diagnostics for a given SourceLocation once,
+  ///   so you can safely call this multiple times without generating duplicate
+  ///   deferred errors.
+  ///
+  /// - Otherwise, returns true without emitting any diagnostics.
   bool CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee);
 
   /// Check whether a 'try' or 'throw' expression is allowed within the current

@@ -13,7 +13,7 @@
 
 #include <vector>
 #include <cassert>
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
 
@@ -35,7 +35,7 @@ int main()
             assert(v[i] == 1);
     }
     {
-        std::vector<int, stack_allocator<int, 300> > v(100);
+        std::vector<int, limited_allocator<int, 300> > v(100);
         v.resize(50, 1);
         assert(v.size() == 50);
         assert(v.capacity() == 100);

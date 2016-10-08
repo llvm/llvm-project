@@ -15,6 +15,7 @@
 #include "AVRMCAsmInfo.h"
 #include "AVRMCTargetDesc.h"
 #include "AVRTargetStreamer.h"
+#include "InstPrinter/AVRInstPrinter.h"
 
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -52,6 +53,18 @@ static MCSubtargetInfo *createAVRMCSubtargetInfo(const Triple &TT,
   return createAVRMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
+static MCInstPrinter *createAVRMCInstPrinter(const Triple &T,
+                                             unsigned SyntaxVariant,
+                                             const MCAsmInfo &MAI,
+                                             const MCInstrInfo &MII,
+                                             const MCRegisterInfo &MRI) {
+  if (SyntaxVariant == 0) {
+    return new AVRInstPrinter(MAI, MII, MRI);
+  }
+
+  return nullptr;
+}
+
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     MCAsmBackend &MAB, raw_pwrite_stream &OS,
                                     MCCodeEmitter *Emitter, bool RelaxAll) {
@@ -84,6 +97,9 @@ extern "C" void LLVMInitializeAVRTargetMC() {
   TargetRegistry::RegisterMCSubtargetInfo(TheAVRTarget,
                                           createAVRMCSubtargetInfo);
 
+  // Register the MCInstPrinter.
+  TargetRegistry::RegisterMCInstPrinter(TheAVRTarget, createAVRMCInstPrinter);
+
   // Register the ELF streamer
   TargetRegistry::RegisterELFStreamer(TheAVRTarget, createMCStreamer);
 
@@ -94,5 +110,8 @@ extern "C" void LLVMInitializeAVRTargetMC() {
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(TheAVRTarget,
                                             createMCAsmTargetStreamer);
+
+  // Register the asm backend (as little endian).
+  TargetRegistry::RegisterMCAsmBackend(TheAVRTarget, createAVRAsmBackend);
 }
 

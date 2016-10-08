@@ -12,8 +12,10 @@
 #include "PdbYaml.h"
 #include "llvm-pdbdump.h"
 
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/ModStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
@@ -27,6 +29,8 @@ YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
 Error YAMLOutputStyle::dump() {
   if (opts::pdb2yaml::StreamDirectory)
     opts::pdb2yaml::StreamMetadata = true;
+  if (opts::pdb2yaml::DbiModuleSyms)
+    opts::pdb2yaml::DbiModuleInfo = true;
   if (opts::pdb2yaml::DbiModuleSourceFileInfo)
     opts::pdb2yaml::DbiModuleInfo = true;
   if (opts::pdb2yaml::DbiModuleInfo)
@@ -152,6 +156,25 @@ Error YAMLOutputStyle::dumpDbiStream() {
       DMI.Obj = MI.Info.getObjFileName();
       if (opts::pdb2yaml::DbiModuleSourceFileInfo)
         DMI.SourceFiles = MI.SourceFiles;
+
+      if (opts::pdb2yaml::DbiModuleSyms &&
+          MI.Info.getModuleStreamIndex() != kInvalidStreamIndex) {
+        DMI.Modi.emplace();
+        auto ModStreamData = msf::MappedBlockStream::createIndexedStream(
+            File.getMsfLayout(), File.getMsfBuffer(),
+            MI.Info.getModuleStreamIndex());
+
+        pdb::ModStream ModS(MI.Info, std::move(ModStreamData));
+        if (auto EC = ModS.reload())
+          return EC;
+
+        DMI.Modi->Signature = ModS.signature();
+        bool HadError = false;
+        for (auto &Sym : ModS.symbols(&HadError)) {
+          pdb::yaml::PdbSymbolRecord Record{Sym};
+          DMI.Modi->Symbols.push_back(Record);
+        }
+      }
       Obj.DbiStream->ModInfos.push_back(DMI);
     }
   }

@@ -49,6 +49,15 @@ define void @storeArrayOfA([1 x %A]* %aa.ptr) {
   ret void
 }
 
+define void @storeLargeArrayOfA([2000 x %A]* %aa.ptr) {
+; CHECK-LABEL: storeLargeArrayOfA
+; CHECK-NEXT: store [2000 x %A]
+; CHECK-NEXT: ret void
+  %i1 = insertvalue [2000 x %A] undef, %A { %A__vtbl* @A__vtblZ }, 1
+  store [2000 x %A] %i1, [2000 x %A]* %aa.ptr, align 8
+  ret void
+}
+
 define void @storeStructOfArrayOfA({ [1 x %A] }* %saa.ptr) {
 ; CHECK-LABEL: storeStructOfArrayOfA
 ; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds { [1 x %A] }, { [1 x %A] }* %saa.ptr, i64 0, i32 0, i64 0, i32 0

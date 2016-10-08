@@ -17,11 +17,9 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
-#if _LIBCPP_STD_VER > 11
-#define HAS_FOUR_ITERATOR_VERSION
-#endif
 
 int main()
 {
@@ -31,7 +29,7 @@ int main()
     assert(std::equal(input_iterator<const int*>(ia),
                       input_iterator<const int*>(ia+s),
                       input_iterator<const int*>(ia)));
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
     assert(std::equal(input_iterator<const int*>(ia),
                       input_iterator<const int*>(ia+s),
                       input_iterator<const int*>(ia),
@@ -44,7 +42,7 @@ int main()
     assert(!std::equal(input_iterator<const int*>(ia),
                        input_iterator<const int*>(ia+s),
                        input_iterator<const int*>(ib)));
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
     assert(!std::equal(input_iterator<const int*>(ia),
                        input_iterator<const int*>(ia+s),
                        input_iterator<const int*>(ib),

@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 void
 test(const T& a, const T& b, const T& x)
@@ -43,7 +45,7 @@ int main()
     test(x, y, x);
     test(y, x, x);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER >= 14
     {
     constexpr int x = 1;
     constexpr int y = 0;

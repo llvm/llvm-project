@@ -14,7 +14,7 @@
 #include <vector>
 #include <cassert>
 #include "MoveOnly.h"
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
 
@@ -50,7 +50,7 @@ int main()
             assert(c[j] == MoveOnly(j));
     }
     {
-        std::vector<MoveOnly, stack_allocator<MoveOnly, 15> > c;
+        std::vector<MoveOnly, limited_allocator<MoveOnly, 15> > c;
         c.push_back(MoveOnly(0));
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));

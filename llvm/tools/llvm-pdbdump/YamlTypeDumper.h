@@ -1,4 +1,4 @@
-//===- PdbYAML.h ---------------------------------------------- *- C++ --*-===//
+//===- YamlTypeDumper.h --------------------------------------- *- C++ --*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMPDBDUMP_CODEVIEWYAML_H
-#define LLVM_TOOLS_LLVMPDBDUMP_CODEVIEWYAML_H
+#ifndef LLVM_TOOLS_LLVMPDBDUMP_YAMLTYPEDUMPER_H
+#define LLVM_TOOLS_LLVMPDBDUMP_YAMLTYPEDUMPER_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
@@ -74,6 +74,20 @@ struct SerializationContext;
 
 namespace llvm {
 namespace yaml {
+
+template <> struct ScalarTraits<APSInt> {
+  static void output(const APSInt &S, void *, llvm::raw_ostream &OS);
+  static StringRef input(StringRef Scalar, void *Ctx, APSInt &S);
+  static bool mustQuote(StringRef Scalar);
+};
+
+template <> struct ScalarTraits<codeview::TypeIndex> {
+  static void output(const codeview::TypeIndex &S, void *,
+                     llvm::raw_ostream &OS);
+  static StringRef input(StringRef Scalar, void *Ctx, codeview::TypeIndex &S);
+  static bool mustQuote(StringRef Scalar);
+};
+
 template <> struct MappingTraits<codeview::MemberPointerInfo> {
   static void mapping(IO &IO, codeview::MemberPointerInfo &Obj);
 };

@@ -332,6 +332,10 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
         for (auto &LI : FI.second)
           MaxLI |= LI.second;
 
+    bool NothingInlined = !MaxLI.Inlined.Transformed;
+    bool NothingUnrolled = !MaxLI.Unrolled.Transformed;
+    bool NothingVectorized = !MaxLI.Vectorized.Transformed;
+
     unsigned VFDigits = llvm::utostr(MaxLI.VectorizationFactor).size();
     unsigned ICDigits = llvm::utostr(MaxLI.InterleaveCount).size();
     unsigned UCDigits = llvm::utostr(MaxLI.UnrollCount).size();
@@ -435,11 +439,12 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
         };
 
         OS << llvm::format_decimal(L, LNDigits) << " ";
-        OS << (LLI.Inlined.Transformed && InlinedCols < 2 ? "I" : " ");
+        OS << (LLI.Inlined.Transformed && InlinedCols < 2 ? "I" :
+                (NothingInlined ? "" : " "));
         OS << (LLI.Unrolled.Transformed && UnrolledCols < 2 ?
-                "U" + UStr(LLI) : " " + USpaces);
+                "U" + UStr(LLI) : (NothingUnrolled ? "" : " " + USpaces));
         OS << (LLI.Vectorized.Transformed && VectorizedCols < 2 ?
-                "V" + VStr(LLI) : " " + VSpaces);
+                "V" + VStr(LLI) : (NothingVectorized ? "" : " " + VSpaces));
 
         OS << " | " << *LI << "\n";
 
@@ -449,11 +454,13 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
               (J.second.Vectorized.Transformed && VectorizedCols > 1)) {
             OS << std::string(LNDigits + 1, ' ');
             OS << (J.second.Inlined.Transformed &&
-                   InlinedCols > 1 ? "I" : " ");
+                   InlinedCols > 1 ? "I" : (NothingInlined ? "" : " "));
             OS << (J.second.Unrolled.Transformed &&
-                   UnrolledCols > 1 ? "U" + UStr(J.second) : " " + USpaces);
+                   UnrolledCols > 1 ? "U" + UStr(J.second) :
+                     (NothingUnrolled ? "" : " " + USpaces));
             OS << (J.second.Vectorized.Transformed &&
-                   VectorizedCols > 1 ? "V" + VStr(J.second) : " " + VSpaces);
+                   VectorizedCols > 1 ? "V" + VStr(J.second) :
+                     (NothingVectorized ? "" : " " + VSpaces));
 
             OS << " | " << std::string(J.first - 1, ' ') << "^\n";
           }

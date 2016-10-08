@@ -49,7 +49,7 @@ bool TailDuplicatePass::runOnMachineFunction(MachineFunction &MF) {
 
   auto MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
 
-  Duplicator.initMF(MF, MBPI);
+  Duplicator.initMF(MF, MBPI, /* LayoutMode */ false);
 
   bool MadeChange = false;
   while (Duplicator.tailDuplicateBlocks())

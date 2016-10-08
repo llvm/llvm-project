@@ -14,7 +14,7 @@
 #include <deque>
 #include <cassert>
 
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "../../../NotConstructible.h"
 #include "min_allocator.h"
 
@@ -33,7 +33,7 @@ test()
 int main()
 {
     test<int, std::allocator<int> >();
-    test<NotConstructible, stack_allocator<NotConstructible, 1> >();
+    test<NotConstructible, limited_allocator<NotConstructible, 1> >();
 #if TEST_STD_VER >= 11
     test<int, min_allocator<int> >();
     test<NotConstructible, min_allocator<NotConstructible> >();

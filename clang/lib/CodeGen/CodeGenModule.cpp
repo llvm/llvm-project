@@ -2923,6 +2923,10 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // non-error diags here, because order can be significant, e.g. with notes
   // that follow errors.)
   auto Diags = D->takeDeferredDiags();
+  if (auto *Templ = D->getPrimaryTemplate()) {
+    auto TemplDiags = Templ->getAsFunction()->takeDeferredDiags();
+    Diags.insert(Diags.end(), TemplDiags.begin(), TemplDiags.end());
+  }
   bool HasError = llvm::any_of(Diags, [this](const PartialDiagnosticAt &PDAt) {
     return getDiags().getDiagnosticLevel(PDAt.second.getDiagID(), PDAt.first) >=
            DiagnosticsEngine::Error;

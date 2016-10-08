@@ -12,7 +12,6 @@ bb1:
   %tmp2 = load i16, i16* %ptr, align 2
   br label %bb2
 bb2:
-; CHECK: %bb2
 ; CHECK-NOT: and {{w[0-9]+}}, [[REG]], #0xffff
 ; CHECK: cmp [[REG]], #23
   %tmp3 = phi i16 [ 0, %entry ], [ %tmp2, %bb1 ]
