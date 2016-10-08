@@ -165,6 +165,7 @@ def VOP_MAC : VOPProfile <[f32, f32, f32, f32]> {
   let AsmSDWA = getAsmSDWA<1, 2, HasModifiers, f32>.ret;
   let HasSrc2 = 0;
   let HasSrc2Mods = 0;
+  let HasExt = 1;
 }
 
 // Write out to vcc or arbitrary SGPR.

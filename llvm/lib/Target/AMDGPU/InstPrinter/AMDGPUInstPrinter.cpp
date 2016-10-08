@@ -531,15 +531,17 @@ void AMDGPUInstPrinter::printBoundCtrl(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printSDWASel(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
+  using namespace llvm::AMDGPU::SDWA;
+
   unsigned Imm = MI->getOperand(OpNo).getImm();
   switch (Imm) {
-  case 0: O << "BYTE_0"; break;
-  case 1: O << "BYTE_1"; break;
-  case 2: O << "BYTE_2"; break;
-  case 3: O << "BYTE_3"; break;
-  case 4: O << "WORD_0"; break;
-  case 5: O << "WORD_1"; break;
-  case 6: O << "DWORD"; break;
+  case SdwaSel::BYTE_0: O << "BYTE_0"; break;
+  case SdwaSel::BYTE_1: O << "BYTE_1"; break;
+  case SdwaSel::BYTE_2: O << "BYTE_2"; break;
+  case SdwaSel::BYTE_3: O << "BYTE_3"; break;
+  case SdwaSel::WORD_0: O << "WORD_0"; break;
+  case SdwaSel::WORD_1: O << "WORD_1"; break;
+  case SdwaSel::DWORD: O << "DWORD"; break;
   default: llvm_unreachable("Invalid SDWA data select operand");
   }
 }
@@ -568,12 +570,14 @@ void AMDGPUInstPrinter::printSDWASrc1Sel(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printSDWADstUnused(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  using namespace llvm::AMDGPU::SDWA;
+
   O << "dst_unused:";
   unsigned Imm = MI->getOperand(OpNo).getImm();
   switch (Imm) {
-  case 0: O << "UNUSED_PAD"; break;
-  case 1: O << "UNUSED_SEXT"; break;
-  case 2: O << "UNUSED_PRESERVE"; break;
+  case DstUnused::UNUSED_PAD: O << "UNUSED_PAD"; break;
+  case DstUnused::UNUSED_SEXT: O << "UNUSED_SEXT"; break;
+  case DstUnused::UNUSED_PRESERVE: O << "UNUSED_PRESERVE"; break;
   default: llvm_unreachable("Invalid SDWA dest_unused operand");
   }
 }

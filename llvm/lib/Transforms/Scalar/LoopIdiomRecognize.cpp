@@ -1181,9 +1181,7 @@ bool LoopIdiomRecognize::recognizePopcount() {
 
   // It should have a preheader containing nothing but an unconditional branch.
   BasicBlock *PH = CurLoop->getLoopPreheader();
-  if (!PH)
-    return false;
-  if (&PH->front() != PH->getTerminator())
+  if (!PH || &PH->front() != PH->getTerminator())
     return false;
   auto *EntryBI = dyn_cast<BranchInst>(PH->getTerminator());
   if (!EntryBI || EntryBI->isConditional())

@@ -26,6 +26,8 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 
+#include <vector>
+
 namespace llvm {
 
 AVRFrameLowering::AVRFrameLowering()
@@ -43,10 +45,9 @@ bool AVRFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   // conditions:
   // - Y pointer is reserved to be the frame pointer.
   // - The function does not contain variable sized objects.
-  // - MaxCallFrameSize doesn't fit into 6-bits (when it's greater than 63).
+
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return (hasFP(MF) && !MFI.hasVarSizedObjects() &&
-          !isUInt<6>(MFI.getMaxCallFrameSize()));
+  return hasFP(MF) && !MFI.hasVarSizedObjects();
 }
 
 void AVRFrameLowering::emitPrologue(MachineFunction &MF,
@@ -144,8 +145,9 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  assert(MBBI == MBB.end() &&
+  assert(MBBI->getDesc().isReturn() &&
          "Can only insert epilog into returning blocks");
+
   DebugLoc DL = MBBI->getDebugLoc();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
@@ -272,8 +274,8 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 
-  for (const CalleeSavedInfo &CSI : CSI) {
-    unsigned Reg = CSI.getReg();
+  for (const CalleeSavedInfo &CCSI : CSI) {
+    unsigned Reg = CCSI.getReg();
 
     assert(TRI->getMinimalPhysRegClass(Reg)->getSize() == 1 &&
            "Invalid register size");

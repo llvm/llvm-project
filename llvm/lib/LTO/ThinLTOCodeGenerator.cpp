@@ -234,10 +234,21 @@ public:
     if (CachePath.empty())
       return;
 
+    if (!Index.modulePaths().count(ModuleID))
+      // The module does not have an entry, it can't have a hash at all
+      return;
+
     // Compute the unique hash for this entry
     // This is based on the current compiler version, the module itself, the
     // export list, the hash for every single module in the import list, the
     // list of ResolvedODR for the module, and the list of preserved symbols.
+
+    // Include the hash for the current module
+    auto ModHash = Index.getModuleHash(ModuleID);
+
+    if (all_of(ModHash, [](uint32_t V) { return V == 0; }))
+      // No hash entry, no caching!
+      return;
 
     SHA1 Hasher;
 
@@ -247,8 +258,6 @@ public:
     Hasher.update(LLVM_REVISION);
 #endif
 
-    // Include the hash for the current module
-    auto ModHash = Index.getModuleHash(ModuleID);
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
     for (auto F : ExportList)
       // The export list can impact the internalization, be conservative here

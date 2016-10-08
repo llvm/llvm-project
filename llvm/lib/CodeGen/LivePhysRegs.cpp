@@ -49,7 +49,7 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
       if (!O->isDef())
         continue;
       unsigned Reg = O->getReg();
-      if (Reg == 0)
+      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
         continue;
       removeReg(Reg);
     } else if (O->isRegMask())
@@ -61,7 +61,7 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
     if (!O->isReg() || !O->readsReg())
       continue;
     unsigned Reg = O->getReg();
-    if (Reg == 0)
+    if (!TargetRegisterInfo::isPhysicalRegister(Reg))
       continue;
     addReg(Reg);
   }
@@ -77,7 +77,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
       unsigned Reg = O->getReg();
-      if (Reg == 0)
+      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
         continue;
       if (O->isDef()) {
         // Note, dead defs are still recorded.  The caller should decide how to

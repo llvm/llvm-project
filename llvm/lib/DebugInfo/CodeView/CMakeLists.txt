@@ -1,5 +1,6 @@
 add_llvm_library(LLVMDebugInfoCodeView
   CodeViewError.cpp
+  CVSymbolVisitor.cpp
   CVTypeVisitor.cpp
   EnumTables.cpp
   FieldListRecordBuilder.cpp

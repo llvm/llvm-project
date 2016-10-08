@@ -353,6 +353,8 @@ def ProcR5      : SubtargetFeature<"r5", "ARMProcFamily", "CortexR5",
                                    "Cortex-R5 ARM processors", []>;
 def ProcR7      : SubtargetFeature<"r7", "ARMProcFamily", "CortexR7",
                                    "Cortex-R7 ARM processors", []>;
+def ProcR52     : SubtargetFeature<"r52", "ARMProcFamily", "CortexR52",
+                                   "Cortex-R52 ARM processors", []>;
 
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
@@ -473,6 +475,19 @@ def ARMv82a   : Architecture<"armv8.2-a", "ARMv82a",  [HasV8_2aOps,
                                                        FeatureCrypto,
                                                        FeatureCRC,
                                                        FeatureRAS]>;
+
+def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
+                                                       FeatureRClass,
+                                                       FeatureDB,
+                                                       FeatureHWDiv,
+                                                       FeatureHWDivARM,
+                                                       FeatureT2XtPk,
+                                                       FeatureDSP,
+                                                       FeatureCRC,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON]>;
 
 def ARMv8mBaseline : Architecture<"armv8-m.base", "ARMv8mBaseline",
                                                       [HasV8MBaselineOps,
@@ -803,6 +818,8 @@ def : ProcNoItin<"exynos-m2",                           [ARMv8a, ProcExynosM1,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,
                                                          FeatureCRC]>;
+
+def : ProcNoItin<"cortex-r52",                          [ARMv8r, ProcR52]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

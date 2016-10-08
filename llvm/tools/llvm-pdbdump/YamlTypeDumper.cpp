@@ -1,4 +1,4 @@
-//===- PdbYAML.cpp -------------------------------------------- *- C++ --*-===//
+//===- YamlTypeDumper.cpp ------------------------------------- *- C++ --*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeViewYaml.h"
+#include "YamlTypeDumper.h"
 #include "PdbYaml.h"
 #include "YamlSerializationContext.h"
 
@@ -260,17 +260,16 @@ template <> struct ScalarBitSetTraits<MethodOptions> {
   }
 };
 
-template <> struct ScalarTraits<APSInt> {
-  static void output(const APSInt &S, void *, llvm::raw_ostream &OS) {
-    S.print(OS, true);
-  }
-  static StringRef input(StringRef Scalar, void *Ctx, APSInt &S) {
-    S = APSInt(Scalar);
-    return "";
-  }
+void ScalarTraits<APSInt>::output(const APSInt &S, void *,
+                                  llvm::raw_ostream &OS) {
+  S.print(OS, true);
+}
+StringRef ScalarTraits<APSInt>::input(StringRef Scalar, void *Ctx, APSInt &S) {
+  S = APSInt(Scalar);
+  return "";
+}
 
-  static bool mustQuote(StringRef Scalar) { return false; }
-};
+bool ScalarTraits<APSInt>::mustQuote(StringRef Scalar) { return false; }
 
 void MappingContextTraits<CVType, pdb::yaml::SerializationContext>::mapping(
     IO &IO, CVType &Record, pdb::yaml::SerializationContext &Context) {
@@ -501,21 +500,22 @@ void MappingTraits<ListContinuationRecord>::mapping(
   IO.mapRequired("ContinuationIndex", Cont.ContinuationIndex);
 }
 
-template <> struct ScalarTraits<codeview::TypeIndex> {
-  static void output(const codeview::TypeIndex &S, void *,
-                     llvm::raw_ostream &OS) {
-    OS << S.getIndex();
-  }
-  static StringRef input(StringRef Scalar, void *Ctx, codeview::TypeIndex &S) {
-    uint32_t I;
-    StringRef Result = ScalarTraits<uint32_t>::input(Scalar, Ctx, I);
-    if (!Result.empty())
-      return Result;
-    S = TypeIndex(I);
-    return "";
-  }
-  static bool mustQuote(StringRef Scalar) { return false; }
-};
+void ScalarTraits<codeview::TypeIndex>::output(const codeview::TypeIndex &S,
+                                               void *, llvm::raw_ostream &OS) {
+  OS << S.getIndex();
+}
+StringRef ScalarTraits<codeview::TypeIndex>::input(StringRef Scalar, void *Ctx,
+                                                   codeview::TypeIndex &S) {
+  uint32_t I;
+  StringRef Result = ScalarTraits<uint32_t>::input(Scalar, Ctx, I);
+  if (!Result.empty())
+    return Result;
+  S = TypeIndex(I);
+  return "";
+}
+bool ScalarTraits<codeview::TypeIndex>::mustQuote(StringRef Scalar) {
+  return false;
+}
 
 void ScalarEnumerationTraits<TypeLeafKind>::enumeration(IO &io,
                                                         TypeLeafKind &Value) {

@@ -107,6 +107,24 @@ void AMDGPUAsmBackend::processFixupValue(const MCAssembler &Asm,
                                          const MCFixup &Fixup, const MCFragment *DF,
                                          const MCValue &Target, uint64_t &Value,
                                          bool &IsResolved) {
+  MCValue Res;
+
+  // When we have complex expressions like: BB0_1 + (BB0_2 - 4), which are
+  // used for long branches, this function will be called with
+  // IsResolved = false and Value set to some pre-computed value.  In
+  // the example above, the value would be:
+  // (BB0_1 + (BB0_2 - 4)) - CurrentOffsetFromStartOfFunction.
+  // This is not what we want.  We just want the expression computation
+  // only.  The reason the MC layer subtracts the current offset from the
+  // expression is because the fixup is of kind FK_PCRel_4.
+  // For these scenarios, evaluateAsValue gives us the computation that we
+  // want.
+  if (!IsResolved && Fixup.getValue()->evaluateAsValue(Res, Layout) &&
+      Res.isAbsolute()) {
+    Value = Res.getConstant();
+    IsResolved = true;
+
+  }
   if (IsResolved)
     Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
 }

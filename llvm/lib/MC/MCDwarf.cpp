@@ -122,7 +122,8 @@ EmitDwarfLineTable(MCObjectStreamer *MCOS, MCSection *Section,
       MCOS->EmitIntValue(dwarf::DW_LNS_set_column, 1);
       MCOS->EmitULEB128IntValue(Column);
     }
-    if (Discriminator != LineEntry.getDiscriminator()) {
+    if (Discriminator != LineEntry.getDiscriminator() &&
+        MCOS->getContext().getDwarfVersion() >= 4) {
       Discriminator = LineEntry.getDiscriminator();
       unsigned Size = getULEB128Size(Discriminator);
       MCOS->EmitIntValue(dwarf::DW_LNS_extended_op, 1);

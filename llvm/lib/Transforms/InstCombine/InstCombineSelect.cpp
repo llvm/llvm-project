@@ -939,11 +939,11 @@ Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
 
   // If the constant is the same after truncation to the smaller type and
   // extension to the original type, we can narrow the select.
+  Value *Cond = Sel.getCondition();
   Type *SelType = Sel.getType();
   Constant *TruncC = ConstantExpr::getTrunc(C, SmallType);
   Constant *ExtC = ConstantExpr::getCast(ExtOpcode, TruncC, SelType);
   if (ExtC == C) {
-    Value *Cond = Sel.getCondition();
     Value *TruncCVal = cast<Value>(TruncC);
     if (ExtInst == Sel.getFalseValue())
       std::swap(X, TruncCVal);
@@ -952,6 +952,26 @@ Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
     // select Cond, C, (ext X) --> ext(select Cond, C', X)
     Value *NewSel = Builder->CreateSelect(Cond, X, TruncCVal, "narrow", &Sel);
     return CastInst::Create(Instruction::CastOps(ExtOpcode), NewSel, SelType);
+  }
+
+  // If one arm of the select is the extend of the condition, replace that arm
+  // with the extension of the appropriate known bool value.
+  if (Cond == X) {
+    SelectInst *NewSel;
+    if (ExtInst == Sel.getTrueValue()) {
+      // select X, (sext X), C --> select X, -1, C
+      // select X, (zext X), C --> select X,  1, C
+      Constant *One = ConstantInt::getTrue(SmallType);
+      Constant *AllOnesOrOne = ConstantExpr::getCast(ExtOpcode, One, SelType);
+      NewSel = SelectInst::Create(Cond, AllOnesOrOne, C);
+    } else {
+      // select X, C, (sext X) --> select X, C, 0
+      // select X, C, (zext X) --> select X, C, 0
+      Constant *Zero = ConstantInt::getNullValue(SelType);
+      NewSel = SelectInst::Create(Cond, C, Zero);
+    }
+    NewSel->copyMetadata(Sel);
+    return NewSel;
   }
 
   return nullptr;

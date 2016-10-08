@@ -1190,7 +1190,8 @@ void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
     Fn = Scope->getFilename();
     Dir = Scope->getDirectory();
     if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
-      Discriminator = LBF->getDiscriminator();
+      if (DwarfVersion >= 4)
+        Discriminator = LBF->getDiscriminator();
 
     unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
     Src = static_cast<DwarfCompileUnit &>(*InfoHolder.getUnits()[CUID])

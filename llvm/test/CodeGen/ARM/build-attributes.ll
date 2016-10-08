@@ -200,6 +200,11 @@
 ; RUN: llc < %s -mtriple=armv5-none-linux-gnueabi -mcpu=arm1022e | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv5-none-linux-gnueabi -mcpu=arm1022e -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 
+; ARMv8-R
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 -mattr=-vfp2,-fp16 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NOFPU
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 -mattr=-neon,+fp-only-sp,+d16 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-SP
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NEON
+
 ; XSCALE:      .eabi_attribute 6, 5
 ; XSCALE:      .eabi_attribute 8, 1
 ; XSCALE:      .eabi_attribute 9, 1
@@ -1548,6 +1553,35 @@
 
 ; PCS-R9-USE:  .eabi_attribute 14, 0
 ; PCS-R9-RESERVE:  .eabi_attribute 14, 3
+
+; ARMv8R: .eabi_attribute 67, "2.09"      @ Tag_conformance
+; ARMv8R: .eabi_attribute 6, 15   @ Tag_CPU_arch
+; ARMv8R: .eabi_attribute 7, 82   @ Tag_CPU_arch_profile
+; ARMv8R: .eabi_attribute 8, 1    @ Tag_ARM_ISA_use
+; ARMv8R: .eabi_attribute 9, 2    @ Tag_THUMB_ISA_use
+; ARMv8R-NOFPU-NOT: .fpu
+; ARMv8R-NOFPU-NOT: .eabi_attribute 12
+; ARMv8R-SP: .fpu fpv5-sp-d16
+; ARMv8R-SP-NOT: .eabi_attribute 12
+; ARMv8R-NEON: .fpu    neon-fp-armv8
+; ARMv8R-NEON: .eabi_attribute 12, 3   @ Tag_Advanced_SIMD_arch
+; ARMv8R: .eabi_attribute 17, 1   @ Tag_ABI_PCS_GOT_use
+; ARMv8R: .eabi_attribute 20, 1   @ Tag_ABI_FP_denormal
+; ARMv8R: .eabi_attribute 21, 1   @ Tag_ABI_FP_exceptions
+; ARMv8R: .eabi_attribute 23, 3   @ Tag_ABI_FP_number_model
+; ARMv8R: .eabi_attribute 34, 1   @ Tag_CPU_unaligned_access
+; ARMv8R: .eabi_attribute 24, 1   @ Tag_ABI_align_needed
+; ARMv8R: .eabi_attribute 25, 1   @ Tag_ABI_align_preserved
+; ARMv8R-NOFPU-NOT: .eabi_attribute 27
+; ARMv8R-SP: .eabi_attribute 27, 1   @ Tag_ABI_HardFP_use
+; ARMv8R-NEON-NOT: .eabi_attribute 27
+; ARMv8R-NOFPU-NOT: .eabi_attribute 36
+; ARMv8R-SP: .eabi_attribute 36, 1   @ Tag_FP_HP_extension
+; ARMv8R-NEON: .eabi_attribute 36, 1   @ Tag_FP_HP_extension
+; ARMv8R: .eabi_attribute 38, 1   @ Tag_ABI_FP_16bit_format
+; ARMv8R: .eabi_attribute 42, 1   @ Tag_MPextension_use
+; ARMv8R: .eabi_attribute 14, 0   @ Tag_ABI_PCS_R9_use
+; ARMv8R: .eabi_attribute 68, 2   @ Tag_Virtualization_use
 
 define i32 @f(i64 %z) {
     ret i32 0

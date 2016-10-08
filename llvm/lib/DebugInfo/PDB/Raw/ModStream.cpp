@@ -38,8 +38,7 @@ Error ModStream::reload() {
 
   ReadableStreamRef S;
 
-  uint32_t SymbolSubstreamSig = 0;
-  if (auto EC = Reader.readInteger(SymbolSubstreamSig))
+  if (auto EC = Reader.readInteger(Signature))
     return EC;
   if (auto EC = Reader.readArray(SymbolsSubstream, SymbolSize - 4))
     return EC;

@@ -38,6 +38,10 @@ void GCNHazardRecognizer::EmitInstruction(MachineInstr *MI) {
   CurrCycleInstr = MI;
 }
 
+static bool isDivFMas(unsigned Opcode) {
+  return Opcode == AMDGPU::V_DIV_FMAS_F32 || Opcode == AMDGPU::V_DIV_FMAS_F64;
+}
+
 ScheduleHazardRecognizer::HazardType
 GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   MachineInstr *MI = SU->getInstr();
@@ -49,6 +53,9 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
     return NoopHazard;
 
   if (SIInstrInfo::isDPP(*MI) && checkDPPHazards(MI) > 0)
+    return NoopHazard;
+
+  if (isDivFMas(MI->getOpcode()) && checkDivFMasHazards(MI) > 0)
     return NoopHazard;
 
   return NoHazard;
@@ -67,6 +74,9 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
 
   if (SIInstrInfo::isDPP(*MI))
     return std::max(0, checkDPPHazards(MI));
+
+  if (isDivFMas(MI->getOpcode()))
+    return std::max(0, checkDivFMasHazards(MI));
 
   return 0;
 }
@@ -261,4 +271,16 @@ int GCNHazardRecognizer::checkDPPHazards(MachineInstr *DPP) {
   }
 
   return WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkDivFMasHazards(MachineInstr *DivFMas) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  // v_div_fmas requires 4 wait states after a write to vcc from a VALU
+  // instruction.
+  const int DivFMasWaitStates = 4;
+  auto IsHazardDefFn = [TII] (MachineInstr *MI) { return TII->isVALU(*MI); };
+  int WaitStatesNeeded = getWaitStatesSinceDef(AMDGPU::VCC, IsHazardDefFn);
+
+  return DivFMasWaitStates - WaitStatesNeeded;
 }

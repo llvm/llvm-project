@@ -39,7 +39,7 @@ define float @caller(i8* %error_ref) {
 ; Access part of the error object and save it to error_ref
 ; CHECK-APPLE: movb 8(%r12)
 ; CHECK-APPLE: movq %r12, %rdi
-; CHECK_APPLE: callq {{.*}}free
+; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller:
 ; CHECK-O0: xorl
@@ -76,14 +76,14 @@ define float @caller2(i8* %error_ref) {
 ; Access part of the error object and save it to error_ref
 ; CHECK-APPLE: movb 8(%r12)
 ; CHECK-APPLE: movq %r12, %rdi
-; CHECK_APPLE: callq {{.*}}free
+; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller2:
 ; CHECK-O0: xorl
 ; CHECK-O0: movl %{{.*}}, %r12d
 ; CHECK-O0: callq {{.*}}foo
 ; CHECK-O0: movq %r12, [[ID:%[a-z]+]]
-; CHECK-O0: cmpq $0, [[ID]]
+; CHECK-O0: cmpq $0, %r12
 ; CHECK-O0: jne
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*
@@ -133,7 +133,8 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-DAG: movq [[ID]], %r12
 ; CHECK-O0: ret
 ; reload from stack
-; CHECK-O0: movq {{.*}}(%rsp), %r12
+; CHECK-O0: movq {{.*}}(%rsp), [[REG:%[a-z]+]]
+; CHECK-O0: movq [[REG]], %r12
 ; CHECK-O0: ret
 entry:
   %cond = icmp ne i32 %cc, 0
@@ -173,11 +174,12 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0: je
 ; CHECK-O0: movl $16,
 ; CHECK-O0: malloc
-; CHECK-O0: movq %rax, [[ID:%[a-z]+]]
+; CHECK-O0: movq %rax, [[ID:%[a-z0-9]+]]
 ; CHECK-O0: movb $1, 8([[ID]])
 ; CHECK-O0: jbe
 ; reload from stack
-; CHECK-O0: movq {{.*}}(%rsp), %r12
+; CHECK-O0: movq {{.*}}(%rsp), [[REG:%[a-z0-9]+]]
+; CHECK-O0: movq [[REG]], %r12
 ; CHECK-O0: ret
 entry:
   br label %bb_loop
@@ -251,7 +253,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE: movb 8(%r12),
 ; CHECK-APPLE: movb %{{.*}},
 ; CHECK-APPLE: movq %r12, %rdi
-; CHECK_APPLE: callq {{.*}}free
+; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller3:
 ; CHECK-O0: xorl
@@ -300,7 +302,7 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; Access part of the error object and save it to error_ref
 ; CHECK-APPLE: movb 8(%r12)
 ; CHECK-APPLE: movq %r12, %rdi
-; CHECK_APPLE: callq {{.*}}free
+; CHECK-APPLE: callq {{.*}}free
 
 ; The second swifterror value:
 ; CHECK-APPLE: xorl %r12d, %r12d
@@ -310,7 +312,7 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; Access part of the error object and save it to error_ref
 ; CHECK-APPLE: movb 8(%r12)
 ; CHECK-APPLE: movq %r12, %rdi
-; CHECK_APPLE: callq {{.*}}free
+; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller_with_multiple_swifterror_values:
 
@@ -411,12 +413,9 @@ define swiftcc float @forward_swifterror(%swift_error** swifterror %error_ptr_re
 ; CHECK-APPLE: retq
 
 ; CHECK-O0-LABEL: forward_swifterror:
-; CHECK-O0:  subq $24, %rsp
-; CHECK-O0:  movq %r12, %rcx
-; CHECK-O0:  movq %rcx, 16(%rsp)
-; CHECK-O0:  movq %rax, 8(%rsp)
+; CHECK-O0: pushq %rax
 ; CHECK-O0:  callq _moo
-; CHECK-O0:  addq $24, %rsp
+; CHECK-O0: popq %rax
 ; CHECK-O0:  retq
 
 entry:
@@ -440,20 +439,21 @@ define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror
 
 ; CHECK-O0-LABEL: conditionally_forward_swifterror:
 ; CHECK-O0:  subq $24, %rsp
-; CHECK-O0:  movq %r12, %rcx
+; CHECK-O0:  movq %r12, [[REG1:%[a-z0-9]+]]
 ; CHECK-O0:  cmpl $0, %edi
-; CHECK-O0:  movq %rax, 16(%rsp)
-; CHECK-O0:  movq %r12, 8(%rsp)
-; CHECK-O0:  movq %rcx, (%rsp)
+; CHECK-O0-DAG:  movq [[REG1]], [[STK:[0-9]+]](%rsp)
+; CHECK-O0-DAG:  movq %r12, [[STK2:[0-9]+]](%rsp)
 ; CHECK-O0:  je
 
-; CHECK-O0:  movq 8(%rsp), %r12
+; CHECK-O0:  movq [[STK2]](%rsp), [[REG:%[a-z0-9]+]]
+; CHECK-O0:  movq [[REG]], %r12
 ; CHECK-O0:  callq _moo
 ; CHECK-O0:  addq $24, %rsp
 ; CHECK-O0:  retq
 
+; CHECK-O0:  movq [[STK2]](%rsp), [[REG:%[a-z0-9]+]]
 ; CHECK-O0:  xorps %xmm0, %xmm0
-; CHECK-O0:  movq 8(%rsp), %r12
+; CHECK-O0:  movq [[REG]], %r12
 ; CHECK-O0:  addq $24, %rsp
 ; CHECK-O0:  retq
 entry:
@@ -494,4 +494,28 @@ entry:
 define swiftcc {i32, i32, i32} @empty_swiftcc({i32, i32, i32} , %swift_error** swifterror %error_ptr_ref) {
 entry:
   ret {i32, i32, i32} %0
+}
+
+; Make sure we can handle the case when isel generates new machine basic blocks.
+; CHECK-APPLE-LABEL: dont_crash_on_new_isel_blocks:
+; CHECK-APPLE: pushq   %rax
+; CHECK-APPLE: xorl    %eax, %eax
+; CHECK-APPLE: testb   %al, %al
+; CHECK-APPLE: jne
+; CHECK-APPLE: callq   *%rax
+; CHECK-APPLE: popq    %rax
+; CHECK-APPLE: ret
+
+define swiftcc void @dont_crash_on_new_isel_blocks(%swift_error** nocapture swifterror, i1, i8**) {
+entry:
+  %3 = or i1 false, %1
+  br i1 %3, label %cont, label %falsebb
+
+falsebb:
+  %4 = load i8*, i8** %2, align 8
+  br label %cont
+
+cont:
+  tail call swiftcc void undef(%swift_error** nocapture swifterror %0)
+  ret void
 }
