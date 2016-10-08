@@ -135,8 +135,7 @@ cl::opt<ActionType> Action(
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
-                   "Generate attribute documentation"),
-        clEnumValEnd));
+                   "Generate attribute documentation")));
 
 cl::opt<std::string>
 ClangComponent("clang-component",

@@ -46,8 +46,7 @@ static cl::opt<FunctionNameKind> ClPrintFunctions(
                clEnumValN(FunctionNameKind::ShortName, "short",
                           "print short function name"),
                clEnumValN(FunctionNameKind::LinkageName, "linkage",
-                          "print function linkage name"),
-               clEnumValEnd));
+                          "print function linkage name")));
 
 static cl::opt<bool>
     ClUseRelativeAddress("relative-address", cl::init(false),

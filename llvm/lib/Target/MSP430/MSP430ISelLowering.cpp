@@ -54,8 +54,7 @@ HWMultMode("msp430-hwmult-mode", cl::Hidden,
              clEnumValN(HWMultIntr, "interrupts",
                 "Assume hardware multiplier can be used inside interrupts"),
              clEnumValN(HWMultNoIntr, "use",
-                "Assume hardware multiplier cannot be used inside interrupts"),
-             clEnumValEnd));
+                "Assume hardware multiplier cannot be used inside interrupts")));
 
 MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
                                            const MSP430Subtarget &STI)

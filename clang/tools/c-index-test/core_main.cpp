@@ -41,8 +41,7 @@ static cl::opt<ActionType>
 Action(cl::desc("Action:"), cl::init(ActionType::None),
        cl::values(
           clEnumValN(ActionType::PrintSourceSymbols,
-                     "print-source-symbols", "Print symbols from source"),
-          clEnumValEnd),
+                     "print-source-symbols", "Print symbols from source")),
        cl::cat(IndexTestCoreCategory));
 
 static cl::extrahelp MoreHelp(

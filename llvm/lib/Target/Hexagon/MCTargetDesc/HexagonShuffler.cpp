@@ -171,7 +171,7 @@ bool HexagonShuffler::check() {
   unsigned slotJump = slotFirstJump;
   unsigned slotLoadStore = slotFirstLoadStore;
   // Number of branches, solo branches, indirect branches.
-  unsigned jumps = 0, jump1 = 0, jumpr = 0;
+  unsigned jumps = 0, jump1 = 0;
   // Number of memory operations, loads, solo loads, stores, solo stores, single
   // stores.
   unsigned memory = 0, loads = 0, load0 = 0, stores = 0, store0 = 0, store1 = 0;
@@ -207,6 +207,8 @@ bool HexagonShuffler::check() {
       ++pSlot3Cnt;
       slot3ISJ = ISJ;
     }
+    if (HexagonMCInstrInfo::isCofMax1(MCII, *ID))
+      ++jump1;
 
     switch (HexagonMCInstrInfo::getType(MCII, *ID)) {
     case HexagonII::TypeXTYPE:
@@ -214,8 +216,6 @@ bool HexagonShuffler::check() {
         ++xtypeFloat;
       break;
     case HexagonII::TypeJR:
-      ++jumpr;
-      LLVM_FALLTHROUGH;
     case HexagonII::TypeJ:
       ++jumps;
       break;
@@ -304,7 +304,7 @@ bool HexagonShuffler::check() {
     if (HexagonMCInstrInfo::getDesc(MCII, *ID).isBranch() ||
         HexagonMCInstrInfo::getDesc(MCII, *ID).isCall())
       if (jumps > 1) {
-        if (jumpr || slotJump < slotLastJump) {
+        if (slotJump < slotLastJump) {
           // Error if indirect branch with another branch or
           // no more slots available for branches.
           Error = SHUFFLE_ERROR_BRANCHES;

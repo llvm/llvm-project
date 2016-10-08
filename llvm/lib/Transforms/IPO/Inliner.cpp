@@ -72,8 +72,7 @@ cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
     cl::values(clEnumValN(InlinerFunctionImportStatsOpts::Basic, "basic",
                           "basic statistics"),
                clEnumValN(InlinerFunctionImportStatsOpts::Verbose, "verbose",
-                          "printing of statistics for each inlined function"),
-               clEnumValEnd),
+                          "printing of statistics for each inlined function")),
     cl::Hidden, cl::desc("Enable inliner stats for imported functions"));
 } // namespace
 

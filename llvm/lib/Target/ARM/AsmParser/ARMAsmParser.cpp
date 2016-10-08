@@ -65,8 +65,7 @@ static cl::opt<ImplicitItModeTy> ImplicitItMode(
                clEnumValN(ImplicitItModeTy::ARMOnly, "arm",
                           "Accept in ARM, reject in Thumb"),
                clEnumValN(ImplicitItModeTy::ThumbOnly, "thumb",
-                          "Warn in ARM, emit implicit ITs in Thumb"),
-               clEnumValEnd));
+                          "Warn in ARM, emit implicit ITs in Thumb")));
 
 class ARMOperand;
 

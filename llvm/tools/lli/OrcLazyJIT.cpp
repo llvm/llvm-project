@@ -37,8 +37,7 @@ namespace {
                                              "mods-to-disk",
                                              "Dump modules to the current "
                                              "working directory. (WARNING: "
-                                             "will overwrite existing files)."),
-                                  clEnumValEnd),
+                                             "will overwrite existing files).")),
                                 cl::Hidden);
 
   cl::opt<bool> OrcInlineStubs("orc-lazy-inline-stubs",

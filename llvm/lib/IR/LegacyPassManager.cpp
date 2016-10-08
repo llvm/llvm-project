@@ -56,8 +56,7 @@ PassDebugging("debug-pass", cl::Hidden,
   clEnumVal(Arguments , "print pass arguments to pass to 'opt'"),
   clEnumVal(Structure , "print pass structure before run()"),
   clEnumVal(Executions, "print pass name before it is executed"),
-  clEnumVal(Details   , "print pass details when it is executed"),
-                             clEnumValEnd));
+  clEnumVal(Details   , "print pass details when it is executed")));
 
 namespace {
 typedef llvm::cl::list<const llvm::PassInfo *, bool, PassNameParser>

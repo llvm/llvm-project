@@ -56,7 +56,7 @@ cl::opt<OutputFormatTy> OutputFormat(
     "format", cl::desc("Specify output format"),
     cl::values(clEnumVal(bsd, "BSD format"), clEnumVal(sysv, "System V format"),
                clEnumVal(posix, "POSIX.2 format"),
-               clEnumVal(darwin, "Darwin -m format"), clEnumValEnd),
+               clEnumVal(darwin, "Darwin -m format")),
     cl::init(bsd));
 cl::alias OutputFormat2("f", cl::desc("Alias for --format"),
                         cl::aliasopt(OutputFormat));
@@ -143,7 +143,7 @@ enum Radix { d, o, x };
 cl::opt<Radix>
     AddressRadix("radix", cl::desc("Radix (o/d/x) for printing symbol Values"),
                  cl::values(clEnumVal(d, "decimal"), clEnumVal(o, "octal"),
-                            clEnumVal(x, "hexadecimal"), clEnumValEnd),
+                            clEnumVal(x, "hexadecimal")),
                  cl::init(x));
 cl::alias RadixAlias("t", cl::desc("Alias for --radix"),
                      cl::aliasopt(AddressRadix));
