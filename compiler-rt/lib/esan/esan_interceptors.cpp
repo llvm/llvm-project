@@ -461,7 +461,7 @@ INTERCEPTOR(int, pthread_sigmask, int how, __sanitizer_sigset_t *set,
 // Malloc interceptors
 //===----------------------------------------------------------------------===//
 
-static const uptr early_alloc_buf_size = 1024;
+static const uptr early_alloc_buf_size = 4096;
 static uptr allocated_bytes;
 static char early_alloc_buf[early_alloc_buf_size];
 
