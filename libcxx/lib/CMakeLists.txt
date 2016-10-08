@@ -33,9 +33,17 @@ add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}"
 
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
-add_library_flags_if(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "-Wl,--whole-archive" "-Wl,-Bstatic")
-add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
-add_library_flags_if(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "-Wl,-Bdynamic" "-Wl,--no-whole-archive")
+if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+  add_library_flags("-Wl,--whole-archive" "-Wl,-Bstatic")
+  add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
+  add_library_flags("-Wl,-Bdynamic" "-Wl,--no-whole-archive")
+elseif (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
+                   LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
+  # Apple re-exports libc++abi in libc++, so don't make it public
+  add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
+else()
+  list(APPEND LIBCXX_LIBRARIES_PUBLIC "${LIBCXX_CXX_ABI_LIBRARY}")
+endif()
 
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
@@ -67,13 +75,18 @@ if (APPLE AND LLVM_USE_SANITIZER)
   endif()
 endif()
 
-# Generate library list.
+# Generate private library list.
 add_library_flags_if(LIBCXX_HAS_PTHREAD_LIB pthread)
 add_library_flags_if(LIBCXX_HAS_C_LIB c)
 add_library_flags_if(LIBCXX_HAS_M_LIB m)
 add_library_flags_if(LIBCXX_HAS_RT_LIB rt)
 add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
+
+# Add the unwinder library.
+if (LIBCXXABI_USE_LLVM_UNWINDER)
+  list(APPEND LIBCXX_LIBRARIES_PUBLIC unwind)
+endif()
 
 # Setup flags.
 if (NOT WIN32)
@@ -151,7 +164,9 @@ set(LIBCXX_TARGETS)
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED $<TARGET_OBJECTS:cxx_objects>)
-  target_link_libraries(cxx_shared ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_shared
+    PRIVATE ${LIBCXX_LIBRARIES}
+    PUBLIC ${LIBCXX_LIBRARIES_PUBLIC})
   set_target_properties(cxx_shared
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
@@ -165,7 +180,9 @@ endif()
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC $<TARGET_OBJECTS:cxx_objects>)
-  target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_static
+    PRIVATE ${LIBCXX_LIBRARIES}
+    PUBLIC ${LIBCXX_LIBRARIES_PUBLIC})
   set_target_properties(cxx_static
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
@@ -238,7 +255,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
       ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
     ARGS
       "$<TARGET_LINKER_FILE:cxx_shared>"
-      "${SCRIPT_ABI_LIBNAME}"
+      "\"${LIBCXX_LIBRARIES_PUBLIC}\""
     WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
   )
 endif()

@@ -1,4 +1,6 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon -fp-contract=fast | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon -fp-contract=fast -mcpu=exynos-m1 | FileCheck --check-prefix=EXYNOS %s
+; The instruction latencies of Exynos-M1 trigger the transform we see under the Exynos check.
 
 declare <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double>, <2 x double>)
 
@@ -382,6 +384,10 @@ define <2 x float> @test_vfma_lane_f32(<2 x float> %a, <2 x float> %b, <2 x floa
 ; CHECK-LABEL: test_vfma_lane_f32:
 ; CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfma_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[1]
+; EXYNOS: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> <i32 1, i32 1>
   %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
@@ -394,6 +400,10 @@ define <4 x float> @test_vfmaq_lane_f32(<4 x float> %a, <4 x float> %b, <2 x flo
 ; CHECK-LABEL: test_vfmaq_lane_f32:
 ; CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmaq_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[1]
+; EXYNOS: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <2 x float> %v, <2 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %0 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %lane, <4 x float> %b, <4 x float> %a)
@@ -406,6 +416,10 @@ define <2 x float> @test_vfma_laneq_f32(<2 x float> %a, <2 x float> %b, <4 x flo
 ; CHECK-LABEL: test_vfma_laneq_f32:
 ; CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfma_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> <i32 3, i32 3>
   %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
@@ -416,6 +430,10 @@ define <4 x float> @test_vfmaq_laneq_f32(<4 x float> %a, <4 x float> %b, <4 x fl
 ; CHECK-LABEL: test_vfmaq_laneq_f32:
 ; CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmaq_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %0 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %lane, <4 x float> %b, <4 x float> %a)
@@ -426,6 +444,10 @@ define <2 x float> @test_vfms_lane_f32(<2 x float> %a, <2 x float> %b, <2 x floa
 ; CHECK-LABEL: test_vfms_lane_f32:
 ; CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfms_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[1]
+; EXYNOS: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <2 x float> %sub, <2 x float> undef, <2 x i32> <i32 1, i32 1>
@@ -437,6 +459,10 @@ define <4 x float> @test_vfmsq_lane_f32(<4 x float> %a, <4 x float> %b, <2 x flo
 ; CHECK-LABEL: test_vfmsq_lane_f32:
 ; CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsq_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[1]
+; EXYNOS: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <2 x float> %sub, <2 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -448,6 +474,10 @@ define <2 x float> @test_vfms_laneq_f32(<2 x float> %a, <2 x float> %b, <4 x flo
 ; CHECK-LABEL: test_vfms_laneq_f32:
 ; CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfms_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <4 x float> %sub, <4 x float> undef, <2 x i32> <i32 3, i32 3>
@@ -459,6 +489,10 @@ define <4 x float> @test_vfmsq_laneq_f32(<4 x float> %a, <4 x float> %b, <4 x fl
 ; CHECK-LABEL: test_vfmsq_laneq_f32:
 ; CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsq_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <4 x float> %sub, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
@@ -470,6 +504,10 @@ define <2 x double> @test_vfmaq_lane_f64(<2 x double> %a, <2 x double> %b, <1 x 
 ; CHECK-LABEL: test_vfmaq_lane_f64:
 ; CHECK: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmaq_lane_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <1 x double> %v, <1 x double> undef, <2 x i32> zeroinitializer
   %0 = tail call <2 x double> @llvm.fma.v2f64(<2 x double> %lane, <2 x double> %b, <2 x double> %a)
@@ -482,6 +520,10 @@ define <2 x double> @test_vfmaq_laneq_f64(<2 x double> %a, <2 x double> %b, <2 x
 ; CHECK-LABEL: test_vfmaq_laneq_f64:
 ; CHECK: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmaq_laneq_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[1]
+; EXYNOS: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   %0 = tail call <2 x double> @llvm.fma.v2f64(<2 x double> %lane, <2 x double> %b, <2 x double> %a)
@@ -492,6 +534,10 @@ define <2 x double> @test_vfmsq_lane_f64(<2 x double> %a, <2 x double> %b, <1 x 
 ; CHECK-LABEL: test_vfmsq_lane_f64:
 ; CHECK: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsq_lane_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <1 x double> <double -0.000000e+00>, %v
   %lane = shufflevector <1 x double> %sub, <1 x double> undef, <2 x i32> zeroinitializer
@@ -503,6 +549,10 @@ define <2 x double> @test_vfmsq_laneq_f64(<2 x double> %a, <2 x double> %b, <2 x
 ; CHECK-LABEL: test_vfmsq_laneq_f64:
 ; CHECK: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsq_laneq_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[1]
+; EXYNOS: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %v
   %lane = shufflevector <2 x double> %sub, <2 x double> undef, <2 x i32> <i32 1, i32 1>
@@ -514,6 +564,9 @@ define float @test_vfmas_laneq_f32(float %a, float %b, <4 x float> %v) {
 ; CHECK-LABEL: test_vfmas_laneq_f32
 ; CHECK: fmla {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXNOS-LABEL: test_vfmas_laneq_f32
+; EXNOS: fmla {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}.s[3]
+; EXNOS-NEXT: ret
 entry:
   %extract = extractelement <4 x float> %v, i32 3
   %0 = tail call float @llvm.fma.f32(float %b, float %extract, float %a)
@@ -539,6 +592,9 @@ define float @test_vfmss_lane_f32(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_vfmss_lane_f32
 ; CHECK: fmls {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmss_lane_f32
+; EXYNOS: fmls {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}.s[1]
+; EXYNOS-NEXT: ret
 entry:
   %extract.rhs = extractelement <2 x float> %v, i32 1
   %extract = fsub float -0.000000e+00, %extract.rhs
@@ -561,6 +617,9 @@ define double @test_vfmsd_laneq_f64(double %a, double %b, <2 x double> %v) {
 ; CHECK-LABEL: test_vfmsd_laneq_f64
 ; CHECK: fmls {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsd_laneq_f64
+; EXYNOS: fmls {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[1]
+; EXYNOS-NEXT: ret
 entry:
   %extract.rhs = extractelement <2 x double> %v, i32 1
   %extract = fsub double -0.000000e+00, %extract.rhs
@@ -583,6 +642,9 @@ define float @test_vfmss_lane_f32_0(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_vfmss_lane_f32_0
 ; CHECK: fmls {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmss_lane_f32_0
+; EXYNOS: fmls {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}.s[1]
+; EXYNOS-NEXT: ret
 entry:
   %tmp0 = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %v
   %tmp1 = extractelement <2 x float> %tmp0, i32 1
@@ -1408,6 +1470,10 @@ define <2 x float> @test_vmul_lane_f32(<2 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmul_lane_f32:
 ; CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmul_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[1]
+; EXYNOS: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> <i32 1, i32 1>
   %mul = fmul <2 x float> %shuffle, %a
@@ -1418,6 +1484,9 @@ define <1 x double> @test_vmul_lane_f64(<1 x double> %a, <1 x double> %v) {
 ; CHECK-LABEL: test_vmul_lane_f64:
 ; CHECK: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmul_lane_f64:
+; EXYNOS: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+; EXYNOS-NEXT: ret
 entry:
   %0 = bitcast <1 x double> %a to <8 x i8>
   %1 = bitcast <8 x i8> %0 to double
@@ -1431,6 +1500,10 @@ define <4 x float> @test_vmulq_lane_f32(<4 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmulq_lane_f32:
 ; CHECK: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulq_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[1]
+; EXYNOS: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %mul = fmul <4 x float> %shuffle, %a
@@ -1441,6 +1514,10 @@ define <2 x double> @test_vmulq_lane_f64(<2 x double> %a, <1 x double> %v) {
 ; CHECK-LABEL: test_vmulq_lane_f64:
 ; CHECK: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulq_lane_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <1 x double> %v, <1 x double> undef, <2 x i32> zeroinitializer
   %mul = fmul <2 x double> %shuffle, %a
@@ -1451,6 +1528,10 @@ define <2 x float> @test_vmul_laneq_f32(<2 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmul_laneq_f32:
 ; CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmul_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> <i32 3, i32 3>
   %mul = fmul <2 x float> %shuffle, %a
@@ -1461,6 +1542,9 @@ define <1 x double> @test_vmul_laneq_f64(<1 x double> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmul_laneq_f64:
 ; CHECK: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmul_laneq_f64:
+; EXYNOS: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[1]
+; EXYNOS-NEXT: ret
 entry:
   %0 = bitcast <1 x double> %a to <8 x i8>
   %1 = bitcast <8 x i8> %0 to double
@@ -1474,6 +1558,10 @@ define <4 x float> @test_vmulq_laneq_f32(<4 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmulq_laneq_f32:
 ; CHECK: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulq_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %mul = fmul <4 x float> %shuffle, %a
@@ -1484,6 +1572,10 @@ define <2 x double> @test_vmulq_laneq_f64(<2 x double> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmulq_laneq_f64:
 ; CHECK: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulq_laneq_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[1]
+; EXYNOS: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   %mul = fmul <2 x double> %shuffle, %a
@@ -1494,6 +1586,10 @@ define <2 x float> @test_vmulx_lane_f32(<2 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmulx_lane_f32:
 ; CHECK: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulx_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[1]
+; EXYNOS: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> <i32 1, i32 1>
   %vmulx2.i = tail call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %a, <2 x float> %shuffle)
@@ -1504,6 +1600,10 @@ define <4 x float> @test_vmulxq_lane_f32(<4 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmulxq_lane_f32:
 ; CHECK: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_lane_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[1]
+; EXYNOS: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; Exynos-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %vmulx2.i = tail call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %a, <4 x float> %shuffle)
@@ -1514,6 +1614,10 @@ define <2 x double> @test_vmulxq_lane_f64(<2 x double> %a, <1 x double> %v) {
 ; CHECK-LABEL: test_vmulxq_lane_f64:
 ; CHECK: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_lane_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <1 x double> %v, <1 x double> undef, <2 x i32> zeroinitializer
   %vmulx2.i = tail call <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double> %a, <2 x double> %shuffle)
@@ -1524,6 +1628,10 @@ define <2 x float> @test_vmulx_laneq_f32(<2 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmulx_laneq_f32:
 ; CHECK: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulx_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[3]
+; EXYNOS: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> <i32 3, i32 3>
   %vmulx2.i = tail call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %a, <2 x float> %shuffle)
@@ -1534,6 +1642,10 @@ define <4 x float> @test_vmulxq_laneq_f32(<4 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmulxq_laneq_f32:
 ; CHECK: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[3]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_laneq_f32:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[3]
+; EXYNOS: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %vmulx2.i = tail call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %a, <4 x float> %shuffle)
@@ -1544,6 +1656,10 @@ define <2 x double> @test_vmulxq_laneq_f64(<2 x double> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmulxq_laneq_f64:
 ; CHECK: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[1]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_laneq_f64:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[1]
+; EXYNOS: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   %vmulx2.i = tail call <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double> %a, <2 x double> %shuffle)
@@ -1890,6 +2006,10 @@ define <2 x float> @test_vfma_lane_f32_0(<2 x float> %a, <2 x float> %b, <2 x fl
 ; CHECK-LABEL: test_vfma_lane_f32_0:
 ; CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfma_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> zeroinitializer
   %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
@@ -1900,6 +2020,10 @@ define <4 x float> @test_vfmaq_lane_f32_0(<4 x float> %a, <4 x float> %b, <2 x f
 ; CHECK-LABEL: test_vfmaq_lane_f32_0:
 ; CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmaq_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <2 x float> %v, <2 x float> undef, <4 x i32> zeroinitializer
   %0 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %lane, <4 x float> %b, <4 x float> %a)
@@ -1910,6 +2034,10 @@ define <2 x float> @test_vfma_laneq_f32_0(<2 x float> %a, <2 x float> %b, <4 x f
 ; CHECK-LABEL: test_vfma_laneq_f32_0:
 ; CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfma_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> zeroinitializer
   %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
@@ -1920,6 +2048,10 @@ define <4 x float> @test_vfmaq_laneq_f32_0(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-LABEL: test_vfmaq_laneq_f32_0:
 ; CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmaq_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> zeroinitializer
   %0 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %lane, <4 x float> %b, <4 x float> %a)
@@ -1930,6 +2062,10 @@ define <2 x float> @test_vfms_lane_f32_0(<2 x float> %a, <2 x float> %b, <2 x fl
 ; CHECK-LABEL: test_vfms_lane_f32_0:
 ; CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfms_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <2 x float> %sub, <2 x float> undef, <2 x i32> zeroinitializer
@@ -1941,6 +2077,10 @@ define <4 x float> @test_vfmsq_lane_f32_0(<4 x float> %a, <4 x float> %b, <2 x f
 ; CHECK-LABEL: test_vfmsq_lane_f32_0:
 ; CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsq_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <2 x float> %sub, <2 x float> undef, <4 x i32> zeroinitializer
@@ -1952,6 +2092,10 @@ define <2 x float> @test_vfms_laneq_f32_0(<2 x float> %a, <2 x float> %b, <4 x f
 ; CHECK-LABEL: test_vfms_laneq_f32_0:
 ; CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfms_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <4 x float> %sub, <4 x float> undef, <2 x i32> zeroinitializer
@@ -1963,6 +2107,10 @@ define <4 x float> @test_vfmsq_laneq_f32_0(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-LABEL: test_vfmsq_laneq_f32_0:
 ; CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsq_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %v
   %lane = shufflevector <4 x float> %sub, <4 x float> undef, <4 x i32> zeroinitializer
@@ -1974,6 +2122,10 @@ define <2 x double> @test_vfmaq_laneq_f64_0(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-LABEL: test_vfmaq_laneq_f64_0:
 ; CHECK: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmaq_laneq_f64_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %lane = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> zeroinitializer
   %0 = tail call <2 x double> @llvm.fma.v2f64(<2 x double> %lane, <2 x double> %b, <2 x double> %a)
@@ -1984,6 +2136,10 @@ define <2 x double> @test_vfmsq_laneq_f64_0(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-LABEL: test_vfmsq_laneq_f64_0:
 ; CHECK: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vfmsq_laneq_f64_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %sub = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %v
   %lane = shufflevector <2 x double> %sub, <2 x double> undef, <2 x i32> zeroinitializer
@@ -2787,6 +2943,10 @@ define <2 x float> @test_vmul_lane_f32_0(<2 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmul_lane_f32_0:
 ; CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmul_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> zeroinitializer
   %mul = fmul <2 x float> %shuffle, %a
@@ -2797,6 +2957,10 @@ define <4 x float> @test_vmulq_lane_f32_0(<4 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmulq_lane_f32_0:
 ; CHECK: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulq_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <4 x i32> zeroinitializer
   %mul = fmul <4 x float> %shuffle, %a
@@ -2807,6 +2971,10 @@ define <2 x float> @test_vmul_laneq_f32_0(<2 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmul_laneq_f32_0:
 ; CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmul_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> zeroinitializer
   %mul = fmul <2 x float> %shuffle, %a
@@ -2817,6 +2985,9 @@ define <1 x double> @test_vmul_laneq_f64_0(<1 x double> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmul_laneq_f64_0:
 ; CHECK: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmul_laneq_f64_0:
+; EXYNOS: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[0]
+; EXYNOS-NEXT: ret
 entry:
   %0 = bitcast <1 x double> %a to <8 x i8>
   %1 = bitcast <8 x i8> %0 to double
@@ -2830,6 +3001,10 @@ define <4 x float> @test_vmulq_laneq_f32_0(<4 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmulq_laneq_f32_0:
 ; CHECK: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulq_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> zeroinitializer
   %mul = fmul <4 x float> %shuffle, %a
@@ -2840,6 +3015,10 @@ define <2 x double> @test_vmulq_laneq_f64_0(<2 x double> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmulq_laneq_f64_0:
 ; CHECK: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulq_laneq_f64_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> zeroinitializer
   %mul = fmul <2 x double> %shuffle, %a
@@ -2850,6 +3029,10 @@ define <2 x float> @test_vmulx_lane_f32_0(<2 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmulx_lane_f32_0:
 ; CHECK: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulx_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> zeroinitializer
   %vmulx2.i = tail call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %a, <2 x float> %shuffle)
@@ -2860,6 +3043,10 @@ define <4 x float> @test_vmulxq_lane_f32_0(<4 x float> %a, <2 x float> %v) {
 ; CHECK-LABEL: test_vmulxq_lane_f32_0:
 ; CHECK: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_lane_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x float> %v, <2 x float> undef, <4 x i32> zeroinitializer
   %vmulx2.i = tail call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %a, <4 x float> %shuffle)
@@ -2870,6 +3057,10 @@ define <2 x double> @test_vmulxq_lane_f64_0(<2 x double> %a, <1 x double> %v) {
 ; CHECK-LABEL: test_vmulxq_lane_f64_0:
 ; CHECK: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_lane_f64_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <1 x double> %v, <1 x double> undef, <2 x i32> zeroinitializer
   %vmulx2.i = tail call <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double> %a, <2 x double> %shuffle)
@@ -2880,6 +3071,10 @@ define <2 x float> @test_vmulx_laneq_f32_0(<2 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmulx_laneq_f32_0:
 ; CHECK: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulx_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[0]
+; EXYNOS: mulx {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> zeroinitializer
   %vmulx2.i = tail call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %a, <2 x float> %shuffle)
@@ -2890,6 +3085,10 @@ define <4 x float> @test_vmulxq_laneq_f32_0(<4 x float> %a, <4 x float> %v) {
 ; CHECK-LABEL: test_vmulxq_laneq_f32_0:
 ; CHECK: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_laneq_f32_0:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[0]
+; EXYNOS: mulx {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> zeroinitializer
   %vmulx2.i = tail call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %a, <4 x float> %shuffle)
@@ -2900,9 +3099,51 @@ define <2 x double> @test_vmulxq_laneq_f64_0(<2 x double> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmulxq_laneq_f64_0:
 ; CHECK: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.d[0]
 ; CHECK-NEXT: ret
+; EXYNOS-LABEL: test_vmulxq_laneq_f64_0:
+; EXYNOS: dup  [[x:v[0-9]+]].2d, {{v[0-9]+}}.d[0]
+; EXYNOS: mulx {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, [[x]].2d
+; EXYNOS-NEXT: ret
 entry:
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> zeroinitializer
   %vmulx2.i = tail call <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double> %a, <2 x double> %shuffle)
   ret <2 x double> %vmulx2.i
 }
 
+define <4 x float> @optimize_dup(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %v) {
+; CHECK-LABEL: optimize_dup:
+; CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[3]
+; CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[3]
+; CHECK-NEXT: ret
+; EXYNOS-LABEL: optimize_dup:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS-NEXT: ret
+entry:
+  %lane1 = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %0 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %lane1, <4 x float> %b, <4 x float> %a)
+  %lane2 = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+	%1 = fmul <4 x float> %lane2, %c
+	%s = fsub <4 x float> %0, %1
+  ret <4 x float> %s
+}
+
+define <4 x float> @no_optimize_dup(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %v) {
+; CHECK-LABEL: no_optimize_dup:
+; CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[3]
+; CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.s[1]
+; CHECK-NEXT: ret
+; EXYNOS-LABEL: no_optimize_dup:
+; EXYNOS: dup  [[x:v[0-9]+]].4s, {{v[0-9]+}}.s[3]
+; EXYNOS: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[x]].4s
+; EXYNOS: dup  [[y:v[0-9]+]].4s, {{v[0-9]+}}.s[1]
+; EXYNOS: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, [[y]].4s
+; EXYNOS-NEXT: ret
+entry:
+  %lane1 = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %0 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %lane1, <4 x float> %b, <4 x float> %a)
+  %lane2 = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+	%1 = fmul <4 x float> %lane2, %c
+	%s = fsub <4 x float> %0, %1
+  ret <4 x float> %s
+}
