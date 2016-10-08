@@ -495,7 +495,13 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
     Diag(Callee->getLocation(), diag::note_previous_decl) << Callee;
     return false;
   }
-  if (Pref == Sema::CFP_WrongSide) {
+
+  // Insert into LocsWithCUDADeferredDiags to avoid emitting duplicate deferred
+  // diagnostics for the same location.  Duplicate deferred diags are otherwise
+  // tricky to avoid, because, unlike with regular errors, sema checking
+  // proceeds unhindered when we omit a deferred diagnostic.
+  if (Pref == Sema::CFP_WrongSide &&
+      LocsWithCUDACallDeferredDiags.insert(Loc.getRawEncoding()).second) {
     // We have to do this odd dance to create our PartialDiagnostic because we
     // want its storage to be allocated with operator new, not in an arena.
     PartialDiagnostic ErrPD{PartialDiagnostic::NullDiagnostic()};

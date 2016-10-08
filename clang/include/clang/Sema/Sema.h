@@ -8877,16 +8877,16 @@ public:
 
   /// Check assignment constraints for an assignment of RHS to LHSType.
   ///
-  /// \brief LHSType The destination type for the assignment.
-  /// \brief RHS The source expression for the assignment.
-  /// \brief Diagnose If \c true, diagnostics may be produced when checking
+  /// \param LHSType The destination type for the assignment.
+  /// \param RHS The source expression for the assignment.
+  /// \param Diagnose If \c true, diagnostics may be produced when checking
   ///        for assignability. If a diagnostic is produced, \p RHS will be
   ///        set to ExprError(). Note that this function may still return
   ///        without producing a diagnostic, even for an invalid assignment.
-  /// \brief DiagnoseCFAudited If \c true, the target is a function parameter
+  /// \param DiagnoseCFAudited If \c true, the target is a function parameter
   ///        in an audited Core Foundation API and does not need to be checked
   ///        for ARC retain issues.
-  /// \brief ConvertRHS If \c true, \p RHS will be updated to model the
+  /// \param ConvertRHS If \c true, \p RHS will be updated to model the
   ///        conversions necessary to perform the assignment. If \c false,
   ///        \p Diagnose must also be \c false.
   AssignConvertType CheckSingleAssignmentConstraints(
@@ -9307,16 +9307,27 @@ public:
   void maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *FD,
                                    const LookupResult &Previous);
 
+private:
+  /// Raw encodings of SourceLocations for which CheckCUDACall has emitted a
+  /// deferred "bad call" diagnostic.  We use this to avoid emitting the same
+  /// deferred diag twice.
+  llvm::DenseSet<unsigned> LocsWithCUDACallDeferredDiags;
+
+public:
   /// Check whether we're allowed to call Callee from the current context.
   ///
-  /// If the call is never allowed in a semantically-correct program
-  /// (CFP_Never), emits an error and returns false.
+  /// - If the call is never allowed in a semantically-correct program
+  ///   (CFP_Never), emits an error and returns false.
   ///
-  /// If the call is allowed in semantically-correct programs, but only if it's
-  /// never codegen'ed (CFP_WrongSide), creates a deferred diagnostic to be
-  /// emitted if and when the caller is codegen'ed, and returns true.
+  /// - If the call is allowed in semantically-correct programs, but only if
+  ///   it's never codegen'ed (CFP_WrongSide), creates a deferred diagnostic to
+  ///   be emitted if and when the caller is codegen'ed, and returns true.
   ///
-  /// Otherwise, returns true without emitting any diagnostics.
+  ///   Will only create deferred diagnostics for a given SourceLocation once,
+  ///   so you can safely call this multiple times without generating duplicate
+  ///   deferred errors.
+  ///
+  /// - Otherwise, returns true without emitting any diagnostics.
   bool CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee);
 
   /// Check whether a 'try' or 'throw' expression is allowed within the current

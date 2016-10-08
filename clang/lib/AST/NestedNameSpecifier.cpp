@@ -155,7 +155,7 @@ NestedNameSpecifier::SpecifierKind NestedNameSpecifier::getKind() const {
 
 /// \brief Retrieve the namespace stored in this nested name specifier.
 NamespaceDecl *NestedNameSpecifier::getAsNamespace() const {
-	if (Prefix.getInt() == StoredDecl)
+  if (Prefix.getInt() == StoredDecl)
     return dyn_cast<NamespaceDecl>(static_cast<NamedDecl *>(Specifier));
 
   return nullptr;
@@ -163,7 +163,7 @@ NamespaceDecl *NestedNameSpecifier::getAsNamespace() const {
 
 /// \brief Retrieve the namespace alias stored in this nested name specifier.
 NamespaceAliasDecl *NestedNameSpecifier::getAsNamespaceAlias() const {
-	if (Prefix.getInt() == StoredDecl)
+  if (Prefix.getInt() == StoredDecl)
     return dyn_cast<NamespaceAliasDecl>(static_cast<NamedDecl *>(Specifier));
 
   return nullptr;

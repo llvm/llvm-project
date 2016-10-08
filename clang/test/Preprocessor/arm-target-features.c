@@ -9,6 +9,15 @@
 // CHECK-V8A: #define __ARM_FP16_ARGS 1
 // CHECK-V8A: #define __ARM_FP16_FORMAT_IEEE 1
 
+// RUN: %clang -target armv8r-none-linux-gnu -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8R %s
+// CHECK-V8R: #define __ARMEL__ 1
+// CHECK-V8R: #define __ARM_ARCH 8
+// CHECK-V8R: #define __ARM_ARCH_8R__ 1
+// CHECK-V8R: #define __ARM_FEATURE_CRC32 1
+// CHECK-V8R: #define __ARM_FEATURE_DIRECTED_ROUNDING 1
+// CHECK-V8R: #define __ARM_FEATURE_NUMERIC_MAXMIN 1
+// CHECK-V8R: #define __ARM_FP 0xE
+
 // RUN: %clang -target armv7a-none-linux-gnu -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V7 %s
 // CHECK-V7: #define __ARMEL__ 1
 // CHECK-V7: #define __ARM_ARCH 7

@@ -1766,7 +1766,8 @@ void ExprEngine::processBeginOfFunction(NodeBuilderContext &BC,
 /// ProcessEndPath - Called by CoreEngine.  Used to generate end-of-path
 ///  nodes when the control reaches the end of a function.
 void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
-                                      ExplodedNode *Pred) {
+                                      ExplodedNode *Pred,
+                                      const ReturnStmt *RS) {
   // FIXME: Assert that stackFrameDoesNotContainInitializedTemporaries(*Pred)).
   // We currently cannot enable this assert, as lifetime extended temporaries
   // are not modelled correctly.
@@ -1788,7 +1789,7 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
     getCheckerManager().runCheckersForEndFunction(BC, Dst, Pred, *this);
   }
 
-  Engine.enqueueEndOfFunction(Dst);
+  Engine.enqueueEndOfFunction(Dst, RS);
 }
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor

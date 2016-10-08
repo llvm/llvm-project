@@ -324,6 +324,7 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
       " .msgT { padding:0x; spacing:0x }\n"
       " .msgEvent { background-color:#fff8b4; color:#000000 }\n"
       " .msgControl { background-color:#bbbbbb; color:#000000 }\n"
+      " .msgNote { background-color:#ddeeff; color:#000000 }\n"
       " .mrange { background-color:#dfddf3 }\n"
       " .mrange { border-bottom:1px solid #6F9DBE }\n"
       " .PathIndex { font-weight: bold; padding:0px 5px; "
@@ -343,8 +344,12 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
       "   border-collapse: collapse; border-spacing: 0px;\n"
       " }\n"
       " td.rowname {\n"
-      "   text-align:right; font-weight:bold; color:#444444;\n"
-      "   padding-right:2ex; }\n"
+      "   text-align: right;\n"
+      "   vertical-align: top;\n"
+      "   font-weight: bold;\n"
+      "   color:#444444;\n"
+      "   padding-right:2ex;\n"
+      " }\n"
       "</style>\n</head>\n<body>";
 
   // Generate header
