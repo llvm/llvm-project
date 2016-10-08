@@ -186,13 +186,8 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopLatch() const {
 template<class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::
 addBasicBlockToLoop(BlockT *NewBB, LoopInfoBase<BlockT, LoopT> &LIB) {
-#ifndef NDEBUG
-  if (!Blocks.empty()) {
-    auto SameHeader = LIB[getHeader()];
-    assert(contains(SameHeader) && getHeader() == SameHeader->getHeader()
-           && "Incorrect LI specified for this loop!");
-  }
-#endif
+  assert((Blocks.empty() || LIB[getHeader()] == this) &&
+         "Incorrect LI specified for this loop!");
   assert(NewBB && "Cannot add a null basic block to the loop!");
   assert(!LIB[NewBB] && "BasicBlock already in the loop!");
 

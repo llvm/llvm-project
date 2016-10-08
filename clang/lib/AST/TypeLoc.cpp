@@ -210,7 +210,7 @@ SourceLocation TypeLoc::getEndLoc() const {
     switch (Cur.getTypeLocClass()) {
     default:
       if (!Last)
-	Last = Cur;
+        Last = Cur;
       return Last.getLocalSourceRange().getEnd();
     case Paren:
     case ConstantArray:
