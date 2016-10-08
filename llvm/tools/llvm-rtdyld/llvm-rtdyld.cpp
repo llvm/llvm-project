@@ -66,8 +66,7 @@ Action(cl::desc("Action to perform:"),
                   clEnumValN(AC_PrintObjectLineInfo, "printobjline",
                              "Like -printlineinfo but does not load the object first"),
                   clEnumValN(AC_Verify, "verify",
-                             "Load, link and verify the resulting memory image."),
-                  clEnumValEnd));
+                             "Load, link and verify the resulting memory image.")));
 
 static cl::opt<std::string>
 EntryPoint("entry",

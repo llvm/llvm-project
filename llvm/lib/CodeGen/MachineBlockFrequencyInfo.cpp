@@ -42,9 +42,7 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
                           "display a graph using the raw "
                           "integer fractional block frequency representation."),
                clEnumValN(GVDT_Count, "count", "display a graph using the real "
-                                               "profile count if available."),
-
-               clEnumValEnd));
+                                               "profile count if available.")));
 
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 extern cl::opt<unsigned> ViewHotFreqPercent;

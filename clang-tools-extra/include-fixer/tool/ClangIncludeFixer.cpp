@@ -90,8 +90,7 @@ enum DatabaseFormatTy {
 cl::opt<DatabaseFormatTy> DatabaseFormat(
     "db", cl::desc("Specify input format"),
     cl::values(clEnumVal(fixed, "Hard-coded mapping"),
-               clEnumVal(yaml, "Yaml database created by find-all-symbols"),
-               clEnumValEnd),
+               clEnumVal(yaml, "Yaml database created by find-all-symbols")),
     cl::init(yaml), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string> Input("input",

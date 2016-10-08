@@ -129,8 +129,7 @@ static cl::opt<CFLAAType> UseCFLAA(
                clEnumValN(CFLAAType::Andersen, "anders",
                           "Enable inclusion-based CFL-AA"),
                clEnumValN(CFLAAType::Both, "both", 
-                          "Enable both variants of CFL-AA"),
-               clEnumValEnd));
+                          "Enable both variants of CFL-AA")));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.

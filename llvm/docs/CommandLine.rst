@@ -355,8 +355,7 @@ library fill it in with the appropriate level directly, which is used like this:
       clEnumVal(g , "No optimizations, enable debugging"),
       clEnumVal(O1, "Enable trivial optimizations"),
       clEnumVal(O2, "Enable default optimizations"),
-      clEnumVal(O3, "Enable expensive optimizations"),
-     clEnumValEnd));
+      clEnumVal(O3, "Enable expensive optimizations")));
 
   ...
     if (OptimizationLevel >= O2) doPartialRedundancyElimination(...);
@@ -401,8 +400,7 @@ program.  Because of this, we can alternatively write this example like this:
      clEnumValN(Debug, "g", "No optimizations, enable debugging"),
       clEnumVal(O1        , "Enable trivial optimizations"),
       clEnumVal(O2        , "Enable default optimizations"),
-      clEnumVal(O3        , "Enable expensive optimizations"),
-     clEnumValEnd));
+      clEnumVal(O3        , "Enable expensive optimizations")));
 
   ...
     if (OptimizationLevel == Debug) outputDebugInfo(...);
@@ -436,8 +434,7 @@ the code looks like this:
     cl::values(
       clEnumValN(nodebuginfo, "none", "disable debug information"),
        clEnumVal(quick,               "enable quick debug information"),
-       clEnumVal(detailed,            "enable detailed debug information"),
-      clEnumValEnd));
+       clEnumVal(detailed,            "enable detailed debug information")));
 
 This definition defines an enumerated command line variable of type "``enum
 DebugLev``", which works exactly the same way as before.  The difference here is
@@ -498,8 +495,7 @@ Then define your "``cl::list``" variable:
       clEnumVal(dce               , "Dead Code Elimination"),
       clEnumVal(constprop         , "Constant Propagation"),
      clEnumValN(inlining, "inline", "Procedure Integration"),
-      clEnumVal(strip             , "Strip Symbols"),
-    clEnumValEnd));
+      clEnumVal(strip             , "Strip Symbols")));
 
 This defines a variable that is conceptually of the type
 "``std::vector<enum Opts>``".  Thus, you can access it with standard vector
@@ -558,8 +554,7 @@ Reworking the above list example, we could replace `cl::list`_ with `cl::bits`_:
       clEnumVal(dce               , "Dead Code Elimination"),
       clEnumVal(constprop         , "Constant Propagation"),
      clEnumValN(inlining, "inline", "Procedure Integration"),
-      clEnumVal(strip             , "Strip Symbols"),
-    clEnumValEnd));
+      clEnumVal(strip             , "Strip Symbols")));
 
 To test to see if ``constprop`` was specified, we can use the ``cl:bits::isSet``
 function:

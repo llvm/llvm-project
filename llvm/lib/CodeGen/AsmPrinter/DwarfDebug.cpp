@@ -86,7 +86,7 @@ DwarfAccelTables("dwarf-accel-tables", cl::Hidden,
                  cl::desc("Output prototype dwarf accelerator tables."),
                  cl::values(clEnumVal(Default, "Default for platform"),
                             clEnumVal(Enable, "Enabled"),
-                            clEnumVal(Disable, "Disabled"), clEnumValEnd),
+                            clEnumVal(Disable, "Disabled")),
                  cl::init(Default));
 
 static cl::opt<DefaultOnOff>
@@ -94,7 +94,7 @@ SplitDwarf("split-dwarf", cl::Hidden,
            cl::desc("Output DWARF5 split debug info."),
            cl::values(clEnumVal(Default, "Default for platform"),
                       clEnumVal(Enable, "Enabled"),
-                      clEnumVal(Disable, "Disabled"), clEnumValEnd),
+                      clEnumVal(Disable, "Disabled")),
            cl::init(Default));
 
 static cl::opt<DefaultOnOff>
@@ -102,7 +102,7 @@ DwarfPubSections("generate-dwarf-pub-sections", cl::Hidden,
                  cl::desc("Generate DWARF pubnames and pubtypes sections"),
                  cl::values(clEnumVal(Default, "Default for platform"),
                             clEnumVal(Enable, "Enabled"),
-                            clEnumVal(Disable, "Disabled"), clEnumValEnd),
+                            clEnumVal(Disable, "Disabled")),
                  cl::init(Default));
 
 enum LinkageNameOption {
@@ -117,8 +117,7 @@ static cl::opt<LinkageNameOption>
                                             "Default for platform"),
                                  clEnumValN(AllLinkageNames, "All", "All"),
                                  clEnumValN(AbstractLinkageNames, "Abstract",
-                                            "Abstract subprograms"),
-                                 clEnumValEnd),
+                                            "Abstract subprograms")),
                       cl::init(DefaultLinkageNames));
 
 static const char *const DWARFGroupName = "DWARF Emission";

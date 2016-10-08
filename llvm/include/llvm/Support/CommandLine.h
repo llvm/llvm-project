@@ -556,52 +556,43 @@ private:
 //===----------------------------------------------------------------------===//
 // Enum valued command line option
 //
-#define clEnumVal(ENUMVAL, DESC) #ENUMVAL, int(ENUMVAL), DESC
-#define clEnumValN(ENUMVAL, FLAGNAME, DESC) FLAGNAME, int(ENUMVAL), DESC
-#define clEnumValEnd (reinterpret_cast<void *>(0))
+
+// This represents a single enum value, using "int" as the underlying type.
+struct OptionEnumValue {
+  StringRef Name;
+  int Value;
+  StringRef Description;
+};
+
+#define clEnumVal(ENUMVAL, DESC)                                               \
+  cl::OptionEnumValue { #ENUMVAL, int(ENUMVAL), DESC }
+#define clEnumValN(ENUMVAL, FLAGNAME, DESC)                                    \
+  cl::OptionEnumValue { FLAGNAME, int(ENUMVAL), DESC }
 
 // values - For custom data types, allow specifying a group of values together
-// as the values that go into the mapping that the option handler uses.  Note
-// that the values list must always have a 0 at the end of the list to indicate
-// that the list has ended.
+// as the values that go into the mapping that the option handler uses.
 //
-template <class DataType> class ValuesClass {
+class ValuesClass {
   // Use a vector instead of a map, because the lists should be short,
   // the overhead is less, and most importantly, it keeps them in the order
   // inserted so we can print our option out nicely.
-  SmallVector<std::pair<StringRef , std::pair<int, StringRef >>, 4> Values;
-  void processValues(va_list Vals);
+  SmallVector<OptionEnumValue, 4> Values;
 
 public:
-  ValuesClass(StringRef EnumName, DataType Val, StringRef Desc,
-              va_list ValueArgs) {
-    // Insert the first value, which is required.
-    Values.push_back(std::make_pair(EnumName, std::make_pair(Val, Desc)));
-
-    // Process the varargs portion of the values...
-    while (const char *enumName = va_arg(ValueArgs, const char * )) {
-      DataType EnumVal = static_cast<DataType>(va_arg(ValueArgs, int));
-      auto EnumDesc = StringRef(va_arg(ValueArgs, const char * ));
-      Values.push_back(std::make_pair(StringRef(enumName), // Add value to value map
-                                      std::make_pair(EnumVal, EnumDesc)));
-    }
-  }
+  ValuesClass(std::initializer_list<OptionEnumValue> Options)
+      : Values(Options) {}
 
   template <class Opt> void apply(Opt &O) const {
-    for (size_t i = 0, e = Values.size(); i != e; ++i)
-      O.getParser().addLiteralOption(Values[i].first, Values[i].second.first,
-                                     Values[i].second.second);
+    for (auto Value : Values)
+      O.getParser().addLiteralOption(Value.Name, Value.Value,
+                                     Value.Description);
   }
 };
 
-template <class DataType>
-ValuesClass<DataType> LLVM_END_WITH_NULL
-values(StringRef Arg, DataType Val, StringRef Desc, ...) {
-  va_list ValueArgs;
-  va_start(ValueArgs, Desc);
-  ValuesClass<DataType> Vals(Arg, Val, Desc, ValueArgs);
-  va_end(ValueArgs);
-  return Vals;
+/// Helper to build a ValuesClass by forwarding a variable number of arguments
+/// as an initializer list to the ValuesClass constructor.
+template <typename... OptsTy> ValuesClass values(OptsTy... Options) {
+  return ValuesClass({Options...});
 }
 
 //===----------------------------------------------------------------------===//

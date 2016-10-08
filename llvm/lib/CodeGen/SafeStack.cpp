@@ -60,8 +60,7 @@ static cl::opt<UnsafeStackPtrStorageVal> USPStorage("safe-stack-usp-storage",
     cl::values(clEnumValN(ThreadLocalUSP, "thread-local",
                           "Thread-local storage"),
                clEnumValN(SingleThreadUSP, "single-thread",
-                          "Non-thread-local storage"),
-               clEnumValEnd));
+                          "Non-thread-local storage")));
 
 namespace llvm {
 

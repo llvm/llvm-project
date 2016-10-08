@@ -92,7 +92,7 @@ cl::opt<ActionType> Action(
                    "REMOVED. Use -symbolize & coverage-report-server.py."),
         clEnumValN(SymbolizeAction, "symbolize",
                    "Produces a symbolized JSON report from binary report."),
-        clEnumValN(MergeAction, "merge", "Merges reports."), clEnumValEnd));
+        clEnumValN(MergeAction, "merge", "Merges reports.")));
 
 static cl::list<std::string>
     ClInputFiles(cl::Positional, cl::OneOrMore,

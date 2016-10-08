@@ -26,8 +26,7 @@ cl::opt<MCTargetOptions::AsmInstrumentation> AsmInstrumentation(
     cl::values(clEnumValN(MCTargetOptions::AsmInstrumentationNone, "none",
                           "no instrumentation at all"),
                clEnumValN(MCTargetOptions::AsmInstrumentationAddress, "address",
-                          "instrument instructions with memory arguments"),
-               clEnumValEnd));
+                          "instrument instructions with memory arguments")));
 
 cl::opt<bool> RelaxAll("mc-relax-all",
                        cl::desc("When used with filetype=obj, "

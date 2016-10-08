@@ -39,8 +39,7 @@ static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
                           "display a graph using the raw "
                           "integer fractional block frequency representation."),
                clEnumValN(GVDT_Count, "count", "display a graph using the real "
-                                               "profile count if available."),
-               clEnumValEnd));
+                                               "profile count if available.")));
 
 cl::opt<std::string>
     ViewBlockFreqFuncName("view-bfi-func-name", cl::Hidden,
