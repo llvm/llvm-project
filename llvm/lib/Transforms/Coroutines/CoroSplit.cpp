@@ -273,18 +273,6 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   // FIXME: coming in upcoming patches:
   // replaceUnwindCoroEnds(Shape.CoroEnds, VMap);
 
-  // We only store resume(0) and destroy(1) addresses in the coroutine frame.
-  // The cleanup(2) clone is only used during devirtualization when coroutine is
-  // eligible for heap elision and thus does not participate in indirect calls
-  // and does not need its address to be stored in the coroutine frame.
-  if (FnIndex < 2) {
-    // Store the address of this clone in the coroutine frame.
-    Builder.SetInsertPoint(Shape.FramePtr->getNextNode());
-    auto *G = Builder.CreateConstInBoundsGEP2_32(Shape.FrameTy, Shape.FramePtr,
-                                                 0, FnIndex, "fn.addr");
-    Builder.CreateStore(NewF, G);
-  }
-
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
   coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
@@ -346,6 +334,31 @@ static void setCoroInfo(Function &F, CoroBeginInst *CoroBegin,
   LLVMContext &C = F.getContext();
   auto *BC = ConstantExpr::getPointerCast(GV, Type::getInt8PtrTy(C));
   CoroBegin->getId()->setInfo(BC);
+}
+
+// Store addresses of Resume/Destroy/Cleanup functions in the coroutine frame.
+static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
+                            Function *DestroyFn, Function *CleanupFn) {
+
+  IRBuilder<> Builder(Shape.FramePtr->getNextNode());
+  auto *ResumeAddr = Builder.CreateConstInBoundsGEP2_32(
+      Shape.FrameTy, Shape.FramePtr, 0, coro::Shape::ResumeField,
+      "resume.addr");
+  Builder.CreateStore(ResumeFn, ResumeAddr);
+
+  Value *DestroyOrCleanupFn = DestroyFn;
+
+  CoroIdInst *CoroId = Shape.CoroBegin->getId();
+  if (CoroAllocInst *CA = CoroId->getCoroAlloc()) {
+    // If there is a CoroAlloc and it returns false (meaning we elide the
+    // allocation, use CleanupFn instead of DestroyFn).
+    DestroyOrCleanupFn = Builder.CreateSelect(CA, DestroyFn, CleanupFn);
+  }
+
+  auto *DestroyAddr = Builder.CreateConstInBoundsGEP2_32(
+      Shape.FrameTy, Shape.FramePtr, 0, coro::Shape::DestroyField,
+      "destroy.addr");
+  Builder.CreateStore(DestroyOrCleanupFn, DestroyAddr);
 }
 
 static void postSplitCleanup(Function &F) {
@@ -496,7 +509,15 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
   postSplitCleanup(*DestroyClone);
   postSplitCleanup(*CleanupClone);
 
+  // Store addresses resume/destroy/cleanup functions in the coroutine frame.
+  updateCoroFrame(Shape, ResumeClone, DestroyClone, CleanupClone);
+
+  // Create a constant array referring to resume/destroy/clone functions pointed
+  // by the last argument of @llvm.coro.info, so that CoroElide pass can
+  // determined correct function to call.
   setCoroInfo(F, Shape.CoroBegin, {ResumeClone, DestroyClone, CleanupClone});
+
+  // Update call graph and add the functions we created to the SCC.
   coro::updateCallGraph(F, {ResumeClone, DestroyClone, CleanupClone}, CG, SCC);
 }
 

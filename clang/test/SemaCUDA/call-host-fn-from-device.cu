@@ -12,6 +12,9 @@ extern "C" void host_fn() {}
 // expected-note@-4 {{'host_fn' declared here}}
 // expected-note@-5 {{'host_fn' declared here}}
 // expected-note@-6 {{'host_fn' declared here}}
+// expected-note@-7 {{'host_fn' declared here}}
+
+struct Dummy {};
 
 struct S {
   S() {}
@@ -34,6 +37,15 @@ struct T {
 
   void h() {}
   // expected-note@-1 {{'h' declared here}}
+
+  void operator+();
+  // expected-note@-1 {{'operator+' declared here}}
+
+  void operator-(const T&) {}
+  // expected-note@-1 {{'operator-' declared here}}
+
+  operator Dummy() { return Dummy(); }
+  // expected-note@-1 {{'operator Dummy' declared here}}
 };
 
 __host__ __device__ void T::hd3() {
@@ -92,3 +104,30 @@ template <typename T>
 __host__ __device__ void fn_ptr_template() {
   auto* ptr = &host_fn;  // Not an error because the template isn't instantiated.
 }
+
+__host__ __device__ void unaryOp() {
+  T t;
+  (void) +t; // expected-error {{reference to __host__ function 'operator+' in __host__ __device__ function}}
+}
+
+__host__ __device__ void binaryOp() {
+  T t;
+  (void) (t - t); // expected-error {{reference to __host__ function 'operator-' in __host__ __device__ function}}
+}
+
+__host__ __device__ void implicitConversion() {
+  T t;
+  Dummy d = t; // expected-error {{reference to __host__ function 'operator Dummy' in __host__ __device__ function}}
+}
+
+template <typename T>
+struct TmplStruct {
+  template <typename U> __host__ __device__ void fn() {}
+};
+
+template <>
+template <>
+__host__ __device__ void TmplStruct<int>::fn<int>() { host_fn(); }
+// expected-error@-1 {{reference to __host__ function 'host_fn' in __host__ __device__ function}}
+
+__device__ void double_specialization() { TmplStruct<int>().fn<int>(); }

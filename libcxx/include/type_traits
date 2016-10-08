@@ -1122,6 +1122,11 @@ struct __unconstref {
     typedef typename remove_const<typename remove_reference<_Tp>::type>::type type;
 };
 
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp>
+using __uncvref_t = typename __uncvref<_Tp>::type;
+#endif
+
 // __is_same_uncvref
 
 template <class _Tp, class _Up>
@@ -1670,10 +1675,10 @@ _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x400);
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x800);
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x1000);
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x2000);
-// MSDN says that MSVC does not support alignment beyond 8192 (=0x2000)
-#if !defined(_LIBCPP_MSVC)
+// PE/COFF does not support alignment beyond 8192 (=0x2000)
+#if !defined(_WIN32)
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x4000);
-#endif // !_LIBCPP_MSVC
+#endif // !_WIN32
 
 #undef _CREATE_ALIGNED_STORAGE_SPECIALIZATION
 

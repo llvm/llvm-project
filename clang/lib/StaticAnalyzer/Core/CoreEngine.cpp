@@ -313,7 +313,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     const ReturnStmt *RS = nullptr;
     if (!L.getSrc()->empty()) {
       if (Optional<CFGStmt> LastStmt = L.getSrc()->back().getAs<CFGStmt>()) {
-        if (RS = dyn_cast<ReturnStmt>(LastStmt->getStmt())) {
+        if ((RS = dyn_cast<ReturnStmt>(LastStmt->getStmt()))) {
           if (!RS->getRetValue())
             RS = nullptr;
         }

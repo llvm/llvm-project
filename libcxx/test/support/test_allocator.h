@@ -10,10 +10,11 @@
 #ifndef TEST_ALLOCATOR_H
 #define TEST_ALLOCATOR_H
 
-#include <cstddef>
 #include <type_traits>
-#include <cstdlib>
 #include <new>
+#include <memory>
+#include <cstddef>
+#include <cstdlib>
 #include <climits>
 #include <cassert>
 
@@ -88,10 +89,7 @@ public:
         {::new(static_cast<void*>(p)) T(std::forward<U>(val));}
 #endif
     void destroy(pointer p)
-        {
-            p->~T();
-            ((void)p); // Prevent MSVC's spurious unused warning
-        }
+        {p->~T();}
     friend bool operator==(const test_allocator& x, const test_allocator& y)
         {return x.data_ == y.data_;}
     friend bool operator!=(const test_allocator& x, const test_allocator& y)
@@ -291,10 +289,7 @@ public:
 
     template<typename U, typename... Args>
     void destroy(U* p)
-    {
-        p->~U();
-        ((void)p); // Prevent MSVC's spurious unused warning
-    }
+    { p->~U(); }
 };
 
 template<typename T, typename U>
@@ -307,6 +302,79 @@ bool
 operator!=(const TaggingAllocator<T>&, const TaggingAllocator<U>&)
 { return false; }
 #endif
+
+template <std::size_t MaxAllocs>
+struct limited_alloc_handle {
+  std::size_t outstanding_;
+  void* last_alloc_;
+
+  limited_alloc_handle() : outstanding_(0), last_alloc_(nullptr) {}
+
+  template <class T>
+  T *allocate(std::size_t N) {
+    if (N + outstanding_ > MaxAllocs)
+      TEST_THROW(std::bad_alloc());
+    last_alloc_ = ::operator new(N*sizeof(T));
+    outstanding_ += N;
+    return static_cast<T*>(last_alloc_);
+  }
+
+  void deallocate(void* ptr, std::size_t N) {
+    if (ptr == last_alloc_) {
+      last_alloc_ = nullptr;
+      assert(outstanding_ >= N);
+      outstanding_ -= N;
+    }
+    ::operator delete(ptr);
+  }
+};
+
+template <class T, std::size_t N>
+class limited_allocator
+{
+    typedef limited_alloc_handle<N> BuffT;
+    std::shared_ptr<BuffT> handle_;
+public:
+    typedef T                 value_type;
+    typedef value_type*       pointer;
+    typedef const value_type* const_pointer;
+    typedef value_type&       reference;
+    typedef const value_type& const_reference;
+    typedef std::size_t       size_type;
+    typedef std::ptrdiff_t    difference_type;
+
+    template <class U> struct rebind { typedef limited_allocator<U, N> other; };
+
+    limited_allocator() : handle_(new BuffT) {}
+
+    limited_allocator(limited_allocator const& other) : handle_(other.handle_) {}
+
+    template <class U>
+    explicit limited_allocator(limited_allocator<U, N> const& other)
+        : handle_(other.handle_) {}
+
+private:
+    limited_allocator& operator=(const limited_allocator&);// = delete;
+
+public:
+    pointer allocate(size_type n) { return handle_->template allocate<T>(n); }
+    void deallocate(pointer p, size_type n) { handle_->deallocate(p, n); }
+    size_type max_size() const {return N;}
+
+    BuffT* getHandle() const { return handle_.get(); }
+};
+
+template <class T, class U, std::size_t N>
+inline bool operator==(limited_allocator<T, N> const& LHS,
+                       limited_allocator<U, N> const& RHS) {
+  return LHS.getHandle() == RHS.getHandle();
+}
+
+template <class T, class U, std::size_t N>
+inline bool operator!=(limited_allocator<T, N> const& LHS,
+                       limited_allocator<U, N> const& RHS) {
+  return !(LHS == RHS);
+}
 
 
 #endif  // TEST_ALLOCATOR_H

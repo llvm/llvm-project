@@ -14,11 +14,11 @@
 #include <queue>
 #include <cassert>
 
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 
 int main()
 {
-    std::priority_queue<int, std::vector<int, stack_allocator<int, 10> > > q;
+    std::priority_queue<int, std::vector<int, limited_allocator<int, 10> > > q;
     assert(q.size() == 0);
     q.push(1);
     q.push(2);

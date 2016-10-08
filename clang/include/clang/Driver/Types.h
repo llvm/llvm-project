@@ -13,6 +13,9 @@
 #include "clang/Driver/Phases.h"
 #include "llvm/ADT/SmallVector.h"
 
+namespace llvm {
+class StringRef;
+}
 namespace clang {
 namespace driver {
 namespace types {
@@ -79,7 +82,7 @@ namespace types {
 
   /// lookupTypeForExtension - Lookup the type to use for the file
   /// extension \p Ext.
-  ID lookupTypeForExtension(const char *Ext);
+  ID lookupTypeForExtension(llvm::StringRef Ext);
 
   /// lookupTypeForTypSpecifier - Lookup the type to use for a user
   /// specified type name.

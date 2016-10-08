@@ -13,6 +13,8 @@
 #include "OutputStyle.h"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
@@ -53,10 +55,20 @@ struct PdbInfoStream {
   std::vector<NamedStreamMapping> NamedStreams;
 };
 
+struct PdbSymbolRecord {
+  codeview::CVSymbol Record;
+};
+
+struct PdbModiStream {
+  uint32_t Signature;
+  std::vector<PdbSymbolRecord> Symbols;
+};
+
 struct PdbDbiModuleInfo {
   StringRef Obj;
   StringRef Mod;
   std::vector<StringRef> SourceFiles;
+  Optional<PdbModiStream> Modi;
 };
 
 struct PdbDbiStream {
@@ -136,6 +148,14 @@ struct MappingContextTraits<pdb::yaml::PdbTpiStream, llvm::BumpPtrAllocator> {
 
 template <> struct MappingTraits<pdb::yaml::NamedStreamMapping> {
   static void mapping(IO &IO, pdb::yaml::NamedStreamMapping &Obj);
+};
+
+template <> struct MappingTraits<pdb::yaml::PdbSymbolRecord> {
+  static void mapping(IO &IO, pdb::yaml::PdbSymbolRecord &Obj);
+};
+
+template <> struct MappingTraits<pdb::yaml::PdbModiStream> {
+  static void mapping(IO &IO, pdb::yaml::PdbModiStream &Obj);
 };
 
 template <> struct MappingTraits<pdb::yaml::PdbDbiModuleInfo> {

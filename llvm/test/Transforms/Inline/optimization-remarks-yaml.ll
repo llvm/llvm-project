@@ -50,14 +50,14 @@ target triple = "x86_64-apple-macosx10.11.0"
 define i32 @baz() !dbg !7 !prof !14 {
 entry:
   %call = call i32 (...) @foo(), !dbg !9
-  %call1 = call i32 (...) @bar(), !dbg !10
+  %call1 = call i32 (...) @"\01bar"(), !dbg !10
   %add = add nsw i32 %call, %call1, !dbg !12
   ret i32 %add, !dbg !13
 }
 
 declare i32 @foo(...)
 
-declare i32 @bar(...)
+declare i32 @"\01bar"(...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

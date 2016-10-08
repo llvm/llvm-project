@@ -11,10 +11,6 @@
 
 #include <tgmath.h>
 
-#ifndef _LIBCPP_VERSION
-#error _LIBCPP_VERSION not defined
-#endif
-
 int main()
 {
     std::complex<double> cd;

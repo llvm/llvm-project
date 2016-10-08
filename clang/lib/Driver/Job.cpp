@@ -80,8 +80,8 @@ static int skipArgs(const char *Flag, bool HaveCrashVFS) {
   return 0;
 }
 
-void Command::printArg(raw_ostream &OS, const char *Arg, bool Quote) {
-  const bool Escape = std::strpbrk(Arg, "\"\\$");
+void Command::printArg(raw_ostream &OS, StringRef Arg, bool Quote) {
+  const bool Escape = Arg.find_first_of("\"\\$") != StringRef::npos;
 
   if (!Quote && !Escape) {
     OS << Arg;
@@ -90,7 +90,7 @@ void Command::printArg(raw_ostream &OS, const char *Arg, bool Quote) {
 
   // Quote and escape. This isn't really complete, but good enough.
   OS << '"';
-  while (const char c = *Arg++) {
+  for (const char c : Arg) {
     if (c == '"' || c == '\\' || c == '$')
       OS << '\\';
     OS << c;

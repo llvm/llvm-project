@@ -280,6 +280,11 @@ cl::opt<bool>
                   cl::desc("Dump DBI Module Information (implies -dbi-stream)"),
                   cl::sub(PdbToYamlSubcommand), cl::init(false));
 
+cl::opt<bool> DbiModuleSyms(
+    "dbi-module-syms",
+    cl::desc("Dump DBI Module Information (implies -dbi-module-info)"),
+    cl::sub(PdbToYamlSubcommand), cl::init(false));
+
 cl::opt<bool> DbiModuleSourceFileInfo(
     "dbi-module-source-info",
     cl::desc(

@@ -49,6 +49,15 @@ define void @storeArrayOfA([1 x %A]* %aa.ptr) {
   ret void
 }
 
+define void @storeLargeArrayOfA([2000 x %A]* %aa.ptr) {
+; CHECK-LABEL: storeLargeArrayOfA
+; CHECK-NEXT: store [2000 x %A]
+; CHECK-NEXT: ret void
+  %i1 = insertvalue [2000 x %A] undef, %A { %A__vtbl* @A__vtblZ }, 1
+  store [2000 x %A] %i1, [2000 x %A]* %aa.ptr, align 8
+  ret void
+}
+
 define void @storeStructOfArrayOfA({ [1 x %A] }* %saa.ptr) {
 ; CHECK-LABEL: storeStructOfArrayOfA
 ; CHECK-NEXT: [[GEP:%[a-z0-9\.]+]] = getelementptr inbounds { [1 x %A] }, { [1 x %A] }* %saa.ptr, i64 0, i32 0, i64 0, i32 0
@@ -177,6 +186,14 @@ define [2 x %B] @loadArrayOfB([2 x %B]* %ab.ptr) {
 ; CHECK-NEXT: ret [2 x %B] [[IV6]]
   %1 = load [2 x %B], [2 x %B]* %ab.ptr, align 8
   ret [2 x %B] %1
+}
+
+define [2000 x %B] @loadLargeArrayOfB([2000 x %B]* %ab.ptr) {
+; CHECK-LABEL: loadLargeArrayOfB
+; CHECK-NEXT: load [2000 x %B], [2000 x %B]* %ab.ptr, align 8
+; CHECK-NEXT: ret [2000 x %B]
+  %1 = load [2000 x %B], [2000 x %B]* %ab.ptr, align 8
+  ret [2000 x %B] %1
 }
 
 %struct.S = type <{ i8, %struct.T }>

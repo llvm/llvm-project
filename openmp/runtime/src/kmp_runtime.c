@@ -2766,11 +2766,11 @@ __kmp_get_schedule( int gtid, kmp_sched_t * kind, int * chunk )
     case kmp_sch_trapezoidal:
         *kind = kmp_sched_trapezoidal;
         break;
-/*
+#if KMP_STATIC_STEAL_ENABLED
     case kmp_sch_static_steal:
         *kind = kmp_sched_static_steal;
         break;
-*/
+#endif
     default:
         KMP_FATAL( UnknownSchedulingType, th_type );
     }
@@ -3034,7 +3034,9 @@ __kmp_get_global_icvs( void ) {
       (kmp_int8)__kmp_global.g.g_dynamic,                                 //internal control for dynamic adjustment of threads (per thread)
       (kmp_int8)__kmp_env_blocktime,          //int bt_set;               //internal control for whether blocktime is explicitly set
       __kmp_dflt_blocktime,         //int blocktime;            //internal control for blocktime
+#if KMP_USE_MONITOR
       __kmp_bt_intervals,           //int bt_intervals;         //internal control for blocktime intervals
+#endif
       __kmp_dflt_team_nth,          //int nproc;                //internal control for # of threads for next parallel region (per thread)
                                     // (use a max ub on value if __kmp_parallel_initialize not called yet)
       __kmp_dflt_max_active_levels, //int max_active_levels;    //internal control for max_active_levels
@@ -6376,8 +6378,10 @@ __kmp_do_serial_initialize( void )
 
     // Three vars below moved here from __kmp_env_initialize() "KMP_BLOCKTIME" part
     __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
+#if KMP_USE_MONITOR
     __kmp_monitor_wakeups = KMP_WAKEUPS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
     __kmp_bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
+#endif
     // From "KMP_LIBRARY" part of __kmp_env_initialize()
     __kmp_library = library_throughput;
     // From KMP_SCHEDULE initialization
@@ -7449,7 +7453,9 @@ void
 __kmp_aux_set_blocktime (int arg, kmp_info_t *thread, int tid)
 {
     int blocktime = arg;        /* argument is in milliseconds */
+#if KMP_USE_MONITOR
     int bt_intervals;
+#endif
     int bt_set;
 
     __kmp_save_internal_controls( thread );
@@ -7463,20 +7469,29 @@ __kmp_aux_set_blocktime (int arg, kmp_info_t *thread, int tid)
     set__blocktime_team( thread->th.th_team, tid, blocktime );
     set__blocktime_team( thread->th.th_serial_team, 0, blocktime );
 
+#if KMP_USE_MONITOR
     /* Calculate and set blocktime intervals for the teams */
     bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME(blocktime, __kmp_monitor_wakeups);
 
     set__bt_intervals_team( thread->th.th_team, tid, bt_intervals );
     set__bt_intervals_team( thread->th.th_serial_team, 0, bt_intervals );
+#endif
 
     /* Set whether blocktime has been set to "TRUE" */
     bt_set = TRUE;
 
     set__bt_set_team( thread->th.th_team, tid, bt_set );
     set__bt_set_team( thread->th.th_serial_team, 0, bt_set );
-    KF_TRACE(10, ( "kmp_set_blocktime: T#%d(%d:%d), blocktime=%d, bt_intervals=%d, monitor_updates=%d\n",
-                  __kmp_gtid_from_tid(tid, thread->th.th_team),
-                  thread->th.th_team->t.t_id, tid, blocktime, bt_intervals, __kmp_monitor_wakeups ) );
+    KF_TRACE(10, ( "kmp_set_blocktime: T#%d(%d:%d), blocktime=%d"
+#if KMP_USE_MONITOR
+                   ", bt_intervals=%d, monitor_updates=%d"
+#endif
+                   "\n",
+                   __kmp_gtid_from_tid(tid, thread->th.th_team), thread->th.th_team->t.t_id, tid, blocktime
+#if KMP_USE_MONITOR
+                   , bt_intervals, __kmp_monitor_wakeups
+#endif
+                 ) );
 }
 
 void

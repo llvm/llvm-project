@@ -395,6 +395,8 @@ option(LLVM_POLLY_BUILD "Build LLVM with Polly" ON)
 
 if (EXISTS ${LLVM_MAIN_SRC_DIR}/tools/polly/CMakeLists.txt)
   set(POLLY_IN_TREE TRUE)
+elseif(LLVM_EXTERNAL_POLLY_SOURCE_DIR)
+  set(POLLY_IN_TREE TRUE)
 else()
   set(POLLY_IN_TREE FALSE)
 endif()

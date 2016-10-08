@@ -17,7 +17,7 @@
 //                        *** Must match BaseInfo.h ***
 //----------------------------------------------------------------------------//
 
-def TypeMEMOP    : IType<9>;
+def TypeV4LDST    : IType<9>;
 def TypeNV       : IType<10>;
 def TypeDUPLEX   : IType<11>;
 def TypeCOMPOUND : IType<12>;
@@ -132,7 +132,7 @@ class NCJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 let mayLoad = 1, mayStore = 1 in
 class MEMInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeMEMOP>,
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeV4LDST>,
     OpcodeHexagon;
 
 class MEMInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],

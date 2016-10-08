@@ -195,7 +195,7 @@ public:
   /// \param BoundArch - The bound architecture name, or 0.
   virtual llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                const char *BoundArch) const {
+                StringRef BoundArch) const {
     return nullptr;
   }
 
@@ -233,7 +233,7 @@ public:
 
   /// LookupTypeForExtension - Return the default language type to use for the
   /// given extension.
-  virtual types::ID LookupTypeForExtension(const char *Ext) const;
+  virtual types::ID LookupTypeForExtension(StringRef Ext) const;
 
   /// IsBlocksDefault - Does this tool chain enable -fblocks by default.
   virtual bool IsBlocksDefault() const { return false; }

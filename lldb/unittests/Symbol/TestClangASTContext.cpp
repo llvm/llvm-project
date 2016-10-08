@@ -163,7 +163,7 @@ TEST_F(TestClangASTContext, TestGetBasicTypeFromName) {
 }
 
 void VerifyEncodingAndBitSize(clang::ASTContext *context,
-                              lldb::Encoding encoding, int bit_size) {
+                              lldb::Encoding encoding, unsigned int bit_size) {
   CompilerType type = ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(
       context, encoding, bit_size);
   EXPECT_TRUE(type.IsValid());
@@ -244,15 +244,15 @@ TEST_F(TestClangASTContext, TestRemoveFastQualifiers) {
   QualType qt;
 
   qt = ClangUtil::GetQualType(record_type);
-  EXPECT_EQ(0, qt.getLocalFastQualifiers());
+  EXPECT_EQ(0u, qt.getLocalFastQualifiers());
   record_type = record_type.AddConstModifier();
   record_type = record_type.AddVolatileModifier();
   record_type = record_type.AddRestrictModifier();
   qt = ClangUtil::GetQualType(record_type);
-  EXPECT_NE(0, qt.getLocalFastQualifiers());
+  EXPECT_NE(0u, qt.getLocalFastQualifiers());
   record_type = ClangUtil::RemoveFastQualifiers(record_type);
   qt = ClangUtil::GetQualType(record_type);
-  EXPECT_EQ(0, qt.getLocalFastQualifiers());
+  EXPECT_EQ(0u, qt.getLocalFastQualifiers());
 }
 
 TEST_F(TestClangASTContext, TestConvertAccessTypeToAccessSpecifier) {
@@ -350,7 +350,7 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
       m_ast->GetAsCXXRecordDecl(empty_derived.GetOpaqueQualType());
   RecordDecl *empty_derived_non_empty_base_decl =
       ClangASTContext::GetAsRecordDecl(empty_derived);
-  EXPECT_EQ(1, ClangASTContext::GetNumBaseClasses(
+  EXPECT_EQ(1u, ClangASTContext::GetNumBaseClasses(
                    empty_derived_non_empty_base_cxx_decl, false));
   EXPECT_TRUE(
       ClangASTContext::RecordHasFields(empty_derived_non_empty_base_decl));
@@ -371,7 +371,7 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
       m_ast->GetAsCXXRecordDecl(empty_derived2.GetOpaqueQualType());
   RecordDecl *empty_derived_non_empty_vbase_decl =
       ClangASTContext::GetAsRecordDecl(empty_derived2);
-  EXPECT_EQ(1, ClangASTContext::GetNumBaseClasses(
+  EXPECT_EQ(1u, ClangASTContext::GetNumBaseClasses(
                    empty_derived_non_empty_vbase_cxx_decl, false));
   EXPECT_TRUE(
       ClangASTContext::RecordHasFields(empty_derived_non_empty_vbase_decl));
