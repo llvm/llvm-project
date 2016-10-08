@@ -490,6 +490,8 @@ private:
     }
 
     auto CombinedIndex = ThinGenerator.linkCombinedIndex();
+    if (!CombinedIndex)
+      report_fatal_error("ThinLink didn't create an index");
     std::error_code EC;
     raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
     error(EC, "error opening the file '" + OutputFilename + "'");

@@ -6089,8 +6089,8 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
           if (!TheIndex)
             break;
           if (TheIndex->modulePaths().empty())
-            // Does not have any summary emitted.
-            break;
+            // We always seed the index with the module.
+            TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0);
           if (TheIndex->modulePaths().size() != 1)
             return error("Don't expect multiple modules defined?");
           auto &Hash = TheIndex->modulePaths().begin()->second.second;

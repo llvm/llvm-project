@@ -234,6 +234,10 @@ public:
     if (CachePath.empty())
       return;
 
+    if (!Index.modulePaths().count(ModuleID))
+      // The module does not have an entry, it can't have a hash at all
+      return;
+
     // Compute the unique hash for this entry
     // This is based on the current compiler version, the module itself, the
     // export list, the hash for every single module in the import list, the
