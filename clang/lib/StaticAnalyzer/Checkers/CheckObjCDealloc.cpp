@@ -107,8 +107,9 @@ class ObjCDeallocChecker
   std::unique_ptr<BugType> ExtraReleaseBugType;
   std::unique_ptr<BugType> MistakenDeallocBugType;
 
-  static constexpr const char *MsgDeclared = "Property is declared here";
-  static constexpr const char *MsgSynthesized = "Property is synthesized here";
+  // FIXME: constexpr initialization isn't supported by MSVC2013.
+  static const char *const MsgDeclared;
+  static const char *const MsgSynthesized;
 
 public:
   ObjCDeallocChecker();
@@ -183,6 +184,11 @@ private:
 } // End anonymous namespace.
 
 typedef llvm::ImmutableSet<SymbolRef> SymbolSet;
+
+const char *const ObjCDeallocChecker::MsgDeclared =
+    "Property is declared here";
+const char *const ObjCDeallocChecker::MsgSynthesized =
+    "Property is synthesized here";
 
 /// Maps from the symbol for a class instance to the set of
 /// symbols remaining that must be released in -dealloc.
