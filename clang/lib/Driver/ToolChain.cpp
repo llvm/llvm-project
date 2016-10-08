@@ -370,7 +370,7 @@ std::string ToolChain::GetLinkerPath() const {
   return GetProgramPath(DefaultLinker);
 }
 
-types::ID ToolChain::LookupTypeForExtension(const char *Ext) const {
+types::ID ToolChain::LookupTypeForExtension(StringRef Ext) const {
   return types::lookupTypeForExtension(Ext);
 }
 

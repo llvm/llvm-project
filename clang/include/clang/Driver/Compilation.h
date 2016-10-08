@@ -69,8 +69,9 @@ class Compilation {
 
   /// Cache of translated arguments for a particular tool chain and bound
   /// architecture.
-  llvm::DenseMap<std::pair<const ToolChain *, const char *>,
-                 llvm::opt::DerivedArgList *> TCArgs;
+  llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
+                 llvm::opt::DerivedArgList *>
+      TCArgs;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -184,7 +185,7 @@ public:
   ///
   /// \param BoundArch - The bound architecture name, or 0.
   const llvm::opt::DerivedArgList &getArgsForToolChain(const ToolChain *TC,
-                                                       const char *BoundArch);
+                                                       StringRef BoundArch);
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.

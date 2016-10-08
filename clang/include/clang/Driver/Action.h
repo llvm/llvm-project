@@ -190,12 +190,12 @@ class BindArchAction : public Action {
   virtual void anchor();
   /// The architecture to bind, or 0 if the default architecture
   /// should be bound.
-  const char *ArchName;
+  StringRef ArchName;
 
 public:
-  BindArchAction(Action *Input, const char *ArchName);
+  BindArchAction(Action *Input, StringRef ArchName);
 
-  const char *getArchName() const { return ArchName; }
+  StringRef getArchName() const { return ArchName; }
 
   static bool classof(const Action *A) {
     return A->getKind() == BindArchClass;

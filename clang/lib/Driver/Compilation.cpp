@@ -37,11 +37,9 @@ Compilation::~Compilation() {
   delete Args;
 
   // Free any derived arg lists.
-  for (llvm::DenseMap<std::pair<const ToolChain*, const char*>,
-                      DerivedArgList*>::iterator it = TCArgs.begin(),
-         ie = TCArgs.end(); it != ie; ++it)
-    if (it->second != TranslatedArgs)
-      delete it->second;
+  for (auto Arg : TCArgs)
+    if (Arg.second != TranslatedArgs)
+      delete Arg.second;
 
   // Free redirections of stdout/stderr.
   if (Redirects) {
@@ -53,7 +51,7 @@ Compilation::~Compilation() {
 }
 
 const DerivedArgList &Compilation::getArgsForToolChain(const ToolChain *TC,
-                                                       const char *BoundArch) {
+                                                       StringRef BoundArch) {
   if (!TC)
     TC = &DefaultToolChain;
 
