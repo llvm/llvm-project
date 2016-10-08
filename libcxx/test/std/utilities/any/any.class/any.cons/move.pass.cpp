@@ -77,11 +77,13 @@ void test_move() {
 
         any a2(std::move(a));
 
-        assert(Type::moved >= 1); // zero or more move operations can be performed.
+        assert(Type::moved == 1 || Type::moved == 2); // zero or more move operations can be performed.
         assert(Type::copied == 0); // no copies can be performed.
-        assert(Type::count == 1);
+        assert(Type::count == 1 + a.has_value());
         assertEmpty(a); // Moves are always destructive.
         assertContains<Type>(a2, 42);
+        if (a.has_value())
+            assertContains<Type>(a, 0);
     }
     assert(Type::count == 0);
 }

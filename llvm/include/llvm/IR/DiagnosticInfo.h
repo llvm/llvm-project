@@ -387,7 +387,7 @@ public:
     std::string Val;
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
-    Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
+    Argument(StringRef Key, Value *V);
     Argument(StringRef Key, int N);
     Argument(StringRef Key, unsigned N);
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}

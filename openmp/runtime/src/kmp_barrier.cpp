@@ -1108,7 +1108,9 @@ __kmp_barrier(enum barrier_type bt, int gtid, int is_split, size_t reduce_size,
            the team struct is not guaranteed to exist. */
         // See note about the corresponding code in __kmp_join_barrier() being performance-critical.
         if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
+#if KMP_USE_MONITOR
             this_thr->th.th_team_bt_intervals = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_intervals;
+#endif
             this_thr->th.th_team_bt_set = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_set;
         }
 
@@ -1425,7 +1427,9 @@ __kmp_join_barrier(int gtid)
        down EPCC parallel by 2x. As a workaround, we do not perform the copy if blocktime=infinite,
        since the values are not used by __kmp_wait_template() in that case. */
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
+#if KMP_USE_MONITOR
         this_thr->th.th_team_bt_intervals = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_intervals;
+#endif
         this_thr->th.th_team_bt_set = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_set;
     }
 
@@ -1612,7 +1616,9 @@ __kmp_fork_barrier(int gtid, int tid)
            access it when the team struct is not guaranteed to exist. */
         // See note about the corresponding code in __kmp_join_barrier() being performance-critical
         if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
+#if KMP_USE_MONITOR
             this_thr->th.th_team_bt_intervals = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_intervals;
+#endif
             this_thr->th.th_team_bt_set = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_set;
         }
     } // master

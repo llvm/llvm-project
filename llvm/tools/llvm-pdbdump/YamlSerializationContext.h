@@ -10,8 +10,8 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_YAMLSERIALIZATIONCONTEXT_H
 #define LLVM_TOOLS_LLVMPDBDUMP_YAMLSERIALIZATIONCONTEXT_H
 
-#include "CodeViewYaml.h"
 #include "PdbYaml.h"
+#include "YamlTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/FieldListRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
 

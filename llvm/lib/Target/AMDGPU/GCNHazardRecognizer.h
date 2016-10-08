@@ -43,6 +43,7 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   int checkSMRDHazards(MachineInstr *SMRD);
   int checkVMEMHazards(MachineInstr* VMEM);
   int checkDPPHazards(MachineInstr *DPP);
+  int checkDivFMasHazards(MachineInstr *DivFMas);
 public:
   GCNHazardRecognizer(const MachineFunction &MF);
   // We can only issue one instruction per cycle.

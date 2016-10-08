@@ -11,7 +11,8 @@
 
 // <any>
 
-// any& operator=(any const &);
+// template <class ValueType>
+// any& operator=(ValueType&&);
 
 // Test value copy and move assignment.
 
@@ -65,10 +66,12 @@ void test_assign_value() {
         assert(RHS::moved >= 1);
         assert(RHS::copied == 0);
         assert(LHS::count == 0);
-        assert(RHS::count == 1);
+        assert(RHS::count == 1 + rhs.has_value());
+        LIBCPP_ASSERT(!rhs.has_value());
 
         assertContains<RHS>(lhs, 2);
-        assertEmpty<RHS>(rhs);
+        if (rhs.has_value())
+            assertContains<RHS>(rhs, 0);
     }
     assert(LHS::count == 0);
     assert(RHS::count == 0);
@@ -114,7 +117,7 @@ void test_assign_value_empty() {
 template <class Tp, bool Move = false>
 void test_assign_throws() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
-    auto try_throw=
+    auto try_throw =
     [](any& lhs, auto&& rhs) {
         try {
             Move ? lhs = std::move(rhs)
@@ -188,6 +191,7 @@ void test_sfinae_constraints() {
           NoCopy(NoCopy&&) = default;
         };
         static_assert(!std::is_assignable<std::any, NoCopy>::value, "");
+        static_assert(!std::is_assignable<std::any, NoCopy&>::value, "");
     }
 }
 

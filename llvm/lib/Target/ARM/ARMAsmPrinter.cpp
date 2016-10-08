@@ -605,9 +605,11 @@ static ARMBuildAttrs::CPUArch getArchForCPU(StringRef CPU,
   if (CPU == "xscale")
     return ARMBuildAttrs::v5TEJ;
 
-  if (Subtarget->hasV8Ops())
+  if (Subtarget->hasV8Ops()) {
+    if (Subtarget->isRClass())
+      return ARMBuildAttrs::v8_R;
     return ARMBuildAttrs::v8_A;
-  else if (Subtarget->hasV8MMainlineOps())
+  } else if (Subtarget->hasV8MMainlineOps())
     return ARMBuildAttrs::v8_M_Main;
   else if (Subtarget->hasV7Ops()) {
     if (Subtarget->isMClass() && Subtarget->hasDSP())

@@ -318,7 +318,7 @@ TEST(TargetParserTest, ARMparseCPUArch) {
       "cortex-m3",     "cortex-m4",     "cortex-m7",   "cortex-a32",
       "cortex-a35",    "cortex-a53",    "cortex-a57",  "cortex-a72",
       "cortex-a73",    "cyclone",       "exynos-m1",   "exynos-m2",   
-      "iwmmxt",        "xscale",        "swift"};
+      "iwmmxt",        "xscale",        "swift",       "cortex-r52"};
 
   for (const auto &ARMCPUName : kARMCPUNames) {
     if (contains(CPU, ARMCPUName.Name))
@@ -335,7 +335,7 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
       "v6kz",  "v6z",    "v6zk",  "v6-m", "v6m",  "v6sm", "v6s-m", "v7-a",
       "v7",    "v7a",    "v7hl",  "v7l",  "v7-r", "v7r",  "v7-m",  "v7m",
       "v7k",   "v7s",    "v7e-m", "v7em", "v8-a", "v8",   "v8a",   "v8.1-a",
-      "v8.1a", "v8.2-a", "v8.2a"};
+      "v8.1a", "v8.2-a", "v8.2a", "v8-r"};
 
   for (unsigned i = 0; i < array_lengthof(Arch); i++) {
     std::string arm_1 = "armeb" + (std::string)(Arch[i]);

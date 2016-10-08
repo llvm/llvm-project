@@ -659,9 +659,11 @@ __kmp_stg_parse_blocktime( char const * name, char const * value, void * data ) 
         }; // if
         __kmp_env_blocktime = TRUE;    // KMP_BLOCKTIME was specified.
     }; // if
-    // calculate number of monitor thread wakeup intervals corresonding to blocktime.
+#if KMP_USE_MONITOR
+    // calculate number of monitor thread wakeup intervals corresponding to blocktime.
     __kmp_monitor_wakeups = KMP_WAKEUPS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
     __kmp_bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
+#endif
     K_DIAG( 1, ( "__kmp_env_blocktime == %d\n", __kmp_env_blocktime ) );
     if ( __kmp_env_blocktime ) {
         K_DIAG( 1, ( "__kmp_dflt_blocktime == %d\n", __kmp_dflt_blocktime ) );

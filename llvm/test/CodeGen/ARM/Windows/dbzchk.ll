@@ -141,7 +141,7 @@ attributes #0 = { optsize }
 ; CHECK-CFG-ASM-NEXT: udf.w #249
 ; CHECK-CFG-ASM-LABEL: .LBB2_4:
 ; CHECK-CFG-ASM: bl __rt_udiv
-; CHECK-CFG-ASM: pop.w {{{.*}}, r11, pc}
+; CHECK-CFG-ASM: pop.w {r11, pc}
 
 ; RUN: llc -O0 -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
 

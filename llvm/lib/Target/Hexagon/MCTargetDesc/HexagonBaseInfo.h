@@ -41,7 +41,7 @@ namespace HexagonII {
     TypeST      = 6,
     TypeSYSTEM  = 7,
     TypeXTYPE   = 8,
-    TypeMEMOP   = 9,
+    TypeV4LDST  = 9,
     TypeNV      = 10,
     TypeDUPLEX  = 11,
     TypeCOMPOUND = 12,

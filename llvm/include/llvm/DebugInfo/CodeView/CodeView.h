@@ -524,7 +524,7 @@ enum class RegisterId : uint16_t {
 };
 
 /// These values correspond to the THUNK_ORDINAL enumeration.
-enum class ThunkOrdinal {
+enum class ThunkOrdinal : uint8_t {
   Standard,
   ThisAdjustor,
   Vcall,

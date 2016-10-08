@@ -9,10 +9,14 @@
 
 #include "PdbYaml.h"
 
-#include "CodeViewYaml.h"
 #include "YamlSerializationContext.h"
+#include "YamlSymbolDumper.h"
+#include "YamlTypeDumper.h"
 
+#include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeSerializationVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
@@ -30,6 +34,7 @@ LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSymbolRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
 
@@ -205,10 +210,33 @@ void MappingTraits<NamedStreamMapping>::mapping(IO &IO,
   IO.mapRequired("StreamNum", Obj.StreamNumber);
 }
 
+void MappingTraits<PdbSymbolRecord>::mapping(IO &IO, PdbSymbolRecord &Obj) {
+  codeview::SymbolVisitorCallbackPipeline Pipeline;
+  codeview::SymbolDeserializer Deserializer(nullptr);
+  codeview::yaml::YamlSymbolDumper Dumper(IO);
+
+  if (IO.outputting()) {
+    // For PDB to Yaml, deserialize into a high level record type, then dump it.
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(Dumper);
+  } else {
+    return;
+  }
+
+  codeview::CVSymbolVisitor Visitor(Pipeline);
+  consumeError(Visitor.visitSymbolRecord(Obj.Record));
+}
+
+void MappingTraits<PdbModiStream>::mapping(IO &IO, PdbModiStream &Obj) {
+  IO.mapRequired("Signature", Obj.Signature);
+  IO.mapRequired("Records", Obj.Symbols);
+}
+
 void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
   IO.mapRequired("Module", Obj.Mod);
   IO.mapRequired("ObjFile", Obj.Obj);
   IO.mapOptional("SourceFiles", Obj.SourceFiles);
+  IO.mapOptional("Modi", Obj.Modi);
 }
 
 void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::

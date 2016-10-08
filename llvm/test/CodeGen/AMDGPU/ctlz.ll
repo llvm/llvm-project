@@ -228,12 +228,15 @@ define void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addr
   ret void
 }
 
+; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; FUNC-LABEL: {{^}}v_ctlz_i8_sel_eq_neg1:
-; GCN: buffer_load_ubyte [[VAL:v[0-9]+]],
+; GCN: {{buffer|flat}}_load_ubyte [[VAL:v[0-9]+]],
 ; GCN: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
-; GCN: buffer_store_byte [[FFBH]],
+; GCN: {{buffer|flat}}_store_byte [[FFBH]],
  define void @v_ctlz_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
-  %val = load i8, i8 addrspace(1)* %valptr
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %valptr.gep = getelementptr i8, i8 addrspace(1)* %valptr, i32 %tid
+  %val = load i8, i8 addrspace(1)* %valptr.gep
   %ctlz = call i8 @llvm.ctlz.i8(i8 %val, i1 false) nounwind readnone
   %cmp = icmp eq i8 %val, 0
   %sel = select i1 %cmp, i8 -1, i8 %ctlz
@@ -254,13 +257,16 @@ define void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addr
   ret void
 }
 
+; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; FUNC-LABEL: {{^}}v_ctlz_i7_sel_eq_neg1:
-; GCN: buffer_load_ubyte [[VAL:v[0-9]+]],
+; GCN: {{buffer|flat}}_load_ubyte [[VAL:v[0-9]+]],
 ; GCN: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
 ; GCN: v_and_b32_e32 [[TRUNC:v[0-9]+]], 0x7f, [[FFBH]]
-; GCN: buffer_store_byte [[TRUNC]],
- define void @v_ctlz_i7_sel_eq_neg1(i7 addrspace(1)* noalias %out, i7 addrspace(1)* noalias %valptr) nounwind {
-  %val = load i7, i7 addrspace(1)* %valptr
+; GCN: {{buffer|flat}}_store_byte [[TRUNC]],
+define void @v_ctlz_i7_sel_eq_neg1(i7 addrspace(1)* noalias %out, i7 addrspace(1)* noalias %valptr) nounwind {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %valptr.gep = getelementptr i7, i7 addrspace(1)* %valptr, i32 %tid
+  %val = load i7, i7 addrspace(1)* %valptr.gep
   %ctlz = call i7 @llvm.ctlz.i7(i7 %val, i1 false) nounwind readnone
   %cmp = icmp eq i7 %val, 0
   %sel = select i1 %cmp, i7 -1, i7 %ctlz

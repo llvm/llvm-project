@@ -99,6 +99,7 @@ public:
     ARMSubArch_v8_2a,
     ARMSubArch_v8_1a,
     ARMSubArch_v8,
+    ARMSubArch_v8r,
     ARMSubArch_v8m_baseline,
     ARMSubArch_v8m_mainline,
     ARMSubArch_v7,

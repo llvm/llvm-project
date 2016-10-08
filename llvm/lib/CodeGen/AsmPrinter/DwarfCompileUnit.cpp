@@ -419,7 +419,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   addUInt(*ScopeDIE, dwarf::DW_AT_call_file, None,
           getOrCreateSourceID(IA->getFilename(), IA->getDirectory()));
   addUInt(*ScopeDIE, dwarf::DW_AT_call_line, None, IA->getLine());
-  if (IA->getDiscriminator())
+  if (IA->getDiscriminator() && DD->getDwarfVersion() >= 4)
     addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, None,
             IA->getDiscriminator());
 

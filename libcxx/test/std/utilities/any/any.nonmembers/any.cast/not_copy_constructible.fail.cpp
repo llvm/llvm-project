@@ -31,15 +31,28 @@ struct no_copy
 {
     no_copy() {}
     no_copy(no_copy &&) {}
-private:
-    no_copy(no_copy const &);
+    no_copy(no_copy const &) = delete;
+};
+
+struct no_move {
+  no_move() {}
+  no_move(no_move&&) = delete;
+  no_move(no_move const&) {}
 };
 
 int main() {
     any a;
+    // expected-error@any:* {{static_assert failed "ValueType is required to be a reference or a CopyConstructible type"}}
+    // expected-error@any:* {{static_cast from 'no_copy' to 'no_copy' uses deleted function}}
     any_cast<no_copy>(static_cast<any&>(a)); // expected-note {{requested here}}
+
+    // expected-error@any:* {{static_assert failed "ValueType is required to be a reference or a CopyConstructible type"}}
+    // expected-error@any:* {{static_cast from 'const no_copy' to 'no_copy' uses deleted function}}
     any_cast<no_copy>(static_cast<any const&>(a)); // expected-note {{requested here}}
-    any_cast<no_copy>(static_cast<any &&>(a)); // expected-note {{requested here}}
-    // expected-error@any:* 3 {{static_assert failed "_ValueType is required to be a reference or a CopyConstructible type."}}
-    // expected-error@any:* 2 {{calling a private constructor of class 'no_copy'}}
+
+    any_cast<no_copy>(static_cast<any &&>(a)); // OK
+
+    // expected-error@any:* {{static_assert failed "ValueType is required to be an rvalue reference or a CopyConstructible type"}}
+    // expected-error@any:* {{static_cast from 'typename remove_reference<no_move &>::type' (aka 'no_move') to 'no_move' uses deleted function}}
+    any_cast<no_move>(static_cast<any &&>(a));
 }

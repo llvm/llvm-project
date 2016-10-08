@@ -20,8 +20,17 @@ using namespace llvm;
 // per-module instances.
 void ModuleSummaryIndex::mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
                                    uint64_t NextModuleId) {
+  if (Other->modulePaths().empty())
+    return;
 
-  StringRef ModPath;
+  assert(Other->modulePaths().size() == 1 &&
+         "Can only merge from an single-module index at that time");
+
+  StringRef OtherModPath = Other->modulePaths().begin()->first();
+  StringRef ModPath = addModulePath(OtherModPath, NextModuleId,
+                                    Other->getModuleHash(OtherModPath))
+                          ->first();
+
   for (auto &OtherGlobalValSummaryLists : *Other) {
     GlobalValue::GUID ValueGUID = OtherGlobalValSummaryLists.first;
     GlobalValueSummaryList &List = OtherGlobalValSummaryLists.second;
@@ -30,16 +39,6 @@ void ModuleSummaryIndex::mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
     // have duplicate names within a single per-module index.
     assert(List.size() == 1);
     std::unique_ptr<GlobalValueSummary> Summary = std::move(List.front());
-
-    // Add the module path string ref for this module if we haven't already
-    // saved a reference to it.
-    if (ModPath.empty()) {
-      auto Path = Summary->modulePath();
-      ModPath = addModulePath(Path, NextModuleId, Other->getModuleHash(Path))
-                    ->first();
-    } else
-      assert(ModPath == Summary->modulePath() &&
-             "Each module in the combined map should have a unique ID");
 
     // Note the module path string ref was copied above and is still owned by
     // the original per-module index. Reset it to the new module path

@@ -43,20 +43,21 @@ define float @caller(i8* %error_ref) {
 ; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r6, #8]
 ; CHECK-APPLE: strbeq [[CODE]], [{{.*}}[[ID]]]
 ; CHECK-APPLE: mov r0, r6
-; CHECK_APPLE: bl {{.*}}free
+; CHECK-APPLE: bl {{.*}}free
 
 ; CHECK-O0-LABEL: caller:
 ; spill r0
-; CHECK-O0-DAG: str r0,
 ; CHECK-O0-DAG: mov r6, #0
+; CHECK-O0-DAG: str r0, [sp, [[SLOT:#[0-9]+]]
 ; CHECK-O0: bl {{.*}}foo
-; CHECK-O0: mov r{{.*}}, r6
+; CHECK-O0: mov [[TMP:r[0-9]+]], r6
+; CHECK-O0: str [[TMP]], [sp]
 ; CHECK-O0: bne
 ; CHECK-O0: ldrb [[CODE:r[0-9]+]], [r0, #8]
-; reload r0
-; CHECK-O0: ldr [[ID:r[0-9]+]],
+; CHECK-O0: ldr     [[ID:r[0-9]+]], [sp, [[SLOT]]]
 ; CHECK-O0: strb [[CODE]], [{{.*}}[[ID]]]
-; CHECK-O0: mov r0,
+; reload r0
+; CHECK-O0: ldr r0, [sp]
 ; CHECK-O0: free
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*
@@ -88,7 +89,7 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-APPLE: ldrb [[CODE:r[0-9]+]], [r6, #8]
 ; CHECK-APPLE: strb [[CODE]], [{{.*}}[[ID]]]
 ; CHECK-APPLE: mov r0, r6
-; CHECK_APPLE: bl {{.*}}free
+; CHECK-APPLE: bl {{.*}}free
 
 ; CHECK-O0-LABEL: caller2:
 ; spill r0
@@ -96,13 +97,14 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-DAG: mov r6, #0
 ; CHECK-O0: bl {{.*}}foo
 ; CHECK-O0: mov r{{.*}}, r6
+; CHECK-O0: str r0, [sp]
 ; CHECK-O0: bne
 ; CHECK-O0: ble
 ; CHECK-O0: ldrb [[CODE:r[0-9]+]], [r0, #8]
 ; reload r0
 ; CHECK-O0: ldr [[ID:r[0-9]+]],
 ; CHECK-O0: strb [[CODE]], [{{.*}}[[ID]]]
-; CHECK-O0: mov r0,
+; CHECK-O0: ldr r0, [sp]
 ; CHECK-O0: free
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*
@@ -268,7 +270,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r6, #8]
 ; CHECK-APPLE: strbeq [[CODE]], [{{.*}}[[ID]]]
 ; CHECK-APPLE: mov r0, r6
-; CHECK_APPLE: bl {{.*}}free
+; CHECK-APPLE: bl {{.*}}free
 
 ; CHECK-O0-LABEL: caller3:
 ; CHECK-O0-DAG: mov r6, #0
@@ -276,14 +278,15 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0-DAG: mov r1
 ; CHECK-O0: bl {{.*}}foo_sret
 ; CHECK-O0: mov [[ID2:r[0-9]+]], r6
-; CHECK-O0: cmp [[ID2]]
+; CHECK-O0: cmp r6
+; CHECK-O0: str [[ID2]], [sp[[SLOT:.*]]]
 ; CHECK-O0: bne
 ; Access part of the error object and save it to error_ref
 ; CHECK-O0: ldrb [[CODE:r[0-9]+]]
 ; CHECK-O0: ldr [[ID:r[0-9]+]]
 ; CHECK-O0: strb [[CODE]], [{{.*}}[[ID]]]
-; CHECK-O0: mov r0,
-; CHECK_O0: bl {{.*}}free
+; CHECK-O0: ldr r0, [sp[[SLOT]]
+; CHECK-O0: bl {{.*}}free
 entry:
   %s = alloca %struct.S, align 8
   %error_ptr_ref = alloca swifterror %swift_error*
@@ -349,7 +352,7 @@ define float @caller4(i8* %error_ref) {
 ; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r6, #8]
 ; CHECK-APPLE: strbeq [[CODE]], [{{.*}}[[ID]]]
 ; CHECK-APPLE: mov r0, r6
-; CHECK_APPLE: bl {{.*}}free
+; CHECK-APPLE: bl {{.*}}free
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*
   store %swift_error* null, %swift_error** %error_ptr_ref

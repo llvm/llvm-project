@@ -49,9 +49,16 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
       Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  if (Header->sh_addralign > UINT32_MAX)
+  uint64_t V = std::max<uint64_t>(Header->sh_addralign, 1);
+  if (!isPowerOf2_64(V))
+    fatal(getFilename(File) + ": section sh_addralign is not a power of 2");
+
+  // We reject object files having insanely large alignments even though
+  // they are allowed by the spec. I think 4GB is a reasonable limitation.
+  // We might want to relax this in the future.
+  if (V > UINT32_MAX)
     fatal(getFilename(File) + ": section sh_addralign is too large");
-  Alignment = std::max<uintX_t>(Header->sh_addralign, 1);
+  Alignment = V;
 }
 
 template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
@@ -578,7 +585,7 @@ template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   else
     this->Pieces = splitNonStrings(Data, EntSize);
 
-  if (Config->GcSections && this->getSectionHdr()->sh_flags & SHF_ALLOC)
+  if (Config->GcSections && (this->getSectionHdr()->sh_flags & SHF_ALLOC))
     for (uintX_t Off : LiveOffsets)
       this->getSectionPiece(Off)->Live = true;
 }

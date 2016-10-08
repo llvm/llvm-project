@@ -14,7 +14,7 @@
 #include <deque>
 #include <cassert>
 
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
@@ -98,7 +98,7 @@ int main()
     test<DefaultOnly, std::allocator<DefaultOnly> >(4096);
     test<DefaultOnly, std::allocator<DefaultOnly> >(4097);
 
-    test1<DefaultOnly, stack_allocator<DefaultOnly, 4096> >(4095);
+    test1<DefaultOnly, limited_allocator<DefaultOnly, 4096> >(4095);
 
 #if TEST_STD_VER >= 11
     test<DefaultOnly, min_allocator<DefaultOnly> >(4095);

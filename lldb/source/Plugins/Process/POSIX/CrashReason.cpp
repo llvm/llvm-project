@@ -136,6 +136,24 @@ CrashReason GetCrashReasonForSIGBUS(const siginfo_t &info) {
 std::string GetCrashReasonString(CrashReason reason, const siginfo_t &info) {
   std::string str;
 
+// make sure that siginfo_t has the bound fields available.
+#if defined(si_lower) && defined(si_upper)
+  if (reason == CrashReason::eBoundViolation) {
+    str = "signal SIGSEGV";
+    AppendBounds(str, reinterpret_cast<lldb::addr_t>(info.si_lower),
+                 reinterpret_cast<lldb::addr_t>(info.si_upper),
+                 reinterpret_cast<lldb::addr_t>(info.si_addr));
+    return str;
+  }
+#endif
+
+  return GetCrashReasonString(reason,
+                              reinterpret_cast<lldb::addr_t>(info.si_addr));
+}
+
+std::string GetCrashReasonString(CrashReason reason, lldb::addr_t fault_addr) {
+  std::string str;
+
   switch (reason) {
   default:
     assert(false && "invalid CrashReason");
@@ -143,20 +161,14 @@ std::string GetCrashReasonString(CrashReason reason, const siginfo_t &info) {
 
   case CrashReason::eInvalidAddress:
     str = "signal SIGSEGV: invalid address";
-    AppendFaultAddr(str, reinterpret_cast<lldb::addr_t>(info.si_addr));
+    AppendFaultAddr(str, fault_addr);
     break;
   case CrashReason::ePrivilegedAddress:
     str = "signal SIGSEGV: address access protected";
-    AppendFaultAddr(str, reinterpret_cast<lldb::addr_t>(info.si_addr));
+    AppendFaultAddr(str, fault_addr);
     break;
   case CrashReason::eBoundViolation:
-    str = "signal SIGSEGV";
-// Make sure that siginfo_t has the bound fields available.
-#if defined(si_lower) && defined(si_upper)
-    AppendBounds(str, reinterpret_cast<lldb::addr_t>(info.si_lower),
-                     reinterpret_cast<lldb::addr_t>(info.si_upper),
-                     reinterpret_cast<lldb::addr_t>(info.si_addr));
-#endif
+    str = "signal SIGSEGV: bound violation";
     break;
   case CrashReason::eIllegalOpcode:
     str = "signal SIGILL: illegal instruction";

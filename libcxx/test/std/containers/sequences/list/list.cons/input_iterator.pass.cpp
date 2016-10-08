@@ -15,7 +15,7 @@
 #include <list>
 #include <cassert>
 #include "test_iterators.h"
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 
 int main()
@@ -43,7 +43,7 @@ int main()
     }
     {
         int a[] = {0, 1, 2, 3};
-        std::list<int, stack_allocator<int, sizeof(a)/sizeof(a[0])> > l(input_iterator<const int*>(a),
+        std::list<int, limited_allocator<int, sizeof(a)/sizeof(a[0])> > l(input_iterator<const int*>(a),
                          input_iterator<const int*>(a + sizeof(a)/sizeof(a[0])));
         assert(l.size() == sizeof(a)/sizeof(a[0]));
         assert(std::distance(l.begin(), l.end()) == sizeof(a)/sizeof(a[0]));

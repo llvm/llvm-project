@@ -108,6 +108,7 @@ enum CPUArch {
   v6S_M    = 12,  // v6_M with the System extensions
   v7E_M    = 13,  // v7_M with DSP extensions
   v8_A     = 14,  // v8_A AArch32
+  v8_R     = 15,  // e.g. Cortex R52
   v8_M_Base= 16,  // v8_M_Base AArch32
   v8_M_Main= 17,  // v8_M_Main AArch32
 };

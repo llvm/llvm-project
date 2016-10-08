@@ -13,7 +13,7 @@
 
 #include <vector>
 #include <cassert>
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "MoveOnly.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
@@ -33,7 +33,7 @@ int main()
         assert(is_contiguous_container_asan_correct(v));
     }
     {
-        std::vector<MoveOnly, stack_allocator<MoveOnly, 300> > v(100);
+        std::vector<MoveOnly, limited_allocator<MoveOnly, 300> > v(100);
         v.resize(50);
         assert(v.size() == 50);
         assert(v.capacity() == 100);
@@ -56,7 +56,7 @@ int main()
         assert(is_contiguous_container_asan_correct(v));
     }
     {
-        std::vector<int, stack_allocator<int, 300> > v(100);
+        std::vector<int, limited_allocator<int, 300> > v(100);
         v.resize(50);
         assert(v.size() == 50);
         assert(v.capacity() == 100);

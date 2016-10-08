@@ -9497,8 +9497,8 @@ Syntax:
       declare i32 @llvm.get.dynamic.area.offset.i32()
       declare i64 @llvm.get.dynamic.area.offset.i64()
 
-      Overview:
-      """""""""
+Overview:
+"""""""""
 
       The '``llvm.get.dynamic.area.offset.*``' intrinsic family is used to
       get the offset from native stack pointer to the address of the most

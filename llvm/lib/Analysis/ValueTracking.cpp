@@ -2855,21 +2855,22 @@ Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
       break;
 
     if (GEPOperator *GEP = dyn_cast<GEPOperator>(Ptr)) {
-      APInt GEPOffset(BitWidth, 0);
+      // If one of the values we have visited is an addrspacecast, then
+      // the pointer type of this GEP may be different from the type
+      // of the Ptr parameter which was passed to this function.  This
+      // means when we construct GEPOffset, we need to use the size
+      // of GEP's pointer type rather than the size of the original
+      // pointer type.
+      APInt GEPOffset(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
       if (!GEP->accumulateConstantOffset(DL, GEPOffset))
         break;
 
-      ByteOffset += GEPOffset;
+      ByteOffset += GEPOffset.getSExtValue();
 
       Ptr = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(Ptr) == Instruction::BitCast) {
+    } else if (Operator::getOpcode(Ptr) == Instruction::BitCast ||
+               Operator::getOpcode(Ptr) == Instruction::AddrSpaceCast) {
       Ptr = cast<Operator>(Ptr)->getOperand(0);
-    } else if (AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(Ptr)) {
-      Value *SourcePtr = ASCI->getPointerOperand();
-      // Don't look through addrspace cast which changes pointer size
-      if (BitWidth != DL.getPointerTypeSizeInBits(SourcePtr->getType()))
-        break;
-      Ptr = SourcePtr;
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(Ptr)) {
       if (GA->isInterposable())
         break;

@@ -334,6 +334,7 @@ namespace {
 
     SDValue visitShiftByConstant(SDNode *N, ConstantSDNode *Amt);
 
+    SDValue foldSelectOfConstants(SDNode *N);
     bool SimplifySelectOps(SDNode *SELECT, SDValue LHS, SDValue RHS);
     SDValue SimplifyBinOpWithSameOpcodeHands(SDNode *N);
     SDValue SimplifySelect(const SDLoc &DL, SDValue N0, SDValue N1, SDValue N2);
@@ -5105,6 +5106,41 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   }
 }
 
+// TODO: We should handle other cases of selecting between {-1,0,1} here.
+SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
+  SDValue Cond = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  EVT CondVT = Cond.getValueType();
+  SDLoc DL(N);
+
+  // fold (select Cond, 0, 1) -> (xor Cond, 1)
+  // We can't do this reliably if integer based booleans have different contents
+  // to floating point based booleans. This is because we can't tell whether we
+  // have an integer-based boolean or a floating-point-based boolean unless we
+  // can find the SETCC that produced it and inspect its operands. This is
+  // fairly easy if C is the SETCC node, but it can potentially be
+  // undiscoverable (or not reasonably discoverable). For example, it could be
+  // in another basic block or it could require searching a complicated
+  // expression.
+  if (VT.isInteger() &&
+      (CondVT == MVT::i1 || (CondVT.isInteger() &&
+                             TLI.getBooleanContents(false, true) ==
+                                 TargetLowering::ZeroOrOneBooleanContent &&
+                             TLI.getBooleanContents(false, false) ==
+                                 TargetLowering::ZeroOrOneBooleanContent)) &&
+      isNullConstant(N1) && isOneConstant(N2)) {
+    SDValue NotCond = DAG.getNode(ISD::XOR, DL, CondVT, Cond,
+                                  DAG.getConstant(1, DL, CondVT));
+    if (VT.bitsEq(CondVT))
+      return NotCond;
+    return DAG.getZExtOrTrunc(NotCond, DL, VT);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -5123,36 +5159,10 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   // fold (select C, 1, X) -> (or C, X)
   if (VT == MVT::i1 && isOneConstant(N1))
     return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N2);
-  // fold (select C, 0, 1) -> (xor C, 1)
-  // We can't do this reliably if integer based booleans have different contents
-  // to floating point based booleans. This is because we can't tell whether we
-  // have an integer-based boolean or a floating-point-based boolean unless we
-  // can find the SETCC that produced it and inspect its operands. This is
-  // fairly easy if C is the SETCC node, but it can potentially be
-  // undiscoverable (or not reasonably discoverable). For example, it could be
-  // in another basic block or it could require searching a complicated
-  // expression.
-  if (VT.isInteger() &&
-      (VT0 == MVT::i1 || (VT0.isInteger() &&
-                          TLI.getBooleanContents(false, false) ==
-                              TLI.getBooleanContents(false, true) &&
-                          TLI.getBooleanContents(false, false) ==
-                              TargetLowering::ZeroOrOneBooleanContent)) &&
-      isNullConstant(N1) && isOneConstant(N2)) {
-    SDValue XORNode;
-    if (VT == VT0) {
-      SDLoc DL(N);
-      return DAG.getNode(ISD::XOR, DL, VT0,
-                         N0, DAG.getConstant(1, DL, VT0));
-    }
-    SDLoc DL0(N0);
-    XORNode = DAG.getNode(ISD::XOR, DL0, VT0,
-                          N0, DAG.getConstant(1, DL0, VT0));
-    AddToWorklist(XORNode.getNode());
-    if (VT.bitsGT(VT0))
-      return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, XORNode);
-    return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, XORNode);
-  }
+
+  if (SDValue V = foldSelectOfConstants(N))
+    return V;
+
   // fold (select C, 0, X) -> (and (not C), X)
   if (VT == VT0 && VT == MVT::i1 && isNullConstant(N1)) {
     SDValue NOTNode = DAG.getNOT(SDLoc(N0), N0, VT);

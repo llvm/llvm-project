@@ -578,6 +578,7 @@ static StringRef getArchSynonym(StringRef Arch) {
       .Cases("v8", "v8a", "aarch64", "arm64", "v8-a")
       .Case("v8.1a", "v8.1-a")
       .Case("v8.2a", "v8.2-a")
+      .Case("v8r", "v8-r")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
       .Default(Arch);
@@ -721,6 +722,7 @@ unsigned llvm::ARM::parseArchProfile(StringRef Arch) {
   case ARM::AK_ARMV8MBaseline:
     return ARM::PK_M;
   case ARM::AK_ARMV7R:
+  case ARM::AK_ARMV8R:
     return ARM::PK_R;
   case ARM::AK_ARMV7A:
   case ARM::AK_ARMV7K:
@@ -768,6 +770,7 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   case ARM::AK_ARMV8A:
   case ARM::AK_ARMV8_1A:
   case ARM::AK_ARMV8_2A:
+  case ARM::AK_ARMV8R:
   case ARM::AK_ARMV8MBaseline:
   case ARM::AK_ARMV8MMainline:
     return 8;

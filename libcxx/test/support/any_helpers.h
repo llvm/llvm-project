@@ -246,67 +246,6 @@ typedef large_type<> large;
 typedef large_type<1> large1;
 typedef large_type<2> large2;
 
-
-struct deleted_move
-{
-    static int count;
-    static int copied;
-    static int moved;
-    static int const_copied;
-    static int non_const_copied;
-
-    static void reset() {
-        deleted_move::copied = 0;
-        deleted_move::moved = 0;
-        deleted_move::const_copied = 0;
-        deleted_move::non_const_copied = 0;
-    }
-
-    int value;
-
-    explicit deleted_move(int val = 0) : value(val) {
-        ++count;
-    }
-    explicit deleted_move(int, int val, int) : value(val) {
-        ++count;
-    }
-    deleted_move(std::initializer_list<int> il) : value(*il.begin()) {
-        ++count;
-    }
-
-    deleted_move(deleted_move const & other) noexcept {
-        value = other.value;
-        ++count;
-        ++copied;
-        ++const_copied;
-    }
-
-    deleted_move(deleted_move& other) noexcept {
-        value = other.value;
-        ++count;
-        ++copied;
-        ++non_const_copied;
-    }
-
-    deleted_move(deleted_move && other) = delete;
-
-    ~deleted_move() {
-        value = -1;
-        --count;
-    }
-
-private:
-    deleted_move& operator=(deleted_move const&) = delete;
-    deleted_move& operator=(deleted_move&&) = delete;
-};
-
-int deleted_move::count = 0;
-int deleted_move::copied = 0;
-int deleted_move::moved = 0;
-int deleted_move::const_copied = 0;
-int deleted_move::non_const_copied = 0;
-
-
 // The exception type thrown by 'small_throws_on_copy', 'large_throws_on_copy'
 // and 'throws_on_move'.
 struct my_any_exception {};
