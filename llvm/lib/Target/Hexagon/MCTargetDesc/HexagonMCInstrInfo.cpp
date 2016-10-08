@@ -431,6 +431,11 @@ bool HexagonMCInstrInfo::isCanon(MCInstrInfo const &MCII, MCInst const &MCI) {
           HexagonMCInstrInfo::getType(MCII, MCI) != HexagonII::TypeENDLOOP);
 }
 
+bool HexagonMCInstrInfo::isCofMax1(MCInstrInfo const &MCII, MCInst const &MCI) {
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return ((F >> HexagonII::CofMax1Pos) & HexagonII::CofMax1Mask);
+}
+
 bool HexagonMCInstrInfo::isCompound(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
   return (getType(MCII, MCI) == HexagonII::TypeCOMPOUND);

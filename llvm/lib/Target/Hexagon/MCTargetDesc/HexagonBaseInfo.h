@@ -204,6 +204,9 @@ namespace HexagonII {
     // Complex XU, prevent xu competition by prefering slot3
     PrefersSlot3Pos = 55,
     PrefersSlot3Mask = 0x1,
+
+    CofMax1Pos = 60,
+    CofMax1Mask = 0x1
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //
