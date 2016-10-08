@@ -170,6 +170,8 @@ const std::string DiagnosticInfoWithDebugLocBase::getLocationStr() const {
     getLocation(&Filename, &Line, &Column);
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, Value *V)
+    : Key(Key), Val(GlobalValue::getRealLinkageName(V->getName())) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
     : Key(Key), Val(itostr(N)) {}
