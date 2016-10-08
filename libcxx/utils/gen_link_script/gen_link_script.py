@@ -22,7 +22,7 @@ def help_and_exit():
     help_msg = \
 """Usage
 
-  gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <abi_libname>
+  gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <public_libs>
 
   Generate a linker script that links libc++ to the proper ABI library.
   The script replaces the specified libc++ symlink.
@@ -31,8 +31,7 @@ def help_and_exit():
 Arguments
   <path/to/libcxx.so> - The top level symlink to the versioned libc++ shared
                         library. This file is replaced with a linker script.
-  <abi_libname>       - The name of the ABI library to use in the linker script.
-                        The name must be one of [c++abi, stdc++, supc++, cxxrt].
+  <public_libs>       - List of library names to include in linker script.
 
 Exit Status:
   0 if OK,
@@ -53,11 +52,11 @@ def parse_args():
     if len(args) != 2:
         usage_and_exit()
     symlink_file = args[0]
-    abi_libname = args[1]
-    return dryrun, symlink_file, abi_libname
+    public_libs = args[1].split(';')
+    return dryrun, symlink_file, public_libs
 
 def main():
-    dryrun, symlink_file, abi_libname = parse_args()
+    dryrun, symlink_file, public_libs = parse_args()
 
     # Check that the given libc++.so file is a valid symlink.
     if not os.path.islink(symlink_file):
@@ -66,15 +65,12 @@ def main():
     # Read the symlink so we know what libc++ to link to in the linker script.
     linked_libcxx = os.readlink(symlink_file)
 
-    # Check that the abi_libname is one of the supported values.
-    supported_abi_list = ['c++abi', 'stdc++', 'supc++', 'cxxrt']
-    if abi_libname not in supported_abi_list:
-        print_and_exit("abi name '%s' is not supported: Use one of %r" %
-                        (abi_libname, supported_abi_list))
+    # Prepare the list of public libraries to link.
+    public_libs = ['-l%s' % l for l in public_libs]
 
     # Generate the linker script contents and print the script and destination
     # information.
-    contents = "INPUT(%s -l%s)" % (linked_libcxx, abi_libname)
+    contents = "INPUT(%s %s)" % (linked_libcxx, ' '.join(public_libs))
     print("GENERATING SCRIPT: '%s' as file %s" % (contents, symlink_file))
 
     # Remove the existing libc++ symlink and replace it with the script.
