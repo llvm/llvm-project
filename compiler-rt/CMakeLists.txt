@@ -190,6 +190,12 @@ elseif(MSVC)
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Z[i7I]" "/Z7")
 endif()
 
+if(LLVM_ENABLE_MODULES)
+  # Sanitizers cannot be built with -fmodules. The interceptors intentionally
+  # don't include system headers, which is incompatible with modules.
+  list(APPEND SANITIZER_COMMON_CFLAGS -fno-modules)
+endif()
+
 # Turn off several warnings.
 append_list_if(COMPILER_RT_HAS_WGNU_FLAG -Wno-gnu SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros SANITIZER_COMMON_CFLAGS)
