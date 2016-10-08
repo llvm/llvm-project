@@ -29,22 +29,22 @@
   id _nonPropertyIvar;
 }
 @property(retain) id X;
-@property(retain) id Y;
-@property(assign) id Z;
+@property(retain) id Y; // expected-note{{Property is declared here}}
+@property(assign) id Z; // expected-note{{Property is declared here}}
 @property(assign) id K;
 @property(weak) id L;
 @property(readonly) id N;
 @property(retain) id M;
 @property(weak) id P;
-@property(weak) id Q;
+@property(weak) id Q; // expected-note{{Property is declared here}}
 @property(retain) id R;
-@property(weak, readonly) id S;
+@property(weak, readonly) id S; // expected-note{{Property is declared here}}
 
 @property(assign, readonly) id T; // Shadowed in class extension
 @property(assign) id U;
 
 @property(retain) id V;
-@property(retain) id W;
+@property(retain) id W; // expected-note{{Property is declared here}}
 -(id) O;
 -(void) setO: (id) arg;
 @end
@@ -56,16 +56,16 @@
 
 @implementation MyClass
 @synthesize X = _X;
-@synthesize Y = _Y;
-@synthesize Z = _Z;
+@synthesize Y = _Y; // expected-note{{Property is synthesized here}}
+@synthesize Z = _Z; // expected-note{{Property is synthesized here}}
 @synthesize K = _K;
 @synthesize L = _L;
 @synthesize N = _N;
 @synthesize M = _M;
-@synthesize Q = _Q;
+@synthesize Q = _Q; // expected-note{{Property is synthesized here}}
 @synthesize R = _R;
 @synthesize V = _V;
-@synthesize W = _W;
+@synthesize W = _W; // expected-note{{Property is synthesized here}}
 
 -(id) O{ return 0; }
 -(void) setO:(id)arg { }
