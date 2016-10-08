@@ -52,12 +52,12 @@ struct A {
 
 constexpr bool test_constexpr_move() {
 #if TEST_STD_VER > 11
-    int x = 42;
-    const int cx = x;
-    return std::move(x) == 42
-        && std::move(cx) == 42
-        && std::move(static_cast<int&&>(x)) == 42
-        && std::move(static_cast<int const&&>(x)) == 42;
+    int y = 42;
+    const int cy = y;
+    return std::move(y) == 42
+        && std::move(cy) == 42
+        && std::move(static_cast<int&&>(y)) == 42
+        && std::move(static_cast<int const&&>(y)) == 42;
 #else
     return true;
 #endif
@@ -105,8 +105,8 @@ int main()
     }
 #if TEST_STD_VER > 11
     {
-        constexpr int x = 42;
-        static_assert(std::move(x) == 42, "");
+        constexpr int y = 42;
+        static_assert(std::move(y) == 42, "");
         static_assert(test_constexpr_move(), "");
     }
 #endif
@@ -114,8 +114,8 @@ int main()
     // Test that std::forward is constexpr in C++11. This is an extension
     // provided by both libc++ and libstdc++.
     {
-        constexpr int x = 42;
-        static_assert(std::move(x) == 42, "");
+        constexpr int y = 42;
+        static_assert(std::move(y) == 42, "");
     }
 #endif
 }

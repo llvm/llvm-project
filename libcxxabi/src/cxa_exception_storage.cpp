@@ -45,8 +45,8 @@ extern "C" {
 #else
 
 #include <pthread.h>
-#include <cstdlib>          // for calloc, free
 #include "abort_message.h"
+#include "fallback_malloc.h"
 
 //  In general, we treat all pthread errors as fatal.
 //  We cannot call std::terminate() because that will in turn
@@ -58,7 +58,7 @@ namespace {
     pthread_once_t flag_ = PTHREAD_ONCE_INIT;
 
     void destruct_ (void *p) {
-        std::free ( p );
+        __free_with_fallback ( p );
         if ( 0 != ::pthread_setspecific ( key_, NULL ) ) 
             abort_message("cannot zero out thread value for __cxa_get_globals()");
         }
@@ -77,7 +77,7 @@ extern "C" {
     //  If this is the first time we've been asked for these globals, create them
         if ( NULL == retVal ) {
             retVal = static_cast<__cxa_eh_globals*>
-                        (std::calloc (1, sizeof (__cxa_eh_globals)));
+                        (__calloc_with_fallback (1, sizeof (__cxa_eh_globals)));
             if ( NULL == retVal )
                 abort_message("cannot allocate __cxa_eh_globals");
             if ( 0 != pthread_setspecific ( key_, retVal ) )

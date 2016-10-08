@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <algorithm>
 
 // template<class T, class Compare>
@@ -17,9 +19,10 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     int i = std::max({2, 3, 1}, std::greater<int>());
     assert(i == 1);
     i = std::max({2, 1, 3}, std::greater<int>());
@@ -32,12 +35,11 @@ int main()
     assert(i == 1);
     i = std::max({1, 3, 2}, std::greater<int>());
     assert(i == 1);
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER >= 14
     {
     static_assert(std::max({1, 3, 2}, std::greater<int>()) == 1, "");
     static_assert(std::max({2, 1, 3}, std::greater<int>()) == 1, "");
     static_assert(std::max({3, 2, 1}, std::greater<int>()) == 1, "");
     }
 #endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

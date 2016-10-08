@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "../../../NotConstructible.h"
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
 
@@ -71,7 +71,7 @@ int main()
         (test_allocator<NotConstructible>(5));
     }
     {
-        std::vector<int, stack_allocator<int, 10> > v;
+        std::vector<int, limited_allocator<int, 10> > v;
         assert(v.empty());
     }
 #if TEST_STD_VER >= 11

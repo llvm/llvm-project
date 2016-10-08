@@ -16,6 +16,7 @@
 // UNSUPPORTED: c++98, c++03
 
 #include <tuple>
+#include <memory>
 #include <string>
 #include <cassert>
 

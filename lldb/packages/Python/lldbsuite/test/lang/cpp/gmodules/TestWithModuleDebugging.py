@@ -10,7 +10,6 @@ class TestWithGmodulesDebugInfo(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(["gmodules"])
-    @expectedFailureAll(oslist=["macosx"], bugnumber="llvm.org/pr28156")
     def test_specialized_typedef_from_pch(self):
         self.build()
         cwd = os.getcwd()

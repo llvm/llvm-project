@@ -71,7 +71,7 @@ void test_copy()
         assert(Type::copied == 1);
         assert(Type::count == 2);
         assertContains<Type>(a, 42);
-        assertContains<Type>(a, 42);
+        assertContains<Type>(a2, 42);
 
         // Modify a and check that a2 is unchanged
         modifyValue<Type>(a, -1);

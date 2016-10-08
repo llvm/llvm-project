@@ -589,7 +589,7 @@ namespace std {
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
 #  if __has_attribute(__type_visibility__)
-#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __attribute__ ((__visibility__("default")))
+#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __attribute__ ((__type_visibility__("default")))
 #  else
 #    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
 #  endif

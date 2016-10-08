@@ -118,7 +118,6 @@ size_t OptionValueEnumeration::AutoComplete(
 
   const uint32_t num_enumerators = m_enumerations.GetSize();
   if (s && s[0]) {
-    const size_t s_len = strlen(s);
     for (size_t i = 0; i < num_enumerators; ++i) {
       llvm::StringRef name = m_enumerations.GetCStringAtIndex(i);
       if (name.startswith(s))

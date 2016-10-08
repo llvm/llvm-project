@@ -99,7 +99,7 @@ static_assert(IsSmallObject<SmallThrows>::value, "");
 struct LargeThrows {
   LargeThrows(int) { throw 42; }
   LargeThrows(std::initializer_list<int>, int) { throw 42; }
-  int data[10];
+  int data[sizeof(std::any)];
 };
 static_assert(!IsSmallObject<LargeThrows>::value, "");
 

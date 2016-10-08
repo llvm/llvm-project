@@ -141,8 +141,10 @@ enum sched_type    __kmp_static = kmp_sch_static_greedy; /* default static sched
 enum sched_type    __kmp_guided = kmp_sch_guided_iterative_chunked; /* default guided scheduling method */
 enum sched_type      __kmp_auto = kmp_sch_guided_analytical_chunked; /* default auto scheduling method */
 int        __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
+#if KMP_USE_MONITOR
 int       __kmp_monitor_wakeups = KMP_MIN_MONITOR_WAKEUPS;
 int          __kmp_bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME( KMP_DEFAULT_BLOCKTIME, KMP_MIN_MONITOR_WAKEUPS );
+#endif
 #ifdef KMP_ADJUST_BLOCKTIME
 int               __kmp_zero_bt = FALSE;
 #endif /* KMP_ADJUST_BLOCKTIME */

@@ -129,7 +129,7 @@ static_assert(IsSmallObject<SmallThrows>::value, "");
 struct LargeThrows {
   LargeThrows(int) { throw 42; }
   LargeThrows(std::initializer_list<int>, int) { throw 42; }
-  int data[10];
+  int data[sizeof(std::any)];
 };
 static_assert(!IsSmallObject<LargeThrows>::value, "");
 
@@ -236,6 +236,13 @@ void test_emplace_sfinae_constraints() {
         static_assert(!has_emplace<NoCopy>(), "");
         static_assert(!has_emplace<NoCopy, int>(), "");
         static_assert(!has_emplace_init_list<NoCopy, int, int, int>(), "");
+        static_assert(!has_emplace<NoCopy&>(), "");
+        static_assert(!has_emplace<NoCopy&, int>(), "");
+        static_assert(!has_emplace_init_list<NoCopy&, int, int, int>(), "");
+        static_assert(!has_emplace<NoCopy&&>(), "");
+        static_assert(!has_emplace<NoCopy&&, int>(), "");
+        static_assert(!has_emplace_init_list<NoCopy&&, int, int, int>(), "");
+
     }
 }
 

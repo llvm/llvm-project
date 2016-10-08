@@ -57,7 +57,7 @@ template <class ELFT> static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   std::error_code EC;
   ELFFile<ELFT> F(MB.getBuffer(), EC);
   if (EC)
-    error(EC, "failed to read " + MB.getBufferIdentifier());
+    fatal(EC, "failed to read " + MB.getBufferIdentifier());
   return F;
 }
 
@@ -81,7 +81,7 @@ typename ELFT::SymRange ELFFileBase<ELFT>::getElfSymbols(bool OnlyGlobals) {
   Elf_Sym_Range Syms = ELFObj.symbols(Symtab);
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   uint32_t FirstNonLocal = Symtab->sh_info;
-  if (FirstNonLocal > NumSymbols)
+  if (FirstNonLocal == 0 || FirstNonLocal > NumSymbols)
     fatal(getFilename(this) + ": invalid sh_info in symbol table");
 
   if (OnlyGlobals)
@@ -523,11 +523,11 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
 
   if (!DynamicSec)
     return;
-  auto *Begin =
-      reinterpret_cast<const Elf_Dyn *>(Obj.base() + DynamicSec->sh_offset);
-  const Elf_Dyn *End = Begin + DynamicSec->sh_size / sizeof(Elf_Dyn);
 
-  for (const Elf_Dyn &Dyn : make_range(Begin, End)) {
+  ArrayRef<Elf_Dyn> Arr =
+      check(Obj.template getSectionContentsAsArray<Elf_Dyn>(DynamicSec),
+            getFilename(this) + ": getSectionContentsAsArray failed");
+  for (const Elf_Dyn &Dyn : Arr) {
     if (Dyn.d_tag == DT_SONAME) {
       uintX_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())

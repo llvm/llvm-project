@@ -30,7 +30,6 @@
 using std::any;
 using std::any_cast;
 
-
 template <class Type>
 void test_copy_value_throws()
 {
@@ -107,33 +106,6 @@ void test_copy_move_value() {
     }
 }
 
-void test_non_moveable_type()
-{
-    using Type = deleted_move;
-    {
-        deleted_move mv(42);
-        std::any a(mv);
-        assert(Type::count == 2);
-        assert(Type::copied == 1);
-        assert(Type::moved == 0);
-        assertContains<Type>(a, 42);
-    }
-    assert(Type::count == 0);
-    Type::reset();
-    {
-        deleted_move mv(42);
-        std::any a(std::move(mv));
-        assert(Type::count == 2);
-        assert(Type::copied == 1);
-        assert(Type::moved == 0);
-        assertContains<Type>(a, 42);
-    }
-    assert(Type::count == 0);
-    Type::reset();
-}
-
-
-
 // Test that any(ValueType&&) is *never* selected for a std::in_place type.
 void test_sfinae_constraints() {
     using Tag = std::in_place_type_t<int>;
@@ -169,6 +141,7 @@ void test_sfinae_constraints() {
           NoCopy(int) {}
         };
         static_assert(!std::is_constructible<std::any, NoCopy>::value, "");
+        static_assert(!std::is_constructible<std::any, NoCopy&>::value, "");
         static_assert(!std::is_convertible<NoCopy, std::any>::value, "");
     }
 }
@@ -179,6 +152,5 @@ int main() {
     test_copy_value_throws<small_throws_on_copy>();
     test_copy_value_throws<large_throws_on_copy>();
     test_move_value_throws();
-    test_non_moveable_type();
     test_sfinae_constraints();
 }

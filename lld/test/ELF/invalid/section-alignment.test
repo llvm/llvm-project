@@ -13,7 +13,7 @@ Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1000000000000001
+    AddressAlign:    0x1000000000000000
     Content:         "00000000"
 
 # CHECK: section sh_addralign is too large
