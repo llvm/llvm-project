@@ -107,6 +107,10 @@ class ObjCDeallocChecker
   std::unique_ptr<BugType> ExtraReleaseBugType;
   std::unique_ptr<BugType> MistakenDeallocBugType;
 
+  // FIXME: constexpr initialization isn't supported by MSVC2013.
+  static const char *const MsgDeclared;
+  static const char *const MsgSynthesized;
+
 public:
   ObjCDeallocChecker();
 
@@ -128,6 +132,9 @@ public:
   void checkEndFunction(CheckerContext &Ctx) const;
 
 private:
+  void addNoteForDecl(std::unique_ptr<BugReport> &BR, StringRef Msg,
+                           const Decl *D) const;
+
   void diagnoseMissingReleases(CheckerContext &C) const;
 
   bool diagnoseExtraRelease(SymbolRef ReleasedValue, const ObjCMethodCall &M,
@@ -177,6 +184,11 @@ private:
 } // End anonymous namespace.
 
 typedef llvm::ImmutableSet<SymbolRef> SymbolSet;
+
+const char *const ObjCDeallocChecker::MsgDeclared =
+    "Property is declared here";
+const char *const ObjCDeallocChecker::MsgSynthesized =
+    "Property is synthesized here";
 
 /// Maps from the symbol for a class instance to the set of
 /// symbols remaining that must be released in -dealloc.
@@ -489,6 +501,18 @@ ProgramStateRef ObjCDeallocChecker::checkPointerEscape(
   return State;
 }
 
+/// Add an extra note piece describing a declaration that is important
+/// for understanding the bug report.
+void ObjCDeallocChecker::addNoteForDecl(std::unique_ptr<BugReport> &BR,
+                                             StringRef Msg,
+                                             const Decl *D) const {
+  ASTContext &ACtx = D->getASTContext();
+  SourceManager &SM = ACtx.getSourceManager();
+  PathDiagnosticLocation Pos = PathDiagnosticLocation::createBegin(D, SM);
+  if (Pos.isValid() && Pos.asLocation().isValid())
+    BR->addNote(Msg, Pos, D->getSourceRange());
+}
+
 /// Report any unreleased instance variables for the current instance being
 /// dealloced.
 void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
@@ -585,6 +609,9 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
 
     std::unique_ptr<BugReport> BR(
         new BugReport(*MissingReleaseBugType, OS.str(), ErrNode));
+
+    addNoteForDecl(BR, MsgDeclared, PropDecl);
+    addNoteForDecl(BR, MsgSynthesized, PropImpl);
 
     C.emitReport(std::move(BR));
   }
@@ -689,11 +716,12 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
          );
 
   const ObjCImplDecl *Container = getContainingObjCImpl(C.getLocationContext());
-  OS << "The '" << *PropImpl->getPropertyIvarDecl()
-     << "' ivar in '" << *Container;
+  const ObjCIvarDecl *IvarDecl = PropImpl->getPropertyIvarDecl();
+  OS << "The '" << *IvarDecl << "' ivar in '" << *Container;
 
+  bool ReleasedByCIFilterDealloc = isReleasedByCIFilterDealloc(PropImpl);
 
-  if (isReleasedByCIFilterDealloc(PropImpl)) {
+  if (ReleasedByCIFilterDealloc) {
     OS << "' will be released by '-[CIFilter dealloc]' but also released here";
   } else {
     OS << "' was synthesized for ";
@@ -709,6 +737,10 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
   std::unique_ptr<BugReport> BR(
       new BugReport(*ExtraReleaseBugType, OS.str(), ErrNode));
   BR->addRange(M.getOriginExpr()->getSourceRange());
+
+  addNoteForDecl(BR, MsgDeclared, PropDecl);
+  if (!ReleasedByCIFilterDealloc)
+    addNoteForDecl(BR, MsgSynthesized, PropImpl);
 
   C.emitReport(std::move(BR));
 

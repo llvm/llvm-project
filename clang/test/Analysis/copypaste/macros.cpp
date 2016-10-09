@@ -5,7 +5,7 @@
 // to have the same complexity value. Macros have smaller complexity values
 // and need to be in their own hash group.
 
-int foo(int a) { // expected-warning{{Detected code clone.}}
+int foo(int a) { // expected-warning{{Duplicate code detected}}
   a = a + 1;
   a = a + 1 / 1;
   a = a + 1 + 1 + 1;
@@ -15,7 +15,7 @@ int foo(int a) { // expected-warning{{Detected code clone.}}
   return a;
 }
 
-int fooClone(int a) { // expected-note{{Related code clone is here.}}
+int fooClone(int a) { // expected-note{{Similar code here}}
   a = a + 1;
   a = a + 1 / 1;
   a = a + 1 + 1 + 1;
@@ -30,7 +30,7 @@ int fooClone(int a) { // expected-note{{Related code clone is here.}}
 
 #define ASSIGN(T, V) T = T + V
 
-int macro(int a) { // expected-warning{{Detected code clone.}}
+int macro(int a) { // expected-warning{{Duplicate code detected}}
   ASSIGN(a, 1);
   ASSIGN(a, 1 / 1);
   ASSIGN(a, 1 + 1 + 1);
@@ -40,7 +40,7 @@ int macro(int a) { // expected-warning{{Detected code clone.}}
   return a;
 }
 
-int macroClone(int a) { // expected-note{{Related code clone is here.}}
+int macroClone(int a) { // expected-note{{Similar code here}}
   ASSIGN(a, 1);
   ASSIGN(a, 1 / 1);
   ASSIGN(a, 1 + 1 + 1);
@@ -54,7 +54,7 @@ int macroClone(int a) { // expected-note{{Related code clone is here.}}
 
 #define EMPTY
 
-int fooFalsePositiveClone(int a) { // expected-note{{Related code clone is here.}}
+int fooFalsePositiveClone(int a) { // expected-note{{Similar code here}}
   a = EMPTY a + 1;
   a = a + 1 / 1;
   a = a + 1 + 1 + 1;

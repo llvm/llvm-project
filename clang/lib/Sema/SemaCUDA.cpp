@@ -23,6 +23,19 @@
 #include "llvm/ADT/SmallVector.h"
 using namespace clang;
 
+void Sema::PushForceCUDAHostDevice() {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  ForceCUDAHostDeviceDepth++;
+}
+
+bool Sema::PopForceCUDAHostDevice() {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  if (ForceCUDAHostDeviceDepth == 0)
+    return false;
+  ForceCUDAHostDeviceDepth--;
+  return true;
+}
+
 ExprResult Sema::ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                          MultiExprArg ExecConfig,
                                          SourceLocation GGGLoc) {
@@ -441,9 +454,23 @@ bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
 //  * a __device__ function with this signature was already declared, in which
 //    case in which case we output an error, unless the __device__ decl is in a
 //    system header, in which case we leave the constexpr function unattributed.
+//
+// In addition, all function decls are treated as __host__ __device__ when
+// ForceCUDAHostDeviceDepth > 0 (corresponding to code within a
+//   #pragma clang force_cuda_host_device_begin/end
+// pair).
 void Sema::maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *NewD,
                                        const LookupResult &Previous) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+
+  if (ForceCUDAHostDeviceDepth > 0) {
+    if (!NewD->hasAttr<CUDAHostAttr>())
+      NewD->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    if (!NewD->hasAttr<CUDADeviceAttr>())
+      NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+    return;
+  }
+
   if (!getLangOpts().CUDAHostDeviceConstexpr || !NewD->isConstexpr() ||
       NewD->isVariadic() || NewD->hasAttr<CUDAHostAttr>() ||
       NewD->hasAttr<CUDADeviceAttr>() || NewD->hasAttr<CUDAGlobalAttr>())
