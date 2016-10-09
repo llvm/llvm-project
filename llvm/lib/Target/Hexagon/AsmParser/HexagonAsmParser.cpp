@@ -222,7 +222,7 @@ public:
   SMLoc getStartLoc() const { return StartLoc; }
 
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const { return EndLoc; }
+  SMLoc getEndLoc() { return EndLoc; }
 
   unsigned getReg() const {
     assert(Kind == Register && "Invalid access!");

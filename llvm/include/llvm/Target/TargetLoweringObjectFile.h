@@ -120,12 +120,6 @@ public:
   getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
                            const TargetMachine &TM) const = 0;
 
-  /// Allow the target to completely override section assignment of a global.
-  virtual const MCSection *
-  getSpecialCasedSectionGlobals(const GlobalValue *GV, SectionKind Kind) const {
-    return nullptr;
-  }
-
   /// Return an MCExpr to use for a reference to the specified global variable
   /// from exception handling information.
   virtual const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,

@@ -806,7 +806,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
     = MaxStoresPerMemmoveOptSize = 4;
   UseUnderscoreSetJmp = false;
   UseUnderscoreLongJmp = false;
-  SelectIsExpensive = false;
   HasMultipleConditionRegisters = false;
   HasExtractBitsInsn = false;
   JumpIsExpensive = JumpIsExpensiveOverride;

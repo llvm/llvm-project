@@ -179,12 +179,6 @@ public:
   virtual void adjustForHiPEPrologue(MachineFunction &MF,
                                      MachineBasicBlock &PrologueMBB) const {}
 
-  /// Adjust the prologue to add an allocation at a fixed offset from the frame
-  /// pointer.
-  virtual void
-  adjustForFrameAllocatePrologue(MachineFunction &MF,
-                                 MachineBasicBlock &PrologueMBB) const {}
-
   /// spillCalleeSavedRegisters - Issues instruction(s) to spill all callee
   /// saved registers and returns true if it isn't possible / profitable to do
   /// so by issuing a series of store instructions via
