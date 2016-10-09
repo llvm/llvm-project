@@ -65,8 +65,7 @@ static cl::opt<ImplicitItModeTy> ImplicitItMode(
                clEnumValN(ImplicitItModeTy::ARMOnly, "arm",
                           "Accept in ARM, reject in Thumb"),
                clEnumValN(ImplicitItModeTy::ThumbOnly, "thumb",
-                          "Warn in ARM, emit implicit ITs in Thumb"),
-               clEnumValEnd));
+                          "Warn in ARM, emit implicit ITs in Thumb")));
 
 class ARMOperand;
 
@@ -753,7 +752,7 @@ public:
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
   SMRange getLocRange() const { return SMRange(StartLoc, EndLoc); }

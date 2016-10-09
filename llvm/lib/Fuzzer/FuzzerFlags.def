@@ -57,8 +57,8 @@ FUZZER_FLAG_INT(workers, 0,
             "Number of simultaneous worker processes to run the jobs."
             " If zero, \"min(jobs,NumberOfCpuCores()/2)\" is used.")
 FUZZER_FLAG_INT(reload, 1,
-                "Reload the main corpus periodically to get new units"
-                " discovered by other processes.")
+                "Reload the main corpus every <N> seconds to get new units"
+                " discovered by other processes. If 0, disabled")
 FUZZER_FLAG_INT(report_slow_units, 10,
     "Report slowest units if they run for more than this number of seconds.")
 FUZZER_FLAG_INT(only_ascii, 0,

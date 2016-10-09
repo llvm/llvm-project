@@ -117,7 +117,7 @@ public:
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
 
   void addExplicitComment(const Twine &T) override;
-  void emitExplicitComments() override;
+  void emitExplicitComments();
 
   /// AddBlankLine - Emit a blank line to a .s file to pretty it up.
   void AddBlankLine() override {

@@ -170,6 +170,7 @@ bool isBundle(MCInst const &MCI);
 
 // Return whether the insn is an actual insn.
 bool isCanon(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isCofMax1(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isCompound(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Return the duplex iclass given the two duplex classes

@@ -179,6 +179,9 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<1> isAccumulator = 0;
   let TSFlags{54} = isAccumulator;
 
+  bit cofMax1 = 0;
+  let TSFlags{60} = cofMax1;
+
   // Fields used for relation models.
   bit isNonTemporal = 0;
   string isNT = ""; // set to "true" for non-temporal vector stores.

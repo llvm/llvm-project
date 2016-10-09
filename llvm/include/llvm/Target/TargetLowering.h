@@ -191,9 +191,6 @@ public:
     return getPointerTy(DL);
   }
 
-  /// Return true if the select operation is expensive for this target.
-  bool isSelectExpensive() const { return SelectIsExpensive; }
-
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
     return true;
   }
@@ -1378,12 +1375,6 @@ protected:
     StackPointerRegisterToSaveRestore = R;
   }
 
-  /// Tells the code generator not to expand operations into sequences that use
-  /// the select operations if possible.
-  void setSelectIsExpensive(bool isExpensive = true) {
-    SelectIsExpensive = isExpensive;
-  }
-
   /// Tells the code generator that the target has multiple (allocatable)
   /// condition registers that can be used to store the results of comparisons
   /// for use by selects and conditional branches. With multiple condition
@@ -1423,15 +1414,6 @@ protected:
   void addRegisterClass(MVT VT, const TargetRegisterClass *RC) {
     assert((unsigned)VT.SimpleTy < array_lengthof(RegClassForVT));
     RegClassForVT[VT.SimpleTy] = RC;
-  }
-
-  /// Remove all register classes.
-  void clearRegisterClasses() {
-    std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
-  }
-
-  /// \brief Remove all operation actions.
-  void clearOperationActions() {
   }
 
   /// Return the largest legal super-reg register class of the register class
@@ -1761,11 +1743,6 @@ public:
   /// In other words, unless the target performs a post-isel load combining,
   /// this information should not be provided because it will generate more
   /// loads.
-  virtual bool hasPairedLoad(Type * /*LoadedType*/,
-                             unsigned & /*RequiredAligment*/) const {
-    return false;
-  }
-
   virtual bool hasPairedLoad(EVT /*LoadedType*/,
                              unsigned & /*RequiredAligment*/) const {
     return false;
@@ -1914,10 +1891,6 @@ public:
 
 private:
   const TargetMachine &TM;
-
-  /// Tells the code generator not to expand operations into sequences that use
-  /// the select operations if possible.
-  bool SelectIsExpensive;
 
   /// Tells the code generator that the target has multiple (allocatable)
   /// condition registers that can be used to store the results of comparisons

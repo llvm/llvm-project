@@ -309,8 +309,6 @@ public:
   bool isZExtFree(EVT VT1, EVT VT2) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
 
-  bool hasPairedLoad(Type *LoadedType,
-                     unsigned &RequiredAligment) const override;
   bool hasPairedLoad(EVT LoadedType, unsigned &RequiredAligment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }

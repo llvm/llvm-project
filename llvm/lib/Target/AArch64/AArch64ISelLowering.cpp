@@ -7058,16 +7058,6 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
   return true;
 }
 
-bool AArch64TargetLowering::hasPairedLoad(Type *LoadedType,
-                                          unsigned &RequiredAligment) const {
-  if (!LoadedType->isIntegerTy() && !LoadedType->isFloatTy())
-    return false;
-  // Cyclone supports unaligned accesses.
-  RequiredAligment = 0;
-  unsigned NumBits = LoadedType->getPrimitiveSizeInBits();
-  return NumBits == 32 || NumBits == 64;
-}
-
 bool AArch64TargetLowering::hasPairedLoad(EVT LoadedType,
                                           unsigned &RequiredAligment) const {
   if (!LoadedType.isSimple() ||

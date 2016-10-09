@@ -60,8 +60,7 @@ cl::opt<OutputType> InterpreterSel(
                           "compile the bitcode. Useful to avoid linking."),
                clEnumValN(Custom, "run-custom",
                           "Use -exec-command to define a command to execute "
-                          "the bitcode. Useful for cross-compilation."),
-               clEnumValEnd),
+                          "the bitcode. Useful for cross-compilation.")),
     cl::init(AutoPick));
 
 cl::opt<OutputType> SafeInterpreterSel(
@@ -70,8 +69,7 @@ cl::opt<OutputType> SafeInterpreterSel(
                clEnumValN(RunLLC, "safe-run-llc", "Compile with LLC"),
                clEnumValN(Custom, "safe-run-custom",
                           "Use -exec-command to define a command to execute "
-                          "the bitcode. Useful for cross-compilation."),
-               clEnumValEnd),
+                          "the bitcode. Useful for cross-compilation.")),
     cl::init(AutoPick));
 
 cl::opt<std::string> SafeInterpreterPath(

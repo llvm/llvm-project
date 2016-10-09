@@ -102,8 +102,7 @@ cl::opt<ThinLTOModes> ThinLTOMode(
                    "(requires -thinlto-index)."),
         clEnumValN(THINOPT, "optimize", "Perform ThinLTO optimizations."),
         clEnumValN(THINCODEGEN, "codegen", "CodeGen (expected to match llc)"),
-        clEnumValN(THINALL, "run", "Perform ThinLTO end-to-end"),
-        clEnumValEnd));
+        clEnumValN(THINALL, "run", "Perform ThinLTO end-to-end")));
 
 static cl::opt<std::string>
     ThinLTOIndex("thinlto-index",

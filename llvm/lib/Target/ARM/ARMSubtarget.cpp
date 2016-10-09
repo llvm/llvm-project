@@ -59,8 +59,7 @@ IT(cl::desc("IT block support"), cl::Hidden, cl::init(DefaultIT),
               clEnumValN(RestrictedIT, "arm-restrict-it",
                          "Disallow deprecated IT based on ARMv8"),
               clEnumValN(NoRestrictedIT, "arm-no-restrict-it",
-                         "Allow IT blocks based on ARMv7"),
-              clEnumValEnd));
+                         "Allow IT blocks based on ARMv7")));
 
 /// ForceFastISel - Use the fast-isel, even for subtargets where it is not
 /// currently supported (for testing only).

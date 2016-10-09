@@ -447,11 +447,6 @@ public:
   virtual const MCPhysReg*
   getCalleeSavedRegs(const MachineFunction *MF) const = 0;
 
-  virtual const MCPhysReg*
-  getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
-    return nullptr;
-  }
-
   /// Return a mask of call-preserved registers for the given calling convention
   /// on the current function. The mask should include all call-preserved
   /// aliases. This is used by the register allocator to determine which

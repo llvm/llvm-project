@@ -326,7 +326,7 @@ public:
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
 
   StringRef getToken() const {
     assert(Kind == k_Token && "Invalid access!");
