@@ -185,7 +185,19 @@ __DEVICE__ float tgamma(float);
 __DEVICE__ double trunc(double);
 __DEVICE__ float trunc(float);
 
+// We need to define these overloads in exactly the namespace our standard
+// library uses (including the right inline namespace), otherwise they won't be
+// picked up by other functions in the standard library (e.g. functions in
+// <complex>).  Thus the ugliness below.
+#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_NAMESPACE_STD
+#else
 namespace std {
+#ifdef _GLIBCXX_BEGIN_NAMESPACE_VERSION
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+#endif
+#endif
+
 using ::abs;
 using ::acos;
 using ::acosh;
@@ -259,7 +271,15 @@ using ::tan;
 using ::tanh;
 using ::tgamma;
 using ::trunc;
+
+#ifdef _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_NAMESPACE_STD
+#else
+#ifdef _GLIBCXX_BEGIN_NAMESPACE_VERSION
+_GLIBCXX_END_NAMESPACE_VERSION
+#endif
 } // namespace std
+#endif
 
 #pragma pop_macro("__DEVICE__")
 

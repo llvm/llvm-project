@@ -580,7 +580,11 @@ namespace clang {
       MSSTRUCT_PRAGMA_OPTIONS = 55,
 
       /// \brief Record code for \#pragma ms_struct options.
-      POINTERS_TO_MEMBERS_PRAGMA_OPTIONS = 56
+      POINTERS_TO_MEMBERS_PRAGMA_OPTIONS = 56,
+
+      /// \brief Number of unmatched #pragma clang cuda_force_host_device begin
+      /// directives we've seen.
+      CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH = 57,
     };
 
     /// \brief Record types used within a source manager block.

@@ -1069,6 +1069,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(POINTERS_TO_MEMBERS_PRAGMA_OPTIONS);
   RECORD(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES);
   RECORD(DELETE_EXPRS_TO_ANALYZE);
+  RECORD(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -3942,6 +3943,13 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
 
+void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
+  if (SemaRef.ForceCUDAHostDeviceDepth > 0) {
+    RecordData::value_type Record[] = {SemaRef.ForceCUDAHostDeviceDepth};
+    Stream.EmitRecord(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH, Record);
+  }
+}
+
 void ASTWriter::WriteObjCCategories() {
   SmallVector<ObjCCategoriesInfo, 2> CategoriesMap;
   RecordData Categories;
@@ -4619,6 +4627,7 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteIdentifierTable(PP, SemaRef.IdResolver, isModule);
   WriteFPPragmaOptions(SemaRef.getFPOptions());
   WriteOpenCLExtensions(SemaRef);
+  WriteCUDAPragmas(SemaRef);
   WritePragmaDiagnosticMappings(Context.getDiagnostics(), isModule);
 
   // If we're emitting a module, write out the submodule information.  

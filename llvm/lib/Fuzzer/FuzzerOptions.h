@@ -32,7 +32,7 @@ struct FuzzingOptions {
   bool UseMemmem = true;
   bool UseValueProfile = false;
   bool Shrink = false;
-  bool Reload = true;
+  int ReloadIntervalSec = 1;
   bool ShuffleAtStartUp = true;
   bool PreferSmall = true;
   size_t MaxNumberOfRuns = -1L;

@@ -3275,6 +3275,14 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         UnusedLocalTypedefNameCandidates.push_back(
             getGlobalDeclID(F, Record[I]));
       break;
+
+    case CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH:
+      if (Record.size() != 1) {
+        Error("invalid cuda pragma options record");
+        return Failure;
+      }
+      ForceCUDAHostDeviceDepth = Record[0];
+      break;
     }
   }
 }
@@ -7128,6 +7136,7 @@ void ASTReader::UpdateSema() {
             PragmaMSPointersToMembersState,
         PointersToMembersPragmaLocation);
   }
+  SemaObj->ForceCUDAHostDeviceDepth = ForceCUDAHostDeviceDepth;
 }
 
 IdentifierInfo *ASTReader::get(StringRef Name) {
