@@ -22,12 +22,15 @@ set(files
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
+  __clang_cuda_builtin_vars.h
   __clang_cuda_cmath.h
+  __clang_cuda_complex_builtins.h
   __clang_cuda_intrinsics.h
   __clang_cuda_math_forward_declares.h
   __clang_cuda_runtime_wrapper.h
   cpuid.h
-  cuda_builtin_vars.h
+  cuda_wrappers/algorithm
+  cuda_wrappers/complex
   clflushoptintrin.h
   emmintrin.h
   f16cintrin.h

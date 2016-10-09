@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 "-triple" "nvptx-nvidia-cuda" -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
 
-#include "cuda_builtin_vars.h"
+#include "__clang_cuda_builtin_vars.h"
 
 // CHECK: define void @_Z6kernelPi(i32* %out)
 __attribute__((global))

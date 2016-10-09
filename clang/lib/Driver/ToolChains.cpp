@@ -4694,6 +4694,15 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                ArgStringList &CC1Args) const {
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    // Add cuda_wrappers/* to our system include path.  This lets us wrap
+    // standard library headers.
+    SmallString<128> P(getDriver().ResourceDir);
+    llvm::sys::path::append(P, "include");
+    llvm::sys::path::append(P, "cuda_wrappers");
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
+
   if (DriverArgs.hasArg(options::OPT_nocudainc))
     return;
 

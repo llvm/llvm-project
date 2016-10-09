@@ -9219,6 +9219,20 @@ public:
                             QualType FieldTy, bool IsMsStruct,
                             Expr *BitWidth, bool *ZeroWidth = nullptr);
 
+private:
+  unsigned ForceCUDAHostDeviceDepth = 0;
+
+public:
+  /// Increments our count of the number of times we've seen a pragma forcing
+  /// functions to be __host__ __device__.  So long as this count is greater
+  /// than zero, all functions encountered will be __host__ __device__.
+  void PushForceCUDAHostDevice();
+
+  /// Decrements our count of the number of times we've seen a pragma forcing
+  /// functions to be __host__ __device__.  Returns false if the count is 0
+  /// before incrementing, so you can emit an error.
+  bool PopForceCUDAHostDevice();
+
   enum CUDAFunctionTarget {
     CFT_Device,
     CFT_Global,
