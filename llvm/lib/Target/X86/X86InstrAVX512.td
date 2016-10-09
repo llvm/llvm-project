@@ -7552,13 +7552,28 @@ multiclass expand_by_vec_width<bits<8> opc, X86VectorVTInfo _,
             AVX5128IBase, EVEX_CD8<_.EltSize, CD8VT1>;
 }
 
+multiclass expand_by_vec_width_lowering<X86VectorVTInfo _ > {
+
+  def : Pat<(_.VT (X86mExpandingLoad addr:$src, _.KRCWM:$mask, undef)),
+            (!cast<Instruction>(NAME#_.ZSuffix##rmkz)
+                                        _.KRCWM:$mask, addr:$src)>;
+
+  def : Pat<(_.VT (X86mExpandingLoad addr:$src, _.KRCWM:$mask,
+                                               (_.VT _.RC:$src0))),
+            (!cast<Instruction>(NAME#_.ZSuffix##rmk)
+                            _.RC:$src0, _.KRCWM:$mask, addr:$src)>;
+}
+
 multiclass expand_by_elt_width<bits<8> opc, string OpcodeStr,
                                  AVX512VLVectorVTInfo VTInfo> {
-  defm Z : expand_by_vec_width<opc, VTInfo.info512, OpcodeStr>, EVEX_V512;
+  defm Z : expand_by_vec_width<opc, VTInfo.info512, OpcodeStr>,
+           expand_by_vec_width_lowering<VTInfo.info512>, EVEX_V512;
 
   let Predicates = [HasVLX] in {
-    defm Z256 : expand_by_vec_width<opc, VTInfo.info256, OpcodeStr>, EVEX_V256;
-    defm Z128 : expand_by_vec_width<opc, VTInfo.info128, OpcodeStr>, EVEX_V128;
+    defm Z256 : expand_by_vec_width<opc, VTInfo.info256, OpcodeStr>,
+                expand_by_vec_width_lowering<VTInfo.info256>, EVEX_V256;
+    defm Z128 : expand_by_vec_width<opc, VTInfo.info128, OpcodeStr>,
+                expand_by_vec_width_lowering<VTInfo.info128>, EVEX_V128;
   }
 }
 

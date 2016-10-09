@@ -919,30 +919,36 @@ def vinsert256_insert : PatFrag<(ops node:$bigvec, node:$smallvec,
   return X86::isVINSERT256Index(N);
 }], INSERT_get_vinsert256_imm>;
 
-def masked_load_aligned128 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+def X86mload : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                          (masked_load node:$src1, node:$src2, node:$src3), [{
-  if (auto *Load = dyn_cast<MaskedLoadSDNode>(N))
-    return Load->getAlignment() >= 16;
-  return false;
+  return !cast<MaskedLoadSDNode>(N)->isExpandingLoad() &&
+    cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
+}]>;
+
+def masked_load_aligned128 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                         (X86mload node:$src1, node:$src2, node:$src3), [{
+  return cast<MaskedLoadSDNode>(N)->getAlignment() >= 16;
 }]>;
 
 def masked_load_aligned256 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                         (masked_load node:$src1, node:$src2, node:$src3), [{
-  if (auto *Load = dyn_cast<MaskedLoadSDNode>(N))
-    return Load->getAlignment() >= 32;
-  return false;
+                         (X86mload node:$src1, node:$src2, node:$src3), [{
+  return cast<MaskedLoadSDNode>(N)->getAlignment() >= 32;
 }]>;
 
 def masked_load_aligned512 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                         (masked_load node:$src1, node:$src2, node:$src3), [{
-  if (auto *Load = dyn_cast<MaskedLoadSDNode>(N))
-    return Load->getAlignment() >= 64;
-  return false;
+                         (X86mload node:$src1, node:$src2, node:$src3), [{
+  return cast<MaskedLoadSDNode>(N)->getAlignment() >= 64;
 }]>;
 
 def masked_load_unaligned : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                          (masked_load node:$src1, node:$src2, node:$src3), [{
-  return isa<MaskedLoadSDNode>(N);
+  return !cast<MaskedLoadSDNode>(N)->isExpandingLoad() &&
+    cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
+}]>;
+
+def X86mExpandingLoad : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                         (masked_load node:$src1, node:$src2, node:$src3), [{
+  return cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 // Masked store fragments.
