@@ -316,7 +316,19 @@ scalbn(__T __x, int __exp) {
   return std::scalbn((double)__x, __exp);
 }
 
+// We need to define these overloads in exactly the namespace our standard
+// library uses (including the right inline namespace), otherwise they won't be
+// picked up by other functions in the standard library (e.g. functions in
+// <complex>).  Thus the ugliness below.
+#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_NAMESPACE_STD
+#else
 namespace std {
+#ifdef _GLIBCXX_BEGIN_NAMESPACE_VERSION
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+#endif
+#endif
+
 // Pull the new overloads we defined above into namespace std.
 using ::acos;
 using ::acosh;
@@ -451,7 +463,15 @@ using ::tanf;
 using ::tanhf;
 using ::tgammaf;
 using ::truncf;
-}
+
+#ifdef _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_NAMESPACE_STD
+#else
+#ifdef _GLIBCXX_BEGIN_NAMESPACE_VERSION
+_GLIBCXX_END_NAMESPACE_VERSION
+#endif
+} // namespace std
+#endif
 
 #undef __DEVICE__
 
