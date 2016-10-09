@@ -244,10 +244,15 @@ endif()
 if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
   # is a target name and not a library. Ex cxxabi_shared.
-  set(SCRIPT_ABI_LIBNAME "${LIBCXX_CXX_ABI_LIBRARY}")
-  if (SCRIPT_ABI_LIBNAME STREQUAL "cxxabi_shared")
-    set(SCRIPT_ABI_LIBNAME "c++abi")
-  endif()
+  set(LIBCXX_LIBRARIES_PUBLIC_NAMES)
+  foreach(lib ${LIBCXX_LIBRARIES_PUBLIC})
+    if (lib STREQUAL "cxxabi_shared")
+      list(APPEND LIBCXX_LIBRARIES_PUBLIC_NAMES "c++abi")
+    else()
+      list(APPEND LIBCXX_LIBRARIES_PUBLIC_NAMES "${lib}")
+    endif()
+  endforeach()
+
   # Generate a linker script inplace of a libc++.so symlink. Rerun this command
   # after cxx builds.
   add_custom_command(TARGET cxx_shared POST_BUILD
@@ -255,7 +260,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
       ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
     ARGS
       "$<TARGET_LINKER_FILE:cxx_shared>"
-      "\"${LIBCXX_LIBRARIES_PUBLIC}\""
+      "\"${LIBCXX_LIBRARIES_PUBLIC_NAMES}\""
     WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
   )
 endif()
