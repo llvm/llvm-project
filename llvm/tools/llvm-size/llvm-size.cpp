@@ -40,14 +40,14 @@ static cl::opt<OutputFormatTy>
 OutputFormat("format", cl::desc("Specify output format"),
              cl::values(clEnumVal(sysv, "System V format"),
                         clEnumVal(berkeley, "Berkeley format"),
-                        clEnumVal(darwin, "Darwin -m format"), clEnumValEnd),
+                        clEnumVal(darwin, "Darwin -m format")),
              cl::init(berkeley));
 
 static cl::opt<OutputFormatTy> OutputFormatShort(
     cl::desc("Specify output format"),
     cl::values(clEnumValN(sysv, "A", "System V format"),
                clEnumValN(berkeley, "B", "Berkeley format"),
-               clEnumValN(darwin, "m", "Darwin -m format"), clEnumValEnd),
+               clEnumValN(darwin, "m", "Darwin -m format")),
     cl::init(berkeley));
 
 static bool BerkeleyHeaderPrinted = false;
@@ -81,8 +81,7 @@ static cl::opt<RadixTy>
 RadixShort(cl::desc("Print size in radix:"),
            cl::values(clEnumValN(octal, "o", "Print size in octal"),
                       clEnumValN(decimal, "d", "Print size in decimal"),
-                      clEnumValN(hexadecimal, "x", "Print size in hexadecimal"),
-                      clEnumValEnd),
+                      clEnumValN(hexadecimal, "x", "Print size in hexadecimal")),
            cl::init(decimal));
 
 static cl::opt<bool>

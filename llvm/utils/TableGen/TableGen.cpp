@@ -91,8 +91,7 @@ namespace {
                     clEnumValN(GenAttributes, "gen-attrs",
                                "Generate attributes"),
                     clEnumValN(GenSearchableTables, "gen-searchable-tables",
-                               "Generate generic binary-searchable table"),
-                    clEnumValEnd));
+                               "Generate generic binary-searchable table")));
 
   cl::opt<std::string>
   Class("class", cl::desc("Print Enum list for this class"),

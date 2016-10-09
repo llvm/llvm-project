@@ -31,8 +31,7 @@ Action(cl::desc("Action to perform:"),
        cl::values(clEnumValN(AC_Assemble, "assemble",
                              "Assemble a .s file (default)"),
                   clEnumValN(AC_Disassemble, "disassemble",
-                             "Disassemble strings of hex bytes"),
-                  clEnumValEnd));
+                             "Disassemble strings of hex bytes")));
 
 static cl::opt<std::string>
     TripleName("triple", cl::desc("Target triple to assemble for, "

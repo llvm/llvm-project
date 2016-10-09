@@ -93,7 +93,7 @@ static cl::opt<Format>
     FormatOpt("format", cl::desc("Archive format to create"),
               cl::values(clEnumValN(Default, "default", "default"),
                          clEnumValN(GNU, "gnu", "gnu"),
-                         clEnumValN(BSD, "bsd", "bsd"), clEnumValEnd));
+                         clEnumValN(BSD, "bsd", "bsd")));
 
 static std::string Options;
 

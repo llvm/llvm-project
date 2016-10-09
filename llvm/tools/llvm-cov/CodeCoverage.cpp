@@ -485,8 +485,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::values(clEnumValN(CoverageViewOptions::OutputFormat::Text, "text",
                             "Text output"),
                  clEnumValN(CoverageViewOptions::OutputFormat::HTML, "html",
-                            "HTML output"),
-                 clEnumValEnd),
+                            "HTML output")),
       cl::init(CoverageViewOptions::OutputFormat::Text));
 
   cl::opt<bool> FilenameEquivalence(

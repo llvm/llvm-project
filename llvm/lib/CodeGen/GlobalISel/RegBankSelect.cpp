@@ -33,8 +33,7 @@ static cl::opt<RegBankSelect::Mode> RegBankSelectMode(
     cl::values(clEnumValN(RegBankSelect::Mode::Fast, "regbankselect-fast",
                           "Run the Fast mode (default mapping)"),
                clEnumValN(RegBankSelect::Mode::Greedy, "regbankselect-greedy",
-                          "Use the Greedy mode (best local mapping)"),
-               clEnumValEnd));
+                          "Use the Greedy mode (best local mapping)")));
 
 char RegBankSelect::ID = 0;
 INITIALIZE_PASS_BEGIN(RegBankSelect, DEBUG_TYPE,

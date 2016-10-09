@@ -264,7 +264,7 @@ namespace opts {
   cl::opt<OutputStyleTy>
       Output("elf-output-style", cl::desc("Specify ELF dump style"),
              cl::values(clEnumVal(LLVM, "LLVM default style"),
-                        clEnumVal(GNU, "GNU readelf style"), clEnumValEnd),
+                        clEnumVal(GNU, "GNU readelf style")),
              cl::init(LLVM));
 } // namespace opts
 

@@ -79,8 +79,7 @@ static cl::opt<ReplaceExitVal> ReplaceExitValue(
                clEnumValN(OnlyCheapRepl, "cheap",
                           "only replace exit value when the cost is cheap"),
                clEnumValN(AlwaysRepl, "always",
-                          "always replace exit value whenever possible"),
-               clEnumValEnd));
+                          "always replace exit value whenever possible")));
 
 namespace {
 struct RewritePhi;

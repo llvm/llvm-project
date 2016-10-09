@@ -61,8 +61,7 @@ static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
     cl::desc("Spill mode for splitting live ranges"),
     cl::values(clEnumValN(SplitEditor::SM_Partition, "default", "Default"),
                clEnumValN(SplitEditor::SM_Size, "size", "Optimize for size"),
-               clEnumValN(SplitEditor::SM_Speed, "speed", "Optimize for speed"),
-               clEnumValEnd),
+               clEnumValN(SplitEditor::SM_Speed, "speed", "Optimize for speed")),
     cl::init(SplitEditor::SM_Speed));
 
 static cl::opt<unsigned>

@@ -401,7 +401,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.Shrink = Flags.shrink;
   Options.ShuffleAtStartUp = Flags.shuffle;
   Options.PreferSmall = Flags.prefer_small;
-  Options.Reload = Flags.reload;
+  Options.ReloadIntervalSec = Flags.reload;
   Options.OnlyASCII = Flags.only_ascii;
   Options.OutputCSV = Flags.output_csv;
   Options.DetectLeaks = Flags.detect_leaks;
@@ -443,7 +443,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   Random Rand(Seed);
   MutationDispatcher MD(Rand, Options);
-  InputCorpus Corpus;
+  InputCorpus Corpus(Options.OutputCorpus);
   Fuzzer F(Callback, Corpus, MD, Options);
 
   for (auto &U: Dictionary)
@@ -500,7 +500,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   UnitVector InitialCorpus;
   for (auto &Inp : *Inputs) {
     Printf("Loading corpus dir: %s\n", Inp.c_str());
-    ReadDirToVectorOfUnits(Inp.c_str(), &InitialCorpus, nullptr, TemporaryMaxLen);
+    ReadDirToVectorOfUnits(Inp.c_str(), &InitialCorpus, nullptr,
+                           TemporaryMaxLen, /*ExitOnError=*/false);
   }
 
   if (Options.MaxLen == 0) {

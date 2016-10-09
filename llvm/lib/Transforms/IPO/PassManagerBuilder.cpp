@@ -92,8 +92,7 @@ static cl::opt<CFLAAType>
                         clEnumValN(CFLAAType::Andersen, "anders",
                                    "Enable inclusion-based CFL-AA"),
                         clEnumValN(CFLAAType::Both, "both",
-                                   "Enable both variants of CFL-AA"),
-                        clEnumValEnd));
+                                   "Enable both variants of CFL-AA")));
 
 static cl::opt<bool>
 EnableMLSM("mlsm", cl::init(true), cl::Hidden,

@@ -51,10 +51,10 @@ struct Instruction {
   }
 };
 
-class UnwindEmitter : public WinEH::UnwindEmitter {
+class UnwindEmitter {
 public:
-  void Emit(MCStreamer &Streamer) const override;
-  void EmitUnwindInfo(MCStreamer &Streamer, WinEH::FrameInfo *FI) const override;
+  void Emit(MCStreamer &Streamer) const;
+  void EmitUnwindInfo(MCStreamer &Streamer, WinEH::FrameInfo *FI) const;
 };
 }
 } // end namespace llvm
