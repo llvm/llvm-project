@@ -923,23 +923,26 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
                                target->GetArchitecture().GetAddressByteSize());
 
       RegisterValue r2_value, r3_value, f0_value, f1_value, f2_value;
+      // Tracks how much bytes of r2 and r3 registers we've consumed so far
+      uint32_t integer_bytes = 0;
 
-      uint32_t integer_bytes = 0; // Tracks how much bytes of r2 and r3
-                                  // registers we've consumed so far
-      bool use_fp_regs = 0; // True if return values are in FP return registers.
-      bool found_non_fp_field =
-          0; // True if we found any non floating point field in structure.
-      bool use_r2 = 0; // True if return values are in r2 register.
-      bool use_r3 = 0; // True if return values are in r3 register.
-      bool sucess = 0; // True if the result is copied into our data buffer
+      // True if return values are in FP return registers.
+      bool use_fp_regs = 0;
+      // True if we found any non floating point field in structure.
+      bool found_non_fp_field = 0;
+      // True if return values are in r2 register.
+      bool use_r2 = 0;
+      // True if return values are in r3 register.
+      bool use_r3 = 0;
+      // True if the result is copied into our data buffer
+      bool sucess = 0;
       std::string name;
       bool is_complex;
       uint32_t count;
       const uint32_t num_children = return_compiler_type.GetNumFields();
 
       // A structure consisting of one or two FP values (and nothing else) will
-      // be
-      // returned in the two FP return-value registers i.e fp0 and fp2.
+      // be returned in the two FP return-value registers i.e fp0 and fp2.
       if (num_children <= 2) {
         uint64_t field_bit_offset = 0;
 
@@ -967,7 +970,6 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
           reg_ctx->ReadRegister(f2_info, f2_value);
 
           f0_value.GetData(f0_data);
-          f2_value.GetData(f2_data);
 
           for (uint32_t idx = 0; idx < num_children; idx++) {
             CompilerType field_compiler_type =
@@ -977,30 +979,40 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
                 field_compiler_type.GetByteSize(nullptr);
 
             DataExtractor *copy_from_extractor = nullptr;
+            uint64_t return_value[2];
+            offset_t offset = 0;
 
             if (idx == 0) {
-              if (field_byte_width == 16) // This case is for long double type.
-              {
+              // This case is for long double type.
+              if (field_byte_width == 16) {
+
                 // If structure contains long double type, then it is returned
                 // in fp0/fp1 registers.
-                reg_ctx->ReadRegister(f1_info, f1_value);
-                f1_value.GetData(f1_data);
-
                 if (target_byte_order == eByteOrderLittle) {
-                  f0_data.Append(f1_data);
-                  copy_from_extractor = &f0_data;
+                  return_value[0] = f0_data.GetU64(&offset);
+                  reg_ctx->ReadRegister(f1_info, f1_value);
+                  f1_value.GetData(f1_data);
+                  offset = 0;
+                  return_value[1] = f1_data.GetU64(&offset);
                 } else {
-                  f1_data.Append(f0_data);
-                  copy_from_extractor = &f1_data;
+                  return_value[1] = f0_data.GetU64(&offset);
+                  reg_ctx->ReadRegister(f1_info, f1_value);
+                  f1_value.GetData(f1_data);
+                  offset = 0;
+                  return_value[0] = f1_data.GetU64(&offset);
                 }
-              } else
-                copy_from_extractor = &f0_data; // This is in f0, copy from
-                                                // register to our result
-                                                // structure
-            } else
-              copy_from_extractor = &f2_data; // This is in f2, copy from
+
+                f0_data.SetData(return_value, field_byte_width,
+                                target_byte_order);
+              }
+              copy_from_extractor = &f0_data; // This is in f0, copy from
                                               // register to our result
                                               // structure
+            } else {
+              f2_value.GetData(f2_data);
+              // This is in f2, copy from register to our result structure
+              copy_from_extractor = &f2_data;
+            }
 
             // Sanity check to avoid crash
             if (!copy_from_extractor ||

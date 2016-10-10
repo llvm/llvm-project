@@ -132,6 +132,15 @@ InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) const {
   return getOffset(Sym.Value);
 }
 
+template<class ELFT>
+InputSectionBase<ELFT>*
+InputSectionBase<ELFT>::getLinkOrderDep() const {
+  const Elf_Shdr *Hdr = getSectionHdr();
+  if ((Hdr->sh_flags & SHF_LINK_ORDER) && Hdr->sh_link != 0)
+    return getFile()->getSections()[Hdr->sh_link];
+  return nullptr;
+}
+
 template <class ELFT>
 InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
                                  const Elf_Shdr *Header, StringRef Name)
