@@ -90,7 +90,7 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
                                                unsigned CVRQualifiers,
                                                llvm::Value *Offset) {
   // Compute (type*) ( (char *) BaseValue + Offset)
-  QualType IvarTy = Ivar->getType();
+  QualType IvarTy = Ivar->getType().withCVRQualifiers(CVRQualifiers);
   llvm::Type *LTy = CGF.CGM.getTypes().ConvertTypeForMem(IvarTy);
   llvm::Value *V = CGF.Builder.CreateBitCast(BaseValue, CGF.Int8PtrTy);
   V = CGF.Builder.CreateInBoundsGEP(V, Offset, "add.ptr");
@@ -98,7 +98,6 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
   if (!Ivar->isBitField()) {
     V = CGF.Builder.CreateBitCast(V, llvm::PointerType::getUnqual(LTy));
     LValue LV = CGF.MakeNaturalAlignAddrLValue(V, IvarTy);
-    LV.getQuals().addCVRQualifiers(CVRQualifiers);
     return LV;
   }
 
@@ -139,9 +138,7 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
   Addr = CGF.Builder.CreateElementBitCast(Addr,
                                    llvm::Type::getIntNTy(CGF.getLLVMContext(),
                                                          Info->StorageSize));
-  return LValue::MakeBitfield(Addr, *Info,
-                              IvarTy.withCVRQualifiers(CVRQualifiers),
-                              AlignmentSource::Decl);
+  return LValue::MakeBitfield(Addr, *Info, IvarTy, AlignmentSource::Decl);
 }
 
 namespace {

@@ -656,7 +656,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
     if (!FirstPTLoad->Last)
       FirstPTLoad->Last = Out<ELFT>::ProgramHeaders;
   } else if (!FirstPTLoad->First) {
-    // Sometimes the very first PT_LOAD segment can be empty. 
+    // Sometimes the very first PT_LOAD segment can be empty.
     // This happens if (all conditions met):
     //  - Linker script is used
     //  - First section in ELF image is not RO

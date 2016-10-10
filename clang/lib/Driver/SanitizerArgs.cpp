@@ -559,14 +559,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         D.Diag(clang::diag::note_drv_address_sanitizer_debug_runtime);
       }
     }
-  }
 
-  AsanUseAfterScope =
-      Args.hasArg(options::OPT_fsanitize_address_use_after_scope);
-  if (AsanUseAfterScope && !(AllAddedKinds & Address)) {
-    D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-        << "-fsanitize-address-use-after-scope"
-        << "-fsanitize=address";
+    if (Arg *A = Args.getLastArg(
+            options::OPT_fsanitize_address_use_after_scope,
+            options::OPT_fno_sanitize_address_use_after_scope)) {
+      AsanUseAfterScope = A->getOption().getID() ==
+                          options::OPT_fsanitize_address_use_after_scope;
+    }
   }
 
   // Parse -link-cxx-sanitizer flag.

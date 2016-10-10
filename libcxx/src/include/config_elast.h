@@ -20,6 +20,8 @@
 #define _LIBCPP_ELAST ELAST
 #elif defined(_NEWLIB_VERSION)
 #define _LIBCPP_ELAST __ELASTERROR
+#elif defined(__Fuchsia__)
+// No _LIBCPP_ELAST needed on Fuchsia
 #elif defined(__linux__)
 #define _LIBCPP_ELAST 4095
 #elif defined(__APPLE__)

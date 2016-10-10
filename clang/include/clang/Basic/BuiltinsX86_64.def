@@ -20,6 +20,11 @@
 
 TARGET_HEADER_BUILTIN(__mulh,  "LLiLLiLLi",    "nch", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_mul128, "LLiLLiLLiLLi*",      "nh",   "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_umul128, "ULLiULLiULLiULLi*", "nh",   "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__faststorefence, "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
 
 #undef BUILTIN
 #undef TARGET_HEADER_BUILTIN

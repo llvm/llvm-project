@@ -49,7 +49,6 @@ static void checkError(Error E) {
 
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config Conf;
-  lto::ThinBackend Backend;
 
   // LLD supports the new relocations.
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
@@ -68,6 +67,9 @@ static std::unique_ptr<lto::LTO> createLTO() {
     checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
                             /*UseInputModulePath*/ true));
 
+  lto::ThinBackend Backend;
+  if (Config->LtoJobs)
+    Backend = lto::createInProcessThinBackend(Config->LtoJobs);
   return llvm::make_unique<lto::LTO>(std::move(Conf), Backend, Config->LtoJobs);
 }
 

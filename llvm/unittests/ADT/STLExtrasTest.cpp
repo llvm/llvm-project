@@ -195,7 +195,7 @@ TEST(STLExtrasTest, EnumerateLifetimeSemantics) {
 
 TEST(STLExtrasTest, ApplyTuple) {
   auto T = std::make_tuple(1, 3, 7);
-  auto U = llvm::apply(
+  auto U = llvm::apply_tuple(
       [](int A, int B, int C) { return std::make_tuple(A - B, B - C, C - A); },
       T);
 
@@ -203,7 +203,7 @@ TEST(STLExtrasTest, ApplyTuple) {
   EXPECT_EQ(-4, std::get<1>(U));
   EXPECT_EQ(6, std::get<2>(U));
 
-  auto V = llvm::apply(
+  auto V = llvm::apply_tuple(
       [](int A, int B, int C) {
         return std::make_tuple(std::make_pair(A, char('A' + A)),
                                std::make_pair(B, char('A' + B)),
@@ -231,7 +231,7 @@ public:
 
 TEST(STLExtrasTest, ApplyTupleVariadic) {
   auto Items = std::make_tuple(1, llvm::StringRef("Test"), 'X');
-  auto Values = apply(apply_variadic(), Items);
+  auto Values = apply_tuple(apply_variadic(), Items);
 
   EXPECT_EQ(2, std::get<0>(Values));
   EXPECT_EQ("Tes", std::get<1>(Values));

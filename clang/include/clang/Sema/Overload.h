@@ -795,7 +795,9 @@ namespace clang {
                         OverloadCandidateDisplayKind OCD,
                         ArrayRef<Expr *> Args,
                         StringRef Opc = "",
-                        SourceLocation Loc = SourceLocation());
+                        SourceLocation Loc = SourceLocation(),
+                        llvm::function_ref<bool(OverloadCandidate&)> Filter =
+                          [](OverloadCandidate&) { return true; });
   };
 
   bool isBetterOverloadCandidate(Sema &S,
