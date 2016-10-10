@@ -35,9 +35,9 @@ class StringRef;
 class raw_pwrite_stream;
 class raw_ostream;
 
-extern Target ThePPC32Target;
-extern Target ThePPC64Target;
-extern Target ThePPC64LETarget;
+Target &getThePPC32Target();
+Target &getThePPC64Target();
+Target &getThePPC64LETarget();
 
 MCCodeEmitter *createPPCMCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,

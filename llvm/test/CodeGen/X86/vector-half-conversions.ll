@@ -1057,8 +1057,7 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    movq %rax, %rcx
@@ -2449,8 +2448,7 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    movq %rax, %rcx

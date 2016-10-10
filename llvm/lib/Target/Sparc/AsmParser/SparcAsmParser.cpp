@@ -1263,9 +1263,9 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
 }
 
 extern "C" void LLVMInitializeSparcAsmParser() {
-  RegisterMCAsmParser<SparcAsmParser> A(TheSparcTarget);
-  RegisterMCAsmParser<SparcAsmParser> B(TheSparcV9Target);
-  RegisterMCAsmParser<SparcAsmParser> C(TheSparcelTarget);
+  RegisterMCAsmParser<SparcAsmParser> A(getTheSparcTarget());
+  RegisterMCAsmParser<SparcAsmParser> B(getTheSparcV9Target());
+  RegisterMCAsmParser<SparcAsmParser> C(getTheSparcelTarget());
 }
 
 #define GET_REGISTER_MATCHER

@@ -51,10 +51,10 @@ EnableGlobalMerge("arm-global-merge", cl::Hidden,
 
 extern "C" void LLVMInitializeARMTarget() {
   // Register the target.
-  RegisterTargetMachine<ARMLETargetMachine> X(TheARMLETarget);
-  RegisterTargetMachine<ARMBETargetMachine> Y(TheARMBETarget);
-  RegisterTargetMachine<ThumbLETargetMachine> A(TheThumbLETarget);
-  RegisterTargetMachine<ThumbBETargetMachine> B(TheThumbBETarget);
+  RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
+  RegisterTargetMachine<ARMBETargetMachine> Y(getTheARMBETarget());
+  RegisterTargetMachine<ThumbLETargetMachine> A(getTheThumbLETarget());
+  RegisterTargetMachine<ThumbBETargetMachine> B(getTheThumbBETarget());
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeARMLoadStoreOptPass(Registry);

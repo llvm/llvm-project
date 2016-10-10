@@ -86,7 +86,7 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
 }
 
 extern "C" void LLVMInitializeAMDGPUTargetMC() {
-  for (Target *T : {&TheAMDGPUTarget, &TheGCNTarget}) {
+  for (Target *T : {&getTheAMDGPUTarget(), &getTheGCNTarget()}) {
     RegisterMCAsmInfo<AMDGPUMCAsmInfo> X(*T);
 
     TargetRegistry::RegisterMCInstrInfo(*T, createAMDGPUMCInstrInfo);
@@ -98,14 +98,15 @@ extern "C" void LLVMInitializeAMDGPUTargetMC() {
   }
 
   // R600 specific registration
-  TargetRegistry::RegisterMCCodeEmitter(TheAMDGPUTarget,
+  TargetRegistry::RegisterMCCodeEmitter(getTheAMDGPUTarget(),
                                         createR600MCCodeEmitter);
 
   // GCN specific registration
-  TargetRegistry::RegisterMCCodeEmitter(TheGCNTarget, createSIMCCodeEmitter);
+  TargetRegistry::RegisterMCCodeEmitter(getTheGCNTarget(),
+                                        createSIMCCodeEmitter);
 
-  TargetRegistry::RegisterAsmTargetStreamer(TheGCNTarget,
+  TargetRegistry::RegisterAsmTargetStreamer(getTheGCNTarget(),
                                             createAMDGPUAsmTargetStreamer);
-  TargetRegistry::RegisterObjectTargetStreamer(TheGCNTarget,
-                                              createAMDGPUObjectTargetStreamer);
+  TargetRegistry::RegisterObjectTargetStreamer(
+      getTheGCNTarget(), createAMDGPUObjectTargetStreamer);
 }

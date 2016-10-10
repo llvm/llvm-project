@@ -237,18 +237,18 @@ createAArch64ExternalSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
 }
 
 extern "C" void LLVMInitializeAArch64Disassembler() {
-  TargetRegistry::RegisterMCDisassembler(TheAArch64leTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheAArch64leTarget(),
                                          createAArch64Disassembler);
-  TargetRegistry::RegisterMCDisassembler(TheAArch64beTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheAArch64beTarget(),
                                          createAArch64Disassembler);
-  TargetRegistry::RegisterMCSymbolizer(TheAArch64leTarget,
+  TargetRegistry::RegisterMCSymbolizer(getTheAArch64leTarget(),
                                        createAArch64ExternalSymbolizer);
-  TargetRegistry::RegisterMCSymbolizer(TheAArch64beTarget,
+  TargetRegistry::RegisterMCSymbolizer(getTheAArch64beTarget(),
                                        createAArch64ExternalSymbolizer);
 
-  TargetRegistry::RegisterMCDisassembler(TheARM64Target,
+  TargetRegistry::RegisterMCDisassembler(getTheARM64Target(),
                                          createAArch64Disassembler);
-  TargetRegistry::RegisterMCSymbolizer(TheARM64Target,
+  TargetRegistry::RegisterMCSymbolizer(getTheARM64Target(),
                                        createAArch64ExternalSymbolizer);
 }
 

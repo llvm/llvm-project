@@ -1980,9 +1980,9 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
 
 /// Force static initialization.
 extern "C" void LLVMInitializePowerPCAsmParser() {
-  RegisterMCAsmParser<PPCAsmParser> A(ThePPC32Target);
-  RegisterMCAsmParser<PPCAsmParser> B(ThePPC64Target);
-  RegisterMCAsmParser<PPCAsmParser> C(ThePPC64LETarget);
+  RegisterMCAsmParser<PPCAsmParser> A(getThePPC32Target());
+  RegisterMCAsmParser<PPCAsmParser> B(getThePPC64Target());
+  RegisterMCAsmParser<PPCAsmParser> C(getThePPC64LETarget());
 }
 
 #define GET_REGISTER_MATCHER

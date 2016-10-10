@@ -31,10 +31,10 @@ class Triple;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheMipsTarget;
-extern Target TheMipselTarget;
-extern Target TheMips64Target;
-extern Target TheMips64elTarget;
+Target &getTheMipsTarget();
+Target &getTheMipselTarget();
+Target &getTheMips64Target();
+Target &getTheMips64elTarget();
 
 MCCodeEmitter *createMipsMCCodeEmitterEB(const MCInstrInfo &MCII,
                                          const MCRegisterInfo &MRI,

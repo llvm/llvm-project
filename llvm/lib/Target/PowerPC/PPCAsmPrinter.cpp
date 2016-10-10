@@ -1447,7 +1447,10 @@ createPPCAsmPrinterPass(TargetMachine &tm,
 
 // Force static initialization.
 extern "C" void LLVMInitializePowerPCAsmPrinter() {
-  TargetRegistry::RegisterAsmPrinter(ThePPC32Target, createPPCAsmPrinterPass);
-  TargetRegistry::RegisterAsmPrinter(ThePPC64Target, createPPCAsmPrinterPass);
-  TargetRegistry::RegisterAsmPrinter(ThePPC64LETarget, createPPCAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getThePPC32Target(),
+                                     createPPCAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getThePPC64Target(),
+                                     createPPCAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getThePPC64LETarget(),
+                                     createPPCAsmPrinterPass);
 }

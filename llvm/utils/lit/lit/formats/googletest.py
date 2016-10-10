@@ -52,7 +52,6 @@ class GoogleTest(TestFormat):
                 # handle it here in case upstream googletest is being used.
                 continue
 
-            prefix = ''
             index = 0
             while ln[index*2:index*2+2] == '  ':
                 index += 1

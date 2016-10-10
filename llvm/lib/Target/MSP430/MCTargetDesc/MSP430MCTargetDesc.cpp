@@ -59,20 +59,21 @@ static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
 
 extern "C" void LLVMInitializeMSP430TargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfo<MSP430MCAsmInfo> X(TheMSP430Target);
+  RegisterMCAsmInfo<MSP430MCAsmInfo> X(getTheMSP430Target());
 
   // Register the MC instruction info.
-  TargetRegistry::RegisterMCInstrInfo(TheMSP430Target, createMSP430MCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheMSP430Target(),
+                                      createMSP430MCInstrInfo);
 
   // Register the MC register info.
-  TargetRegistry::RegisterMCRegInfo(TheMSP430Target,
+  TargetRegistry::RegisterMCRegInfo(getTheMSP430Target(),
                                     createMSP430MCRegisterInfo);
 
   // Register the MC subtarget info.
-  TargetRegistry::RegisterMCSubtargetInfo(TheMSP430Target,
+  TargetRegistry::RegisterMCSubtargetInfo(getTheMSP430Target(),
                                           createMSP430MCSubtargetInfo);
 
   // Register the MCInstPrinter.
-  TargetRegistry::RegisterMCInstPrinter(TheMSP430Target,
+  TargetRegistry::RegisterMCInstPrinter(getTheMSP430Target(),
                                         createMSP430MCInstPrinter);
 }

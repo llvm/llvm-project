@@ -74,9 +74,9 @@ EnableMachineCombinerPass("ppc-machine-combiner",
 
 extern "C" void LLVMInitializePowerPCTarget() {
   // Register the targets
-  RegisterTargetMachine<PPC32TargetMachine> A(ThePPC32Target);
-  RegisterTargetMachine<PPC64TargetMachine> B(ThePPC64Target);
-  RegisterTargetMachine<PPC64TargetMachine> C(ThePPC64LETarget);
+  RegisterTargetMachine<PPC32TargetMachine> A(getThePPC32Target());
+  RegisterTargetMachine<PPC64TargetMachine> B(getThePPC64Target());
+  RegisterTargetMachine<PPC64TargetMachine> C(getThePPC64LETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializePPCBoolRetToIntPass(PR);

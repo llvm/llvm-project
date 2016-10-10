@@ -42,7 +42,7 @@ static MCDisassembler *createSystemZDisassembler(const Target &T,
 
 extern "C" void LLVMInitializeSystemZDisassembler() {
   // Register the disassembler.
-  TargetRegistry::RegisterMCDisassembler(TheSystemZTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheSystemZTarget(),
                                          createSystemZDisassembler);
 }
 

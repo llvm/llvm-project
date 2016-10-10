@@ -1171,5 +1171,5 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
 
 // Force static initialization.
 extern "C" void LLVMInitializeSystemZAsmParser() {
-  RegisterMCAsmParser<SystemZAsmParser> X(TheSystemZTarget);
+  RegisterMCAsmParser<SystemZAsmParser> X(getTheSystemZTarget());
 }

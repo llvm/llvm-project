@@ -239,5 +239,5 @@ bool LanaiAsmPrinter::isBlockOnlyReachableByFallthrough(
 
 // Force static initialization.
 extern "C" void LLVMInitializeLanaiAsmPrinter() {
-  RegisterAsmPrinter<LanaiAsmPrinter> X(TheLanaiTarget);
+  RegisterAsmPrinter<LanaiAsmPrinter> X(getTheLanaiTarget());
 }

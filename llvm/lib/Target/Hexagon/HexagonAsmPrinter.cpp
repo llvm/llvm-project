@@ -600,5 +600,5 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 extern "C" void LLVMInitializeHexagonAsmPrinter() {
-  RegisterAsmPrinter<HexagonAsmPrinter> X(TheHexagonTarget);
+  RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());
 }

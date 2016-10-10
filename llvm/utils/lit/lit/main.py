@@ -28,7 +28,6 @@ class TestingProgressDisplay(object):
     def __init__(self, opts, numTests, progressBar=None):
         self.opts = opts
         self.numTests = numTests
-        self.current = None
         self.progressBar = progressBar
         self.completed = 0
 

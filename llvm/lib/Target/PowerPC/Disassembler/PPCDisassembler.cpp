@@ -51,11 +51,11 @@ static MCDisassembler *createPPCLEDisassembler(const Target &T,
 
 extern "C" void LLVMInitializePowerPCDisassembler() {
   // Register the disassembler for each target.
-  TargetRegistry::RegisterMCDisassembler(ThePPC32Target,
+  TargetRegistry::RegisterMCDisassembler(getThePPC32Target(),
                                          createPPCDisassembler);
-  TargetRegistry::RegisterMCDisassembler(ThePPC64Target,
+  TargetRegistry::RegisterMCDisassembler(getThePPC64Target(),
                                          createPPCDisassembler);
-  TargetRegistry::RegisterMCDisassembler(ThePPC64LETarget,
+  TargetRegistry::RegisterMCDisassembler(getThePPC64LETarget(),
                                          createPPCLEDisassembler);
 }
 
