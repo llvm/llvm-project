@@ -67,36 +67,35 @@ static cl::opt<PassPositionChoice> PassPosition(
         clEnumValN(POSITION_AFTER_LOOPOPT, "after-loopopt",
                    "After the loop optimizer (but within the inline cycle)"),
         clEnumValN(POSITION_BEFORE_VECTORIZER, "before-vectorizer",
-                   "Right before the vectorizer"),
-        clEnumValEnd),
+                   "Right before the vectorizer")),
     cl::Hidden, cl::init(POSITION_EARLY), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 
-static cl::opt<OptimizerChoice> Optimizer(
-    "polly-optimizer", cl::desc("Select the scheduling optimizer"),
-    cl::values(clEnumValN(OPTIMIZER_NONE, "none", "No optimizer"),
-               clEnumValN(OPTIMIZER_ISL, "isl", "The isl scheduling optimizer"),
-               clEnumValEnd),
-    cl::Hidden, cl::init(OPTIMIZER_ISL), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+static cl::opt<OptimizerChoice>
+    Optimizer("polly-optimizer", cl::desc("Select the scheduling optimizer"),
+              cl::values(clEnumValN(OPTIMIZER_NONE, "none", "No optimizer"),
+                         clEnumValN(OPTIMIZER_ISL, "isl",
+                                    "The isl scheduling optimizer")),
+              cl::Hidden, cl::init(OPTIMIZER_ISL), cl::ZeroOrMore,
+              cl::cat(PollyCategory));
 
 enum CodeGenChoice { CODEGEN_FULL, CODEGEN_AST, CODEGEN_NONE };
 static cl::opt<CodeGenChoice> CodeGeneration(
     "polly-code-generation", cl::desc("How much code-generation to perform"),
     cl::values(clEnumValN(CODEGEN_FULL, "full", "AST and IR generation"),
                clEnumValN(CODEGEN_AST, "ast", "Only AST generation"),
-               clEnumValN(CODEGEN_NONE, "none", "No code generation"),
-               clEnumValEnd),
+               clEnumValN(CODEGEN_NONE, "none", "No code generation")),
     cl::Hidden, cl::init(CODEGEN_FULL), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 enum TargetChoice { TARGET_CPU, TARGET_GPU };
 static cl::opt<TargetChoice>
     Target("polly-target", cl::desc("The hardware to target"),
-           cl::values(clEnumValN(TARGET_CPU, "cpu", "generate CPU code"),
+           cl::values(clEnumValN(TARGET_CPU, "cpu", "generate CPU code")
 #ifdef GPU_CODEGEN
-                      clEnumValN(TARGET_GPU, "gpu", "generate GPU code"),
+                          ,
+                      clEnumValN(TARGET_GPU, "gpu", "generate GPU code")
 #endif
-                      clEnumValEnd),
+                          ),
            cl::init(TARGET_CPU), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 VectorizerChoice polly::PollyVectorizerChoice;
@@ -106,9 +105,9 @@ static cl::opt<polly::VectorizerChoice, true> Vectorizer(
         clEnumValN(polly::VECTORIZER_NONE, "none", "No Vectorization"),
         clEnumValN(polly::VECTORIZER_POLLY, "polly",
                    "Polly internal vectorizer"),
-        clEnumValN(polly::VECTORIZER_STRIPMINE, "stripmine",
-                   "Strip-mine outer loops for the loop-vectorizer to trigger"),
-        clEnumValEnd),
+        clEnumValN(
+            polly::VECTORIZER_STRIPMINE, "stripmine",
+            "Strip-mine outer loops for the loop-vectorizer to trigger")),
     cl::location(PollyVectorizerChoice), cl::init(polly::VECTORIZER_NONE),
     cl::ZeroOrMore, cl::cat(PollyCategory));
 

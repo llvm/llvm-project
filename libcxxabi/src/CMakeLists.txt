@@ -54,14 +54,14 @@ if (LIBCXXABI_ENABLE_THREADS)
 endif()
 
 append_if(libraries LIBCXXABI_HAS_C_LIB c)
-
 if (LIBCXXABI_USE_LLVM_UNWINDER)
-  if (NOT LIBCXXABI_STANDALONE_BUILD)
-    if (LIBUNWIND_ENABLE_SHARED)
-      list(APPEND libraries unwind_shared)
-    else()
-      list(APPEND libraries unwind_static)
-    endif()
+  # Prefer using the in-tree version of libunwind, either shared or static. If
+  # none are found fall back to using -lunwind.
+  # FIXME: Is it correct to prefer the static version of libunwind?
+  if (TARGET unwind_shared)
+    list(APPEND libraries unwind_shared)
+  elseif(TARGET unwind_static)
+    list(APPEND libraries unwind_static)
   else()
     list(APPEND libraries unwind)
   endif()

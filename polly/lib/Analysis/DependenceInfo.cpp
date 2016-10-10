@@ -65,8 +65,7 @@ static cl::opt<enum AnalysisType> OptAnalysisType(
     cl::values(clEnumValN(VALUE_BASED_ANALYSIS, "value-based",
                           "Exact dependences without transitive dependences"),
                clEnumValN(MEMORY_BASED_ANALYSIS, "memory-based",
-                          "Overapproximation of dependences"),
-               clEnumValEnd),
+                          "Overapproximation of dependences")),
     cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 
@@ -80,8 +79,7 @@ static cl::opt<Dependences::AnalyisLevel> OptAnalysisLevel(
                           " accessed references in the same statement"),
                clEnumValN(Dependences::AL_Access, "access-wise",
                           "Memory reference level analysis that distinguish"
-                          " access instructions in the same statement"),
-               clEnumValEnd),
+                          " access instructions in the same statement")),
     cl::Hidden, cl::init(Dependences::AL_Statement), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 

@@ -33,9 +33,20 @@ add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}"
 
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
-add_library_flags_if(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "-Wl,--whole-archive" "-Wl,-Bstatic")
-add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
-add_library_flags_if(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "-Wl,-Bdynamic" "-Wl,--no-whole-archive")
+if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
+               LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
+  set(LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY ON)
+endif()
+
+if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+  add_library_flags("-Wl,--whole-archive" "-Wl,-Bstatic")
+  add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
+  add_library_flags("-Wl,-Bdynamic" "-Wl,--no-whole-archive")
+elseif (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
+  add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
+else ()
+ add_interface_library("${LIBCXX_CXX_ABI_LIBRARY}")
+endif()
 
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
@@ -67,7 +78,7 @@ if (APPLE AND LLVM_USE_SANITIZER)
   endif()
 endif()
 
-# Generate library list.
+# Generate private library list.
 add_library_flags_if(LIBCXX_HAS_PTHREAD_LIB pthread)
 add_library_flags_if(LIBCXX_HAS_C_LIB c)
 add_library_flags_if(LIBCXX_HAS_M_LIB m)
@@ -75,14 +86,24 @@ add_library_flags_if(LIBCXX_HAS_RT_LIB rt)
 add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
+# Add the unwinder library.
+if (LIBCXXABI_USE_LLVM_UNWINDER)
+  if (TARGET unwind_shared)
+    add_interface_library(unwind_shared)
+  elseif (TARGET unwind_static)
+    add_interface_library(unwind_static)
+  else()
+    add_interface_library(unwind)
+  endif()
+endif()
+
 # Setup flags.
 if (NOT WIN32)
   add_flags_if_supported(-fPIC)
 endif()
 add_link_flags_if_supported(-nodefaultlibs)
 
-if ( APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
-                LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
+if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)
     set(LIBCXX_LIBCPPABI_VERSION "2") # Default value
     execute_process(
@@ -227,10 +248,16 @@ endif()
 if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
   # is a target name and not a library. Ex cxxabi_shared.
-  set(SCRIPT_ABI_LIBNAME "${LIBCXX_CXX_ABI_LIBRARY}")
-  if (SCRIPT_ABI_LIBNAME STREQUAL "cxxabi_shared")
-    set(SCRIPT_ABI_LIBNAME "c++abi")
-  endif()
+  set(LIBCXX_INTERFACE_LIBRARY_NAMES)
+  foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
+    # FIXME: Handle cxxabi_static and unwind_static.
+    if (TARGET ${lib})
+      list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
+    else()
+      list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")
+    endif()
+  endforeach()
+  #split_list(LIBCXX_INTERFACE_LIBRARY_NAMES)
   # Generate a linker script inplace of a libc++.so symlink. Rerun this command
   # after cxx builds.
   add_custom_command(TARGET cxx_shared POST_BUILD
@@ -238,7 +265,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
       ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
     ARGS
       "$<TARGET_LINKER_FILE:cxx_shared>"
-      "${SCRIPT_ABI_LIBNAME}"
+      ${LIBCXX_INTERFACE_LIBRARY_NAMES}
     WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
   )
 endif()
