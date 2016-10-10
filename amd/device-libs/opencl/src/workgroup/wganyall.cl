@@ -1,8 +1,14 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 #include "wg.h"
 
-#define update_all __llvm_atomic_and_a3_x_wg_i32
-#define update_any __llvm_atomic_or_a3_x_wg_i32
+#define update_any atomic_fetch_or_explicit
+#define update_all atomic_fetch_and_explicit
 
 #define GEN_AA(SUF,ID) \
 __attribute__((overloadable, always_inline)) int \
@@ -13,18 +19,18 @@ work_group_##SUF(int predicate) \
     if (n == 1) \
 	return a; \
  \
-    __local uint *p = (__local uint *)__get_scratch_lds(); \
+    __local atomic_uint *p = (__local atomic_uint *)__get_scratch_lds(); \
     uint l = get_sub_group_local_id(); \
     uint i = get_sub_group_id(); \
  \
     if ((i == 0) & (l == 0)) \
-        __llvm_st_atomic_a3_x_wg_i32(p, a); \
+        atomic_store_explicit(p, a, memory_order_relaxed, memory_scope_work_group); \
  \
     work_group_barrier(CLK_LOCAL_MEM_FENCE); \
     if ((i != 0) & (l == 0)) \
-        update_##SUF(p, a); \
+        update_##SUF(p, a, memory_order_relaxed, memory_scope_work_group); \
     work_group_barrier(CLK_LOCAL_MEM_FENCE); \
-    a = __llvm_ld_atomic_a3_x_wg_i32(p); \
+    a = atomic_load_explicit(p, memory_order_relaxed, memory_scope_work_group); \
     work_group_barrier(CLK_LOCAL_MEM_FENCE); \
  \
     return a; \
