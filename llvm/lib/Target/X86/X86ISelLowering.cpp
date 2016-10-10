@@ -18854,7 +18854,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
     return DAG.getMaskedStore(Chain, dl, DataToCompress, Addr, VMask, VT,
-                              MemIntr->getMemOperand(), false, true);
+                              MemIntr->getMemOperand(),
+                              false /* truncating */, true /* compressing */);
   }
   case TRUNCATE_TO_MEM_VI8:
   case TRUNCATE_TO_MEM_VI16:
@@ -18877,7 +18878,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
     return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, VMask, VT,
-                              MemIntr->getMemOperand(), true);
+                              MemIntr->getMemOperand(), true /* truncating */);
   }
   case EXPAND_FROM_MEM: {
     SDValue Mask = Op.getOperand(4);
@@ -18889,16 +18890,16 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     MemIntrinsicSDNode *MemIntr = dyn_cast<MemIntrinsicSDNode>(Op);
     assert(MemIntr && "Expected MemIntrinsicSDNode!");
 
-    SDValue DataToExpand = DAG.getLoad(VT, dl, Chain, Addr,
-                                       MemIntr->getMemOperand());
+    if (isAllOnesConstant(Mask)) // Return a regular (unmasked) vector load.
+      return DAG.getLoad(VT, dl, Chain, Addr, MemIntr->getMemOperand());
+    if (X86::isZeroNode(Mask))
+      return DAG.getUNDEF(VT);
 
-    if (isAllOnesConstant(Mask)) // return just a load
-      return DataToExpand;
-
-    SDValue Results[] = {
-      getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, DataToExpand),
-                           Mask, PassThru, Subtarget, DAG), Chain};
-    return DAG.getMergeValues(Results, dl);
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+    SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+    return DAG.getMaskedLoad(VT, dl, Chain, Addr, VMask, PassThru, VT,
+                             MemIntr->getMemOperand(), ISD::NON_EXTLOAD,
+                             true /* expanding */);
   }
   }
 }
@@ -32023,6 +32024,7 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'u':
     case 'y':
     case 'x':
+    case 'v':
     case 'Y':
     case 'l':
       return C_RegisterClass;
@@ -32092,6 +32094,10 @@ TargetLowering::ConstraintWeight
     if (type->isX86_MMXTy() && Subtarget.hasMMX())
       weight = CW_SpecificReg;
     break;
+  case 'v':
+    if ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512())
+      weight = CW_Register;
+    LLVM_FALLTHROUGH;
   case 'x':
   case 'Y':
     if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
@@ -32428,17 +32434,23 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'Y':   // SSE_REGS if SSE2 allowed
       if (!Subtarget.hasSSE2()) break;
       LLVM_FALLTHROUGH;
+    case 'v':
     case 'x':   // SSE_REGS if SSE1 allowed or AVX_REGS if AVX allowed
       if (!Subtarget.hasSSE1()) break;
+      bool VConstraint = (Constraint[0] == 'v');
 
       switch (VT.SimpleTy) {
       default: break;
       // Scalar SSE types.
       case MVT::f32:
       case MVT::i32:
+        if (VConstraint && Subtarget.hasAVX512() && Subtarget.hasVLX())
+          return std::make_pair(0U, &X86::FR32XRegClass);
         return std::make_pair(0U, &X86::FR32RegClass);
       case MVT::f64:
       case MVT::i64:
+        if (VConstraint && Subtarget.hasVLX())
+          return std::make_pair(0U, &X86::FR64XRegClass);
         return std::make_pair(0U, &X86::FR64RegClass);
       // TODO: Handle f128 and i128 in FR128RegClass after it is tested well.
       // Vector types.
@@ -32448,6 +32460,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v2i64:
       case MVT::v4f32:
       case MVT::v2f64:
+        if (VConstraint && Subtarget.hasVLX())
+          return std::make_pair(0U, &X86::VR128XRegClass);
         return std::make_pair(0U, &X86::VR128RegClass);
       // AVX types.
       case MVT::v32i8:
@@ -32456,6 +32470,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v4i64:
       case MVT::v8f32:
       case MVT::v4f64:
+        if (VConstraint && Subtarget.hasVLX())
+          return std::make_pair(0U, &X86::VR256XRegClass);
         return std::make_pair(0U, &X86::VR256RegClass);
       case MVT::v8f64:
       case MVT::v16f32:

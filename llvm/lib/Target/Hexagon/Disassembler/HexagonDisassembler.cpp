@@ -147,7 +147,7 @@ static MCDisassembler *createHexagonDisassembler(const Target &T,
 }
 
 extern "C" void LLVMInitializeHexagonDisassembler() {
-  TargetRegistry::RegisterMCDisassembler(TheHexagonTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheHexagonTarget(),
                                          createHexagonDisassembler);
 }
 

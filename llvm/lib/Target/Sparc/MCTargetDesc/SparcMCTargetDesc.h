@@ -31,9 +31,9 @@ class StringRef;
 class raw_pwrite_stream;
 class raw_ostream;
 
-extern Target TheSparcTarget;
-extern Target TheSparcV9Target;
-extern Target TheSparcelTarget;
+Target &getTheSparcTarget();
+Target &getTheSparcV9Target();
+Target &getTheSparcelTarget();
 
 MCCodeEmitter *createSparcMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,

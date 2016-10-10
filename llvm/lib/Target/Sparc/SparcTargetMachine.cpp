@@ -22,9 +22,9 @@ using namespace llvm;
 
 extern "C" void LLVMInitializeSparcTarget() {
   // Register the target.
-  RegisterTargetMachine<SparcV8TargetMachine> X(TheSparcTarget);
-  RegisterTargetMachine<SparcV9TargetMachine> Y(TheSparcV9Target);
-  RegisterTargetMachine<SparcelTargetMachine> Z(TheSparcelTarget);
+  RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
+  RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
+  RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
 }
 
 static std::string computeDataLayout(const Triple &T, bool is64Bit) {

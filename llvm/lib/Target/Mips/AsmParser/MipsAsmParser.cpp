@@ -6469,10 +6469,10 @@ bool MipsAsmParser::parseInternalDirectiveReallowModule() {
 }
 
 extern "C" void LLVMInitializeMipsAsmParser() {
-  RegisterMCAsmParser<MipsAsmParser> X(TheMipsTarget);
-  RegisterMCAsmParser<MipsAsmParser> Y(TheMipselTarget);
-  RegisterMCAsmParser<MipsAsmParser> A(TheMips64Target);
-  RegisterMCAsmParser<MipsAsmParser> B(TheMips64elTarget);
+  RegisterMCAsmParser<MipsAsmParser> X(getTheMipsTarget());
+  RegisterMCAsmParser<MipsAsmParser> Y(getTheMipselTarget());
+  RegisterMCAsmParser<MipsAsmParser> A(getTheMips64Target());
+  RegisterMCAsmParser<MipsAsmParser> B(getTheMips64elTarget());
 }
 
 #define GET_REGISTER_MATCHER

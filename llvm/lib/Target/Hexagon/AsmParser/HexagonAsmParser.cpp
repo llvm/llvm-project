@@ -1065,7 +1065,7 @@ bool HexagonAsmParser::RegisterMatchesArch(unsigned MatchNum) const {
 
 /// Force static initialization.
 extern "C" void LLVMInitializeHexagonAsmParser() {
-  RegisterMCAsmParser<HexagonAsmParser> X(TheHexagonTarget);
+  RegisterMCAsmParser<HexagonAsmParser> X(getTheHexagonTarget());
 }
 
 #define GET_MATCHER_IMPLEMENTATION

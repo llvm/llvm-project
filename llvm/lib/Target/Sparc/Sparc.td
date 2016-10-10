@@ -110,7 +110,7 @@ def : Processor<"leon2", LEON2Itineraries,
 // LEON 2 FT (AT697E)
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"at697e", LEON2Itineraries,
-                [FeatureLeon, InsertNOPLoad]>;
+                [FeatureLeon, ReplaceSDIV, InsertNOPLoad]>;
 
 // LEON 2 FT (AT697F)
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.

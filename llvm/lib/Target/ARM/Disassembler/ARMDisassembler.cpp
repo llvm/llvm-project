@@ -861,13 +861,13 @@ DecodeStatus ThumbDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
 
 extern "C" void LLVMInitializeARMDisassembler() {
-  TargetRegistry::RegisterMCDisassembler(TheARMLETarget,
+  TargetRegistry::RegisterMCDisassembler(getTheARMLETarget(),
                                          createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(TheARMBETarget,
+  TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),
                                          createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(TheThumbLETarget,
+  TargetRegistry::RegisterMCDisassembler(getTheThumbLETarget(),
                                          createThumbDisassembler);
-  TargetRegistry::RegisterMCDisassembler(TheThumbBETarget,
+  TargetRegistry::RegisterMCDisassembler(getTheThumbBETarget(),
                                          createThumbDisassembler);
 }
 

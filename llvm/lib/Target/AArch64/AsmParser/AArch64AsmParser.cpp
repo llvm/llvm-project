@@ -4553,9 +4553,9 @@ AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
 
 /// Force static initialization.
 extern "C" void LLVMInitializeAArch64AsmParser() {
-  RegisterMCAsmParser<AArch64AsmParser> X(TheAArch64leTarget);
-  RegisterMCAsmParser<AArch64AsmParser> Y(TheAArch64beTarget);
-  RegisterMCAsmParser<AArch64AsmParser> Z(TheARM64Target);
+  RegisterMCAsmParser<AArch64AsmParser> X(getTheAArch64leTarget());
+  RegisterMCAsmParser<AArch64AsmParser> Y(getTheAArch64beTarget());
+  RegisterMCAsmParser<AArch64AsmParser> Z(getTheARM64Target());
 }
 
 #define GET_REGISTER_MATCHER

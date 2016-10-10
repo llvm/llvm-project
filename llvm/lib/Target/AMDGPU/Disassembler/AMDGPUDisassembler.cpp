@@ -495,6 +495,8 @@ static MCDisassembler *createAMDGPUDisassembler(const Target &T,
 }
 
 extern "C" void LLVMInitializeAMDGPUDisassembler() {
-  TargetRegistry::RegisterMCDisassembler(TheGCNTarget, createAMDGPUDisassembler);
-  TargetRegistry::RegisterMCSymbolizer(TheGCNTarget, createAMDGPUSymbolizer);
+  TargetRegistry::RegisterMCDisassembler(getTheGCNTarget(),
+                                         createAMDGPUDisassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheGCNTarget(),
+                                       createAMDGPUSymbolizer);
 }

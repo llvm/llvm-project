@@ -108,8 +108,8 @@ extern char &SIDebuggerInsertNopsID;
 void initializeSIInsertWaitsPass(PassRegistry&);
 extern char &SIInsertWaitsID;
 
-extern Target TheAMDGPUTarget;
-extern Target TheGCNTarget;
+Target &getTheAMDGPUTarget();
+Target &getTheGCNTarget();
 
 namespace AMDGPU {
 enum TargetIndex {

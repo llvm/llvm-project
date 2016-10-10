@@ -444,6 +444,7 @@ protected:
     uint16_t : NumLSBaseSDNodeBits;
 
     uint16_t ExtTy : 2; // enum ISD::LoadExtType
+    uint16_t IsExpanding : 1;
   };
 
   class StoreSDNodeBitfields {
@@ -473,7 +474,7 @@ protected:
   static_assert(sizeof(ConstantSDNodeBitfields) <= 2, "field too wide");
   static_assert(sizeof(MemSDNodeBitfields) <= 2, "field too wide");
   static_assert(sizeof(LSBaseSDNodeBitfields) <= 2, "field too wide");
-  static_assert(sizeof(LoadSDNodeBitfields) <= 2, "field too wide");
+  static_assert(sizeof(LoadSDNodeBitfields) <= 4, "field too wide");
   static_assert(sizeof(StoreSDNodeBitfields) <= 2, "field too wide");
 
 private:
@@ -1939,9 +1940,11 @@ class MaskedLoadSDNode : public MaskedLoadStoreSDNode {
 public:
   friend class SelectionDAG;
   MaskedLoadSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                   ISD::LoadExtType ETy, EVT MemVT, MachineMemOperand *MMO)
+                   ISD::LoadExtType ETy, bool IsExpanding, EVT MemVT,
+                   MachineMemOperand *MMO)
       : MaskedLoadStoreSDNode(ISD::MLOAD, Order, dl, VTs, MemVT, MMO) {
     LoadSDNodeBits.ExtTy = ETy;
+    LoadSDNodeBits.IsExpanding = IsExpanding;
   }
 
   ISD::LoadExtType getExtensionType() const {
@@ -1952,6 +1955,8 @@ public:
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MLOAD;
   }
+
+  bool isExpandingLoad() const { return LoadSDNodeBits.IsExpanding; }
 };
 
 /// This class is used to represent an MSTORE node

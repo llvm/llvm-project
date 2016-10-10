@@ -48,6 +48,7 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   bool FixFSMULD;
   bool ReplaceFMULS;
   bool FixAllFDIVSQRT;
+  bool PerformSDIVReplace;
 
   SparcInstrInfo InstrInfo;
   SparcTargetLowering TLInfo;
@@ -86,6 +87,7 @@ public:
 
   // Leon options
   bool hasUmacSmac() const { return HasUmacSmac; }
+  bool performSDIVReplace() const { return PerformSDIVReplace; }
   bool hasLeonCasa() const { return HasLeonCasa; }
   bool insertNOPLoad() const { return InsertNOPLoad; }
   bool fixFSMULD() const { return FixFSMULD; }

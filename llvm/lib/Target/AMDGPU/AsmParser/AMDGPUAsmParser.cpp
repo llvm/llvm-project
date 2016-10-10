@@ -3052,8 +3052,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 
 /// Force static initialization.
 extern "C" void LLVMInitializeAMDGPUAsmParser() {
-  RegisterMCAsmParser<AMDGPUAsmParser> A(TheAMDGPUTarget);
-  RegisterMCAsmParser<AMDGPUAsmParser> B(TheGCNTarget);
+  RegisterMCAsmParser<AMDGPUAsmParser> A(getTheAMDGPUTarget());
+  RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
 }
 
 #define GET_REGISTER_MATCHER

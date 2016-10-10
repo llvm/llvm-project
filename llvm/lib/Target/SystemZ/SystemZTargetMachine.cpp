@@ -20,7 +20,7 @@ using namespace llvm;
 extern cl::opt<bool> MISchedPostRA;
 extern "C" void LLVMInitializeSystemZTarget() {
   // Register the target.
-  RegisterTargetMachine<SystemZTargetMachine> X(TheSystemZTarget);
+  RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
 }
 
 // Determine whether we use the vector ABI.

@@ -37,8 +37,10 @@ class Triple;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheARMLETarget, TheThumbLETarget;
-extern Target TheARMBETarget, TheThumbBETarget;
+Target &getTheARMLETarget();
+Target &getTheThumbLETarget();
+Target &getTheARMBETarget();
+Target &getTheThumbBETarget();
 
 namespace ARM_MC {
 std::string ParseARMTriple(const Triple &TT, StringRef CPU);

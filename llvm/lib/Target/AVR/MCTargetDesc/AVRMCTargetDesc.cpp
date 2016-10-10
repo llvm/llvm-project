@@ -85,33 +85,34 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
 
 extern "C" void LLVMInitializeAVRTargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfo<AVRMCAsmInfo> X(TheAVRTarget);
+  RegisterMCAsmInfo<AVRMCAsmInfo> X(getTheAVRTarget());
 
   // Register the MC instruction info.
-  TargetRegistry::RegisterMCInstrInfo(TheAVRTarget, createAVRMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheAVRTarget(), createAVRMCInstrInfo);
 
   // Register the MC register info.
-  TargetRegistry::RegisterMCRegInfo(TheAVRTarget, createAVRMCRegisterInfo);
+  TargetRegistry::RegisterMCRegInfo(getTheAVRTarget(), createAVRMCRegisterInfo);
 
   // Register the MC subtarget info.
-  TargetRegistry::RegisterMCSubtargetInfo(TheAVRTarget,
+  TargetRegistry::RegisterMCSubtargetInfo(getTheAVRTarget(),
                                           createAVRMCSubtargetInfo);
 
   // Register the MCInstPrinter.
-  TargetRegistry::RegisterMCInstPrinter(TheAVRTarget, createAVRMCInstPrinter);
+  TargetRegistry::RegisterMCInstPrinter(getTheAVRTarget(),
+                                        createAVRMCInstPrinter);
 
   // Register the ELF streamer
-  TargetRegistry::RegisterELFStreamer(TheAVRTarget, createMCStreamer);
+  TargetRegistry::RegisterELFStreamer(getTheAVRTarget(), createMCStreamer);
 
   // Register the obj target streamer.
-  TargetRegistry::RegisterObjectTargetStreamer(TheAVRTarget,
+  TargetRegistry::RegisterObjectTargetStreamer(getTheAVRTarget(),
                                                createAVRObjectTargetStreamer);
 
   // Register the asm target streamer.
-  TargetRegistry::RegisterAsmTargetStreamer(TheAVRTarget,
+  TargetRegistry::RegisterAsmTargetStreamer(getTheAVRTarget(),
                                             createMCAsmTargetStreamer);
 
   // Register the asm backend (as little endian).
-  TargetRegistry::RegisterMCAsmBackend(TheAVRTarget, createAVRAsmBackend);
+  TargetRegistry::RegisterMCAsmBackend(getTheAVRTarget(), createAVRAsmBackend);
 }
 

@@ -34,7 +34,8 @@ class StringRef;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheX86_32Target, TheX86_64Target;
+Target &getTheX86_32Target();
+Target &getTheX86_64Target();
 
 /// Flavour of dwarf regnumbers
 ///

@@ -76,8 +76,8 @@ void initializeNVPTXLowerAllocaPass(PassRegistry &);
 
 extern "C" void LLVMInitializeNVPTXTarget() {
   // Register the target.
-  RegisterTargetMachine<NVPTXTargetMachine32> X(TheNVPTXTarget32);
-  RegisterTargetMachine<NVPTXTargetMachine64> Y(TheNVPTXTarget64);
+  RegisterTargetMachine<NVPTXTargetMachine32> X(getTheNVPTXTarget32());
+  RegisterTargetMachine<NVPTXTargetMachine64> Y(getTheNVPTXTarget64());
 
   // FIXME: This pass is really intended to be invoked during IR optimization,
   // but it's very NVPTX-specific.

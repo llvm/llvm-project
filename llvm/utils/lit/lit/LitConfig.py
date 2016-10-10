@@ -83,7 +83,7 @@ class LitConfig(object):
             # a timeout per test. Check it's available.
             # See lit.util.killProcessAndChildren()
             try:
-                import psutil
+                import psutil  # noqa: F401
             except ImportError:
                 self.fatal("Setting a timeout per test requires the"
                            " Python psutil module but it could not be"

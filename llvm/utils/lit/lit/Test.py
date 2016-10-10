@@ -189,9 +189,9 @@ class Test:
 
     def setResult(self, result):
         if self.result is not None:
-            raise ArgumentError("test result already set")
+            raise ValueError("test result already set")
         if not isinstance(result, Result):
-            raise ArgumentError("unexpected result type")
+            raise ValueError("unexpected result type")
 
         self.result = result
 
