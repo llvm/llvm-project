@@ -1219,116 +1219,111 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
   llvm_unreachable("predeclared global operator new/delete is missing");
 }
 
-static std::pair<bool, bool>
-shouldPassSizeAndAlignToUsualDelete(const FunctionProtoType *FPT) {
-  auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
-
-  // The first argument is always a void*.
-  ++AI;
-
-  // Figure out what other parameters we should be implicitly passing.
-  bool PassSize = false;
-  bool PassAlignment = false;
-
-  if (AI != AE && (*AI)->isIntegerType()) {
-    PassSize = true;
-    ++AI;
-  }
-
-  if (AI != AE && (*AI)->isAlignValT()) {
-    PassAlignment = true;
-    ++AI;
-  }
-
-  assert(AI == AE && "unexpected usual deallocation function parameter");
-  return {PassSize, PassAlignment};
-}
-
 namespace {
-  /// A cleanup to call the given 'operator delete' function upon abnormal
-  /// exit from a new expression. Templated on a traits type that deals with
-  /// ensuring that the arguments dominate the cleanup if necessary.
-  template<typename Traits>
+  /// A cleanup to call the given 'operator delete' function upon
+  /// abnormal exit from a new expression.
   class CallDeleteDuringNew final : public EHScopeStack::Cleanup {
-    /// Type used to hold llvm::Value*s.
-    typedef typename Traits::ValueTy ValueTy;
-    /// Type used to hold RValues.
-    typedef typename Traits::RValueTy RValueTy;
-    struct PlacementArg {
-      RValueTy ArgValue;
-      QualType ArgType;
-    };
-
-    unsigned NumPlacementArgs : 31;
-    unsigned PassAlignmentToPlacementDelete : 1;
+    size_t NumPlacementArgs;
     const FunctionDecl *OperatorDelete;
-    ValueTy Ptr;
-    ValueTy AllocSize;
-    CharUnits AllocAlign;
+    llvm::Value *Ptr;
+    llvm::Value *AllocSize;
 
-    PlacementArg *getPlacementArgs() {
-      return reinterpret_cast<PlacementArg *>(this + 1);
+    RValue *getPlacementArgs() { return reinterpret_cast<RValue*>(this+1); }
+
+  public:
+    static size_t getExtraSize(size_t NumPlacementArgs) {
+      return NumPlacementArgs * sizeof(RValue);
+    }
+
+    CallDeleteDuringNew(size_t NumPlacementArgs,
+                        const FunctionDecl *OperatorDelete,
+                        llvm::Value *Ptr,
+                        llvm::Value *AllocSize) 
+      : NumPlacementArgs(NumPlacementArgs), OperatorDelete(OperatorDelete),
+        Ptr(Ptr), AllocSize(AllocSize) {}
+
+    void setPlacementArg(unsigned I, RValue Arg) {
+      assert(I < NumPlacementArgs && "index out of range");
+      getPlacementArgs()[I] = Arg;
+    }
+
+    void Emit(CodeGenFunction &CGF, Flags flags) override {
+      const FunctionProtoType *FPT
+        = OperatorDelete->getType()->getAs<FunctionProtoType>();
+      assert(FPT->getNumParams() == NumPlacementArgs + 1 ||
+             (FPT->getNumParams() == 2 && NumPlacementArgs == 0));
+
+      CallArgList DeleteArgs;
+
+      // The first argument is always a void*.
+      FunctionProtoType::param_type_iterator AI = FPT->param_type_begin();
+      DeleteArgs.add(RValue::get(Ptr), *AI++);
+
+      // A member 'operator delete' can take an extra 'size_t' argument.
+      if (FPT->getNumParams() == NumPlacementArgs + 2)
+        DeleteArgs.add(RValue::get(AllocSize), *AI++);
+
+      // Pass the rest of the arguments, which must match exactly.
+      for (unsigned I = 0; I != NumPlacementArgs; ++I)
+        DeleteArgs.add(getPlacementArgs()[I], *AI++);
+
+      // Call 'operator delete'.
+      EmitNewDeleteCall(CGF, OperatorDelete, FPT, DeleteArgs);
+    }
+  };
+
+  /// A cleanup to call the given 'operator delete' function upon
+  /// abnormal exit from a new expression when the new expression is
+  /// conditional.
+  class CallDeleteDuringConditionalNew final : public EHScopeStack::Cleanup {
+    size_t NumPlacementArgs;
+    const FunctionDecl *OperatorDelete;
+    DominatingValue<RValue>::saved_type Ptr;
+    DominatingValue<RValue>::saved_type AllocSize;
+
+    DominatingValue<RValue>::saved_type *getPlacementArgs() {
+      return reinterpret_cast<DominatingValue<RValue>::saved_type*>(this+1);
     }
 
   public:
     static size_t getExtraSize(size_t NumPlacementArgs) {
-      return NumPlacementArgs * sizeof(PlacementArg);
+      return NumPlacementArgs * sizeof(DominatingValue<RValue>::saved_type);
     }
 
-    CallDeleteDuringNew(size_t NumPlacementArgs,
-                        const FunctionDecl *OperatorDelete, ValueTy Ptr,
-                        ValueTy AllocSize, bool PassAlignmentToPlacementDelete,
-                        CharUnits AllocAlign)
-      : NumPlacementArgs(NumPlacementArgs),
-        PassAlignmentToPlacementDelete(PassAlignmentToPlacementDelete),
-        OperatorDelete(OperatorDelete), Ptr(Ptr), AllocSize(AllocSize),
-        AllocAlign(AllocAlign) {}
+    CallDeleteDuringConditionalNew(size_t NumPlacementArgs,
+                                   const FunctionDecl *OperatorDelete,
+                                   DominatingValue<RValue>::saved_type Ptr,
+                              DominatingValue<RValue>::saved_type AllocSize)
+      : NumPlacementArgs(NumPlacementArgs), OperatorDelete(OperatorDelete),
+        Ptr(Ptr), AllocSize(AllocSize) {}
 
-    void setPlacementArg(unsigned I, RValueTy Arg, QualType Type) {
+    void setPlacementArg(unsigned I, DominatingValue<RValue>::saved_type Arg) {
       assert(I < NumPlacementArgs && "index out of range");
-      getPlacementArgs()[I] = {Arg, Type};
+      getPlacementArgs()[I] = Arg;
     }
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      const FunctionProtoType *FPT =
-          OperatorDelete->getType()->getAs<FunctionProtoType>();
+      const FunctionProtoType *FPT
+        = OperatorDelete->getType()->getAs<FunctionProtoType>();
+      assert(FPT->getNumParams() == NumPlacementArgs + 1 ||
+             (FPT->getNumParams() == 2 && NumPlacementArgs == 0));
+
       CallArgList DeleteArgs;
 
       // The first argument is always a void*.
-      DeleteArgs.add(Traits::get(CGF, Ptr), FPT->getParamType(0));
+      FunctionProtoType::param_type_iterator AI = FPT->param_type_begin();
+      DeleteArgs.add(Ptr.restore(CGF), *AI++);
 
-      // Figure out what other parameters we should be implicitly passing.
-      bool PassSize = false;
-      bool PassAlignment = false;
-      if (NumPlacementArgs) {
-        // A placement deallocation function is implicitly passed an alignment
-        // if the placement allocation function was, but is never passed a size.
-        PassAlignment = PassAlignmentToPlacementDelete;
-      } else {
-        // For a non-placement new-expression, 'operator delete' can take a
-        // size and/or an alignment if it has the right parameters.
-        std::tie(PassSize, PassAlignment) =
-            shouldPassSizeAndAlignToUsualDelete(FPT);
+      // A member 'operator delete' can take an extra 'size_t' argument.
+      if (FPT->getNumParams() == NumPlacementArgs + 2) {
+        RValue RV = AllocSize.restore(CGF);
+        DeleteArgs.add(RV, *AI++);
       }
-
-      // The second argument can be a std::size_t (for non-placement delete).
-      if (PassSize)
-        DeleteArgs.add(Traits::get(CGF, AllocSize),
-                       CGF.getContext().getSizeType());
-
-      // The next (second or third) argument can be a std::align_val_t, which
-      // is an enum whose underlying type is std::size_t.
-      // FIXME: Use the right type as the parameter type. Note that in a call
-      // to operator delete(size_t, ...), we may not have it available.
-      if (PassAlignment)
-        DeleteArgs.add(RValue::get(llvm::ConstantInt::get(
-                           CGF.SizeTy, AllocAlign.getQuantity())),
-                       CGF.getContext().getSizeType());
 
       // Pass the rest of the arguments, which must match exactly.
       for (unsigned I = 0; I != NumPlacementArgs; ++I) {
-        auto Arg = getPlacementArgs()[I];
-        DeleteArgs.add(Traits::get(CGF, Arg.ArgValue), Arg.ArgType);
+        RValue RV = getPlacementArgs()[I].restore(CGF);
+        DeleteArgs.add(RV, *AI++);
       }
 
       // Call 'operator delete'.
@@ -1343,34 +1338,18 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
                                   const CXXNewExpr *E,
                                   Address NewPtr,
                                   llvm::Value *AllocSize,
-                                  CharUnits AllocAlign,
                                   const CallArgList &NewArgs) {
-  unsigned NumNonPlacementArgs = E->passAlignment() ? 2 : 1;
-
   // If we're not inside a conditional branch, then the cleanup will
   // dominate and we can do the easier (and more efficient) thing.
   if (!CGF.isInConditionalBranch()) {
-    struct DirectCleanupTraits {
-      typedef llvm::Value *ValueTy;
-      typedef RValue RValueTy;
-      static RValue get(CodeGenFunction &, ValueTy V) { return RValue::get(V); }
-      static RValue get(CodeGenFunction &, RValueTy V) { return V; }
-    };
-
-    typedef CallDeleteDuringNew<DirectCleanupTraits> DirectCleanup;
-
-    DirectCleanup *Cleanup = CGF.EHStack
-      .pushCleanupWithExtra<DirectCleanup>(EHCleanup,
-                                           E->getNumPlacementArgs(),
-                                           E->getOperatorDelete(),
-                                           NewPtr.getPointer(),
-                                           AllocSize,
-                                           E->passAlignment(),
-                                           AllocAlign);
-    for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
-      auto &Arg = NewArgs[I + NumNonPlacementArgs];
-      Cleanup->setPlacementArg(I, Arg.RV, Arg.Ty);
-    }
+    CallDeleteDuringNew *Cleanup = CGF.EHStack
+      .pushCleanupWithExtra<CallDeleteDuringNew>(EHCleanup,
+                                                 E->getNumPlacementArgs(),
+                                                 E->getOperatorDelete(),
+                                                 NewPtr.getPointer(),
+                                                 AllocSize);
+    for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I)
+      Cleanup->setPlacementArg(I, NewArgs[I+1].RV);
 
     return;
   }
@@ -1381,28 +1360,15 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
   DominatingValue<RValue>::saved_type SavedAllocSize =
     DominatingValue<RValue>::save(CGF, RValue::get(AllocSize));
 
-  struct ConditionalCleanupTraits {
-    typedef DominatingValue<RValue>::saved_type ValueTy;
-    typedef DominatingValue<RValue>::saved_type RValueTy;
-    static RValue get(CodeGenFunction &CGF, ValueTy V) {
-      return V.restore(CGF);
-    }
-  };
-  typedef CallDeleteDuringNew<ConditionalCleanupTraits> ConditionalCleanup;
-
-  ConditionalCleanup *Cleanup = CGF.EHStack
-    .pushCleanupWithExtra<ConditionalCleanup>(EHCleanup,
-                                              E->getNumPlacementArgs(),
-                                              E->getOperatorDelete(),
-                                              SavedNewPtr,
-                                              SavedAllocSize,
-                                              E->passAlignment(),
-                                              AllocAlign);
-  for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
-    auto &Arg = NewArgs[I + NumNonPlacementArgs];
-    Cleanup->setPlacementArg(I, DominatingValue<RValue>::save(CGF, Arg.RV),
-                             Arg.Ty);
-  }
+  CallDeleteDuringConditionalNew *Cleanup = CGF.EHStack
+    .pushCleanupWithExtra<CallDeleteDuringConditionalNew>(EHCleanup,
+                                                 E->getNumPlacementArgs(),
+                                                 E->getOperatorDelete(),
+                                                 SavedNewPtr,
+                                                 SavedAllocSize);
+  for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I)
+    Cleanup->setPlacementArg(I,
+                     DominatingValue<RValue>::save(CGF, NewArgs[I+1].RV));
 
   CGF.initFullExprCleanup();
 }
@@ -1431,7 +1397,6 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Value *allocSize =
     EmitCXXNewAllocSize(*this, E, minElements, numElements,
                         allocSizeWithoutCookie);
-  CharUnits allocAlign = getContext().getTypeAlignInChars(allocType);
 
   // Emit the allocation call.  If the allocator is a global placement
   // operator, just "inline" it directly.
@@ -1447,8 +1412,10 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     // The pointer expression will, in many cases, be an opaque void*.
     // In these cases, discard the computed alignment and use the
     // formal alignment of the allocated type.
-    if (alignSource != AlignmentSource::Decl)
-      allocation = Address(allocation.getPointer(), allocAlign);
+    if (alignSource != AlignmentSource::Decl) {
+      allocation = Address(allocation.getPointer(),
+                           getContext().getTypeAlignInChars(allocType));
+    }
 
     // Set up allocatorArgs for the call to operator delete if it's not
     // the reserved global operator.
@@ -1461,55 +1428,28 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   } else {
     const FunctionProtoType *allocatorType =
       allocator->getType()->castAs<FunctionProtoType>();
-    unsigned ParamsToSkip = 0;
 
     // The allocation size is the first argument.
     QualType sizeType = getContext().getSizeType();
     allocatorArgs.add(RValue::get(allocSize), sizeType);
-    ++ParamsToSkip;
 
-    if (allocSize != allocSizeWithoutCookie) {
-      CharUnits cookieAlign = getSizeAlign(); // FIXME: Ask the ABI.
-      allocAlign = std::max(allocAlign, cookieAlign);
-    }
-
-    // The allocation alignment may be passed as the second argument.
-    if (E->passAlignment()) {
-      QualType AlignValT = sizeType;
-      if (allocatorType->getNumParams() > 1) {
-        AlignValT = allocatorType->getParamType(1);
-        assert(getContext().hasSameUnqualifiedType(
-                   AlignValT->castAs<EnumType>()->getDecl()->getIntegerType(),
-                   sizeType) &&
-               "wrong type for alignment parameter");
-        ++ParamsToSkip;
-      } else {
-        // Corner case, passing alignment to 'operator new(size_t, ...)'.
-        assert(allocator->isVariadic() && "can't pass alignment to allocator");
-      }
-      allocatorArgs.add(
-          RValue::get(llvm::ConstantInt::get(SizeTy, allocAlign.getQuantity())),
-          AlignValT);
-    }
-
-    // FIXME: Why do we not pass a CalleeDecl here?
+    // We start at 1 here because the first argument (the allocation size)
+    // has already been emitted.
     EmitCallArgs(allocatorArgs, allocatorType, E->placement_arguments(),
-                 /*CalleeDecl*/nullptr, /*ParamsToSkip*/ParamsToSkip);
+                 /* CalleeDecl */ nullptr,
+                 /*ParamsToSkip*/ 1);
 
     RValue RV =
       EmitNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
-    // If this was a call to a global replaceable allocation function that does
-    // not take an alignment argument, the allocator is known to produce
-    // storage that's suitably aligned for any object that fits, up to a known
-    // threshold. Otherwise assume it's suitably aligned for the allocated type.
-    CharUnits allocationAlign = allocAlign;
-    if (!E->passAlignment() &&
-        allocator->isReplaceableGlobalAllocationFunction()) {
-      unsigned AllocatorAlign = llvm::PowerOf2Floor(std::min<uint64_t>(
-          Target.getNewAlign(), getContext().getTypeSize(allocType)));
-      allocationAlign = std::max(
-          allocationAlign, getContext().toCharUnitsFromBits(AllocatorAlign));
+    // For now, only assume that the allocation function returns
+    // something satisfactorily aligned for the element type, plus
+    // the cookie if we have one.
+    CharUnits allocationAlign =
+      getContext().getTypeAlignInChars(allocType);
+    if (allocSize != allocSizeWithoutCookie) {
+      CharUnits cookieAlign = getSizeAlign(); // FIXME?
+      allocationAlign = std::max(allocationAlign, cookieAlign);
     }
 
     allocation = Address(RV.getScalarVal(), allocationAlign);
@@ -1548,8 +1488,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Instruction *cleanupDominator = nullptr;
   if (E->getOperatorDelete() &&
       !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
-    EnterNewDeleteCleanup(*this, E, allocation, allocSize, allocAlign,
-                          allocatorArgs);
+    EnterNewDeleteCleanup(*this, E, allocation, allocSize, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
     cleanupDominator = Builder.CreateUnreachable();
   }
@@ -1611,58 +1550,31 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 }
 
 void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
-                                     llvm::Value *Ptr, QualType DeleteTy,
-                                     llvm::Value *NumElements,
-                                     CharUnits CookieSize) {
-  assert((!NumElements && CookieSize.isZero()) ||
-         DeleteFD->getOverloadedOperator() == OO_Array_Delete);
+                                     llvm::Value *Ptr,
+                                     QualType DeleteTy) {
+  assert(DeleteFD->getOverloadedOperator() == OO_Delete);
 
   const FunctionProtoType *DeleteFTy =
     DeleteFD->getType()->getAs<FunctionProtoType>();
 
   CallArgList DeleteArgs;
 
-  std::pair<bool, bool> PassSizeAndAlign =
-      shouldPassSizeAndAlignToUsualDelete(DeleteFTy);
+  // Check if we need to pass the size to the delete operator.
+  llvm::Value *Size = nullptr;
+  QualType SizeTy;
+  if (DeleteFTy->getNumParams() == 2) {
+    SizeTy = DeleteFTy->getParamType(1);
+    CharUnits DeleteTypeSize = getContext().getTypeSizeInChars(DeleteTy);
+    Size = llvm::ConstantInt::get(ConvertType(SizeTy), 
+                                  DeleteTypeSize.getQuantity());
+  }
 
-  auto ParamTypeIt = DeleteFTy->param_type_begin();
-
-  // Pass the pointer itself.
-  QualType ArgTy = *ParamTypeIt++;
+  QualType ArgTy = DeleteFTy->getParamType(0);
   llvm::Value *DeletePtr = Builder.CreateBitCast(Ptr, ConvertType(ArgTy));
   DeleteArgs.add(RValue::get(DeletePtr), ArgTy);
 
-  // Pass the size if the delete function has a size_t parameter.
-  if (PassSizeAndAlign.first) {
-    QualType SizeType = *ParamTypeIt++;
-    CharUnits DeleteTypeSize = getContext().getTypeSizeInChars(DeleteTy);
-    llvm::Value *Size = llvm::ConstantInt::get(ConvertType(SizeType),
-                                               DeleteTypeSize.getQuantity());
-
-    // For array new, multiply by the number of elements.
-    if (NumElements)
-      Size = Builder.CreateMul(Size, NumElements);
-
-    // If there is a cookie, add the cookie size.
-    if (!CookieSize.isZero())
-      Size = Builder.CreateAdd(
-          Size, llvm::ConstantInt::get(SizeTy, CookieSize.getQuantity()));
-
-    DeleteArgs.add(RValue::get(Size), SizeType);
-  }
-
-  // Pass the alignment if the delete function has an align_val_t parameter.
-  if (PassSizeAndAlign.second) {
-    QualType AlignValType = *ParamTypeIt++;
-    CharUnits DeleteTypeAlign = getContext().toCharUnitsFromBits(
-        getContext().getTypeAlignIfKnown(DeleteTy));
-    llvm::Value *Align = llvm::ConstantInt::get(ConvertType(AlignValType),
-                                                DeleteTypeAlign.getQuantity());
-    DeleteArgs.add(RValue::get(Align), AlignValType);
-  }
-
-  assert(ParamTypeIt == DeleteFTy->param_type_end() &&
-         "unknown parameter to usual delete function");
+  if (Size)
+    DeleteArgs.add(RValue::get(Size), SizeTy);
 
   // Emit the call to delete.
   EmitNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs);
@@ -1766,8 +1678,45 @@ namespace {
         ElementType(ElementType), CookieSize(CookieSize) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      CGF.EmitDeleteCall(OperatorDelete, Ptr, ElementType, NumElements,
-                         CookieSize);
+      const FunctionProtoType *DeleteFTy =
+        OperatorDelete->getType()->getAs<FunctionProtoType>();
+      assert(DeleteFTy->getNumParams() == 1 || DeleteFTy->getNumParams() == 2);
+
+      CallArgList Args;
+      
+      // Pass the pointer as the first argument.
+      QualType VoidPtrTy = DeleteFTy->getParamType(0);
+      llvm::Value *DeletePtr
+        = CGF.Builder.CreateBitCast(Ptr, CGF.ConvertType(VoidPtrTy));
+      Args.add(RValue::get(DeletePtr), VoidPtrTy);
+
+      // Pass the original requested size as the second argument.
+      if (DeleteFTy->getNumParams() == 2) {
+        QualType size_t = DeleteFTy->getParamType(1);
+        llvm::IntegerType *SizeTy
+          = cast<llvm::IntegerType>(CGF.ConvertType(size_t));
+        
+        CharUnits ElementTypeSize =
+          CGF.CGM.getContext().getTypeSizeInChars(ElementType);
+
+        // The size of an element, multiplied by the number of elements.
+        llvm::Value *Size
+          = llvm::ConstantInt::get(SizeTy, ElementTypeSize.getQuantity());
+        if (NumElements)
+          Size = CGF.Builder.CreateMul(Size, NumElements);
+
+        // Plus the size of the cookie if applicable.
+        if (!CookieSize.isZero()) {
+          llvm::Value *CookieSizeV
+            = llvm::ConstantInt::get(SizeTy, CookieSize.getQuantity());
+          Size = CGF.Builder.CreateAdd(Size, CookieSizeV);
+        }
+
+        Args.add(RValue::get(Size), size_t);
+      }
+
+      // Emit the call to delete.
+      EmitNewDeleteCall(CGF, OperatorDelete, DeleteFTy, Args);
     }
   };
 }

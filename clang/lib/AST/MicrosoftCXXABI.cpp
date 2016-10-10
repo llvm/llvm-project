@@ -143,8 +143,9 @@ public:
         const_cast<TagDecl *>(TD->getCanonicalDecl()));
   }
 
-  MangleNumberingContext *createMangleNumberingContext() const override {
-    return new MicrosoftNumberingContext();
+  std::unique_ptr<MangleNumberingContext>
+  createMangleNumberingContext() const override {
+    return llvm::make_unique<MicrosoftNumberingContext>();
   }
 };
 }

@@ -31,13 +31,13 @@ namespace test0 {
 namespace test1 {
   class A {
   public:
-    static void operator delete(void *p) {};
+    static void operator delete(void *p) {}; // expected-note {{member 'operator delete' declared here}}
     virtual ~A();
   };
 
   class B : protected A {
   public:
-    static void operator delete(void *, size_t) {};
+    static void operator delete(void *, size_t) {}; // expected-note {{member 'operator delete' declared here}}
     ~B();
   };
 
@@ -49,20 +49,7 @@ namespace test1 {
     ~C();
   };
 
-  // We assume that the intent is to treat C::operator delete(void*, size_t) as
-  // /not/ being a usual deallocation function, as it would be if it were
-  // declared with in C directly.
-  C::~C() {}
-
-  struct D {
-    void operator delete(void*); // expected-note {{member 'operator delete' declared here}}
-    void operator delete(void*, ...); // expected-note {{member 'operator delete' declared here}}
-    virtual ~D();
-  };
-  // FIXME: The standard doesn't say this is ill-formed, but presumably either
-  // it should be or the variadic operator delete should not be a usual
-  // deallocation function.
-  D::~D() {} // expected-error {{multiple suitable 'operator delete' functions in 'D'}}
+  C::~C() {} // expected-error {{multiple suitable 'operator delete' functions in 'C'}}
 }
 
 // ...at the point of definition of a virtual destructor...

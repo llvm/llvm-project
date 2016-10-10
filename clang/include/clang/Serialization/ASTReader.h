@@ -1877,8 +1877,8 @@ public:
                                            SourceLocation> > &Pending) override;
 
   void ReadLateParsedTemplates(
-      llvm::MapVector<const FunctionDecl *, LateParsedTemplate *> &LPTMap)
-      override;
+      llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
+          &LPTMap) override;
 
   /// \brief Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);

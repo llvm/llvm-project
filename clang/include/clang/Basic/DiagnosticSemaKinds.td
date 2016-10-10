@@ -6025,10 +6025,6 @@ def err_no_suitable_delete_member_function_found : Error<
   "no suitable member %0 in %1">;
 def err_ambiguous_suitable_delete_member_function_found : Error<
   "multiple suitable %0 functions in %1">;
-def warn_ambiguous_suitable_delete_function_found : Warning<
-  "multiple suitable %0 functions for %1; no 'operator delete' function "
-  "will be invoked if initialization throws an exception">,
-  InGroup<DiagGroup<"ambiguous-delete">>;
 def note_member_declared_here : Note<
   "member %0 declared here">;
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;

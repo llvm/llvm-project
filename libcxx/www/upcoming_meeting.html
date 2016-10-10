@@ -78,11 +78,11 @@
 	 <tr><td><a href="http://wg21.link/LWG2536">2536</a></td><td>What should &lt;complex.h&gt; do?</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2540">2540</a></td><td>unordered_multimap::insert hint iterator</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2543">2543</a></td><td>LWG 2148 (hash support for enum types) seems under-specified</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2544">2544</a></td><td>istreambuf_iterator(basic_streambuf<charT, traits>* s) effects unclear when s is 0</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2544">2544</a></td><td>istreambuf_iterator(basic_streambuf<charT, traits>* s) effects unclear when s is 0</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2556">2556</a></td><td>Wide contract for future::share()</td><td>Issaquah</td><td>Patch ready</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2562">2562</a></td><td>Consistent total ordering of pointers by comparison functors</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2567">2567</a></td><td>Specification of logical operator traits uses BaseCharacteristic, which is defined only for UnaryTypeTraits and BinaryTypeTraits</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2569">2569</a></td><td>conjunction and disjunction requirements are too strict</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2567">2567</a></td><td>Specification of logical operator traits uses BaseCharacteristic, which is defined only for UnaryTypeTraits and BinaryTypeTraits</td><td>Issaquah</td><td>Nothing to do.</td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2569">2569</a></td><td>conjunction and disjunction requirements are too strict</td><td>Issaquah</td><td>Nothing to do.</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2570">2570</a></td><td>[fund.ts.v2] conjunction and disjunction requirements are too strict</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2578">2578</a></td><td>Iterator requirements should reference iterator traits</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2584">2584</a></td><td><regex> ECMAScript IdentityEscape is ambiguous</td><td>Issaquah</td><td></td></tr>
@@ -97,8 +97,8 @@
 	 <tr><td><a href="http://wg21.link/LWG2680">2680</a></td><td>Add "Equivalent to" to filesystem</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2681">2681</a></td><td>filesystem::copy() cannot copy symlinks</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2682">2682</a></td><td>filesystem::copy() won't create a symlink to a directory</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2686">2686</a></td><td>Why is std::hash specialized for error_code, but not error_condition?</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2694">2694</a></td><td>Application of LWG 436 accidentally deleted definition of "facet"</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2686">2686</a></td><td>Why is std::hash specialized for error_code, but not error_condition?</td><td>Issaquah</td><td>Patch ready</td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2694">2694</a></td><td>Application of LWG 436 accidentally deleted definition of "facet"</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2696">2696</a></td><td>Interaction between make_shared and enable_shared_from_this is underspecified</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2699">2699</a></td><td>Missing restriction in [numeric.requirements]</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2712">2712</a></td><td>copy_file(from, to, ...) has a number of unspecified error conditions</td><td>Issaquah</td><td></td></tr>
@@ -152,33 +152,33 @@
 <li>2536 - We already do this. </li>
 <li>2540 - </li>
 <li>2543 - </li>
-<li>2544 - </li>
+<li>2544 - We already do this; I've added tests to make sure we keep doing so</li>
 <li>2556 - Patch and tests ready</li>
 <li>2562 - </li>
-<li>2567 - </li>
-<li>2569 - </li>
-<li>2570 - </li>
+<li>2567 - This is just wording cleanup.</li>
+<li>2569 - This is just wording cleanup.</li>
+<li>2570 - Same as 2569, but applied to LFTS</li>
 <li>2578 - This is just wording cleanup. </li>
 <li>2584 - </li>
 <li>2589 - This is just wording cleanup. </li>
 <li>2591 - </li>
 <li>2598 - Patch and tests ready</li>
-<li>2664 - </li>
-<li>2665 - </li>
-<li>2672 - </li>
-<li>2678 - </li>
+<li>2664 - File System; Eric?</li>
+<li>2665 - File System; Eric?</li>
+<li>2672 - File System; Eric?</li>
+<li>2678 - File System; Eric?</li>
 <li>2679 - This is just wording cleanup. </li>
-<li>2680 - </li>
-<li>2681 - </li>
-<li>2682 - </li>
-<li>2686 - </li>
-<li>2694 - </li>
+<li>2680 - File System; Eric?</li>
+<li>2681 - File System; Eric?</li>
+<li>2682 - File System; Eric?</li>
+<li>2686 - Patch and tests ready</li>
+<li>2694 - Restoring inadvertently deleted text. No code changes needed.</li>
 <li>2696 - </li>
 <li>2699 - I don't think this requires any code changes; look more closely.</li>
 <li>2712 - </li>
-<li>2722 - </li>
+<li>2722 - File System; Eric?</li>
 <li>2729 - </li>
-<li>2732 - </li>
+<li>2732 - File System; Eric?</li>
 <li>2733 - </li>
 <li>2735 - </li>
 <li>2736 - </li>

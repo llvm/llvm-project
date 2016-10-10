@@ -655,6 +655,17 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
     FirstPTLoad->First = Out<ELFT>::ElfHeader;
     if (!FirstPTLoad->Last)
       FirstPTLoad->Last = Out<ELFT>::ProgramHeaders;
+  } else if (!FirstPTLoad->First) {
+    // Sometimes the very first PT_LOAD segment can be empty. 
+    // This happens if (all conditions met):
+    //  - Linker script is used
+    //  - First section in ELF image is not RO
+    //  - Not enough space for program headers.
+    // The code below removes empty PT_LOAD segment and updates
+    // program headers size.
+    Phdrs.erase(FirstPTLoad);
+    Out<ELFT>::ProgramHeaders->setSize(sizeof(typename ELFT::Phdr) *
+                                       Phdrs.size());
   }
 }
 

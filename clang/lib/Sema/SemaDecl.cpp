@@ -14368,14 +14368,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     if (!Completed)
       Record->completeDefinition();
 
-    // We may have deferred checking for a deleted destructor. Check now.
-    if (CXXRecordDecl *CXXRecord = dyn_cast<CXXRecordDecl>(Record)) {
-      auto *Dtor = CXXRecord->getDestructor();
-      if (Dtor && Dtor->isImplicit() &&
-          ShouldDeleteSpecialMember(Dtor, CXXDestructor))
-        SetDeclDeleted(Dtor, CXXRecord->getLocation());
-    }
-
     if (Record->hasAttrs()) {
       CheckAlignasUnderalignment(Record);
 

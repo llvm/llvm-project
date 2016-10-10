@@ -183,7 +183,7 @@ define i64 @rotr1_64(i64 %A) nounwind {
 ;
 ; 64-LABEL: rotr1_64:
 ; 64:       # BB#0:
-; 64-NEXT:    rolq $63, %rdi
+; 64-NEXT:    rorq %rdi
 ; 64-NEXT:    movq %rdi, %rax
 ; 64-NEXT:    retq
 	%B = shl i64 %A, 63
@@ -296,12 +296,12 @@ define i32 @rotr1_32(i32 %A) nounwind {
 ; 32-LABEL: rotr1_32:
 ; 32:       # BB#0:
 ; 32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; 32-NEXT:    roll $31, %eax
+; 32-NEXT:    rorl %eax
 ; 32-NEXT:    retl
 ;
 ; 64-LABEL: rotr1_32:
 ; 64:       # BB#0:
-; 64-NEXT:    roll $31, %edi
+; 64-NEXT:    rorl %edi
 ; 64-NEXT:    movl %edi, %eax
 ; 64-NEXT:    retq
 	%B = shl i32 %A, 31
@@ -414,12 +414,12 @@ define i16 @rotr1_16(i16 %A) nounwind {
 ; 32-LABEL: rotr1_16:
 ; 32:       # BB#0:
 ; 32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; 32-NEXT:    rolw $15, %ax
+; 32-NEXT:    rorw %ax
 ; 32-NEXT:    retl
 ;
 ; 64-LABEL: rotr1_16:
 ; 64:       # BB#0:
-; 64-NEXT:    rolw $15, %di
+; 64-NEXT:    rorw %di
 ; 64-NEXT:    movl %edi, %eax
 ; 64-NEXT:    retq
 	%B = lshr i16 %A, 1
@@ -528,12 +528,12 @@ define i8 @rotr1_8(i8 %A) nounwind {
 ; 32-LABEL: rotr1_8:
 ; 32:       # BB#0:
 ; 32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; 32-NEXT:    rolb $7, %al
+; 32-NEXT:    rorb %al
 ; 32-NEXT:    retl
 ;
 ; 64-LABEL: rotr1_8:
 ; 64:       # BB#0:
-; 64-NEXT:    rolb $7, %dil
+; 64-NEXT:    rorb %dil
 ; 64-NEXT:    movl %edi, %eax
 ; 64-NEXT:    retq
 	%B = lshr i8 %A, 1

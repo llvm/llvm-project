@@ -92,3 +92,12 @@ namespace aliastemplateinst {
 
   template struct APtr<int>; // expected-error{{elaborated type refers to a type alias template}}
 }
+
+namespace DontDiagnoseInvalidTest {
+template <bool Value> struct Base {
+  static_assert(Value, ""); // expected-error {{static_assert failed}}
+};
+struct Derived : Base<false> { // expected-note {{requested here}}
+  using Base<false>::Base; // OK. Don't diagnose that 'Base' isn't a base class of Derived.
+};
+} // namespace DontDiagnoseInvalidTest

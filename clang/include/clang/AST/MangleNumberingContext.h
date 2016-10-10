@@ -29,7 +29,7 @@ class VarDecl;
 
 /// \brief Keeps track of the mangled names of lambda expressions and block
 /// literals within a particular context.
-class MangleNumberingContext : public RefCountedBase<MangleNumberingContext> {
+class MangleNumberingContext {
 public:
   virtual ~MangleNumberingContext() {}
 
