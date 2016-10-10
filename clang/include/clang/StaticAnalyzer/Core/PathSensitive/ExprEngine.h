@@ -263,7 +263,7 @@ public:
   /// function has ended. Called for both inlined and and top-level functions.
   void processEndOfFunction(NodeBuilderContext& BC,
                             ExplodedNode *Pred,
-                            const ReturnStmt *RS=nullptr) override;
+                            const ReturnStmt *RS = nullptr) override;
 
   /// Remove dead bindings/symbols before exiting a function.
   void removeDeadOnEndOfFunction(NodeBuilderContext& BC,

@@ -6330,6 +6330,7 @@ Expr *ASTNodeImporter::VisitCXXNewExpr(CXXNewExpr *CE) {
         Importer.getToContext(),
         CE->isGlobalNew(),
         OperatorNewDecl, OperatorDeleteDecl,
+        CE->passAlignment(),
         CE->doesUsualArrayDeleteWantSize(),
         PlacementArgs,
         Importer.Import(CE->getTypeIdParens()),

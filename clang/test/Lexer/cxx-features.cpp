@@ -30,8 +30,7 @@
 #error "wrong value for __cpp_inline_variables"
 #endif
 
-#if check(aligned_new, 0, 0, 0, 0) // FIXME: provisional name
-// FIXME: value shuld be 201606 for cxx1z once implemented
+#if check(aligned_new, 0, 0, 0, 201606) // FIXME: provisional name
 #error "wrong value for __cpp_aligned_new"
 #endif
 

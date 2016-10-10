@@ -7354,6 +7354,8 @@ multiclass AVX512_pmovx_patterns<string OpcPrefix, string ExtTy,
 
   def : Pat<(v8i64 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#BQZrm) addr:$src)>;
+  def : Pat<(v8i64 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BQZrm) addr:$src)>;
 
   def : Pat<(v16i32 (ExtOp (bc_v16i16 (loadv4i64 addr:$src)))),
             (!cast<I>(OpcPrefix#WDZrm) addr:$src)>;

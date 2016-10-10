@@ -1410,6 +1410,7 @@ void ASTStmtReader::VisitCXXNewExpr(CXXNewExpr *E) {
   VisitExpr(E);
   E->GlobalNew = Record[Idx++];
   bool isArray = Record[Idx++];
+  E->PassAlignment = Record[Idx++];
   E->UsualArrayDeleteWantsSize = Record[Idx++];
   unsigned NumPlacementArgs = Record[Idx++];
   E->StoredInitializationStyle = Record[Idx++];
