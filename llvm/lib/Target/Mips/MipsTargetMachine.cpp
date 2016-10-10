@@ -39,10 +39,10 @@ using namespace llvm;
 
 extern "C" void LLVMInitializeMipsTarget() {
   // Register the target.
-  RegisterTargetMachine<MipsebTargetMachine> X(TheMipsTarget);
-  RegisterTargetMachine<MipselTargetMachine> Y(TheMipselTarget);
-  RegisterTargetMachine<MipsebTargetMachine> A(TheMips64Target);
-  RegisterTargetMachine<MipselTargetMachine> B(TheMips64elTarget);
+  RegisterTargetMachine<MipsebTargetMachine> X(getTheMipsTarget());
+  RegisterTargetMachine<MipselTargetMachine> Y(getTheMipselTarget());
+  RegisterTargetMachine<MipsebTargetMachine> A(getTheMips64Target());
+  RegisterTargetMachine<MipselTargetMachine> B(getTheMips64elTarget());
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,

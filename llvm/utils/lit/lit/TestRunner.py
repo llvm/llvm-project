@@ -503,7 +503,7 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
     return out, err, exitCode, timeoutInfo
 
 def executeScript(test, litConfig, tmpBase, commands, cwd):
-    bashPath = litConfig.getBashPath();
+    bashPath = litConfig.getBashPath()
     isWin32CMDEXE = (litConfig.isWindows and not bashPath)
     script = tmpBase + '.script'
     if isWin32CMDEXE:

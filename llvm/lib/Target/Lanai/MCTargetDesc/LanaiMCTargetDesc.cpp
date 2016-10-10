@@ -113,37 +113,40 @@ static MCInstrAnalysis *createLanaiInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" void LLVMInitializeLanaiTargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfo<LanaiMCAsmInfo> X(TheLanaiTarget);
+  RegisterMCAsmInfo<LanaiMCAsmInfo> X(getTheLanaiTarget());
 
   // Register the MC instruction info.
-  TargetRegistry::RegisterMCInstrInfo(TheLanaiTarget, createLanaiMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheLanaiTarget(),
+                                      createLanaiMCInstrInfo);
 
   // Register the MC register info.
-  TargetRegistry::RegisterMCRegInfo(TheLanaiTarget, createLanaiMCRegisterInfo);
+  TargetRegistry::RegisterMCRegInfo(getTheLanaiTarget(),
+                                    createLanaiMCRegisterInfo);
 
   // Register the MC subtarget info.
-  TargetRegistry::RegisterMCSubtargetInfo(TheLanaiTarget,
+  TargetRegistry::RegisterMCSubtargetInfo(getTheLanaiTarget(),
                                           createLanaiMCSubtargetInfo);
 
   // Register the MC code emitter
-  TargetRegistry::RegisterMCCodeEmitter(TheLanaiTarget,
+  TargetRegistry::RegisterMCCodeEmitter(getTheLanaiTarget(),
                                         llvm::createLanaiMCCodeEmitter);
 
   // Register the ASM Backend
-  TargetRegistry::RegisterMCAsmBackend(TheLanaiTarget, createLanaiAsmBackend);
+  TargetRegistry::RegisterMCAsmBackend(getTheLanaiTarget(),
+                                       createLanaiAsmBackend);
 
   // Register the MCInstPrinter.
-  TargetRegistry::RegisterMCInstPrinter(TheLanaiTarget,
+  TargetRegistry::RegisterMCInstPrinter(getTheLanaiTarget(),
                                         createLanaiMCInstPrinter);
 
   // Register the ELF streamer.
-  TargetRegistry::RegisterELFStreamer(TheLanaiTarget, createMCStreamer);
+  TargetRegistry::RegisterELFStreamer(getTheLanaiTarget(), createMCStreamer);
 
   // Register the MC relocation info.
-  TargetRegistry::RegisterMCRelocationInfo(TheLanaiTarget,
+  TargetRegistry::RegisterMCRelocationInfo(getTheLanaiTarget(),
                                            createLanaiElfRelocation);
 
   // Register the MC instruction analyzer.
-  TargetRegistry::RegisterMCInstrAnalysis(TheLanaiTarget,
+  TargetRegistry::RegisterMCInstrAnalysis(getTheLanaiTarget(),
                                           createLanaiInstrAnalysis);
 }

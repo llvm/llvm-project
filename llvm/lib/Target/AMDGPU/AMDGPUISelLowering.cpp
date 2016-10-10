@@ -443,7 +443,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // (Section 7.3)
   setHasFloatingPointExceptions(Subtarget->hasFPExceptions());
 
-  setSelectIsExpensive(false);
   PredictableSelectIsExpensive = false;
 
   // We want to find all load dependencies for long chains of stores to enable

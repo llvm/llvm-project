@@ -30,7 +30,7 @@ class Target;
 class Triple;
 class raw_pwrite_stream;
 
-extern Target TheAVRTarget;
+Target &getTheAVRTarget();
 
 /// Creates a machine code emitter for AVR.
 MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII,

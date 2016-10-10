@@ -1474,7 +1474,7 @@ public:
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
 
   virtual ~MipsOperand() {
     switch (Kind) {
@@ -6469,10 +6469,10 @@ bool MipsAsmParser::parseInternalDirectiveReallowModule() {
 }
 
 extern "C" void LLVMInitializeMipsAsmParser() {
-  RegisterMCAsmParser<MipsAsmParser> X(TheMipsTarget);
-  RegisterMCAsmParser<MipsAsmParser> Y(TheMipselTarget);
-  RegisterMCAsmParser<MipsAsmParser> A(TheMips64Target);
-  RegisterMCAsmParser<MipsAsmParser> B(TheMips64elTarget);
+  RegisterMCAsmParser<MipsAsmParser> X(getTheMipsTarget());
+  RegisterMCAsmParser<MipsAsmParser> Y(getTheMipselTarget());
+  RegisterMCAsmParser<MipsAsmParser> A(getTheMips64Target());
+  RegisterMCAsmParser<MipsAsmParser> B(getTheMips64elTarget());
 }
 
 #define GET_REGISTER_MATCHER

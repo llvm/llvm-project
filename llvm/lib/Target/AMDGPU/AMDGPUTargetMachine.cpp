@@ -63,8 +63,8 @@ static cl::opt<bool> EnableLoadStoreVectorizer(
 
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
-  RegisterTargetMachine<R600TargetMachine> X(TheAMDGPUTarget);
-  RegisterTargetMachine<GCNTargetMachine> Y(TheGCNTarget);
+  RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
+  RegisterTargetMachine<GCNTargetMachine> Y(getTheGCNTarget());
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeSILowerI1CopiesPass(*PR);

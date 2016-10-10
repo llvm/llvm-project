@@ -510,7 +510,6 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus1z) {
     Builder.defineMacro("__cpp_hex_float", "201603");
     Builder.defineMacro("__cpp_inline_variables", "201606");
-    //Builder.defineMacro("__cpp_aligned_new", "201606");
     //Builder.defineMacro("__cpp_noexcept_function_type", "201510");
     Builder.defineMacro("__cpp_capture_star_this", "201603");
     Builder.defineMacro("__cpp_if_constexpr", "201606");
@@ -522,6 +521,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_nontype_template_args", "201411");
     Builder.defineMacro("__cpp_fold_expressions", "201603");
   }
+  if (LangOpts.AlignedAllocation)
+    Builder.defineMacro("__cpp_aligned_new", "201606");
 
   // TS features.
   if (LangOpts.ConceptsTS)

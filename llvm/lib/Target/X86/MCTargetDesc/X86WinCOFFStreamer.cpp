@@ -22,7 +22,7 @@ public:
       : MCWinCOFFStreamer(C, AB, *CE, OS) {}
 
   void EmitWinEHHandlerData() override;
-  void EmitWindowsUnwindTables() override;
+  void EmitWindowsUnwindTables();
   void FinishImpl() override;
 };
 

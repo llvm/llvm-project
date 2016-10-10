@@ -12,17 +12,25 @@
 using namespace llvm;
 
 namespace llvm {
-Target TheBPFleTarget;
-Target TheBPFbeTarget;
-Target TheBPFTarget;
+Target &getTheBPFleTarget() {
+  static Target TheBPFleTarget;
+  return TheBPFleTarget;
 }
+Target &getTheBPFbeTarget() {
+  static Target TheBPFbeTarget;
+  return TheBPFbeTarget;
+}
+Target &getTheBPFTarget() {
+  static Target TheBPFTarget;
+  return TheBPFTarget;
+}
+} // namespace llvm
 
 extern "C" void LLVMInitializeBPFTargetInfo() {
-  TargetRegistry::RegisterTarget(TheBPFTarget, "bpf",
-                                 "BPF (host endian)",
+  TargetRegistry::RegisterTarget(getTheBPFTarget(), "bpf", "BPF (host endian)",
                                  [](Triple::ArchType) { return false; }, true);
-  RegisterTarget<Triple::bpfel, /*HasJIT=*/true> X(
-      TheBPFleTarget, "bpfel", "BPF (little endian)");
-  RegisterTarget<Triple::bpfeb, /*HasJIT=*/true> Y(
-      TheBPFbeTarget, "bpfeb", "BPF (big endian)");
+  RegisterTarget<Triple::bpfel, /*HasJIT=*/true> X(getTheBPFleTarget(), "bpfel",
+                                                   "BPF (little endian)");
+  RegisterTarget<Triple::bpfeb, /*HasJIT=*/true> Y(getTheBPFbeTarget(), "bpfeb",
+                                                   "BPF (big endian)");
 }

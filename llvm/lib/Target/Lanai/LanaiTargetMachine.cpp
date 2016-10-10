@@ -32,7 +32,8 @@ void initializeLanaiMemAluCombinerPass(PassRegistry &);
 
 extern "C" void LLVMInitializeLanaiTarget() {
   // Register the target.
-  RegisterTargetMachine<LanaiTargetMachine> registered_target(TheLanaiTarget);
+  RegisterTargetMachine<LanaiTargetMachine> registered_target(
+      getTheLanaiTarget());
 }
 
 static std::string computeDataLayout() {

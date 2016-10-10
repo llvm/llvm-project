@@ -149,8 +149,8 @@ static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 extern "C" void LLVMInitializeMipsTargetMC() {
-  for (Target *T : {&TheMipsTarget, &TheMipselTarget, &TheMips64Target,
-                    &TheMips64elTarget}) {
+  for (Target *T : {&getTheMipsTarget(), &getTheMipselTarget(),
+                    &getTheMips64Target(), &getTheMips64elTarget()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createMipsMCAsmInfo);
 
@@ -183,20 +183,19 @@ extern "C" void LLVMInitializeMipsTargetMC() {
   }
 
   // Register the MC Code Emitter
-  for (Target *T : {&TheMipsTarget, &TheMips64Target})
+  for (Target *T : {&getTheMipsTarget(), &getTheMips64Target()})
     TargetRegistry::RegisterMCCodeEmitter(*T, createMipsMCCodeEmitterEB);
 
-  for (Target *T : {&TheMipselTarget, &TheMips64elTarget})
+  for (Target *T : {&getTheMipselTarget(), &getTheMips64elTarget()})
     TargetRegistry::RegisterMCCodeEmitter(*T, createMipsMCCodeEmitterEL);
 
   // Register the asm backend.
-  TargetRegistry::RegisterMCAsmBackend(TheMipsTarget,
+  TargetRegistry::RegisterMCAsmBackend(getTheMipsTarget(),
                                        createMipsAsmBackendEB32);
-  TargetRegistry::RegisterMCAsmBackend(TheMipselTarget,
+  TargetRegistry::RegisterMCAsmBackend(getTheMipselTarget(),
                                        createMipsAsmBackendEL32);
-  TargetRegistry::RegisterMCAsmBackend(TheMips64Target,
+  TargetRegistry::RegisterMCAsmBackend(getTheMips64Target(),
                                        createMipsAsmBackendEB64);
-  TargetRegistry::RegisterMCAsmBackend(TheMips64elTarget,
+  TargetRegistry::RegisterMCAsmBackend(getTheMips64elTarget(),
                                        createMipsAsmBackendEL64);
-
 }

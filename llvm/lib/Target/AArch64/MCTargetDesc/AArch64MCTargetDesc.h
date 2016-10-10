@@ -35,9 +35,9 @@ class Triple;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheAArch64leTarget;
-extern Target TheAArch64beTarget;
-extern Target TheARM64Target;
+Target &getTheAArch64leTarget();
+Target &getTheAArch64beTarget();
+Target &getTheARM64Target();
 
 MCCodeEmitter *createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
                                           const MCRegisterInfo &MRI,

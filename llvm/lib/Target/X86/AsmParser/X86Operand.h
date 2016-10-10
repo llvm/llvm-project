@@ -31,7 +31,6 @@ struct X86Operand : public MCParsedAsmOperand {
   } Kind;
 
   SMLoc StartLoc, EndLoc;
-  SMLoc OffsetOfLoc;
   StringRef SymName;
   void *OpDecl;
   bool AddressOf;
@@ -75,12 +74,10 @@ struct X86Operand : public MCParsedAsmOperand {
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
   SMRange getLocRange() const { return SMRange(StartLoc, EndLoc); }
-  /// getOffsetOfLoc - Get the location of the offset operator.
-  SMLoc getOffsetOfLoc() const override { return OffsetOfLoc; }
 
   void print(raw_ostream &OS) const override {}
 
@@ -195,10 +192,6 @@ struct X86Operand : public MCParsedAsmOperand {
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
     return isImmUnsignedi8Value(CE->getValue());
-  }
-
-  bool isOffsetOf() const override {
-    return OffsetOfLoc.getPointer();
   }
 
   bool needAddressOf() const override {
@@ -474,12 +467,11 @@ struct X86Operand : public MCParsedAsmOperand {
 
   static std::unique_ptr<X86Operand>
   CreateReg(unsigned RegNo, SMLoc StartLoc, SMLoc EndLoc,
-            bool AddressOf = false, SMLoc OffsetOfLoc = SMLoc(),
-            StringRef SymName = StringRef(), void *OpDecl = nullptr) {
+            bool AddressOf = false, StringRef SymName = StringRef(),
+            void *OpDecl = nullptr) {
     auto Res = llvm::make_unique<X86Operand>(Register, StartLoc, EndLoc);
     Res->Reg.RegNo = RegNo;
     Res->AddressOf = AddressOf;
-    Res->OffsetOfLoc = OffsetOfLoc;
     Res->SymName = SymName;
     Res->OpDecl = OpDecl;
     return Res;

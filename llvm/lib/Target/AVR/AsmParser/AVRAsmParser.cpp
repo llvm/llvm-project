@@ -582,7 +582,7 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 bool AVRAsmParser::ParseDirective(llvm::AsmToken DirectiveID) { return true; }
 
 extern "C" void LLVMInitializeAVRAsmParser() {
-  RegisterMCAsmParser<AVRAsmParser> X(TheAVRTarget);
+  RegisterMCAsmParser<AVRAsmParser> X(getTheAVRTarget());
 }
 
 #define GET_REGISTER_MATCHER

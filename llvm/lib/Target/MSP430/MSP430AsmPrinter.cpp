@@ -155,5 +155,5 @@ void MSP430AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeMSP430AsmPrinter() {
-  RegisterAsmPrinter<MSP430AsmPrinter> X(TheMSP430Target);
+  RegisterAsmPrinter<MSP430AsmPrinter> X(getTheMSP430Target());
 }

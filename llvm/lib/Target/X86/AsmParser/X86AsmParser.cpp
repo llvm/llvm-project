@@ -1696,7 +1696,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOffsetOfOperator() {
   unsigned RegNo = is64BitMode() ? X86::RBX : (Parse32 ? X86::EBX : X86::BX);
 
   return X86Operand::CreateReg(RegNo, Start, End, /*GetAddress=*/true,
-                               OffsetOfLoc, Identifier, Info.OpDecl);
+                               Identifier, Info.OpDecl);
 }
 
 enum IntelOperatorKind {
@@ -3065,8 +3065,8 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeX86AsmParser() {
-  RegisterMCAsmParser<X86AsmParser> X(TheX86_32Target);
-  RegisterMCAsmParser<X86AsmParser> Y(TheX86_64Target);
+  RegisterMCAsmParser<X86AsmParser> X(getTheX86_32Target());
+  RegisterMCAsmParser<X86AsmParser> Y(getTheX86_64Target());
 }
 
 #define GET_REGISTER_MATCHER

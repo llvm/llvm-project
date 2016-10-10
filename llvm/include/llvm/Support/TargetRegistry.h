@@ -849,10 +849,13 @@ struct TargetRegistry {
 /// target's initialization function. Usage:
 ///
 ///
-/// Target TheFooTarget; // The global target instance.
-///
+/// Target &getTheFooTarget() { // The global target instance.
+///   static Target TheFooTarget;
+///   return TheFooTarget;
+/// }
 /// extern "C" void LLVMInitializeFooTargetInfo() {
-///   RegisterTarget<Triple::foo> X(TheFooTarget, "foo", "Foo description");
+///   RegisterTarget<Triple::foo> X(getTheFooTarget(), "foo", "Foo
+///   description");
 /// }
 template <Triple::ArchType TargetArchType = Triple::UnknownArch,
           bool HasJIT = false>

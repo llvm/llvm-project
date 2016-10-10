@@ -394,7 +394,7 @@ public:
   SMLoc getStartLoc() const override { return StartLoc; }
 
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
 
   /// isPPC64 - True if this operand is for an instruction in 64-bit mode.
   bool isPPC64() const { return IsPPC64; }
@@ -1980,9 +1980,9 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
 
 /// Force static initialization.
 extern "C" void LLVMInitializePowerPCAsmParser() {
-  RegisterMCAsmParser<PPCAsmParser> A(ThePPC32Target);
-  RegisterMCAsmParser<PPCAsmParser> B(ThePPC64Target);
-  RegisterMCAsmParser<PPCAsmParser> C(ThePPC64LETarget);
+  RegisterMCAsmParser<PPCAsmParser> A(getThePPC32Target());
+  RegisterMCAsmParser<PPCAsmParser> B(getThePPC64Target());
+  RegisterMCAsmParser<PPCAsmParser> C(getThePPC64LETarget());
 }
 
 #define GET_REGISTER_MATCHER

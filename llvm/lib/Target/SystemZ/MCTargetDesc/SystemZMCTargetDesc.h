@@ -28,7 +28,7 @@ class Triple;
 class raw_pwrite_stream;
 class raw_ostream;
 
-extern Target TheSystemZTarget;
+Target &getTheSystemZTarget();
 
 namespace SystemZMC {
 // How many bytes are in the ABI-defined, caller-allocated part of

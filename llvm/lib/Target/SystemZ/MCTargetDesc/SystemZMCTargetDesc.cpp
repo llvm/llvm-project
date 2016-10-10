@@ -205,34 +205,34 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
 
 extern "C" void LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
-  TargetRegistry::RegisterMCAsmInfo(TheSystemZTarget,
+  TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
                                     createSystemZMCAsmInfo);
 
   // Register the adjustCodeGenOpts.
-  TargetRegistry::registerMCAdjustCodeGenOpts(TheSystemZTarget,
+  TargetRegistry::registerMCAdjustCodeGenOpts(getTheSystemZTarget(),
                                               adjustCodeGenOpts);
 
   // Register the MCCodeEmitter.
-  TargetRegistry::RegisterMCCodeEmitter(TheSystemZTarget,
+  TargetRegistry::RegisterMCCodeEmitter(getTheSystemZTarget(),
                                         createSystemZMCCodeEmitter);
 
   // Register the MCInstrInfo.
-  TargetRegistry::RegisterMCInstrInfo(TheSystemZTarget,
+  TargetRegistry::RegisterMCInstrInfo(getTheSystemZTarget(),
                                       createSystemZMCInstrInfo);
 
   // Register the MCRegisterInfo.
-  TargetRegistry::RegisterMCRegInfo(TheSystemZTarget,
+  TargetRegistry::RegisterMCRegInfo(getTheSystemZTarget(),
                                     createSystemZMCRegisterInfo);
 
   // Register the MCSubtargetInfo.
-  TargetRegistry::RegisterMCSubtargetInfo(TheSystemZTarget,
+  TargetRegistry::RegisterMCSubtargetInfo(getTheSystemZTarget(),
                                           createSystemZMCSubtargetInfo);
 
   // Register the MCAsmBackend.
-  TargetRegistry::RegisterMCAsmBackend(TheSystemZTarget,
+  TargetRegistry::RegisterMCAsmBackend(getTheSystemZTarget(),
                                        createSystemZMCAsmBackend);
 
   // Register the MCInstPrinter.
-  TargetRegistry::RegisterMCInstPrinter(TheSystemZTarget,
+  TargetRegistry::RegisterMCInstPrinter(getTheSystemZTarget(),
                                         createSystemZMCInstPrinter);
 }

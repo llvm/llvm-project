@@ -2596,7 +2596,7 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction() const {
     return false;
 
   const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 2 || FPT->isVariadic())
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 3 || FPT->isVariadic())
     return false;
 
   // If this is a single-parameter function, it must be a replaceable global
@@ -2604,20 +2604,42 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction() const {
   if (FPT->getNumParams() == 1)
     return true;
 
-  // Otherwise, we're looking for a second parameter whose type is
-  // 'const std::nothrow_t &', or, in C++1y, 'std::size_t'.
-  QualType Ty = FPT->getParamType(1);
+  unsigned Params = 1;
+  QualType Ty = FPT->getParamType(Params);
   ASTContext &Ctx = getASTContext();
+
+  auto Consume = [&] {
+    ++Params;
+    Ty = Params < FPT->getNumParams() ? FPT->getParamType(Params) : QualType();
+  };
+
+  // In C++14, the next parameter can be a 'std::size_t' for sized delete.
+  bool IsSizedDelete = false;
   if (Ctx.getLangOpts().SizedDeallocation &&
-      Ctx.hasSameType(Ty, Ctx.getSizeType()))
-    return true;
-  if (!Ty->isReferenceType())
-    return false;
-  Ty = Ty->getPointeeType();
-  if (Ty.getCVRQualifiers() != Qualifiers::Const)
-    return false;
-  const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-  return RD && isNamed(RD, "nothrow_t") && RD->isInStdNamespace();
+      (getDeclName().getCXXOverloadedOperator() == OO_Delete ||
+       getDeclName().getCXXOverloadedOperator() == OO_Array_Delete) &&
+      Ctx.hasSameType(Ty, Ctx.getSizeType())) {
+    IsSizedDelete = true;
+    Consume();
+  }
+
+  // In C++17, the next parameter can be a 'std::align_val_t' for aligned
+  // new/delete.
+  if (Ctx.getLangOpts().AlignedAllocation && !Ty.isNull() && Ty->isAlignValT())
+    Consume();
+
+  // Finally, if this is not a sized delete, the final parameter can
+  // be a 'const std::nothrow_t&'.
+  if (!IsSizedDelete && !Ty.isNull() && Ty->isReferenceType()) {
+    Ty = Ty->getPointeeType();
+    if (Ty.getCVRQualifiers() != Qualifiers::Const)
+      return false;
+    const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+    if (RD && isNamed(RD, "nothrow_t") && RD->isInStdNamespace())
+      Consume();
+  }
+
+  return Params == FPT->getNumParams();
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {

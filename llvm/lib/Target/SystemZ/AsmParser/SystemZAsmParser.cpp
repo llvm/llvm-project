@@ -261,7 +261,7 @@ public:
 
   // Override MCParsedAsmOperand.
   SMLoc getStartLoc() const override { return StartLoc; }
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
   void print(raw_ostream &OS) const override;
 
   // Used by the TableGen code to add particular types of operand
@@ -1171,5 +1171,5 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
 
 // Force static initialization.
 extern "C" void LLVMInitializeSystemZAsmParser() {
-  RegisterMCAsmParser<SystemZAsmParser> X(TheSystemZTarget);
+  RegisterMCAsmParser<SystemZAsmParser> X(getTheSystemZTarget());
 }

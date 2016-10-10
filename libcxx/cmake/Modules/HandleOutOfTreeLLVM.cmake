@@ -105,10 +105,7 @@ if (LIBCXX_USING_INSTALLED_LLVM OR LIBCXX_STANDALONE_BUILD)
 
   # Required doc configuration
   if (LLVM_ENABLE_SPHINX)
-    message(STATUS "Sphinx enabled.")
     find_package(Sphinx REQUIRED)
-  else()
-    message(STATUS "Sphinx disabled.")
   endif()
 
   # FIXME - This is cribbed from HandleLLVMOptions.cmake.

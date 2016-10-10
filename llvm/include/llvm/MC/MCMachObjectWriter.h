@@ -27,15 +27,10 @@ class MCMachObjectTargetWriter {
   const unsigned Is64Bit : 1;
   const uint32_t CPUType;
   const uint32_t CPUSubtype;
-  unsigned LocalDifference_RIT;
 
 protected:
   MCMachObjectTargetWriter(bool Is64Bit_, uint32_t CPUType_,
                            uint32_t CPUSubtype_);
-
-  void setLocalDifferenceRelocationType(unsigned Type) {
-    LocalDifference_RIT = Type;
-  }
 
 public:
   virtual ~MCMachObjectTargetWriter();
@@ -53,9 +48,6 @@ public:
   bool is64Bit() const { return Is64Bit; }
   uint32_t getCPUType() const { return CPUType; }
   uint32_t getCPUSubtype() const { return CPUSubtype; }
-  unsigned getLocalDifferenceRelocationType() const {
-    return LocalDifference_RIT;
-  }
 
   /// @}
 

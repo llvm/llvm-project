@@ -752,7 +752,7 @@ public:
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
   SMRange getLocRange() const { return SMRange(StartLoc, EndLoc); }
@@ -10408,10 +10408,10 @@ bool ARMAsmParser::parseDirectiveThumbSet(SMLoc L) {
 
 /// Force static initialization.
 extern "C" void LLVMInitializeARMAsmParser() {
-  RegisterMCAsmParser<ARMAsmParser> X(TheARMLETarget);
-  RegisterMCAsmParser<ARMAsmParser> Y(TheARMBETarget);
-  RegisterMCAsmParser<ARMAsmParser> A(TheThumbLETarget);
-  RegisterMCAsmParser<ARMAsmParser> B(TheThumbBETarget);
+  RegisterMCAsmParser<ARMAsmParser> X(getTheARMLETarget());
+  RegisterMCAsmParser<ARMAsmParser> Y(getTheARMBETarget());
+  RegisterMCAsmParser<ARMAsmParser> A(getTheThumbLETarget());
+  RegisterMCAsmParser<ARMAsmParser> B(getTheThumbBETarget());
 }
 
 #define GET_REGISTER_MATCHER

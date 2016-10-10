@@ -412,7 +412,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
+; AVX512F-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_8f32:
@@ -744,14 +744,14 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm11[0],xmm1[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm10[0],xmm1[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm9[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm8[0],xmm7[0],xmm8[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm6[0],xmm2[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm5[0]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm3[0],xmm0[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm16[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -1057,8 +1057,7 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f32:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    movq %rax, %rcx
@@ -1193,7 +1192,7 @@ define <8 x float> @load_cvt_8i16_to_8f32(<8 x i16>* %a0) nounwind {
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
+; AVX512F-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_8f32:
@@ -1425,14 +1424,14 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm10[0],xmm11[0],xmm10[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm9[0],xmm1[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm8[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm6[0],xmm7[0],xmm6[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm5[0],xmm1[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm17[0],xmm2[3]
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm16[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -2449,8 +2448,7 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    movq %rax, %rcx

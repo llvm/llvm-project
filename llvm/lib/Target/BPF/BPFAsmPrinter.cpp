@@ -55,7 +55,7 @@ void BPFAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeBPFAsmPrinter() {
-  RegisterAsmPrinter<BPFAsmPrinter> X(TheBPFleTarget);
-  RegisterAsmPrinter<BPFAsmPrinter> Y(TheBPFbeTarget);
-  RegisterAsmPrinter<BPFAsmPrinter> Z(TheBPFTarget);
+  RegisterAsmPrinter<BPFAsmPrinter> X(getTheBPFleTarget());
+  RegisterAsmPrinter<BPFAsmPrinter> Y(getTheBPFbeTarget());
+  RegisterAsmPrinter<BPFAsmPrinter> Z(getTheBPFTarget());
 }

@@ -193,12 +193,6 @@ public:
 
   bool shouldPrintMachineCode() const { return Options.PrintMachineCode; }
 
-  /// Returns the default value of asm verbosity.
-  ///
-  bool getAsmVerbosityDefault() const {
-    return Options.MCOptions.AsmVerbose;
-  }
-
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
   /// Return true if data objects should be emitted into their own section,

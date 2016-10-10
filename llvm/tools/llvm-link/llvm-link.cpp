@@ -83,7 +83,7 @@ Force("f", cl::desc("Enable binary output on terminals"));
 
 static cl::opt<bool>
     DisableLazyLoad("disable-lazy-loading",
-                    cl::desc("Enable binary output on terminals"));
+                    cl::desc("Disable lazy module loading"));
 
 static cl::opt<bool>
     OutputAssembly("S", cl::desc("Write output as LLVM assembly"), cl::Hidden);

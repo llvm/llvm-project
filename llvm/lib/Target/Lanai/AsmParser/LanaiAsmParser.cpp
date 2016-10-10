@@ -134,7 +134,7 @@ public:
   SMLoc getStartLoc() const override { return StartLoc; }
 
   // getEndLoc - Gets location of the last token of this operand
-  SMLoc getEndLoc() const override { return EndLoc; }
+  SMLoc getEndLoc() const { return EndLoc; }
 
   unsigned getReg() const override {
     assert(isReg() && "Invalid type access!");
@@ -1207,7 +1207,7 @@ bool LanaiAsmParser::ParseInstruction(ParseInstructionInfo & /*Info*/,
 } // namespace
 
 extern "C" void LLVMInitializeLanaiAsmParser() {
-  RegisterMCAsmParser<LanaiAsmParser> x(TheLanaiTarget);
+  RegisterMCAsmParser<LanaiAsmParser> x(getTheLanaiTarget());
 }
 
 } // namespace llvm

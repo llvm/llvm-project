@@ -179,6 +179,7 @@ class Configuration(object):
             assert self.cxx.version is not None
             maj_v, min_v, _ = self.cxx.version
             self.config.available_features.add(cxx_type)
+            self.config.available_features.add('%s-%s' % (cxx_type, maj_v))
             self.config.available_features.add('%s-%s.%s' % (
                 cxx_type, maj_v, min_v))
 

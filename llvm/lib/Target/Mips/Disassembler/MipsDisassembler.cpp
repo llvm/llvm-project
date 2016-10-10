@@ -519,8 +519,10 @@ static DecodeStatus DecodeMovePRegPair(MCInst &Inst, unsigned Insn,
                                        const void *Decoder);
 
 namespace llvm {
-extern Target TheMipselTarget, TheMipsTarget, TheMips64Target,
-              TheMips64elTarget;
+Target &getTheMipselTarget();
+Target &getTheMipsTarget();
+Target &getTheMips64Target();
+Target &getTheMips64elTarget();
 }
 
 static MCDisassembler *createMipsDisassembler(
@@ -539,13 +541,13 @@ static MCDisassembler *createMipselDisassembler(
 
 extern "C" void LLVMInitializeMipsDisassembler() {
   // Register the disassembler.
-  TargetRegistry::RegisterMCDisassembler(TheMipsTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheMipsTarget(),
                                          createMipsDisassembler);
-  TargetRegistry::RegisterMCDisassembler(TheMipselTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheMipselTarget(),
                                          createMipselDisassembler);
-  TargetRegistry::RegisterMCDisassembler(TheMips64Target,
+  TargetRegistry::RegisterMCDisassembler(getTheMips64Target(),
                                          createMipsDisassembler);
-  TargetRegistry::RegisterMCDisassembler(TheMips64elTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheMips64elTarget(),
                                          createMipselDisassembler);
 }
 
