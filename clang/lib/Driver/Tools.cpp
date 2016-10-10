@@ -4635,7 +4635,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-dwarf-column-info");
 
   // FIXME: Move backend command line options to the module.
-  if (Args.hasArg(options::OPT_gmodules)) {
+  // If -gline-tables-only is the last option it wins.
+  if (DebugInfoKind != codegenoptions::DebugLineTablesOnly &&
+      Args.hasArg(options::OPT_gmodules)) {
     DebugInfoKind = codegenoptions::LimitedDebugInfo;
     CmdArgs.push_back("-dwarf-ext-refs");
     CmdArgs.push_back("-fmodule-format=obj");
