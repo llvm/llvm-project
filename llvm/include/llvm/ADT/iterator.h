@@ -256,11 +256,6 @@ struct pointee_iterator
   T &operator*() const { return **this->I; }
 };
 
-template <typename WrappedIteratorT>
-pointee_iterator<WrappedIteratorT> make_pointee_iterator(WrappedIteratorT &&I) {
-  return pointee_iterator<WrappedIteratorT>(std::forward<WrappedIteratorT>(I));
-}
-
 template <typename WrappedIteratorT,
           typename T = decltype(&*std::declval<WrappedIteratorT>())>
 class pointer_iterator
@@ -277,11 +272,6 @@ public:
   T &operator*() { return Ptr = &*this->I; }
   const T &operator*() const { return Ptr = &*this->I; }
 };
-
-template <typename WrappedIteratorT>
-pointer_iterator<WrappedIteratorT> make_pointer_iterator(WrappedIteratorT &&I) {
-  return pointer_iterator<WrappedIteratorT>(std::forward<WrappedIteratorT>(I));
-}
 
 } // namespace llvm
 

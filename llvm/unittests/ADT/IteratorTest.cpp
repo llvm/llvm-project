@@ -42,20 +42,19 @@ TEST(PointeeIteratorTest, Basic) {
   V.push_back(&arr[2]);
   V.push_back(&arr[3]);
 
-  auto Begin = make_pointee_iterator(V.begin());
-  auto End = make_pointee_iterator(V.end());
-  static_assert(
-      std::is_same<decltype(Begin),
-                   pointee_iterator<SmallVectorImpl<int *>::iterator>>::value,
-      "Wrong type returned by make_pointee_iterator");
+  typedef pointee_iterator<SmallVectorImpl<int *>::const_iterator> test_iterator;
 
-  auto I = Begin;
+  test_iterator Begin, End;
+  Begin = V.begin();
+  End = test_iterator(V.end());
+
+  test_iterator I = Begin;
   for (int i = 0; i < 4; ++i) {
     EXPECT_EQ(*V[i], *I);
 
     EXPECT_EQ(I, Begin + i);
     EXPECT_EQ(I, std::next(Begin, i));
-    auto J = Begin;
+    test_iterator J = Begin;
     J += i;
     EXPECT_EQ(I, J);
     EXPECT_EQ(*V[i], Begin[i]);
@@ -70,7 +69,7 @@ TEST(PointeeIteratorTest, Basic) {
     EXPECT_EQ(i, std::distance(Begin, I));
     EXPECT_EQ(Begin, I - i);
 
-    auto K = I++;
+    test_iterator K = I++;
     EXPECT_EQ(K, std::prev(I));
   }
   EXPECT_EQ(End, I);
@@ -83,21 +82,20 @@ TEST(PointeeIteratorTest, SmartPointer) {
   V.push_back(make_unique<int>(3));
   V.push_back(make_unique<int>(4));
 
-  auto Begin = make_pointee_iterator(V.begin());
-  auto End = make_pointee_iterator(V.end());
-  static_assert(
-      std::is_same<decltype(Begin),
-                   pointee_iterator<
-                       SmallVectorImpl<std::unique_ptr<int>>::iterator>>::value,
-      "Wrong type returned by make_pointee_iterator");
+  typedef pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<int>>::const_iterator> test_iterator;
 
-  auto I = Begin;
+  test_iterator Begin, End;
+  Begin = V.begin();
+  End = test_iterator(V.end());
+
+  test_iterator I = Begin;
   for (int i = 0; i < 4; ++i) {
     EXPECT_EQ(*V[i], *I);
 
     EXPECT_EQ(I, Begin + i);
     EXPECT_EQ(I, std::next(Begin, i));
-    auto J = Begin;
+    test_iterator J = Begin;
     J += i;
     EXPECT_EQ(I, J);
     EXPECT_EQ(*V[i], Begin[i]);
@@ -112,7 +110,7 @@ TEST(PointeeIteratorTest, SmartPointer) {
     EXPECT_EQ(i, std::distance(Begin, I));
     EXPECT_EQ(Begin, I - i);
 
-    auto K = I++;
+    test_iterator K = I++;
     EXPECT_EQ(K, std::prev(I));
   }
   EXPECT_EQ(End, I);
@@ -189,10 +187,7 @@ TEST(FilterIteratorTest, InputIterator) {
 
 TEST(PointerIterator, Basic) {
   int A[] = {1, 2, 3, 4};
-  auto Begin = make_pointer_iterator(std::begin(A));
-  auto End = make_pointer_iterator(std::end(A));
-  static_assert(std::is_same<decltype(Begin), pointer_iterator<int *>>::value,
-                "Wrong type returned by make_pointer_iterator");
+  pointer_iterator<int *> Begin(std::begin(A)), End(std::end(A));
   EXPECT_EQ(A, *Begin);
   ++Begin;
   EXPECT_EQ(A + 1, *Begin);
@@ -206,7 +201,7 @@ TEST(PointerIterator, Basic) {
 
 TEST(PointerIterator, Const) {
   int A[] = {1, 2, 3, 4};
-  auto Begin = make_pointer_iterator(std::begin(A));
+  const pointer_iterator<int *> Begin(std::begin(A));
   EXPECT_EQ(A, *Begin);
   EXPECT_EQ(A + 1, std::next(*Begin, 1));
   EXPECT_EQ(A + 2, std::next(*Begin, 2));

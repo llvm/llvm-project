@@ -18,6 +18,8 @@ define void @use1() {
 ; CHECK: [[B]] = distinct !DIGlobalVariable(name: "b", scope: null, isLocal: false, isDefinition: true, expr: [[EXPR:![0-9]+]])
 ; CHECK: [[EXPR]] = !DIExpression(DW_OP_plus, 4)
 
-
+!llvm.module.flags = !{!2, !3}
 !0 = distinct !DIGlobalVariable(name: "a")
 !1 = distinct !DIGlobalVariable(name: "b")
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 2, !"Dwarf Version", i32 4}

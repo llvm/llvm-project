@@ -1329,6 +1329,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::CTPOP:       ExpandIntRes_CTPOP(N, Lo, Hi); break;
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTTZ:        ExpandIntRes_CTTZ(N, Lo, Hi); break;
+  case ISD::FLT_ROUNDS_: ExpandIntRes_FLT_ROUNDS(N, Lo, Hi); break;
   case ISD::FP_TO_SINT:  ExpandIntRes_FP_TO_SINT(N, Lo, Hi); break;
   case ISD::FP_TO_UINT:  ExpandIntRes_FP_TO_UINT(N, Lo, Hi); break;
   case ISD::LOAD:        ExpandIntRes_LOAD(cast<LoadSDNode>(N), Lo, Hi); break;
@@ -2015,6 +2016,19 @@ void DAGTypeLegalizer::ExpandIntRes_CTTZ(SDNode *N,
                                  DAG.getConstant(NVT.getSizeInBits(), dl,
                                                  NVT)));
   Hi = DAG.getConstant(0, dl, NVT);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_FLT_ROUNDS(SDNode *N, SDValue &Lo,
+                                               SDValue &Hi) {
+  SDLoc dl(N);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  unsigned NBitWidth = NVT.getSizeInBits();
+
+  EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
+  Lo = DAG.getNode(ISD::FLT_ROUNDS_, dl, NVT);
+  // The high part is the sign of Lo, as -1 is a valid value for FLT_ROUNDS
+  Hi = DAG.getNode(ISD::SRA, dl, NVT, Lo,
+                   DAG.getConstant(NBitWidth - 1, dl, ShiftAmtTy));
 }
 
 void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,

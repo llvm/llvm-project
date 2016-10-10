@@ -88,10 +88,10 @@ namespace Intrinsic {
                                 StringRef Name);
 
   /// Map a GCC builtin name to an intrinsic ID.
-  ID getIntrinsicForGCCBuiltin(const char *Prefix, const char *BuiltinName);
+  ID getIntrinsicForGCCBuiltin(const char *Prefix, StringRef BuiltinName);
 
   /// Map a MS builtin name to an intrinsic ID.
-  ID getIntrinsicForMSBuiltin(const char *Prefix, const char *BuiltinName);
+  ID getIntrinsicForMSBuiltin(const char *Prefix, StringRef BuiltinName);
 
   /// This is a type descriptor which explains the type requirements of an
   /// intrinsic. This is returned by getIntrinsicInfoTableEntries.

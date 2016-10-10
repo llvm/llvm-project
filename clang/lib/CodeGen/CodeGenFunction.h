@@ -2033,7 +2033,8 @@ public:
   void EmitCXXDeleteExpr(const CXXDeleteExpr *E);
 
   void EmitDeleteCall(const FunctionDecl *DeleteFD, llvm::Value *Ptr,
-                      QualType DeleteTy);
+                      QualType DeleteTy, llvm::Value *NumElements = nullptr,
+                      CharUnits CookieSize = CharUnits());
 
   RValue EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
                                   const Expr *Arg, bool IsDelete);

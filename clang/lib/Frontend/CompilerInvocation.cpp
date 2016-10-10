@@ -732,8 +732,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_fsanitize_memory_use_after_dtor);
   Opts.SanitizeCfiCrossDso = Args.hasArg(OPT_fsanitize_cfi_cross_dso);
   Opts.SanitizeStats = Args.hasArg(OPT_fsanitize_stats);
-  Opts.SanitizeAddressUseAfterScope =
-      Args.hasArg(OPT_fsanitize_address_use_after_scope);
+  if (Arg *A = Args.getLastArg(OPT_fsanitize_address_use_after_scope,
+                               OPT_fno_sanitize_address_use_after_scope)) {
+    Opts.SanitizeAddressUseAfterScope =
+        A->getOption().getID() == OPT_fsanitize_address_use_after_scope;
+  }
   Opts.SSPBufferSize =
       getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
   Opts.StackRealignment = Args.hasArg(OPT_mstackrealign);

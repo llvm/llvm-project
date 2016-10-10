@@ -24,6 +24,7 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <tuple>
 #include <utility> // for std::pair
 
 #include "llvm/ADT/Optional.h"
@@ -690,6 +691,28 @@ template <typename R> detail::enumerator_impl<R> enumerate(R &&Range) {
   return detail::enumerator_impl<R>(std::forward<R>(Range));
 }
 
+namespace detail {
+template <typename F, typename Tuple, std::size_t... I>
+auto apply_tuple_impl(F &&f, Tuple &&t, index_sequence<I...>)
+    -> decltype(std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...)) {
+  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
+}
+}
+
+/// Given an input tuple (a1, a2, ..., an), pass the arguments of the
+/// tuple variadically to f as if by calling f(a1, a2, ..., an) and
+/// return the result.
+template <typename F, typename Tuple>
+auto apply_tuple(F &&f, Tuple &&t) -> decltype(detail::apply_tuple_impl(
+    std::forward<F>(f), std::forward<Tuple>(t),
+    build_index_impl<
+        std::tuple_size<typename std::decay<Tuple>::type>::value>{})) {
+  using Indices = build_index_impl<
+      std::tuple_size<typename std::decay<Tuple>::type>::value>;
+
+  return detail::apply_tuple_impl(std::forward<F>(f), std::forward<Tuple>(t),
+                                  Indices{});
+}
 } // End llvm namespace
 
 #endif

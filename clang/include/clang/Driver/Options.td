@@ -687,6 +687,9 @@ def fsanitize_address_field_padding : Joined<["-"], "fsanitize-address-field-pad
 def fsanitize_address_use_after_scope : Flag<["-"], "fsanitize-address-use-after-scope">,
                                         Group<f_clang_Group>, Flags<[CC1Option]>,
                                         HelpText<"Enable use-after-scope detection in AddressSanitizer">;
+def fno_sanitize_address_use_after_scope : Flag<["-"], "fno-sanitize-address-use-after-scope">,
+                                           Group<f_clang_Group>, Flags<[CC1Option]>,
+                                           HelpText<"Disable use-after-scope detection in AddressSanitizer">;
 def fsanitize_recover : Flag<["-"], "fsanitize-recover">, Group<f_clang_Group>,
                         Flags<[CoreOption]>;
 def fno_sanitize_recover : Flag<["-"], "fno-sanitize-recover">,

@@ -66,7 +66,9 @@ void __cpuid(int[4], int);
 static __inline__
 void __cpuidex(int[4], int, int);
 void __debugbreak(void);
+static __inline__
 __int64 __emul(int, int);
+static __inline__
 unsigned __int64 __emulu(unsigned int, unsigned int);
 void __cdecl __fastfail(unsigned int);
 unsigned int __getcallerseflags(void);
@@ -254,10 +256,12 @@ static __inline__
 unsigned long __cdecl _lrotl(unsigned long, int);
 static __inline__
 unsigned long __cdecl _lrotr(unsigned long, int);
-static __inline__
-void _ReadBarrier(void);
-static __inline__
-void _ReadWriteBarrier(void);
+static __inline__ void
+__attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
+_ReadBarrier(void);
+static __inline__ void
+__attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
+_ReadWriteBarrier(void);
 static __inline__
 void *_ReturnAddress(void);
 unsigned int _rorx_u32(unsigned int, const unsigned int);
@@ -286,8 +290,9 @@ unsigned int _shrx_u32(unsigned int, unsigned int);
 void _Store_HLERelease(long volatile *, long);
 void _Store64_HLERelease(__int64 volatile *, __int64);
 void _StorePointer_HLERelease(void *volatile *, void *);
-static __inline__
-void _WriteBarrier(void);
+static __inline__ void
+__attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
+_WriteBarrier(void);
 unsigned __int32 xbegin(void);
 void _xend(void);
 static __inline__
@@ -312,8 +317,6 @@ void __lwpval64(unsigned __int64, unsigned int, unsigned int);
 unsigned __int64 __lzcnt64(unsigned __int64);
 static __inline__
 void __movsq(unsigned long long *, unsigned long long const *, size_t);
-static __inline__
-__int64 __mulh(__int64, __int64);
 static __inline__
 unsigned __int64 __popcnt64(unsigned __int64);
 static __inline__
@@ -405,9 +408,6 @@ static __inline__
 __int64 _InterlockedXor64(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedXor64_np(__int64 volatile *_Value, __int64 _Mask);
 char _InterlockedXor8_np(char volatile *_Value, char _Mask);
-static __inline__
-__int64 _mul128(__int64 _Multiplier, __int64 _Multiplicand,
-                __int64 *_HighProduct);
 unsigned __int64 _rorx_u64(unsigned __int64, const unsigned int);
 __int64 _sarx_i64(__int64, unsigned int);
 #if __STDC_HOSTED__
@@ -415,34 +415,19 @@ int __cdecl _setjmpex(jmp_buf);
 #endif
 unsigned __int64 _shlx_u64(unsigned __int64, unsigned int);
 unsigned __int64 _shrx_u64(unsigned __int64, unsigned int);
-/*
- * Multiply two 64-bit integers and obtain a 64-bit result.
- * The low-half is returned directly and the high half is in an out parameter.
- */
-static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
-_umul128(unsigned __int64 _Multiplier, unsigned __int64 _Multiplicand,
-         unsigned __int64 *_HighProduct) {
-  unsigned __int128 _FullProduct =
-      (unsigned __int128)_Multiplier * (unsigned __int128)_Multiplicand;
-  *_HighProduct = _FullProduct >> 64;
-  return _FullProduct;
-}
+static __inline__
+__int64 __mulh(__int64, __int64);
 static __inline__
 unsigned __int64 __umulh(unsigned __int64, unsigned __int64);
+static __inline__
+__int64 _mul128(__int64, __int64, __int64*);
+static __inline__
+unsigned __int64 _umul128(unsigned __int64,
+                          unsigned __int64,
+                          unsigned __int64*);
 
 #endif /* __x86_64__ */
 
-/*----------------------------------------------------------------------------*\
-|* Multiplication
-\*----------------------------------------------------------------------------*/
-static __inline__ __int64 __DEFAULT_FN_ATTRS
-__emul(int __in1, int __in2) {
-  return (__int64)__in1 * (__int64)__in2;
-}
-static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
-__emulu(unsigned int __in1, unsigned int __in2) {
-  return (unsigned __int64)__in1 * (unsigned __int64)__in2;
-}
 /*----------------------------------------------------------------------------*\
 |* Bit Counting and Testing
 \*----------------------------------------------------------------------------*/
@@ -1060,30 +1045,6 @@ _InterlockedCompareExchange64_rel(__int64 volatile *_Destination,
   __atomic_compare_exchange(_Destination, &_Comparand, &_Exchange, 0,
                             __ATOMIC_SEQ_CST, __ATOMIC_RELEASE);
   return _Comparand;
-}
-#endif
-/*----------------------------------------------------------------------------*\
-|* Barriers
-\*----------------------------------------------------------------------------*/
-static __inline__ void __DEFAULT_FN_ATTRS
-__attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
-_ReadWriteBarrier(void) {
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
-}
-static __inline__ void __DEFAULT_FN_ATTRS
-__attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
-_ReadBarrier(void) {
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
-}
-static __inline__ void __DEFAULT_FN_ATTRS
-__attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
-_WriteBarrier(void) {
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
-}
-#ifdef __x86_64__
-static __inline__ void __DEFAULT_FN_ATTRS
-__faststorefence(void) {
-  __atomic_thread_fence(__ATOMIC_SEQ_CST);
 }
 #endif
 /*----------------------------------------------------------------------------*\
