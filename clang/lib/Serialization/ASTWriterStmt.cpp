@@ -1392,6 +1392,7 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
   VisitExpr(E);
   Record.push_back(E->isGlobalNew());
   Record.push_back(E->isArray());
+  Record.push_back(E->passAlignment());
   Record.push_back(E->doesUsualArrayDeleteWantSize());
   Record.push_back(E->getNumPlacementArgs());
   Record.push_back(E->StoredInitializationStyle);
