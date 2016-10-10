@@ -394,7 +394,8 @@ Driver Options
 
 .. option:: -print-libgcc-file-name
 
-  Print the library path for "libgcc.a".
+  Print the library path for the currently used compiler runtime library
+  ("libgcc.a" or "libclang_rt.builtins.*.a").
 
 .. option:: -print-prog-name=<name>
 

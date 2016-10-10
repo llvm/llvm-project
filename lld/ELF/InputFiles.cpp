@@ -145,6 +145,8 @@ void elf::ObjectFile<ELFT>::parse(DenseSet<StringRef> &ComdatGroups) {
   // Read section and symbol tables.
   initializeSections(ComdatGroups);
   initializeSymbols();
+  if (Config->GcSections && Config->EMachine == EM_ARM)
+    initializeReverseDependencies();
 }
 
 // Sections with SHT_GROUP and comdat bits define comdat section groups.
@@ -267,6 +269,24 @@ void elf::ObjectFile<ELFT>::initializeSections(
     default:
       Sections[I] = createInputSection(Sec);
     }
+  }
+}
+
+// .ARM.exidx sections have a reverse dependency on the InputSection they
+// have a SHF_LINK_ORDER dependency, this is identified by the sh_link.
+template <class ELFT>
+void elf::ObjectFile<ELFT>::initializeReverseDependencies() {
+  unsigned I = -1;
+  for (const Elf_Shdr &Sec : this->ELFObj.sections()) {
+    ++I;
+    if ((Sections[I] == &InputSection<ELFT>::Discarded) ||
+        !(Sec.sh_flags & SHF_LINK_ORDER))
+      continue;
+    if (Sec.sh_link >= Sections.size())
+      fatal(getFilename(this) + ": invalid sh_link index: " +
+            Twine(Sec.sh_link));
+    auto *IS = cast<InputSection<ELFT>>(Sections[Sec.sh_link]);
+    IS->DependentSection = Sections[I];
   }
 }
 
@@ -417,9 +437,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
                                               /*CanOmitFromDynSym*/ false, this)
         ->body();
   case SHN_COMMON:
-    if (Sym->st_value == 0)
+    if (Sym->st_value == 0 || Sym->st_value >= UINT32_MAX)
       fatal(getFilename(this) + ": common symbol '" + Name +
-            "' alignment is 0");
+            "' has invalid alignment: " + Twine(Sym->st_value));
     return elf::Symtab<ELFT>::X->addCommon(Name, Sym->st_size, Sym->st_value,
                                            Binding, Sym->st_other,
                                            Sym->getType(), this)

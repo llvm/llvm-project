@@ -110,7 +110,7 @@ public:
   const Elf_Shdr *getSectionHdr() const { return Header; }
   ObjectFile<ELFT> *getFile() const { return File; }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
-
+  InputSectionBase *getLinkOrderDep() const;
   // Translate an offset in the input section to an offset in the output
   // section.
   uintX_t getOffset(uintX_t Offset) const;
@@ -234,6 +234,9 @@ public:
   // The offset from beginning of the output sections this section was assigned
   // to. The writer sets a value.
   uint64_t OutSecOff = 0;
+
+  // InputSection that is dependent on us (reverse dependency for GC)
+  InputSectionBase<ELFT> *DependentSection = nullptr;
 
   static bool classof(const InputSectionBase<ELFT> *S);
 

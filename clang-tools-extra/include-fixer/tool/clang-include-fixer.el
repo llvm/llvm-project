@@ -94,9 +94,9 @@ CALLBACK is called after the process finishes successfully; it is
 called with a single argument, the buffer where standard output
 has been inserted.  ARGS is a list of additional command line
 arguments.  Return the new process object."
-  (let* ((stdin (current-buffer))
-         (stdout (generate-new-buffer "*clang-include-fixer output*"))
-         (stderr (generate-new-buffer "*clang-include-fixer errors*")))
+  (let ((stdin (current-buffer))
+        (stdout (generate-new-buffer "*clang-include-fixer output*"))
+        (stderr (generate-new-buffer "*clang-include-fixer errors*")))
     (make-process :name "clang-include-fixer"
                   :buffer stdout
                   :command (clang-include-fixer--command args)

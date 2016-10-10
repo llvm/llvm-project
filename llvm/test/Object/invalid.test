@@ -64,3 +64,7 @@ RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 INVALID-RELOC-SH-OFFSET: Invalid data was encountered while parsing the file
+
+RUN: not llvm-readobj -t %p/Inputs/invalid-sections-address-alignment.x86-64 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-SEC-ADDRESS-ALIGNMENT %s
+INVALID-SEC-ADDRESS-ALIGNMENT: Invalid address alignment of section headers

@@ -19,6 +19,7 @@
 #include "isl/aff.h"
 #include "isl/ctx.h"
 #include "isl/map.h"
+#include "isl/options.h"
 #include "isl/set.h"
 #include "isl/union_map.h"
 #include "isl/union_set.h"
@@ -424,6 +425,70 @@ foreachEltWithBreak(NonowningIslPtr<isl_union_map> UMap,
 isl_stat foreachPieceWithBreak(
     NonowningIslPtr<isl_pw_aff> PwAff,
     const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> &F);
+
+/// Scoped limit of ISL operations.
+///
+/// Limits the number of ISL operations during the lifetime of this object. The
+/// idea is to use this as an RAII guard for the scope where the code is aware
+/// that ISL can return errors even when all input is valid. After leaving the
+/// scope, it will return to the error setting as it was before. That also means
+/// that the error setting should not be changed while in that scope.
+///
+/// Such scopes are not allowed to be nested because the previous operations
+/// counter cannot be reset to the previous state, or one that adds the
+/// operations while being in the nested scope. Use therefore is only allowed
+/// while currently a no operations-limit is active.
+class IslMaxOperationsGuard {
+private:
+  /// The ISL context to set the operations limit.
+  ///
+  /// If set to nullptr, there is no need for any action at the end of the
+  /// scope.
+  isl_ctx *IslCtx;
+
+  /// Old OnError setting; to reset to when the scope ends.
+  int OldOnError;
+
+public:
+  /// Enter a max operations scope.
+  ///
+  /// @param IslCtx      The ISL context to set the operations limit for.
+  /// @param LocalMaxOps Maximum number of operations allowed in the
+  ///                    scope. If set to zero, no operations limit is enforced.
+  IslMaxOperationsGuard(isl_ctx *IslCtx, unsigned long LocalMaxOps)
+      : IslCtx(IslCtx) {
+    assert(IslCtx);
+    assert(isl_ctx_get_max_operations(IslCtx) == 0 &&
+           "Nested max operations not supported");
+
+    if (LocalMaxOps == 0) {
+      // No limit on operations; also disable restoring on_error/max_operations.
+      this->IslCtx = nullptr;
+      return;
+    }
+
+    // Save previous state.
+    OldOnError = isl_options_get_on_error(IslCtx);
+
+    // Activate the new setting.
+    isl_ctx_set_max_operations(IslCtx, LocalMaxOps);
+    isl_ctx_reset_operations(IslCtx);
+    isl_options_set_on_error(IslCtx, ISL_ON_ERROR_CONTINUE);
+  }
+
+  /// Leave the max operations scope.
+  ~IslMaxOperationsGuard() {
+    if (!IslCtx)
+      return;
+
+    assert(isl_options_get_on_error(IslCtx) == ISL_ON_ERROR_CONTINUE &&
+           "Unexpected change of the on_error setting");
+
+    // Return to the previous error setting.
+    isl_ctx_set_max_operations(IslCtx, 0);
+    isl_options_set_on_error(IslCtx, OldOnError);
+  }
+};
 
 } // end namespace polly
 

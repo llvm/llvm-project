@@ -39,6 +39,7 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   // Leon features
   HasLeonCasa = false;
   HasUmacSmac = false;
+  PerformSDIVReplace = false;
   InsertNOPLoad = false;
   FixFSMULD = false;
   ReplaceFMULS = false;

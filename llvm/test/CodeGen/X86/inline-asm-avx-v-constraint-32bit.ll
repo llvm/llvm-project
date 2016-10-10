@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple i386-unknown-linux-gnu -mattr +avx 1> /dev/null 2> %t
+; RUN: not llc < %s -mtriple i386-unknown-linux-gnu -mattr +avx -o /dev/null 2> %t
 ; RUN: FileCheck %s --input-file %t
 
 define <4 x float> @testXMM_1(<4 x float> %_xmm0, i32 %_l) {

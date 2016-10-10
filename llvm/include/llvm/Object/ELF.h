@@ -367,6 +367,8 @@ const typename ELFFile<ELFT>::Elf_Shdr *ELFFile<ELFT>::section_begin() const {
   if (Header->e_shentsize != sizeof(Elf_Shdr))
     report_fatal_error(
         "Invalid section header entry size (e_shentsize) in ELF header");
+  if (Header->e_shoff & (AlignOf<Elf_Shdr>::Alignment - 1))
+    report_fatal_error("Invalid address alignment of section headers");
   return reinterpret_cast<const Elf_Shdr *>(base() + Header->e_shoff);
 }
 

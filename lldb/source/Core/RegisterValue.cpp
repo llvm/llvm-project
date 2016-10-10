@@ -633,8 +633,11 @@ uint64_t RegisterValue::GetAsUInt64(uint64_t fail_value,
     default:
       break;
     case 1:
+      return *(const uint8_t *)buffer.bytes;
     case 2:
+      return *(const uint16_t *)buffer.bytes;
     case 4:
+      return *(const uint32_t *)buffer.bytes;
     case 8:
       return *(const uint64_t *)buffer.bytes;
     }
