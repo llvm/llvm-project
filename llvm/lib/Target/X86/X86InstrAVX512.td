@@ -7227,6 +7227,148 @@ let Predicates = [HasAVX512] in {
   defm : avx512_ext_lowering<"DQZ",    v8i64_info,   v8i32x_info,  extloadvi32>;
 }
 
+multiclass AVX512_pmovx_patterns<string OpcPrefix, string ExtTy,
+                                 SDNode ExtOp, PatFrag ExtLoad16> {
+  // 128-bit patterns
+  let Predicates = [HasVLX, HasBWI] in {
+  def : Pat<(v8i16 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BWZ128rm) addr:$src)>;
+  def : Pat<(v8i16 (ExtOp (bc_v16i8 (v2f64 (scalar_to_vector (loadf64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BWZ128rm) addr:$src)>;
+  def : Pat<(v8i16 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BWZ128rm) addr:$src)>;
+  def : Pat<(v8i16 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BWZ128rm) addr:$src)>;
+  def : Pat<(v8i16 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BWZ128rm) addr:$src)>;
+  }
+  let Predicates = [HasVLX] in {
+  def : Pat<(v4i32 (ExtOp (bc_v16i8 (v4i32 (scalar_to_vector (loadi32 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BDZ128rm) addr:$src)>;
+  def : Pat<(v4i32 (ExtOp (v16i8 (vzmovl_v4i32 addr:$src)))),
+            (!cast<I>(OpcPrefix#BDZ128rm) addr:$src)>;
+  def : Pat<(v4i32 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BDZ128rm) addr:$src)>;
+  def : Pat<(v4i32 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BDZ128rm) addr:$src)>;
+
+  def : Pat<(v2i64 (ExtOp (bc_v16i8 (v4i32 (scalar_to_vector (ExtLoad16 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (v16i8 (vzmovl_v4i32 addr:$src)))),
+            (!cast<I>(OpcPrefix#BQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BQZ128rm) addr:$src)>;
+
+  def : Pat<(v4i32 (ExtOp (bc_v8i16 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#WDZ128rm) addr:$src)>;
+  def : Pat<(v4i32 (ExtOp (bc_v8i16 (v2f64 (scalar_to_vector (loadf64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#WDZ128rm) addr:$src)>;
+  def : Pat<(v4i32 (ExtOp (v8i16 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WDZ128rm) addr:$src)>;
+  def : Pat<(v4i32 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WDZ128rm) addr:$src)>;
+  def : Pat<(v4i32 (ExtOp (bc_v8i16 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WDZ128rm) addr:$src)>;
+
+  def : Pat<(v2i64 (ExtOp (bc_v8i16 (v4i32 (scalar_to_vector (loadi32 addr:$src)))))),
+            (!cast<I>(OpcPrefix#WQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (v8i16 (vzmovl_v4i32 addr:$src)))),
+            (!cast<I>(OpcPrefix#WQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (bc_v8i16 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WQZ128rm) addr:$src)>;
+
+  def : Pat<(v2i64 (ExtOp (bc_v4i32 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#DQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (bc_v4i32 (v2f64 (scalar_to_vector (loadf64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#DQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (v4i32 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#DQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (v4i32 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#DQZ128rm) addr:$src)>;
+  def : Pat<(v2i64 (ExtOp (bc_v4i32 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#DQZ128rm) addr:$src)>;
+  }
+  // 256-bit patterns
+  let Predicates = [HasVLX, HasBWI] in {
+  def : Pat<(v16i16 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
+  def : Pat<(v16i16 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
+  def : Pat<(v16i16 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
+  }
+  let Predicates = [HasVLX] in {
+  def : Pat<(v8i32 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
+  def : Pat<(v8i32 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
+  def : Pat<(v8i32 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
+  def : Pat<(v8i32 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
+
+  def : Pat<(v4i64 (ExtOp (bc_v16i8 (v4i32 (scalar_to_vector (loadi32 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (v16i8 (vzmovl_v4i32 addr:$src)))),
+            (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
+
+  def : Pat<(v8i32 (ExtOp (bc_v8i16 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
+  def : Pat<(v8i32 (ExtOp (v8i16 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
+  def : Pat<(v8i32 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
+
+  def : Pat<(v4i64 (ExtOp (bc_v8i16 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (v8i16 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (bc_v8i16 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
+
+  def : Pat<(v4i64 (ExtOp (bc_v4i32 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (v4i32 (vzmovl_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
+  def : Pat<(v4i64 (ExtOp (v4i32 (vzload_v2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
+  }
+  // 512-bit patterns
+  let Predicates = [HasBWI] in {
+  def : Pat<(v32i16 (ExtOp (bc_v32i8 (loadv4i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BWZrm) addr:$src)>;
+  }
+  let Predicates = [HasAVX512] in {
+  def : Pat<(v16i32 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#BDZrm) addr:$src)>;
+
+  def : Pat<(v8i64 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BQZrm) addr:$src)>;
+
+  def : Pat<(v16i32 (ExtOp (bc_v16i16 (loadv4i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WDZrm) addr:$src)>;
+
+  def : Pat<(v8i64 (ExtOp (bc_v8i16 (loadv2i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#WQZrm) addr:$src)>;
+
+  def : Pat<(v8i64 (ExtOp (bc_v8i32 (loadv4i64 addr:$src)))),
+            (!cast<I>(OpcPrefix#DQZrm) addr:$src)>;
+  }
+}
+
+defm : AVX512_pmovx_patterns<"VPMOVSX", "s", X86vsext, extloadi32i16>;
+defm : AVX512_pmovx_patterns<"VPMOVZX", "z", X86vzext, loadi16_anyext>;
+
 //===----------------------------------------------------------------------===//
 // GATHER - SCATTER Operations
 

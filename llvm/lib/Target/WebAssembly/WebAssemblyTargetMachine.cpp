@@ -43,8 +43,10 @@ static cl::opt<bool> EnableEmSjLj(
 
 extern "C" void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
-  RegisterTargetMachine<WebAssemblyTargetMachine> X(TheWebAssemblyTarget32);
-  RegisterTargetMachine<WebAssemblyTargetMachine> Y(TheWebAssemblyTarget64);
+  RegisterTargetMachine<WebAssemblyTargetMachine> X(
+      getTheWebAssemblyTarget32());
+  RegisterTargetMachine<WebAssemblyTargetMachine> Y(
+      getTheWebAssemblyTarget64());
 
   // Register exception handling pass to opt
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(

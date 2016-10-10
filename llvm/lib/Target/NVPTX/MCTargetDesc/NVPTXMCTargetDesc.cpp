@@ -60,7 +60,7 @@ static MCInstPrinter *createNVPTXMCInstPrinter(const Triple &T,
 
 // Force static initialization.
 extern "C" void LLVMInitializeNVPTXTargetMC() {
-  for (Target *T : {&TheNVPTXTarget32, &TheNVPTXTarget64}) {
+  for (Target *T : {&getTheNVPTXTarget32(), &getTheNVPTXTarget64()}) {
     // Register the MC asm info.
     RegisterMCAsmInfo<NVPTXMCAsmInfo> X(*T);
 

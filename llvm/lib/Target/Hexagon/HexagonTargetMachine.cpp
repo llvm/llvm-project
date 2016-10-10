@@ -100,7 +100,7 @@ int HexagonTargetMachineModule = 0;
 
 extern "C" void LLVMInitializeHexagonTarget() {
   // Register the target.
-  RegisterTargetMachine<HexagonTargetMachine> X(TheHexagonTarget);
+  RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 }
 
 static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {

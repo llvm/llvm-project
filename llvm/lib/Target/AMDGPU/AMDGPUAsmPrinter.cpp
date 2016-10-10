@@ -87,8 +87,10 @@ createAMDGPUAsmPrinterPass(TargetMachine &tm,
 }
 
 extern "C" void LLVMInitializeAMDGPUAsmPrinter() {
-  TargetRegistry::RegisterAsmPrinter(TheAMDGPUTarget, createAMDGPUAsmPrinterPass);
-  TargetRegistry::RegisterAsmPrinter(TheGCNTarget, createAMDGPUAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getTheAMDGPUTarget(),
+                                     createAMDGPUAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
+                                     createAMDGPUAsmPrinterPass);
 }
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,

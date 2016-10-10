@@ -126,9 +126,9 @@ static cl::opt<bool>
 
 extern "C" void LLVMInitializeAArch64Target() {
   // Register the target.
-  RegisterTargetMachine<AArch64leTargetMachine> X(TheAArch64leTarget);
-  RegisterTargetMachine<AArch64beTargetMachine> Y(TheAArch64beTarget);
-  RegisterTargetMachine<AArch64leTargetMachine> Z(TheARM64Target);
+  RegisterTargetMachine<AArch64leTargetMachine> X(getTheAArch64leTarget());
+  RegisterTargetMachine<AArch64beTargetMachine> Y(getTheAArch64beTarget());
+  RegisterTargetMachine<AArch64leTargetMachine> Z(getTheARM64Target());
   auto PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeAArch64A53Fix835769Pass(*PR);

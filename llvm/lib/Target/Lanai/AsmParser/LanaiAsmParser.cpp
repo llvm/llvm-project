@@ -1207,7 +1207,7 @@ bool LanaiAsmParser::ParseInstruction(ParseInstructionInfo & /*Info*/,
 } // namespace
 
 extern "C" void LLVMInitializeLanaiAsmParser() {
-  RegisterMCAsmParser<LanaiAsmParser> x(TheLanaiTarget);
+  RegisterMCAsmParser<LanaiAsmParser> x(getTheLanaiTarget());
 }
 
 } // namespace llvm

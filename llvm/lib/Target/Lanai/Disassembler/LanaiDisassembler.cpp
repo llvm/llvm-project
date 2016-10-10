@@ -27,7 +27,7 @@ using namespace llvm;
 typedef MCDisassembler::DecodeStatus DecodeStatus;
 
 namespace llvm {
-extern Target TheLanaiTarget;
+Target &getTheLanaiTarget();
 }
 
 static MCDisassembler *createLanaiDisassembler(const Target & /*T*/,
@@ -38,7 +38,7 @@ static MCDisassembler *createLanaiDisassembler(const Target & /*T*/,
 
 extern "C" void LLVMInitializeLanaiDisassembler() {
   // Register the disassembler
-  TargetRegistry::RegisterMCDisassembler(TheLanaiTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheLanaiTarget(),
                                          createLanaiDisassembler);
 }
 

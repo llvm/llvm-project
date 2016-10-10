@@ -30,8 +30,8 @@ class Target;
 class Triple;
 class raw_pwrite_stream;
 
-extern Target TheWebAssemblyTarget32;
-extern Target TheWebAssemblyTarget64;
+Target &getTheWebAssemblyTarget32();
+Target &getTheWebAssemblyTarget64();
 
 MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 

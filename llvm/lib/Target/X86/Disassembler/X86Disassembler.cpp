@@ -1066,8 +1066,8 @@ static MCDisassembler *createX86Disassembler(const Target &T,
 
 extern "C" void LLVMInitializeX86Disassembler() {
   // Register the disassembler.
-  TargetRegistry::RegisterMCDisassembler(TheX86_32Target,
+  TargetRegistry::RegisterMCDisassembler(getTheX86_32Target(),
                                          createX86Disassembler);
-  TargetRegistry::RegisterMCDisassembler(TheX86_64Target,
+  TargetRegistry::RegisterMCDisassembler(getTheX86_64Target(),
                                          createX86Disassembler);
 }

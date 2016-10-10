@@ -2380,6 +2380,6 @@ std::string LineReader::readLine(unsigned lineNum) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeNVPTXAsmPrinter() {
-  RegisterAsmPrinter<NVPTXAsmPrinter> X(TheNVPTXTarget32);
-  RegisterAsmPrinter<NVPTXAsmPrinter> Y(TheNVPTXTarget64);
+  RegisterAsmPrinter<NVPTXAsmPrinter> X(getTheNVPTXTarget32());
+  RegisterAsmPrinter<NVPTXAsmPrinter> Y(getTheNVPTXTarget64());
 }

@@ -32,9 +32,9 @@ class Triple;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheBPFleTarget;
-extern Target TheBPFbeTarget;
-extern Target TheBPFTarget;
+Target &getTheBPFleTarget();
+Target &getTheBPFbeTarget();
+Target &getTheBPFTarget();
 
 MCCodeEmitter *createBPFMCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,

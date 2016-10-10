@@ -230,39 +230,39 @@ createHexagonObjectTargetStreamer(MCStreamer &S, MCSubtargetInfo const &STI) {
 // Force static initialization.
 extern "C" void LLVMInitializeHexagonTargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfoFn X(TheHexagonTarget, createHexagonMCAsmInfo);
+  RegisterMCAsmInfoFn X(getTheHexagonTarget(), createHexagonMCAsmInfo);
 
   // Register the MC instruction info.
-  TargetRegistry::RegisterMCInstrInfo(TheHexagonTarget,
+  TargetRegistry::RegisterMCInstrInfo(getTheHexagonTarget(),
                                       createHexagonMCInstrInfo);
 
   // Register the MC register info.
-  TargetRegistry::RegisterMCRegInfo(TheHexagonTarget,
+  TargetRegistry::RegisterMCRegInfo(getTheHexagonTarget(),
                                     createHexagonMCRegisterInfo);
 
   // Register the MC subtarget info.
-  TargetRegistry::RegisterMCSubtargetInfo(TheHexagonTarget,
+  TargetRegistry::RegisterMCSubtargetInfo(getTheHexagonTarget(),
                                           createHexagonMCSubtargetInfo);
 
   // Register the MC Code Emitter
-  TargetRegistry::RegisterMCCodeEmitter(TheHexagonTarget,
+  TargetRegistry::RegisterMCCodeEmitter(getTheHexagonTarget(),
                                         createHexagonMCCodeEmitter);
 
   // Register the asm backend
-  TargetRegistry::RegisterMCAsmBackend(TheHexagonTarget,
+  TargetRegistry::RegisterMCAsmBackend(getTheHexagonTarget(),
                                        createHexagonAsmBackend);
 
   // Register the obj streamer
-  TargetRegistry::RegisterELFStreamer(TheHexagonTarget, createMCStreamer);
+  TargetRegistry::RegisterELFStreamer(getTheHexagonTarget(), createMCStreamer);
 
   // Register the asm streamer
-  TargetRegistry::RegisterAsmTargetStreamer(TheHexagonTarget,
+  TargetRegistry::RegisterAsmTargetStreamer(getTheHexagonTarget(),
                                             createMCAsmTargetStreamer);
 
   // Register the MC Inst Printer
-  TargetRegistry::RegisterMCInstPrinter(TheHexagonTarget,
+  TargetRegistry::RegisterMCInstPrinter(getTheHexagonTarget(),
                                         createHexagonMCInstPrinter);
 
   TargetRegistry::RegisterObjectTargetStreamer(
-      TheHexagonTarget, createHexagonObjectTargetStreamer);
+      getTheHexagonTarget(), createHexagonObjectTargetStreamer);
 }

@@ -523,5 +523,5 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
 // Force static initialization.
 extern "C" void LLVMInitializeSystemZAsmPrinter() {
-  RegisterAsmPrinter<SystemZAsmPrinter> X(TheSystemZTarget);
+  RegisterAsmPrinter<SystemZAsmPrinter> X(getTheSystemZTarget());
 }

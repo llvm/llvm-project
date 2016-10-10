@@ -5910,8 +5910,6 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
             (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
   def : Pat<(v16i16 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
-  def : Pat<(v16i16 (ExtOp (bc_v16i8 (loadv2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
   }
   let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v8i32 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
@@ -5938,8 +5936,6 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
             (!cast<I>(OpcPrefix#WDYrm) addr:$src)>;
   def : Pat<(v8i32 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#WDYrm) addr:$src)>;
-  def : Pat<(v8i32 (ExtOp (bc_v8i16 (loadv2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#WDYrm) addr:$src)>;
 
   def : Pat<(v4i64 (ExtOp (bc_v8i16 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#WQYrm) addr:$src)>;
@@ -5955,8 +5951,6 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy, SDNode ExtO
   def : Pat<(v4i64 (ExtOp (v4i32 (vzmovl_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#DQYrm) addr:$src)>;
   def : Pat<(v4i64 (ExtOp (v4i32 (vzload_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#DQYrm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (bc_v4i32 (loadv2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#DQYrm) addr:$src)>;
   }
 }

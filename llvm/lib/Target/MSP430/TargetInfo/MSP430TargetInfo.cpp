@@ -12,9 +12,12 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheMSP430Target;
+Target &llvm::getTheMSP430Target() {
+  static Target TheMSP430Target;
+  return TheMSP430Target;
+}
 
-extern "C" void LLVMInitializeMSP430TargetInfo() { 
-  RegisterTarget<Triple::msp430> 
-    X(TheMSP430Target, "msp430", "MSP430 [experimental]");
+extern "C" void LLVMInitializeMSP430TargetInfo() {
+  RegisterTarget<Triple::msp430> X(getTheMSP430Target(), "msp430",
+                                   "MSP430 [experimental]");
 }

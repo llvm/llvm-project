@@ -288,11 +288,11 @@ looks like this:
 
 .. code-block:: c++
 
-  Target llvm::TheSparcTarget;
+  Target llvm::getTheSparcTarget();
 
   extern "C" void LLVMInitializeSparcTargetInfo() {
     RegisterTarget<Triple::sparc, /*HasJIT=*/false>
-      X(TheSparcTarget, "sparc", "Sparc");
+      X(getTheSparcTarget(), "sparc", "Sparc");
   }
 
 This allows the ``TargetRegistry`` to look up the target by name or by target
@@ -305,7 +305,7 @@ example.  Here is an example of registering the Sparc assembly printer:
 .. code-block:: c++
 
   extern "C" void LLVMInitializeSparcAsmPrinter() {
-    RegisterAsmPrinter<SparcAsmPrinter> X(TheSparcTarget);
+    RegisterAsmPrinter<SparcAsmPrinter> X(getTheSparcTarget());
   }
 
 For more information, see "`llvm/Target/TargetRegistry.h

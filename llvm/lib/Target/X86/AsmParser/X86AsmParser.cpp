@@ -3065,8 +3065,8 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeX86AsmParser() {
-  RegisterMCAsmParser<X86AsmParser> X(TheX86_32Target);
-  RegisterMCAsmParser<X86AsmParser> Y(TheX86_64Target);
+  RegisterMCAsmParser<X86AsmParser> X(getTheX86_32Target());
+  RegisterMCAsmParser<X86AsmParser> Y(getTheX86_64Target());
 }
 
 #define GET_REGISTER_MATCHER

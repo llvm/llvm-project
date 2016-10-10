@@ -274,8 +274,8 @@ static MCInstrAnalysis *createARMMCInstrAnalysis(const MCInstrInfo *Info) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeARMTargetMC() {
-  for (Target *T : {&TheARMLETarget, &TheARMBETarget, &TheThumbLETarget,
-                    &TheThumbBETarget}) {
+  for (Target *T : {&getTheARMLETarget(), &getTheARMBETarget(),
+                    &getTheThumbLETarget(), &getTheThumbBETarget()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createARMMCAsmInfo);
 
@@ -314,16 +314,18 @@ extern "C" void LLVMInitializeARMTargetMC() {
   }
 
   // Register the MC Code Emitter
-  for (Target *T : {&TheARMLETarget, &TheThumbLETarget})
+  for (Target *T : {&getTheARMLETarget(), &getTheThumbLETarget()})
     TargetRegistry::RegisterMCCodeEmitter(*T, createARMLEMCCodeEmitter);
-  for (Target *T : {&TheARMBETarget, &TheThumbBETarget})
+  for (Target *T : {&getTheARMBETarget(), &getTheThumbBETarget()})
     TargetRegistry::RegisterMCCodeEmitter(*T, createARMBEMCCodeEmitter);
 
   // Register the asm backend.
-  TargetRegistry::RegisterMCAsmBackend(TheARMLETarget, createARMLEAsmBackend);
-  TargetRegistry::RegisterMCAsmBackend(TheARMBETarget, createARMBEAsmBackend);
-  TargetRegistry::RegisterMCAsmBackend(TheThumbLETarget,
+  TargetRegistry::RegisterMCAsmBackend(getTheARMLETarget(),
+                                       createARMLEAsmBackend);
+  TargetRegistry::RegisterMCAsmBackend(getTheARMBETarget(),
+                                       createARMBEAsmBackend);
+  TargetRegistry::RegisterMCAsmBackend(getTheThumbLETarget(),
                                        createThumbLEAsmBackend);
-  TargetRegistry::RegisterMCAsmBackend(TheThumbBETarget,
+  TargetRegistry::RegisterMCAsmBackend(getTheThumbBETarget(),
                                        createThumbBEAsmBackend);
 }

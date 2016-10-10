@@ -57,8 +57,8 @@ FunctionPass *createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM);
 BasicBlockPass *createNVPTXLowerAllocaPass();
 MachineFunctionPass *createNVPTXPeephole();
 
-extern Target TheNVPTXTarget32;
-extern Target TheNVPTXTarget64;
+Target &getTheNVPTXTarget32();
+Target &getTheNVPTXTarget64();
 
 namespace NVPTX {
 enum DrvInterface {
