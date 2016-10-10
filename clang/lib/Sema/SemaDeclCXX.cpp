@@ -6755,7 +6755,7 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
     DeclarationName Name =
       Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     if (FindDeallocationFunction(MD->getLocation(), MD->getParent(), Name,
-                                 OperatorDelete, /*Diagnose*/false)) {
+                                 OperatorDelete, false)) {
       if (Diagnose)
         Diag(RD->getLocation(), diag::note_deleted_dtor_no_operator_delete);
       return true;
@@ -7695,11 +7695,19 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       Loc = RD->getLocation();
     
     // If we have a virtual destructor, look up the deallocation function
-    if (FunctionDecl *OperatorDelete =
-            FindDeallocationFunctionForDestructor(Loc, RD)) {
-      MarkFunctionReferenced(Loc, OperatorDelete);
-      Destructor->setOperatorDelete(OperatorDelete);
-    }
+    FunctionDecl *OperatorDelete = nullptr;
+    DeclarationName Name = 
+    Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+    if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete))
+      return true;
+    // If there's no class-specific operator delete, look up the global
+    // non-array delete.
+    if (!OperatorDelete)
+      OperatorDelete = FindUsualDeallocationFunction(Loc, true, Name);
+
+    MarkFunctionReferenced(Loc, OperatorDelete);
+    
+    Destructor->setOperatorDelete(OperatorDelete);
   }
   
   return false;
@@ -9462,11 +9470,13 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
         return true;
       }
 
-      Diag(SS.getRange().getBegin(),
-           diag::err_using_decl_nested_name_specifier_is_not_base_class)
-        << SS.getScopeRep()
-        << cast<CXXRecordDecl>(CurContext)
-        << SS.getRange();
+      if (!cast<CXXRecordDecl>(NamedContext)->isInvalidDecl()) {
+        Diag(SS.getRange().getBegin(),
+             diag::err_using_decl_nested_name_specifier_is_not_base_class)
+          << SS.getScopeRep()
+          << cast<CXXRecordDecl>(CurContext)
+          << SS.getRange();
+      }
       return true;
     }
 
@@ -10272,11 +10282,7 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   Scope *S = getScopeForContext(ClassDecl);
   CheckImplicitSpecialMemberDeclaration(S, Destructor);
 
-  // We can't check whether an implicit destructor is deleted before we complete
-  // the definition of the class, because its validity depends on the alignment
-  // of the class. We'll check this from ActOnFields once the class is complete.
-  if (ClassDecl->isCompleteDefinition() &&
-      ShouldDeleteSpecialMember(Destructor, CXXDestructor))
+  if (ShouldDeleteSpecialMember(Destructor, CXXDestructor))
     SetDeclDeleted(Destructor, ClassLoc);
 
   // Introduce this destructor into its scope.

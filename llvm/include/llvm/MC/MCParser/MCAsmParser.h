@@ -235,7 +235,8 @@ public:
 
   /// \brief Ensure that we have a valid section set in the streamer. Otherwise,
   /// report an error and switch to .text.
-  virtual void checkForValidSection() = 0;
+  /// \return - False on success.
+  virtual bool checkForValidSection() = 0;
 
   /// \brief Parse an arbitrary expression of a specified parenthesis depth,
   /// assuming that the initial '(' characters have already been consumed.

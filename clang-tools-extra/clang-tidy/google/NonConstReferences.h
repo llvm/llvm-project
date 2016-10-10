@@ -22,10 +22,13 @@ namespace runtime {
 /// https://google.github.io/styleguide/cppguide.html#Reference_Arguments
 class NonConstReferences : public ClangTidyCheck {
 public:
-  NonConstReferences(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  NonConstReferences(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const std::vector<std::string> WhiteListTypes;
 };
 
 } // namespace runtime

@@ -2337,15 +2337,6 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   return false;
 }
 
-bool Type::isAlignValT() const {
-  if (auto *ET = getAs<EnumType>()) {
-    auto *II = ET->getDecl()->getIdentifier();
-    if (II && II->isStr("align_val_t") && ET->getDecl()->isInStdNamespace())
-      return true;
-  }
-  return false;
-}
-
 bool Type::isPromotableIntegerType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>())
     switch (BT->getKind()) {

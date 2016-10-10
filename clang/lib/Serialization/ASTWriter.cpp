@@ -4009,14 +4009,14 @@ void ASTWriter::WriteLateParsedTemplates(Sema &SemaRef) {
     return;
 
   RecordData Record;
-  for (auto LPTMapEntry : LPTMap) {
+  for (auto &LPTMapEntry : LPTMap) {
     const FunctionDecl *FD = LPTMapEntry.first;
-    LateParsedTemplate *LPT = LPTMapEntry.second;
+    LateParsedTemplate &LPT = *LPTMapEntry.second;
     AddDeclRef(FD, Record);
-    AddDeclRef(LPT->D, Record);
-    Record.push_back(LPT->Toks.size());
+    AddDeclRef(LPT.D, Record);
+    Record.push_back(LPT.Toks.size());
 
-    for (const auto &Tok : LPT->Toks) {
+    for (const auto &Tok : LPT.Toks) {
       AddToken(Tok, Record);
     }
   }

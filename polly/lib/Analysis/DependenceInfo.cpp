@@ -370,73 +370,70 @@ void Dependences::calculateDependences(Scop &S) {
     }
   }
 
-  long MaxOpsOld = isl_ctx_get_max_operations(IslCtx.get());
-  if (OptComputeOut) {
-    isl_ctx_reset_operations(IslCtx.get());
-    isl_ctx_set_max_operations(IslCtx.get(), OptComputeOut);
-  }
-
-  auto OnErrorStatus = isl_options_get_on_error(IslCtx.get());
-  isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_CONTINUE);
-
   DEBUG(dbgs() << "Read: " << Read << "\n";
         dbgs() << "Write: " << Write << "\n";
         dbgs() << "MayWrite: " << MayWrite << "\n";
         dbgs() << "Schedule: " << Schedule << "\n");
 
-  RAW = WAW = WAR = RED = nullptr;
+  {
+    IslMaxOperationsGuard MaxOpGuard(IslCtx.get(), OptComputeOut);
 
-  if (OptAnalysisType == VALUE_BASED_ANALYSIS) {
-    isl_union_flow *Flow;
+    RAW = WAW = WAR = RED = nullptr;
 
-    Flow = buildFlow(Read, Write, MayWrite, Schedule);
+    if (OptAnalysisType == VALUE_BASED_ANALYSIS) {
+      isl_union_flow *Flow;
 
-    RAW = isl_union_flow_get_must_dependence(Flow);
-    isl_union_flow_free(Flow);
+      Flow = buildFlow(Read, Write, MayWrite, Schedule);
 
-    Flow = buildFlow(Write, Write, Read, Schedule);
+      RAW = isl_union_flow_get_must_dependence(Flow);
+      isl_union_flow_free(Flow);
 
-    WAW = isl_union_flow_get_must_dependence(Flow);
-    WAR = isl_union_flow_get_may_dependence(Flow);
+      Flow = buildFlow(Write, Write, Read, Schedule);
 
-    // This subtraction is needed to obtain the same results as were given by
-    // isl_union_map_compute_flow. For large sets this may add some compile-time
-    // cost. As there does not seem to be a need to distinguish between WAW and
-    // WAR, refactoring Polly to only track general non-flow dependences may
-    // improve performance.
-    WAR = isl_union_map_subtract(WAR, isl_union_map_copy(WAW));
+      WAW = isl_union_flow_get_must_dependence(Flow);
+      WAR = isl_union_flow_get_may_dependence(Flow);
 
-    isl_union_flow_free(Flow);
-    isl_schedule_free(Schedule);
-  } else {
-    isl_union_flow *Flow;
+      // This subtraction is needed to obtain the same results as were given by
+      // isl_union_map_compute_flow. For large sets this may add some
+      // compile-time cost. As there does not seem to be a need to distinguish
+      // between WAW and WAR, refactoring Polly to only track general non-flow
+      // dependences may improve performance.
+      WAR = isl_union_map_subtract(WAR, isl_union_map_copy(WAW));
 
-    Write = isl_union_map_union(Write, isl_union_map_copy(MayWrite));
+      isl_union_flow_free(Flow);
+      isl_schedule_free(Schedule);
+    } else {
+      isl_union_flow *Flow;
 
-    Flow = buildFlow(Read, nullptr, Write, Schedule);
+      Write = isl_union_map_union(Write, isl_union_map_copy(MayWrite));
 
-    RAW = isl_union_flow_get_may_dependence(Flow);
-    isl_union_flow_free(Flow);
+      Flow = buildFlow(Read, nullptr, Write, Schedule);
 
-    Flow = buildFlow(Write, nullptr, Read, Schedule);
+      RAW = isl_union_flow_get_may_dependence(Flow);
+      isl_union_flow_free(Flow);
 
-    WAR = isl_union_flow_get_may_dependence(Flow);
-    isl_union_flow_free(Flow);
+      Flow = buildFlow(Write, nullptr, Read, Schedule);
 
-    Flow = buildFlow(Write, nullptr, Write, Schedule);
+      WAR = isl_union_flow_get_may_dependence(Flow);
+      isl_union_flow_free(Flow);
 
-    WAW = isl_union_flow_get_may_dependence(Flow);
-    isl_union_flow_free(Flow);
-    isl_schedule_free(Schedule);
+      Flow = buildFlow(Write, nullptr, Write, Schedule);
+
+      WAW = isl_union_flow_get_may_dependence(Flow);
+      isl_union_flow_free(Flow);
+      isl_schedule_free(Schedule);
+    }
+
+    isl_union_map_free(MayWrite);
+    isl_union_map_free(Write);
+    isl_union_map_free(Read);
+
+    RAW = isl_union_map_coalesce(RAW);
+    WAW = isl_union_map_coalesce(WAW);
+    WAR = isl_union_map_coalesce(WAR);
+
+    // End of max_operations scope.
   }
-
-  isl_union_map_free(MayWrite);
-  isl_union_map_free(Write);
-  isl_union_map_free(Read);
-
-  RAW = isl_union_map_coalesce(RAW);
-  WAW = isl_union_map_coalesce(WAW);
-  WAR = isl_union_map_coalesce(WAR);
 
   if (isl_ctx_last_error(IslCtx.get()) == isl_error_quota) {
     isl_union_map_free(RAW);
@@ -445,9 +442,6 @@ void Dependences::calculateDependences(Scop &S) {
     RAW = WAW = WAR = nullptr;
     isl_ctx_reset_error(IslCtx.get());
   }
-  isl_options_set_on_error(IslCtx.get(), OnErrorStatus);
-  isl_ctx_reset_operations(IslCtx.get());
-  isl_ctx_set_max_operations(IslCtx.get(), MaxOpsOld);
 
   // Drop out early, as the remaining computations are only needed for
   // reduction dependences or dependences that are finer than statement

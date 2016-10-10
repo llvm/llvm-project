@@ -794,8 +794,6 @@ ASTContext::~ASTContext() {
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
-
-  llvm::DeleteContainerSeconds(MangleNumberingContexts);
 }
 
 void ASTContext::ReleaseParentMapEntries() {
@@ -1570,30 +1568,6 @@ bool ASTContext::isAlignmentRequired(const Type *T) const {
 
 bool ASTContext::isAlignmentRequired(QualType T) const {
   return isAlignmentRequired(T.getTypePtr());
-}
-
-unsigned ASTContext::getTypeAlignIfKnown(QualType T) const {
-  // An alignment on a typedef overrides anything else.
-  if (auto *TT = T->getAs<TypedefType>())
-    if (unsigned Align = TT->getDecl()->getMaxAlignment())
-      return Align;
-
-  // If we have an (array of) complete type, we're done.
-  T = getBaseElementType(T);
-  if (!T->isIncompleteType())
-    return getTypeAlign(T);
-
-  // If we had an array type, its element type might be a typedef
-  // type with an alignment attribute.
-  if (auto *TT = T->getAs<TypedefType>())
-    if (unsigned Align = TT->getDecl()->getMaxAlignment())
-      return Align;
-
-  // Otherwise, see if the declaration of the type had an attribute.
-  if (auto *TT = T->getAs<TagType>())
-    return TT->getDecl()->getMaxAlignment();
-
-  return 0;
 }
 
 TypeInfo ASTContext::getTypeInfo(const Type *T) const {
@@ -9006,13 +8980,14 @@ unsigned ASTContext::getStaticLocalNumber(const VarDecl *VD) const {
 MangleNumberingContext &
 ASTContext::getManglingNumberContext(const DeclContext *DC) {
   assert(LangOpts.CPlusPlus);  // We don't need mangling numbers for plain C.
-  MangleNumberingContext *&MCtx = MangleNumberingContexts[DC];
+  std::unique_ptr<MangleNumberingContext> &MCtx = MangleNumberingContexts[DC];
   if (!MCtx)
     MCtx = createMangleNumberingContext();
   return *MCtx;
 }
 
-MangleNumberingContext *ASTContext::createMangleNumberingContext() const {
+std::unique_ptr<MangleNumberingContext>
+ASTContext::createMangleNumberingContext() const {
   return ABI->createMangleNumberingContext();
 }
 

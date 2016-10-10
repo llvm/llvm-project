@@ -609,19 +609,19 @@ def ROR64ri  : RIi8<0xC1, MRM1r, (outs GR64:$dst),
 // Rotate by 1
 def ROR8r1   : I<0xD0, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "ror{b}\t$dst",
-                 [(set GR8:$dst, (rotr GR8:$src1, (i8 1)))],
+                 [(set GR8:$dst, (rotl GR8:$src1, (i8 7)))],
                  IIC_SR>;
 def ROR16r1  : I<0xD1, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                  "ror{w}\t$dst",
-                 [(set GR16:$dst, (rotr GR16:$src1, (i8 1)))],
+                 [(set GR16:$dst, (rotl GR16:$src1, (i8 15)))],
                  IIC_SR>, OpSize16;
 def ROR32r1  : I<0xD1, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
                  "ror{l}\t$dst",
-                 [(set GR32:$dst, (rotr GR32:$src1, (i8 1)))],
+                 [(set GR32:$dst, (rotl GR32:$src1, (i8 31)))],
                  IIC_SR>, OpSize32;
 def ROR64r1  : RI<0xD1, MRM1r, (outs GR64:$dst), (ins GR64:$src1),
                   "ror{q}\t$dst",
-                  [(set GR64:$dst, (rotr GR64:$src1, (i8 1)))],
+                  [(set GR64:$dst, (rotl GR64:$src1, (i8 63)))],
                   IIC_SR>;
 } // Constraints = "$src = $dst", SchedRW
 

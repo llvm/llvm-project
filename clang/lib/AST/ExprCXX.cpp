@@ -62,7 +62,7 @@ SourceLocation CXXScalarValueInitExpr::getLocStart() const {
 // CXXNewExpr
 CXXNewExpr::CXXNewExpr(const ASTContext &C, bool globalNew,
                        FunctionDecl *operatorNew, FunctionDecl *operatorDelete,
-                       bool PassAlignment, bool usualArrayDeleteWantsSize,
+                       bool usualArrayDeleteWantsSize,
                        ArrayRef<Expr*> placementArgs,
                        SourceRange typeIdParens, Expr *arraySize,
                        InitializationStyle initializationStyle,
@@ -76,8 +76,7 @@ CXXNewExpr::CXXNewExpr(const ASTContext &C, bool globalNew,
     SubExprs(nullptr), OperatorNew(operatorNew), OperatorDelete(operatorDelete),
     AllocatedTypeInfo(allocatedTypeInfo), TypeIdParens(typeIdParens),
     Range(Range), DirectInitRange(directInitRange),
-    GlobalNew(globalNew), PassAlignment(PassAlignment),
-    UsualArrayDeleteWantsSize(usualArrayDeleteWantsSize) {
+    GlobalNew(globalNew), UsualArrayDeleteWantsSize(usualArrayDeleteWantsSize) {
   assert((initializer != nullptr || initializationStyle == NoInit) &&
          "Only NoInit can have no initializer.");
   StoredInitializationStyle = initializer ? initializationStyle + 1 : 0;

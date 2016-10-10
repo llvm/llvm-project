@@ -45,7 +45,7 @@ jump_to_include = False
 if vim.eval('exists("g:clang_include_fixer_jump_to_include")') == "1":
   jump_to_include = vim.eval('g:clang_include_fixer_jump_to_include') != "0"
 
-query_mode = True
+query_mode = False
 if vim.eval('exists("g:clang_include_fixer_query_mode")') == "1":
   query_mode = vim.eval('g:clang_include_fixer_query_mode') != "0"
 
