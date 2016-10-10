@@ -1838,11 +1838,13 @@ class CXXNewExpr : public Expr {
   unsigned GlobalNew : 1;
   /// Do we allocate an array? If so, the first SubExpr is the size expression.
   unsigned Array : 1;
+  /// Should the alignment be passed to the allocation function?
+  unsigned PassAlignment : 1;
   /// If this is an array allocation, does the usual deallocation
   /// function for the allocated type want to know the allocated size?
   unsigned UsualArrayDeleteWantsSize : 1;
   /// The number of placement new arguments.
-  unsigned NumPlacementArgs : 13;
+  unsigned NumPlacementArgs : 26;
   /// What kind of initializer do we have? Could be none, parens, or braces.
   /// In storage, we distinguish between "none, and no initializer expr", and
   /// "none, but an implicit initializer expr".
@@ -1858,8 +1860,8 @@ public:
   };
 
   CXXNewExpr(const ASTContext &C, bool globalNew, FunctionDecl *operatorNew,
-             FunctionDecl *operatorDelete, bool usualArrayDeleteWantsSize,
-             ArrayRef<Expr*> placementArgs,
+             FunctionDecl *operatorDelete, bool PassAlignment,
+             bool usualArrayDeleteWantsSize, ArrayRef<Expr*> placementArgs,
              SourceRange typeIdParens, Expr *arraySize,
              InitializationStyle initializationStyle, Expr *initializer,
              QualType ty, TypeSourceInfo *AllocatedTypeInfo,
@@ -1947,8 +1949,14 @@ public:
   }
 
   /// \brief Returns the CXXConstructExpr from this new-expression, or null.
-  const CXXConstructExpr* getConstructExpr() const {
+  const CXXConstructExpr *getConstructExpr() const {
     return dyn_cast_or_null<CXXConstructExpr>(getInitializer());
+  }
+
+  /// Indicates whether the required alignment should be implicitly passed to
+  /// the allocation function.
+  bool passAlignment() const {
+    return PassAlignment;
   }
 
   /// Answers whether the usual array deallocation function for the

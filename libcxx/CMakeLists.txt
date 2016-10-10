@@ -270,13 +270,13 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 # LIBCXX_CXX_FLAGS: General flags for both the compiler and linker.
 # LIBCXX_COMPILE_FLAGS: Compile only flags.
 # LIBCXX_LINK_FLAGS: Linker only flags.
-# LIBCXX_LIBRARIES: Private libraries libc++ is linked to.
-# LIBCXX_LIBRARIES_PUBLIC: Public libraries libc++ is linked to,
-#                          also exposed in the linker script.
+# LIBCXX_LIBRARIES: libraries libc++ is linked to.
+# LIBCXX_INTERFACE_LIBRARIES: Libraries that must be linked when using libc++
+#                             There libraries are exposed in the linker script.
 set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
-set(LIBCXX_LIBRARIES_PUBLIC "")
+set(LIBCXX_INTERFACE_LIBRARIES "")
 
 # Include macros for adding and removing libc++ flags.
 include(HandleLibcxxFlags)

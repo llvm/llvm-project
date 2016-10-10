@@ -16,13 +16,13 @@ def print_and_exit(msg):
     sys.exit(1)
 
 def usage_and_exit():
-    print_and_exit("Usage: ./gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <abi_libname>")
+    print_and_exit("Usage: ./gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <public_libs>...")
 
 def help_and_exit():
     help_msg = \
 """Usage
 
-  gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <public_libs>
+  gen_link_script.py [--help] [--dryrun] <path/to/libcxx.so> <public_libs>...
 
   Generate a linker script that links libc++ to the proper ABI library.
   The script replaces the specified libc++ symlink.
@@ -49,10 +49,10 @@ def parse_args():
     dryrun = '--dryrun' == args[0]
     if dryrun:
         del args[0]
-    if len(args) != 2:
+    if len(args) < 2:
         usage_and_exit()
     symlink_file = args[0]
-    public_libs = args[1].split(';')
+    public_libs = args[1:]
     return dryrun, symlink_file, public_libs
 
 def main():

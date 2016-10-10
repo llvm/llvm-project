@@ -425,7 +425,7 @@ template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp
 #endif
 
 // addressof
-#if __has_builtin(__builtin_addressof)
+#if __has_builtin(__builtin_addressof) || _GNUC_VER >= 700
 
 template <class _Tp>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX14

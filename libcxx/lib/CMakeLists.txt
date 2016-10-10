@@ -33,16 +33,19 @@ add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}"
 
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
+if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
+               LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
+  set(LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY ON)
+endif()
+
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
   add_library_flags("-Wl,--whole-archive" "-Wl,-Bstatic")
   add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
   add_library_flags("-Wl,-Bdynamic" "-Wl,--no-whole-archive")
-elseif (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
-                   LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
-  # Apple re-exports libc++abi in libc++, so don't make it public
+elseif (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
-else()
-  list(APPEND LIBCXX_LIBRARIES_PUBLIC "${LIBCXX_CXX_ABI_LIBRARY}")
+else ()
+ add_interface_library("${LIBCXX_CXX_ABI_LIBRARY}")
 endif()
 
 if (APPLE AND LLVM_USE_SANITIZER)
@@ -85,7 +88,13 @@ add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Add the unwinder library.
 if (LIBCXXABI_USE_LLVM_UNWINDER)
-  list(APPEND LIBCXX_LIBRARIES_PUBLIC unwind)
+  if (TARGET unwind_shared)
+    add_interface_library(unwind_shared)
+  elseif (TARGET unwind_static)
+    add_interface_library(unwind_static)
+  else()
+    add_interface_library(unwind)
+  endif()
 endif()
 
 # Setup flags.
@@ -94,8 +103,7 @@ if (NOT WIN32)
 endif()
 add_link_flags_if_supported(-nodefaultlibs)
 
-if ( APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
-                LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
+if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)
     set(LIBCXX_LIBCPPABI_VERSION "2") # Default value
     execute_process(
@@ -164,9 +172,7 @@ set(LIBCXX_TARGETS)
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED $<TARGET_OBJECTS:cxx_objects>)
-  target_link_libraries(cxx_shared
-    PRIVATE ${LIBCXX_LIBRARIES}
-    PUBLIC ${LIBCXX_LIBRARIES_PUBLIC})
+  target_link_libraries(cxx_shared ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
@@ -180,9 +186,7 @@ endif()
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC $<TARGET_OBJECTS:cxx_objects>)
-  target_link_libraries(cxx_static
-    PRIVATE ${LIBCXX_LIBRARIES}
-    PUBLIC ${LIBCXX_LIBRARIES_PUBLIC})
+  target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_static
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
@@ -244,15 +248,16 @@ endif()
 if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
   # is a target name and not a library. Ex cxxabi_shared.
-  set(LIBCXX_LIBRARIES_PUBLIC_NAMES)
-  foreach(lib ${LIBCXX_LIBRARIES_PUBLIC})
-    if (lib STREQUAL "cxxabi_shared")
-      list(APPEND LIBCXX_LIBRARIES_PUBLIC_NAMES "c++abi")
+  set(LIBCXX_INTERFACE_LIBRARY_NAMES)
+  foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
+    # FIXME: Handle cxxabi_static and unwind_static.
+    if (TARGET ${lib})
+      list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
     else()
-      list(APPEND LIBCXX_LIBRARIES_PUBLIC_NAMES "${lib}")
+      list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")
     endif()
   endforeach()
-
+  #split_list(LIBCXX_INTERFACE_LIBRARY_NAMES)
   # Generate a linker script inplace of a libc++.so symlink. Rerun this command
   # after cxx builds.
   add_custom_command(TARGET cxx_shared POST_BUILD
@@ -260,7 +265,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
       ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
     ARGS
       "$<TARGET_LINKER_FILE:cxx_shared>"
-      "\"${LIBCXX_LIBRARIES_PUBLIC_NAMES}\""
+      ${LIBCXX_INTERFACE_LIBRARY_NAMES}
     WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
   )
 endif()

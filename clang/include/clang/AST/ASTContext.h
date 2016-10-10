@@ -1881,6 +1881,11 @@ public:
   unsigned getTypeAlign(QualType T) const { return getTypeInfo(T).Align; }
   unsigned getTypeAlign(const Type *T) const { return getTypeInfo(T).Align; }
 
+  /// \brief Return the ABI-specified alignment of a type, in bits, or 0 if
+  /// the type is incomplete and we cannot determine the alignment (for
+  /// example, from alignment attributes).
+  unsigned getTypeAlignIfKnown(QualType T) const;
+
   /// \brief Return the ABI-specified alignment of a (complete) type \p T, in 
   /// characters.
   CharUnits getTypeAlignInChars(QualType T) const;
