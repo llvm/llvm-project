@@ -3622,9 +3622,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     if (PatternDecl->isFromASTFile())
       ExternalSource->ReadLateParsedTemplates(LateParsedTemplateMap);
 
-    LateParsedTemplate *LPT = LateParsedTemplateMap.lookup(PatternDecl);
-    assert(LPT && "missing LateParsedTemplate");
-    LateTemplateParser(OpaqueParser, *LPT);
+    auto LPTIter = LateParsedTemplateMap.find(PatternDecl);
+    assert(LPTIter != LateParsedTemplateMap.end() &&
+           "missing LateParsedTemplate");
+    LateTemplateParser(OpaqueParser, *LPTIter->second);
     Pattern = PatternDecl->getBody(PatternDecl);
   }
 

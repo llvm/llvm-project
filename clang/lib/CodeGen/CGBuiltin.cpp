@@ -51,7 +51,7 @@ llvm::Value *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   if (FD->hasAttr<AsmLabelAttr>())
     Name = getMangledName(D);
   else
-    Name = Context.BuiltinInfo.getName(BuiltinID) + 10;
+    Name = Context.BuiltinInfo.getName(BuiltinID).drop_front(10);
 
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
@@ -2605,11 +2605,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   checkTargetFeatures(E, FD);
 
   // See if we have a target specific intrinsic.
-  const char *Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
   StringRef Prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!Prefix.empty()) {
+    StringRef Name = getContext().BuiltinInfo.getName(BuiltinID);
     IntrinsicID = Intrinsic::getIntrinsicForGCCBuiltin(Prefix.data(), Name);
     // NOTE we dont need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
@@ -7658,16 +7658,24 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpordsd:
     return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 7);
 
+  case X86::BI__emul:
+  case X86::BI__emulu: {
+    llvm::Type *Int64Ty = llvm::IntegerType::get(getLLVMContext(), 64);
+    bool isSigned = (BuiltinID == X86::BI__emul);
+    Value *LHS = Builder.CreateIntCast(Ops[0], Int64Ty, isSigned);
+    Value *RHS = Builder.CreateIntCast(Ops[1], Int64Ty, isSigned);
+    return Builder.CreateMul(LHS, RHS, "", !isSigned, isSigned);
+  }
   case X86::BI__mulh:
-  case X86::BI__umulh: {
-    Value *LHS = EmitScalarExpr(E->getArg(0));
-    Value *RHS = EmitScalarExpr(E->getArg(1));
+  case X86::BI__umulh:
+  case X86::BI_mul128:
+  case X86::BI_umul128: {
     llvm::Type *ResType = ConvertType(E->getType());
     llvm::Type *Int128Ty = llvm::IntegerType::get(getLLVMContext(), 128);
 
-    bool IsSigned = (BuiltinID == X86::BI__mulh);
-    LHS = Builder.CreateIntCast(LHS, Int128Ty, IsSigned);
-    RHS = Builder.CreateIntCast(RHS, Int128Ty, IsSigned);
+    bool IsSigned = (BuiltinID == X86::BI__mulh || BuiltinID == X86::BI_mul128);
+    Value *LHS = Builder.CreateIntCast(Ops[0], Int128Ty, IsSigned);
+    Value *RHS = Builder.CreateIntCast(Ops[1], Int128Ty, IsSigned);
 
     Value *MulResult, *HigherBits;
     if (IsSigned) {
@@ -7677,9 +7685,25 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       MulResult = Builder.CreateNUWMul(LHS, RHS);
       HigherBits = Builder.CreateLShr(MulResult, 64);
     }
-
     HigherBits = Builder.CreateIntCast(HigherBits, ResType, IsSigned);
-    return HigherBits;
+
+    if (BuiltinID == X86::BI__mulh || BuiltinID == X86::BI__umulh)
+      return HigherBits;
+
+    Address HighBitsAddress = EmitPointerWithAlignment(E->getArg(2));
+    Builder.CreateStore(HigherBits, HighBitsAddress);
+    return Builder.CreateIntCast(MulResult, ResType, IsSigned);
+  }
+
+  case X86::BI__faststorefence: {
+    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                               llvm::CrossThread);
+  }
+  case X86::BI_ReadWriteBarrier:
+  case X86::BI_ReadBarrier:
+  case X86::BI_WriteBarrier: {
+    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                               llvm::SingleThread);
   }
   }
 }

@@ -109,6 +109,15 @@
 // RUN: %clang -### -gmodules %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GEXTREFS %s
 //
+// RUN: %clang -### -gmodules -g %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=GEXTREFS %s
+//
+// RUN: %clang -### -gline-tables-only -gmodules %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=GEXTREFS %s
+//
+// RUN: %clang -### -gmodules -gline-tables-only %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=GLTO_ONLY %s
+//
 // G: "-cc1"
 // G: "-debug-info-kind=limited"
 //
@@ -131,7 +140,9 @@
 // G_NO-NOT: -debug-info-kind=
 //
 // GLTO_ONLY: "-cc1"
+// GLTO_ONLY-NOT: "-dwarf-ext-refs"
 // GLTO_ONLY: "-debug-info-kind=line-tables-only"
+// GLTO_ONLY-NOT: "-dwarf-ext-refs"
 //
 // GLTO_ONLY_DWARF2: "-cc1"
 // GLTO_ONLY_DWARF2: "-debug-info-kind=line-tables-only"

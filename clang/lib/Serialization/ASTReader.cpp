@@ -1600,8 +1600,7 @@ bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
   if (a.Size != b.Size || (a.ModTime && b.ModTime && a.ModTime != b.ModTime))
     return false;
 
-  if (llvm::sys::path::is_absolute(a.Filename) &&
-      strcmp(a.Filename, b.Filename) == 0)
+  if (llvm::sys::path::is_absolute(a.Filename) && a.Filename == b.Filename)
     return true;
   
   // Determine whether the actual files are equivalent.
@@ -7558,12 +7557,13 @@ void ASTReader::ReadPendingInstantiations(
 }
 
 void ASTReader::ReadLateParsedTemplates(
-    llvm::MapVector<const FunctionDecl *, LateParsedTemplate *> &LPTMap) {
+    llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
+        &LPTMap) {
   for (unsigned Idx = 0, N = LateParsedTemplates.size(); Idx < N;
        /* In loop */) {
     FunctionDecl *FD = cast<FunctionDecl>(GetDecl(LateParsedTemplates[Idx++]));
 
-    LateParsedTemplate *LT = new LateParsedTemplate;
+    auto LT = llvm::make_unique<LateParsedTemplate>();
     LT->D = GetDecl(LateParsedTemplates[Idx++]);
 
     ModuleFile *F = getOwningModuleFile(LT->D);
@@ -7574,7 +7574,7 @@ void ASTReader::ReadLateParsedTemplates(
     for (unsigned T = 0; T < TokN; ++T)
       LT->Toks.push_back(ReadToken(*F, LateParsedTemplates, Idx));
 
-    LPTMap.insert(std::make_pair(FD, LT));
+    LPTMap.insert(std::make_pair(FD, std::move(LT)));
   }
 
   LateParsedTemplates.clear();

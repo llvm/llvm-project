@@ -1354,9 +1354,9 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
 namespace {
   struct UsualDeallocFnInfo {
     UsualDeallocFnInfo() : Found(), FD(nullptr) {}
-    UsualDeallocFnInfo(DeclAccessPair Found)
+    UsualDeallocFnInfo(Sema &S, DeclAccessPair Found)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
-          HasSizeT(false), HasAlignValT(false) {
+          HasSizeT(false), HasAlignValT(false), CUDAPref(Sema::CFP_Native) {
       // A function template declaration is never a usual deallocation function.
       if (!FD)
         return;
@@ -1366,13 +1366,35 @@ namespace {
         HasSizeT = FD->getParamDecl(1)->getType()->isIntegerType();
         HasAlignValT = !HasSizeT;
       }
+
+      // In CUDA, determine how much we'd like / dislike to call this.
+      if (S.getLangOpts().CUDA)
+        if (auto *Caller = dyn_cast<FunctionDecl>(S.CurContext))
+          CUDAPref = S.IdentifyCUDAPreference(Caller, FD);
     }
 
     operator bool() const { return FD; }
 
+    bool isBetterThan(const UsualDeallocFnInfo &Other, bool WantSize,
+                      bool WantAlign) const {
+      // C++17 [expr.delete]p10:
+      //   If the type has new-extended alignment, a function with a parameter
+      //   of type std::align_val_t is preferred; otherwise a function without
+      //   such a parameter is preferred
+      if (HasAlignValT != Other.HasAlignValT)
+        return HasAlignValT == WantAlign;
+
+      if (HasSizeT != Other.HasSizeT)
+        return HasSizeT == WantSize;
+
+      // Use CUDA call preference as a tiebreaker.
+      return CUDAPref > Other.CUDAPref;
+    }
+
     DeclAccessPair Found;
     FunctionDecl *FD;
     bool HasSizeT, HasAlignValT;
+    Sema::CUDAFunctionPreference CUDAPref;
   };
 }
 
@@ -1393,16 +1415,10 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
     llvm::SmallVectorImpl<UsualDeallocFnInfo> *BestFns = nullptr) {
   UsualDeallocFnInfo Best;
 
-  // For CUDA, rank callability above anything else when ordering usual
-  // deallocation functions.
-  // FIXME: We should probably instead rank this between alignment (which
-  // affects correctness) and size (which is just an optimization).
-  if (S.getLangOpts().CUDA)
-    S.EraseUnwantedCUDAMatches(dyn_cast<FunctionDecl>(S.CurContext), R);
-
   for (auto I = R.begin(), E = R.end(); I != E; ++I) {
-    UsualDeallocFnInfo Info(I.getPair());
-    if (!Info || !isNonPlacementDeallocationFunction(S, Info.FD))
+    UsualDeallocFnInfo Info(S, I.getPair());
+    if (!Info || !isNonPlacementDeallocationFunction(S, Info.FD) ||
+        Info.CUDAPref == Sema::CFP_Never)
       continue;
 
     if (!Best) {
@@ -1412,21 +1428,12 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
       continue;
     }
 
-    // C++17 [expr.delete]p10:
-    //   If the type has new-extended alignment, a function with a parameter of
-    //   type std::align_val_t is preferred; otherwise a function without such a
-    //   parameter is preferred
-    if (Best.HasAlignValT == WantAlign && Info.HasAlignValT != WantAlign)
-      continue;
-
-    if (Best.HasAlignValT == Info.HasAlignValT &&
-        Best.HasSizeT == WantSize && Info.HasSizeT != WantSize)
+    if (Best.isBetterThan(Info, WantSize, WantAlign))
       continue;
 
     //   If more than one preferred function is found, all non-preferred
     //   functions are eliminated from further consideration.
-    if (BestFns && (Best.HasAlignValT != Info.HasAlignValT ||
-        Best.HasSizeT != Info.HasSizeT))
+    if (BestFns && Info.isBetterThan(Best, WantSize, WantAlign))
       BestFns->clear();
 
     Best = Info;
@@ -2373,7 +2380,8 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     //   is ill-formed.
     if (getLangOpts().CPlusPlus11 && isPlacementNew &&
         isNonPlacementDeallocationFunction(*this, OperatorDelete)) {
-      UsualDeallocFnInfo Info(DeclAccessPair::make(OperatorDelete, AS_public));
+      UsualDeallocFnInfo Info(*this,
+                              DeclAccessPair::make(OperatorDelete, AS_public));
       // Core issue, per mail to core reflector, 2016-10-09:
       //   If this is a member operator delete, and there is a corresponding
       //   non-sized member operator delete, this isn't /really/ a sized
@@ -3118,9 +3126,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         // function we just found.
         else if (OperatorDelete && isa<CXXMethodDecl>(OperatorDelete))
           UsualArrayDeleteWantsSize =
-              UsualDeallocFnInfo(
-                  DeclAccessPair::make(OperatorDelete, AS_public))
-                  .HasSizeT;
+            UsualDeallocFnInfo(*this,
+                               DeclAccessPair::make(OperatorDelete, AS_public))
+              .HasSizeT;
       }
 
       if (!PointeeRD->hasIrrelevantDestructor())

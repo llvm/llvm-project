@@ -52,7 +52,7 @@ public:
   }
 
   // Implement FileSystemStatCache::getStat().
-  LookupResult getStat(const char *Path, FileData &Data, bool isFile,
+  LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
                        std::unique_ptr<vfs::File> *F,
                        vfs::FileSystem &FS) override {
     if (StatCalls.count(Path) != 0) {
@@ -82,14 +82,14 @@ TEST_F(FileManagerTest, getVirtualFileSetsTheDirFieldCorrectly) {
 
   const DirectoryEntry *dir = file->getDir();
   ASSERT_TRUE(dir != nullptr);
-  EXPECT_STREQ(".", dir->getName());
+  EXPECT_EQ(".", dir->getName());
 
   file = manager.getVirtualFile("x/y/z.cpp", 42, 0);
   ASSERT_TRUE(file != nullptr);
 
   dir = file->getDir();
   ASSERT_TRUE(dir != nullptr);
-  EXPECT_STREQ("x/y", dir->getName());
+  EXPECT_EQ("x/y", dir->getName());
 }
 
 // Before any virtual file is added, no virtual directory exists.
@@ -115,11 +115,11 @@ TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
 
   const DirectoryEntry *dir = manager.getDirectory("virtual/dir");
   ASSERT_TRUE(dir != nullptr);
-  EXPECT_STREQ("virtual/dir", dir->getName());
+  EXPECT_EQ("virtual/dir", dir->getName());
 
   dir = manager.getDirectory("virtual");
   ASSERT_TRUE(dir != nullptr);
-  EXPECT_STREQ("virtual", dir->getName());
+  EXPECT_EQ("virtual", dir->getName());
 }
 
 // getFile() returns non-NULL if a real file exists at the given path.
@@ -140,11 +140,11 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
 
   const FileEntry *file = manager.getFile("/tmp/test");
   ASSERT_TRUE(file != nullptr);
-  EXPECT_STREQ("/tmp/test", file->getName());
+  EXPECT_EQ("/tmp/test", file->getName());
 
   const DirectoryEntry *dir = file->getDir();
   ASSERT_TRUE(dir != nullptr);
-  EXPECT_STREQ("/tmp", dir->getName());
+  EXPECT_EQ("/tmp", dir->getName());
 
 #ifdef LLVM_ON_WIN32
   file = manager.getFile(FileName);
@@ -152,7 +152,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
 
   dir = file->getDir();
   ASSERT_TRUE(dir != NULL);
-  EXPECT_STREQ(DirName, dir->getName());
+  EXPECT_EQ(DirName, dir->getName());
 #endif
 }
 
@@ -164,11 +164,11 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
   const FileEntry *file = manager.getFile("virtual/dir/bar.h");
   ASSERT_TRUE(file != nullptr);
-  EXPECT_STREQ("virtual/dir/bar.h", file->getName());
+  EXPECT_EQ("virtual/dir/bar.h", file->getName());
 
   const DirectoryEntry *dir = file->getDir();
   ASSERT_TRUE(dir != nullptr);
-  EXPECT_STREQ("virtual/dir", dir->getName());
+  EXPECT_EQ("virtual/dir", dir->getName());
 }
 
 // getFile() returns different FileEntries for different paths when

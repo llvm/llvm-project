@@ -702,6 +702,9 @@ def fsanitize_address_field_padding : Joined<["-"], "fsanitize-address-field-pad
 def fsanitize_address_use_after_scope : Flag<["-"], "fsanitize-address-use-after-scope">,
                                         Group<f_clang_Group>, Flags<[CC1Option]>,
                                         HelpText<"Enable use-after-scope detection in AddressSanitizer">;
+def fno_sanitize_address_use_after_scope : Flag<["-"], "fno-sanitize-address-use-after-scope">,
+                                           Group<f_clang_Group>, Flags<[CC1Option]>,
+                                           HelpText<"Disable use-after-scope detection in AddressSanitizer">;
 def fsanitize_recover : Flag<["-"], "fsanitize-recover">, Group<f_clang_Group>,
                         Flags<[CoreOption]>;
 def fno_sanitize_recover : Flag<["-"], "fno-sanitize-recover">,
@@ -1204,6 +1207,15 @@ def ftemplate_backtrace_limit_EQ : Joined<["-"], "ftemplate-backtrace-limit=">,
                                    Group<f_Group>;
 def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">,
                                Group<f_Group>;
+
+def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">,
+  Group<f_Group>, HelpText<"Generate a YAML optimization record file">;
+def fno_save_optimization_record : Flag<["-"], "fno-save-optimization-record">,
+  Group<f_Group>, Flags<[NoArgumentUnused]>;
+def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">,
+  Group<f_Group>,
+  HelpText<"Specify the file name of any generated YAML optimization record">;
+
 def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>;
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
@@ -1356,7 +1368,7 @@ def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>, Flag
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
-def gmodules : Flag <["-"], "gmodules">, Group<f_Group>,
+def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
@@ -1878,7 +1890,8 @@ def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">, Flags<[CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">;
 def print_libgcc_file_name : Flag<["-", "--"], "print-libgcc-file-name">,
-  HelpText<"Print the library path for \"libgcc.a\"">;
+  HelpText<"Print the library path for the currently used compiler runtime "
+           "library (\"libgcc.a\" or \"libclang_rt.builtins.*.a\")">;
 def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
 def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
 def print_multi_os_directory : Flag<["-", "--"], "print-multi-os-directory">,

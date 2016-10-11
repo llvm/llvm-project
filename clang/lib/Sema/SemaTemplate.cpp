@@ -8673,12 +8673,12 @@ void Sema::MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
   if (!FD)
     return;
 
-  LateParsedTemplate *LPT = new LateParsedTemplate;
+  auto LPT = llvm::make_unique<LateParsedTemplate>();
 
   // Take tokens to avoid allocations
   LPT->Toks.swap(Toks);
   LPT->D = FnD;
-  LateParsedTemplateMap.insert(std::make_pair(FD, LPT));
+  LateParsedTemplateMap.insert(std::make_pair(FD, std::move(LPT)));
 
   FD->setLateTemplateParsed(true);
 }
