@@ -51,8 +51,7 @@ enum ID {
 };
 
 struct Info {
-  llvm::StringRef Name;
-  const char *Type, *Attributes, *HeaderName;
+  const char *Name, *Type, *Attributes, *HeaderName;
   LanguageID Langs;
   const char *Features;
 };
@@ -81,7 +80,7 @@ public:
 
   /// \brief Return the identifier name for the specified builtin,
   /// e.g. "__builtin_abs".
-  llvm::StringRef getName(unsigned ID) const {
+  const char *getName(unsigned ID) const {
     return getRecord(ID).Name;
   }
 

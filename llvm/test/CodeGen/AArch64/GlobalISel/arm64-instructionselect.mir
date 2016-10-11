@@ -82,6 +82,10 @@
 
   @var_got = external global i8
   define i8* @global_got() { ret i8* undef }
+
+  define void @anyext_gpr() { ret void }
+  define void @zext_gpr() { ret void }
+  define void @sext_gpr() { ret void }
 ...
 
 ---
@@ -1318,4 +1322,104 @@ registers:
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_got
+...
+
+---
+# CHECK-LABEL: name: anyext_gpr
+name:            anyext_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 2, class: gpr32 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = COPY %0
+# CHECK:    %2 = COPY %w0
+# CHECK:    %3 = COPY %2
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_ANYEXT %0
+    %2(s8) = COPY %w0
+    %3(s32) = G_ANYEXT %2
+...
+
+---
+# CHECK-LABEL: name: zext_gpr
+name:            zext_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 2, class: gpr32 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %4 = SUBREG_TO_REG 0, %0, 15
+# CHECK:    %1 = UBFMXri %4, 0, 31
+# CHECK:    %2 = COPY %w0
+# CHECK:    %3 = UBFMWri %2, 0, 7
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_ZEXT %0
+    %2(s8) = COPY %w0
+    %3(s32) = G_ZEXT %2
+...
+
+---
+# CHECK-LABEL: name: sext_gpr
+name:            sext_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 2, class: gpr32 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %4 = SUBREG_TO_REG 0, %0, 15
+# CHECK:    %1 = SBFMXri %4, 0, 31
+# CHECK:    %2 = COPY %w0
+# CHECK:    %3 = SBFMWri %2, 0, 7
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_SEXT %0
+    %2(s8) = COPY %w0
+    %3(s32) = G_SEXT %2
 ...

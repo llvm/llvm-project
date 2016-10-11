@@ -349,3 +349,9 @@ INVALID-ENCRYPT-CRYPTOFF: macho-invalid-encrypt-cryptoff': truncated or malforme
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-encrypt64-cryptoff-cryptsize 2>&1 | FileCheck -check-prefix INVALID-ENCRYPT-CRYPTOFF-CRYPTSIZE %s
 INVALID-ENCRYPT-CRYPTOFF-CRYPTSIZE: macho-invalid-encrypt64-cryptoff-cryptsize': truncated or malformed object (cryptoff field plus cryptsize field of LC_ENCRYPTION_INFO_64 command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-linkopt-bad-size 2>&1 | FileCheck -check-prefix INVALID-LINKOPT-BAD-SIZE %s
+INVALID-LINKOPT-BAD-SIZE: macho-invalid-linkopt-bad-size': truncated or malformed object (load command 0 LC_LINKER_OPTION cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-linkopt-bad-count 2>&1 | FileCheck -check-prefix INVALID-LINKOPT-BAD-COUNT %s
+INVALID-LINKOPT-BAD-COUNT: macho-invalid-linkopt-bad-count': truncated or malformed object (load command 0 LC_LINKER_OPTION string count 3 does not match number of strings)

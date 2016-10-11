@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
+#include "llvm/Support/Endian.h"
 
 namespace llvm {
 namespace msf {
@@ -44,6 +45,9 @@ public:
   void setFlags(uint16_t F);
   void setMachineType(PDB_Machine M);
 
+  // Add given bytes as a new stream.
+  Error addDbgStream(pdb::DbgHeaderType Type, ArrayRef<uint8_t> Data);
+
   uint32_t calculateSerializedLength() const;
 
   Error addModuleInfo(StringRef ObjFile, StringRef Module);
@@ -57,6 +61,11 @@ public:
                const msf::WritableStream &Buffer);
 
 private:
+  struct DebugStream {
+    ArrayRef<uint8_t> Data;
+    uint16_t StreamNumber = 0;
+  };
+
   Error finalize();
   uint32_t calculateModiSubstreamSize() const;
   uint32_t calculateFileInfoSubstreamSize() const;
@@ -92,6 +101,7 @@ private:
   msf::WritableStreamRef NamesBuffer;
   msf::MutableByteStream ModInfoBuffer;
   msf::MutableByteStream FileInfoBuffer;
+  llvm::SmallVector<DebugStream, (int)DbgHeaderType::Max> DbgStreams;
 };
 }
 }

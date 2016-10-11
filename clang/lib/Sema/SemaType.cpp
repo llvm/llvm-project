@@ -2400,28 +2400,16 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
       }
       continue;
 
-    // swift_context parameters must be the last parameter except for
-    // a possible swift_error parameter.
     case ParameterABI::SwiftContext:
       checkForSwiftCC(paramIndex);
-      if (!(paramIndex == numParams - 1 ||
-            (paramIndex == numParams - 2 &&
-             EPI.ExtParameterInfos[numParams - 1].getABI()
-               == ParameterABI::SwiftErrorResult))) {
-        S.Diag(getParamLoc(paramIndex),
-               diag::err_swift_context_not_before_swift_error_result);
-      }
       continue;
 
-    // swift_error parameters must be the last parameter.
+    // swift_error parameters must be preceded by a swift_context parameter.
     case ParameterABI::SwiftErrorResult:
       checkForSwiftCC(paramIndex);
-      if (paramIndex != numParams - 1) {
-        S.Diag(getParamLoc(paramIndex),
-               diag::err_swift_error_result_not_last);
-      } else if (paramIndex == 0 ||
-                 EPI.ExtParameterInfos[paramIndex - 1].getABI()
-                   != ParameterABI::SwiftContext) {
+      if (paramIndex == 0 ||
+          EPI.ExtParameterInfos[paramIndex - 1].getABI() !=
+              ParameterABI::SwiftContext) {
         S.Diag(getParamLoc(paramIndex),
                diag::err_swift_error_result_not_after_swift_context);
       }

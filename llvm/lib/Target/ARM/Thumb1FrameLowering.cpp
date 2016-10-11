@@ -615,10 +615,10 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
 // or OrderEnd if no further registers are in that set. This does not advance
 // the iterator fiorst, so returns CurrentReg if it is in EnabledRegs.
 template <unsigned SetSize>
-static ArrayRef<unsigned>::const_iterator
-findNextOrderedReg(ArrayRef<unsigned>::const_iterator CurrentReg,
+static const unsigned *
+findNextOrderedReg(const unsigned *CurrentReg,
                    SmallSet<unsigned, SetSize> &EnabledRegs,
-                   ArrayRef<unsigned>::const_iterator OrderEnd) {
+                   const unsigned *OrderEnd) {
   while (CurrentReg != OrderEnd && !EnabledRegs.count(*CurrentReg))
     ++CurrentReg;
   return CurrentReg;
@@ -690,26 +690,29 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   // multiple PUSH instructions, the order of the registers on the stack still
   // matches the unwind info. They need to be swicthed back to ascending order
   // before adding to the PUSH instruction.
-  ArrayRef<unsigned> AllCopyRegs({ARM::LR,
-                                  ARM::R7, ARM::R6, ARM::R5, ARM::R4,
-                                  ARM::R3, ARM::R2, ARM::R1, ARM::R0});
-  ArrayRef<unsigned> AllHighRegs({ARM::R11, ARM::R10, ARM::R9, ARM::R8});
+  static const unsigned AllCopyRegs[] = {ARM::LR, ARM::R7, ARM::R6,
+                                         ARM::R5, ARM::R4, ARM::R3,
+                                         ARM::R2, ARM::R1, ARM::R0};
+  static const unsigned AllHighRegs[] = {ARM::R11, ARM::R10, ARM::R9, ARM::R8};
+
+  const unsigned *AllCopyRegsEnd = std::end(AllCopyRegs);
+  const unsigned *AllHighRegsEnd = std::end(AllHighRegs);
 
   // Find the first register to save.
-  auto HiRegToSave =
-      findNextOrderedReg(AllHighRegs.begin(), HiRegsToSave, AllHighRegs.end());
+  const unsigned *HiRegToSave = findNextOrderedReg(
+      std::begin(AllHighRegs), HiRegsToSave, AllHighRegsEnd);
 
-  while (HiRegToSave != AllHighRegs.end()) {
+  while (HiRegToSave != AllHighRegsEnd) {
     // Find the first low register to use.
-    auto CopyReg =
-        findNextOrderedReg(AllCopyRegs.begin(), CopyRegs, AllCopyRegs.end());
+    const unsigned *CopyReg =
+        findNextOrderedReg(std::begin(AllCopyRegs), CopyRegs, AllCopyRegsEnd);
 
     // Create the PUSH, but don't insert it yet (the MOVs need to come first).
     MachineInstrBuilder PushMIB = BuildMI(MF, DL, TII.get(ARM::tPUSH));
     AddDefaultPred(PushMIB);
 
     SmallVector<unsigned, 4> RegsToPush;
-    while (HiRegToSave != AllHighRegs.end() && CopyReg != AllCopyRegs.end()) {
+    while (HiRegToSave != AllHighRegsEnd && CopyReg != AllCopyRegsEnd) {
       if (HiRegsToSave.count(*HiRegToSave)) {
         bool isKill = !MF.getRegInfo().isLiveIn(*HiRegToSave);
         if (isKill)
@@ -725,9 +728,9 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
         // Record the register that must be added to the PUSH.
         RegsToPush.push_back(*CopyReg);
 
-        CopyReg = findNextOrderedReg(++CopyReg, CopyRegs, AllCopyRegs.end());
+        CopyReg = findNextOrderedReg(++CopyReg, CopyRegs, AllCopyRegsEnd);
         HiRegToSave =
-            findNextOrderedReg(++HiRegToSave, HiRegsToSave, AllHighRegs.end());
+            findNextOrderedReg(++HiRegToSave, HiRegsToSave, AllHighRegsEnd);
       }
     }
 
@@ -796,25 +799,28 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
     }
   }
 
-  ArrayRef<unsigned> AllCopyRegs({ARM::R0, ARM::R1, ARM::R2, ARM::R3,
-                                  ARM::R4, ARM::R5, ARM::R6, ARM::R7});
-  ArrayRef<unsigned> AllHighRegs({ARM::R8, ARM::R9, ARM::R10, ARM::R11});
+  static const unsigned AllCopyRegs[] = {ARM::R0, ARM::R1, ARM::R2, ARM::R3,
+                                         ARM::R4, ARM::R5, ARM::R6, ARM::R7};
+  static const unsigned AllHighRegs[] = {ARM::R8, ARM::R9, ARM::R10, ARM::R11};
+
+  const unsigned *AllCopyRegsEnd = std::end(AllCopyRegs);
+  const unsigned *AllHighRegsEnd = std::end(AllHighRegs);
 
   // Find the first register to restore.
-  auto HiRegToRestore = findNextOrderedReg(AllHighRegs.begin(), HiRegsToRestore,
-                                           AllHighRegs.end());
+  auto HiRegToRestore = findNextOrderedReg(std::begin(AllHighRegs),
+                                           HiRegsToRestore, AllHighRegsEnd);
 
-  while (HiRegToRestore != AllHighRegs.end()) {
+  while (HiRegToRestore != AllHighRegsEnd) {
     assert(!CopyRegs.empty());
     // Find the first low register to use.
     auto CopyReg =
-        findNextOrderedReg(AllCopyRegs.begin(), CopyRegs, AllCopyRegs.end());
+        findNextOrderedReg(std::begin(AllCopyRegs), CopyRegs, AllCopyRegsEnd);
 
     // Create the POP instruction.
     MachineInstrBuilder PopMIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPOP));
     AddDefaultPred(PopMIB);
 
-    while (HiRegToRestore != AllHighRegs.end() && CopyReg != AllCopyRegs.end()) {
+    while (HiRegToRestore != AllHighRegsEnd && CopyReg != AllCopyRegsEnd) {
       // Add the low register to the POP.
       PopMIB.addReg(*CopyReg, RegState::Define);
 
@@ -825,9 +831,9 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
       MIB.addReg(*CopyReg, RegState::Kill);
       AddDefaultPred(MIB);
 
-      CopyReg = findNextOrderedReg(++CopyReg, CopyRegs, AllCopyRegs.end());
-      HiRegToRestore = findNextOrderedReg(++HiRegToRestore, HiRegsToRestore,
-                                          AllHighRegs.end());
+      CopyReg = findNextOrderedReg(++CopyReg, CopyRegs, AllCopyRegsEnd);
+      HiRegToRestore =
+          findNextOrderedReg(++HiRegToRestore, HiRegsToRestore, AllHighRegsEnd);
     }
   }
 

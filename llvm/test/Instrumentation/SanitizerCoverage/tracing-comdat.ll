@@ -9,4 +9,4 @@ entry:
   ret void
 }
 
-; CHECK: @__sancov_guard.Foo = linkonce_odr hidden global [1 x i32] zeroinitializer, section "__sancov_guards", comdat($Foo)
+; CHECK: @__sancov_guard = private global [1 x i32] zeroinitializer, section "__sancov_guards", comdat($Foo)

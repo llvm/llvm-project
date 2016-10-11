@@ -17,16 +17,16 @@ void indirect_result_single(INDIRECT_RESULT void *out) SWIFTCALL;
 void indirect_result_multiple(INDIRECT_RESULT void *out1, INDIRECT_RESULT void *out2) SWIFTCALL;
 
 void error_result_nonswift(ERROR_RESULT void **error); // expected-error {{'swift_error_result' parameter can only be used with swiftcall calling convention}} expected-error{{'swift_error_result' parameter must follow 'swift_context' parameter}}
-void error_result_bad_position(ERROR_RESULT void **error, int last) SWIFTCALL; // expected-error {{'swift_error_result' parameter must be last parameter of function}}
 void error_result_bad_position2(int first, ERROR_RESULT void **error) SWIFTCALL; // expected-error {{'swift_error_result' parameter must follow 'swift_context' parameter}}
 void error_result_bad_type(CONTEXT void *context, ERROR_RESULT int error) SWIFTCALL; // expected-error {{'swift_error_result' parameter must have pointer to unqualified pointer type; type here is 'int'}}
 void error_result_bad_type2(CONTEXT void *context, ERROR_RESULT int *error) SWIFTCALL; // expected-error {{'swift_error_result' parameter must have pointer to unqualified pointer type; type here is 'int *'}}
 void error_result_okay(int a, int b, CONTEXT void *context, ERROR_RESULT void **error) SWIFTCALL;
+void error_result_okay(CONTEXT void *context, ERROR_RESULT void **error, void *selfType, char **selfWitnessTable) SWIFTCALL;
 
 void context_nonswift(CONTEXT void *context); // expected-error {{'swift_context' parameter can only be used with swiftcall calling convention}}
-void context_bad_position(CONTEXT void *context, int x) SWIFTCALL; // expected-error {{'swift_context' parameter can only be followed by 'swift_error_result' parameter}}
 void context_bad_type(CONTEXT int context) SWIFTCALL; // expected-error {{'swift_context' parameter must have pointer type; type here is 'int'}}
 void context_okay(CONTEXT void *context) SWIFTCALL;
+void context_okay(CONTEXT void *context, void *selfType, char **selfWitnessTable) SWIFTCALL;
 
 template <class T> void indirect_result_temp_okay1(INDIRECT_RESULT T *out) SWIFTCALL;
 template <class T> void indirect_result_temp_okay2(INDIRECT_RESULT T out) SWIFTCALL; // expected-note {{candidate template ignored: substitution failure [with T = int]: 'swift_indirect_result' parameter must have pointer type; type here is 'int'}}

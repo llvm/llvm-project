@@ -1168,6 +1168,7 @@ static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
     if (AI->hasSwiftErrorAttr()) {
       assert(!HaveSeenSwiftErrorArg &&
              "Must have only one swifterror parameter");
+      (void)HaveSeenSwiftErrorArg; // silence warning.
       HaveSeenSwiftErrorArg = true;
       FuncInfo->SwiftErrorArg = &*AI;
       FuncInfo->SwiftErrorVals.push_back(&*AI);
