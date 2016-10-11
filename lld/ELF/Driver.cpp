@@ -481,9 +481,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->LtoO = getInteger(Args, OPT_lto_O, 2);
   if (Config->LtoO > 3)
     error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
-  Config->LtoJobs = getInteger(Args, OPT_lto_jobs, 1);
-  if (Config->LtoJobs == 0)
-    error("number of threads must be > 0");
+  Config->LtoPartitions = getInteger(Args, OPT_lto_partitions, 1);
+  if (Config->LtoPartitions == 0)
+    error("--lto-partitions: number of threads must be > 0");
+  Config->ThinLtoJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
+  if (Config->ThinLtoJobs == 0)
+    error("--thinlto-jobs: number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecStack = hasZOption(Args, "execstack");
