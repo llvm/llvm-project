@@ -317,6 +317,28 @@ void ProTypeMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreArrays", IgnoreArrays);
 }
 
+// FIXME: Copied from clang/lib/Sema/SemaDeclCXX.cpp.
+static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
+  if (T->isIncompleteArrayType())
+    return true;
+
+  while (const ConstantArrayType *ArrayT = Context.getAsConstantArrayType(T)) {
+    if (!ArrayT->getSize())
+      return true;
+
+    T = ArrayT->getElementType();
+  }
+
+  return false;
+}
+
+static bool isEmpty(ASTContext &Context, const QualType &Type) {
+  if (const CXXRecordDecl *ClassDecl = Type->getAsCXXRecordDecl()) {
+    return ClassDecl->isEmpty();
+  }
+  return isIncompleteOrZeroLengthArrayType(Context, Type);
+}
+
 void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     ASTContext &Context, const CXXRecordDecl &ClassDecl,
     const CXXConstructorDecl *Ctor) {
@@ -330,7 +352,8 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   forEachField(ClassDecl, ClassDecl.fields(), false, [&](const FieldDecl *F) {
     if (!F->hasInClassInitializer() &&
         utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
-                                                            Context))
+                                                            Context) &&
+        !isEmpty(Context, F->getType()))
       FieldsToInit.insert(F);
   });
   if (FieldsToInit.empty())

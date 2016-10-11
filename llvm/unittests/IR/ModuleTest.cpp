@@ -59,7 +59,7 @@ TEST(ModuleTest, randomNumberGenerator) {
   Module M("R", Context);
 
   std::uniform_int_distribution<int> dist;
-  constexpr std::size_t NBCheck = 10;
+  const size_t NBCheck = 10;
 
   std::array<int, NBCheck> RandomStreams[2];
   for (auto &RandomStream : RandomStreams) {

@@ -121,7 +121,7 @@ struct Configuration {
   bool Verbose;
   bool WarnCommon;
   bool ZCombreloc;
-  bool ZExecStack;
+  bool ZExecstack;
   bool ZNodelete;
   bool ZNow;
   bool ZOrigin;

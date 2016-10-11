@@ -124,26 +124,28 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
 // Force static initialization.
 extern "C" void LLVMInitializeXCoreTargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfoFn X(TheXCoreTarget, createXCoreMCAsmInfo);
+  RegisterMCAsmInfoFn X(getTheXCoreTarget(), createXCoreMCAsmInfo);
 
   // Register the MC codegen info.
-  TargetRegistry::registerMCAdjustCodeGenOpts(TheXCoreTarget,
+  TargetRegistry::registerMCAdjustCodeGenOpts(getTheXCoreTarget(),
                                               adjustCodeGenOpts);
 
   // Register the MC instruction info.
-  TargetRegistry::RegisterMCInstrInfo(TheXCoreTarget, createXCoreMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheXCoreTarget(),
+                                      createXCoreMCInstrInfo);
 
   // Register the MC register info.
-  TargetRegistry::RegisterMCRegInfo(TheXCoreTarget, createXCoreMCRegisterInfo);
+  TargetRegistry::RegisterMCRegInfo(getTheXCoreTarget(),
+                                    createXCoreMCRegisterInfo);
 
   // Register the MC subtarget info.
-  TargetRegistry::RegisterMCSubtargetInfo(TheXCoreTarget,
+  TargetRegistry::RegisterMCSubtargetInfo(getTheXCoreTarget(),
                                           createXCoreMCSubtargetInfo);
 
   // Register the MCInstPrinter
-  TargetRegistry::RegisterMCInstPrinter(TheXCoreTarget,
+  TargetRegistry::RegisterMCInstPrinter(getTheXCoreTarget(),
                                         createXCoreMCInstPrinter);
 
-  TargetRegistry::RegisterAsmTargetStreamer(TheXCoreTarget,
+  TargetRegistry::RegisterAsmTargetStreamer(getTheXCoreTarget(),
                                             createTargetAsmStreamer);
 }

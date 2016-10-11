@@ -47,11 +47,11 @@ RandomNumberGenerator::RandomNumberGenerator(StringRef Salt) {
   // are using a 64-bit RNG. This isn't a problem since the Mersenne
   // twister constructor copies these correctly into its initial state.
   std::vector<uint32_t> Data;
-  Data.reserve(2 + Salt.size());
-  Data.push_back(Seed);
-  Data.push_back(Seed >> 32);
+  Data.resize(2 + Salt.size());
+  Data[0] = Seed;
+  Data[1] = Seed >> 32;
 
-  std::copy(Salt.begin(), Salt.end(), Data.end());
+  std::copy(Salt.begin(), Salt.end(), Data.begin() + 2);
 
   std::seed_seq SeedSeq(Data.begin(), Data.end());
   Generator.seed(SeedSeq);
