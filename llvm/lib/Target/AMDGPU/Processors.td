@@ -125,7 +125,7 @@ def : ProcessorModel<"mullins",    SIQuarterSpeedModel,
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"tonga",   SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0,
+  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_2,
    FeatureLDSBankCount32]
 >;
 
@@ -147,9 +147,9 @@ def : ProcessorModel<"stoney", SIQuarterSpeedModel,
 >;
 
 def : ProcessorModel<"polaris10", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount32]
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_3, FeatureLDSBankCount32]
 >;
 
 def : ProcessorModel<"polaris11", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount32]
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_3, FeatureLDSBankCount32]
 >;

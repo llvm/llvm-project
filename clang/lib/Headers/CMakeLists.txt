@@ -24,6 +24,7 @@ set(files
   bmiintrin.h
   __clang_cuda_builtin_vars.h
   __clang_cuda_cmath.h
+  __clang_cuda_complex_builtins.h
   __clang_cuda_intrinsics.h
   __clang_cuda_math_forward_declares.h
   __clang_cuda_runtime_wrapper.h
@@ -89,6 +90,11 @@ set(files
   xtestintrin.h
   )
 
+set(cuda_wrapper_files
+  cuda_wrappers/algorithm
+  cuda_wrappers/complex
+)
+
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
 
 # Generate arm_neon.h
@@ -96,7 +102,7 @@ clang_tablegen(arm_neon.h -gen-arm-neon
   SOURCE ${CLANG_SOURCE_DIR}/include/clang/Basic/arm_neon.td)
 
 set(out_files)
-foreach( f ${files} )
+foreach( f ${files} ${cuda_wrapper_files} )
   set( src ${CMAKE_CURRENT_SOURCE_DIR}/${f} )
   set( dst ${output_dir}/${f} )
   add_custom_command(OUTPUT ${dst}
@@ -120,6 +126,12 @@ install(
   COMPONENT clang-headers
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
   DESTINATION lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include)
+
+install(
+  FILES ${cuda_wrapper_files}
+  COMPONENT clang-headers
+  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  DESTINATION lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include/cuda_wrappers)
 
 if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
   add_custom_target(install-clang-headers

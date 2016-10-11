@@ -21,6 +21,16 @@ template <typename T> class J {};
 class G;
 class H;
 
+template <typename T> class K {};
+template <template <typename> class S>
+class L {};
+
+template <typename T> class M {};
+class N {};
+
+template <int T> class P {};
+const int Constant = 0;
+
 class Base {
  public:
   void f();
@@ -150,6 +160,14 @@ using n::Blue;
 using ns::AA;
 using ns::ff;
 
+using n::K;
+
+using n::N;
+
+// FIXME: Currently non-type template arguments are not supported.
+using n::Constant;
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'Constant' is unused
+
 // ----- Usages -----
 void f(B b);
 void g() {
@@ -170,4 +188,16 @@ void g() {
   int t3 = 0;
   a.func1<AA>(&t3);
   a.func2<int, ff>(t3);
+
+  n::L<K> l;
 }
+
+template<class T>
+void h(n::M<T>* t) {}
+// n::N is used the explicit template instantiation.
+template void h(n::M<N>* t);
+
+// Test on Non-type template arguments.
+template <int T>
+void i(n::P<T>* t) {}
+template void i(n::P<Constant>* t);

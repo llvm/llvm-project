@@ -31,7 +31,7 @@
 // CK-HELP: {{.*}}referring to the same source file but different targets into a single
 // CK-HELP: {{.*}}one. The resulting file can also be unbundled into different files by
 // CK-HELP: {{.*}}this tool if -unbundle is provided.
-// CK-HELP: {{.*}}USAGE: clang-offload-bundler [subcommand] [options]
+// CK-HELP: {{.*}}USAGE: clang-offload-bundler [options]
 // CK-HELP: {{.*}}-inputs=<string>  - [<input file>,...]
 // CK-HELP: {{.*}}-outputs=<string> - [<output file>,...]
 // CK-HELP: {{.*}}-targets=<string> - [<offload kind>-<target triple>,...]

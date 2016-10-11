@@ -31,6 +31,8 @@
 .byte 0
 .elseif .option.machine_version_stepping == 1
 .byte 1
+.elseif .option.machine_version_stepping == 2
+.byte 2
 .elseif .option.machine_version_stepping == 3
 .byte 3
 .else
@@ -38,7 +40,7 @@
 .endif
 // BONAIRE: .byte 0
 // HAWAII: .byte 1
-// TONGA: .byte 0
+// TONGA: .byte 2
 // FIJI: .byte 3
 
 v_add_f32 v0, v0, v[.option.machine_version_major]

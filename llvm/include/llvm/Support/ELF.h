@@ -1036,6 +1036,9 @@ enum {
   PT_SUNW_EH_FRAME = 0x6474e550,
   PT_SUNW_UNWIND   = 0x6464e550,
 
+  PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
+  PT_OPENBSD_WXNEEDED  = 0x65a3dbe7, // Program does W^X violations.
+
   PT_GNU_STACK  = 0x6474e551, // Indicates stack executability.
   PT_GNU_RELRO  = 0x6474e552, // Read-only after relocation.
 

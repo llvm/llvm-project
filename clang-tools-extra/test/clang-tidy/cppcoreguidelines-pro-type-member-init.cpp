@@ -423,3 +423,30 @@ UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(F);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
 UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(G);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: G
+
+struct NegativeEmpty {
+};
+
+static void NegativeEmptyVar() {
+  NegativeEmpty e;
+  (void)e;
+}
+
+struct NegativeEmptyMember {
+  NegativeEmptyMember() {}
+  NegativeEmpty e;
+};
+
+struct NegativeEmptyBase : NegativeEmpty {
+  NegativeEmptyBase() {}
+};
+
+struct NegativeEmptyArrayMember {
+  NegativeEmptyArrayMember() {}
+  char e[0];
+};
+
+struct NegativeIncompleteArrayMember {
+  NegativeIncompleteArrayMember() {}
+  char e[];
+};
