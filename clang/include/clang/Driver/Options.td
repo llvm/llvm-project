@@ -1176,6 +1176,15 @@ def ftemplate_backtrace_limit_EQ : Joined<["-"], "ftemplate-backtrace-limit=">,
                                    Group<f_Group>;
 def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">,
                                Group<f_Group>;
+
+def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">,
+  Group<f_Group>, HelpText<"Generate a YAML optimization record file">;
+def fno_save_optimization_record : Flag<["-"], "fno-save-optimization-record">,
+  Group<f_Group>, Flags<[NoArgumentUnused]>;
+def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">,
+  Group<f_Group>,
+  HelpText<"Specify the file name of any generated YAML optimization record">;
+
 def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>;
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;

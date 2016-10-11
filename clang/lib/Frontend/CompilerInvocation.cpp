@@ -804,6 +804,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.LinkerOptions = Args.getAllArgValues(OPT_linker_option);
   bool NeedLocTracking = false;
 
+  Opts.OptRecordFile = Args.getLastArgValue(OPT_opt_record_file);
+  if (!Opts.OptRecordFile.empty())
+    NeedLocTracking = true;
+
   if (Arg *A = Args.getLastArg(OPT_Rpass_EQ)) {
     Opts.OptimizationRemarkPattern =
         GenerateOptimizationRemarkRegex(Diags, Args, A);
