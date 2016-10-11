@@ -31,7 +31,7 @@ namespace {
 
 using internal::MatcherDescriptor;
 
-typedef llvm::StringMap<const MatcherDescriptor *> ConstructorMap;
+typedef llvm::StringMap<std::unique_ptr<const MatcherDescriptor>> ConstructorMap;
 class RegistryMaps {
 public:
   RegistryMaps();
@@ -40,14 +40,16 @@ public:
   const ConstructorMap &constructors() const { return Constructors; }
 
 private:
-  void registerMatcher(StringRef MatcherName, MatcherDescriptor *Callback);
+  void registerMatcher(StringRef MatcherName,
+                       std::unique_ptr<MatcherDescriptor> Callback);
+
   ConstructorMap Constructors;
 };
 
-void RegistryMaps::registerMatcher(StringRef MatcherName,
-                                   MatcherDescriptor *Callback) {
+void RegistryMaps::registerMatcher(
+    StringRef MatcherName, std::unique_ptr<MatcherDescriptor> Callback) {
   assert(Constructors.find(MatcherName) == Constructors.end());
-  Constructors[MatcherName] = Callback;
+  Constructors[MatcherName] = std::move(Callback);
 }
 
 #define REGISTER_MATCHER(name)                                                 \
@@ -55,19 +57,19 @@ void RegistryMaps::registerMatcher(StringRef MatcherName,
                              ::clang::ast_matchers::name, #name));
 
 #define SPECIFIC_MATCHER_OVERLOAD(name, Id)                                    \
-  static_cast< ::clang::ast_matchers::name##_Type##Id>(                        \
+  static_cast<::clang::ast_matchers::name##_Type##Id>(                         \
       ::clang::ast_matchers::name)
 
 #define REGISTER_OVERLOADED_2(name)                                            \
   do {                                                                         \
-    MatcherDescriptor *Callbacks[] = {                                         \
-      internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 0),    \
-                                        #name),                                \
-      internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 1),    \
-                                        #name)                                 \
-    };                                                                         \
-    registerMatcher(#name,                                                     \
-                    new internal::OverloadedMatcherDescriptor(Callbacks));     \
+    std::unique_ptr<MatcherDescriptor> Callbacks[] = {                         \
+        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 0),  \
+                                          #name),                              \
+        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 1),  \
+                                          #name)};                             \
+    registerMatcher(                                                           \
+        #name,                                                                 \
+        llvm::make_unique<internal::OverloadedMatcherDescriptor>(Callbacks));  \
   } while (0)
 
 /// \brief Generate a registry map with all the known matchers.
@@ -426,9 +428,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(withInitializer);
 }
 
-RegistryMaps::~RegistryMaps() {
-  llvm::DeleteContainerSeconds(Constructors);
-}
+RegistryMaps::~RegistryMaps() {}
 
 static llvm::ManagedStatic<RegistryMaps> RegistryData;
 
@@ -436,11 +436,10 @@ static llvm::ManagedStatic<RegistryMaps> RegistryData;
 
 // static
 llvm::Optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
-  ConstructorMap::const_iterator it =
-      RegistryData->constructors().find(MatcherName);
+  auto it = RegistryData->constructors().find(MatcherName);
   return it == RegistryData->constructors().end()
              ? llvm::Optional<MatcherCtor>()
-             : it->second;
+             : it->second.get();
 }
 
 namespace {
@@ -499,12 +498,12 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
 
   // Search the registry for acceptable matchers.
   for (const auto &M : RegistryData->constructors()) {
-    const auto *Matcher = M.getValue();
+    const MatcherDescriptor& Matcher = *M.getValue();
     StringRef Name = M.getKey();
 
     std::set<ASTNodeKind> RetKinds;
-    unsigned NumArgs = Matcher->isVariadic() ? 1 : Matcher->getNumArgs();
-    bool IsPolymorphic = Matcher->isPolymorphic();
+    unsigned NumArgs = Matcher.isVariadic() ? 1 : Matcher.getNumArgs();
+    bool IsPolymorphic = Matcher.isPolymorphic();
     std::vector<std::vector<ArgKind>> ArgsKinds(NumArgs);
     unsigned MaxSpecificity = 0;
     for (const ArgKind& Kind : AcceptedTypes) {
@@ -512,13 +511,13 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
         continue;
       unsigned Specificity;
       ASTNodeKind LeastDerivedKind;
-      if (Matcher->isConvertibleTo(Kind.getMatcherKind(), &Specificity,
-                                   &LeastDerivedKind)) {
+      if (Matcher.isConvertibleTo(Kind.getMatcherKind(), &Specificity,
+                                  &LeastDerivedKind)) {
         if (MaxSpecificity < Specificity)
           MaxSpecificity = Specificity;
         RetKinds.insert(LeastDerivedKind);
         for (unsigned Arg = 0; Arg != NumArgs; ++Arg)
-          Matcher->getArgKinds(Kind.getMatcherKind(), Arg, ArgsKinds[Arg]);
+          Matcher.getArgKinds(Kind.getMatcherKind(), Arg, ArgsKinds[Arg]);
         if (IsPolymorphic)
           break;
       }
@@ -554,7 +553,7 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
           }
         }
       }
-      if (Matcher->isVariadic())
+      if (Matcher.isVariadic())
         OS << "...";
       OS << ")";
 

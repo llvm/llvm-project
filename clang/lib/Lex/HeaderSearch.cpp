@@ -847,17 +847,19 @@ LookupSubframeworkHeader(StringRef Filename,
   if (SlashPos == StringRef::npos) return nullptr;
 
   // Look up the base framework name of the ContextFileEnt.
-  const char *ContextName = ContextFileEnt->getName();
+  StringRef ContextName = ContextFileEnt->getName();
 
   // If the context info wasn't a framework, couldn't be a subframework.
   const unsigned DotFrameworkLen = 10;
-  const char *FrameworkPos = strstr(ContextName, ".framework");
-  if (FrameworkPos == nullptr ||
-      (FrameworkPos[DotFrameworkLen] != '/' && 
-       FrameworkPos[DotFrameworkLen] != '\\'))
+  auto FrameworkPos = ContextName.find(".framework");
+  if (FrameworkPos == StringRef::npos ||
+      (ContextName[FrameworkPos + DotFrameworkLen] != '/' &&
+       ContextName[FrameworkPos + DotFrameworkLen] != '\\'))
     return nullptr;
 
-  SmallString<1024> FrameworkName(ContextName, FrameworkPos+DotFrameworkLen+1);
+  SmallString<1024> FrameworkName(ContextName.data(), ContextName.data() +
+                                                          FrameworkPos +
+                                                          DotFrameworkLen + 1);
 
   // Append Frameworks/HIToolbox.framework/
   FrameworkName += "Frameworks/";
@@ -1449,7 +1451,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
   // FIXME: We assume that the path name currently cached in the FileEntry is
   // the most appropriate one for this analysis (and that it's spelled the same
   // way as the corresponding header search path).
-  const char *Name = File->getName();
+  StringRef Name = File->getName();
 
   unsigned BestPrefixLength = 0;
   unsigned BestSearchDir;
@@ -1459,7 +1461,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
     if (!SearchDirs[I].isNormalDir())
       continue;
 
-    const char *Dir = SearchDirs[I].getDir()->getName();
+    StringRef Dir = SearchDirs[I].getDir()->getName();
     for (auto NI = llvm::sys::path::begin(Name),
               NE = llvm::sys::path::end(Name),
               DI = llvm::sys::path::begin(Dir),
@@ -1492,5 +1494,5 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
 
   if (IsSystem)
     *IsSystem = BestPrefixLength ? BestSearchDir >= SystemDirIdx : false;
-  return Name + BestPrefixLength;
+  return Name.drop_front(BestPrefixLength);
 }

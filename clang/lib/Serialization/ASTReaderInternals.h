@@ -257,7 +257,7 @@ public:
   struct internal_key_type {
     off_t Size;
     time_t ModTime;
-    const char *Filename;
+    StringRef Filename;
     bool Imported;
   };
   typedef const internal_key_type &internal_key_ref;

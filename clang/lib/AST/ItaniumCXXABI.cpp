@@ -163,8 +163,9 @@ public:
     return nullptr;
   }
 
-  MangleNumberingContext *createMangleNumberingContext() const override {
-    return new ItaniumNumberingContext();
+  std::unique_ptr<MangleNumberingContext>
+  createMangleNumberingContext() const override {
+    return llvm::make_unique<ItaniumNumberingContext>();
   }
 };
 }

@@ -165,7 +165,7 @@ public:
 
   /// \brief Is this a libc/libm function that is no longer recognized as a
   /// builtin because a -fno-builtin-* option has been specified?
-  bool isNoBuiltinFunc(const char *Name) const;
+  bool isNoBuiltinFunc(StringRef Name) const;
 };
 
 /// \brief Floating point control options

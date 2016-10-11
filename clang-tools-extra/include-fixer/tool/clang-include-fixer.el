@@ -101,6 +101,7 @@ arguments.  Return the new process object."
                   :buffer stdout
                   :command (clang-include-fixer--command args)
                   :coding 'utf-8-unix
+                  :noquery t
                   :connection-type 'pipe
                   :sentinel (clang-include-fixer--sentinel stdin stdout stderr
                                                            callback)
@@ -118,6 +119,7 @@ arguments.  Return the new process object."
          (process (apply #'start-process "clang-include-fixer" stdout
                          (clang-include-fixer--command args))))
     (set-process-coding-system process 'utf-8-unix 'utf-8-unix)
+    (set-process-query-on-exit-flag process nil)
     (set-process-sentinel process
                           (clang-include-fixer--sentinel stdin stdout nil
                                                          callback))
