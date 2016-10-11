@@ -52,7 +52,7 @@
             (kill-buffer output-buffer)
             (revert-buffer :ignore-auto :noconfirm :preserve-modes))
         ;; Failure; append exit code to output buffer and display it.
-        (let ((message (format-message
+        (let ((message (clang-rename--format-message
                         "clang-rename failed with %s %s"
                         (if (integerp exit-code) "exit status" "signal")
                         exit-code)))
@@ -68,6 +68,11 @@
     ;; ‘position-bytes’.
     (lambda (position &optional _quality _coding-system)
       (1- (position-bytes position)))))
+
+;; ‘format-message’ is new in Emacs 25.1.  Provide a fallback for older
+;; versions.
+(defalias 'clang-rename--format-message
+  (if (fboundp 'format-message) 'format-message 'format))
 
 (provide 'clang-rename)
 

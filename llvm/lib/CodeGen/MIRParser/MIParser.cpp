@@ -44,6 +44,17 @@ PerFunctionMIParsingState::PerFunctionMIParsingState(MachineFunction &MF,
   : MF(MF), SM(&SM), IRSlots(IRSlots) {
 }
 
+VRegInfo &PerFunctionMIParsingState::getVRegInfo(unsigned Num) {
+  auto I = VRegInfos.insert(std::make_pair(Num, nullptr));
+  if (I.second) {
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    VRegInfo *Info = new (Allocator) VRegInfo;
+    Info->VReg = MRI.createIncompleteVirtualRegister();
+    I.first->second = Info;
+  }
+  return *I.first->second;
+}
+
 namespace {
 
 /// A wrapper struct around the 'MachineOperand' struct that includes a source
@@ -68,7 +79,7 @@ class MIParser {
   SMDiagnostic &Error;
   StringRef Source, CurrentSource;
   MIToken Token;
-  const PerFunctionMIParsingState &PFS;
+  PerFunctionMIParsingState &PFS;
   /// Maps from instruction names to op codes.
   StringMap<unsigned> Names2InstrOpCodes;
   /// Maps from register names to registers.
@@ -89,7 +100,7 @@ class MIParser {
   StringMap<unsigned> Names2BitmaskTargetFlags;
 
 public:
-  MIParser(const PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
+  MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
            StringRef Source);
 
   /// \p SkipChar gives the number of characters to skip before looking
@@ -112,7 +123,7 @@ public:
   bool parse(MachineInstr *&MI);
   bool parseStandaloneMBB(MachineBasicBlock *&MBB);
   bool parseStandaloneNamedRegister(unsigned &Reg);
-  bool parseStandaloneVirtualRegister(unsigned &Reg);
+  bool parseStandaloneVirtualRegister(VRegInfo *&Info);
   bool parseStandaloneStackObject(int &FI);
   bool parseStandaloneMDNode(MDNode *&Node);
 
@@ -122,7 +133,9 @@ public:
   bool parseBasicBlockLiveins(MachineBasicBlock &MBB);
   bool parseBasicBlockSuccessors(MachineBasicBlock &MBB);
 
-  bool parseRegister(unsigned &Reg);
+  bool parseNamedRegister(unsigned &Reg);
+  bool parseVirtualRegister(VRegInfo *&Info);
+  bool parseRegister(unsigned &Reg, VRegInfo *&VRegInfo);
   bool parseRegisterFlag(unsigned &Flags);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
@@ -255,7 +268,7 @@ private:
 
 } // end anonymous namespace
 
-MIParser::MIParser(const PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
+MIParser::MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
                    StringRef Source)
     : MF(PFS.MF), Error(Error), Source(Source), CurrentSource(Source), PFS(PFS)
 {}
@@ -438,7 +451,7 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
     if (Token.isNot(MIToken::NamedRegister))
       return error("expected a named register");
     unsigned Reg = 0;
-    if (parseRegister(Reg))
+    if (parseNamedRegister(Reg))
       return true;
     MBB.addLiveIn(Reg);
     lex();
@@ -683,7 +696,7 @@ bool MIParser::parseStandaloneNamedRegister(unsigned &Reg) {
   lex();
   if (Token.isNot(MIToken::NamedRegister))
     return error("expected a named register");
-  if (parseRegister(Reg))
+  if (parseNamedRegister(Reg))
     return true;
   lex();
   if (Token.isNot(MIToken::Eof))
@@ -691,11 +704,11 @@ bool MIParser::parseStandaloneNamedRegister(unsigned &Reg) {
   return false;
 }
 
-bool MIParser::parseStandaloneVirtualRegister(unsigned &Reg) {
+bool MIParser::parseStandaloneVirtualRegister(VRegInfo *&Info) {
   lex();
   if (Token.isNot(MIToken::VirtualRegister))
     return error("expected a virtual register");
-  if (parseRegister(Reg))
+  if (parseVirtualRegister(Info))
     return true;
   lex();
   if (Token.isNot(MIToken::Eof))
@@ -791,33 +804,39 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
   return false;
 }
 
-bool MIParser::parseRegister(unsigned &Reg) {
+bool MIParser::parseNamedRegister(unsigned &Reg) {
+  assert(Token.is(MIToken::NamedRegister) && "Needs NamedRegister token");
+  StringRef Name = Token.stringValue();
+  if (getRegisterByName(Name, Reg))
+    return error(Twine("unknown register name '") + Name + "'");
+  return false;
+}
+
+bool MIParser::parseVirtualRegister(VRegInfo *&Info) {
+  assert(Token.is(MIToken::VirtualRegister) && "Needs VirtualRegister token");
+  unsigned ID;
+  if (getUnsigned(ID))
+    return true;
+  Info = &PFS.getVRegInfo(ID);
+  return false;
+}
+
+bool MIParser::parseRegister(unsigned &Reg, VRegInfo *&Info) {
   switch (Token.kind()) {
   case MIToken::underscore:
     Reg = 0;
-    break;
-  case MIToken::NamedRegister: {
-    StringRef Name = Token.stringValue();
-    if (getRegisterByName(Name, Reg))
-      return error(Twine("unknown register name '") + Name + "'");
-    break;
-  }
-  case MIToken::VirtualRegister: {
-    unsigned ID;
-    if (getUnsigned(ID))
+    return false;
+  case MIToken::NamedRegister:
+    return parseNamedRegister(Reg);
+  case MIToken::VirtualRegister:
+    if (parseVirtualRegister(Info))
       return true;
-    const auto RegInfo = PFS.VirtualRegisterSlots.find(ID);
-    if (RegInfo == PFS.VirtualRegisterSlots.end())
-      return error(Twine("use of undefined virtual register '%") + Twine(ID) +
-                   "'");
-    Reg = RegInfo->second;
-    break;
-  }
+    Reg = Info->VReg;
+    return false;
   // TODO: Parse other register kinds.
   default:
     llvm_unreachable("The current token should be a register");
   }
-  return false;
 }
 
 bool MIParser::parseRegisterFlag(unsigned &Flags) {
@@ -927,7 +946,6 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     Optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Reg;
   unsigned Flags = IsDef ? RegState::Define : 0;
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
@@ -935,7 +953,9 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
   }
   if (!Token.isRegister())
     return error("expected a register after register flags");
-  if (parseRegister(Reg))
+  unsigned Reg;
+  VRegInfo *RegInfo;
+  if (parseRegister(Reg, RegInfo))
     return true;
   lex();
   unsigned SubReg = 0;
@@ -970,7 +990,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     // Virtual registers may have a size with GlobalISel.
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       return error("unexpected size on physical register");
-    if (MRI.getRegClassOrRegBank(Reg).is<const TargetRegisterClass *>())
+    if (RegInfo->Kind != VRegInfo::GENERIC)
       return error("unexpected size on non-generic virtual register");
 
     LLT Ty;
@@ -984,11 +1004,13 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("inconsistent type for generic virtual register");
 
     MRI.setType(Reg, Ty);
-  } else if (PFS.GenericVRegs.count(Reg)) {
+  } else if (TargetRegisterInfo::isVirtualRegister(Reg)) {
     // Generic virtual registers must have a size.
     // If we end up here this means the size hasn't been specified and
     // this is bad!
-    return error("generic virtual registers must have a size");
+    if (RegInfo->Kind == VRegInfo::GENERIC ||
+        RegInfo->Kind == VRegInfo::REGBANK)
+      return error("generic virtual registers must have a size");
   }
   Dest = MachineOperand::CreateReg(
       Reg, Flags & RegState::Define, Flags & RegState::Implicit,
@@ -1305,7 +1327,7 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
   if (Token.isNot(MIToken::NamedRegister))
     return error("expected a cfi register");
   unsigned LLVMReg;
-  if (parseRegister(LLVMReg))
+  if (parseNamedRegister(LLVMReg))
     return true;
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
   assert(TRI && "Expected target register info");
@@ -1540,8 +1562,8 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   while (true) {
     if (Token.isNot(MIToken::NamedRegister))
       return error("expected a named register");
-    unsigned Reg = 0;
-    if (parseRegister(Reg))
+    unsigned Reg;
+    if (parseNamedRegister(Reg))
       return true;
     lex();
     Mask[Reg / 32] |= 1U << (Reg % 32);
@@ -2166,36 +2188,36 @@ bool llvm::parseMachineBasicBlockDefinitions(PerFunctionMIParsingState &PFS,
   return MIParser(PFS, Error, Src).parseBasicBlockDefinitions(PFS.MBBSlots);
 }
 
-bool llvm::parseMachineInstructions(const PerFunctionMIParsingState &PFS,
+bool llvm::parseMachineInstructions(PerFunctionMIParsingState &PFS,
                                     StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseBasicBlocks();
 }
 
-bool llvm::parseMBBReference(const PerFunctionMIParsingState &PFS,
+bool llvm::parseMBBReference(PerFunctionMIParsingState &PFS,
                              MachineBasicBlock *&MBB, StringRef Src,
                              SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMBB(MBB);
 }
 
-bool llvm::parseNamedRegisterReference(const PerFunctionMIParsingState &PFS,
+bool llvm::parseNamedRegisterReference(PerFunctionMIParsingState &PFS,
                                        unsigned &Reg, StringRef Src,
                                        SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneNamedRegister(Reg);
 }
 
-bool llvm::parseVirtualRegisterReference(const PerFunctionMIParsingState &PFS,
-                                         unsigned &Reg, StringRef Src,
+bool llvm::parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
+                                         VRegInfo *&Info, StringRef Src,
                                          SMDiagnostic &Error) {
-  return MIParser(PFS, Error, Src).parseStandaloneVirtualRegister(Reg);
+  return MIParser(PFS, Error, Src).parseStandaloneVirtualRegister(Info);
 }
 
-bool llvm::parseStackObjectReference(const PerFunctionMIParsingState &PFS,
+bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS,
                                      int &FI, StringRef Src,
                                      SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneStackObject(FI);
 }
 
-bool llvm::parseMDNode(const PerFunctionMIParsingState &PFS,
+bool llvm::parseMDNode(PerFunctionMIParsingState &PFS,
                        MDNode *&Node, StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
 }

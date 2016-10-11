@@ -75,7 +75,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     Log2Size = llvm::Log2_32(4);
     switch (Sym->getKind()) {
     default:
-      llvm_unreachable("Unexpected symbol reference variant kind!");
+      return false;
     case MCSymbolRefExpr::VK_PAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGEOFF12);
       return true;

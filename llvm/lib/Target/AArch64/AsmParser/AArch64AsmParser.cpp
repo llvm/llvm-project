@@ -326,7 +326,7 @@ public:
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const { return EndLoc; }
+  SMLoc getEndLoc() const override { return EndLoc; }
 
   StringRef getToken() const {
     assert(Kind == k_Token && "Invalid access!");
@@ -729,9 +729,13 @@ public:
           || ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12;
     }
 
-    // Otherwise it should be a real immediate in range:
-    const MCConstantExpr *CE = cast<MCConstantExpr>(Expr);
-    return CE->getValue() >= 0 && CE->getValue() <= 0xfff;
+    // If it's a constant, it should be a real immediate in range:
+    if (auto *CE = dyn_cast<MCConstantExpr>(Expr))
+      return CE->getValue() >= 0 && CE->getValue() <= 0xfff;
+
+    // If it's an expression, we hope for the best and let the fixup/relocation
+    // code deal with it.
+    return true;
   }
   bool isAddSubImmNeg() const {
     if (!isShiftedImm() && !isImm())
@@ -3568,31 +3572,34 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
       AArch64MCExpr::VariantKind ELFRefKind;
       MCSymbolRefExpr::VariantKind DarwinRefKind;
       int64_t Addend;
-      if (!classifySymbolRef(Expr, ELFRefKind, DarwinRefKind, Addend)) {
-        return Error(Loc[2], "invalid immediate expression");
+      if (classifySymbolRef(Expr, ELFRefKind, DarwinRefKind, Addend)) {
+
+        // Only allow these with ADDXri.
+        if ((DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
+             DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF) &&
+            Inst.getOpcode() == AArch64::ADDXri)
+          return false;
+
+        // Only allow these with ADDXri/ADDWri
+        if ((ELFRefKind == AArch64MCExpr::VK_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12) &&
+            (Inst.getOpcode() == AArch64::ADDXri ||
+             Inst.getOpcode() == AArch64::ADDWri))
+          return false;
+
+        // Don't allow symbol refs in the immediate field otherwise
+        // Note: Loc.back() may be Loc[1] or Loc[2] depending on the number of
+        // operands of the original instruction (i.e. 'add w0, w1, borked' vs
+        // 'cmp w0, 'borked')
+        return Error(Loc.back(), "invalid immediate expression");
       }
-
-      // Only allow these with ADDXri.
-      if ((DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
-          DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF) &&
-          Inst.getOpcode() == AArch64::ADDXri)
-        return false;
-
-      // Only allow these with ADDXri/ADDWri
-      if ((ELFRefKind == AArch64MCExpr::VK_LO12 ||
-          ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
-          ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
-          ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
-          ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
-          ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
-          ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
-          ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12) &&
-          (Inst.getOpcode() == AArch64::ADDXri ||
-          Inst.getOpcode() == AArch64::ADDWri))
-        return false;
-
-      // Don't allow expressions in the immediate field otherwise
-      return Error(Loc[2], "invalid immediate expression");
+      // We don't validate more complex expressions here
     }
     return false;
   }

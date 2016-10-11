@@ -379,7 +379,7 @@ public:
     return StartLoc;
   }
 
-  SMLoc getEndLoc() const {
+  SMLoc getEndLoc() const override {
     return EndLoc;
   }
 

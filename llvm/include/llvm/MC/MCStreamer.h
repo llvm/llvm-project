@@ -199,6 +199,8 @@ protected:
     return CurrentWinFrameInfo;
   }
 
+  virtual void EmitWindowsUnwindTables();
+
   virtual void EmitRawTextImpl(StringRef String);
 
 public:
@@ -275,6 +277,8 @@ public:
   /// \brief Add explicit comment T. T is required to be a valid
   /// comment in the output and does not need to be escaped.
   virtual void addExplicitComment(const Twine &T);
+  /// \brief Emit added explicit comments.
+  virtual void emitExplicitComments();
 
   /// AddBlankLine - Emit a blank line to a .s file to pretty it up.
   virtual void AddBlankLine() {}

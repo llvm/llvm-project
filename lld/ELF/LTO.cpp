@@ -68,9 +68,10 @@ static std::unique_ptr<lto::LTO> createLTO() {
                             /*UseInputModulePath*/ true));
 
   lto::ThinBackend Backend;
-  if (Config->LtoJobs)
-    Backend = lto::createInProcessThinBackend(Config->LtoJobs);
-  return llvm::make_unique<lto::LTO>(std::move(Conf), Backend, Config->LtoJobs);
+  if (Config->ThinLtoJobs != -1u)
+    Backend = lto::createInProcessThinBackend(Config->ThinLtoJobs);
+  return llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
+                                     Config->LtoPartitions);
 }
 
 BitcodeCompiler::BitcodeCompiler() : LtoObj(createLTO()) {}

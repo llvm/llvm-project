@@ -1600,8 +1600,7 @@ bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
   if (a.Size != b.Size || (a.ModTime && b.ModTime && a.ModTime != b.ModTime))
     return false;
 
-  if (llvm::sys::path::is_absolute(a.Filename) &&
-      strcmp(a.Filename, b.Filename) == 0)
+  if (llvm::sys::path::is_absolute(a.Filename) && a.Filename == b.Filename)
     return true;
   
   // Determine whether the actual files are equivalent.

@@ -303,11 +303,13 @@ def alias_version_script_version_script: J<"version-script=">,
   Alias<version_script>;
 
 // LTO-related options.
-def lto_jobs: J<"lto-jobs=">, HelpText<"Number of threads to run codegen">;
 def lto_aa_pipeline: J<"lto-aa-pipeline=">,
   HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
 def lto_newpm_passes: J<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
+def lto_partitions: J<"lto-partitions=">,
+  HelpText<"Number of LTO codegen partitions">;
 def disable_verify: F<"disable-verify">;
 def mllvm: S<"mllvm">;
 def save_temps: F<"save-temps">;
+def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;

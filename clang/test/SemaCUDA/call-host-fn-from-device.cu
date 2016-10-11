@@ -46,6 +46,14 @@ struct T {
 
   operator Dummy() { return Dummy(); }
   // expected-note@-1 {{'operator Dummy' declared here}}
+
+  __host__ void operator delete(void*);
+  __device__ void operator delete(void*, size_t);
+};
+
+struct U {
+  __device__ void operator delete(void*, size_t) = delete;
+  __host__ __device__ void operator delete(void*);
 };
 
 __host__ __device__ void T::hd3() {
@@ -80,6 +88,11 @@ __host__ __device__ void placement_new(char *ptr) {
 __host__ __device__ void explicit_destructor(S *s) {
   s->~S();
   // expected-error@-1 {{reference to __host__ function '~S' in __host__ __device__ function}}
+}
+
+__host__ __device__ void class_specific_delete(T *t, U *u) {
+  delete t; // ok, call sized device delete even though host has preferable non-sized version
+  delete u; // ok, call non-sized HD delete rather than sized D delete
 }
 
 __host__ __device__ void hd_member_fn() {

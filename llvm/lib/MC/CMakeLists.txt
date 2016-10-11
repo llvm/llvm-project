@@ -41,6 +41,7 @@ add_llvm_library(LLVMMC
   MCTargetOptions.cpp
   MCValue.cpp
   MCWin64EH.cpp
+  MCWinEH.cpp
   MachObjectWriter.cpp
   StringTableBuilder.cpp
   SubtargetFeature.cpp

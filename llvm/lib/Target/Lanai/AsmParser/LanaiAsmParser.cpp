@@ -134,7 +134,7 @@ public:
   SMLoc getStartLoc() const override { return StartLoc; }
 
   // getEndLoc - Gets location of the last token of this operand
-  SMLoc getEndLoc() const { return EndLoc; }
+  SMLoc getEndLoc() const override { return EndLoc; }
 
   unsigned getReg() const override {
     assert(isReg() && "Invalid type access!");

@@ -18,8 +18,8 @@ registers:
 body: |
   bb.0.entry:
     %0 = COPY %edi
-    ; CHECK: [[@LINE+1]]:17: use of undefined virtual register '%10'
-    %eax = COPY %10
+    ; CHECK: Cannot determine class/bank of virtual register 1 in function 'test'
+    %eax = COPY %1
     RETQ %eax
 ...
 
