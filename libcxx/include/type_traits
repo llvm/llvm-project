@@ -2082,7 +2082,7 @@ template <class _Tp> _LIBCPP_CONSTEXPR bool is_copy_assignable_v
 template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_move_assignable
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     : public is_assignable<typename add_lvalue_reference<_Tp>::type,
-                     const typename add_rvalue_reference<_Tp>::type> {};
+                           typename add_rvalue_reference<_Tp>::type> {};
 #else
     : public is_copy_assignable<_Tp> {};
 #endif

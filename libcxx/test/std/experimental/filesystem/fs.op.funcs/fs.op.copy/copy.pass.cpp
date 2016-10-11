@@ -69,37 +69,44 @@ TEST_CASE(test_error_reporting)
     const path fifo = env.create_fifo("fifo");
     TEST_REQUIRE(is_other(fifo));
 
+    const auto test_ec = GetTestEC();
+
     // !exists(f)
     {
-        std::error_code ec;
+        std::error_code ec = test_ec;
         const path f = StaticEnv::DNE;
         const path t = env.test_root;
         fs::copy(f, t, ec);
         TEST_REQUIRE(ec);
+        TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(f, t, ec));
     }
     { // equivalent(f, t) == true
-        std::error_code ec;
+        std::error_code ec = test_ec;
         fs::copy(file, file, ec);
         TEST_REQUIRE(ec);
+        TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(file, file, ec));
     }
     { // is_directory(from) && is_file(to)
-        std::error_code ec;
+        std::error_code ec = test_ec;
         fs::copy(dir, file, ec);
         TEST_REQUIRE(ec);
+        TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(dir, file, ec));
     }
     { // is_other(from)
-        std::error_code ec;
+        std::error_code ec = test_ec;
         fs::copy(fifo, dir, ec);
         TEST_REQUIRE(ec);
+        TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(fifo, dir, ec));
     }
     { // is_other(to)
-        std::error_code ec;
+        std::error_code ec = test_ec;
         fs::copy(file, fifo, ec);
         TEST_REQUIRE(ec);
+        TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(file, fifo, ec));
     }
 }
@@ -129,11 +136,13 @@ TEST_CASE(from_is_symlink)
         std::error_code ec = GetTestEC();
         fs::copy(symlink, file, copy_options::copy_symlinks, ec);
         TEST_CHECK(ec);
+        TEST_CHECK(ec != GetTestEC());
     }
     { // create symlinks but target exists
         std::error_code ec = GetTestEC();
         fs::copy(symlink, file, copy_options::create_symlinks, ec);
         TEST_CHECK(ec);
+        TEST_CHECK(ec != GetTestEC());
     }
 }
 
@@ -246,6 +255,19 @@ TEST_CASE(from_is_directory)
             TEST_CHECK(file_size(nested_created) == FI.size);
         }
     }
-
 }
+
+TEST_CASE(test_otherwise_no_effects_clause)
+{
+    scoped_test_env env;
+    const path dir = env.create_dir("dir1");
+    { // skip copy because of directory
+        const path dest = env.make_env_path("dest1");
+        std::error_code ec;
+        fs::copy(dir, dest, CO::directories_only, ec);
+        TEST_CHECK(!ec);
+        TEST_CHECK(!exists(dest));
+    }
+}
+
 TEST_SUITE_END()

@@ -43,6 +43,24 @@ public:
   int Field;
 };
 
+// Default member initializer
+class DMI {
+public:
+  DMI() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DMI() = default;
+  int Field = 5;
+};
+
+// Class member
+class CM {
+public:
+  CM() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: CM() = default;
+  OL o;
+};
+
 // Private constructor/destructor.
 class Priv {
   Priv() {}

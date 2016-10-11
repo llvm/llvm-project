@@ -3709,61 +3709,6 @@ uninitialized_fill_n(_ForwardIterator __f, _Size __n, const _Tp& __x)
 
 #if _LIBCPP_STD_VER > 14
 
-template <class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY
-void uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
-    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
-    for (; __first != __last; ++__first)
-        ::new((void*)_VSTD::addressof(*__first)) _Vt;
-}
-
-template <class _ForwardIterator, class _Size>
-inline _LIBCPP_INLINE_VISIBILITY
-_ForwardIterator uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
-    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
-    for (; __n > 0; (void)++__first, --__n)
-        ::new((void*)_VSTD::addressof(*__first)) _Vt;
-    return __first;
-}
-
-
-template <class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY
-void uninitialized_value_construct(_ForwardIterator __first, _ForwardIterator __last) {
-    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
-    for (; __first != __last; ++__first)
-        ::new((void*)_VSTD::addressof(*__first)) _Vt();
-}
-
-template <class _ForwardIterator, class _Size>
-inline _LIBCPP_INLINE_VISIBILITY
-_ForwardIterator uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
-    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
-    for (; __n > 0; (void)++__first, --__n)
-        ::new((void*)_VSTD::addressof(*__first)) _Vt();
-    return __first;
-}
-
-
-template <class _InputIt, class _ForwardIt>
-inline _LIBCPP_INLINE_VISIBILITY
-_ForwardIt uninitialized_move(_InputIt __first, _InputIt __last, _ForwardIt __res) {
-    using _Vt = typename iterator_traits<_ForwardIt>::value_type;
-    for (; __first != __last; (void)++__res, ++__first)
-        ::new((void*)_VSTD::addressof(*__res)) _Vt(std::move(*__first));
-    return __res;
-}
-
-template <class _InputIt, class _Size, class _ForwardIt>
-inline _LIBCPP_INLINE_VISIBILITY
-pair<_InputIt, _ForwardIt>
-uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __res) {
-    using _Vt = typename iterator_traits<_ForwardIt>::value_type;
-    for (; __n > 0; ++__res, (void)++__first, --__n)
-        ::new((void*)_VSTD::addressof(*__res)) _Vt(std::move(*__first));
-    return {__first, __res};
-}
-
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 void destroy_at(_Tp* __loc) {
@@ -3785,6 +3730,122 @@ _ForwardIterator destroy_n(_ForwardIterator __first, _Size __n) {
         _VSTD::destroy_at(_VSTD::addressof(*__first));
     return __first;
 }
+
+template <class _ForwardIterator>
+inline _LIBCPP_INLINE_VISIBILITY
+void uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
+    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
+    auto __idx = __first;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif
+    for (; __idx != __last; ++__idx)
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+        _VSTD::destroy(__first, __idx);
+        throw;
+    }
+#endif
+}
+
+template <class _ForwardIterator, class _Size>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIterator uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
+    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
+    auto __idx = __first;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif
+    for (; __n > 0; (void)++__idx, --__n)
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt;
+    return __idx;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+        _VSTD::destroy(__first, __idx);
+        throw;
+    }
+#endif
+}
+
+
+template <class _ForwardIterator>
+inline _LIBCPP_INLINE_VISIBILITY
+void uninitialized_value_construct(_ForwardIterator __first, _ForwardIterator __last) {
+    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
+    auto __idx = __first;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif
+    for (; __idx != __last; ++__idx)
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt();
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+        _VSTD::destroy(__first, __idx);
+        throw;
+    }
+#endif
+}
+
+template <class _ForwardIterator, class _Size>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIterator uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
+    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
+    auto __idx = __first;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif
+    for (; __n > 0; (void)++__idx, --__n)
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt();
+    return __idx;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+        _VSTD::destroy(__first, __idx);
+        throw;
+    }
+#endif
+}
+
+
+template <class _InputIt, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIt uninitialized_move(_InputIt __first, _InputIt __last, _ForwardIt __first_res) {
+    using _Vt = typename iterator_traits<_ForwardIt>::value_type;
+    auto __idx = __first_res;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif
+    for (; __first != __last; (void)++__idx, ++__first)
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt(std::move(*__first));
+    return __idx;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+        _VSTD::destroy(__first_res, __idx);
+        throw;
+    }
+#endif
+}
+
+template <class _InputIt, class _Size, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+pair<_InputIt, _ForwardIt>
+uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
+    using _Vt = typename iterator_traits<_ForwardIt>::value_type;
+    auto __idx = __first_res;
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try {
+#endif
+    for (; __n > 0; ++__idx, (void)++__first, --__n)
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt(std::move(*__first));
+    return {__first, __idx};
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    } catch (...) {
+        _VSTD::destroy(__first_res, __idx);
+        throw;
+    }
+#endif
+}
+
 
 #endif // _LIBCPP_STD_VER > 14
 

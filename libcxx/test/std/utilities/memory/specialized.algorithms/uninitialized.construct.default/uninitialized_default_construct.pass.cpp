@@ -47,7 +47,7 @@ struct ThrowsCounted {
       ++count;
   }
   ThrowsCounted(ThrowsCounted const&) { assert(false); }
-  ~ThrowsCounted() { --count; }
+  ~ThrowsCounted() { assert(count > 0); --count; }
   friend void operator&(ThrowsCounted) = delete;
 };
 int ThrowsCounted::count = 0;
@@ -67,10 +67,8 @@ void test_ctor_throws()
         std::uninitialized_default_construct(It(p), It(p+N));
         assert(false);
     } catch (...) {}
-    assert(ThrowsCounted::count == 3);
-    assert(ThrowsCounted::constructed == 4); // forth construction throws
-    std::destroy(p, p+3);
     assert(ThrowsCounted::count == 0);
+    assert(ThrowsCounted::constructed == 4); // forth construction throws
 #endif
 }
 

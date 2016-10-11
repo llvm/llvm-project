@@ -125,6 +125,11 @@ void *_recalloc(void *p, size_t n, size_t elem_size) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
+void *_recalloc_base(void *p, size_t n, size_t elem_size) {
+  return _recalloc(p, n, elem_size);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
 size_t _msize(const void *ptr) {
   GET_CURRENT_PC_BP_SP;
   (void)sp;
@@ -223,6 +228,7 @@ void ReplaceSystemMalloc() {
   TryToOverrideFunction("_realloc_base", (uptr)realloc);
   TryToOverrideFunction("_realloc_crt", (uptr)realloc);
   TryToOverrideFunction("_recalloc", (uptr)_recalloc);
+  TryToOverrideFunction("_recalloc_base", (uptr)_recalloc);
   TryToOverrideFunction("_recalloc_crt", (uptr)_recalloc);
   TryToOverrideFunction("_msize", (uptr)_msize);
   TryToOverrideFunction("_expand", (uptr)_expand);
