@@ -340,6 +340,7 @@ private:
   void ExpandIntRes_SIGN_EXTEND_INREG (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_TRUNCATE          (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ZERO_EXTEND       (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_FLT_ROUNDS        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FP_TO_SINT        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FP_TO_UINT        (SDNode *N, SDValue &Lo, SDValue &Hi);
 

@@ -31,9 +31,20 @@ class StringRef;
 /// Module::createRNG to create a new RNG instance for use with that
 /// module.
 class RandomNumberGenerator {
+
+  // 64-bit Mersenne Twister by Matsumoto and Nishimura, 2000
+  // http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine
+  // This RNG is deterministically portable across C++11
+  // implementations.
+  using generator_type = std::mt19937_64;
+
 public:
+  using result_type = generator_type::result_type;
+
   /// Returns a random number in the range [0, Max).
-  uint_fast64_t operator()();
+  result_type operator()();
+  static LLVM_CONSTEXPR result_type min() { return generator_type::min(); }
+  static LLVM_CONSTEXPR result_type max() { return generator_type::max(); }
 
 private:
   /// Seeds and salts the underlying RNG engine.
@@ -42,11 +53,7 @@ private:
   /// Module::createRNG to create a new RNG salted with the Module ID.
   RandomNumberGenerator(StringRef Salt);
 
-  // 64-bit Mersenne Twister by Matsumoto and Nishimura, 2000
-  // http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine
-  // This RNG is deterministically portable across C++11
-  // implementations.
-  std::mt19937_64 Generator;
+  generator_type Generator;
 
   // Noncopyable.
   RandomNumberGenerator(const RandomNumberGenerator &other) = delete;

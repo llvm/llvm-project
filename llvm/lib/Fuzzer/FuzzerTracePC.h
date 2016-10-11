@@ -87,7 +87,7 @@ private:
   static const size_t kNumCounters = 1 << 14;
   alignas(8) uint8_t Counters[kNumCounters];
 
-  static const size_t kNumPCs = 1 << 20;
+  static const size_t kNumPCs = 1 << 24;
   uintptr_t PCs[kNumPCs];
 
   ValueBitMap ValueProfileMap;

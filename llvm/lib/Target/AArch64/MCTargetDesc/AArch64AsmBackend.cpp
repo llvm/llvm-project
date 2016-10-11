@@ -521,6 +521,17 @@ public:
 
     return CompactUnwindEncoding;
   }
+
+  void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
+                         const MCFixup &Fixup, const MCFragment *DF,
+                         const MCValue &Target, uint64_t &Value,
+                         bool &IsResolved) override {
+    // Try to get the encoded value for the fixup as-if we're mapping it into
+    // the instruction. This allows adjustFixupValue() to issue a diagnostic
+    // if the value is invalid.
+    if (IsResolved)
+      (void)adjustFixupValue(Fixup, Value, &Asm.getContext());
+  }
 };
 
 } // end anonymous namespace

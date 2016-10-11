@@ -281,7 +281,7 @@ public:
     return StartLoc;
   }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const {
+  SMLoc getEndLoc() const override {
     return EndLoc;
   }
 

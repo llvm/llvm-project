@@ -40,5 +40,5 @@ if os.path.exists(compilerrt_obj_root):
             os.path.join(compilerrt_obj_root, 'test')
 
 if __name__=='__main__':
-    import lit
-    lit.main(builtin_parameters)
+    from lit.main import main
+    main(builtin_parameters)

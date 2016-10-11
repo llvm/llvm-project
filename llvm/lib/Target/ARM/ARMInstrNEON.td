@@ -610,14 +610,14 @@ def NEONimmAllOnesV: PatLeaf<(NEONvmovImm (i32 timm)), [{
 def VLDMQIA
   : PseudoVFPLdStM<(outs DPair:$dst), (ins GPR:$Rn),
                     IIC_fpLoad_m, "",
-                   [(set DPair:$dst, (v2f64 (load GPR:$Rn)))]>;
+                   [(set DPair:$dst, (v2f64 (word_alignedload GPR:$Rn)))]>;
 
 // Use VSTM to store a Q register as a D register pair.
 // This is a pseudo instruction that is expanded to VSTMD after reg alloc.
 def VSTMQIA
   : PseudoVFPLdStM<(outs), (ins DPair:$src, GPR:$Rn),
                     IIC_fpStore_m, "",
-                   [(store (v2f64 DPair:$src), GPR:$Rn)]>;
+                   [(word_alignedstore (v2f64 DPair:$src), GPR:$Rn)]>;
 
 // Classes for VLD* pseudo-instructions with multi-register operands.
 // These are expanded to real instructions after register allocation.
@@ -6848,6 +6848,16 @@ let Predicates = [IsBE] in {
   def : Pat<(v2f64 (bitconvert (v16i8 QPR:$src))), (VREV64q8  QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v4f32 QPR:$src))), (VREV64q32 QPR:$src)>;
 }
+
+// Use VLD1/VST1 + VREV for non-word-aligned v2f64 load/store on Big Endian
+def : Pat<(v2f64 (byte_alignedload addrmode6:$addr)),
+          (VREV64q8 (VLD1q8 addrmode6:$addr))>, Requires<[IsBE]>;
+def : Pat<(byte_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
+          (VST1q8 addrmode6:$addr, (VREV64q8 QPR:$value))>, Requires<[IsBE]>;
+def : Pat<(v2f64 (hword_alignedload addrmode6:$addr)),
+          (VREV64q16 (VLD1q16 addrmode6:$addr))>, Requires<[IsBE]>;
+def : Pat<(hword_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
+          (VST1q16 addrmode6:$addr, (VREV64q16 QPR:$value))>, Requires<[IsBE]>;
 
 // Fold extracting an element out of a v2i32 into a vfp register.
 def : Pat<(f32 (bitconvert (i32 (extractelt (v2i32 DPR:$src), imm:$lane)))),

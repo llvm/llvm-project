@@ -545,14 +545,14 @@ Constant *ConstantInt::getFalse(Type *Ty) {
 ConstantInt *ConstantInt::get(LLVMContext &Context, const APInt &V) {
   // get an existing value or the insertion position
   LLVMContextImpl *pImpl = Context.pImpl;
-  ConstantInt *&Slot = pImpl->IntConstants[V];
+  std::unique_ptr<ConstantInt> &Slot = pImpl->IntConstants[V];
   if (!Slot) {
     // Get the corresponding integer type for the bit width of the value.
     IntegerType *ITy = IntegerType::get(Context, V.getBitWidth());
-    Slot = new ConstantInt(ITy, V);
+    Slot.reset(new ConstantInt(ITy, V));
   }
   assert(Slot->getType() == IntegerType::get(Context, V.getBitWidth()));
-  return Slot;
+  return Slot.get();
 }
 
 Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
@@ -685,7 +685,7 @@ Constant *ConstantFP::getZeroValueForNegation(Type *Ty) {
 ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
   LLVMContextImpl* pImpl = Context.pImpl;
 
-  ConstantFP *&Slot = pImpl->FPConstants[V];
+  std::unique_ptr<ConstantFP> &Slot = pImpl->FPConstants[V];
 
   if (!Slot) {
     Type *Ty;
@@ -704,10 +704,10 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
              "Unknown FP format");
       Ty = Type::getPPC_FP128Ty(Context);
     }
-    Slot = new ConstantFP(Ty, V);
+    Slot.reset(new ConstantFP(Ty, V));
   }
 
-  return Slot;
+  return Slot.get();
 }
 
 Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
@@ -1259,12 +1259,13 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {
 ConstantAggregateZero *ConstantAggregateZero::get(Type *Ty) {
   assert((Ty->isStructTy() || Ty->isArrayTy() || Ty->isVectorTy()) &&
          "Cannot create an aggregate zero of non-aggregate type!");
-  
-  ConstantAggregateZero *&Entry = Ty->getContext().pImpl->CAZConstants[Ty];
-  if (!Entry)
-    Entry = new ConstantAggregateZero(Ty);
 
-  return Entry;
+  std::unique_ptr<ConstantAggregateZero> &Entry =
+      Ty->getContext().pImpl->CAZConstants[Ty];
+  if (!Entry)
+    Entry.reset(new ConstantAggregateZero(Ty));
+
+  return Entry.get();
 }
 
 /// Remove the constant from the constant table.
@@ -1325,11 +1326,12 @@ const APInt &Constant::getUniqueInteger() const {
 //
 
 ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
-  ConstantPointerNull *&Entry = Ty->getContext().pImpl->CPNConstants[Ty];
+  std::unique_ptr<ConstantPointerNull> &Entry =
+      Ty->getContext().pImpl->CPNConstants[Ty];
   if (!Entry)
-    Entry = new ConstantPointerNull(Ty);
+    Entry.reset(new ConstantPointerNull(Ty));
 
-  return Entry;
+  return Entry.get();
 }
 
 /// Remove the constant from the constant table.
@@ -1338,11 +1340,11 @@ void ConstantPointerNull::destroyConstantImpl() {
 }
 
 UndefValue *UndefValue::get(Type *Ty) {
-  UndefValue *&Entry = Ty->getContext().pImpl->UVConstants[Ty];
+  std::unique_ptr<UndefValue> &Entry = Ty->getContext().pImpl->UVConstants[Ty];
   if (!Entry)
-    Entry = new UndefValue(Ty);
+    Entry.reset(new UndefValue(Ty));
 
-  return Entry;
+  return Entry.get();
 }
 
 /// Remove the constant from the constant table.

@@ -1696,7 +1696,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOffsetOfOperator() {
   unsigned RegNo = is64BitMode() ? X86::RBX : (Parse32 ? X86::EBX : X86::BX);
 
   return X86Operand::CreateReg(RegNo, Start, End, /*GetAddress=*/true,
-                               Identifier, Info.OpDecl);
+                               OffsetOfLoc, Identifier, Info.OpDecl);
 }
 
 enum IntelOperatorKind {

@@ -657,6 +657,13 @@ public:
   /// selection and constraining of all generic virtual registers).
   void clearVirtRegTypes();
 
+  /// Creates a new virtual register that has no register class, register bank
+  /// or size assigned yet. This is only allowed to be used
+  /// temporarily while constructing machine instructions. Most operations are
+  /// undefined on an incomplete register until one of setRegClass(),
+  /// setRegBank() or setSize() has been called on it.
+  unsigned createIncompleteVirtualRegister();
+
   /// getNumVirtRegs - Return the number of virtual registers created.
   ///
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }

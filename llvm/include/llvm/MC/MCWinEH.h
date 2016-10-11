@@ -52,6 +52,15 @@ struct FrameInfo {
       : Begin(BeginFuncEHLabel), Function(Function),
         ChainedParent(ChainedParent) {}
 };
+
+class UnwindEmitter {
+public:
+  virtual ~UnwindEmitter();
+
+  /// This emits the unwind info sections (.pdata and .xdata in PE/COFF).
+  virtual void Emit(MCStreamer &Streamer) const = 0;
+  virtual void EmitUnwindInfo(MCStreamer &Streamer, FrameInfo *FI) const = 0;
+};
 }
 }
 

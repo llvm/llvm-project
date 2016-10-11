@@ -752,7 +752,7 @@ public:
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const { return EndLoc; }
+  SMLoc getEndLoc() const override { return EndLoc; }
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
   SMRange getLocRange() const { return SMRange(StartLoc, EndLoc); }

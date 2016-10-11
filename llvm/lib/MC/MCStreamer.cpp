@@ -72,6 +72,7 @@ raw_ostream &MCStreamer::GetCommentOS() {
 void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
 void MCStreamer::addExplicitComment(const Twine &T) {}
+void MCStreamer::emitExplicitComments() {}
 
 void MCStreamer::generateCompactUnwindEncodings(MCAsmBackend *MAB) {
   for (auto &FI : DwarfFrameInfos)
@@ -710,6 +711,9 @@ void MCStreamer::EmitRawTextImpl(StringRef String) {
 void MCStreamer::EmitRawText(const Twine &T) {
   SmallString<128> Str;
   EmitRawTextImpl(T.toStringRef(Str));
+}
+
+void MCStreamer::EmitWindowsUnwindTables() {
 }
 
 void MCStreamer::Finish() {

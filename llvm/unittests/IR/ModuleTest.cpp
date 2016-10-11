@@ -9,7 +9,10 @@
 
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include "gtest/gtest.h"
+
+#include <random>
 
 using namespace llvm;
 
@@ -43,6 +46,30 @@ TEST(ModuleTest, sortGlobalsByName) {
     M.getGlobalList().sort(compare);
     EXPECT_TRUE(std::is_sorted(M.global_begin(), M.global_end(), compare));
   }
+}
+
+TEST(ModuleTest, randomNumberGenerator) {
+  LLVMContext Context;
+  static char ID;
+  struct DummyPass : ModulePass {
+    DummyPass() : ModulePass(ID) {}
+    bool runOnModule(Module &) { return true; }
+  } DP;
+
+  Module M("R", Context);
+
+  std::uniform_int_distribution<int> dist;
+  constexpr std::size_t NBCheck = 10;
+
+  std::array<int, NBCheck> RandomStreams[2];
+  for (auto &RandomStream : RandomStreams) {
+    std::unique_ptr<RandomNumberGenerator> RNG{M.createRNG(&DP)};
+    std::generate(RandomStream.begin(), RandomStream.end(),
+                  [&]() { return dist(*RNG); });
+  }
+
+  EXPECT_TRUE(std::equal(RandomStreams[0].begin(), RandomStreams[0].end(),
+                         RandomStreams[1].begin()));
 }
 
 } // end namespace

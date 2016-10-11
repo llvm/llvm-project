@@ -64,10 +64,20 @@ public:
 
   /// getStartLoc - Get the location of the first token of this operand.
   virtual SMLoc getStartLoc() const = 0;
+  /// getEndLoc - Get the location of the last token of this operand.
+  virtual SMLoc getEndLoc() const = 0;
 
   /// needAddressOf - Do we need to emit code to get the address of the
   /// variable/label?   Only valid when parsing MS-style inline assembly.
   virtual bool needAddressOf() const { return false; }
+
+  /// isOffsetOf - Do we need to emit code to get the offset of the variable,
+  /// rather then the value of the variable?   Only valid when parsing MS-style
+  /// inline assembly.
+  virtual bool isOffsetOf() const { return false; }
+
+  /// getOffsetOfLoc - Get the location of the offset operator.
+  virtual SMLoc getOffsetOfLoc() const { return SMLoc(); }
 
   /// print - Print a debug representation of the operand to the given stream.
   virtual void print(raw_ostream &OS) const = 0;

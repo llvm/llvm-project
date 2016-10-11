@@ -94,12 +94,13 @@ LLVMContextImpl::~LLVMContextImpl() {
   ArrayConstants.freeConstants();
   StructConstants.freeConstants();
   VectorConstants.freeConstants();
-  DeleteContainerSeconds(CAZConstants);
-  DeleteContainerSeconds(CPNConstants);
-  DeleteContainerSeconds(UVConstants);
   InlineAsms.freeConstants();
-  DeleteContainerSeconds(IntConstants);
-  DeleteContainerSeconds(FPConstants);
+
+  CAZConstants.clear();
+  CPNConstants.clear();
+  UVConstants.clear();
+  IntConstants.clear();
+  FPConstants.clear();
 
   for (auto &CDSConstant : CDSConstants)
     delete CDSConstant.second;
