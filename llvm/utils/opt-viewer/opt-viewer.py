@@ -24,6 +24,8 @@ def demangle(name):
     return p.stdout.readline().rstrip()
 
 class Remark(yaml.YAMLObject):
+    max_hotness = 0
+
     @property
     def File(self):
         return self.DebugLoc['File']
@@ -59,6 +61,10 @@ class Remark(yaml.YAMLObject):
         # exactly one key-value pair.
         values = [self.getArgString(mapping.items()[0]) for mapping in self.Args]
         return demangle("".join(values))
+
+    @property
+    def RelativeHotness(self):
+        return int(round(self.Hotness * 100 / Remark.max_hotness))
 
 class Analysis(Remark):
     yaml_tag = '!Analysis'
@@ -102,7 +108,7 @@ class SourceFileRenderer:
         print('''
 <tr>
 <td></td>
-<td>{r.Hotness}</td>
+<td>{r.RelativeHotness}%</td>
 <td class=\"column-entry-{r.color}\">{r.Pass}</td>
 <td class=\"column-entry-yellow\">{r.message}</td>
 </tr>'''.format(**locals()), file=self.stream)
@@ -143,7 +149,7 @@ class IndexRenderer:
         print('''
 <tr>
 <td><a href={r.Link}>{r.DebugLocString}</a></td>
-<td>{r.Hotness}%</td>
+<td>{r.RelativeHotness}%</td>
 <td>{r.DemangledFunctionName}</td>
 <td class=\"column-entry-{r.color}\">{r.Pass}</td>
 </tr>'''.format(**locals()), file=self.stream)
@@ -181,6 +187,7 @@ for input_file in args.yaml_files:
         if hasattr(remark, 'Hotness'):
             file_remarks.setdefault(remark.File, dict()).setdefault(remark.Line, []).append(remark);
             all_remarks.append(remark)
+            Remark.max_hotness = max(Remark.max_hotness, remark.Hotness)
 
 all_remarks = sorted(all_remarks, key=lambda r: r.Hotness, reverse=True)
 
