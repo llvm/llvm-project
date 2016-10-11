@@ -2646,30 +2646,30 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) &
             noexcept(noexcept(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
 
     template <class ..._Args>
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) &&
             noexcept(noexcept(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
 
     template <class ..._Args>
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) const&
             noexcept(noexcept(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
 
 
     template <class ..._Args>
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) const&&
             noexcept(noexcept(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
 
 private:
     template <class _RawFunc,

@@ -94,9 +94,9 @@ CALLBACK is called after the process finishes successfully; it is
 called with a single argument, the buffer where standard output
 has been inserted.  ARGS is a list of additional command line
 arguments.  Return the new process object."
-  (let* ((stdin (current-buffer))
-         (stdout (generate-new-buffer "*clang-include-fixer output*"))
-         (stderr (generate-new-buffer "*clang-include-fixer errors*")))
+  (let ((stdin (current-buffer))
+        (stdout (generate-new-buffer "*clang-include-fixer output*"))
+        (stderr (generate-new-buffer "*clang-include-fixer errors*")))
     (make-process :name "clang-include-fixer"
                   :buffer stdout
                   :command (clang-include-fixer--command args)
@@ -281,8 +281,8 @@ They are replaced by the single element selected by the user."
             (cl-flet ((header (info) (let-alist info .Header)))
               ;; The header-infos is already sorted by include-fixer.
               (let* ((header (ido-completing-read
-                              (format-message "Select include for '%s': "
-                                              symbol)
+                              (clang-include-fixer--format-message
+                               "Select include for '%s': " symbol)
                               (mapcar #'header .HeaderInfos)
                               nil :require-match nil
                               'clang-include-fixer--history))
@@ -401,6 +401,11 @@ non-nil.  Otherwise return nil."
       'filepos-to-bufferpos
     (lambda (byte &optional _quality _coding-system)
       (byte-to-position (1+ byte)))))
+
+;; ‘format-message’ is new in Emacs 25.1.  Provide a fallback for older
+;; versions.
+(defalias 'clang-include-fixer--format-message
+  (if (fboundp 'format-message) 'format-message 'format))
 
 (provide 'clang-include-fixer)
 ;;; clang-include-fixer.el ends here

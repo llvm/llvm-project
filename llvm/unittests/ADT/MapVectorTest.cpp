@@ -148,6 +148,15 @@ TEST(MapVectorTest, iteration_test) {
   }
 }
 
+TEST(MapVectorTest, NonCopyable) {
+  MapVector<int, std::unique_ptr<int>> MV;
+  MV.insert(std::make_pair(1, llvm::make_unique<int>(1)));
+  MV.insert(std::make_pair(2, llvm::make_unique<int>(2)));
+
+  ASSERT_EQ(MV.count(1), 1u);
+  ASSERT_EQ(*MV.find(2)->second, 2);
+}
+
 TEST(SmallMapVectorSmallTest, insert_pop) {
   SmallMapVector<int, int, 32> MV;
   std::pair<SmallMapVector<int, int, 32>::iterator, bool> R;
@@ -255,6 +264,15 @@ TEST(SmallMapVectorSmallTest, iteration_test) {
     ASSERT_EQ(P.first, count);
     count--;
   }
+}
+
+TEST(SmallMapVectorSmallTest, NonCopyable) {
+  SmallMapVector<int, std::unique_ptr<int>, 8> MV;
+  MV.insert(std::make_pair(1, llvm::make_unique<int>(1)));
+  MV.insert(std::make_pair(2, llvm::make_unique<int>(2)));
+
+  ASSERT_EQ(MV.count(1), 1u);
+  ASSERT_EQ(*MV.find(2)->second, 2);
 }
 
 TEST(SmallMapVectorLargeTest, insert_pop) {

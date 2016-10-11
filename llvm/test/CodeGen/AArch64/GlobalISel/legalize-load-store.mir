@@ -23,6 +23,7 @@ registers:
   - { id: 4, class: _ }
   - { id: 5, class: _ }
   - { id: 6, class: _ }
+  - { id: 7, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -47,6 +48,9 @@ body: |
 
     ; CHECK: %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
     %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+
+    ; CHECK: %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
 ...
 
 ---

@@ -363,8 +363,7 @@ library fill it in with the appropriate level directly, which is used like this:
 
 This declaration defines a variable "``OptimizationLevel``" of the
 "``OptLevel``" enum type.  This variable can be assigned any of the values that
-are listed in the declaration (Note that the declaration list must be terminated
-with the "``clEnumValEnd``" argument!).  The CommandLine library enforces that
+are listed in the declaration.  The CommandLine library enforces that
 the user can only specify one of the options, and it ensure that only valid enum
 values can be specified.  The "``clEnumVal``" macros ensure that the command
 line arguments matched the enum values.  With this option added, our help output
@@ -962,11 +961,10 @@ This section describes the basic attributes that you can specify on options.
 .. _cl::values:
 
 * The **cl::values** attribute specifies the string-to-value mapping to be used
-  by the generic parser.  It takes a **clEnumValEnd terminated** list of
-  (option, value, description) triplets that specify the option name, the value
-  mapped to, and the description shown in the ``-help`` for the tool.  Because
-  the generic parser is used most frequently with enum values, two macros are
-  often useful:
+  by the generic parser.  It takes a list of (option, value, description)
+  triplets that specify the option name, the value mapped to, and the
+  description shown in the ``-help`` for the tool.  Because the generic parser
+  is used most frequently with enum values, two macros are often useful:
 
   #. The **clEnumVal** macro is used as a nice simple way to specify a triplet
      for an enum.  This macro automatically makes the option name be the same as

@@ -26,6 +26,8 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace llvm::support;
+using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf;
@@ -335,7 +337,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (Config->Discard == DiscardPolicy::Locals)
     return false;
 
-  return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
+  return !Sec || !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
 }
 
 template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
@@ -364,6 +366,9 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     StringRef StrTab = F->getStringTable();
     for (SymbolBody *B : F->getLocalSymbols()) {
+      if (!B->IsLocal)
+        fatal(getFilename(F) +
+              ": broken object: getLocalSymbols returns a non-local symbol");
       auto *DR = dyn_cast<DefinedRegular<ELFT>>(B);
       // No reason to keep local undefined symbol in symtab.
       if (!DR)
@@ -1036,6 +1041,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   Phdr TlsHdr(PT_TLS, PF_R);
   Phdr RelRo(PT_GNU_RELRO, PF_R);
   Phdr Note(PT_NOTE, PF_R);
+  Phdr ARMExidx(PT_ARM_EXIDX, PF_R);
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     if (!(Sec->getFlags() & SHF_ALLOC))
       break;
@@ -1066,6 +1072,8 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
       RelRo.add(Sec);
     if (Sec->getType() == SHT_NOTE)
       Note.add(Sec);
+    if (Config->EMachine == EM_ARM && Sec->getType() == SHT_ARM_EXIDX)
+      ARMExidx.add(Sec);
   }
 
   // Add the TLS segment unless it's empty.
@@ -1088,6 +1096,10 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     Phdr &Hdr = *AddHdr(PT_GNU_EH_FRAME, Out<ELFT>::EhFrameHdr->getPhdrFlags());
     Hdr.add(Out<ELFT>::EhFrameHdr);
   }
+
+  // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
+  if (ARMExidx.First)
+    Ret.push_back(std::move(ARMExidx));
 
   // PT_GNU_STACK is a special section to tell the loader to make the
   // pages for the stack non-executable.
@@ -1366,6 +1378,61 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
       Sec->writeTo(Buf + Sec->getFileOff());
 }
 
+// Convert the .ARM.exidx table entries that use relative PREL31 offsets to
+// Absolute addresses. This form is internal to LLD and is only used to
+// make reordering the table simpler.
+static void ARMExidxEntryPrelToAbs(uint8_t *Loc, uint64_t EntryVA) {
+  uint64_t Addr = Target->getImplicitAddend(Loc, R_ARM_PREL31) + EntryVA;
+  bool InlineEntry =
+      (read32le(Loc + 4) == 1 || (read32le(Loc + 4) & 0x80000000));
+  if (InlineEntry)
+    // Set flag in unused bit of code address so that when we convert back we
+    // know which table entries to leave alone.
+    Addr |= 0x1;
+  else
+    write32le(Loc + 4,
+              Target->getImplicitAddend(Loc + 4, R_ARM_PREL31) + EntryVA + 4);
+  write32le(Loc, Addr);
+}
+
+// Convert the .ARM.exidx table entries from the internal to LLD form using
+// absolute addresses back to relative PREL31 offsets.
+static void ARMExidxEntryAbsToPrel(uint8_t *Loc, uint64_t EntryVA) {
+  uint64_t Off = read32le(Loc) - EntryVA;
+  // ARMExidxEntryPreltoAbs sets bit 0 if the table entry has inline data
+  // that is not an address
+  bool InlineEntry = Off & 0x1;
+  Target->relocateOne(Loc, R_ARM_PREL31, Off & ~0x1);
+  if (!InlineEntry)
+    Target->relocateOne(Loc + 4, R_ARM_PREL31,
+                        read32le(Loc + 4) - (EntryVA + 4));
+}
+
+// The table formed by the .ARM.exidx OutputSection has entries with two
+// 4-byte fields:
+// | PREL31 offset to function | Action to take for function |
+// The table must be ordered in ascending virtual address of the functions
+// identified by the first field of the table. Instead of using the
+// SHF_LINK_ORDER dependency to reorder the sections prior to relocation we
+// sort the table post-relocation.
+// Ref: Exception handling ABI for the ARM architecture
+static void sortARMExidx(uint8_t *Buf, uint64_t OutSecVA, uint64_t Size) {
+  struct ARMExidxEntry {
+    ulittle32_t Target;
+    ulittle32_t Action;
+  };
+  ARMExidxEntry *Start = (ARMExidxEntry *)Buf;
+  size_t NumEnt = Size / sizeof(ARMExidxEntry);
+  for (uint64_t Off = 0; Off < Size; Off += 8)
+    ARMExidxEntryPrelToAbs(Buf + Off, OutSecVA + Off);
+  std::stable_sort(Start, Start + NumEnt,
+                   [](const ARMExidxEntry &A, const ARMExidxEntry &B) {
+                     return A.Target < B.Target;
+                   });
+  for (uint64_t Off = 0; Off < Size; Off += 8)
+    ARMExidxEntryAbsToPrel(Buf + Off, OutSecVA + Off);
+}
+
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
   uint8_t *Buf = Buffer->getBufferStart();
@@ -1381,6 +1448,11 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     if (Sec != Out<ELFT>::Opd && Sec != Out<ELFT>::EhFrameHdr)
       Sec->writeTo(Buf + Sec->getFileOff());
+
+  OutputSectionBase<ELFT> *ARMExidx = findSection(".ARM.exidx");
+  if (!Config->Relocatable)
+    if (auto *OS = dyn_cast_or_null<OutputSection<ELFT>>(ARMExidx))
+      sortARMExidx(Buf + OS->getFileOff(), OS->getVA(), OS->getSize());
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.

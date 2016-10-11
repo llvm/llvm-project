@@ -1,0 +1,1 @@
+add_lldb_unittest(InstEmulationTests TestArm64InstEmulation.cpp)

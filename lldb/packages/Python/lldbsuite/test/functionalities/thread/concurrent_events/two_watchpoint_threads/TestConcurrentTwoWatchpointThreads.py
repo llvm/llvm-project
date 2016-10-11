@@ -15,7 +15,7 @@ class ConcurrentTwoWatchpointThreads(ConcurrentEventsBase):
     @skipIfFreeBSD  # timing out on buildbot
     @skipIfRemoteDueToDeadlock
     # Atomic sequences are not supported yet for MIPS in LLDB.
-    @expectedFailureAll(triple='^mips')
+    @skipIf(triple='^mips')
     def test_two_watchpoint_threads(self):
         """Test two threads that trigger a watchpoint. """
         self.build(dictionary=self.getBuildFlags())

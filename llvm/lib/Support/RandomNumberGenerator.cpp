@@ -57,7 +57,7 @@ RandomNumberGenerator::RandomNumberGenerator(StringRef Salt) {
   Generator.seed(SeedSeq);
 }
 
-uint_fast64_t RandomNumberGenerator::operator()() {
+RandomNumberGenerator::result_type RandomNumberGenerator::operator()() {
   return Generator();
 }
 

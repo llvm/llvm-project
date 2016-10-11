@@ -2893,7 +2893,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
        << "                       const OperandVector &Operands);\n";
   }
   OS << "  void convertToMapAndConstraints(unsigned Kind,\n                ";
-  OS << "           const OperandVector &Operands);\n";
+  OS << "           const OperandVector &Operands) override;\n";
   if (HasMnemonicFirst)
     OS << "  bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);\n";
   OS << "  unsigned MatchInstructionImpl(const OperandVector &Operands,\n"

@@ -878,6 +878,9 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
 
 template <class ELFT> void OutputSection<ELFT>::finalize() {
   uint32_t Type = this->Header.sh_type;
+  // SHF_LINK_ORDER only has meaning in relocatable objects
+  if (!Config->Relocatable)
+    this->Header.sh_flags &= ~SHF_LINK_ORDER;
   if (Type != SHT_RELA && Type != SHT_REL)
     return;
   this->Header.sh_link = Out<ELFT>::SymTab->SectionIndex;

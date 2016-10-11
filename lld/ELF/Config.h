@@ -138,9 +138,10 @@ struct Configuration {
   uint64_t ImageBase;
   uint64_t MaxPageSize;
   uint64_t ZStackSize;
-  unsigned LtoJobs;
+  unsigned LtoPartitions;
   unsigned LtoO;
   unsigned Optimize;
+  unsigned ThinLtoJobs;
 };
 
 // The only instance of Configuration struct.

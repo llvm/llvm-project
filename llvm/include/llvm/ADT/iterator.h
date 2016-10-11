@@ -273,6 +273,6 @@ public:
   const T &operator*() const { return Ptr = &*this->I; }
 };
 
-}
+} // namespace llvm
 
 #endif

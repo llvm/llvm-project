@@ -27,10 +27,10 @@ void TracePC::HandleTrace(uint32_t *Guard, uintptr_t PC) {
   uint8_t *CounterPtr = &Counters[Idx % kNumCounters];
   uint8_t Counter = *CounterPtr;
   if (Counter == 0) {
-    if (!PCs[Idx]) {
+    if (!PCs[Idx % kNumPCs]) {
       AddNewPCID(Idx);
       TotalPCCoverage++;
-      PCs[Idx] = PC;
+      PCs[Idx % kNumPCs] = PC;
     }
   }
   if (UseCounters) {
@@ -227,7 +227,12 @@ void __sanitizer_cov_trace_cmp1(uint8_t Arg1, int8_t Arg2) {
 
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
-  // TODO(kcc): support value profile here.
+  uint64_t N = Cases[0];
+  uint64_t *Vals = Cases + 2;
+  char *PC = (char*)__builtin_return_address(0);
+  for (size_t i = 0; i < N; i++)
+    if (Val != Vals[i])
+      fuzzer::AddValueForCmp(PC + i, Val, Vals[i]);
 }
 
 __attribute__((visibility("default")))

@@ -461,11 +461,11 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
 
 template <class ELFT>
 static std::vector<OutputSectionBase<ELFT> *>
-findSections(OutputSectionCommand &Cmd,
+findSections(StringRef Name,
              const std::vector<OutputSectionBase<ELFT> *> &Sections) {
   std::vector<OutputSectionBase<ELFT> *> Ret;
   for (OutputSectionBase<ELFT> *Sec : Sections)
-    if (Sec->getName() == Cmd.Name)
+    if (Sec->getName() == Name)
       Ret.push_back(Sec);
   return Ret;
 }
@@ -475,7 +475,7 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   if (Cmd->LMAExpr)
     LMAOffset = Cmd->LMAExpr(Dot) - Dot;
   std::vector<OutputSectionBase<ELFT> *> Sections =
-      findSections(*Cmd, *OutputSections);
+      findSections(Cmd->Name, *OutputSections);
   if (Sections.empty())
     return;
   switchTo(Sections[0]);
@@ -509,7 +509,7 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
         if (!Cmd)
           return false;
         std::vector<OutputSectionBase<ELFT> *> Secs =
-            findSections(*Cmd, *OutputSections);
+            findSections(Cmd->Name, *OutputSections);
         if (!Secs.empty())
           return false;
         for (const std::unique_ptr<BaseCommand> &I : Cmd->Commands)
@@ -530,7 +530,7 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
     if (!Cmd)
       continue;
     std::vector<OutputSectionBase<ELFT> *> Secs =
-        findSections(*Cmd, *OutputSections);
+        findSections(Cmd->Name, *OutputSections);
     if (!Secs.empty()) {
       Flags = Secs[0]->getFlags();
       Type = Secs[0]->getType();
@@ -655,6 +655,17 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
     FirstPTLoad->First = Out<ELFT>::ElfHeader;
     if (!FirstPTLoad->Last)
       FirstPTLoad->Last = Out<ELFT>::ProgramHeaders;
+  } else if (!FirstPTLoad->First) {
+    // Sometimes the very first PT_LOAD segment can be empty.
+    // This happens if (all conditions met):
+    //  - Linker script is used
+    //  - First section in ELF image is not RO
+    //  - Not enough space for program headers.
+    // The code below removes empty PT_LOAD segment and updates
+    // program headers size.
+    Phdrs.erase(FirstPTLoad);
+    Out<ELFT>::ProgramHeaders->setSize(sizeof(typename ELFT::Phdr) *
+                                       Phdrs.size());
   }
 }
 

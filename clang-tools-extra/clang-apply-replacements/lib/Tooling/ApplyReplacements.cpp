@@ -300,7 +300,7 @@ bool writeFiles(const clang::Rewriter &Rewrites) {
   for (Rewriter::const_buffer_iterator BufferI = Rewrites.buffer_begin(),
                                        BufferE = Rewrites.buffer_end();
        BufferI != BufferE; ++BufferI) {
-    const char *FileName =
+    StringRef FileName =
         Rewrites.getSourceMgr().getFileEntryForID(BufferI->first)->getName();
 
     std::error_code EC;

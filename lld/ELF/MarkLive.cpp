@@ -91,6 +91,8 @@ static void forEachSuccessor(InputSection<ELFT> &Sec,
         Fn(resolveReloc(Sec, Rel));
     }
   }
+  if (Sec.DependentSection)
+    Fn({Sec.DependentSection, 0});
 }
 
 // The .eh_frame section is an unfortunate special case.

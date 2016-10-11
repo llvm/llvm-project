@@ -76,7 +76,7 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   setAction({G_FREM, s64}, Libcall);
 
   for (auto MemOp : {G_LOAD, G_STORE}) {
-    for (auto Ty : {s8, s16, s32, s64, p0})
+    for (auto Ty : {s8, s16, s32, s64, p0, v2s32})
       setAction({MemOp, Ty}, Legal);
 
     setAction({MemOp, s1}, WidenScalar);
@@ -168,6 +168,7 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
 
   // Pointer-handling
   setAction({G_FRAME_INDEX, p0}, Legal);
+  setAction({G_GLOBAL_VALUE, p0}, Legal);
 
   setAction({G_PTRTOINT, 0, s64}, Legal);
   setAction({G_PTRTOINT, 1, p0}, Legal);

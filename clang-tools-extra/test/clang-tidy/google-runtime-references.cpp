@@ -1,4 +1,8 @@
-// RUN: %check_clang_tidy %s google-runtime-references %t
+// RUN: %check_clang_tidy %s google-runtime-references %t -- \
+// RUN:   -extra-arg="-std=c++11" \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: google-runtime-references.WhiteListTypes, \
+// RUN:               value: 'whitelist::A; whitelist::B'}]}" --
 
 int a;
 int &b = a;
@@ -137,3 +141,12 @@ A& operator>>=(A& a, const A& b) { return a; }
 A& operator|=(A& a, const A& b) { return a; }
 A& operator^=(A& a, const A& b) { return a; }
 A& operator&=(A& a, const A& b) { return a; }
+
+namespace whitelist {
+class A {};
+class B {};
+void f7(A &);
+void f8(B &);
+}
+void f9(whitelist::A &);
+void f10(whitelist::B &);

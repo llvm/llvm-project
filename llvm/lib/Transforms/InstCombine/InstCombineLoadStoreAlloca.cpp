@@ -379,8 +379,16 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
       break;
     case LLVMContext::MD_range:
       // FIXME: It would be nice to propagate this in some way, but the type
-      // conversions make it hard. If the new type is a pointer, we could
-      // translate it to !nonnull metadata.
+      // conversions make it hard.
+
+      // If it's a pointer now and the range does not contain 0, make it !nonnull.
+      if (NewTy->isPointerTy()) {
+        unsigned BitWidth = IC.getDataLayout().getTypeSizeInBits(NewTy);
+        if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
+          MDNode *NN = MDNode::get(LI.getContext(), None);
+          NewLoad->setMetadata(LLVMContext::MD_nonnull, NN);
+        }
+      }
       break;
     }
   }

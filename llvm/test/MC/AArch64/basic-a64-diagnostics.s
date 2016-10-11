@@ -172,9 +172,14 @@
 
         // A relocation should be provided for symbols
         add x3, x9, #variable
+        add x3, x9, #variable-16
 // CHECK-ERROR: error: expected compatible register, symbol or integer in range [0, 4095]
 // CHECK-ERROR-NEXT:         add x3, x9, #variable
 // CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: expected compatible register, symbol or integer in range [0, 4095]
+// CHECK-ERROR-NEXT:         add x3, x9, #variable-16
+// CHECK-ERROR-NEXT:                 ^
+
 
 
 //------------------------------------------------------------------------------

@@ -281,6 +281,15 @@ bool llvm::StripDebugInfo(Module &M) {
   for (Function &F : M)
     Changed |= stripDebugInfo(F);
 
+  for (auto &GV : M.globals()) {
+    SmallVector<MDNode *, 1> MDs;
+    GV.getMetadata(LLVMContext::MD_dbg, MDs);
+    if (!MDs.empty()) {
+      GV.eraseMetadata(LLVMContext::MD_dbg);
+      Changed = true;
+    }
+  }
+
   if (GVMaterializer *Materializer = M.getMaterializer())
     Materializer->setStripDebugInfo();
 

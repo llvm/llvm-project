@@ -49,7 +49,6 @@ static void checkError(Error E) {
 
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config Conf;
-  lto::ThinBackend Backend;
 
   // LLD supports the new relocations.
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
@@ -68,7 +67,11 @@ static std::unique_ptr<lto::LTO> createLTO() {
     checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
                             /*UseInputModulePath*/ true));
 
-  return llvm::make_unique<lto::LTO>(std::move(Conf), Backend, Config->LtoJobs);
+  lto::ThinBackend Backend;
+  if (Config->ThinLtoJobs != -1u)
+    Backend = lto::createInProcessThinBackend(Config->ThinLtoJobs);
+  return llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
+                                     Config->LtoPartitions);
 }
 
 BitcodeCompiler::BitcodeCompiler() : LtoObj(createLTO()) {}

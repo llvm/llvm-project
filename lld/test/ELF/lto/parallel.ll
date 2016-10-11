@@ -1,6 +1,6 @@
 ; REQUIRES: x86
 ; RUN: llvm-as -o %t.bc %s
-; RUN: ld.lld -m elf_x86_64 --lto-jobs=2 -save-temps -o %t %t.bc -shared
+; RUN: ld.lld -m elf_x86_64 --lto-partitions=2 -save-temps -o %t %t.bc -shared
 ; RUN: llvm-nm %t0.lto.o | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-nm %t1.lto.o | FileCheck --check-prefix=CHECK1 %s
 

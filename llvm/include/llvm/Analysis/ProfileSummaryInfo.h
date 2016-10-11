@@ -51,11 +51,11 @@ public:
   ProfileSummaryInfo(Module &M) : M(M) {}
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg)
       : M(Arg.M), Summary(std::move(Arg.Summary)) {}
+  /// \brief Returns true if \p F has hot function entry.
+  bool isFunctionEntryHot(const Function *F);
+  /// \brief Returns true if \p F has cold function entry.
+  bool isFunctionEntryCold(const Function *F);
   /// \brief Returns true if \p F is a hot function.
-  bool isHotFunction(const Function *F);
-  /// \brief Returns true if \p F is a cold function.
-  bool isColdFunction(const Function *F);
-  /// \brief Returns true if count \p C is considered hot.
   bool isHotCount(uint64_t C);
   /// \brief Returns true if count \p C is considered cold.
   bool isColdCount(uint64_t C);
