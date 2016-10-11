@@ -394,6 +394,105 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     // operands to use appropriate classes.
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
+
+  case TargetOpcode::G_ANYEXT: {
+    const unsigned DstReg = I.getOperand(0).getReg();
+    const unsigned SrcReg = I.getOperand(1).getReg();
+
+    const RegisterBank &RB = *RBI.getRegBank(DstReg, MRI, TRI);
+
+    if (RB.getID() != AArch64::GPRRegBankID) {
+      DEBUG(dbgs() << "G_ANYEXT on bank: " << RB << ", expected: GPR\n");
+      return false;
+    }
+
+    const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+
+    if (DstSize == 0) {
+      DEBUG(dbgs() << "G_ANYEXT operand has no size, not a gvreg?\n");
+      return false;
+    }
+
+    const TargetRegisterClass *RC = nullptr;
+    if (DstSize <= 32) {
+      RC = &AArch64::GPR32RegClass;
+    } else if (DstSize == 64) {
+      RC = &AArch64::GPR64RegClass;
+    } else {
+      DEBUG(dbgs() << "G_ANYEXT to size: " << DstSize
+                   << ", expected: 32 or 64\n");
+      return false;
+    }
+
+    if (!RBI.constrainGenericRegister(SrcReg, *RC, MRI) ||
+        !RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
+      DEBUG(dbgs() << "Failed to constrain G_ANYEXT\n");
+      return false;
+    }
+
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::COPY))
+        .addDef(DstReg)
+        .addUse(SrcReg);
+
+    I.eraseFromParent();
+    return true;
+  }
+
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT: {
+    unsigned Opcode = I.getOpcode();
+    const LLT DstTy = MRI.getType(I.getOperand(0).getReg()),
+              SrcTy = MRI.getType(I.getOperand(1).getReg());
+    const bool isSigned = Opcode == TargetOpcode::G_SEXT;
+    const unsigned DefReg = I.getOperand(0).getReg();
+    const unsigned SrcReg = I.getOperand(1).getReg();
+    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+
+    if (RB.getID() != AArch64::GPRRegBankID) {
+      DEBUG(dbgs() << TII.getName(I.getOpcode()) << " on bank: " << RB
+                   << ", expected: GPR\n");
+      return false;
+    }
+
+    MachineInstr *ExtI;
+    if (DstTy == LLT::scalar(64)) {
+      // FIXME: Can we avoid manually doing this?
+      if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI)) {
+        DEBUG(dbgs() << "Failed to constrain " << TII.getName(Opcode)
+                     << " operand\n");
+        return false;
+      }
+
+      const unsigned SrcXReg =
+          MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+      BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::SUBREG_TO_REG))
+          .addDef(SrcXReg)
+          .addImm(0)
+          .addUse(SrcReg)
+          .addImm(AArch64::sub_32);
+
+      const unsigned NewOpc = isSigned ? AArch64::SBFMXri : AArch64::UBFMXri;
+      ExtI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+                 .addDef(DefReg)
+                 .addUse(SrcXReg)
+                 .addImm(0)
+                 .addImm(SrcTy.getSizeInBits() - 1);
+    } else if (DstTy == LLT::scalar(32)) {
+      const unsigned NewOpc = isSigned ? AArch64::SBFMWri : AArch64::UBFMWri;
+      ExtI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+                 .addDef(DefReg)
+                 .addUse(SrcReg)
+                 .addImm(0)
+                 .addImm(SrcTy.getSizeInBits() - 1);
+    } else {
+      return false;
+    }
+
+    constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
+
+    I.eraseFromParent();
+    return true;
+  }
   }
 
   return false;

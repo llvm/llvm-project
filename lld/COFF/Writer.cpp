@@ -7,13 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Writer.h"
 #include "Config.h"
 #include "DLL.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "PDB.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "Writer.h"
 #include "lld/Core/Parallel.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -147,6 +148,7 @@ private:
   std::unique_ptr<Chunk> DebugDirectory;
   std::vector<std::unique_ptr<Chunk>> DebugRecords;
   CVDebugRecordChunk *BuildId = nullptr;
+  ArrayRef<uint8_t> SectionTable;
 
   uint64_t FileSize;
   uint32_t PointerToSymbolTable = 0;
@@ -301,6 +303,10 @@ void Writer::run() {
   writeSections();
   sortExceptionTable();
   writeBuildId();
+
+  if (!Config->PDBPath.empty())
+    createPDB(Config->PDBPath, SectionTable);
+
   if (auto EC = Buffer->commit())
     fatal(EC, "failed to write the output file");
 }
@@ -719,6 +725,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     Sec->writeHeaderTo(Buf);
     Buf += sizeof(coff_section);
   }
+  SectionTable = ArrayRef<uint8_t>(
+      Buf - OutputSections.size() * sizeof(coff_section), Buf);
 
   if (OutputSymtab.empty())
     return;

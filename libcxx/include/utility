@@ -291,9 +291,20 @@ extern const piecewise_construct_t piecewise_construct;// = piecewise_construct_
 constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 #endif
 
+#if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
+struct __non_trivially_copyable_base {
+  _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
+  __non_trivially_copyable_base() _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+  __non_trivially_copyable_base(__non_trivially_copyable_base const&) _NOEXCEPT {}
+};
+#endif
 
 template <class _T1, class _T2>
 struct _LIBCPP_TYPE_VIS_ONLY pair
+#if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
+: private __non_trivially_copyable_base
+#endif
 {
     typedef _T1 first_type;
     typedef _T2 second_type;
@@ -301,26 +312,7 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
     _T1 first;
     _T2 second;
 
-#if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
-    _LIBCPP_INLINE_VISIBILITY
-    pair(const pair& __p)
-        _NOEXCEPT_(is_nothrow_copy_constructible<first_type>::value &&
-                   is_nothrow_copy_constructible<second_type>::value)
-        : first(__p.first),
-          second(__p.second)
-    {
-    }
-
-# ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    pair(pair&& __p) _NOEXCEPT_(is_nothrow_move_constructible<first_type>::value &&
-                                is_nothrow_move_constructible<second_type>::value)
-        : first(_VSTD::forward<first_type>(__p.first)),
-          second(_VSTD::forward<second_type>(__p.second))
-    {
-    }
-# endif
-#elif !defined(_LIBCPP_CXX03_LANG)
+#if !defined(_LIBCPP_CXX03_LANG)
     pair(pair const&) = default;
     pair(pair&&) = default;
 #else

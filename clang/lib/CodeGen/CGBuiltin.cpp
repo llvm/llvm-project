@@ -50,7 +50,7 @@ llvm::Value *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   if (FD->hasAttr<AsmLabelAttr>())
     Name = getMangledName(D);
   else
-    Name = Context.BuiltinInfo.getName(BuiltinID).drop_front(10);
+    Name = Context.BuiltinInfo.getName(BuiltinID) + 10;
 
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
@@ -2523,11 +2523,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   checkTargetFeatures(E, FD);
 
   // See if we have a target specific intrinsic.
+  const char *Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
   StringRef Prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!Prefix.empty()) {
-    StringRef Name = getContext().BuiltinInfo.getName(BuiltinID);
     IntrinsicID = Intrinsic::getIntrinsicForGCCBuiltin(Prefix.data(), Name);
     // NOTE we dont need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the

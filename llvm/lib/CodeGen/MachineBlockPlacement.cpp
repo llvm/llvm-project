@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TailDuplicator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -121,12 +122,26 @@ static cl::opt<unsigned> MisfetchCost(
 static cl::opt<unsigned> JumpInstCost("jump-inst-cost",
                                       cl::desc("Cost of jump instructions."),
                                       cl::init(1), cl::Hidden);
+static cl::opt<bool>
+TailDupPlacement("tail-dup-placement",
+              cl::desc("Perform tail duplication during placement. "
+                       "Creates more fallthrough opportunites in "
+                       "outline branches."),
+              cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 BranchFoldPlacement("branch-fold-placement",
               cl::desc("Perform branch folding during placement. "
                        "Reduces code size."),
               cl::init(true), cl::Hidden);
+
+// Heuristic for tail duplication.
+static cl::opt<unsigned> TailDuplicatePlacementThreshold(
+    "tail-dup-placement-threshold",
+    cl::desc("Instruction cutoff for tail duplication during layout. "
+             "Tail merging during layout is forced to have a threshold "
+             "that won't conflict."), cl::init(2),
+    cl::Hidden);
 
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
@@ -184,6 +199,16 @@ public:
 
   /// \brief End of blocks within the chain.
   iterator end() { return Blocks.end(); }
+
+  bool remove(MachineBasicBlock* BB) {
+    for(iterator i = begin(); i != end(); ++i) {
+      if (*i == BB) {
+        Blocks.erase(i);
+        return true;
+      }
+    }
+    return false;
+  }
 
   /// \brief Merge a block chain into this one.
   ///
@@ -266,6 +291,13 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// \brief A handle to the post dominator tree.
   MachineDominatorTree *MDT;
 
+  /// \brief Duplicator used to duplicate tails during placement.
+  ///
+  /// Placement decisions can open up new tail duplication opportunities, but
+  /// since tail duplication affects placement decisions of later blocks, it
+  /// must be done inline.
+  TailDuplicator TailDup;
+
   /// \brief A set of blocks that are unavoidably execute, i.e. they dominate
   /// all terminators of the MachineFunction.
   SmallPtrSet<MachineBasicBlock *, 4> UnavoidableBlocks;
@@ -287,8 +319,18 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// between basic blocks.
   DenseMap<MachineBasicBlock *, BlockChain *> BlockToChain;
 
+  /// Decrease the UnscheduledPredecessors count for all blocks in chain, and
+  /// if the count goes to 0, add them to the appropriate work list.
   void markChainSuccessors(BlockChain &Chain, MachineBasicBlock *LoopHeaderBB,
                            const BlockFilterSet *BlockFilter = nullptr);
+
+  /// Decrease the UnscheduledPredecessors count for a single block, and
+  /// if the count goes to 0, add them to the appropriate work list.
+  void markBlockSuccessors(
+      BlockChain &Chain, MachineBasicBlock *BB, MachineBasicBlock *LoopHeaderBB,
+      const BlockFilterSet *BlockFilter = nullptr);
+
+
   BranchProbability
   collectViableSuccessors(MachineBasicBlock *BB, BlockChain &Chain,
                           const BlockFilterSet *BlockFilter,
@@ -298,6 +340,16 @@ class MachineBlockPlacement : public MachineFunctionPass {
                                  const BlockFilterSet *BlockFilter,
                                  BranchProbability SuccProb,
                                  BranchProbability HotProb);
+  bool repeatedlyTailDuplicateBlock(
+      MachineBasicBlock *BB, MachineBasicBlock *&LPred,
+      MachineBasicBlock *LoopHeaderBB,
+      BlockChain &Chain, BlockFilterSet *BlockFilter,
+      MachineFunction::iterator &PrevUnplacedBlockIt);
+  bool maybeTailDuplicateBlock(MachineBasicBlock *BB, MachineBasicBlock *LPred,
+                               const BlockChain &Chain,
+                               BlockFilterSet *BlockFilter,
+                               MachineFunction::iterator &PrevUnplacedBlockIt,
+                               bool &DuplicatedToPred);
   bool
   hasBetterLayoutPredecessor(MachineBasicBlock *BB, MachineBasicBlock *Succ,
                              BlockChain &SuccChain, BranchProbability SuccProb,
@@ -323,7 +375,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
                      SmallPtrSetImpl<BlockChain *> &UpdatedPreds,
                      const BlockFilterSet *BlockFilter);
   void buildChain(MachineBasicBlock *BB, BlockChain &Chain,
-                  const BlockFilterSet *BlockFilter = nullptr);
+                  BlockFilterSet *BlockFilter = nullptr);
   MachineBasicBlock *findBestLoopTop(MachineLoop &L,
                                      const BlockFilterSet &LoopBlockSet);
   MachineBasicBlock *findBestLoopExit(MachineLoop &L,
@@ -388,37 +440,49 @@ static std::string getBlockName(MachineBasicBlock *BB) {
 /// When a chain is being merged into the "placed" chain, this routine will
 /// quickly walk the successors of each block in the chain and mark them as
 /// having one fewer active predecessor. It also adds any successors of this
-/// chain which reach the zero-predecessor state to the worklist passed in.
+/// chain which reach the zero-predecessor state to the appropriate worklist.
 void MachineBlockPlacement::markChainSuccessors(
     BlockChain &Chain, MachineBasicBlock *LoopHeaderBB,
     const BlockFilterSet *BlockFilter) {
   // Walk all the blocks in this chain, marking their successors as having
   // a predecessor placed.
   for (MachineBasicBlock *MBB : Chain) {
-    // Add any successors for which this is the only un-placed in-loop
-    // predecessor to the worklist as a viable candidate for CFG-neutral
-    // placement. No subsequent placement of this block will violate the CFG
-    // shape, so we get to use heuristics to choose a favorable placement.
-    for (MachineBasicBlock *Succ : MBB->successors()) {
-      if (BlockFilter && !BlockFilter->count(Succ))
-        continue;
-      BlockChain &SuccChain = *BlockToChain[Succ];
-      // Disregard edges within a fixed chain, or edges to the loop header.
-      if (&Chain == &SuccChain || Succ == LoopHeaderBB)
-        continue;
+    markBlockSuccessors(Chain, MBB, LoopHeaderBB, BlockFilter);
+  }
+}
 
-      // This is a cross-chain edge that is within the loop, so decrement the
-      // loop predecessor count of the destination chain.
-      if (SuccChain.UnscheduledPredecessors == 0 ||
-          --SuccChain.UnscheduledPredecessors > 0)
-        continue;
+/// \brief Mark a single block's successors as having one fewer preds.
+///
+/// Under normal circumstances, this is only called by markChainSuccessors,
+/// but if a block that was to be placed is completely tail-duplicated away,
+/// and was duplicated into the chain end, we need to redo markBlockSuccessors
+/// for just that block.
+void MachineBlockPlacement::markBlockSuccessors(
+    BlockChain &Chain, MachineBasicBlock *MBB, MachineBasicBlock *LoopHeaderBB,
+    const BlockFilterSet *BlockFilter) {
+  // Add any successors for which this is the only un-placed in-loop
+  // predecessor to the worklist as a viable candidate for CFG-neutral
+  // placement. No subsequent placement of this block will violate the CFG
+  // shape, so we get to use heuristics to choose a favorable placement.
+  for (MachineBasicBlock *Succ : MBB->successors()) {
+    if (BlockFilter && !BlockFilter->count(Succ))
+      continue;
+    BlockChain &SuccChain = *BlockToChain[Succ];
+    // Disregard edges within a fixed chain, or edges to the loop header.
+    if (&Chain == &SuccChain || Succ == LoopHeaderBB)
+      continue;
 
-      auto *MBB = *SuccChain.begin();
-      if (MBB->isEHPad())
-        EHPadWorkList.push_back(MBB);
-      else
-        BlockWorkList.push_back(MBB);
-    }
+    // This is a cross-chain edge that is within the loop, so decrement the
+    // loop predecessor count of the destination chain.
+    if (SuccChain.UnscheduledPredecessors == 0 ||
+        --SuccChain.UnscheduledPredecessors > 0)
+      continue;
+
+    auto *NewBB = *SuccChain.begin();
+    if (NewBB->isEHPad())
+      EHPadWorkList.push_back(NewBB);
+    else
+      BlockWorkList.push_back(NewBB);
   }
 }
 
@@ -902,7 +966,7 @@ void MachineBlockPlacement::fillWorkLists(
 
 void MachineBlockPlacement::buildChain(
     MachineBasicBlock *BB, BlockChain &Chain,
-    const BlockFilterSet *BlockFilter) {
+    BlockFilterSet *BlockFilter) {
   assert(BB && "BB must not be null.\n");
   assert(BlockToChain[BB] == &Chain && "BlockToChainMap mis-match.\n");
   MachineFunction::iterator PrevUnplacedBlockIt = F->begin();
@@ -935,6 +999,17 @@ void MachineBlockPlacement::buildChain(
 
       DEBUG(dbgs() << "Unnatural loop CFG detected, forcibly merging the "
                       "layout successor until the CFG reduces\n");
+    }
+
+    // Placement may have changed tail duplication opportunities.
+    // Check for that now.
+    if (TailDupPlacement && BestSucc) {
+      // If the chosen successor was duplicated into all its predecessors,
+      // don't bother laying it out, just go round the loop again with BB as
+      // the chain end.
+      if (repeatedlyTailDuplicateBlock(BestSucc, BB, LoopHeaderBB, Chain,
+                                       BlockFilter, PrevUnplacedBlockIt))
+        continue;
     }
 
     // Place this block, updating the datastructures to reflect its placement.
@@ -1718,6 +1793,174 @@ void MachineBlockPlacement::alignBlocks() {
   }
 }
 
+/// Tail duplicate \p BB into (some) predecessors if profitable, repeating if
+/// it was duplicated into its chain predecessor and removed.
+/// \p BB    - Basic block that may be duplicated.
+///
+/// \p LPred - Chosen layout predecessor of \p BB.
+///            Updated to be the chain end if LPred is removed.
+/// \p Chain - Chain to which \p LPred belongs, and \p BB will belong.
+/// \p BlockFilter - Set of blocks that belong to the loop being laid out.
+///                  Used to identify which blocks to update predecessor
+///                  counts.
+/// \p PrevUnplacedBlockIt - Iterator pointing to the last block that was
+///                          chosen in the given order due to unnatural CFG
+///                          only needed if \p BB is removed and
+///                          \p PrevUnplacedBlockIt pointed to \p BB.
+/// @return true if \p BB was removed.
+bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
+    MachineBasicBlock *BB, MachineBasicBlock *&LPred,
+    MachineBasicBlock *LoopHeaderBB,
+    BlockChain &Chain, BlockFilterSet *BlockFilter,
+    MachineFunction::iterator &PrevUnplacedBlockIt) {
+  bool Removed, DuplicatedToLPred;
+  bool DuplicatedToOriginalLPred;
+  Removed = maybeTailDuplicateBlock(BB, LPred, Chain, BlockFilter,
+                                    PrevUnplacedBlockIt,
+                                    DuplicatedToLPred);
+  if (!Removed)
+    return false;
+  DuplicatedToOriginalLPred = DuplicatedToLPred;
+  // Iteratively try to duplicate again. It can happen that a block that is
+  // duplicated into is still small enough to be duplicated again.
+  // No need to call markBlockSuccessors in this case, as the blocks being
+  // duplicated from here on are already scheduled.
+  // Note that DuplicatedToLPred always implies Removed.
+  while (DuplicatedToLPred) {
+    assert (Removed && "Block must have been removed to be duplicated into its "
+            "layout predecessor.");
+    MachineBasicBlock *DupBB, *DupPred;
+    // The removal callback causes Chain.end() to be updated when a block is
+    // removed. On the first pass through the loop, the chain end should be the
+    // same as it was on function entry. On subsequent passes, because we are
+    // duplicating the block at the end of the chain, if it is removed the
+    // chain will have shrunk by one block.
+    BlockChain::iterator ChainEnd = Chain.end();
+    DupBB = *(--ChainEnd);
+    // Now try to duplicate again.
+    if (ChainEnd == Chain.begin())
+      break;
+    DupPred = *std::prev(ChainEnd);
+    Removed = maybeTailDuplicateBlock(DupBB, DupPred, Chain, BlockFilter,
+                                      PrevUnplacedBlockIt,
+                                      DuplicatedToLPred);
+  }
+  // If BB was duplicated into LPred, it is now scheduled. But because it was
+  // removed, markChainSuccessors won't be called for its chain. Instead we
+  // call markBlockSuccessors for LPred to achieve the same effect. This must go
+  // at the end because repeating the tail duplication can increase the number
+  // of unscheduled predecessors.
+  LPred = *std::prev(Chain.end());
+  if (DuplicatedToOriginalLPred)
+    markBlockSuccessors(Chain, LPred, LoopHeaderBB, BlockFilter);
+  return true;
+}
+
+/// Tail duplicate \p BB into (some) predecessors if profitable.
+/// \p BB    - Basic block that may be duplicated
+/// \p LPred - Chosen layout predecessor of \p BB
+/// \p Chain - Chain to which \p LPred belongs, and \p BB will belong.
+/// \p BlockFilter - Set of blocks that belong to the loop being laid out.
+///                  Used to identify which blocks to update predecessor
+///                  counts.
+/// \p PrevUnplacedBlockIt - Iterator pointing to the last block that was
+///                          chosen in the given order due to unnatural CFG
+///                          only needed if \p BB is removed and
+///                          \p PrevUnplacedBlockIt pointed to \p BB.
+/// \p DuplicatedToLPred - True if the block was duplicated into LPred. Will
+///                        only be true if the block was removed.
+/// \return  - True if the block was duplicated into all preds and removed.
+bool MachineBlockPlacement::maybeTailDuplicateBlock(
+    MachineBasicBlock *BB, MachineBasicBlock *LPred,
+    const BlockChain &Chain, BlockFilterSet *BlockFilter,
+    MachineFunction::iterator &PrevUnplacedBlockIt,
+    bool &DuplicatedToLPred) {
+
+  DuplicatedToLPred = false;
+  DEBUG(dbgs() << "Redoing tail duplication for Succ#"
+        << BB->getNumber() << "\n");
+  bool IsSimple = TailDup.isSimpleBB(BB);
+  // Blocks with single successors don't create additional fallthrough
+  // opportunities. Don't duplicate them. TODO: When conditional exits are
+  // analyzable, allow them to be duplicated.
+  if (!IsSimple && BB->succ_size() == 1)
+    return false;
+  if (!TailDup.shouldTailDuplicate(IsSimple, *BB))
+    return false;
+  // This has to be a callback because none of it can be done after
+  // BB is deleted.
+  bool Removed = false;
+  auto RemovalCallback =
+      [&](MachineBasicBlock *RemBB) {
+        // Signal to outer function
+        Removed = true;
+
+        // Conservative default.
+        bool InWorkList = true;
+        // Remove from the Chain and Chain Map
+        if (BlockToChain.count(RemBB)) {
+          BlockChain *Chain = BlockToChain[RemBB];
+          InWorkList = Chain->UnscheduledPredecessors == 0;
+          Chain->remove(RemBB);
+          BlockToChain.erase(RemBB);
+        }
+
+        // Handle the unplaced block iterator
+        if (&(*PrevUnplacedBlockIt) == RemBB) {
+          PrevUnplacedBlockIt++;
+        }
+
+        // Handle the Work Lists
+        if (InWorkList) {
+          SmallVectorImpl<MachineBasicBlock *> &RemoveList = BlockWorkList;
+          if (RemBB->isEHPad())
+            RemoveList = EHPadWorkList;
+          RemoveList.erase(
+              remove_if(RemoveList,
+                        [RemBB](MachineBasicBlock *BB) {return BB == RemBB;}),
+              RemoveList.end());
+        }
+
+        // Handle the filter set
+        if (BlockFilter) {
+          BlockFilter->erase(RemBB);
+        }
+
+        // Remove the block from loop info.
+        MLI->removeBlock(RemBB);
+
+        // TailDuplicator handles removing it from loops.
+        DEBUG(dbgs() << "TailDuplicator deleted block: "
+              << getBlockName(RemBB) << "\n");
+      };
+  auto RemovalCallbackRef =
+      llvm::function_ref<void(MachineBasicBlock*)>(RemovalCallback);
+
+  SmallVector<MachineBasicBlock *, 8> DuplicatedPreds;
+  TailDup.tailDuplicateAndUpdate(IsSimple, BB, LPred,
+                                 &DuplicatedPreds, &RemovalCallbackRef);
+
+  // Update UnscheduledPredecessors to reflect tail-duplication.
+  DuplicatedToLPred = false;
+  for (MachineBasicBlock *Pred : DuplicatedPreds) {
+    // We're only looking for unscheduled predecessors that match the filter.
+    BlockChain* PredChain = BlockToChain[Pred];
+    if (Pred == LPred)
+      DuplicatedToLPred = true;
+    if (Pred == LPred || (BlockFilter && !BlockFilter->count(Pred))
+        || PredChain == &Chain)
+      continue;
+    for (MachineBasicBlock *NewSucc : Pred->successors()) {
+      if (BlockFilter && !BlockFilter->count(NewSucc))
+        continue;
+      BlockChain *NewChain = BlockToChain[NewSucc];
+      if (NewChain != &Chain && NewChain != PredChain)
+        NewChain->UnscheduledPredecessors++;
+    }
+  }
+  return Removed;
+}
+
 bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
@@ -1734,6 +1977,13 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
   MDT = &getAnalysis<MachineDominatorTree>();
+  if (TailDupPlacement) {
+    unsigned TailDupSize = TailDuplicatePlacementThreshold;
+    if (MF.getFunction()->optForSize())
+      TailDupSize = 1;
+    TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
+  }
+
   assert(BlockToChain.empty());
 
   buildCFGChains();
@@ -1747,8 +1997,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                          BranchFoldPlacement;
   // No tail merging opportunities if the block number is less than four.
   if (MF.size() > 3 && EnableTailMerge) {
-    // Default to the standard tail-merge-size option.
-    unsigned TailMergeSize = 0;
+    unsigned TailMergeSize = TailDuplicatePlacementThreshold + 1;
     BranchFolder BF(/*EnableTailMerge=*/true, /*CommonHoist=*/false, *MBFI,
                     *MBPI, TailMergeSize);
 
@@ -1757,6 +2006,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                             /*AfterBlockPlacement=*/true)) {
       // Redo the layout if tail merging creates/removes/moves blocks.
       BlockToChain.clear();
+      // Must redo the dominator tree if blocks were changed.
+      MDT->runOnMachineFunction(MF);
       ChainAllocator.DestroyAll();
       buildCFGChains();
     }

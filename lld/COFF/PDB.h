@@ -10,11 +10,12 @@
 #ifndef LLD_COFF_PDB_H
 #define LLD_COFF_PDB_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lld {
 namespace coff {
-void createPDB(llvm::StringRef Path);
+void createPDB(llvm::StringRef Path, llvm::ArrayRef<uint8_t> SectionTable);
 }
 }
 
