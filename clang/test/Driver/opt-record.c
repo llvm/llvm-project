@@ -11,7 +11,7 @@
 
 // CHECK-NO-O: "-cc1"
 // CHECK-NO-O-DAG: "-opt-record-file" "opt-record.opt.yaml"
-// CHECK-CUDA-DEV-DAG: "-opt-record-file" "opt-record-device-cuda-nvptx64-nvidia-cuda-sm_20.opt.yaml"
+// CHECK-CUDA-DEV-DAG: "-opt-record-file" "opt-record-device-cuda-{{nvptx64|nvptx}}-nvidia-cuda-sm_20.opt.yaml"
 
 // CHECK-EQ: "-cc1"
 // CHECK-EQ: "-opt-record-file" "BAR.txt"
