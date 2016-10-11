@@ -48,7 +48,8 @@ class DiagnosticsEngine;
 /// report the error(s).
 bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
-                         bool DefaultDiagColor = true);
+                         bool DefaultDiagColor = true,
+                         bool DefaultShowOpt = true);
 
 class CompilerInvocationBase : public RefCountedBase<CompilerInvocation> {
   void operator=(const CompilerInvocationBase &) = delete;

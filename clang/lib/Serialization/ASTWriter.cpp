@@ -1808,7 +1808,7 @@ namespace {
     
     struct key_type {
       const FileEntry *FE;
-      const char *Filename;
+      StringRef Filename;
     };
     typedef const key_type &key_type_ref;
     
@@ -1829,7 +1829,7 @@ namespace {
     EmitKeyDataLength(raw_ostream& Out, key_type_ref key, data_type_ref Data) {
       using namespace llvm::support;
       endian::Writer<little> LE(Out);
-      unsigned KeyLen = strlen(key.Filename) + 1 + 8 + 8;
+      unsigned KeyLen = key.Filename.size() + 1 + 8 + 8;
       LE.write<uint16_t>(KeyLen);
       unsigned DataLen = 1 + 2 + 4 + 4;
       for (auto ModInfo : HS.getModuleMap().findAllModulesForHeader(key.FE))
@@ -1846,7 +1846,7 @@ namespace {
       KeyLen -= 8;
       LE.write<uint64_t>(Writer.getTimestampForOutput(key.FE));
       KeyLen -= 8;
-      Out.write(key.Filename, KeyLen);
+      Out.write(key.Filename.data(), KeyLen);
     }
     
     void EmitData(raw_ostream &Out, key_type_ref key,
@@ -1935,13 +1935,13 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       continue;
 
     // Massage the file path into an appropriate form.
-    const char *Filename = File->getName();
+    StringRef Filename = File->getName();
     SmallString<128> FilenameTmp(Filename);
     if (PreparePathForOutput(FilenameTmp)) {
       // If we performed any translation on the file name at all, we need to
       // save this string, since the generator will refer to it later.
-      Filename = strdup(FilenameTmp.c_str());
-      SavedStrings.push_back(Filename);
+      Filename = StringRef(strdup(FilenameTmp.c_str()));
+      SavedStrings.push_back(Filename.data());
     }
 
     HeaderFileInfoTrait::key_type key = { File, Filename };

@@ -507,6 +507,9 @@ def arcmt_modify : Flag<["-"], "arcmt-modify">,
 def arcmt_migrate : Flag<["-"], "arcmt-migrate">,
   HelpText<"Apply modifications and produces temporary files that conform to ARC">;
 
+def opt_record_file : Separate<["-"], "opt-record-file">,
+  HelpText<"File name to use for YAML optimization record output">;
+
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">;
 def stats_file : Joined<["-"], "stats-file=">,

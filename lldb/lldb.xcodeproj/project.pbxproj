@@ -916,6 +916,7 @@
 		AF20F76A1AF18F9000751A6E /* ABISysV_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF20F7681AF18F9000751A6E /* ABISysV_arm64.cpp */; };
 		AF20F7701AF1902900751A6E /* RegisterContextLinux_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF20F76E1AF1902900751A6E /* RegisterContextLinux_arm64.cpp */; };
 		AF23B4DB19009C66003E2A58 /* FreeBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF23B4D919009C66003E2A58 /* FreeBSDSignals.cpp */; };
+		AF248A4D1DA71C77000B814D /* TestArm64InstEmulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF248A4C1DA71C77000B814D /* TestArm64InstEmulation.cpp */; };
 		AF254E31170CCC33007AE5C9 /* PlatformDarwinKernel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF254E2F170CCC33007AE5C9 /* PlatformDarwinKernel.cpp */; };
 		AF25AB26188F685C0030DEC3 /* AppleGetQueuesHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF25AB24188F685C0030DEC3 /* AppleGetQueuesHandler.cpp */; };
 		AF26703A1852D01E00B6CC36 /* Queue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2670381852D01E00B6CC36 /* Queue.cpp */; };
@@ -2922,6 +2923,7 @@
 		AF20F76F1AF1902900751A6E /* RegisterContextLinux_arm64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextLinux_arm64.h; path = Utility/RegisterContextLinux_arm64.h; sourceTree = "<group>"; };
 		AF23B4D919009C66003E2A58 /* FreeBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FreeBSDSignals.cpp; path = Utility/FreeBSDSignals.cpp; sourceTree = "<group>"; };
 		AF23B4DA19009C66003E2A58 /* FreeBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FreeBSDSignals.h; path = Utility/FreeBSDSignals.h; sourceTree = "<group>"; };
+		AF248A4C1DA71C77000B814D /* TestArm64InstEmulation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TestArm64InstEmulation.cpp; path = UnwindAssembly/InstEmulation/TestArm64InstEmulation.cpp; sourceTree = "<group>"; };
 		AF254E2F170CCC33007AE5C9 /* PlatformDarwinKernel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDarwinKernel.cpp; sourceTree = "<group>"; };
 		AF254E30170CCC33007AE5C9 /* PlatformDarwinKernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformDarwinKernel.h; sourceTree = "<group>"; };
 		AF25AB24188F685C0030DEC3 /* AppleGetQueuesHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleGetQueuesHandler.cpp; sourceTree = "<group>"; };
@@ -6252,6 +6254,14 @@
 			name = "SysV-arm64";
 			sourceTree = "<group>";
 		};
+		AF248A4B1DA71C67000B814D /* InstEmulation */ = {
+			isa = PBXGroup;
+			children = (
+				AF248A4C1DA71C77000B814D /* TestArm64InstEmulation.cpp */,
+			);
+			name = InstEmulation;
+			sourceTree = "<group>";
+		};
 		AF2BCA6518C7EFDE005B4526 /* JITLoader */ = {
 			isa = PBXGroup;
 			children = (
@@ -6301,7 +6311,7 @@
 		AFEC5FD31D94F9130076A480 /* UnwindAssembly */ = {
 			isa = PBXGroup;
 			children = (
-				AFEC5FD51D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp */,
+				AF248A4B1DA71C67000B814D /* InstEmulation */,
 				AFEC5FD41D94F9270076A480 /* x86 */,
 			);
 			name = UnwindAssembly;
@@ -6310,6 +6320,7 @@
 		AFEC5FD41D94F9270076A480 /* x86 */ = {
 			isa = PBXGroup;
 			children = (
+				AFEC5FD51D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp */,
 			);
 			name = x86;
 			sourceTree = "<group>";
@@ -6911,6 +6922,7 @@
 				23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */,
 				23CB15361D66DA9300EDDDE1 /* FileSpecTest.cpp in Sources */,
 				23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */,
+				AF248A4D1DA71C77000B814D /* TestArm64InstEmulation.cpp in Sources */,
 				23CB15371D66DA9300EDDDE1 /* PythonTestSuite.cpp in Sources */,
 				23E2E5291D9037D9006F38BB /* SymbolFilePDBTests.cpp in Sources */,
 				23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */,

@@ -93,6 +93,13 @@ MachineRegisterInfo::recomputeRegClass(unsigned Reg) {
   return true;
 }
 
+unsigned MachineRegisterInfo::createIncompleteVirtualRegister() {
+  unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
+  VRegInfo.grow(Reg);
+  RegAllocHints.grow(Reg);
+  return Reg;
+}
+
 /// createVirtualRegister - Create and return a new virtual register in the
 /// function with the specified register class.
 ///
@@ -103,10 +110,8 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass){
          "Virtual register RegClass must be allocatable.");
 
   // New virtual register number.
-  unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
-  VRegInfo.grow(Reg);
+  unsigned Reg = createIncompleteVirtualRegister();
   VRegInfo[Reg].first = RegClass;
-  RegAllocHints.grow(Reg);
   if (TheDelegate)
     TheDelegate->MRI_NoteNewVirtualRegister(Reg);
   return Reg;
@@ -119,7 +124,8 @@ LLT MachineRegisterInfo::getType(unsigned VReg) const {
 
 void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
   // Check that VReg doesn't have a class.
-  assert(!getRegClassOrRegBank(VReg).is<const TargetRegisterClass *>() &&
+  assert((getRegClassOrRegBank(VReg).isNull() ||
+         !getRegClassOrRegBank(VReg).is<const TargetRegisterClass *>()) &&
          "Can't set the size of a non-generic virtual register");
   getVRegToType()[VReg] = Ty;
 }
@@ -127,12 +133,10 @@ void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
 unsigned
 MachineRegisterInfo::createGenericVirtualRegister(LLT Ty) {
   // New virtual register number.
-  unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
-  VRegInfo.grow(Reg);
-  // FIXME: Should we use a dummy register bank?
+  unsigned Reg = createIncompleteVirtualRegister();
+  // FIXME: Should we use a dummy register class?
   VRegInfo[Reg].first = static_cast<RegisterBank *>(nullptr);
   getVRegToType()[Reg] = Ty;
-  RegAllocHints.grow(Reg);
   if (TheDelegate)
     TheDelegate->MRI_NoteNewVirtualRegister(Reg);
   return Reg;

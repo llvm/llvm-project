@@ -438,6 +438,9 @@ LiveRangeEdit::MRI_NoteNewVirtualRegister(unsigned VReg)
   if (VRM)
     VRM->grow();
 
+  if (Parent && !Parent->isSpillable())
+    LIS.getInterval(VReg).markNotSpillable();
+
   NewRegs.push_back(VReg);
 }
 

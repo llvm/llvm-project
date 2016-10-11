@@ -158,80 +158,29 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
   llvm_unreachable("All cases should've been handled by now.");
 }
 
-void Sema::EraseUnwantedCUDAMatches(const FunctionDecl *Caller,
-                                    LookupResult &R) {
-  if (R.empty() || R.isSingleResult())
-    return;
-
-  // Gets the CUDA function preference for a call from Caller to Match.
-  auto GetCFP = [&](const NamedDecl *D) {
-    if (auto *Callee = dyn_cast<FunctionDecl>(D->getUnderlyingDecl()))
-      return IdentifyCUDAPreference(Caller, Callee);
-    return CFP_Never;
-  };
-
-  // Find the best call preference among the functions in R.
-  CUDAFunctionPreference BestCFP = GetCFP(*std::max_element(
-      R.begin(), R.end(), [&](const NamedDecl *D1, const NamedDecl *D2) {
-        return GetCFP(D1) < GetCFP(D2);
-      }));
-
-  // Erase all functions with lower priority.
-  auto Filter = R.makeFilter();
-  while (Filter.hasNext()) {
-    auto *Callee = dyn_cast<FunctionDecl>(Filter.next()->getUnderlyingDecl());
-    if (Callee && GetCFP(Callee) < BestCFP)
-      Filter.erase();
-  }
-  Filter.done();
-}
-
-template <typename T>
-static void EraseUnwantedCUDAMatchesImpl(
-    Sema &S, const FunctionDecl *Caller, llvm::SmallVectorImpl<T> &Matches,
-    std::function<const FunctionDecl *(const T &)> FetchDecl) {
+void Sema::EraseUnwantedCUDAMatches(
+    const FunctionDecl *Caller,
+    SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches) {
   if (Matches.size() <= 1)
     return;
 
+  using Pair = std::pair<DeclAccessPair, FunctionDecl*>;
+
   // Gets the CUDA function preference for a call from Caller to Match.
-  auto GetCFP = [&](const T &Match) {
-    return S.IdentifyCUDAPreference(Caller, FetchDecl(Match));
+  auto GetCFP = [&](const Pair &Match) {
+    return IdentifyCUDAPreference(Caller, Match.second);
   };
 
   // Find the best call preference among the functions in Matches.
-  Sema::CUDAFunctionPreference BestCFP = GetCFP(*std::max_element(
+  CUDAFunctionPreference BestCFP = GetCFP(*std::max_element(
       Matches.begin(), Matches.end(),
-      [&](const T &M1, const T &M2) { return GetCFP(M1) < GetCFP(M2); }));
+      [&](const Pair &M1, const Pair &M2) { return GetCFP(M1) < GetCFP(M2); }));
 
   // Erase all functions with lower priority.
   Matches.erase(
-      llvm::remove_if(Matches,
-                      [&](const T &Match) { return GetCFP(Match) < BestCFP; }),
+      llvm::remove_if(
+          Matches, [&](const Pair &Match) { return GetCFP(Match) < BestCFP; }),
       Matches.end());
-}
-
-void Sema::EraseUnwantedCUDAMatches(const FunctionDecl *Caller,
-                                    SmallVectorImpl<FunctionDecl *> &Matches){
-  EraseUnwantedCUDAMatchesImpl<FunctionDecl *>(
-      *this, Caller, Matches, [](const FunctionDecl *item) { return item; });
-}
-
-void Sema::EraseUnwantedCUDAMatches(const FunctionDecl *Caller,
-                                    SmallVectorImpl<DeclAccessPair> &Matches) {
-  EraseUnwantedCUDAMatchesImpl<DeclAccessPair>(
-      *this, Caller, Matches, [](const DeclAccessPair &item) {
-        return dyn_cast<FunctionDecl>(item.getDecl());
-      });
-}
-
-void Sema::EraseUnwantedCUDAMatches(
-    const FunctionDecl *Caller,
-    SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches){
-  EraseUnwantedCUDAMatchesImpl<std::pair<DeclAccessPair, FunctionDecl *>>(
-      *this, Caller, Matches,
-      [](const std::pair<DeclAccessPair, FunctionDecl *> &item) {
-        return dyn_cast<FunctionDecl>(item.second);
-      });
 }
 
 /// When an implicitly-declared special member has to invoke more than one

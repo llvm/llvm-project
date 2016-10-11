@@ -366,6 +366,9 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     StringRef StrTab = F->getStringTable();
     for (SymbolBody *B : F->getLocalSymbols()) {
+      if (!B->IsLocal)
+        fatal(getFilename(F) +
+              ": broken object: getLocalSymbols returns a non-local symbol");
       auto *DR = dyn_cast<DefinedRegular<ELFT>>(B);
       // No reason to keep local undefined symbol in symtab.
       if (!DR)

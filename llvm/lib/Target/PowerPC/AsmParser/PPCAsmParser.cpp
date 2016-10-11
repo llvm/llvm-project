@@ -394,7 +394,7 @@ public:
   SMLoc getStartLoc() const override { return StartLoc; }
 
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const { return EndLoc; }
+  SMLoc getEndLoc() const override { return EndLoc; }
 
   /// isPPC64 - True if this operand is for an instruction in 64-bit mode.
   bool isPPC64() const { return IsPPC64; }

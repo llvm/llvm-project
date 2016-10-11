@@ -209,6 +209,9 @@ public:
     return Match_Success;
   }
 
+  virtual void convertToMapAndConstraints(unsigned Kind,
+                                          const OperandVector &Operands) = 0;
+
   // Return whether this parser uses assignment statements with equals tokens
   virtual bool equalIsAsmAssignment() { return true; };
   // Return whether this start of statement identifier is a label

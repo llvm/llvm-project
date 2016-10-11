@@ -101,6 +101,7 @@ arguments.  Return the new process object."
                   :buffer stdout
                   :command (clang-include-fixer--command args)
                   :coding 'utf-8-unix
+                  :noquery t
                   :connection-type 'pipe
                   :sentinel (clang-include-fixer--sentinel stdin stdout stderr
                                                            callback)
@@ -118,6 +119,7 @@ arguments.  Return the new process object."
          (process (apply #'start-process "clang-include-fixer" stdout
                          (clang-include-fixer--command args))))
     (set-process-coding-system process 'utf-8-unix 'utf-8-unix)
+    (set-process-query-on-exit-flag process nil)
     (set-process-sentinel process
                           (clang-include-fixer--sentinel stdin stdout nil
                                                          callback))
@@ -281,8 +283,8 @@ They are replaced by the single element selected by the user."
             (cl-flet ((header (info) (let-alist info .Header)))
               ;; The header-infos is already sorted by include-fixer.
               (let* ((header (ido-completing-read
-                              (format-message "Select include for '%s': "
-                                              symbol)
+                              (clang-include-fixer--format-message
+                               "Select include for '%s': " symbol)
                               (mapcar #'header .HeaderInfos)
                               nil :require-match nil
                               'clang-include-fixer--history))
@@ -401,6 +403,11 @@ non-nil.  Otherwise return nil."
       'filepos-to-bufferpos
     (lambda (byte &optional _quality _coding-system)
       (byte-to-position (1+ byte)))))
+
+;; ‘format-message’ is new in Emacs 25.1.  Provide a fallback for older
+;; versions.
+(defalias 'clang-include-fixer--format-message
+  (if (fboundp 'format-message) 'format-message 'format))
 
 (provide 'clang-include-fixer)
 ;;; clang-include-fixer.el ends here

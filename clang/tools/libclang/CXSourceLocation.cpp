@@ -139,16 +139,17 @@ CXSourceLocation clang_getLocation(CXTranslationUnit TU,
   if (SLoc.isInvalid()) {
     if (Log)
       *Log << llvm::format("(\"%s\", %d, %d) = invalid",
-                           File->getName(), line, column);
+                           File->getName().str().c_str(), line, column);
     return clang_getNullLocation();
   }
   
   CXSourceLocation CXLoc =
       cxloc::translateSourceLocation(CXXUnit->getASTContext(), SLoc);
   if (Log)
-    *Log << llvm::format("(\"%s\", %d, %d) = ", File->getName(), line, column)
+    *Log << llvm::format("(\"%s\", %d, %d) = ", File->getName().str().c_str(),
+                         line, column)
          << CXLoc;
-  
+
   return CXLoc;
 }
   

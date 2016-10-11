@@ -896,6 +896,19 @@ public:
         NumTypos(0),
         ManglingContextDecl(ManglingContextDecl), MangleNumbering() { }
 
+    // FIXME: This is here only to make MSVC 2013 happy.  Remove it and rely on
+    // the default move constructor once MSVC 2013 is gone.
+    ExpressionEvaluationContextRecord(ExpressionEvaluationContextRecord &&E)
+        : Context(E.Context), ParentCleanup(E.ParentCleanup),
+          IsDecltype(E.IsDecltype), NumCleanupObjects(E.NumCleanupObjects),
+          NumTypos(E.NumTypos),
+          SavedMaybeODRUseExprs(std::move(E.SavedMaybeODRUseExprs)),
+          Lambdas(std::move(E.Lambdas)),
+          ManglingContextDecl(E.ManglingContextDecl),
+          MangleNumbering(std::move(E.MangleNumbering)),
+          DelayedDecltypeCalls(std::move(E.DelayedDecltypeCalls)),
+          DelayedDecltypeBinds(std::move(E.DelayedDecltypeBinds)) {}
+
     /// \brief Retrieve the mangling numbering context, used to consistently
     /// number constructs like lambdas for mangling.
     MangleNumberingContext &getMangleNumberingContext(ASTContext &Ctx);
@@ -9329,14 +9342,9 @@ public:
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower
   /// calling priority.
-  void EraseUnwantedCUDAMatches(const FunctionDecl *Caller,
-                                SmallVectorImpl<FunctionDecl *> &Matches);
-  void EraseUnwantedCUDAMatches(const FunctionDecl *Caller,
-                                SmallVectorImpl<DeclAccessPair> &Matches);
   void EraseUnwantedCUDAMatches(
       const FunctionDecl *Caller,
       SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches);
-  void EraseUnwantedCUDAMatches(const FunctionDecl *Caller, LookupResult &R);
 
   /// Given a implicit special member, infer its CUDA target from the
   /// calls it needs to make to underlying base/field special members.

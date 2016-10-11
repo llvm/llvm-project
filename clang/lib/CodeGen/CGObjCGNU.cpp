@@ -2582,7 +2582,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   SourceManager &SM = CGM.getContext().getSourceManager();
   const FileEntry *mainFile = SM.getFileEntryForID(SM.getMainFileID());
   std::string path =
-    std::string(mainFile->getDir()->getName()) + '/' + mainFile->getName();
+      (Twine(mainFile->getDir()->getName()) + "/" + mainFile->getName()).str();
   Elements.push_back(MakeConstantString(path, ".objc_source_file_name"));
   Elements.push_back(SymTab);
 

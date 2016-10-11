@@ -261,7 +261,7 @@ public:
 
   // Override MCParsedAsmOperand.
   SMLoc getStartLoc() const override { return StartLoc; }
-  SMLoc getEndLoc() const { return EndLoc; }
+  SMLoc getEndLoc() const override { return EndLoc; }
   void print(raw_ostream &OS) const override;
 
   // Used by the TableGen code to add particular types of operand

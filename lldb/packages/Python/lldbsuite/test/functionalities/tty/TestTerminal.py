@@ -22,7 +22,6 @@ class LaunchInTerminalTestCase(TestBase):
     # a program in a separate terminal window. It would be great if other platforms
     # added support for this.
     @skipUnlessDarwin
-    @expectedFailureDarwin("llvm.org/pr25484")
     # If the test is being run under sudo, the spawned terminal won't retain that elevated
     # privilege so it can't open the socket to talk back to the test case
     @unittest2.skipIf(hasattr(os, 'geteuid') and os.geteuid()
@@ -35,13 +34,16 @@ class LaunchInTerminalTestCase(TestBase):
         "test must be run on local system")
     @no_debug_info_test
     def test_launch_in_terminal(self):
-        exe = "/bin/ls"
+        self.build()
+        exe = os.path.join(os.getcwd(), "a.out")
+
         target = self.dbg.CreateTarget(exe)
         launch_info = lldb.SBLaunchInfo(["-lAF", "/tmp/"])
         launch_info.SetLaunchFlags(
             lldb.eLaunchFlagLaunchInTTY | lldb.eLaunchFlagCloseTTYOnExit)
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
+        print("Error was: %s."%(error.GetCString()))
         self.assertTrue(
             error.Success(),
             "Make sure launch happened successfully in a terminal window")

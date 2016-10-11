@@ -58,18 +58,21 @@ public:
 
 
 class PTHEntryKeyVariant {
-  union { const FileEntry* FE; const char* Path; };
+  union {
+    const FileEntry *FE;
+    StringRef Path;
+  };
   enum { IsFE = 0x1, IsDE = 0x2, IsNoExist = 0x0 } Kind;
   FileData *Data;
 
 public:
   PTHEntryKeyVariant(const FileEntry *fe) : FE(fe), Kind(IsFE), Data(nullptr) {}
 
-  PTHEntryKeyVariant(FileData *Data, const char *path)
-      : Path(path), Kind(IsDE), Data(new FileData(*Data)) {}
+  PTHEntryKeyVariant(FileData *Data, StringRef Path)
+      : Path(Path), Kind(IsDE), Data(new FileData(*Data)) {}
 
-  explicit PTHEntryKeyVariant(const char *path)
-      : Path(path), Kind(IsNoExist), Data(nullptr) {}
+  explicit PTHEntryKeyVariant(StringRef Path)
+      : Path(Path), Kind(IsNoExist), Data(nullptr) {}
 
   bool isFile() const { return Kind == IsFE; }
 
@@ -549,7 +552,7 @@ public:
   StatListener(PTHMap &pm) : PM(pm) {}
   ~StatListener() override {}
 
-  LookupResult getStat(const char *Path, FileData &Data, bool isFile,
+  LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
                        std::unique_ptr<vfs::File> *F,
                        vfs::FileSystem &FS) override {
     LookupResult Result = statChained(Path, Data, isFile, F, FS);

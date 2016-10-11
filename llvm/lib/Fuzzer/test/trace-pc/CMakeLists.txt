@@ -10,6 +10,8 @@ set(TracePCTests
   NullDerefTest
   ShrinkControlFlowTest
   ShrinkValueProfileTest
+  SwitchTest
+  Switch2Test
   FullCoverageSetTest
   )
 

@@ -21,15 +21,19 @@ class AArch64InstrInfo;
 class AArch64RegisterBankInfo;
 class AArch64RegisterInfo;
 class AArch64Subtarget;
+class AArch64TargetMachine;
 
 class AArch64InstructionSelector : public InstructionSelector {
 public:
-  AArch64InstructionSelector(const AArch64Subtarget &STI,
+  AArch64InstructionSelector(const AArch64TargetMachine &TM,
+                             const AArch64Subtarget &STI,
                              const AArch64RegisterBankInfo &RBI);
 
   virtual bool select(MachineInstr &I) const override;
 
 private:
+  const AArch64TargetMachine &TM;
+  const AArch64Subtarget &STI;
   const AArch64InstrInfo &TII;
   const AArch64RegisterInfo &TRI;
   const AArch64RegisterBankInfo &RBI;
