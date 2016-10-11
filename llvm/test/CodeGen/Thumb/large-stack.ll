@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=thumb-apple-ios | FileCheck %s
-; RUN: llc < %s -mtriple=thumb-none-eabi | FileCheck %s
+; RUN: llc < %s -mtriple=thumb-apple-ios | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN4
+; RUN: llc < %s -mtriple=thumb-none-eabi | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN8
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-apple-ios
-; RUN: llvm-objdump -triple=thumbv6-apple-ios -d %t | FileCheck %s
+; RUN: llvm-objdump -triple=thumbv6-apple-ios -d %t | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN4
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-none-eabi
-; RUN: llvm-objdump -triple=thumbv6-none-eabi -d %t | FileCheck %s
+; RUN: llvm-objdump -triple=thumbv6-none-eabi -d %t | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN8
 
 ; Largest stack for which a single tADDspi/tSUBspi is enough
 define void @test1() {
@@ -33,7 +33,9 @@ define void @test100_nofpelim() "no-frame-pointer-elim"="true" {
 ; CHECK: sub sp, #508
 ; CHECK: sub sp, #508
 ; CHECK: sub sp, #508
-; CHECK: subs r4, r7, #4
+; ALIGN4: subs r4, r7, #4
+; ALIGN8: subs r4, r7, #7
+; ALIGN8: subs r4, #1
 ; CHECK: mov sp, r4
     %tmp = alloca [ 1524 x i8 ] , align 4
     ret void
@@ -55,7 +57,9 @@ define void @test2_nofpelim() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test2_nofpelim:
 ; CHECK: ldr [[TEMP:r[0-7]]],
 ; CHECK: add sp, [[TEMP]]
-; CHECK: subs r4, r7, #4
+; ALIGN4: subs r4, r7, #4
+; ALIGN8: subs r4, r7, #7
+; ALIGN8: subs r4, #1
 ; CHECK: mov sp, r4
     %tmp = alloca [ 1528 x i8 ] , align 4
     ret void

@@ -7865,8 +7865,10 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   const ARMBaseRegisterInfo &RI = AII->getRegisterInfo();
 
   // Add a register mask with no preserved registers.  This results in all
-  // registers being marked as clobbered.
-  MIB.addRegMask(RI.getNoPreservedMask());
+  // registers being marked as clobbered. This can't work if the dispatch block
+  // is in a Thumb1 function and is linked with ARM code which uses the FP
+  // registers, as there is no way to preserve the FP registers in Thumb1 mode.
+  MIB.addRegMask(RI.getSjLjDispatchPreservedMask(*MF));
 
   bool IsPositionIndependent = isPositionIndependent();
   unsigned NumLPads = LPadList.size();

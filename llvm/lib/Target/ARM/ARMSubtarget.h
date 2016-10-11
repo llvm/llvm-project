@@ -568,10 +568,12 @@ public:
   }
   /// Returns true if the frame setup is split into two separate pushes (first
   /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
-  /// to lr.
+  /// to lr. This is always required on Thumb1-only targets, as the push and
+  /// pop instructions can't access the high registers.
   bool splitFramePushPop(const MachineFunction &MF) const {
-    return useR7AsFramePointer() &&
-           MF.getTarget().Options.DisableFramePointerElim(MF);
+    return (useR7AsFramePointer() &&
+            MF.getTarget().Options.DisableFramePointerElim(MF)) ||
+           isThumb1Only();
   }
 
   bool useStride4VFPs(const MachineFunction &MF) const;

@@ -31,18 +31,16 @@ using namespace lldb_private;
 
 class TestArm64InstEmulation : public testing::Test {
 public:
-  //  static void SetUpTestCase() { }
-
-  //  static void TearDownTestCase() { }
+  static void SetUpTestCase();
+  static void TearDownTestCase();
 
   //  virtual void SetUp() override { }
-
   //  virtual void TearDown() override { }
 
 protected:
 };
 
-static void init() {
+void TestArm64InstEmulation::SetUpTestCase() {
   llvm::InitializeAllTargets();
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllTargetMCs();
@@ -51,15 +49,12 @@ static void init() {
   EmulateInstructionARM64::Initialize();
 }
 
-static void terminate() {
+void TestArm64InstEmulation::TearDownTestCase() {
   DisassemblerLLVMC::Terminate();
   EmulateInstructionARM64::Terminate();
 }
 
 TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
-
-  init();
-
   ArchSpec arch("arm64-apple-ios10", nullptr);
   UnwindAssemblyInstEmulation *engine =
       static_cast<UnwindAssemblyInstEmulation *>(
@@ -153,13 +148,9 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
-
-  terminate();
 }
 
 TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
-  init();
-
   ArchSpec arch("arm64-apple-ios10", nullptr);
   UnwindAssemblyInstEmulation *engine =
       static_cast<UnwindAssemblyInstEmulation *>(
@@ -319,6 +310,4 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
 
   EXPECT_TRUE(row_sp->GetRegisterInfo(arm64_dwarf::x22, regloc));
   EXPECT_TRUE(regloc.IsSame());
-
-  terminate();
 }

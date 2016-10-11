@@ -1,9 +1,9 @@
-; RUN: llc -mtriple armv7-apple-ios -relocation-model=pic -o - %s | FileCheck %s -check-prefix=ARM-PIC
-; RUN: llc -mtriple armv7-apple-ios -relocation-model=static -o - %s | FileCheck %s -check-prefix=ARM-NOPIC
-; RUN: llc -mtriple armv7-apple-ios -relocation-model=dynamic-no-pic -o - %s | FileCheck %s -check-prefix=ARM-NOPIC
-; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=pic -o - %s | FileCheck %s -check-prefix=THUMB1-PIC
-; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=static -o - %s | FileCheck %s -check-prefix=THUMB1-NOPIC
-; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=dynamic-no-pic -o - %s | FileCheck %s -check-prefix=THUMB1-NOPIC
+; RUN: llc -mtriple armv7-apple-ios -relocation-model=pic -o - %s | FileCheck %s -check-prefix=ARM-PIC -check-prefix=ARM
+; RUN: llc -mtriple armv7-apple-ios -relocation-model=static -o - %s | FileCheck %s -check-prefix=ARM-NOPIC -check-prefix=ARM
+; RUN: llc -mtriple armv7-apple-ios -relocation-model=dynamic-no-pic -o - %s | FileCheck %s -check-prefix=ARM-NOPIC -check-prefix=ARM
+; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=pic -o - %s | FileCheck %s -check-prefix=THUMB1-PIC -check-prefix=THUMB1
+; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=static -o - %s | FileCheck %s -check-prefix=THUMB1-NOPIC -check-prefix=THUMB1
+; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=dynamic-no-pic -o - %s | FileCheck %s -check-prefix=THUMB1-NOPIC -check-prefix=THUMB1
 
 @_ZTIi = external constant i8*
 
@@ -41,6 +41,9 @@ attributes #0 = { ssp }
 attributes #1 = { nounwind }
 attributes #2 = { noreturn }
 
+; ARM: vst1.64
+; ARM: vst1.64
+
 ; ARM-PIC: cxa_throw
 ; ARM-PIC: trap
 ; ARM-PIC: adr [[REG1:r[0-9]+]], [[LJTI:.*]]
@@ -62,6 +65,18 @@ attributes #2 = { noreturn }
 ; ARM-NOPIC: .long [[LABEL:LBB0_[0-9]]]
 ; ARM-NOPIC: .end_data_region
 ; ARM-NOPIC: [[LABEL]]
+
+; ARM: vld1.64
+; ARM: vld1.64
+
+; On Thumb1 targets, we have no way to preserve the floating-point registers.
+; If all other code is built for Thumb1 or is built soft-float, this is not a
+; problem as the FP regs don't need saving. However, if this code is linked
+; against ARM code that uses the FP regs, they won't be restored correctly. We
+; don't support this use-case, but have no way to prevent it in the compiler.
+
+; THUMB1: push {{[^d]*$}}
+; THUMB1-NOT: vst
 
 ; THUMB1-PIC: cxa_throw
 ; THUMB1-PIC: trap
@@ -87,3 +102,6 @@ attributes #2 = { noreturn }
 ; THUMB1-NOPIC: .long [[LABEL:LBB0_[0-9]]]+1
 ; THUMB1-NOPIC: .end_data_region
 ; THUMB1-NOPIC: [[LABEL]]
+
+; THUMB1-NOT: vld
+; THUMB1: pop {{[^d]*$}}

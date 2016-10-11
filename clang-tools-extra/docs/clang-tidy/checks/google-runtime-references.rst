@@ -14,4 +14,4 @@ Options
 
 .. option:: WhiteListTypes
 
-   A semicolon-separated list of names of whitelist types. Defualt is empty.
+   A semicolon-separated list of names of whitelist types. Default is empty.
