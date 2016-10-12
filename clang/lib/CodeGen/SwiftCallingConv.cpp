@@ -506,7 +506,7 @@ void SwiftAggLowering::enumerateComponents(EnumerationCallback callback) const {
   assert(Finished && "haven't yet finished lowering");
 
   for (auto &entry : Entries) {
-    callback(entry.Begin, entry.Type);
+    callback(entry.Begin, entry.End, entry.Type);
   }
 }
 
