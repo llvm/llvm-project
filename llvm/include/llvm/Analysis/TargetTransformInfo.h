@@ -290,6 +290,8 @@ public:
     /// Apply loop unroll on any kind of loop
     /// (mainly to loops that fail runtime unrolling).
     bool Force;
+    /// Allow using trip count upper bound to unroll loops.
+    bool UpperBound;
   };
 
   /// \brief Get target-customized preferences for the generic loop unrolling

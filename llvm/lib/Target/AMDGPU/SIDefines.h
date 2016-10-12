@@ -110,6 +110,15 @@ namespace SIOutMods {
   };
 }
 
+namespace VGPRIndexMode {
+  enum {
+    SRC0_ENABLE = 1 << 0,
+    SRC1_ENABLE = 1 << 1,
+    SRC2_ENABLE = 1 << 2,
+    DST_ENABLE = 1 << 3
+  };
+}
+
 namespace AMDGPUAsmVariants {
   enum {
     DEFAULT = 0,

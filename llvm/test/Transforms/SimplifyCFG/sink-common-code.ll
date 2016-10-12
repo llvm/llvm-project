@@ -755,6 +755,32 @@ if.end:
 ; CHECK-NOT: exact
 ; CHECK: }
 
+declare i32 @call_target()
+
+define void @test_operand_bundles(i1 %cond, i32* %ptr) {
+entry:
+  br i1 %cond, label %left, label %right
+
+left:
+  %val0 = call i32 @call_target() [ "deopt"(i32 10) ]
+  store i32 %val0, i32* %ptr
+  br label %merge
+
+right:
+  %val1 = call i32 @call_target() [ "deopt"(i32 20) ]
+  store i32 %val1, i32* %ptr
+  br label %merge
+
+merge:
+  ret void
+}
+
+; CHECK-LABEL: @test_operand_bundles(
+; CHECK: left:
+; CHECK-NEXT:   %val0 = call i32 @call_target() [ "deopt"(i32 10) ]
+; CHECK: right:
+; CHECK-NEXT:   %val1 = call i32 @call_target() [ "deopt"(i32 20) ]
+
 ; CHECK: !0 = !{!1, !1, i64 0}
 ; CHECK: !1 = !{!"float", !2}
 ; CHECK: !2 = !{!"an example type tree"}
