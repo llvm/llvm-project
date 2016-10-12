@@ -75,6 +75,7 @@ class IndexedInstrProfReader;
 namespace coverage {
 
 class CoverageMappingReader;
+struct CoverageMappingRecord;
 
 class CoverageMapping;
 struct CounterExpressions;
@@ -423,6 +424,10 @@ class CoverageMapping {
   unsigned MismatchedFunctionCount;
 
   CoverageMapping() : MismatchedFunctionCount(0) {}
+
+  /// \brief Add a function record corresponding to \p Record.
+  Error loadFunctionRecord(const CoverageMappingRecord &Record,
+                           IndexedInstrProfReader &ProfileReader);
 
 public:
   /// \brief Load the coverage mapping using the given readers.
