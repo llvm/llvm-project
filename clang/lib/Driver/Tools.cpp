@@ -5229,18 +5229,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_freroll_loops,
-                               options::OPT_fno_reroll_loops)) {
+                               options::OPT_fno_reroll_loops))
     if (A->getOption().matches(options::OPT_freroll_loops))
       CmdArgs.push_back("-freroll-loops");
-  } else if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    // If rerolling is not explicitly enabled or disabled, then enable when
-    // optimizing for size.
-    if (A->getOption().matches(options::OPT_O)) {
-      StringRef S(A->getValue());
-      if (S == "s" || S == "z")
-        CmdArgs.push_back("-freroll-loops");
-    }
-  }
 
   Args.AddLastArg(CmdArgs, options::OPT_fwritable_strings);
   Args.AddLastArg(CmdArgs, options::OPT_funroll_loops,

@@ -60,8 +60,10 @@ public:
 class PTHEntryKeyVariant {
   union {
     const FileEntry *FE;
-    StringRef Path;
+    // FIXME: Use "StringRef Path;" when MSVC 2013 is dropped.
+    const char *PathPtr;
   };
+  size_t PathSize;
   enum { IsFE = 0x1, IsDE = 0x2, IsNoExist = 0x0 } Kind;
   FileData *Data;
 
@@ -69,15 +71,17 @@ public:
   PTHEntryKeyVariant(const FileEntry *fe) : FE(fe), Kind(IsFE), Data(nullptr) {}
 
   PTHEntryKeyVariant(FileData *Data, StringRef Path)
-      : Path(Path), Kind(IsDE), Data(new FileData(*Data)) {}
+      : PathPtr(Path.data()), PathSize(Path.size()), Kind(IsDE),
+        Data(new FileData(*Data)) {}
 
   explicit PTHEntryKeyVariant(StringRef Path)
-      : Path(Path), Kind(IsNoExist), Data(nullptr) {}
+      : PathPtr(Path.data()), PathSize(Path.size()), Kind(IsNoExist),
+        Data(nullptr) {}
 
   bool isFile() const { return Kind == IsFE; }
 
   StringRef getString() const {
-    return Kind == IsFE ? FE->getName() : Path;
+    return Kind == IsFE ? FE->getName() : StringRef(PathPtr, PathSize);
   }
 
   unsigned getKind() const { return (unsigned) Kind; }

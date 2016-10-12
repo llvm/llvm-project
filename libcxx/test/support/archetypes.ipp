@@ -9,7 +9,11 @@
 #define DEFINE_CONSTEXPR constexpr
 #endif
 #ifndef DEFINE_ASSIGN_CONSTEXPR
+#if TEST_STD_VER >= 14
 #define DEFINE_ASSIGN_CONSTEXPR DEFINE_CONSTEXPR
+#else
+#define DEFINE_ASSIGN_CONSTEXPR
+#endif
 #endif
 #ifndef DEFINE_CTOR
 #define DEFINE_CTOR = default
