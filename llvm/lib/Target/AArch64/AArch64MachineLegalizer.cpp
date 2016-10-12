@@ -176,5 +176,21 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   setAction({G_INTTOPTR, 0, p0}, Legal);
   setAction({G_INTTOPTR, 1, s64}, Legal);
 
+  // Casts for 32 and 64-bit width type are just copies.
+  for (auto Ty : {s1, s8, s16, s32, s64}) {
+    setAction({G_BITCAST, 0, Ty}, Legal);
+    setAction({G_BITCAST, 1, Ty}, Legal);
+  }
+
+  for (int EltSize = 8; EltSize <= 64; EltSize *= 2) {
+    setAction({G_BITCAST, 0, LLT::vector(128/EltSize, EltSize)}, Legal);
+    setAction({G_BITCAST, 1, LLT::vector(128/EltSize, EltSize)}, Legal);
+    if (EltSize == 64)
+      continue;
+
+    setAction({G_BITCAST, 0, LLT::vector(64/EltSize, EltSize)}, Legal);
+    setAction({G_BITCAST, 1, LLT::vector(64/EltSize, EltSize)}, Legal);
+  }
+
   computeTables();
 }

@@ -89,7 +89,7 @@ void XCorePassConfig::addPreEmitPass() {
 
 // Force static initialization.
 extern "C" void LLVMInitializeXCoreTarget() {
-  RegisterTargetMachine<XCoreTargetMachine> X(TheXCoreTarget);
+  RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
 }
 
 TargetIRAnalysis XCoreTargetMachine::getTargetIRAnalysis() {

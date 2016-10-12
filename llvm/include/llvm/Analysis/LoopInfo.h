@@ -412,7 +412,7 @@ public:
   bool isLCSSAForm(DominatorTree &DT) const;
 
   /// Return true if this Loop and all inner subloops are in LCSSA form.
-  bool isRecursivelyLCSSAForm(DominatorTree &DT) const;
+  bool isRecursivelyLCSSAForm(DominatorTree &DT, const LoopInfo &LI) const;
 
   /// Return true if the Loop is in the form that the LoopSimplify form
   /// transforms loops to, which is sometimes called normal form.

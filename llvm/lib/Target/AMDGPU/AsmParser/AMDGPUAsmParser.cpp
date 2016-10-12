@@ -2016,53 +2016,41 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   if (getLexer().is(AsmToken::Amp) || getLexer().is(AsmToken::Comma))
     Parser.Lex();
 
-  int CntShift;
-  int CntMask;
-
   IsaVersion IV = getIsaVersion(getSTI().getFeatureBits());
-  if (CntName == "vmcnt") {
-    CntMask = getVmcntMask(IV);
-    CntShift = getVmcntShift(IV);
-  } else if (CntName == "expcnt") {
-    CntMask = getExpcntMask(IV);
-    CntShift = getExpcntShift(IV);
-  } else if (CntName == "lgkmcnt") {
-    CntMask = getLgkmcntMask(IV);
-    CntShift = getLgkmcntShift(IV);
-  } else {
+  if (CntName == "vmcnt")
+    IntVal = encodeVmcnt(IV, IntVal, CntVal);
+  else if (CntName == "expcnt")
+    IntVal = encodeExpcnt(IV, IntVal, CntVal);
+  else if (CntName == "lgkmcnt")
+    IntVal = encodeLgkmcnt(IV, IntVal, CntVal);
+  else
     return true;
-  }
 
-  IntVal &= ~(CntMask << CntShift);
-  IntVal |= (CntVal << CntShift);
   return false;
 }
 
 AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
-  // Disable all counters by default.
-  // vmcnt   [3:0]
-  // expcnt  [6:4]
-  // lgkmcnt [11:8]
-  int64_t CntVal = 0xf7f;
+  IsaVersion IV = getIsaVersion(getSTI().getFeatureBits());
+  int64_t Waitcnt = getWaitcntBitMask(IV);
   SMLoc S = Parser.getTok().getLoc();
 
   switch(getLexer().getKind()) {
     default: return MatchOperand_ParseFail;
     case AsmToken::Integer:
       // The operand can be an integer value.
-      if (getParser().parseAbsoluteExpression(CntVal))
+      if (getParser().parseAbsoluteExpression(Waitcnt))
         return MatchOperand_ParseFail;
       break;
 
     case AsmToken::Identifier:
       do {
-        if (parseCnt(CntVal))
+        if (parseCnt(Waitcnt))
           return MatchOperand_ParseFail;
       } while(getLexer().isNot(AsmToken::EndOfStatement));
       break;
   }
-  Operands.push_back(AMDGPUOperand::CreateImm(this, CntVal, S));
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Waitcnt, S));
   return MatchOperand_Success;
 }
 

@@ -30,6 +30,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetOptions.h"
 
+#define DEBUG_TYPE "arm-frame-lowering"
+
 using namespace llvm;
 
 static cl::opt<bool>
@@ -1485,6 +1487,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  (void)TRI;  // Silence unused warning in non-assert builds.
   unsigned FramePtr = RegInfo->getFrameRegister(MF);
 
   // Spill R4 if Thumb2 function requires stack realignment - it will be used as
@@ -1640,6 +1644,9 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         SavedRegs.set(ARM::LR);
         LRSpilled = true;
         NumGPRSpills++;
+        auto LRPos = find(UnspilledCS1GPRs, ARM::LR);
+        if (LRPos != UnspilledCS1GPRs.end())
+          UnspilledCS1GPRs.erase(LRPos);
       }
       auto FPPos = find(UnspilledCS1GPRs, FramePtr);
       if (FPPos != UnspilledCS1GPRs.end())
@@ -1647,6 +1654,116 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       NumGPRSpills++;
       if (FramePtr == ARM::R7)
         CS1Spilled = true;
+    }
+
+    if (AFI->isThumb1OnlyFunction()) {
+      // For Thumb1-only targets, we need some low registers when we save and
+      // restore the high registers (which aren't allocatable, but could be
+      // used by inline assembly) because the push/pop instructions can not
+      // access high registers. If necessary, we might need to push more low
+      // registers to ensure that there is at least one free that can be used
+      // for the saving & restoring, and preferably we should ensure that as
+      // many as are needed are available so that fewer push/pop instructions
+      // are required.
+
+      // Low registers which are not currently pushed, but could be (r4-r7).
+      SmallVector<unsigned, 4> AvailableRegs;
+
+      // Unused argument registers (r0-r3) can be clobbered in the prologue for
+      // free.
+      int EntryRegDeficit = 0;
+      for (unsigned Reg : {ARM::R0, ARM::R1, ARM::R2, ARM::R3}) {
+        if (!MF.getRegInfo().isLiveIn(Reg)) {
+          --EntryRegDeficit;
+          DEBUG(dbgs() << PrintReg(Reg, TRI)
+                       << " is unused argument register, EntryRegDeficit = "
+                       << EntryRegDeficit << "\n");
+        }
+      }
+
+      // Unused return registers can be clobbered in the epilogue for free.
+      int ExitRegDeficit = AFI->getReturnRegsCount() - 4;
+      DEBUG(dbgs() << AFI->getReturnRegsCount()
+                   << " return regs used, ExitRegDeficit = " << ExitRegDeficit
+                   << "\n");
+
+      int RegDeficit = std::max(EntryRegDeficit, ExitRegDeficit);
+      DEBUG(dbgs() << "RegDeficit = " << RegDeficit << "\n");
+
+      // r4-r6 can be used in the prologue if they are pushed by the first push
+      // instruction.
+      for (unsigned Reg : {ARM::R4, ARM::R5, ARM::R6}) {
+        if (SavedRegs.test(Reg)) {
+          --RegDeficit;
+          DEBUG(dbgs() << PrintReg(Reg, TRI)
+                       << " is saved low register, RegDeficit = " << RegDeficit
+                       << "\n");
+        } else {
+          AvailableRegs.push_back(Reg);
+          DEBUG(dbgs()
+                << PrintReg(Reg, TRI)
+                << " is non-saved low register, adding to AvailableRegs\n");
+        }
+      }
+
+      // r7 can be used if it is not being used as the frame pointer.
+      if (!hasFP(MF)) {
+        if (SavedRegs.test(ARM::R7)) {
+          --RegDeficit;
+          DEBUG(dbgs() << "%R7 is saved low register, RegDeficit = "
+                       << RegDeficit << "\n");
+        } else {
+          AvailableRegs.push_back(ARM::R7);
+          DEBUG(dbgs()
+                << "%R7 is non-saved low register, adding to AvailableRegs\n");
+        }
+      }
+
+      // Each of r8-r11 needs to be copied to a low register, then pushed.
+      for (unsigned Reg : {ARM::R8, ARM::R9, ARM::R10, ARM::R11}) {
+        if (SavedRegs.test(Reg)) {
+          ++RegDeficit;
+          DEBUG(dbgs() << PrintReg(Reg, TRI)
+                       << " is saved high register, RegDeficit = " << RegDeficit
+                       << "\n");
+        }
+      }
+
+      // LR can only be used by PUSH, not POP, and can't be used at all if the
+      // llvm.returnaddress intrinsic is used. This is only worth doing if we
+      // are more limited at function entry than exit.
+      if ((EntryRegDeficit > ExitRegDeficit) &&
+          !(MF.getRegInfo().isLiveIn(ARM::LR) &&
+            MF.getFrameInfo().isReturnAddressTaken())) {
+        if (SavedRegs.test(ARM::LR)) {
+          --RegDeficit;
+          DEBUG(dbgs() << "%LR is saved register, RegDeficit = " << RegDeficit
+                       << "\n");
+        } else {
+          AvailableRegs.push_back(ARM::LR);
+          DEBUG(dbgs() << "%LR is not saved, adding to AvailableRegs\n");
+        }
+      }
+
+      // If there are more high registers that need pushing than low registers
+      // available, push some more low registers so that we can use fewer push
+      // instructions. This might not reduce RegDeficit all the way to zero,
+      // because we can only guarantee that r4-r6 are available, but r8-r11 may
+      // need saving.
+      DEBUG(dbgs() << "Final RegDeficit = " << RegDeficit << "\n");
+      for (; RegDeficit > 0 && !AvailableRegs.empty(); --RegDeficit) {
+        unsigned Reg = AvailableRegs.pop_back_val();
+        DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
+                     << " to make up reg deficit\n");
+        SavedRegs.set(Reg);
+        NumGPRSpills++;
+        CS1Spilled = true;
+        ExtraCSSpill = true;
+        UnspilledCS1GPRs.erase(find(UnspilledCS1GPRs, Reg));
+        if (Reg == ARM::LR)
+          LRSpilled = true;
+      }
+      DEBUG(dbgs() << "After adding spills, RegDeficit = " << RegDeficit << "\n");
     }
 
     // If LR is not spilled, but at least one of R4, R5, R6, and R7 is spilled.
@@ -1666,6 +1783,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // If stack and double are 8-byte aligned and we are spilling an odd number
     // of GPRs, spill one extra callee save GPR so we won't have to pad between
     // the integer and double callee save areas.
+    DEBUG(dbgs() << "NumGPRSpills = " << NumGPRSpills << "\n");
     unsigned TargetAlign = getStackAlignment();
     if (TargetAlign >= 8 && (NumGPRSpills & 1)) {
       if (CS1Spilled && !UnspilledCS1GPRs.empty()) {
@@ -1677,6 +1795,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
               (STI.isTargetWindows() && Reg == ARM::R11) ||
               isARMLowRegister(Reg) || Reg == ARM::LR) {
             SavedRegs.set(Reg);
+            DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
+                         << " to make up alignment\n");
             if (!MRI.isReserved(Reg))
               ExtraCSSpill = true;
             break;
@@ -1685,6 +1805,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       } else if (!UnspilledCS2GPRs.empty() && !AFI->isThumb1OnlyFunction()) {
         unsigned Reg = UnspilledCS2GPRs.front();
         SavedRegs.set(Reg);
+        DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
+                     << " to make up alignment\n");
         if (!MRI.isReserved(Reg))
           ExtraCSSpill = true;
       }

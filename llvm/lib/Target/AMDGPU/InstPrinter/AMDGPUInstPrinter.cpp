@@ -874,25 +874,24 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
   IsaVersion IV = getIsaVersion(STI.getFeatureBits());
 
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
-  unsigned Vmcnt = (SImm16 >> getVmcntShift(IV)) & getVmcntMask(IV);
-  unsigned Expcnt = (SImm16 >> getExpcntShift(IV)) & getExpcntMask(IV);
-  unsigned Lgkmcnt = (SImm16 >> getLgkmcntShift(IV)) & getLgkmcntMask(IV);
+  unsigned Vmcnt, Expcnt, Lgkmcnt;
+  decodeWaitcnt(IV, SImm16, Vmcnt, Expcnt, Lgkmcnt);
 
   bool NeedSpace = false;
 
-  if (Vmcnt != 0xF) {
+  if (Vmcnt != getVmcntBitMask(IV)) {
     O << "vmcnt(" << Vmcnt << ')';
     NeedSpace = true;
   }
 
-  if (Expcnt != 0x7) {
+  if (Expcnt != getExpcntBitMask(IV)) {
     if (NeedSpace)
       O << ' ';
     O << "expcnt(" << Expcnt << ')';
     NeedSpace = true;
   }
 
-  if (Lgkmcnt != 0xF) {
+  if (Lgkmcnt != getLgkmcntBitMask(IV)) {
     if (NeedSpace)
       O << ' ';
     O << "lgkmcnt(" << Lgkmcnt << ')';

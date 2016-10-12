@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: fmaddsubpd_loop_128:
 ; CHECK:   vfmaddsub231pd %xmm1, %xmm0, %xmm2
-; CHECK:   vmovaps %xmm2, %xmm0
+; CHECK:   vmovapd %xmm2, %xmm0
 ; CHECK-NEXT: retq
 define <2 x double> @fmaddsubpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %b, <2 x double> %c) {
 entry:
@@ -28,7 +28,7 @@ for.end:
 
 ; CHECK-LABEL: fmsubaddpd_loop_128:
 ; CHECK:   vfmsubadd231pd %xmm1, %xmm0, %xmm2
-; CHECK:   vmovaps %xmm2, %xmm0
+; CHECK:   vmovapd %xmm2, %xmm0
 ; CHECK-NEXT: retq
 define <2 x double> @fmsubaddpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %b, <2 x double> %c) {
 entry:
@@ -54,7 +54,7 @@ for.end:
 
 ; CHECK-LABEL: fmaddpd_loop_128:
 ; CHECK:   vfmadd231pd %xmm1, %xmm0, %xmm2
-; CHECK:   vmovaps %xmm2, %xmm0
+; CHECK:   vmovapd %xmm2, %xmm0
 ; CHECK-NEXT: retq
 define <2 x double> @fmaddpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %b, <2 x double> %c) {
 entry:
@@ -80,7 +80,7 @@ for.end:
 
 ; CHECK-LABEL: fmsubpd_loop_128:
 ; CHECK:   vfmsub231pd %xmm1, %xmm0, %xmm2
-; CHECK:   vmovaps %xmm2, %xmm0
+; CHECK:   vmovapd %xmm2, %xmm0
 ; CHECK-NEXT: retq
 define <2 x double> @fmsubpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %b, <2 x double> %c) {
 entry:
@@ -106,7 +106,7 @@ for.end:
 
 ; CHECK-LABEL: fnmaddpd_loop_128:
 ; CHECK:   vfnmadd231pd %xmm1, %xmm0, %xmm2
-; CHECK:   vmovaps %xmm2, %xmm0
+; CHECK:   vmovapd %xmm2, %xmm0
 ; CHECK-NEXT: retq
 define <2 x double> @fnmaddpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %b, <2 x double> %c) {
 entry:
@@ -132,7 +132,7 @@ for.end:
 
 ; CHECK-LABEL: fnmsubpd_loop_128:
 ; CHECK:   vfnmsub231pd %xmm1, %xmm0, %xmm2
-; CHECK:   vmovaps %xmm2, %xmm0
+; CHECK:   vmovapd %xmm2, %xmm0
 ; CHECK-NEXT: retq
 define <2 x double> @fnmsubpd_loop_128(i32 %iter, <2 x double> %a, <2 x double> %b, <2 x double> %c) {
 entry:
@@ -329,7 +329,7 @@ declare <4 x float> @llvm.x86.fma.vfnmsub.ps(<4 x float>, <4 x float>, <4 x floa
 
 ; CHECK-LABEL: fmaddsubpd_loop_256:
 ; CHECK:   vfmaddsub231pd %ymm1, %ymm0, %ymm2
-; CHECK:   vmovaps %ymm2, %ymm0
+; CHECK:   vmovapd %ymm2, %ymm0
 ; CHECK-NEXT: retq
 define <4 x double> @fmaddsubpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %b, <4 x double> %c) {
 entry:
@@ -355,7 +355,7 @@ for.end:
 
 ; CHECK-LABEL: fmsubaddpd_loop_256:
 ; CHECK:   vfmsubadd231pd %ymm1, %ymm0, %ymm2
-; CHECK:   vmovaps %ymm2, %ymm0
+; CHECK:   vmovapd %ymm2, %ymm0
 ; CHECK-NEXT: retq
 define <4 x double> @fmsubaddpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %b, <4 x double> %c) {
 entry:
@@ -381,7 +381,7 @@ for.end:
 
 ; CHECK-LABEL: fmaddpd_loop_256:
 ; CHECK:   vfmadd231pd %ymm1, %ymm0, %ymm2
-; CHECK:   vmovaps %ymm2, %ymm0
+; CHECK:   vmovapd %ymm2, %ymm0
 ; CHECK-NEXT: retq
 define <4 x double> @fmaddpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %b, <4 x double> %c) {
 entry:
@@ -407,7 +407,7 @@ for.end:
 
 ; CHECK-LABEL: fmsubpd_loop_256:
 ; CHECK:   vfmsub231pd %ymm1, %ymm0, %ymm2
-; CHECK:   vmovaps %ymm2, %ymm0
+; CHECK:   vmovapd %ymm2, %ymm0
 ; CHECK-NEXT: retq
 define <4 x double> @fmsubpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %b, <4 x double> %c) {
 entry:
@@ -433,7 +433,7 @@ for.end:
 
 ; CHECK-LABEL: fnmaddpd_loop_256:
 ; CHECK:   vfnmadd231pd %ymm1, %ymm0, %ymm2
-; CHECK:   vmovaps %ymm2, %ymm0
+; CHECK:   vmovapd %ymm2, %ymm0
 ; CHECK-NEXT: retq
 define <4 x double> @fnmaddpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %b, <4 x double> %c) {
 entry:
@@ -459,7 +459,7 @@ for.end:
 
 ; CHECK-LABEL: fnmsubpd_loop_256:
 ; CHECK:   vfnmsub231pd %ymm1, %ymm0, %ymm2
-; CHECK:   vmovaps %ymm2, %ymm0
+; CHECK:   vmovapd %ymm2, %ymm0
 ; CHECK-NEXT: retq
 define <4 x double> @fnmsubpd_loop_256(i32 %iter, <4 x double> %a, <4 x double> %b, <4 x double> %c) {
 entry:

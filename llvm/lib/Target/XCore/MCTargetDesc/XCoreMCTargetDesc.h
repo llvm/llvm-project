@@ -18,8 +18,7 @@
 
 namespace llvm {
 class Target;
-
-extern Target TheXCoreTarget;
+Target &getTheXCoreTarget();
 
 } // End llvm namespace
 

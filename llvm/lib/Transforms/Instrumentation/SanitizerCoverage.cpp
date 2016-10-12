@@ -502,17 +502,17 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   InjectTraceForGep(F, GepTraceTargets);
   return true;
 }
-void SanitizerCoverageModule::CreateFunctionGuardArray(size_t NumGuards, Function &F) {
+void SanitizerCoverageModule::CreateFunctionGuardArray(size_t NumGuards,
+                                                       Function &F) {
   if (!Options.TracePCGuard) return;
   HasSancovGuardsSection = true;
   ArrayType *ArrayOfInt32Ty = ArrayType::get(Int32Ty, NumGuards);
   FunctionGuardArray = new GlobalVariable(
-      *CurModule, ArrayOfInt32Ty, false, GlobalVariable::LinkOnceODRLinkage,
-      Constant::getNullValue(ArrayOfInt32Ty), "__sancov_guard." + F.getName());
+      *CurModule, ArrayOfInt32Ty, false, GlobalVariable::PrivateLinkage,
+      Constant::getNullValue(ArrayOfInt32Ty), "__sancov_guard");
   if (auto Comdat = F.getComdat())
     FunctionGuardArray->setComdat(Comdat);
   FunctionGuardArray->setSection(SanCovTracePCGuardSection);
-  FunctionGuardArray->setVisibility(GlobalValue::HiddenVisibility);
 }
 
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
@@ -687,14 +687,6 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     IRB.CreateCall(SanCovTracePC); // gets the PC using GET_CALLER_PC.
     IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.
   } else if (Options.TracePCGuard) {
-    //auto GuardVar = new GlobalVariable(
-    //   *F.getParent(), Int64Ty, false, GlobalVariable::LinkOnceODRLinkage,
-    //    Constant::getNullValue(Int64Ty), "__sancov_guard." + F.getName());
-    // if (auto Comdat = F.getComdat())
-    //  GuardVar->setComdat(Comdat);
-    // TODO: add debug into to GuardVar.
-    // GuardVar->setSection(SanCovTracePCGuardSection);
-    // auto GuardPtr = IRB.CreatePointerCast(GuardVar, IntptrPtrTy);
     auto GuardPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(IRB.CreatePointerCast(FunctionGuardArray, IntptrTy),
                       ConstantInt::get(IntptrTy, Idx * 4)),

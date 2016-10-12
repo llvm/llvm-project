@@ -55,6 +55,7 @@ inline StringRef getInstrProfNameSectionName(bool AddSegment) {
 /// data.
 inline StringRef getInstrProfDataSectionName(bool AddSegment) {
   return AddSegment ? "__DATA," INSTR_PROF_DATA_SECT_NAME_STR
+                      ",regular,live_support"
                     : INSTR_PROF_DATA_SECT_NAME_STR;
 }
 

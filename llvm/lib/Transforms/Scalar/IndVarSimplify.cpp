@@ -505,7 +505,8 @@ Value *IndVarSimplify::expandSCEVIfNeeded(SCEVExpander &Rewriter, const SCEV *S,
 /// constant operands at the beginning of the loop.
 void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
   // Check a pre-condition.
-  assert(L->isRecursivelyLCSSAForm(*DT) && "Indvars did not preserve LCSSA!");
+  assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
+         "Indvars did not preserve LCSSA!");
 
   SmallVector<BasicBlock*, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
@@ -2184,7 +2185,8 @@ void IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
 bool IndVarSimplify::run(Loop *L) {
   // We need (and expect!) the incoming loop to be in LCSSA.
-  assert(L->isRecursivelyLCSSAForm(*DT) && "LCSSA required to run indvars!");
+  assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
+         "LCSSA required to run indvars!");
 
   // If LoopSimplify form is not available, stay out of trouble. Some notes:
   //  - LSR currently only supports LoopSimplify-form loops. Indvars'
@@ -2277,7 +2279,8 @@ bool IndVarSimplify::run(Loop *L) {
   Changed |= DeleteDeadPHIs(L->getHeader(), TLI);
 
   // Check a post-condition.
-  assert(L->isRecursivelyLCSSAForm(*DT) && "Indvars did not preserve LCSSA!");
+  assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
+         "Indvars did not preserve LCSSA!");
 
   // Verify that LFTR, and any other change have not interfered with SCEV's
   // ability to compute trip count.

@@ -177,6 +177,12 @@ exit:
   ret i32 %sum
 }
 
+; Tail duplication during layout can entirely remove body0 by duplicating it
+; into the entry block and into body1. This is a good thing but it isn't what
+; this test is looking for. So to make the blocks longer so they don't get
+; duplicated, we add some calls to dummy.
+declare void @dummy()
+
 define i32 @test_loop_rotate(i32 %i, i32* %a) {
 ; Check that we rotate conditional exits from the loop to the bottom of the
 ; loop, eliminating unconditional branches to the top.
@@ -194,6 +200,8 @@ body0:
   %base = phi i32 [ 0, %entry ], [ %sum, %body1 ]
   %next = add i32 %iv, 1
   %exitcond = icmp eq i32 %next, %i
+  call void @dummy()
+  call void @dummy()
   br i1 %exitcond, label %exit, label %body1
 
 body1:
@@ -945,7 +953,7 @@ define void @benchmark_heapsort(i32 %n, double* nocapture %ra) {
 ; First rotated loop top.
 ; CHECK: .p2align
 ; CHECK: %while.end
-; CHECK: %for.cond
+; %for.cond gets completely tail-duplicated away.
 ; CHECK: %if.then
 ; CHECK: %if.else
 ; CHECK: %if.end10

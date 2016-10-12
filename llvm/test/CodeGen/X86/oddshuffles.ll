@@ -1425,3 +1425,48 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
   ret void
 }
 
+define <2 x double> @wrongorder(<4 x double> %A, <8 x double>* %P) #0 {
+; SSE2-LABEL: wrongorder:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; SSE2-NEXT:    movaps %xmm0, 48(%rdi)
+; SSE2-NEXT:    movaps %xmm0, 32(%rdi)
+; SSE2-NEXT:    movaps %xmm0, 16(%rdi)
+; SSE2-NEXT:    movaps %xmm0, (%rdi)
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: wrongorder:
+; SSE42:       # BB#0:
+; SSE42-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
+; SSE42-NEXT:    movapd %xmm0, 48(%rdi)
+; SSE42-NEXT:    movapd %xmm0, 32(%rdi)
+; SSE42-NEXT:    movapd %xmm0, 16(%rdi)
+; SSE42-NEXT:    movapd %xmm0, (%rdi)
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: wrongorder:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; AVX1-NEXT:    vmovapd %ymm1, 32(%rdi)
+; AVX1-NEXT:    vmovapd %ymm1, (%rdi)
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: wrongorder:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm1
+; AVX2-NEXT:    vmovapd %ymm1, 32(%rdi)
+; AVX2-NEXT:    vmovapd %ymm1, (%rdi)
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+  %shuffle = shufflevector <4 x double> %A, <4 x double> %A, <8 x i32> zeroinitializer
+  store <8 x double> %shuffle, <8 x double>* %P, align 64
+  %m2 = load <8 x double>, <8 x double>* %P, align 64
+  store <8 x double> %m2, <8 x double>* %P, align 64
+  %m3 = load <8 x double>, <8 x double>* %P, align 64
+  %m4 = shufflevector <8 x double> %m3, <8 x double> undef, <2 x i32> <i32 2, i32 0>
+  ret <2 x double> %m4
+}

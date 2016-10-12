@@ -131,6 +131,15 @@ ARMBaseRegisterInfo::getTLSCallPreservedMask(const MachineFunction &MF) const {
   return CSR_iOS_TLSCall_RegMask;
 }
 
+const uint32_t *
+ARMBaseRegisterInfo::getSjLjDispatchPreservedMask(const MachineFunction &MF) const {
+  const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
+  if (!STI.useSoftFloat() && STI.hasVFP2() && !STI.isThumb1Only())
+    return CSR_NoRegs_RegMask;
+  else
+    return CSR_FPRegs_RegMask;
+}
+
 
 const uint32_t *
 ARMBaseRegisterInfo::getThisReturnPreservedMask(const MachineFunction &MF,

@@ -722,6 +722,39 @@ static Error checkEncryptCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+static Error checkLinkerOptCommand(const MachOObjectFile *Obj,
+                                   const MachOObjectFile::LoadCommandInfo &Load,
+                                   uint32_t LoadCommandIndex) {
+  if (Load.C.cmdsize < sizeof(MachO::linker_option_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_LINKER_OPTION cmdsize too small");
+  MachO::linker_option_command L =
+    getStruct<MachO::linker_option_command>(Obj, Load.Ptr);
+  // Make sure the count of strings is correct.
+  const char *string = (const char *)Load.Ptr +
+                       sizeof(struct MachO::linker_option_command);
+  uint32_t left = L.cmdsize - sizeof(struct MachO::linker_option_command);
+  uint32_t i = 0;
+  while (left > 0) {
+    while (*string == '\0' && left > 0) {
+      string++;
+      left--;
+    }
+    if (left > 0) {
+      i++;
+      uint32_t NullPos = StringRef(string, left).find('\0');
+      uint32_t len = std::min(NullPos, left) + 1;
+      string += len;
+      left -= len;
+    }
+  }
+  if (L.count != i)
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_LINKER_OPTION string count " + Twine(L.count) +
+                          " does not match number of strings");
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -949,6 +982,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         getStruct<MachO::encryption_info_command_64>(this, Load.Ptr);
       if ((Err = checkEncryptCommand(this, Load, I, E.cryptoff, E.cryptsize,
                                      &EncryptLoadCmd, "LC_ENCRYPTION_INFO_64")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_LINKER_OPTION) {
+      if ((Err = checkLinkerOptCommand(this, Load, I)))
         return;
     }
     if (I < LoadCommandCount - 1) {

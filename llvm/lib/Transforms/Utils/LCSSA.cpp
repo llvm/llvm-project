@@ -323,7 +323,8 @@ struct LCSSAWrapperPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
   void verifyAnalysis() const override {
     assert(
-        all_of(*LI, [&](Loop *L) { return L->isRecursivelyLCSSAForm(*DT); }) &&
+        all_of(*LI,
+               [&](Loop *L) { return L->isRecursivelyLCSSAForm(*DT, *LI); }) &&
         "LCSSA form is broken!");
   };
 

@@ -70,6 +70,7 @@ add_llvm_library(LLVMSupport
   MemoryBuffer.cpp
   MemoryObject.cpp
   MD5.cpp
+  NativeFormatting.cpp
   Options.cpp
   PluginLoader.cpp
   PrettyStackTrace.cpp
