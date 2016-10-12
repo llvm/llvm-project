@@ -824,6 +824,45 @@ static ConstantFPSDNode *isConstOrConstSplatFP(SDValue N) {
   return nullptr;
 }
 
+// Determines if it is a constant integer or a build vector of constant
+// integers (and undefs).
+// Do not permit build vector implicit truncation.
+static bool isConstantOrConstantVector(SDValue N, bool NoOpaques = false) {
+  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N))
+    return !(Const->isOpaque() && NoOpaques);
+  if (N.getOpcode() != ISD::BUILD_VECTOR)
+    return false;
+  unsigned BitWidth = N.getScalarValueSizeInBits();
+  for (const SDValue &Op : N->op_values()) {
+    if (Op.isUndef())
+      continue;
+    ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Op);
+    if (!Const || Const->getAPIntValue().getBitWidth() != BitWidth ||
+        (Const->isOpaque() && NoOpaques))
+      return false;
+  }
+  return true;
+}
+
+// Determines if it is a constant null integer or a splatted vector of a
+// constant null integer (with no undefs).
+// Build vector implicit truncation is not an issue for null values.
+static bool isNullConstantOrNullSplatConstant(SDValue N) {
+  if (ConstantSDNode *Splat = isConstOrConstSplat(N))
+    return Splat->isNullValue();
+  return false;
+}
+
+// Determines if it is a constant integer of one or a splatted vector of a
+// constant integer of one (with no undefs).
+// Do not permit build vector implicit truncation.
+static bool isOneConstantOrOneSplatConstant(SDValue N) {
+  unsigned BitWidth = N.getScalarValueSizeInBits();
+  if (ConstantSDNode *Splat = isConstOrConstSplat(N))
+    return Splat->isOne() && Splat->getAPIntValue().getBitWidth() == BitWidth;
+  return false;
+}
+
 SDValue DAGCombiner::ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                                     SDValue N1) {
   EVT VT = N0.getValueType();
@@ -1674,13 +1713,12 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (isNullConstant(N1))
     return N0;
   // fold ((c1-A)+c2) -> (c1+c2)-A
-  if (ConstantSDNode *N1C = getAsNonOpaqueConstant(N1)) {
+  if (isConstantOrConstantVector(N1, /* NoOpaque */ true)) {
     if (N0.getOpcode() == ISD::SUB)
-      if (ConstantSDNode *N0C = getAsNonOpaqueConstant(N0.getOperand(0))) {
+      if (isConstantOrConstantVector(N0.getOperand(0), /* NoOpaque */ true)) {
         SDLoc DL(N);
         return DAG.getNode(ISD::SUB, DL, VT,
-                           DAG.getConstant(N1C->getAPIntValue()+
-                                           N0C->getAPIntValue(), DL, VT),
+                           DAG.getNode(ISD::ADD, DL, VT, N1, N0.getOperand(0)),
                            N0.getOperand(1));
       }
   }
@@ -1688,10 +1726,12 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (SDValue RADD = ReassociateOps(ISD::ADD, SDLoc(N), N0, N1))
     return RADD;
   // fold ((0-A) + B) -> B-A
-  if (N0.getOpcode() == ISD::SUB && isNullConstant(N0.getOperand(0)))
+  if (N0.getOpcode() == ISD::SUB &&
+      isNullConstantOrNullSplatConstant(N0.getOperand(0)))
     return DAG.getNode(ISD::SUB, SDLoc(N), VT, N1, N0.getOperand(1));
   // fold (A + (0-B)) -> A-B
-  if (N1.getOpcode() == ISD::SUB && isNullConstant(N1.getOperand(0)))
+  if (N1.getOpcode() == ISD::SUB &&
+      isNullConstantOrNullSplatConstant(N1.getOperand(0)))
     return DAG.getNode(ISD::SUB, SDLoc(N), VT, N0, N1.getOperand(1));
   // fold (A+(B-A)) -> B
   if (N1.getOpcode() == ISD::SUB && N0 == N1.getOperand(1))
@@ -1723,29 +1763,30 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     SDValue N10 = N1.getOperand(0);
     SDValue N11 = N1.getOperand(1);
 
-    if (isa<ConstantSDNode>(N00) || isa<ConstantSDNode>(N10))
+    if (isConstantOrConstantVector(N00) ||
+        isConstantOrConstantVector(N10))
       return DAG.getNode(ISD::SUB, SDLoc(N), VT,
                          DAG.getNode(ISD::ADD, SDLoc(N0), VT, N00, N10),
                          DAG.getNode(ISD::ADD, SDLoc(N1), VT, N01, N11));
   }
 
-  if (!VT.isVector() && SimplifyDemandedBits(SDValue(N, 0)))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
   if ((!LegalOperations || TLI.isOperationLegal(ISD::OR, VT)) &&
-      VT.isInteger() && !VT.isVector() && DAG.haveNoCommonBitsSet(N0, N1))
+      VT.isInteger() && DAG.haveNoCommonBitsSet(N0, N1))
     return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N1);
 
   // fold (add x, shl(0 - y, n)) -> sub(x, shl(y, n))
   if (N1.getOpcode() == ISD::SHL && N1.getOperand(0).getOpcode() == ISD::SUB &&
-      isNullConstant(N1.getOperand(0).getOperand(0)))
+      isNullConstantOrNullSplatConstant(N1.getOperand(0).getOperand(0)))
     return DAG.getNode(ISD::SUB, SDLoc(N), VT, N0,
                        DAG.getNode(ISD::SHL, SDLoc(N), VT,
                                    N1.getOperand(0).getOperand(1),
                                    N1.getOperand(1)));
   if (N0.getOpcode() == ISD::SHL && N0.getOperand(0).getOpcode() == ISD::SUB &&
-      isNullConstant(N0.getOperand(0).getOperand(0)))
+      isNullConstantOrNullSplatConstant(N0.getOperand(0).getOperand(0)))
     return DAG.getNode(ISD::SUB, SDLoc(N), VT, N1,
                        DAG.getNode(ISD::SHL, SDLoc(N), VT,
                                    N0.getOperand(0).getOperand(1),
@@ -1758,7 +1799,8 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
 
     // (add z, (and (sbbl x, x), 1)) -> (sub z, (sbbl x, x))
     // and similar xforms where the inner op is either ~0 or 0.
-    if (NumSignBits == DestBits && isOneConstant(N1->getOperand(1))) {
+    if (NumSignBits == DestBits &&
+        isOneConstantOrOneSplatConstant(N1->getOperand(1))) {
       SDLoc DL(N);
       return DAG.getNode(ISD::SUB, DL, VT, N->getOperand(0), AndOp0);
     }
@@ -10196,7 +10238,8 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
   // value.
   // TODO: Handle store large -> read small portion.
   // TODO: Handle TRUNCSTORE/LOADEXT
-  if (ISD::isNormalLoad(N) && !LD->isVolatile()) {
+  if (OptLevel != CodeGenOpt::None &&
+      ISD::isNormalLoad(N) && !LD->isVolatile()) {
     if (ISD::isNON_TRUNCStore(Chain.getNode())) {
       StoreSDNode *PrevST = cast<StoreSDNode>(Chain);
       if (PrevST->getBasePtr() == Ptr &&

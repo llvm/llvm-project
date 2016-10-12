@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // optional<T>& operator=(const optional<T>& rhs);
@@ -45,7 +44,6 @@ struct Z2
     Z2& operator=(const Z2&) = default;
 };
 
-#if __cplusplus >= 201402
 template <class T>
 constexpr bool
 test()
@@ -55,23 +53,18 @@ test()
     opt = opt2;
     return true;
 }
-#endif
 
 int main()
 {
     {
         using T = int;
         static_assert((std::is_trivially_copy_assignable<optional<T>>::value), "");
-#if __cplusplus >= 201402
         static_assert(test<T>(), "");
-#endif
     }
     {
         using T = X;
         static_assert((std::is_trivially_copy_assignable<optional<T>>::value), "");
-#if __cplusplus >= 201402
         static_assert(test<T>(), "");
-#endif
     }
     static_assert(!(std::is_trivially_copy_assignable<optional<Y>>::value), "");
     static_assert(!(std::is_trivially_copy_assignable<optional<std::string>>::value), "");

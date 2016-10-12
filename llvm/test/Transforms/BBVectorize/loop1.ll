@@ -1,7 +1,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 ; RUN: opt < %s -bb-vectorize -bb-vectorize-req-chain-depth=3 -bb-vectorize-ignore-target-info -instcombine -gvn -S | FileCheck %s
-; RUN: opt < %s -basicaa -loop-unroll -unroll-threshold=45 -unroll-allow-partial -bb-vectorize -bb-vectorize-req-chain-depth=3 -bb-vectorize-ignore-target-info -instcombine -gvn -S | FileCheck %s -check-prefix=CHECK-UNRL
+; RUN: opt < %s -dont-improve-non-negative-phi-bits=false -basicaa -loop-unroll -unroll-threshold=45 -unroll-allow-partial -bb-vectorize -bb-vectorize-req-chain-depth=3 -bb-vectorize-ignore-target-info -instcombine -gvn -S | FileCheck %s -check-prefix=CHECK-UNRL
 ; The second check covers the use of alias analysis (with loop unrolling).
 
 define void @test1(double* noalias %out, double* noalias %in1, double* noalias %in2) nounwind uwtable {
@@ -83,7 +83,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK-UNRL: %add12 = fadd <2 x double> %add7, %mul11
 ; CHECK-UNRL: %4 = bitcast double* %arrayidx14 to <2 x double>*
 ; CHECK-UNRL: store <2 x double> %add12, <2 x double>* %4, align 8
-; CHECK-UNRL: %indvars.iv.next.1 = add nsw i64 %indvars.iv, 2
+; CHECK-UNRL: %indvars.iv.next.1 = add nuw nsw i64 %indvars.iv, 2
 ; CHECK-UNRL: %lftr.wideiv.1 = trunc i64 %indvars.iv.next.1 to i32
 ; CHECK-UNRL: %exitcond.1 = icmp eq i32 %lftr.wideiv.1, 10
 ; CHECK-UNRL: br i1 %exitcond.1, label %for.end, label %for.body

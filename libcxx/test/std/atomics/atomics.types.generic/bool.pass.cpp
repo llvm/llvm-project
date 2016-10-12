@@ -57,6 +57,8 @@
 
 #include <cmpxchg_loop.h>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -226,7 +228,7 @@ int main()
     }
     {
         typedef std::atomic<bool> A;
-        _ALIGNAS_TYPE(A) char storage[sizeof(A)] = {1};
+        TEST_ALIGNAS_TYPE(A) char storage[sizeof(A)] = {1};
         A& zero = *new (storage) A();
         assert(zero == false);
         zero.~A();

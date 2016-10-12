@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// XFAIL: libcpp-no-exceptions
+
 // <optional>
 
 // optional(optional<T>&& rhs);

@@ -2836,8 +2836,8 @@ define void @combine_scalar_load_with_blend_with_zero(double* %a0, <4 x float>* 
 }
 
 ; PR30371
-define <4 x float> @combine_constant_insertion(float %f) {
-; SSE2-LABEL: combine_constant_insertion:
+define <4 x float> @combine_constant_insertion_v4f32(float %f) {
+; SSE2-LABEL: combine_constant_insertion_v4f32:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -2847,7 +2847,7 @@ define <4 x float> @combine_constant_insertion(float %f) {
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; SSE2-NEXT:    retq
 ;
-; SSSE3-LABEL: combine_constant_insertion:
+; SSSE3-LABEL: combine_constant_insertion_v4f32:
 ; SSSE3:       # BB#0:
 ; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -2857,14 +2857,14 @@ define <4 x float> @combine_constant_insertion(float %f) {
 ; SSSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; SSSE3-NEXT:    retq
 ;
-; SSE41-LABEL: combine_constant_insertion:
+; SSE41-LABEL: combine_constant_insertion_v4f32:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: combine_constant_insertion:
+; AVX-LABEL: combine_constant_insertion_v4f32:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
@@ -2873,6 +2873,61 @@ define <4 x float> @combine_constant_insertion(float %f) {
   %a0 = insertelement <4 x float> undef, float %f, i32 0
   %ret = shufflevector <4 x float> %a0, <4 x float> <float undef, float 4.0, float 5.0, float 3.0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %ret
+}
+
+define <4 x i32> @combine_constant_insertion_v4i32(i32 %f) {
+; SSE2-LABEL: combine_constant_insertion_v4i32:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movl $30, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movl $4, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    movl $5, %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    movd %edi, %xmm0
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: combine_constant_insertion_v4i32:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movl $30, %eax
+; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    movl $4, %eax
+; SSSE3-NEXT:    movd %eax, %xmm1
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSSE3-NEXT:    movl $5, %eax
+; SSSE3-NEXT:    movd %eax, %xmm2
+; SSSE3-NEXT:    movd %edi, %xmm0
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_constant_insertion_v4i32:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    movd %edi, %xmm0
+; SSE41-NEXT:    movl $4, %eax
+; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE41-NEXT:    movl $5, %eax
+; SSE41-NEXT:    pinsrd $2, %eax, %xmm0
+; SSE41-NEXT:    movl $30, %eax
+; SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_constant_insertion_v4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovd %edi, %xmm0
+; AVX-NEXT:    movl $4, %eax
+; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    movl $5, %eax
+; AVX-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; AVX-NEXT:    movl $30, %eax
+; AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a0 = insertelement <4 x i32> undef, i32 %f, i32 0
+  %ret = shufflevector <4 x i32> %a0, <4 x i32> <i32 undef, i32 4, i32 5, i32 30>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x i32> %ret
 }
 
 define <4 x float> @PR22377(<4 x float> %a, <4 x float> %b) {

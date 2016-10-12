@@ -229,29 +229,30 @@ def int_amdgcn_atomic_dec : Intrinsic<[llvm_anyint_ty],
 >;
 
 class AMDGPUImageLoad : Intrinsic <
-  [llvm_v4f32_ty],    // vdata(VGPR)
+  [llvm_anyfloat_ty], // vdata(VGPR)
   [llvm_anyint_ty,    // vaddr(VGPR)
-   llvm_v8i32_ty,     // rsrc(SGPR)
+   llvm_anyint_ty,    // rsrc(SGPR)
    llvm_i32_ty,       // dmask(imm)
-   llvm_i1_ty,        // r128(imm)
-   llvm_i1_ty,        // da(imm)
    llvm_i1_ty,        // glc(imm)
-   llvm_i1_ty],       // slc(imm)
+   llvm_i1_ty,        // slc(imm)
+   llvm_i1_ty,        // lwe(imm)
+   llvm_i1_ty],       // da(imm)
   [IntrReadMem]>;
 
 def int_amdgcn_image_load : AMDGPUImageLoad;
 def int_amdgcn_image_load_mip : AMDGPUImageLoad;
+def int_amdgcn_image_getresinfo : AMDGPUImageLoad;
 
 class AMDGPUImageStore : Intrinsic <
   [],
-  [llvm_v4f32_ty,     // vdata(VGPR)
+  [llvm_anyfloat_ty,  // vdata(VGPR)
    llvm_anyint_ty,    // vaddr(VGPR)
-   llvm_v8i32_ty,     // rsrc(SGPR)
+   llvm_anyint_ty,    // rsrc(SGPR)
    llvm_i32_ty,       // dmask(imm)
-   llvm_i1_ty,        // r128(imm)
-   llvm_i1_ty,        // da(imm)
    llvm_i1_ty,        // glc(imm)
-   llvm_i1_ty],       // slc(imm)
+   llvm_i1_ty,        // slc(imm)
+   llvm_i1_ty,        // lwe(imm)
+   llvm_i1_ty],       // da(imm)
   []>;
 
 def int_amdgcn_image_store : AMDGPUImageStore;

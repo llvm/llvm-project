@@ -3720,20 +3720,21 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
           Results.AddResult(Result("template"));
       }
     }
-  } else if (!IsArrow && BaseType->getAsObjCInterfacePointerType()) {
+  } else if (!IsArrow && BaseType->isObjCObjectPointerType()) {
     // Objective-C property reference.
     AddedPropertiesSet AddedProperties;
-    
-    // Add property results based on our interface.
-    const ObjCObjectPointerType *ObjCPtr
-      = BaseType->getAsObjCInterfacePointerType();
-    assert(ObjCPtr && "Non-NULL pointer guaranteed above!");
-    AddObjCProperties(CCContext, ObjCPtr->getInterfaceDecl(), true,
-                      /*AllowNullaryMethods=*/true, CurContext, 
-                      AddedProperties, Results);
-    
+
+    if (const ObjCObjectPointerType *ObjCPtr =
+            BaseType->getAsObjCInterfacePointerType()) {
+      // Add property results based on our interface.
+      assert(ObjCPtr && "Non-NULL pointer guaranteed above!");
+      AddObjCProperties(CCContext, ObjCPtr->getInterfaceDecl(), true,
+                        /*AllowNullaryMethods=*/true, CurContext,
+                        AddedProperties, Results);
+    }
+
     // Add properties from the protocols in a qualified interface.
-    for (auto *I : ObjCPtr->quals())
+    for (auto *I : BaseType->getAs<ObjCObjectPointerType>()->quals())
       AddObjCProperties(CCContext, I, true, /*AllowNullaryMethods=*/true,
                         CurContext, AddedProperties, Results);
   } else if ((IsArrow && BaseType->isObjCObjectPointerType()) ||

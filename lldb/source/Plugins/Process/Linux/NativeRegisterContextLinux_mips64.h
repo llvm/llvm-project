@@ -52,6 +52,8 @@ public:
 
   Error WriteCP1();
 
+  uint8_t *ReturnFPOffset(uint8_t reg_index, uint32_t byte_offset);
+
   Error IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
 
   Error GetWatchpointHitIndex(uint32_t &wp_index,
@@ -76,11 +78,13 @@ public:
   static bool IsMSAAvailable();
 
 protected:
-  Error DoReadRegisterValue(uint32_t offset, const char *reg_name,
-                            uint32_t size, RegisterValue &value) override;
+  Error Read_SR_Config(uint32_t offset, const char *reg_name, uint32_t size,
+                       RegisterValue &value);
 
-  Error DoWriteRegisterValue(uint32_t offset, const char *reg_name,
-                             const RegisterValue &value) override;
+  Error ReadRegisterRaw(uint32_t reg_index, RegisterValue &value) override;
+
+  Error WriteRegisterRaw(uint32_t reg_index,
+                         const RegisterValue &value) override;
 
   Error DoReadWatchPointRegisterValue(lldb::tid_t tid, void *watch_readback);
 
