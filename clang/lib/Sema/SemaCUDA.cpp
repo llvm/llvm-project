@@ -120,8 +120,7 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
   // (a) Can't call global from some contexts until we support CUDA's
   // dynamic parallelism.
   if (CalleeTarget == CFT_Global &&
-      (CallerTarget == CFT_Global || CallerTarget == CFT_Device ||
-       (CallerTarget == CFT_HostDevice && getLangOpts().CUDAIsDevice)))
+      (CallerTarget == CFT_Global || CallerTarget == CFT_Device))
     return CFP_Never;
 
   // (b) Calling HostDevice is OK for everyone.
