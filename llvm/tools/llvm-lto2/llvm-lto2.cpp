@@ -176,7 +176,10 @@ int main(int argc, char **argv) {
       }
     }
     for (auto I : CurrentFileSymResolutions) {
-      auto NumErased = CommandLineResolutions.erase({F, I.first});
+#ifndef NDEBUG
+      auto NumErased =
+#endif
+          CommandLineResolutions.erase({F, I.first});
       assert(NumErased > 0);
     }
 
