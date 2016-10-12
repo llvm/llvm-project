@@ -82,33 +82,42 @@ const NamespaceDecl *getOuterNamespace(const NamespaceDecl *InnerNs,
   return CurrentNs;
 }
 
-// FIXME: get rid of this helper function if this is supported in clang-refactor
-// library.
-SourceLocation getStartOfNextLine(SourceLocation Loc, const SourceManager &SM,
-                                  const LangOptions &LangOpts) {
+static std::unique_ptr<Lexer>
+getLexerStartingFromLoc(SourceLocation Loc, const SourceManager &SM,
+                        const LangOptions &LangOpts) {
   if (Loc.isMacroID() &&
       !Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
-    return SourceLocation();
+    return nullptr;
   // Break down the source location.
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
   // Try to load the file buffer.
   bool InvalidTemp = false;
   llvm::StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
   if (InvalidTemp)
-    return SourceLocation();
+    return nullptr;
 
   const char *TokBegin = File.data() + LocInfo.second;
   // Lex from the start of the given location.
-  Lexer Lex(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
-            TokBegin, File.end());
+  return llvm::make_unique<Lexer>(SM.getLocForStartOfFile(LocInfo.first),
+                                  LangOpts, File.begin(), TokBegin, File.end());
+}
 
+// FIXME: get rid of this helper function if this is supported in clang-refactor
+// library.
+static SourceLocation getStartOfNextLine(SourceLocation Loc,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  std::unique_ptr<Lexer> Lex = getLexerStartingFromLoc(Loc, SM, LangOpts);
+  if (!Lex.get())
+    return SourceLocation();
   llvm::SmallVector<char, 16> Line;
   // FIXME: this is a bit hacky to get ReadToEndOfLine work.
-  Lex.setParsingPreprocessorDirective(true);
-  Lex.ReadToEndOfLine(&Line);
+  Lex->setParsingPreprocessorDirective(true);
+  Lex->ReadToEndOfLine(&Line);
   auto End = Loc.getLocWithOffset(Line.size());
-  return SM.getLocForEndOfFile(LocInfo.first) == End ? End
-                                                     : End.getLocWithOffset(1);
+  return SM.getLocForEndOfFile(SM.getDecomposedLoc(Loc).first) == End
+             ? End
+             : End.getLocWithOffset(1);
 }
 
 // Returns `R` with new range that refers to code after `Replaces` being
@@ -365,6 +374,23 @@ void ChangeNamespaceTool::run(
   }
 }
 
+static SourceLocation getLocAfterNamespaceLBrace(const NamespaceDecl *NsDecl,
+                                                 const SourceManager &SM,
+                                                 const LangOptions &LangOpts) {
+  std::unique_ptr<Lexer> Lex =
+      getLexerStartingFromLoc(NsDecl->getLocStart(), SM, LangOpts);
+  assert(Lex.get() &&
+         "Failed to create lexer from the beginning of namespace.");
+  if (!Lex.get())
+    return SourceLocation();
+  Token Tok;
+  while (!Lex->LexFromRawLexer(Tok) && Tok.isNot(tok::TokenKind::l_brace)) {
+  }
+  return Tok.isNot(tok::TokenKind::l_brace)
+             ? SourceLocation()
+             : Tok.getEndLoc().getLocWithOffset(1);
+}
+
 // Stores information about a moved namespace in `MoveNamespaces` and leaves
 // the actual movement to `onEndOfTranslationUnit()`.
 void ChangeNamespaceTool::moveOldNamespace(
@@ -375,7 +401,9 @@ void ChangeNamespaceTool::moveOldNamespace(
     return;
 
   // Get the range of the code in the old namespace.
-  SourceLocation Start = NsDecl->decls_begin()->getLocStart();
+  SourceLocation Start = getLocAfterNamespaceLBrace(
+      NsDecl, *Result.SourceManager, Result.Context->getLangOpts());
+  assert(Start.isValid() && "Can't find l_brace for namespace.");
   SourceLocation End = NsDecl->getRBraceLoc().getLocWithOffset(-1);
   // Create a replacement that deletes the code in the old namespace merely for
   // retrieving offset and length from it.

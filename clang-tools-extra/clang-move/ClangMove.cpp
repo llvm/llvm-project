@@ -51,8 +51,18 @@ std::string MakeAbsolutePath(const SourceManager& SM, StringRef Path) {
        SM.getFileManager().getVirtualFileSystem()->makeAbsolute(AbsolutePath))
     llvm::errs() << "Warning: could not make absolute file: '" <<  EC.message()
                  << '\n';
-  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
-  llvm::sys::path::native(AbsolutePath);
+  // Handle symbolic link path cases.
+  // We are trying to get the real file path of the symlink.
+  const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
+       llvm::sys::path::parent_path(AbsolutePath.str()));
+  if (Dir) {
+    StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
+    SmallVector<char, 128> AbsoluteFilename;
+    llvm::sys::path::append(AbsoluteFilename, DirName,
+                            llvm::sys::path::filename(AbsolutePath.str()));
+    return llvm::StringRef(AbsoluteFilename.data(), AbsoluteFilename.size())
+        .str();
+  }
   return AbsolutePath.str();
 }
 
@@ -382,24 +392,27 @@ void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader,
                                 llvm::StringRef SearchPath,
                                 llvm::StringRef FileName,
                                 const SourceManager& SM) {
-  auto AbsoluteSearchPath = MakeAbsolutePath(SM, SearchPath);
+  SmallVector<char, 128> HeaderWithSearchPath;
+  llvm::sys::path::append(HeaderWithSearchPath, SearchPath, IncludeHeader);
+  std::string AbsoluteOldHeader =
+      MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader);
   // FIXME: Add old.h to the new.cc/h when the new target has dependencies on
   // old.h/c. For instance, when moved class uses another class defined in
   // old.h, the old.h should be added in new.h.
-  if (MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader) ==
-      MakeAbsolutePath(AbsoluteSearchPath, IncludeHeader))
+  if (AbsoluteOldHeader ==
+      MakeAbsolutePath(SM, llvm::StringRef(HeaderWithSearchPath.data(),
+                                           HeaderWithSearchPath.size())))
     return;
 
   std::string IncludeLine =
       IsAngled ? ("#include <" + IncludeHeader + ">\n").str()
                : ("#include \"" + IncludeHeader + "\"\n").str();
 
-  std::string AbsolutePath = MakeAbsolutePath(SM, FileName);
-  if (MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader) ==
-      AbsolutePath) {
+  std::string AbsoluteCurrentFile = MakeAbsolutePath(SM, FileName);
+  if (AbsoluteOldHeader == AbsoluteCurrentFile) {
     HeaderIncludes.push_back(IncludeLine);
   } else if (MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC) ==
-             AbsolutePath) {
+             AbsoluteCurrentFile) {
     CCIncludes.push_back(IncludeLine);
   }
 }

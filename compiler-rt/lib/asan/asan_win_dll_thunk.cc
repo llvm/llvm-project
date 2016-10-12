@@ -379,6 +379,7 @@ WRAP_W_WW(realloc)
 WRAP_W_WW(_realloc_base)
 WRAP_W_WWW(_realloc_dbg)
 WRAP_W_WWW(_recalloc)
+WRAP_W_WWW(_recalloc_base)
 
 WRAP_W_W(_msize)
 WRAP_W_W(_expand)

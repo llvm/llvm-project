@@ -25,12 +25,6 @@ using namespace lld;
 using namespace lld::elf;
 
 template <class ELFT>
-static std::string getSectionName(InputSectionBase<ELFT> *S) {
-  StringRef Filename = S->getFile()->getName();
-  return (sys::path::filename(Filename) + "(" + S->Name + ")").str();
-}
-
-template <class ELFT>
 static typename ELFT::uint getSymVA(const SymbolBody &Body,
                                     typename ELFT::uint &Addend) {
   typedef typename ELFT::uint uintX_t;
@@ -59,11 +53,6 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     // This is an absolute symbol.
     if (!SC)
       return D.Value;
-
-    if (!SC->Live) {
-      warn("relocation refers to discarded section '" + getSectionName(SC) + "'");
-      return 0;
-    }
 
     uintX_t Offset = D.Value;
     if (D.isSection()) {
@@ -256,13 +245,13 @@ LazyObject::LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
 }
 
 InputFile *LazyArchive::fetch() {
-  MemoryBufferRef MBRef = file()->getMember(&Sym);
+  std::pair<MemoryBufferRef, uint64_t> MBInfo = file()->getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
-  if (MBRef.getBuffer().empty())
+  if (MBInfo.first.getBuffer().empty())
     return nullptr;
-  return createObjectFile(MBRef, file()->getName());
+  return createObjectFile(MBInfo.first, file()->getName(), MBInfo.second);
 }
 
 InputFile *LazyObject::fetch() {

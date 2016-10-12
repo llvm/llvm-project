@@ -310,6 +310,13 @@ public:
   std::string GetClangTargetCPU();
 
   //------------------------------------------------------------------
+  /// Return a string representing target application ABI.
+  ///
+  /// @return A string representing target application ABI.
+  //------------------------------------------------------------------
+  std::string GetTargetABI() const;
+
+  //------------------------------------------------------------------
   /// Clears the object state.
   ///
   /// Clears the object state back to a default invalid state.
@@ -595,6 +602,8 @@ public:
   uint32_t GetFlags() const { return m_flags; }
 
   void SetFlags(uint32_t flags) { m_flags = flags; }
+
+  void SetFlags(std::string elf_abi);
 
 protected:
   bool IsEqualTo(const ArchSpec &rhs, bool exact_match) const;

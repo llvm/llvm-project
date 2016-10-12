@@ -18,12 +18,14 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 class A
 {
     int data_;
 public:
     explicit A(int data) : data_(data) {}
-    virtual ~A() _NOEXCEPT {}
+    virtual ~A() TEST_NOEXCEPT {}
 
     friend bool operator==(const A& x, const A& y) {return x.data_ == y.data_;}
 };

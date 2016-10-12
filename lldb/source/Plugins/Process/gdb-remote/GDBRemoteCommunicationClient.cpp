@@ -1849,6 +1849,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       std::string os_name;
       std::string vendor_name;
       std::string triple;
+      std::string elf_abi;
       uint32_t pointer_byte_size = 0;
       StringExtractor extractor;
       ByteOrder byte_order = eByteOrderInvalid;
@@ -1885,6 +1886,9 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         } else if (name.equals("pid")) {
           if (!value.getAsInteger(16, pid))
             ++num_keys_decoded;
+        } else if (name.equals("elf_abi")) {
+          elf_abi = value;
+          ++num_keys_decoded;
         }
       }
       if (num_keys_decoded > 0)
@@ -1897,6 +1901,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       // Set the ArchSpec from the triple if we have it.
       if (!triple.empty()) {
         m_process_arch.SetTriple(triple.c_str());
+        m_process_arch.SetFlags(elf_abi);
         if (pointer_byte_size) {
           assert(pointer_byte_size == m_process_arch.GetAddressByteSize());
         }
