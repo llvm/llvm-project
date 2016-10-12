@@ -41,6 +41,32 @@ AArch64InstructionSelector::AArch64InstructionSelector(
   : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
       TRI(*STI.getRegisterInfo()), RBI(RBI) {}
 
+// FIXME: This should be target-independent, inferred from the types declared
+// for each class in the bank.
+static const TargetRegisterClass *
+getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
+                         const RegisterBankInfo &RBI) {
+  if (RB.getID() == AArch64::GPRRegBankID) {
+    if (Ty.getSizeInBits() <= 32)
+      return &AArch64::GPR32RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &AArch64::GPR64RegClass;
+    return nullptr;
+  }
+
+  if (RB.getID() == AArch64::FPRRegBankID) {
+    if (Ty.getSizeInBits() == 32)
+      return &AArch64::FPR32RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &AArch64::FPR64RegClass;
+    if (Ty.getSizeInBits() == 128)
+      return &AArch64::FPR128RegClass;
+    return nullptr;
+  }
+
+  return nullptr;
+}
+
 /// Check whether \p I is a currently unsupported binary operation:
 /// - it has an unsized type
 /// - an operand is not a vreg
@@ -489,6 +515,42 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     }
 
     constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
+
+    I.eraseFromParent();
+    return true;
+  }
+
+  case TargetOpcode::G_INTTOPTR:
+  case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_BITCAST: {
+    const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    const LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
+
+    const unsigned DstReg = I.getOperand(0).getReg();
+    const unsigned SrcReg = I.getOperand(1).getReg();
+
+    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+    const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+
+    const TargetRegisterClass *DstRC =
+        getRegClassForTypeOnBank(DstTy, DstRB, RBI);
+    if (!DstRC)
+      return false;
+
+    const TargetRegisterClass *SrcRC =
+        getRegClassForTypeOnBank(SrcTy, SrcRB, RBI);
+    if (!SrcRC)
+      return false;
+
+    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
+        !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+      DEBUG(dbgs() << "Failed to constrain G_BITCAST\n");
+      return false;
+    }
+
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::COPY))
+        .addDef(DstReg)
+        .addUse(SrcReg);
 
     I.eraseFromParent();
     return true;

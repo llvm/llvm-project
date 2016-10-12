@@ -201,11 +201,13 @@ bool PPCMIPeephole::simplifyCode(void) {
         // Splat fed by another splat - switch the output of the first
         // and remove the second.
         if (SameOpcode) {
-          DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
+          DEBUG(dbgs() << "Changing redundant splat to a copy: ");
+          DEBUG(MI.dump());
+          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                  MI.getOperand(0).getReg())
+              .addOperand(MI.getOperand(OpNo));
           ToErase = &MI;
           Simplified = true;
-          DEBUG(dbgs() << "Removing redundant splat: ");
-          DEBUG(MI.dump());
         }
         // Splat fed by a shift. Usually when we align value to splat into
         // vector element zero.

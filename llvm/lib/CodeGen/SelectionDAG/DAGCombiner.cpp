@@ -12955,6 +12955,11 @@ SDValue DAGCombiner::createBuildVecShuffle(SDLoc DL, SDNode *N,
           VecIn2 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InVT1,
                                DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
         ShuffleNumElems = NumElems * 2;
+      } else {
+        // Both VecIn1 and VecIn2 are wider than the output, and VecIn2 is wider
+        // than VecIn1. We can't handle this for now - this case will disappear
+        // when we start sorting the vectors by type.
+        return SDValue();
       }
     } else {
       // TODO: Support cases where the length mismatch isn't exactly by a

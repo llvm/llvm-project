@@ -47,12 +47,7 @@
 // CHECK-NO-UNROLL-LOOPS: "-fno-unroll-loops"
 
 // RUN: %clang -### -S -freroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
-// RUN: %clang -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
-// RUN: %clang -### -S -Oz %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
 // RUN: %clang -### -S -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
-// RUN: %clang -### -S -Os -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
-// RUN: %clang -### -S -Oz -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
-// RUN: %clang -### -S -O1 %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
 // RUN: %clang -### -S -fno-reroll-loops -freroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
 // RUN: %clang -### -S -freroll-loops -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
 // CHECK-REROLL-LOOPS: "-freroll-loops"
