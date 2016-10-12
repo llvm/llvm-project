@@ -102,6 +102,12 @@ configuration. Passing the option on the command line will override the default.
 
   Specify the compiler used to build the tests.
 
+.. option:: --cxx_stdlib_under_test=[libc++, libstdc++, cxx_default]
+
+  Specify the C++ standard library being tested. Unless otherwise specified
+  libc++ is used. This option is intended to allow running the libc++ test
+  suite against other standard library implementations.
+
 .. option:: std=<standard version>
 
   **Values**: c++98, c++03, c++11, c++14, c++1z
@@ -113,10 +119,10 @@ configuration. Passing the option on the command line will override the default.
   Specify the site configuration to use when running the tests.  This option
   overrides the enviroment variable LIBCXX_SITE_CONFIG.
 
-.. option:: --libcxx_headers=<path/to/headers>
+.. option:: --cxx_headers=<path/to/headers>
 
-  Specify the libc++ headers that are tested. By default the headers in the
-  source tree are used.
+  Specify the c++ standard library headers that are tested. By default the
+  headers in the source tree are used.
 
 .. option:: --cxx_library_root=<path/to/lib/>
 

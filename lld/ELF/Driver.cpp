@@ -489,7 +489,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     error("--thinlto-jobs: number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
-  Config->ZExecStack = hasZOption(Args, "execstack");
+  Config->ZExecstack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");

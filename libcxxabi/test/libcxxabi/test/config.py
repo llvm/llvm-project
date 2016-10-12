@@ -55,6 +55,10 @@ class Configuration(LibcxxConfiguration):
         cxx_headers = self.get_lit_conf(
             'cxx_headers',
             os.path.join(self.libcxx_src_root, '/include'))
+        if cxx_headers == '':
+            self.lit_config.note('using the systems c++ headers')
+        else:
+            self.cxx.compile_flags += ['-nostdinc++']
         if not os.path.isdir(cxx_headers):
             self.lit_config.fatal("cxx_headers='%s' is not a directory."
                                   % cxx_headers)

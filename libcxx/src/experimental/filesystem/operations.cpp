@@ -236,12 +236,8 @@ void __copy(const path& from, const path& to, copy_options options,
         }
         return;
     }
-    else if (is_directory(f)) {
-        if (not bool(copy_options::recursive & options) &&
-            bool(copy_options::__in_recursive_copy & options))
-        {
-            return;
-        }
+    else if (is_directory(f) && (bool(copy_options::recursive & options) ||
+             copy_options::none == options)) {
 
         if (!exists(t)) {
             // create directory to with attributes from 'from'.

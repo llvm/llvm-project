@@ -36,7 +36,12 @@ void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
       functionDecl(unless(isDefinition()),
                    // Lambdas are always their own definition, but they
                    // generate a non-definition FunctionDecl too. Ignore those.
-                   unless(cxxMethodDecl(ofClass(cxxRecordDecl(isLambda())))),
+                   // Class template instantiations have a non-definition
+                   // CXXMethodDecl for methods that aren't used in this
+                   // translation unit. Ignore those, as the template will have
+                   // already been checked.
+                   unless(cxxMethodDecl(ofClass(cxxRecordDecl(anyOf(
+                       isLambda(), ast_matchers::isTemplateInstantiation()))))),
                    has(typeLoc(forEach(ConstParamDecl))))
           .bind("func"),
       this);

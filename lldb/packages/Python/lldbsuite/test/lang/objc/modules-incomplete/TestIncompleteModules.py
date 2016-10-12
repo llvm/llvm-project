@@ -26,7 +26,6 @@ class IncompleteModulesTestCase(TestBase):
     @unittest2.expectedFailure("rdar://20416388")
     @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion(
         '12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
-    @skipIfDarwin  # llvm.org/pr26267
     def test_expr(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

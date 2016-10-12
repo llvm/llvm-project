@@ -3,25 +3,28 @@
 # RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
 # RUN:   -dbi-stream -ipi-stream %t.pdb | FileCheck %s
 
+# RUN: llvm-pdbdump raw -section-headers %t.pdb | FileCheck -check-prefix RAW %s
+
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
 # CHECK-NEXT:     BlockSize:       4096
 # CHECK-NEXT:     FreeBlockMap:
-# CHECK-NEXT:     NumBlocks:       9
-# CHECK-NEXT:     NumDirectoryBytes: 40
+# CHECK-NEXT:     NumBlocks:       10
+# CHECK-NEXT:     NumDirectoryBytes: 48
 # CHECK-NEXT:     Unknown1:        0
 # CHECK-NEXT:     BlockMapAddr:    3
 # CHECK-NEXT:     NumDirectoryBlocks: 1
-# CHECK-NEXT:     DirectoryBlocks: [ 8 ]
-# CHECK-NEXT:     NumStreams:      5
-# CHECK-NEXT:     FileSize:        36864
-# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 68, 56 ]
+# CHECK-NEXT:     DirectoryBlocks: [ 9 ]
+# CHECK-NEXT:     NumStreams:      6
+# CHECK-NEXT:     FileSize:        40960
+# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 90, 56, 80 ]
 # CHECK-NEXT:   StreamMap:
-# CHECK-NEXT:     - Stream:          [ ]
-# CHECK-NEXT:     - Stream:          [ 4 ]
-# CHECK-NEXT:     - Stream:          [ 6 ]
+# CHECK-NEXT:     - Stream:          [  ]
 # CHECK-NEXT:     - Stream:          [ 5 ]
 # CHECK-NEXT:     - Stream:          [ 7 ]
+# CHECK-NEXT:     - Stream:          [ 6 ]
+# CHECK-NEXT:     - Stream:          [ 8 ]
+# CHECK-NEXT:     - Stream:          [ 4 ]
 # CHECK-NEXT:   PdbStream:
 # CHECK-NEXT:     Age:             1
 # CHECK-NEXT:     Guid:            '{00000000-0000-0000-0000-000000000000}'
@@ -39,6 +42,40 @@
 # CHECK-NEXT:   IpiStream:
 # CHECK-NEXT:     Version:         VC80
 # CHECK-NEXT:     Records:
+
+# RAW:      Section Headers [
+# RAW-NEXT:   {
+# RAW-NEXT:     Name: .text
+# RAW-NEXT:     Virtual Size:
+# RAW-NEXT:     Virtual Address:
+# RAW-NEXT:     Size of Raw Data:
+# RAW-NEXT:     File Pointer to Raw Data:
+# RAW-NEXT:     File Pointer to Relocations: 0
+# RAW-NEXT:     File Pointer to Linenumbers: 0
+# RAW-NEXT:     Number of Relocations: 0
+# RAW-NEXT:     Number of Linenumbers: 0
+# RAW-NEXT:     Characteristics [ (0x60000020)
+# RAW-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+# RAW-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+# RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# RAW-NEXT:     ]
+# RAW-NEXT:   }
+# RAW-NEXT:   {
+# RAW-NEXT:     Name: .rdata
+# RAW-NEXT:     Virtual Size:
+# RAW-NEXT:     Virtual Address:
+# RAW-NEXT:     Size of Raw Data:
+# RAW-NEXT:     File Pointer to Raw Data:
+# RAW-NEXT:     File Pointer to Relocations: 0
+# RAW-NEXT:     File Pointer to Linenumbers: 0
+# RAW-NEXT:     Number of Relocations: 0
+# RAW-NEXT:     Number of Linenumbers: 0
+# RAW-NEXT:     Characteristics [ (0x40000040)
+# RAW-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+# RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# RAW-NEXT:     ]
+# RAW-NEXT:   }
+# RAW-NEXT: ]
 
 --- !COFF
 header:

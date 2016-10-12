@@ -23,7 +23,7 @@ class GlobalVariablesTestCase(TestBase):
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     @expectedFailureAll(
-        "llvm.org/pr25872",
+        "llvm.org/pr25872, <rdar://problem/28725399>",
         oslist=["macosx"],
         debug_info=[
             "dwarf",

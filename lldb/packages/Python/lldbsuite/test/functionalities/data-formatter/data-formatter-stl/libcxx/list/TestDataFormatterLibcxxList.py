@@ -32,7 +32,6 @@ class LibcxxListDataFormatterTestCase(TestBase):
 
     @skipIf(compiler="gcc")
     @skipIfWindows  # libc++ not ported to Windows yet
-    @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://25499635")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
