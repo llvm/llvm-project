@@ -1,3 +1,6 @@
+// REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -S -o /dev/null -verify \
 // RUN:   -verify-ignore-unexpected=note %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -S -o /dev/null -fcuda-is-device \
