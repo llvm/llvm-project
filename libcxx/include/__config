@@ -914,6 +914,10 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_SAFE_STATIC
 #endif
 
+#if !__has_builtin(__builtin_addressof) && _GNUC_VER < 700
+#define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
+#endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG

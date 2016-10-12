@@ -14,6 +14,8 @@
 #include <vector>
 #include <list>
 
+#include "test_macros.h"
+
 template <class T>
 class nasty_vector
 {
@@ -49,27 +51,27 @@ public:
     void assign(std::initializer_list<value_type> il)  { v_.assign(il); }
 #endif
 
-    iterator               begin() _NOEXCEPT         { return v_.begin(); }
-    const_iterator         begin()   const _NOEXCEPT { return v_.begin(); }
-    iterator               end() _NOEXCEPT           { return v_.end(); }
-    const_iterator         end()     const _NOEXCEPT { return v_.end(); }
+    iterator               begin() TEST_NOEXCEPT         { return v_.begin(); }
+    const_iterator         begin()   const TEST_NOEXCEPT { return v_.begin(); }
+    iterator               end() TEST_NOEXCEPT           { return v_.end(); }
+    const_iterator         end()     const TEST_NOEXCEPT { return v_.end(); }
 
-    reverse_iterator       rbegin() _NOEXCEPT        { return v_.rbegin(); }
-    const_reverse_iterator rbegin()  const _NOEXCEPT { return v_.rbegin(); }
-    reverse_iterator       rend() _NOEXCEPT          { return v_.rend(); }
-    const_reverse_iterator rend()    const _NOEXCEPT { return v_.rend(); }
+    reverse_iterator       rbegin() TEST_NOEXCEPT        { return v_.rbegin(); }
+    const_reverse_iterator rbegin()  const TEST_NOEXCEPT { return v_.rbegin(); }
+    reverse_iterator       rend() TEST_NOEXCEPT          { return v_.rend(); }
+    const_reverse_iterator rend()    const TEST_NOEXCEPT { return v_.rend(); }
 
-    const_iterator         cbegin()  const _NOEXCEPT { return v_.cbegin(); }
-    const_iterator         cend()    const _NOEXCEPT { return v_.cend(); }
-    const_reverse_iterator crbegin() const _NOEXCEPT { return v_.crbegin(); }
-    const_reverse_iterator crend()   const _NOEXCEPT { return v_.crend(); }
+    const_iterator         cbegin()  const TEST_NOEXCEPT { return v_.cbegin(); }
+    const_iterator         cend()    const TEST_NOEXCEPT { return v_.cend(); }
+    const_reverse_iterator crbegin() const TEST_NOEXCEPT { return v_.crbegin(); }
+    const_reverse_iterator crend()   const TEST_NOEXCEPT { return v_.crend(); }
 
-    size_type size() const _NOEXCEPT      { return v_.size(); }
-    size_type max_size() const _NOEXCEPT  { return v_.max_size(); }
-    size_type capacity() const _NOEXCEPT  { return v_.capacity(); }
-    bool empty() const _NOEXCEPT          { return v_.empty(); }
+    size_type size() const TEST_NOEXCEPT      { return v_.size(); }
+    size_type max_size() const TEST_NOEXCEPT  { return v_.max_size(); }
+    size_type capacity() const TEST_NOEXCEPT  { return v_.capacity(); }
+    bool empty() const TEST_NOEXCEPT          { return v_.empty(); }
     void reserve(size_type n)             { v_.reserve(n); };
-    void shrink_to_fit() _NOEXCEPT        { v_.shrink_to_fit(); }
+    void shrink_to_fit() TEST_NOEXCEPT        { v_.shrink_to_fit(); }
 
     reference       operator[](size_type n)       { return v_[n]; }
     const_reference operator[](size_type n) const { return v_[n]; }
@@ -81,8 +83,8 @@ public:
     reference       back()        { return v_.back(); }
     const_reference back() const  { return v_.back(); }
 
-    value_type*       data() _NOEXCEPT       { return v_.data(); }
-    const value_type* data() const _NOEXCEPT { return v_.data(); }
+    value_type*       data() TEST_NOEXCEPT       { return v_.data(); }
+    const value_type* data() const TEST_NOEXCEPT { return v_.data(); }
 
     void push_back(const value_type& x)     { v_.push_back(x); }
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -117,12 +119,17 @@ public:
     iterator erase(const_iterator pos)                        { return v_.erase(pos); }
     iterator erase(const_iterator first, const_iterator last) { return v_.erase(first, last); }
 
-    void clear() _NOEXCEPT { v_.clear(); }
+    void clear() TEST_NOEXCEPT { v_.clear(); }
 
     void resize(size_type sz)                      { v_.resize(sz); }
     void resize(size_type sz, const value_type& c) { v_.resize(sz, c); }
 
-    void swap(nasty_vector &nv) _NOEXCEPT_(std::__is_nothrow_swappable<nested_container>::value)
+    void swap(nasty_vector &nv)
+#if TEST_STD_VER > 14
+    noexcept(std::is_nothrow_swappable<nested_container>::value)
+#elif defined(_LIBCPP_VERSION)
+    TEST_NOEXCEPT_COND(std::__is_nothrow_swappable<nested_container>::value)
+#endif
     { v_.swap(nv.v_); }
 
     nasty_vector *operator &()             { assert(false); return nullptr; }  // nasty
@@ -176,29 +183,29 @@ public:
 #endif
 
 
-    iterator               begin() _NOEXCEPT         { return l_.begin(); }
-    const_iterator         begin()   const _NOEXCEPT { return l_.begin(); }
-    iterator               end() _NOEXCEPT           { return l_.end(); }
-    const_iterator         end()     const _NOEXCEPT { return l_.end(); }
+    iterator               begin() TEST_NOEXCEPT         { return l_.begin(); }
+    const_iterator         begin()   const TEST_NOEXCEPT { return l_.begin(); }
+    iterator               end() TEST_NOEXCEPT           { return l_.end(); }
+    const_iterator         end()     const TEST_NOEXCEPT { return l_.end(); }
 
-    reverse_iterator       rbegin() _NOEXCEPT        { return l_.rbegin(); }
-    const_reverse_iterator rbegin()  const _NOEXCEPT { return l_.rbegin(); }
-    reverse_iterator       rend() _NOEXCEPT          { return l_.rend(); }
-    const_reverse_iterator rend()    const _NOEXCEPT { return l_.rend(); }
+    reverse_iterator       rbegin() TEST_NOEXCEPT        { return l_.rbegin(); }
+    const_reverse_iterator rbegin()  const TEST_NOEXCEPT { return l_.rbegin(); }
+    reverse_iterator       rend() TEST_NOEXCEPT          { return l_.rend(); }
+    const_reverse_iterator rend()    const TEST_NOEXCEPT { return l_.rend(); }
 
-    const_iterator         cbegin()  const _NOEXCEPT { return l_.cbegin(); }
-    const_iterator         cend()    const _NOEXCEPT { return l_.cend(); }
-    const_reverse_iterator crbegin() const _NOEXCEPT { return l_.crbegin(); }
-    const_reverse_iterator crend()   const _NOEXCEPT { return l_.crend(); }
+    const_iterator         cbegin()  const TEST_NOEXCEPT { return l_.cbegin(); }
+    const_iterator         cend()    const TEST_NOEXCEPT { return l_.cend(); }
+    const_reverse_iterator crbegin() const TEST_NOEXCEPT { return l_.crbegin(); }
+    const_reverse_iterator crend()   const TEST_NOEXCEPT { return l_.crend(); }
 
     reference       front()       { return l_.front(); }
     const_reference front() const { return l_.front(); }
     reference       back()        { return l_.back(); }
     const_reference back() const  { return l_.back(); }
 
-    size_type size() const _NOEXCEPT      { return l_.size(); }
-    size_type max_size() const _NOEXCEPT  { return l_.max_size(); }
-    bool empty() const _NOEXCEPT          { return l_.empty(); }
+    size_type size() const TEST_NOEXCEPT      { return l_.size(); }
+    size_type max_size() const TEST_NOEXCEPT  { return l_.max_size(); }
+    bool empty() const TEST_NOEXCEPT          { return l_.empty(); }
 
     void push_front(const value_type& x)    { l_.push_front(x); }
     void push_back(const value_type& x)     { l_.push_back(x); }
@@ -241,10 +248,15 @@ public:
     void resize(size_type sz)                      { l_.resize(); }
     void resize(size_type sz, const value_type& c) { l_.resize(c); }
 
-    void swap(nasty_list &nl) _NOEXCEPT_(std::__is_nothrow_swappable<nested_container>::value)
+    void swap(nasty_list &nl)
+#if TEST_STD_VER > 14
+    noexcept(std::is_nothrow_swappable<nested_container>::value)
+#elif defined(_LIBCPP_VERSION)
+    TEST_NOEXCEPT_COND(std::__is_nothrow_swappable<nested_container>::value)
+#endif
     { l_.swap(nl.l_); }
 
-    void clear() _NOEXCEPT { l_.clear(); }
+    void clear() TEST_NOEXCEPT { l_.clear(); }
 
 //     void splice(const_iterator position, list& x);
 //     void splice(const_iterator position, list&& x);
@@ -284,7 +296,7 @@ bool operator==(const nasty_list<T>& x, const nasty_list<T>& y) { return x.l_ ==
 class nasty_mutex
 {
 public:
-     nasty_mutex() _NOEXCEPT {}
+     nasty_mutex() TEST_NOEXCEPT {}
      ~nasty_mutex() {}
 
 	nasty_mutex *operator& ()   { assert(false); return nullptr; }
@@ -297,8 +309,8 @@ private:
 
 public:
     void lock()               {}
-    bool try_lock() _NOEXCEPT { return true; }
-    void unlock() _NOEXCEPT   {}
+    bool try_lock() TEST_NOEXCEPT { return true; }
+    void unlock() TEST_NOEXCEPT   {}
 
     // Shared ownership
     void lock_shared()     {}

@@ -180,6 +180,7 @@ public:
 
   private:
     friend class LazyCallGraph::Node;
+    friend class LazyCallGraph::RefSCC;
 
     PointerIntPair<PointerUnion<Function *, Node *>, 1, Kind> Value;
 
@@ -197,6 +198,7 @@ public:
   class Node {
     friend class LazyCallGraph;
     friend class LazyCallGraph::SCC;
+    friend class LazyCallGraph::RefSCC;
 
     LazyCallGraph *G;
     Function &F;
@@ -225,6 +227,11 @@ public:
 
     /// Internal helper to remove the edge to the given function.
     void removeEdgeInternal(Function &ChildF);
+
+    void clear() {
+      Edges.clear();
+      EdgeIndexMap.clear();
+    }
 
     /// Print the name of this node's function.
     friend raw_ostream &operator<<(raw_ostream &OS, const Node &N) {
@@ -461,6 +468,12 @@ public:
     /// formRefSCCFast on the graph itself.
     RefSCC(LazyCallGraph &G);
 
+    void clear() {
+      Parents.clear();
+      SCCs.clear();
+      SCCIndices.clear();
+    }
+
     /// Print a short description useful for debugging or logging.
     ///
     /// We print the SCCs wrapped in '[]'s and skipping the middle SCCs if
@@ -502,6 +515,10 @@ public:
     void verify();
 #endif
 
+    /// Handle any necessary parent set updates after inserting a trivial ref
+    /// or call edge.
+    void handleTrivialEdgeInsertion(Node &SourceN, Node &TargetN);
+
   public:
     typedef pointee_iterator<SmallVectorImpl<SCC *>::const_iterator> iterator;
     typedef iterator_range<iterator> range;
@@ -526,7 +543,7 @@ public:
       return make_range(parent_begin(), parent_end());
     }
 
-    /// Test if this SCC is a parent of \a C.
+    /// Test if this RefSCC is a parent of \a C.
     bool isParentOf(const RefSCC &C) const { return C.isChildOf(*this); }
 
     /// Test if this RefSCC is an ancestor of \a C.
@@ -540,9 +557,9 @@ public:
     /// Test if this RefSCC is a descendant of \a C.
     bool isDescendantOf(const RefSCC &C) const;
 
-    /// Provide a short name by printing this SCC to a std::string.
+    /// Provide a short name by printing this RefSCC to a std::string.
     ///
-    /// This copes with the fact that we don't have a name per-se for an SCC
+    /// This copes with the fact that we don't have a name per-se for an RefSCC
     /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;
@@ -556,7 +573,7 @@ public:
     /// \name Mutation API
     ///
     /// These methods provide the core API for updating the call graph in the
-    /// presence of a (potentially still in-flight) DFS-found SCCs.
+    /// presence of (potentially still in-flight) DFS-found RefSCCs and SCCs.
     ///
     /// Note that these methods sometimes have complex runtimes, so be careful
     /// how you call them.
@@ -711,15 +728,41 @@ public:
     SmallVector<RefSCC *, 1> removeInternalRefEdge(Node &SourceN,
                                                    Node &TargetN);
 
+    /// A convenience wrapper around the above to handle trivial cases of
+    /// inserting a new call edge.
+    ///
+    /// This is trivial whenever the target is in the same SCC as the source or
+    /// the edge is an outgoing edge to some descendant SCC. In these cases
+    /// there is no change to the cyclic structure of SCCs or RefSCCs.
+    ///
+    /// To further make calling this convenient, it also handles inserting
+    /// already existing edges.
+    void insertTrivialCallEdge(Node &SourceN, Node &TargetN);
+
+    /// A convenience wrapper around the above to handle trivial cases of
+    /// inserting a new ref edge.
+    ///
+    /// This is trivial whenever the target is in the same RefSCC as the source
+    /// or the edge is an outgoing edge to some descendant RefSCC. In these
+    /// cases there is no change to the cyclic structure of the RefSCCs.
+    ///
+    /// To further make calling this convenient, it also handles inserting
+    /// already existing edges.
+    void insertTrivialRefEdge(Node &SourceN, Node &TargetN);
+
     ///@}
   };
 
-  /// A post-order depth-first SCC iterator over the call graph.
+  /// A post-order depth-first RefSCC iterator over the call graph.
   ///
-  /// This iterator triggers the Tarjan DFS-based formation of the SCC DAG for
-  /// the call graph, walking it lazily in depth-first post-order. That is, it
-  /// always visits SCCs for a callee prior to visiting the SCC for a caller
-  /// (when they are in different SCCs).
+  /// This iterator triggers the Tarjan DFS-based formation of the RefSCC (and
+  /// SCC) DAG for the call graph, walking it lazily in depth-first post-order.
+  /// That is, it always visits RefSCCs for the target of a reference edge
+  /// prior to visiting the RefSCC for a source of the edge (when they are in
+  /// different RefSCCs).
+  ///
+  /// When forming each RefSCC, the call edges within it are used to form SCCs
+  /// within it, so iterating this also controls the lazy formation of SCCs.
   class postorder_ref_scc_iterator
       : public iterator_facade_base<postorder_ref_scc_iterator,
                                     std::forward_iterator_tag, RefSCC> {
@@ -801,7 +844,7 @@ public:
 
   /// Lookup a function's SCC in the graph.
   ///
-  /// \returns null if the function hasn't been assigned an SCC via the SCC
+  /// \returns null if the function hasn't been assigned an SCC via the RefSCC
   /// iterator walk.
   SCC *lookupSCC(Node &N) const { return SCCMap.lookup(&N); }
 
@@ -833,8 +876,9 @@ public:
   /// call graph. They can be used to update the core node-graph during
   /// a node-based inorder traversal that precedes any SCC-based traversal.
   ///
-  /// Once you begin manipulating a call graph's SCCs, you must perform all
-  /// mutation of the graph via the SCC methods.
+  /// Once you begin manipulating a call graph's SCCs, most mutation of the
+  /// graph must be performed via a RefSCC method. There are some exceptions
+  /// below.
 
   /// Update the call graph after inserting a new edge.
   void insertEdge(Node &Caller, Function &Callee, Edge::Kind EK);
@@ -851,6 +895,28 @@ public:
   void removeEdge(Function &Caller, Function &Callee) {
     return removeEdge(get(Caller), Callee);
   }
+
+  ///@}
+
+  ///@{
+  /// \name General Mutation API
+  ///
+  /// There are a very limited set of mutations allowed on the graph as a whole
+  /// once SCCs have started to be formed. These routines have strict contracts
+  /// but may be called at any point.
+
+  /// Remove a dead function from the call graph (typically to delete it).
+  ///
+  /// Note that the function must have an empty use list, and the call graph
+  /// must be up-to-date prior to calling this. That means it is by itself in
+  /// a maximal SCC which is by itself in a maximal RefSCC, etc. No structural
+  /// changes result from calling this routine other than potentially removing
+  /// entry points into the call graph.
+  ///
+  /// If SCC formation has begun, this function must not be part of the current
+  /// DFS in order to call this safely. Typically, the function will have been
+  /// fully visited by the DFS prior to calling this routine.
+  void removeDeadFunction(Function &F);
 
   ///@}
 
@@ -929,7 +995,7 @@ private:
   /// Set of entry nodes not-yet-processed into RefSCCs.
   SmallVector<Function *, 4> RefSCCEntryNodes;
 
-  /// Stack of nodes the DFS has walked but not yet put into a SCC.
+  /// Stack of nodes the DFS has walked but not yet put into a RefSCC.
   SmallVector<Node *, 4> PendingRefSCCStack;
 
   /// Counter for the next DFS number to assign.

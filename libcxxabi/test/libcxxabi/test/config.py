@@ -37,8 +37,6 @@ class Configuration(LibcxxConfiguration):
         super(Configuration, self).configure_features()
         if not self.get_lit_bool('enable_exceptions', True):
             self.config.available_features.add('libcxxabi-no-exceptions')
-        if self.get_lit_bool('thread_atexit', True):
-            self.config.available_features.add('thread_atexit')
 
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']

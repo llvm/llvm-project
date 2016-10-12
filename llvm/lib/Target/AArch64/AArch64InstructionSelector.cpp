@@ -41,32 +41,6 @@ AArch64InstructionSelector::AArch64InstructionSelector(
   : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
       TRI(*STI.getRegisterInfo()), RBI(RBI) {}
 
-// FIXME: This should be target-independent, inferred from the types declared
-// for each class in the bank.
-static const TargetRegisterClass *
-getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
-                         const RegisterBankInfo &RBI) {
-  if (RB.getID() == AArch64::GPRRegBankID) {
-    if (Ty.getSizeInBits() <= 32)
-      return &AArch64::GPR32RegClass;
-    if (Ty.getSizeInBits() == 64)
-      return &AArch64::GPR64RegClass;
-    return nullptr;
-  }
-
-  if (RB.getID() == AArch64::FPRRegBankID) {
-    if (Ty.getSizeInBits() == 32)
-      return &AArch64::FPR32RegClass;
-    if (Ty.getSizeInBits() == 64)
-      return &AArch64::FPR64RegClass;
-    if (Ty.getSizeInBits() == 128)
-      return &AArch64::FPR128RegClass;
-    return nullptr;
-  }
-
-  return nullptr;
-}
-
 /// Check whether \p I is a currently unsupported binary operation:
 /// - it has an unsized type
 /// - an operand is not a vreg
@@ -238,6 +212,68 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
   return GenericOpc;
 }
 
+static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
+                       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                       const RegisterBankInfo &RBI) {
+
+  unsigned DstReg = I.getOperand(0).getReg();
+  if (TargetRegisterInfo::isPhysicalRegister(DstReg)) {
+    assert(I.isCopy() && "Generic operators do not allow physical registers");
+    return true;
+  }
+
+  const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  unsigned SrcReg = I.getOperand(1).getReg();
+  const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+  (void)SrcSize;
+  assert((!TargetRegisterInfo::isPhysicalRegister(SrcReg) || I.isCopy()) &&
+         "No phys reg on generic operators");
+  assert(
+      (DstSize == SrcSize ||
+       // Copies are a mean to setup initial types, the number of
+       // bits may not exactly match.
+       (TargetRegisterInfo::isPhysicalRegister(SrcReg) &&
+        DstSize <= RBI.getSizeInBits(SrcReg, MRI, TRI)) ||
+       // Copies are a mean to copy bits around, as long as we are
+       // on the same register class, that's fine. Otherwise, that
+       // means we need some SUBREG_TO_REG or AND & co.
+       (((DstSize + 31) / 32 == (SrcSize + 31) / 32) && DstSize > SrcSize)) &&
+      "Copy with different width?!");
+  assert((DstSize <= 64 || RegBank.getID() == AArch64::FPRRegBankID) &&
+         "GPRs cannot get more than 64-bit width values");
+  const TargetRegisterClass *RC = nullptr;
+
+  if (RegBank.getID() == AArch64::FPRRegBankID) {
+    if (DstSize <= 32)
+      RC = &AArch64::FPR32RegClass;
+    else if (DstSize <= 64)
+      RC = &AArch64::FPR64RegClass;
+    else if (DstSize <= 128)
+      RC = &AArch64::FPR128RegClass;
+    else {
+      DEBUG(dbgs() << "Unexpected bitcast size " << DstSize << '\n');
+      return false;
+    }
+  } else {
+    assert(RegBank.getID() == AArch64::GPRRegBankID &&
+           "Bitcast for the flags?");
+    RC =
+        DstSize <= 32 ? &AArch64::GPR32allRegClass : &AArch64::GPR64allRegClass;
+  }
+
+  // No need to constrain SrcReg. It will get constrained when
+  // we hit another of its use or its defs.
+  // Copies do not have constraints.
+  if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
+    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                 << " operand\n");
+    return false;
+  }
+  I.setDesc(TII.get(AArch64::COPY));
+  return true;
+}
+
 bool AArch64InstructionSelector::select(MachineInstr &I) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -246,12 +282,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // FIXME: Is there *really* nothing to be done here?  This assumes that
-  // no upstream pass introduces things like generic vreg on copies or
-  // target-specific instructions.
-  // We should document (and verify) that assumption.
   if (!isPreISelGenericOpcode(I.getOpcode()))
-    return true;
+    return !I.isCopy() || selectCopy(I, TII, MRI, TRI, RBI);
 
   if (I.getNumOperands() != I.getNumExplicitOperands()) {
     DEBUG(dbgs() << "Generic instruction has unexpected implicit operands\n");
@@ -425,10 +457,15 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     const unsigned DstReg = I.getOperand(0).getReg();
     const unsigned SrcReg = I.getOperand(1).getReg();
 
-    const RegisterBank &RB = *RBI.getRegBank(DstReg, MRI, TRI);
+    const RegisterBank &RBDst = *RBI.getRegBank(DstReg, MRI, TRI);
+    if (RBDst.getID() != AArch64::GPRRegBankID) {
+      DEBUG(dbgs() << "G_ANYEXT on bank: " << RBDst << ", expected: GPR\n");
+      return false;
+    }
 
-    if (RB.getID() != AArch64::GPRRegBankID) {
-      DEBUG(dbgs() << "G_ANYEXT on bank: " << RB << ", expected: GPR\n");
+    const RegisterBank &RBSrc = *RBI.getRegBank(SrcReg, MRI, TRI);
+    if (RBSrc.getID() != AArch64::GPRRegBankID) {
+      DEBUG(dbgs() << "G_ANYEXT on bank: " << RBSrc << ", expected: GPR\n");
       return false;
     }
 
@@ -439,29 +476,23 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return false;
     }
 
-    const TargetRegisterClass *RC = nullptr;
-    if (DstSize <= 32) {
-      RC = &AArch64::GPR32RegClass;
-    } else if (DstSize == 64) {
-      RC = &AArch64::GPR64RegClass;
-    } else {
+    if (DstSize != 64 && DstSize > 32) {
       DEBUG(dbgs() << "G_ANYEXT to size: " << DstSize
                    << ", expected: 32 or 64\n");
       return false;
     }
-
-    if (!RBI.constrainGenericRegister(SrcReg, *RC, MRI) ||
-        !RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
-      DEBUG(dbgs() << "Failed to constrain G_ANYEXT\n");
-      return false;
+    // At this point G_ANYEXT is just like a plain COPY, but we need
+    // to explicitly form the 64-bit value if any.
+    if (DstSize > 32) {
+      unsigned ExtSrc = MRI.createVirtualRegister(&AArch64::GPR64allRegClass);
+      BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::SUBREG_TO_REG))
+          .addDef(ExtSrc)
+          .addImm(0)
+          .addUse(SrcReg)
+          .addImm(AArch64::sub_32);
+      I.getOperand(1).setReg(ExtSrc);
     }
-
-    BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::COPY))
-        .addDef(DstReg)
-        .addUse(SrcReg);
-
-    I.eraseFromParent();
-    return true;
+    return selectCopy(I, TII, MRI, TRI, RBI);
   }
 
   case TargetOpcode::G_ZEXT:
@@ -522,39 +553,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
-  case TargetOpcode::G_BITCAST: {
-    const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
-    const LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
-
-    const unsigned DstReg = I.getOperand(0).getReg();
-    const unsigned SrcReg = I.getOperand(1).getReg();
-
-    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-    const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
-
-    const TargetRegisterClass *DstRC =
-        getRegClassForTypeOnBank(DstTy, DstRB, RBI);
-    if (!DstRC)
-      return false;
-
-    const TargetRegisterClass *SrcRC =
-        getRegClassForTypeOnBank(SrcTy, SrcRB, RBI);
-    if (!SrcRC)
-      return false;
-
-    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
-        !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-      DEBUG(dbgs() << "Failed to constrain G_BITCAST\n");
-      return false;
-    }
-
-    BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::COPY))
-        .addDef(DstReg)
-        .addUse(SrcReg);
-
-    I.eraseFromParent();
-    return true;
-  }
+  case TargetOpcode::G_BITCAST:
+    return selectCopy(I, TII, MRI, TRI, RBI);
   }
 
   return false;

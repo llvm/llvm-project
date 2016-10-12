@@ -88,6 +88,7 @@
 #if TEST_STD_VER >= 11
 #define TEST_CONSTEXPR constexpr
 #define TEST_NOEXCEPT noexcept
+#define TEST_NOEXCEPT_COND(...) noexcept(__VA_ARGS__)
 # if TEST_STD_VER >= 14
 #   define TEST_CONSTEXPR_CXX14 constexpr
 # else
@@ -97,6 +98,7 @@
 #define TEST_CONSTEXPR
 #define TEST_CONSTEXPR_CXX14
 #define TEST_NOEXCEPT
+#define TEST_NOEXCEPT_COND(...)
 #endif
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
