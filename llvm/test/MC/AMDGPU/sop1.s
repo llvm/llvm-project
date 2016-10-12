@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck --check-prefix=NOSICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=VI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=NOVI %s
 
@@ -242,3 +242,7 @@ s_abs_i32 s1, s2
 
 s_mov_fed_b32 s1, s2
 // SICI: s_mov_fed_b32 s1, s2 ; encoding: [0x02,0x35,0x81,0xbe]
+
+s_set_gpr_idx_idx s0
+// VI: s_set_gpr_idx_idx s0 ; encoding: [0x00,0x32,0x80,0xbe]
+// NOSICI: error: instruction not supported on this GPU

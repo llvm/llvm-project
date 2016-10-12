@@ -512,6 +512,10 @@ public:
     CALLSITE_DELEGATE_GETTER(countOperandBundlesOfType(ID));
   }
 
+  bool isBundleOperand(unsigned Idx) const {
+    CALLSITE_DELEGATE_GETTER(isBundleOperand(Idx));
+  }
+
   IterTy arg_begin() const {
     CALLSITE_DELEGATE_GETTER(arg_begin());
   }

@@ -1330,6 +1330,11 @@ public:
   /// prematurely via another branch.
   unsigned getSmallConstantTripCount(Loop *L, BasicBlock *ExitingBlock);
 
+  /// Returns the upper bound of the loop trip count as a normal unsigned
+  /// value.
+  /// Returns 0 if the trip count is unknown or not constant.
+  unsigned getSmallConstantMaxTripCount(Loop *L);
+
   /// Returns the largest constant divisor of the trip count of the
   /// loop if it is a single-exit loop and we can compute a small maximum for
   /// that loop.

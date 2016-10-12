@@ -512,13 +512,15 @@ def skipIfNoSBHeaders(func):
                 'Current',
                 'Headers',
                 'LLDB.h')
-        else:
-            header = os.path.join(
-                os.environ["LLDB_SRC"],
-                "include",
-                "lldb",
-                "API",
-                "LLDB.h")
+            if os.path.exists(header):
+                return None
+        
+        header = os.path.join(
+            os.environ["LLDB_SRC"],
+            "include",
+            "lldb",
+            "API",
+            "LLDB.h")
         if not os.path.exists(header):
             return "skip because LLDB.h header not found"
         return None
@@ -647,13 +649,21 @@ def skipUnlessCompilerRt(func):
     """Decorate the item to skip tests if testing remotely."""
     def is_compiler_rt_missing():
         compilerRtPath = os.path.join(
-            os.path.dirname(__file__),
-            "..",
+            os.environ["LLDB_SRC"],
             "..",
             "..",
             "..",
             "llvm",
             "projects",
+            "compiler-rt")
+        if not os.path.exists(compilerRtPath):
+            compilerRtPath = os.path.join(
+            os.environ["LLDB_SRC"],
+            "..",
+            "..",
+            "..",
+            "llvm",
+            "runtimes",
             "compiler-rt")
         return "compiler-rt not found" if not os.path.exists(
             compilerRtPath) else None

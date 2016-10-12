@@ -344,6 +344,7 @@ public:
   bool isSMRDOffset() const;
   bool isSMRDLiteralOffset() const;
   bool isDPPCtrl() const;
+  bool isGPRIdxMode() const;
 
   StringRef getExpressionAsToken() const {
     assert(isExpr());
@@ -2742,6 +2743,10 @@ bool AMDGPUOperand::isDPPCtrl() const {
            (Imm == 0x143);
   }
   return false;
+}
+
+bool AMDGPUOperand::isGPRIdxMode() const {
+  return isImm() && isUInt<4>(getImm());
 }
 
 AMDGPUAsmParser::OperandMatchResultTy

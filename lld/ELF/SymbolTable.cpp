@@ -508,9 +508,9 @@ void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
     replaceBody<LazyArchive>(S, *F, Sym, S->body()->Type);
     return;
   }
-  MemoryBufferRef MBRef = F->getMember(&Sym);
-  if (!MBRef.getBuffer().empty())
-    addFile(createObjectFile(MBRef, F->getName()));
+  std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
+  if (!MBInfo.first.getBuffer().empty())
+    addFile(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
 }
 
 template <class ELFT>

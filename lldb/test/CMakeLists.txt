@@ -8,8 +8,24 @@ function(add_python_test_target name test_script args comment)
   add_custom_target(${name}
     COMMAND ${PYTHON_TEST_COMMAND} ${ARG_DEFAULT_ARGS}
     COMMENT "${comment}"
+    DEPENDS ${LLDB_TEST_DEPS}
+    USES_TERMINAL
     )
 endfunction()
+
+set(LLDB_TEST_DEPS lldb)
+
+if(TARGET lldb-server)
+  list(APPEND LLDB_TEST_DEPS lldb-server)
+endif()
+  
+if(TARGET debugserver)
+  list(APPEND LLDB_TEST_DEPS debugserver)
+endif()
+
+if(TARGET lldb-mi)
+  list(APPEND LLDB_TEST_DEPS lldb-mi)
+endif()
 
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
     string(REGEX REPLACE ".*ccache\ +" "" LLDB_TEST_COMPILER ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
@@ -34,8 +50,7 @@ set(LLDB_TEST_USER_ARGS
 
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
-  --executable
-  ${CMAKE_BINARY_DIR}/bin/lldb${CMAKE_EXECUTABLE_SUFFIX}
+  --executable $<TARGET_FILE:lldb>
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
   -S nm

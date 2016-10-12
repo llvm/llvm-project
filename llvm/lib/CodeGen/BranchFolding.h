@@ -156,7 +156,6 @@ namespace llvm {
     bool OptimizeBranches(MachineFunction &MF);
     bool OptimizeBlock(MachineBasicBlock *MBB);
     void RemoveDeadBlock(MachineBasicBlock *MBB);
-    bool OptimizeImpDefsBlock(MachineBasicBlock *MBB);
 
     bool HoistCommonCode(MachineFunction &MF);
     bool HoistCommonCodeInSuccs(MachineBasicBlock *MBB);

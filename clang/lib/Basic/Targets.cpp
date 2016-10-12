@@ -4551,6 +4551,7 @@ public:
     case CC_X86VectorCall:
     case CC_IntelOclBicc:
     case CC_X86_64SysV:
+    case CC_Swift:
       return CCCR_OK;
     default:
       return CCCR_Warning;

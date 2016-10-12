@@ -229,7 +229,7 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let EmitDst = 1; // force vdst emission
 }
 
-let Uses = [M0, EXEC] in {
+let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
 // v_movreld_b32 is a special case because the destination output
  // register is really a source. It isn't actually read (but may be
  // written), and is only to provide the base register to start
@@ -526,6 +526,17 @@ defm V_RNDNE_F16         : VOP1_Real_vi <0x47>;
 defm V_FRACT_F16         : VOP1_Real_vi <0x48>;
 defm V_SIN_F16           : VOP1_Real_vi <0x49>;
 defm V_COS_F16           : VOP1_Real_vi <0x4a>;
+
+
+// Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
+// indexing mode. vdst can't be treated as a def for codegen purposes,
+// and an implicit use and def of the super register should be added.
+def V_MOV_B32_indirect : VPseudoInstSI<(outs),
+  (ins getVALUDstForVT<i32>.ret:$vdst, getVOPSrc0ForVT<i32>.ret:$src0)>,
+  PseudoInstExpansion<(V_MOV_B32_e32_vi getVALUDstForVT<i32>.ret:$vdst,
+                                        getVOPSrc0ForVT<i32>.ret:$src0)> {
+  let VOP1 = 1;
+}
 
 let Predicates = [isVI] in {
 

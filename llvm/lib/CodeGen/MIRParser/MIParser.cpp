@@ -36,6 +36,7 @@
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cctype>
 
 using namespace llvm;
 
@@ -453,8 +454,19 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
     unsigned Reg = 0;
     if (parseNamedRegister(Reg))
       return true;
-    MBB.addLiveIn(Reg);
     lex();
+    LaneBitmask Mask = ~LaneBitmask(0);
+    if (consumeIfPresent(MIToken::colon)) {
+      // Parse lane mask.
+      if (Token.isNot(MIToken::IntegerLiteral) &&
+          Token.isNot(MIToken::HexLiteral))
+        return error("expected a lane mask");
+      static_assert(sizeof(LaneBitmask) == sizeof(unsigned), "");
+      if (getUnsigned(Mask))
+        return error("invalid lane mask value");
+      lex();
+    }
+    MBB.addLiveIn(Reg, Mask);
   } while (consumeIfPresent(MIToken::comma));
   return false;
 }
@@ -1107,7 +1119,8 @@ bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
 bool MIParser::parseFPImmediateOperand(MachineOperand &Dest) {
   auto Loc = Token.location();
   lex();
-  if (Token.isNot(MIToken::FloatingPointLiteral))
+  if (Token.isNot(MIToken::FloatingPointLiteral) &&
+      Token.isNot(MIToken::HexLiteral))
     return error("expected a floating point literal");
   const Constant *C = nullptr;
   if (parseIRConstant(Loc, C))
@@ -1117,13 +1130,30 @@ bool MIParser::parseFPImmediateOperand(MachineOperand &Dest) {
 }
 
 bool MIParser::getUnsigned(unsigned &Result) {
-  assert(Token.hasIntegerValue() && "Expected a token with an integer value");
-  const uint64_t Limit = uint64_t(std::numeric_limits<unsigned>::max()) + 1;
-  uint64_t Val64 = Token.integerValue().getLimitedValue(Limit);
-  if (Val64 == Limit)
-    return error("expected 32-bit integer (too large)");
-  Result = Val64;
-  return false;
+  if (Token.hasIntegerValue()) {
+    const uint64_t Limit = uint64_t(std::numeric_limits<unsigned>::max()) + 1;
+    uint64_t Val64 = Token.integerValue().getLimitedValue(Limit);
+    if (Val64 == Limit)
+      return error("expected 32-bit integer (too large)");
+    Result = Val64;
+    return false;
+  }
+  if (Token.is(MIToken::HexLiteral)) {
+    StringRef S = Token.range();
+    assert(S[0] == '0' && tolower(S[1]) == 'x');
+    // This could be a floating point literal with a special prefix.
+    if (!isxdigit(S[2]))
+      return true;
+    StringRef V = S.substr(2);
+    unsigned BW = std::min<unsigned>(V.size()*4, 32);
+    APInt A(BW, V, 16);
+    APInt Limit = APInt(BW, std::numeric_limits<unsigned>::max());
+    if (A.ugt(Limit))
+      return error("expected 32-bit integer (too large)");
+    Result = A.getZExtValue();
+    return false;
+  }
+  return true;
 }
 
 bool MIParser::parseMBBReference(MachineBasicBlock *&MBB) {

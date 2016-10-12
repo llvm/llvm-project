@@ -471,13 +471,14 @@ template <class ELFT> void ArchiveFile::parse() {
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
-MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
+std::pair<MemoryBufferRef, uint64_t>
+ArchiveFile::getMember(const Archive::Symbol *Sym) {
   Archive::Child C =
       check(Sym->getMember(),
             "could not get the member for symbol " + Sym->getName());
 
   if (!Seen.insert(C.getChildOffset()).second)
-    return MemoryBufferRef();
+    return {MemoryBufferRef(), 0};
 
   MemoryBufferRef Ret =
       check(C.getMemoryBufferRef(),
@@ -487,8 +488,9 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
   if (C.getParent()->isThin() && Driver->Cpio)
     Driver->Cpio->append(relativeToRoot(check(C.getFullName())),
                          Ret.getBuffer());
-
-  return Ret;
+  if (C.getParent()->isThin())
+    return {Ret, 0};
+  return {Ret, C.getChildOffset()};
 }
 
 template <class ELFT>
@@ -713,7 +715,18 @@ static Symbol *createBitcodeSymbol(const DenseSet<const Comdat *> &KeptComdats,
 
 template <class ELFT>
 void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
-  Obj = check(lto::InputFile::create(MB));
+
+  // Here we pass a new MemoryBufferRef which is identified by ArchiveName
+  // (the fully resolved path of the archive) + member name + offset of the
+  // member in the archive.
+  // ThinLTO uses the MemoryBufferRef identifier to access its internal
+  // data structures and if two archives define two members with the same name,
+  // this causes a collision which result in only one of the objects being
+  // taken into consideration at LTO time (which very likely causes undefined
+  // symbols later in the link stage).
+  Obj = check(lto::InputFile::create(MemoryBufferRef(
+      MB.getBuffer(), Saver.save(ArchiveName + MB.getBufferIdentifier() +
+                                 utostr(OffsetInArchive)))));
   DenseSet<const Comdat *> KeptComdats;
   for (const auto &P : Obj->getComdatSymbolTable()) {
     StringRef N = Saver.save(P.first());
@@ -803,10 +816,12 @@ static bool isBitcode(MemoryBufferRef MB) {
   return identify_magic(MB.getBuffer()) == file_magic::bitcode;
 }
 
-InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName) {
+InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
+                                 uint64_t OffsetInArchive) {
   InputFile *F =
       isBitcode(MB) ? new BitcodeFile(MB) : createELFFile<ObjectFile>(MB);
   F->ArchiveName = ArchiveName;
+  F->OffsetInArchive = OffsetInArchive;
   return F;
 }
 

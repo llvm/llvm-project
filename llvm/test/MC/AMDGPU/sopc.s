@@ -64,3 +64,19 @@ s_cmp_eq_u64 s[0:1], s[2:3]
 s_cmp_lg_u64 s[0:1], s[2:3]
 // VI: s_cmp_lg_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x13,0xbf]
 // NOSICI: error: instruction not supported on this GPU
+
+s_set_gpr_idx_on s0, 0
+// VI: s_set_gpr_idx_on s0, 0 ; encoding: [0x00,0x00,0x11,0xbf]
+// NOSICI: error: instruction not supported on this GPU
+
+s_set_gpr_idx_on s0, 1
+// VI: s_set_gpr_idx_on s0, src0 ; encoding: [0x00,0x01,0x11,0xbf]
+// NOSICI: error: instruction not supported on this GPU
+
+s_set_gpr_idx_on s0, 3
+// VI: s_set_gpr_idx_on s0, src0 src1 ; encoding: [0x00,0x03,0x11,0xbf]
+// NOSICI: error: instruction not supported on this GPU
+
+s_set_gpr_idx_on s0, 15
+// VI: s_set_gpr_idx_on s0, dst src0 src1 src2 ; encoding: [0x00,0x0f,0x11,0xbf]
+// NOSICI: error: instruction not supported on this GPU

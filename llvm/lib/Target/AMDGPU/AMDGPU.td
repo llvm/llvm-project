@@ -168,6 +168,18 @@ def Feature16BitInsts : SubtargetFeature<"16-bit-insts",
   "Has i16/f16 instructions"
 >;
 
+def FeatureMovrel : SubtargetFeature<"movrel",
+  "HasMovrel",
+  "true",
+  "Has v_movrel*_b32 instructions"
+>;
+
+def FeatureVGPRIndexMode : SubtargetFeature<"vgpr-index-mode",
+  "HasVGPRIndexMode",
+  "true",
+  "Has VGPR mode register indexing"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -295,20 +307,20 @@ def FeatureNorthernIslands : SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
 def FeatureSouthernIslands : SubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768,
   FeatureWavefrontSize64, FeatureGCN, FeatureGCN1Encoding,
-  FeatureLDSBankCount32]
+  FeatureLDSBankCount32, FeatureMovrel]
 >;
 
 def FeatureSeaIslands : SubtargetFeatureGeneration<"SEA_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536,
   FeatureWavefrontSize64, FeatureGCN, FeatureFlatAddressSpace,
-  FeatureGCN1Encoding, FeatureCIInsts]
+  FeatureGCN1Encoding, FeatureCIInsts, FeatureMovrel]
 >;
 
 def FeatureVolcanicIslands : SubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536,
    FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
-   FeatureSMemRealTime
+   FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel
   ]
 >;
 
