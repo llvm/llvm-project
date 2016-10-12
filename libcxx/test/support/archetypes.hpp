@@ -138,27 +138,42 @@ struct ValueBase {
     explicit constexpr ValueBase(std::initializer_list<int>& il, int y = 0) : value(il.size()) {}
     template <bool Dummy = true, typename std::enable_if<Dummy && !Explicit, bool>::type = true>
     constexpr ValueBase(std::initializer_list<int>& il, int y = 0) : value(il.size()) {}
-    constexpr ValueBase& operator=(int xvalue) noexcept {
+    TEST_CONSTEXPR_CXX14 ValueBase& operator=(int xvalue) noexcept {
         value = xvalue;
         return *this;
     }
     //~ValueBase() { assert(value != -999); value = -999; }
     int value;
 protected:
-  constexpr ValueBase() noexcept : value(0) {}
-    constexpr ValueBase(ValueBase const& o) noexcept : value(o.value) {
-        assert(o.value != -1); assert(o.value != -999);
+    constexpr static int check_value(int const& val) {
+#if TEST_STD_VER < 14
+      return val == -1 || val == 999 ? TEST_THROW(42) : val;
+#else
+      assert(val != -1); assert(val != 999);
+      return val;
+#endif
     }
-    constexpr ValueBase(ValueBase && o) noexcept : value(o.value) {
-        assert(o.value != -1); assert(o.value != -999);
-        o.value = -1;
+    constexpr static int check_value(int& val, int val_cp = 0) {
+#if TEST_STD_VER < 14
+      return val_cp = val, val = -1, (val_cp == -1 || val_cp == 999 ? TEST_THROW(42) : val_cp);
+#else
+      assert(val != -1); assert(val != 999);
+      val_cp = val;
+      val = -1;
+      return val_cp;
+#endif
     }
-    constexpr ValueBase& operator=(ValueBase const& o) noexcept {
+    constexpr ValueBase() noexcept : value(0) {}
+    constexpr ValueBase(ValueBase const& o) noexcept : value(check_value(o.value)) {
+    }
+    constexpr ValueBase(ValueBase && o) noexcept : value(check_value(o.value)) {
+    }
+    TEST_CONSTEXPR_CXX14 ValueBase& operator=(ValueBase const& o) noexcept {
         assert(o.value != -1); assert(o.value != -999);
         value = o.value;
         return *this;
     }
-    constexpr ValueBase& operator=(ValueBase&& o) noexcept {
+    TEST_CONSTEXPR_CXX14 ValueBase& operator=(ValueBase&& o) noexcept {
         assert(o.value != -1); assert(o.value != -999);
         value = o.value;
         o.value = -1;

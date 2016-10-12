@@ -670,7 +670,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
     // the original PHI's value or the reloaded incoming values from the
     // generated code. An llvm::Value is merged between the original code's
     // value or the generated one.
-    if (!SAI->isValueKind() && !SAI->isExitPHIKind())
+    if (!SAI->isExitPHIKind())
       continue;
 
     PHINode *PHI = dyn_cast<PHINode>(Val);

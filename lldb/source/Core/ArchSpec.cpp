@@ -621,6 +621,42 @@ bool ArchSpec::IsMIPS() const {
   return false;
 }
 
+std::string ArchSpec::GetTargetABI() const {
+
+  std::string abi;
+
+  if (IsMIPS()) {
+    switch (GetFlags() & ArchSpec::eMIPSABI_mask) {
+    case ArchSpec::eMIPSABI_N64:
+      abi = "n64";
+      return abi;
+    case ArchSpec::eMIPSABI_N32:
+      abi = "n32";
+      return abi;
+    case ArchSpec::eMIPSABI_O32:
+      abi = "o32";
+      return abi;
+    default:
+      return abi;
+    }
+  }
+  return abi;
+}
+
+void ArchSpec::SetFlags(std::string elf_abi) {
+
+  uint32_t flag = GetFlags();
+  if (IsMIPS()) {
+    if (elf_abi == "n64")
+      flag |= ArchSpec::eMIPSABI_N64;
+    else if (elf_abi == "n32")
+      flag |= ArchSpec::eMIPSABI_N32;
+    else if (elf_abi == "o32")
+      flag |= ArchSpec::eMIPSABI_O32;
+  }
+  SetFlags(flag);
+}
+
 std::string ArchSpec::GetClangTargetCPU() {
   std::string cpu;
   const llvm::Triple::ArchType machine = GetMachine();
@@ -815,7 +851,8 @@ bool ArchSpec::SetTriple(const llvm::Triple &triple) {
   return IsValid();
 }
 
-bool lldb_private::ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch) {
+bool lldb_private::ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str,
+                                                 ArchSpec &arch) {
   // Accept "12-10" or "12.10" as cpu type/subtype
   if (triple_str.empty())
     return false;

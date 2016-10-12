@@ -13,6 +13,31 @@
 /// independent and default TTI implementations handle the rest.
 ///
 //===----------------------------------------------------------------------===//
+/// About Cost Model numbers used below it's necessary to say the following:
+/// the numbers correspond to some "generic" X86 CPU instead of usage of
+/// concrete CPU model. Usually the numbers correspond to CPU where the feature
+/// apeared at the first time. For example, if we do Subtarget.hasSSE42() in
+/// the lookups below the cost is based on Nehalem as that was the first CPU
+/// to support that feature level and thus has most likely the worst case cost.
+/// Some examples of other technologies/CPUs:
+///   SSE 3   - Pentium4 / Athlon64
+///   SSE 4.1 - Penryn
+///   SSE 4.2 - Nehalem
+///   AVX     - Sandy Bridge
+///   AVX2    - Haswell
+///   AVX-512 - Xeon Phi / Skylake
+/// And some examples of instruction target dependent costs (latency)
+///                   divss     sqrtss          rsqrtss
+///   AMD K7            11-16     19              3
+///   Piledriver        9-24      13-15           5
+///   Jaguar            14        16              2
+///   Pentium II,III    18        30              2
+///   Nehalem           7-14      7-18            3
+///   Haswell           10-13     11              5
+/// TODO: Develop and implement  the target dependent cost model and
+/// specialize cost numbers for different Cost Model Targets such as throughput,
+/// code size, latency and uop count.
+//===----------------------------------------------------------------------===//
 
 #include "X86TargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"

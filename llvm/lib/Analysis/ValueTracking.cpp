@@ -51,6 +51,12 @@ const unsigned MaxDepth = 6;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
+// This optimization is known to cause performance regressions is some cases,
+// keep it under a temporary flag for now.
+static cl::opt<bool>
+DontImproveNonNegativePhiBits("dont-improve-non-negative-phi-bits",
+                              cl::Hidden, cl::init(true));
+
 /// Returns the bitwidth of the given scalar or pointer type (if unknown returns
 /// 0). For vector types, returns the element type's bitwidth.
 static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
@@ -1300,9 +1306,46 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
           APInt KnownZero3(KnownZero), KnownOne3(KnownOne);
           computeKnownBits(L, KnownZero3, KnownOne3, Depth + 1, Q);
 
-          KnownZero = APInt::getLowBitsSet(BitWidth,
-                                           std::min(KnownZero2.countTrailingOnes(),
-                                                    KnownZero3.countTrailingOnes()));
+          KnownZero = APInt::getLowBitsSet(
+              BitWidth, std::min(KnownZero2.countTrailingOnes(),
+                                 KnownZero3.countTrailingOnes()));
+
+          if (DontImproveNonNegativePhiBits)
+            break;
+
+          auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(LU);
+          if (OverflowOp && OverflowOp->hasNoSignedWrap()) {
+            // If initial value of recurrence is nonnegative, and we are adding
+            // a nonnegative number with nsw, the result can only be nonnegative
+            // or poison value regardless of the number of times we execute the
+            // add in phi recurrence. If initial value is negative and we are
+            // adding a negative number with nsw, the result can only be
+            // negative or poison value. Similar arguments apply to sub and mul.
+            //
+            // (add non-negative, non-negative) --> non-negative
+            // (add negative, negative) --> negative
+            if (Opcode == Instruction::Add) {
+              if (KnownZero2.isNegative() && KnownZero3.isNegative())
+                KnownZero.setBit(BitWidth - 1);
+              else if (KnownOne2.isNegative() && KnownOne3.isNegative())
+                KnownOne.setBit(BitWidth - 1);
+            }
+
+            // (sub nsw non-negative, negative) --> non-negative
+            // (sub nsw negative, non-negative) --> negative
+            else if (Opcode == Instruction::Sub && LL == I) {
+              if (KnownZero2.isNegative() && KnownOne3.isNegative())
+                KnownZero.setBit(BitWidth - 1);
+              else if (KnownOne2.isNegative() && KnownZero3.isNegative())
+                KnownOne.setBit(BitWidth - 1);
+            }
+
+            // (mul nsw non-negative, non-negative) --> non-negative
+            else if (Opcode == Instruction::Mul && KnownZero2.isNegative() &&
+                     KnownZero3.isNegative())
+              KnownZero.setBit(BitWidth - 1);
+          }
+
           break;
         }
       }

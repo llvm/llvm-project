@@ -19,18 +19,15 @@ define <4 x i32> @combine_vec_add_to_zero(<4 x i32> %a) {
 define <4 x i32> @combine_vec_add_constant_sub(<4 x i32> %a) {
 ; SSE-LABEL: combine_vec_add_constant_sub:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,2,3]
-; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,2,4,6]
 ; SSE-NEXT:    psubd %xmm0, %xmm1
-; SSE-NEXT:    paddd %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_constant_sub:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,2,4,6]
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %a
   %2 = add <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %1
@@ -41,17 +38,13 @@ define <4 x i32> @combine_vec_add_constant_sub(<4 x i32> %a) {
 define <4 x i32> @combine_vec_add_neg0(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: combine_vec_add_neg0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    psubd %xmm0, %xmm2
-; SSE-NEXT:    paddd %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    psubd %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_neg0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> zeroinitializer, %a
   %2 = add <4 x i32> %1, %b
@@ -62,16 +55,12 @@ define <4 x i32> @combine_vec_add_neg0(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @combine_vec_add_neg1(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: combine_vec_add_neg1:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    psubd %xmm1, %xmm2
-; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_neg1:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> zeroinitializer, %b
   %2 = add <4 x i32> %a, %1
@@ -186,18 +175,16 @@ define <4 x i32> @combine_vec_add_sub_add3(<4 x i32> %a, <4 x i32> %b, <4 x i32>
 define <4 x i32> @combine_vec_add_sub_sub(<4 x i32> %a, <4 x i32> %b, <4 x i32> %d) {
 ; SSE-LABEL: combine_vec_add_sub_sub:
 ; SSE:       # BB#0:
+; SSE-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    paddd %xmm2, %xmm1
 ; SSE-NEXT:    psubd %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,2,3]
-; SSE-NEXT:    psubd %xmm2, %xmm1
-; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_sub_sub:
 ; AVX:       # BB#0:
+; AVX-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3]
-; AVX-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> %a, %b
   %2 = sub <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %d
@@ -209,18 +196,18 @@ define <4 x i32> @combine_vec_add_sub_sub(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 define <4 x i32> @combine_vec_add_uniquebits(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: combine_vec_add_uniquebits:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
-; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_uniquebits:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
+; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
+; AVX-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %a, <i32 61680, i32 61680, i32 61680, i32 61680>
   %2 = and <4 x i32> %b, <i32 3855, i32 3855, i32 3855, i32 3855>
@@ -232,18 +219,14 @@ define <4 x i32> @combine_vec_add_uniquebits(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @combine_vec_add_shl_neg0(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_add_shl_neg0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    psubd %xmm1, %xmm2
-; SSE-NEXT:    pslld $5, %xmm2
-; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    pslld $5, %xmm1
+; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_shl_neg0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpslld $5, %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> zeroinitializer, %y
   %2 = shl <4 x i32> %1, <i32 5, i32 5, i32 5, i32 5>
@@ -255,18 +238,14 @@ define <4 x i32> @combine_vec_add_shl_neg0(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @combine_vec_add_shl_neg1(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_add_shl_neg1:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    psubd %xmm1, %xmm2
-; SSE-NEXT:    pslld $5, %xmm2
-; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    pslld $5, %xmm1
+; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_shl_neg1:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpslld $5, %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> zeroinitializer, %y
   %2 = shl <4 x i32> %1, <i32 5, i32 5, i32 5, i32 5>
@@ -280,15 +259,13 @@ define <4 x i32> @combine_vec_add_and_compare(<4 x i32> %a0, <4 x i32> %a1, <4 x
 ; SSE-LABEL: combine_vec_add_and_compare:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE-NEXT:    psrld $31, %xmm1
-; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_and_compare:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpsrld $31, %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = icmp eq <4 x i32> %a1, %a2
   %2 = sext <4 x i1> %1 to <4 x i32>

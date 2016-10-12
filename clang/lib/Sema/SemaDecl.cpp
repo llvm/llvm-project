@@ -9708,6 +9708,22 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
          VDecl->getDeclContext()->isDependentContext())) {
       // The previous definition is hidden, and multiple definitions are
       // permitted (in separate TUs). Form another definition of it.
+      if (!isa<ParmVarDecl>(VDecl)) {
+        // Demote the newly parsed definition to a fake declaration.
+        if (!VDecl->isThisDeclarationADemotedDefinition())
+          VDecl->demoteThisDefinitionToDeclaration();
+
+        // Make the definition visible from the point of the demotion on.
+        assert (!Hidden || Def == Hidden &&
+                "We were suggested another hidden definition!");
+        makeMergedDefinitionVisible(Def, VDecl->getLocation());
+
+        // If this is a variable template definition, make its enclosing template
+        // visible.
+        if (VarDecl *VarPattern = Def->getTemplateInstantiationPattern())
+          if (VarPattern->isThisDeclarationADefinition())
+            makeMergedDefinitionVisible(VarPattern, VDecl->getLocation());
+      }
     } else {
       Diag(VDecl->getLocation(), diag::err_redefinition)
         << VDecl->getDeclName();

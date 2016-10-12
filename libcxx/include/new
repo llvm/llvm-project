@@ -125,7 +125,7 @@ _LIBCPP_FUNC_VIS new_handler get_new_handler() _NOEXCEPT;
 
 }  // std
 
-#if defined(_LIBCPP_MSVCRT) && !defined(_LIBCPP_BUILDING_LIBRARY)
+#if defined(_WIN32) && !defined(_LIBCPP_BUILDING_LIBRARY)
 # define _LIBCPP_NEW_DELETE_VIS
 #else
 # define _LIBCPP_NEW_DELETE_VIS _LIBCPP_FUNC_VIS

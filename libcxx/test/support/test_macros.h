@@ -88,16 +88,24 @@
 #if TEST_STD_VER >= 11
 #define TEST_CONSTEXPR constexpr
 #define TEST_NOEXCEPT noexcept
+#define TEST_NOEXCEPT_COND(...) noexcept(__VA_ARGS__)
 # if TEST_STD_VER >= 14
 #   define TEST_CONSTEXPR_CXX14 constexpr
 # else
 #   define TEST_CONSTEXPR_CXX14
 # endif
+#define TEST_ALIGNOF(...) alignof(__VA_ARGS__)
+#define TEST_ALIGNAS(...) alignas(__VA_ARGS__)
 #else
 #define TEST_CONSTEXPR
 #define TEST_CONSTEXPR_CXX14
-#define TEST_NOEXCEPT
+#define TEST_NOEXCEPT throw()
+#define TEST_NOEXCEPT_COND(...)
+#define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
+#define TEST_ALIGNAS(...) __attribute__((__aligned__(__VA_ARGS__)))
 #endif
+
+#define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
     && !defined(__GXX_RTTI)

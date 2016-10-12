@@ -332,6 +332,7 @@ struct limited_alloc_handle {
 template <class T, std::size_t N>
 class limited_allocator
 {
+    template <class U, std::size_t UN> friend class limited_allocator;
     typedef limited_alloc_handle<N> BuffT;
     std::shared_ptr<BuffT> handle_;
 public:
