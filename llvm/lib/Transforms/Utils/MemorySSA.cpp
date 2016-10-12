@@ -169,44 +169,6 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
     return LHS == RHS;
   }
 };
-}
-
-namespace {
-struct UpwardsMemoryQuery {
-  // True if our original query started off as a call
-  bool IsCall;
-  // The pointer location we started the query with. This will be empty if
-  // IsCall is true.
-  MemoryLocation StartingLoc;
-  // This is the instruction we were querying about.
-  const Instruction *Inst;
-  // The MemoryAccess we actually got called with, used to test local domination
-  const MemoryAccess *OriginalAccess;
-
-  UpwardsMemoryQuery()
-      : IsCall(false), Inst(nullptr), OriginalAccess(nullptr) {}
-
-  UpwardsMemoryQuery(const Instruction *Inst, const MemoryAccess *Access)
-      : IsCall(ImmutableCallSite(Inst)), Inst(Inst), OriginalAccess(Access) {
-    if (!IsCall)
-      StartingLoc = MemoryLocation::get(Inst);
-  }
-};
-
-static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
-                           AliasAnalysis &AA) {
-  Instruction *Inst = MD->getMemoryInst();
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
-      return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), Loc);
-    default:
-      return false;
-    }
-  }
-  return false;
-}
 
 enum class Reorderability { Always, IfNoAlias, Never };
 
@@ -246,17 +208,6 @@ static Reorderability getLoadReorderability(const LoadInst *Use,
   if (SeqCstUse || MayClobberIsAcquire)
     return Reorderability::Never;
   return Result;
-}
-
-static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
-                                                   const Instruction *I) {
-  // If the memory can't be changed, then loads of the memory can't be
-  // clobbered.
-  //
-  // FIXME: We should handle invariant groups, as well. It's a bit harder,
-  // because we need to pay close attention to invariant group barriers.
-  return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
-                              AA.pointsToConstantMemory(I));
 }
 
 static bool instructionClobbersQuery(MemoryDef *MD,
@@ -301,6 +252,62 @@ static bool instructionClobbersQuery(MemoryDef *MD,
   }
 
   return AA.getModRefInfo(DefInst, UseLoc) & MRI_Mod;
+}
+
+// Return true when MD may alias MU, return false otherwise.
+bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
+                         AliasAnalysis &AA) {
+  Instruction *Insn = MU->getMemoryInst();
+  return instructionClobbersQuery(MD, MemoryLocation::get(Insn), Insn, AA);
+}
+}
+
+namespace {
+struct UpwardsMemoryQuery {
+  // True if our original query started off as a call
+  bool IsCall;
+  // The pointer location we started the query with. This will be empty if
+  // IsCall is true.
+  MemoryLocation StartingLoc;
+  // This is the instruction we were querying about.
+  const Instruction *Inst;
+  // The MemoryAccess we actually got called with, used to test local domination
+  const MemoryAccess *OriginalAccess;
+
+  UpwardsMemoryQuery()
+      : IsCall(false), Inst(nullptr), OriginalAccess(nullptr) {}
+
+  UpwardsMemoryQuery(const Instruction *Inst, const MemoryAccess *Access)
+      : IsCall(ImmutableCallSite(Inst)), Inst(Inst), OriginalAccess(Access) {
+    if (!IsCall)
+      StartingLoc = MemoryLocation::get(Inst);
+  }
+};
+
+static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
+                           AliasAnalysis &AA) {
+  Instruction *Inst = MD->getMemoryInst();
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+      return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), Loc);
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
+                                                   const Instruction *I) {
+  // If the memory can't be changed, then loads of the memory can't be
+  // clobbered.
+  //
+  // FIXME: We should handle invariant groups, as well. It's a bit harder,
+  // because we need to pay close attention to invariant group barriers.
+  return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
+                              AA.pointsToConstantMemory(I));
 }
 
 static bool instructionClobbersQuery(MemoryDef *MD, MemoryUse *MU,

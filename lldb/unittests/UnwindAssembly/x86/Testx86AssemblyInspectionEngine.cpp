@@ -26,7 +26,7 @@ using namespace lldb_private;
 
 class Testx86AssemblyInspectionEngine : public testing::Test {
 public:
-  //  static void SetUpTestCase() { }
+  static void SetUpTestCase();
 
   //  static void TearDownTestCase() { }
 
@@ -36,6 +36,13 @@ public:
 
 protected:
 };
+
+void Testx86AssemblyInspectionEngine::SetUpTestCase() {
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllDisassemblers();
+}
 
 // only defining the register names / numbers that the unwinder is actually
 // using today
@@ -88,10 +95,6 @@ enum i386_regs {
 std::unique_ptr<x86AssemblyInspectionEngine> Getx86_64Inspector() {
 
   ArchSpec arch("x86_64-apple-macosx", nullptr);
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllDisassemblers();
   std::unique_ptr<x86AssemblyInspectionEngine> engine(
       new x86AssemblyInspectionEngine(arch));
 
@@ -111,10 +114,6 @@ std::unique_ptr<x86AssemblyInspectionEngine> Getx86_64Inspector() {
 std::unique_ptr<x86AssemblyInspectionEngine> Geti386Inspector() {
 
   ArchSpec arch("i386-apple-macosx", nullptr);
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllDisassemblers();
   std::unique_ptr<x86AssemblyInspectionEngine> engine(
       new x86AssemblyInspectionEngine(arch));
 

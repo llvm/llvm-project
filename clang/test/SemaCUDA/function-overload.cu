@@ -181,18 +181,7 @@ __host__ __device__ void hostdevicef() {
   CurrentFnPtr fp_cdh = cdh;
   CurrentReturnTy ret_cdh = cdh();
 
-  GlobalFnPtr fp_g = g;
-#if defined(__CUDA_ARCH__)
-  // expected-error@-2 {{reference to __global__ function 'g' in __host__ __device__ function}}
-#endif
-  g();
-  g<<<0,0>>>();
-#if !defined(__CUDA_ARCH__)
-  // expected-error@-3 {{call to global function g not configured}}
-#else
-  // expected-error@-5 {{no matching function for call to 'g'}}
-  // expected-error@-5 {{reference to __global__ function 'g' in __host__ __device__ function}}
-#endif  // __CUDA_ARCH__
+  g(); // expected-error {{call to global function g not configured}}
 }
 
 // Test for address of overloaded function resolution in the global context.

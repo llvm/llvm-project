@@ -44,6 +44,9 @@ registers:
   - { id: 27, class: _ }
   - { id: 28, class: _ }
   - { id: 29, class: _ }
+  - { id: 30, class: _ }
+  - { id: 31, class: _ }
+  - { id: 32, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -117,4 +120,11 @@ body: |
     %27(s16) = G_SELECT %10, %12, %7
     %28(s32) = G_SELECT %10, %15, %16
     %29(s64) = G_SELECT %10, %9, %24
+
+    ; CHECK: %30(<2 x s32>) = G_BITCAST %9
+    ; CHECK: %31(s64) = G_BITCAST %30
+    ; CHECK: %32(s32) = G_BITCAST %15
+    %30(<2 x s32>) = G_BITCAST %9
+    %31(s64) = G_BITCAST %30
+    %32(s32) = G_BITCAST %15
 ...
