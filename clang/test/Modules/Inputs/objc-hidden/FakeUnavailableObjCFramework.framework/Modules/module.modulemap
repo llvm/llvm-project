@@ -1,0 +1,5 @@
+framework module FakeUnavailableObjCFramework {
+  umbrella header "FakeUnavailableObjCFramework.h"
+  // Do not export to test hidden decls.
+  // export *
+}

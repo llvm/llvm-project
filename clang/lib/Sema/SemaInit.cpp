@@ -1238,8 +1238,9 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
   //   subaggregate, brace elision is assumed and the initializer is
   //   considered for the initialization of the first member of
   //   the subaggregate.
-  if (!SemaRef.getLangOpts().OpenCL && 
-      (ElemType->isAggregateType() || ElemType->isVectorType())) {
+  // OpenCL vector initializer is handled elsewhere.
+  if ((!SemaRef.getLangOpts().OpenCL && ElemType->isVectorType()) ||
+      ElemType->isAggregateType()) {
     CheckImplicitInitList(Entity, IList, ElemType, Index, StructuredList,
                           StructuredIndex);
     ++StructuredIndex;

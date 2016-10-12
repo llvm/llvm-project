@@ -312,6 +312,7 @@ __device__ inline __cuda_builtin_gridDim_t::operator dim3() const {
 
 #include <__clang_cuda_cmath.h>
 #include <__clang_cuda_intrinsics.h>
+#include <__clang_cuda_complex_builtins.h>
 
 // curand_mtgp32_kernel helpfully redeclares blockDim and threadIdx in host
 // mode, giving them their "proper" types of dim3 and uint3.  This is

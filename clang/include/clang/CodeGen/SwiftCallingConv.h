@@ -90,7 +90,7 @@ public:
   bool shouldPassIndirectly(bool asReturnValue) const;
 
   using EnumerationCallback =
-    llvm::function_ref<void(CharUnits offset, llvm::Type *type)>;
+    llvm::function_ref<void(CharUnits offset, CharUnits end, llvm::Type *type)>;
 
   /// Enumerate the expanded components of this type.
   ///
