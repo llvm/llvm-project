@@ -25,7 +25,6 @@ class TracePC {
   void HandleInit(uint32_t *start, uint32_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   void HandleValueProfile(size_t Value) { ValueProfileMap.AddValue(Value); }
-  template <class T> void HandleCmp(void *PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage() { return TotalPCCoverage; }
   void ResetTotalPCCoverage() { TotalPCCoverage = 0; }
   void SetUseCounters(bool UC) { UseCounters = UC; }
@@ -33,7 +32,8 @@ class TracePC {
   size_t FinalizeTrace(InputCorpus *C, size_t InputSize, bool Shrink);
   bool UpdateValueProfileMap(ValueBitMap *MaxValueProfileMap) {
     return UseValueProfile && MaxValueProfileMap->MergeFrom(ValueProfileMap);
-  }
+    }
+
 
   size_t GetNewPCIDs(uintptr_t **NewPCIDsPtr) {
     *NewPCIDsPtr = NewPCIDs;

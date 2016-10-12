@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: linux
-// REQUIRES: thread_atexit
 
 #include <assert.h>
 #include <cxxabi.h>
