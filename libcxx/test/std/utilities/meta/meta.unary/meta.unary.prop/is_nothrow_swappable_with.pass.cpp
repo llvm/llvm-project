@@ -59,7 +59,7 @@ int main()
                       !std::is_nothrow_swappable_with<A&, A&>::value, "");
     }
     {
-        // test that hetrogenius swap is allowed only if both 'swap(A, B)' and
+        // test that heterogeneous swap is allowed only if both 'swap(A, B)' and
         // 'swap(B, A)' are valid.
         static_assert(std::is_nothrow_swappable_with<A&, B&>::value, "");
         static_assert(!std::is_nothrow_swappable_with<A&, C&>::value &&

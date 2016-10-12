@@ -27,9 +27,9 @@ define void @leaf_nofpelim() "no-frame-pointer-elim"="true" {
 ; need to use a frame pointer.
 define void @leaf_lowreg_nofpelim() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: leaf_lowreg_nofpelim:
-; CHECK: push {r4, r7, lr}
-; CHECK: add r7, sp, #4
-; CHECK: pop {r4, r7, pc}
+; CHECK: push {r4, r6, r7, lr}
+; CHECK: add r7, sp, #8
+; CHECK: pop {r4, r6, r7, pc}
   call void asm sideeffect "", "~{r4}" ()
   ret void
 }
@@ -40,11 +40,11 @@ define void @leaf_lowreg_nofpelim() "no-frame-pointer-elim"="true" {
 ; the stack.
 define void @leaf_highreg_nofpelim() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: leaf_highreg_nofpelim:
-; CHECK: push {r7, lr}
-; CHECK: mov r7, sp
+; CHECK: push {r6, r7, lr}
+; CHECK: add r7, sp, #4
 ; CHECK: str r8, [sp, #-4]!
 ; CHECK: ldr r8, [sp], #4
-; CHECK: pop {r7, pc}
+; CHECK: pop {r6, r7, pc}
   call void asm sideeffect "", "~{r8}" ()
   ret void
 }

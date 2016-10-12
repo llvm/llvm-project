@@ -242,6 +242,7 @@ def RetCC_ARM_AAPCS_VFP : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
+def CSR_FPRegs : CalleeSavedRegs<(add (sequence "D%u", 0, 31))>;
 
 def CSR_AAPCS : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7, R6, R5, R4,
                                      (sequence "D%u", 15, 8))>;

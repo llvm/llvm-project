@@ -63,11 +63,11 @@ private:
   const MachineRegisterInfo *MRI;
   IsaVersion IV;
 
-  /// \brief Constant hardware limits
-  static const Counters WaitCounts;
-
   /// \brief Constant zero value
   static const Counters ZeroCounts;
+
+  /// \brief Hardware limits
+  Counters HardwareLimits;
 
   /// \brief Counter values we have already waited on.
   Counters WaitedOn;
@@ -173,7 +173,6 @@ FunctionPass *llvm::createSIInsertWaitsPass() {
   return new SIInsertWaits();
 }
 
-const Counters SIInsertWaits::WaitCounts = { { 15, 7, 15 } };
 const Counters SIInsertWaits::ZeroCounts = { { 0, 0, 0 } };
 
 static bool readsVCCZ(unsigned Opcode) {
@@ -379,7 +378,7 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
   Ordered[2] = false;
 
   // The values we are going to put into the S_WAITCNT instruction
-  Counters Counts = WaitCounts;
+  Counters Counts = HardwareLimits;
 
   // Do we really need to wait?
   bool NeedWait = false;
@@ -395,7 +394,7 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
       unsigned Value = LastIssued.Array[i] - Required.Array[i];
 
       // Adjust the value to the real hardware possibilities.
-      Counts.Array[i] = std::min(Value, WaitCounts.Array[i]);
+      Counts.Array[i] = std::min(Value, HardwareLimits.Array[i]);
 
     } else
       Counts.Array[i] = 0;
@@ -413,9 +412,10 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
 
   // Build the wait instruction
   BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
-    .addImm(((Counts.Named.VM & getVmcntMask(IV)) << getVmcntShift(IV)) |
-            ((Counts.Named.EXP & getExpcntMask(IV)) << getExpcntShift(IV)) |
-            ((Counts.Named.LGKM & getLgkmcntMask(IV)) << getLgkmcntShift(IV)));
+    .addImm(encodeWaitcnt(IV,
+                          Counts.Named.VM,
+                          Counts.Named.EXP,
+                          Counts.Named.LGKM));
 
   LastOpcodeType = OTHER;
   LastInstWritesM0 = false;
@@ -443,9 +443,9 @@ void SIInsertWaits::handleExistingWait(MachineBasicBlock::iterator I) {
   unsigned Imm = I->getOperand(0).getImm();
   Counters Counts, WaitOn;
 
-  Counts.Named.VM = (Imm >> getVmcntShift(IV)) & getVmcntMask(IV);
-  Counts.Named.EXP = (Imm >> getExpcntShift(IV)) & getExpcntMask(IV);
-  Counts.Named.LGKM = (Imm >> getLgkmcntShift(IV)) & getLgkmcntMask(IV);
+  Counts.Named.VM = decodeVmcnt(IV, Imm);
+  Counts.Named.EXP = decodeExpcnt(IV, Imm);
+  Counts.Named.LGKM = decodeLgkmcnt(IV, Imm);
 
   for (unsigned i = 0; i < 3; ++i) {
     if (Counts.Array[i] <= LastIssued.Array[i])
@@ -522,6 +522,10 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   IV = getIsaVersion(ST->getFeatureBits());
+
+  HardwareLimits.Named.VM = getVmcntBitMask(IV);
+  HardwareLimits.Named.EXP = getExpcntBitMask(IV);
+  HardwareLimits.Named.LGKM = getLgkmcntBitMask(IV);
 
   WaitedOn = ZeroCounts;
   DelayedWaitOn = ZeroCounts;

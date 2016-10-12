@@ -554,7 +554,10 @@ void call_operator_noexcept_test()
         using T = NoExceptCallable<bool>;
         T value(true);
         auto ret = std::not_fn(value);
-        static_assert(noexcept(!_VSTD::__invoke(value)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(!_VSTD::__invoke(value)), "");
+#if TEST_STD_VER > 14
+        static_assert(noexcept(!std::invoke(value)), "");
+#endif
         static_assert(noexcept(ret()), "call should be noexcept");
         auto const& cret = ret;
         static_assert(noexcept(cret()), "call should be noexcept");

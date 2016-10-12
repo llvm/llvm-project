@@ -1756,10 +1756,12 @@ public:
     if (!GlobalParser->ProgramOverview.empty())
       outs() << "OVERVIEW: " << GlobalParser->ProgramOverview << "\n";
 
-    if (Sub == &*TopLevelSubCommand)
-      outs() << "USAGE: " << GlobalParser->ProgramName
-             << " [subcommand] [options]";
-    else {
+    if (Sub == &*TopLevelSubCommand) {
+      outs() << "USAGE: " << GlobalParser->ProgramName;
+      if (Subs.size() > 2)
+        outs() << " [subcommand]";
+      outs() << " [options]";
+    } else {
       if (!Sub->getDescription().empty()) {
         outs() << "SUBCOMMAND '" << Sub->getName()
                << "': " << Sub->getDescription() << "\n\n";

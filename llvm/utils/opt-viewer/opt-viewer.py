@@ -24,6 +24,8 @@ def demangle(name):
     return p.stdout.readline().rstrip()
 
 class Remark(yaml.YAMLObject):
+    max_hotness = 0
+
     @property
     def File(self):
         return self.DebugLoc['File']
@@ -36,10 +38,16 @@ class Remark(yaml.YAMLObject):
     def Column(self):
         return self.DebugLoc['Column']
 
-    def getDebugLoc(self):
+    @property
+    def DebugLocString(self):
         return "{}:{}:{}".format(self.File, self.Line, self.Column)
 
-    def getLink(self):
+    @property
+    def DemangledFunctionName(self):
+        return demangle(self.Function)
+
+    @property
+    def Link(self):
         return "{}#L{}".format(SourceFileRenderer.html_file_name(self.File), self.Line)
 
     def getArgString(self, pair):
@@ -52,7 +60,11 @@ class Remark(yaml.YAMLObject):
         # Args is a list of mappings (dictionaries) with each dictionary with
         # exactly one key-value pair.
         values = [self.getArgString(mapping.items()[0]) for mapping in self.Args]
-        return demangle("".join(values))
+        return "".join(values)
+
+    @property
+    def RelativeHotness(self):
+        return int(round(self.Hotness * 100 / Remark.max_hotness))
 
 class Analysis(Remark):
     yaml_tag = '!Analysis'
@@ -96,7 +108,7 @@ class SourceFileRenderer:
         print('''
 <tr>
 <td></td>
-<td>{r.Hotness}</td>
+<td>{r.RelativeHotness}%</td>
 <td class=\"column-entry-{r.color}\">{r.Pass}</td>
 <td class=\"column-entry-yellow\">{r.message}</td>
 </tr>'''.format(**locals()), file=self.stream)
@@ -133,14 +145,14 @@ class IndexRenderer:
     def __init__(self):
         self.stream = open(os.path.join(args.output_dir, 'index.html'), 'w')
 
-    def render_entry(self, remark):
-        html = SourceFileRenderer.html_file_name(remark.File)
-        link = "<a href={}>{}</a>".format(remark.getLink(), remark.getDebugLoc())
-
-        dem_name = demangle(remark.Function)
-        print("<tr><td>{}<td>{}<td>{}<td class=\"column-entry-{}\">{}</tr>".format(
-            link,
-            remark.Hotness, dem_name, remark.color, remark.Pass), file=self.stream)
+    def render_entry(self, r):
+        print('''
+<tr>
+<td><a href={r.Link}>{r.DebugLocString}</a></td>
+<td>{r.RelativeHotness}%</td>
+<td>{r.DemangledFunctionName}</td>
+<td class=\"column-entry-{r.color}\">{r.Pass}</td>
+</tr>'''.format(**locals()), file=self.stream)
 
     def render(self, all_remarks):
         print('''
@@ -175,6 +187,7 @@ for input_file in args.yaml_files:
         if hasattr(remark, 'Hotness'):
             file_remarks.setdefault(remark.File, dict()).setdefault(remark.Line, []).append(remark);
             all_remarks.append(remark)
+            Remark.max_hotness = max(Remark.max_hotness, remark.Hotness)
 
 all_remarks = sorted(all_remarks, key=lambda r: r.Hotness, reverse=True)
 

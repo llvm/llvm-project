@@ -17,7 +17,6 @@ pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_ENABLE_THREADS)
 pythonize_bool(LIBCXXABI_ENABLE_EXCEPTIONS)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
-pythonize_bool(LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
 set(LIBCXXABI_TARGET_INFO "libcxx.test.target_info.LocalTI" CACHE STRING
     "TargetInfo to use when setting up test environment.")
 set(LIBCXXABI_EXECUTOR "None" CACHE STRING

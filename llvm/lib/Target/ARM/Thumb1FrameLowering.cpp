@@ -188,7 +188,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   int FramePtrOffsetInBlock = 0;
   unsigned adjustedGPRCS1Size = GPRCS1Size;
-  if (tryFoldSPUpdateIntoPushPop(STI, MF, &*std::prev(MBBI), NumBytes)) {
+  if (GPRCS1Size > 0 && GPRCS2Size == 0 &&
+      tryFoldSPUpdateIntoPushPop(STI, MF, &*std::prev(MBBI), NumBytes)) {
     FramePtrOffsetInBlock = NumBytes;
     adjustedGPRCS1Size += NumBytes;
     NumBytes = 0;
@@ -261,6 +262,48 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       AFI->setShouldRestoreSPFromFP(true);
   }
 
+  // Skip past the spilling of r8-r11, which could consist of multiple tPUSH
+  // and tMOVr instructions. We don't need to add any call frame information
+  // in-between these instructions, because they do not modify the high
+  // registers.
+  while (true) {
+    MachineBasicBlock::iterator OldMBBI = MBBI;
+    // Skip a run of tMOVr instructions
+    while (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tMOVr)
+      MBBI++;
+    if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tPUSH) {
+      MBBI++;
+    } else {
+      // We have reached an instruction which is not a push, so the previous
+      // run of tMOVr instructions (which may have been empty) was not part of
+      // the prologue. Reset MBBI back to the last PUSH of the prologue.
+      MBBI = OldMBBI;
+      break;
+    }
+  }
+
+  // Emit call frame information for the callee-saved high registers.
+  for (auto &I : CSI) {
+    unsigned Reg = I.getReg();
+    int FI = I.getFrameIdx();
+    switch (Reg) {
+    case ARM::R8:
+    case ARM::R9:
+    case ARM::R10:
+    case ARM::R11:
+    case ARM::R12: {
+      unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
+          nullptr, MRI->getDwarfRegNum(Reg, true), MFI.getObjectOffset(FI)));
+      BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameSetup);
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
   if (NumBytes) {
     // Insert it after all the callee-save spills.
     emitSPUpdate(MBB, MBBI, TII, dl, *RegInfo, -NumBytes,
@@ -308,12 +351,12 @@ static bool isCSRestore(MachineInstr &MI, const MCPhysReg *CSRegs) {
       isCalleeSavedRegister(MI.getOperand(0).getReg(), CSRegs))
     return true;
   else if (MI.getOpcode() == ARM::tPOP) {
-    // The first two operands are predicates. The last two are
-    // imp-def and imp-use of SP. Check everything in between.
-    for (int i = 2, e = MI.getNumOperands() - 2; i != e; ++i)
-      if (!isCalleeSavedRegister(MI.getOperand(i).getReg(), CSRegs))
-        return false;
     return true;
+  } else if (MI.getOpcode() == ARM::tMOVr) {
+    unsigned Dst = MI.getOperand(0).getReg();
+    unsigned Src = MI.getOperand(1).getReg();
+    return ((ARM::tGPRRegClass.contains(Src) || Src == ARM::LR) &&
+            ARM::hGPRRegClass.contains(Dst));
   }
   return false;
 }
@@ -568,6 +611,19 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   return true;
 }
 
+// Return the first iteraror after CurrentReg which is present in EnabledRegs,
+// or OrderEnd if no further registers are in that set. This does not advance
+// the iterator fiorst, so returns CurrentReg if it is in EnabledRegs.
+template <unsigned SetSize>
+static const unsigned *
+findNextOrderedReg(const unsigned *CurrentReg,
+                   SmallSet<unsigned, SetSize> &EnabledRegs,
+                   const unsigned *OrderEnd) {
+  while (CurrentReg != OrderEnd && !EnabledRegs.count(*CurrentReg))
+    ++CurrentReg;
+  return CurrentReg;
+}
+
 bool Thumb1FrameLowering::
 spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MI,
@@ -578,29 +634,114 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   DebugLoc DL;
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  MachineFunction &MF = *MBB.getParent();
+  const ARMBaseRegisterInfo *RegInfo = static_cast<const ARMBaseRegisterInfo *>(
+      MF.getSubtarget().getRegisterInfo());
 
-  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPUSH));
-  AddDefaultPred(MIB);
+  SmallSet<unsigned, 9> LoRegsToSave; // r0-r7, lr
+  SmallSet<unsigned, 4> HiRegsToSave; // r8-r11
+  SmallSet<unsigned, 9> CopyRegs; // Registers which can be used after pushing
+                           // LoRegs for saving HiRegs.
+
   for (unsigned i = CSI.size(); i != 0; --i) {
     unsigned Reg = CSI[i-1].getReg();
-    bool isKill = true;
 
-    // Add the callee-saved register as live-in unless it's LR and
-    // @llvm.returnaddress is called. If LR is returned for @llvm.returnaddress
-    // then it's already added to the function and entry block live-in sets.
-    if (Reg == ARM::LR) {
-      MachineFunction &MF = *MBB.getParent();
-      if (MF.getFrameInfo().isReturnAddressTaken() &&
-          MF.getRegInfo().isLiveIn(Reg))
-        isKill = false;
+    if (ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR) {
+      LoRegsToSave.insert(Reg);
+    } else if (ARM::hGPRRegClass.contains(Reg) && Reg != ARM::LR) {
+      HiRegsToSave.insert(Reg);
+    } else {
+      llvm_unreachable("callee-saved register of unexpected class");
     }
 
-    if (isKill)
-      MBB.addLiveIn(Reg);
-
-    MIB.addReg(Reg, getKillRegState(isKill));
+    if ((ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR) &&
+        !MF.getRegInfo().isLiveIn(Reg) &&
+        !(hasFP(MF) && Reg == RegInfo->getFrameRegister(MF)))
+      CopyRegs.insert(Reg);
   }
-  MIB.setMIFlags(MachineInstr::FrameSetup);
+
+  // Unused argument registers can be used for the high register saving.
+  for (unsigned ArgReg : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
+    if (!MF.getRegInfo().isLiveIn(ArgReg))
+      CopyRegs.insert(ArgReg);
+
+  // Push the low registers and lr
+  if (!LoRegsToSave.empty()) {
+    MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPUSH));
+    AddDefaultPred(MIB);
+    for (unsigned Reg : {ARM::R4, ARM::R5, ARM::R6, ARM::R7, ARM::LR}) {
+      if (LoRegsToSave.count(Reg)) {
+        bool isKill = !MF.getRegInfo().isLiveIn(Reg);
+        if (isKill)
+          MBB.addLiveIn(Reg);
+
+        MIB.addReg(Reg, getKillRegState(isKill));
+      }
+    }
+    MIB.setMIFlags(MachineInstr::FrameSetup);
+  }
+
+  // Push the high registers. There are no store instructions that can access
+  // these registers directly, so we have to move them to low registers, and
+  // push them. This might take multiple pushes, as it is possible for there to
+  // be fewer low registers available than high registers which need saving.
+
+  // These are in reverse order so that in the case where we need to use
+  // multiple PUSH instructions, the order of the registers on the stack still
+  // matches the unwind info. They need to be swicthed back to ascending order
+  // before adding to the PUSH instruction.
+  static const unsigned AllCopyRegs[] = {ARM::LR, ARM::R7, ARM::R6,
+                                         ARM::R5, ARM::R4, ARM::R3,
+                                         ARM::R2, ARM::R1, ARM::R0};
+  static const unsigned AllHighRegs[] = {ARM::R11, ARM::R10, ARM::R9, ARM::R8};
+
+  const unsigned *AllCopyRegsEnd = std::end(AllCopyRegs);
+  const unsigned *AllHighRegsEnd = std::end(AllHighRegs);
+
+  // Find the first register to save.
+  const unsigned *HiRegToSave = findNextOrderedReg(
+      std::begin(AllHighRegs), HiRegsToSave, AllHighRegsEnd);
+
+  while (HiRegToSave != AllHighRegsEnd) {
+    // Find the first low register to use.
+    const unsigned *CopyReg =
+        findNextOrderedReg(std::begin(AllCopyRegs), CopyRegs, AllCopyRegsEnd);
+
+    // Create the PUSH, but don't insert it yet (the MOVs need to come first).
+    MachineInstrBuilder PushMIB = BuildMI(MF, DL, TII.get(ARM::tPUSH));
+    AddDefaultPred(PushMIB);
+
+    SmallVector<unsigned, 4> RegsToPush;
+    while (HiRegToSave != AllHighRegsEnd && CopyReg != AllCopyRegsEnd) {
+      if (HiRegsToSave.count(*HiRegToSave)) {
+        bool isKill = !MF.getRegInfo().isLiveIn(*HiRegToSave);
+        if (isKill)
+          MBB.addLiveIn(*HiRegToSave);
+
+        // Emit a MOV from the high reg to the low reg.
+        MachineInstrBuilder MIB =
+            BuildMI(MBB, MI, DL, TII.get(ARM::tMOVr));
+        MIB.addReg(*CopyReg, RegState::Define);
+        MIB.addReg(*HiRegToSave, getKillRegState(isKill));
+        AddDefaultPred(MIB);
+
+        // Record the register that must be added to the PUSH.
+        RegsToPush.push_back(*CopyReg);
+
+        CopyReg = findNextOrderedReg(++CopyReg, CopyRegs, AllCopyRegsEnd);
+        HiRegToSave =
+            findNextOrderedReg(++HiRegToSave, HiRegsToSave, AllHighRegsEnd);
+      }
+    }
+
+    // Add the low registers to the PUSH, in ascending order.
+    for (unsigned Reg : reverse(RegsToPush))
+      PushMIB.addReg(Reg, RegState::Kill);
+
+    // Insert the PUSH instruction after the MOVs.
+    MBB.insert(MI, PushMIB);
+  }
+
   return true;
 }
 
@@ -615,15 +756,101 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
   MachineFunction &MF = *MBB.getParent();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const ARMBaseRegisterInfo *RegInfo = static_cast<const ARMBaseRegisterInfo *>(
+      MF.getSubtarget().getRegisterInfo());
 
   bool isVarArg = AFI->getArgRegsSaveSize() > 0;
   DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
+
+  SmallSet<unsigned, 9> LoRegsToRestore;
+  SmallSet<unsigned, 4> HiRegsToRestore;
+  // Low registers (r0-r7) which can be used to restore the high registers.
+  SmallSet<unsigned, 9> CopyRegs;
+
+  for (CalleeSavedInfo I : CSI) {
+    unsigned Reg = I.getReg();
+
+    if (ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR) {
+      LoRegsToRestore.insert(Reg);
+    } else if (ARM::hGPRRegClass.contains(Reg) && Reg != ARM::LR) {
+      HiRegsToRestore.insert(Reg);
+    } else {
+      llvm_unreachable("callee-saved register of unexpected class");
+    }
+
+    // If this is a low register not used as the frame pointer, we may want to
+    // use it for restoring the high registers.
+    if ((ARM::tGPRRegClass.contains(Reg)) &&
+        !(hasFP(MF) && Reg == RegInfo->getFrameRegister(MF)))
+      CopyRegs.insert(Reg);
+  }
+
+  // If this is a return block, we may be able to use some unused return value
+  // registers for restoring the high regs.
+  auto Terminator = MBB.getFirstTerminator();
+  if (Terminator != MBB.end() && Terminator->getOpcode() == ARM::tBX_RET) {
+    CopyRegs.insert(ARM::R0);
+    CopyRegs.insert(ARM::R1);
+    CopyRegs.insert(ARM::R2);
+    CopyRegs.insert(ARM::R3);
+    for (auto Op : Terminator->implicit_operands()) {
+      if (Op.isReg())
+        CopyRegs.erase(Op.getReg());
+    }
+  }
+
+  static const unsigned AllCopyRegs[] = {ARM::R0, ARM::R1, ARM::R2, ARM::R3,
+                                         ARM::R4, ARM::R5, ARM::R6, ARM::R7};
+  static const unsigned AllHighRegs[] = {ARM::R8, ARM::R9, ARM::R10, ARM::R11};
+
+  const unsigned *AllCopyRegsEnd = std::end(AllCopyRegs);
+  const unsigned *AllHighRegsEnd = std::end(AllHighRegs);
+
+  // Find the first register to restore.
+  auto HiRegToRestore = findNextOrderedReg(std::begin(AllHighRegs),
+                                           HiRegsToRestore, AllHighRegsEnd);
+
+  while (HiRegToRestore != AllHighRegsEnd) {
+    assert(!CopyRegs.empty());
+    // Find the first low register to use.
+    auto CopyReg =
+        findNextOrderedReg(std::begin(AllCopyRegs), CopyRegs, AllCopyRegsEnd);
+
+    // Create the POP instruction.
+    MachineInstrBuilder PopMIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPOP));
+    AddDefaultPred(PopMIB);
+
+    while (HiRegToRestore != AllHighRegsEnd && CopyReg != AllCopyRegsEnd) {
+      // Add the low register to the POP.
+      PopMIB.addReg(*CopyReg, RegState::Define);
+
+      // Create the MOV from low to high register.
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, MI, DL, TII.get(ARM::tMOVr));
+      MIB.addReg(*HiRegToRestore, RegState::Define);
+      MIB.addReg(*CopyReg, RegState::Kill);
+      AddDefaultPred(MIB);
+
+      CopyReg = findNextOrderedReg(++CopyReg, CopyRegs, AllCopyRegsEnd);
+      HiRegToRestore =
+          findNextOrderedReg(++HiRegToRestore, HiRegsToRestore, AllHighRegsEnd);
+    }
+  }
+
+
+
+
   MachineInstrBuilder MIB = BuildMI(MF, DL, TII.get(ARM::tPOP));
   AddDefaultPred(MIB);
 
   bool NeedsPop = false;
   for (unsigned i = CSI.size(); i != 0; --i) {
     unsigned Reg = CSI[i-1].getReg();
+
+    // High registers (excluding lr) have already been dealt with
+    if (!(ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR))
+      continue;
+
     if (Reg == ARM::LR) {
       if (MBB.succ_empty()) {
         // Special epilogue for vararg functions. See emitEpilogue

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc < %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=x86_64-pc-win32 < %s -o /dev/null 2>&1 | FileCheck %s
 
 	.text
 	.global baz

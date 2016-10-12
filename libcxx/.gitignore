@@ -56,3 +56,6 @@ target/
 # MSVC libraries test harness
 env.lst
 keep.lst
+
+# Editor by-products
+.vscode/
