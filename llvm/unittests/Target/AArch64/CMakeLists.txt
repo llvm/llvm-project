@@ -3,8 +3,6 @@ include_directories(
   ${CMAKE_BINARY_DIR}/lib/Target/AArch64
   )
 
-# FIXME: We're really requiring way too many components here, and a lot of it is
-# because of the TargetOptions
 set(LLVM_LINK_COMPONENTS
   AArch64CodeGen
   AArch64Desc
