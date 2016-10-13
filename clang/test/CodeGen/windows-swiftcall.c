@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-windows -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows -emit-llvm -target-cpu core2 -o - %s | FileCheck %s
 
 #define SWIFTCALL __attribute__((swiftcall))
 #define OUT __attribute__((swift_indirect_result))
@@ -121,7 +121,6 @@ TEST(struct_1);
 // CHECK:   ret void
 // CHECK: }
 // CHECK-LABEL: define void @test_struct_1() {{.*}}{
-// CHECK: entry:
 // CHECK:   [[AGG:%.*]] = alloca [[STRUCT1:%.*]], align 4
 // CHECK:   [[RET:%.*]] = call swiftcc { i64, i64 } @return_struct_1()
 // CHECK:   [[CAST:%.*]] = bitcast [[STRUCT1]]* [[AGG]] to { i64, i64 }*
