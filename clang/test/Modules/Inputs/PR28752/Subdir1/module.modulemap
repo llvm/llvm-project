@@ -1,5 +1,0 @@
-module b {
-  module "b.h" { header "b.h" export * }
-  module "c.h" { header "c.h" export * }
-  export *
-}

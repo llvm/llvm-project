@@ -286,11 +286,11 @@ public:
     case MM_None:
       return "";
     case MM_ELF:
+    case MM_WinCOFF:
       return ".L";
     case MM_Mips:
       return "$";
     case MM_MachO:
-    case MM_WinCOFF:
     case MM_WinCOFFX86:
       return "L";
     }

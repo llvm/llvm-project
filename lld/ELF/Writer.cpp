@@ -91,7 +91,7 @@ private:
 };
 } // anonymous namespace
 
-StringRef elf::getOutputSectionName(StringRef Name) {
+StringRef elf::getOutputSectionName(StringRef Name, BumpPtrAllocator &Alloc) {
   if (Config->Relocatable)
     return Name;
 
@@ -103,6 +103,11 @@ StringRef elf::getOutputSectionName(StringRef Name) {
     if (Name.startswith(V) || Name == Prefix)
       return Prefix;
   }
+
+  // ".zdebug_" is a prefix for ZLIB-compressed sections.
+  // Because we decompressed input sections, we want to remove 'z'.
+  if (Name.startswith(".zdebug_"))
+    return StringSaver(Alloc).save(Twine(".") + Name.substr(2));
   return Name;
 }
 
@@ -699,7 +704,8 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       }
       OutputSectionBase<ELFT> *Sec;
       bool IsNew;
-      std::tie(Sec, IsNew) = Factory.create(IS, getOutputSectionName(IS->Name));
+      StringRef OutsecName = getOutputSectionName(IS->Name, Alloc);
+      std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
       if (IsNew)
         OutputSections.push_back(Sec);
       Sec->addSection(IS);

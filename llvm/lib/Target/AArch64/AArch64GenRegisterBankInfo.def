@@ -69,7 +69,10 @@ RegisterBankInfo::PartialMapping PartMappings[] {
 enum ValueMappingIdx {
   First3OpsIdx = 0,
   Last3OpsIdx = 18,
-  DistanceBetweenRegBanks = 3
+  DistanceBetweenRegBanks = 3,
+  FirstCrossRegCpyIdx = 21,
+  LastCrossRegCpyIdx = 27,
+  DistanceBetweenCrossRegCpy = 2
 };
 
 // ValueMappings.
@@ -90,7 +93,17 @@ RegisterBankInfo::ValueMapping ValMappings[] {
   // 15: FPR 256-bit value.
   {&PartMappings[5], 1}, {&PartMappings[5], 1}, {&PartMappings[5], 1},
   // 18: FPR 512-bit value. <-- This must match Last3OpsIdx.
-  {&PartMappings[6], 1}, {&PartMappings[6], 1}, {&PartMappings[6], 1}
+  {&PartMappings[6], 1}, {&PartMappings[6], 1}, {&PartMappings[6], 1},
+  // Cross register bank copies.
+  // 21: GPR 32-bit value to FPR 32-bit value. <-- This must match FirstCrossRegCpyIdx.
+  {&PartMappings[0], 1}, {&PartMappings[2], 1},
+  // 23: GPR 64-bit value to FPR 64-bit value.
+  {&PartMappings[1], 1}, {&PartMappings[3], 1},
+  // 25: FPR 32-bit value to GPR 32-bit value.
+  {&PartMappings[2], 1}, {&PartMappings[0], 1},
+  // 27: FPR 64-bit value to GPR 64-bit value. <-- This must match LastCrossRegCpyIdx.
+  {&PartMappings[3], 1}, {&PartMappings[1], 1}
+
 };
 
 /// Get the pointer to the ValueMapping representing the RegisterBank
@@ -109,6 +122,29 @@ getValueMapping(PartialMappingIdx RBIdx, unsigned Size) {
     assert(ValMappingIdx >= AArch64::First3OpsIdx &&
            ValMappingIdx <= AArch64::Last3OpsIdx && "Mapping out of bound");
 
+  return &ValMappings[ValMappingIdx];
+}
+
+/// Get the pointer to the ValueMapping of the operands of a copy
+/// instruction from a GPR or FPR register to a GPR or FPR register
+/// with a size of \p Size.
+///
+/// If \p DstIsGPR is true, the destination of the copy is on GPR,
+/// otherwise it is on FPR. Same thing for \p SrcIsGPR.
+const RegisterBankInfo::ValueMapping *
+getCopyMapping(bool DstIsGPR, bool SrcIsGPR, unsigned Size) {
+  PartialMappingIdx DstRBIdx = DstIsGPR ? FirstGPR : FirstFPR;
+  PartialMappingIdx SrcRBIdx = SrcIsGPR ? FirstGPR : FirstFPR;
+  if (DstRBIdx == SrcRBIdx)
+    return getValueMapping(DstRBIdx, Size);
+  assert(Size <= 64 && "GPR cannot handle that size");
+  unsigned ValMappingIdx =
+      FirstCrossRegCpyIdx +
+      (DstRBIdx - FirstGPR + getRegBankBaseIdxOffset(Size)) *
+          ValueMappingIdx::DistanceBetweenCrossRegCpy;
+  assert(ValMappingIdx >= AArch64::FirstCrossRegCpyIdx &&
+         ValMappingIdx <= AArch64::LastCrossRegCpyIdx &&
+         "Mapping out of bound");
   return &ValMappings[ValMappingIdx];
 }
 

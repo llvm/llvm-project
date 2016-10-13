@@ -466,14 +466,10 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
                                           const NamedDecl *PatternDef,
                                           TemplateSpecializationKind TSK,
                                           bool Complain /*= true*/) {
-  assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation) ||
-         isa<VarDecl>(Instantiation));
+  assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation));
 
-  bool IsEntityBeingDefined = false;
-  if (const TagDecl *TD = dyn_cast_or_null<TagDecl>(PatternDef))
-    IsEntityBeingDefined = TD->isBeingDefined();
-
-  if (PatternDef && !IsEntityBeingDefined) {
+  if (PatternDef && (isa<FunctionDecl>(PatternDef)
+                     || !cast<TagDecl>(PatternDef)->isBeingDefined())) {
     NamedDecl *SuggestedDef = nullptr;
     if (!hasVisibleDefinition(const_cast<NamedDecl*>(PatternDef), &SuggestedDef,
                               /*OnlyNeedComplete*/false)) {
@@ -490,14 +486,13 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
   if (!Complain || (PatternDef && PatternDef->isInvalidDecl()))
     return true;
 
-  llvm::Optional<unsigned> Note;
   QualType InstantiationTy;
   if (TagDecl *TD = dyn_cast<TagDecl>(Instantiation))
     InstantiationTy = Context.getTypeDeclType(TD);
   if (PatternDef) {
     Diag(PointOfInstantiation,
          diag::err_template_instantiate_within_definition)
-      << /*implicit|explicit*/(TSK != TSK_ImplicitInstantiation)
+      << (TSK != TSK_ImplicitInstantiation)
       << InstantiationTy;
     // Not much point in noting the template declaration here, since
     // we're lexically inside it.
@@ -506,44 +501,28 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
     if (isa<FunctionDecl>(Instantiation)) {
       Diag(PointOfInstantiation,
            diag::err_explicit_instantiation_undefined_member)
-        << /*member function*/ 1 << Instantiation->getDeclName()
-        << Instantiation->getDeclContext();
-      Note = diag::note_explicit_instantiation_here;
+        << 1 << Instantiation->getDeclName() << Instantiation->getDeclContext();
     } else {
-      assert(isa<TagDecl>(Instantiation) && "Must be a TagDecl!");
       Diag(PointOfInstantiation,
            diag::err_implicit_instantiate_member_undefined)
         << InstantiationTy;
-      Note = diag::note_member_declared_at;
     }
+    Diag(Pattern->getLocation(), isa<FunctionDecl>(Instantiation)
+                                     ? diag::note_explicit_instantiation_here
+                                     : diag::note_member_declared_at);
   } else {
-    if (isa<FunctionDecl>(Instantiation)) {
+    if (isa<FunctionDecl>(Instantiation))
       Diag(PointOfInstantiation,
            diag::err_explicit_instantiation_undefined_func_template)
         << Pattern;
-      Note = diag::note_explicit_instantiation_here;
-    } else if (isa<TagDecl>(Instantiation)) {
+    else
       Diag(PointOfInstantiation, diag::err_template_instantiate_undefined)
         << (TSK != TSK_ImplicitInstantiation)
         << InstantiationTy;
-      Note = diag::note_template_decl_here;
-    } else {
-      assert(isa<VarDecl>(Instantiation) && "Must be a VarDecl!");
-      if (isa<VarTemplateSpecializationDecl>(Instantiation)) {
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_var_template)
-          << Instantiation;
-        Instantiation->setInvalidDecl();
-      } else
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_member)
-          << /*static data member*/ 2 << Instantiation->getDeclName()
-          << Instantiation->getDeclContext();
-      Note = diag::note_explicit_instantiation_here;
-    }
+    Diag(Pattern->getLocation(), isa<FunctionDecl>(Instantiation)
+                                     ? diag::note_explicit_instantiation_here
+                                     : diag::note_template_decl_here);
   }
-  if (Note) // Diagnostics were emitted.
-    Diag(Pattern->getLocation(), Note.getValue());
 
   // In general, Instantiation isn't marked invalid to get more than one
   // error for multiple undefined instantiations. But the code that does

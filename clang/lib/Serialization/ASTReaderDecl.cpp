@@ -1216,7 +1216,6 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
   VD->VarDeclBits.TSCSpec = Record[Idx++];
   VD->VarDeclBits.InitStyle = Record[Idx++];
   if (!isa<ParmVarDecl>(VD)) {
-    VD->NonParmVarDeclBits.IsThisDeclarationADemotedDefinition = Record[Idx++];
     VD->NonParmVarDeclBits.ExceptionVar = Record[Idx++];
     VD->NonParmVarDeclBits.NRVOVariable = Record[Idx++];
     VD->NonParmVarDeclBits.CXXForRangeDecl = Record[Idx++];
@@ -3068,29 +3067,6 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
 }
 
 namespace clang {
-template<>
-void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
-                                           Redeclarable<VarDecl> *D,
-                                           Decl *Previous, Decl *Canon) {
-  VarDecl *VD = static_cast<VarDecl*>(D);
-  VarDecl *PrevVD = cast<VarDecl>(Previous);
-  D->RedeclLink.setPrevious(PrevVD);
-  D->First = PrevVD->First;
-
-  // We should keep at most one definition on the chain.
-  if (VD->isThisDeclarationADefinition()) {
-    for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
-      // If we find an already demoted definition, this we already visited this
-      // part of the chain. Reduces the loop from quadratic-time to linear-time.
-      if (CurD->isThisDeclarationADemotedDefinition() ||
-          CurD->isThisDeclarationADefinition()) {
-        VD->demoteThisDefinitionToDeclaration();
-        break;
-      }
-    }
-  }
-}
-
 template<>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<FunctionDecl> *D,

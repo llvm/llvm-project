@@ -6888,10 +6888,6 @@ bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
     if (auto *Pattern = FD->getTemplateInstantiationPattern())
       FD = Pattern;
     D = FD->getDefinition();
-  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-    if (auto *Pattern = VD->getTemplateInstantiationPattern())
-      VD = Pattern;
-    D = VD->getDefinition();
   }
   assert(D && "missing definition for pattern of instantiated definition");
 

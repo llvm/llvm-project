@@ -121,7 +121,6 @@ TEST(struct_1);
 // CHECK:   ret void
 // CHECK: }
 // CHECK-LABEL: define void @test_struct_1() {{.*}}{
-// CHECK: entry:
 // CHECK:   [[AGG:%.*]] = alloca [[STRUCT1:%.*]], align 4
 // CHECK:   [[RET:%.*]] = call swiftcc { i64, i64 } @return_struct_1()
 // CHECK:   [[CAST:%.*]] = bitcast [[STRUCT1]]* [[AGG]] to { i64, i64 }*

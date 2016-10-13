@@ -436,8 +436,14 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     errs() << "WARNING: this target does not support the llvm."
            << (Callee->getIntrinsicID() == Intrinsic::returnaddress ?
              "return" : "frame") << "address intrinsic.\n";
-    CI->replaceAllUsesWith(ConstantPointerNull::get(
-                                            cast<PointerType>(CI->getType())));
+    CI->replaceAllUsesWith(
+        ConstantPointerNull::get(cast<PointerType>(CI->getType())));
+    break;
+  case Intrinsic::addressofreturnaddress:
+    errs() << "WARNING: this target does not support the "
+              "llvm.addressofreturnaddress intrinsic.\n";
+    CI->replaceAllUsesWith(
+        ConstantPointerNull::get(cast<PointerType>(CI->getType())));
     break;
 
   case Intrinsic::prefetch:
