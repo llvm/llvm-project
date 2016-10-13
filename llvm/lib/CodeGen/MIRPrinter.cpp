@@ -499,7 +499,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
       First = false;
       printReg(LI.PhysReg, OS, TRI);
       if (LI.LaneMask != ~0u)
-        OS << ':' << PrintLaneMask(LI.LaneMask);
+        OS << ":0x" << PrintLaneMask(LI.LaneMask);
     }
     OS << "\n";
     HasLineAttributes = true;

@@ -38,6 +38,7 @@ STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
 STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
+STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 
 static cl::opt<bool> DontProcessAdds("cvp-dont-process-adds", cl::init(false));
@@ -384,6 +385,25 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
+  if (SDI->getType()->isVectorTy() || hasLocalDefs(SDI))
+    return false;
+
+  Constant *Zero = ConstantInt::get(SDI->getType(), 0);
+  if (LVI->getPredicateAt(ICmpInst::ICMP_SGE, SDI->getOperand(0), Zero, SDI) !=
+      LazyValueInfo::True)
+    return false;
+
+  ++NumAShrs;
+  auto *BO = BinaryOperator::CreateLShr(SDI->getOperand(0), SDI->getOperand(1),
+                                        SDI->getName(), SDI);
+  BO->setIsExact(SDI->isExact());
+  SDI->replaceAllUsesWith(BO);
+  SDI->eraseFromParent();
+
+  return true;
+}
+
 static bool processAdd(BinaryOperator *AddOp, LazyValueInfo *LVI) {
   typedef OverflowingBinaryOperator OBO;
 
@@ -494,6 +514,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI) {
         break;
       case Instruction::SDiv:
         BBChanged |= processSDiv(cast<BinaryOperator>(II), LVI);
+        break;
+      case Instruction::AShr:
+        BBChanged |= processAShr(cast<BinaryOperator>(II), LVI);
         break;
       case Instruction::Add:
         BBChanged |= processAdd(cast<BinaryOperator>(II), LVI);

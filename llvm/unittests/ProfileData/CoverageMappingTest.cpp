@@ -55,6 +55,17 @@ struct OutputFunctionCoverageData {
   std::vector<StringRef> Filenames;
   std::vector<CounterMappingRegion> Regions;
 
+  OutputFunctionCoverageData() : Hash(0) {}
+
+  OutputFunctionCoverageData(OutputFunctionCoverageData &&OFCD)
+      : Name(OFCD.Name), Hash(OFCD.Hash), Filenames(std::move(OFCD.Filenames)),
+        Regions(std::move(OFCD.Regions)) {}
+
+  OutputFunctionCoverageData(const OutputFunctionCoverageData &) = delete;
+  OutputFunctionCoverageData &
+  operator=(const OutputFunctionCoverageData &) = delete;
+  OutputFunctionCoverageData &operator=(OutputFunctionCoverageData &&) = delete;
+
   void fillCoverageMappingRecord(CoverageMappingRecord &Record) const {
     Record.FunctionName = Name;
     Record.FunctionHash = Hash;
@@ -95,6 +106,16 @@ struct InputFunctionCoverageData {
 
   InputFunctionCoverageData(std::string Name, uint64_t Hash)
       : Name(std::move(Name)), Hash(Hash) {}
+
+  InputFunctionCoverageData(InputFunctionCoverageData &&IFCD)
+      : ReverseVirtualFileMapping(std::move(IFCD.ReverseVirtualFileMapping)),
+        Name(std::move(IFCD.Name)), Hash(IFCD.Hash),
+        Regions(std::move(IFCD.Regions)) {}
+
+  InputFunctionCoverageData(const InputFunctionCoverageData &) = delete;
+  InputFunctionCoverageData &
+  operator=(const InputFunctionCoverageData &) = delete;
+  InputFunctionCoverageData &operator=(InputFunctionCoverageData &&) = delete;
 };
 
 struct CoverageMappingTest : ::testing::Test {
@@ -164,7 +185,7 @@ struct CoverageMappingTest : ::testing::Test {
     return OS.str();
   }
 
-  void readCoverageRegions(std::string Coverage,
+  void readCoverageRegions(const std::string &Coverage,
                            OutputFunctionCoverageData &Data) {
     SmallVector<StringRef, 8> Filenames(Files.size());
     for (const auto &E : Files)

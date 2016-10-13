@@ -75,8 +75,8 @@ exit:                              ; preds = %outer_loop_top
 ; CHECK: # %shared_preheader
 ; CHECK: # %shared_loop_header
 ; CHECK: # %inner_loop_body
-; CHECK: # %merge_predecessor_split
 ; CHECK: # %outer_loop_latch
+; CHECK: # %merge_predecessor_split
 ; CHECK: # %outer_loop_latch
 ; CHECK: # %cleanup
 define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i32 %wwprva, i32 %e_lfanew, i8* readonly %wwp, i32 %wwpsz, i16 zeroext %sects) local_unnamed_addr #0 {

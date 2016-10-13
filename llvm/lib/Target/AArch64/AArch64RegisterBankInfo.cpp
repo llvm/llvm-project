@@ -170,6 +170,36 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   CHECK_VALUEMAP_3OPS(FPR, 256);
   CHECK_VALUEMAP_3OPS(FPR, 512);
 
+#define CHECK_VALUEMAP_CROSSREGCPY(RBNameDst, RBNameSrc, Size)                 \
+  do {                                                                         \
+    AArch64::PartialMappingIdx PartialMapDstIdx =                              \
+        AArch64::PartialMappingIdx::RBNameDst##Size;                           \
+    AArch64::PartialMappingIdx PartialMapSrcIdx =                              \
+        AArch64::PartialMappingIdx::RBNameSrc##Size;                           \
+    (void) PartialMapDstIdx;                                                   \
+    (void) PartialMapSrcIdx;                                                   \
+    const ValueMapping *Map = AArch64::getCopyMapping(                         \
+        AArch64::First##RBNameDst == AArch64::FirstGPR,                        \
+        AArch64::First##RBNameSrc == AArch64::FirstGPR, Size);                 \
+    (void) Map;                                                                \
+    assert(Map[0].BreakDown == &AArch64::PartMappings[PartialMapDstIdx] &&     \
+           Map[0].NumBreakDowns == 1 && #RBNameDst #Size                       \
+           " Dst is incorrectly initialized");                                 \
+    assert(Map[1].BreakDown == &AArch64::PartMappings[PartialMapSrcIdx] &&     \
+           Map[1].NumBreakDowns == 1 && #RBNameSrc #Size                       \
+           " Src is incorrectly initialized");                                 \
+                                                                               \
+  } while (0)
+
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, GPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, FPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, GPR, 64);
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, FPR, 64);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, FPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, FPR, 64);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 64);
+
   assert(verify(TRI) && "Invalid register bank information");
 }
 
@@ -181,7 +211,16 @@ unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
   // Will introduce other hooks for different size:
   // * extract cost.
   // * build_sequence cost.
-  // TODO: Add more accurate cost for FPR to/from GPR.
+
+  // Copy from (resp. to) GPR to (resp. from) FPR involves FMOV.
+  // FIXME: This should be deduced from the scheduling model.
+  if (&A == &AArch64::GPRRegBank && &B == &AArch64::FPRRegBank)
+    // FMOVXDr or FMOVWSr.
+    return 5;
+  if (&A == &AArch64::FPRRegBank && &B == &AArch64::GPRRegBank)
+    // FMOVDXr or FMOVSWr.
+    return 4;
+
   return RegisterBankInfo::copyCost(A, B, Size);
 }
 
@@ -225,15 +264,15 @@ const RegisterBank &AArch64RegisterBankInfo::getRegBankFromRegClass(
 RegisterBankInfo::InstructionMappings
 AArch64RegisterBankInfo::getInstrAlternativeMappings(
     const MachineInstr &MI) const {
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
   switch (MI.getOpcode()) {
   case TargetOpcode::G_OR: {
     // 32 and 64-bit or can be mapped on either FPR or
     // GPR for the same cost.
-    const MachineFunction &MF = *MI.getParent()->getParent();
-    const TargetSubtargetInfo &STI = MF.getSubtarget();
-    const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64)
       break;
@@ -254,6 +293,70 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     AltMappings.emplace_back(std::move(FPRMapping));
     return AltMappings;
   }
+  case TargetOpcode::G_BITCAST: {
+    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    if (Size != 32 && Size != 64)
+      break;
+
+    // If the instruction has any implicit-defs or uses,
+    // do not mess with it.
+    if (MI.getNumOperands() != 2)
+      break;
+
+    InstructionMappings AltMappings;
+    InstructionMapping GPRMapping(
+        /*ID*/ 1, /*Cost*/ 1,
+        AArch64::getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ true, Size),
+        /*NumOperands*/ 2);
+    InstructionMapping FPRMapping(
+        /*ID*/ 2, /*Cost*/ 1,
+        AArch64::getCopyMapping(/*DstIsFPR*/ false, /*SrcIsFPR*/ false, Size),
+        /*NumOperands*/ 2);
+    InstructionMapping GPRToFPRMapping(
+        /*ID*/ 3,
+        /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
+        AArch64::getCopyMapping(/*DstIsFPR*/ false, /*SrcIsFPR*/ true, Size),
+        /*NumOperands*/ 2);
+    InstructionMapping FPRToGPRMapping(
+        /*ID*/ 3,
+        /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
+        AArch64::getCopyMapping(/*DstIsFPR*/ true, /*SrcIsFPR*/ false, Size),
+        /*NumOperands*/ 2);
+
+    AltMappings.emplace_back(std::move(GPRMapping));
+    AltMappings.emplace_back(std::move(FPRMapping));
+    AltMappings.emplace_back(std::move(GPRToFPRMapping));
+    AltMappings.emplace_back(std::move(FPRToGPRMapping));
+    return AltMappings;
+  }
+  case TargetOpcode::G_LOAD: {
+    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    if (Size != 64)
+      break;
+
+    // If the instruction has any implicit-defs or uses,
+    // do not mess with it.
+    if (MI.getNumOperands() != 2)
+      break;
+
+    InstructionMappings AltMappings;
+    InstructionMapping GPRMapping(
+        /*ID*/ 1, /*Cost*/ 1,
+        getOperandsMapping({AArch64::getValueMapping(AArch64::FirstGPR, Size),
+                            // Addresses are GPR 64-bit.
+                            AArch64::getValueMapping(AArch64::FirstGPR, 64)}),
+        /*NumOperands*/ 2);
+    InstructionMapping FPRMapping(
+        /*ID*/ 2, /*Cost*/ 1,
+        getOperandsMapping({AArch64::getValueMapping(AArch64::FirstFPR, Size),
+                            // Addresses are GPR 64-bit.
+                            AArch64::getValueMapping(AArch64::FirstGPR, 64)}),
+        /*NumOperands*/ 2);
+
+    AltMappings.emplace_back(std::move(GPRMapping));
+    AltMappings.emplace_back(std::move(FPRMapping));
+    return AltMappings;
+  }
   default:
     break;
   }
@@ -263,10 +366,12 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
 void AArch64RegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   switch (OpdMapper.getMI().getOpcode()) {
-  case TargetOpcode::G_OR: {
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_BITCAST:
+  case TargetOpcode::G_LOAD: {
     // Those ID must match getInstrAlternativeMappings.
-    assert((OpdMapper.getInstrMapping().getID() == 1 ||
-            OpdMapper.getInstrMapping().getID() == 2) &&
+    assert((OpdMapper.getInstrMapping().getID() >= 1 ||
+            OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
   }
@@ -369,13 +474,19 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
     return getSameKindOfOperandsMapping(MI);
+  case TargetOpcode::G_BITCAST: {
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    // If we are on the same bank, we can use the "same kind" mapping.
+    if (DstTy.isVector() == SrcTy.isVector())
+      return getSameKindOfOperandsMapping(MI);
+    break;
+  }
   default:
     break;
   }
 
   unsigned NumOperands = MI.getNumOperands();
-  RegisterBankInfo::InstructionMapping Mapping =
-      InstructionMapping{DefaultMappingID, 1, nullptr, NumOperands};
 
   // Track the size and bank of each register.  We don't do partial mappings.
   SmallVector<unsigned, 4> OpSize(NumOperands);
@@ -396,6 +507,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpRegBankIdx[Idx] = AArch64::FirstGPR;
   }
 
+  unsigned Cost = 1;
   // Some of the floating-point instructions have mixed GPR and FPR operands:
   // fine-tune the computed mapping.
   switch (Opc) {
@@ -415,9 +527,29 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                     AArch64::FirstFPR, AArch64::FirstFPR};
     break;
   }
+  case TargetOpcode::G_BITCAST: {
+    // This is going to be a cross register bank copy and this is expensive.
+    if (OpRegBankIdx[0] != OpRegBankIdx[1])
+      Cost =
+          copyCost(*AArch64::PartMappings[OpRegBankIdx[0]].RegBank,
+                   *AArch64::PartMappings[OpRegBankIdx[1]].RegBank, OpSize[0]);
+    break;
+  }
+  case TargetOpcode::G_LOAD: {
+    // Loading in vector unit is slightly more expensive.
+    // This is actually only true for the LD1R and co instructions,
+    // but anyway for the fast mode this number does not matter and
+    // for the greedy mode the cost of the cross bank copy will
+    // offset this number.
+    // FIXME: Should be derived from the scheduling model.
+    if (OpRegBankIdx[0] >= AArch64::FirstFPR)
+      Cost = 2;
+  }
   }
 
   // Finally construct the computed mapping.
+  RegisterBankInfo::InstructionMapping Mapping =
+      InstructionMapping{DefaultMappingID, Cost, nullptr, NumOperands};
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx)
     if (MI.getOperand(Idx).isReg())

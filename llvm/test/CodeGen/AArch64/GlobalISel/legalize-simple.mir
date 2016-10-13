@@ -47,6 +47,8 @@ registers:
   - { id: 30, class: _ }
   - { id: 31, class: _ }
   - { id: 32, class: _ }
+  - { id: 33, class: _ }
+  - { id: 34, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -58,8 +60,7 @@ body: |
     %1(p0) = G_INTTOPTR %0
     %2(s64) = G_PTRTOINT %1
 
-    ; CHECK: [[TST32:%[0-9]+]](s32) = G_ANYEXT %3
-    ; CHECK: G_BRCOND [[TST32]](s32), %bb.1.next
+    ; CHECK: G_BRCOND %3(s1), %bb.1.next
     %3(s1) = G_TRUNC %0
     G_BRCOND %3, %bb.1.next
 
@@ -127,4 +128,6 @@ body: |
     %30(<2 x s32>) = G_BITCAST %9
     %31(s64) = G_BITCAST %30
     %32(s32) = G_BITCAST %15
+    %33(<4 x s8>) = G_BITCAST %15
+    %34(<2 x s16>) = G_BITCAST %15
 ...

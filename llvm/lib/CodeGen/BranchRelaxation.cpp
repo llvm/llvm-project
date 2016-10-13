@@ -379,6 +379,7 @@ bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
         BranchBB->addLiveIn(LiveIn);
     }
 
+    BranchBB->sortUniqueLiveIns();
     BranchBB->addSuccessor(DestBB);
     MBB->replaceSuccessor(DestBB, BranchBB);
   }

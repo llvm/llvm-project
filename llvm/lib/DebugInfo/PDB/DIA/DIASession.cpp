@@ -24,9 +24,7 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-namespace {
-
-Error ErrorFromHResult(HRESULT Result) {
+static Error ErrorFromHResult(HRESULT Result) {
   switch (Result) {
   case E_PDB_NOT_FOUND:
     return make_error<GenericError>(generic_error_code::invalid_path);
@@ -44,7 +42,7 @@ Error ErrorFromHResult(HRESULT Result) {
   }
 }
 
-Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
+static Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
   if (SUCCEEDED(CoCreateInstance(CLSID_DiaSource, nullptr, CLSCTX_INPROC_SERVER,
                                  IID_IDiaDataSource,
                                  reinterpret_cast<LPVOID *>(&DiaDataSource))))
@@ -55,12 +53,11 @@ Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
 #if !defined(_MSC_VER)
   return llvm::make_error<GenericError>(
       "DIA is only supported when using MSVC.");
-#endif
-
+#else
   const wchar_t *msdia_dll = nullptr;
-#if _MSC_VER == 1900
+#if _MSC_VER >= 1900 && _MSC_VER < 2000
   msdia_dll = L"msdia140.dll"; // VS2015
-#elif _MSC_VER == 1800
+#elif _MSC_VER >= 1800
   msdia_dll = L"msdia120.dll"; // VS2013
 #else
 #error "Unknown Visual Studio version."
@@ -71,8 +68,7 @@ Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
                                 reinterpret_cast<LPVOID *>(&DiaDataSource))))
     return ErrorFromHResult(HR);
   return Error::success();
-}
-
+#endif
 }
 
 DIASession::DIASession(CComPtr<IDiaSession> DiaSession) : Session(DiaSession) {}

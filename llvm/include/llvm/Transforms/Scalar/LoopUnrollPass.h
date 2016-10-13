@@ -21,6 +21,7 @@ struct LoopUnrollPass : public PassInfoMixin<LoopUnrollPass> {
   Optional<unsigned> ProvidedThreshold;
   Optional<bool> ProvidedAllowPartial;
   Optional<bool> ProvidedRuntime;
+  Optional<bool> ProvidedUpperBound;
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM);
 };

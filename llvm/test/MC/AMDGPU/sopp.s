@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=VI %s
 
 //===----------------------------------------------------------------------===//
@@ -176,3 +176,15 @@ s_decperflevel 6
 
 s_ttracedata
 // GCN: s_ttracedata ; encoding: [0x00,0x00,0x96,0xbf]
+
+s_set_gpr_idx_off
+// VI: 	s_set_gpr_idx_off ; encoding: [0x00,0x00,0x9c,0xbf]
+// NOSICI: error: instruction not supported on this GPU
+
+s_set_gpr_idx_mode 0
+// VI: s_set_gpr_idx_mode 0 ; encoding: [0x00,0x00,0x9d,0xbf]
+// NOSICI: error: instruction not supported on this GPU
+
+s_set_gpr_idx_mode 15
+// VI: s_set_gpr_idx_mode dst src0 src1 src2 ; encoding: [0x0f,0x00,0x9d,0xbf]
+// NOSICI: error: instruction not supported on this GPU

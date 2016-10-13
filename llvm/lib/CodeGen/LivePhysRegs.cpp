@@ -141,9 +141,16 @@ bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
 }
 
 /// Add live-in registers of basic block \p MBB to \p LiveRegs.
-static void addLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB) {
-  for (const auto &LI : MBB.liveins())
-    LiveRegs.addReg(LI.PhysReg);
+void LivePhysRegs::addBlockLiveIns(const MachineBasicBlock &MBB) {
+  for (const auto &LI : MBB.liveins()) {
+    if (LI.LaneMask == ~0u) {
+      addReg(LI.PhysReg);
+      continue;
+    }
+    for (MCSubRegIndexIterator S(LI.PhysReg, TRI); S.isValid(); ++S)
+      if (LI.LaneMask & TRI->getSubRegIndexLaneMask(S.getSubRegIndex()))
+        addReg(S.getSubReg());
+  }
 }
 
 /// Add pristine registers to the given \p LiveRegs. This function removes
@@ -160,7 +167,7 @@ static void addPristines(LivePhysRegs &LiveRegs, const MachineFunction &MF,
 void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
   // To get the live-outs we simply merge the live-ins of all successors.
   for (const MachineBasicBlock *Succ : MBB.successors())
-    ::addLiveIns(*this, *Succ);
+    addBlockLiveIns(*Succ);
 }
 
 void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
@@ -185,5 +192,5 @@ void LivePhysRegs::addLiveIns(const MachineBasicBlock &MBB) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (MFI.isCalleeSavedInfoValid())
     addPristines(*this, MF, MFI, *TRI);
-  ::addLiveIns(*this, MBB);
+  addBlockLiveIns(MBB);
 }

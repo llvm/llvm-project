@@ -105,6 +105,8 @@ public:
   MemoryLocOrCall() : IsCall(false) {}
   MemoryLocOrCall(MemoryUseOrDef *MUD)
       : MemoryLocOrCall(MUD->getMemoryInst()) {}
+  MemoryLocOrCall(const MemoryUseOrDef *MUD)
+      : MemoryLocOrCall(MUD->getMemoryInst()) {}
 
   MemoryLocOrCall(Instruction *Inst) {
     if (ImmutableCallSite(Inst)) {
@@ -254,11 +256,22 @@ static bool instructionClobbersQuery(MemoryDef *MD,
   return AA.getModRefInfo(DefInst, UseLoc) & MRI_Mod;
 }
 
+static bool instructionClobbersQuery(MemoryDef *MD, const MemoryUseOrDef *MU,
+                                     const MemoryLocOrCall &UseMLOC,
+                                     AliasAnalysis &AA) {
+  // FIXME: This is a temporary hack to allow a single instructionClobbersQuery
+  // to exist while MemoryLocOrCall is pushed through places.
+  if (UseMLOC.IsCall)
+    return instructionClobbersQuery(MD, MemoryLocation(), MU->getMemoryInst(),
+                                    AA);
+  return instructionClobbersQuery(MD, UseMLOC.getLoc(), MU->getMemoryInst(),
+                                  AA);
+}
+
 // Return true when MD may alias MU, return false otherwise.
 bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
                          AliasAnalysis &AA) {
-  Instruction *Insn = MU->getMemoryInst();
-  return instructionClobbersQuery(MD, MemoryLocation::get(Insn), Insn, AA);
+  return instructionClobbersQuery(MD, MU, MemoryLocOrCall(MU), AA);
 }
 }
 
@@ -308,18 +321,6 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
   // because we need to pay close attention to invariant group barriers.
   return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
                               AA.pointsToConstantMemory(I));
-}
-
-static bool instructionClobbersQuery(MemoryDef *MD, MemoryUse *MU,
-                                     const MemoryLocOrCall &UseMLOC,
-                                     AliasAnalysis &AA) {
-  // FIXME: This is a temporary hack to allow a single instructionClobbersQuery
-  // to exist while MemoryLocOrCall is pushed through places.
-  if (UseMLOC.IsCall)
-    return instructionClobbersQuery(MD, MemoryLocation(), MU->getMemoryInst(),
-                                    AA);
-  return instructionClobbersQuery(MD, UseMLOC.getLoc(), MU->getMemoryInst(),
-                                  AA);
 }
 
 /// Cache for our caching MemorySSA walker.

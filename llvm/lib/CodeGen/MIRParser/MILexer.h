@@ -118,6 +118,7 @@ struct MIToken {
     // Other tokens
     IntegerLiteral,
     FloatingPointLiteral,
+    HexLiteral,
     VirtualRegister,
     ConstantPoolItem,
     JumpTableIndex,
