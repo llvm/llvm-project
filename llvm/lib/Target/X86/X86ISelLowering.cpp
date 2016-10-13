@@ -16340,7 +16340,7 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
   }
 
   assert (InVT.getVectorElementType() == MVT::i1 && "Unexpected vector type");
-  MVT ExtVT = NumElts == 8 ? MVT::v8i64 : MVT::v16i32;
+  MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(512/NumElts), NumElts);
   SDValue NegOne = DAG.getConstant(
       APInt::getAllOnesValue(ExtVT.getScalarSizeInBits()), dl, ExtVT);
   SDValue Zero = DAG.getConstant(

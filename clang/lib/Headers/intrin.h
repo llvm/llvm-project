@@ -1112,14 +1112,6 @@ __stosq(unsigned __int64 *__dst, unsigned __int64 __x, size_t __n) {
 /*----------------------------------------------------------------------------*\
 |* Misc
 \*----------------------------------------------------------------------------*/
-static __inline__ void * __DEFAULT_FN_ATTRS
-_AddressOfReturnAddress(void) {
-  return (void*)((char*)__builtin_frame_address(0) + sizeof(void*));
-}
-static __inline__ void * __DEFAULT_FN_ATTRS
-_ReturnAddress(void) {
-  return __builtin_return_address(0);
-}
 #if defined(__i386__) || defined(__x86_64__)
 static __inline__ void __DEFAULT_FN_ATTRS
 __cpuid(int __info[4], int __level) {

@@ -2148,11 +2148,10 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
                                       getShiftAmountTy(N0.getValueType()))));
   }
 
-  APInt Val;
   // (mul (shl X, c1), c2) -> (mul X, c2 << c1)
-  if (N1IsConst && N0.getOpcode() == ISD::SHL &&
-      (ISD::isConstantSplatVector(N0.getOperand(1).getNode(), Val) ||
-       isa<ConstantSDNode>(N0.getOperand(1)))) {
+  if (N0.getOpcode() == ISD::SHL &&
+      isConstantOrConstantVector(N1) &&
+      isConstantOrConstantVector(N0.getOperand(1))) {
     SDValue C3 = DAG.getNode(ISD::SHL, SDLoc(N), VT, N1, N0.getOperand(1));
     AddToWorklist(C3.getNode());
     return DAG.getNode(ISD::MUL, SDLoc(N), VT, N0.getOperand(0), C3);
@@ -2162,14 +2161,14 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   // use.
   {
     SDValue Sh(nullptr, 0), Y(nullptr, 0);
+
     // Check for both (mul (shl X, C), Y)  and  (mul Y, (shl X, C)).
     if (N0.getOpcode() == ISD::SHL &&
-        (ISD::isConstantSplatVector(N0.getOperand(1).getNode(), Val) ||
-         isa<ConstantSDNode>(N0.getOperand(1))) &&
+        isConstantOrConstantVector(N0.getOperand(1)) &&
         N0.getNode()->hasOneUse()) {
       Sh = N0; Y = N1;
     } else if (N1.getOpcode() == ISD::SHL &&
-               isa<ConstantSDNode>(N1.getOperand(1)) &&
+               isConstantOrConstantVector(N1.getOperand(1)) &&
                N1.getNode()->hasOneUse()) {
       Sh = N1; Y = N0;
     }

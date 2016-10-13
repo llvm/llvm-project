@@ -235,6 +235,9 @@ protected:
   /// particularly effective at zeroing a VFP register.
   bool HasZeroCycleZeroing = false;
 
+  /// HasFPAO - if true, processor  does positive address offset computation faster
+  bool HasFPAO = false;
+
   /// If true, if conversion may decide to leave some instructions unpredicated.
   bool IsProfitableToUnpredicate = false;
 
@@ -453,6 +456,7 @@ public:
   bool hasTrustZone() const { return HasTrustZone; }
   bool has8MSecExt() const { return Has8MSecExt; }
   bool hasZeroCycleZeroing() const { return HasZeroCycleZeroing; }
+  bool hasFPAO() const { return HasFPAO; }
   bool isProfitableToUnpredicate() const { return IsProfitableToUnpredicate; }
   bool hasSlowVGETLNi32() const { return HasSlowVGETLNi32; }
   bool hasSlowVDUP32() const { return HasSlowVDUP32; }

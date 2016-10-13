@@ -64,7 +64,7 @@ void TracePC::PrintModuleInfo() {
 void TracePC::ResetGuards() {
   uint32_t N = 0;
   for (size_t M = 0; M < NumModules; M++)
-    for (uint32_t *X = Modules[M].Start; X < Modules[M].Stop; X++)
+    for (uint32_t *X = Modules[M].Start, *End = Modules[M].Stop; X < End; X++)
       *X = ++N;
   assert(N == NumGuards);
 }
@@ -163,23 +163,17 @@ void TracePC::AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
   TPC.HandleValueProfile((PC & 4095) | (Idx << 12));
 }
 
+template <class T>
 ATTRIBUTE_TARGET_POPCNT
-static void AddValueForCmp(void *PCptr, uint64_t Arg1, uint64_t Arg2) {
-  uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
+#ifdef __clang__  // g++ can't handle this __attribute__ here :(
+__attribute__((always_inline))
+#endif  // __clang__
+void TracePC::HandleCmp(void *PC, T Arg1, T Arg2) {
+  uintptr_t PCuint = reinterpret_cast<uintptr_t>(PC);
   uint64_t ArgDistance = __builtin_popcountl(Arg1 ^ Arg2) + 1; // [1,65]
-  uintptr_t Idx = ((PC & 4095) + 1) * ArgDistance;
-  TPC.HandleValueProfile(Idx);
+  uintptr_t Idx = ((PCuint & 4095) + 1) * ArgDistance;
+  HandleValueProfile(Idx);
 }
-
-static void AddValueForSingleVal(void *PCptr, uintptr_t Val) {
-  if (!Val) return;
-  uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
-  uint64_t ArgDistance = __builtin_popcountl(Val) - 1; // [0,63]
-  uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
-  TPC.HandleValueProfile(Idx);
-}
-
-
 
 } // namespace fuzzer
 
@@ -201,28 +195,21 @@ void __sanitizer_cov_trace_pc_indir(uintptr_t Callee) {
   fuzzer::TPC.HandleCallerCallee(PC, Callee);
 }
 
-// TODO: this one will not be used with the newest clang. Remove it.
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1,
-                               uint64_t Arg2) {
-  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
-}
-
-__attribute__((visibility("default")))
-void __sanitizer_cov_trace_cmp8(uint64_t Arg1, int64_t Arg2) {
-  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2) {
+  fuzzer::TPC.HandleCmp(__builtin_return_address(0), Arg1, Arg2);
 }
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_cmp4(uint32_t Arg1, int32_t Arg2) {
-  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2) {
+  fuzzer::TPC.HandleCmp(__builtin_return_address(0), Arg1, Arg2);
 }
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_cmp2(uint16_t Arg1, int16_t Arg2) {
-  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+void __sanitizer_cov_trace_cmp2(uint16_t Arg1, uint16_t Arg2) {
+  fuzzer::TPC.HandleCmp(__builtin_return_address(0), Arg1, Arg2);
 }
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_cmp1(uint8_t Arg1, int8_t Arg2) {
-  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+void __sanitizer_cov_trace_cmp1(uint8_t Arg1, uint8_t Arg2) {
+  fuzzer::TPC.HandleCmp(__builtin_return_address(0), Arg1, Arg2);
 }
 
 __attribute__((visibility("default")))
@@ -232,20 +219,20 @@ void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
   char *PC = (char*)__builtin_return_address(0);
   for (size_t i = 0; i < N; i++)
     if (Val != Vals[i])
-      fuzzer::AddValueForCmp(PC + i, Val, Vals[i]);
+      fuzzer::TPC.HandleCmp(PC + i, Val, Vals[i]);
 }
 
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_div4(uint32_t Val) {
-  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+  fuzzer::TPC.HandleCmp(__builtin_return_address(0), Val, (uint32_t)0);
 }
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_div8(uint64_t Val) {
-  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+  fuzzer::TPC.HandleCmp(__builtin_return_address(0), Val, (uint64_t)0);
 }
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_gep(uintptr_t Idx) {
-  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Idx);
+  fuzzer::TPC.HandleCmp(__builtin_return_address(0), Idx, (uintptr_t)0);
 }
 
 }  // extern "C"

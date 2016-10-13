@@ -38,6 +38,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Signals.h"
 
 using namespace clang;
 using namespace llvm;
@@ -69,6 +70,7 @@ cl::opt<std::string> Style("style",
 } // anonymous namespace
 
 int main(int argc, const char **argv) {
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   tooling::CommonOptionsParser OptionsParser(argc, argv,
                                              ChangeNamespaceCategory);
   const auto &Files = OptionsParser.getSourcePathList();

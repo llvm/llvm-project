@@ -115,9 +115,6 @@ static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
   llvm_unreachable("invalid TLS model");
 }
 
-// FIXME: make this a proper option
-static bool CanUseCopyRelocWithPIE = false;
-
 bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
                                          const GlobalValue *GV) const {
   Reloc::Model RM = getRelocationModel();
@@ -154,8 +151,10 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       return true;
 
     bool IsTLS = GV && GV->isThreadLocal();
+    bool IsAccessViaCopyRelocs =
+        Options.MCOptions.MCPIECopyRelocations && GV && isa<GlobalVariable>(GV);
     // Check if we can use copy relocations.
-    if (!IsTLS && (RM == Reloc::Static || CanUseCopyRelocWithPIE))
+    if (!IsTLS && (RM == Reloc::Static || IsAccessViaCopyRelocs))
       return true;
   }
 

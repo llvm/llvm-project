@@ -99,6 +99,8 @@ def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
 // Not to be confused with FeatureHasRetAddrStack (return address stack)
 def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
                 "Enable Reliability, Availability and Serviceability extensions">;
+def FeatureFPAO : SubtargetFeature<"fpao", "HasFPAO", "true",
+                "Enable fast computation of positive address offsets">;
 
 
 // Cyclone has preferred instructions for zeroing VFP registers, which can
@@ -773,13 +775,15 @@ def : ProcNoItin<"cortex-a53",                          [ARMv8a, ProcA53,
                                                          FeatureHWDiv,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,
-                                                         FeatureCRC]>;
+                                                         FeatureCRC,
+                                                         FeatureFPAO]>;
 
 def : ProcNoItin<"cortex-a57",                          [ARMv8a, ProcA57,
                                                          FeatureHWDiv,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,
-                                                         FeatureCRC]>;
+                                                         FeatureCRC,
+                                                         FeatureFPAO]>;
 
 def : ProcNoItin<"cortex-a72",                          [ARMv8a, ProcA72,
                                                          FeatureHWDiv,

@@ -16,6 +16,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 // Define static_assert() unless already defined by compiler.

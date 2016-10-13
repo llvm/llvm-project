@@ -2271,14 +2271,6 @@ public:
   /// returns 0.
   unsigned getMemoryFunctionKind() const;
 
-  /// Add a diagnostic to be emitted if and when this function is codegen'ed.
-  void addDeferredDiag(PartialDiagnosticAt PD);
-
-  /// Gets this object's list of deferred diagnostics, if there are any.
-  ///
-  /// Although this is logically const, it clears our list of deferred diags.
-  std::vector<PartialDiagnosticAt> takeDeferredDiags() const;
-
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) {

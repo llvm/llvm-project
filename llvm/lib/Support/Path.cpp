@@ -707,12 +707,11 @@ static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot) {
   for (StringRef C : llvm::make_range(path::begin(rel), path::end(rel))) {
     if (C == ".")
       continue;
-    if (remove_dot_dot) {
-      if (C == "..") {
-        if (!components.empty())
-          components.pop_back();
-        continue;
-      }
+    // Leading ".." will remain in the path.
+    if (remove_dot_dot && C == ".." && !components.empty() &&
+        components.back() != "..") {
+      components.pop_back();
+      continue;
     }
     components.push_back(C);
   }

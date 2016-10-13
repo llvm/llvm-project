@@ -9,13 +9,13 @@ void host() {
 }
 __device__ void device() {
   throw NULL;
-  // expected-error@-1 {{cannot use 'throw' in __device__ function 'device'}}
+  // expected-error@-1 {{cannot use 'throw' in __device__ function}}
   try {} catch(void*) {}
-  // expected-error@-1 {{cannot use 'try' in __device__ function 'device'}}
+  // expected-error@-1 {{cannot use 'try' in __device__ function}}
 }
 __global__ void kernel() {
   throw NULL;
-  // expected-error@-1 {{cannot use 'throw' in __global__ function 'kernel'}}
+  // expected-error@-1 {{cannot use 'throw' in __global__ function}}
   try {} catch(void*) {}
-  // expected-error@-1 {{cannot use 'try' in __global__ function 'kernel'}}
+  // expected-error@-1 {{cannot use 'try' in __global__ function}}
 }

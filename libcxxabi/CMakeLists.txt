@@ -340,6 +340,7 @@ endif()
 
 if (LIBCXXABI_HAS_PTHREAD_API)
   add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
+  add_definitions(-D_LIBCXXABI_USE_THREAD_API_PTHREAD)
 endif()
 
 if (MSVC)

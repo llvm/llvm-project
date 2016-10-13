@@ -2002,6 +2002,14 @@ static unsigned getLTOParallelism(const ArgList &Args, const Driver &D) {
   return Parallelism;
 }
 
+// CloudABI and WebAssembly use -ffunction-sections and -fdata-sections by
+// default.
+static bool isUseSeparateSections(const llvm::Triple &Triple) {
+  return Triple.getOS() == llvm::Triple::CloudABI ||
+         Triple.getArch() == llvm::Triple::wasm32 ||
+         Triple.getArch() == llvm::Triple::wasm64;
+}
+
 static void AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, bool IsThinLTO,
                           const Driver &D) {
@@ -2050,6 +2058,19 @@ static void AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back("-plugin-opt=-debugger-tune=sce");
     else
       CmdArgs.push_back("-plugin-opt=-debugger-tune=gdb");
+  }
+
+  bool UseSeparateSections =
+      isUseSeparateSections(ToolChain.getEffectiveTriple());
+
+  if (Args.hasFlag(options::OPT_ffunction_sections,
+                   options::OPT_fno_function_sections, UseSeparateSections)) {
+    CmdArgs.push_back("-plugin-opt=-function-sections");
+  }
+
+  if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
+                   UseSeparateSections)) {
+    CmdArgs.push_back("-plugin-opt=-data-sections");
   }
 }
 
@@ -4763,11 +4784,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-generate-type-units");
   }
 
-  // CloudABI and WebAssembly use -ffunction-sections and -fdata-sections by
-  // default.
-  bool UseSeparateSections = Triple.getOS() == llvm::Triple::CloudABI ||
-                             Triple.getArch() == llvm::Triple::wasm32 ||
-                             Triple.getArch() == llvm::Triple::wasm64;
+  bool UseSeparateSections = isUseSeparateSections(Triple);
 
   if (Args.hasFlag(options::OPT_ffunction_sections,
                    options::OPT_fno_function_sections, UseSeparateSections)) {

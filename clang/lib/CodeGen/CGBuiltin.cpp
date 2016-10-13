@@ -1147,6 +1147,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     Value *F = CGM.getIntrinsic(Intrinsic::returnaddress);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
+  case Builtin::BI_ReturnAddress: {
+    Value *F = CGM.getIntrinsic(Intrinsic::returnaddress);
+    return RValue::get(Builder.CreateCall(F, Builder.getInt32(0)));
+  }
   case Builtin::BI__builtin_frame_address: {
     Value *Depth =
         CGM.EmitConstantExpr(E->getArg(0), getContext().UnsignedIntTy, this);
@@ -7697,6 +7701,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI_BitScanReverse:
   case X86::BI_BitScanReverse64:
     return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
+  case X86::BI_AddressOfReturnAddress: {
+    Value *F = CGM.getIntrinsic(Intrinsic::addressofreturnaddress);
+    return Builder.CreateCall(F);
+  }
   }
 }
 

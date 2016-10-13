@@ -10,13 +10,10 @@
 #include "fallback_malloc.h"
 
 #include "config.h"
+#include "threading_support.h"
 
 #include <cstdlib> // for malloc, calloc, free
 #include <cstring> // for memset
-
-#ifndef _LIBCXXABI_HAS_NO_THREADS
-#include <pthread.h> // for mutexes
-#endif
 
 //  A small, simple heap manager based (loosely) on
 //  the startup heap manager from FreeBSD, optimized for space.
@@ -32,7 +29,7 @@ namespace {
 
 // When POSIX threads are not available, make the mutex operations a nop
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-static pthread_mutex_t heap_mutex = PTHREAD_MUTEX_INITIALIZER;
+static __libcxxabi_mutex_t heap_mutex = _LIBCXXABI_MUTEX_INITIALIZER;
 #else
 static void * heap_mutex = 0;
 #endif
@@ -40,8 +37,8 @@ static void * heap_mutex = 0;
 class mutexor {
 public:
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-    mutexor ( pthread_mutex_t *m ) : mtx_(m) { pthread_mutex_lock ( mtx_ ); }
-    ~mutexor () { pthread_mutex_unlock ( mtx_ ); }
+    mutexor ( __libcxxabi_mutex_t *m ) : mtx_(m) { __libcxxabi_mutex_lock ( mtx_ ); }
+    ~mutexor () { __libcxxabi_mutex_unlock ( mtx_ ); }
 #else
     mutexor ( void * ) {}
     ~mutexor () {}
@@ -50,7 +47,7 @@ private:
     mutexor ( const mutexor &rhs );
     mutexor & operator = ( const mutexor &rhs );
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-    pthread_mutex_t *mtx_;
+    __libcxxabi_mutex_t *mtx_;
 #endif
     };
 
