@@ -18,6 +18,10 @@
 #   define LANGBUILTIN(ID, TYPE, ATTRS, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+#if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
+#  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
 // In libgcc
 BUILTIN(__clear_cache, "vv*v*", "i")
 
@@ -129,5 +133,11 @@ LANGBUILTIN(_MoveFromCoprocessor2, "UiIUiIUiIUiIUiIUi", "", ALL_MS_LANGUAGES)
 LANGBUILTIN(_MoveToCoprocessor, "vUiIUiIUiIUiIUiIUi", "", ALL_MS_LANGUAGES)
 LANGBUILTIN(_MoveToCoprocessor2, "vUiIUiIUiIUiIUiIUi", "", ALL_MS_LANGUAGES)
 
+TARGET_HEADER_BUILTIN(_BitScanForward, "UcULi*ULi", "n", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse, "UcULi*ULi", "n", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanForward64, "UcULi*ULLi", "n", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcULi*ULLi", "n", "intrin.h", ALL_MS_LANGUAGES, "")
+
 #undef BUILTIN
 #undef LANGBUILTIN
+#undef TARGET_HEADER_BUILTIN

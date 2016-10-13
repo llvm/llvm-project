@@ -737,7 +737,7 @@ public:
 
   /// \brief Build a result that refers to a pattern with an associated
   /// declaration.
-  CodeCompletionResult(CodeCompletionString *Pattern, NamedDecl *D,
+  CodeCompletionResult(CodeCompletionString *Pattern, const NamedDecl *D,
                        unsigned Priority)
     : Declaration(D), Pattern(Pattern), Priority(Priority), StartParameter(0),
       Kind(RK_Pattern), Availability(CXAvailability_Available), Hidden(false),

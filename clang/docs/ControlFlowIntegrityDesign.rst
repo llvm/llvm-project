@@ -497,3 +497,57 @@ Cross-DSO CFI mode requires that the main executable is built as PIE.
 In non-PIE executables the address of an external function (taken from
 the main executable) is the address of that function’s PLT record in
 the main executable. This would break the CFI checks.
+
+
+Hardware support
+================
+
+We believe that the above design can be efficiently implemented in hardware.
+A single new instruction added to an ISA would allow to perform the CFI check
+with fewer bytes per check (smaller code size overhead) and potentially more
+efficiently. The current software-only instrumentation requires at least
+32-bytes per check (on x86_64).
+A hardware instruction may probably be less than ~ 12 bytes.
+Such instruction would check that the argument pointer is in-bounds,
+and is properly aligned, and if the checks fail it will either trap (in monolithic scheme)
+or call the slow path function (cross-DSO scheme).
+The bit vector lookup is probably too complex for a hardware implementation.
+
+.. code-block:: none
+
+  //  This instruction checks that 'Ptr'
+  //   * is aligned by (1 << kAlignment) and
+  //   * is inside [kRangeBeg, kRangeBeg+(kRangeSize<<kAlignment))
+  //  and if the check fails it jumps to the given target (slow path).
+  //
+  // 'Ptr' is a register, pointing to the virtual function table
+  //    or to the function which we need to check. We may require an explicit
+  //    fixed register to be used.
+  // 'kAlignment' is a 4-bit constant.
+  // 'kRangeSize' is a ~20-bit constant.
+  // 'kRangeBeg' is a PC-relative constant (~28 bits)
+  //    pointing to the beginning of the allowed range for 'Ptr'.
+  // 'kFailedCheckTarget': is a PC-relative constant (~28 bits)
+  //    representing the target to branch to when the check fails.
+  //    If kFailedCheckTarget==0, the process will trap
+  //    (monolithic binary scheme).
+  //    Otherwise it will jump to a handler that implements `CFI_SlowPath`
+  //    (cross-DSO scheme).
+  CFI_Check(Ptr, kAlignment, kRangeSize, kRangeBeg, kFailedCheckTarget) {
+     if (Ptr < kRangeBeg ||
+         Ptr >= kRangeBeg + (kRangeSize << kAlignment) ||
+         Ptr & ((1 << kAlignment) - 1))
+           Jump(kFailedCheckTarget);
+  }
+
+An alternative and more compact enconding would not use `kFailedCheckTarget`,
+and will trap on check failure instead.
+This will allow us to fit the instruction into **8-9 bytes**.
+The cross-DSO checks will be performed by a trap handler and
+performance-critical ones will have to be black-listed and checked using the
+software-only scheme.
+
+Note that such hardware extension would be complementary to checks
+at the callee side, such as e.g. **Intel ENDBRANCH**.
+Moreover, CFI would have two benefits over ENDBRANCH: a) precision and b)
+ability to protect against invalid casts between polymorphic types.

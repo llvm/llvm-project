@@ -432,20 +432,6 @@ unsigned __int64 _umul128(unsigned __int64,
 |* Bit Counting and Testing
 \*----------------------------------------------------------------------------*/
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_BitScanForward(unsigned long *_Index, unsigned long _Mask) {
-  if (!_Mask)
-    return 0;
-  *_Index = __builtin_ctzl(_Mask);
-  return 1;
-}
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_BitScanReverse(unsigned long *_Index, unsigned long _Mask) {
-  if (!_Mask)
-    return 0;
-  *_Index = 31 - __builtin_clzl(_Mask);
-  return 1;
-}
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _bittest(long const *_BitBase, long _BitPos) {
   return (*_BitBase >> _BitPos) & 1;
 }
@@ -490,20 +476,6 @@ _interlockedbittestandset_rel(long volatile *_BitBase, long _BitPos) {
 }
 #endif
 #ifdef __x86_64__
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_BitScanForward64(unsigned long *_Index, unsigned __int64 _Mask) {
-  if (!_Mask)
-    return 0;
-  *_Index = __builtin_ctzll(_Mask);
-  return 1;
-}
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask) {
-  if (!_Mask)
-    return 0;
-  *_Index = 63 - __builtin_clzll(_Mask);
-  return 1;
-}
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _bittest64(__int64 const *_BitBase, __int64 _BitPos) {
   return (*_BitBase >> _BitPos) & 1;

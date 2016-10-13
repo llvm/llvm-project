@@ -1,18 +1,80 @@
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple i686--windows -Oz -emit-llvm %s -o - \
-// RUN:         | FileCheck %s -check-prefix CHECK -check-prefix CHECK-I386
+// RUN:         | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-I386
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple thumbv7--windows -Oz -emit-llvm %s -o - \
-// RUN:         | FileCheck %s
+// RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM-X64
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple x86_64--windows -Oz -emit-llvm %s -o - \
-// RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X64
+// RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X64 --check-prefix=CHECK-ARM-X64
 
 // intrin.h needs size_t, but -ffreestanding prevents us from getting it from
 // stddef.h.  Work around it with this typedef.
 typedef __SIZE_TYPE__ size_t;
 
 #include <intrin.h>
+
+unsigned char test_BitScanForward(unsigned long *Index, unsigned long Mask) {
+  return _BitScanForward(Index, Mask);
+}
+// CHECK: define{{.*}}i8 @test_BitScanForward(i32* {{[a-z_ ]*}}%Index, i32 {{[a-z_ ]*}}%Mask){{.*}}{
+// CHECK:   [[ISNOTZERO:%[a-z0-9._]+]] = icmp eq i32 %Mask, 0
+// CHECK:   br i1 [[ISNOTZERO]], label %[[END_LABEL:[a-z0-9._]+]], label %[[ISNOTZERO_LABEL:[a-z0-9._]+]]
+// CHECK:   [[END_LABEL]]:
+// CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
+// CHECK:   ret i8 [[RESULT]]
+// CHECK:   [[ISNOTZERO_LABEL]]:
+// CHECK:   [[INDEX:%[0-9]+]] = tail call i32 @llvm.cttz.i32(i32 %Mask, i1 true)
+// CHECK:   store i32 [[INDEX]], i32* %Index, align 4
+// CHECK:   br label %[[END_LABEL]]
+
+unsigned char test_BitScanReverse(unsigned long *Index, unsigned long Mask) {
+  return _BitScanReverse(Index, Mask);
+}
+// CHECK: define{{.*}}i8 @test_BitScanReverse(i32* {{[a-z_ ]*}}%Index, i32 {{[a-z_ ]*}}%Mask){{.*}}{
+// CHECK:   [[ISNOTZERO:%[0-9]+]] = icmp eq i32 %Mask, 0
+// CHECK:   br i1 [[ISNOTZERO]], label %[[END_LABEL:[a-z0-9._]+]], label %[[ISNOTZERO_LABEL:[a-z0-9._]+]]
+// CHECK:   [[END_LABEL]]:
+// CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
+// CHECK:   ret i8 [[RESULT]]
+// CHECK:   [[ISNOTZERO_LABEL]]:
+// CHECK:   [[REVINDEX:%[0-9]+]] = tail call i32 @llvm.ctlz.i32(i32 %Mask, i1 true)
+// CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[REVINDEX]], 31
+// CHECK:   store i32 [[INDEX]], i32* %Index, align 4
+// CHECK:   br label %[[END_LABEL]]
+
+#if defined(__x86_64__) || defined(__arm__)
+unsigned char test_BitScanForward64(unsigned long *Index, unsigned __int64 Mask) {
+  return _BitScanForward64(Index, Mask);
+}
+// CHECK-ARM-X64: define{{.*}}i8 @test_BitScanForward64(i32* {{[a-z_ ]*}}%Index, i64 {{[a-z_ ]*}}%Mask){{.*}}{
+// CHECK-ARM-X64:   [[ISNOTZERO:%[a-z0-9._]+]] = icmp eq i64 %Mask, 0
+// CHECK-ARM-X64:   br i1 [[ISNOTZERO]], label %[[END_LABEL:[a-z0-9._]+]], label %[[ISNOTZERO_LABEL:[a-z0-9._]+]]
+// CHECK-ARM-X64:   [[END_LABEL]]:
+// CHECK-ARM-X64:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
+// CHECK-ARM-X64:   ret i8 [[RESULT]]
+// CHECK-ARM-X64:   [[ISNOTZERO_LABEL]]:
+// CHECK-ARM-X64:   [[INDEX:%[0-9]+]] = tail call i64 @llvm.cttz.i64(i64 %Mask, i1 true)
+// CHECK-ARM-X64:   [[TRUNC_INDEX:%[0-9]+]] = trunc i64 [[INDEX]] to i32
+// CHECK-ARM-X64:   store i32 [[TRUNC_INDEX]], i32* %Index, align 4
+// CHECK-ARM-X64:   br label %[[END_LABEL]]
+
+unsigned char test_BitScanReverse64(unsigned long *Index, unsigned __int64 Mask) {
+  return _BitScanReverse64(Index, Mask);
+}
+// CHECK-ARM-X64: define{{.*}}i8 @test_BitScanReverse64(i32* {{[a-z_ ]*}}%Index, i64 {{[a-z_ ]*}}%Mask){{.*}}{
+// CHECK-ARM-X64:   [[ISNOTZERO:%[0-9]+]] = icmp eq i64 %Mask, 0
+// CHECK-ARM-X64:   br i1 [[ISNOTZERO]], label %[[END_LABEL:[a-z0-9._]+]], label %[[ISNOTZERO_LABEL:[a-z0-9._]+]]
+// CHECK-ARM-X64:   [[END_LABEL]]:
+// CHECK-ARM-X64:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
+// CHECK-ARM-X64:   ret i8 [[RESULT]]
+// CHECK-ARM-X64:   [[ISNOTZERO_LABEL]]:
+// CHECK-ARM-X64:   [[REVINDEX:%[0-9]+]] = tail call i64 @llvm.ctlz.i64(i64 %Mask, i1 true)
+// CHECK-ARM-X64:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc i64 [[REVINDEX]] to i32
+// CHECK-ARM-X64:   [[INDEX:%[0-9]+]] = xor i32 [[TRUNC_REVINDEX]], 63
+// CHECK-ARM-X64:   store i32 [[INDEX]], i32* %Index, align 4
+// CHECK-ARM-X64:   br label %[[END_LABEL]]
+#endif
 
 void *test_InterlockedExchangePointer(void * volatile *Target, void *Value) {
   return _InterlockedExchangePointer(Target, Value);

@@ -2003,10 +2003,10 @@ public:
 };
 
 /// WinX86_64ABIInfo - The Windows X86_64 ABI information.
-class WinX86_64ABIInfo : public ABIInfo {
+class WinX86_64ABIInfo : public SwiftABIInfo {
 public:
   WinX86_64ABIInfo(CodeGen::CodeGenTypes &CGT)
-      : ABIInfo(CGT),
+      : SwiftABIInfo(CGT),
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
@@ -2023,6 +2023,12 @@ public:
                                          uint64_t NumMembers) const override {
     // FIXME: Assumes vectorcall is in use.
     return isX86VectorCallAggregateSmallEnough(NumMembers);
+  }
+
+  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
+                                    ArrayRef<llvm::Type *> scalars,
+                                    bool asReturnValue) const override {
+    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
 
 private:
