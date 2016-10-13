@@ -881,8 +881,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (HasStackObjects)
     Info->setHasNonSpillStackObjects(true);
 
+  // Everything live out of a block is spilled with fast regalloc, so it's
+  // almost certain that spilling will be required.
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+    HasStackObjects = true;
+
   if (ST.isAmdCodeObjectV2()) {
-    // TODO: Assume we will spill without optimizations.
     if (HasStackObjects) {
       // If we have stack objects, we unquestionably need the private buffer
       // resource. For the Code Object V2 ABI, this will be the first 4 user
@@ -1179,7 +1183,7 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
     MachineInstr *SetIdx =
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_IDX))
       .addReg(IdxReg, RegState::Kill);
-    SetIdx->getOperand(2).setIsUndef(true);
+    SetIdx->getOperand(2).setIsUndef();
   } else {
     // Move index from VCC into M0
     if (Offset == 0) {
@@ -1319,7 +1323,7 @@ static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
         .addOperand(*Idx)
         .addImm(IdxMode);
 
-      SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
+      SetOn->getOperand(3).setIsUndef();
     } else {
       unsigned Tmp = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), Tmp)
@@ -1330,7 +1334,7 @@ static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
         .addReg(Tmp, RegState::Kill)
         .addImm(IdxMode);
 
-      SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
+      SetOn->getOperand(3).setIsUndef();
     }
 
     return true;
@@ -1406,7 +1410,7 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
     MachineInstr *SetOn = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
       .addImm(0) // Reset inside loop.
       .addImm(VGPRIndexMode::SRC0_ENABLE);
-    SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
+    SetOn->getOperand(3).setIsUndef();
 
 
     // Disable again after the loop.
@@ -1514,7 +1518,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
     MachineInstr *SetOn = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
       .addImm(0) // Reset inside loop.
       .addImm(VGPRIndexMode::DST_ENABLE);
-    SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
+    SetOn->getOperand(3).setIsUndef();
 
     // Disable again after the loop.
     BuildMI(MBB, std::next(I), DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));

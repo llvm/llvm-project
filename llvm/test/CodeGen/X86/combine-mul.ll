@@ -43,7 +43,7 @@ define <4 x i32> @combine_vec_mul_zero(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
-; fold (mul x, 0) -> 0
+; fold (mul x, 1) -> x
 define <4 x i32> @combine_vec_mul_one(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_one:
 ; SSE:       # BB#0:

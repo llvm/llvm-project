@@ -37,8 +37,9 @@ public:
   };
 
   struct MoveDefinitionSpec {
-    // A fully qualified name, e.g. "X", "a::X".
-    std::string Name;
+    // A comma-separated list of fully qualified names, e.g. "Foo",
+    // "a::Foo, b::Foo".
+    std::string Names;
     // The file path of old header, can be relative path and absolute path.
     std::string OldHeader;
     // The file path of old cc, can be relative path and absolute path.

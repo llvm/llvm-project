@@ -116,6 +116,12 @@ local_label:
         dlsa    $2, $3, $4, 5     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         drotr32 $2, $3, -1   # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
         drotr32 $2, $3, 32   # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
+        dvp $17, $3          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        dvp $17, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        dvp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp $16, $3          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp $16, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         jalr.hb $31          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         lsa     $2, $3, $4, 0     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4

@@ -113,6 +113,12 @@ local_label:
         bnezc $2, 4194303        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
         cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+        dvp $17, $3          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        dvp $17, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        dvp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp $16, $3          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp $16, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         jalr.hb $31          # CHECK: :[[@LINE]]:9: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:9: error: source and destination must be different
         ldc2 $20, -1025($s2) # CHECK: :[[@LINE]]:9: error: instruction requires a CPU feature not currently enabled

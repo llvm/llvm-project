@@ -1335,11 +1335,12 @@ class TLBINV_MMR6_DESC : TLBINV_MMR6_DESC_BASE<"tlbinv", II_TLBINV>;
 class TLBINVF_MMR6_DESC : TLBINV_MMR6_DESC_BASE<"tlbinvf", II_TLBINVF>;
 
 class DVPEVP_MMR6_DESC_BASE<string opstr, InstrItinClass Itin> {
-  dag OutOperandList = (outs);
-  dag InOperandList = (ins GPR32Opnd:$rs);
+  dag OutOperandList = (outs GPR32Opnd:$rs);
+  dag InOperandList = (ins);
   string AsmString = !strconcat(opstr, "\t$rs");
   list<dag> Pattern = [];
   InstrItinClass Itinerary = Itin;
+  bit hasUnModeledSideEffects = 1;
 }
 
 class DVP_MMR6_DESC : DVPEVP_MMR6_DESC_BASE<"dvp", II_DVP>;
