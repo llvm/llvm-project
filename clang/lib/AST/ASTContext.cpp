@@ -8824,15 +8824,10 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       }
     }
 
-    GVALinkage Linkage = GetGVALinkageForFunction(FD);
-
     // static, static inline, always_inline, and extern inline functions can
     // always be deferred.  Normal inline functions can be deferred in C99/C++.
     // Implicit template instantiations can also be deferred in C++.
-    if (Linkage == GVA_Internal || Linkage == GVA_AvailableExternally ||
-        Linkage == GVA_DiscardableODR)
-      return false;
-    return true;
+    return !isDiscardableGVALinkage(GetGVALinkageForFunction(FD));
   }
   
   const VarDecl *VD = cast<VarDecl>(D);
@@ -8843,9 +8838,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables that can be needed in other TUs are required.
-  GVALinkage L = GetGVALinkageForVariable(VD);
-  if (L != GVA_Internal && L != GVA_AvailableExternally &&
-      L != GVA_DiscardableODR)
+  if (!isDiscardableGVALinkage(GetGVALinkageForVariable(VD)))
     return true;
 
   // Variables that have destruction with side-effects are required.

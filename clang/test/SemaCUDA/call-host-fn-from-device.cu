@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - -verify
+// RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device \
+// RUN:   -emit-llvm -o /dev/null -verify
 
 // Note: This test won't work with -fsyntax-only, because some of these errors
 // are emitted during codegen.

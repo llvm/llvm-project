@@ -18,6 +18,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,6 +56,10 @@ ExprResult Sema::ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
 
 /// IdentifyCUDATarget - Determine the CUDA compilation target for this function
 Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D) {
+  // Code that lives outside a function is run on the host.
+  if (D == nullptr)
+    return CFT_Host;
+
   if (D->hasAttr<CUDAInvalidTargetAttr>())
     return CFT_InvalidTarget;
 
@@ -108,9 +113,8 @@ Sema::CUDAFunctionPreference
 Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
                              const FunctionDecl *Callee) {
   assert(Callee && "Callee must be valid.");
+  CUDAFunctionTarget CallerTarget = IdentifyCUDATarget(Caller);
   CUDAFunctionTarget CalleeTarget = IdentifyCUDATarget(Callee);
-  CUDAFunctionTarget CallerTarget =
-      (Caller != nullptr) ? IdentifyCUDATarget(Caller) : Sema::CFT_Host;
 
   // If one of the targets is invalid, the check always fails, no matter what
   // the other target is.
@@ -484,88 +488,230 @@ void Sema::maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *NewD,
   NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
 }
 
+Sema::CUDADiagBuilder::CUDADiagBuilder(Kind K, SourceLocation Loc,
+                                       unsigned DiagID, FunctionDecl *Fn,
+                                       Sema &S) {
+  switch (K) {
+  case K_Nop:
+    break;
+  case K_Immediate:
+    ImmediateDiagBuilder.emplace(S.Diag(Loc, DiagID));
+    break;
+  case K_Deferred:
+    assert(Fn && "Must have a function to attach the deferred diag to.");
+    PartialDiagInfo.emplace(S, Loc, S.PDiag(DiagID), Fn);
+    break;
+  }
+}
+
+// In CUDA, there are some constructs which may appear in semantically-valid
+// code, but trigger errors if we ever generate code for the function in which
+// they appear.  Essentially every construct you're not allowed to use on the
+// device falls into this category, because you are allowed to use these
+// constructs in a __host__ __device__ function, but only if that function is
+// never codegen'ed on the device.
+//
+// To handle semantic checking for these constructs, we keep track of the set of
+// functions we know will be emitted, either because we could tell a priori that
+// they would be emitted, or because they were transitively called by a
+// known-emitted function.
+//
+// We also keep a partial call graph of which not-known-emitted functions call
+// which other not-known-emitted functions.
+//
+// When we see something which is illegal if the current function is emitted
+// (usually by way of CUDADiagIfDeviceCode, CUDADiagIfHostCode, or
+// CheckCUDACall), we first check if the current function is known-emitted.  If
+// so, we immediately output the diagnostic.
+//
+// Otherwise, we "defer" the diagnostic.  It sits in Sema::CUDADeferredDiags
+// until we discover that the function is known-emitted, at which point we take
+// it out of this map and emit the diagnostic.
+
+// Do we know that we will eventually codegen the given function?
+static bool IsKnownEmitted(Sema &S, FunctionDecl *FD) {
+  // Templates are emitted when they're instantiated.
+  if (FD->isDependentContext())
+    return false;
+
+  // When compiling for device, host functions are never emitted.  Similarly,
+  // when compiling for host, device and global functions are never emitted.
+  // (Technically, we do emit a host-side stub for global functions, but this
+  // doesn't count for our purposes here.)
+  Sema::CUDAFunctionTarget T = S.IdentifyCUDATarget(FD);
+  if (S.getLangOpts().CUDAIsDevice && T == Sema::CFT_Host)
+    return false;
+  if (!S.getLangOpts().CUDAIsDevice &&
+      (T == Sema::CFT_Device || T == Sema::CFT_Global))
+    return false;
+
+  // Externally-visible and similar functions are always emitted.
+  if (!isDiscardableGVALinkage(S.getASTContext().GetGVALinkageForFunction(FD)))
+    return true;
+
+  // Otherwise, the function is known-emitted if it's in our set of
+  // known-emitted functions.
+  return S.CUDAKnownEmittedFns.count(FD) > 0;
+}
+
+Sema::CUDADiagBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
+                                                 unsigned DiagID) {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  CUDADiagBuilder::Kind DiagKind = [&] {
+    switch (CurrentCUDATarget()) {
+    case CFT_Global:
+    case CFT_Device:
+      return CUDADiagBuilder::K_Immediate;
+    case CFT_HostDevice:
+      // An HD function counts as host code if we're compiling for host, and
+      // device code if we're compiling for device.  Defer any errors in device
+      // mode until the function is known-emitted.
+      if (getLangOpts().CUDAIsDevice) {
+        return IsKnownEmitted(*this, dyn_cast<FunctionDecl>(CurContext))
+                   ? CUDADiagBuilder::K_Immediate
+                   : CUDADiagBuilder::K_Deferred;
+      }
+      return CUDADiagBuilder::K_Nop;
+
+    default:
+      return CUDADiagBuilder::K_Nop;
+    }
+  }();
+  return CUDADiagBuilder(DiagKind, Loc, DiagID,
+                         dyn_cast<FunctionDecl>(CurContext), *this);
+}
+
+Sema::CUDADiagBuilder Sema::CUDADiagIfHostCode(SourceLocation Loc,
+                                               unsigned DiagID) {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  CUDADiagBuilder::Kind DiagKind = [&] {
+    switch (CurrentCUDATarget()) {
+    case CFT_Host:
+      return CUDADiagBuilder::K_Immediate;
+    case CFT_HostDevice:
+      // An HD function counts as host code if we're compiling for host, and
+      // device code if we're compiling for device.  Defer any errors in device
+      // mode until the function is known-emitted.
+      if (getLangOpts().CUDAIsDevice)
+        return CUDADiagBuilder::K_Nop;
+
+      return IsKnownEmitted(*this, dyn_cast<FunctionDecl>(CurContext))
+                 ? CUDADiagBuilder::K_Immediate
+                 : CUDADiagBuilder::K_Deferred;
+    default:
+      return CUDADiagBuilder::K_Nop;
+    }
+  }();
+  return CUDADiagBuilder(DiagKind, Loc, DiagID,
+                         dyn_cast<FunctionDecl>(CurContext), *this);
+}
+
+// Emit any deferred diagnostics for FD and erase them from the map in which
+// they're stored.
+static void EmitDeferredDiags(Sema &S, FunctionDecl *FD) {
+  auto It = S.CUDADeferredDiags.find(FD);
+  if (It == S.CUDADeferredDiags.end())
+    return;
+  for (PartialDiagnosticAt &PDAt : It->second) {
+    const SourceLocation &Loc = PDAt.first;
+    const PartialDiagnostic &PD = PDAt.second;
+    DiagnosticBuilder Builder(S.Diags.Report(Loc, PD.getDiagID()));
+    Builder.setForceEmit();
+    PD.Emit(Builder);
+  }
+  S.CUDADeferredDiags.erase(It);
+}
+
+// Indicate that this function (and thus everything it transtively calls) will
+// be codegen'ed, and emit any deferred diagnostics on this function and its
+// (transitive) callees.
+static void MarkKnownEmitted(Sema &S, FunctionDecl *FD) {
+  // Nothing to do if we already know that FD is emitted.
+  if (IsKnownEmitted(S, FD)) {
+    assert(!S.CUDACallGraph.count(FD));
+    return;
+  }
+
+  // We've just discovered that FD is known-emitted.  Walk our call graph to see
+  // what else we can now discover also must be emitted.
+  llvm::SmallVector<FunctionDecl *, 4> Worklist = {FD};
+  llvm::SmallSet<FunctionDecl *, 4> Seen;
+  Seen.insert(FD);
+  while (!Worklist.empty()) {
+    FunctionDecl *Caller = Worklist.pop_back_val();
+    assert(!IsKnownEmitted(S, Caller) &&
+           "Worklist should not contain known-emitted functions.");
+    S.CUDAKnownEmittedFns.insert(Caller);
+    EmitDeferredDiags(S, Caller);
+
+    // Deferred diags are often emitted on the template itself, so emit those as
+    // well.
+    if (auto *Templ = Caller->getPrimaryTemplate())
+      EmitDeferredDiags(S, Templ->getAsFunction());
+
+    // Add all functions called by Caller to our worklist.
+    auto CGIt = S.CUDACallGraph.find(Caller);
+    if (CGIt == S.CUDACallGraph.end())
+      continue;
+
+    for (FunctionDecl *Callee : CGIt->second) {
+      if (Seen.count(Callee) || IsKnownEmitted(S, Callee))
+        continue;
+      Seen.insert(Callee);
+      Worklist.push_back(Callee);
+    }
+
+    // Caller is now known-emitted, so we no longer need to maintain its list of
+    // callees in CUDACallGraph.
+    S.CUDACallGraph.erase(CGIt);
+  }
+}
+
 bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   assert(Callee && "Callee may not be null.");
+  // FIXME: Is bailing out early correct here?  Should we instead assume that
+  // the caller is a global initializer?
   FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext);
   if (!Caller)
     return true;
 
-  Sema::CUDAFunctionPreference Pref = IdentifyCUDAPreference(Caller, Callee);
-  if (Pref == Sema::CFP_Never) {
-    Diag(Loc, diag::err_ref_bad_target) << IdentifyCUDATarget(Callee) << Callee
-                                        << IdentifyCUDATarget(Caller);
-    Diag(Callee->getLocation(), diag::note_previous_decl) << Callee;
-    return false;
-  }
+  bool CallerKnownEmitted = IsKnownEmitted(*this, Caller);
+  if (CallerKnownEmitted)
+    MarkKnownEmitted(*this, Callee);
+  else
+    CUDACallGraph[Caller].insert(Callee);
 
-  // Insert into LocsWithCUDADeferredDiags to avoid emitting duplicate deferred
-  // diagnostics for the same location.  Duplicate deferred diags are otherwise
-  // tricky to avoid, because, unlike with regular errors, sema checking
-  // proceeds unhindered when we omit a deferred diagnostic.
-  if (Pref == Sema::CFP_WrongSide &&
-      LocsWithCUDACallDeferredDiags.insert(Loc.getRawEncoding()).second) {
-    // We have to do this odd dance to create our PartialDiagnostic because we
-    // want its storage to be allocated with operator new, not in an arena.
-    PartialDiagnostic ErrPD{PartialDiagnostic::NullDiagnostic()};
-    ErrPD.Reset(diag::err_ref_bad_target);
-    ErrPD << IdentifyCUDATarget(Callee) << Callee << IdentifyCUDATarget(Caller);
-    Caller->addDeferredDiag({Loc, std::move(ErrPD)});
+  CUDADiagBuilder::Kind DiagKind = [&] {
+    switch (IdentifyCUDAPreference(Caller, Callee)) {
+    case CFP_Never:
+      return CUDADiagBuilder::K_Immediate;
+    case CFP_WrongSide:
+      assert(Caller && "WrongSide calls require a non-null caller");
+      // If we know the caller will be emitted, we know this wrong-side call
+      // will be emitted, so it's an immediate error.  Otherwise, defer the
+      // error until we know the caller is emitted.
+      return CallerKnownEmitted ? CUDADiagBuilder::K_Immediate
+                                : CUDADiagBuilder::K_Deferred;
+    default:
+      return CUDADiagBuilder::K_Nop;
+    }
+  }();
 
-    PartialDiagnostic NotePD{PartialDiagnostic::NullDiagnostic()};
-    NotePD.Reset(diag::note_previous_decl);
-    NotePD << Callee;
-    Caller->addDeferredDiag({Callee->getLocation(), std::move(NotePD)});
-
-    // This is not immediately an error, so return true.  The deferred errors
-    // will be emitted if and when Caller is codegen'ed.
+  // Avoid emitting this error twice for the same location.  Using a hashtable
+  // like this is unfortunate, but because we must continue parsing as normal
+  // after encountering a deferred error, it's otherwise very tricky for us to
+  // ensure that we only emit this deferred error once.
+  if (!LocsWithCUDACallDiags.insert(Loc.getRawEncoding()).second)
     return true;
-  }
-  return true;
-}
 
-bool Sema::CheckCUDAExceptionExpr(SourceLocation Loc, StringRef ExprTy) {
-  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
-  FunctionDecl *CurFn = dyn_cast<FunctionDecl>(CurContext);
-  if (!CurFn)
-    return true;
-  CUDAFunctionTarget Target = IdentifyCUDATarget(CurFn);
-
-  // Raise an error immediately if this is a __global__ or __device__ function.
-  // If it's a __host__ __device__ function, enqueue a deferred error which will
-  // be emitted if the function is codegen'ed for device.
-  if (Target == CFT_Global || Target == CFT_Device) {
-    Diag(Loc, diag::err_cuda_device_exceptions) << ExprTy << Target << CurFn;
-    return false;
-  }
-  if (Target == CFT_HostDevice && getLangOpts().CUDAIsDevice) {
-    PartialDiagnostic ErrPD{PartialDiagnostic::NullDiagnostic()};
-    ErrPD.Reset(diag::err_cuda_device_exceptions);
-    ErrPD << ExprTy << Target << CurFn;
-    CurFn->addDeferredDiag({Loc, std::move(ErrPD)});
-    return false;
-  }
-  return true;
-}
-
-bool Sema::CheckCUDAVLA(SourceLocation Loc) {
-  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
-  FunctionDecl *CurFn = dyn_cast<FunctionDecl>(CurContext);
-  if (!CurFn)
-    return true;
-  CUDAFunctionTarget Target = IdentifyCUDATarget(CurFn);
-  if (Target == CFT_Global || Target == CFT_Device) {
-    Diag(Loc, diag::err_cuda_vla) << Target;
-    return false;
-  }
-  if (Target == CFT_HostDevice && getLangOpts().CUDAIsDevice) {
-    PartialDiagnostic ErrPD{PartialDiagnostic::NullDiagnostic()};
-    ErrPD.Reset(diag::err_cuda_vla);
-    ErrPD << Target;
-    CurFn->addDeferredDiag({Loc, std::move(ErrPD)});
-    return false;
-  }
-  return true;
+  bool IsImmediateErr =
+      CUDADiagBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller, *this)
+      << IdentifyCUDATarget(Callee) << Callee << IdentifyCUDATarget(Caller);
+  CUDADiagBuilder(DiagKind, Callee->getLocation(), diag::note_previous_decl,
+                  Caller, *this)
+      << Callee;
+  return !IsImmediateErr;
 }
 
 void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {

@@ -69,6 +69,10 @@ enum GVALinkage {
   GVA_StrongODR
 };
 
+inline bool isDiscardableGVALinkage(GVALinkage L) {
+  return L <= GVA_DiscardableODR;
+}
+
 inline bool isExternallyVisible(Linkage L) {
   return L == ExternalLinkage || L == VisibleNoLinkage;
 }

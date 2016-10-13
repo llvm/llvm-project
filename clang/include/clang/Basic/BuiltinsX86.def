@@ -2029,8 +2029,8 @@ TARGET_BUILTIN(__builtin_ia32_monitorx, "vv*UiUi", "", "mwaitx")
 TARGET_BUILTIN(__builtin_ia32_mwaitx, "vUiUiUi", "", "mwaitx")
 
 // MSVC
-TARGET_HEADER_BUILTIN(_BitScanForward, "UcULi*ULi", "n", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(_BitScanReverse, "UcULi*ULi", "n", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanForward, "UcULi*ULi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse, "UcULi*ULi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_ReadWriteBarrier, "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_ReadBarrier,      "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
@@ -2038,6 +2038,8 @@ TARGET_HEADER_BUILTIN(_WriteBarrier,     "v", "nh", "intrin.h", ALL_MS_LANGUAGES
 
 TARGET_HEADER_BUILTIN(__emul,  "LLiii",    "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__emulu, "ULLiUiUi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(_AddressOfReturnAddress, "v*", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

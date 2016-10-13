@@ -384,7 +384,7 @@ void SwiftAggLowering::splitVectorEntry(unsigned index) {
   auto eltTy = split.first;
   CharUnits eltSize = getTypeStoreSize(CGM, eltTy);
   auto numElts = split.second;
-  Entries.insert(&Entries[index + 1], numElts - 1, StorageEntry());
+  Entries.insert(Entries.begin() + index + 1, numElts - 1, StorageEntry());
 
   CharUnits begin = Entries[index].Begin;
   for (unsigned i = 0; i != numElts; ++i) {

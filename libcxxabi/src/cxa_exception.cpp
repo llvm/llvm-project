@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "config.h"
+#include "threading_support.h"
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate

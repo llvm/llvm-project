@@ -65,6 +65,7 @@ __global__ static inline void foobar() {};
 __constant__ int global_constant;
 void host_fn() {
   __constant__ int c; // expected-error {{__constant__ variables must be global}}
+  __shared__ int s; // expected-error {{__shared__ local variables not allowed in __host__ functions}}
 }
 __device__ void device_fn() {
   __constant__ int c; // expected-error {{__constant__ variables must be global}}

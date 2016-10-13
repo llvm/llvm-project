@@ -14,8 +14,8 @@ __host__ __device__ void hd1() {
   throw NULL;
   try {} catch(void*) {}
 #ifndef HOST
-  // expected-error@-3 {{cannot use 'throw' in __host__ __device__ function 'hd1'}}
-  // expected-error@-3 {{cannot use 'try' in __host__ __device__ function 'hd1'}}
+  // expected-error@-3 {{cannot use 'throw' in __host__ __device__ function}}
+  // expected-error@-3 {{cannot use 'try' in __host__ __device__ function}}
 #endif
 }
 
@@ -31,8 +31,8 @@ inline __host__ __device__ void hd3() {
   throw NULL;
   try {} catch(void*) {}
 #ifndef HOST
-  // expected-error@-3 {{cannot use 'throw' in __host__ __device__ function 'hd3'}}
-  // expected-error@-3 {{cannot use 'try' in __host__ __device__ function 'hd3'}}
+  // expected-error@-3 {{cannot use 'throw' in __host__ __device__ function}}
+  // expected-error@-3 {{cannot use 'try' in __host__ __device__ function}}
 #endif
 }
 __device__ void call_hd3() { hd3(); }

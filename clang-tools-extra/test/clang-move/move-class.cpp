@@ -6,7 +6,7 @@
 // RUN: cp %S/Inputs/test.cpp %T/clang-move/src
 // RUN: touch %T/clang-move/include/test2.h
 // RUN: cd %T/clang-move/build
-// RUN: clang-move -name="a::Foo" -new_cc=%T/clang-move/new_test.cpp -new_header=%T/clang-move/new_test.h -old_cc=../src/test.cpp -old_header=../include/test.h %T/clang-move/src/test.cpp
+// RUN: clang-move -names="a::Foo" -new_cc=%T/clang-move/new_test.cpp -new_header=%T/clang-move/new_test.h -old_cc=../src/test.cpp -old_header=../include/test.h %T/clang-move/src/test.cpp
 // RUN: FileCheck -input-file=%T/clang-move/new_test.cpp -check-prefix=CHECK-NEW-TEST-CPP %s
 // RUN: FileCheck -input-file=%T/clang-move/new_test.h -check-prefix=CHECK-NEW-TEST-H %s
 // RUN: FileCheck -input-file=%T/clang-move/src/test.cpp -check-prefix=CHECK-OLD-TEST-CPP %s
@@ -15,7 +15,7 @@
 // RUN: cp %S/Inputs/test.h  %T/clang-move/include
 // RUN: cp %S/Inputs/test.cpp %T/clang-move/src
 // RUN: cd %T/clang-move/build
-// RUN: clang-move -name="a::Foo" -new_cc=%T/clang-move/new_test.cpp -new_header=%T/clang-move/new_test.h -old_cc=%T/clang-move/src/test.cpp -old_header=%T/clang-move/include/test.h %T/clang-move/src/test.cpp
+// RUN: clang-move -names="a::Foo" -new_cc=%T/clang-move/new_test.cpp -new_header=%T/clang-move/new_test.h -old_cc=%T/clang-move/src/test.cpp -old_header=%T/clang-move/include/test.h %T/clang-move/src/test.cpp
 // RUN: FileCheck -input-file=%T/clang-move/new_test.cpp -check-prefix=CHECK-NEW-TEST-CPP %s
 // RUN: FileCheck -input-file=%T/clang-move/new_test.h -check-prefix=CHECK-NEW-TEST-H %s
 // RUN: FileCheck -input-file=%T/clang-move/src/test.cpp -check-prefix=CHECK-OLD-TEST-CPP %s

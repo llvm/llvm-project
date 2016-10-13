@@ -8,12 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
+// REQUIRES-ANY: c++11, c++14
 
 // <functional>
 
 // class function<R(ArgTypes...)>
 
 // template<class A> function(allocator_arg_t, const A&, function&&);
+//
+// This signature was removed in C++17
 
 #include <functional>
 #include <memory>

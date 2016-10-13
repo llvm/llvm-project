@@ -448,12 +448,6 @@ private:
   /// \brief Allocator for partial diagnostics.
   PartialDiagnostic::StorageAllocator DiagAllocator;
 
-  /// Diagnostics that are emitted if and only if the given function is
-  /// codegen'ed.  Access these through FunctionDecl::addDeferredDiag() and
-  /// FunctionDecl::takeDeferredDiags().
-  llvm::DenseMap<const FunctionDecl *, std::vector<PartialDiagnosticAt>>
-      DeferredDiags;
-
   /// \brief The current C++ ABI.
   std::unique_ptr<CXXABI> ABI;
   CXXABI *createCXXABI(const TargetInfo &T);
@@ -602,11 +596,6 @@ public:
   
   PartialDiagnostic::StorageAllocator &getDiagAllocator() {
     return DiagAllocator;
-  }
-
-  decltype(DeferredDiags) &getDeferredDiags() { return DeferredDiags; }
-  const decltype(DeferredDiags) &getDeferredDiags() const {
-    return DeferredDiags;
   }
 
   const TargetInfo &getTargetInfo() const { return *Target; }
