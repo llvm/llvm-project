@@ -456,6 +456,7 @@ get_image_dim(Q##_qual T##_ity i) \
 
 GD2GEN(_2D)
 GD2GEN(_2Da)
+GD2GEN(_2Dd)
 GD2GEN(_2Dad)
 
 #define GGENQT(Q,N,T) \
