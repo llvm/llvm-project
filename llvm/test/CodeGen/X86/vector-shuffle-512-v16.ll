@@ -330,14 +330,11 @@ define <16 x float> @shuffle_v16f32_0zzzzzzzzzzzzzzz(<16 x float> %a) {
   ret <16 x float> %shuffle
 }
 
-define <16 x i32> @shuffle_v16i32_16_zz_zz_zz_17_zz_zz_zz_18_zz_zz_zz_19_zz_zz_zz(<16 x i32> %a) {
-; ALL-LABEL: shuffle_v16i32_16_zz_zz_zz_17_zz_zz_zz_18_zz_zz_zz_19_zz_zz_zz:
+define <16 x i32> @shuffle_v16i32_16_zz_17_zz_18_zz_19_zz_20_zz_21_zz_22_zz_23_zz(<16 x i32> %a) {
+; ALL-LABEL: shuffle_v16i32_16_zz_17_zz_18_zz_19_zz_20_zz_21_zz_22_zz_23_zz:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [16,1,2,3,17,5,6,7,18,9,10,11,19,13,14,15]
-; ALL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
-; ALL-NEXT:    vpermt2d %zmm0, %zmm2, %zmm1
-; ALL-NEXT:    vmovdqa64 %zmm1, %zmm0
+; ALL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <16 x i32> zeroinitializer, <16 x i32> %a, <16 x i32> <i32 16, i32 0, i32 0, i32 0, i32 17, i32 0, i32 0, i32 0, i32 18, i32 0, i32 0, i32 0, i32 19, i32 0, i32 0, i32 0>
+  %shuffle = shufflevector <16 x i32> zeroinitializer, <16 x i32> %a, <16 x i32> <i32 16, i32 0, i32 17, i32 0, i32 18, i32 0, i32 19, i32 0, i32 20, i32 0, i32 21, i32 0, i32 22, i32 0, i32 23, i32 0>
   ret <16 x i32> %shuffle
 }

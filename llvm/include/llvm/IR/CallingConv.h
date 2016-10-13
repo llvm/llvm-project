@@ -193,6 +193,9 @@ namespace CallingConv {
     /// Calling convention for AMDGPU code object kernels.
     AMDGPU_KERNEL = 91,
 
+    /// Register calling convention used for parameters transfer optimization
+    X86_RegCall = 92,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

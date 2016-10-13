@@ -12935,10 +12935,10 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
   SDValue In =  Op.getOperand(0);
   SDValue Idx = Op.getOperand(1);
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  MVT ResVT   = Op.getSimpleValueType();
-  MVT InVT    = In.getSimpleValueType();
+  MVT ResVT = Op.getSimpleValueType();
 
-  assert((InVT.is256BitVector() || InVT.is512BitVector()) &&
+  assert((In.getSimpleValueType().is256BitVector() ||
+          In.getSimpleValueType().is512BitVector()) &&
          "Can only extract from 256-bit or 512-bit vectors");
 
   if (ResVT.is128BitVector())
