@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s
 
+// REQUIRES: aarch64-registered-target,x86-registered-target
+
 #define SWIFTCALL __attribute__((swiftcall))
 #define OUT __attribute__((swift_indirect_result))
 #define ERROR __attribute__((swift_error_result))
