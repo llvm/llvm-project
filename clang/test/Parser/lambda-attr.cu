@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcuda-is-device -verify %s
 
 __attribute__((device)) void device_fn() {}
-__attribute__((device)) void hd_fn() {}
+__attribute__((host, device)) void hd_fn() {}
 
 __attribute__((device)) void device_attr() {
   ([]() __attribute__((device)) { device_fn(); })();

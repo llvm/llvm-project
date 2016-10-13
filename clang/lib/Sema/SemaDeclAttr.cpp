@@ -3724,6 +3724,10 @@ static void handleSharedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
     S.Diag(Attr.getLoc(), diag::err_cuda_extern_shared) << VD;
     return;
   }
+  if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
+      S.CUDADiagIfHostCode(Attr.getLoc(), diag::err_cuda_host_shared)
+          << S.CurrentCUDATarget())
+    return;
   D->addAttr(::new (S.Context) CUDASharedAttr(
       Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
 }

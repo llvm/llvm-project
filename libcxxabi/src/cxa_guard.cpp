@@ -11,10 +11,8 @@
 
 #include "abort_message.h"
 #include "config.h"
+#include "threading_support.h"
 
-#ifndef _LIBCXXABI_HAS_NO_THREADS
-#  include <pthread.h>
-#endif
 #include <stdint.h>
 
 /*
@@ -22,9 +20,9 @@
     which will turn around and try to call __cxa_guard_acquire reentrantly.
     For this reason, the headers of this file are as restricted as possible.
     Previous implementations of this code for __APPLE__ have used
-    pthread_mutex_lock and the abort_message utility without problem.  This
-    implementation also uses pthread_cond_wait which has tested to not be a
-    problem.
+    __libcxxabi_mutex_lock and the abort_message utility without problem.  This
+    implementation also uses __libcxxabi_condvar_wait which has tested
+    to not be a problem.
 */
 
 namespace __cxxabiv1
@@ -69,8 +67,8 @@ bool is_initialized(guard_type* guard_object) {
 #endif
 
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-pthread_mutex_t guard_mut = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  guard_cv  = PTHREAD_COND_INITIALIZER;
+__libcxxabi_mutex_t guard_mut = _LIBCXXABI_MUTEX_INITIALIZER;
+__libcxxabi_condvar_t guard_cv = _LIBCXXABI_CONDVAR_INITIALIZER;
 #endif
 
 #if defined(__APPLE__) && !defined(__arm__)
@@ -175,13 +173,13 @@ extern "C"
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type *guard_object) {
     char* initialized = (char*)guard_object;
-    if (pthread_mutex_lock(&guard_mut))
+    if (__libcxxabi_mutex_lock(&guard_mut))
         abort_message("__cxa_guard_acquire failed to acquire mutex");
     int result = *initialized == 0;
     if (result)
     {
 #if defined(__APPLE__) && !defined(__arm__)
-        const lock_type id = pthread_mach_thread_np(pthread_self());
+        const lock_type id = __libcxxabi_thread_get_port();
         lock_type lock = get_lock(*guard_object);
         if (lock)
         {
@@ -190,7 +188,7 @@ _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type *guard_object) {
                 abort_message("__cxa_guard_acquire detected deadlock");
             do
             {
-                if (pthread_cond_wait(&guard_cv, &guard_mut))
+                if (__libcxxabi_condvar_wait(&guard_cv, &guard_mut))
                     abort_message("__cxa_guard_acquire condition variable wait failed");
                 lock = get_lock(*guard_object);
             } while (lock);
@@ -202,36 +200,36 @@ _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(guard_type *guard_object) {
             set_lock(*guard_object, id);
 #else  // !__APPLE__ || __arm__
         while (get_lock(*guard_object))
-            if (pthread_cond_wait(&guard_cv, &guard_mut))
+            if (__libcxxabi_condvar_wait(&guard_cv, &guard_mut))
                 abort_message("__cxa_guard_acquire condition variable wait failed");
         result = *initialized == 0;
         if (result)
             set_lock(*guard_object, true);
 #endif  // !__APPLE__ || __arm__
     }
-    if (pthread_mutex_unlock(&guard_mut))
+    if (__libcxxabi_mutex_unlock(&guard_mut))
         abort_message("__cxa_guard_acquire failed to release mutex");
     return result;
 }
 
 _LIBCXXABI_FUNC_VIS void __cxa_guard_release(guard_type *guard_object) {
-    if (pthread_mutex_lock(&guard_mut))
+    if (__libcxxabi_mutex_lock(&guard_mut))
         abort_message("__cxa_guard_release failed to acquire mutex");
     *guard_object = 0;
     set_initialized(guard_object);
-    if (pthread_mutex_unlock(&guard_mut))
+    if (__libcxxabi_mutex_unlock(&guard_mut))
         abort_message("__cxa_guard_release failed to release mutex");
-    if (pthread_cond_broadcast(&guard_cv))
+    if (__libcxxabi_condvar_broadcast(&guard_cv))
         abort_message("__cxa_guard_release failed to broadcast condition variable");
 }
 
 _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(guard_type *guard_object) {
-    if (pthread_mutex_lock(&guard_mut))
+    if (__libcxxabi_mutex_lock(&guard_mut))
         abort_message("__cxa_guard_abort failed to acquire mutex");
     *guard_object = 0;
-    if (pthread_mutex_unlock(&guard_mut))
+    if (__libcxxabi_mutex_unlock(&guard_mut))
         abort_message("__cxa_guard_abort failed to release mutex");
-    if (pthread_cond_broadcast(&guard_cv))
+    if (__libcxxabi_condvar_broadcast(&guard_cv))
         abort_message("__cxa_guard_abort failed to broadcast condition variable");
 }
 

@@ -965,6 +965,8 @@ TEST(Support, RemoveDots) {
   EXPECT_EQ("a\\..\\b\\c", remove_dots(".\\a\\..\\b\\c", false));
   EXPECT_EQ("b\\c", remove_dots(".\\a\\..\\b\\c", true));
   EXPECT_EQ("c", remove_dots(".\\.\\c", true));
+  EXPECT_EQ("..\\a\\c", remove_dots("..\\a\\b\\..\\c", true));
+  EXPECT_EQ("..\\..\\a\\c", remove_dots("..\\..\\a\\b\\..\\c", true));
 
   SmallString<64> Path1(".\\.\\c");
   EXPECT_TRUE(path::remove_dots(Path1, true));
@@ -976,6 +978,8 @@ TEST(Support, RemoveDots) {
   EXPECT_EQ("a/../b/c", remove_dots("./a/../b/c", false));
   EXPECT_EQ("b/c", remove_dots("./a/../b/c", true));
   EXPECT_EQ("c", remove_dots("././c", true));
+  EXPECT_EQ("../a/c", remove_dots("../a/b/../c", true));
+  EXPECT_EQ("../../a/c", remove_dots("../../a/b/../c", true));
 
   SmallString<64> Path1("././c");
   EXPECT_TRUE(path::remove_dots(Path1, true));

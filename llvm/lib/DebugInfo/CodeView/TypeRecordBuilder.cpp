@@ -92,9 +92,15 @@ void TypeRecordBuilder::writeEncodedUnsignedInteger(uint64_t Value) {
 }
 
 void TypeRecordBuilder::writeNullTerminatedString(StringRef Value) {
-  // Microsoft's linker seems to have trouble with symbol names longer than
-  // 0xffd8 bytes.
-  Value = Value.substr(0, 0xffd8);
+  // Usually the null terminated string comes last, so truncate it to avoid a
+  // record larger than MaxNameLength. Don't do this if this is a list record.
+  // Those have special handling to split the record.
+  unsigned MaxNameLength = MaxRecordLength;
+  if (Kind != TypeRecordKind::FieldList &&
+      Kind != TypeRecordKind::MethodOverloadList)
+    MaxNameLength = maxBytesRemaining();
+  assert(MaxNameLength > 0 && "need room for null terminator");
+  Value = Value.take_front(MaxNameLength - 1);
   Stream.write(Value.data(), Value.size());
   writeUInt8(0);
 }

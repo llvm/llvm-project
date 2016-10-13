@@ -10511,7 +10511,13 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   }
 
   // All the following checks are C++ only.
-  if (!getLangOpts().CPlusPlus) return;
+  if (!getLangOpts().CPlusPlus) {
+      // If this variable must be emitted, add it as an initializer for the
+      // current module.
+     if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
+       Context.addModuleInitializer(ModuleScopes.back().Module, var);
+     return;
+  }
 
   if (auto *DD = dyn_cast<DecompositionDecl>(var))
     CheckCompleteDecompositionDeclaration(DD);
@@ -10671,12 +10677,11 @@ Sema::FinalizeDeclaration(Decl *ThisDecl) {
       // CUDA E.2.9.4: Within the body of a __device__ or __global__
       // function, only __shared__ variables may be declared with
       // static storage class.
-      if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
-          (FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAGlobalAttr>()) &&
-          !VD->hasAttr<CUDASharedAttr>()) {
-        Diag(VD->getLocation(), diag::err_device_static_local_var);
+      if (getLangOpts().CUDA && !VD->hasAttr<CUDASharedAttr>() &&
+          CUDADiagIfDeviceCode(VD->getLocation(),
+                               diag::err_device_static_local_var)
+              << CurrentCUDATarget())
         VD->setInvalidDecl();
-      }
     }
   }
 
@@ -10690,7 +10695,7 @@ Sema::FinalizeDeclaration(Decl *ThisDecl) {
     if (Init && VD->hasGlobalStorage()) {
       if (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>() ||
           VD->hasAttr<CUDASharedAttr>()) {
-        assert((!VD->isStaticLocal() || VD->hasAttr<CUDASharedAttr>()));
+        assert(!VD->isStaticLocal() || VD->hasAttr<CUDASharedAttr>());
         bool AllowedInit = false;
         if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(Init))
           AllowedInit =

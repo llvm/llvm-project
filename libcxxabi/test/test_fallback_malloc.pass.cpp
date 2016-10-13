@@ -10,7 +10,7 @@
 #include <iostream>
 #include <deque>
 
-#include <pthread.h>
+#include "../src/threading_support.h"
 
 typedef std::deque<void *> container;
 

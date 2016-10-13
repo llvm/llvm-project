@@ -62,8 +62,8 @@ ThinLTO is currently supported for the following linkers:
   <http://llvm.org/docs/GoldPlugin.html>`_.
 - **ld64**:
   Starting with `Xcode 8 <https://developer.apple.com/xcode/>`_.
-
-Additionally, support is being added to the *lld* linker.
+- **lld**:
+  Starting with r284050 (ELF only).
 
 Usage
 =====
@@ -109,6 +109,8 @@ be reduced to ``N`` via:
   ``-Wl,-plugin-opt,jobs=N``
 - ld64:
   ``-Wl,-mllvm,-threads=N``
+- lld:
+  ``-Wl,--thinlto-jobs=N``
 
 Incremental
 -----------

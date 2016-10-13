@@ -91,6 +91,8 @@ FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
     "Be careful, this will also close e.g. asan's stderr/stdout.")
 FUZZER_FLAG_INT(detect_leaks, 1, "If 1, and if LeakSanitizer is enabled "
     "try to detect memory leaks during fuzzing (i.e. not only at shut down).")
+FUZZER_FLAG_INT(trace_malloc, 0, "If >= 1 will print all mallocs/frees. "
+                                 "If >= 2 will also print stack traces.")
 FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
     "reaching this limit of RSS memory usage.")
 FUZZER_FLAG_STRING(exit_on_src_pos, "Exit if a newly found PC originates"

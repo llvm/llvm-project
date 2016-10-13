@@ -12,9 +12,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
-#ifndef _LIBCXXABI_HAS_NO_THREADS
-#  include <pthread.h>
-#endif
+#include "../src/threading_support.h"
 #include <unistd.h>
 
 #include "../src/cxa_exception.hpp"
@@ -40,8 +38,8 @@ void *thread_code (void *parm) {
 
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 #define NUMTHREADS  10
-size_t      thread_globals [ NUMTHREADS ] = { 0 };
-pthread_t   threads        [ NUMTHREADS ];
+size_t                 thread_globals [ NUMTHREADS ] = { 0 };
+__libcxxabi_thread_t   threads        [ NUMTHREADS ];
 #endif
 
 int main ( int argc, char *argv [] ) {
@@ -50,9 +48,9 @@ int main ( int argc, char *argv [] ) {
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 //  Make the threads, let them run, and wait for them to finish
     for ( int i = 0; i < NUMTHREADS; ++i )
-        pthread_create( threads + i, NULL, thread_code, (void *) (thread_globals + i));
+        __libcxxabi_thread_create ( threads + i, thread_code, (void *) (thread_globals + i));
     for ( int i = 0; i < NUMTHREADS; ++i )
-        pthread_join ( threads [ i ], NULL );
+        __libcxxabi_thread_join ( &threads [ i ] );
 
     for ( int i = 0; i < NUMTHREADS; ++i )
         if ( 0 == thread_globals [ i ] ) {
