@@ -130,9 +130,13 @@ a:
         dnegu     $2,$3                # CHECK: dnegu $2, $3                # encoding: [0x00,0x03,0x10,0x2f]
         dsubu   $14,-4586        # CHECK: daddiu $14, $14, 4586  # encoding: [0x65,0xce,0x11,0xea]
         dsubu   $15,$11,5025     # CHECK: daddiu $15, $11, -5025 # encoding: [0x65,0x6f,0xec,0x5f]
+        dvp     $4               # CHECK: dvp $4           # encoding: [0x41,0x64,0x00,0x24]
+        dvp                      # CHECK: dvp $zero        # encoding: [0x41,0x60,0x00,0x24]
         ei                       # CHECK: ei               # encoding: [0x41,0x60,0x60,0x20]
         ei      $14              # CHECK: ei  $14          # encoding: [0x41,0x6e,0x60,0x20]
         eretnc                   # CHECK: eretnc                 # encoding: [0x42,0x00,0x00,0x58]
+        evp     $5               # CHECK: evp $5           # encoding: [0x41,0x65,0x00,0x04]
+        evp                      # CHECK: evp $zero        # encoding: [0x41,0x60,0x00,0x04]
         j       1f               # CHECK: j $tmp0                # encoding: [0b000010AA,A,A,A]
                                  # CHECK:                        #   fixup A - offset: 0, value: ($tmp0), kind: fixup_Mips_26
         j       a                # CHECK: j a                    # encoding: [0b000010AA,A,A,A]

@@ -10,7 +10,7 @@ entry:
 }
 
 ; CHECK-LABEL: caller
-; CHECK: ldr [[REG:r[0-9]+]], [[CPI:LCPI[_0-9]+]]
+; CHECK: ldr [[REG:r[0-9]+]], [[CPI:\.LCPI[_0-9]+]]
 ; CHECK: bx [[REG]]
 ; CHECK: .p2align 2
 ; CHECK: [[CPI]]:

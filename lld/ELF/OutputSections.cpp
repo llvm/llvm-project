@@ -1232,10 +1232,6 @@ template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   Builder.write(Buf);
 }
 
-static StringRef toStringRef(ArrayRef<uint8_t> A) {
-  return {(const char *)A.data(), A.size()};
-}
-
 template <class ELFT>
 void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *Sec = cast<MergeInputSection<ELFT>>(C);
@@ -1694,7 +1690,7 @@ void BuildIdFastHash<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   const endianness E = ELFT::TargetEndianness;
 
   // 64-bit xxhash
-  uint64_t Hash = xxHash64(StringRef((const char *)Buf.data(), Buf.size()));
+  uint64_t Hash = xxHash64(toStringRef(Buf));
   write64<E>(this->HashBuf, Hash);
 }
 

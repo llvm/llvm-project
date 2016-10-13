@@ -22,7 +22,7 @@ define i32 @f() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
 
@@ -43,7 +43,7 @@ define i32 @e() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
 
@@ -64,7 +64,7 @@ define i32 @d() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
 
@@ -85,7 +85,7 @@ define i32 @c() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
 
@@ -106,7 +106,7 @@ define i32 @b() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
 
@@ -127,7 +127,7 @@ define i16 @a() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldrh r0, {{\[}}[[TLS]], [[SLOT]]]
 
@@ -148,7 +148,7 @@ define i8 @Z() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldrb r0, {{\[}}[[TLS]], [[SLOT]]]
 

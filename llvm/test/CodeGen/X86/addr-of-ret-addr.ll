@@ -5,7 +5,7 @@ define i8* @f() nounwind readnone optsize {
 entry:
   %0 = tail call i8* @llvm.addressofreturnaddress()    ; <i8*> [#uses=1]
   ret i8* %0
-  ; CHECK-X86-LABEL: _f:
+  ; CHECK-X86-LABEL: f:
   ; CHECK-X86: pushl   %ebp
   ; CHECK-X86: movl    %esp, %ebp
   ; CHECK-X86: leal    4(%ebp), %eax

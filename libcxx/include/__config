@@ -34,7 +34,6 @@
 #endif
 
 #if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
-#define _LIBCPP_ABI_EXTERN_TEMPLATE_SYMBOLS_VERSION 2
 // Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
 #define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
@@ -50,7 +49,6 @@
 #define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #elif _LIBCPP_ABI_VERSION == 1
-#define _LIBCPP_ABI_EXTERN_TEMPLATE_SYMBOLS_VERSION 1
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
 #if defined(__FreeBSD__)
@@ -603,19 +601,11 @@ namespace std {
 #endif
 
 #ifndef _LIBCPP_INLINE_VISIBILITY
-# if __has_attribute(__internal_linkage__)
-#   define _LIBCPP_INLINE_VISIBILITY __attribute__((__internal_linkage__, __always_inline__))
-# else
-#   define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__visibility__("hidden"), __always_inline__))
-# endif
+#define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__visibility__("hidden"), __always_inline__))
 #endif
 
 #ifndef _LIBCPP_ALWAYS_INLINE
-# if __has_attribute(__internal_linkage__)
-#   define _LIBCPP_ALWAYS_INLINE __attribute__((__internal_linkage__, __always_inline__))
-# else
-#   define _LIBCPP_ALWAYS_INLINE  __attribute__ ((__visibility__("hidden"), __always_inline__))
-# endif
+#define _LIBCPP_ALWAYS_INLINE  __attribute__ ((__visibility__("hidden"), __always_inline__))
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY

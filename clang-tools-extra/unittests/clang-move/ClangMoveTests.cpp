@@ -210,7 +210,7 @@ runClangMoveOnCode(const move::ClangMoveTool::MoveDefinitionSpec &Spec) {
 
 TEST(ClangMove, MoveHeaderAndCC) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Name = "a::b::Foo";
+  Spec.Names = "a::b::Foo";
   Spec.OldHeader = "foo.h";
   Spec.OldCC = "foo.cc";
   Spec.NewHeader = "new_foo.h";
@@ -225,7 +225,7 @@ TEST(ClangMove, MoveHeaderAndCC) {
 
 TEST(ClangMove, MoveHeaderOnly) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Name = "a::b::Foo";
+  Spec.Names = "a::b::Foo";
   Spec.OldHeader = "foo.h";
   Spec.NewHeader = "new_foo.h";
   auto Results = runClangMoveOnCode(Spec);
@@ -236,7 +236,7 @@ TEST(ClangMove, MoveHeaderOnly) {
 
 TEST(ClangMove, MoveCCOnly) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Name = "a::b::Foo";
+  Spec.Names = "a::b::Foo";
   Spec.OldCC = "foo.cc";
   Spec.NewCC = "new_foo.cc";
   std::string ExpectedHeader = "#include \"foo.h\"\n\n";
@@ -248,7 +248,7 @@ TEST(ClangMove, MoveCCOnly) {
 
 TEST(ClangMove, MoveNonExistClass) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Name = "NonExistFoo";
+  Spec.Names = "NonExistFoo";
   Spec.OldHeader = "foo.h";
   Spec.OldCC = "foo.cc";
   Spec.NewHeader = "new_foo.h";

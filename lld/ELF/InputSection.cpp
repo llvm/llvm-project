@@ -160,8 +160,8 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
 
   // Uncompress Buf.
   UncompressedData.reset(new uint8_t[Size]);
-  if (zlib::uncompress(StringRef((const char *)Buf.data(), Buf.size()),
-                       (char *)UncompressedData.get(), Size) != zlib::StatusOK)
+  if (zlib::uncompress(toStringRef(Buf), (char *)UncompressedData.get(),
+                       Size) != zlib::StatusOK)
     fatal(getName(this) + ": error while uncompressing section");
   Data = ArrayRef<uint8_t>(UncompressedData.get(), Size);
 }

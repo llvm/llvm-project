@@ -1405,8 +1405,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             return error;
           }
           llvm::StringRef path(cstr);
-          if (path.startswith("/lib/x86_64-linux-gnu") ||
-              path.startswith("/lib/i386-linux-gnu")) {
+          if (path.contains("/lib/x86_64-linux-gnu") || path.contains("/lib/i386-linux-gnu")) {
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
             break;
           }

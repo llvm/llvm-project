@@ -232,8 +232,15 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
       assert(I->capturesVariableArrayType());
       II = &getContext().Idents.get("vla");
     }
-    if (ArgType->isVariablyModifiedType())
-      ArgType = getContext().getVariableArrayDecayedType(ArgType);
+    if (ArgType->isVariablyModifiedType()) {
+      bool IsReference = ArgType->isLValueReferenceType();
+      ArgType =
+          getContext().getCanonicalParamType(ArgType.getNonReferenceType());
+      if (IsReference && !ArgType->isPointerType()) {
+        ArgType = getContext().getLValueReferenceType(
+            ArgType, /*SpelledAsLValue=*/false);
+      }
+    }
     Args.push_back(ImplicitParamDecl::Create(getContext(), nullptr,
                                              FD->getLocation(), II, ArgType));
     ++I;
@@ -297,8 +304,14 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
       QualType VarTy = Var->getType();
       Address ArgAddr = ArgLVal.getAddress();
       if (!VarTy->isReferenceType()) {
-        ArgAddr = EmitLoadOfReference(
-            ArgAddr, ArgLVal.getType()->castAs<ReferenceType>());
+        if (ArgLVal.getType()->isLValueReferenceType()) {
+          ArgAddr = EmitLoadOfReference(
+              ArgAddr, ArgLVal.getType()->castAs<ReferenceType>());
+        } else {
+          assert(ArgLVal.getType()->isPointerType());
+          ArgAddr = EmitLoadOfPointer(
+              ArgAddr, ArgLVal.getType()->castAs<PointerType>());
+        }
       }
       setAddrOfLocalVar(
           Var, Address(ArgAddr.getPointer(), getContext().getDeclAlign(Var)));

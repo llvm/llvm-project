@@ -181,14 +181,21 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
     setAction({G_BITCAST, 1, Ty}, Legal);
   }
 
+  // For the sake of copying bits around, the type does not really
+  // matter as long as it fits a register.
   for (int EltSize = 8; EltSize <= 64; EltSize *= 2) {
     setAction({G_BITCAST, 0, LLT::vector(128/EltSize, EltSize)}, Legal);
     setAction({G_BITCAST, 1, LLT::vector(128/EltSize, EltSize)}, Legal);
-    if (EltSize == 64)
+    if (EltSize >= 64)
       continue;
 
     setAction({G_BITCAST, 0, LLT::vector(64/EltSize, EltSize)}, Legal);
     setAction({G_BITCAST, 1, LLT::vector(64/EltSize, EltSize)}, Legal);
+    if (EltSize >= 32)
+      continue;
+
+    setAction({G_BITCAST, 0, LLT::vector(32/EltSize, EltSize)}, Legal);
+    setAction({G_BITCAST, 1, LLT::vector(32/EltSize, EltSize)}, Legal);
   }
 
   computeTables();
