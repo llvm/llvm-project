@@ -637,6 +637,9 @@ static AsanInitializer asan_initializer;
 using namespace __asan;  // NOLINT
 
 void NOINLINE __asan_handle_no_return() {
+  if (asan_init_is_running)
+    return;
+
   int local_stack;
   AsanThread *curr_thread = GetCurrentThread();
   uptr PageSize = GetPageSizeCached();

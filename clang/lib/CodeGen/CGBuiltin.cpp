@@ -2637,6 +2637,68 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   }
 }
 
+// Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
+// handle them here.
+enum class CodeGenFunction::MSVCIntrin {
+  _BitScanForward,
+  _BitScanReverse
+};
+
+Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
+                                            const CallExpr *E) {
+  switch (BuiltinID) {
+  case MSVCIntrin::_BitScanForward:
+  case MSVCIntrin::_BitScanReverse: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(1));
+
+    llvm::Type *ArgType = ArgValue->getType();
+    llvm::Type *IndexType =
+        EmitScalarExpr(E->getArg(0))->getType()->getPointerElementType();
+    llvm::Type *ResultType = ConvertType(E->getType());
+
+    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
+    Value *ResZero = llvm::Constant::getNullValue(ResultType);
+    Value *ResOne = llvm::ConstantInt::get(ResultType, 1);
+
+    BasicBlock *Begin = Builder.GetInsertBlock();
+    BasicBlock *End = createBasicBlock("bitscan_end", this->CurFn);
+    Builder.SetInsertPoint(End);
+    PHINode *Result = Builder.CreatePHI(ResultType, 2, "bitscan_result");
+
+    Builder.SetInsertPoint(Begin);
+    Value *IsZero = Builder.CreateICmpEQ(ArgValue, ArgZero);
+    BasicBlock *NotZero = createBasicBlock("bitscan_not_zero", this->CurFn);
+    Builder.CreateCondBr(IsZero, End, NotZero);
+    Result->addIncoming(ResZero, Begin);
+
+    Builder.SetInsertPoint(NotZero);
+    Address IndexAddress = EmitPointerWithAlignment(E->getArg(0));
+
+    if (BuiltinID == MSVCIntrin::_BitScanForward) {
+      Value *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+      Value *ZeroCount = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
+      ZeroCount = Builder.CreateIntCast(ZeroCount, IndexType, false);
+      Builder.CreateStore(ZeroCount, IndexAddress, false);
+    } else {
+      unsigned ArgWidth = cast<llvm::IntegerType>(ArgType)->getBitWidth();
+      Value *ArgTypeLastIndex = llvm::ConstantInt::get(IndexType, ArgWidth - 1);
+
+      Value *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Value *ZeroCount = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
+      ZeroCount = Builder.CreateIntCast(ZeroCount, IndexType, false);
+      Value *Index = Builder.CreateNSWSub(ArgTypeLastIndex, ZeroCount);
+      Builder.CreateStore(Index, IndexAddress, false);
+    }
+    Builder.CreateBr(End);
+    Result->addIncoming(ResOne, NotZero);
+
+    Builder.SetInsertPoint(End);
+    return Result;
+  }
+  }
+  llvm_unreachable("Incorrect MSVC intrinsic!");
+}
+
 Value *CodeGenFunction::EmitTargetBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   if (getContext().BuiltinInfo.isAuxBuiltinID(BuiltinID)) {
@@ -4561,6 +4623,12 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Ops[1], Ops[2], Ops[0],
                                   Ops[3], Ops[4], Ops[5]});
   }
+  case ARM::BI_BitScanForward:
+  case ARM::BI_BitScanForward64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanForward, E);
+  case ARM::BI_BitScanReverse:
+  case ARM::BI_BitScanReverse64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
   }
 
   // Get the last argument, which specifies the vector type.
@@ -7623,6 +7691,12 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
                                llvm::SingleThread);
   }
+  case X86::BI_BitScanForward:
+  case X86::BI_BitScanForward64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanForward, E);
+  case X86::BI_BitScanReverse:
+  case X86::BI_BitScanReverse64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
   }
 }
 

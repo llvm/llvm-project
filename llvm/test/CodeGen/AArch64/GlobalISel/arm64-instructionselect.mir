@@ -53,7 +53,28 @@
   define void @fdiv_s32_gpr() { ret void }
   define void @fdiv_s64_gpr() { ret void }
 
+  define void @sitofp_s32_s32_fpr() { ret void }
+  define void @sitofp_s32_s64_fpr() { ret void }
+  define void @sitofp_s64_s32_fpr() { ret void }
+  define void @sitofp_s64_s64_fpr() { ret void }
+
+  define void @uitofp_s32_s32_fpr() { ret void }
+  define void @uitofp_s32_s64_fpr() { ret void }
+  define void @uitofp_s64_s32_fpr() { ret void }
+  define void @uitofp_s64_s64_fpr() { ret void }
+
+  define void @fptosi_s32_s32_gpr() { ret void }
+  define void @fptosi_s32_s64_gpr() { ret void }
+  define void @fptosi_s64_s32_gpr() { ret void }
+  define void @fptosi_s64_s64_gpr() { ret void }
+
+  define void @fptoui_s32_s32_gpr() { ret void }
+  define void @fptoui_s32_s64_gpr() { ret void }
+  define void @fptoui_s64_s32_gpr() { ret void }
+  define void @fptoui_s64_s64_gpr() { ret void }
+
   define void @unconditional_br() { ret void }
+  define void @conditional_br() { ret void }
 
   define void @load_s64_gpr(i64* %addr) { ret void }
   define void @load_s32_gpr(i32* %addr) { ret void }
@@ -83,6 +104,8 @@
   @var_got = external global i8
   define i8* @global_got() { ret i8* undef }
 
+  define void @trunc() { ret void }
+
   define void @anyext_gpr() { ret void }
   define void @zext_gpr() { ret void }
   define void @sext_gpr() { ret void }
@@ -98,6 +121,8 @@
   define void @bitcast_s64_gpr_fpr() { ret void }
   define void @bitcast_s64_fpr_gpr() { ret void }
 
+  define void @icmp() { ret void }
+  define void @fcmp() { ret void }
 ...
 
 ---
@@ -996,6 +1021,390 @@ body:             |
 ...
 
 ---
+# CHECK-LABEL: name: sitofp_s32_s32_fpr
+name:            sitofp_s32_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = SCVTFUWSri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_SITOFP %0
+...
+
+---
+# CHECK-LABEL: name: sitofp_s32_s64_fpr
+name:            sitofp_s32_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = SCVTFUXSri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s32) = G_SITOFP %0
+...
+
+---
+# CHECK-LABEL: name: sitofp_s64_s32_fpr
+name:            sitofp_s64_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = SCVTFUWDri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_SITOFP %0
+...
+
+---
+# CHECK-LABEL: name: sitofp_s64_s64_fpr
+name:            sitofp_s64_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = SCVTFUXDri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s64) = G_SITOFP %0
+...
+
+---
+# CHECK-LABEL: name: uitofp_s32_s32_fpr
+name:            uitofp_s32_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = UCVTFUWSri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_UITOFP %0
+...
+
+---
+# CHECK-LABEL: name: uitofp_s32_s64_fpr
+name:            uitofp_s32_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = UCVTFUXSri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s32) = G_UITOFP %0
+...
+
+---
+# CHECK-LABEL: name: uitofp_s64_s32_fpr
+name:            uitofp_s64_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = UCVTFUWDri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_UITOFP %0
+...
+
+---
+# CHECK-LABEL: name: uitofp_s64_s64_fpr
+name:            uitofp_s64_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = UCVTFUXDri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s64) = G_UITOFP %0
+...
+
+---
+# CHECK-LABEL: name: fptosi_s32_s32_gpr
+name:            fptosi_s32_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZSUWSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FPTOSI %0
+...
+
+---
+# CHECK-LABEL: name: fptosi_s32_s64_gpr
+name:            fptosi_s32_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZSUWDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_FPTOSI %0
+...
+
+---
+# CHECK-LABEL: name: fptosi_s64_s32_gpr
+name:            fptosi_s64_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZSUXSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s64) = G_FPTOSI %0
+...
+
+---
+# CHECK-LABEL: name: fptosi_s64_s64_gpr
+name:            fptosi_s64_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZSUXDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s64) = G_FPTOSI %0
+...
+
+---
+# CHECK-LABEL: name: fptoui_s32_s32_gpr
+name:            fptoui_s32_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZUUWSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FPTOUI %0
+...
+
+---
+# CHECK-LABEL: name: fptoui_s32_s64_gpr
+name:            fptoui_s32_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZUUWDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_FPTOUI %0
+...
+
+---
+# CHECK-LABEL: name: fptoui_s64_s32_gpr
+name:            fptoui_s64_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZUUXSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s64) = G_FPTOUI %0
+...
+
+---
+# CHECK-LABEL: name: fptoui_s64_s64_gpr
+name:            fptoui_s64_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZUUXDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s64) = G_FPTOUI %0
+...
+
+---
 # CHECK-LABEL: name: unconditional_br
 name:            unconditional_br
 legalized:       true
@@ -1010,6 +1419,29 @@ body:             |
     successors: %bb.0
 
     G_BR %bb.0
+...
+
+---
+# CHECK-LABEL: name: conditional_br
+name:            conditional_br
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+
+# CHECK:  body:
+# CHECK:   bb.0:
+# CHECK:    TBNZW %0, 0, %bb.1
+# CHECK:    B %bb.0
+body:             |
+  bb.0:
+    successors: %bb.0, %bb.1
+    %0(s1) = COPY %w0
+    G_BRCOND %0(s1), %bb.1
+    G_BR %bb.0
+
+  bb.1:
 ...
 
 ---
@@ -1338,6 +1770,41 @@ body:             |
 ...
 
 ---
+# CHECK-LABEL: name: trunc
+name:            trunc
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: gpr64 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %1 = COPY %0
+# CHECK:    %3 = COPY %2.sub_32
+# CHECK:    %4 = COPY %2.sub_32
+body:             |
+  bb.0:
+    liveins: %w0, %x0
+
+    %0(s32) = COPY %w0
+    %1(s1) = G_TRUNC %0
+
+    %2(s64) = COPY %x0
+    %3(s32) = G_TRUNC %2
+    %4(s8) = G_TRUNC %2
+...
+
+---
 # CHECK-LABEL: name: anyext_gpr
 name:            anyext_gpr
 legalized:       true
@@ -1657,4 +2124,89 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s64) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: icmp
+name:            icmp
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: gpr64 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr64 }
+# CHECK-NEXT:  - { id: 5, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %wzr = SUBSWrr %0, %0, implicit-def %nzcv
+# CHECK:    %1 = CSINCWr %wzr, %wzr, 0, implicit %nzcv
+
+# CHECK:    %xzr = SUBSXrr %2, %2, implicit-def %nzcv
+# CHECK:    %3 = CSINCWr %wzr, %wzr, 2, implicit %nzcv
+
+# CHECK:    %xzr = SUBSXrr %4, %4, implicit-def %nzcv
+# CHECK:    %5 = CSINCWr %wzr, %wzr, 1, implicit %nzcv
+
+body:             |
+  bb.0:
+    liveins: %w0, %x0
+
+    %0(s32) = COPY %w0
+    %1(s1) = G_ICMP intpred(eq), %0, %0
+
+    %2(s64) = COPY %x0
+    %3(s1) = G_ICMP intpred(uge), %2, %2
+
+    %4(p0) = COPY %x0
+    %5(s1) = G_ICMP intpred(ne), %4, %4
+...
+
+---
+# CHECK-LABEL: name: fcmp
+name:            fcmp
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: fpr64 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+# CHECK-NEXT:  - { id: 5, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK:    FCMPSrr %0, %0, implicit-def %nzcv
+# CHECK:    [[TST_MI:%[0-9]+]] = CSINCWr %wzr, %wzr, 4, implicit %nzcv
+# CHECK:    [[TST_GT:%[0-9]+]] = CSINCWr %wzr, %wzr, 12, implicit %nzcv
+# CHECK:    %1 = ORRWrr [[TST_MI]], [[TST_GT]]
+
+# CHECK:    FCMPDrr %2, %2, implicit-def %nzcv
+# CHECK:    %3 = CSINCWr %wzr, %wzr, 5, implicit %nzcv
+
+body:             |
+  bb.0:
+    liveins: %w0, %x0
+
+    %0(s32) = COPY %s0
+    %1(s1) = G_FCMP floatpred(one), %0, %0
+
+    %2(s64) = COPY %d0
+    %3(s1) = G_FCMP floatpred(uge), %2, %2
+
 ...
