@@ -694,3 +694,22 @@ typedef struct {
 TEST(struct_l5)
 // CHECK: define swiftcc void @return_struct_l5([[STRUCT5:%.*]]* noalias sret
 // CHECK: define swiftcc void @take_struct_l5([[STRUCT5]]*
+
+
+// Don't crash.
+typedef union {
+int4 v[2];
+struct {
+  int LSW;
+  int d7;
+  int d6;
+  int d5;
+  int d4;
+  int d3;
+  int d2;
+  int MSW;
+} s;
+} union_het_vecint;
+TEST(union_het_vecint)
+// CHECK: define swiftcc void @return_union_het_vecint([[UNION:%.*]]* noalias sret
+// CHECK: define swiftcc void @take_union_het_vecint([[UNION]]*
