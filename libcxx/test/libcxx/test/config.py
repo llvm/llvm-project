@@ -226,6 +226,7 @@ class Configuration(object):
                 'unsupported value for "cxx_stdlib_under_test": %s'
                 % self.cxx_stdlib_under_test)
         if self.cxx_stdlib_under_test == 'libstdc++':
+            self.config.available_features.add('libstdc++')
             # Manually enable the experimental and filesystem tests for libstdc++
             # if the options aren't present.
             # FIXME this is a hack.
@@ -346,7 +347,7 @@ class Configuration(object):
                     'Failed to infer a supported language dialect from one of %r'
                     % possible_stds)
         self.cxx.compile_flags += ['-std={0}'.format(std)]
-        self.config.available_features.add(std)
+        self.config.available_features.add(std.replace('gnu++', 'c++'))
         # Configure include paths
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)

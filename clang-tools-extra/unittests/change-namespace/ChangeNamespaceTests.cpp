@@ -552,6 +552,38 @@ TEST_F(ChangeNamespaceTest, NoMisplaceAtEOF) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, CommentsBeforeMovedClass) {
+  std::string Code = "namespace na {\n"
+                     "namespace nb {\n"
+                     "\n\n"
+                     "// Wild comments.\n"
+                     "\n"
+                     "// Comments.\n"
+                     "// More comments.\n"
+                     "class B {\n"
+                     "  // Private comments.\n"
+                     "  int a;\n"
+                     "};\n"
+                     "}\n"
+                     "}";
+  std::string Expected = "\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "\n\n"
+                         "// Wild comments.\n"
+                         "\n"
+                         "// Comments.\n"
+                         "// More comments.\n"
+                         "class B {\n"
+                         "  // Private comments.\n"
+                         "  int a;\n"
+                         "};\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

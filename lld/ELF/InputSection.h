@@ -67,7 +67,7 @@ public:
   ArrayRef<uint8_t> getData(const SectionPiece &P) const;
 
   // If a section is compressed, this has the uncompressed section data.
-  std::unique_ptr<char[]> UncompressedData;
+  std::unique_ptr<uint8_t[]> UncompressedData;
 
   std::vector<Relocation> Relocations;
 };
@@ -118,6 +118,13 @@ public:
   void uncompress();
 
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
+
+private:
+  std::pair<ArrayRef<uint8_t>, uint64_t>
+  getElfCompressedData(ArrayRef<uint8_t> Data);
+
+  std::pair<ArrayRef<uint8_t>, uint64_t>
+  getRawCompressedData(ArrayRef<uint8_t> Data);
 };
 
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;

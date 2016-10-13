@@ -239,6 +239,12 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
       Ret.push_back(static_cast<InputSectionBase<ELFT> *>(S));
   }
 
+  // After we created final list we should now set OutSec pointer to null,
+  // instead of -1. Otherwise we may get a crash when writing relocs, in 
+  // case section is discarded by linker script
+  for (InputSectionBase<ELFT> *S : Ret)
+    S->OutSec = nullptr;
+
   return Ret;
 }
 
@@ -345,7 +351,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec)
-        addSection(Factory, S, getOutputSectionName(S->Name));
+        addSection(Factory, S, getOutputSectionName(S->Name, Opt.Alloc));
 }
 
 // Sets value of a section-defined symbol. Two kinds of

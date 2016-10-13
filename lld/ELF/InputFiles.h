@@ -66,6 +66,12 @@ public:
   // string for creating error messages.
   StringRef ArchiveName;
 
+  // If this file is in an archive, the member contains the offset of
+  // the file in the archive. Otherwise, it's just zero. We store this
+  // field so that we can pass it to lib/LTO in order to disambiguate
+  // between objects.
+  uint64_t OffsetInArchive;
+
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
   ELFKind EKind = ELFNoneKind;
@@ -239,10 +245,11 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   template <class ELFT> void parse();
 
-  // Returns a memory buffer for a given symbol. An empty memory buffer
+  // Returns a memory buffer for a given symbol and the offset in the archive
+  // for the member. An empty memory buffer and an offset of zero
   // is returned if we have already returned the same memory buffer.
   // (So that we don't instantiate same members more than once.)
-  MemoryBufferRef getMember(const Archive::Symbol *Sym);
+  std::pair<MemoryBufferRef, uint64_t> getMember(const Archive::Symbol *Sym);
 
 private:
   std::unique_ptr<Archive> File;
@@ -324,7 +331,8 @@ private:
   std::vector<uint8_t> ELFData;
 };
 
-InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "");
+InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
+                            uint64_t OffsetInArchive = 0);
 InputFile *createSharedFile(MemoryBufferRef MB);
 
 } // namespace elf

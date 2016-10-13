@@ -3,8 +3,12 @@
 # RUN: echo "SECTIONS { /DISCARD/ : { *(.aaa*) } }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+
 # CHECK-NOT: .aaa
 
 .section .aaa,"a"
-aaa:
+aab:
   .quad 0
+
+.section .zzz,"a"
+  .quad aab

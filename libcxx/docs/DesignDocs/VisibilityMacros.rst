@@ -112,14 +112,15 @@ Visibility Macros
   Mark a symbol as being exported by the libc++ library. This macro must be
   applied to all `operator new` and `operator delete` overloads.
 
-  **Windows Behavior**: When using the Microsoft CRT, all the `operator new` and
-  `operator delete` overloads are defined statically in `msvcrt.lib`. Marking
-  them as `dllimport` in the libc++ `<new>` header is therefore undesirable: if
-  we were to mark them as `dllimport` and then link against libc++, source files
-  which included `<new>` would end up linking against libc++'s `operator new`
-  and `operator delete`, while source files which did not include `<new>` would
-  end up linking against msvcrt's `operator new` and `operator delete`, which
-  would be a confusing and potentially error-prone inconsistency.
+  **Windows Behavior**: The `operator new` and `operator delete` overloads
+  should not be marked as `dllimport`; if they were, source files including the
+  `<new>` header (either directly or transitively) would lose the ability to use
+  local overloads of `operator new` and `operator delete`. On Windows, this
+  macro therefore expands to `__declspec(dllexport)` when building the library
+  and has an empty definition otherwise. A related caveat is that libc++ must be
+  included on the link line before `msvcrt.lib`, otherwise Microsoft's
+  definitions of `operator new` and `operator delete` inside `msvcrt.lib` will
+  end up being used instead of libc++'s.
 
 Links
 =====

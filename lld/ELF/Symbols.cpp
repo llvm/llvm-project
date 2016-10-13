@@ -15,6 +15,7 @@
 #include "Target.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -244,13 +245,13 @@ LazyObject::LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
 }
 
 InputFile *LazyArchive::fetch() {
-  MemoryBufferRef MBRef = file()->getMember(&Sym);
+  std::pair<MemoryBufferRef, uint64_t> MBInfo = file()->getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
-  if (MBRef.getBuffer().empty())
+  if (MBInfo.first.getBuffer().empty())
     return nullptr;
-  return createObjectFile(MBRef, file()->getName());
+  return createObjectFile(MBInfo.first, file()->getName(), MBInfo.second);
 }
 
 InputFile *LazyObject::fetch() {

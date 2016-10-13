@@ -11,6 +11,8 @@
 #define LLD_ELF_STRINGS_H
 
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
 #include <vector>
 
@@ -27,6 +29,10 @@ StringRef unquote(StringRef S);
 // name or the system does not provide __cxa_demangle function,
 // it returns an unmodified string.
 std::string demangle(StringRef Name);
+
+inline StringRef toStringRef(ArrayRef<uint8_t> Arr) {
+  return {(const char *)Arr.data(), Arr.size()};
+}
 }
 }
 
