@@ -99,6 +99,8 @@ protected:
   bool SGPRInitBug;
   bool HasSMemRealTime;
   bool Has16BitInsts;
+  bool HasMovrel;
+  bool HasVGPRIndexMode;
   bool FlatAddressSpace;
   bool R600ALUInst;
   bool CaymanISA;
@@ -499,6 +501,14 @@ public:
 
   bool has16BitInsts() const {
     return Has16BitInsts;
+  }
+
+  bool hasMovrel() const {
+    return HasMovrel;
+  }
+
+  bool hasVGPRIndexMode() const {
+    return HasVGPRIndexMode;
   }
 
   bool hasScalarCompareEq64() const {

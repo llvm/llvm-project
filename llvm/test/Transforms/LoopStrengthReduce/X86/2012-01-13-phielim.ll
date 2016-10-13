@@ -97,10 +97,9 @@ while.end:                                        ; preds = %entry
 ;
 ; CHECK: @test3
 ; CHECK: %for.body3.lr.ph.us.i.loopexit
-; CHECK-NEXT: in Loop: Header
-; CHECK-NEXT: incq
-; CHECK-NEXT: %for.body3.us.i
+; CHECK-NEXT: Parent Loop
 ; CHECK-NEXT: Inner Loop
+; CHECK-NEXT: incq
 ; CHECK: testb
 ; CHECK: je
 ; CHECK: jmp

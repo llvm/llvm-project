@@ -22,27 +22,26 @@
 # RUN: FileCheck  --check-prefix=CHECK-OUT-COMMON < %t.intsh.out %s
 # RUN: FileCheck --check-prefix=CHECK-INTSH-OUT < %t.intsh.out %s
 # RUN: FileCheck --check-prefix=CHECK-INTSH-ERR < %t.intsh.err %s
-#
-# CHECK-INTSH-OUT: TIMEOUT: per_test_timeout :: infinite_loop.py
-# CHECK-INTSH-OUT: Command 0 Reached Timeout: True
-# CHECK-INTSH-OUT: Command 0 Output:
-# CHECK-INTSH-OUT-NEXT: Running infinite loop
 
+# CHECK-INTSH-OUT: TIMEOUT: per_test_timeout :: infinite_loop.py
+# CHECK-INTSH-OUT: command output:
+# CHECK-INTSH-OUT-NEXT: Running infinite loop
+# CHECK-INTSH-OUT: command reached timeout: True
 
 # CHECK-INTSH-OUT: TIMEOUT: per_test_timeout :: quick_then_slow.py
 # CHECK-INTSH-OUT: Timeout: Reached timeout of 1 seconds
 # CHECK-INTSH-OUT: Command Output
-# CHECK-INTSH-OUT: Command 0 Reached Timeout: False
-# CHECK-INTSH-OUT: Command 0 Output:
+# CHECK-INTSH-OUT: command output:
 # CHECK-INTSH-OUT-NEXT: Running in quick mode
-# CHECK-INTSH-OUT: Command 1 Reached Timeout: True
-# CHECK-INTSH-OUT: Command 1 Output:
+# CHECK-INTSH-OUT: command reached timeout: False
+# CHECK-INTSH-OUT: command output:
 # CHECK-INTSH-OUT-NEXT: Running in slow mode
+# CHECK-INTSH-OUT: command reached timeout: True
 
 # CHECK-INTSH-OUT: TIMEOUT: per_test_timeout :: slow.py
-# CHECK-INTSH-OUT: Command 0 Reached Timeout: True
-# CHECK-INTSH-OUT: Command 0 Output:
+# CHECK-INTSH-OUT: command output:
 # CHECK-INTSH-OUT-NEXT: Running slow program
+# CHECK-INTSH-OUT: command reached timeout: True
 
 # CHECK-INTSH-ERR: Using internal shell
 

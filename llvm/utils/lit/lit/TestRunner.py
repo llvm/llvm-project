@@ -498,7 +498,7 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
                 result.exitCode,)
         if litConfig.maxIndividualTestTime > 0:
             out += 'error: command reached timeout: %s\n' % (
-                i, str(result.timeoutReached))
+                str(result.timeoutReached),)
 
     return out, err, exitCode, timeoutInfo
 

@@ -510,13 +510,13 @@ can be better.
    :hidden:
 
    CodeOfConduct
-   Proposals/GitHubSubMod
+   Proposals/GitHubMove
 
 :doc:`CodeOfConduct`
    Proposal to adopt a code of conduct on the LLVM social spaces (lists, events,
    IRC, etc).
 
-:doc:`Proposals/GitHubSubMod`
+:doc:`Proposals/GitHubMove`
    Proposal to move from SVN/Git to GitHub.
 
 

@@ -37,6 +37,12 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableVGPRIndexMode(
+  "amdgpu-vgpr-index-mode",
+  cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
+  cl::init(false));
+
+
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
@@ -1129,7 +1135,8 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
   unsigned ResultReg,
   unsigned PhiReg,
   unsigned InitSaveExecReg,
-  int Offset) {
+  int Offset,
+  bool UseGPRIdxMode) {
   MachineBasicBlock::iterator I = LoopBB.begin();
 
   unsigned PhiExec = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
@@ -1158,14 +1165,31 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
     .addReg(CurrentIdxReg)
     .addReg(IdxReg.getReg(), 0, IdxReg.getSubReg());
 
-  // Move index from VCC into M0
-  if (Offset == 0) {
-    BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
-      .addReg(CurrentIdxReg, RegState::Kill);
+  if (UseGPRIdxMode) {
+    unsigned IdxReg;
+    if (Offset == 0) {
+      IdxReg = CurrentIdxReg;
+    } else {
+      IdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+      BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), IdxReg)
+        .addReg(CurrentIdxReg, RegState::Kill)
+        .addImm(Offset);
+    }
+
+    MachineInstr *SetIdx =
+      BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_IDX))
+      .addReg(IdxReg, RegState::Kill);
+    SetIdx->getOperand(2).setIsUndef(true);
   } else {
-    BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
-      .addReg(CurrentIdxReg, RegState::Kill)
-      .addImm(Offset);
+    // Move index from VCC into M0
+    if (Offset == 0) {
+      BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+        .addReg(CurrentIdxReg, RegState::Kill);
+    } else {
+      BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
+        .addReg(CurrentIdxReg, RegState::Kill)
+        .addImm(Offset);
+    }
   }
 
   // Update EXEC, save the original EXEC value to VCC.
@@ -1200,7 +1224,8 @@ static MachineBasicBlock::iterator loadM0FromVGPR(const SIInstrInfo *TII,
                                                   MachineInstr &MI,
                                                   unsigned InitResultReg,
                                                   unsigned PhiReg,
-                                                  int Offset) {
+                                                  int Offset,
+                                                  bool UseGPRIdxMode) {
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -1239,7 +1264,7 @@ static MachineBasicBlock::iterator loadM0FromVGPR(const SIInstrInfo *TII,
 
   auto InsPt = emitLoadM0FromVGPRLoop(TII, MRI, MBB, *LoopBB, DL, *Idx,
                                       InitResultReg, DstReg, PhiReg, TmpExec,
-                                      Offset);
+                                      Offset, UseGPRIdxMode);
 
   MachineBasicBlock::iterator First = RemainderBB->begin();
   BuildMI(*RemainderBB, First, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
@@ -1270,7 +1295,9 @@ computeIndirectRegAndOffset(const SIRegisterInfo &TRI,
 static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
                                  MachineRegisterInfo &MRI,
                                  MachineInstr &MI,
-                                 int Offset) {
+                                 int Offset,
+                                 bool UseGPRIdxMode,
+                                 bool IsIndirectSrc) {
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(&MI);
@@ -1282,6 +1309,32 @@ static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
 
   if (!TII->getRegisterInfo().isSGPRClass(IdxRC))
     return false;
+
+  if (UseGPRIdxMode) {
+    unsigned IdxMode = IsIndirectSrc ?
+      VGPRIndexMode::SRC0_ENABLE : VGPRIndexMode::DST_ENABLE;
+    if (Offset == 0) {
+      MachineInstr *SetOn =
+        BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
+        .addOperand(*Idx)
+        .addImm(IdxMode);
+
+      SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
+    } else {
+      unsigned Tmp = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), Tmp)
+        .addOperand(*Idx)
+        .addImm(Offset);
+      MachineInstr *SetOn =
+        BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
+        .addReg(Tmp, RegState::Kill)
+        .addImm(IdxMode);
+
+      SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
+    }
+
+    return true;
+  }
 
   if (Offset == 0) {
     BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
@@ -1314,17 +1367,32 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   std::tie(SubReg, Offset)
     = computeIndirectRegAndOffset(TRI, VecRC, SrcVec->getReg(), Offset);
 
-  if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset)) {
+  bool UseGPRIdxMode = ST.hasVGPRIndexMode() && EnableVGPRIndexMode;
+
+  if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset, UseGPRIdxMode, true)) {
     MachineBasicBlock::iterator I(&MI);
     const DebugLoc &DL = MI.getDebugLoc();
 
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-      .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
-      .addReg(SrcVec->getReg(), RegState::Implicit);
+    if (UseGPRIdxMode) {
+      // TODO: Look at the uses to avoid the copy. This may require rescheduling
+      // to avoid interfering with other uses, so probably requires a new
+      // optimization pass.
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), Dst)
+        .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
+        .addReg(SrcVec->getReg(), RegState::Implicit)
+        .addReg(AMDGPU::M0, RegState::Implicit);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
+    } else {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
+        .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
+        .addReg(SrcVec->getReg(), RegState::Implicit);
+    }
+
     MI.eraseFromParent();
 
     return &MBB;
   }
+
 
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(&MI);
@@ -1334,15 +1402,32 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
 
   BuildMI(MBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), InitReg);
 
+  if (UseGPRIdxMode) {
+    MachineInstr *SetOn = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
+      .addImm(0) // Reset inside loop.
+      .addImm(VGPRIndexMode::SRC0_ENABLE);
+    SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
 
-  auto InsPt = loadM0FromVGPR(TII, MBB, MI, InitReg, PhiReg, Offset);
 
-  BuildMI(*InsPt->getParent(), InsPt, DL,
-          TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-    .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
-    .addReg(SrcVec->getReg(), RegState::Implicit);
+    // Disable again after the loop.
+    BuildMI(MBB, std::next(I), DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
+  }
 
-  return InsPt->getParent();
+  auto InsPt = loadM0FromVGPR(TII, MBB, MI, InitReg, PhiReg, Offset, UseGPRIdxMode);
+  MachineBasicBlock *LoopBB = InsPt->getParent();
+
+  if (UseGPRIdxMode) {
+    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOV_B32_e32), Dst)
+      .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
+      .addReg(SrcVec->getReg(), RegState::Implicit)
+      .addReg(AMDGPU::M0, RegState::Implicit);
+  } else {
+    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
+      .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
+      .addReg(SrcVec->getReg(), RegState::Implicit);
+  }
+
+  return LoopBB;
 }
 
 static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
@@ -1367,6 +1452,8 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   std::tie(SubReg, Offset) = computeIndirectRegAndOffset(TRI, VecRC,
                                                          SrcVec->getReg(),
                                                          Offset);
+  bool UseGPRIdxMode = ST.hasVGPRIndexMode() && EnableVGPRIndexMode;
+
   if (Idx->getReg() == AMDGPU::NoRegister) {
     MachineBasicBlock::iterator I(&MI);
     const DebugLoc &DL = MI.getDebugLoc();
@@ -1382,23 +1469,36 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
     return &MBB;
   }
 
-  const MCInstrDesc &MovRelDesc = TII->get(AMDGPU::V_MOVRELD_B32_e32);
-  if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset)) {
+  if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset, UseGPRIdxMode, false)) {
     MachineBasicBlock::iterator I(&MI);
     const DebugLoc &DL = MI.getDebugLoc();
 
-    MachineInstr *MovRel =
-      BuildMI(MBB, I, DL, MovRelDesc)
-      .addReg(SrcVec->getReg(), RegState::Undef, SubReg) // vdst
-      .addOperand(*Val)
-      .addReg(Dst, RegState::ImplicitDefine)
-      .addReg(SrcVec->getReg(), RegState::Implicit);
+    if (UseGPRIdxMode) {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_indirect))
+        .addReg(SrcVec->getReg(), RegState::Undef, SubReg) // vdst
+        .addOperand(*Val)
+        .addReg(Dst, RegState::ImplicitDefine)
+        .addReg(SrcVec->getReg(), RegState::Implicit)
+        .addReg(AMDGPU::M0, RegState::Implicit);
 
-    const int ImpDefIdx = MovRelDesc.getNumOperands() +
-      MovRelDesc.getNumImplicitUses();
-    const int ImpUseIdx = ImpDefIdx + 1;
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
+    } else {
+      const MCInstrDesc &MovRelDesc = TII->get(AMDGPU::V_MOVRELD_B32_e32);
 
-    MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
+      MachineInstr *MovRel =
+        BuildMI(MBB, I, DL, MovRelDesc)
+        .addReg(SrcVec->getReg(), RegState::Undef, SubReg) // vdst
+        .addOperand(*Val)
+        .addReg(Dst, RegState::ImplicitDefine)
+        .addReg(SrcVec->getReg(), RegState::Implicit);
+
+      const int ImpDefIdx = MovRelDesc.getNumOperands() +
+        MovRelDesc.getNumImplicitUses();
+      const int ImpUseIdx = ImpDefIdx + 1;
+
+      MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
+    }
+
     MI.eraseFromParent();
     return &MBB;
   }
@@ -1407,25 +1507,50 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
     MRI.clearKillFlags(Val->getReg());
 
   const DebugLoc &DL = MI.getDebugLoc();
+
+  if (UseGPRIdxMode) {
+    MachineBasicBlock::iterator I(&MI);
+
+    MachineInstr *SetOn = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
+      .addImm(0) // Reset inside loop.
+      .addImm(VGPRIndexMode::DST_ENABLE);
+    SetOn->getOperand(3).setIsUndef(AMDGPU::M0);
+
+    // Disable again after the loop.
+    BuildMI(MBB, std::next(I), DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
+  }
+
   unsigned PhiReg = MRI.createVirtualRegister(VecRC);
 
-  auto InsPt = loadM0FromVGPR(TII, MBB, MI, SrcVec->getReg(), PhiReg, Offset);
+  auto InsPt = loadM0FromVGPR(TII, MBB, MI, SrcVec->getReg(), PhiReg,
+                              Offset, UseGPRIdxMode);
+  MachineBasicBlock *LoopBB = InsPt->getParent();
 
-  // vdst is not actually read and just provides the base register index.
-  MachineInstr *MovRel =
-    BuildMI(*InsPt->getParent(), InsPt, DL, MovRelDesc)
+  if (UseGPRIdxMode) {
+    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOV_B32_indirect))
+      .addReg(PhiReg, RegState::Undef, SubReg) // vdst
+      .addOperand(*Val) // src0
+      .addReg(Dst, RegState::ImplicitDefine)
+      .addReg(PhiReg, RegState::Implicit)
+      .addReg(AMDGPU::M0, RegState::Implicit);
+  } else {
+    const MCInstrDesc &MovRelDesc = TII->get(AMDGPU::V_MOVRELD_B32_e32);
+    // vdst is not actually read and just provides the base register index.
+    MachineInstr *MovRel =
+      BuildMI(*LoopBB, InsPt, DL, MovRelDesc)
     .addReg(PhiReg, RegState::Undef, SubReg) // vdst
     .addOperand(*Val)
     .addReg(Dst, RegState::ImplicitDefine)
     .addReg(PhiReg, RegState::Implicit);
 
-  const int ImpDefIdx = MovRelDesc.getNumOperands() +
-    MovRelDesc.getNumImplicitUses();
-  const int ImpUseIdx = ImpDefIdx + 1;
+    const int ImpDefIdx = MovRelDesc.getNumOperands() +
+      MovRelDesc.getNumImplicitUses();
+    const int ImpUseIdx = ImpDefIdx + 1;
 
-  MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
+    MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
+  }
 
-  return InsPt->getParent();
+  return LoopBB;
 }
 
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(

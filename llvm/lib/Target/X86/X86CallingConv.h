@@ -43,6 +43,13 @@ inline bool CC_X86_AnyReg_Error(unsigned &, MVT &, MVT &,
   return false;
 }
 
+inline bool CC_X86_RegCall_Error(unsigned &, MVT &, MVT &,
+                                 CCValAssign::LocInfo &, ISD::ArgFlagsTy &,
+                                 CCState &) {
+  report_fatal_error("LLVM x86 RegCall calling convention implementation" \
+    " doesn't support long double and mask types yet.");
+}
+
 inline bool CC_X86_32_MCUInReg(unsigned &ValNo, MVT &ValVT,
                                          MVT &LocVT,
                                          CCValAssign::LocInfo &LocInfo,

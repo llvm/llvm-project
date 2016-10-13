@@ -49,10 +49,9 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; CHECK: a %r2, 172(%r15)
 ; CHECK: a %r2, 176(%r15)
 ; CHECK-O0-LABEL: test2:
-; CHECK-O0: la %[[REG1:r[0-9]+]], 168(%r15)
 ; CHECK-O0: st %r2, [[SPILL1:[0-9]+]](%r15)
-; CHECK-O0: lgr %r2, %[[REG1]]
 ; CHECK-O0: l %r3, [[SPILL1]](%r15)
+; CHECK-O0: la %r2, 168(%r15)
 ; CHECK-O0: brasl %r14, gen2
 ; CHECK-O0-DAG: l %r{{.*}}, 184(%r15)
 ; CHECK-O0-DAG: l %r{{.*}}, 180(%r15)

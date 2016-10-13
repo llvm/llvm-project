@@ -21,8 +21,9 @@ entry:
 ; NO-REALIGN: vst1.64 {{{d[0-9]+, d[0-9]+}}}, [r[[R2]]:128]
 ; NO-REALIGN: add r[[R2:[0-9]+]], r[[R1]], #32
 ; NO-REALIGN: vst1.64 {{{d[0-9]+, d[0-9]+}}}, [r[[R2]]:128]
-; NO-REALIGN: vst1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[R1]]:128]!
-; NO-REALIGN: vst1.64 {{{d[0-9]+, d[0-9]+}}}, [r[[R1]]:128]
+; NO-REALIGN: mov	r[[R3:[0-9]+]], r[[R1]]
+; NO-REALIGN: vst1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[R3]]:128]!
+; NO-REALIGN: vst1.64 {{{d[0-9]+, d[0-9]+}}}, [r[[R3]]:128]
 
 ; NO-REALIGN: add r[[R2:[0-9]+]], r[[R0:0]], #48
 ; NO-REALIGN: vst1.64 {{{d[0-9]+, d[0-9]+}}}, [r[[R2]]:128]

@@ -184,6 +184,7 @@ static bool isInertIntrinsic(unsigned ID) {
   // TODO: Make this into a covered switch.
   switch (ID) {
   case Intrinsic::returnaddress:
+  case Intrinsic::addressofreturnaddress:
   case Intrinsic::frameaddress:
   case Intrinsic::stacksave:
   case Intrinsic::stackrestore:

@@ -64,7 +64,7 @@ class CoverageExporterJson {
   raw_ostream &OS;
 
   /// \brief The full CoverageMapping object to export.
-  CoverageMapping Coverage;
+  const CoverageMapping &Coverage;
 
   /// \brief States that the JSON rendering machine can be in.
   enum JsonState { None, NonEmptyElement, EmptyElement };
