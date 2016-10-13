@@ -685,7 +685,8 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
-    CheckCUDAExceptionExpr(OpLoc, "throw");
+    CUDADiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
+        << "throw" << CurrentCUDATarget();
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";

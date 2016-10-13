@@ -6804,19 +6804,22 @@ def note_cuda_conflicting_device_function_declared_here : Note<
   "conflicting __device__ function declared here">;
 def err_cuda_device_exceptions : Error<
   "cannot use '%0' in "
-  "%select{__device__|__global__|__host__|__host__ __device__}1 function %2">;
+  "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, and __shared__ variables.">;
 def err_shared_var_init : Error<
     "initialization is not supported for __shared__ variables.">;
 def err_device_static_local_var : Error<
-    "Within a __device__/__global__ function, "
-    "only __shared__ variables may be marked \"static\"">;
+    "within a %select{__device__|__global__|__host__|__host__ __device__}0 "
+    "function, only __shared__ variables may be marked 'static'">;
 def err_cuda_vla : Error<
     "cannot use variable-length arrays in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_extern_shared : Error<"__shared__ variable %0 cannot be 'extern'">;
+def err_cuda_host_shared : Error<
+    "__shared__ local variables not allowed in "
+    "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonglobal_constant : Error<"__constant__ variables must be global">;
 
 def warn_non_pod_vararg_with_format_string : Warning<

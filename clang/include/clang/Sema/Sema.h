@@ -9285,6 +9285,127 @@ public:
   /// before incrementing, so you can emit an error.
   bool PopForceCUDAHostDevice();
 
+  /// Diagnostics that are emitted only if we discover that the given function
+  /// must be codegen'ed.  Because handling these correctly adds overhead to
+  /// compilation, this is currently only enabled for CUDA compilations.
+  llvm::DenseMap<const FunctionDecl *, std::vector<PartialDiagnosticAt>>
+      CUDADeferredDiags;
+
+  /// Raw encodings of SourceLocations for which CheckCUDACall has emitted a
+  /// (maybe deferred) "bad call" diagnostic.  We use this to avoid emitting the
+  /// same deferred diag twice.
+  llvm::DenseSet<unsigned> LocsWithCUDACallDiags;
+
+  /// The set of CUDA functions that we've discovered must be emitted by tracing
+  /// the call graph.  Functions that we can tell a priori must be emitted
+  /// aren't added to this set.
+  llvm::DenseSet<FunctionDecl *> CUDAKnownEmittedFns;
+
+  /// A partial call graph maintained during CUDA compilation to support
+  /// deferred diagnostics.  Specifically, functions are only added here if, at
+  /// the time they're added, they are not known-emitted.  As soon as we
+  /// discover that a function is known-emitted, we remove it and everything it
+  /// transitively calls from this set and add those functions to
+  /// CUDAKnownEmittedFns.
+  llvm::DenseMap<FunctionDecl *, llvm::SetVector<FunctionDecl *>> CUDACallGraph;
+
+  /// Diagnostic builder for CUDA errors which may or may not be deferred.
+  ///
+  /// In CUDA, there exist constructs (e.g. variable-length arrays, try/catch)
+  /// which are not allowed to appear inside __device__ functions and are
+  /// allowed to appear in __host__ __device__ functions only if the host+device
+  /// function is never codegen'ed.
+  ///
+  /// To handle this, we use the notion of "deferred diagnostics", where we
+  /// attach a diagnostic to a FunctionDecl that's emitted iff it's codegen'ed.
+  ///
+  /// This class lets you emit either a regular diagnostic, a deferred
+  /// diagnostic, or no diagnostic at all, according to an argument you pass to
+  /// its constructor, thus simplifying the process of creating these "maybe
+  /// deferred" diagnostics.
+  class CUDADiagBuilder {
+  public:
+    enum Kind {
+      /// Emit no diagnostics.
+      K_Nop,
+      /// Emit the diagnostic immediately (i.e., behave like Sema::Diag()).
+      K_Immediate,
+      /// Create a deferred diagnostic, which is emitted only if the function
+      /// it's attached to is codegen'ed.
+      K_Deferred
+    };
+
+    CUDADiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
+                    FunctionDecl *Fn, Sema &S);
+
+    /// Convertible to bool: True if we immediately emitted an error, false if
+    /// we didn't emit an error or we created a deferred error.
+    ///
+    /// Example usage:
+    ///
+    ///   if (CUDADiagBuilder(...) << foo << bar)
+    ///     return ExprError();
+    ///
+    /// But see CUDADiagIfDeviceCode() and CUDADiagIfHostCode() -- you probably
+    /// want to use these instead of creating a CUDADiagBuilder yourself.
+    operator bool() const { return ImmediateDiagBuilder.hasValue(); }
+
+    template <typename T>
+    friend const CUDADiagBuilder &operator<<(const CUDADiagBuilder &Diag,
+                                             const T &Value) {
+      if (Diag.ImmediateDiagBuilder.hasValue())
+        *Diag.ImmediateDiagBuilder << Value;
+      else if (Diag.PartialDiagInfo.hasValue())
+        Diag.PartialDiagInfo->PD << Value;
+      return Diag;
+    }
+
+  private:
+    struct PartialDiagnosticInfo {
+      PartialDiagnosticInfo(Sema &S, SourceLocation Loc, PartialDiagnostic PD,
+                            FunctionDecl *Fn)
+          : S(S), Loc(Loc), PD(std::move(PD)), Fn(Fn) {}
+
+      ~PartialDiagnosticInfo() {
+        S.CUDADeferredDiags[Fn].push_back({Loc, std::move(PD)});
+      }
+
+      Sema &S;
+      SourceLocation Loc;
+      PartialDiagnostic PD;
+      FunctionDecl *Fn;
+    };
+
+    // Invariant: At most one of these Optionals has a value.
+    // FIXME: Switch these to a Variant once that exists.
+    llvm::Optional<Sema::SemaDiagnosticBuilder> ImmediateDiagBuilder;
+    llvm::Optional<PartialDiagnosticInfo> PartialDiagInfo;
+  };
+
+  /// Creates a CUDADiagBuilder that emits the diagnostic if the current context
+  /// is "used as device code".
+  ///
+  /// - If CurContext is a __host__ function, does not emit any diagnostics.
+  /// - If CurContext is a __device__ or __global__ function, emits the
+  ///   diagnostics immediately.
+  /// - If CurContext is a __host__ __device__ function and we are compiling for
+  ///   the device, creates a diagnostic which is emitted if and when we realize
+  ///   that the function will be codegen'ed.
+  ///
+  /// Example usage:
+  ///
+  ///  // Variable-length arrays are not allowed in CUDA device code.
+  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
+  ///    return ExprError();
+  ///  // Otherwise, continue parsing as normal.
+  CUDADiagBuilder CUDADiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
+
+  /// Creates a CUDADiagBuilder that emits the diagnostic if the current context
+  /// is "used as host code".
+  ///
+  /// Same as CUDADiagIfDeviceCode, with "host" and "device" switched.
+  CUDADiagBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
+
   enum CUDAFunctionTarget {
     CFT_Device,
     CFT_Global,
@@ -9293,7 +9414,17 @@ public:
     CFT_InvalidTarget
   };
 
+  /// Determines whether the given function is a CUDA device/host/kernel/etc.
+  /// function.
+  ///
+  /// Use this rather than examining the function's attributes yourself -- you
+  /// will get it wrong.  Returns CFT_Host if D is null.
   CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D);
+
+  /// Gets the CUDA target for the current context.
+  CUDAFunctionTarget CurrentCUDATarget() {
+    return IdentifyCUDATarget(dyn_cast<FunctionDecl>(CurContext));
+  }
 
   // CUDA function call preference. Must be ordered numerically from
   // worst to best.
@@ -9333,12 +9464,6 @@ public:
   void maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *FD,
                                    const LookupResult &Previous);
 
-private:
-  /// Raw encodings of SourceLocations for which CheckCUDACall has emitted a
-  /// deferred "bad call" diagnostic.  We use this to avoid emitting the same
-  /// deferred diag twice.
-  llvm::DenseSet<unsigned> LocsWithCUDACallDeferredDiags;
-
 public:
   /// Check whether we're allowed to call Callee from the current context.
   ///
@@ -9355,21 +9480,6 @@ public:
   ///
   /// - Otherwise, returns true without emitting any diagnostics.
   bool CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee);
-
-  /// Check whether a 'try' or 'throw' expression is allowed within the current
-  /// context, and raise an error or create a deferred error, as appropriate.
-  ///
-  /// 'try' and 'throw' are never allowed in CUDA __device__ functions, and are
-  /// allowed in __host__ __device__ functions only if those functions are never
-  /// codegen'ed for the device.
-  ///
-  /// ExprTy should be the string "try" or "throw", as appropriate.
-  bool CheckCUDAExceptionExpr(SourceLocation Loc, StringRef ExprTy);
-
-  /// Check whether it's legal for us to create a variable-length array in the
-  /// current context.  Returns true if the VLA is OK; returns false and emits
-  /// an error otherwise.
-  bool CheckCUDAVLA(SourceLocation Loc);
 
   /// Set __device__ or __host__ __device__ attributes on the given lambda
   /// operator() method.

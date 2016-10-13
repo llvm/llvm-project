@@ -150,18 +150,16 @@ namespace {
   };
 
   struct CallObjCEndCatch final : EHScopeStack::Cleanup {
-    CallObjCEndCatch(bool MightThrow, llvm::Value *Fn) :
-      MightThrow(MightThrow), Fn(Fn) {}
+    CallObjCEndCatch(bool MightThrow, llvm::Value *Fn)
+        : MightThrow(MightThrow), Fn(Fn) {}
     bool MightThrow;
     llvm::Value *Fn;
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      if (!MightThrow) {
-        CGF.Builder.CreateCall(Fn)->setDoesNotThrow();
-        return;
-      }
-
-      CGF.EmitRuntimeCallOrInvoke(Fn);
+      if (MightThrow)
+        CGF.EmitRuntimeCallOrInvoke(Fn);
+      else
+        CGF.EmitNounwindRuntimeCall(Fn);
     }
   };
 }
@@ -230,10 +228,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
 
     // Enter the catch.
     llvm::Value *Exn = RawExn;
-    if (beginCatchFn) {
-      Exn = CGF.Builder.CreateCall(beginCatchFn, RawExn, "exn.adjusted");
-      cast<llvm::CallInst>(Exn)->setDoesNotThrow();
-    }
+    if (beginCatchFn)
+      Exn = CGF.EmitNounwindRuntimeCall(beginCatchFn, RawExn, "exn.adjusted");
 
     CodeGenFunction::LexicalScope cleanups(CGF, Handler.Body->getSourceRange());
 

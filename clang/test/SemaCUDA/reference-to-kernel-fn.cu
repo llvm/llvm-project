@@ -18,10 +18,7 @@ typedef void (*fn_ptr_t)();
 __host__ __device__ fn_ptr_t get_ptr_hd() {
   return kernel;
 #ifdef DEVICE
-  // This emits a deferred error on the device, but we don't catch it in this
-  // file because the non-deferred error below precludes this.
-
-  // FIXME-expected-error@-2 {{reference to __global__ function}}
+  // expected-error@-2 {{reference to __global__ function}}
 #endif
 }
 __host__ fn_ptr_t get_ptr_h() {

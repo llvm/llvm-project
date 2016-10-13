@@ -2249,8 +2249,8 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     return QualType();
   }
   // CUDA device code doesn't support VLAs.
-  if (getLangOpts().CUDA && T->isVariableArrayType() && !CheckCUDAVLA(Loc))
-    return QualType();
+  if (getLangOpts().CUDA && T->isVariableArrayType())
+    CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget();
 
   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
   if (!getLangOpts().C99) {
