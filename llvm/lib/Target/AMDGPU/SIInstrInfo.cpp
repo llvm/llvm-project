@@ -925,10 +925,15 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADD_U32), RegLo)
                        .addReg(RegLo)
                        .addOperand(MI.getOperand(1)));
-    Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADDC_U32), RegHi)
-                           .addReg(RegHi)
-                           .addImm(0));
 
+    MachineInstrBuilder MIB = BuildMI(MF, DL, get(AMDGPU::S_ADDC_U32), RegHi)
+                                  .addReg(RegHi);
+    if (MI.getOperand(2).getTargetFlags() == SIInstrInfo::MO_NONE)
+      MIB.addImm(0);
+    else
+      MIB.addOperand(MI.getOperand(2));
+
+    Bundler.append(MIB);
     llvm::finalizeBundle(MBB, Bundler.begin());
 
     MI.eraseFromParent();

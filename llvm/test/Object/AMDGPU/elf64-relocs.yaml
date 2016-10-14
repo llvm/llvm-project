@@ -3,13 +3,18 @@
 
 # CHECK: Relocations [
 # CHECK:   Section (2) .rela.text {
-# CHECK:     0x0 R_AMDGPU_NONE main 0x0
-# CHECK:     0x8 R_AMDGPU_ABS32_LO - 0x0
-# CHECK:     0x10 R_AMDGPU_ABS32_HI - 0x0
-# CHECK:     0x18 R_AMDGPU_ABS64 - 0x0
-# CHECK:     0x20 R_AMDGPU_REL32 - 0x0
-# CHECK:     0x28 R_AMDGPU_REL64 - 0x0
-# CHECK:     0x30 R_AMDGPU_ABS32 - 0x0
+# CHECK:     0x0  R_AMDGPU_NONE           - 0x0
+# CHECK:     0x2  R_AMDGPU_ABS32_LO       - 0x0
+# CHECK:     0x4  R_AMDGPU_ABS32_HI       - 0x0
+# CHECK:     0x6  R_AMDGPU_ABS64          - 0x0
+# CHECK:     0x8  R_AMDGPU_REL32          - 0x0
+# CHECK:     0x10 R_AMDGPU_REL64          - 0x0
+# CHECK:     0x12 R_AMDGPU_ABS32          - 0x0
+# CHECK:     0x14 R_AMDGPU_GOTPCREL       - 0x0
+# CHECK:     0x16 R_AMDGPU_GOTPCREL32_LO  - 0x0
+# CHECK:     0x18 R_AMDGPU_GOTPCREL32_HI  - 0x0
+# CHECK:     0x20 R_AMDGPU_REL32_LO       - 0x0
+# CHECK:     0x22 R_AMDGPU_REL32_HI       - 0x0
 # CHECK:   }
 # CHECK: ]
 
@@ -32,26 +37,41 @@ Sections:
     AddressAlign:    0x08
     Relocations:
       - Offset:          0x0
-        Symbol:          main
+        Symbol:          s0
         Type:            R_AMDGPU_NONE
-      - Offset:          0x8
-        Symbol:          a
+      - Offset:          0x2
+        Symbol:          s1
         Type:            R_AMDGPU_ABS32_LO
-      - Offset:          0x10
-        Symbol:          b
+      - Offset:          0x4
+        Symbol:          s2
         Type:            R_AMDGPU_ABS32_HI
-      - Offset:          0x18
-        Symbol:          c
+      - Offset:          0x6
+        Symbol:          s3
         Type:            R_AMDGPU_ABS64
-      - Offset:          0x20
-        Symbol:          d
+      - Offset:          0x8
+        Symbol:          s4
         Type:            R_AMDGPU_REL32
-      - Offset:          0x28
-        Symbol:          e
+      - Offset:          0x10
+        Symbol:          s5
         Type:            R_AMDGPU_REL64
-      - Offset:          0x30
-        Symbol:          f
+      - Offset:          0x12
+        Symbol:          s6
         Type:            R_AMDGPU_ABS32
+      - Offset:          0x14
+        Symbol:          s7
+        Type:            R_AMDGPU_GOTPCREL
+      - Offset:          0x16
+        Symbol:          s8
+        Type:            R_AMDGPU_GOTPCREL32_LO
+      - Offset:          0x18
+        Symbol:          s9
+        Type:            R_AMDGPU_GOTPCREL32_HI
+      - Offset:          0x20
+        Symbol:          s10
+        Type:            R_AMDGPU_REL32_LO
+      - Offset:          0x22
+        Symbol:          s11
+        Type:            R_AMDGPU_REL32_HI
 
 Symbols:
   Local:

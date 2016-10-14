@@ -275,6 +275,10 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Hexagon_IE: return "IE";
   case VK_Hexagon_IE_GOT: return "IEGOT";
   case VK_WebAssembly_FUNCTION: return "FUNCTION";
+  case VK_AMDGPU_GOTPCREL32_LO: return "gotpcrel32@lo";
+  case VK_AMDGPU_GOTPCREL32_HI: return "gotpcrel32@hi";
+  case VK_AMDGPU_REL32_LO: return "rel32@lo";
+  case VK_AMDGPU_REL32_HI: return "rel32@hi";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -372,6 +376,10 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("prel31", VK_ARM_PREL31)
     .Case("sbrel", VK_ARM_SBREL)
     .Case("tlsldo", VK_ARM_TLSLDO)
+    .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
+    .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)
+    .Case("rel32@lo", VK_AMDGPU_REL32_LO)
+    .Case("rel32@hi", VK_AMDGPU_REL32_HI)
     .Default(VK_Invalid);
 }
 

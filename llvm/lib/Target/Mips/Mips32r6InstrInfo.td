@@ -98,6 +98,9 @@ class BC1NEZ_ENC : COP1_BCCZ_FM<OPCODE5_BC1NEZ>;
 class BC2EQZ_ENC : COP2_BCCZ_FM<OPCODE5_BC2EQZ>;
 class BC2NEZ_ENC : COP2_BCCZ_FM<OPCODE5_BC2NEZ>;
 
+class DVP_ENC : COP0_EVP_DVP_FM<0b1>;
+class EVP_ENC : COP0_EVP_DVP_FM<0b0>;
+
 class JIALC_ENC : JMP_IDX_COMPACT_FM<0b111110>;
 class JIC_ENC   : JMP_IDX_COMPACT_FM<0b110110>;
 class JR_HB_R6_ENC : JR_HB_R6_FM<OPCODE6_JALR>;
@@ -324,7 +327,7 @@ class AUI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                     InstrItinClass itin = NoItinerary>
       : MipsR6Arch<instr_asm> {
   dag OutOperandList = (outs GPROpnd:$rs);
-  dag InOperandList = (ins GPROpnd:$rt, simm16:$imm);
+  dag InOperandList = (ins GPROpnd:$rt, uimm16:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $imm");
   list<dag> Pattern = [];
   InstrItinClass Itinerary = itin;
@@ -505,6 +508,19 @@ class DIVMOD_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   // teq instructions as well.
   bit usesCustomInserter = 1;
 }
+
+class DVPEVP_DESC_BASE<string instr_asm, InstrItinClass Itin>
+    : MipsR6Arch<instr_asm> {
+  dag OutOperandList = (outs GPR32Opnd:$rt);
+  dag InOperandList = (ins);
+  string AsmString = !strconcat(instr_asm, "\t$rt");
+  list<dag> Pattern = [];
+  InstrItinClass Itinerary = Itin;
+  bit hasUnModeledSideEffects = 1;
+}
+
+class DVP_DESC : DVPEVP_DESC_BASE<"dvp", II_DVP>;
+class EVP_DESC : DVPEVP_DESC_BASE<"evp", II_EVP>;
 
 class DIV_DESC  : DIVMOD_DESC_BASE<"div", GPR32Opnd, II_DIV, sdiv>;
 class DIVU_DESC : DIVMOD_DESC_BASE<"divu", GPR32Opnd, II_DIVU, udiv>;
@@ -819,6 +835,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def DIV : R6MMR6Rel, DIV_ENC, DIV_DESC, ISA_MIPS32R6;
   def DIVU : R6MMR6Rel, DIVU_ENC, DIVU_DESC, ISA_MIPS32R6;
 }
+
+def DVP : R6MMR6Rel, DVP_ENC, DVP_DESC, ISA_MIPS32R6;
+def EVP : R6MMR6Rel, EVP_ENC, EVP_DESC, ISA_MIPS32R6;
+
 def JIALC : R6MMR6Rel, JIALC_ENC, JIALC_DESC, ISA_MIPS32R6;
 def JIC : R6MMR6Rel, JIC_ENC, JIC_DESC, ISA_MIPS32R6;
 def JR_HB_R6 : JR_HB_R6_ENC, JR_HB_R6_DESC, ISA_MIPS32R6;
@@ -883,6 +903,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
 // Instruction Aliases
 //
 //===----------------------------------------------------------------------===//
+
+def : MipsInstAlias<"dvp", (DVP ZERO), 0>, ISA_MIPS32R6;
+def : MipsInstAlias<"evp", (EVP ZERO), 0>, ISA_MIPS32R6;
 
 let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsInstAlias<"sdbbp", (SDBBP_R6 0)>, ISA_MIPS32R6;

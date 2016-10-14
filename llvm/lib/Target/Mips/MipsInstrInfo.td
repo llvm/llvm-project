@@ -530,6 +530,14 @@ def UImm16RelaxedAsmOperandClass
   let PredicateMethod = "isAnyImm<16>";
   let DiagnosticType = "UImm16_Relaxed";
 }
+// Similar to the relaxed classes which take an SImm and render it as
+// an UImm, this takes a UImm and renders it as an SImm.
+def UImm16AltRelaxedAsmOperandClass
+    : SImmAsmOperandClass<16, [UImm16RelaxedAsmOperandClass]> {
+  let Name = "UImm16_AltRelaxed";
+  let PredicateMethod = "isUImm<16>";
+  let DiagnosticType = "UImm16_AltRelaxed";
+}
 // FIXME: One of these should probably have UImm16AsmOperandClass as the
 //        superclass instead of UImm16RelaxedasmOPerandClass.
 def UImm16AsmOperandClass
@@ -810,6 +818,11 @@ def uimm16_64_relaxed : Operand<i64> {
       !cast<AsmOperandClass>("UImm16RelaxedAsmOperandClass");
 }
 
+def uimm16_altrelaxed : Operand<i32> {
+  let PrintMethod = "printUImm<16>";
+  let ParserMatchClass =
+      !cast<AsmOperandClass>("UImm16AltRelaxedAsmOperandClass");
+}
 // Like uimm5 but reports a less confusing error for 32-63 when
 // an instruction alias permits that.
 def uimm5_report_uimm6 : Operand<i32> {

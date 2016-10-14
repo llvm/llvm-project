@@ -733,7 +733,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // If we are generating dwarf for assembly source files save the initial text
   // section and generate a .file directive.
   if (getContext().getGenDwarfForAssembly()) {
-    MCSection *Sec = getStreamer().getCurrentSection().first;
+    MCSection *Sec = getStreamer().getCurrentSectionOnly();
     if (!Sec->getBeginSymbol()) {
       MCSymbol *SectionStartSym = getContext().createTempSymbol();
       getStreamer().EmitLabel(SectionStartSym);
@@ -829,7 +829,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 }
 
 bool AsmParser::checkForValidSection() {
-  if (!ParsingInlineAsm && !getStreamer().getCurrentSection().first) {
+  if (!ParsingInlineAsm && !getStreamer().getCurrentSectionOnly()) {
     Out.InitSections(false);
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
@@ -2014,7 +2014,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   // directive for the instruction.
   if (!ParseHadError && getContext().getGenDwarfForAssembly() &&
       getContext().getGenDwarfSectionSyms().count(
-          getStreamer().getCurrentSection().first)) {
+          getStreamer().getCurrentSectionOnly())) {
     unsigned Line;
     if (ActiveMacros.empty())
       Line = SrcMgr.FindLineNumber(IDLoc, CurBuffer);
@@ -3109,7 +3109,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
 
   // Check whether we should use optimal code alignment for this .align
   // directive.
-  const MCSection *Section = getStreamer().getCurrentSection().first;
+  const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
   bool UseCodeAlign = Section->UseCodeAlign();
   if ((!HasFillExpr || Lexer.getMAI().getTextAlignFillValue() == FillExpr) &&

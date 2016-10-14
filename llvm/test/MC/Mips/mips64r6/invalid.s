@@ -10,6 +10,8 @@ local_label:
 	.set noat
         align   $4, $2, $3, -1    # CHECK: :[[@LINE]]:29: error: expected 2-bit unsigned immediate
         align   $4, $2, $3, 4     # CHECK: :[[@LINE]]:29: error: expected 2-bit unsigned immediate
+        aui     $4, $4, 65536     # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        aui     $4, $4, -1        # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
         jalr.hb $31 # CHECK: :[[@LINE]]:9: error: source and destination must be different
         jalr.hb $31, $31 # CHECK: :[[@LINE]]:9: error: source and destination must be different
         ldc2    $8,-21181($at)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
@@ -110,12 +112,29 @@ local_label:
         bnezc $2, 4194303        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
         cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+        dahi    $4, $4, 65536     # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        dahi    $4, $4, -1        # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        dahi    $4, $5, 1         # CHECK: :[[@LINE]]:9: error: source and destination must match
         dalign  $4, $2, $3, -1    # CHECK: :[[@LINE]]:29: error: expected 3-bit unsigned immediate
         dalign  $4, $2, $3, 8     # CHECK: :[[@LINE]]:29: error: expected 3-bit unsigned immediate
+        dati    $4, $4, 65536     # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        dati    $4, $4, -1        # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        dati    $4, $5, 1         # CHECK: :[[@LINE]]:9: error: source and destination must match
+        daui    $4, $0, 1         # CHECK: :[[@LINE]]:9: error: invalid operand ($zero) for instruction
+        daui    $4, $4, 65536     # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        daui    $4, $4, -1        # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        dati    $4, $4, -1        # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        dati    $4, $5, 1         # CHECK: :[[@LINE]]:9: error: source and destination must match
         dlsa    $2, $3, $4, 0     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         dlsa    $2, $3, $4, 5     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         drotr32 $2, $3, -1   # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
         drotr32 $2, $3, 32   # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
+        dvp $17, $3          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        dvp $17, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        dvp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp $16, $3          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp $16, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        evp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         jalr.hb $31          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         lsa     $2, $3, $4, 0     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4

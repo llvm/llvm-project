@@ -266,6 +266,11 @@ public:
 
     VK_WebAssembly_FUNCTION, // Function table index, rather than virtual addr
 
+    VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
+    VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi
+    VK_AMDGPU_REL32_LO,      // symbol@rel32@lo
+    VK_AMDGPU_REL32_HI,      // symbol@rel32@hi
+
     VK_TPREL,
     VK_DTPREL
   };

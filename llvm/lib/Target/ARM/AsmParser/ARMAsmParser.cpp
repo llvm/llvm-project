@@ -10106,7 +10106,7 @@ bool ARMAsmParser::parseDirectiveLtorg(SMLoc L) {
 }
 
 bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
-  const MCSection *Section = getStreamer().getCurrentSection().first;
+  const MCSection *Section = getStreamer().getCurrentSectionOnly();
 
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     TokError("unexpected token in directive");
@@ -10115,7 +10115,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
 
   if (!Section) {
     getStreamer().InitSections(false);
-    Section = getStreamer().getCurrentSection().first;
+    Section = getStreamer().getCurrentSectionOnly();
   }
 
   assert(Section && "must have section to emit alignment");
@@ -10369,7 +10369,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     return true;
 
   // '.align' is target specifically handled to mean 2**2 byte alignment.
-  const MCSection *Section = getStreamer().getCurrentSection().first;
+  const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
   if (Section->UseCodeAlign())
     getStreamer().EmitCodeAlignment(4, 0);

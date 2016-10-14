@@ -106,6 +106,7 @@ set(Tests
   ThreadedLeakTest
   ThreadedTest
   TimeoutTest
+  TraceMallocTest
   )
 
 if(APPLE)

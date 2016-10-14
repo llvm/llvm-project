@@ -447,20 +447,19 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
   }
 }
 
-MachineInstr *X86FrameLowering::emitStackProbe(MachineFunction &MF,
-                                               MachineBasicBlock &MBB,
-                                               MachineBasicBlock::iterator MBBI,
-                                               const DebugLoc &DL,
-                                               bool InProlog) const {
+void X86FrameLowering::emitStackProbe(MachineFunction &MF,
+                                      MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator MBBI,
+                                      const DebugLoc &DL, bool InProlog) const {
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   if (STI.isTargetWindowsCoreCLR()) {
     if (InProlog) {
-      return emitStackProbeInlineStub(MF, MBB, MBBI, DL, true);
+      emitStackProbeInlineStub(MF, MBB, MBBI, DL, true);
     } else {
-      return emitStackProbeInline(MF, MBB, MBBI, DL, false);
+      emitStackProbeInline(MF, MBB, MBBI, DL, false);
     }
   } else {
-    return emitStackProbeCall(MF, MBB, MBBI, DL, InProlog);
+    emitStackProbeCall(MF, MBB, MBBI, DL, InProlog);
   }
 }
 
@@ -489,9 +488,11 @@ void X86FrameLowering::inlineStackProbe(MachineFunction &MF,
   }
 }
 
-MachineInstr *X86FrameLowering::emitStackProbeInline(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
+void X86FrameLowering::emitStackProbeInline(MachineFunction &MF,
+                                            MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            const DebugLoc &DL,
+                                            bool InProlog) const {
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   assert(STI.is64Bit() && "different expansion needed for 32 bit");
   assert(STI.isTargetWindowsCoreCLR() && "custom expansion expects CoreCLR");
@@ -701,13 +702,13 @@ MachineInstr *X86FrameLowering::emitStackProbeInline(
   }
 
   // Possible TODO: physreg liveness for InProlog case.
-
-  return &*ContinueMBBI;
 }
 
-MachineInstr *X86FrameLowering::emitStackProbeCall(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
+void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
+                                          MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI,
+                                          const DebugLoc &DL,
+                                          bool InProlog) const {
   bool IsLargeCodeModel = MF.getTarget().getCodeModel() == CodeModel::Large;
 
   unsigned CallOp;
@@ -765,11 +766,9 @@ MachineInstr *X86FrameLowering::emitStackProbeCall(
     for (++ExpansionMBBI; ExpansionMBBI != MBBI; ++ExpansionMBBI)
       ExpansionMBBI->setFlag(MachineInstr::FrameSetup);
   }
-
-  return &*MBBI;
 }
 
-MachineInstr *X86FrameLowering::emitStackProbeInlineStub(
+void X86FrameLowering::emitStackProbeInlineStub(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
 
@@ -777,8 +776,6 @@ MachineInstr *X86FrameLowering::emitStackProbeInlineStub(
 
   BuildMI(MBB, MBBI, DL, TII.get(X86::CALLpcrel32))
       .addExternalSymbol("__chkstk_stub");
-
-  return &*MBBI;
 }
 
 static unsigned calculateSetFPREG(uint64_t SPAdjust) {
