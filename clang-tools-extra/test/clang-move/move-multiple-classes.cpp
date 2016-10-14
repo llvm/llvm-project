@@ -24,6 +24,8 @@
 // CHECK-OLD-TEST-CPP: }
 // CHECK-OLD-TEST-CPP: } // namespace c
 
+// CHECK-NEW-TEST-H: #ifndef {{.*}}NEW_MULTIPLE_CLASS_TEST_H
+// CHECK-NEW-TEST-H: #define {{.*}}NEW_MULTIPLE_CLASS_TEST_H
 // CHECK-NEW-TEST-H: namespace a {
 // CHECK-NEW-TEST-H: class Move1 {
 // CHECK-NEW-TEST-H: public:
@@ -54,6 +56,7 @@
 // CHECK-NEW-TEST-H:   static int a;
 // CHECK-NEW-TEST-H: };
 // CHECK-NEW-TEST-H: } // namespace c
+// CHECK-NEW-TEST-H: #endif // {{.*}}NEW_MULTIPLE_CLASS_TEST_H
 
 // CHECK-NEW-TEST-CPP: #include "{{.*}}new_multiple_class_test.h"
 // CHECK-NEW-TEST-CPP: namespace a {

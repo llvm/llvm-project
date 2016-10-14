@@ -324,6 +324,9 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec, Name));
     return MipsReginfo.get();
   case SHT_MIPS_OPTIONS:
+    if (MipsOptions)
+      fatal(getFilename(this) +
+            ": multiple SHT_MIPS_OPTIONS sections are not allowed");
     MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec, Name));
     return MipsOptions.get();
   case SHT_MIPS_ABIFLAGS:
