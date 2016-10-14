@@ -103,9 +103,9 @@ static bool HasRedeclarationWithoutAvailabilityInCategory(const Decl *D) {
   return false;
 }
 
-AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
-    NamedDecl *&D, VersionTuple ContextVersion, std::string *Message) {
-  AvailabilityResult Result = D->getAvailability(Message, ContextVersion);
+AvailabilityResult
+Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
+  AvailabilityResult Result = D->getAvailability(Message);
 
   // For typedefs, if the typedef declaration appears available look
   // to the underlying type to see if it is more restrictive.
@@ -113,7 +113,7 @@ AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
     if (Result == AR_Available) {
       if (const TagType *TT = TD->getUnderlyingType()->getAs<TagType>()) {
         D = TT->getDecl();
-        Result = D->getAvailability(Message, ContextVersion);
+        Result = D->getAvailability(Message);
         continue;
       }
     }
@@ -124,7 +124,7 @@ AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
       D = IDecl->getDefinition();
-      Result = D->getAvailability(Message, ContextVersion);
+      Result = D->getAvailability(Message);
     }
   }
 
@@ -132,18 +132,10 @@ AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
     if (Result == AR_Available) {
       const DeclContext *DC = ECD->getDeclContext();
       if (const EnumDecl *TheEnumDecl = dyn_cast<EnumDecl>(DC))
-        Result = TheEnumDecl->getAvailability(Message, ContextVersion);
+        Result = TheEnumDecl->getAvailability(Message);
     }
 
-  switch (Result) {
-  case AR_Available:
-    return Result;
-
-  case AR_Unavailable:
-  case AR_Deprecated:
-    return getCurContextAvailability() != Result ? Result : AR_Available;
-
-  case AR_NotYetIntroduced: {
+  if (Result == AR_NotYetIntroduced) {
     // Don't do this for enums, they can't be redeclared.
     if (isa<EnumConstantDecl>(D) || isa<EnumDecl>(D))
       return AR_Available;
@@ -166,23 +158,18 @@ AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
 
     return Warn ? AR_NotYetIntroduced : AR_Available;
   }
-  }
-  llvm_unreachable("Unknown availability result!");
+
+  return Result;
 }
 
 static void
 DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
                            const ObjCInterfaceDecl *UnknownObjCClass,
                            bool ObjCPropertyAccess) {
-  VersionTuple ContextVersion;
-  if (const DeclContext *DC = S.getCurObjCLexicalContext())
-    ContextVersion = S.getVersionForDecl(cast<Decl>(DC));
-
   std::string Message;
-  // See if this declaration is unavailable, deprecated, or partial in the
-  // current context.
+  // See if this declaration is unavailable, deprecated, or partial.
   if (AvailabilityResult Result =
-          S.ShouldDiagnoseAvailabilityOfDecl(D, ContextVersion, &Message)) {
+          S.ShouldDiagnoseAvailabilityOfDecl(D, &Message)) {
 
     if (Result == AR_NotYetIntroduced && S.getCurFunctionOrMethodDecl()) {
       S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
@@ -192,8 +179,7 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
     const ObjCPropertyDecl *ObjCPDecl = nullptr;
     if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
       if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
-        AvailabilityResult PDeclResult =
-            PD->getAvailability(nullptr, ContextVersion);
+        AvailabilityResult PDeclResult = PD->getAvailability(nullptr);
         if (PDeclResult == Result)
           ObjCPDecl = PD;
       }

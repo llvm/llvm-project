@@ -1767,9 +1767,41 @@ TargetLoweringBase::getTypeLegalizationCost(const DataLayout &DL,
   }
 }
 
+Value *TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilder<> &IRB,
+                                                              bool UseTLS) const {
+  // compiler-rt provides a variable with a magic name.  Targets that do not
+  // link with compiler-rt may also provide such a variable.
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  const char *UnsafeStackPtrVar = "__safestack_unsafe_stack_ptr";
+  auto UnsafeStackPtr =
+      dyn_cast_or_null<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
+
+  Type *StackPtrTy = Type::getInt8PtrTy(M->getContext());
+
+  if (!UnsafeStackPtr) {
+    auto TLSModel = UseTLS ?
+        GlobalValue::InitialExecTLSModel :
+        GlobalValue::NotThreadLocal;
+    // The global variable is not defined yet, define it ourselves.
+    // We use the initial-exec TLS model because we do not support the
+    // variable living anywhere other than in the main executable.
+    UnsafeStackPtr = new GlobalVariable(
+        *M, StackPtrTy, false, GlobalValue::ExternalLinkage, nullptr,
+        UnsafeStackPtrVar, nullptr, TLSModel);
+  } else {
+    // The variable exists, check its type and attributes.
+    if (UnsafeStackPtr->getValueType() != StackPtrTy)
+      report_fatal_error(Twine(UnsafeStackPtrVar) + " must have void* type");
+    if (UseTLS != UnsafeStackPtr->isThreadLocal())
+      report_fatal_error(Twine(UnsafeStackPtrVar) + " must " +
+                         (UseTLS ? "" : "not ") + "be thread-local");
+  }
+  return UnsafeStackPtr;
+}
+
 Value *TargetLoweringBase::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
   if (!TM.getTargetTriple().isAndroid())
-    return nullptr;
+    return getDefaultSafeStackPointerLocation(IRB, true);
 
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.

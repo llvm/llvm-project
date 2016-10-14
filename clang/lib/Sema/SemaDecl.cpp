@@ -15615,29 +15615,3 @@ void Sema::ActOnPragmaWeakAlias(IdentifierInfo* Name,
 Decl *Sema::getObjCDeclContext() const {
   return (dyn_cast_or_null<ObjCContainerDecl>(CurContext));
 }
-
-AvailabilityResult Sema::getCurContextAvailability() const {
-  const Decl *D = cast_or_null<Decl>(getCurObjCLexicalContext());
-  if (!D)
-    return AR_Available;
-
-  // If we are within an Objective-C method, we should consult
-  // both the availability of the method as well as the
-  // enclosing class.  If the class is (say) deprecated,
-  // the entire method is considered deprecated from the
-  // purpose of checking if the current context is deprecated.
-  if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    AvailabilityResult R = MD->getAvailability();
-    if (R != AR_Available)
-      return R;
-    D = MD->getClassInterface();
-  }
-  // If we are within an Objective-c @implementation, it
-  // gets the same availability context as the @interface.
-  else if (const ObjCImplementationDecl *ID =
-            dyn_cast<ObjCImplementationDecl>(D)) {
-    D = ID->getClassInterface();
-  }
-  // Recover from user error.
-  return D ? D->getAvailability() : AR_Available;
-}

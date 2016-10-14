@@ -34,10 +34,8 @@ static bool RecordingMemcmp = false;
 static bool RecordingMemmem = false;
 static bool DoingMyOwnMemmem = false;
 
-struct ScopedDoingMyOwnMemmem {
-  ScopedDoingMyOwnMemmem() { DoingMyOwnMemmem = true; }
-  ~ScopedDoingMyOwnMemmem() { DoingMyOwnMemmem = false; }
-};
+ScopedDoingMyOwnMemmem::ScopedDoingMyOwnMemmem() { DoingMyOwnMemmem = true; }
+ScopedDoingMyOwnMemmem::~ScopedDoingMyOwnMemmem() { DoingMyOwnMemmem = false; }
 
 class TraceState {
 public:

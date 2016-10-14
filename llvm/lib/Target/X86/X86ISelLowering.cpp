@@ -2045,6 +2045,9 @@ Value *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
 }
 
 Value *X86TargetLowering::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
+  if (Subtarget.getTargetTriple().isOSContiki())
+    return getDefaultSafeStackPointerLocation(IRB, false);
+
   if (!Subtarget.isTargetAndroid())
     return TargetLowering::getSafeStackPointerLocation(IRB);
 

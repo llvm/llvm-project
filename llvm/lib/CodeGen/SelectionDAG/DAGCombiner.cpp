@@ -1962,8 +1962,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       (N1->getOpcode() == ISD::SRA || N1->getOpcode() == ISD::SRL)) {
     ConstantSDNode *ShiftAmt = isConstOrConstSplat(N1.getOperand(1));
     if (ShiftAmt && ShiftAmt->getZExtValue() == VT.getScalarSizeInBits() - 1) {
-      auto NewOpcode = N1->getOpcode() == ISD::SRA ? ISD::SRL :ISD::SRA;
-      return DAG.getNode(NewOpcode, DL, VT, N1.getOperand(0), N1.getOperand(1));
+      auto NewOpc = N1->getOpcode() == ISD::SRA ? ISD::SRL :ISD::SRA;
+      if (!LegalOperations || TLI.isOperationLegal(NewOpc, VT))
+        return DAG.getNode(NewOpc, DL, VT, N1.getOperand(0), N1.getOperand(1));
     }
   }
 

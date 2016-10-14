@@ -82,12 +82,10 @@ define void @test_smul24_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   ret void
 }
 
-; FIXME: Should be able to eliminate bfe
 ; FUNC-LABEL: {{^}}test_smul24_i64_square:
 ; GCN: s_load_dword [[A:s[0-9]+]]
-; GCN: s_bfe_i32 [[SEXT:s[0-9]+]], [[A]], 0x180000{{$}}
-; GCN-DAG: v_mul_hi_i32_i24_e64 v{{[0-9]+}}, [[SEXT]], [[SEXT]]
-; GCN-DAG: v_mul_i32_i24_e64 v{{[0-9]+}}, [[SEXT]], [[SEXT]]
+; GCN-DAG: v_mul_hi_i32_i24_e64 v{{[0-9]+}}, [[A]], [[A]]
+; GCN-DAG: v_mul_i32_i24_e64 v{{[0-9]+}}, [[A]], [[A]]
 ; GCN: buffer_store_dwordx2
 define void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %shl.i = shl i32 %a, 8

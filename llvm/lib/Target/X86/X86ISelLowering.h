@@ -1030,6 +1030,14 @@ namespace llvm {
 
     bool supportSwiftError() const override;
 
+    unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
+
+    /// \brief Lower interleaved load(s) into target specific
+    /// instructions/intrinsics.
+    bool lowerInterleavedLoad(LoadInst *LI,
+                              ArrayRef<ShuffleVectorInst *> Shuffles,
+                              ArrayRef<unsigned> Indices,
+                              unsigned Factor) const override;
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

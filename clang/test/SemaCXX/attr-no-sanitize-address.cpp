@@ -21,9 +21,6 @@ int noanal_testfn(int y) {
   return x;
 }
 
-int noanal_test_var NO_SANITIZE_ADDRESS; // \
-  // expected-error {{'no_sanitize_address' attribute only applies to functions}}
-
 class NoanalFoo {
  private:
   int test_field NO_SANITIZE_ADDRESS; // \

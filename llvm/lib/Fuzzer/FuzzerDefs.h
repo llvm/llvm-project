@@ -111,5 +111,11 @@ int NumberOfCpuCores();
 int GetPid();
 void SleepSeconds(int Seconds);
 
+
+struct ScopedDoingMyOwnMemmem {
+  ScopedDoingMyOwnMemmem();
+  ~ScopedDoingMyOwnMemmem();
+};
+
 }  // namespace fuzzer
 #endif  // LLVM_FUZZER_DEFS_H

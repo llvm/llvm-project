@@ -418,6 +418,58 @@ bool TargetLowering::TargetLoweringOpt::ShrinkDemandedOp(SDValue Op,
   return false;
 }
 
+bool
+TargetLowering::TargetLoweringOpt::SimplifyDemandedBits(SDNode *User,
+                                                        unsigned OpIdx,
+                                                        const APInt &Demanded,
+                                                        DAGCombinerInfo &DCI) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Op = User->getOperand(OpIdx);
+  APInt KnownZero, KnownOne;
+
+  if (!TLI.SimplifyDemandedBits(Op, Demanded, KnownZero, KnownOne,
+                                *this, 0, true))
+    return false;
+
+
+  // Old will not always be the same as Op.  For example:
+  //
+  // Demanded = 0xffffff
+  // Op = i64 truncate (i32 and x, 0xffffff)
+  // In this case simplify demand bits will want to replace the 'and' node
+  // with the value 'x', which will give us:
+  // Old = i32 and x, 0xffffff
+  // New = x
+  if (Old.hasOneUse()) {
+    // For the one use case, we just commit the change.
+    DCI.CommitTargetLoweringOpt(*this);
+    return true;
+  }
+
+  // If Old has more than one use then it must be Op, because the
+  // AssumeSingleUse flag is not propogated to recursive calls of
+  // SimplifyDemanded bits, so the only node with multiple use that
+  // it will attempt to combine will be opt.
+  assert(Old == Op);
+
+  SmallVector <SDValue, 4> NewOps;
+  for (unsigned i = 0, e = User->getNumOperands(); i != e; ++i) {
+    if (i == OpIdx) {
+      NewOps.push_back(New);
+      continue;
+    }
+    NewOps.push_back(User->getOperand(i));
+  }
+  DAG.UpdateNodeOperands(User, NewOps);
+  // Op has less users now, so we may be able to perform additional combines
+  // with it.
+  DCI.AddToWorklist(Op.getNode());
+  // User's operands have been updated, so we may be able to do new combines
+  // with it.
+  DCI.AddToWorklist(User);
+  return true;
+}
+
 /// Look at Op. At this point, we know that only the DemandedMask bits of the
 /// result of Op are ever used downstream. If we can use this information to
 /// simplify Op, create a new simplified DAG node and return true, returning the
@@ -430,7 +482,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                           APInt &KnownZero,
                                           APInt &KnownOne,
                                           TargetLoweringOpt &TLO,
-                                          unsigned Depth) const {
+                                          unsigned Depth,
+                                          bool AssumeSingleUse) const {
   unsigned BitWidth = DemandedMask.getBitWidth();
   assert(Op.getScalarValueSizeInBits() == BitWidth &&
          "Mask size mismatches value type size!");
@@ -442,7 +495,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
   KnownZero = KnownOne = APInt(BitWidth, 0);
 
   // Other users may use these bits.
-  if (!Op.getNode()->hasOneUse()) {
+  if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
     if (Depth != 0) {
       // If not at the root, Just compute the KnownZero/KnownOne bits to
       // simplify things downstream.
