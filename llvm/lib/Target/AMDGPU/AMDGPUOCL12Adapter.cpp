@@ -195,7 +195,7 @@ void createOCL20BuiltinFuncDefn(Function *OldFunc, Function *NewFunc) {
     return;
   }
   BBBuilder.CreateRet(CallInstVal);
-  OldFunc->setLinkage(GlobalValue::ExternalWeakLinkage);
+  OldFunc->setLinkage(GlobalValue::LinkOnceODRLinkage);
   return;
 }
 
