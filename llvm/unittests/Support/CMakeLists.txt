@@ -40,6 +40,7 @@ add_llvm_unittest(SupportTests
   StringPool.cpp
   SwapByteOrderTest.cpp
   TargetParserTest.cpp
+  Threading.cpp
   ThreadLocalTest.cpp
   ThreadPool.cpp
   TimerTest.cpp

@@ -15,6 +15,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Atomic.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/thread.h"
 #include <cassert>
@@ -116,3 +117,10 @@ void llvm::llvm_execute_on_thread(void (*Fn)(void*), void *UserData,
 }
 
 #endif
+
+unsigned llvm::hardware_physical_concurrency() {
+  int NumPhysical = sys::getHostNumPhysicalCores();
+  if (NumPhysical == -1)
+    return thread::hardware_concurrency();
+  return NumPhysical;
+}
