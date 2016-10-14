@@ -4559,7 +4559,8 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
       //   default argument expression appears.
       ContextRAII SavedContext(*this, FD);
       LocalInstantiationScope Local(*this);
-      Result = SubstExpr(UninstExpr, MutiLevelArgList);
+      Result = SubstInitializer(UninstExpr, MutiLevelArgList,
+                                /*DirectInit*/false);
     }
     if (Result.isInvalid())
       return ExprError();

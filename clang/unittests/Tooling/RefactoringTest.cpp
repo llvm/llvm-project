@@ -972,5 +972,23 @@ TEST_F(MergeReplacementsTest, OverlappingRanges) {
       toReplacements({{"", 0, 3, "cc"}, {"", 3, 3, "dd"}}));
 }
 
+TEST(DeduplicateByFileTest, LeaveLeadingDotDot) {
+  std::map<std::string, Replacements> FileToReplaces;
+  FileToReplaces["../../a/b/.././c.h"] = Replacements();
+  FileToReplaces["../../a/c.h"] = Replacements();
+  FileToReplaces = groupReplacementsByFile(FileToReplaces);
+  EXPECT_EQ(1u, FileToReplaces.size());
+  EXPECT_EQ("../../a/c.h", FileToReplaces.begin()->first);
+}
+
+TEST(DeduplicateByFileTest, RemoveDotSlash) {
+  std::map<std::string, Replacements> FileToReplaces;
+  FileToReplaces["./a/b/.././c.h"] = Replacements();
+  FileToReplaces["a/c.h"] = Replacements();
+  FileToReplaces = groupReplacementsByFile(FileToReplaces);
+  EXPECT_EQ(1u, FileToReplaces.size());
+  EXPECT_EQ("a/c.h", FileToReplaces.begin()->first);
+}
+
 } // end namespace tooling
 } // end namespace clang
