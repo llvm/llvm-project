@@ -119,7 +119,7 @@ struct MallocFreeTracer {
     Frees = 0;
   }
   // Returns true if there were more mallocs than frees.
-  bool Stop() { 
+  bool Stop() {
     if (TraceLevel)
       Printf("MallocFreeTracer: STOP %zd %zd (%s)\n", Mallocs.load(),
              Frees.load(), Mallocs == Frees ? "same" : "DIFFERENT");
@@ -147,7 +147,7 @@ void MallocHook(const volatile void *ptr, size_t size) {
 void FreeHook(const volatile void *ptr) {
   size_t N = AllocTracer.Frees++;
   if (int TraceLevel = AllocTracer.TraceLevel) {
-    Printf("FREE[%zd]   %p %zd\n", N, ptr);
+    Printf("FREE[%zd]   %p\n", N, ptr);
     if (TraceLevel >= 2 && EF)
       EF->__sanitizer_print_stack_trace();
   }
@@ -667,6 +667,8 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
     Printf("INFO: libFuzzer disabled leak detection after every mutation.\n"
            "      Most likely the target function accumulates allocated\n"
            "      memory in a global state w/o actually leaking it.\n"
+           "      You may try running this binary with -trace_malloc=[12]"
+           "      to get a trace of mallocs and frees.\n"
            "      If LeakSanitizer is enabled in this process it will still\n"
            "      run on the process shutdown.\n");
     return;

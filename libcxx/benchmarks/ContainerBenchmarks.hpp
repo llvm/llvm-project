@@ -11,10 +11,11 @@ namespace ContainerBenchmarks {
 template <class Container, class GenInputs>
 void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
     auto in = gen(st.range(0));
+    const auto begin = in.begin();
     const auto end = in.end();
     benchmark::DoNotOptimize(&in);
     while (st.KeepRunning()) {
-        Container c(in.begin(), in.end());
+        Container c(begin, end);
         benchmark::DoNotOptimize(c.data());
     }
 }

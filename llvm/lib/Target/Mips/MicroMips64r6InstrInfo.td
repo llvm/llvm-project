@@ -81,7 +81,7 @@ class DAUI_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                           InstrItinClass Itin>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins GPROpnd:$rs, simm16:$imm);
+  dag InOperandList = (ins GPROpnd:$rs, uimm16:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $imm");
   list<dag> Pattern = [];
   InstrItinClass Itinerary = Itin;
@@ -92,8 +92,8 @@ class DAHI_DATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                           InstrItinClass Itin>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs GPROpnd:$rs);
-  dag InOperandList = (ins GPROpnd:$rt, simm16:$imm);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $imm");
+  dag InOperandList = (ins GPROpnd:$rt, uimm16:$imm);
+  string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $imm");
   string Constraints = "$rs = $rt";
   InstrItinClass Itinerary = Itin;
 }
@@ -360,8 +360,10 @@ class LWUPC_MM64R6_DESC {
 
 let DecoderNamespace = "MicroMipsR6" in {
   def DAUI_MM64R6 : StdMMR6Rel, DAUI_MMR6_DESC, DAUI_MMR6_ENC, ISA_MICROMIPS64R6;
-  def DAHI_MM64R6 : StdMMR6Rel, DAHI_MMR6_DESC, DAHI_MMR6_ENC, ISA_MICROMIPS64R6;
-  def DATI_MM64R6 : StdMMR6Rel, DATI_MMR6_DESC, DATI_MMR6_ENC, ISA_MICROMIPS64R6;
+  let DecoderMethod = "DecodeDAHIDATIMMR6" in {
+    def DAHI_MM64R6 : StdMMR6Rel, DAHI_MMR6_DESC, DAHI_MMR6_ENC, ISA_MICROMIPS64R6;
+    def DATI_MM64R6 : StdMMR6Rel, DATI_MMR6_DESC, DATI_MMR6_ENC, ISA_MICROMIPS64R6;
+  }
   def DEXT_MM64R6 : StdMMR6Rel, DEXT_MMR6_DESC, DEXT_MMR6_ENC,
                     ISA_MICROMIPS64R6;
   def DEXTM_MM64R6 : StdMMR6Rel, DEXTM_MMR6_DESC, DEXTM_MMR6_ENC,

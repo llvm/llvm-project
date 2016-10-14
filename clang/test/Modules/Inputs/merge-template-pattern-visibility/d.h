@@ -1,1 +1,3 @@
-// d.h: empty
+namespace CrossModuleMerge {
+  struct E {};
+}

@@ -463,6 +463,107 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   return Builder.CreateCall(F, {EmitScalarExpr(E), CI});
 }
 
+// Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
+// handle them here.
+enum class CodeGenFunction::MSVCIntrin {
+  _BitScanForward,
+  _BitScanReverse,
+  _InterlockedAnd,
+  _InterlockedDecrement,
+  _InterlockedExchange,
+  _InterlockedExchangeAdd,
+  _InterlockedExchangeSub,
+  _InterlockedIncrement,
+  _InterlockedOr,
+  _InterlockedXor,
+};
+
+Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
+  const CallExpr *E) {
+  switch (BuiltinID) {
+  case MSVCIntrin::_BitScanForward:
+  case MSVCIntrin::_BitScanReverse: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(1));
+
+    llvm::Type *ArgType = ArgValue->getType();
+    llvm::Type *IndexType =
+      EmitScalarExpr(E->getArg(0))->getType()->getPointerElementType();
+    llvm::Type *ResultType = ConvertType(E->getType());
+
+    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
+    Value *ResZero = llvm::Constant::getNullValue(ResultType);
+    Value *ResOne = llvm::ConstantInt::get(ResultType, 1);
+
+    BasicBlock *Begin = Builder.GetInsertBlock();
+    BasicBlock *End = createBasicBlock("bitscan_end", this->CurFn);
+    Builder.SetInsertPoint(End);
+    PHINode *Result = Builder.CreatePHI(ResultType, 2, "bitscan_result");
+
+    Builder.SetInsertPoint(Begin);
+    Value *IsZero = Builder.CreateICmpEQ(ArgValue, ArgZero);
+    BasicBlock *NotZero = createBasicBlock("bitscan_not_zero", this->CurFn);
+    Builder.CreateCondBr(IsZero, End, NotZero);
+    Result->addIncoming(ResZero, Begin);
+
+    Builder.SetInsertPoint(NotZero);
+    Address IndexAddress = EmitPointerWithAlignment(E->getArg(0));
+
+    if (BuiltinID == MSVCIntrin::_BitScanForward) {
+      Value *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+      Value *ZeroCount = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
+      ZeroCount = Builder.CreateIntCast(ZeroCount, IndexType, false);
+      Builder.CreateStore(ZeroCount, IndexAddress, false);
+    } else {
+      unsigned ArgWidth = cast<llvm::IntegerType>(ArgType)->getBitWidth();
+      Value *ArgTypeLastIndex = llvm::ConstantInt::get(IndexType, ArgWidth - 1);
+
+      Value *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Value *ZeroCount = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
+      ZeroCount = Builder.CreateIntCast(ZeroCount, IndexType, false);
+      Value *Index = Builder.CreateNSWSub(ArgTypeLastIndex, ZeroCount);
+      Builder.CreateStore(Index, IndexAddress, false);
+    }
+    Builder.CreateBr(End);
+    Result->addIncoming(ResOne, NotZero);
+
+    Builder.SetInsertPoint(End);
+    return Result;
+  }
+  case MSVCIntrin::_InterlockedAnd:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::And, E);
+  case MSVCIntrin::_InterlockedExchange:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xchg, E);
+  case MSVCIntrin::_InterlockedExchangeAdd:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Add, E);
+  case MSVCIntrin::_InterlockedExchangeSub:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Sub, E);
+  case MSVCIntrin::_InterlockedOr:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Or, E);
+  case MSVCIntrin::_InterlockedXor:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xor, E);
+
+  case MSVCIntrin::_InterlockedDecrement: {
+    llvm::Type *IntTy = ConvertType(E->getType());
+    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
+      AtomicRMWInst::Sub,
+      EmitScalarExpr(E->getArg(0)),
+      ConstantInt::get(IntTy, 1),
+      llvm::AtomicOrdering::SequentiallyConsistent);
+    return Builder.CreateSub(RMWI, ConstantInt::get(IntTy, 1));
+  }
+  case MSVCIntrin::_InterlockedIncrement: {
+    llvm::Type *IntTy = ConvertType(E->getType());
+    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
+      AtomicRMWInst::Add,
+      EmitScalarExpr(E->getArg(0)),
+      ConstantInt::get(IntTy, 1),
+      llvm::AtomicOrdering::SequentiallyConsistent);
+    return Builder.CreateAdd(RMWI, ConstantInt::get(IntTy, 1));
+  }
+  }
+  llvm_unreachable("Incorrect MSVC intrinsic!");
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -1978,7 +2079,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI_InterlockedExchange16:
   case Builtin::BI_InterlockedExchange:
   case Builtin::BI_InterlockedExchangePointer:
-    return EmitBinaryAtomic(*this, llvm::AtomicRMWInst::Xchg, E);
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E));
   case Builtin::BI_InterlockedCompareExchangePointer: {
     llvm::Type *RTy;
     llvm::IntegerType *IntType =
@@ -2020,45 +2122,35 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       return RValue::get(Builder.CreateExtractValue(CXI, 0));
   }
   case Builtin::BI_InterlockedIncrement16:
-  case Builtin::BI_InterlockedIncrement: {
-    llvm::Type *IntTy = ConvertType(E->getType());
-    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
-      AtomicRMWInst::Add,
-      EmitScalarExpr(E->getArg(0)),
-      ConstantInt::get(IntTy, 1),
-      llvm::AtomicOrdering::SequentiallyConsistent);
-    return RValue::get(Builder.CreateAdd(RMWI, ConstantInt::get(IntTy, 1)));
-  }
+  case Builtin::BI_InterlockedIncrement:
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement, E));
   case Builtin::BI_InterlockedDecrement16:
-  case Builtin::BI_InterlockedDecrement: {
-    llvm::Type *IntTy = ConvertType(E->getType());
-    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
-      AtomicRMWInst::Sub,
-      EmitScalarExpr(E->getArg(0)),
-      ConstantInt::get(IntTy, 1),
-      llvm::AtomicOrdering::SequentiallyConsistent);
-    return RValue::get(Builder.CreateSub(RMWI, ConstantInt::get(IntTy, 1)));
-  }
+  case Builtin::BI_InterlockedDecrement:
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement, E));
   case Builtin::BI_InterlockedAnd8:
   case Builtin::BI_InterlockedAnd16:
   case Builtin::BI_InterlockedAnd:
-    return EmitBinaryAtomic(*this, AtomicRMWInst::And, E);
+    return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd, E));
   case Builtin::BI_InterlockedExchangeAdd8:
   case Builtin::BI_InterlockedExchangeAdd16:
   case Builtin::BI_InterlockedExchangeAdd:
-    return EmitBinaryAtomic(*this, AtomicRMWInst::Add, E);
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd, E));
   case Builtin::BI_InterlockedExchangeSub8:
   case Builtin::BI_InterlockedExchangeSub16:
   case Builtin::BI_InterlockedExchangeSub:
-    return EmitBinaryAtomic(*this, AtomicRMWInst::Sub, E);
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeSub, E));
   case Builtin::BI_InterlockedOr8:
   case Builtin::BI_InterlockedOr16:
   case Builtin::BI_InterlockedOr:
-    return EmitBinaryAtomic(*this, AtomicRMWInst::Or, E);
+    return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr, E));
   case Builtin::BI_InterlockedXor8:
   case Builtin::BI_InterlockedXor16:
   case Builtin::BI_InterlockedXor:
-    return EmitBinaryAtomic(*this, AtomicRMWInst::Xor, E);
+    return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E));
   case Builtin::BI__readfsdword: {
     llvm::Type *IntTy = ConvertType(E->getType());
     Value *IntToPtr =
@@ -2639,68 +2731,6 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   default:
     return nullptr;
   }
-}
-
-// Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
-// handle them here.
-enum class CodeGenFunction::MSVCIntrin {
-  _BitScanForward,
-  _BitScanReverse
-};
-
-Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
-                                            const CallExpr *E) {
-  switch (BuiltinID) {
-  case MSVCIntrin::_BitScanForward:
-  case MSVCIntrin::_BitScanReverse: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(1));
-
-    llvm::Type *ArgType = ArgValue->getType();
-    llvm::Type *IndexType =
-        EmitScalarExpr(E->getArg(0))->getType()->getPointerElementType();
-    llvm::Type *ResultType = ConvertType(E->getType());
-
-    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
-    Value *ResZero = llvm::Constant::getNullValue(ResultType);
-    Value *ResOne = llvm::ConstantInt::get(ResultType, 1);
-
-    BasicBlock *Begin = Builder.GetInsertBlock();
-    BasicBlock *End = createBasicBlock("bitscan_end", this->CurFn);
-    Builder.SetInsertPoint(End);
-    PHINode *Result = Builder.CreatePHI(ResultType, 2, "bitscan_result");
-
-    Builder.SetInsertPoint(Begin);
-    Value *IsZero = Builder.CreateICmpEQ(ArgValue, ArgZero);
-    BasicBlock *NotZero = createBasicBlock("bitscan_not_zero", this->CurFn);
-    Builder.CreateCondBr(IsZero, End, NotZero);
-    Result->addIncoming(ResZero, Begin);
-
-    Builder.SetInsertPoint(NotZero);
-    Address IndexAddress = EmitPointerWithAlignment(E->getArg(0));
-
-    if (BuiltinID == MSVCIntrin::_BitScanForward) {
-      Value *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
-      Value *ZeroCount = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
-      ZeroCount = Builder.CreateIntCast(ZeroCount, IndexType, false);
-      Builder.CreateStore(ZeroCount, IndexAddress, false);
-    } else {
-      unsigned ArgWidth = cast<llvm::IntegerType>(ArgType)->getBitWidth();
-      Value *ArgTypeLastIndex = llvm::ConstantInt::get(IndexType, ArgWidth - 1);
-
-      Value *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-      Value *ZeroCount = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
-      ZeroCount = Builder.CreateIntCast(ZeroCount, IndexType, false);
-      Value *Index = Builder.CreateNSWSub(ArgTypeLastIndex, ZeroCount);
-      Builder.CreateStore(Index, IndexAddress, false);
-    }
-    Builder.CreateBr(End);
-    Result->addIncoming(ResOne, NotZero);
-
-    Builder.SetInsertPoint(End);
-    return Result;
-  }
-  }
-  llvm_unreachable("Incorrect MSVC intrinsic!");
 }
 
 Value *CodeGenFunction::EmitTargetBuiltinExpr(unsigned BuiltinID,
@@ -4633,6 +4663,23 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case ARM::BI_BitScanReverse:
   case ARM::BI_BitScanReverse64:
     return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
+
+  case ARM::BI_InterlockedAnd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd, E);
+  case ARM::BI_InterlockedExchange64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E);
+  case ARM::BI_InterlockedExchangeAdd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd, E);
+  case ARM::BI_InterlockedExchangeSub64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeSub, E);
+  case ARM::BI_InterlockedOr64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr, E);
+  case ARM::BI_InterlockedXor64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E);
+  case ARM::BI_InterlockedDecrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement, E);
+  case ARM::BI_InterlockedIncrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement, E);
   }
 
   // Get the last argument, which specifies the vector type.
@@ -7701,6 +7748,24 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI_BitScanReverse:
   case X86::BI_BitScanReverse64:
     return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
+
+  case X86::BI_InterlockedAnd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd, E);
+  case X86::BI_InterlockedExchange64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E);
+  case X86::BI_InterlockedExchangeAdd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd, E);
+  case X86::BI_InterlockedExchangeSub64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeSub, E);
+  case X86::BI_InterlockedOr64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr, E);
+  case X86::BI_InterlockedXor64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E);
+  case X86::BI_InterlockedDecrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement, E);
+  case X86::BI_InterlockedIncrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement, E);
+
   case X86::BI_AddressOfReturnAddress: {
     Value *F = CGM.getIntrinsic(Intrinsic::addressofreturnaddress);
     return Builder.CreateCall(F);

@@ -917,7 +917,7 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
   MCContext &context = MCOS->getContext();
   // We won't create dwarf labels for symbols in sections that we are not
   // generating debug info for.
-  if (!context.getGenDwarfSectionSyms().count(MCOS->getCurrentSection().first))
+  if (!context.getGenDwarfSectionSyms().count(MCOS->getCurrentSectionOnly()))
     return;
 
   // The dwarf label's name does not have the symbol name's leading

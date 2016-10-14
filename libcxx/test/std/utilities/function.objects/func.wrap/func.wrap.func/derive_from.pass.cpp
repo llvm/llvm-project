@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
+// REQUIRES-ANY: c++11, c++14
 
 // <functional>
 
@@ -15,6 +16,8 @@
 
 #include <functional>
 #include <type_traits>
+
+#include "test_macros.h"
 
 using Fn = std::function<void()>;
 struct S : public std::function<void()> { using function::function; };

@@ -45,8 +45,18 @@ AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &st,
 
 static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
   switch (MOFlags) {
-  default: return MCSymbolRefExpr::VK_None;
-  case SIInstrInfo::MO_GOTPCREL: return MCSymbolRefExpr::VK_GOTPCREL;
+  default:
+    return MCSymbolRefExpr::VK_None;
+  case SIInstrInfo::MO_GOTPCREL:
+    return MCSymbolRefExpr::VK_GOTPCREL;
+  case SIInstrInfo::MO_GOTPCREL32_LO:
+    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO;
+  case SIInstrInfo::MO_GOTPCREL32_HI:
+    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI;
+  case SIInstrInfo::MO_REL32_LO:
+    return MCSymbolRefExpr::VK_AMDGPU_REL32_LO;
+  case SIInstrInfo::MO_REL32_HI:
+    return MCSymbolRefExpr::VK_AMDGPU_REL32_HI;
   }
 }
 

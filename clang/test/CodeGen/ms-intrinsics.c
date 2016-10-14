@@ -334,3 +334,72 @@ long test_InterlockedDecrement(long volatile *Addend) {
 // CHECK: [[RESULT:%[0-9]+]] = add i32 [[TMP]], -1
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
+
+#if defined(__x86_64__) || defined(__arm__)
+__int64 test_InterlockedExchange64(__int64 volatile *value, __int64 mask) {
+  return _InterlockedExchange64(value, mask);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedExchange64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-X64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i64* %value, i64 %mask seq_cst
+// CHECK-ARM-X64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-X64: }
+
+__int64 test_InterlockedExchangeAdd64(__int64 volatile *value, __int64 mask) {
+  return _InterlockedExchangeAdd64(value, mask);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedExchangeAdd64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-X64:   [[RESULT:%[0-9]+]] = atomicrmw add i64* %value, i64 %mask seq_cst
+// CHECK-ARM-X64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-X64: }
+
+__int64 test_InterlockedExchangeSub64(__int64 volatile *value, __int64 mask) {
+  return _InterlockedExchangeSub64(value, mask);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedExchangeSub64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-X64:   [[RESULT:%[0-9]+]] = atomicrmw sub i64* %value, i64 %mask seq_cst
+// CHECK-ARM-X64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-X64: }
+
+__int64 test_InterlockedOr64(__int64 volatile *value, __int64 mask) {
+  return _InterlockedOr64(value, mask);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedOr64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-X64:   [[RESULT:%[0-9]+]] = atomicrmw or i64* %value, i64 %mask seq_cst
+// CHECK-ARM-X64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-X64: }
+
+__int64 test_InterlockedXor64(__int64 volatile *value, __int64 mask) {
+  return _InterlockedXor64(value, mask);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedXor64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-X64:   [[RESULT:%[0-9]+]] = atomicrmw xor i64* %value, i64 %mask seq_cst
+// CHECK-ARM-X64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-X64: }
+
+__int64 test_InterlockedAnd64(__int64 volatile *value, __int64 mask) {
+  return _InterlockedAnd64(value, mask);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedAnd64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-X64:   [[RESULT:%[0-9]+]] = atomicrmw and i64* %value, i64 %mask seq_cst
+// CHECK-ARM-X64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-X64: }
+
+__int64 test_InterlockedIncrement64(__int64 volatile *Addend) {
+  return _InterlockedIncrement64(Addend);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedIncrement64(i64*{{[a-z_ ]*}}%Addend){{.*}}{
+// CHECK-ARM-X64: [[TMP:%[0-9]+]] = atomicrmw add i64* %Addend, i64 1 seq_cst
+// CHECK-ARM-X64: [[RESULT:%[0-9]+]] = add i64 [[TMP]], 1
+// CHECK-ARM-X64: ret i64 [[RESULT]]
+// CHECK-ARM-X64: }
+
+__int64 test_InterlockedDecrement64(__int64 volatile *Addend) {
+  return _InterlockedDecrement64(Addend);
+}
+// CHECK-ARM-X64: define{{.*}}i64 @test_InterlockedDecrement64(i64*{{[a-z_ ]*}}%Addend){{.*}}{
+// CHECK-ARM-X64: [[TMP:%[0-9]+]] = atomicrmw sub i64* %Addend, i64 1 seq_cst
+// CHECK-ARM-X64: [[RESULT:%[0-9]+]] = add i64 [[TMP]], -1
+// CHECK-ARM-X64: ret i64 [[RESULT]]
+// CHECK-ARM-X64: }
+
+#endif

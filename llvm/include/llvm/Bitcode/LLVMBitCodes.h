@@ -120,9 +120,8 @@ enum AttributeCodes {
   // FIXME: Remove `PARAMATTR_CODE_ENTRY_OLD' in 4.0
   PARAMATTR_CODE_ENTRY_OLD = 1, // ENTRY: [paramidx0, attr0,
                                 //         paramidx1, attr1...]
-  PARAMATTR_CODE_ENTRY = 2,     // ENTRY: [paramidx0, attrgrp0,
-                                //         paramidx1, attrgrp1, ...]
-  PARAMATTR_GRP_CODE_ENTRY = 3  // ENTRY: [id, attr0, att1, ...]
+  PARAMATTR_CODE_ENTRY = 2,     // ENTRY: [attrgrp0, attrgrp1, ...]
+  PARAMATTR_GRP_CODE_ENTRY = 3  // ENTRY: [grpid, idx, attr0, attr1, ...]
 };
 
 /// TYPE blocks have codes for each type primitive they use.
@@ -168,11 +167,6 @@ enum TypeCodes {
 
 enum OperandBundleTagCode {
   OPERAND_BUNDLE_TAG = 1, // TAG: [strchr x N]
-};
-
-// The type symbol table only has one code (TST_ENTRY_CODE).
-enum TypeSymtabCodes {
-  TST_CODE_ENTRY = 1 // TST_ENTRY: [typeid, namechar x N]
 };
 
 // Value symbol table codes.

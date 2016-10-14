@@ -468,8 +468,8 @@ bool DarwinAsmParser::parseDirectiveDesc(StringRef, SMLoc) {
 /// parseDirectiveIndirectSymbol
 ///  ::= .indirect_symbol identifier
 bool DarwinAsmParser::parseDirectiveIndirectSymbol(StringRef, SMLoc Loc) {
-  const MCSectionMachO *Current = static_cast<const MCSectionMachO*>(
-                                       getStreamer().getCurrentSection().first);
+  const MCSectionMachO *Current = static_cast<const MCSectionMachO *>(
+      getStreamer().getCurrentSectionOnly());
   MachO::SectionType SectionType = Current->getType();
   if (SectionType != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
       SectionType != MachO::S_LAZY_SYMBOL_POINTERS &&

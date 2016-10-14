@@ -21,6 +21,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
 
 namespace clang {
@@ -564,13 +565,15 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
   return Result;
 }
 
-std::map<std::string, Replacements>
-groupReplacementsByFile(const Replacements &Replaces) {
-  std::map<std::string, Replacements> FileToReplaces;
-  for (const auto &Replace : Replaces)
-    // We can ignore the Error here since \p Replaces is already conflict-free.
-    FileToReplaces[Replace.getFilePath()].add(Replace);
-  return FileToReplaces;
+std::map<std::string, Replacements> groupReplacementsByFile(
+    const std::map<std::string, Replacements> &FileToReplaces) {
+  std::map<std::string, Replacements> Result;
+  for (const auto &Entry : FileToReplaces) {
+    llvm::SmallString<256> CleanPath(Entry.first.data());
+    llvm::sys::path::remove_dots(CleanPath, /*remove_dot_dot=*/true);
+    Result[CleanPath.str()] = std::move(Entry.second);
+  }
+  return Result;
 }
 
 } // end namespace tooling

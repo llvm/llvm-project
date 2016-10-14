@@ -157,7 +157,7 @@ void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 
 /// getCurrentSection() - Return the current section we are emitting to.
 const MCSection *AsmPrinter::getCurrentSection() const {
-  return OutStreamer->getCurrentSection().first;
+  return OutStreamer->getCurrentSectionOnly();
 }
 
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {

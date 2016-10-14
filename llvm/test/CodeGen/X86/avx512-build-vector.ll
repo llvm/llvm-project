@@ -14,11 +14,11 @@ define <16 x i32> @test2(<16 x i32> %x) {
 define <16 x float> @test3(<4 x float> %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[8,9,10,11,0,1,2,3],zero,zero,zero,zero
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; CHECK-NEXT:    vpxor %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,3,4,18,16,7,8,9,10,11,12,13,14,15]
+; CHECK-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %b = extractelement <4 x float> %a, i32 2
   %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5

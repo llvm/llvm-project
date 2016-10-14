@@ -182,7 +182,9 @@ define void @stored_fi_to_global_huge_frame_offset(i32* addrspace(1)* %ptr) #0 {
 ; on the leftover AssertZext's ValueType operand.
 
 ; GCN-LABEL: {{^}}cannot_select_assertzext_valuetype:
-; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, g1@GOTPCREL+4
+; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
+; GCN: s_add_u32 s{{[0-9]+}}, s[[PC_LO]], g1@gotpcrel32@lo+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC_HI]], g1@gotpcrel32@hi+4
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dword [[FI]]
 define void @cannot_select_assertzext_valuetype(i32 addrspace(1)* %out, i32 %idx) #0 {

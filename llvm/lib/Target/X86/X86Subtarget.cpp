@@ -284,6 +284,7 @@ void X86Subtarget::initializeEnvironment() {
   HasFastPartialYMMWrite = false;
   HasFastScalarFSQRT = false;
   HasFastVectorFSQRT = false;
+  HasFastLZCNT = false;
   HasSlowDivide32 = false;
   HasSlowDivide64 = false;
   PadShortFunctions = false;

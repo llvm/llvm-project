@@ -18,7 +18,7 @@
 
 extern "C" {
 
-enum XRayEntryType { ENTRY = 0, EXIT = 1 };
+enum XRayEntryType { ENTRY = 0, EXIT = 1, TAIL = 2 };
 
 // Provide a function to invoke for when instrumentation points are hit. This is
 // a user-visible control surface that overrides the default implementation. The

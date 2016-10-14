@@ -1274,8 +1274,6 @@ static MachineBasicBlock::iterator loadM0FromVGPR(const SIInstrInfo *TII,
   BuildMI(*RemainderBB, First, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
     .addReg(SaveExec);
 
-  MI.eraseFromParent();
-
   return InsPt;
 }
 
@@ -1362,14 +1360,14 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
   unsigned Dst = MI.getOperand(0).getReg();
-  const MachineOperand *SrcVec = TII->getNamedOperand(MI, AMDGPU::OpName::src);
+  unsigned SrcReg = TII->getNamedOperand(MI, AMDGPU::OpName::src)->getReg();
   int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
 
-  const TargetRegisterClass *VecRC = MRI.getRegClass(SrcVec->getReg());
+  const TargetRegisterClass *VecRC = MRI.getRegClass(SrcReg);
 
   unsigned SubReg;
   std::tie(SubReg, Offset)
-    = computeIndirectRegAndOffset(TRI, VecRC, SrcVec->getReg(), Offset);
+    = computeIndirectRegAndOffset(TRI, VecRC, SrcReg, Offset);
 
   bool UseGPRIdxMode = ST.hasVGPRIndexMode() && EnableVGPRIndexMode;
 
@@ -1382,14 +1380,14 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
       // to avoid interfering with other uses, so probably requires a new
       // optimization pass.
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), Dst)
-        .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
-        .addReg(SrcVec->getReg(), RegState::Implicit)
+        .addReg(SrcReg, RegState::Undef, SubReg)
+        .addReg(SrcReg, RegState::Implicit)
         .addReg(AMDGPU::M0, RegState::Implicit);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
     } else {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-        .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
-        .addReg(SrcVec->getReg(), RegState::Implicit);
+        .addReg(SrcReg, RegState::Undef, SubReg)
+        .addReg(SrcReg, RegState::Implicit);
     }
 
     MI.eraseFromParent();
@@ -1412,7 +1410,6 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
       .addImm(VGPRIndexMode::SRC0_ENABLE);
     SetOn->getOperand(3).setIsUndef();
 
-
     // Disable again after the loop.
     BuildMI(MBB, std::next(I), DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
   }
@@ -1422,14 +1419,16 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
 
   if (UseGPRIdxMode) {
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOV_B32_e32), Dst)
-      .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
-      .addReg(SrcVec->getReg(), RegState::Implicit)
+      .addReg(SrcReg, RegState::Undef, SubReg)
+      .addReg(SrcReg, RegState::Implicit)
       .addReg(AMDGPU::M0, RegState::Implicit);
   } else {
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-      .addReg(SrcVec->getReg(), RegState::Undef, SubReg)
-      .addReg(SrcVec->getReg(), RegState::Implicit);
+      .addReg(SrcReg, RegState::Undef, SubReg)
+      .addReg(SrcReg, RegState::Implicit);
   }
+
+  MI.eraseFromParent();
 
   return LoopBB;
 }
@@ -1553,6 +1552,8 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
 
     MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
   }
+
+  MI.eraseFromParent();
 
   return LoopBB;
 }
@@ -1979,10 +1980,22 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   return DAG.getUNDEF(ASC->getValueType(0));
 }
 
+static bool shouldEmitFixup(const GlobalValue *GV,
+                            const TargetMachine &TM) {
+  // FIXME: We need to emit global variables in constant address space in a
+  // separate section, and use relocations.
+  return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
+}
+
 static bool shouldEmitGOTReloc(const GlobalValue *GV,
                                const TargetMachine &TM) {
   return GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
          !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
+}
+
+static bool shouldEmitPCReloc(const GlobalValue *GV,
+                              const TargetMachine &TM) {
+  return !shouldEmitFixup(GV, TM) && !shouldEmitGOTReloc(GV, TM);
 }
 
 bool
@@ -1997,14 +2010,27 @@ static SDValue buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
                                       unsigned GAFlags = SIInstrInfo::MO_NONE) {
   // In order to support pc-relative addressing, the PC_ADD_REL_OFFSET SDNode is
   // lowered to the following code sequence:
-  // s_getpc_b64 s[0:1]
-  // s_add_u32 s0, s0, $symbol
-  // s_addc_u32 s1, s1, 0
   //
-  // s_getpc_b64 returns the address of the s_add_u32 instruction and then
-  // a fixup or relocation is emitted to replace $symbol with a literal
-  // constant, which is a pc-relative offset from the encoding of the $symbol
-  // operand to the global variable.
+  // For constant address space:
+  //   s_getpc_b64 s[0:1]
+  //   s_add_u32 s0, s0, $symbol
+  //   s_addc_u32 s1, s1, 0
+  //
+  //   s_getpc_b64 returns the address of the s_add_u32 instruction and then
+  //   a fixup or relocation is emitted to replace $symbol with a literal
+  //   constant, which is a pc-relative offset from the encoding of the $symbol
+  //   operand to the global variable.
+  //
+  // For global address space:
+  //   s_getpc_b64 s[0:1]
+  //   s_add_u32 s0, s0, $symbol@{gotpc}rel32@lo
+  //   s_addc_u32 s1, s1, $symbol@{gotpc}rel32@hi
+  //
+  //   s_getpc_b64 returns the address of the s_add_u32 instruction and then
+  //   fixups or relocations are emitted to replace $symbol@*@lo and
+  //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
+  //   which is a 64-bit pc-relative offset from the encoding of the $symbol
+  //   operand to the global variable.
   //
   // What we want here is an offset from the value returned by s_getpc
   // (which is the address of the s_add_u32 instruction) to the global
@@ -2012,9 +2038,12 @@ static SDValue buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
   // small. This requires us to add 4 to the global variable offset in order to
   // compute the correct address.
-  SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4,
-                                          GAFlags);
-  return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, GA);
+  SDValue PtrLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4,
+                                             GAFlags);
+  SDValue PtrHi = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4,
+                                             GAFlags == SIInstrInfo::MO_NONE ?
+                                             GAFlags : GAFlags + 1);
+  return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, PtrLo, PtrHi);
 }
 
 SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
@@ -2030,11 +2059,14 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   const GlobalValue *GV = GSD->getGlobal();
   EVT PtrVT = Op.getValueType();
 
-  if (!shouldEmitGOTReloc(GV, getTargetMachine()))
+  if (shouldEmitFixup(GV, getTargetMachine()))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT);
+  else if (shouldEmitPCReloc(GV, getTargetMachine()))
+    return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT,
+                                   SIInstrInfo::MO_REL32);
 
   SDValue GOTAddr = buildPCRelGlobalAddress(DAG, GV, DL, 0, PtrVT,
-                                            SIInstrInfo::MO_GOTPCREL);
+                                            SIInstrInfo::MO_GOTPCREL32);
 
   Type *Ty = PtrVT.getTypeForEVT(*DAG.getContext());
   PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);

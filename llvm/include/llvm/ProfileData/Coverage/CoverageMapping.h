@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -428,6 +429,7 @@ public:
 /// This is the main interface to get coverage information, using a profile to
 /// fill out execution counts.
 class CoverageMapping {
+  StringSet<> FunctionNames;
   std::vector<FunctionRecord> Functions;
   unsigned MismatchedFunctionCount;
 
@@ -446,9 +448,19 @@ public:
   load(CoverageMappingReader &CoverageReader,
        IndexedInstrProfReader &ProfileReader);
 
+  static Expected<std::unique_ptr<CoverageMapping>>
+  load(ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+       IndexedInstrProfReader &ProfileReader);
+
   /// \brief Load the coverage mapping from the given files.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(StringRef ObjectFilename, StringRef ProfileFilename,
+       StringRef Arch = StringRef()) {
+    return load(ArrayRef<StringRef>(ObjectFilename), ProfileFilename, Arch);
+  }
+
+  static Expected<std::unique_ptr<CoverageMapping>>
+  load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
        StringRef Arch = StringRef());
 
   /// \brief The number of functions that couldn't have their profiles mapped.

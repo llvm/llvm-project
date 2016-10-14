@@ -112,7 +112,7 @@ inline std::vector<std::string> getDuplicateStringInputs(size_t N) {
 
 inline std::vector<std::string> getRandomStringInputs(size_t N) {
     std::vector<std::string> inputs;
-    for (int i=0; i < N; ++i) {
+    for (size_t i=0; i < N; ++i) {
         inputs.push_back(getRandomString(1024));
     }
     return inputs;

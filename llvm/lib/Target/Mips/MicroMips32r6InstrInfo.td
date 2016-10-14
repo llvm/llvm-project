@@ -563,7 +563,7 @@ class ALIGN_MMR6_DESC : ALIGN_MMR6_DESC_BASE<"align", GPR32Opnd, uimm2,
 class AUI_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                          InstrItinClass Itin> : MMR6Arch<instr_asm> {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins GPROpnd:$rs, simm16:$imm);
+  dag InOperandList = (ins GPROpnd:$rs, uimm16:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $imm");
   list<dag> Pattern = [];
   InstrItinClass Itinerary = Itin;

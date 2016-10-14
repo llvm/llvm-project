@@ -771,6 +771,8 @@ namespace llvm {
 
     bool isCheapToSpeculateCtlz() const override;
 
+    bool isCtlzFast() const override;
+
     bool hasBitPreservingFPLogic(EVT VT) const override {
       return VT == MVT::f32 || VT == MVT::f64 || VT.isVector();
     }
