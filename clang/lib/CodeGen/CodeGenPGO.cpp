@@ -458,6 +458,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   void VisitSwitchStmt(const SwitchStmt *S) {
     RecordStmtCount(S);
+    if (S->getInit())
+      Visit(S->getInit());
     Visit(S->getCond());
     CurrentCount = 0;
     BreakContinueStack.push_back(BreakContinue());
