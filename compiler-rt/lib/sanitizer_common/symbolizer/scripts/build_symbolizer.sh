@@ -82,7 +82,7 @@ make -j${J} libz.a
 if [[ ! -d ${LIBCXX_BUILD} ]]; then
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
-  LIBCXX_FLAGS="${FLAGS} -I${LLVM_SRC}/projects/libcxxabi/include"
+  LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined -I${LLVM_SRC}/projects/libcxxabi/include"
   cmake -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
