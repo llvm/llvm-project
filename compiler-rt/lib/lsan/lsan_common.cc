@@ -449,6 +449,8 @@ static bool CheckForLeaks() {
     Report(
         "HINT: For debugging, try setting environment variable "
         "LSAN_OPTIONS=verbosity=1:log_threads=1\n");
+    Report(
+        "HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)\n");
     Die();
   }
   param.leak_report.ApplySuppressions();

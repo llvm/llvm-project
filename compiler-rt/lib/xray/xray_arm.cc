@@ -127,4 +127,11 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
   return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);
 }
 
+bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
+                           const XRaySledEntry &Sled) {
+  // FIXME: In the future we'd need to distinguish between non-tail exits and
+  // tail exits for better information preservation.
+  return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);
+}
+
 } // namespace __xray

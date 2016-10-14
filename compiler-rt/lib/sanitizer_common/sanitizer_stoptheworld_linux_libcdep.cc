@@ -190,6 +190,7 @@ void ThreadSuspender::KillAllThreads() {
 bool ThreadSuspender::SuspendAllThreads() {
   ThreadLister thread_lister(pid_);
   bool added_threads;
+  bool first_iteration = true;
   do {
     // Run through the directory entries once.
     added_threads = false;
@@ -199,12 +200,13 @@ bool ThreadSuspender::SuspendAllThreads() {
         added_threads = true;
       tid = thread_lister.GetNextTID();
     }
-    if (thread_lister.error()) {
+    if (thread_lister.error() || (first_iteration && !added_threads)) {
       // Detach threads and fail.
       ResumeAllThreads();
       return false;
     }
     thread_lister.Reset();
+    first_iteration = false;
   } while (added_threads);
   return true;
 }
