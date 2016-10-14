@@ -38,6 +38,8 @@ cl::opt<bool> IncrementalLinkerCompatible(
         "When used with filetype=obj, "
         "emit an object file which can be used with an incremental linker"));
 
+cl::opt<bool> PIECopyRelocations("pie-copy-relocations", cl::desc("PIE Copy Relocations"));
+
 cl::opt<int> DwarfVersion("dwarf-version", cl::desc("Dwarf version"),
                           cl::init(0));
 
@@ -62,6 +64,7 @@ static inline MCTargetOptions InitMCTargetOptionsFromFlags() {
       (AsmInstrumentation == MCTargetOptions::AsmInstrumentationAddress);
   Options.MCRelaxAll = RelaxAll;
   Options.MCIncrementalLinkerCompatible = IncrementalLinkerCompatible;
+  Options.MCPIECopyRelocations = PIECopyRelocations;
   Options.DwarfVersion = DwarfVersion;
   Options.ShowMCInst = ShowMCInst;
   Options.ABIName = ABIName;

@@ -27,18 +27,19 @@ public:
     virtual const char* what() const noexcept;
 };
 
-class bad_array_length : public bad_alloc // C++14
+class bad_array_length : public bad_alloc // FIXME: Not part of C++
 {
 public:
     bad_array_length() noexcept;
 };
 
-class bad_array_new_length : public bad_alloc
+class bad_array_new_length : public bad_alloc // C++14
 {
 public:
     bad_array_new_length() noexcept;
 };
 
+enum class align_val_t : size_t {}; // C++17
 struct nothrow_t {};
 extern const nothrow_t nothrow;
 typedef void (*new_handler)();
@@ -48,16 +49,34 @@ new_handler get_new_handler() noexcept;
 }  // std
 
 void* operator new(std::size_t size);                                   // replaceable
+void* operator new(std::size_t size, std::align_val_t alignment);       // replaceable, C++17
 void* operator new(std::size_t size, const std::nothrow_t&) noexcept;   // replaceable
+void* operator new(std::size_t size, std::align_val_t alignment,
+                   const std::nothrow_t&) noexcept;                     // replaceable, C++17
 void  operator delete(void* ptr) noexcept;                              // replaceable
 void  operator delete(void* ptr, std::size_t size) noexcept;            // replaceable, C++14
+void  operator delete(void* ptr, std::align_val_t alignment) noexcept;  // replaceable, C++17
+void  operator delete(void* ptr, std::size_t size,
+                      std::align_val_t alignment) noexcept;             // replaceable, C++17
 void  operator delete(void* ptr, const std::nothrow_t&) noexcept;       // replaceable
+void  operator delete(void* ptr, std:align_val_t alignment,
+                      const std::nothrow_t&) noexcept;                  // replaceable, C++17
 
 void* operator new[](std::size_t size);                                 // replaceable
+void* operator new[](std::size_t size,
+                     std::align_val_t alignment) noexcept;              // replaceable, C++17
 void* operator new[](std::size_t size, const std::nothrow_t&) noexcept; // replaceable
+void* operator new[](std::size_t size, std::align_val_t alignment,
+                     const std::nothrow_t&) noexcept;                   // replaceable, C++17
 void  operator delete[](void* ptr) noexcept;                            // replaceable
 void  operator delete[](void* ptr, std::size_t size) noexcept;          // replaceable, C++14
+void  operator delete[](void* ptr,
+                        std::align_val_t alignment) noexcept;           // replaceable, C++17
+void  operator delete[](void* ptr, std::size_t size,
+                        std::align_val_t alignment) noexcept;           // replaceable, C++17
 void  operator delete[](void* ptr, const std::nothrow_t&) noexcept;     // replaceable
+void  operator delete[](void* ptr, std::align_val_t alignment,
+                        const std::nothrow_t&) noexcept;                // replaceable, C++17
 
 void* operator new  (std::size_t size, void* ptr) noexcept;
 void* operator new[](std::size_t size, void* ptr) noexcept;
@@ -77,6 +96,16 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
+#endif
+
+#if !(defined(_LIBCPP_BUILDING_NEW) || _LIBCPP_STD_VER >= 14 || \
+    (defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309))
+# define _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+#endif
+
+#if !(defined(_LIBCPP_BUILDING_NEW) || _LIBCPP_STD_VER > 14 || \
+    (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606))
+# define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
 namespace std  // purposefully not using versioning namespace
@@ -117,6 +146,14 @@ public:
 
 #endif  // defined(_LIBCPP_BUILDING_NEW) || (_LIBCPP_STD_VER > 11)
 
+#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#ifndef _LIBCPP_CXX03_LANG
+enum class _LIBCPP_ENUM_VIS align_val_t : size_t { };
+#else
+enum align_val_t { __zero = 0, __max = (size_t)-1 };
+#endif
+#endif
+
 struct _LIBCPP_TYPE_VIS nothrow_t {};
 extern _LIBCPP_FUNC_VIS const nothrow_t nothrow;
 typedef void (*new_handler)();
@@ -131,30 +168,44 @@ _LIBCPP_FUNC_VIS new_handler get_new_handler() _NOEXCEPT;
 # define _LIBCPP_NEW_DELETE_VIS _LIBCPP_FUNC_VIS
 #endif
 
-_LIBCPP_NEW_DELETE_VIS void* operator new(std::size_t __sz)
 #if !__has_feature(cxx_noexcept)
-    throw(std::bad_alloc)
+#define _THROW_BAD_ALLOC throw(std::bad_alloc)
+#else
+#define _THROW_BAD_ALLOC
 #endif
-;
+
+_LIBCPP_NEW_DELETE_VIS void* operator new(std::size_t __sz) _THROW_BAD_ALLOC;
 _LIBCPP_NEW_DELETE_VIS void* operator new(std::size_t __sz, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
 _LIBCPP_NEW_DELETE_VIS void  operator delete(void* __p) _NOEXCEPT;
 _LIBCPP_NEW_DELETE_VIS void  operator delete(void* __p, const std::nothrow_t&) _NOEXCEPT;
-#if defined(_LIBCPP_BUILDING_NEW) || _LIBCPP_STD_VER >= 14 || \
-    (defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309)
+#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
 _LIBCPP_NEW_DELETE_VIS void  operator delete(void* __p, std::size_t __sz) _NOEXCEPT;
 #endif
 
-_LIBCPP_NEW_DELETE_VIS void* operator new[](std::size_t __sz)
-#if !__has_feature(cxx_noexcept)
-    throw(std::bad_alloc)
-#endif
-;
+_LIBCPP_NEW_DELETE_VIS void* operator new[](std::size_t __sz) _THROW_BAD_ALLOC;
 _LIBCPP_NEW_DELETE_VIS void* operator new[](std::size_t __sz, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
 _LIBCPP_NEW_DELETE_VIS void  operator delete[](void* __p) _NOEXCEPT;
 _LIBCPP_NEW_DELETE_VIS void  operator delete[](void* __p, const std::nothrow_t&) _NOEXCEPT;
-#if defined(_LIBCPP_BUILDING_NEW) || _LIBCPP_STD_VER >= 14 || \
-    (defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309)
+#ifdef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
 _LIBCPP_NEW_DELETE_VIS void  operator delete[](void* __p, std::size_t __sz) _NOEXCEPT;
+#endif
+
+#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+_LIBCPP_NEW_DELETE_VIS void* operator new(std::size_t __sz, std::align_val_t) _THROW_BAD_ALLOC;
+_LIBCPP_NEW_DELETE_VIS void* operator new(std::size_t __sz, std::align_val_t, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
+_LIBCPP_NEW_DELETE_VIS void  operator delete(void* __p, std::align_val_t) _NOEXCEPT;
+_LIBCPP_NEW_DELETE_VIS void  operator delete(void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
+#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+_LIBCPP_NEW_DELETE_VIS void  operator delete(void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
+#endif
+
+_LIBCPP_NEW_DELETE_VIS void* operator new[](std::size_t __sz, std::align_val_t) _THROW_BAD_ALLOC;
+_LIBCPP_NEW_DELETE_VIS void* operator new[](std::size_t __sz, std::align_val_t, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
+_LIBCPP_NEW_DELETE_VIS void  operator delete[](void* __p, std::align_val_t) _NOEXCEPT;
+_LIBCPP_NEW_DELETE_VIS void  operator delete[](void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
+#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+_LIBCPP_NEW_DELETE_VIS void  operator delete[](void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
+#endif
 #endif
 
 inline _LIBCPP_INLINE_VISIBILITY void* operator new  (std::size_t, void* __p) _NOEXCEPT {return __p;}

@@ -4599,6 +4599,8 @@ struct __has_operator_addressof
 #endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
+
+#define __cpp_lib_void_t 201411
 template <class...> using void_t = void;
 
 # ifndef _LIBCPP_HAS_NO_VARIADICS

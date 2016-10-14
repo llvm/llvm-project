@@ -477,10 +477,16 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_BITCAST: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
-    // If we are on the same bank, we can use the "same kind" mapping.
-    if (DstTy.isVector() == SrcTy.isVector())
-      return getSameKindOfOperandsMapping(MI);
-    break;
+    unsigned Size = DstTy.getSizeInBits();
+    bool DstIsGPR = !DstTy.isVector();
+    bool SrcIsGPR = !SrcTy.isVector();
+    const RegisterBank &DstRB =
+        DstIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
+    const RegisterBank &SrcRB =
+        SrcIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
+    return InstructionMapping{DefaultMappingID, copyCost(DstRB, SrcRB, Size),
+                              AArch64::getCopyMapping(DstIsGPR, SrcIsGPR, Size),
+                              /*NumOperands*/ 2};
   }
   default:
     break;

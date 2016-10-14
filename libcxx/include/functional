@@ -2635,6 +2635,8 @@ struct _LIBCPP_TYPE_VIS_ONLY hash : public __enum_hash<_Tp>
 
 #if _LIBCPP_STD_VER > 14
 
+#define __cpp_lib_invoke 201411
+
 template <class _Fn, class ..._Args>
 result_of_t<_Fn&&(_Args&&...)>
 invoke(_Fn&& __f, _Args&&... __args)

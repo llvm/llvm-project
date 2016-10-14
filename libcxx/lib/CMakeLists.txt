@@ -132,7 +132,7 @@ if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
       "/usr/lib/libSystem.B.dylib")
   else()
-    if (DEFINED CMAKE_OSX_SYSROOT)
+    if (DEFINED CMAKE_OSX_SYSROOT AND NOT CMAKE_OSX_SYSROOT STREQUAL "")
       list(FIND CMAKE_OSX_ARCHITECTURES "armv7" OSX_HAS_ARMV7)
       if (NOT OSX_HAS_ARMV7 EQUAL -1)
         set(OSX_RE_EXPORT_LINE
@@ -197,10 +197,6 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_TARGETS})
-
-if (DEFINED LIBCXX_CXX_ABI_DEPS)
-  add_dependencies(cxx LIBCXX_CXX_ABI_DEPS)
-endif()
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)

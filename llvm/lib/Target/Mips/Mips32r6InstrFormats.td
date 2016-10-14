@@ -45,6 +45,7 @@ class MipsR6Inst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>,
 class OPGROUP<bits<6> Val> {
   bits<6> Value = Val;
 }
+def OPGROUP_COP0     : OPGROUP<0b010000>;
 def OPGROUP_COP1     : OPGROUP<0b010001>;
 def OPGROUP_COP2     : OPGROUP<0b010010>;
 def OPGROUP_ADDI     : OPGROUP<0b001000>;
@@ -199,6 +200,21 @@ class BAL_FM : MipsR6Inst {
   let Inst{25-21} = 0b00000;
   let Inst{20-16} = OPCODE5_BGEZAL.Value;
   let Inst{15-0} = offset;
+}
+
+class COP0_EVP_DVP_FM<bits<1> sc> : MipsR6Inst {
+  bits<5> rt;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = OPGROUP_COP0.Value;
+  let Inst{25-21} = 0b01011;
+  let Inst{20-16} = rt;
+  let Inst{15-11} = 0b00000;
+  let Inst{10-6}  = 0b00000;
+  let Inst{5}     = sc;
+  let Inst{4-3}   = 0b00;
+  let Inst{2-0}   = 0b100;
 }
 
 class COP1_2R_FM<bits<6> funct, FIELD_FMT Format> : MipsR6Inst {

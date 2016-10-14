@@ -79,7 +79,7 @@ void AssemblerConstantPools::emitAll(MCStreamer &Streamer) {
 }
 
 void AssemblerConstantPools::emitForCurrentSection(MCStreamer &Streamer) {
-  MCSection *Section = Streamer.getCurrentSection().first;
+  MCSection *Section = Streamer.getCurrentSectionOnly();
   if (ConstantPool *CP = getConstantPool(Section)) {
     emitConstantPool(Streamer, Section, *CP);
   }
@@ -88,7 +88,7 @@ void AssemblerConstantPools::emitForCurrentSection(MCStreamer &Streamer) {
 const MCExpr *AssemblerConstantPools::addEntry(MCStreamer &Streamer,
                                                const MCExpr *Expr,
                                                unsigned Size, SMLoc Loc) {
-  MCSection *Section = Streamer.getCurrentSection().first;
+  MCSection *Section = Streamer.getCurrentSectionOnly();
   return getOrCreateConstantPool(Section).addEntry(Expr, Streamer.getContext(),
                                                    Size, Loc);
 }

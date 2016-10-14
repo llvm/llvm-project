@@ -63,3 +63,20 @@ entry:
   %array4096 = alloca [4096 x i8], align 16       ; <[4096 x i8]*> [#uses=0]
   ret i32 0
 }
+
+; PR30687: Avoid crashing when inserting a __chkstk call at the end of an MBB.
+define void @dont_crash() {
+entry:
+; WIN_X32:    calll __chkstk
+; WIN_X64:    callq __chkstk
+; WIN64_LARGE: movabsq $__chkstk, %r11
+; WIN64_LARGE: callq *%r11
+; MINGW_X32:  calll __alloca
+; MINGW_X64:  callq ___chkstk_ms
+; LINUX-NOT:  call __chkstk
+  %buffer = alloca [4096 x i8]
+  br label %ret
+
+ret:
+  ret void
+}

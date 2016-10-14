@@ -749,7 +749,7 @@ static void PrintQuotedString(StringRef Data, raw_ostream &OS) {
 }
 
 void MCAsmStreamer::EmitBytes(StringRef Data) {
-  assert(getCurrentSection().first &&
+  assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
   if (Data.empty()) return;
 
@@ -794,7 +794,7 @@ void MCAsmStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
 void MCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
                                   SMLoc Loc) {
   assert(Size <= 8 && "Invalid size");
-  assert(getCurrentSection().first &&
+  assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
   const char *Directive = nullptr;
   switch (Size) {
@@ -1580,8 +1580,9 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
   }
 }
 
-void MCAsmStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) {
-  assert(getCurrentSection().first &&
+void MCAsmStreamer::EmitInstruction(const MCInst &Inst,
+                                    const MCSubtargetInfo &STI) {
+  assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
 
   // Show the encoding in a comment if we have a code emitter.

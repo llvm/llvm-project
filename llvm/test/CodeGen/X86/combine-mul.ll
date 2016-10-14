@@ -43,7 +43,7 @@ define <4 x i32> @combine_vec_mul_zero(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
-; fold (mul x, 0) -> 0
+; fold (mul x, 1) -> x
 define <4 x i32> @combine_vec_mul_one(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_one:
 ; SSE:       # BB#0:
@@ -146,7 +146,6 @@ define <4 x i32> @combine_vec_mul_shl_const(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_mul_shl_const:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shl <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>
@@ -164,8 +163,8 @@ define <4 x i32> @combine_vec_mul_shl_oneuse0(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX-LABEL: combine_vec_mul_shl_oneuse0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shl <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>
   %2 = mul <4 x i32> %1, %y
@@ -181,8 +180,8 @@ define <4 x i32> @combine_vec_mul_shl_oneuse1(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX-LABEL: combine_vec_mul_shl_oneuse1:
 ; AVX:       # BB#0:
+; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpmulld %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = shl <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>
   %2 = mul <4 x i32> %y, %1

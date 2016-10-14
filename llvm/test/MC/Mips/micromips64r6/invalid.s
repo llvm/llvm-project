@@ -19,6 +19,17 @@
   bnezc16 $6, 130          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
   cache -1, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   cache 32, 255($7)        # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
+  dahi    $4, $4, 65536    # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
+  dahi    $4, $4, -1       # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
+  dahi    $4, $5, 1        # CHECK: :[[@LINE]]:3: error: source and destination must match
+  dati    $4, $4, 65536    # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
+  dati    $4, $4, -1       # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
+  dati    $4, $5, 1        # CHECK: :[[@LINE]]:3: error: source and destination must match
+  daui    $4, $0, 1        # CHECK: :[[@LINE]]:3: error: invalid operand ($zero) for instruction
+  daui    $4, $4, 65536    # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
+  daui    $4, $4, -1       # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
+  dati    $4, $4, -1       # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
+  dati    $4, $5, 1        # CHECK: :[[@LINE]]:3: error: source and destination must match
   # FIXME: Check various 'pos + size' constraints on dext*
   dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
   dext $2, $3, 64, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
@@ -399,5 +410,5 @@
   lwupc $2, -262145            # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
   lwupc $2, $2                 # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
   lwupc $2, bar+267            # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
-  aui $3, $4, 32768            # CHECK: :[[@LINE]]:15: error: expected 16-bit signed immediate
-  aui $3, $4, -32769           # CHECK: :[[@LINE]]:15: error: expected 16-bit signed immediate
+  aui $3, $4, 65536            # CHECK: :[[@LINE]]:15: error: expected 16-bit unsigned immediate
+  aui $3, $4, -32769           # CHECK: :[[@LINE]]:15: error: expected 16-bit unsigned immediate

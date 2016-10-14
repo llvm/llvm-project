@@ -4939,3 +4939,79 @@ define <4 x i64> @sext_4i8_to_4i64(<4 x i8> %mask) {
   %extmask = sext <4 x i8> %mask to <4 x i64>
   ret <4 x i64> %extmask
 }
+
+define <32 x i8> @sext_32xi1_to_32xi8(<32 x i16> %c1, <32 x i16> %c2)nounwind {
+; SSE-LABEL: sext_32xi1_to_32xi8:
+; SSE:       # BB#0:
+; SSE-NEXT:    pcmpeqw %xmm5, %xmm1
+; SSE-NEXT:    pcmpeqw %xmm4, %xmm0
+; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqw %xmm7, %xmm3
+; SSE-NEXT:    pcmpeqw %xmm6, %xmm2
+; SSE-NEXT:    packsswb %xmm3, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: sext_32xi1_to_32xi8:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpacksswb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: sext_32xi1_to_32xi8:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: sext_32xi1_to_32xi8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: sext_32xi1_to_32xi8:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512BW-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    retq
+;
+; X32-SSE41-LABEL: sext_32xi1_to_32xi8:
+; X32-SSE41:       # BB#0:
+; X32-SSE41-NEXT:    pushl %ebp
+; X32-SSE41-NEXT:    movl %esp, %ebp
+; X32-SSE41-NEXT:    andl $-16, %esp
+; X32-SSE41-NEXT:    subl $16, %esp
+; X32-SSE41-NEXT:    movdqa 8(%ebp), %xmm3
+; X32-SSE41-NEXT:    pcmpeqw 40(%ebp), %xmm1
+; X32-SSE41-NEXT:    pcmpeqw 24(%ebp), %xmm0
+; X32-SSE41-NEXT:    packsswb %xmm1, %xmm0
+; X32-SSE41-NEXT:    pcmpeqw 72(%ebp), %xmm3
+; X32-SSE41-NEXT:    pcmpeqw 56(%ebp), %xmm2
+; X32-SSE41-NEXT:    packsswb %xmm3, %xmm2
+; X32-SSE41-NEXT:    movdqa %xmm2, %xmm1
+; X32-SSE41-NEXT:    movl %ebp, %esp
+; X32-SSE41-NEXT:    popl %ebp
+; X32-SSE41-NEXT:    retl
+  %a = icmp eq <32 x i16> %c1, %c2
+  %b = sext <32 x i1> %a to <32 x i8>
+  ret <32 x i8> %b
+}

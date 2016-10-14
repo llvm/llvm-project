@@ -2223,10 +2223,21 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
     DEBUG(dbgs() << "Try to recolor: " << *LI << '\n');
     unsigned PhysReg;
     PhysReg = selectOrSplitImpl(*LI, NewVRegs, FixedRegisters, Depth + 1);
-    if (PhysReg == ~0u || !PhysReg)
+    // When splitting happens, the live-range may actually be empty.
+    // In that case, this is okay to continue the recoloring even
+    // if we did not find an alternative color for it. Indeed,
+    // there will not be anything to color for LI in the end.
+    if (PhysReg == ~0u || (!PhysReg && !LI->empty()))
       return false;
+
+    if (!PhysReg) {
+      assert(LI->empty() && "Only empty live-range do not require a register");
+      DEBUG(dbgs() << "Recoloring of " << *LI << " succeeded. Empty LI.\n");
+      continue;
+    }
     DEBUG(dbgs() << "Recoloring of " << *LI
                  << " succeeded with: " << PrintReg(PhysReg, TRI) << '\n');
+
     Matrix->assign(*LI, PhysReg);
     FixedRegisters.insert(LI->reg);
   }

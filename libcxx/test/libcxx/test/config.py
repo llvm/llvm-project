@@ -313,6 +313,13 @@ class Configuration(object):
         if self.cxx.hasCompileFlag('-fsized-deallocation'):
             self.config.available_features.add('fsized-deallocation')
 
+        if self.cxx.hasCompileFlag('-faligned-allocation'):
+            self.config.available_features.add('-faligned-allocation')
+        else:
+            # FIXME remove this once more than just clang-4.0 support
+            # C++17 aligned allocation.
+            self.config.available_features.add('no-aligned-allocation')
+
         if self.get_lit_bool('has_libatomic', False):
             self.config.available_features.add('libatomic')
 

@@ -51,6 +51,7 @@ struct FuzzingOptions {
   bool PrintCorpusStats = false;
   bool PrintCoverage = false;
   bool DetectLeaks = true;
+  int  TraceMalloc = 0;
 };
 
 }  // namespace fuzzer

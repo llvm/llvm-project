@@ -58,9 +58,7 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
     endif()
   endforeach()
 
-  add_custom_target(LIBCXX_CXX_ABI_DEPS DEPENDS ${abilib_headers})
   include_directories("${CMAKE_BINARY_DIR}/include")
-
 endmacro()
 
 

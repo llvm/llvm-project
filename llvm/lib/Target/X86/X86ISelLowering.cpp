@@ -114,7 +114,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       addBypassSlowDiv(64, 16);
   }
 
-  if (Subtarget.isTargetKnownWindowsMSVC()) {
+  if (Subtarget.isTargetKnownWindowsMSVC() ||
+      Subtarget.isTargetWindowsItanium()) {
     // Setup Windows compiler runtime calls.
     setLibcallName(RTLIB::SDIV_I64, "_alldiv");
     setLibcallName(RTLIB::UDIV_I64, "_aulldiv");
@@ -1651,7 +1652,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // is. We should promote the value to 64-bits to solve this.
   // This is what the CRT headers do - `fmodf` is an inline header
   // function casting to f64 and calling `fmod`.
-  if (Subtarget.is32Bit() && Subtarget.isTargetKnownWindowsMSVC())
+  if (Subtarget.is32Bit() && (Subtarget.isTargetKnownWindowsMSVC() ||
+                              Subtarget.isTargetWindowsItanium()))
     for (ISD::NodeType Op :
          {ISD::FCEIL, ISD::FCOS, ISD::FEXP, ISD::FFLOOR, ISD::FREM, ISD::FLOG,
           ISD::FLOG10, ISD::FPOW, ISD::FSIN})
@@ -16340,7 +16342,7 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
   }
 
   assert (InVT.getVectorElementType() == MVT::i1 && "Unexpected vector type");
-  MVT ExtVT = NumElts == 8 ? MVT::v8i64 : MVT::v16i32;
+  MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(512/NumElts), NumElts);
   SDValue NegOne = DAG.getConstant(
       APInt::getAllOnesValue(ExtVT.getScalarSizeInBits()), dl, ExtVT);
   SDValue Zero = DAG.getConstant(

@@ -358,8 +358,9 @@ defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
-  (ins si_ga:$ptr),
-  [(set SReg_64:$dst, (i64 (SIpc_add_rel_offset (tglobaladdr:$ptr))))]> {
+  (ins si_ga:$ptr_lo, si_ga:$ptr_hi),
+  [(set SReg_64:$dst,
+   (i64 (SIpc_add_rel_offset (tglobaladdr:$ptr_lo), (tglobaladdr:$ptr_hi))))]> {
   let Defs = [SCC];
 }
 
