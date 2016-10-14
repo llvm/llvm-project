@@ -17,7 +17,7 @@
 // None of the current GCC compilers support this.
 // XFAIL: gcc-4, gcc-5, gcc-6
 
-// UBSAN replaces certain new/delete functions which makes this test fail
+// TODO Investigate why UBSAN prevents new from calling our replacement.
 // XFAIL: ubsan
 
 #include <new>
@@ -60,6 +60,7 @@ struct alignas(std::max_align_t) B {};
 
 int main()
 {
+    reset();
     {
         B *x = new B;
         assert(0 == unsized_delete_called);

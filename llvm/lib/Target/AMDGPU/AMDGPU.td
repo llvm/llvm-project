@@ -67,6 +67,12 @@ def FeatureUnalignedBufferAccess : SubtargetFeature<"unaligned-buffer-access",
   "Support unaligned global loads and stores"
 >;
 
+def FeatureUnalignedScratchAccess : SubtargetFeature<"unaligned-scratch-access",
+  "UnalignedScratchAccess",
+  "true",
+  "Support unaligned scratch loads and stores"
+>;
+
 def FeatureXNACK : SubtargetFeature<"xnack",
   "EnableXNACK",
   "true",

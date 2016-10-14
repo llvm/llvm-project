@@ -38,7 +38,6 @@ void f() {
   __movsd(0, 0, 0);
   __movsw(0, 0, 0);
 
-  __stosb(0, 0, 0);
   __stosd(0, 0, 0);
   __stosw(0, 0, 0);
 

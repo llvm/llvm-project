@@ -145,12 +145,11 @@ entry:
   ret void
 }
 
-; FIXME: Should be able to eliminate the and.
 ; FUNC-LABEL: {{^}}test_umul24_i64_square:
 ; GCN: s_load_dword [[A:s[0-9]+]]
-; GCN: s_and_b32 [[TRUNC:s[0-9]+]], [[A]], 0xffffff{{$}}
-; GCN-DAG: v_mul_hi_u32_u24_e64 v{{[0-9]+}}, [[TRUNC]], [[TRUNC]]
-; GCN-DAG: v_mul_u32_u24_e64 v{{[0-9]+}}, [[TRUNC]], [[TRUNC]]
+; GCN-NOT: s_and_b32
+; GCN-DAG: v_mul_hi_u32_u24_e64 v{{[0-9]+}}, [[A]], [[A]]
+; GCN-DAG: v_mul_u32_u24_e64 v{{[0-9]+}}, [[A]], [[A]]
 define void @test_umul24_i64_square(i64 addrspace(1)* %out, i64 %a) {
 entry:
   %tmp0 = shl i64 %a, 40

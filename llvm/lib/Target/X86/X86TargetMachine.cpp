@@ -269,6 +269,9 @@ void X86PassConfig::addIRPasses() {
   addPass(createAtomicExpandPass(&getX86TargetMachine()));
 
   TargetPassConfig::addIRPasses();
+
+  if (TM->getOptLevel() != CodeGenOpt::None)
+    addPass(createInterleavedAccessPass(TM));
 }
 
 bool X86PassConfig::addInstSelector() {

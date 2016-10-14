@@ -14,6 +14,22 @@ typedef __SIZE_TYPE__ size_t;
 
 #include <intrin.h>
 
+#if defined(__i386__) || defined(__x86_64__)
+void test__stosb(unsigned char *Dest, unsigned char Data, size_t Count) {
+  return __stosb(Dest, Data, Count);
+}
+
+// CHECK-I386: define{{.*}}void @test__stosb
+// CHECK-I386:   tail call void @llvm.memset.p0i8.i32(i8* %Dest, i8 %Data, i32 %Count, i32 1, i1 true)
+// CHECK-I386:   ret void
+// CHECK-I386: }
+
+// CHECK-X64: define{{.*}}void @test__stosb
+// CHECK-X64:   tail call void @llvm.memset.p0i8.i64(i8* %Dest, i8 %Data, i64 %Count, i32 1, i1 true)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+#endif
+
 void *test_ReturnAddress() {
   return _ReturnAddress();
 }

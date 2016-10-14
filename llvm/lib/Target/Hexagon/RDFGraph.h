@@ -253,6 +253,7 @@ namespace llvm {
 
 namespace rdf {
   typedef uint32_t NodeId;
+  typedef uint32_t RegisterId;
 
   struct DataFlowGraph;
 
@@ -400,29 +401,22 @@ namespace rdf {
   };
 
   struct RegisterRef {
-    // For virtual registers, Reg and Sub have the usual meanings.
-    //
-    // Physical registers are assumed not to have any subregisters, and for
-    // them, Sub is the key of the LaneBitmask in the lane mask map in DFG.
-    // The case of Sub = 0 is treated as 'all lanes', i.e. lane mask of ~0.
-    // Use an key/map to access lane masks, since we only have uint32_t
-    // for it, and the LaneBitmask type can grow in the future.
-    //
-    // The case when Reg = 0 and Sub = 0 is reserved to mean "no register".
-    uint32_t Reg, Sub;
+    RegisterId Reg;
+    LaneBitmask Mask;
 
-    // No non-trivial constructors, since this will be a member of a union.
-    RegisterRef() = default;
+    RegisterRef() : RegisterRef(0) {}
+    explicit RegisterRef(RegisterId R, LaneBitmask M = ~LaneBitmask(0))
+      : Reg(R), Mask(M) {}
     RegisterRef(const RegisterRef &RR) = default;
     RegisterRef &operator= (const RegisterRef &RR) = default;
     bool operator== (const RegisterRef &RR) const {
-      return Reg == RR.Reg && Sub == RR.Sub;
+      return Reg == RR.Reg && Mask == RR.Mask;
     }
     bool operator!= (const RegisterRef &RR) const {
       return !operator==(RR);
     }
     bool operator< (const RegisterRef &RR) const {
-      return Reg < RR.Reg || (Reg == RR.Reg && Sub < RR.Sub);
+      return Reg < RR.Reg || (Reg == RR.Reg && Mask < RR.Mask);
     }
   };
   typedef std::set<RegisterRef> RegisterSet;
@@ -437,6 +431,13 @@ namespace rdf {
     const TargetInstrInfo &TII;
   };
 
+
+  // Packed register reference. Only used for storage.
+  struct PackedRegisterRef {
+    RegisterId Reg;
+    uint32_t MaskId;
+  };
+
   // Template class for a map translating uint32_t into arbitrary types.
   // The map will act like an indexed set: upon insertion of a new object,
   // it will automatically assign a new index to it. Index of 0 is treated
@@ -444,25 +445,31 @@ namespace rdf {
   template <typename T, unsigned N = 32>
   struct IndexedSet {
     IndexedSet() : Map() { Map.reserve(N); }
-    const T get(uint32_t Idx) const {
+    T get(uint32_t Idx) const {
       // Index Idx corresponds to Map[Idx-1].
       assert(Idx != 0 && !Map.empty() && Idx-1 < Map.size());
       return Map[Idx-1];
     }
     uint32_t insert(T Val) {
       // Linear search.
-      auto F = find(Map, Val);
+      auto F = llvm::find(Map, Val);
       if (F != Map.end())
-        return F - Map.begin();
+        return F - Map.begin() + 1;
       Map.push_back(Val);
       return Map.size();  // Return actual_index + 1.
     }
-
+    uint32_t find(T Val) const {
+      auto F = llvm::find(Map, Val);
+      assert(F != Map.end());
+      return *F;
+    }
   private:
     std::vector<T> Map;
   };
 
   struct LaneMaskIndex : private IndexedSet<LaneBitmask> {
+    LaneMaskIndex() = default;
+
     LaneBitmask getLaneMaskForIndex(uint32_t K) const {
       return K == 0 ? ~LaneBitmask(0) : get(K);
     }
@@ -470,24 +477,35 @@ namespace rdf {
       assert(LM != LaneBitmask(0));
       return LM == ~LaneBitmask(0) ? 0 : insert(LM);
     }
+    uint32_t getIndexForLaneMask(LaneBitmask LM) const {
+      assert(LM != LaneBitmask(0));
+      return LM == ~LaneBitmask(0) ? 0 : find(LM);
+    }
+    PackedRegisterRef pack(RegisterRef RR) {
+      return { RR.Reg, getIndexForLaneMask(RR.Mask) };
+    }
+    PackedRegisterRef pack(RegisterRef RR) const {
+      return { RR.Reg, getIndexForLaneMask(RR.Mask) };
+    }
+    RegisterRef unpack(PackedRegisterRef PR) const {
+      return RegisterRef(PR.Reg, getLaneMaskForIndex(PR.MaskId));
+    }
   };
 
   struct RegisterAggr {
-    typedef std::pair<uint32_t,LaneBitmask> ValueType;
-
-    RegisterAggr(const LaneMaskIndex &m, const TargetRegisterInfo &tri)
+    RegisterAggr(const TargetRegisterInfo &tri)
         : Masks(), ExpAliasUnits(tri.getNumRegUnits()), CheckUnits(false),
-          LMI(m), TRI(tri) {}
+          TRI(tri) {}
     RegisterAggr(const RegisterAggr &RG)
         : Masks(RG.Masks), ExpAliasUnits(RG.ExpAliasUnits),
-          CheckUnits(RG.CheckUnits), LMI(RG.LMI), TRI(RG.TRI) {}
+          CheckUnits(RG.CheckUnits), TRI(RG.TRI) {}
 
     bool empty() const { return Masks.empty(); }
     bool hasAliasOf(RegisterRef RR) const;
     bool hasCoverOf(RegisterRef RR) const;
-    static bool isCoverOf(RegisterRef RefA, RegisterRef RefB,
-                     const LaneMaskIndex &LMI, const TargetRegisterInfo &TRI) {
-      return RegisterAggr(LMI, TRI).insert(RefA).hasCoverOf(RefB);
+    static bool isCoverOf(RegisterRef RA, RegisterRef RB,
+                          const TargetRegisterInfo &TRI) {
+      return RegisterAggr(TRI).insert(RA).hasCoverOf(RB);
     }
 
     RegisterAggr &insert(RegisterRef RR);
@@ -497,18 +515,19 @@ namespace rdf {
     void print(raw_ostream &OS) const;
 
   private:
-    typedef std::unordered_map<ValueType::first_type,
-                               ValueType::second_type> MapType;
+    typedef std::unordered_map<RegisterId, LaneBitmask> MapType;
+
+  public:
+    typedef MapType::const_iterator iterator;
+    iterator begin() const { return Masks.begin(); }
+    iterator end() const { return Masks.end(); }
+    RegisterRef normalize(RegisterRef RR) const;
+
+  private:
     MapType Masks;
     BitVector ExpAliasUnits; // Register units for explicit aliases.
     bool CheckUnits;
-    const LaneMaskIndex &LMI;
     const TargetRegisterInfo &TRI;
-
-    uint32_t getLargestSuperReg(uint32_t Reg) const;
-    void setMaskRaw(uint32_t Reg, LaneBitmask LM);
-    LaneBitmask composeMaskForReg(uint32_t Reg, LaneBitmask LM,
-                                  uint32_t SuperR) const;
   };
 
 
@@ -556,7 +575,7 @@ namespace rdf {
       };
       union {
         MachineOperand *Op;   // Non-phi refs point to a machine operand.
-        RegisterRef RR;       // Phi refs store register info directly.
+        PackedRegisterRef PR; // Phi refs store register info directly.
       };
     };
 
@@ -577,13 +596,13 @@ namespace rdf {
 
   struct RefNode : public NodeBase {
     RefNode() = default;
-    RegisterRef getRegRef() const;
+    RegisterRef getRegRef(const DataFlowGraph &G) const;
     MachineOperand &getOp() {
       assert(!(getFlags() & NodeAttrs::PhiRef));
       return *Ref.Op;
     }
-    void setRegRef(RegisterRef RR);
-    void setRegRef(MachineOperand *Op);
+    void setRegRef(RegisterRef RR, DataFlowGraph &G);
+    void setRegRef(MachineOperand *Op, DataFlowGraph &G);
     NodeId getReachingDef() const {
       return Ref.RD;
     }
@@ -712,8 +731,6 @@ namespace rdf {
 
     NodeAddr<FuncNode*> getFunc() const { return Func; }
     MachineFunction &getMF() const { return MF; }
-    LaneMaskIndex &getLMI() { return LMI; }
-    const LaneMaskIndex &getLMI() const { return LMI; }
     const TargetInstrInfo &getTII() const { return TII; }
     const TargetRegisterInfo &getTRI() const { return TRI; }
     const MachineDominatorTree &getDT() const { return MDT; }
@@ -775,6 +792,11 @@ namespace rdf {
     void pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DM);
     void markBlock(NodeId B, DefStackMap &DefM);
     void releaseBlock(NodeId B, DefStackMap &DefM);
+
+    PackedRegisterRef pack(RegisterRef RR)       { return LMI.pack(RR); }
+    PackedRegisterRef pack(RegisterRef RR) const { return LMI.pack(RR); }
+    RegisterRef unpack(PackedRegisterRef PR) const { return LMI.unpack(PR); }
+    RegisterRef makeRegRef(unsigned Reg, unsigned Sub) const;
 
     NodeAddr<RefNode*> getNextRelated(NodeAddr<InstrNode*> IA,
         NodeAddr<RefNode*> RA) const;
@@ -913,7 +935,7 @@ namespace rdf {
     while (NA.Addr != this) {
       if (NA.Addr->getType() == NodeAttrs::Ref) {
         NodeAddr<RefNode*> RA = NA;
-        if (RA.Addr->getRegRef() == RR && P(NA))
+        if (RA.Addr->getRegRef(G) == RR && P(NA))
           return NA;
         if (NextOnly)
           break;

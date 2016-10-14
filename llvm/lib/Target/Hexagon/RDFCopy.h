@@ -28,6 +28,7 @@ namespace rdf {
     bool run();
     void trace(bool On) { Trace = On; }
     bool trace() const { return Trace; }
+    DataFlowGraph &getDFG() { return DFG; }
 
     typedef std::map<RegisterRef, RegisterRef> EqualityMap;
     virtual bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM);

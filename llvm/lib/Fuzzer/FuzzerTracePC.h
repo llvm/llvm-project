@@ -17,6 +17,25 @@
 
 namespace fuzzer {
 
+// TableOfRecentCompares (TORC) remembers the most recently performed
+// comparisons of type T.
+// We record the arguments of CMP instructions in this table unconditionally
+// because it seems cheaper this way than to compute some expensive
+// conditions inside __sanitizer_cov_trace_cmp*.
+// After the unit has been executed we may decide to use the contents of
+// this table to populate a Dictionary.
+template<class T, size_t kSizeT>
+struct TableOfRecentCompares {
+  static const size_t kSize = kSizeT;
+  void Insert(size_t Idx, T Arg1, T Arg2) {
+    Idx = Idx % kSize;
+    Table[Idx][0] = Arg1;
+    Table[Idx][1] = Arg2;
+  }
+  void Clear() { memset(Table, 0, sizeof(Table)); }
+  T Table[kSize][2];
+};
+
 class TracePC {
  public:
   static const size_t kFeatureSetSize = ValueBitMap::kNumberOfItems;
@@ -48,6 +67,11 @@ class TracePC {
     memset(Counters, 0, sizeof(Counters));
   }
 
+  void ResetTORC() {
+    TORC4.Clear();
+    TORC8.Clear();
+  }
+
   void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
   void PrintFeatureSet();
 
@@ -63,6 +87,8 @@ class TracePC {
                          size_t n);
 
   bool UsingTracePcGuard() const {return NumModules; }
+
+  void ProcessTORC(Dictionary *Dict, const uint8_t *Data, size_t Size);
 
 private:
   bool UseCounters = false;
@@ -86,6 +112,29 @@ private:
 
   static const size_t kNumCounters = 1 << 14;
   alignas(8) uint8_t Counters[kNumCounters];
+
+  static const size_t kTORCSize = 1 << 12;
+  TableOfRecentCompares<uint32_t, kTORCSize> TORC4;
+  TableOfRecentCompares<uint64_t, kTORCSize> TORC8;
+  void TORCInsert(size_t Idx, uint8_t Arg1, uint8_t Arg2) {
+    // Do nothing, too small to be interesting.
+  }
+  void TORCInsert(size_t Idx, uint16_t Arg1, uint16_t Arg2) {
+    // Do nothing, these don't usually hapen.
+  }
+  void TORCInsert(size_t Idx, uint32_t Arg1, uint32_t Arg2) {
+    TORC4.Insert(Idx, Arg1, Arg2);
+  }
+  void TORCInsert(size_t Idx, uint64_t Arg1, uint64_t Arg2) {
+    TORC8.Insert(Idx, Arg1, Arg2);
+  }
+
+  template <class T>
+  void TORCToDict(const TableOfRecentCompares<T, kTORCSize> &TORC,
+                  Dictionary *Dict, const uint8_t *Data, size_t Size);
+  template <class T>
+  void TORCToDict(Dictionary *Dict, T FindInData, T Substitute,
+                  const uint8_t *Data, size_t Size);
 
   static const size_t kNumPCs = 1 << 24;
   uintptr_t PCs[kNumPCs];

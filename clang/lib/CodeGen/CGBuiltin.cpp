@@ -7770,6 +7770,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *F = CGM.getIntrinsic(Intrinsic::addressofreturnaddress);
     return Builder.CreateCall(F);
   }
+  case X86::BI__stosb: {
+    // We treat __stosb as a volatile memset - it may not generate "rep stosb"
+    // instruction, but it will create a memset that won't be optimized away.
+    return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], 1, true);
+  }
   }
 }
 

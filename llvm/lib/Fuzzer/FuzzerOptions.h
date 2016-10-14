@@ -30,6 +30,7 @@ struct FuzzingOptions {
   bool UseIndirCalls = true;
   bool UseMemcmp = true;
   bool UseMemmem = true;
+  bool UseCmp = false;
   bool UseValueProfile = false;
   bool Shrink = false;
   int ReloadIntervalSec = 1;

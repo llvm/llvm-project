@@ -1,4 +1,7 @@
 module X {
-  header "X.h"
+  module T {
+    header "X.h"
+    export *
+  }
   export *
 }

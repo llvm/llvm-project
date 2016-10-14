@@ -43,12 +43,16 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
           {&MutationDispatcher::Mutate_CopyPart, "CopyPart"},
           {&MutationDispatcher::Mutate_CrossOver, "CrossOver"},
           {&MutationDispatcher::Mutate_AddWordFromManualDictionary,
-           "AddFromManualDict"},
+           "ManualDict"},
           {&MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary,
-           "AddFromTempAutoDict"},
+           "TempAutoDict"},
           {&MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary,
-           "AddFromPersAutoDict"},
+           "PersAutoDict"},
       });
+  if(Options.UseCmp)
+    DefaultMutators.push_back(
+        {&MutationDispatcher::Mutate_AddWordFromTraceCmpDictionary,
+         "TraceCmpDict"});
 
   if (EF->LLVMFuzzerCustomMutator)
     Mutators.push_back({&MutationDispatcher::Mutate_Custom, "Custom"});
@@ -169,6 +173,11 @@ size_t MutationDispatcher::Mutate_AddWordFromManualDictionary(uint8_t *Data,
 size_t MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary(
     uint8_t *Data, size_t Size, size_t MaxSize) {
   return AddWordFromDictionary(TempAutoDictionary, Data, Size, MaxSize);
+}
+
+size_t MutationDispatcher::Mutate_AddWordFromTraceCmpDictionary(
+    uint8_t *Data, size_t Size, size_t MaxSize) {
+  return AddWordFromDictionary(TraceCmpDictionary, Data, Size, MaxSize);
 }
 
 size_t MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary(

@@ -98,6 +98,7 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
     EM.insert(std::make_pair(DstR, SrcR));
   };
 
+  DataFlowGraph &DFG = getDFG();
   unsigned Opc = MI->getOpcode();
   switch (Opc) {
     case Hexagon::A2_combinew: {
@@ -105,10 +106,10 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       const MachineOperand &HiOp = MI->getOperand(1);
       const MachineOperand &LoOp = MI->getOperand(2);
       assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
-      mapRegs({ DstOp.getReg(), Hexagon::subreg_hireg },
-              { HiOp.getReg(), HiOp.getSubReg() });
-      mapRegs({ DstOp.getReg(), Hexagon::subreg_loreg },
-              { LoOp.getReg(), LoOp.getSubReg() });
+      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::subreg_hireg),
+              DFG.makeRegRef(HiOp.getReg(),  HiOp.getSubReg()));
+      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::subreg_loreg),
+              DFG.makeRegRef(LoOp.getReg(), LoOp.getSubReg()));
       return true;
     }
     case Hexagon::A2_addi: {
@@ -120,8 +121,8 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
     case Hexagon::A2_tfr: {
       const MachineOperand &DstOp = MI->getOperand(0);
       const MachineOperand &SrcOp = MI->getOperand(1);
-      mapRegs({ DstOp.getReg(), DstOp.getSubReg() },
-              { SrcOp.getReg(), SrcOp.getSubReg() });
+      mapRegs(DFG.makeRegRef(DstOp.getReg(), DstOp.getSubReg()),
+              DFG.makeRegRef(SrcOp.getReg(), SrcOp.getSubReg()));
       return true;
     }
   }
@@ -181,7 +182,8 @@ void HexagonDCE::removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum) {
     llvm_unreachable("Invalid operand");
   };
   DenseMap<NodeId,unsigned> OpMap;
-  NodeList Refs = IA.Addr->members(getDFG());
+  DataFlowGraph &DFG = getDFG();
+  NodeList Refs = IA.Addr->members(DFG);
   for (NodeAddr<RefNode*> RA : Refs)
     OpMap.insert(std::make_pair(RA.Id, getOpNum(RA.Addr->getOp())));
 
@@ -190,9 +192,9 @@ void HexagonDCE::removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum) {
   for (NodeAddr<RefNode*> RA : Refs) {
     unsigned N = OpMap[RA.Id];
     if (N < OpNum)
-      RA.Addr->setRegRef(&MI->getOperand(N));
+      RA.Addr->setRegRef(&MI->getOperand(N), DFG);
     else if (N > OpNum)
-      RA.Addr->setRegRef(&MI->getOperand(N-1));
+      RA.Addr->setRegRef(&MI->getOperand(N-1), DFG);
   }
 }
 

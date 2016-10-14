@@ -29,6 +29,9 @@
 // It could be transformed into a ld2 intrinsic in AArch64 backend or a vld2
 // intrinsic in ARM backend.
 //
+// In X86, this can be further optimized into a set of target
+// specific loads followed by an optimized sequence of shuffles.
+//
 // E.g. An interleaved store (Factor = 3):
 //        %i.vec = shuffle <8 x i32> %v0, <8 x i32> %v1,
 //                                    <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>
@@ -37,6 +40,8 @@
 // It could be transformed into a st3 intrinsic in AArch64 backend or a vst3
 // intrinsic in ARM backend.
 //
+// Similarly, a set of interleaved stores can be transformed into an optimized
+// sequence of shuffles followed by a set of target specific stores for X86.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Passes.h"
