@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 
 #include <ostream>
+#include <utility>
 
 using namespace llvm;
 using namespace coverage;
@@ -118,7 +119,8 @@ struct InputFunctionCoverageData {
   InputFunctionCoverageData &operator=(InputFunctionCoverageData &&) = delete;
 };
 
-struct CoverageMappingTest : ::testing::TestWithParam<bool> {
+struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
+  bool UseMultipleReaders;
   StringMap<unsigned> Files;
   std::vector<InputFunctionCoverageData> InputFunctions;
   std::vector<OutputFunctionCoverageData> OutputFunctions;
@@ -129,7 +131,8 @@ struct CoverageMappingTest : ::testing::TestWithParam<bool> {
   std::unique_ptr<CoverageMapping> LoadedCoverage;
 
   void SetUp() override {
-    ProfileWriter.setOutputSparse(GetParam());
+    ProfileWriter.setOutputSparse(GetParam().first);
+    UseMultipleReaders = GetParam().second;
   }
 
   unsigned getGlobalFileIndex(StringRef Name) {
@@ -215,12 +218,24 @@ struct CoverageMappingTest : ::testing::TestWithParam<bool> {
     ProfileReader = std::move(ReaderOrErr.get());
   }
 
+  Expected<std::unique_ptr<CoverageMapping>> readOutputFunctions() {
+    if (!UseMultipleReaders) {
+      CoverageMappingReaderMock CovReader(OutputFunctions);
+      return CoverageMapping::load(CovReader, *ProfileReader);
+    }
+
+    std::vector<std::unique_ptr<CoverageMappingReader>> CoverageReaders;
+    for (const auto &OF : OutputFunctions) {
+      ArrayRef<OutputFunctionCoverageData> Funcs(OF);
+      CoverageReaders.push_back(make_unique<CoverageMappingReaderMock>(Funcs));
+    }
+    return CoverageMapping::load(CoverageReaders, *ProfileReader);
+  }
+
   void loadCoverageMapping(bool EmitFilenames = true) {
     readProfCounts();
     writeAndReadCoverageRegions(EmitFilenames);
-
-    CoverageMappingReaderMock CovReader(OutputFunctions);
-    auto CoverageOrErr = CoverageMapping::load(CovReader, *ProfileReader);
+    auto CoverageOrErr = readOutputFunctions();
     ASSERT_TRUE(NoError(CoverageOrErr.takeError()));
     LoadedCoverage = std::move(CoverageOrErr.get());
   }
@@ -547,7 +562,28 @@ TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
   EXPECT_EQ(CoverageSegment(1, 10, false), Segments[1]);
 }
 
+TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
+  InstrProfRecord Record("func", 0x1234, {1});
+  NoError(ProfileWriter.addRecord(std::move(Record)));
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
+
+  loadCoverageMapping();
+
+  auto Funcs = LoadedCoverage->getCoveredFunctions();
+  unsigned NumFuncs = std::distance(Funcs.begin(), Funcs.end());
+  ASSERT_EQ(1U, NumFuncs);
+}
+
+// FIXME: Use ::testing::Combine() when llvm updates its copy of googletest.
 INSTANTIATE_TEST_CASE_P(ParameterizedCovMapTest, CoverageMappingTest,
-                        ::testing::Bool());
+                        ::testing::Values(std::pair<bool, bool>({false, false}),
+                                          std::pair<bool, bool>({false, true}),
+                                          std::pair<bool, bool>({true, false}),
+                                          std::pair<bool, bool>({true, true})));
 
 } // end anonymous namespace

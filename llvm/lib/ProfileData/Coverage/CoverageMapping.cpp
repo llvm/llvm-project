@@ -186,6 +186,16 @@ void FunctionRecordIterator::skipOtherFiles() {
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     IndexedInstrProfReader &ProfileReader) {
+  StringRef OrigFuncName = Record.FunctionName;
+  if (Record.Filenames.empty())
+    OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName);
+  else
+    OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
+
+  // Don't load records for functions we've already seen.
+  if (!FunctionNames.insert(OrigFuncName).second)
+    return Error::success();
+
   CounterMappingContext Ctx(Record.Expressions);
 
   std::vector<uint64_t> Counts;
@@ -203,11 +213,6 @@ Error CoverageMapping::loadFunctionRecord(
 
   assert(!Record.MappingRegions.empty() && "Function has no regions");
 
-  StringRef OrigFuncName = Record.FunctionName;
-  if (Record.Filenames.empty())
-    OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName);
-  else
-    OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
   FunctionRecord Function(OrigFuncName, Record.Filenames);
   for (const auto &Region : Record.MappingRegions) {
     Expected<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
@@ -238,22 +243,41 @@ CoverageMapping::load(CoverageMappingReader &CoverageReader,
   return std::move(Coverage);
 }
 
+Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
+    ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+    IndexedInstrProfReader &ProfileReader) {
+  auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
+
+  for (const auto &CoverageReader : CoverageReaders)
+    for (const auto &Record : *CoverageReader)
+      if (Error E = Coverage->loadFunctionRecord(Record, ProfileReader))
+        return std::move(E);
+
+  return std::move(Coverage);
+}
+
 Expected<std::unique_ptr<CoverageMapping>>
-CoverageMapping::load(StringRef ObjectFilename, StringRef ProfileFilename,
-                      StringRef Arch) {
-  auto CounterMappingBuff = MemoryBuffer::getFileOrSTDIN(ObjectFilename);
-  if (std::error_code EC = CounterMappingBuff.getError())
-    return errorCodeToError(EC);
-  auto CoverageReaderOrErr =
-      BinaryCoverageReader::create(CounterMappingBuff.get(), Arch);
-  if (Error E = CoverageReaderOrErr.takeError())
-    return std::move(E);
-  auto CoverageReader = std::move(CoverageReaderOrErr.get());
+CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
+                      StringRef ProfileFilename, StringRef Arch) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename);
   if (Error E = ProfileReaderOrErr.takeError())
     return std::move(E);
   auto ProfileReader = std::move(ProfileReaderOrErr.get());
-  return load(*CoverageReader, *ProfileReader);
+
+  SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
+  SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
+  for (StringRef ObjectFilename : ObjectFilenames) {
+    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(ObjectFilename);
+    if (std::error_code EC = CovMappingBufOrErr.getError())
+      return errorCodeToError(EC);
+    auto CoverageReaderOrErr =
+        BinaryCoverageReader::create(CovMappingBufOrErr.get(), Arch);
+    if (Error E = CoverageReaderOrErr.takeError())
+      return std::move(E);
+    Readers.push_back(std::move(CoverageReaderOrErr.get()));
+    Buffers.push_back(std::move(CovMappingBufOrErr.get()));
+  }
+  return load(Readers, *ProfileReader);
 }
 
 namespace {
