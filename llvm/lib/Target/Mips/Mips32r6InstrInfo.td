@@ -327,7 +327,7 @@ class AUI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                     InstrItinClass itin = NoItinerary>
       : MipsR6Arch<instr_asm> {
   dag OutOperandList = (outs GPROpnd:$rs);
-  dag InOperandList = (ins GPROpnd:$rt, simm16:$imm);
+  dag InOperandList = (ins GPROpnd:$rt, uimm16:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $imm");
   list<dag> Pattern = [];
   InstrItinClass Itinerary = itin;

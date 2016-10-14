@@ -48,8 +48,8 @@ class SCD_R6_ENC : SPECIAL3_LL_SC_FM<OPCODE6_SCD>;
 
 class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd, InstrItinClass itin> {
   dag OutOperandList = (outs GPROpnd:$rs);
-  dag InOperandList = (ins GPROpnd:$rt, simm16_relaxed:$imm);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $imm");
+  dag InOperandList = (ins GPROpnd:$rt, uimm16_altrelaxed:$imm);
+  string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $imm");
   string Constraints = "$rs = $rt";
   InstrItinClass Itinerary = itin;
 }
@@ -111,8 +111,10 @@ class SC64_R6_DESC : SC_R6_DESC_BASE<"sc", GPR32Opnd, II_SC>;
 //===----------------------------------------------------------------------===//
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def DATI : DATI_ENC, DATI_DESC, ISA_MIPS64R6;
-  def DAHI : DAHI_ENC, DAHI_DESC, ISA_MIPS64R6;
+  let DecoderMethod = "DecodeDAHIDATI" in {
+    def DATI : DATI_ENC, DATI_DESC, ISA_MIPS64R6;
+    def DAHI : DAHI_ENC, DAHI_DESC, ISA_MIPS64R6;
+  }
   def DAUI : DAUI_ENC, DAUI_DESC, ISA_MIPS64R6;
   def DALIGN : DALIGN_ENC, DALIGN_DESC, ISA_MIPS64R6;
   def DBITSWAP : R6MMR6Rel, DBITSWAP_ENC, DBITSWAP_DESC, ISA_MIPS64R6;

@@ -8,15 +8,17 @@
 ; the fallback path.
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-apple-ios"
+target triple = "aarch64--"
 
+; We use __fixunstfti as the common denominator for __fixunstfti on Linux and
+; ___fixunstfti on iOS
 ; ERROR: Unable to lower arguments
 ; FALLBACK: ldr q0,
-; FALLBACK-NEXT: bl ___fixunstfti
+; FALLBACK-NEXT: bl __fixunstfti
 ;
 ; FALLBACK_WITH_REPORT: warning: Instruction selection used fallback path for ABIi128
 ; FALLBACK_WITH_REPORT: ldr q0,
-; FALLBACK_WITH_REPORT-NEXT: bl ___fixunstfti
+; FALLBACK_WITH_REPORT-NEXT: bl __fixunstfti
 define i128 @ABIi128(i128 %arg1) {
   %farg1 =       bitcast i128 %arg1 to fp128 
   %res = fptoui fp128 %farg1 to i128

@@ -33,12 +33,17 @@ template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
 class InputSectionData;
 
+// This represents an expression in the linker script.
+// ScriptParser::readExpr reads an expression and returns an Expr.
+// Later, we evaluate the expression by calling the function
+// with the value of special context variable ".".
 typedef std::function<uint64_t(uint64_t)> Expr;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
 void readLinkerScript(MemoryBufferRef MB);
 
+// Parses a version script.
 void readVersionScript(MemoryBufferRef MB);
 
 // This enum is used to implement linker script SECTIONS command.
@@ -57,6 +62,7 @@ struct BaseCommand {
   int Kind;
 };
 
+// This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
   SymbolAssignment(StringRef Name, Expr E, bool IsAbsolute)
       : BaseCommand(AssignmentKind), Name(Name), Expression(E),
@@ -77,10 +83,9 @@ struct SymbolAssignment : BaseCommand {
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
-// An output section will only be created if all of its input sections are
-// read-only
-// or all of its input sections are read-write by using the keyword ONLY_IF_RO
-// and ONLY_IF_RW respectively.
+// If an output section is marked as ONLY_IF_RO, the section is created
+// only if its input sections are read-only. Likewise, an output section
+// with ONLY_IF_RW is created if all input sections are RW.
 enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 
 struct OutputSectionCommand : BaseCommand {
@@ -133,12 +138,14 @@ struct InputSectionDescription : BaseCommand {
   std::vector<InputSectionData *> Sections;
 };
 
+// Represents an ASSERT().
 struct AssertCommand : BaseCommand {
   AssertCommand(Expr E) : BaseCommand(AssertKind), Expression(E) {}
   static bool classof(const BaseCommand *C);
   Expr Expression;
 };
 
+// Represents BYTE(), SHORT(), LONG(), or QUAD().
 struct BytesDataCommand : BaseCommand {
   BytesDataCommand(uint64_t Data, unsigned Size)
       : BaseCommand(BytesDataKind), Data(Data), Size(Size) {}

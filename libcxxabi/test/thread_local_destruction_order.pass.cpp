@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: libcxxabi-no-threads
 
 #include <cassert>
 #include <thread>

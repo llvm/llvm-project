@@ -14,8 +14,8 @@
 
 ; CHECK-LABEL: private_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], private+8
-; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], private@rel32@lo+8
+; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], private@rel32@hi+8
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[ADDR_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[ADDR_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
@@ -28,8 +28,8 @@ define void @private_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: internal_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], internal+8
-; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], internal@rel32@lo+8
+; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], internal@rel32@hi+8
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[ADDR_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[ADDR_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
@@ -42,8 +42,8 @@ define void @internal_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: available_externally_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], available_externally@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], available_externally@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], available_externally@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -59,8 +59,8 @@ define void @available_externally_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: linkonce_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], linkonce@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], linkonce@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], linkonce@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -76,8 +76,8 @@ define void @linkonce_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: weak_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], weak@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], weak@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], weak@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -93,8 +93,8 @@ define void @weak_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: common_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], common@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], common@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], common@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -110,8 +110,8 @@ define void @common_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: extern_weak_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], extern_weak@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], extern_weak@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], extern_weak@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -127,8 +127,8 @@ define void @extern_weak_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: linkonce_odr_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], linkonce_odr@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], linkonce_odr@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], linkonce_odr@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -144,8 +144,8 @@ define void @linkonce_odr_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: weak_odr_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], weak_odr@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], weak_odr@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], weak_odr@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -161,8 +161,8 @@ define void @weak_odr_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: external_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], external@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], external@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], external@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0
@@ -178,8 +178,8 @@ define void @external_test(i32 addrspace(1)* %out) {
 
 ; CHECK-LABEL: external_w_init_test:
 ; CHECK: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], external_w_init@GOTPCREL+4
-; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], 0
+; CHECK: s_add_u32 s[[GOTADDR_LO:[0-9]+]], s[[PC_LO]], external_w_init@gotpcrel32@lo+4
+; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], external_w_init@gotpcrel32@hi+4
 ; CHECK: s_load_dwordx2 s{{\[}}[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]{{\]}}, s{{\[}}[[GOTADDR_LO]]:[[GOTADDR_HI]]{{\]}}, 0x0
 ; CHECK: s_add_u32 s[[GEP_LO:[0-9]+]], s[[ADDR_LO]], 4
 ; CHECK: s_addc_u32 s[[GEP_HI:[0-9]+]], s[[ADDR_HI]], 0

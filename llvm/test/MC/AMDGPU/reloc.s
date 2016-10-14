@@ -4,7 +4,11 @@
 // CHECK: .rel.text {
 // CHECK: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD0 0x0
 // CHECK: R_AMDGPU_ABS32_HI SCRATCH_RSRC_DWORD1 0x0
-// CHECK: R_AMDGPU_GOTPCREL global_var 0x0
+// CHECK: R_AMDGPU_GOTPCREL global_var0 0x0
+// CHECK: R_AMDGPU_GOTPCREL32_LO global_var1 0x0
+// CHECK: R_AMDGPU_GOTPCREL32_HI global_var2 0x0
+// CHECK: R_AMDGPU_REL32_LO global_var3 0x0
+// CHECK: R_AMDGPU_REL32_HI global_var4 0x0
 // CHECK: R_AMDGPU_ABS32 var 0x0
 // CHECK: }
 // CHECK: .rel.data {
@@ -15,9 +19,17 @@
 kernel:
   s_mov_b32 s0, SCRATCH_RSRC_DWORD0
   s_mov_b32 s1, SCRATCH_RSRC_DWORD1
-  s_mov_b32 s2, global_var@GOTPCREL
+  s_mov_b32 s2, global_var0@GOTPCREL
+  s_mov_b32 s3, global_var1@gotpcrel32@lo
+  s_mov_b32 s4, global_var2@gotpcrel32@hi
+  s_mov_b32 s5, global_var3@rel32@lo
+  s_mov_b32 s6, global_var4@rel32@hi
 
-.globl global_var
+.globl global_var0
+.globl global_var1
+.globl global_var2
+.globl global_var3
+.globl global_var4
 
 .globl SCRATCH_RSRC_DWORD0
 

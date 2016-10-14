@@ -25,12 +25,11 @@ define i8 @big_divisor(i8 %x) {
   ret i8 %rem
 }
 
-; TODO: Should this be zext+add instead of sext+sub?
 define i5 @biggest_divisor(i5 %x) {
 ; CHECK-LABEL: @biggest_divisor(
 ; CHECK-NEXT:    [[NOT_:%.*]] = icmp eq i5 %x, -1
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[NOT_]] to i5
-; CHECK-NEXT:    [[REM:%.*]] = sub i5 %x, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[NOT_]] to i5
+; CHECK-NEXT:    [[REM:%.*]] = add i5 [[TMP1]], %x
 ; CHECK-NEXT:    ret i5 [[REM]]
 ;
   %rem = urem i5 %x, -1

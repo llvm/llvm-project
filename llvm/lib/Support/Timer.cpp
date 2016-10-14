@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Interval Timing implementation.
+/// \file Interval Timing implementation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,14 +23,13 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-// getLibSupportInfoOutputFilename - This ugly hack is brought to you courtesy
-// of constructor/destructor ordering being unspecified by C++.  Basically the
-// problem is that a Statistic object gets destroyed, which ends up calling
-// 'GetLibSupportInfoOutputFile()' (below), which calls this function.
-// LibSupportInfoOutputFilename used to be a global variable, but sometimes it
-// would get destroyed before the Statistic, causing havoc to ensue.  We "fix"
-// this by creating the string the first time it is needed and never destroying
-// it.
+// This ugly hack is brought to you courtesy of constructor/destructor ordering
+// being unspecified by C++.  Basically the problem is that a Statistic object
+// gets destroyed, which ends up calling 'GetLibSupportInfoOutputFile()'
+// (below), which calls this function.  LibSupportInfoOutputFilename used to be
+// a global variable, but sometimes it would get destroyed before the Statistic,
+// causing havoc to ensue.  We "fix" this by creating the string the first time
+// it is needed and never destroying it.
 static ManagedStatic<std::string> LibSupportInfoOutputFilename;
 static std::string &getLibSupportInfoOutputFilename() {
   return *LibSupportInfoOutputFilename;
@@ -50,7 +49,6 @@ namespace {
                    cl::Hidden, cl::location(getLibSupportInfoOutputFilename()));
 }
 
-// Return a file stream to print our output on.
 std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
   const std::string &OutputFilename = getLibSupportInfoOutputFilename();
   if (OutputFilename.empty())
@@ -234,12 +232,12 @@ NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef GroupName,
 //   TimerGroup Implementation
 //===----------------------------------------------------------------------===//
 
-/// TimerGroupList - This is the global list of TimerGroups, maintained by the
-/// TimerGroup ctor/dtor and is protected by the TimerLock lock.
+/// This is the global list of TimerGroups, maintained by the TimerGroup
+/// ctor/dtor and is protected by the TimerLock lock.
 static TimerGroup *TimerGroupList = nullptr;
 
 TimerGroup::TimerGroup(StringRef name)
-  : Name(name.begin(), name.end()), FirstTimer(nullptr) {
+  : Name(name.begin(), name.end()) {
 
   // Add the group to TimerGroupList.
   sys::SmartScopedLock<true> L(*TimerLock);
@@ -347,7 +345,6 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   TimersToPrint.clear();
 }
 
-/// print - Print any started timers in this group and zero them.
 void TimerGroup::print(raw_ostream &OS) {
   sys::SmartScopedLock<true> L(*TimerLock);
 
@@ -356,7 +353,7 @@ void TimerGroup::print(raw_ostream &OS) {
   for (Timer *T = FirstTimer; T; T = T->Next) {
     if (!T->hasTriggered()) continue;
     TimersToPrint.emplace_back(T->Time, T->Name);
-    
+
     // Clear out the time.
     T->clear();
   }
@@ -366,7 +363,6 @@ void TimerGroup::print(raw_ostream &OS) {
     PrintQueuedTimers(OS);
 }
 
-/// printAll - This static method prints all timers and clears them all out.
 void TimerGroup::printAll(raw_ostream &OS) {
   sys::SmartScopedLock<true> L(*TimerLock);
 

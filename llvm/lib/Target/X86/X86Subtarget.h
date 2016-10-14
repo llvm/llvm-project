@@ -215,6 +215,9 @@ protected:
   /// 64-bit divisions and should be used when possible.
   bool HasSlowDivide64;
 
+  /// True if LZCNT instruction is fast.
+  bool HasFastLZCNT;
+
   /// True if the short functions should be padded to prevent
   /// a stall when returning too early.
   bool PadShortFunctions;
@@ -444,6 +447,7 @@ public:
   bool hasFastPartialYMMWrite() const { return HasFastPartialYMMWrite; }
   bool hasFastScalarFSQRT() const { return HasFastScalarFSQRT; }
   bool hasFastVectorFSQRT() const { return HasFastVectorFSQRT; }
+  bool hasFastLZCNT() const { return HasFastLZCNT; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }
   bool padShortFunctions() const { return PadShortFunctions; }

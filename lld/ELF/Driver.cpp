@@ -494,6 +494,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
+  Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   if (!Config->Relocatable)
     Config->Strip = getStripOption(Args);

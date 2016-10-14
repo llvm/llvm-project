@@ -98,7 +98,18 @@ public:
 
   enum TargetOperandFlags {
     MO_NONE = 0,
-    MO_GOTPCREL = 1
+    // MO_GOTPCREL -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
+    MO_GOTPCREL = 1,
+    // MO_GOTPCREL32_LO -> symbol@gotpcrel32@lo -> R_AMDGPU_GOTPCREL32_LO.
+    MO_GOTPCREL32 = 2,
+    MO_GOTPCREL32_LO = 2,
+    // MO_GOTPCREL32_HI -> symbol@gotpcrel32@hi -> R_AMDGPU_GOTPCREL32_HI.
+    MO_GOTPCREL32_HI = 3,
+    // MO_REL32_LO -> symbol@rel32@lo -> R_AMDGPU_REL32_LO.
+    MO_REL32 = 4,
+    MO_REL32_LO = 4,
+    // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
+    MO_REL32_HI = 5
   };
 
   explicit SIInstrInfo(const SISubtarget &);

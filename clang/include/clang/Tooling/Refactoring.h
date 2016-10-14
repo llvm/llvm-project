@@ -55,6 +55,9 @@ public:
 
   /// \brief Apply all stored replacements to the given Rewriter.
   ///
+  /// FileToReplaces will be deduplicated with `groupReplacementsByFile` before
+  /// application.
+  ///
   /// Replacement applications happen independently of the success of other
   /// applications.
   ///
@@ -74,6 +77,9 @@ private:
 /// given Replacements, this function also formats the changed code.
 ///
 /// \pre Replacements must be conflict-free.
+///
+/// FileToReplaces will be deduplicated with `groupReplacementsByFile` before
+/// application.
 ///
 /// Replacement applications happen independently of the success of other
 /// applications.

@@ -79,9 +79,9 @@ def write_syms(sym_list, out=None, names_only=False):
     """
     out_str = ''
     out_list = sym_list
+    out_list.sort(key=lambda x: x['name'])
     if names_only:
         out_list = [sym['name'] for sym in sym_list]
-        out_list.sort()
     for sym in out_list:
         out_str += '%s\n' % sym
     if out is None:

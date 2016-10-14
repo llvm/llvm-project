@@ -174,6 +174,9 @@ XRayPatchingStatus ControlPatching(bool Enable) {
     case XRayEntryType::EXIT:
       Success = patchFunctionExit(Enable, FuncId, Sled);
       break;
+    case XRayEntryType::TAIL:
+      Success = patchFunctionTailExit(Enable, FuncId, Sled);
+      break;
     default:
       Report("Unsupported sled kind: %d", int(Sled.Kind));
       continue;

@@ -2682,15 +2682,19 @@ Following notations are used for specifying relocation calculations:
 AMDGPU Backend generates *Elf64_Rela* relocation records with the following
 supported relocation types:
 
-  =====================  =====  ==========  ====================
-  Relocation type        Value  Field       Calculation
-  =====================  =====  ==========  ====================
-  ``R_AMDGPU_NONE``      0      ``none``    ``none``
-  ``R_AMDGPU_ABS32_LO``  1      ``word32``  (S + A) & 0xFFFFFFFF
-  ``R_AMDGPU_ABS32_HI``  2      ``word32``  (S + A) >> 32
-  ``R_AMDGPU_ABS64``     3      ``word64``  S + A
-  ``R_AMDGPU_REL32``     4      ``word32``  S + A - P
-  ``R_AMDGPU_REL64``     5      ``word64``  S + A - P
-  ``R_AMDGPU_ABS32``     6      ``word32``  S + A
-  ``R_AMDGPU_GOTPCREL``  7      ``word32``  G + GOT + A - P
-  =====================  =====  ==========  ====================
+  ==========================  =====  ==========  ==============================
+  Relocation type             Value  Field       Calculation
+  ==========================  =====  ==========  ==============================
+  ``R_AMDGPU_NONE``           0      ``none``    ``none``
+  ``R_AMDGPU_ABS32_LO``       1      ``word32``  (S + A) & 0xFFFFFFFF
+  ``R_AMDGPU_ABS32_HI``       2      ``word32``  (S + A) >> 32
+  ``R_AMDGPU_ABS64``          3      ``word64``  S + A
+  ``R_AMDGPU_REL32``          4      ``word32``  S + A - P
+  ``R_AMDGPU_REL64``          5      ``word64``  S + A - P
+  ``R_AMDGPU_ABS32``          6      ``word32``  S + A
+  ``R_AMDGPU_GOTPCREL``       7      ``word32``  G + GOT + A - P
+  ``R_AMDGPU_GOTPCREL32_LO``  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
+  ``R_AMDGPU_GOTPCREL32_HI``  9      ``word32``  (G + GOT + A - P) >> 32
+  ``R_AMDGPU_REL32_LO``       10     ``word32``  (S + A - P) & 0xFFFFFFFF
+  ``R_AMDGPU_REL32_HI``       11     ``word32``  (S + A - P) >> 32
+  ==========================  =====  ==========  ==============================

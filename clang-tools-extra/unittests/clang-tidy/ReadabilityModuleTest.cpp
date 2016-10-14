@@ -15,9 +15,9 @@ TEST(NamespaceCommentCheckTest, Basic) {
             runCheckOnCode<NamespaceCommentCheck>("namespace i {\n}"));
   EXPECT_EQ("namespace {\n} // namespace",
             runCheckOnCode<NamespaceCommentCheck>("namespace {\n}"));
-  EXPECT_EQ(
-      "namespace i { namespace j {\n} // namespace j\n } // namespace i",
-      runCheckOnCode<NamespaceCommentCheck>("namespace i { namespace j {\n} }"));
+  EXPECT_EQ("namespace i { namespace j {\n} // namespace j\n } // namespace i",
+            runCheckOnCode<NamespaceCommentCheck>(
+                "namespace i { namespace j {\n} }"));
 }
 
 TEST(NamespaceCommentCheckTest, SingleLineNamespaces) {
@@ -49,10 +49,11 @@ TEST(NamespaceCommentCheckTest, CheckExistingComments) {
             "} // Anonymous namespace.",
             runCheckOnCode<NamespaceCommentCheck>("namespace {\n"
                                                   "} // Anonymous namespace."));
-  EXPECT_EQ("namespace q {\n"
-            "} // namespace q",
-            runCheckOnCode<NamespaceCommentCheck>("namespace q {\n"
-                                                  "} // anonymous namespace q"));
+  EXPECT_EQ(
+      "namespace q {\n"
+      "} // namespace q",
+      runCheckOnCode<NamespaceCommentCheck>("namespace q {\n"
+                                            "} // anonymous namespace q"));
   EXPECT_EQ(
       "namespace My_NameSpace123 {\n"
       "} // namespace My_NameSpace123",
@@ -97,7 +98,7 @@ TEST(NamespaceCommentCheckTest, FixWrongComments) {
                                                   "} // random text"));
 }
 
-TEST(BracesAroundStatementsCheck, IfWithComments) {
+TEST(BracesAroundStatementsCheckTest, IfWithComments) {
   EXPECT_EQ("int main() {\n"
             "  if (false /*dummy token*/) {\n"
             "    // comment\n"
@@ -134,7 +135,7 @@ TEST(BracesAroundStatementsCheck, IfWithComments) {
                 "}"));
 }
 
-TEST(BracesAroundStatementsCheck, If) {
+TEST(BracesAroundStatementsCheckTest, If) {
   EXPECT_NO_CHANGES(BracesAroundStatementsCheck, "int main() {\n"
                                                  "  if (false) {\n"
                                                  "    return -1;\n"
@@ -235,7 +236,7 @@ TEST(BracesAroundStatementsCheck, If) {
                                                         "}"));
 }
 
-TEST(BracesAroundStatementsCheck, IfElseWithShortStatements) {
+TEST(BracesAroundStatementsCheckTest, IfElseWithShortStatements) {
   ClangTidyOptions Options;
   Options.CheckOptions["test-check-0.ShortStatementLines"] = "1";
 
@@ -269,7 +270,7 @@ TEST(BracesAroundStatementsCheck, IfElseWithShortStatements) {
                 nullptr, "input.cc", None, Options));
 }
 
-TEST(BracesAroundStatementsCheck, For) {
+TEST(BracesAroundStatementsCheckTest, For) {
   EXPECT_NO_CHANGES(BracesAroundStatementsCheck, "int main() {\n"
                                                  "  for (;;) {\n"
                                                  "    ;\n"
@@ -304,7 +305,7 @@ TEST(BracesAroundStatementsCheck, For) {
                                                         "}"));
 }
 
-TEST(BracesAroundStatementsCheck, ForRange) {
+TEST(BracesAroundStatementsCheckTest, ForRange) {
   EXPECT_NO_CHANGES(BracesAroundStatementsCheck, "int main() {\n"
                                                  "  int arr[4];\n"
                                                  "  for (int i : arr) {\n"
@@ -329,7 +330,7 @@ TEST(BracesAroundStatementsCheck, ForRange) {
                                                         "}"));
 }
 
-TEST(BracesAroundStatementsCheck, DoWhile) {
+TEST(BracesAroundStatementsCheckTest, DoWhile) {
   EXPECT_NO_CHANGES(BracesAroundStatementsCheck, "int main() {\n"
                                                  "  do {\n"
                                                  "    ;\n"
@@ -347,7 +348,7 @@ TEST(BracesAroundStatementsCheck, DoWhile) {
                                                         "}"));
 }
 
-TEST(BracesAroundStatementsCheck, While) {
+TEST(BracesAroundStatementsCheckTest, While) {
   EXPECT_NO_CHANGES(BracesAroundStatementsCheck, "int main() {\n"
                                                  "  while (false) {\n"
                                                  "    ;\n"
@@ -411,7 +412,7 @@ TEST(BracesAroundStatementsCheck, While) {
                                                         "}"));
 }
 
-TEST(BracesAroundStatementsCheck, Nested) {
+TEST(BracesAroundStatementsCheckTest, Nested) {
   EXPECT_EQ("int main() {\n"
             "  do { if (true) {}} while (false);\n"
             "}",
@@ -446,7 +447,7 @@ TEST(BracesAroundStatementsCheck, Nested) {
                                                   "}"));
 }
 
-TEST(BracesAroundStatementsCheck, Macros) {
+TEST(BracesAroundStatementsCheckTest, Macros) {
   EXPECT_NO_CHANGES(BracesAroundStatementsCheck,
                     "#define IF(COND) if (COND) return -1;\n"
                     "int main() {\n"
@@ -478,6 +479,19 @@ TEST(BracesAroundStatementsCheck, Macros) {
                                                         "  else\n"
                                                         "    DO_IT;\n"
                                                         "}"));
+}
+
+#define EXPECT_NO_CHANGES_WITH_OPTS(Check, Opts, Code)                         \
+  EXPECT_EQ(Code, runCheckOnCode<Check>(Code, nullptr, "input.cc", None, Opts))
+TEST(BracesAroundStatementsCheckTest, ImplicitCastInReturn) {
+  ClangTidyOptions Opts;
+  Opts.CheckOptions["test-check-0.ShortStatementLines"] = "1";
+
+  EXPECT_NO_CHANGES_WITH_OPTS(BracesAroundStatementsCheck, Opts,
+                              "const char *f() {\n"
+                              "  if (true) return \"\";\n"
+                              "  return \"abc\";\n"
+                              "}\n");
 }
 
 } // namespace test

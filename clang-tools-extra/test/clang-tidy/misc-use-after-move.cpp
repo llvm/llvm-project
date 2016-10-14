@@ -133,6 +133,7 @@ void moveAfterMove() {
       std::move(a);
       // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'a' used after it was moved
       // CHECK-MESSAGES: [[@LINE-2]]:7: note: move occurred here
+      // CHECK-MESSAGES: [[@LINE-3]]:17: note: the use happens in a later loop
     }
   }
 }
@@ -391,7 +392,8 @@ void useAndMoveInLoop() {
     for (int i = 0; i < 10; ++i) {
       a.foo();
       // CHECK-MESSAGES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE+1]]:7: note: move occurred here
+      // CHECK-MESSAGES: [[@LINE+2]]:7: note: move occurred here
+      // CHECK-MESSAGES: [[@LINE-3]]:7: note: the use happens in a later loop
       std::move(a);
     }
   }
@@ -586,7 +588,7 @@ void assignments(int i) {
   }
 }
 
-// Passing the object to a function through a non-const pointer or refernce
+// Passing the object to a function through a non-const pointer or reference
 // counts as a re-initialization.
 void passByNonConstPointer(A *);
 void passByNonConstReference(A &);

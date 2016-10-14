@@ -123,7 +123,9 @@ const char ExpectedTestCC[] = "#include \"foo.h\"\n"
                               "} // namespace b\n"
                               "} // namespace a\n";
 
-const char ExpectedNewHeader[] = "namespace a {\n"
+const char ExpectedNewHeader[] = "#ifndef NEW_FOO_H\n"
+                                 "#define NEW_FOO_H\n"
+                                 "namespace a {\n"
                                  "class C1; // test\n"
                                  "namespace b {\n"
                                  "// This is a Foo class\n"
@@ -138,7 +140,8 @@ const char ExpectedNewHeader[] = "namespace a {\n"
                                  "  static int b;\n"
                                  "}; // abc\n"
                                  "} // namespace b\n"
-                                 "} // namespace a\n";
+                                 "} // namespace a\n"
+                                 "#endif // NEW_FOO_H\n";
 
 const char ExpectedNewCC[] = "namespace a {\n"
                              "namespace b {\n"

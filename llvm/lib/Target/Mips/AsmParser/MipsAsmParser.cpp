@@ -3827,6 +3827,8 @@ MipsAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
     return Match_Success;
   case Mips::DATI:
   case Mips::DAHI:
+  case Mips::DATI_MM64R6:
+  case Mips::DAHI_MM64R6:
     if (static_cast<MipsOperand &>(*Operands[1])
             .isValidForTie(static_cast<MipsOperand &>(*Operands[2])))
       return Match_Success;
@@ -3835,6 +3837,14 @@ MipsAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
 }
 unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   switch (Inst.getOpcode()) {
+  // As described by the MIPSR6 spec, daui must not use the zero operand for
+  // its source operand.
+  case Mips::DAUI:
+  case Mips::DAUI_MM64R6:
+    if (Inst.getOperand(1).getReg() == Mips::ZERO ||
+        Inst.getOperand(1).getReg() == Mips::ZERO_64)
+      return Match_RequiresNoZeroRegister;
+    return Match_Success;
   // As described by the Mips32r2 spec, the registers Rd and Rs for
   // jalr.hb must be different.
   // It also applies for registers Rt and Rs of microMIPSr6 jalrc.hb instruction

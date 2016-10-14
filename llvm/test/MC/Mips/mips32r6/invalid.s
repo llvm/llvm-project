@@ -10,6 +10,8 @@ local_label:
         .set noat
         align   $4, $2, $3, -1    # CHECK: :[[@LINE]]:29: error: expected 2-bit unsigned immediate
         align   $4, $2, $3, 4     # CHECK: :[[@LINE]]:29: error: expected 2-bit unsigned immediate
+        aui     $4, $4, 65536     # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
+        aui     $4, $4, -1        # CHECK: :[[@LINE]]:25: error: expected 16-bit unsigned immediate
         jalr.hb $31 # CHECK: :[[@LINE]]:9: error: source and destination must be different
         jalr.hb $31, $31 # CHECK: :[[@LINE]]:9: error: source and destination must be different
         swc2    $25,24880($s0)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled

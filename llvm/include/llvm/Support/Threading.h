@@ -115,6 +115,10 @@ namespace llvm {
     TsanHappensAfter(&flag);
 #endif
   }
+
+  /// Get the amount of currency based on physical cores, if available for the
+  /// host system, otherwise falls back to thread::hardware_concurrency().
+  unsigned hardware_physical_concurrency();
 }
 
 #endif

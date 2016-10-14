@@ -24,6 +24,11 @@ namespace clang {
 namespace move {
 namespace {
 
+// FIXME: Move to ASTMatchers.
+AST_MATCHER(VarDecl, isStaticDataMember) {
+  return Node.isStaticDataMember();
+}
+
 AST_MATCHER_P(Decl, hasOutermostEnclosingClass,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
   const auto* Context = Node.getDeclContext();
@@ -188,27 +193,6 @@ std::string getDeclarationSourceText(const clang::Decl *D,
   return SourceText.str();
 }
 
-clang::tooling::Replacement
-getReplacementInChangedCode(const clang::tooling::Replacements &Replacements,
-                            const clang::tooling::Replacement &Replacement) {
-  unsigned Start = Replacements.getShiftedCodePosition(Replacement.getOffset());
-  unsigned End = Replacements.getShiftedCodePosition(Replacement.getOffset() +
-                                                     Replacement.getLength());
-  return clang::tooling::Replacement(Replacement.getFilePath(), Start,
-                                     End - Start,
-                                     Replacement.getReplacementText());
-}
-
-void addOrMergeReplacement(const clang::tooling::Replacement &Replacement,
-                           clang::tooling::Replacements *Replacements) {
-  auto Err = Replacements->add(Replacement);
-  if (Err) {
-    llvm::consumeError(std::move(Err));
-    auto Replace = getReplacementInChangedCode(*Replacements, Replacement);
-    *Replacements = Replacements->merge(clang::tooling::Replacements(Replace));
-  }
-}
-
 bool isInHeaderFile(const clang::SourceManager &SM, const clang::Decl *D,
                     llvm::StringRef OriginalRunningDirectory,
                     llvm::StringRef OldHeader) {
@@ -244,20 +228,26 @@ std::vector<std::string> GetNamespaces(const clang::Decl *D) {
 clang::tooling::Replacements
 createInsertedReplacements(const std::vector<std::string> &Includes,
                            const std::vector<ClangMoveTool::MovedDecl> &Decls,
-                           llvm::StringRef FileName) {
-  clang::tooling::Replacements InsertedReplacements;
+                           llvm::StringRef FileName,
+                           bool IsHeader = false) {
+  std::string NewCode;
+  std::string GuardName(FileName);
+  if (IsHeader) {
+    std::replace(GuardName.begin(), GuardName.end(), '/', '_');
+    std::replace(GuardName.begin(), GuardName.end(), '.', '_');
+    std::replace(GuardName.begin(), GuardName.end(), '-', '_');
+
+    GuardName = StringRef(GuardName).upper();
+    NewCode += "#ifndef " + GuardName + "\n";
+    NewCode += "#define " + GuardName + "\n";
+  }
 
   // Add #Includes.
-  std::string AllIncludesString;
-  // FIXME: Add header guard.
   for (const auto &Include : Includes)
-    AllIncludesString += Include;
+    NewCode += Include;
 
-  if (!AllIncludesString.empty()) {
-    clang::tooling::Replacement InsertInclude(FileName, 0, 0,
-                                              AllIncludesString + "\n");
-    addOrMergeReplacement(InsertInclude, &InsertedReplacements);
-  }
+  if (!Includes.empty())
+    NewCode += "\n";
 
   // Add moved class definition and its related declarations. All declarations
   // in same namespace are grouped together.
@@ -280,30 +270,23 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
     for (auto It = CurrentNamespaces.rbegin(); RemainingSize > 0;
          --RemainingSize, ++It) {
       assert(It < CurrentNamespaces.rend());
-      auto code = "} // namespace " + *It + "\n";
-      clang::tooling::Replacement InsertedReplacement(FileName, 0, 0, code);
-      addOrMergeReplacement(InsertedReplacement, &InsertedReplacements);
+      NewCode += "} // namespace " + *It + "\n";
     }
     while (DeclIt != DeclNamespaces.end()) {
-      clang::tooling::Replacement InsertedReplacement(
-          FileName, 0, 0, "namespace " + *DeclIt + " {\n");
-      addOrMergeReplacement(InsertedReplacement, &InsertedReplacements);
+      NewCode += "namespace " + *DeclIt + " {\n";
       ++DeclIt;
     }
-
-    clang::tooling::Replacement InsertedReplacement(
-        FileName, 0, 0, getDeclarationSourceText(MovedDecl.Decl, MovedDecl.SM));
-    addOrMergeReplacement(InsertedReplacement, &InsertedReplacements);
-
+    NewCode += getDeclarationSourceText(MovedDecl.Decl, MovedDecl.SM);
     CurrentNamespaces = std::move(NextNamespaces);
   }
   std::reverse(CurrentNamespaces.begin(), CurrentNamespaces.end());
-  for (const auto &NS : CurrentNamespaces) {
-    clang::tooling::Replacement InsertedReplacement(
-        FileName, 0, 0, "} // namespace " + NS + "\n");
-    addOrMergeReplacement(InsertedReplacement, &InsertedReplacements);
-  }
-  return InsertedReplacements;
+  for (const auto &NS : CurrentNamespaces)
+    NewCode += "} // namespace " + NS + "\n";
+
+  if (IsHeader)
+    NewCode += "#endif // " + GuardName + "\n";
+  return clang::tooling::Replacements(
+      clang::tooling::Replacement(FileName, 0, 0, NewCode));
 }
 
 } // namespace
@@ -365,7 +348,8 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
       this);
 
   // Match static member variable definition of the moved class.
-  Finder->addMatcher(varDecl(InMovedClass, InOldCC, isDefinition())
+  Finder->addMatcher(varDecl(InMovedClass, InOldCC, isDefinition(),
+                             isStaticDataMember())
                          .bind("class_static_var_decl"),
                      this);
 
@@ -464,7 +448,11 @@ void ClangMoveTool::removeClassDefinitionInOldFiles() {
                            Range.getBegin(), Range.getEnd()),
         "");
     std::string FilePath = RemoveReplacement.getFilePath().str();
-    addOrMergeReplacement(RemoveReplacement, &FileToReplacements[FilePath]);
+    auto Err = FileToReplacements[FilePath].add(RemoveReplacement);
+    if (Err) {
+      llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+      continue;
+    }
 
     llvm::StringRef Code =
         SM.getBufferData(SM.getFileID(MovedDecl.Decl->getLocation()));
@@ -494,7 +482,7 @@ void ClangMoveTool::moveClassDefinitionToNewFiles() {
 
   if (!Spec.NewHeader.empty())
     FileToReplacements[Spec.NewHeader] = createInsertedReplacements(
-        HeaderIncludes, NewHeaderDecls, Spec.NewHeader);
+        HeaderIncludes, NewHeaderDecls, Spec.NewHeader, /*IsHeader=*/true);
   if (!Spec.NewCC.empty())
     FileToReplacements[Spec.NewCC] =
         createInsertedReplacements(CCIncludes, NewCCDecls, Spec.NewCC);

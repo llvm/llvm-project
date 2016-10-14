@@ -170,7 +170,8 @@ public:
     TvOS,       // Apple tvOS
     WatchOS,    // Apple watchOS
     Mesa3D,
-    LastOSType = Mesa3D
+    Contiki,
+    LastOSType = Contiki
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -487,6 +488,10 @@ public:
     return Env == Triple::GNU || Env == Triple::GNUABI64 ||
            Env == Triple::GNUEABI || Env == Triple::GNUEABIHF ||
            Env == Triple::GNUX32;
+  }
+
+  bool isOSContiki() const {
+    return getOS() == Triple::Contiki;
   }
 
   /// Checks if the environment could be MSVC.
