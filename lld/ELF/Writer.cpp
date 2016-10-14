@@ -546,15 +546,15 @@ void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
 }
 
 template <class ELFT>
-static Symbol *addOptionalSynthetic(StringRef Name,
-                                    OutputSectionBase<ELFT> *Sec,
-                                    typename ELFT::uint Val) {
+static Symbol *
+addOptionalSynthetic(StringRef Name, OutputSectionBase<ELFT> *Sec,
+                     typename ELFT::uint Val, uint8_t StOther = STV_HIDDEN) {
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S)
     return nullptr;
   if (!S->isUndefined() && !S->isShared())
     return S->symbol();
-  return Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, STV_HIDDEN);
+  return Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
 }
 
 template <class ELFT>
@@ -974,15 +974,9 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
   if (!isValidCIdentifier(S))
     return;
   StringSaver Saver(Alloc);
-  StringRef Start = Saver.save("__start_" + S);
-  StringRef Stop = Saver.save("__stop_" + S);
-  if (SymbolBody *B = Symtab<ELFT>::X->find(Start))
-    if (B->isUndefined())
-      Symtab<ELFT>::X->addSynthetic(Start, Sec, 0, B->getVisibility());
-  if (SymbolBody *B = Symtab<ELFT>::X->find(Stop))
-    if (B->isUndefined())
-      Symtab<ELFT>::X->addSynthetic(
-          Stop, Sec, DefinedSynthetic<ELFT>::SectionEnd, B->getVisibility());
+  addOptionalSynthetic(Saver.save("__start_" + S), Sec, 0, STV_DEFAULT);
+  addOptionalSynthetic(Saver.save("__stop_" + S), Sec,
+                       DefinedSynthetic<ELFT>::SectionEnd, STV_DEFAULT);
 }
 
 template <class ELFT>

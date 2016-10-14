@@ -8,10 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
+// REQUIRES-ANY: c++98, c++03, c++11, c++14
 
 // class function<R(ArgTypes...)>
 
 // template<class A> function(allocator_arg_t, const A&);
+//
+// This signature was removed in C++17
 
 #include <functional>
 #include <cassert>

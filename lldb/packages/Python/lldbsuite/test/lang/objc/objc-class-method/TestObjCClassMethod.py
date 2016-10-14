@@ -24,9 +24,7 @@ class TestObjCClassMethod(TestBase):
             self.main_source, '// Set breakpoint here.')
 
     @skipUnlessDarwin
-    @expectedFailureAll(archs=["i[3-6]86"])
     @add_test_categories(['pyapi'])
-    # rdar://problem/9745789 "expression" can't call functions in class methods
     def test_with_python_api(self):
         """Test calling functions in class methods."""
         self.build()

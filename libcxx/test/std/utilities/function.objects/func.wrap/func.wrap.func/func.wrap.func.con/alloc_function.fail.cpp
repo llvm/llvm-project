@@ -8,21 +8,23 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// REQUIRES-ANY: c++98, c++03, c++11, c++14
+// XFAIL: c++98, c++03, c++11, c++14
 
 // class function<R(ArgTypes...)>
 
-// template<class A> function(allocator_arg_t, const A&, nullptr_t);
+// template<class A> function(allocator_arg_t, const A&, const function&);
 //
 // This signature was removed in C++17
+
 
 #include <functional>
 #include <cassert>
 
-#include "min_allocator.h"
+#include "test_macros.h"
 
 int main()
 {
-    std::function<int(int)> f(std::allocator_arg, bare_allocator<int>(), nullptr);
-    assert(!f);
+	typedef std::function<void(int)> F;
+	F f1;
+	F f2(std::allocator_arg, std::allocator<int>(), f1);
 }

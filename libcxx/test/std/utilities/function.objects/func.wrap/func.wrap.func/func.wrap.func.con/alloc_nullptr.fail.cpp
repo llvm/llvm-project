@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// REQUIRES-ANY: c++98, c++03, c++11, c++14
+// XFAIL: c++98, c++03, c++11, c++14
 
 // class function<R(ArgTypes...)>
 
@@ -23,6 +23,5 @@
 
 int main()
 {
-    std::function<int(int)> f(std::allocator_arg, bare_allocator<int>(), nullptr);
-    assert(!f);
+    std::function<int(int)> f(std::allocator_arg, std::allocator<int>(), nullptr);
 }

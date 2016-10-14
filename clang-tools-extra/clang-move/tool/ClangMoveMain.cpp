@@ -15,9 +15,10 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <set>
 #include <string>
 
@@ -37,8 +38,10 @@ std::error_code CreateNewFile(const llvm::Twine &path) {
 
 cl::OptionCategory ClangMoveCategory("clang-move options");
 
-cl::opt<std::string> Name("name", cl::desc("The name of class being moved."),
-                          cl::cat(ClangMoveCategory));
+cl::opt<std::string>
+    Names("names", cl::desc("A comma-separated list of the names of classes "
+                            "being moved, e.g. \"Foo\", \"a::Foo, b::Foo\"."),
+          cl::cat(ClangMoveCategory));
 
 cl::opt<std::string>
     OldHeader("old_header",
@@ -70,6 +73,7 @@ cl::opt<bool> Dump("dump_result",
 } // namespace
 
 int main(int argc, const char **argv) {
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   // Add "-fparse-all-comments" compile option to make clang parse all comments,
   // otherwise, ordinary comments like "//" and "/*" won't get parsed (This is
   // a bit of hacky).
@@ -86,7 +90,7 @@ int main(int argc, const char **argv) {
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(),
                                 OptionsParser.getSourcePathList());
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Name = Name;
+  Spec.Names = Names;
   Spec.OldHeader = OldHeader;
   Spec.NewHeader = NewHeader;
   Spec.OldCC = OldCC;
@@ -104,10 +108,22 @@ int main(int argc, const char **argv) {
   if (CodeStatus)
     return CodeStatus;
 
-  if (!NewCC.empty())
-    CreateNewFile(NewCC);
-  if (!NewHeader.empty())
-    CreateNewFile(NewHeader);
+  if (!NewCC.empty()) {
+    std::error_code EC = CreateNewFile(NewCC);
+    if (EC) {
+      llvm::errs() << "Failed to create " << NewCC << ": " << EC.message()
+                   << "\n";
+      return EC.value();
+    }
+  }
+  if (!NewHeader.empty()) {
+    std::error_code EC = CreateNewFile(NewHeader);
+    if (EC) {
+      llvm::errs() << "Failed to create " << NewHeader << ": " << EC.message()
+                   << "\n";
+      return EC.value();
+    }
+  }
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
   clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), &*DiagOpts);
