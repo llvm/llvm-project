@@ -230,8 +230,6 @@ private:
   Replacements(const_iterator Begin, const_iterator End)
       : Replaces(Begin, End) {}
 
-  Replacements mergeReplacements(const ReplacementsImpl &Second) const;
-
   // Returns `R` with new range that refers to code after `Replaces` being
   // applied.
   Replacement getReplacementInChangedCode(const Replacement &R) const;
@@ -294,10 +292,11 @@ std::vector<Range>
 calculateRangesAfterReplacements(const Replacements &Replaces,
                                  const std::vector<Range> &Ranges);
 
-/// \brief Groups a random set of replacements by file path. Replacements
-/// related to the same file entry are put into the same vector.
-std::map<std::string, Replacements>
-groupReplacementsByFile(const Replacements &Replaces);
+/// \brief If there are multiple <File, Replacements> pairs with the same file
+/// path after removing dots, we only keep one pair (with path after dots being
+/// removed) and discard the rest.
+std::map<std::string, Replacements> groupReplacementsByFile(
+    const std::map<std::string, Replacements> &FileToReplaces);
 
 template <typename Node>
 Replacement::Replacement(const SourceManager &Sources,

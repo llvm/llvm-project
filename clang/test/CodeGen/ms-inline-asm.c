@@ -634,6 +634,15 @@ void label5() {
   // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.5__dollar_label$$\0A\09{{.*}}__MSASMLABEL_.5__dollar_label$$:", "~{dirflag},~{fpsr},~{flags}"()
 }
 
+void label6(){
+  __asm {
+      jmp short label
+    label:
+  }
+  // CHECK-LABEL: define void @label6
+  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.6__label\0A\09{{.*}}__MSASMLABEL_.6__label:", "~{dirflag},~{fpsr},~{flags}"()
+}
+
 typedef union _LARGE_INTEGER {
   struct {
     unsigned int LowPart;
