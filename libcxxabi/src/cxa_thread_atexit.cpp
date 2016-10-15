@@ -99,7 +99,7 @@ namespace {
   };
 } // namespace
 
-#endif // HAVE__CXA_THREAD_ATEXIT_IMPL
+#endif // HAVE___CXA_THREAD_ATEXIT_IMPL
 
 extern "C" {
 

@@ -25,7 +25,7 @@ else()
   list(APPEND LIBCXXABI_SOURCES cxa_noexception.cpp)
 endif()
 
-if (UNIX AND NOT (APPLE OR CYGWIN))
+if (LIBCXXABI_ENABLE_THREADS AND UNIX AND NOT (APPLE OR CYGWIN))
   list(APPEND LIBCXXABI_SOURCES cxa_thread_atexit.cpp)
 endif()
 

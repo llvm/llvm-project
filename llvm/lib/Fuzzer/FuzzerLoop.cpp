@@ -753,16 +753,28 @@ void Fuzzer::Loop() {
     }
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
       break;
-    if (Options.MaxTotalTimeSec > 0 &&
-        secondsSinceProcessStartUp() >
-            static_cast<size_t>(Options.MaxTotalTimeSec))
-      break;
+    if (TimedOut()) break;
     // Perform several mutations and runs.
     MutateAndTestOne();
   }
 
   PrintStats("DONE  ", "\n");
   MD.PrintRecommendedDictionary();
+}
+
+void Fuzzer::MinimizeCrashLoop(const Unit &U) {
+  if (U.size() <= 2) return;
+  while (!TimedOut() && TotalNumberOfRuns < Options.MaxNumberOfRuns) {
+    MD.StartMutationSequence();
+    memcpy(CurrentUnitData, U.data(), U.size());
+    for (int i = 0; i < Options.MutateDepth; i++) {
+      size_t NewSize = MD.Mutate(CurrentUnitData, U.size(), MaxMutationLen);
+      assert(NewSize > 0 && NewSize <= MaxMutationLen);
+      RunOne(CurrentUnitData, NewSize);
+      TryDetectingAMemoryLeak(CurrentUnitData, NewSize,
+                              /*DuringInitialCorpusExecution*/ false);
+    }
+  }
 }
 
 } // namespace fuzzer
