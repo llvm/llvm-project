@@ -105,9 +105,9 @@ const InstructionSelector *AArch64Subtarget::getInstructionSelector() const {
   return GISel->getInstructionSelector();
 }
 
-const MachineLegalizer *AArch64Subtarget::getMachineLegalizer() const {
+const LegalizerInfo *AArch64Subtarget::getLegalizerInfo() const {
   assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getMachineLegalizer();
+  return GISel->getLegalizerInfo();
 }
 
 const RegisterBankInfo *AArch64Subtarget::getRegBankInfo() const {

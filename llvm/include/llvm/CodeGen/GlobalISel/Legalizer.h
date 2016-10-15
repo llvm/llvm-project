@@ -1,4 +1,4 @@
-//== llvm/CodeGen/GlobalISel/MachineLegalizePass.h ------------- -*- C++ -*-==//
+//== llvm/CodeGen/GlobalISel/LegalizePass.h ------------- -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,7 +28,7 @@ namespace llvm {
 
 class MachineRegisterInfo;
 
-class MachineLegalizePass : public MachineFunctionPass {
+class Legalizer : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -39,9 +39,9 @@ private:
 
 public:
   // Ctor, nothing fancy.
-  MachineLegalizePass();
+  Legalizer();
 
-  StringRef getPassName() const override { return "MachineLegalizePass"; }
+  StringRef getPassName() const override { return "Legalizer"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

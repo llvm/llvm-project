@@ -148,7 +148,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
   RegisterRef OffsetRR;
   NodeId OffsetRegRD = 0;
   for (NodeAddr<UseNode *> UA : AddAslSN.Addr->members_if(DFG->IsUse, *DFG)) {
-    RegisterRef RR = UA.Addr->getRegRef();
+    RegisterRef RR = UA.Addr->getRegRef(*DFG);
     if (OffsetReg == RR.Reg) {
       OffsetRR = RR;
       OffsetRegRD = UA.Addr->getReachingDef();
@@ -191,7 +191,7 @@ bool HexagonOptAddrMode::allValidCandidates(NodeAddr<StmtNode *> SA,
                                             NodeList &UNodeList) {
   for (auto I = UNodeList.rbegin(), E = UNodeList.rend(); I != E; ++I) {
     NodeAddr<UseNode *> UN = *I;
-    RegisterRef UR = UN.Addr->getRegRef();
+    RegisterRef UR = UN.Addr->getRegRef(*DFG);
     NodeSet Visited, Defs;
     const auto &ReachingDefs = LV->getAllReachingDefsRec(UR, UN, Visited, Defs);
     if (ReachingDefs.size() > 1) {
@@ -215,7 +215,7 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
   for (NodeAddr<DefNode *> DA : SA.Addr->members_if(DFG->IsDef, *DFG)) {
     DEBUG(dbgs() << "\t\t[DefNode]: " << Print<NodeAddr<DefNode *>>(DA, *DFG)
                  << "\n");
-    RegisterRef DR = DA.Addr->getRegRef();
+    RegisterRef DR = DA.Addr->getRegRef(*DFG);
     auto UseSet = LV->getAllReachedUses(DR, DA);
 
     for (auto UI : UseSet) {
@@ -575,7 +575,7 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
 void HexagonOptAddrMode::updateMap(NodeAddr<InstrNode *> IA) {
   RegisterSet RRs;
   for (NodeAddr<RefNode *> RA : IA.Addr->members(*DFG))
-    RRs.insert(RA.Addr->getRegRef());
+    RRs.insert(RA.Addr->getRegRef(*DFG));
   bool Common = false;
   for (auto &R : RDefMap) {
     if (!RRs.count(R.first))

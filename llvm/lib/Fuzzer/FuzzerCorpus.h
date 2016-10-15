@@ -153,6 +153,12 @@ class InputCorpus {
     return Res;
   }
 
+  void ResetFeatureSet() {
+    assert(Inputs.empty());
+    memset(InputSizesPerFeature, 0, sizeof(InputSizesPerFeature));
+    memset(SmallestElementPerFeature, 0, sizeof(SmallestElementPerFeature));
+  }
+
 private:
 
   static const bool FeatureDebug = false;

@@ -479,6 +479,9 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
       Res = 1;
   }
 
+  if (Res && Options.UseCmp)
+    TPC.ProcessTORC(MD.GetTraceCmpDictionary(), CurrentUnitData, Size);
+
   CheckExitOnSrcPos();
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
@@ -513,6 +516,8 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
   TPC.ResetMaps();
+  if (Options.UseCmp)
+    TPC.ResetTORC();
   if (Options.UseCounters)
     TPC.ResetGuards();
   int Res = CB(DataCopy, Size);
@@ -594,15 +599,22 @@ UnitVector Fuzzer::FindExtraUnits(const UnitVector &Initial,
     ShuffleCorpus(&Res);
     TPC.ResetMaps();
     TPC.ResetGuards();
+    Corpus.ResetFeatureSet();
     ResetCoverage();
 
-    for (auto &U : Initial)
+    for (auto &U : Initial) {
+      TPC.ResetMaps();
+      TPC.ResetGuards();
       RunOne(U);
+    }
 
     Tmp.clear();
-    for (auto &U : Res)
+    for (auto &U : Res) {
+      TPC.ResetMaps();
+      TPC.ResetGuards();
       if (RunOne(U))
         Tmp.push_back(U);
+    }
 
     char Stat[7] = "MIN   ";
     Stat[3] = '0' + Iter;
@@ -741,16 +753,28 @@ void Fuzzer::Loop() {
     }
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
       break;
-    if (Options.MaxTotalTimeSec > 0 &&
-        secondsSinceProcessStartUp() >
-            static_cast<size_t>(Options.MaxTotalTimeSec))
-      break;
+    if (TimedOut()) break;
     // Perform several mutations and runs.
     MutateAndTestOne();
   }
 
   PrintStats("DONE  ", "\n");
   MD.PrintRecommendedDictionary();
+}
+
+void Fuzzer::MinimizeCrashLoop(const Unit &U) {
+  if (U.size() <= 2) return;
+  while (!TimedOut() && TotalNumberOfRuns < Options.MaxNumberOfRuns) {
+    MD.StartMutationSequence();
+    memcpy(CurrentUnitData, U.data(), U.size());
+    for (int i = 0; i < Options.MutateDepth; i++) {
+      size_t NewSize = MD.Mutate(CurrentUnitData, U.size(), MaxMutationLen);
+      assert(NewSize > 0 && NewSize <= MaxMutationLen);
+      RunOne(CurrentUnitData, NewSize);
+      TryDetectingAMemoryLeak(CurrentUnitData, NewSize,
+                              /*DuringInitialCorpusExecution*/ false);
+    }
+  }
 }
 
 } // namespace fuzzer

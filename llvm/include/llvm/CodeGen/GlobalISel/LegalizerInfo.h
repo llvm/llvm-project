@@ -1,4 +1,4 @@
-//==-- llvm/CodeGen/GlobalISel/MachineLegalizer.h ----------------*- C++ -*-==//
+//==-- llvm/CodeGen/GlobalISel/LegalizerInfo.h -------------------*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -46,7 +46,7 @@ struct InstrAspect {
   }
 };
 
-class MachineLegalizer {
+class LegalizerInfo {
 public:
   enum LegalizeAction : std::uint8_t {
     /// The operation is expected to be selectable directly by the target, and
@@ -95,7 +95,7 @@ public:
     NotFound,
   };
 
-  MachineLegalizer();
+  LegalizerInfo();
 
   /// Compute any ancillary tables needed to quickly decide how an operation
   /// should be handled. This must be called after all "set*Action"methods but

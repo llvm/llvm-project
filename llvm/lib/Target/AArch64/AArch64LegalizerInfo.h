@@ -1,4 +1,4 @@
-//===- AArch64Machinelegalizer --------------------------------*- C++ -*-==//
+//===- AArch64LegalizerInfo --------------------------------------*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,16 +15,16 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINELEGALIZER_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINELEGALIZER_H
 
-#include "llvm/CodeGen/GlobalISel/MachineLegalizer.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 
 namespace llvm {
 
 class LLVMContext;
 
 /// This class provides the information for the target register banks.
-class AArch64MachineLegalizer : public MachineLegalizer {
+class AArch64LegalizerInfo : public LegalizerInfo {
 public:
-  AArch64MachineLegalizer();
+  AArch64LegalizerInfo();
 };
 } // End llvm namespace.
 #endif

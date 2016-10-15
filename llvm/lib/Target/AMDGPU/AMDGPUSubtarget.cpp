@@ -85,6 +85,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FP64Denormals(false),
     FPExceptions(false),
     FlatForGlobal(false),
+    UnalignedScratchAccess(false),
     UnalignedBufferAccess(false),
 
     EnableXNACK(false),

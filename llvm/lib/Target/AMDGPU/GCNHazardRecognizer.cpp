@@ -42,6 +42,21 @@ static bool isDivFMas(unsigned Opcode) {
   return Opcode == AMDGPU::V_DIV_FMAS_F32 || Opcode == AMDGPU::V_DIV_FMAS_F64;
 }
 
+static bool isSGetReg(unsigned Opcode) {
+  return Opcode == AMDGPU::S_GETREG_B32;
+}
+
+static bool isSSetReg(unsigned Opcode) {
+  return Opcode == AMDGPU::S_SETREG_B32 || Opcode == AMDGPU::S_SETREG_IMM32_B32;
+}
+
+static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
+
+  const MachineOperand *RegOp = TII->getNamedOperand(RegInstr,
+                                                     AMDGPU::OpName::simm16);
+  return RegOp->getImm() & AMDGPU::Hwreg::ID_MASK_;
+}
+
 ScheduleHazardRecognizer::HazardType
 GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   MachineInstr *MI = SU->getInstr();
@@ -56,6 +71,9 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
     return NoopHazard;
 
   if (isDivFMas(MI->getOpcode()) && checkDivFMasHazards(MI) > 0)
+    return NoopHazard;
+
+  if (isSGetReg(MI->getOpcode()) && checkGetRegHazards(MI) > 0)
     return NoopHazard;
 
   return NoHazard;
@@ -77,6 +95,9 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
 
   if (isDivFMas(MI->getOpcode()))
     return std::max(0, checkDivFMasHazards(MI));
+
+  if (isSGetReg(MI->getOpcode()))
+    return std::max(0, checkGetRegHazards(MI));
 
   return 0;
 }
@@ -133,6 +154,19 @@ int GCNHazardRecognizer::getWaitStatesSinceDef(
       continue;
     if (MI->modifiesRegister(Reg, TRI))
       return WaitStates;
+  }
+  return std::numeric_limits<int>::max();
+}
+
+int GCNHazardRecognizer::getWaitStatesSinceSetReg(
+    function_ref<bool(MachineInstr *)> IsHazard) {
+
+  int WaitStates = -1;
+  for (MachineInstr *MI : EmittedInstrs) {
+    ++WaitStates;
+    if (!MI || !isSSetReg(MI->getOpcode()) || !IsHazard(MI))
+      continue;
+    return WaitStates;
   }
   return std::numeric_limits<int>::max();
 }
@@ -283,4 +317,17 @@ int GCNHazardRecognizer::checkDivFMasHazards(MachineInstr *DivFMas) {
   int WaitStatesNeeded = getWaitStatesSinceDef(AMDGPU::VCC, IsHazardDefFn);
 
   return DivFMasWaitStates - WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkGetRegHazards(MachineInstr *GetRegInstr) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  unsigned GetRegHWReg = getHWReg(TII, *GetRegInstr);
+
+  const int GetRegWaitStates = 2;
+  auto IsHazardFn = [TII, GetRegHWReg] (MachineInstr *MI) {
+    return GetRegHWReg == getHWReg(TII, *MI);
+  };
+  int WaitStatesNeeded = getWaitStatesSinceSetReg(IsHazardFn);
+
+  return GetRegWaitStates - WaitStatesNeeded;
 }

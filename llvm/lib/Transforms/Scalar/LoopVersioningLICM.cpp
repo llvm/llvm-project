@@ -92,8 +92,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 #define DEBUG_TYPE "loop-versioning-licm"
-static const char* LICMVersioningMetaData =
-    "llvm.loop.licm_versioning.disable";
+static const char *LICMVersioningMetaData = "llvm.loop.licm_versioning.disable";
 
 using namespace llvm;
 
@@ -158,34 +157,48 @@ struct LoopVersioningLICM : public LoopPass {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequiredID(LoopSimplifyID);
     AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 
   LoopVersioningLICM()
-      : LoopPass(ID), AA(nullptr), SE(nullptr), LI(nullptr), DT(nullptr),
-        TLI(nullptr), LAA(nullptr), LAI(nullptr), Changed(false),
-        Preheader(nullptr), CurLoop(nullptr), CurAST(nullptr),
-        LoopDepthThreshold(LVLoopDepthThreshold),
+      : LoopPass(ID), AA(nullptr), SE(nullptr), LAA(nullptr), LAI(nullptr),
+        CurLoop(nullptr), LoopDepthThreshold(LVLoopDepthThreshold),
         InvariantThreshold(LVInvarThreshold), LoadAndStoreCounter(0),
         InvariantCounter(0), IsReadOnlyLoop(true) {
     initializeLoopVersioningLICMPass(*PassRegistry::getPassRegistry());
   }
+  StringRef getPassName() const override { return "Loop Versioning for LICM"; }
 
-  AliasAnalysis *AA;         // Current AliasAnalysis information
-  ScalarEvolution *SE;       // Current ScalarEvolution
-  LoopInfo *LI;              // Current LoopInfo
-  DominatorTree *DT;         // Dominator Tree for the current Loop.
-  TargetLibraryInfo *TLI;    // TargetLibraryInfo for constant folding.
-  LoopAccessLegacyAnalysis *LAA;   // Current LoopAccessAnalysis
-  const LoopAccessInfo *LAI; // Current Loop's LoopAccessInfo
+  void reset() {
+    AA = nullptr;
+    SE = nullptr;
+    LAA = nullptr;
+    CurLoop = nullptr;
+    LoadAndStoreCounter = 0;
+    InvariantCounter = 0;
+    IsReadOnlyLoop = true;
+    CurAST.reset();
+  }
 
-  bool Changed;            // Set to true when we change anything.
-  BasicBlock *Preheader;   // The preheader block of the current loop.
-  Loop *CurLoop;           // The current loop we are working on.
-  AliasSetTracker *CurAST; // AliasSet information for the current loop.
-  ValueToValueMap Strides;
+  class AutoResetter {
+  public:
+    AutoResetter(LoopVersioningLICM &LVLICM) : LVLICM(LVLICM) {}
+    ~AutoResetter() { LVLICM.reset(); }
+
+  private:
+    LoopVersioningLICM &LVLICM;
+  };
+
+private:
+  AliasAnalysis *AA;             // Current AliasAnalysis information
+  ScalarEvolution *SE;           // Current ScalarEvolution
+  LoopAccessLegacyAnalysis *LAA; // Current LoopAccessAnalysis
+  const LoopAccessInfo *LAI;     // Current Loop's LoopAccessInfo
+
+  Loop *CurLoop; // The current loop we are working on.
+  std::unique_ptr<AliasSetTracker>
+      CurAST; // AliasSet information for the current loop.
 
   unsigned LoopDepthThreshold;  // Maximum loop nest threshold
   float InvariantThreshold;     // Minimum invariant threshold
@@ -200,7 +213,6 @@ struct LoopVersioningLICM : public LoopPass {
   bool isLoopAlreadyVisited();
   void setNoAliasToLoop(Loop *);
   bool instructionSafeForVersioning(Instruction *);
-  StringRef getPassName() const override { return "Loop Versioning"; }
 };
 }
 
@@ -505,29 +517,30 @@ void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
 }
 
 bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
+  // This will automatically release all resources hold by the current
+  // LoopVersioningLICM object.
+  AutoResetter Resetter(*this);
+
   if (skipLoop(L))
     return false;
-  Changed = false;
   // Get Analysis information.
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
   LAI = nullptr;
   // Set Current Loop
   CurLoop = L;
-  // Get the preheader block.
-  Preheader = L->getLoopPreheader();
-  // Initial allocation
-  CurAST = new AliasSetTracker(*AA);
+  CurAST.reset(new AliasSetTracker(*AA));
 
   // Loop over the body of this loop, construct AST.
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   for (auto *Block : L->getBlocks()) {
     if (LI->getLoopFor(Block) == L) // Ignore blocks in subloop.
       CurAST->add(*Block);          // Incorporate the specified basic block
   }
+
+  bool Changed = false;
+
   // Check feasiblity of LoopVersioningLICM.
   // If versioning found to be feasible and beneficial then proceed
   // else simply return, by cleaning up memory.
@@ -535,6 +548,7 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     // Do loop versioning.
     // Create memcheck for memory accessed inside loop.
     // Clone original loop, and set blocks properly.
+    DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LoopVersioning LVer(*LAI, CurLoop, LI, DT, SE, true);
     LVer.versionLoop();
     // Set Loop Versioning metaData for original loop.
@@ -548,8 +562,6 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     setNoAliasToLoop(LVer.getVersionedLoop());
     Changed = true;
   }
-  // Delete allocated memory.
-  delete CurAST;
   return Changed;
 }
 
@@ -564,7 +576,6 @@ INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LoopVersioningLICM, "loop-versioning-licm",
                     "Loop Versioning For LICM", false, false)
 
