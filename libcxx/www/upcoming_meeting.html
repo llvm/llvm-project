@@ -76,7 +76,7 @@
 	 <tr><td><a href="http://wg21.link/LWG2534">2534</a></td><td>Constrain rvalue stream operators</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2536">2536</a></td><td>What should &lt;complex.h&gt; do?</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2540">2540</a></td><td>unordered_multimap::insert hint iterator</td><td>Issaquah</td><td>We already do this</td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2543">2543</a></td><td>LWG 2148 (hash support for enum types) seems under-specified</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2543">2543</a></td><td>LWG 2148 (hash support for enum types) seems under-specified</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2544">2544</a></td><td>istreambuf_iterator(basic_streambuf<charT, traits>* s) effects unclear when s is 0</td><td>Issaquah</td><td>We already do this</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2556">2556</a></td><td>Wide contract for future::share()</td><td>Issaquah</td><td>Patch ready</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2562">2562</a></td><td>Consistent total ordering of pointers by comparison functors</td><td>Issaquah</td><td></td></tr>
@@ -88,10 +88,10 @@
 	 <tr><td><a href="http://wg21.link/LWG2589">2589</a></td><td>match_results can't satisfy the requirements of a container</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2591">2591</a></td><td>std::function's member template target() should not lead to undefined behaviour</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2598">2598</a></td><td>addressof works on temporaries</td><td>Issaquah</td><td>Patch ready</td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2664">2664</a></td><td>operator/ (and other append) semantics not useful if argument has root</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2664">2664</a></td><td>operator/ (and other append) semantics not useful if argument has root</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2665">2665</a></td><td>remove_filename() post condition is incorrect</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2672">2672</a></td><td>Should is_empty use error_code in its specification?</td><td>Issaquah</td><td></td></tr>
-	 <tr><td><a href="http://wg21.link/LWG2678">2678</a></td><td>std::filesystem enum classes overspecified</td><td>Issaquah</td><td></td></tr>
+	 <tr><td><a href="http://wg21.link/LWG2678">2678</a></td><td>std::filesystem enum classes overspecified</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2679">2679</a></td><td>Inconsistent Use of Effects and Equivalent To</td><td>Issaquah</td><td>Nothing to do</td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2680">2680</a></td><td>Add "Equivalent to" to filesystem</td><td>Issaquah</td><td></td></tr>
 	 <tr><td><a href="http://wg21.link/LWG2681">2681</a></td><td>filesystem::copy() cannot copy symlinks</td><td>Issaquah</td><td></td></tr>
@@ -166,7 +166,7 @@
 <li>2589 - This is just wording cleanup. </li>
 <li>2591 - I <b>suspect</b> that this is just better specification of the existing structure. Probably need more tests for this.</li>
 <li>2598 - Patch and tests ready</li>
-<li>2664 - File System; Eric?</li>
+<li>2664 - No change needed. _LIBCPP_DEBUG mode tests the new requirements.</li>
 <li>2665 - File System; Eric?</li>
 <li>2672 - File System; Eric?</li>
 <li>2678 - File System; Eric?</li>

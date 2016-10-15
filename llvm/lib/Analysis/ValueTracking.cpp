@@ -86,7 +86,7 @@ struct Query {
   /// isKnownNonZero, which calls computeKnownBits and ComputeSignBit and
   /// isKnownToBeAPowerOfTwo (all of which can call computeKnownBits), and so
   /// on.
-  std::array<const Value*, MaxDepth> Excluded;
+  std::array<const Value *, MaxDepth> Excluded;
   unsigned NumExcluded;
 
   Query(const DataLayout &DL, AssumptionCache *AC, const Instruction *CxtI,

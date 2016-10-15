@@ -759,6 +759,8 @@ private:
 public:
     // appends
     path& operator/=(const path& __p) {
+        _LIBCPP_ASSERT(!__p.has_root_name(),
+                      "cannot append to a path with a root name");
         __append_sep_if_needed(__p.empty() ? char{} : __p.__pn_[0]);
         __pn_ += __p.native();
         return *this;
