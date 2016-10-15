@@ -40,7 +40,6 @@ class TestSwiftDifferentClangFlags(TestBase):
     @decorators.skipIf(
         debug_info=decorators.no_match("dsym"),
         bugnumber="This test requires a stripped binary and a dSYM")
-    @decorators.skipIf(oslist=["macosx"], bugnumber="rdar://26051347")
     def test_swift_different_clang_flags(self):
         """Test that we use the right compiler flags when debugging"""
         self.buildAll()
