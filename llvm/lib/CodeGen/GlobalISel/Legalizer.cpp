@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/GlobalISel/MachineLegalizePass.cpp -------------------===//
+//===-- llvm/CodeGen/GlobalISel/Legalizer.cpp -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,49 +7,48 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This file implements the LegalizeHelper class to legalize individual
-/// instructions and the MachineLegalizePass wrapper pass for the primary
+/// \file This file implements the LegalizerHelper class to legalize individual
+/// instructions and the LegalizePass wrapper pass for the primary
 /// legalization.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/GlobalISel/MachineLegalizePass.h"
-#include "llvm/CodeGen/GlobalISel/MachineLegalizeHelper.h"
-#include "llvm/CodeGen/GlobalISel/MachineLegalizer.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
-#define DEBUG_TYPE "legalize-mir"
+#define DEBUG_TYPE "legalizer"
 
 using namespace llvm;
 
-char MachineLegalizePass::ID = 0;
-INITIALIZE_PASS_BEGIN(MachineLegalizePass, DEBUG_TYPE,
+char Legalizer::ID = 0;
+INITIALIZE_PASS_BEGIN(Legalizer, DEBUG_TYPE,
                       "Legalize the Machine IR a function's Machine IR", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(MachineLegalizePass, DEBUG_TYPE,
+INITIALIZE_PASS_END(Legalizer, DEBUG_TYPE,
                     "Legalize the Machine IR a function's Machine IR", false,
                     false)
 
-MachineLegalizePass::MachineLegalizePass() : MachineFunctionPass(ID) {
-  initializeMachineLegalizePassPass(*PassRegistry::getPassRegistry());
+Legalizer::Legalizer() : MachineFunctionPass(ID) {
+  initializeLegalizerPass(*PassRegistry::getPassRegistry());
 }
 
-void MachineLegalizePass::getAnalysisUsage(AnalysisUsage &AU) const {
+void Legalizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-void MachineLegalizePass::init(MachineFunction &MF) {
+void Legalizer::init(MachineFunction &MF) {
 }
 
-bool MachineLegalizePass::combineExtracts(MachineInstr &MI,
-                                          MachineRegisterInfo &MRI,
-                                          const TargetInstrInfo &TII) {
+bool Legalizer::combineExtracts(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                const TargetInstrInfo &TII) {
   bool Changed = false;
   if (MI.getOpcode() != TargetOpcode::G_EXTRACT)
     return Changed;
@@ -115,7 +114,7 @@ bool MachineLegalizePass::combineExtracts(MachineInstr &MI,
   return Changed;
 }
 
-bool MachineLegalizePass::runOnMachineFunction(MachineFunction &MF) {
+bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
@@ -123,8 +122,8 @@ bool MachineLegalizePass::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "Legalize Machine IR for: " << MF.getName() << '\n');
   init(MF);
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  const MachineLegalizer &Legalizer = *MF.getSubtarget().getMachineLegalizer();
-  MachineLegalizeHelper Helper(MF);
+  const LegalizerInfo &LegalizerInfo = *MF.getSubtarget().getLegalizerInfo();
+  LegalizerHelper Helper(MF);
 
   // FIXME: an instruction may need more than one pass before it is legal. For
   // example on most architectures <3 x i3> is doubly-illegal. It would
@@ -144,11 +143,11 @@ bool MachineLegalizePass::runOnMachineFunction(MachineFunction &MF) {
       if (!isPreISelGenericOpcode(MI->getOpcode()))
         continue;
 
-      auto Res = Helper.legalizeInstr(*MI, Legalizer);
+      auto Res = Helper.legalizeInstr(*MI, LegalizerInfo);
 
       // Error out if we couldn't legalize this instruction. We may want to fall
       // back to DAG ISel instead in the future.
-      if (Res == MachineLegalizeHelper::UnableToLegalize) {
+      if (Res == LegalizerHelper::UnableToLegalize) {
         if (!TPC.isGlobalISelAbortEnabled()) {
           MF.getProperties().set(
               MachineFunctionProperties::Property::FailedISel);
@@ -161,7 +160,7 @@ bool MachineLegalizePass::runOnMachineFunction(MachineFunction &MF) {
         report_fatal_error(OS.str());
       }
 
-      Changed |= Res == MachineLegalizeHelper::Legalized;
+      Changed |= Res == LegalizerHelper::Legalized;
     }
 
 

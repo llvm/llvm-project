@@ -56,6 +56,7 @@ public:
          FuzzingOptions Options);
   ~Fuzzer();
   void Loop();
+  void MinimizeCrashLoop(const Unit &U);
   void ShuffleAndMinimize(UnitVector *V);
   void InitializeTraceState();
   void RereadOutputCorpus(size_t MaxSize);
@@ -64,6 +65,13 @@ public:
     return duration_cast<seconds>(system_clock::now() - ProcessStartTime)
         .count();
   }
+
+  bool TimedOut() {
+    return Options.MaxTotalTimeSec > 0 &&
+           secondsSinceProcessStartUp() >
+               static_cast<size_t>(Options.MaxTotalTimeSec);
+  }
+
   size_t execPerSec() {
     size_t Seconds = secondsSinceProcessStartUp();
     return Seconds ? TotalNumberOfRuns / Seconds : 0;

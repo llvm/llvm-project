@@ -15,10 +15,8 @@
 // XFAIL: clang-3, apple-clang
 
 // None of the current GCC compilers support this.
-// XFAIL: gcc-4, gcc-5, gcc-6
+// XFAIL: gcc
 
-// TODO Investigate why UBSAN prevents new from calling our replacement.
-// XFAIL: ubsan
 
 #include <new>
 #include <cstddef>
@@ -58,28 +56,31 @@ void operator delete(void* p, std::align_val_t a) throw()
 struct alignas(OverAligned) A {};
 struct alignas(std::max_align_t) B {};
 
+B* volatile bp;
+A* volatile ap;
+
 int main()
 {
     reset();
     {
-        B *x = new B;
+        bp = new B;
         assert(0 == unsized_delete_called);
         assert(0 == unsized_delete_nothrow_called);
         assert(0 == aligned_delete_called);
 
-        delete x;
+        delete bp;
         assert(1 == unsized_delete_called);
         assert(0 == unsized_delete_nothrow_called);
         assert(0 == aligned_delete_called);
     }
     reset();
     {
-        A *x = new A;
+        ap = new A;
         assert(0 == unsized_delete_called);
         assert(0 == unsized_delete_nothrow_called);
         assert(0 == aligned_delete_called);
 
-        delete x;
+        delete ap;
         assert(0 == unsized_delete_called);
         assert(0 == unsized_delete_nothrow_called);
         assert(1 == aligned_delete_called);

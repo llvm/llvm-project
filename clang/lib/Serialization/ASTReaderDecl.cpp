@@ -1216,6 +1216,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
   VD->VarDeclBits.TSCSpec = Record[Idx++];
   VD->VarDeclBits.InitStyle = Record[Idx++];
   if (!isa<ParmVarDecl>(VD)) {
+    VD->NonParmVarDeclBits.IsThisDeclarationADemotedDefinition = Record[Idx++];
     VD->NonParmVarDeclBits.ExceptionVar = Record[Idx++];
     VD->NonParmVarDeclBits.NRVOVariable = Record[Idx++];
     VD->NonParmVarDeclBits.CXXForRangeDecl = Record[Idx++];
@@ -3067,6 +3068,29 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
 }
 
 namespace clang {
+template<>
+void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
+                                           Redeclarable<VarDecl> *D,
+                                           Decl *Previous, Decl *Canon) {
+  VarDecl *VD = static_cast<VarDecl*>(D);
+  VarDecl *PrevVD = cast<VarDecl>(Previous);
+  D->RedeclLink.setPrevious(PrevVD);
+  D->First = PrevVD->First;
+
+  // We should keep at most one definition on the chain.
+  // FIXME: Cache the definition once we've found it. Building a chain with
+  // N definitions currently takes O(N^2) time here.
+  if (VD->isThisDeclarationADefinition() == VarDecl::Definition) {
+    for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
+      if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
+        Reader.mergeDefinitionVisibility(CurD, VD);
+        VD->demoteThisDefinitionToDeclaration();
+        break;
+      }
+    }
+  }
+}
+
 template<>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<FunctionDecl> *D,

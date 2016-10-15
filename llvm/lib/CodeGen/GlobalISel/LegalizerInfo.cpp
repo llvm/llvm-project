@@ -1,4 +1,4 @@
-//===---- lib/CodeGen/GlobalISel/MachineLegalizer.cpp - IRTranslator -------==//
+//===---- lib/CodeGen/GlobalISel/LegalizerInfo.cpp - Legalizer -------==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,7 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/GlobalISel/MachineLegalizer.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -27,7 +27,7 @@
 #include "llvm/Target/TargetOpcodes.h"
 using namespace llvm;
 
-MachineLegalizer::MachineLegalizer() : TablesInitialized(false) {
+LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
   // FIXME: these two can be legalized to the fundamental load/store Jakob
   // proposed. Once loads & stores are supported.
   DefaultActions[TargetOpcode::G_ANYEXT] = Legal;
@@ -41,7 +41,7 @@ MachineLegalizer::MachineLegalizer() : TablesInitialized(false) {
   DefaultActions[TargetOpcode::G_BRCOND] = WidenScalar;
 }
 
-void MachineLegalizer::computeTables() {
+void LegalizerInfo::computeTables() {
   for (unsigned Opcode = 0; Opcode <= LastOp - FirstOp; ++Opcode) {
     for (unsigned Idx = 0; Idx != Actions[Opcode].size(); ++Idx) {
       for (auto &Action : Actions[Opcode][Idx]) {
@@ -63,8 +63,8 @@ void MachineLegalizer::computeTables() {
 // probably going to need specialized lookup structures for various types before
 // we have any hope of doing well with something like <13 x i3>. Even the common
 // cases should do better than what we have now.
-std::pair<MachineLegalizer::LegalizeAction, LLT>
-MachineLegalizer::getAction(const InstrAspect &Aspect) const {
+std::pair<LegalizerInfo::LegalizeAction, LLT>
+LegalizerInfo::getAction(const InstrAspect &Aspect) const {
   assert(TablesInitialized && "backend forgot to call computeTables");
   // These *have* to be implemented for now, they're the fundamental basis of
   // how everything else is transformed.
@@ -113,9 +113,9 @@ MachineLegalizer::getAction(const InstrAspect &Aspect) const {
   return findLegalAction(Aspect, FewerElements);
 }
 
-std::tuple<MachineLegalizer::LegalizeAction, unsigned, LLT>
-MachineLegalizer::getAction(const MachineInstr &MI,
-                            const MachineRegisterInfo &MRI) const {
+std::tuple<LegalizerInfo::LegalizeAction, unsigned, LLT>
+LegalizerInfo::getAction(const MachineInstr &MI,
+                         const MachineRegisterInfo &MRI) const {
   SmallBitVector SeenTypes(8);
   const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
   for (unsigned i = 0; i < MI.getDesc().getNumOperands(); ++i) {
@@ -138,13 +138,13 @@ MachineLegalizer::getAction(const MachineInstr &MI,
   return std::make_tuple(Legal, 0, LLT{});
 }
 
-bool MachineLegalizer::isLegal(const MachineInstr &MI,
-                               const MachineRegisterInfo &MRI) const {
+bool LegalizerInfo::isLegal(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI) const {
   return std::get<0>(getAction(MI, MRI)) == Legal;
 }
 
-LLT MachineLegalizer::findLegalType(const InstrAspect &Aspect,
-                                    LegalizeAction Action) const {
+LLT LegalizerInfo::findLegalType(const InstrAspect &Aspect,
+                                 LegalizeAction Action) const {
   switch(Action) {
   default:
     llvm_unreachable("Cannot find legal type");

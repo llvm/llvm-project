@@ -4068,6 +4068,10 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
       PrettyDeclStackTraceEntry CrashInfo(*this, Var, SourceLocation(),
                                           "instantiating variable initializer");
 
+      // The instantiation is visible here, even if it was first declared in an
+      // unimported module.
+      Var->setHidden(false);
+
       // If we're performing recursive template instantiation, create our own
       // queue of pending implicit instantiations that we will instantiate
       // later, while we're still within our own instantiation context.
@@ -4116,33 +4120,17 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
     Def = PatternDecl->getDefinition();
   }
 
-  // FIXME: Check that the definition is visible before trying to instantiate
-  // it. This requires us to track the instantiation stack in order to know
-  // which definitions should be visible.
+  TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
 
   // If we don't have a definition of the variable template, we won't perform
   // any instantiation. Rather, we rely on the user to instantiate this
   // definition (or provide a specialization for it) in another translation
   // unit.
-  if (!Def) {
-    if (DefinitionRequired) {
-      if (VarSpec) {
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_var_template) << Var;
-        Var->setInvalidDecl();
-      }
-      else
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_member)
-            << 2 << Var->getDeclName() << Var->getDeclContext();
-      Diag(PatternDecl->getLocation(),
-           diag::note_explicit_instantiation_here);
-    } else if (Var->getTemplateSpecializationKind()
-                 == TSK_ExplicitInstantiationDefinition) {
+  if (!Def && !DefinitionRequired) {
+    if (TSK == TSK_ExplicitInstantiationDefinition) {
       PendingInstantiations.push_back(
         std::make_pair(Var, PointOfInstantiation));
-    } else if (Var->getTemplateSpecializationKind()
-                 == TSK_ImplicitInstantiation) {
+    } else if (TSK == TSK_ImplicitInstantiation) {
       // Warn about missing definition at the end of translation unit.
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
         Diag(PointOfInstantiation, diag::warn_var_template_missing)
@@ -4151,12 +4139,20 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
         if (getLangOpts().CPlusPlus11)
           Diag(PointOfInstantiation, diag::note_inst_declaration_hint) << Var;
       }
+      return;
     }
 
-    return;
   }
 
-  TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
+  // FIXME: We need to track the instantiation stack in order to know which
+  // definitions should be visible within this instantiation.
+  // FIXME: Produce diagnostics when Var->getInstantiatedFromStaticDataMember().
+  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Var,
+                                     /*InstantiatedFromMember*/false,
+                                     PatternDecl, Def, TSK,
+                                     /*Complain*/DefinitionRequired))
+    return;
+
 
   // Never instantiate an explicit specialization.
   if (TSK == TSK_ExplicitSpecialization)

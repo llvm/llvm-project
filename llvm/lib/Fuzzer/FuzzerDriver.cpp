@@ -345,7 +345,7 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   Corpus->AddToCorpus(U, 0);
   F->SetMaxInputLen(U.size());
   F->SetMaxMutationLen(U.size() - 1);
-  F->Loop();
+  F->MinimizeCrashLoop(U);
   Printf("INFO: Done MinimizeCrashInputInternalStep, no crashes found\n");
   exit(0);
   return 0;
