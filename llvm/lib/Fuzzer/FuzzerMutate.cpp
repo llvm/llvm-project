@@ -293,11 +293,6 @@ size_t MutationDispatcher::Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size,
   return Size;
 }
 
-uint8_t  Bswap(uint8_t x)  { return x; }
-uint16_t Bswap(uint16_t x) { return __builtin_bswap16(x); }
-uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
-uint64_t Bswap(uint64_t x) { return __builtin_bswap64(x); }
-
 template<class T>
 size_t ChangeBinaryInteger(uint8_t *Data, size_t Size, Random &Rand) {
   if (Size < sizeof(T)) return 0;

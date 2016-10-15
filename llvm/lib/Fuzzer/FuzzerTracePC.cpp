@@ -208,22 +208,22 @@ void TracePC::TORCToDict(Dictionary *Dict, T FindInData, T Substitute,
   const size_t DataSize = sizeof(T);
   const uint8_t *End = Data + Size;
   int Attempts = 3;
-  // TODO: also swap bytes in FindInData.
-  for (const uint8_t *Cur = Data; Cur < End && Attempts--; Cur++) {
-    Cur = (uint8_t *)memmem(Cur, End - Cur, &FindInData, DataSize);
-    if (!Cur)
-      break;
-    size_t Pos = Cur - Data;
-    for (int Offset = 0; Offset <= 0; Offset++) {
-      T Tmp = Substitute + Offset;
-      Word W(reinterpret_cast<uint8_t *>(&Tmp), sizeof(Tmp));
+  for (int DoSwap = 0; DoSwap <= 1; DoSwap++) {
+    for (const uint8_t *Cur = Data; Cur < End && Attempts--; Cur++) {
+      Cur = (uint8_t *)memmem(Cur, End - Cur, &FindInData, DataSize);
+      if (!Cur)
+        break;
+      size_t Pos = Cur - Data;
+      Word W(reinterpret_cast<uint8_t *>(&Substitute), sizeof(Substitute));
       DictionaryEntry DE(W, Pos);
       // TODO: evict all entries from Dic if it's full.
       Dict->push_back(DE);
       // Printf("Dict[%zd] TORC%zd %llx => %llx pos %zd\n", Dict->size(),
       // sizeof(T),
-      //       (uint64_t)FindInData, (uint64_t)Tmp, Pos);
+      //       (uint64_t)FindInData, (uint64_t)Substitute, Pos);
     }
+    FindInData = Bswap(FindInData);
+    Substitute = Bswap(Substitute);
   }
 }
 
