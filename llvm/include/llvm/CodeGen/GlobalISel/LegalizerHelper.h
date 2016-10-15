@@ -1,4 +1,4 @@
-//== llvm/CodeGen/GlobalISel/MachineLegalizeHelper.h ----------- -*- C++ -*-==//
+//== llvm/CodeGen/GlobalISel/LegalizerHelper.h ---------------- -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,7 +12,7 @@
 /// occur in multiple phases, for example G_ADD <2 x i8> -> G_ADD <2 x i16> ->
 /// G_ADD <4 x i16>.
 ///
-/// The MachineLegalizeHelper class is where most of the work happens, and is
+/// The LegalizerHelper class is where most of the work happens, and is
 /// designed to be callable from other passes that find themselves with an
 /// illegal instruction.
 //
@@ -27,11 +27,11 @@
 
 namespace llvm {
 // Forward declarations.
-class MachineLegalizeInfo;
-class MachineLegalizer;
+class LegalizerInfo;
+class Legalizer;
 class MachineRegisterInfo;
 
-class MachineLegalizeHelper {
+class LegalizerHelper {
 public:
   enum LegalizeResult {
     /// Instruction was already legal and no change was made to the
@@ -46,7 +46,7 @@ public:
     UnableToLegalize,
   };
 
-  MachineLegalizeHelper(MachineFunction &MF);
+  LegalizerHelper(MachineFunction &MF);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -56,10 +56,10 @@ public:
   /// Considered as an opaque blob, the legal code will use and define the same
   /// registers as \p MI.
   LegalizeResult legalizeInstrStep(MachineInstr &MI,
-                                   const MachineLegalizer &Legalizer);
+                                   const LegalizerInfo &LegalizerInfo);
 
   LegalizeResult legalizeInstr(MachineInstr &MI,
-                               const MachineLegalizer &Legalizer);
+                               const LegalizerInfo &LegalizerInfo);
 
   /// Legalize an instruction by emiting a runtime library call instead.
   LegalizeResult libcall(MachineInstr &MI);

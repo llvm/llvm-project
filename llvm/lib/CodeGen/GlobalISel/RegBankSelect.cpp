@@ -12,7 +12,7 @@
 
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/CodeGen/GlobalISel/MachineLegalizer.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -571,9 +571,9 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   // Check that our input is fully legal: we require the function to have the
   // Legalized property, so it should be.
   // FIXME: This should be in the MachineVerifier, but it can't use the
-  // MachineLegalizer as it's currently in the separate GlobalISel library.
+  // LegalizerInfo as it's currently in the separate GlobalISel library.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (const MachineLegalizer *MLI = MF.getSubtarget().getMachineLegalizer()) {
+  if (const LegalizerInfo *MLI = MF.getSubtarget().getLegalizerInfo()) {
     for (const MachineBasicBlock &MBB : MF) {
       for (const MachineInstr &MI : MBB) {
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI)) {

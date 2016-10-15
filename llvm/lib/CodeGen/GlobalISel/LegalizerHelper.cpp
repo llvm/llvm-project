@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/GlobalISel/MachineLegalizeHelper.cpp -----------------===//
+//===-- llvm/CodeGen/GlobalISel/LegalizerHelper.cpp -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This file implements the MachineLegalizeHelper class to legalize
+/// \file This file implements the LegalizerHelper class to legalize
 /// individual instructions and the LegalizeMachineIR wrapper pass for the
 /// primary legalization.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/GlobalISel/MachineLegalizeHelper.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/GlobalISel/MachineLegalizer.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -28,36 +28,36 @@
 
 using namespace llvm;
 
-MachineLegalizeHelper::MachineLegalizeHelper(MachineFunction &MF)
+LegalizerHelper::LegalizerHelper(MachineFunction &MF)
   : MRI(MF.getRegInfo()) {
   MIRBuilder.setMF(MF);
 }
 
-MachineLegalizeHelper::LegalizeResult
-MachineLegalizeHelper::legalizeInstrStep(MachineInstr &MI,
-                                         const MachineLegalizer &Legalizer) {
-  auto Action = Legalizer.getAction(MI, MRI);
+LegalizerHelper::LegalizeResult
+LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
+                                   const LegalizerInfo &LegalizerInfo) {
+  auto Action = LegalizerInfo.getAction(MI, MRI);
   switch (std::get<0>(Action)) {
-  case MachineLegalizer::Legal:
+  case LegalizerInfo::Legal:
     return AlreadyLegal;
-  case MachineLegalizer::Libcall:
+  case LegalizerInfo::Libcall:
     return libcall(MI);
-  case MachineLegalizer::NarrowScalar:
+  case LegalizerInfo::NarrowScalar:
     return narrowScalar(MI, std::get<1>(Action), std::get<2>(Action));
-  case MachineLegalizer::WidenScalar:
+  case LegalizerInfo::WidenScalar:
     return widenScalar(MI, std::get<1>(Action), std::get<2>(Action));
-  case MachineLegalizer::Lower:
+  case LegalizerInfo::Lower:
     return lower(MI, std::get<1>(Action), std::get<2>(Action));
-  case MachineLegalizer::FewerElements:
+  case LegalizerInfo::FewerElements:
     return fewerElementsVector(MI, std::get<1>(Action), std::get<2>(Action));
   default:
     return UnableToLegalize;
   }
 }
 
-MachineLegalizeHelper::LegalizeResult
-MachineLegalizeHelper::legalizeInstr(MachineInstr &MI,
-                                     const MachineLegalizer &Legalizer) {
+LegalizerHelper::LegalizeResult
+LegalizerHelper::legalizeInstr(MachineInstr &MI,
+                               const LegalizerInfo &LegalizerInfo) {
   SmallVector<MachineInstr *, 4> WorkList;
   MIRBuilder.recordInsertions(
       [&](MachineInstr *MI) { WorkList.push_back(MI); });
@@ -67,7 +67,7 @@ MachineLegalizeHelper::legalizeInstr(MachineInstr &MI,
   LegalizeResult Res;
   unsigned Idx = 0;
   do {
-    Res = legalizeInstrStep(*WorkList[Idx], Legalizer);
+    Res = legalizeInstrStep(*WorkList[Idx], LegalizerInfo);
     if (Res == UnableToLegalize) {
       MIRBuilder.stopRecordingInsertions();
       return UnableToLegalize;
@@ -81,8 +81,8 @@ MachineLegalizeHelper::legalizeInstr(MachineInstr &MI,
   return Changed ? Legalized : AlreadyLegal;
 }
 
-void MachineLegalizeHelper::extractParts(unsigned Reg, LLT Ty, int NumParts,
-                                         SmallVectorImpl<unsigned> &VRegs) {
+void LegalizerHelper::extractParts(unsigned Reg, LLT Ty, int NumParts,
+                                   SmallVectorImpl<unsigned> &VRegs) {
   unsigned Size = Ty.getSizeInBits();
   SmallVector<uint64_t, 4> Indexes;
   for (int i = 0; i < NumParts; ++i) {
@@ -92,8 +92,8 @@ void MachineLegalizeHelper::extractParts(unsigned Reg, LLT Ty, int NumParts,
   MIRBuilder.buildExtract(VRegs, Indexes, Reg);
 }
 
-MachineLegalizeHelper::LegalizeResult
-MachineLegalizeHelper::libcall(MachineInstr &MI) {
+LegalizerHelper::LegalizeResult
+LegalizerHelper::libcall(MachineInstr &MI) {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   unsigned Size = Ty.getSizeInBits();
   MIRBuilder.setInstr(MI);
@@ -119,9 +119,9 @@ MachineLegalizeHelper::libcall(MachineInstr &MI) {
   }
 }
 
-MachineLegalizeHelper::LegalizeResult
-MachineLegalizeHelper::narrowScalar(MachineInstr &MI, unsigned TypeIdx,
-                                    LLT NarrowTy) {
+LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
+                                                              unsigned TypeIdx,
+                                                              LLT NarrowTy) {
   // FIXME: Don't know how to handle secondary types yet.
   if (TypeIdx != 0)
     return UnableToLegalize;
@@ -163,9 +163,8 @@ MachineLegalizeHelper::narrowScalar(MachineInstr &MI, unsigned TypeIdx,
   }
 }
 
-MachineLegalizeHelper::LegalizeResult
-MachineLegalizeHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx,
-                                   LLT WideTy) {
+LegalizerHelper::LegalizeResult
+LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   MIRBuilder.setInstr(MI);
 
   switch (MI.getOpcode()) {
@@ -293,8 +292,8 @@ MachineLegalizeHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx,
   }
 }
 
-MachineLegalizeHelper::LegalizeResult
-MachineLegalizeHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   using namespace TargetOpcode;
   MIRBuilder.setInstr(MI);
 
@@ -319,9 +318,9 @@ MachineLegalizeHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   }
 }
 
-MachineLegalizeHelper::LegalizeResult
-MachineLegalizeHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
-                                           LLT NarrowTy) {
+LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
+                                     LLT NarrowTy) {
   // FIXME: Don't know how to handle secondary types yet.
   if (TypeIdx != 0)
     return UnableToLegalize;

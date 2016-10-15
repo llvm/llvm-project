@@ -14,9 +14,6 @@
 
 // UNSUPPORTED: sanitizer-new-delete
 
-// TODO Investigate why UBSAN prevents new from calling our replacement.
-// XFAIL: ubsan
-
 // NOTE: Only clang-3.7 and GCC 5.1 and greater support -fsized-deallocation.
 // REQUIRES: fsized-deallocation
 
@@ -58,9 +55,11 @@ void operator delete(void* p, std::size_t) throw()
     std::free(p);
 }
 
+int* volatile x;
+
 int main()
 {
-    int *x = new int(42);
+    x = new int(42);
     assert(0 == sized_delete_called);
     assert(0 == unsized_delete_called);
     assert(0 == unsized_delete_nothrow_called);

@@ -1,4 +1,4 @@
-; RUN: llc -O2  -march=ppc64 -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -O2  -mtriple=powerpc64-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
 
 define i64 @foo() {
 entry:

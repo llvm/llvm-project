@@ -5,9 +5,9 @@ set(GLOBAL_ISEL_FILES
       InstructionSelect.cpp
       InstructionSelector.cpp
       MachineIRBuilder.cpp
-      MachineLegalizeHelper.cpp
-      MachineLegalizePass.cpp
-      MachineLegalizer.cpp
+      LegalizerHelper.cpp
+      Legalizer.cpp
+      LegalizerInfo.cpp
       RegBankSelect.cpp
       RegisterBank.cpp
       RegisterBankInfo.cpp

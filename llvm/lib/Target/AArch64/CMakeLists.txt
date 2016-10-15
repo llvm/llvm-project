@@ -20,7 +20,7 @@ add_public_tablegen_target(AArch64CommonTableGen)
 set(GLOBAL_ISEL_FILES
       AArch64CallLowering.cpp
       AArch64InstructionSelector.cpp
-      AArch64MachineLegalizer.cpp
+      AArch64LegalizerInfo.cpp
       AArch64RegisterBankInfo.cpp
       )
 
