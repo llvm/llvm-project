@@ -98,11 +98,13 @@ configuration. Passing the option on the command line will override the default.
 
 .. program:: lit
 
-.. option:: --cxx_under_test=<path/to/compiler>
+.. option:: cxx_under_test=<path/to/compiler>
 
   Specify the compiler used to build the tests.
 
-.. option:: --cxx_stdlib_under_test=[libc++, libstdc++, cxx_default]
+.. option:: cxx_stdlib_under_test=<stdlib name>
+
+  **Values**: libc++, libstdc++
 
   Specify the C++ standard library being tested. Unless otherwise specified
   libc++ is used. This option is intended to allow running the libc++ test
@@ -114,24 +116,24 @@ configuration. Passing the option on the command line will override the default.
 
   Change the standard version used when building the tests.
 
-.. option:: --libcxx_site_config=<path/to/lit.site.cfg>
+.. option:: libcxx_site_config=<path/to/lit.site.cfg>
 
   Specify the site configuration to use when running the tests.  This option
   overrides the enviroment variable LIBCXX_SITE_CONFIG.
 
-.. option:: --cxx_headers=<path/to/headers>
+.. option:: cxx_headers=<path/to/headers>
 
   Specify the c++ standard library headers that are tested. By default the
   headers in the source tree are used.
 
-.. option:: --cxx_library_root=<path/to/lib/>
+.. option:: cxx_library_root=<path/to/lib/>
 
   Specify the directory of the libc++ library to be tested. By default the
   library folder of the build directory is used. This option cannot be used
   when use_system_lib is provided.
 
 
-.. option:: --cxx_runtime_root=<path/to/lib/>
+.. option:: cxx_runtime_root=<path/to/lib/>
 
   Specify the directory of the libc++ library to use at runtime. This directory
   is not added to the linkers search path. This can be used to compile tests
@@ -139,21 +141,21 @@ configuration. Passing the option on the command line will override the default.
   for this option is `cxx_library_root`. This option cannot be used
   when use_system_lib is provided.
 
-.. option:: --use_system_lib=<bool>
+.. option:: use_system_lib=<bool>
 
   **Default**: False
 
   Enable or disable testing against the installed version of libc++ library.
   Note: This does not use the installed headers.
 
-.. option:: --use_lit_shell=<bool>
+.. option:: use_lit_shell=<bool>
 
   Enable or disable the use of LIT's internal shell in ShTests. If the
   environment variable LIT_USE_INTERNAL_SHELL is present then that is used as
   the default value. Otherwise the default value is True on Windows and False
   on every other platform.
 
-.. option:: --no_default_flags=<bool>
+.. option:: no_default_flags=<bool>
 
   **Default**: False
 
@@ -161,16 +163,16 @@ configuration. Passing the option on the command line will override the default.
   option is used only flags specified using the compile_flags and link_flags
   will be used.
 
-.. option:: --compile_flags="<list-of-args>"
+.. option:: compile_flags="<list-of-args>"
 
   Specify additional compile flags as a space delimited string.
   Note: This options should not be used to change the standard version used.
 
-.. option:: --link_flags="<list-of-args>"
+.. option:: link_flags="<list-of-args>"
 
   Specify additional link flags as a space delimited string.
 
-.. option:: --debug_level=<level>
+.. option:: debug_level=<level>
 
   **Values**: 0, 1
 

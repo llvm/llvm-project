@@ -126,6 +126,7 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  bool ZWxneeded;
   DiscardPolicy Discard;
   SortSectionPolicy SortSection;
   StripPolicy Strip = StripPolicy::None;

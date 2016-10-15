@@ -562,17 +562,23 @@ void UseAfterMoveFinder::getReinits(
 }
 
 static void emitDiagnostic(const Expr *MovingCall,
-                           const ValueDecl *MovedVariable,
+                           const DeclRefExpr *MoveArg,
                            const UseAfterMove &Use, ClangTidyCheck *Check,
                            ASTContext *Context) {
-  Check->diag(Use.DeclRef->getExprLoc(), "'%0' used after it was moved")
-      << MovedVariable->getName();
-  Check->diag(MovingCall->getExprLoc(), "move occurred here",
-              DiagnosticIDs::Note);
+  SourceLocation UseLoc = Use.DeclRef->getExprLoc();
+  SourceLocation MoveLoc = MovingCall->getExprLoc();
+
+  Check->diag(UseLoc, "'%0' used after it was moved")
+      << MoveArg->getDecl()->getName();
+  Check->diag(MoveLoc, "move occurred here", DiagnosticIDs::Note);
   if (Use.EvaluationOrderUndefined) {
-    Check->diag(Use.DeclRef->getExprLoc(),
+    Check->diag(UseLoc,
                 "the use and move are unsequenced, i.e. there is no guarantee "
                 "about the order in which they are evaluated",
+                DiagnosticIDs::Note);
+  } else if (UseLoc < MoveLoc || Use.DeclRef == MoveArg) {
+    Check->diag(UseLoc,
+                "the use happens in a later loop iteration than the move",
                 DiagnosticIDs::Note);
   }
 }
@@ -625,8 +631,6 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   else
     return;
 
-  const ValueDecl *MovedVariable = Arg->getDecl();
-
   // Ignore the std::move if the variable that was passed to it isn't a local
   // variable.
   if (!Arg->getDecl()->getDeclContext()->isFunctionOrMethod())
@@ -634,8 +638,8 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
   UseAfterMoveFinder finder(Result.Context);
   UseAfterMove Use;
-  if (finder.find(FunctionBody, MovingCall, MovedVariable, &Use))
-    emitDiagnostic(MovingCall, MovedVariable, Use, this, Result.Context);
+  if (finder.find(FunctionBody, MovingCall, Arg->getDecl(), &Use))
+    emitDiagnostic(MovingCall, Arg, Use, this, Result.Context);
 }
 
 } // namespace misc

@@ -21,17 +21,23 @@
 // RUN: FileCheck -input-file=%T/clang-move/src/test.cpp -check-prefix=CHECK-OLD-TEST-CPP %s
 // RUN: FileCheck -input-file=%T/clang-move/include/test.h %s -implicit-check-not='{{namespace.*}}'
 //
+//
+// CHECK-NEW-TEST-H: #ifndef {{.*}}CLANG_MOVE_NEW_TEST_H
+// CHECK-NEW-TEST-H: #define {{.*}}CLANG_MOVE_NEW_TEST_H
 // CHECK-NEW-TEST-H: namespace a {
 // CHECK-NEW-TEST-H: class Foo {
 // CHECK-NEW-TEST-H: public:
 // CHECK-NEW-TEST-H:   int f();
+// CHECK-NEW-TEST-H:   int f2(int a, int b);
 // CHECK-NEW-TEST-H: };
 // CHECK-NEW-TEST-H: } // namespace a
+// CHECK-NEW-TEST-H: #endif // {{.*}}CLANG_MOVE_NEW_TEST_H
 //
 // CHECK-NEW-TEST-CPP: #include "{{.*}}new_test.h"
 // CHECK-NEW-TEST-CPP: #include "test2.h"
 // CHECK-NEW-TEST-CPP: namespace a {
 // CHECK-NEW-TEST-CPP: int Foo::f() { return 0; }
+// CHECK-NEW-TEST-CPP: int Foo::f2(int a, int b) { return a + b; }
 // CHECK-NEW-TEST-CPP: } // namespace a
 //
 // CHECK-OLD-TEST-CPP: #include "test.h"

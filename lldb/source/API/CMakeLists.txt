@@ -135,10 +135,26 @@ endif()
 target_link_libraries(liblldb PRIVATE ${LLDB_SYSTEM_LIBS})
 
 if(LLDB_BUILD_FRAMEWORK)
+  file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
   set_target_properties(liblldb PROPERTIES
     OUTPUT_NAME LLDB
     FRAMEWORK On
     FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}
+    PUBLIC_HEADER "${public_headers}")
+
+  # This works around a CMake bug where POST_BUILD steps are not applied to 
+  # framework targets. This fix is merged into the CMake release branch and
+  # should be available with CMake 3.7 rc2:
+  # https://gitlab.kitware.com/cmake/cmake/issues/16363
+  if(CMAKE_VERSION VERSION_GREATER 3.6.99)
+    add_custom_command(TARGET liblldb POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLDB_SOURCE_DIR}/include/lldb/API $<TARGET_FILE_DIR:liblldb>/Headers)
+  else()
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Headers
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLDB_SOURCE_DIR}/include/lldb/API $<TARGET_FILE_DIR:liblldb>/Headers)
+    add_custom_target(lldb_header_symlink
+      DEPENDS ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Headers)
+  endif()
 endif()
 

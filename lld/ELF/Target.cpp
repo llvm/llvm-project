@@ -1479,8 +1479,14 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   switch (Type) {
   case R_AMDGPU_ABS32:
   case R_AMDGPU_GOTPCREL:
+  case R_AMDGPU_GOTPCREL32_LO:
   case R_AMDGPU_REL32:
+  case R_AMDGPU_REL32_LO:
     write32le(Loc, Val);
+    break;
+  case R_AMDGPU_GOTPCREL32_HI:
+  case R_AMDGPU_REL32_HI:
+    write32le(Loc, Val >> 32);
     break;
   default:
     fatal("unrecognized reloc " + Twine(Type));
@@ -1492,8 +1498,12 @@ RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_AMDGPU_ABS32:
     return R_ABS;
   case R_AMDGPU_REL32:
+  case R_AMDGPU_REL32_LO:
+  case R_AMDGPU_REL32_HI:
     return R_PC;
   case R_AMDGPU_GOTPCREL:
+  case R_AMDGPU_GOTPCREL32_LO:
+  case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
     fatal("do not know how to handle relocation " + Twine(Type));

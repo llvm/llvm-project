@@ -11,9 +11,6 @@
 
 // UNSUPPORTED: sanitizer-new-delete
 
-// TODO Investigate why UBSAN prevents nothrow new from calling our replacement.
-// XFAIL: ubsan
-
 #include <new>
 #include <cstddef>
 #include <cstdlib>
@@ -44,9 +41,11 @@ struct A
     ~A() {A_constructed = false;}
 };
 
+A* volatile ap;
+
 int main()
 {
-    A* ap = new (std::nothrow) A;
+    ap = new (std::nothrow) A;
     assert(ap);
     assert(A_constructed);
     assert(new_called);

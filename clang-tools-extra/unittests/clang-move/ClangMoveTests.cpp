@@ -123,7 +123,9 @@ const char ExpectedTestCC[] = "#include \"foo.h\"\n"
                               "} // namespace b\n"
                               "} // namespace a\n";
 
-const char ExpectedNewHeader[] = "namespace a {\n"
+const char ExpectedNewHeader[] = "#ifndef NEW_FOO_H\n"
+                                 "#define NEW_FOO_H\n"
+                                 "namespace a {\n"
                                  "class C1; // test\n"
                                  "namespace b {\n"
                                  "// This is a Foo class\n"
@@ -138,7 +140,8 @@ const char ExpectedNewHeader[] = "namespace a {\n"
                                  "  static int b;\n"
                                  "}; // abc\n"
                                  "} // namespace b\n"
-                                 "} // namespace a\n";
+                                 "} // namespace a\n"
+                                 "#endif // NEW_FOO_H\n";
 
 const char ExpectedNewCC[] = "namespace a {\n"
                              "namespace b {\n"
@@ -210,7 +213,7 @@ runClangMoveOnCode(const move::ClangMoveTool::MoveDefinitionSpec &Spec) {
 
 TEST(ClangMove, MoveHeaderAndCC) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Names = "a::b::Foo";
+  Spec.Names = { "a::b::Foo" };
   Spec.OldHeader = "foo.h";
   Spec.OldCC = "foo.cc";
   Spec.NewHeader = "new_foo.h";
@@ -225,7 +228,7 @@ TEST(ClangMove, MoveHeaderAndCC) {
 
 TEST(ClangMove, MoveHeaderOnly) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Names = "a::b::Foo";
+  Spec.Names = { "a::b::Foo" };
   Spec.OldHeader = "foo.h";
   Spec.NewHeader = "new_foo.h";
   auto Results = runClangMoveOnCode(Spec);
@@ -236,7 +239,7 @@ TEST(ClangMove, MoveHeaderOnly) {
 
 TEST(ClangMove, MoveCCOnly) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Names = "a::b::Foo";
+  Spec.Names = { "a::b::Foo" };
   Spec.OldCC = "foo.cc";
   Spec.NewCC = "new_foo.cc";
   std::string ExpectedHeader = "#include \"foo.h\"\n\n";
@@ -248,7 +251,7 @@ TEST(ClangMove, MoveCCOnly) {
 
 TEST(ClangMove, MoveNonExistClass) {
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Names = "NonExistFoo";
+  Spec.Names = { "NonExistFoo" };
   Spec.OldHeader = "foo.h";
   Spec.OldCC = "foo.cc";
   Spec.NewHeader = "new_foo.h";

@@ -411,6 +411,16 @@ endif()
 # Feature flags ===============================================================
 define_if(MSVC -D_CRT_SECURE_NO_WARNINGS)
 
+# Modules flags ===============================================================
+# FIXME The libc++ sources are fundamentally non-modular. They need special
+# versions of the headers in order to provide C++03 and legacy ABI definitions.
+# NOTE: The public headers can be used with modules in all other contexts.
+if (LLVM_ENABLE_MODULES)
+  # Ignore that the rest of the modules flags are now unused.
+  add_compile_flags_if_supported(-Wno-unused-command-line-argument)
+  add_compile_flags(-fno-modules)
+endif()
+
 # Sanitizer flags =============================================================
 
 # Configure for sanitizers. If LIBCXX_STANDALONE_BUILD then we have to do

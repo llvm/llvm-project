@@ -19,23 +19,20 @@
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-// These checks are carefully arranged so as not to trigger a gcc pre-processor
-// defect which causes it to fail to parse the __has_include check below, the
-// redundancy is intentional.
-#if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
-#if !defined(__clang__) && (_GNUC_VER < 500)
-#include <__external_threading>
-#define _LIBCPP_EXTERNAL_THREADING
-#elif !defined(__has_include) || __has_include(<__external_threading>)
-#include <__external_threading>
-#define _LIBCPP_EXTERNAL_THREADING
-#endif
+#ifndef __libcpp_has_include
+  #ifndef __has_include
+    #define __libcpp_has_include(x) 0
+  #else
+    #define __libcpp_has_include(x) __has_include(x)
+  #endif
 #endif
 
-#if !defined(_LIBCPP_EXTERNAL_THREADING)
+#if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL) && \
+    __libcpp_has_include(<__external_threading>)
+#include <__external_threading>
+#else
 #include <pthread.h>
 #include <sched.h>
-#endif
 
 #if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
 #define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_FUNC_VIS
@@ -241,6 +238,8 @@ void __libcpp_tls_set(__libcpp_tls_key __key, void* __p)
 #endif // _LIBCPP_HAS_THREAD_API_PTHREAD || _LIBCPP_BUILDING_EXTERNAL_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // !_LIBCPP_HAS_THREAD_API_EXTERNAL || !__libcpp_has_include(<__external_threading>)
 
 #endif // _LIBCPP_HAS_NO_THREADS
 

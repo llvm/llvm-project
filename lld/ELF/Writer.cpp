@@ -1097,6 +1097,14 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     Hdr.add(Out<ELFT>::EhFrameHdr);
   }
 
+  // PT_OPENBSD_RANDOMIZE specifies the location and size of a part of the
+  // memory image of the program that must be filled with random data before any
+  // code in the object is executed.
+  if (OutputSectionBase<ELFT> *Sec = findSection(".openbsd.randomdata")) {
+    Phdr &Hdr = *AddHdr(PT_OPENBSD_RANDOMIZE, Sec->getPhdrFlags());
+    Hdr.add(Sec);
+  }
+
   // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
   if (ARMExidx.First)
     Ret.push_back(std::move(ARMExidx));
@@ -1108,6 +1116,13 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     if (Config->ZStackSize != uint64_t(-1))
       Hdr.H.p_memsz = Config->ZStackSize;
   }
+
+  // PT_OPENBSD_WXNEEDED is a OpenBSD-specific header to mark the executable
+  // is expected to perform W^X violations, such as calling mprotect(2) or
+  // mmap(2) with PROT_WRITE | PROT_EXEC, which is prohibited by default on
+  // OpenBSD.
+  if (Config->ZWxneeded)
+    AddHdr(PT_OPENBSD_WXNEEDED, PF_X);
 
   if (Note.First)
     Ret.push_back(std::move(Note));

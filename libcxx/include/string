@@ -1174,6 +1174,7 @@ public:
     int compare(size_type __pos1, size_type __n1, const basic_string& __str) const;
     int compare(size_type __pos1, size_type __n1, const basic_string& __str, size_type __pos2, size_type __n2=npos) const;
     template <class _Tp>
+    inline _LIBCPP_INLINE_VISIBILITY
         typename enable_if
         <
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
