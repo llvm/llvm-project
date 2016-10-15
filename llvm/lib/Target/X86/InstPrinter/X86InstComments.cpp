@@ -979,7 +979,50 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::VBROADCASTF128:
   case X86::VBROADCASTI128:
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z128, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z128, rm)
     DecodeSubVectorBroadcast(MVT::v4f64, MVT::v2f64, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, , rm)
+    DecodeSubVectorBroadcast(MVT::v8f64, MVT::v2f64, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+  CASE_AVX512_INS_COMMON(BROADCASTF64X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X4, , rm)
+    DecodeSubVectorBroadcast(MVT::v8f64, MVT::v4f64, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+  CASE_AVX512_INS_COMMON(BROADCASTF32X4, Z256, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X4, Z256, rm)
+    DecodeSubVectorBroadcast(MVT::v8f32, MVT::v4f32, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+  CASE_AVX512_INS_COMMON(BROADCASTF32X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X4, , rm)
+    DecodeSubVectorBroadcast(MVT::v16f32, MVT::v4f32, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+  CASE_AVX512_INS_COMMON(BROADCASTF32X8, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X8, , rm)
+    DecodeSubVectorBroadcast(MVT::v16f32, MVT::v8f32, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, r)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, r)
+    Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, m)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, m)
+    DecodeSubVectorBroadcast(MVT::v8f32, MVT::v2f32, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, r)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, r)
+    Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, m)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, m)
+    DecodeSubVectorBroadcast(MVT::v16f32, MVT::v2f32, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
