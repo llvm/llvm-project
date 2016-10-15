@@ -5305,3 +5305,14 @@ SanitizerMask PS4CPU::getSupportedSanitizers() const {
   Res |= SanitizerKind::Vptr;
   return Res;
 }
+
+Contiki::Contiki(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
+    : Generic_ELF(D, Triple, Args) {}
+
+SanitizerMask Contiki::getSupportedSanitizers() const {
+  const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  if (IsX86)
+    Res |= SanitizerKind::SafeStack;
+  return Res;
+}

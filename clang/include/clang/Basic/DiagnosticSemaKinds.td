@@ -2579,6 +2579,7 @@ def warn_attribute_wrong_decl_type : Warning<
   "|functions, methods and blocks"
   "|functions, methods, and classes"
   "|functions, methods, and parameters"
+  "|functions, methods, and global variables"
   "|classes"
   "|enums"
   "|variables"

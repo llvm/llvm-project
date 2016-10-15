@@ -1,5 +1,16 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name if.c %s | FileCheck %s
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
 
+int nop() { return 0; }
+
+// CHECK-LABEL: _Z3foov:
+void foo() {                    // CHECK-NEXT: [[@LINE]]:12 -> [[@LINE+5]]:2 = #0
+  if (int j = true ? nop()      // CHECK-NEXT: [[@LINE]]:22 -> [[@LINE]]:27 = #2
+                   : nop();     // CHECK-NEXT: [[@LINE]]:22 -> [[@LINE]]:27 = (#0 - #2)
+      j)                        // CHECK-NEXT: [[@LINE]]:7 -> [[@LINE]]:8 = #0
+    ++j;                        // CHECK-NEXT: [[@LINE]]:5 -> [[@LINE]]:8 = #1
+}
+
+// CHECK-LABEL: main:
 int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
   int i = 0;
                                 // CHECK-NEXT: File 0, [[@LINE+1]]:6 -> [[@LINE+1]]:12 = #0

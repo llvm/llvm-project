@@ -367,7 +367,7 @@ BUILTIN(__builtin_islessgreater , "i.", "Fnc")
 BUILTIN(__builtin_isunordered   , "i.", "Fnc")
 
 // Unary FP classification
-BUILTIN(__builtin_fpclassify, "iiiii.", "Fnc")
+BUILTIN(__builtin_fpclassify, "iiiiii.", "Fnc")
 BUILTIN(__builtin_isfinite,   "i.", "Fnc")
 BUILTIN(__builtin_isinf,      "i.", "Fnc")
 BUILTIN(__builtin_isinf_sign, "i.", "Fnc")

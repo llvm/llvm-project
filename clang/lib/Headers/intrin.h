@@ -1024,11 +1024,6 @@ __movsw(unsigned short *__dst, unsigned short const *__src, size_t __n) {
                         : "%edi", "%esi", "%ecx");
 }
 static __inline__ void __DEFAULT_FN_ATTRS
-__stosb(unsigned char *__dst, unsigned char __x, size_t __n) {
-  __asm__("rep stosb" : : "D"(__dst), "a"(__x), "c"(__n)
-                        : "%edi", "%ecx");
-}
-static __inline__ void __DEFAULT_FN_ATTRS
 __stosd(unsigned long *__dst, unsigned long __x, size_t __n) {
   __asm__("rep stosl" : : "D"(__dst), "a"(__x), "c"(__n)
                         : "%edi", "%ecx");
