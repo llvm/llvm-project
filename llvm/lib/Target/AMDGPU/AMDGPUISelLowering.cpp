@@ -2022,19 +2022,18 @@ static bool isI24(SDValue Op, SelectionDAG &DAG) {
          (VT.getSizeInBits() - DAG.ComputeNumSignBits(Op)) < 24;
 }
 
-static bool simplifyI24(SDValue Op, TargetLowering::DAGCombinerInfo &DCI) {
+static bool simplifyI24(SDNode *Node24, unsigned OpIdx,
+                        TargetLowering::DAGCombinerInfo &DCI) {
 
   SelectionDAG &DAG = DCI.DAG;
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Op = Node24->getOperand(OpIdx);
   EVT VT = Op.getValueType();
 
   APInt Demanded = APInt::getLowBitsSet(VT.getSizeInBits(), 24);
   APInt KnownZero, KnownOne;
   TargetLowering::TargetLoweringOpt TLO(DAG, true, true);
-  if (TLI.SimplifyDemandedBits(Op, Demanded, KnownZero, KnownOne, TLO)) {
-    DCI.CommitTargetLoweringOpt(TLO);
+  if (TLO.SimplifyDemandedBits(Node24, OpIdx, Demanded, DCI))
     return true;
-  }
 
   return false;
 }
@@ -2424,12 +2423,12 @@ SDValue AMDGPUTargetLowering::performMulLoHi24Combine(
   SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
 
+  // Simplify demanded bits before splitting into multiple users.
+  if (simplifyI24(N, 0, DCI) || simplifyI24(N, 1, DCI))
+    return SDValue();
+
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-
-  // Simplify demanded bits before splitting into multiple users.
-  if (simplifyI24(N0, DCI) || simplifyI24(N1, DCI))
-    return SDValue();
 
   bool Signed = (N->getOpcode() == AMDGPUISD::MUL_LOHI_I24);
 
@@ -2632,10 +2631,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MULHI_I24:
   case AMDGPUISD::MULHI_U24: {
-    SDValue N0 = N->getOperand(0);
-    SDValue N1 = N->getOperand(1);
-    simplifyI24(N0, DCI);
-    simplifyI24(N1, DCI);
+    simplifyI24(N, 0, DCI);
+    simplifyI24(N, 1, DCI);
     return SDValue();
   }
   case AMDGPUISD::MUL_LOHI_I24:

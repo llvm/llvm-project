@@ -1954,6 +1954,20 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                        DAG.getConstant(-N1C->getAPIntValue(), DL, VT));
   }
 
+  // Right-shifting everything out but the sign bit followed by negation is the
+  // same as flipping arithmetic/logical shift type without the negation:
+  // -(X >>u 31) -> (X >>s 31)
+  // -(X >>s 31) -> (X >>u 31)
+  if (isNullConstantOrNullSplatConstant(N0) &&
+      (N1->getOpcode() == ISD::SRA || N1->getOpcode() == ISD::SRL)) {
+    ConstantSDNode *ShiftAmt = isConstOrConstSplat(N1.getOperand(1));
+    if (ShiftAmt && ShiftAmt->getZExtValue() == VT.getScalarSizeInBits() - 1) {
+      auto NewOpc = N1->getOpcode() == ISD::SRA ? ISD::SRL :ISD::SRA;
+      if (!LegalOperations || TLI.isOperationLegal(NewOpc, VT))
+        return DAG.getNode(NewOpc, DL, VT, N1.getOperand(0), N1.getOperand(1));
+    }
+  }
+
   // Canonicalize (sub -1, x) -> ~x, i.e. (xor x, -1)
   if (isAllOnesConstantOrAllOnesSplatConstant(N0))
     return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
@@ -2262,8 +2276,8 @@ SDValue DAGCombiner::useDivRem(SDNode *Node) {
   SDValue Op1 = Node->getOperand(1);
   SDValue combined;
   for (SDNode::use_iterator UI = Op0.getNode()->use_begin(),
-         UE = Op0.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
+         UE = Op0.getNode()->use_end(); UI != UE;) {
+    SDNode *User = *UI++;
     if (User == Node || User->use_empty())
       continue;
     // Convert the other matching node(s), too;

@@ -38,12 +38,14 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   int getWaitStatesSinceDef(unsigned Reg,
                             function_ref<bool(MachineInstr *)> IsHazardDef =
                                 [](MachineInstr *) { return true; });
+  int getWaitStatesSinceSetReg(function_ref<bool(MachineInstr *)> IsHazard);
 
   int checkSMEMSoftClauseHazards(MachineInstr *SMEM);
   int checkSMRDHazards(MachineInstr *SMRD);
   int checkVMEMHazards(MachineInstr* VMEM);
   int checkDPPHazards(MachineInstr *DPP);
   int checkDivFMasHazards(MachineInstr *DivFMas);
+  int checkGetRegHazards(MachineInstr *GetRegInstr);
 public:
   GCNHazardRecognizer(const MachineFunction &MF);
   // We can only issue one instruction per cycle.

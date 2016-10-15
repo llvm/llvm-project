@@ -62,6 +62,7 @@ syn keyword llvmKeyword
       \ ccc
       \ cleanup
       \ coldcc
+      \ comdat
       \ common
       \ constant
       \ datalayout
@@ -108,6 +109,7 @@ syn keyword llvmKeyword
       \ noimplicitfloat
       \ noinline
       \ nonlazybind
+      \ norecurse
       \ noredzone
       \ noreturn
       \ nounwind

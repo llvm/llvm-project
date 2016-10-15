@@ -35,13 +35,12 @@ namespace rdf {
 
     Liveness(MachineRegisterInfo &mri, const DataFlowGraph &g)
       : DFG(g), TRI(g.getTRI()), MDT(g.getDT()), MDF(g.getDF()),
-        MRI(mri), Empty(), NoRegs(g.getLMI(), g.getTRI()),
-        Trace(false) {}
+        MRI(mri), Empty(), NoRegs(g.getTRI()), Trace(false) {}
 
     NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
         bool FullChain, const RegisterAggr &DefRRs);
     NodeList getAllReachingDefs(NodeAddr<RefNode*> RefA) {
-      return getAllReachingDefs(RefA.Addr->getRegRef(), RefA, false, NoRegs);
+      return getAllReachingDefs(RefA.Addr->getRegRef(DFG), RefA, false, NoRegs);
     }
     NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA) {
       return getAllReachingDefs(RefRR, RefA, false, NoRegs);

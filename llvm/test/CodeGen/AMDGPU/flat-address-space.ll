@@ -1,7 +1,7 @@
-; RUN: llc -O0 -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NO-PROMOTE %s
-; RUN: llc -O0 -march=amdgcn -mcpu=bonaire -mattr=+promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-PROMOTE %s
-; RUN: llc -O0 -march=amdgcn -mcpu=tonga -mattr=-promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NO-PROMOTE %s
-; RUN: llc -O0 -march=amdgcn -mcpu=tonga -mattr=+promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-PROMOTE %s
+; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NO-PROMOTE %s
+; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire -mattr=+promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-PROMOTE %s
+; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=-promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NO-PROMOTE %s
+; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=+promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-PROMOTE %s
 
 ; Disable optimizations in case there are optimizations added that
 ; specialize away generic pointer accesses.
@@ -73,7 +73,7 @@ define void @load_flat_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noa
 ; CHECK: flat_load_dwordx2
 define void @load_flat_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast i64 addrspace(1)* %gptr to i64 addrspace(4)*
-  %fload = load i64, i64 addrspace(4)* %fptr, align 4
+  %fload = load i64, i64 addrspace(4)* %fptr, align 8
   store i64 %fload, i64 addrspace(1)* %out, align 8
   ret void
 }
@@ -82,7 +82,7 @@ define void @load_flat_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noa
 ; CHECK: flat_load_dwordx4
 define void @load_flat_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast <4 x i32> addrspace(1)* %gptr to <4 x i32> addrspace(4)*
-  %fload = load <4 x i32>, <4 x i32> addrspace(4)* %fptr, align 4
+  %fload = load <4 x i32>, <4 x i32> addrspace(4)* %fptr, align 32
   store <4 x i32> %fload, <4 x i32> addrspace(1)* %out, align 8
   ret void
 }
@@ -124,6 +124,30 @@ define void @zextload_flat_i16(i32 addrspace(1)* noalias %out, i16 addrspace(1)*
   %fload = load i16, i16 addrspace(4)* %fptr, align 4
   %ext = zext i16 %fload to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: flat_scratch_unaligned_load:
+; CHECK: flat_load_ubyte
+; CHECK: flat_load_ubyte
+; CHECK: flat_load_ubyte
+; CHECK: flat_load_ubyte
+define void @flat_scratch_unaligned_load() {
+  %scratch = alloca i32
+  %fptr = addrspacecast i32* %scratch to i32 addrspace(4)*
+  %ld = load volatile i32, i32 addrspace(4)* %fptr, align 1
+  ret void
+}
+
+; CHECK-LABEL: flat_scratch_unaligned_store:
+; CHECK: flat_store_byte
+; CHECK: flat_store_byte
+; CHECK: flat_store_byte
+; CHECK: flat_store_byte
+define void @flat_scratch_unaligned_store() {
+  %scratch = alloca i32
+  %fptr = addrspacecast i32* %scratch to i32 addrspace(4)*
+  store volatile i32 0, i32 addrspace(4)* %fptr, align 1
   ret void
 }
 

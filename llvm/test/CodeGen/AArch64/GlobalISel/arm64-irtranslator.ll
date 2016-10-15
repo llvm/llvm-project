@@ -3,7 +3,7 @@
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-apple-ios"
+target triple = "aarch64--"
 
 ; Tests for add.
 ; CHECK-LABEL: name: addi64

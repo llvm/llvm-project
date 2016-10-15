@@ -271,7 +271,11 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   // DAG legalization, so we can fold some i64 ADDs used for address
   // calculation into the LOAD and STORE instructions.
   case ISD::ADD:
-  case ISD::SUB: {
+  case ISD::ADDC:
+  case ISD::ADDE:
+  case ISD::SUB:
+  case ISD::SUBC:
+  case ISD::SUBE: {
     if (N->getValueType(0) != MVT::i64 ||
         Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS)
       break;
@@ -576,7 +580,12 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  bool IsAdd = (N->getOpcode() == ISD::ADD);
+  unsigned Opcode = N->getOpcode();
+  bool ConsumeCarry = (Opcode == ISD::ADDE || Opcode == ISD::SUBE);
+  bool ProduceCarry =
+      ConsumeCarry || Opcode == ISD::ADDC || Opcode == ISD::SUBC;
+  bool IsAdd =
+      (Opcode == ISD::ADD || Opcode == ISD::ADDC || Opcode == ISD::ADDE);
 
   SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
   SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
@@ -592,25 +601,43 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
                                        DL, MVT::i32, RHS, Sub1);
 
   SDVTList VTList = CurDAG->getVTList(MVT::i32, MVT::Glue);
-  SDValue AddLoArgs[] = { SDValue(Lo0, 0), SDValue(Lo1, 0) };
 
   unsigned Opc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
   unsigned CarryOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
 
-  SDNode *AddLo = CurDAG->getMachineNode( Opc, DL, VTList, AddLoArgs);
-  SDValue Carry(AddLo, 1);
-  SDNode *AddHi
-    = CurDAG->getMachineNode(CarryOpc, DL, MVT::i32,
-                             SDValue(Hi0, 0), SDValue(Hi1, 0), Carry);
+  SDNode *AddLo;
+  if (!ConsumeCarry) {
+    SDValue Args[] = { SDValue(Lo0, 0), SDValue(Lo1, 0) };
+    AddLo = CurDAG->getMachineNode(Opc, DL, VTList, Args);
+  } else {
+    SDValue Args[] = { SDValue(Lo0, 0), SDValue(Lo1, 0), N->getOperand(2) };
+    AddLo = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+  }
+  SDValue AddHiArgs[] = {
+    SDValue(Hi0, 0),
+    SDValue(Hi1, 0),
+    SDValue(AddLo, 1)
+  };
+  SDNode *AddHi = CurDAG->getMachineNode(CarryOpc, DL, VTList, AddHiArgs);
 
-  SDValue Args[5] = {
+  SDValue RegSequenceArgs[] = {
     CurDAG->getTargetConstant(AMDGPU::SReg_64RegClassID, DL, MVT::i32),
     SDValue(AddLo,0),
     Sub0,
     SDValue(AddHi,0),
     Sub1,
   };
-  CurDAG->SelectNodeTo(N, AMDGPU::REG_SEQUENCE, MVT::i64, Args);
+  SDNode *RegSequence = CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
+                                               MVT::i64, RegSequenceArgs);
+
+  if (ProduceCarry) {
+    // Replace the carry-use
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 1), SDValue(AddHi, 1));
+  }
+
+  // Replace the remaining uses.
+  CurDAG->ReplaceAllUsesWith(N, RegSequence);
+  CurDAG->RemoveDeadNode(N);
 }
 
 // We need to handle this here because tablegen doesn't support matching

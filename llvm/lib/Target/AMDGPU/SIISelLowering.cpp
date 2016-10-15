@@ -459,6 +459,15 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
     return AlignedBy4;
   }
 
+  // FIXME: We have to be conservative here and assume that flat operations
+  // will access scratch.  If we had access to the IR function, then we
+  // could determine if any private memory was used in the function.
+  if (!Subtarget->hasUnalignedScratchAccess() &&
+      (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+       AddrSpace == AMDGPUAS::FLAT_ADDRESS)) {
+    return false;
+  }
+
   if (Subtarget->hasUnalignedBufferAccess()) {
     // If we have an uniform constant load, it still requires using a slow
     // buffer instruction if unaligned.
