@@ -311,10 +311,8 @@ ClangMoveTool::ClangMoveTool(
 }
 
 void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
-  SmallVector<StringRef, 4> ClassNames;
-  llvm::StringRef(Spec.Names).split(ClassNames, ',');
   Optional<ast_matchers::internal::Matcher<NamedDecl>> InMovedClassNames;
-  for (StringRef ClassName : ClassNames) {
+  for (StringRef ClassName : Spec.Names) {
     llvm::StringRef GlobalClassName = ClassName.trim().ltrim(':');
     const auto HasName = hasName(("::" + GlobalClassName).str());
     InMovedClassNames =

@@ -974,20 +974,38 @@ TEST_F(MergeReplacementsTest, OverlappingRanges) {
 
 TEST(DeduplicateByFileTest, LeaveLeadingDotDot) {
   std::map<std::string, Replacements> FileToReplaces;
+#if !defined(LLVM_ON_WIN32)
   FileToReplaces["../../a/b/.././c.h"] = Replacements();
   FileToReplaces["../../a/c.h"] = Replacements();
+#else
+  FileToReplaces["..\\..\\a\\b\\..\\.\\c.h"] = Replacements();
+  FileToReplaces["..\\..\\a\\c.h"] = Replacements();
+#endif
   FileToReplaces = groupReplacementsByFile(FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
+#if !defined(LLVM_ON_WIN32)
   EXPECT_EQ("../../a/c.h", FileToReplaces.begin()->first);
+#else
+  EXPECT_EQ("..\\..\\a\\c.h", FileToReplaces.begin()->first);
+#endif
 }
 
 TEST(DeduplicateByFileTest, RemoveDotSlash) {
   std::map<std::string, Replacements> FileToReplaces;
+#if !defined(LLVM_ON_WIN32)
   FileToReplaces["./a/b/.././c.h"] = Replacements();
   FileToReplaces["a/c.h"] = Replacements();
+#else
+  FileToReplaces[".\\a\\b\\..\\.\\c.h"] = Replacements();
+  FileToReplaces["a\\c.h"] = Replacements();
+#endif
   FileToReplaces = groupReplacementsByFile(FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
+#if !defined(LLVM_ON_WIN32)
   EXPECT_EQ("a/c.h", FileToReplaces.begin()->first);
+#else
+  EXPECT_EQ("a\\c.h", FileToReplaces.begin()->first);
+#endif
 }
 
 } // end namespace tooling

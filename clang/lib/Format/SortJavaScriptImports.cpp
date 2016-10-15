@@ -1,4 +1,4 @@
-//===--- SortJavaScriptImports.h - Sort ES6 Imports -------------*- C++ -*-===//
+//===--- SortJavaScriptImports.cpp - Sort ES6 Imports -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,7 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "SortJavaScriptImports.h"
 #include "SortJavaScriptImports.h"
 #include "TokenAnalyzer.h"
 #include "TokenAnnotator.h"

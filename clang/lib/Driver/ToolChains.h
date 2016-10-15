@@ -1249,6 +1249,14 @@ protected:
   Tool *buildLinker() const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY Contiki : public Generic_ELF {
+public:
+  Contiki(const Driver &D, const llvm::Triple &Triple,
+          const llvm::opt::ArgList &Args);
+
+  SanitizerMask getSupportedSanitizers() const override;
+};
+
 } // end namespace toolchains
 } // end namespace driver
 } // end namespace clang

@@ -108,10 +108,6 @@ class FoundationTestCase2(TestBase):
                     patterns=["\(int\) \$.* = 3"])
         self.runCmd("process continue")
 
-    @expectedFailureAll(
-        oslist=["macosx"],
-        debug_info="gmodules",
-        bugnumber="llvm.org/pr27861")
     def test_NSString_expr_commands(self):
         """Test expression commands for NSString."""
         self.build()

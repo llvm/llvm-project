@@ -37,9 +37,8 @@ public:
   };
 
   struct MoveDefinitionSpec {
-    // A comma-separated list of fully qualified names, e.g. "Foo",
-    // "a::Foo, b::Foo".
-    std::string Names;
+    // The list of fully qualified names, e.g. Foo, a::Foo, b::Foo.
+    SmallVector<std::string, 4> Names;
     // The file path of old header, can be relative path and absolute path.
     std::string OldHeader;
     // The file path of old cc, can be relative path and absolute path.

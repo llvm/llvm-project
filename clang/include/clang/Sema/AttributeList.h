@@ -891,6 +891,7 @@ enum AttributeDeclKind {
   ExpectedFunctionMethodOrBlock,
   ExpectedFunctionMethodOrClass,
   ExpectedFunctionMethodOrParameter,
+  ExpectedFunctionMethodOrGlobalVar,
   ExpectedClass,
   ExpectedEnum,
   ExpectedVariable,
