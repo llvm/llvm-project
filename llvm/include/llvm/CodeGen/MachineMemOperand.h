@@ -127,8 +127,6 @@ private:
     /// For cmpxchg atomic operations, atomic ordering requirements when store
     /// does not occur.
     unsigned FailureOrdering : 4; // enum AtomicOrdering
-    /// Reserved/unused.
-    unsigned Reserved : 16;
   };
 
   MachinePointerInfo PtrInfo;
@@ -138,17 +136,6 @@ private:
   MachineAtomicInfo AtomicInfo;
   AAMDNodes AAInfo;
   const MDNode *Ranges;
-
-  /// Initialize atomic information for this memory operation.
-  void InitAtomicInfo(SynchronizationScope SynchScope, AtomicOrdering Ordering,
-                      AtomicOrdering FailureOrdering) {
-    AtomicInfo.SynchScope = static_cast<unsigned>(SynchScope);
-    assert(getSynchScope() == SynchScope && "Value truncated");
-    AtomicInfo.Ordering = static_cast<unsigned>(Ordering);
-    assert(getOrdering() == Ordering && "Value truncated");
-    AtomicInfo.FailureOrdering = static_cast<unsigned>(FailureOrdering);
-    assert(getFailureOrdering() == FailureOrdering && "Value truncated");
-  }
 
 public:
   /// Construct a MachineMemOperand object with the specified PtrInfo, flags,

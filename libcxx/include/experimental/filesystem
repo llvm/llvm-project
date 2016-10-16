@@ -863,7 +863,15 @@ public:
     }
 
     path& make_preferred() { return *this; }
-    path& remove_filename() { return *this = parent_path(); }
+
+    _LIBCPP_INLINE_VISIBILITY
+    path& remove_filename() {
+      if (__pn_.size() == __root_path_raw().size())
+        clear();
+      else
+        __pn_ = __parent_path();
+      return *this;
+    }
 
     path& replace_filename(const path& __replacement) {
         remove_filename();
@@ -925,6 +933,7 @@ private:
     _LIBCPP_FUNC_VIS int __compare(__string_view) const;
     _LIBCPP_FUNC_VIS __string_view __root_name() const;
     _LIBCPP_FUNC_VIS __string_view __root_directory() const;
+    _LIBCPP_FUNC_VIS __string_view __root_path_raw() const;
     _LIBCPP_FUNC_VIS __string_view __relative_path() const;
     _LIBCPP_FUNC_VIS __string_view __parent_path() const;
     _LIBCPP_FUNC_VIS __string_view __filename() const;
@@ -953,7 +962,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY bool has_root_name()      const { return !__root_name().empty(); }
     _LIBCPP_INLINE_VISIBILITY bool has_root_directory() const { return !__root_directory().empty(); }
-    _LIBCPP_INLINE_VISIBILITY bool has_root_path()      const { return !(__root_name().empty() && __root_directory().empty()); }
+    _LIBCPP_INLINE_VISIBILITY bool has_root_path()      const { return !__root_path_raw().empty(); }
     _LIBCPP_INLINE_VISIBILITY bool has_relative_path()  const { return !__relative_path().empty(); }
     _LIBCPP_INLINE_VISIBILITY bool has_parent_path()    const { return !__parent_path().empty(); }
     _LIBCPP_INLINE_VISIBILITY bool has_filename()       const { return !__filename().empty(); }

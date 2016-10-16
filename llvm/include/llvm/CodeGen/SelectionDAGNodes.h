@@ -1196,21 +1196,26 @@ public:
   const SDValue &getBasePtr() const { return getOperand(1); }
   const SDValue &getVal() const { return getOperand(2); }
 
+  /// Returns true if this SDNode represents cmpxchg atomic operation, false
+  /// otherwise.
+  bool isCompareAndSwap() const {
+    unsigned Op = getOpcode();
+    return Op == ISD::ATOMIC_CMP_SWAP ||
+           Op == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS;
+  }
+
   /// For cmpxchg atomic operations, return the atomic ordering requirements
   /// when store occurs.
   AtomicOrdering getSuccessOrdering() const {
+    assert(isCompareAndSwap() && "Must be cmpxchg operation");
     return MMO->getSuccessOrdering();
   }
 
   /// For cmpxchg atomic operations, return the atomic ordering requirements
   /// when store does not occur.
   AtomicOrdering getFailureOrdering() const {
+    assert(isCompareAndSwap() && "Must be cmpxchg operation");
     return MMO->getFailureOrdering();
-  }
-
-  bool isCompareAndSwap() const {
-    unsigned Op = getOpcode();
-    return Op == ISD::ATOMIC_CMP_SWAP || Op == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS;
   }
 
   // Methods to support isa and dyn_cast
