@@ -25,7 +25,9 @@ using namespace ento;
 namespace {
 
 class AnalysisOrderChecker : public Checker< check::PreStmt<CastExpr>,
-                                             check::PostStmt<CastExpr>> {
+                                             check::PostStmt<CastExpr>,
+                                             check::PreStmt<ArraySubscriptExpr>,
+                                             check::PostStmt<ArraySubscriptExpr>> {
   bool isCallbackEnabled(CheckerContext &C, StringRef CallbackName) const {
     AnalyzerOptions &Opts = C.getAnalysisManager().getAnalyzerOptions();
     return Opts.getBooleanOption("*", false, this) ||
@@ -43,6 +45,16 @@ public:
     if (isCallbackEnabled(C, "PostStmtCastExpr"))
       llvm::errs() << "PostStmt<CastExpr> (Kind : " << CE->getCastKindName()
                    << ")\n";
+  }
+
+  void checkPreStmt(const ArraySubscriptExpr *SubExpr, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "PreStmtArraySubscriptExpr"))
+      llvm::errs() << "PreStmt<ArraySubscriptExpr>\n";
+  }
+
+  void checkPostStmt(const ArraySubscriptExpr *SubExpr, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "PostStmtArraySubscriptExpr"))
+      llvm::errs() << "PostStmt<ArraySubscriptExpr>\n";
   }
 };
 }
