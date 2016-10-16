@@ -537,7 +537,10 @@ MachinePointerInfo MachinePointerInfo::getStack(MachineFunction &MF,
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
                                      uint64_t s, unsigned int a,
                                      const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges)
+                                     const MDNode *Ranges,
+                                     SynchronizationScope SynchScope,
+                                     AtomicOrdering Ordering,
+                                     AtomicOrdering FailureOrdering)
     : PtrInfo(ptrinfo), Size(s), FlagVals(f), BaseAlignLog2(Log2_32(a) + 1),
       AAInfo(AAInfo), Ranges(Ranges) {
   assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue*>() ||
@@ -545,6 +548,13 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
          "invalid pointer value");
   assert(getBaseAlignment() == a && "Alignment is not a power of 2!");
   assert((isLoad() || isStore()) && "Not a load/store!");
+
+  AtomicInfo.SynchScope = static_cast<unsigned>(SynchScope);
+  assert(getSynchScope() == SynchScope && "Value truncated");
+  AtomicInfo.Ordering = static_cast<unsigned>(Ordering);
+  assert(getOrdering() == Ordering && "Value truncated");
+  AtomicInfo.FailureOrdering = static_cast<unsigned>(FailureOrdering);
+  assert(getFailureOrdering() == FailureOrdering && "Value truncated");
 }
 
 /// Profile - Gather unique data for the object.

@@ -1140,10 +1140,10 @@ multiclass avx512_common_broadcast_i32x2<bits<8> opc, string OpcodeStr,
                                       EVEX_V128;
 }
 
-defm VPBROADCASTI32X2  : avx512_common_broadcast_i32x2<0x59, "vbroadcasti32x2",
-                                           avx512vl_i32_info, avx512vl_i64_info>;
-defm VPBROADCASTF32X2  : avx512_common_broadcast_32x2<0x19, "vbroadcastf32x2",
-                                           avx512vl_f32_info, avx512vl_f64_info>;
+defm VBROADCASTI32X2  : avx512_common_broadcast_i32x2<0x59, "vbroadcasti32x2",
+                                          avx512vl_i32_info, avx512vl_i64_info>;
+defm VBROADCASTF32X2  : avx512_common_broadcast_32x2<0x19, "vbroadcastf32x2",
+                                          avx512vl_f32_info, avx512vl_f64_info>;
 
 def : Pat<(v16f32 (X86VBroadcast (v16f32 VR512:$src))),
           (VBROADCASTSSZr (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm))>;

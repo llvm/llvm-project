@@ -236,6 +236,9 @@ void __copy(const path& from, const path& to, copy_options options,
         }
         return;
     }
+    else if (is_directory(f) && bool(copy_options::create_symlinks & options)) {
+        return set_or_throw(make_error_code(errc::is_a_directory), ec, "copy");
+    }
     else if (is_directory(f) && (bool(copy_options::recursive & options) ||
              copy_options::none == options)) {
 
@@ -472,13 +475,25 @@ bool __fs_is_empty(const path& p, std::error_code *ec)
     std::error_code m_ec;
     struct ::stat pst;
     auto st = detail::posix_stat(p, pst, &m_ec);
-    if (is_directory(st))
-        return directory_iterator(p) == directory_iterator{};
+    if (m_ec) {
+        set_or_throw(m_ec, ec, "is_empty", p);
+        return false;
+    }
+    else if (!is_directory(st) && !is_regular_file(st)) {
+        m_ec = make_error_code(errc::not_supported);
+        set_or_throw(m_ec, ec, "is_empty");
+        return false;
+    }
+    else if (is_directory(st)) {
+        auto it = ec ? directory_iterator(p, *ec) : directory_iterator(p);
+        if (ec && *ec)
+            return false;
+        return it == directory_iterator{};
+    }
     else if (is_regular_file(st))
         return static_cast<std::uintmax_t>(pst.st_size) == 0;
-    // else
-    set_or_throw(m_ec, ec, "is_empty", p);
-    return false;
+
+    _LIBCPP_UNREACHABLE();
 }
 
 

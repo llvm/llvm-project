@@ -1,16 +1,9 @@
 ; RUN: opt < %s -gvn -enable-load-pre -S | FileCheck %s
-; This testcase assumed we'll PRE the load into %for.cond, but we don't actually
-; verify that doing so is safe.  If there didn't _happen_ to be a load in
-; %for.end, we would actually be lengthening the execution on some paths, and
-; we were never actually checking that case.  Now we actually do perform some
-; conservative checking to make sure we don't make paths longer, but we don't
-; currently get this case, which we got lucky on previously.
-;
-; Now that that faulty assumption is corrected, test that we DON'T incorrectly
-; hoist the load.  Doing the right thing for the wrong reasons is still a bug.
 
 @p = external global i32
 define i32 @f(i32 %n) nounwind {
+; CHECK: entry:
+; CHECK-NEXT: %0 = load i32, i32* @p
 entry:
 	br label %for.cond
 
@@ -22,8 +15,9 @@ for.cond:		; preds = %for.inc, %entry
 for.cond.for.end_crit_edge:		; preds = %for.cond
 	br label %for.end
 
+; The load of @p should be hoisted into the entry block.
 ; CHECK: for.body:
-; CHECK-NEXT: %tmp3 = load i32, i32* @p
+; CHECK-NEXT: %dec = add i32 %tmp3, -1
 for.body:		; preds = %for.cond
 	%tmp3 = load i32, i32* @p		; <i32> [#uses=1]
 	%dec = add i32 %tmp3, -1		; <i32> [#uses=2]

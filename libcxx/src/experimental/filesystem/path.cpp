@@ -277,6 +277,16 @@ string_view_t path::__root_directory() const
     return parser::extract_preferred(__pn_, start_i);
 }
 
+string_view_t path::__root_path_raw() const
+{
+    size_t e = parser::root_directory_end(__pn_);
+    if (!parser::good(e))
+      e = parser::root_name_end(__pn_);
+    if (parser::good(e))
+      return string_view_t{__pn_}.substr(0, e + 1);
+    return {};
+}
+
 string_view_t path::__relative_path() const
 {
     if (empty()) {
