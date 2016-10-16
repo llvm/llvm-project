@@ -108,17 +108,12 @@ void test_copy_move_value() {
 
 // Test that any(ValueType&&) is *never* selected for a std::in_place type.
 void test_sfinae_constraints() {
-    using Tag = std::in_place_type_t<int>;
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wignored-qualifiers"
-#endif
-    static_assert(std::is_same<Tag, const Tag>::value, "");
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+    using BadTag = std::in_place_type_t<int>;
+    using OKTag = std::in_place_t;
+    using OKDecay = std::decay_t<OKTag>;
     // Test that the tag type is properly handled in SFINAE
-    Tag t = std::in_place;
+    BadTag t = std::in_place;
+    OKTag ot = std::in_place;
     {
         std::any a(t);
         assertContains<int>(a, 0);
@@ -128,9 +123,22 @@ void test_sfinae_constraints() {
         assertContains<int>(a, 0);
     }
     {
+        std::any a(ot);
+        assertContains<OKDecay>(a, ot);
+    }
+    {
+        OKDecay d = ot;
+        std::any a(d);
+        assertContains<OKDecay>(a, ot);
+    }
+    {
         struct Dummy { Dummy() = delete; };
         using T = std::in_place_type_t<Dummy>;
         static_assert(!std::is_constructible<std::any, T>::value, "");
+    }
+    {
+        using DecayTag = std::decay_t<BadTag>;
+        static_assert(!std::is_constructible<std::any, DecayTag>::value, "");
     }
     {
         // Test that the ValueType&& constructor SFINAE's away when the

@@ -681,12 +681,14 @@ public:
     // LWG2756
     template <class _Up = value_type,
               class = enable_if_t
-                      <
-                          !is_same_v<_Up, optional> &&
-                          !(is_same_v<_Up, value_type> && is_scalar_v<value_type>) &&
-                          is_constructible_v<value_type, _Up> &&
-                          is_assignable_v<value_type&, _Up>
-                      >
+                      <__lazy_and<
+                          integral_constant<bool,
+                              !is_same_v<decay_t<_Up>, optional> &&
+                              !(is_same_v<_Up, value_type> && is_scalar_v<value_type>)
+                          >,
+                          is_constructible<value_type, _Up>,
+                          is_assignable<value_type&, _Up>
+                      >::value>
              >
     _LIBCPP_INLINE_VISIBILITY
     optional&

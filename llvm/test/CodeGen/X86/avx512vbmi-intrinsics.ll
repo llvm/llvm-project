@@ -47,10 +47,10 @@ define <64 x i8>@test_int_x86_avx512_mask_vpermi2var_qi_512(<64 x i8> %x0, <64 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
-; CHECK-NEXT:    vpermt2b %zmm2, %zmm0, %zmm3 {%k1}
-; CHECK-NEXT:    vpermt2b %zmm2, %zmm0, %zmm1
+; CHECK-NEXT:    vpermi2b %zmm2, %zmm0, %zmm3 {%k1}
+; CHECK-NEXT:    vpermi2b %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
-; CHECK-NEXT:    vpermt2b %zmm2, %zmm0, %zmm4 {%k1} {z}
+; CHECK-NEXT:    vpermi2b %zmm2, %zmm0, %zmm4 {%k1} {z}
 ; CHECK-NEXT:    vpaddb %zmm1, %zmm3, %zmm0
 ; CHECK-NEXT:    vpaddb %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    retq

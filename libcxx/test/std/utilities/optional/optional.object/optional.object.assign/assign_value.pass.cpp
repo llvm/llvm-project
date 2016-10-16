@@ -48,6 +48,16 @@ struct MismatchType {
   MismatchType& operator=(char*) = delete;
 };
 
+struct FromOptionalType {
+  using Opt = std::optional<FromOptionalType>;
+  FromOptionalType() = default;
+  FromOptionalType(FromOptionalType const&) = delete;
+  template <class Dummy = void>
+  constexpr FromOptionalType(Opt&) { Dummy::BARK; }
+  template <class Dummy = void>
+  constexpr FromOptionalType& operator=(Opt&) { Dummy::BARK; return *this; }
+};
+
 void test_sfinae() {
     using I = TestTypes::TestType;
     using E = ExplicitTestTypes::TestType;
@@ -68,6 +78,8 @@ void test_sfinae() {
     assert_assignable<MismatchType, int>();
     assert_assignable<MismatchType, int*, false>();
     assert_assignable<MismatchType, char*, false>();
+    // Type constructible from optional
+    assert_assignable<FromOptionalType, std::optional<FromOptionalType>&, false>();
 }
 
 void test_with_test_type()

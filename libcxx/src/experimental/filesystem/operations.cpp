@@ -282,6 +282,10 @@ bool __copy_file(const path& from, const path& to, copy_options options,
     }
 
     const bool to_exists = exists(to_st);
+    if (to_exists && !is_regular_file(to_st)) {
+        set_or_throw(make_error_code(errc::not_supported), ec, "copy_file", from, to);
+        return false;
+    }
     if (to_exists && bool(copy_options::skip_existing & options)) {
         return false;
     }
@@ -302,6 +306,8 @@ bool __copy_file(const path& from, const path& to, copy_options options,
         set_or_throw(make_error_code(errc::file_exists), ec, "copy", from, to);
         return false;
     }
+
+    _LIBCPP_UNREACHABLE();
 }
 
 void __copy_symlink(const path& existing_symlink, const path& new_symlink,

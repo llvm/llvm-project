@@ -15,10 +15,10 @@ define <16 x float> @test3(<4 x float> %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,3,4,18,16,7,8,9,10,11,12,13,14,15]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,1,2,3,4,18,16,7,8,9,10,11,12,13,14,15]
 ; CHECK-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %b = extractelement <4 x float> %a, i32 2
   %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
