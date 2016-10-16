@@ -424,10 +424,8 @@ protected:
     uint16_t IsNonTemporal : 1;
     uint16_t IsDereferenceable : 1;
     uint16_t IsInvariant : 1;
-    uint16_t SynchScope : 1; // enum SynchronizationScope
-    uint16_t Ordering : 4;   // enum AtomicOrdering
   };
-  enum { NumMemSDNodeBits = NumSDNodeBits + 9 };
+  enum { NumMemSDNodeBits = NumSDNodeBits + 4 };
 
   class LSBaseSDNodeBitfields {
     friend class LSBaseSDNode;
@@ -1113,13 +1111,6 @@ public:
   bool isDereferenceable() const { return MemSDNodeBits.IsDereferenceable; }
   bool isInvariant() const { return MemSDNodeBits.IsInvariant; }
 
-  AtomicOrdering getOrdering() const {
-    return static_cast<AtomicOrdering>(MemSDNodeBits.Ordering);
-  }
-  SynchronizationScope getSynchScope() const {
-    return static_cast<SynchronizationScope>(MemSDNodeBits.SynchScope);
-  }
-
   // Returns the offset from the location of the access.
   int64_t getSrcValueOffset() const { return MMO->getOffset(); }
 
@@ -1128,6 +1119,12 @@ public:
 
   /// Returns the Ranges that describes the dereference.
   const MDNode *getRanges() const { return MMO->getRanges(); }
+
+  /// Return the synchronization scope for this memory operation.
+  SynchronizationScope getSynchScope() const { return MMO->getSynchScope(); }
+
+  /// Return the atomic ordering requirements for this memory operation.
+  AtomicOrdering getOrdering() const { return MMO->getOrdering(); }
 
   /// Return the type of the in-memory value.
   EVT getMemoryVT() const { return MemoryVT; }
@@ -1191,45 +1188,34 @@ public:
 
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
-  /// For cmpxchg instructions, the ordering requirements when a store does not
-  /// occur.
-  AtomicOrdering FailureOrdering;
-
-  void InitAtomic(AtomicOrdering SuccessOrdering,
-                  AtomicOrdering FailureOrdering,
-                  SynchronizationScope SynchScope) {
-    MemSDNodeBits.Ordering = static_cast<uint16_t>(SuccessOrdering);
-    assert(getOrdering() == SuccessOrdering && "Value truncated");
-    MemSDNodeBits.SynchScope = static_cast<uint16_t>(SynchScope);
-    assert(getSynchScope() == SynchScope && "Value truncated");
-    this->FailureOrdering = FailureOrdering;
-  }
-
 public:
   AtomicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTL,
-               EVT MemVT, MachineMemOperand *MMO,
-               AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
-               SynchronizationScope SynchScope)
-      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
-    InitAtomic(SuccessOrdering, FailureOrdering, SynchScope);
-  }
+               EVT MemVT, MachineMemOperand *MMO)
+      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {}
 
   const SDValue &getBasePtr() const { return getOperand(1); }
   const SDValue &getVal() const { return getOperand(2); }
 
-  AtomicOrdering getSuccessOrdering() const {
-    return getOrdering();
-  }
-
-  // Not quite enough room in SubclassData for everything, so failure gets its
-  // own field.
-  AtomicOrdering getFailureOrdering() const {
-    return FailureOrdering;
-  }
-
+  /// Returns true if this SDNode represents cmpxchg atomic operation, false
+  /// otherwise.
   bool isCompareAndSwap() const {
     unsigned Op = getOpcode();
-    return Op == ISD::ATOMIC_CMP_SWAP || Op == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS;
+    return Op == ISD::ATOMIC_CMP_SWAP ||
+           Op == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS;
+  }
+
+  /// For cmpxchg atomic operations, return the atomic ordering requirements
+  /// when store occurs.
+  AtomicOrdering getSuccessOrdering() const {
+    assert(isCompareAndSwap() && "Must be cmpxchg operation");
+    return MMO->getSuccessOrdering();
+  }
+
+  /// For cmpxchg atomic operations, return the atomic ordering requirements
+  /// when store does not occur.
+  AtomicOrdering getFailureOrdering() const {
+    assert(isCompareAndSwap() && "Must be cmpxchg operation");
+    return MMO->getFailureOrdering();
   }
 
   // Methods to support isa and dyn_cast

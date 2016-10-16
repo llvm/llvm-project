@@ -1584,12 +1584,15 @@ namespace {
       Fail = false;
       Insts.clear();
       for (auto *BB : Blocks) {
-        if (BB->size() <= 1) {
-          // Block wasn't big enough
-          Fail = true;
-          return;
+        if (Instruction *Terminator = BB->getTerminator()) {
+          if (Instruction *LastNonTerminator = Terminator->getPrevNode()) {
+            Insts.push_back(LastNonTerminator);
+            continue;
+          }
         }
-        Insts.push_back(BB->getTerminator()->getPrevNode());
+        // Block wasn't big enough.
+        Fail = true;
+        return;
       }
     }
 
@@ -1601,11 +1604,12 @@ namespace {
       if (Fail)
         return;
       for (auto *&Inst : Insts) {
-        if (Inst == &Inst->getParent()->front()) {
+        Inst = Inst->getPrevNode();
+        // Already at beginning of block.
+        if (!Inst) {
           Fail = true;
           return;
         }
-        Inst = Inst->getPrevNode();
       }
     }
 
