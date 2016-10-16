@@ -436,6 +436,10 @@ def SimpleStreamChecker : Checker<"SimpleStream">,
   HelpText<"Check for misuses of stream APIs">,
   DescFile<"SimpleStreamChecker.cpp">;
 
+def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
+  HelpText<"Check for calls to blocking functions inside a critical section">,
+  DescFile<"BlockInCriticalSectionChecker.cpp">;
+
 } // end "alpha.unix"
 
 let ParentPackage = CString in {
