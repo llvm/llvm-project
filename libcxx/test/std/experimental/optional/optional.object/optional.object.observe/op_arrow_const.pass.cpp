@@ -51,6 +51,9 @@ int main()
     {
         constexpr optional<Z> opt(Z{});
         assert(opt->test() == 1);
+#ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
+        static_assert(opt->test() == 1, "");
+#endif
     }
 #ifdef _LIBCPP_DEBUG
     {
