@@ -956,9 +956,9 @@ bool Sema::isSameOrCompatibleFunctionType(CanQualType Param,
   if (!ParamFunction || !ArgFunction)
     return Param == Arg;
 
-  // Noreturn adjustment.
+  // Noreturn and noexcept adjustment.
   QualType AdjustedParam;
-  if (IsNoReturnConversion(Param, Arg, AdjustedParam))
+  if (IsFunctionConversion(Param, Arg, AdjustedParam))
     return Arg == Context.getCanonicalType(AdjustedParam);
 
   // FIXME: Compatible calling conventions.
@@ -2757,18 +2757,17 @@ CheckOriginalCallArgDeduction(Sema &S, Sema::OriginalCallArg OriginalArg,
   }
 
   //    - The transformed A can be another pointer or pointer to member
-  //      type that can be converted to the deduced A via a qualification
-  //      conversion.
+  //      type that can be converted to the deduced A via a function pointer
+  //      conversion and/or a qualification conversion.
   //
   // Also allow conversions which merely strip [[noreturn]] from function types
   // (recursively) as an extension.
-  // FIXME: Currently, this doesn't play nicely with qualification conversions.
   bool ObjCLifetimeConversion = false;
   QualType ResultTy;
   if ((A->isAnyPointerType() || A->isMemberPointerType()) &&
       (S.IsQualificationConversion(A, DeducedA, false,
                                    ObjCLifetimeConversion) ||
-       S.IsNoReturnConversion(A, DeducedA, ResultTy)))
+       S.IsFunctionConversion(A, DeducedA, ResultTy)))
     return false;
 
 

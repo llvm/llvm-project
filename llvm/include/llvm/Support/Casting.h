@@ -128,8 +128,7 @@ struct isa_impl_wrap<To, FromTy, FromTy> {
 //
 //  if (isa<Type>(myVal)) { ... }
 //
-template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline bool isa(const Y &Val) {
+template <class X, class Y> LLVM_NODISCARD inline bool isa(const Y &Val) {
   return isa_impl_wrap<X, const Y,
                        typename simplify_type<const Y>::SimpleType>::doit(Val);
 }
@@ -243,9 +242,10 @@ inline typename cast_retty<X, Y *>::ret_type cast(Y *Val) {
 // accepted.
 //
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename std::enable_if<
-    !is_simple_type<Y>::value, typename cast_retty<X, const Y>::ret_type>::type
-cast_or_null(const Y &Val) {
+LLVM_NODISCARD inline
+    typename std::enable_if<!is_simple_type<Y>::value,
+                            typename cast_retty<X, const Y>::ret_type>::type
+    cast_or_null(const Y &Val) {
   if (!Val)
     return nullptr;
   assert(isa<X>(Val) && "cast_or_null<Ty>() argument of incompatible type!");
@@ -253,9 +253,10 @@ cast_or_null(const Y &Val) {
 }
 
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename std::enable_if<
-    !is_simple_type<Y>::value, typename cast_retty<X, Y>::ret_type>::type
-cast_or_null(Y &Val) {
+LLVM_NODISCARD inline
+    typename std::enable_if<!is_simple_type<Y>::value,
+                            typename cast_retty<X, Y>::ret_type>::type
+    cast_or_null(Y &Val) {
   if (!Val)
     return nullptr;
   assert(isa<X>(Val) && "cast_or_null<Ty>() argument of incompatible type!");
@@ -263,7 +264,7 @@ cast_or_null(Y &Val) {
 }
 
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename cast_retty<X, Y *>::ret_type
+LLVM_NODISCARD inline typename cast_retty<X, Y *>::ret_type
 cast_or_null(Y *Val) {
   if (!Val) return nullptr;
   assert(isa<X>(Val) && "cast_or_null<Ty>() argument of incompatible type!");
@@ -280,21 +281,20 @@ cast_or_null(Y *Val) {
 //
 
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename std::enable_if<
-    !is_simple_type<Y>::value, typename cast_retty<X, const Y>::ret_type>::type
-dyn_cast(const Y &Val) {
+LLVM_NODISCARD inline
+    typename std::enable_if<!is_simple_type<Y>::value,
+                            typename cast_retty<X, const Y>::ret_type>::type
+    dyn_cast(const Y &Val) {
   return isa<X>(Val) ? cast<X>(Val) : nullptr;
 }
 
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename cast_retty<X, Y>::ret_type
-dyn_cast(Y &Val) {
+LLVM_NODISCARD inline typename cast_retty<X, Y>::ret_type dyn_cast(Y &Val) {
   return isa<X>(Val) ? cast<X>(Val) : nullptr;
 }
 
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename cast_retty<X, Y *>::ret_type
-dyn_cast(Y *Val) {
+LLVM_NODISCARD inline typename cast_retty<X, Y *>::ret_type dyn_cast(Y *Val) {
   return isa<X>(Val) ? cast<X>(Val) : nullptr;
 }
 
@@ -302,21 +302,23 @@ dyn_cast(Y *Val) {
 // value is accepted.
 //
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename std::enable_if<
-    !is_simple_type<Y>::value, typename cast_retty<X, const Y>::ret_type>::type
-dyn_cast_or_null(const Y &Val) {
+LLVM_NODISCARD inline
+    typename std::enable_if<!is_simple_type<Y>::value,
+                            typename cast_retty<X, const Y>::ret_type>::type
+    dyn_cast_or_null(const Y &Val) {
   return (Val && isa<X>(Val)) ? cast<X>(Val) : nullptr;
 }
 
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename std::enable_if<
-    !is_simple_type<Y>::value, typename cast_retty<X, Y>::ret_type>::type
-dyn_cast_or_null(Y &Val) {
+LLVM_NODISCARD inline
+    typename std::enable_if<!is_simple_type<Y>::value,
+                            typename cast_retty<X, Y>::ret_type>::type
+    dyn_cast_or_null(Y &Val) {
   return (Val && isa<X>(Val)) ? cast<X>(Val) : nullptr;
 }
 
 template <class X, class Y>
-LLVM_ATTRIBUTE_UNUSED_RESULT inline typename cast_retty<X, Y *>::ret_type
+LLVM_NODISCARD inline typename cast_retty<X, Y *>::ret_type
 dyn_cast_or_null(Y *Val) {
   return (Val && isa<X>(Val)) ? cast<X>(Val) : nullptr;
 }

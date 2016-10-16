@@ -150,7 +150,7 @@ static const char* GetImplicitConversionName(ImplicitConversionKind Kind) {
     "Lvalue-to-rvalue",
     "Array-to-pointer",
     "Function-to-pointer",
-    "Noreturn adjustment",
+    "Function pointer conversion",
     "Qualification",
     "Integral promotion",
     "Floating point promotion",
@@ -1390,13 +1390,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 }
 
 /// \brief Determine whether the conversion from FromType to ToType is a valid
-/// conversion that strips "noreturn" off the nested function type.
-bool Sema::IsNoReturnConversion(QualType FromType, QualType ToType,
+/// conversion that strips "noexcept" or "noreturn" off the nested function
+/// type.
+bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
                                 QualType &ResultTy) {
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
   // Permit the conversion F(t __attribute__((noreturn))) -> F(t)
+  //                    or F(t noexcept) -> F(t)
   // where F adds one of the following at most once:
   //   - a pointer
   //   - a member pointer
@@ -1425,11 +1427,37 @@ bool Sema::IsNoReturnConversion(QualType FromType, QualType ToType,
       return false;
   }
 
-  const FunctionType *FromFn = cast<FunctionType>(CanFrom);
-  FunctionType::ExtInfo EInfo = FromFn->getExtInfo();
-  if (!EInfo.getNoReturn()) return false;
+  const auto *FromFn = cast<FunctionType>(CanFrom);
+  FunctionType::ExtInfo FromEInfo = FromFn->getExtInfo();
 
-  FromFn = Context.adjustFunctionType(FromFn, EInfo.withNoReturn(false));
+  const auto *ToFn = dyn_cast<FunctionProtoType>(CanTo);
+  FunctionType::ExtInfo ToEInfo = ToFn->getExtInfo();
+
+  bool Changed = false;
+
+  // Drop 'noreturn' if not present in target type.
+  if (FromEInfo.getNoReturn() && !ToEInfo.getNoReturn()) {
+    FromFn = Context.adjustFunctionType(FromFn, FromEInfo.withNoReturn(false));
+    Changed = true;
+  }
+
+  // Drop 'noexcept' if not present in target type.
+  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
+    const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn);
+    if (FromFPT->isNothrow(Context) && !ToFPT->isNothrow(Context)) {
+      FromFn = cast<FunctionType>(
+          Context.getFunctionType(FromFPT->getReturnType(),
+                                  FromFPT->getParamTypes(),
+                                  FromFPT->getExtProtoInfo().withExceptionSpec(
+                                      FunctionProtoType::ExceptionSpecInfo()))
+                 .getTypePtr());
+      Changed = true;
+    }
+  }
+
+  if (!Changed)
+    return false;
+
   assert(QualType(FromFn, 0).isCanonical());
   if (QualType(FromFn, 0) != CanTo) return false;
 
@@ -1534,7 +1562,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                       S.ExtractUnqualifiedFunctionType(ToType), FromType)) {
         QualType resultTy;
         // if the function type matches except for [[noreturn]], it's ok
-        if (!S.IsNoReturnConversion(FromType,
+        if (!S.IsFunctionConversion(FromType,
               S.ExtractUnqualifiedFunctionType(ToType), resultTy))
           // otherwise, only a boolean conversion is standard   
           if (!ToType->isBooleanType()) 
@@ -1727,9 +1755,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Compatible conversions (Clang extension for C function overloading)
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType.getUnqualifiedType();
-  } else if (S.IsNoReturnConversion(FromType, ToType, FromType)) {
-    // Treat a conversion that strips "noreturn" as an identity conversion.
-    SCS.Second = ICK_NoReturn_Adjustment;
+  } else if (S.IsFunctionConversion(FromType, ToType, FromType)) {
+    // Function pointer conversions (removing 'noexcept') including removal of
+    // 'noreturn' (Clang extension).
+    SCS.Second = ICK_Function_Conversion;
   } else if (IsTransparentUnionStandardConversion(S, From, ToType,
                                              InOverloadResolution,
                                              SCS, CStyle)) {
@@ -2615,7 +2644,8 @@ enum {
   ft_parameter_arity,
   ft_parameter_mismatch,
   ft_return_type,
-  ft_qualifer_mismatch
+  ft_qualifer_mismatch,
+  ft_noexcept
 };
 
 /// Attempts to get the FunctionProtoType from a Type. Handles
@@ -2712,6 +2742,16 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
            ToQuals = ToFunction->getTypeQuals();
   if (FromQuals != ToQuals) {
     PDiag << ft_qualifer_mismatch << ToQuals << FromQuals;
+    return;
+  }
+
+  // Handle exception specification differences on canonical type (in C++17
+  // onwards).
+  if (cast<FunctionProtoType>(FromFunction->getCanonicalTypeUnqualified())
+          ->isNothrow(Context) !=
+      cast<FunctionProtoType>(ToFunction->getCanonicalTypeUnqualified())
+          ->isNothrow(Context)) {
+    PDiag << ft_noexcept;
     return;
   }
 
@@ -5096,7 +5136,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   // conversions are fine.
   switch (SCS.Second) {
   case ICK_Identity:
-  case ICK_NoReturn_Adjustment:
+  case ICK_Function_Conversion:
   case ICK_Integral_Promotion:
   case ICK_Integral_Conversion: // Narrowing conversions are checked elsewhere.
     return true;
@@ -10428,7 +10468,7 @@ private:
   bool candidateHasExactlyCorrectType(const FunctionDecl *FD) {
     QualType Discard;
     return Context.hasSameUnqualifiedType(TargetFunctionType, FD->getType()) ||
-           S.IsNoReturnConversion(FD->getType(), TargetFunctionType, Discard);
+           S.IsFunctionConversion(FD->getType(), TargetFunctionType, Discard);
   }
 
   /// \return true if A is considered a better overload candidate for the

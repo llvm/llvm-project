@@ -279,16 +279,36 @@ namespace dr25 { // dr25: yes
     void f() throw(int);
   };
   void (A::*f)() throw (int);
-  void (A::*g)() throw () = f; // expected-error {{is not superset of source}}
+  void (A::*g)() throw () = f;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{is not superset of source}}
+#else
+  // expected-error@-4 {{different exception specifications}}
+#endif
   void (A::*g2)() throw () = 0;
   void (A::*h)() throw (int, char) = f;
-  void (A::*i)() throw () = &A::f; // expected-error {{is not superset of source}}
+  void (A::*i)() throw () = &A::f;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{is not superset of source}}
+#else
+  // expected-error@-4 {{different exception specifications}}
+#endif
   void (A::*i2)() throw () = 0;
   void (A::*j)() throw (int, char) = &A::f;
   void x() {
-    g2 = f; // expected-error {{is not superset}}
+    g2 = f;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{is not superset of source}}
+#else
+  // expected-error@-4 {{different exception specifications}}
+#endif
     h = f;
-    i2 = &A::f; // expected-error {{is not superset}}
+    i2 = &A::f;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{is not superset of source}}
+#else
+  // expected-error@-4 {{different exception specifications}}
+#endif
     j = &A::f;
   }
 }
@@ -997,20 +1017,31 @@ namespace dr92 { // FIXME: Issue is still open.
   void f() throw(int, float);
   void (*p)() throw(int) = &f; // expected-error {{target exception specification is not superset of source}}
   void (*q)() throw(int);
-  void (**pp)() throw() = &q; // expected-error {{exception specifications are not allowed}}
+  void (**pp)() throw() = &q;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{exception specifications are not allowed}}
+#else
+  // expected-error@-4 {{cannot initialize}}
+#endif
 
-  void g(void() throw());
-  void h() {
-    g(f); // expected-error {{is not superset}}
-    g(q); // expected-error {{is not superset}}
+  void g(void() throw()); // expected-note 0-2 {{no known conversion}}
+  void h() throw() {
+    g(f); // expected-error-re {{{{is not superset|no matching function}}}}
+    g(q); // expected-error-re {{{{is not superset|no matching function}}}}
   }
 
   // Prior to C++17, this is OK because the exception specification is not
   // considered in this context. In C++17, we *do* perform an implicit
-  // conversion (which performs initialization), but we convert to the type of
-  // the template parameter, which does not include the exception specification.
+  // conversion (which performs initialization), and the exception specification
+  // is part of the type of the parameter, so this is invalid.
   template<void() throw()> struct X {};
-  X<&f> xp; // ok
+  X<&f> xp;
+#if __cplusplus > 201402L
+  // expected-error@-2 {{not implicitly convertible}}
+#endif
+
+  template<void() throw(int)> struct Y {};
+  Y<&h> yp; // ok
 }
 
 // dr93: na
