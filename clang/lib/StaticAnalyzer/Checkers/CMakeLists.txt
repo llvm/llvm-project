@@ -91,6 +91,7 @@ add_clang_library(clangStaticAnalyzerCheckers
 
   LINK_LIBS
   clangAST
+  clangASTMatchers
   clangAnalysis
   clangBasic
   clangLex
