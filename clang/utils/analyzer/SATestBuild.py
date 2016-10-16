@@ -660,11 +660,17 @@ def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Dir=None, Strictne
     print "Completed tests for project %s (time: %.2f)." % \
           (ID, (time.time()-TBegin))
 
+def isCommentCSVLine(Entries):
+  # Treat CSV lines starting with a '#' as a comment.
+  return len(Entries) > 0 and Entries[0].startswith("#")
+
 def testAll(IsReferenceBuild = False, UpdateSVN = False, Strictness = 0):
     PMapFile = open(getProjectMapPath(), "rb")
     try:
         # Validate the input.
         for I in csv.reader(PMapFile):
+            if (isCommentCSVLine(I)):
+                continue
             if (len(I) != 2) :
                 print "Error: Rows in the ProjectMapFile should have 3 entries."
                 raise Exception()
@@ -682,6 +688,8 @@ def testAll(IsReferenceBuild = False, UpdateSVN = False, Strictness = 0):
         # Test the projects.
         PMapFile.seek(0)
         for I in csv.reader(PMapFile):
+            if isCommentCSVLine(I):
+              continue;
             testProject(I[0], int(I[1]), IsReferenceBuild, None, Strictness)
 
         # Add reference results to SVN.
