@@ -289,7 +289,11 @@ _Bool opaque_OSAtomicCompareAndSwapPtr( void *__oldValue, void *__newValue, void
 _Bool OSAtomicCompareAndSwapPtr( void *__oldValue, void *__newValue, void * volatile *__theValue ) {
   return opaque_OSAtomicCompareAndSwapPtr(__oldValue, __newValue, __theValue);
 }
-
+// Test that the analyzer doesn't crash when the farm model is used. 
+// The analyzer ignores the autosynthesized code.
+_Bool OSAtomicCompareAndSwapEmptyFunction( void *__oldValue, void *__newValue, void * volatile *__theValue ) {
+  return 0;
+}
 extern BOOL opaque_objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation);
 extern BOOL objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation) {
   return opaque_objc_atomicCompareAndSwapPtr(predicate, replacement, objectLocation);

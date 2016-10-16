@@ -3863,7 +3863,7 @@ void RetainCountChecker::checkEndFunction(CheckerContext &Ctx) const {
   // Don't process anything within synthesized bodies.
   const LocationContext *LCtx = Pred->getLocationContext();
   if (LCtx->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    assert(LCtx->getParent());
+    assert(!LCtx->inTopFrame()); 
     return;
   }
 
