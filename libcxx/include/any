@@ -622,6 +622,18 @@ any_cast(any const * __any) _NOEXCEPT
     return _VSTD::any_cast<_ValueType>(const_cast<any *>(__any));
 }
 
+template <class _RetType>
+inline _LIBCPP_INLINE_VISIBILITY
+_RetType __pointer_or_func_cast(void* __p, /*IsFunction*/false_type) noexcept {
+  return static_cast<_RetType>(__p);
+}
+
+template <class _RetType>
+inline _LIBCPP_INLINE_VISIBILITY
+_RetType __pointer_or_func_cast(void*, /*IsFunction*/true_type) noexcept {
+  return nullptr;
+}
+
 template <class _ValueType>
 add_pointer_t<_ValueType>
 any_cast(any * __any) _NOEXCEPT
@@ -631,15 +643,15 @@ any_cast(any * __any) _NOEXCEPT
                   "_ValueType may not be a reference.");
     typedef typename add_pointer<_ValueType>::type _ReturnType;
     if (__any && __any->__h) {
-        return static_cast<_ReturnType>(
-            __any->__call(_Action::_Get, nullptr,
+      void *__p = __any->__call(_Action::_Get, nullptr,
 #if !defined(_LIBCPP_NO_RTTI)
                           &typeid(_ValueType),
 #else
                           nullptr,
 #endif
-                          __any_imp::__get_fallback_typeid<_ValueType>()
-        ));
+                          __any_imp::__get_fallback_typeid<_ValueType>());
+        return _VSTD::__pointer_or_func_cast<_ReturnType>(
+            __p, is_function<_ValueType>{});
     }
     return nullptr;
 }
