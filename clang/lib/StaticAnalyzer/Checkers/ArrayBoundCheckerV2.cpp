@@ -68,18 +68,11 @@ public:
 
 static SVal computeExtentBegin(SValBuilder &svalBuilder,
                                const MemRegion *region) {
-  while (true)
-    switch (region->getKind()) {
-      default:
-        return svalBuilder.makeZeroArrayIndex();
-      case MemRegion::SymbolicRegionKind:
-        // FIXME: improve this later by tracking symbolic lower bounds
-        // for symbolic regions.
-        return UnknownVal();
-      case MemRegion::ElementRegionKind:
-        region = cast<SubRegion>(region)->getSuperRegion();
-        continue;
-    }
+  const MemSpaceRegion *SR = region->getMemorySpace();
+  if (SR->getKind() == MemRegion::UnknownSpaceRegionKind)
+    return UnknownVal();
+  else
+    return svalBuilder.makeZeroArrayIndex();
 }
 
 // TODO: once the constraint manager is smart enough to handle non simplified
