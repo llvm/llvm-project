@@ -172,15 +172,15 @@ void test_assign_throws() {
 // * std::in_place type.
 // * Non-copyable types
 void test_sfinae_constraints() {
-    {
+    { // Only the constructors are required to SFINAE on in_place_t
         using Tag = std::in_place_type_t<int>;
         using RawTag = std::remove_reference_t<Tag>;
-        static_assert(!std::is_assignable<std::any, RawTag&&>::value, "");
+        static_assert(std::is_assignable<std::any, RawTag&&>::value, "");
     }
     {
         struct Dummy { Dummy() = delete; };
         using T = std::in_place_type_t<Dummy>;
-        static_assert(!std::is_assignable<std::any, T>::value, "");
+        static_assert(std::is_assignable<std::any, T>::value, "");
     }
     {
         // Test that the ValueType&& constructor SFINAE's away when the
