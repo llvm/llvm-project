@@ -984,10 +984,19 @@ namespace dr289 { // dr289: yes
 namespace dr294 { // dr294: no
   void f() throw(int);
   int main() {
-    (void)static_cast<void (*)() throw()>(f); // FIXME: ill-formed
-    (void)static_cast<void (*)() throw(int)>(f); // FIXME: ill-formed
+    (void)static_cast<void (*)() throw()>(f); // FIXME: ill-formed in C++14 and before
+#if __cplusplus > 201402L
+    // FIXME: expected-error@-2 {{not allowed}}
+    //
+    // Irony: the above is valid in C++17 and beyond, but that's exactly when
+    // we reject it. In C++14 and before, this is ill-formed because an
+    // exception-specification is not permitted in a type-id. In C++17, this is
+    // valid because it's the inverse of a standard conversion sequence
+    // containing a function pointer conversion.
+#endif
+    (void)static_cast<void (*)() throw(int)>(f); // FIXME: ill-formed in C++14 and before
 
-    void (*p)() throw() = f; // expected-error {{not superset}}
+    void (*p)() throw() = f; // expected-error-re {{{{not superset|different exception specification}}}}
     void (*q)() throw(int) = f;
   }
 }

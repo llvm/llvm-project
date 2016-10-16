@@ -130,6 +130,11 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
 /// to member to a function with an exception specification. This means that
 /// it is invalid to add another level of indirection.
 bool Sema::CheckDistantExceptionSpec(QualType T) {
+  // C++17 removes this rule in favor of putting exception specifications into
+  // the type system.
+  if (getLangOpts().CPlusPlus1z)
+    return false;
+
   if (const PointerType *PT = T->getAs<PointerType>())
     T = PT->getPointeeType();
   else if (const MemberPointerType *PT = T->getAs<MemberPointerType>())

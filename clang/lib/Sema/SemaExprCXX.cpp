@@ -3610,7 +3610,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     // Nothing else to do.
     break;
 
-  case ICK_NoReturn_Adjustment:
+  case ICK_Function_Conversion:
     // If both sides are functions (or pointers/references to them), there could
     // be incompatible exception declarations.
     if (CheckExceptionSpecCompatibility(From, ToType))

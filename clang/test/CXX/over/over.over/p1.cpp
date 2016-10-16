@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only %s
+// RUN: %clang_cc1 -fsyntax-only -DNOEXCEPT= %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT= %s
+// FIXME: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT=noexcept %s
 
-template<typename T> T f0(T);
-int f0(int);
+template<typename T> T f0(T) NOEXCEPT;
+int f0(int) NOEXCEPT;
 
 // -- an object or reference being initialized 
 struct S {

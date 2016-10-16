@@ -62,7 +62,7 @@ namespace clang {
     ICK_Lvalue_To_Rvalue,      ///< Lvalue-to-rvalue conversion (C++ 4.1)
     ICK_Array_To_Pointer,      ///< Array-to-pointer conversion (C++ 4.2)
     ICK_Function_To_Pointer,   ///< Function-to-pointer (C++ 4.3)
-    ICK_NoReturn_Adjustment,   ///< Removal of noreturn from a type (Clang)
+    ICK_Function_Conversion,   ///< Function pointer conversion (C++17 4.13)
     ICK_Qualification,         ///< Qualification conversions (C++ 4.4)
     ICK_Integral_Promotion,    ///< Integral promotions (C++ 4.5)
     ICK_Floating_Promotion,    ///< Floating point promotions (C++ 4.6)
