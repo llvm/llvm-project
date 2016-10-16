@@ -18,7 +18,7 @@ void getsockname();
 
 void f(int sock) {
   struct sockaddr_storage storage;
-  struct sockaddr* sockaddr = (struct sockaddr*)&storage;
+  struct sockaddr* sockaddr = (struct sockaddr*)&storage; // expected-warning{{Casting data to a larger structure type and accessing a field can lead to memory access errors or data corruption}}
   socklen_t addrlen = sizeof(storage);
   getsockname(sock, sockaddr, &addrlen);
   switch (sockaddr->sa_family) { // no-warning

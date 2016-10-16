@@ -158,3 +158,18 @@ void testInlined() {
     }
   }
 }
+
+// Don't warn about unreachable VarDecl.
+void dostuff(int*A);
+void varDecl(int X) {
+  switch (X) {
+    int A; // No warning here.
+  case 1:
+    dostuff(&A);
+    break;
+  case 2:
+    dostuff(&A);
+    break;
+  }
+}
+
