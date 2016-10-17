@@ -84,7 +84,7 @@ protected:
 
 public:
   typedef unsigned size_type;
-  bool LLVM_ATTRIBUTE_UNUSED_RESULT empty() const { return size() == 0; }
+  LLVM_NODISCARD bool empty() const { return size() == 0; }
   size_type size() const { return NumNonEmpty - NumTombstones; }
 
   void clear() {

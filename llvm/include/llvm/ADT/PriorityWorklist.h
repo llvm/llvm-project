@@ -116,7 +116,7 @@ public:
     } while (!V.empty() && V.back() == T());
   }
 
-  T LLVM_ATTRIBUTE_UNUSED_RESULT pop_back_val() {
+  LLVM_NODISCARD T pop_back_val() {
     T Ret = back();
     pop_back();
     return Ret;

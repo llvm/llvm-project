@@ -54,7 +54,7 @@ public:
     return size_t((char*)CapacityX - (char*)BeginX);
   }
 
-  bool LLVM_ATTRIBUTE_UNUSED_RESULT empty() const { return BeginX == EndX; }
+  LLVM_NODISCARD bool empty() const { return BeginX == EndX; }
 };
 
 template <typename T, unsigned N> struct SmallVectorStorage;
@@ -376,7 +376,7 @@ public:
       this->grow(N);
   }
 
-  T LLVM_ATTRIBUTE_UNUSED_RESULT pop_back_val() {
+  LLVM_NODISCARD T pop_back_val() {
     T Result = ::std::move(this->back());
     this->pop_back();
     return Result;

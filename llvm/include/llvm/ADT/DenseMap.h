@@ -77,7 +77,7 @@ public:
     return const_iterator(getBucketsEnd(), getBucketsEnd(), *this, true);
   }
 
-  bool LLVM_ATTRIBUTE_UNUSED_RESULT empty() const {
+  LLVM_NODISCARD bool empty() const {
     return getNumEntries() == 0;
   }
   unsigned size() const { return getNumEntries(); }
