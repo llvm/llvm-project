@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++1z -fsyntax-only -verify %s
 
 void f0() &; // expected-error {{non-member function cannot have '&' qualifier}}
 void f1() &&; // expected-error {{non-member function cannot have '&&' qualifier}}
@@ -58,3 +59,16 @@ template<typename T> struct pass {
 };
 pass<func_type_lvalue> pass0;
 pass<func_type_lvalue> pass1;
+
+template<typename T, typename U> struct is_same { static const bool value = false; };
+template<typename T> struct is_same<T, T> { static const bool value = true; };
+constexpr bool cxx1z = __cplusplus > 201402L;
+
+void noexcept_true() noexcept(true);
+void noexcept_false() noexcept(false);
+using func_type_noexcept_true = wrap<decltype(noexcept_true)>;
+using func_type_noexcept_false = wrap<decltype(noexcept_false)>;
+static_assert(is_same<func_type_noexcept_false, func_type_noexcept_true>::value == !cxx1z, "");
+static_assert(is_same<func_type_noexcept_false::val, func_type_noexcept_true::val>::value == !cxx1z, "");
+static_assert(is_same<func_type_noexcept_false::ptr, func_type_noexcept_true::ptr>::value == !cxx1z, "");
+static_assert(is_same<func_type_noexcept_false::ref, func_type_noexcept_true::ref>::value == !cxx1z, "");

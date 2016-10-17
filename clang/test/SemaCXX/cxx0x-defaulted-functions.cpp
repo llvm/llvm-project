@@ -142,11 +142,11 @@ namespace PR13527 {
     Y &operator=(Y&&) = default;
     ~Y() = default;
   };
-  Y::Y() = default; // expected-error {{definition of explicitly defaulted}}
-  Y::Y(const Y&) = default; // expected-error {{definition of explicitly defaulted}}
-  Y::Y(Y&&) = default; // expected-error {{definition of explicitly defaulted}}
-  Y &Y::operator=(const Y&) = default; // expected-error {{definition of explicitly defaulted}}
-  Y &Y::operator=(Y&&) = default; // expected-error {{definition of explicitly defaulted}}
+  Y::Y() noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y::Y(const Y&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y::Y(Y&&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y &Y::operator=(const Y&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y &Y::operator=(Y&&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
   Y::~Y() = default; // expected-error {{definition of explicitly defaulted}}
 }
 

@@ -7,9 +7,9 @@
 
 #include "Inputs/register.h"
 
-void f() throw();
-void g() throw(int);
-void h() throw(...);
+void g() throw();
+void h() throw(int);
+void i() throw(...);
 #if __cplusplus >= 201103L
 // expected-warning@-4 {{dynamic exception specifications are deprecated}} expected-note@-4 {{use 'noexcept' instead}}
 // expected-warning@-4 {{dynamic exception specifications are deprecated}} expected-note@-4 {{use 'noexcept(false)' instead}}
