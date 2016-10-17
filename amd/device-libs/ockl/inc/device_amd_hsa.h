@@ -17,6 +17,7 @@ typedef unsigned int uint32_t;
 typedef long int64_t;
 typedef unsigned long uint64_t;
 
+#define __LP64__
 #define DEVICE_COMPILER
 #define LITTLEENDIAN_CPU
 #include "hsa.h"

@@ -1501,12 +1501,18 @@ typedef struct hsa_queue_s {
   uint32_t features;
 
 #ifdef HSA_LARGE_MODEL
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *base_address;
 #elif defined HSA_LITTLE_ENDIAN
   /**
    * Starting address of the HSA runtime-allocated buffer used to store the AQL
    * packets. Must be aligned to the size of an AQL packet.
    */
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *base_address;
   /**
    * Reserved. Must be 0.
@@ -1514,6 +1520,9 @@ typedef struct hsa_queue_s {
   uint32_t reserved0;
 #else
   uint32_t reserved0;
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *base_address;
 #endif
 
@@ -2119,6 +2128,9 @@ typedef struct hsa_kernel_dispatch_packet_s {
   uint64_t kernel_object;
 
 #ifdef HSA_LARGE_MODEL
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *kernarg_address;
 #elif defined HSA_LITTLE_ENDIAN
   /**
@@ -2128,6 +2140,9 @@ typedef struct hsa_kernel_dispatch_packet_s {
    * modified once the kernel dispatch packet is enqueued until the dispatch has
    * completed execution.
    */
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *kernarg_address;
   /**
    * Reserved. Must be 0.
@@ -2135,6 +2150,9 @@ typedef struct hsa_kernel_dispatch_packet_s {
   uint32_t reserved1;
 #else
   uint32_t reserved1;
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *kernarg_address;
 #endif
 
@@ -2172,11 +2190,17 @@ typedef struct hsa_agent_dispatch_packet_s {
   uint32_t reserved0;
 
 #ifdef HSA_LARGE_MODEL
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *return_address;
 #elif defined HSA_LITTLE_ENDIAN
   /**
    * Address where to store the function return values, if any.
    */
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *return_address;
   /**
    * Reserved. Must be 0.
@@ -2184,6 +2208,9 @@ typedef struct hsa_agent_dispatch_packet_s {
   uint32_t reserved1;
 #else
   uint32_t reserved1;
+#ifdef DEVICE_COMPILER
+  __constant
+#endif
   void *return_address;
 #endif
 
