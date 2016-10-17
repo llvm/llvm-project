@@ -59,20 +59,29 @@ void assertEmpty(std::any const& a) {
     assert(any_cast<LastType const>(&a) == nullptr);
 }
 
+template <class Type>
+constexpr auto has_value_member(int) -> decltype(std::declval<Type&>().value, true)
+{ return true; }
+template <class> constexpr bool has_value_member(long) { return false; }
+
+
 // Assert that an 'any' object stores the specified 'Type' and 'value'.
 template <class Type>
-void assertContains(std::any const& a, int value = 1) {
+std::enable_if_t<has_value_member<Type>(0)>
+assertContains(std::any const& a, int value) {
     assert(a.has_value());
     assert(containsType<Type>(a));
     assert(std::any_cast<Type const &>(a).value == value);
 }
 
-template <>
-void assertContains<int>(std::any const& a, int value) {
+template <class Type, class Value>
+std::enable_if_t<!has_value_member<Type>(0)>
+assertContains(std::any const& a, Value value) {
     assert(a.has_value());
-    assert(containsType<int>(a));
-    assert(std::any_cast<int const &>(a) == value);
+    assert(containsType<Type>(a));
+    assert(std::any_cast<Type const &>(a) == value);
 }
+
 
 // Modify the value of a "test type" stored within an any to the specified
 // 'value'.

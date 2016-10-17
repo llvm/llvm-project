@@ -200,7 +200,7 @@ public:
     , class _Tp = decay_t<_ValueType>
     , class = enable_if_t<
         !is_same<_Tp, any>::value &&
-        !__is_inplace_type<_ValueType>::value &&
+        !__is_inplace_type_tag<_ValueType>::value &&
         is_copy_constructible<_Tp>::value>
     >
   _LIBCPP_INLINE_VISIBILITY
@@ -241,15 +241,12 @@ public:
     return *this;
   }
 
-  // TODO: Should this be constrained to disallow in_place types like the
-  // ValueType constructor?
   template <
       class _ValueType
     , class _Tp = decay_t<_ValueType>
     , class = enable_if_t<
           !is_same<_Tp, any>::value
-          && is_copy_constructible<_Tp>::value
-          && !__is_inplace_type<_ValueType>::value>
+          && is_copy_constructible<_Tp>::value>
     >
   _LIBCPP_INLINE_VISIBILITY
   any & operator=(_ValueType && __rhs);
@@ -579,7 +576,8 @@ _ValueType any_cast(any const & __v)
 {
     using _RawValueType = __uncvref_t<_ValueType>;
     static_assert(is_constructible<_ValueType, _RawValueType const &>::value,
-                  "ValueType is required to be a reference or a CopyConstructible type");
+                  "ValueType is required to be a const lvalue reference "
+                  "or a CopyConstructible type");
     auto __tmp = _VSTD::any_cast<add_const_t<_RawValueType>>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
@@ -592,7 +590,8 @@ _ValueType any_cast(any & __v)
 {
     using _RawValueType = __uncvref_t<_ValueType>;
     static_assert(is_constructible<_ValueType, _RawValueType &>::value,
-                  "ValueType is required to be a reference or a CopyConstructible type");
+                  "ValueType is required to be an lvalue reference "
+                  "or a CopyConstructible type");
     auto __tmp = _VSTD::any_cast<_RawValueType>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
@@ -605,7 +604,8 @@ _ValueType any_cast(any && __v)
 {
     using _RawValueType = __uncvref_t<_ValueType>;
     static_assert(is_constructible<_ValueType, _RawValueType>::value,
-                  "ValueType is required to be an rvalue reference or a CopyConstructible type");
+                  "ValueType is required to be an rvalue reference "
+                  "or a CopyConstructible type");
     auto __tmp = _VSTD::any_cast<_RawValueType>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
@@ -622,6 +622,18 @@ any_cast(any const * __any) _NOEXCEPT
     return _VSTD::any_cast<_ValueType>(const_cast<any *>(__any));
 }
 
+template <class _RetType>
+inline _LIBCPP_INLINE_VISIBILITY
+_RetType __pointer_or_func_cast(void* __p, /*IsFunction*/false_type) noexcept {
+  return static_cast<_RetType>(__p);
+}
+
+template <class _RetType>
+inline _LIBCPP_INLINE_VISIBILITY
+_RetType __pointer_or_func_cast(void*, /*IsFunction*/true_type) noexcept {
+  return nullptr;
+}
+
 template <class _ValueType>
 add_pointer_t<_ValueType>
 any_cast(any * __any) _NOEXCEPT
@@ -631,15 +643,15 @@ any_cast(any * __any) _NOEXCEPT
                   "_ValueType may not be a reference.");
     typedef typename add_pointer<_ValueType>::type _ReturnType;
     if (__any && __any->__h) {
-        return static_cast<_ReturnType>(
-            __any->__call(_Action::_Get, nullptr,
+      void *__p = __any->__call(_Action::_Get, nullptr,
 #if !defined(_LIBCPP_NO_RTTI)
                           &typeid(_ValueType),
 #else
                           nullptr,
 #endif
-                          __any_imp::__get_fallback_typeid<_ValueType>()
-        ));
+                          __any_imp::__get_fallback_typeid<_ValueType>());
+        return _VSTD::__pointer_or_func_cast<_ReturnType>(
+            __p, is_function<_ValueType>{});
     }
     return nullptr;
 }

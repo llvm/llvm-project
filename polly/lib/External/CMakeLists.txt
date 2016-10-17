@@ -123,12 +123,12 @@ endif ()
 
 check_c_source_compiles_numeric("
   #include <stdio.h>
-  int main() { snprintf((void*)0, 0, \"\"); return 0; }
+  int main() { snprintf((void*)0, 0, \" \"); return 0; }
   " HAVE_DECL_SNPRINTF)
 
 check_c_source_compiles_numeric("
   #include <stdio.h>
-  int main() { _snprintf((void*)0, 0, \"\"); return 0; }
+  int main() { _snprintf((void*)0, 0, \" \"); return 0; }
   " HAVE_DECL__SNPRINTF)
 
 if (NOT HAVE_DECL_SNPRINTF AND NOT HAVE_DECL__SNPRINTF)

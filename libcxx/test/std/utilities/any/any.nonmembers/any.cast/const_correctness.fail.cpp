@@ -29,18 +29,18 @@ int main()
     any a;
 
     // expected-error@any:* {{binding value of type 'const TestType' to reference to type 'TestType' drops 'const' qualifier}}
-    // expected-error@any:* {{static_assert failed "ValueType is required to be a reference or a CopyConstructible type"}}
+    // expected-error@any:* {{static_assert failed "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType &>(static_cast<any const&>(a)); // expected-note {{requested here}}
 
     // expected-error@any:* {{cannot cast from lvalue of type 'const TestType' to rvalue reference type 'TestType &&'; types are not compatible}}
-    // expected-error@any:* {{static_assert failed "ValueType is required to be a reference or a CopyConstructible type"}}
+    // expected-error@any:* {{static_assert failed "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType &&>(static_cast<any const&>(a)); // expected-note {{requested here}}
 
     // expected-error@any:* {{binding value of type 'const TestType2' to reference to type 'TestType2' drops 'const' qualifier}}
-    // expected-error@any:* {{static_assert failed "ValueType is required to be a reference or a CopyConstructible type"}}
+    // expected-error@any:* {{static_assert failed "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType2 &>(static_cast<any const&&>(a)); // expected-note {{requested here}}
 
     // expected-error@any:* {{cannot cast from lvalue of type 'const TestType2' to rvalue reference type 'TestType2 &&'; types are not compatible}}
-    // expected-error@any:* {{static_assert failed "ValueType is required to be a reference or a CopyConstructible type"}}
+    // expected-error@any:* {{static_assert failed "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType2 &&>(static_cast<any const&&>(a)); // expected-note {{requested here}}
 }
