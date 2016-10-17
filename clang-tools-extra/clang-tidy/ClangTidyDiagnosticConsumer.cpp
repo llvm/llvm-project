@@ -79,12 +79,13 @@ protected:
 
       tooling::Replacement Replacement(SM, Range, FixIt.CodeToInsert);
       llvm::Error Err = Error.Fix[Replacement.getFilePath()].add(Replacement);
-      // FIXME: better error handling.
+      // FIXME: better error handling (at least, don't let other replacements be
+      // applied).
       if (Err) {
         llvm::errs() << "Fix conflicts with existing fix! "
                     << llvm::toString(std::move(Err)) << "\n";
+        assert(false && "Fix conflicts with existing fix!");
       }
-      assert(!Err && "Fix conflicts with existing fix!");
     }
   }
 

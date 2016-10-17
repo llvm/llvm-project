@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o %t.obj %s
-// RUN: llvm-rtdyld -triple thumbv7-windows -dummy-extern OutputDebugStringW=0x01310060 -dummy-extern OutputDebugStringA=0x78563412 -dummy-extern ExitProcess=0x54769890 -dummy-extern unnamed_addr=0x00001024 -verify -check %s %t.obj
+// RUN: llvm-rtdyld -triple thumbv7-windows -dummy-extern OutputDebugStringW=0x01310061 -dummy-extern OutputDebugStringA=0x78563413 -dummy-extern ExitProcess=0x54769891 -dummy-extern unnamed_addr=0x00001024 -verify -check %s %t.obj
 
 	.text
 	.syntax unified
@@ -82,13 +82,13 @@ string:
 __imp_OutputDebugStringA:
 @ rel6:
 	.long OutputDebugStringA			@ IMAGE_REL_ARM_ADDR32
-# rtdyld-check: *{4}__imp_OutputDebugStringA = 0x78563412
+# rtdyld-check: *{4}__imp_OutputDebugStringA = 0x78563413
 
 	.p2align 2
 __imp_ExitProcess:
 @ rel7:
 	.long ExitProcess				@ IMAGE_REL_ARM_ADDR32
-# rtdyld-check: *{4}__imp_ExitProcess = 0x54769890
+# rtdyld-check: *{4}__imp_ExitProcess = 0x54769891
 
 	.global relocations
 relocations:
@@ -118,6 +118,32 @@ rel12:							@ IMAGE_REL_ARM_MOV32T
 __imp_OutputDebugStringW:
 @ rel13:
 	.long OutputDebugStringW			@ IMAGE_REL_ARM_ADDR32
-# rtdyld-check: *{4}__imp_OutputDebugStringW = 0x01310060
+# rtdyld-check: *{4}__imp_OutputDebugStringW = 0x01310061
 
 	.p2align 2
+
+branch_to_thumb_func:
+@ rel14:                                                @ IMAGE_REL_ARM_MOV32T
+        movw r0, :lower16:function
+# rtdyld-check: decode_operand(branch_to_thumb_func, 1) = (function&0x0000ffff|1)
+        movt r0, :upper16:function
+# TODO rtdyld-check: decode_operand(branch_to_thumb_func, 1) = (function&0xffff0000>>16)
+        bx r0
+        trap
+
+        .data
+
+        .p2align 2
+a_data_symbol:
+        .long 1073741822
+
+        .p2align 2
+
+        .text
+
+ref_to_data_symbol_addr:
+@ rel15:                                                @ IMAGE_REL_ARM_MOV32T
+        movw r0, :lower16:a_data_symbol
+# rtdyld-check: decode_operand(ref_to_data_symbol_addr, 1) = (a_data_symbol&0x0000ffff)
+        movt r0, :upper16:a_data_symbol
+# TODO rtdyld-check: decode_operand(ref_to_data_symbol_addr, 1) = (a_data_symbol&0xffff0000>>16)

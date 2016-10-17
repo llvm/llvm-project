@@ -22,6 +22,26 @@
 
 namespace llvm {
 
+static bool isThumbFunc(symbol_iterator Symbol, const ObjectFile &Obj,
+                        section_iterator Section) {
+  Expected<SymbolRef::Type> SymTypeOrErr = Symbol->getType();
+  if (!SymTypeOrErr) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    logAllUnhandledErrors(SymTypeOrErr.takeError(), OS, "");
+    OS.flush();
+    report_fatal_error(Buf);
+  }
+
+  if (*SymTypeOrErr != SymbolRef::ST_Function)
+    return false;
+
+  // We check the IMAGE_SCN_MEM_16BIT flag in the section of the symbol to tell
+  // if it's thumb or not
+  return cast<COFFObjectFile>(Obj).getCOFFSection(*Section)->Characteristics &
+         COFF::IMAGE_SCN_MEM_16BIT;
+}
+
 class RuntimeDyldCOFFThumb : public RuntimeDyldCOFF {
 public:
   RuntimeDyldCOFFThumb(RuntimeDyld::MemoryManager &MM,
@@ -92,12 +112,22 @@ public:
       else
         return TargetSectionIDOrErr.takeError();
 
+      // We need to find out if the relocation is relative to a thumb function
+      // so that we include the ISA selection bit when resolve the relocation
+      bool IsTargetThumbFunc = isThumbFunc(Symbol, Obj, Section);
+
       switch (RelType) {
       default: llvm_unreachable("unsupported relocation type");
       case COFF::IMAGE_REL_ARM_ABSOLUTE:
         // This relocation is ignored.
         break;
-      case COFF::IMAGE_REL_ARM_ADDR32:
+      case COFF::IMAGE_REL_ARM_ADDR32: {
+        RelocationEntry RE = RelocationEntry(
+            SectionID, Offset, RelType, Addend, TargetSectionID,
+            getSymbolOffset(*Symbol), 0, 0, false, 0, IsTargetThumbFunc);
+        addRelocationForSection(RE, TargetSectionID);
+        break;
+      }
       case COFF::IMAGE_REL_ARM_ADDR32NB: {
         RelocationEntry RE =
             RelocationEntry(SectionID, Offset, RelType, Addend, TargetSectionID,
@@ -118,9 +148,9 @@ public:
         break;
       }
       case COFF::IMAGE_REL_ARM_MOV32T: {
-        RelocationEntry RE =
-            RelocationEntry(SectionID, Offset, RelType, Addend, TargetSectionID,
-                            getSymbolOffset(*Symbol), 0, 0, false, 0);
+        RelocationEntry RE = RelocationEntry(
+            SectionID, Offset, RelType, Addend, TargetSectionID,
+            getSymbolOffset(*Symbol), 0, 0, false, 0, IsTargetThumbFunc);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
@@ -142,6 +172,7 @@ public:
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
     const auto Section = Sections[RE.SectionID];
     uint8_t *Target = Section.getAddressWithOffset(RE.Offset);
+    int ISASelectionBit = RE.IsTargetThumbFunc ? 1 : 0;
 
     switch (RE.RelType) {
     default: llvm_unreachable("unsupported relocation type");
@@ -154,6 +185,7 @@ public:
           RE.Sections.SectionA == static_cast<uint32_t>(-1)
               ? Value
               : Sections[RE.Sections.SectionA].getLoadAddressWithOffset(RE.Addend);
+      Result |= ISASelectionBit;
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&
@@ -178,6 +210,7 @@ public:
                    << " RelType: IMAGE_REL_ARM_ADDR32NB"
                    << " TargetSection: " << RE.Sections.SectionA
                    << " Value: " << format("0x%08" PRIx32, Result) << '\n');
+      Result |= ISASelectionBit;
       writeBytesUnaligned(Result, Target, 4);
       break;
     }
@@ -228,7 +261,8 @@ public:
         Bytes[3] |= (((Immediate & 0x0700) >>  8) << 4);
       };
 
-      EncodeImmediate(&Target[0], static_cast<uint32_t>(Result) >> 00);
+      EncodeImmediate(&Target[0],
+                      (static_cast<uint32_t>(Result) >> 00) | ISASelectionBit);
       EncodeImmediate(&Target[4], static_cast<uint32_t>(Result) >> 16);
 
       break;

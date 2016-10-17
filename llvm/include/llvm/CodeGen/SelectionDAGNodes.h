@@ -1401,15 +1401,26 @@ public:
 
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);
+
 /// Returns true if \p V is an FP constant with a value of positive zero.
 bool isNullFPConstant(SDValue V);
+
 /// Returns true if \p V is an integer constant with all bits set.
 bool isAllOnesConstant(SDValue V);
+
 /// Returns true if \p V is a constant integer one.
 bool isOneConstant(SDValue V);
+
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.
 bool isBitwiseNot(SDValue V);
+
+/// Returns the SDNode if it is a constant splat BuildVector or constant int.
+ConstantSDNode *isConstOrConstSplat(SDValue V);
+
+/// Returns the SDNode if it is a constant splat BuildVector or constant float.
+ConstantFPSDNode *isConstOrConstSplatFP(SDValue V);
+
 
 class GlobalAddressSDNode : public SDNode {
   const GlobalValue *TheGlobal;
