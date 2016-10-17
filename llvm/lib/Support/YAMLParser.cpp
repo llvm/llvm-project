@@ -360,10 +360,7 @@ private:
   /// @brief Scan ns-uri-char[39]s starting at Cur.
   ///
   /// This updates Cur and Column while scanning.
-  ///
-  /// @returns A StringRef starting at Cur which covers the longest contiguous
-  ///          sequence of ns-uri-char.
-  StringRef scan_ns_uri_char();
+  void scan_ns_uri_char();
 
   /// @brief Consume a minimal well-formed code unit subsequence starting at
   ///        \a Cur. Return false if it is not the same Unicode scalar value as
@@ -883,8 +880,7 @@ static bool is_ns_word_char(const char C) {
          || (C >= 'A' && C <= 'Z');
 }
 
-StringRef Scanner::scan_ns_uri_char() {
-  StringRef::iterator Start = Current;
+void Scanner::scan_ns_uri_char() {
   while (true) {
     if (Current == End)
       break;
@@ -900,7 +896,6 @@ StringRef Scanner::scan_ns_uri_char() {
     } else
       break;
   }
-  return StringRef(Start, Current - Start);
 }
 
 bool Scanner::consume(uint32_t Expected) {

@@ -12982,17 +12982,32 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
   MVT OpVT = Op.getSimpleValueType();
   MVT SubVecVT = SubVec.getSimpleValueType();
 
-  // Fold two 16-byte subvector loads into one 32-byte load:
-  // (insert_subvector (insert_subvector undef, (load addr), 0),
-  //                   (load addr + 16), Elts/2)
+  if (OpVT.getVectorElementType() == MVT::i1)
+    return insert1BitVector(Op, DAG, Subtarget);
+
+  assert((OpVT.is256BitVector() || OpVT.is512BitVector()) &&
+         "Can only insert into 256-bit or 512-bit vectors");
+
+  // Fold two 16-byte or 32-byte subvector loads into one 32-byte or 64-byte
+  // load:
+  // (insert_subvector (insert_subvector undef, (load16 addr), 0),
+  //                   (load16 addr + 16), Elts/2)
   // --> load32 addr
-  // or a 16-byte broadcast:
-  // (insert_subvector (insert_subvector undef, (load addr), 0),
-  //                   (load addr), Elts/2)
+  // or:
+  // (insert_subvector (insert_subvector undef, (load32 addr), 0),
+  //                   (load32 addr + 32), Elts/2)
+  // --> load64 addr
+  // or a 16-byte or 32-byte broadcast:
+  // (insert_subvector (insert_subvector undef, (load16 addr), 0),
+  //                   (load16 addr), Elts/2)
   // --> X86SubVBroadcast(load16 addr)
+  // or:
+  // (insert_subvector (insert_subvector undef, (load32 addr), 0),
+  //                   (load32 addr), Elts/2)
+  // --> X86SubVBroadcast(load32 addr)
   if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
       Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      OpVT.is256BitVector() && SubVecVT.is128BitVector()) {
+      OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2) {
     auto *Idx2 = dyn_cast<ConstantSDNode>(Vec.getOperand(2));
     if (Idx2 && Idx2->getZExtValue() == 0) {
       SDValue SubVec2 = Vec.getOperand(1);
@@ -13019,12 +13034,6 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
       }
     }
   }
-
-  if (OpVT.getVectorElementType() == MVT::i1)
-    return insert1BitVector(Op, DAG, Subtarget);
-
-  assert((OpVT.is256BitVector() || OpVT.is512BitVector()) &&
-         "Can only insert into 256-bit or 512-bit vectors");
 
   if (SubVecVT.is128BitVector())
     return insert128BitVector(Vec, SubVec, IdxVal, DAG, dl);
