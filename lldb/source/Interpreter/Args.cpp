@@ -332,8 +332,8 @@ void Args::Shift() {
   m_entries.erase(m_entries.begin());
 }
 
-llvm::StringRef Args::Unshift(llvm::StringRef arg_str, char quote_char) {
-  return InsertArgumentAtIndex(0, arg_str, quote_char);
+void Args::Unshift(llvm::StringRef arg_str, char quote_char) {
+  InsertArgumentAtIndex(0, arg_str, quote_char);
 }
 
 void Args::AppendArguments(const Args &rhs) {
@@ -361,30 +361,28 @@ void Args::AppendArguments(const char **argv) {
   m_argv.push_back(nullptr);
 }
 
-llvm::StringRef Args::AppendArgument(llvm::StringRef arg_str, char quote_char) {
-  return InsertArgumentAtIndex(GetArgumentCount(), arg_str, quote_char);
+void Args::AppendArgument(llvm::StringRef arg_str, char quote_char) {
+  InsertArgumentAtIndex(GetArgumentCount(), arg_str, quote_char);
 }
 
-llvm::StringRef Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
-                                            char quote_char) {
+void Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
+                                 char quote_char) {
   assert(m_argv.size() == m_entries.size() + 1);
   assert(m_argv.back() == nullptr);
 
   if (idx > m_entries.size())
-    return llvm::StringRef();
+    return;
   m_entries.emplace(m_entries.begin() + idx, arg_str, quote_char);
   m_argv.insert(m_argv.begin() + idx, m_entries[idx].data());
-  return m_entries[idx].ref;
 }
 
-llvm::StringRef Args::ReplaceArgumentAtIndex(size_t idx,
-                                             llvm::StringRef arg_str,
-                                             char quote_char) {
+void Args::ReplaceArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
+                                  char quote_char) {
   assert(m_argv.size() == m_entries.size() + 1);
   assert(m_argv.back() == nullptr);
 
   if (idx >= m_entries.size())
-    return llvm::StringRef();
+    return;
 
   if (arg_str.size() > m_entries[idx].ref.size()) {
     m_entries[idx] = ArgEntry(arg_str, quote_char);
@@ -395,8 +393,6 @@ llvm::StringRef Args::ReplaceArgumentAtIndex(size_t idx,
     m_entries[idx].ptr[arg_str.size()] = 0;
     m_entries[idx].ref = m_entries[idx].ref.take_front(arg_str.size());
   }
-
-  return m_entries[idx].ref;
 }
 
 void Args::DeleteArgumentAtIndex(size_t idx) {

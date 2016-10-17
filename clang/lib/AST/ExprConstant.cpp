@@ -787,7 +787,7 @@ namespace {
     /// (Foo(), 1)      // use noteSideEffect
     /// (Foo() || true) // use noteSideEffect
     /// Foo() + 1       // use noteFailure
-    LLVM_ATTRIBUTE_UNUSED_RESULT bool noteFailure() {
+    LLVM_NODISCARD bool noteFailure() {
       // Failure when evaluating some expression often means there is some
       // subexpression whose evaluation was skipped. Therefore, (because we
       // don't track whether we skipped an expression when unwinding after an

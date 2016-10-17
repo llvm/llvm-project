@@ -399,9 +399,11 @@ ELFFile<ELFT>::getSection(uint32_t Index) const {
   if (Index >= getNumSections())
     return object_error::invalid_section_index;
 
-  return reinterpret_cast<const Elf_Shdr *>(
-      reinterpret_cast<const char *>(SectionHeaderTable) +
-      (Index * Header->e_shentsize));
+  const uint8_t *Addr = reinterpret_cast<const uint8_t *>(SectionHeaderTable) +
+                        (Index * Header->e_shentsize);
+  if (Addr >= base() + getBufSize())
+    return object_error::invalid_section_index;
+  return reinterpret_cast<const Elf_Shdr *>(Addr);
 }
 
 template <class ELFT>
