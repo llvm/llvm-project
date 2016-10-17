@@ -124,10 +124,10 @@ public:
   }
 
   /// Check if the list is empty in constant time.
-  bool LLVM_ATTRIBUTE_UNUSED_RESULT empty() const { return Sentinel.empty(); }
+  LLVM_NODISCARD bool empty() const { return Sentinel.empty(); }
 
   /// Calculate the size of the list in linear time.
-  size_type LLVM_ATTRIBUTE_UNUSED_RESULT size() const {
+  LLVM_NODISCARD size_type size() const {
     return std::distance(begin(), end());
   }
 

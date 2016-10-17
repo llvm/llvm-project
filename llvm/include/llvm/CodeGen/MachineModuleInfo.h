@@ -293,8 +293,7 @@ public:
     return FrameInstructions;
   }
 
-  unsigned LLVM_ATTRIBUTE_UNUSED_RESULT
-  addFrameInst(const MCCFIInstruction &Inst) {
+  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst) {
     FrameInstructions.push_back(Inst);
     return FrameInstructions.size() - 1;
   }

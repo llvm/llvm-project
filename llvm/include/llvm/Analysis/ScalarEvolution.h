@@ -310,7 +310,7 @@ public:
   };
 
   /// Convenient IncrementWrapFlags manipulation methods.
-  static SCEVWrapPredicate::IncrementWrapFlags LLVM_ATTRIBUTE_UNUSED_RESULT
+  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
   clearFlags(SCEVWrapPredicate::IncrementWrapFlags Flags,
              SCEVWrapPredicate::IncrementWrapFlags OffFlags) {
     assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
@@ -319,7 +319,7 @@ public:
     return (SCEVWrapPredicate::IncrementWrapFlags)(Flags & ~OffFlags);
   }
 
-  static SCEVWrapPredicate::IncrementWrapFlags LLVM_ATTRIBUTE_UNUSED_RESULT
+  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
   maskFlags(SCEVWrapPredicate::IncrementWrapFlags Flags, int Mask) {
     assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
     assert((Mask & IncrementNoWrapMask) == Mask && "Invalid mask value!");
@@ -327,7 +327,7 @@ public:
     return (SCEVWrapPredicate::IncrementWrapFlags)(Flags & Mask);
   }
 
-  static SCEVWrapPredicate::IncrementWrapFlags LLVM_ATTRIBUTE_UNUSED_RESULT
+  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
   setFlags(SCEVWrapPredicate::IncrementWrapFlags Flags,
            SCEVWrapPredicate::IncrementWrapFlags OnFlags) {
     assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
@@ -339,7 +339,7 @@ public:
 
   /// Returns the set of SCEVWrapPredicate no wrap flags implied by a
   /// SCEVAddRecExpr.
-  static SCEVWrapPredicate::IncrementWrapFlags
+  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
   getImpliedFlags(const SCEVAddRecExpr *AR, ScalarEvolution &SE);
 
 private:
@@ -432,15 +432,15 @@ public:
 
   /// Convenient NoWrapFlags manipulation that hides enum casts and is
   /// visible in the ScalarEvolution name space.
-  static SCEV::NoWrapFlags LLVM_ATTRIBUTE_UNUSED_RESULT
-  maskFlags(SCEV::NoWrapFlags Flags, int Mask) {
+  LLVM_NODISCARD static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
+                                                    int Mask) {
     return (SCEV::NoWrapFlags)(Flags & Mask);
   }
-  static SCEV::NoWrapFlags LLVM_ATTRIBUTE_UNUSED_RESULT
-  setFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OnFlags) {
+  LLVM_NODISCARD static SCEV::NoWrapFlags setFlags(SCEV::NoWrapFlags Flags,
+                                                   SCEV::NoWrapFlags OnFlags) {
     return (SCEV::NoWrapFlags)(Flags | OnFlags);
   }
-  static SCEV::NoWrapFlags LLVM_ATTRIBUTE_UNUSED_RESULT
+  LLVM_NODISCARD static SCEV::NoWrapFlags
   clearFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OffFlags) {
     return (SCEV::NoWrapFlags)(Flags & ~OffFlags);
   }

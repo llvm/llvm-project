@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++1z -verify %s -triple x86_64-unknown-unknown
 
 struct S;
 

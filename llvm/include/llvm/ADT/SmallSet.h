@@ -47,7 +47,7 @@ public:
   typedef size_t size_type;
   SmallSet() {}
 
-  bool LLVM_ATTRIBUTE_UNUSED_RESULT empty() const {
+  LLVM_NODISCARD bool empty() const {
     return Vector.empty() && Set.empty();
   }
 

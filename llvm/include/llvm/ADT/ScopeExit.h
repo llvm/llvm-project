@@ -43,8 +43,8 @@ public:
 //
 // Interface is specified by p0052r2.
 template <typename Callable>
-detail::scope_exit<typename std::decay<Callable>::type>
-    LLVM_ATTRIBUTE_UNUSED_RESULT make_scope_exit(Callable &&F) {
+LLVM_NODISCARD detail::scope_exit<typename std::decay<Callable>::type>
+make_scope_exit(Callable &&F) {
   return detail::scope_exit<typename std::decay<Callable>::type>(
       std::forward<Callable>(F));
 }
