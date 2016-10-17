@@ -334,6 +334,12 @@ ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
     return;
   }
 
+  if (SectionTableOffset & (AlignOf<Elf_Shdr>::Alignment - 1)) {
+    // Invalid address alignment of section headers
+    EC = object_error::parse_failed;
+    return;
+  }
+
   // The getNumSections() call below depends on SectionHeaderTable being set.
   SectionHeaderTable =
     reinterpret_cast<const Elf_Shdr *>(base() + SectionTableOffset);

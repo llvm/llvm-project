@@ -137,7 +137,7 @@ StringRef ScriptParserBase::peek() {
   return Tok;
 }
 
-bool ScriptParserBase::skip(StringRef Tok) {
+bool ScriptParserBase::consume(StringRef Tok) {
   if (Error)
     return false;
   if (atEOF()) {

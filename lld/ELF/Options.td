@@ -127,6 +127,8 @@ def no_whole_archive: F<"no-whole-archive">,
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
+def nopie: F<"nopie">, HelpText<"Do not create a position independent executable">;
+
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
