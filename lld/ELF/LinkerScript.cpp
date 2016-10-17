@@ -955,7 +955,7 @@ void ScriptParser::readVersionScript() {
 }
 
 void ScriptParser::readVersionScriptCommand() {
-  if (skip("{")) {
+  if (consume("{")) {
     readVersionDeclaration("");
     return;
   }
@@ -1050,7 +1050,7 @@ void ScriptParser::readAsNeeded() {
   expect("(");
   bool Orig = Config->AsNeeded;
   Config->AsNeeded = true;
-  while (!Error && !skip(")"))
+  while (!Error && !consume(")"))
     addFile(unquote(next()));
   Config->AsNeeded = Orig;
 }
@@ -1066,13 +1066,13 @@ void ScriptParser::readEntry() {
 
 void ScriptParser::readExtern() {
   expect("(");
-  while (!Error && !skip(")"))
+  while (!Error && !consume(")"))
     Config->Undefined.push_back(next());
 }
 
 void ScriptParser::readGroup() {
   expect("(");
-  while (!Error && !skip(")")) {
+  while (!Error && !consume(")")) {
     StringRef Tok = next();
     if (Tok == "AS_NEEDED")
       readAsNeeded();
@@ -1129,7 +1129,7 @@ void ScriptParser::readOutputFormat() {
 
 void ScriptParser::readPhdrs() {
   expect("{");
-  while (!Error && !skip("}")) {
+  while (!Error && !consume("}")) {
     StringRef Tok = next();
     Opt.PhdrsCommands.push_back(
         {Tok, PT_NULL, false, false, UINT_MAX, nullptr});
@@ -1169,7 +1169,7 @@ void ScriptParser::readSearchDir() {
 void ScriptParser::readSections() {
   Opt.HasSections = true;
   expect("{");
-  while (!Error && !skip("}")) {
+  while (!Error && !consume("}")) {
     StringRef Tok = next();
     BaseCommand *Cmd = readProvideOrAssignment(Tok, true);
     if (!Cmd) {
@@ -1194,19 +1194,19 @@ static int precedence(StringRef Op) {
 
 Regex ScriptParser::readFilePatterns() {
   std::vector<StringRef> V;
-  while (!Error && !skip(")"))
+  while (!Error && !consume(")"))
     V.push_back(next());
   return compileGlobPatterns(V);
 }
 
 SortSectionPolicy ScriptParser::readSortKind() {
-  if (skip("SORT") || skip("SORT_BY_NAME"))
+  if (consume("SORT") || consume("SORT_BY_NAME"))
     return SortSectionPolicy::Name;
-  if (skip("SORT_BY_ALIGNMENT"))
+  if (consume("SORT_BY_ALIGNMENT"))
     return SortSectionPolicy::Alignment;
-  if (skip("SORT_BY_INIT_PRIORITY"))
+  if (consume("SORT_BY_INIT_PRIORITY"))
     return SortSectionPolicy::Priority;
-  if (skip("SORT_NONE"))
+  if (consume("SORT_NONE"))
     return SortSectionPolicy::None;
   return SortSectionPolicy::Default;
 }
@@ -1222,7 +1222,7 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
   std::vector<SectionPattern> Ret;
   while (!Error && peek() != ")") {
     Regex ExcludeFileRe;
-    if (skip("EXCLUDE_FILE")) {
+    if (consume("EXCLUDE_FILE")) {
       expect("(");
       ExcludeFileRe = readFilePatterns();
     }
@@ -1249,7 +1249,7 @@ InputSectionDescription *
 ScriptParser::readInputSectionRules(StringRef FilePattern) {
   auto *Cmd = new InputSectionDescription(FilePattern);
   expect("(");
-  while (!HasError && !skip(")")) {
+  while (!HasError && !consume(")")) {
     SortSectionPolicy Outer = readSortKind();
     SortSectionPolicy Inner = SortSectionPolicy::Default;
     std::vector<SectionPattern> V;
@@ -1336,21 +1336,21 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   expect(":");
 
-  if (skip("AT"))
+  if (consume("AT"))
     Cmd->LMAExpr = readParenExpr();
-  if (skip("ALIGN"))
+  if (consume("ALIGN"))
     Cmd->AlignExpr = readParenExpr();
-  if (skip("SUBALIGN"))
+  if (consume("SUBALIGN"))
     Cmd->SubalignExpr = readParenExpr();
 
   // Parse constraints.
-  if (skip("ONLY_IF_RO"))
+  if (consume("ONLY_IF_RO"))
     Cmd->Constraint = ConstraintKind::ReadOnly;
-  if (skip("ONLY_IF_RW"))
+  if (consume("ONLY_IF_RW"))
     Cmd->Constraint = ConstraintKind::ReadWrite;
   expect("{");
 
-  while (!Error && !skip("}")) {
+  while (!Error && !consume("}")) {
     StringRef Tok = next();
     if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok, false))
       Cmd->Commands.emplace_back(Assignment);
@@ -1367,7 +1367,7 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
 
-  if (skip("="))
+  if (consume("="))
     Cmd->Filler = readOutputSectionFiller(next());
   else if (peek().startswith("="))
     Cmd->Filler = readOutputSectionFiller(next().drop_front());
@@ -1430,7 +1430,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   bool IsAbsolute = false;
   Expr E;
   assert(Op == "=" || Op == "+=");
-  if (skip("ABSOLUTE")) {
+  if (consume("ABSOLUTE")) {
     E = readParenExpr();
     IsAbsolute = true;
   } else {
@@ -1737,9 +1737,9 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   size_t VersionId = Config->VersionDefinitions.size() + 2;
   Config->VersionDefinitions.push_back({VerStr, VersionId});
 
-  if (skip("global:") || peek() != "local:")
+  if (consume("global:") || peek() != "local:")
     readGlobal(VerStr);
-  if (skip("local:"))
+  if (consume("local:"))
     readLocal();
   expect("}");
 
@@ -1782,7 +1782,7 @@ void ScriptParser::readGlobal(StringRef VerStr) {
     Globals = &Config->VersionDefinitions.back().Globals;
 
   for (;;) {
-    if (skip("extern"))
+    if (consume("extern"))
       readExtern(Globals);
 
     StringRef Cur = peek();

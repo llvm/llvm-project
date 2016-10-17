@@ -6653,6 +6653,40 @@ bool llvm::isBitwiseNot(SDValue V) {
   return V.getOpcode() == ISD::XOR && isAllOnesConstant(V.getOperand(1));
 }
 
+ConstantSDNode *llvm::isConstOrConstSplat(SDValue N) {
+  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N))
+    return CN;
+
+  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
+    BitVector UndefElements;
+    ConstantSDNode *CN = BV->getConstantSplatNode(&UndefElements);
+
+    // BuildVectors can truncate their operands. Ignore that case here.
+    // FIXME: We blindly ignore splats which include undef which is overly
+    // pessimistic.
+    if (CN && UndefElements.none() &&
+        CN->getValueType(0) == N.getValueType().getScalarType())
+      return CN;
+  }
+
+  return nullptr;
+}
+
+ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N) {
+  if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N))
+    return CN;
+
+  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
+    BitVector UndefElements;
+    ConstantFPSDNode *CN = BV->getConstantFPSplatNode(&UndefElements);
+
+    if (CN && UndefElements.none())
+      return CN;
+  }
+
+  return nullptr;
+}
+
 HandleSDNode::~HandleSDNode() {
   DropOperands();
 }

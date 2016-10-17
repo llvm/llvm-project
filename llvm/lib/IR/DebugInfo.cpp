@@ -272,7 +272,11 @@ bool llvm::StripDebugInfo(Module &M) {
          NME = M.named_metadata_end(); NMI != NME;) {
     NamedMDNode *NMD = &*NMI;
     ++NMI;
-    if (NMD->getName().startswith("llvm.dbg.")) {
+
+    // We're stripping debug info, and without them, coverage information
+    // doesn't quite make sense.
+    if (NMD->getName().startswith("llvm.dbg.") ||
+        NMD->getName() == "llvm.gcov") {
       NMD->eraseFromParent();
       Changed = true;
     }

@@ -693,7 +693,8 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
 }
 
 template <class ELFT>
-static Symbol *createBitcodeSymbol(const DenseSet<const Comdat *> &KeptComdats,
+static Symbol *createBitcodeSymbol(DenseSet<StringRef> &KeptComdats,
+                                   DenseSet<StringRef> &ComdatGroups,
                                    const lto::InputFile::Symbol &ObjSym,
                                    StringSaver &Saver, BitcodeFile *F) {
   StringRef NameRef = Saver.save(ObjSym.getName());
@@ -704,10 +705,20 @@ static Symbol *createBitcodeSymbol(const DenseSet<const Comdat *> &KeptComdats,
   uint8_t Visibility = mapVisibility(ObjSym.getVisibility());
   bool CanOmitFromDynSym = ObjSym.canBeOmittedFromSymbolTable();
 
-  if (const Comdat *C = check(ObjSym.getComdat()))
-    if (!KeptComdats.count(C))
+  StringRef C = check(ObjSym.getComdat());
+  if (!C.empty()) {
+    bool Keep = KeptComdats.count(C);
+    if (!Keep) {
+      StringRef N = Saver.save(C);
+      if (ComdatGroups.insert(N).second) {
+        Keep = true;
+        KeptComdats.insert(C);
+      }
+    }
+    if (!Keep)
       return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
                                            CanOmitFromDynSym, F);
+}
 
   if (Flags & BasicSymbolRef::SF_Undefined)
     return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
@@ -736,16 +747,10 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
   Obj = check(lto::InputFile::create(MemoryBufferRef(
       MB.getBuffer(), Saver.save(ArchiveName + MB.getBufferIdentifier() +
                                  utostr(OffsetInArchive)))));
-  DenseSet<const Comdat *> KeptComdats;
-  for (const auto &P : Obj->getComdatSymbolTable()) {
-    StringRef N = Saver.save(P.first());
-    if (ComdatGroups.insert(N).second)
-      KeptComdats.insert(&P.second);
-  }
-
+  DenseSet<StringRef> KeptComdats;
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
-    Symbols.push_back(
-        createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, Saver, this));
+    Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ComdatGroups,
+                                                ObjSym, Saver, this));
 }
 
 template <template <class> class T>

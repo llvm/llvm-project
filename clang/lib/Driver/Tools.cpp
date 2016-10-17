@@ -5728,7 +5728,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   ObjCRuntime objcRuntime = AddObjCRuntimeArgs(Args, CmdArgs, rewriteKind);
 
   // -fobjc-dispatch-method is only relevant with the nonfragile-abi, and
-  // legacy is the default. Except for deployment taget of 10.5,
+  // legacy is the default. Except for deployment target of 10.5,
   // next runtime is always legacy dispatch and -fno-objc-legacy-dispatch
   // gets ignored silently.
   if (objcRuntime.isNonFragile()) {

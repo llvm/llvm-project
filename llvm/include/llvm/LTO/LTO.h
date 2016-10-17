@@ -176,10 +176,9 @@ public:
       return GV && GV->isThreadLocal();
     }
 
-    //FIXME: We shouldn't expose this information.
-    Expected<const Comdat *> getComdat() const {
+    Expected<StringRef> getComdat() const {
       if (!GV)
-        return nullptr;
+        return "";
       const GlobalObject *GO;
       if (auto *GA = dyn_cast<GlobalAlias>(GV)) {
         GO = GA->getBaseObject();
@@ -189,9 +188,9 @@ public:
       } else {
         GO = cast<GlobalObject>(GV);
       }
-      if (GO)
-        return GO->getComdat();
-      return nullptr;
+      if (const Comdat *C = GO->getComdat())
+        return C->getName();
+      return "";
     }
 
     uint64_t getCommonSize() const {
@@ -251,11 +250,6 @@ public:
 
   MemoryBufferRef getMemoryBufferRef() const {
     return Obj->getMemoryBufferRef();
-  }
-
-  // FIXME: We should fix lld and not expose this information.
-  StringMap<Comdat> &getComdatSymbolTable() {
-    return Obj->getModule().getComdatSymbolTable();
   }
 };
 

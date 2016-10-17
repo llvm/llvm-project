@@ -346,7 +346,7 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueDelegateStructuredDataReceipt) {
   ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
   ASSERT_EQ(eStateStopped, fix.SendCPacket(response));
   ASSERT_EQ("T01", response.GetStringRef());
-  ASSERT_EQ(1, fix.delegate.structured_data_packets.size());
+  ASSERT_EQ(1ul, fix.delegate.structured_data_packets.size());
 
   // Verify the packet contents.  It should have been unescaped upon packet
   // reception.

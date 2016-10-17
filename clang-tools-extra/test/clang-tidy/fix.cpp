@@ -5,6 +5,7 @@
 // RUN: FileCheck -input-file=%t.yaml -check-prefix=CHECK-YAML %s
 
 namespace i {
+void f(); // So that the namespace isn't empty.
 }
 // CHECK: } // namespace i
 // CHECK-MESSAGES: note: FIX-IT applied suggested code changes

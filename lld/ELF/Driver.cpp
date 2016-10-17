@@ -345,6 +345,20 @@ static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
   return UnresolvedPolicy::ReportError;
 }
 
+static Target2Policy getTarget2Option(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_target2)) {
+    StringRef S = Arg->getValue();
+    if (S == "rel")
+      return Target2Policy::Rel;
+    if (S == "abs")
+      return Target2Policy::Abs;
+    if (S == "got-rel")
+      return Target2Policy::GotRel;
+    error("unknown --target2 option: " + S);
+  }
+  return Target2Policy::GotRel;
+}
+
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_oformat)) {
     StringRef S = Arg->getValue();
@@ -549,6 +563,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SortSection = getSortKind(Args);
 
   Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
+
+  Config->Target2 = getTarget2Option(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_dynamic_list))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
