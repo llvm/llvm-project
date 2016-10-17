@@ -2717,8 +2717,9 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     QualType *exnSlot = argSlot + NumParams;
     unsigned I = 0;
     for (QualType ExceptionType : epi.ExceptionSpec.Exceptions) {
-      // Note that a dependent exception specification does *not* make
-      // a type dependent; it's not even part of the C++ type system.
+      // Note that, before C++17, a dependent exception specification does
+      // *not* make a type dependent; it's not even part of the C++ type
+      // system.
       if (ExceptionType->isInstantiationDependentType())
         setInstantiationDependent();
 
@@ -2755,6 +2756,19 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     FunctionDecl **slot =
         reinterpret_cast<FunctionDecl **>(argSlot + NumParams);
     slot[0] = epi.ExceptionSpec.SourceDecl;
+  }
+
+  // If this is a canonical type, and its exception specification is dependent,
+  // then it's a dependent type. This only happens in C++17 onwards.
+  if (isCanonicalUnqualified()) {
+    if (getExceptionSpecType() == EST_Dynamic ||
+        getExceptionSpecType() == EST_ComputedNoexcept) {
+      assert(hasDependentExceptionSpec() && "type should not be canonical");
+      setDependent();
+    }
+  } else if (getCanonicalTypeInternal()->isDependentType()) {
+    // Ask our canonical type whether our exception specification was dependent.
+    setDependent();
   }
 
   if (epi.ExtParameterInfos) {
@@ -2801,29 +2815,28 @@ FunctionProtoType::getNoexceptSpec(const ASTContext &ctx) const {
   return value.getBoolValue() ? NR_Nothrow : NR_Throw;
 }
 
-bool FunctionProtoType::isNothrow(const ASTContext &Ctx,
-                                  bool ResultIfDependent) const {
+CanThrowResult FunctionProtoType::canThrow(const ASTContext &Ctx) const {
   ExceptionSpecificationType EST = getExceptionSpecType();
   assert(EST != EST_Unevaluated && EST != EST_Uninstantiated);
   if (EST == EST_DynamicNone || EST == EST_BasicNoexcept)
-    return true;
+    return CT_Cannot;
 
-  if (EST == EST_Dynamic && ResultIfDependent) {
+  if (EST == EST_Dynamic) {
     // A dynamic exception specification is throwing unless every exception
     // type is an (unexpanded) pack expansion type.
     for (unsigned I = 0, N = NumExceptions; I != N; ++I)
       if (!getExceptionType(I)->getAs<PackExpansionType>())
-        return false;
-    return ResultIfDependent;
+        return CT_Can;
+    return CT_Dependent;
   }
 
   if (EST != EST_ComputedNoexcept)
-    return false;
+    return CT_Can;
 
   NoexceptResult NR = getNoexceptSpec(Ctx);
   if (NR == NR_Dependent)
-    return ResultIfDependent;
-  return NR == NR_Nothrow;
+    return CT_Dependent;
+  return NR == NR_Nothrow ? CT_Cannot : CT_Can;
 }
 
 bool FunctionProtoType::isTemplateVariadic() const {

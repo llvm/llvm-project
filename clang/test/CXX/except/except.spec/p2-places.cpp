@@ -37,6 +37,8 @@ namespace dyn {
   // Pointer to function returning pointer to pointer to function with spec
   void (**(*h())())() throw(int); // expected-error {{not allowed beyond a single}}
 
+  // FIXME: Missing a lot of negative tests, primarily type-ids in various places
+  // We fail to diagnose all of those.
 }
 
 namespace noex {

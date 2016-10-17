@@ -20,7 +20,7 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   # We are building polly out of tree, adjust the settings.
   # FIXME: FileCheck is not available in llvm install directory at the moment.
   set(LLVM_LIT ${LLVM_INSTALL_ROOT}/bin/llvm-lit)
-  set(POLLY_TEST_DEPS LLVMPolly)
+  set(POLLY_TEST_DEPS LLVMPolly polly-isl-test)
   if (POLLY_GTEST_AVAIL)
     list(APPEND POLLY_TEST_DEPS PollyUnitTests)
   endif ()
@@ -115,7 +115,7 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
 else (NOT DEFINED LLVM_MAIN_SRC_DIR)
 
   set(LLVM_LIT ${LLVM_TOOLS_BINARY_DIR}/llvm-lit)
-  set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not)
+  set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not polly-isl-test)
   if (POLLY_GTEST_AVAIL)
     list(APPEND POLLY_TEST_DEPS PollyUnitTests)
   endif ()
