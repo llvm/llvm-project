@@ -130,15 +130,6 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
-/// LLVM_ATTRIBUTE_UNUSED_RESULT - Deprecated. Use LLVM_NODISCARD instead.
-#if __has_attribute(warn_unused_result) || LLVM_GNUC_PREREQ(3, 4, 0)
-#define LLVM_ATTRIBUTE_UNUSED_RESULT __attribute__((__warn_unused_result__))
-#elif defined(_MSC_VER)
-#define LLVM_ATTRIBUTE_UNUSED_RESULT _Check_return_
-#else
-#define LLVM_ATTRIBUTE_UNUSED_RESULT
-#endif
-
 /// LLVM_NODISCARD - Warn if a type or return value is discarded.
 #if __cplusplus > 201402L && __has_cpp_attribute(nodiscard)
 #define LLVM_NODISCARD [[nodiscard]]
