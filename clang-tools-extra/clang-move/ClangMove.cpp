@@ -233,10 +233,10 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
   std::string NewCode;
   std::string GuardName(FileName);
   if (IsHeader) {
-    std::replace(GuardName.begin(), GuardName.end(), '/', '_');
-    std::replace(GuardName.begin(), GuardName.end(), '.', '_');
-    std::replace(GuardName.begin(), GuardName.end(), '-', '_');
-
+    for (size_t i = 0; i < GuardName.size(); ++i) {
+      if (!isAlphanumeric(GuardName[i]))
+        GuardName[i] = '_';
+    }
     GuardName = StringRef(GuardName).upper();
     NewCode += "#ifndef " + GuardName + "\n";
     NewCode += "#define " + GuardName + "\n";

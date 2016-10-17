@@ -1,5 +1,12 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
+
+## Default is no PIE.
+# RUN: ld.lld %t1.o -o %t
+# RUN: llvm-readobj -file-headers -sections -program-headers -symbols -r %t \
+# RUN:   | FileCheck %s --check-prefix=NOPIE
+
+## Check -pie.
 # RUN: ld.lld -pie %t1.o -o %t
 # RUN: llvm-readobj -file-headers -sections -program-headers -symbols -r %t | FileCheck %s
 
@@ -97,6 +104,11 @@
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Alignment: 8
 # CHECK-NEXT:  }
+
+## Check -nopie
+# RUN: ld.lld -nopie %t1.o -o %t2
+# RUN: llvm-readobj -file-headers -r %t2 | FileCheck %s --check-prefix=NOPIE
+# NOPIE-NOT: Type: SharedObject
 
 .globl _start
 _start:

@@ -16,7 +16,7 @@ using namespace llvm;
 namespace {
 
 TEST(Threading, PhysicalConcurrency) {
-  auto Num = hardware_physical_concurrency();
+  auto Num = heavyweight_hardware_concurrency();
   // Since Num is unsigned this will also catch us trying to
   // return -1.
   ASSERT_LE(Num, thread::hardware_concurrency());
