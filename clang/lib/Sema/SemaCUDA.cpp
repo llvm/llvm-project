@@ -644,10 +644,16 @@ static void MarkKnownEmitted(Sema &S, FunctionDecl *FD) {
     S.CUDAKnownEmittedFns.insert(Caller);
     EmitDeferredDiags(S, Caller);
 
-    // Deferred diags are often emitted on the template itself, so emit those as
-    // well.
-    if (auto *Templ = Caller->getPrimaryTemplate())
-      EmitDeferredDiags(S, Templ->getAsFunction());
+    // If this is a template instantiation, explore its callgraph as well:
+    // Non-dependent calls are part of the template's callgraph, while dependent
+    // calls are part of to the instantiation's call graph.
+    if (auto *Templ = Caller->getPrimaryTemplate()) {
+      FunctionDecl *TemplFD = Templ->getAsFunction();
+      if (!Seen.count(TemplFD) && !S.CUDAKnownEmittedFns.count(TemplFD)) {
+        Seen.insert(TemplFD);
+        Worklist.push_back(TemplFD);
+      }
+    }
 
     // Add all functions called by Caller to our worklist.
     auto CGIt = S.CUDACallGraph.find(Caller);
@@ -676,11 +682,21 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   if (!Caller)
     return true;
 
+  // If the caller is known-emitted, mark the callee as known-emitted.
+  // Otherwise, mark the call in our call graph so we can traverse it later.
   bool CallerKnownEmitted = IsKnownEmitted(*this, Caller);
   if (CallerKnownEmitted)
     MarkKnownEmitted(*this, Callee);
-  else
-    CUDACallGraph[Caller].insert(Callee);
+  else {
+    // If we have
+    //   host fn calls kernel fn calls host+device,
+    // the HD function does not get instantiated on the host.  We model this by
+    // omitting at the call to the kernel from the callgraph.  This ensures
+    // that, when compiling for host, only HD functions actually called from the
+    // host get marked as known-emitted.
+    if (getLangOpts().CUDAIsDevice || IdentifyCUDATarget(Callee) != CFT_Global)
+      CUDACallGraph[Caller].insert(Callee);
+  }
 
   CUDADiagBuilder::Kind DiagKind = [&] {
     switch (IdentifyCUDAPreference(Caller, Callee)) {

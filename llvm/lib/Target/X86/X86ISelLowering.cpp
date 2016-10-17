@@ -3857,6 +3857,7 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::VPPERM:
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
+  case X86ISD::VPERMIV3:
   case X86ISD::VZEXT_MOVL:
     return true;
   }
@@ -5101,6 +5102,18 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     Ops.push_back(N->getOperand(0));
     Ops.push_back(N->getOperand(2));
     SDValue MaskNode = N->getOperand(1);
+    if (auto *C = getTargetConstantFromNode(MaskNode)) {
+      DecodeVPERMV3Mask(C, VT, Mask);
+      break;
+    }
+    return false;
+  }
+  case X86ISD::VPERMIV3: {
+    IsUnary = IsFakeUnary = N->getOperand(1) == N->getOperand(2);
+    // Unlike most shuffle nodes, VPERMIV3's mask operand is the first one.
+    Ops.push_back(N->getOperand(1));
+    Ops.push_back(N->getOperand(2));
+    SDValue MaskNode = N->getOperand(0);
     if (auto *C = getTargetConstantFromNode(MaskNode)) {
       DecodeVPERMV3Mask(C, VT, Mask);
       break;
@@ -31938,6 +31951,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPERMI:
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
+  case X86ISD::VPERMIV3:
   case X86ISD::VPERMIL2:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMILPV:
