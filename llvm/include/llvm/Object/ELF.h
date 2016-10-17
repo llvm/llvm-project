@@ -319,8 +319,12 @@ ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
 
   Header = reinterpret_cast<const Elf_Ehdr *>(base());
 
-  if (Header->e_shoff == 0)
+  if (Header->e_shoff == 0) {
+    if (Header->e_shnum != 0)
+      report_fatal_error(
+          "e_shnum should be zero if a file has no section header table");
     return;
+  }
 
   const uint64_t SectionTableOffset = Header->e_shoff;
 

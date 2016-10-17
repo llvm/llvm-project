@@ -4449,9 +4449,12 @@ static bool ValidLookupTableConstant(Constant *C, const TargetTransformInfo &TTI
       !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
     return false;
 
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
     if (!CE->isGEPWithNoNotionalOverIndexing())
       return false;
+    if (!ValidLookupTableConstant(CE->getOperand(0), TTI))
+      return false;
+  }
 
   if (!TTI.shouldBuildLookupTablesForConstant(C))
     return false;

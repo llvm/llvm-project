@@ -22,12 +22,12 @@ namespace utils {
 // (e.g. with one SourceManager).
 class InsertAliasCheck : public ClangTidyCheck {
 public:
-  using ClangTidyCheck::ClangTidyCheck;
+  InsertAliasCheck(StringRef Name, ClangTidyContext *Context)
+      :ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override {
     Finder->addMatcher(ast_matchers::callExpr().bind("foo"), this);
   }
-  void
-  check(const ast_matchers::MatchFinder::MatchResult &Result) override {
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
     if (!Aliaser)
       Aliaser.reset(new NamespaceAliaser(*Result.SourceManager));
 
