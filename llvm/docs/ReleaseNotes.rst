@@ -41,6 +41,10 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The definition and uses of LLVM_ATRIBUTE_UNUSED_RESULT in the LLVM source
+  were replaced with LLVM_NODISCARD, which matches the C++17 [[nodiscard]]
+  semantics rather than gcc's __attribute__((warn_unused_result)).
+
 * ... next change ...
 
 .. NOTE

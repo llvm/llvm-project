@@ -321,6 +321,9 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // they can be used to reason about object compatibility.
     return &InputSection<ELFT>::Discarded;
   case SHT_MIPS_REGINFO:
+    if (MipsReginfo)
+      fatal(getFilename(this) +
+            ": multiple SHT_MIPS_REGINFO sections are not allowed");
     MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec, Name));
     return MipsReginfo.get();
   case SHT_MIPS_OPTIONS:
@@ -330,6 +333,9 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec, Name));
     return MipsOptions.get();
   case SHT_MIPS_ABIFLAGS:
+    if (MipsAbiFlags)
+      fatal(getFilename(this) +
+            ": multiple SHT_MIPS_ABIFLAGS sections are not allowed");
     MipsAbiFlags.reset(new MipsAbiFlagsInputSection<ELFT>(this, &Sec, Name));
     return MipsAbiFlags.get();
   case SHT_RELA:
