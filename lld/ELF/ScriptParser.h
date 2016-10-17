@@ -29,6 +29,7 @@ protected:
   bool atEOF();
   StringRef next();
   StringRef peek();
+  void skip();
   bool skip(StringRef Tok);
   void expect(StringRef Expect);
 

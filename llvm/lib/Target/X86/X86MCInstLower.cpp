@@ -1534,8 +1534,8 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::VPERMILPDZrm: {
     if (!OutStreamer->isVerboseAsm())
       break;
-    assert(MI->getNumOperands() > 5 &&
-           "We should always have at least 5 operands!");
+    assert(MI->getNumOperands() >= 6 &&
+           "We should always have at least 6 operands!");
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp = MI->getOperand(1);
     const MachineOperand &MaskOp = MI->getOperand(5);
@@ -1556,8 +1556,8 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::VPERMILPSZrm: {
     if (!OutStreamer->isVerboseAsm())
       break;
-    assert(MI->getNumOperands() > 5 &&
-           "We should always have at least 5 operands!");
+    assert(MI->getNumOperands() >= 6 &&
+           "We should always have at least 6 operands!");
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp = MI->getOperand(1);
     const MachineOperand &MaskOp = MI->getOperand(5);
@@ -1577,8 +1577,8 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::VPERMIL2PSrmY: {
     if (!OutStreamer->isVerboseAsm())
       break;
-    assert(MI->getNumOperands() > 7 &&
-      "We should always have at least 7 operands!");
+    assert(MI->getNumOperands() >= 8 &&
+           "We should always have at least 8 operands!");
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp1 = MI->getOperand(1);
     const MachineOperand &SrcOp2 = MI->getOperand(2);
@@ -1607,8 +1607,8 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::VPPERMrrm: {
     if (!OutStreamer->isVerboseAsm())
       break;
-    assert(MI->getNumOperands() > 6 &&
-           "We should always have at least 6 operands!");
+    assert(MI->getNumOperands() >= 7 &&
+           "We should always have at least 7 operands!");
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp1 = MI->getOperand(1);
     const MachineOperand &SrcOp2 = MI->getOperand(2);
