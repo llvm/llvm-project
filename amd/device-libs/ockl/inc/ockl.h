@@ -366,7 +366,6 @@ extern __attribute__((const)) int OCKL_MANGLE_T(image_width,3D)(TSHARP i);
 
 extern __attribute__((const)) size_t __ockl_get_global_offset(uint);
 extern __attribute__((const)) size_t __ockl_get_global_id(uint);
-extern __attribute__((const)) size_t __ockl_get_global_id_hcc(uint);
 extern __attribute__((const)) size_t __ockl_get_local_id(uint);
 extern __attribute__((const)) size_t __ockl_get_group_id(uint);
 extern __attribute__((const)) size_t __ockl_get_global_size(uint);
