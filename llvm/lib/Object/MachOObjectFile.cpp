@@ -837,6 +837,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
   const char *SourceLoadCmd = nullptr;
   const char *EntryPointLoadCmd = nullptr;
   const char *EncryptLoadCmd = nullptr;
+  const char *RoutinesLoadCmd = nullptr;
   for (unsigned I = 0; I < LoadCommandCount; ++I) {
     if (is64Bit()) {
       if (Load.C.cmdsize % 8 != 0) {
@@ -1064,6 +1065,30 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                                  sizeof(MachO::sub_client_command),
                                  "sub_client_command", S.client, "client")))
         return;
+    } else if (Load.C.cmd == MachO::LC_ROUTINES) {
+      if (Load.C.cmdsize != sizeof(MachO::routines_command)) {
+        Err = malformedError("LC_ROUTINES command " + Twine(I) +
+                             " has incorrect cmdsize");
+        return;
+      }
+      if (RoutinesLoadCmd) {
+        Err = malformedError("more than one LC_ROUTINES and or LC_ROUTINES_64 "
+                             "command");
+        return;
+      }
+      RoutinesLoadCmd = Load.Ptr;
+    } else if (Load.C.cmd == MachO::LC_ROUTINES_64) {
+      if (Load.C.cmdsize != sizeof(MachO::routines_command_64)) {
+        Err = malformedError("LC_ROUTINES_64 command " + Twine(I) +
+                             " has incorrect cmdsize");
+        return;
+      }
+      if (RoutinesLoadCmd) {
+        Err = malformedError("more than one LC_ROUTINES_64 and or LC_ROUTINES "
+                             "command");
+        return;
+      }
+      RoutinesLoadCmd = Load.Ptr;
     }
     if (I < LoadCommandCount - 1) {
       if (auto LoadOrErr = getNextLoadCommandInfo(this, I, Load))

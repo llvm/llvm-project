@@ -14870,21 +14870,11 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
-  // TODO: Handle half and/or extended types?
-  EVT VT = Op.getValueType();
-  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
-    return SDValue();
+  // Expose the DAG combiner to the target combiner implementations.
+  TargetLowering::DAGCombinerInfo DCI(DAG, Level, false, this);
 
-  // If estimates are explicitly disabled for this function, we're done.
-  MachineFunction &MF = DAG.getMachineFunction();
-  int Enabled = TLI.getDivEnabled(VT, MF);
-  if (Enabled == TLI.ReciprocalEstimate::Disabled)
-    return SDValue();
-
-  // Estimates may be explicitly enabled for this type with a custom number of
-  // refinement steps.
-  int Iterations = TLI.getDivRefinementSteps(VT, MF);
-  if (SDValue Est = TLI.getRecipEstimate(Op, DAG, Enabled, Iterations)) {
+  unsigned Iterations = 0;
+  if (SDValue Est = TLI.getRecipEstimate(Op, DCI, Iterations)) {
     if (Iterations) {
       // Newton iteration for a function: F(X) is X_{i+1} = X_i - F(X_i)/F'(X_i)
       // For the reciprocal, we need to find the zero of the function:
@@ -14899,7 +14889,7 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
       AddToWorklist(Est.getNode());
 
       // Newton iterations: Est = Est + Est (1 - Arg * Est)
-      for (int i = 0; i < Iterations; ++i) {
+      for (unsigned i = 0; i < Iterations; ++i) {
         SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Op, Est, Flags);
         AddToWorklist(NewEst.getNode());
 
@@ -15021,24 +15011,11 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags *Flags,
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
-  // TODO: Handle half and/or extended types?
-  EVT VT = Op.getValueType();
-  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
-    return SDValue();
-
-  // If estimates are explicitly disabled for this function, we're done.
-  MachineFunction &MF = DAG.getMachineFunction();
-  int Enabled = TLI.getSqrtEnabled(VT, MF);
-  if (Enabled == TLI.ReciprocalEstimate::Disabled)
-    return SDValue();
-
-  // Estimates may be explicitly enabled for this type with a custom number of
-  // refinement steps.
-  int Iterations = TLI.getSqrtRefinementSteps(VT, MF);
-
+  // Expose the DAG combiner to the target combiner implementations.
+  TargetLowering::DAGCombinerInfo DCI(DAG, Level, false, this);
+  unsigned Iterations = 0;
   bool UseOneConstNR = false;
-  if (SDValue Est =
-          TLI.getRsqrtEstimate(Op, DAG, Enabled, Iterations, UseOneConstNR)) {
+  if (SDValue Est = TLI.getRsqrtEstimate(Op, DCI, Iterations, UseOneConstNR)) {
     AddToWorklist(Est.getNode());
     if (Iterations) {
       Est = UseOneConstNR

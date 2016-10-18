@@ -164,11 +164,13 @@ public:
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
     return true;
   }
-  SDValue getRsqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
-                           int &RefinementSteps,
+  SDValue getRsqrtEstimate(SDValue Operand,
+                           DAGCombinerInfo &DCI,
+                           unsigned &RefinementSteps,
                            bool &UseOneConstNR) const override;
-  SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
-                           int &RefinementSteps) const override;
+  SDValue getRecipEstimate(SDValue Operand,
+                           DAGCombinerInfo &DCI,
+                           unsigned &RefinementSteps) const override;
 
   virtual SDNode *PostISelFolding(MachineSDNode *N,
                                   SelectionDAG &DAG) const = 0;

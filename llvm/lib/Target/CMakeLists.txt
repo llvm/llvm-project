@@ -6,6 +6,7 @@ add_llvm_library(LLVMTarget
   TargetLoweringObjectFile.cpp
   TargetMachine.cpp
   TargetMachineC.cpp
+  TargetRecip.cpp
   TargetSubtargetInfo.cpp
 
   ADDITIONAL_HEADER_DIRS
