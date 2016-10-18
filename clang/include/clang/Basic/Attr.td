@@ -1596,7 +1596,6 @@ def TransparentUnion : InheritableAttr {
   let Spellings = [GCC<"transparent_union">];
 //  let Subjects = SubjectList<[Record, TypedefName]>;
   let Documentation = [Undocumented];
-  let LangOpts = [COnly];
 }
 
 def Unavailable : InheritableAttr {
