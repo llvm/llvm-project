@@ -2212,6 +2212,7 @@ static void findTypeLocationForBlockDecl(const TypeSourceInfo *TSInfo,
 static std::string
 formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
                        FunctionTypeLoc &Block, FunctionProtoTypeLoc &BlockProto,
+                       bool SuppressBlockName = false,
                        bool SuppressBlock = false,
                        Optional<ArrayRef<QualType>> ObjCSubsts = None);
 
@@ -2277,7 +2278,8 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
     
   // We have the function prototype behind the block pointer type, as it was
   // written in the source.
-  return formatBlockPlaceholder(Policy, Param, Block, BlockProto, SuppressBlock,
+  return formatBlockPlaceholder(Policy, Param, Block, BlockProto,
+                                /*SuppressBlockName=*/false, SuppressBlock,
                                 ObjCSubsts);
 }
 
@@ -2293,7 +2295,7 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
 static std::string
 formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
                        FunctionTypeLoc &Block, FunctionProtoTypeLoc &BlockProto,
-                       bool SuppressBlock,
+                       bool SuppressBlockName, bool SuppressBlock,
                        Optional<ArrayRef<QualType>> ObjCSubsts) {
   std::string Result;
   QualType ResultType = Block.getTypePtr()->getReturnType();
@@ -2329,7 +2331,7 @@ formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
   if (SuppressBlock) {
     // Format as a parameter.
     Result = Result + " (^";
-    if (BlockDecl->getIdentifier())
+    if (!SuppressBlockName && BlockDecl->getIdentifier())
       Result += BlockDecl->getIdentifier()->getName();
     Result += ")";
     Result += Params;
@@ -2338,7 +2340,7 @@ formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
     Result = '^' + Result;
     Result += Params;
 
-    if (BlockDecl->getIdentifier())
+    if (!SuppressBlockName && BlockDecl->getIdentifier())
       Result += BlockDecl->getIdentifier()->getName();
   }
 
@@ -3611,21 +3613,59 @@ static ObjCContainerDecl *getContainerDef(ObjCContainerDecl *Container) {
 
 static void AddObjCProperties(const CodeCompletionContext &CCContext,
                               ObjCContainerDecl *Container,
-                              bool AllowCategories,
-                              bool AllowNullaryMethods,
+                              bool AllowCategories, bool AllowNullaryMethods,
                               DeclContext *CurContext,
                               AddedPropertiesSet &AddedProperties,
-                              ResultBuilder &Results) {
+                              ResultBuilder &Results,
+                              bool IsBaseExprStatement = false) {
   typedef CodeCompletionResult Result;
 
   // Retrieve the definition.
   Container = getContainerDef(Container);
   
   // Add properties in this container.
-  for (const auto *P : Container->instance_properties())
-    if (AddedProperties.insert(P->getIdentifier()).second)
-      Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
-                             CurContext);
+  for (const auto *P : Container->instance_properties()) {
+    if (!AddedProperties.insert(P->getIdentifier()).second)
+      continue;
+
+    Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
+                           CurContext);
+
+    // Provide additional block setter completion iff the base expression is a
+    // statement.
+    if (!P->isReadOnly() && IsBaseExprStatement &&
+        P->getType().getTypePtr()->isBlockPointerType()) {
+      FunctionTypeLoc BlockLoc;
+      FunctionProtoTypeLoc BlockProtoLoc;
+      findTypeLocationForBlockDecl(P->getTypeSourceInfo(), BlockLoc,
+                                   BlockProtoLoc);
+
+      // Provide block setter completion only when we are able to find
+      // the FunctionProtoTypeLoc with parameter names for the block.
+      if (BlockLoc) {
+        CodeCompletionBuilder Builder(Results.getAllocator(),
+                                      Results.getCodeCompletionTUInfo());
+        AddResultTypeChunk(Container->getASTContext(),
+                           getCompletionPrintingPolicy(Results.getSema()), P,
+                           CCContext.getBaseType(), Builder);
+        Builder.AddTypedTextChunk(
+            Results.getAllocator().CopyString(P->getName()));
+        Builder.AddChunk(CodeCompletionString::CK_Equal);
+
+        std::string PlaceholderStr = formatBlockPlaceholder(
+            getCompletionPrintingPolicy(Results.getSema()), P, BlockLoc,
+            BlockProtoLoc, /*SuppressBlockName=*/true);
+        // Add the placeholder string.
+        Builder.AddPlaceholderChunk(
+            Builder.getAllocator().CopyString(PlaceholderStr));
+
+        Results.MaybeAddResult(
+            Result(Builder.TakeString(), P,
+                   Results.getBasePriority(P) + CCD_BlockPropertySetter),
+            CurContext);
+      }
+    }
+  }
 
   // Add nullary methods
   if (AllowNullaryMethods) {
@@ -3654,37 +3694,41 @@ static void AddObjCProperties(const CodeCompletionContext &CCContext,
   if (ObjCProtocolDecl *Protocol = dyn_cast<ObjCProtocolDecl>(Container)) {
     for (auto *P : Protocol->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
-                        CurContext, AddedProperties, Results);
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
   } else if (ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Container)){
     if (AllowCategories) {
       // Look through categories.
       for (auto *Cat : IFace->known_categories())
         AddObjCProperties(CCContext, Cat, AllowCategories, AllowNullaryMethods,
-                          CurContext, AddedProperties, Results);
+                          CurContext, AddedProperties, Results,
+                          IsBaseExprStatement);
     }
 
     // Look through protocols.
     for (auto *I : IFace->all_referenced_protocols())
       AddObjCProperties(CCContext, I, AllowCategories, AllowNullaryMethods,
-                        CurContext, AddedProperties, Results);
-    
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
+
     // Look in the superclass.
     if (IFace->getSuperClass())
       AddObjCProperties(CCContext, IFace->getSuperClass(), AllowCategories,
-                        AllowNullaryMethods, CurContext, 
-                        AddedProperties, Results);
+                        AllowNullaryMethods, CurContext, AddedProperties,
+                        Results, IsBaseExprStatement);
   } else if (const ObjCCategoryDecl *Category
                                     = dyn_cast<ObjCCategoryDecl>(Container)) {
     // Look through protocols.
     for (auto *P : Category->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
-                        CurContext, AddedProperties, Results);
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
   }
 }
 
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
-                                           SourceLocation OpLoc,
-                                           bool IsArrow) {
+                                           SourceLocation OpLoc, bool IsArrow,
+                                           bool IsBaseExprStatement) {
   if (!Base || !CodeCompleter)
     return;
   
@@ -3766,13 +3810,14 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       assert(ObjCPtr && "Non-NULL pointer guaranteed above!");
       AddObjCProperties(CCContext, ObjCPtr->getInterfaceDecl(), true,
                         /*AllowNullaryMethods=*/true, CurContext,
-                        AddedProperties, Results);
+                        AddedProperties, Results, IsBaseExprStatement);
     }
 
     // Add properties from the protocols in a qualified interface.
     for (auto *I : BaseType->getAs<ObjCObjectPointerType>()->quals())
       AddObjCProperties(CCContext, I, true, /*AllowNullaryMethods=*/true,
-                        CurContext, AddedProperties, Results);
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
   } else if ((IsArrow && BaseType->isObjCObjectPointerType()) ||
              (!IsArrow && BaseType->isObjCObjectType())) {
     // Objective-C instance variable access.

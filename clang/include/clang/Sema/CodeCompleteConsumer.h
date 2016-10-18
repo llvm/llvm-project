@@ -90,7 +90,11 @@ enum {
   CCD_ProbablyNotObjCCollection = 15,
 
   /// \brief An Objective-C method being used as a property.
-  CCD_MethodAsProperty = 2
+  CCD_MethodAsProperty = 2,
+
+  /// \brief An Objective-C block property completed as a setter with a
+  /// block placeholder.
+  CCD_BlockPropertySetter = 3
 };
 
 /// \brief Priority value factors by which we will divide or multiply the
