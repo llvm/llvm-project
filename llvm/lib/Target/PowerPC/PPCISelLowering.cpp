@@ -901,23 +901,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTargetDAGCombine(ISD::FSQRT);
   }
 
-  // For the estimates, convergence is quadratic, so we essentially double the
-  // number of digits correct after every iteration. For both FRE and FRSQRTE,
-  // the minimum architected relative accuracy is 2^-5. When hasRecipPrec(),
-  // this is 2^-14. IEEE float has 23 digits and double has 52 digits.
-  unsigned RefinementSteps = Subtarget.hasRecipPrec() ? 1 : 3,
-           RefinementSteps64 = RefinementSteps + 1;
-
-  ReciprocalEstimates.set("sqrtf", true, RefinementSteps);
-  ReciprocalEstimates.set("vec-sqrtf", true, RefinementSteps);
-  ReciprocalEstimates.set("divf", true, RefinementSteps);
-  ReciprocalEstimates.set("vec-divf", true, RefinementSteps);
-
-  ReciprocalEstimates.set("sqrtd", true, RefinementSteps64);
-  ReciprocalEstimates.set("vec-sqrtd", true, RefinementSteps64);
-  ReciprocalEstimates.set("divd", true, RefinementSteps64);
-  ReciprocalEstimates.set("vec-divd", true, RefinementSteps64);
-
   // Darwin long double math library functions have $LDBL128 appended.
   if (Subtarget.isDarwin()) {
     setLibcallName(RTLIB::COS_PPCF128, "cosl$LDBL128");
@@ -9639,22 +9622,19 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 // Target Optimization Hooks
 //===----------------------------------------------------------------------===//
 
-static std::string getRecipOp(const char *Base, EVT VT) {
-  std::string RecipOp(Base);
+static int getEstimateRefinementSteps(EVT VT, const PPCSubtarget &Subtarget) {
+  // For the estimates, convergence is quadratic, so we essentially double the
+  // number of digits correct after every iteration. For both FRE and FRSQRTE,
+  // the minimum architected relative accuracy is 2^-5. When hasRecipPrec(),
+  // this is 2^-14. IEEE float has 23 digits and double has 52 digits.
+  int RefinementSteps = Subtarget.hasRecipPrec() ? 1 : 3;
   if (VT.getScalarType() == MVT::f64)
-    RecipOp += "d";
-  else
-    RecipOp += "f";
-
-  if (VT.isVector())
-    RecipOp = "vec-" + RecipOp;
-
-  return RecipOp;
+    RefinementSteps++;
+  return RefinementSteps;
 }
 
-SDValue PPCTargetLowering::getRsqrtEstimate(SDValue Operand,
-                                            DAGCombinerInfo &DCI,
-                                            unsigned &RefinementSteps,
+SDValue PPCTargetLowering::getRsqrtEstimate(SDValue Operand, SelectionDAG &DAG,
+                                            int Enabled, int &RefinementSteps,
                                             bool &UseOneConstNR) const {
   EVT VT = Operand.getValueType();
   if ((VT == MVT::f32 && Subtarget.hasFRSQRTES()) ||
@@ -9663,21 +9643,18 @@ SDValue PPCTargetLowering::getRsqrtEstimate(SDValue Operand,
       (VT == MVT::v2f64 && Subtarget.hasVSX()) ||
       (VT == MVT::v4f32 && Subtarget.hasQPX()) ||
       (VT == MVT::v4f64 && Subtarget.hasQPX())) {
-    TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
-    std::string RecipOp = getRecipOp("sqrt", VT);
-    if (!Recips.isEnabled(RecipOp))
-      return SDValue();
+    if (RefinementSteps == ReciprocalEstimate::Unspecified)
+      RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
 
-    RefinementSteps = Recips.getRefinementSteps(RecipOp);
     UseOneConstNR = true;
-    return DCI.DAG.getNode(PPCISD::FRSQRTE, SDLoc(Operand), VT, Operand);
+    return DAG.getNode(PPCISD::FRSQRTE, SDLoc(Operand), VT, Operand);
   }
   return SDValue();
 }
 
-SDValue PPCTargetLowering::getRecipEstimate(SDValue Operand,
-                                            DAGCombinerInfo &DCI,
-                                            unsigned &RefinementSteps) const {
+SDValue PPCTargetLowering::getRecipEstimate(SDValue Operand, SelectionDAG &DAG,
+                                            int Enabled,
+                                            int &RefinementSteps) const {
   EVT VT = Operand.getValueType();
   if ((VT == MVT::f32 && Subtarget.hasFRES()) ||
       (VT == MVT::f64 && Subtarget.hasFRE()) ||
@@ -9685,13 +9662,9 @@ SDValue PPCTargetLowering::getRecipEstimate(SDValue Operand,
       (VT == MVT::v2f64 && Subtarget.hasVSX()) ||
       (VT == MVT::v4f32 && Subtarget.hasQPX()) ||
       (VT == MVT::v4f64 && Subtarget.hasQPX())) {
-    TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
-    std::string RecipOp = getRecipOp("div", VT);
-    if (!Recips.isEnabled(RecipOp))
-      return SDValue();
-
-    RefinementSteps = Recips.getRefinementSteps(RecipOp);
-    return DCI.DAG.getNode(PPCISD::FRE, SDLoc(Operand), VT, Operand);
+    if (RefinementSteps == ReciprocalEstimate::Unspecified)
+      RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+    return DAG.getNode(PPCISD::FRE, SDLoc(Operand), VT, Operand);
   }
   return SDValue();
 }

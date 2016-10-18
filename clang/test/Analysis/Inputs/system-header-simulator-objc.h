@@ -10,9 +10,15 @@ typedef unsigned short UInt16;
 
 typedef signed long CFIndex;
 typedef signed char BOOL;
+#define YES ((BOOL)1)
+#define NO ((BOOL)0)
+
 typedef unsigned long NSUInteger;
 typedef unsigned short unichar;
 typedef UInt16 UniChar;
+
+#define NULL ((void *)0)
+#define nil ((id)0)
 
 enum {
     NSASCIIStringEncoding = 1,
@@ -72,6 +78,7 @@ NSFastEnumerationState;
 @end
 @interface NSNumber : NSValue  - (char)charValue;
 - (id)initWithInt:(int)value;
+- (BOOL)boolValue;
 @end   @class NSString;
 @interface NSArray : NSObject <NSCopying, NSMutableCopying, NSCoding, NSFastEnumeration>  - (NSUInteger)count;
 @end  @interface NSArray (NSArrayCreation)  + (id)array;

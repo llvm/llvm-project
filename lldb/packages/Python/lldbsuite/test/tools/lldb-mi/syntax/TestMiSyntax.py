@@ -88,6 +88,7 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://28805064")
     def test_lldbmi_output_grammar(self):
         """Test that 'lldb-mi --interpreter' uses standard output syntax."""
 

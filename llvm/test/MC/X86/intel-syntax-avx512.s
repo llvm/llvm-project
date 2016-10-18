@@ -16,6 +16,10 @@ vaddpd zmm1 {k5}, zmm1, zmm2
 // CHECK:  encoding: [0x62,0xf1,0xf5,0xcd,0x58,0xca]
 vaddpd zmm1 {k5} {z}, zmm1, zmm2
 
+// CHECK: vaddpd zmm1 {k5} {z}, zmm1, zmm2
+// CHECK:  encoding: [0x62,0xf1,0xf5,0xcd,0x58,0xca]
+vaddpd zmm1 {z} {k5}, zmm1, zmm2
+
 // CHECK: vaddpd zmm1, zmm1, zmm2, {rn-sae}
 // CHECK:  encoding: [0x62,0xf1,0xf5,0x18,0x58,0xca]
 vaddpd zmm1, zmm1, zmm2, {rn-sae}

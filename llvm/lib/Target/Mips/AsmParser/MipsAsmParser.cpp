@@ -249,6 +249,9 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                  const MCSubtargetInfo *STI);
 
+  bool expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                             const MCSubtargetInfo *STI, bool IsLoad);
+
   bool reportParseError(Twine ErrorMsg);
   bool reportParseError(SMLoc Loc, Twine ErrorMsg);
 
@@ -401,6 +404,7 @@ public:
     Match_RequiresDifferentOperands,
     Match_RequiresNoZeroRegister,
     Match_RequiresSameSrcAndDst,
+    Match_NonZeroOperandForSync,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "MipsGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -2213,6 +2217,12 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return expandDRotationImm(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::ABSMacro:
     return expandAbs(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::LDMacro:
+  case Mips::SDMacro:
+    return expandLoadStoreDMacro(Inst, IDLoc, Out, STI,
+                                 Inst.getOpcode() == Mips::LDMacro)
+               ? MER_Fail
+               : MER_Success;
   }
 }
 
@@ -3819,6 +3829,92 @@ bool MipsAsmParser::expandAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   return false;
 }
 
+static unsigned nextReg(unsigned Reg) {
+  switch (Reg) {
+  case Mips::ZERO: return Mips::AT;
+  case Mips::AT:   return Mips::V0;
+  case Mips::V0:   return Mips::V1;
+  case Mips::V1:   return Mips::A0;
+  case Mips::A0:   return Mips::A1;
+  case Mips::A1:   return Mips::A2;
+  case Mips::A2:   return Mips::A3;
+  case Mips::A3:   return Mips::T0;
+  case Mips::T0:   return Mips::T1;
+  case Mips::T1:   return Mips::T2;
+  case Mips::T2:   return Mips::T3;
+  case Mips::T3:   return Mips::T4;
+  case Mips::T4:   return Mips::T5;
+  case Mips::T5:   return Mips::T6;
+  case Mips::T6:   return Mips::T7;
+  case Mips::T7:   return Mips::S0;
+  case Mips::S0:   return Mips::S1;
+  case Mips::S1:   return Mips::S2;
+  case Mips::S2:   return Mips::S3;
+  case Mips::S3:   return Mips::S4;
+  case Mips::S4:   return Mips::S5;
+  case Mips::S5:   return Mips::S6;
+  case Mips::S6:   return Mips::S7;
+  case Mips::S7:   return Mips::T8;
+  case Mips::T8:   return Mips::T9;
+  case Mips::T9:   return Mips::K0;
+  case Mips::K0:   return Mips::K1;
+  case Mips::K1:   return Mips::GP;
+  case Mips::GP:   return Mips::SP;
+  case Mips::SP:   return Mips::FP;
+  case Mips::FP:   return Mips::RA;
+  case Mips::RA:   return Mips::ZERO;
+  default:         return 0;
+  }
+
+}
+
+// Expand 'ld $<reg> offset($reg2)' to 'lw $<reg>, offset($reg2);
+//                                      lw $<reg+1>>, offset+4($reg2)'
+// or expand 'sd $<reg> offset($reg2)' to 'sw $<reg>, offset($reg2);
+//                                         sw $<reg+1>>, offset+4($reg2)'
+// for O32.
+bool MipsAsmParser::expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc,
+                                          MCStreamer &Out,
+                                          const MCSubtargetInfo *STI,
+                                          bool IsLoad) {
+  if (!isABI_O32())
+    return true;
+
+  warnIfNoMacro(IDLoc);
+
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned Opcode = IsLoad ? Mips::LW : Mips::SW;
+  unsigned FirstReg = Inst.getOperand(0).getReg();
+  unsigned SecondReg = nextReg(FirstReg);
+  unsigned BaseReg = Inst.getOperand(1).getReg();
+  if (!SecondReg)
+    return true;
+
+  warnIfRegIndexIsAT(FirstReg, IDLoc);
+
+  assert(Inst.getOperand(2).isImm() &&
+         "Offset for load macro is not immediate!");
+
+  MCOperand &FirstOffset = Inst.getOperand(2);
+  signed NextOffset = FirstOffset.getImm() + 4;
+  MCOperand SecondOffset = MCOperand::createImm(NextOffset);
+
+  if (!isInt<16>(FirstOffset.getImm()) || !isInt<16>(NextOffset))
+    return true;
+
+  // For loads, clobber the base register with the second load instead of the
+  // first if the BaseReg == FirstReg.
+  if (FirstReg != BaseReg || !IsLoad) {
+    TOut.emitRRX(Opcode, FirstReg, BaseReg, FirstOffset, IDLoc, STI);
+    TOut.emitRRX(Opcode, SecondReg, BaseReg, SecondOffset, IDLoc, STI);
+  } else {
+    TOut.emitRRX(Opcode, SecondReg, BaseReg, SecondOffset, IDLoc, STI);
+    TOut.emitRRX(Opcode, FirstReg, BaseReg, FirstOffset, IDLoc, STI);
+  }
+
+  return false;
+}
+
 unsigned
 MipsAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
                                               const OperandVector &Operands) {
@@ -3859,6 +3955,10 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   case Mips::LWP_MMR6:
     if (Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg())
       return Match_RequiresDifferentSrcAndDst;
+    return Match_Success;
+  case Mips::SYNC:
+    if (Inst.getOperand(0).getImm() != 0 && !hasMips32())
+      return Match_NonZeroOperandForSync;
     return Match_Success;
   // As described the MIPSR6 spec, the compact branches that compare registers
   // must:
@@ -3957,6 +4057,8 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
     return Error(ErrorLoc, "invalid operand for instruction");
   }
+  case Match_NonZeroOperandForSync:
+    return Error(IDLoc, "s-type must be zero or unspecified for pre-MIPS32 ISAs");
   case Match_MnemonicFail:
     return Error(IDLoc, "invalid instruction");
   case Match_RequiresDifferentSrcAndDst:
@@ -4451,8 +4553,60 @@ MipsAsmParser::parseMemOperand(OperandVector &Operands) {
             MipsOperand::CreateMem(std::move(Base), IdVal, S, E, *this));
         return MatchOperand_Success;
       }
-      Error(Parser.getTok().getLoc(), "'(' expected");
-      return MatchOperand_ParseFail;
+      MCBinaryExpr::Opcode Opcode;
+      // GAS and LLVM treat comparison operators different. GAS will generate -1
+      // or 0, while LLVM will generate 0 or 1. Since a comparsion operator is
+      // highly unlikely to be found in a memory offset expression, we don't
+      // handle them.
+      switch (Tok.getKind()) {
+      case AsmToken::Plus:
+        Opcode = MCBinaryExpr::Add;
+        Parser.Lex();
+        break;
+      case AsmToken::Minus:
+        Opcode = MCBinaryExpr::Sub;
+        Parser.Lex();
+        break;
+      case AsmToken::Star:
+        Opcode = MCBinaryExpr::Mul;
+        Parser.Lex();
+        break;
+      case AsmToken::Pipe:
+        Opcode = MCBinaryExpr::Or;
+        Parser.Lex();
+        break;
+      case AsmToken::Amp:
+        Opcode = MCBinaryExpr::And;
+        Parser.Lex();
+        break;
+      case AsmToken::LessLess:
+        Opcode = MCBinaryExpr::Shl;
+        Parser.Lex();
+        break;
+      case AsmToken::GreaterGreater:
+        Opcode = MCBinaryExpr::LShr;
+        Parser.Lex();
+        break;
+      case AsmToken::Caret:
+        Opcode = MCBinaryExpr::Xor;
+        Parser.Lex();
+        break;
+      case AsmToken::Slash:
+        Opcode = MCBinaryExpr::Div;
+        Parser.Lex();
+        break;
+      case AsmToken::Percent:
+        Opcode = MCBinaryExpr::Mod;
+        Parser.Lex();
+        break;
+      default:
+        Error(Parser.getTok().getLoc(), "'(' or expression expected");
+        return MatchOperand_ParseFail;
+      }
+      const MCExpr * NextExpr;
+      if (getParser().parseExpression(NextExpr))
+        return MatchOperand_ParseFail;
+      IdVal = MCBinaryExpr::create(Opcode, IdVal, NextExpr, getContext());
     }
 
     Parser.Lex(); // Eat the '(' token.

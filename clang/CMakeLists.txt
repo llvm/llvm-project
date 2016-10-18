@@ -124,6 +124,7 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
     endif()
 
     if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
+      # Note: path not really used, except for checking if lit was found
       set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       if(NOT LLVM_UTILS_PROVIDED)
         add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/FileCheck utils/FileCheck)
@@ -140,8 +141,10 @@ Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
       endif()
     else()
       # Seek installed Lit.
-      find_program(LLVM_LIT "lit.py" ${LLVM_MAIN_SRC_DIR}/utils/lit
-        DOC "Path to lit.py")
+      find_program(LLVM_LIT
+                   NAMES llvm-lit lit.py lit
+                   PATHS "${LLVM_MAIN_SRC_DIR}/utils/lit"
+                   DOC "Path to lit.py")
     endif()
 
     if(LLVM_LIT)

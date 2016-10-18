@@ -4,7 +4,7 @@
 # RUN: llvm-readobj --program-headers %t.out | FileCheck %s
 
 # CHECK:      ProgramHeader {
-# CHECK:        Type:  (0x65A3DBE7)
+# CHECK:        Type: PT_OPENBSD_WXNEEDED (0x65A3DBE7)
 # CHECK-NEXT:   Offset: 0x0
 # CHECK-NEXT:   VirtualAddress: 0x0
 # CHECK-NEXT:   PhysicalAddress: 0x0

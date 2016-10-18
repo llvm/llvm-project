@@ -733,7 +733,7 @@ bool ReduceCrashingInstructions::TestInsts(
 
   // Verify that this is still valid.
   legacy::PassManager Passes;
-  Passes.add(createVerifierPass());
+  Passes.add(createVerifierPass(/*FatalErrors=*/false));
   Passes.run(*M);
 
   // Try running on the hacked up program...
@@ -809,7 +809,7 @@ bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
 
   // Verify that this is still valid.
   legacy::PassManager Passes;
-  Passes.add(createVerifierPass());
+  Passes.add(createVerifierPass(/*FatalErrors=*/false));
   Passes.run(*M);
 
   // Try running on the hacked up program...
@@ -876,7 +876,7 @@ bool ReduceCrashingNamedMDOps::TestNamedMDOps(
 
   // Verify that this is still valid.
   legacy::PassManager Passes;
-  Passes.add(createVerifierPass());
+  Passes.add(createVerifierPass(/*FatalErrors=*/false));
   Passes.run(*M);
 
   // Try running on the hacked up program...

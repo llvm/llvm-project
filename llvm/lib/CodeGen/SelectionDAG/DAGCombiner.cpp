@@ -2387,6 +2387,7 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     if (SDValue Folded = DAG.FoldConstantArithmetic(ISD::UDIV, DL, VT,
                                                     N0C, N1C))
       return Folded;
+
   // fold (udiv x, (1 << c)) -> x >>u c
   if (N1C && !N1C->isOpaque() && N1C->getAPIntValue().isPowerOf2())
     return DAG.getNode(ISD::SRL, DL, VT, N0,
@@ -2395,8 +2396,8 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
 
   // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
   if (N1.getOpcode() == ISD::SHL) {
-    if (ConstantSDNode *SHC = getAsNonOpaqueConstant(N1.getOperand(0))) {
-      if (SHC->getAPIntValue().isPowerOf2()) {
+    if (ConstantSDNode *SHC = isConstOrConstSplat(N1.getOperand(0))) {
+      if (!SHC->isOpaque() && SHC->getAPIntValue().isPowerOf2()) {
         EVT ADDVT = N1.getOperand(1).getValueType();
         SDValue Add = DAG.getNode(ISD::ADD, DL, ADDVT,
                                   N1.getOperand(1),
@@ -13177,7 +13178,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // t10: v8i32 = vector_shuffle<0,8,u,u,u,u,u,u> t1, t2
   // t11: v8i32 = vector_shuffle<u,u,0,8,u,u,u,u> t3, t4
   // t12: v8i32 = vector_shuffle<u,u,u,u,0,8,u,u> t5, t6
-  // t13: v8i32 = vector_shuffle<u,u,u,u,u,u,0,8> t7, t8  
+  // t13: v8i32 = vector_shuffle<u,u,u,u,u,u,0,8> t7, t8
   // t20: v8i32 = vector_shuffle<0,1,10,11,u,u,u,u> t10, t11
   // t21: v8i32 = vector_shuffle<u,u,u,u,4,5,14,15> t12, t13
   // t30: v8i32 = vector_shuffle<0,1,2,3,12,13,14,15> t20, t21
@@ -14869,11 +14870,21 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
-  // Expose the DAG combiner to the target combiner implementations.
-  TargetLowering::DAGCombinerInfo DCI(DAG, Level, false, this);
+  // TODO: Handle half and/or extended types?
+  EVT VT = Op.getValueType();
+  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
+    return SDValue();
 
-  unsigned Iterations = 0;
-  if (SDValue Est = TLI.getRecipEstimate(Op, DCI, Iterations)) {
+  // If estimates are explicitly disabled for this function, we're done.
+  MachineFunction &MF = DAG.getMachineFunction();
+  int Enabled = TLI.getDivEnabled(VT, MF);
+  if (Enabled == TLI.ReciprocalEstimate::Disabled)
+    return SDValue();
+
+  // Estimates may be explicitly enabled for this type with a custom number of
+  // refinement steps.
+  int Iterations = TLI.getDivRefinementSteps(VT, MF);
+  if (SDValue Est = TLI.getRecipEstimate(Op, DAG, Enabled, Iterations)) {
     if (Iterations) {
       // Newton iteration for a function: F(X) is X_{i+1} = X_i - F(X_i)/F'(X_i)
       // For the reciprocal, we need to find the zero of the function:
@@ -14888,7 +14899,7 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
       AddToWorklist(Est.getNode());
 
       // Newton iterations: Est = Est + Est (1 - Arg * Est)
-      for (unsigned i = 0; i < Iterations; ++i) {
+      for (int i = 0; i < Iterations; ++i) {
         SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Op, Est, Flags);
         AddToWorklist(NewEst.getNode());
 
@@ -15010,11 +15021,24 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags *Flags,
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
-  // Expose the DAG combiner to the target combiner implementations.
-  TargetLowering::DAGCombinerInfo DCI(DAG, Level, false, this);
-  unsigned Iterations = 0;
+  // TODO: Handle half and/or extended types?
+  EVT VT = Op.getValueType();
+  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
+    return SDValue();
+
+  // If estimates are explicitly disabled for this function, we're done.
+  MachineFunction &MF = DAG.getMachineFunction();
+  int Enabled = TLI.getSqrtEnabled(VT, MF);
+  if (Enabled == TLI.ReciprocalEstimate::Disabled)
+    return SDValue();
+
+  // Estimates may be explicitly enabled for this type with a custom number of
+  // refinement steps.
+  int Iterations = TLI.getSqrtRefinementSteps(VT, MF);
+
   bool UseOneConstNR = false;
-  if (SDValue Est = TLI.getRsqrtEstimate(Op, DCI, Iterations, UseOneConstNR)) {
+  if (SDValue Est =
+          TLI.getRsqrtEstimate(Op, DAG, Enabled, Iterations, UseOneConstNR)) {
     AddToWorklist(Est.getNode());
     if (Iterations) {
       Est = UseOneConstNR

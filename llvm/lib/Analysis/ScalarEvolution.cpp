@@ -8655,43 +8655,68 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
                                       : ICmpInst::ICMP_ULT;
   const SCEV *Start = IV->getStart();
   const SCEV *End = RHS;
-  if (!isLoopEntryGuardedByCond(L, Cond, getMinusSCEV(Start, Stride), RHS))
+  // If the backedge is taken at least once, then it will be taken
+  // (End-Start)/Stride times (rounded up to a multiple of Stride), where Start
+  // is the LHS value of the less-than comparison the first time it is evaluated
+  // and End is the RHS.
+  const SCEV *BECountIfBackedgeTaken =
+    computeBECount(getMinusSCEV(End, Start), Stride, false);
+  // If the loop entry is guarded by the result of the backedge test of the
+  // first loop iteration, then we know the backedge will be taken at least
+  // once and so the backedge taken count is as above. If not then we use the
+  // expression (max(End,Start)-Start)/Stride to describe the backedge count,
+  // as if the backedge is taken at least once max(End,Start) is End and so the
+  // result is as above, and if not max(End,Start) is Start so we get a backedge
+  // count of zero.
+  const SCEV *BECount;
+  if (isLoopEntryGuardedByCond(L, Cond, getMinusSCEV(Start, Stride), RHS))
+    BECount = BECountIfBackedgeTaken;
+  else {
     End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
-
-  const SCEV *BECount = computeBECount(getMinusSCEV(End, Start), Stride, false);
-
-  APInt MinStart = IsSigned ? getSignedRange(Start).getSignedMin()
-                            : getUnsignedRange(Start).getUnsignedMin();
-
-  unsigned BitWidth = getTypeSizeInBits(LHS->getType());
-
-  APInt StrideForMaxBECount;
-
-  if (PositiveStride)
-    StrideForMaxBECount = IsSigned ? getSignedRange(Stride).getSignedMin()
-                                   : getUnsignedRange(Stride).getUnsignedMin();
-  else
-    // Using a stride of 1 is safe when computing max backedge taken count for
-    // a loop with unknown stride.
-    StrideForMaxBECount = APInt(BitWidth, 1, IsSigned);
-
-  APInt Limit =
-      IsSigned ? APInt::getSignedMaxValue(BitWidth) - (StrideForMaxBECount - 1)
-               : APInt::getMaxValue(BitWidth) - (StrideForMaxBECount - 1);
-
-  // Although End can be a MAX expression we estimate MaxEnd considering only
-  // the case End = RHS. This is safe because in the other case (End - Start)
-  // is zero, leading to a zero maximum backedge taken count.
-  APInt MaxEnd =
-    IsSigned ? APIntOps::smin(getSignedRange(RHS).getSignedMax(), Limit)
-             : APIntOps::umin(getUnsignedRange(RHS).getUnsignedMax(), Limit);
+    BECount = computeBECount(getMinusSCEV(End, Start), Stride, false);
+  }
 
   const SCEV *MaxBECount;
   if (isa<SCEVConstant>(BECount))
     MaxBECount = BECount;
-  else
+  else if (isa<SCEVConstant>(BECountIfBackedgeTaken))
+    // If we know exactly how many times the backedge will be taken if it's
+    // taken at least once, then the backedge count will either be that or
+    // zero.
+    MaxBECount = BECountIfBackedgeTaken;
+  else {
+    // Calculate the maximum backedge count based on the range of values
+    // permitted by Start, End, and Stride.
+    APInt MinStart = IsSigned ? getSignedRange(Start).getSignedMin()
+                              : getUnsignedRange(Start).getUnsignedMin();
+
+    unsigned BitWidth = getTypeSizeInBits(LHS->getType());
+
+    APInt StrideForMaxBECount;
+
+    if (PositiveStride)
+      StrideForMaxBECount =
+        IsSigned ? getSignedRange(Stride).getSignedMin()
+                 : getUnsignedRange(Stride).getUnsignedMin();
+    else
+      // Using a stride of 1 is safe when computing max backedge taken count for
+      // a loop with unknown stride.
+      StrideForMaxBECount = APInt(BitWidth, 1, IsSigned);
+
+    APInt Limit =
+      IsSigned ? APInt::getSignedMaxValue(BitWidth) - (StrideForMaxBECount - 1)
+               : APInt::getMaxValue(BitWidth) - (StrideForMaxBECount - 1);
+
+    // Although End can be a MAX expression we estimate MaxEnd considering only
+    // the case End = RHS. This is safe because in the other case (End - Start)
+    // is zero, leading to a zero maximum backedge taken count.
+    APInt MaxEnd =
+      IsSigned ? APIntOps::smin(getSignedRange(RHS).getSignedMax(), Limit)
+               : APIntOps::umin(getUnsignedRange(RHS).getUnsignedMax(), Limit);
+
     MaxBECount = computeBECount(getConstant(MaxEnd - MinStart),
                                 getConstant(StrideForMaxBECount), false);
+  }
 
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     MaxBECount = BECount;

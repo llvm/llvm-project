@@ -1,3 +1,5 @@
+include(${LLDB_PROJECT_ROOT}/cmake/LLDBDependencies.cmake)
+
 set(LLDB_MI_SOURCES
   MICmdArgContext.cpp
   MICmdArgSet.cpp

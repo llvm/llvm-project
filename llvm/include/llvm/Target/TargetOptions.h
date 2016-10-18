@@ -15,7 +15,6 @@
 #ifndef LLVM_TARGET_TARGETOPTIONS_H
 #define LLVM_TARGET_TARGETOPTIONS_H
 
-#include "llvm/Target/TargetRecip.h"
 #include "llvm/MC/MCTargetOptions.h"
 
 namespace llvm {

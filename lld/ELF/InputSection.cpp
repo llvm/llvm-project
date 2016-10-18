@@ -691,7 +691,7 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) const {
 // Create a map from input offsets to output offsets for all section pieces.
 // It is called after finalize().
 template <class ELFT> void  MergeInputSection<ELFT>::finalizePieces() {
-  OffsetMap.grow(this->Pieces.size());
+  OffsetMap.reserve(this->Pieces.size());
   for (SectionPiece &Piece : this->Pieces) {
     if (!Piece.Live)
       continue;

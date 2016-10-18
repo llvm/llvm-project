@@ -42,7 +42,8 @@ def test_kind_groups():
                     CursorKind.MACRO_DEFINITION,
                     CursorKind.MACRO_INSTANTIATION,
                     CursorKind.INCLUSION_DIRECTIVE,
-                    CursorKind.PREPROCESSING_DIRECTIVE):
+                    CursorKind.PREPROCESSING_DIRECTIVE,
+                    CursorKind.OVERLOAD_CANDIDATE):
             assert len(group) == 0
         else:
             assert len(group) == 1
