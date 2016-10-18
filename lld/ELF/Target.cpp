@@ -1554,6 +1554,12 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_GOT_PC;
   case R_ARM_TARGET1:
     return Config->Target1Rel ? R_PC : R_ABS;
+  case R_ARM_TARGET2:
+    if (Config->Target2 == Target2Policy::Rel)
+      return R_PC;
+    if (Config->Target2 == Target2Policy::Abs)
+      return R_ABS;
+    return R_GOT_PC;
   case R_ARM_TLS_GD32:
     return R_TLSGD_PC;
   case R_ARM_TLS_LDM32:
@@ -1660,6 +1666,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
   case R_ARM_TARGET1:
+  case R_ARM_TARGET2:
   case R_ARM_TLS_GD32:
   case R_ARM_TLS_IE32:
   case R_ARM_TLS_LDM32:
@@ -1789,6 +1796,7 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
   case R_ARM_TARGET1:
+  case R_ARM_TARGET2:
   case R_ARM_TLS_GD32:
   case R_ARM_TLS_LDM32:
   case R_ARM_TLS_LDO32:

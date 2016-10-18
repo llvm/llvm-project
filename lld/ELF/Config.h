@@ -45,6 +45,9 @@ enum class UnresolvedPolicy { NoUndef, ReportError, Warn, Ignore };
 // For --sort-section and linkerscript sorting rules.
 enum class SortSectionPolicy { Default, None, Alignment, Name, Priority };
 
+// For --target2
+enum class Target2Policy { Abs, Rel, GotRel };
+
 struct SymbolVersion {
   llvm::StringRef Name;
   bool IsExternCpp;
@@ -131,6 +134,7 @@ struct Configuration {
   SortSectionPolicy SortSection;
   StripPolicy Strip = StripPolicy::None;
   UnresolvedPolicy UnresolvedSymbols;
+  Target2Policy Target2 = Target2Policy::GotRel;
   BuildIdKind BuildId = BuildIdKind::None;
   ELFKind EKind = ELFNoneKind;
   uint16_t DefaultSymbolVersion = llvm::ELF::VER_NDX_GLOBAL;

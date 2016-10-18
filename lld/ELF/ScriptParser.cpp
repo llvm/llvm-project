@@ -137,7 +137,7 @@ StringRef ScriptParserBase::peek() {
   return Tok;
 }
 
-bool ScriptParserBase::skip(StringRef Tok) {
+bool ScriptParserBase::consume(StringRef Tok) {
   if (Error)
     return false;
   if (atEOF()) {
@@ -150,15 +150,7 @@ bool ScriptParserBase::skip(StringRef Tok) {
   return true;
 }
 
-void ScriptParserBase::skip() {
-  if (Error)
-    return;
-  if (atEOF()) {
-    setError("unexpected EOF");
-    return;
-  }
-  ++Pos;
-}
+void ScriptParserBase::skip() { (void)next(); }
 
 void ScriptParserBase::expect(StringRef Expect) {
   if (Error)

@@ -15,6 +15,7 @@ add_clang_library(clangTidy
   clangAST
   clangASTMatchers
   clangBasic
+  clangFormat
   clangFrontend
   clangLex
   clangRewrite

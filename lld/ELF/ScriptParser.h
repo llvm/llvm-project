@@ -30,7 +30,7 @@ protected:
   StringRef next();
   StringRef peek();
   void skip();
-  bool skip(StringRef Tok);
+  bool consume(StringRef Tok);
   void expect(StringRef Expect);
 
   size_t getPos();
