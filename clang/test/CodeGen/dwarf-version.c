@@ -4,7 +4,13 @@
 // RUN: %clang -target x86_64-linux-gnu -gdwarf-5 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
 // RUN: %clang -target x86_64-linux-gnu -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
 // RUN: %clang -target x86_64-linux-gnu -gdwarf -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
-// RUN: %clang -target x86_64-apple-darwin -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
+
+// The -isysroot is used as a hack to avoid LIT messing with the SDKROOT
+// environment variable which indirecty overrides the version in the target
+// triple used here.
+// RUN: %clang -target x86_64-apple-macosx10.11 -g -S -emit-llvm -o - %s -isysroot %t | FileCheck %s --check-prefix=VER4
+// RUN: %clang -target x86_64-apple-darwin14 -g -S -emit-llvm -o - %s -isysroot %t | FileCheck %s --check-prefix=VER2
+
 // RUN: %clang -target powerpc-unknown-openbsd -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2
 // RUN: %clang -target powerpc-unknown-freebsd -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2
 // RUN: %clang -target i386-pc-solaris -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2

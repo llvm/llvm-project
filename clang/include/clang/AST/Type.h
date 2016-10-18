@@ -3473,7 +3473,8 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                       param_type_iterator ArgTys, unsigned NumArgs,
-                      const ExtProtoInfo &EPI, const ASTContext &Context);
+                      const ExtProtoInfo &EPI, const ASTContext &Context,
+                      bool Canonical);
 };
 
 /// \brief Represents the dependent type named by a dependently-scoped

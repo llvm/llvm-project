@@ -386,8 +386,6 @@ SourceManager::~SourceManager() {
       ContentCacheAlloc.Deallocate(I->second);
     }
   }
-
-  llvm::DeleteContainerSeconds(MacroArgsCacheMap);
 }
 
 void SourceManager::clearIDTables() {
@@ -1784,13 +1782,10 @@ SourceLocation SourceManager::translateLineCol(FileID FID,
 ///     0   -> SourceLocation()
 ///     100 -> Expanded macro arg location
 ///     110 -> SourceLocation()
-void SourceManager::computeMacroArgsCache(MacroArgsMap *&CachePtr,
+void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
                                           FileID FID) const {
   assert(FID.isValid());
-  assert(!CachePtr);
 
-  CachePtr = new MacroArgsMap();
-  MacroArgsMap &MacroArgsCache = *CachePtr;
   // Initially no macro argument chunk is present.
   MacroArgsCache.insert(std::make_pair(0, SourceLocation()));
 
@@ -1940,9 +1935,11 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   if (FID.isInvalid())
     return Loc;
 
-  MacroArgsMap *&MacroArgsCache = MacroArgsCacheMap[FID];
-  if (!MacroArgsCache)
-    computeMacroArgsCache(MacroArgsCache, FID);
+  std::unique_ptr<MacroArgsMap> &MacroArgsCache = MacroArgsCacheMap[FID];
+  if (!MacroArgsCache) {
+    MacroArgsCache = llvm::make_unique<MacroArgsMap>();
+    computeMacroArgsCache(*MacroArgsCache.get(), FID);
+  }
 
   assert(!MacroArgsCache->empty());
   MacroArgsMap::iterator I = MacroArgsCache->upper_bound(Offset);
