@@ -2162,6 +2162,53 @@ static std::string formatObjCParamQualifiers(unsigned ObjCQuals,
   return Result;
 }
 
+/// \brief Tries to find the most appropriate type location for an Objective-C
+/// block placeholder.
+///
+/// This function ignores things like typedefs and qualifiers in order to
+/// present the most relevant and accurate block placeholders in code completion
+/// results.
+static void findTypeLocationForBlockDecl(const TypeSourceInfo *TSInfo,
+                                         FunctionTypeLoc &Block,
+                                         FunctionProtoTypeLoc &BlockProto,
+                                         bool SuppressBlock = false) {
+  if (!TSInfo)
+    return;
+  TypeLoc TL = TSInfo->getTypeLoc().getUnqualifiedLoc();
+  while (true) {
+    // Look through typedefs.
+    if (!SuppressBlock) {
+      if (TypedefTypeLoc TypedefTL = TL.getAs<TypedefTypeLoc>()) {
+        if (TypeSourceInfo *InnerTSInfo =
+                TypedefTL.getTypedefNameDecl()->getTypeSourceInfo()) {
+          TL = InnerTSInfo->getTypeLoc().getUnqualifiedLoc();
+          continue;
+        }
+      }
+
+      // Look through qualified types
+      if (QualifiedTypeLoc QualifiedTL = TL.getAs<QualifiedTypeLoc>()) {
+        TL = QualifiedTL.getUnqualifiedLoc();
+        continue;
+      }
+
+      if (AttributedTypeLoc AttrTL = TL.getAs<AttributedTypeLoc>()) {
+        TL = AttrTL.getModifiedLoc();
+        continue;
+      }
+    }
+
+    // Try to get the function prototype behind the block pointer type,
+    // then we're done.
+    if (BlockPointerTypeLoc BlockPtr = TL.getAs<BlockPointerTypeLoc>()) {
+      TL = BlockPtr.getPointeeLoc().IgnoreParens();
+      Block = TL.getAs<FunctionTypeLoc>();
+      BlockProto = TL.getAs<FunctionProtoTypeLoc>();
+    }
+    break;
+  }
+}
+
 static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
                                            const ParmVarDecl *Param,
                                            bool SuppressName = false,
@@ -2192,47 +2239,13 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
     }
     return Result;
   }
-  
+
   // The argument for a block pointer parameter is a block literal with
   // the appropriate type.
   FunctionTypeLoc Block;
   FunctionProtoTypeLoc BlockProto;
-  TypeLoc TL;
-  if (TypeSourceInfo *TSInfo = Param->getTypeSourceInfo()) {
-    TL = TSInfo->getTypeLoc().getUnqualifiedLoc();
-    while (true) {
-      // Look through typedefs.
-      if (!SuppressBlock) {
-        if (TypedefTypeLoc TypedefTL = TL.getAs<TypedefTypeLoc>()) {
-          if (TypeSourceInfo *InnerTSInfo =
-                  TypedefTL.getTypedefNameDecl()->getTypeSourceInfo()) {
-            TL = InnerTSInfo->getTypeLoc().getUnqualifiedLoc();
-            continue;
-          }
-        }
-        
-        // Look through qualified types
-        if (QualifiedTypeLoc QualifiedTL = TL.getAs<QualifiedTypeLoc>()) {
-          TL = QualifiedTL.getUnqualifiedLoc();
-          continue;
-        }
-
-        if (AttributedTypeLoc AttrTL = TL.getAs<AttributedTypeLoc>()) {
-          TL = AttrTL.getModifiedLoc();
-          continue;
-        }
-      }
-      
-      // Try to get the function prototype behind the block pointer type,
-      // then we're done.
-      if (BlockPointerTypeLoc BlockPtr = TL.getAs<BlockPointerTypeLoc>()) {
-        TL = BlockPtr.getPointeeLoc().IgnoreParens();
-        Block = TL.getAs<FunctionTypeLoc>();
-        BlockProto = TL.getAs<FunctionProtoTypeLoc>();
-      }
-      break;
-    }
-  }
+  findTypeLocationForBlockDecl(Param->getTypeSourceInfo(), Block, BlockProto,
+                               SuppressBlock);
 
   if (!Block) {
     // We were unable to find a FunctionProtoTypeLoc with parameter names
