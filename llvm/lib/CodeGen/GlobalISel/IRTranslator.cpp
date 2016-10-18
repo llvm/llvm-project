@@ -358,6 +358,26 @@ bool IRTranslator::translateGetElementPtr(const User &U) {
   return true;
 }
 
+bool IRTranslator::translateMemcpy(const CallInst &CI) {
+  LLT SizeTy{*CI.getArgOperand(2)->getType(), *DL};
+  if (cast<PointerType>(CI.getArgOperand(0)->getType())->getAddressSpace() !=
+          0 ||
+      cast<PointerType>(CI.getArgOperand(1)->getType())->getAddressSpace() !=
+          0 ||
+      SizeTy.getSizeInBits() != DL->getPointerSizeInBits(0))
+    return false;
+
+  SmallVector<CallLowering::ArgInfo, 8> Args;
+  for (int i = 0; i < 3; ++i) {
+    const auto &Arg = CI.getArgOperand(i);
+    Args.emplace_back(getOrCreateVReg(*Arg), Arg->getType());
+  }
+
+  MachineOperand Callee = MachineOperand::CreateES("memcpy");
+
+  return CLI->lowerCall(MIRBuilder, Callee,
+                        CallLowering::ArgInfo(0, CI.getType()), Args);
+}
 
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
                                            Intrinsic::ID ID) {
@@ -370,6 +390,15 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::ssub_with_overflow: Op = TargetOpcode::G_SSUBO; break;
   case Intrinsic::umul_with_overflow: Op = TargetOpcode::G_UMULO; break;
   case Intrinsic::smul_with_overflow: Op = TargetOpcode::G_SMULO; break;
+  case Intrinsic::memcpy:
+    return translateMemcpy(CI);
+  case Intrinsic::objectsize: {
+    // If we don't know by now, we're never going to know.
+    const ConstantInt *Min = cast<ConstantInt>(CI.getArgOperand(1));
+
+    MIRBuilder.buildConstant(getOrCreateVReg(CI), Min->isZero() ? -1ULL : 0);
+    return true;
+  }
   }
 
   LLT Ty{*CI.getOperand(0)->getType(), *DL};

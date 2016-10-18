@@ -41,7 +41,7 @@
 using namespace llvm;
 using namespace lto;
 
-LLVM_ATTRIBUTE_NORETURN void reportOpenError(StringRef Path, Twine Msg) {
+LLVM_ATTRIBUTE_NORETURN static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
   exit(1);

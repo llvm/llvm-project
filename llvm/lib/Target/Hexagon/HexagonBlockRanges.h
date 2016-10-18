@@ -150,7 +150,8 @@ struct HexagonBlockRanges {
   };
 
 private:
-  RegisterSet getLiveIns(const MachineBasicBlock &B);
+  RegisterSet getLiveIns(const MachineBasicBlock &B,
+      const MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI);
 
   void computeInitialLiveRanges(InstrIndexMap &IndexMap,
       RegToRangeMap &LiveMap);

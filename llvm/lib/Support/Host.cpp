@@ -1194,7 +1194,7 @@ StringRef sys::getHostCPUName() { return "generic"; }
 // On Linux, the number of physical cores can be computed from /proc/cpuinfo,
 // using the number of unique physical/core id pairs. The following
 // implementation reads the /proc/cpuinfo format on an x86_64 system.
-int computeHostNumPhysicalCores() {
+static int computeHostNumPhysicalCores() {
   // Read /proc/cpuinfo as a stream (until EOF reached). It cannot be
   // mmapped because it appears to have 0 size.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
@@ -1236,7 +1236,7 @@ int computeHostNumPhysicalCores() {
 }
 #else
 // On other systems, return -1 to indicate unknown.
-int computeHostNumPhysicalCores() { return -1; }
+static int computeHostNumPhysicalCores() { return -1; }
 #endif
 
 int sys::getHostNumPhysicalCores() {

@@ -3150,53 +3150,77 @@ static bool isCanonicalExceptionSpecification(
     return true;
 
   // A dynamic exception specification is canonical if it only contains pack
-  // expansions (so we can't tell whether it's non-throwing).
+  // expansions (so we can't tell whether it's non-throwing) and all its
+  // contained types are canonical.
   if (ESI.Type == EST_Dynamic) {
     for (QualType ET : ESI.Exceptions)
-      if (!ET->getAs<PackExpansionType>())
+      if (!ET.isCanonical() || !ET->getAs<PackExpansionType>())
         return false;
     return true;
   }
 
-  // A noexcept(expr) specification is canonical if expr is value-dependent.
+  // A noexcept(expr) specification is (possibly) canonical if expr is
+  // value-dependent.
   if (ESI.Type == EST_ComputedNoexcept)
     return ESI.NoexceptExpr && ESI.NoexceptExpr->isValueDependent();
 
   return false;
 }
 
-QualType
-ASTContext::getFunctionType(QualType ResultTy, ArrayRef<QualType> ArgArray,
-                            const FunctionProtoType::ExtProtoInfo &EPI) const {
+QualType ASTContext::getFunctionTypeInternal(
+    QualType ResultTy, ArrayRef<QualType> ArgArray,
+    const FunctionProtoType::ExtProtoInfo &EPI, bool OnlyWantCanonical) const {
   size_t NumArgs = ArgArray.size();
-
-  bool NoexceptInType = getLangOpts().CPlusPlus1z;
-
-  bool IsCanonicalExceptionSpec =
-      isCanonicalExceptionSpecification(EPI.ExceptionSpec, NoexceptInType);
-
-  // Determine whether the type being created is already canonical or not.
-  bool isCanonical = IsCanonicalExceptionSpec &&
-                     isCanonicalResultType(ResultTy) && !EPI.HasTrailingReturn;
-  for (unsigned i = 0; i != NumArgs && isCanonical; ++i)
-    if (!ArgArray[i].isCanonicalAsParam())
-      isCanonical = false;
 
   // Unique functions, to guarantee there is only one function of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
   FunctionProtoType::Profile(ID, ResultTy, ArgArray.begin(), NumArgs, EPI,
-                             *this, isCanonical);
+                             *this, true);
+
+  QualType Canonical;
+  bool Unique = false;
 
   void *InsertPos = nullptr;
-  if (FunctionProtoType *FTP =
-        FunctionProtoTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(FTP, 0);
+  if (FunctionProtoType *FPT =
+        FunctionProtoTypes.FindNodeOrInsertPos(ID, InsertPos)) {
+    QualType Existing = QualType(FPT, 0);
 
-  // If this type isn't canonical, get the canonical version of it.
-  // The exception spec is not part of the canonical type.
-  QualType Canonical;
-  if (!isCanonical) {
+    // If we find a pre-existing equivalent FunctionProtoType, we can just reuse
+    // it so long as our exception specification doesn't contain a dependent
+    // noexcept expression, or we're just looking for a canonical type.
+    // Otherwise, we're going to need to create a type
+    // sugar node to hold the concrete expression.
+    if (OnlyWantCanonical || EPI.ExceptionSpec.Type != EST_ComputedNoexcept ||
+        EPI.ExceptionSpec.NoexceptExpr == FPT->getNoexceptExpr())
+      return Existing;
+
+    // We need a new type sugar node for this one, to hold the new noexcept
+    // expression. We do no canonicalization here, but that's OK since we don't
+    // expect to see the same noexcept expression much more than once.
+    Canonical = getCanonicalType(Existing);
+    Unique = true;
+  }
+
+  bool NoexceptInType = getLangOpts().CPlusPlus1z;
+  bool IsCanonicalExceptionSpec =
+      isCanonicalExceptionSpecification(EPI.ExceptionSpec, NoexceptInType);
+
+  // Determine whether the type being created is already canonical or not.
+  bool isCanonical = !Unique && IsCanonicalExceptionSpec &&
+                     isCanonicalResultType(ResultTy) && !EPI.HasTrailingReturn;
+  for (unsigned i = 0; i != NumArgs && isCanonical; ++i)
+    if (!ArgArray[i].isCanonicalAsParam())
+      isCanonical = false;
+
+  if (OnlyWantCanonical)
+    assert(isCanonical &&
+           "given non-canonical parameters constructing canonical type");
+
+  // If this type isn't canonical, get the canonical version of it if we don't
+  // already have it. The exception spec is only partially part of the
+  // canonical type, and only in C++17 onwards.
+  if (!isCanonical && Canonical.isNull()) {
     SmallVector<QualType, 16> CanonicalArgs;
     CanonicalArgs.reserve(NumArgs);
     for (unsigned i = 0; i != NumArgs; ++i)
@@ -3208,16 +3232,33 @@ ASTContext::getFunctionType(QualType ResultTy, ArrayRef<QualType> ArgArray,
     if (IsCanonicalExceptionSpec) {
       // Exception spec is already OK.
     } else if (NoexceptInType) {
+      llvm::SmallVector<QualType, 8> ExceptionTypeStorage;
       switch (EPI.ExceptionSpec.Type) {
       case EST_Unparsed: case EST_Unevaluated: case EST_Uninstantiated:
         // We don't know yet. It shouldn't matter what we pick here; no-one
         // should ever look at this.
         LLVM_FALLTHROUGH;
-      case EST_None: case EST_MSAny: case EST_Dynamic:
-        // If we get here for EST_Dynamic, there is at least one
-        // non-pack-expansion type, so this is not non-throwing.
+      case EST_None: case EST_MSAny:
         CanonicalEPI.ExceptionSpec.Type = EST_None;
         break;
+
+        // A dynamic exception specification is almost always "not noexcept",
+        // with the exception that a pack expansion might expand to no types.
+      case EST_Dynamic: {
+        bool AnyPacks = false;
+        for (QualType ET : EPI.ExceptionSpec.Exceptions) {
+          if (ET->getAs<PackExpansionType>())
+            AnyPacks = true;
+          ExceptionTypeStorage.push_back(getCanonicalType(ET));
+        }
+        if (!AnyPacks)
+          CanonicalEPI.ExceptionSpec.Type = EST_None;
+        else {
+          CanonicalEPI.ExceptionSpec.Type = EST_Dynamic;
+          CanonicalEPI.ExceptionSpec.Exceptions = ExceptionTypeStorage;
+        }
+        break;
+      }
 
       case EST_DynamicNone: case EST_BasicNoexcept:
         CanonicalEPI.ExceptionSpec.Type = EST_BasicNoexcept;
@@ -3238,15 +3279,14 @@ ASTContext::getFunctionType(QualType ResultTy, ArrayRef<QualType> ArgArray,
             Value.getBoolValue() ? EST_BasicNoexcept : EST_None;
         break;
       }
-      assert(isCanonicalExceptionSpecification(CanonicalEPI.ExceptionSpec,
-                                               NoexceptInType));
     } else {
       CanonicalEPI.ExceptionSpec = FunctionProtoType::ExceptionSpecInfo();
     }
 
     // Adjust the canonical function result type.
     CanQualType CanResultTy = getCanonicalFunctionResultType(ResultTy);
-    Canonical = getFunctionType(CanResultTy, CanonicalArgs, CanonicalEPI);
+    Canonical =
+        getFunctionTypeInternal(CanResultTy, CanonicalArgs, CanonicalEPI, true);
 
     // Get the new insert position for the node we care about.
     FunctionProtoType *NewIP =
@@ -3289,7 +3329,8 @@ ASTContext::getFunctionType(QualType ResultTy, ArrayRef<QualType> ArgArray,
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
   new (FTP) FunctionProtoType(ResultTy, ArgArray, Canonical, newEPI);
   Types.push_back(FTP);
-  FunctionProtoTypes.InsertNode(FTP, InsertPos);
+  if (!Unique)
+    FunctionProtoTypes.InsertNode(FTP, InsertPos);
   return QualType(FTP, 0);
 }
 

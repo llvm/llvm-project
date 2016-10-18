@@ -833,6 +833,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
   const char *FuncStartsLoadCmd = nullptr;
   const char *SplitInfoLoadCmd = nullptr;
   const char *CodeSignDrsLoadCmd = nullptr;
+  const char *CodeSignLoadCmd = nullptr;
   const char *VersLoadCmd = nullptr;
   const char *SourceLoadCmd = nullptr;
   const char *EntryPointLoadCmd = nullptr;
@@ -884,6 +885,10 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
     } else if (Load.C.cmd == MachO::LC_DYLIB_CODE_SIGN_DRS) {
       if ((Err = checkLinkeditDataCommand(this, Load, I, &CodeSignDrsLoadCmd,
                                           "LC_DYLIB_CODE_SIGN_DRS")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_CODE_SIGNATURE) {
+      if ((Err = checkLinkeditDataCommand(this, Load, I, &CodeSignLoadCmd,
+                                          "LC_CODE_SIGNATURE")))
         return;
     } else if (Load.C.cmd == MachO::LC_DYLD_INFO) {
       if ((Err = checkDyldInfoCommand(this, Load, I, &DyldInfoLoadCmd,
