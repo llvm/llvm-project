@@ -3975,11 +3975,6 @@ ASTContext::applyObjCProtocolQualifiers(QualType type,
                   bool allowOnPointerType) const {
   hasError = false;
 
-  if (const ObjCTypeParamType *objT =
-      dyn_cast<ObjCTypeParamType>(type.getTypePtr())) {
-    return getObjCTypeParamType(objT->getDecl(), protocols);
-  }
-
   // Apply protocol qualifiers to ObjCObjectPointerType.
   if (allowOnPointerType) {
     if (const ObjCObjectPointerType *objPtr =
