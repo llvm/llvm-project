@@ -6,7 +6,7 @@
 # RUN: llvm-readobj --program-headers -s %t | FileCheck %s
 
 # CHECK:      ProgramHeader {
-# CHECK:        Type:  (0x65A3DBE6)
+# CHECK:        Type: PT_OPENBSD_RANDOMIZE (0x65A3DBE6)
 # CHECK-NEXT:   Offset: 0x94
 # CHECK-NEXT:   VirtualAddress: 0x94
 # CHECK-NEXT:   PhysicalAddress: 0x94

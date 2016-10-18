@@ -47,6 +47,29 @@
 # AT-NEXT:        PF_X (0x1)
 # AT-NEXT:      ]
 
+## Check the numetic values for PHDRS.
+# RUN: echo "PHDRS {text PT_LOAD FILEHDR PHDRS; foo 0x11223344; } \
+# RUN:       SECTIONS { . = SIZEOF_HEADERS; .foo : { *(.*) } : text : foo}" > %t1.script
+# RUN: ld.lld -o %t2 --script %t1.script %t
+# RUN: llvm-readobj -program-headers %t2 | FileCheck --check-prefix=INT-PHDRS %s
+
+# INT-PHDRS:      ProgramHeaders [
+# INT-PHDRS:        ProgramHeader {
+# INT-PHDRS:           Type:  (0x11223344)
+# INT-PHDRS-NEXT:      Offset: 0xB0
+# INT-PHDRS-NEXT:      VirtualAddress: 0xB0
+# INT-PHDRS-NEXT:      PhysicalAddress: 0xB0
+# INT-PHDRS-NEXT:      FileSize: 9
+# INT-PHDRS-NEXT:      MemSize: 9
+# INT-PHDRS-NEXT:      Flags [
+# INT-PHDRS-NEXT:        PF_R
+# INT-PHDRS-NEXT:        PF_W
+# INT-PHDRS-NEXT:        PF_X
+# INT-PHDRS-NEXT:      ]
+# INT-PHDRS-NEXT:      Alignment: 4
+# INT-PHDRS-NEXT:    }
+# INT-PHDRS-NEXT:  ]
+
 .global _start
 _start:
  nop
