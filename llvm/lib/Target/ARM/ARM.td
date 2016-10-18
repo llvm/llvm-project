@@ -823,7 +823,8 @@ def : ProcNoItin<"exynos-m2",                           [ARMv8a, ProcExynosM1,
                                                          FeatureCrypto,
                                                          FeatureCRC]>;
 
-def : ProcNoItin<"cortex-r52",                          [ARMv8r, ProcR52]>;
+def : ProcNoItin<"cortex-r52",                          [ARMv8r, ProcR52,
+                                                         FeatureFPAO]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

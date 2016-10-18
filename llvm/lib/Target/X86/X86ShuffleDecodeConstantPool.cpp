@@ -275,60 +275,59 @@ void DecodeVPPERMMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
   }
 }
 
-void DecodeVPERMVMask(const Constant *C, MVT VT,
+void DecodeVPERMVMask(const Constant *C, unsigned ElSize,
                       SmallVectorImpl<int> &ShuffleMask) {
   Type *MaskTy = C->getType();
-  if (MaskTy->isVectorTy()) {
-    unsigned NumElements = MaskTy->getVectorNumElements();
-    if (NumElements == VT.getVectorNumElements()) {
-      unsigned EltMaskSize = Log2_64(NumElements);
-      for (unsigned i = 0; i < NumElements; ++i) {
-        Constant *COp = C->getAggregateElement(i);
-        if (!COp || (!isa<UndefValue>(COp) && !isa<ConstantInt>(COp))) {
-          ShuffleMask.clear();
-          return;
-        }
-        if (isa<UndefValue>(COp))
-          ShuffleMask.push_back(SM_SentinelUndef);
-        else {
-          APInt Element = cast<ConstantInt>(COp)->getValue();
-          Element = Element.getLoBits(EltMaskSize);
-          ShuffleMask.push_back(Element.getZExtValue());
-        }
-      }
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  (void)MaskTySize;
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
+         "Unexpected vector size.");
+  assert((ElSize == 8 || ElSize == 16 || ElSize == 32 || ElSize == 64) &&
+         "Unexpected vector element size.");
+
+  // The shuffle mask requires elements the same size as the target.
+  SmallBitVector UndefElts;
+  SmallVector<uint64_t, 8> RawMask;
+  if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
+    return;
+
+  unsigned NumElts = RawMask.size();
+
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (UndefElts[i]) {
+      ShuffleMask.push_back(SM_SentinelUndef);
+      continue;
     }
-    return;
+    int Index = RawMask[i] & (NumElts - 1);
+    ShuffleMask.push_back(Index);
   }
-  // Scalar value; just broadcast it
-  if (!isa<ConstantInt>(C))
-    return;
-  uint64_t Element = cast<ConstantInt>(C)->getZExtValue();
-  int NumElements = VT.getVectorNumElements();
-  Element &= (1 << NumElements) - 1;
-  for (int i = 0; i < NumElements; ++i)
-    ShuffleMask.push_back(Element);
 }
 
-void DecodeVPERMV3Mask(const Constant *C, MVT VT,
+void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize,
                        SmallVectorImpl<int> &ShuffleMask) {
   Type *MaskTy = C->getType();
-  unsigned NumElements = MaskTy->getVectorNumElements();
-  if (NumElements == VT.getVectorNumElements()) {
-    unsigned EltMaskSize = Log2_64(NumElements * 2);
-    for (unsigned i = 0; i < NumElements; ++i) {
-      Constant *COp = C->getAggregateElement(i);
-      if (!COp) {
-        ShuffleMask.clear();
-        return;
-      }
-      if (isa<UndefValue>(COp))
-        ShuffleMask.push_back(SM_SentinelUndef);
-      else {
-        APInt Element = cast<ConstantInt>(COp)->getValue();
-        Element = Element.getLoBits(EltMaskSize);
-        ShuffleMask.push_back(Element.getZExtValue());
-      }
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  (void)MaskTySize;
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
+         "Unexpected vector size.");
+  assert((ElSize == 8 || ElSize == 16 || ElSize == 32 || ElSize == 64) &&
+         "Unexpected vector element size.");
+
+  // The shuffle mask requires elements the same size as the target.
+  SmallBitVector UndefElts;
+  SmallVector<uint64_t, 8> RawMask;
+  if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
+    return;
+
+  unsigned NumElts = RawMask.size();
+
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (UndefElts[i]) {
+      ShuffleMask.push_back(SM_SentinelUndef);
+      continue;
     }
+    int Index = RawMask[i] & (NumElts*2 - 1);
+    ShuffleMask.push_back(Index);
   }
 }
 } // llvm namespace

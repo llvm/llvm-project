@@ -55,6 +55,9 @@ INVALID-SYMTAB-SIZE: Invalid data was encountered while parsing the file
 RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 INVALID-XINDEX-SIZE: Invalid data was encountered while parsing the file.
 
+RUN: not llvm-readobj -t %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
+INVALID-SH-NUM: e_shnum should be zero if a file has no section header table
+
 RUN: not llvm-readobj -t %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
 INVALID-EXT-SYMTAB-INDEX: Invalid symbol table index
@@ -64,3 +67,7 @@ RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 INVALID-RELOC-SH-OFFSET: Invalid data was encountered while parsing the file
+
+RUN: not llvm-readobj -t %p/Inputs/invalid-sections-address-alignment.x86-64 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-SEC-ADDRESS-ALIGNMENT %s
+INVALID-SEC-ADDRESS-ALIGNMENT: Invalid data was encountered while parsing the file

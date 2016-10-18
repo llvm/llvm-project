@@ -2050,6 +2050,9 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case ARM::PATCHABLE_FUNCTION_EXIT:
     LowerPATCHABLE_FUNCTION_EXIT(*MI);
     return;
+  case ARM::PATCHABLE_TAIL_CALL:
+    LowerPATCHABLE_TAIL_CALL(*MI);
+    return;
   }
 
   MCInst TmpInst;

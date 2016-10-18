@@ -149,12 +149,8 @@ define void @merge_global_store_4_constants_f32(float addrspace(1)* %out) #0 {
   ret void
 }
 
-; FIXME: Should be able to merge this
 ; GCN-LABEL: {{^}}merge_global_store_4_constants_mixed_i32_f32:
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
+; GCN-NOAA: buffer_store_dwordx4 v
 
 ; GCN-AA: buffer_store_dwordx2
 ; GCN-AA: buffer_store_dword v

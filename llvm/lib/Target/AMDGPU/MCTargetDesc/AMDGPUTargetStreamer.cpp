@@ -97,7 +97,8 @@ void
 AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                                            uint32_t Minor) {
   MCStreamer &OS = getStreamer();
-  MCSectionELF *Note = OS.getContext().getELFSection(".note", ELF::SHT_NOTE, 0);
+  MCSectionELF *Note =
+      OS.getContext().getELFSection(".note", ELF::SHT_NOTE, ELF::SHF_ALLOC);
 
   unsigned NameSZ = 4;
 
@@ -120,7 +121,8 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
                                                        StringRef VendorName,
                                                        StringRef ArchName) {
   MCStreamer &OS = getStreamer();
-  MCSectionELF *Note = OS.getContext().getELFSection(".note", ELF::SHT_NOTE, 0);
+  MCSectionELF *Note =
+      OS.getContext().getELFSection(".note", ELF::SHT_NOTE, ELF::SHF_ALLOC);
 
   unsigned NameSZ = 4;
   uint16_t VendorNameSize = VendorName.size() + 1;

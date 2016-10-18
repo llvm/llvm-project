@@ -222,6 +222,10 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
   switch (RegBankID) {
   case AArch64::GPRRegBankID:
     switch (OpSize) {
+    case 8:
+      return isStore ? AArch64::STRBBui : AArch64::LDRBBui;
+    case 16:
+      return isStore ? AArch64::STRHHui : AArch64::LDRHHui;
     case 32:
       return isStore ? AArch64::STRWui : AArch64::LDRWui;
     case 64:
@@ -229,6 +233,10 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
     }
   case AArch64::FPRRegBankID:
     switch (OpSize) {
+    case 8:
+      return isStore ? AArch64::STRBui : AArch64::LDRBui;
+    case 16:
+      return isStore ? AArch64::STRHui : AArch64::LDRHui;
     case 32:
       return isStore ? AArch64::STRSui : AArch64::LDRSui;
     case 64:

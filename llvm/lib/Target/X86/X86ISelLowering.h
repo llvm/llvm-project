@@ -302,6 +302,9 @@ namespace llvm {
       // Vector FP round.
       VFPROUND, VFPROUND_RND, VFPROUNDS_RND,
 
+      // Vector double to signed integer (truncated).
+      CVTTPD2DQ,
+
       // Vector signed/unsigned integer to double.
       CVTDQ2PD, CVTUDQ2PD,
 

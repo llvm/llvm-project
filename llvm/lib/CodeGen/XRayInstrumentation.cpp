@@ -95,10 +95,17 @@ void XRayInstrumentation::prependRetWithPatchableExit(MachineFunction &MF,
 {
   for (auto &MBB : MF) {
     for (auto &T : MBB.terminators()) {
+      unsigned Opc = 0;
       if (T.isReturn()) {
-        // Prepend the return instruction with PATCHABLE_FUNCTION_EXIT
-        BuildMI(MBB, T, T.getDebugLoc(),
-                TII->get(TargetOpcode::PATCHABLE_FUNCTION_EXIT));
+        Opc = TargetOpcode::PATCHABLE_FUNCTION_EXIT;
+      }
+      if (TII->isTailCall(T)) {
+        Opc = TargetOpcode::PATCHABLE_TAIL_CALL;
+      }
+      if (Opc != 0) {
+        // Prepend the return instruction with PATCHABLE_FUNCTION_EXIT or
+        //   PATCHABLE_TAIL_CALL .
+        BuildMI(MBB, T, T.getDebugLoc(),TII->get(Opc));
       }
     }
   }
