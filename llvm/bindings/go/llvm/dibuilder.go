@@ -277,7 +277,7 @@ func (d *DIBuilder) CreateParameterVariable(scope Metadata, v DIParameterVariabl
 type DIBasicType struct {
 	Name        string
 	SizeInBits  uint64
-	AlignInBits uint64
+	AlignInBits uint32
 	Encoding    DwarfTypeEncoding
 }
 
@@ -289,7 +289,7 @@ func (d *DIBuilder) CreateBasicType(t DIBasicType) Metadata {
 		d.ref,
 		name,
 		C.uint64_t(t.SizeInBits),
-		C.uint64_t(t.AlignInBits),
+		C.uint32_t(t.AlignInBits),
 		C.unsigned(t.Encoding),
 	)
 	return Metadata{C: result}
@@ -299,7 +299,7 @@ func (d *DIBuilder) CreateBasicType(t DIBasicType) Metadata {
 type DIPointerType struct {
 	Pointee     Metadata
 	SizeInBits  uint64
-	AlignInBits uint64 // optional
+	AlignInBits uint32 // optional
 	Name        string // optional
 }
 
@@ -311,7 +311,7 @@ func (d *DIBuilder) CreatePointerType(t DIPointerType) Metadata {
 		d.ref,
 		t.Pointee.C,
 		C.uint64_t(t.SizeInBits),
-		C.uint64_t(t.AlignInBits),
+		C.uint32_t(t.AlignInBits),
 		name,
 	)
 	return Metadata{C: result}
@@ -340,7 +340,7 @@ type DIStructType struct {
 	File        Metadata
 	Line        int
 	SizeInBits  uint64
-	AlignInBits uint64
+	AlignInBits uint32
 	Flags       int
 	DerivedFrom Metadata
 	Elements    []Metadata
@@ -358,7 +358,7 @@ func (d *DIBuilder) CreateStructType(scope Metadata, t DIStructType) Metadata {
 		t.File.C,
 		C.unsigned(t.Line),
 		C.uint64_t(t.SizeInBits),
-		C.uint64_t(t.AlignInBits),
+		C.uint32_t(t.AlignInBits),
 		C.unsigned(t.Flags),
 		t.DerivedFrom.C,
 		elements.C,
@@ -375,7 +375,7 @@ type DIReplaceableCompositeType struct {
 	Line        int
 	RuntimeLang int
 	SizeInBits  uint64
-	AlignInBits uint64
+	AlignInBits uint32
 	Flags       int
 }
 
@@ -392,7 +392,7 @@ func (d *DIBuilder) CreateReplaceableCompositeType(scope Metadata, t DIReplaceab
 		C.unsigned(t.Line),
 		C.unsigned(t.RuntimeLang),
 		C.uint64_t(t.SizeInBits),
-		C.uint64_t(t.AlignInBits),
+		C.uint32_t(t.AlignInBits),
 		C.unsigned(t.Flags),
 	)
 	return Metadata{C: result}
@@ -404,7 +404,7 @@ type DIMemberType struct {
 	File         Metadata
 	Line         int
 	SizeInBits   uint64
-	AlignInBits  uint64
+	AlignInBits  uint32
 	OffsetInBits uint64
 	Flags        int
 	Type         Metadata
@@ -421,7 +421,7 @@ func (d *DIBuilder) CreateMemberType(scope Metadata, t DIMemberType) Metadata {
 		t.File.C,
 		C.unsigned(t.Line),
 		C.uint64_t(t.SizeInBits),
-		C.uint64_t(t.AlignInBits),
+		C.uint32_t(t.AlignInBits),
 		C.uint64_t(t.OffsetInBits),
 		C.unsigned(t.Flags),
 		t.Type.C,
@@ -438,7 +438,7 @@ type DISubrange struct {
 // DIArrayType holds the values for creating array type debug metadata.
 type DIArrayType struct {
 	SizeInBits  uint64
-	AlignInBits uint64
+	AlignInBits uint32
 	ElementType Metadata
 	Subscripts  []DISubrange
 }
@@ -453,7 +453,7 @@ func (d *DIBuilder) CreateArrayType(t DIArrayType) Metadata {
 	result := C.LLVMDIBuilderCreateArrayType(
 		d.ref,
 		C.uint64_t(t.SizeInBits),
-		C.uint64_t(t.AlignInBits),
+		C.uint32_t(t.AlignInBits),
 		t.ElementType.C,
 		subscripts.C,
 	)

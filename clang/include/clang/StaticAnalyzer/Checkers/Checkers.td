@@ -474,6 +474,11 @@ def CStringNotNullTerm : Checker<"NotNullTerminated">,
 
 let ParentPackage = OSX in {
 
+def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
+  InPackage<OSX>,
+  HelpText<"Check for erroneous conversions of objects representing numbers into numbers">,
+  DescFile<"NumberObjectConversionChecker.cpp">;
+
 def MacOSXAPIChecker : Checker<"API">,
   InPackage<OSX>,
   HelpText<"Check for proper uses of various Apple APIs">,

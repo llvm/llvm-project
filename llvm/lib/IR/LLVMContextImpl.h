@@ -319,11 +319,11 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   unsigned Tag;
   MDString *Name;
   uint64_t SizeInBits;
-  uint64_t AlignInBits;
+  uint32_t AlignInBits;
   unsigned Encoding;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                uint64_t AlignInBits, unsigned Encoding)
+                uint32_t AlignInBits, unsigned Encoding)
       : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
         Encoding(Encoding) {}
   MDNodeKeyImpl(const DIBasicType *N)
@@ -349,23 +349,23 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   Metadata *Scope;
   Metadata *BaseType;
   uint64_t SizeInBits;
-  uint64_t AlignInBits;
   uint64_t OffsetInBits;
+  uint32_t AlignInBits;
   unsigned Flags;
   Metadata *ExtraData;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-                uint64_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
+                uint32_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
                 Metadata *ExtraData)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
-        BaseType(BaseType), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        OffsetInBits(OffsetInBits), Flags(Flags), ExtraData(ExtraData) {}
+        BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
+        AlignInBits(AlignInBits), Flags(Flags), ExtraData(ExtraData) {}
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
-        AlignInBits(N->getAlignInBits()), OffsetInBits(N->getOffsetInBits()),
+        OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
         Flags(N->getFlags()), ExtraData(N->getRawExtraData()) {}
 
   bool isKeyOf(const DIDerivedType *RHS) const {
@@ -430,8 +430,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   Metadata *Scope;
   Metadata *BaseType;
   uint64_t SizeInBits;
-  uint64_t AlignInBits;
   uint64_t OffsetInBits;
+  uint32_t AlignInBits;
   unsigned Flags;
   Metadata *Elements;
   unsigned RuntimeLang;
@@ -441,20 +441,20 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-                uint64_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
+                uint32_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
                 Metadata *Elements, unsigned RuntimeLang,
                 Metadata *VTableHolder, Metadata *TemplateParams,
                 MDString *Identifier)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
-        BaseType(BaseType), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        OffsetInBits(OffsetInBits), Flags(Flags), Elements(Elements),
+        BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
+        AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
         RuntimeLang(RuntimeLang), VTableHolder(VTableHolder),
         TemplateParams(TemplateParams), Identifier(Identifier) {}
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
-        AlignInBits(N->getAlignInBits()), OffsetInBits(N->getOffsetInBits()),
+        OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
         Flags(N->getFlags()), Elements(N->getRawElements()),
         RuntimeLang(N->getRuntimeLang()), VTableHolder(N->getRawVTableHolder()),
         TemplateParams(N->getRawTemplateParams()),

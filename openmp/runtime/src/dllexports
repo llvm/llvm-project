@@ -924,6 +924,59 @@ kmp_set_disp_num_buffers                    890
         __kmpc_atomic_start                    2410
         __kmpc_atomic_end                      2411
 
+        %ifdef HAVE_QUAD
+        __kmpc_atomic_fixed1_add_cpt_fp
+        __kmpc_atomic_fixed1_sub_cpt_fp
+        __kmpc_atomic_fixed1_mul_cpt_fp
+        __kmpc_atomic_fixed1_div_cpt_fp
+        __kmpc_atomic_fixed1u_add_cpt_fp
+        __kmpc_atomic_fixed1u_sub_cpt_fp
+        __kmpc_atomic_fixed1u_mul_cpt_fp
+        __kmpc_atomic_fixed1u_div_cpt_fp
+
+        __kmpc_atomic_fixed2_add_cpt_fp
+        __kmpc_atomic_fixed2_sub_cpt_fp
+        __kmpc_atomic_fixed2_mul_cpt_fp
+        __kmpc_atomic_fixed2_div_cpt_fp
+        __kmpc_atomic_fixed2u_add_cpt_fp
+        __kmpc_atomic_fixed2u_sub_cpt_fp
+        __kmpc_atomic_fixed2u_mul_cpt_fp
+        __kmpc_atomic_fixed2u_div_cpt_fp
+
+        __kmpc_atomic_fixed4_add_cpt_fp
+        __kmpc_atomic_fixed4_sub_cpt_fp
+        __kmpc_atomic_fixed4_mul_cpt_fp
+        __kmpc_atomic_fixed4_div_cpt_fp
+        __kmpc_atomic_fixed4u_add_cpt_fp
+        __kmpc_atomic_fixed4u_sub_cpt_fp
+        __kmpc_atomic_fixed4u_mul_cpt_fp
+        __kmpc_atomic_fixed4u_div_cpt_fp
+
+        __kmpc_atomic_fixed8_add_cpt_fp
+        __kmpc_atomic_fixed8_sub_cpt_fp
+        __kmpc_atomic_fixed8_mul_cpt_fp
+        __kmpc_atomic_fixed8_div_cpt_fp
+        __kmpc_atomic_fixed8u_add_cpt_fp
+        __kmpc_atomic_fixed8u_sub_cpt_fp
+        __kmpc_atomic_fixed8u_mul_cpt_fp
+        __kmpc_atomic_fixed8u_div_cpt_fp
+
+        __kmpc_atomic_float4_add_cpt_fp
+        __kmpc_atomic_float4_sub_cpt_fp
+        __kmpc_atomic_float4_mul_cpt_fp
+        __kmpc_atomic_float4_div_cpt_fp
+
+        __kmpc_atomic_float8_add_cpt_fp
+        __kmpc_atomic_float8_sub_cpt_fp
+        __kmpc_atomic_float8_mul_cpt_fp
+        __kmpc_atomic_float8_div_cpt_fp
+
+        __kmpc_atomic_float10_add_cpt_fp
+        __kmpc_atomic_float10_sub_cpt_fp
+        __kmpc_atomic_float10_mul_cpt_fp
+        __kmpc_atomic_float10_div_cpt_fp
+        %endif
+
         %ifdef OMP_40
 
             # ATOMIC extensions for OpenMP 4.0 spec (x86 and x64 only)
@@ -1002,10 +1055,119 @@ kmp_set_disp_num_buffers                    890
             %endif
             %endif
 
+            __kmpc_atomic_fixed1_sub_rev   2470
+            __kmpc_atomic_fixed1_div_rev   2471
+            __kmpc_atomic_fixed1u_div_rev  2472
+            __kmpc_atomic_fixed1_shl_rev   2473
+            __kmpc_atomic_fixed1_shr_rev   2474
+            __kmpc_atomic_fixed1u_shr_rev  2475
+            __kmpc_atomic_fixed2_sub_rev   2476
+            __kmpc_atomic_fixed2_div_rev   2477
+            __kmpc_atomic_fixed2u_div_rev  2478
+            __kmpc_atomic_fixed2_shl_rev   2479
+            __kmpc_atomic_fixed2_shr_rev   2480
+            __kmpc_atomic_fixed2u_shr_rev  2481
+            __kmpc_atomic_fixed4_sub_rev   2482
+            __kmpc_atomic_fixed4_div_rev   2483
+            __kmpc_atomic_fixed4u_div_rev  2484
+            __kmpc_atomic_fixed4_shl_rev   2485
+            __kmpc_atomic_fixed4_shr_rev   2486
+            __kmpc_atomic_fixed4u_shr_rev  2487
+            __kmpc_atomic_fixed8_sub_rev   2488
+            __kmpc_atomic_fixed8_div_rev   2489
+            __kmpc_atomic_fixed8u_div_rev  2490
+            __kmpc_atomic_fixed8_shl_rev   2491
+            __kmpc_atomic_fixed8_shr_rev   2492
+            __kmpc_atomic_fixed8u_shr_rev  2493
+            __kmpc_atomic_float4_sub_rev   2494
+            __kmpc_atomic_float4_div_rev   2495
+            __kmpc_atomic_float8_sub_rev   2496
+            __kmpc_atomic_float8_div_rev   2497
+            __kmpc_atomic_float10_sub_rev  2498
+            __kmpc_atomic_float10_div_rev  2499
+            %ifdef HAVE_QUAD
+            __kmpc_atomic_float16_sub_rev  2500
+            __kmpc_atomic_float16_div_rev  2501
+	    %endif
+            __kmpc_atomic_cmplx4_sub_rev   2502
+            __kmpc_atomic_cmplx4_div_rev   2503
+            __kmpc_atomic_cmplx8_sub_rev   2504
+            __kmpc_atomic_cmplx8_div_rev   2505
+            __kmpc_atomic_cmplx10_sub_rev  2506
+            __kmpc_atomic_cmplx10_div_rev  2507
+            %ifdef HAVE_QUAD
+            __kmpc_atomic_cmplx16_sub_rev  2508
+            __kmpc_atomic_cmplx16_div_rev  2509
+            %ifdef arch_32
+                __kmpc_atomic_float16_sub_a16_rev  2510
+                __kmpc_atomic_float16_div_a16_rev  2511
+                __kmpc_atomic_cmplx16_sub_a16_rev  2512
+                __kmpc_atomic_cmplx16_div_a16_rev  2513
+            %endif
+            %endif
+
+            %ifdef HAVE_QUAD
+            __kmpc_atomic_fixed1_sub_rev_fp
+            __kmpc_atomic_fixed1_div_rev_fp
+            __kmpc_atomic_fixed1u_div_rev_fp
+            __kmpc_atomic_fixed2_sub_rev_fp
+            __kmpc_atomic_fixed2_div_rev_fp
+            __kmpc_atomic_fixed2u_div_rev_fp
+            __kmpc_atomic_fixed4_sub_rev_fp
+            __kmpc_atomic_fixed4_div_rev_fp
+            __kmpc_atomic_fixed4u_div_rev_fp
+            __kmpc_atomic_fixed8_sub_rev_fp
+            __kmpc_atomic_fixed8_div_rev_fp
+            __kmpc_atomic_fixed8u_div_rev_fp
+            __kmpc_atomic_float4_sub_rev_fp
+            __kmpc_atomic_float4_div_rev_fp
+            __kmpc_atomic_float8_sub_rev_fp
+            __kmpc_atomic_float8_div_rev_fp
+            __kmpc_atomic_float10_sub_rev_fp
+            __kmpc_atomic_float10_div_rev_fp
+
+            __kmpc_atomic_fixed1_sub_cpt_rev_fp
+            __kmpc_atomic_fixed1u_sub_cpt_rev_fp
+            __kmpc_atomic_fixed1_div_cpt_rev_fp
+            __kmpc_atomic_fixed1u_div_cpt_rev_fp
+            __kmpc_atomic_fixed2_sub_cpt_rev_fp
+            __kmpc_atomic_fixed2u_sub_cpt_rev_fp
+            __kmpc_atomic_fixed2_div_cpt_rev_fp
+            __kmpc_atomic_fixed2u_div_cpt_rev_fp
+            __kmpc_atomic_fixed4_sub_cpt_rev_fp
+            __kmpc_atomic_fixed4u_sub_cpt_rev_fp
+            __kmpc_atomic_fixed4_div_cpt_rev_fp
+            __kmpc_atomic_fixed4u_div_cpt_rev_fp
+            __kmpc_atomic_fixed8_sub_cpt_rev_fp
+            __kmpc_atomic_fixed8u_sub_cpt_rev_fp
+            __kmpc_atomic_fixed8_div_cpt_rev_fp
+            __kmpc_atomic_fixed8u_div_cpt_rev_fp
+            __kmpc_atomic_float4_sub_cpt_rev_fp
+            __kmpc_atomic_float4_div_cpt_rev_fp
+            __kmpc_atomic_float8_sub_cpt_rev_fp
+            __kmpc_atomic_float8_div_cpt_rev_fp
+            __kmpc_atomic_float10_sub_cpt_rev_fp
+            __kmpc_atomic_float10_div_cpt_rev_fp
+            %endif
         %endif   # OMP_40
 
 
     %endif   # arch_64
+
+    %ifdef HAVE_QUAD
+    __kmpc_atomic_fixed1u_add_fp
+    __kmpc_atomic_fixed1u_sub_fp
+    __kmpc_atomic_fixed1u_mul_fp
+    __kmpc_atomic_fixed2u_add_fp
+    __kmpc_atomic_fixed2u_sub_fp
+    __kmpc_atomic_fixed2u_mul_fp
+    __kmpc_atomic_fixed4u_add_fp
+    __kmpc_atomic_fixed4u_sub_fp
+    __kmpc_atomic_fixed4u_mul_fp
+    __kmpc_atomic_fixed8u_add_fp
+    __kmpc_atomic_fixed8u_sub_fp
+    __kmpc_atomic_fixed8u_mul_fp
+    %endif
 
 %endif
 

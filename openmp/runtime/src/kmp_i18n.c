@@ -809,7 +809,7 @@ sys_error(
                 int    strerror_r( int, char *, size_t );  // XSI version
         */
 
-        #if KMP_OS_LINUX
+        #if defined(__GLIBC__) && defined(_GNU_SOURCE)
 
             // GNU version of strerror_r.
 
