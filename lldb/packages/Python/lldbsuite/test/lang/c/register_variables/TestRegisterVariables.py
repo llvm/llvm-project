@@ -114,7 +114,6 @@ class RegisterVariableTestCase(TestBase):
         # way.
         register_variables_count = 0
 
-        print("Trace is: ", self.TraceOn())
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

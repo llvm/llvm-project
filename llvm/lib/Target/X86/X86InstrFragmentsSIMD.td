@@ -67,6 +67,9 @@ def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
 def X86comi    : SDNode<"X86ISD::COMI",      SDTX86CmpTest>;
 def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86CmpTest>;
 def X86cmps    : SDNode<"X86ISD::FSETCC",     SDTX86Cmps>;
+def X86cvttpd2dq: SDNode<"X86ISD::CVTTPD2DQ",
+                  SDTypeProfile<1, 1, [SDTCisVT<0, v4i32>,
+                                       SDTCisVT<1, v2f64>]>>;
 def X86cvtdq2pd: SDNode<"X86ISD::CVTDQ2PD",
                  SDTypeProfile<1, 1, [SDTCisVT<0, v2f64>,
                                       SDTCisVT<1, v4i32>]>>;
