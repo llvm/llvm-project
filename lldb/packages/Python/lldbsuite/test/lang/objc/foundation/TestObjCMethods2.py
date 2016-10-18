@@ -137,7 +137,7 @@ class FoundationTestCase2(TestBase):
         self.expect('expression str = (id)[NSString stringWithCString: "new"]')
         self.runCmd("process continue")
 
-    @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
     def test_MyString_dump_with_runtime(self):
         """Test dump of a known Objective-C object by dereferencing it."""
         self.build()
@@ -158,7 +158,7 @@ class FoundationTestCase2(TestBase):
                 "\(MyBase\)"])
         self.runCmd("process continue")
 
-    @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
     def test_runtime_types(self):
         """Test commands that require runtime types"""
         self.build()

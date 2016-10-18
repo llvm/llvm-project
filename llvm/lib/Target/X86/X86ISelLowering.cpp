@@ -5091,7 +5091,7 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
       break;
     }
     if (auto *C = getTargetConstantFromNode(MaskNode)) {
-      DecodeVPERMVMask(C, VT, Mask);
+      DecodeVPERMVMask(C, MaskEltSize, Mask);
       break;
     }
     return false;
@@ -5102,8 +5102,9 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     Ops.push_back(N->getOperand(0));
     Ops.push_back(N->getOperand(2));
     SDValue MaskNode = N->getOperand(1);
+    unsigned MaskEltSize = VT.getScalarSizeInBits();
     if (auto *C = getTargetConstantFromNode(MaskNode)) {
-      DecodeVPERMV3Mask(C, VT, Mask);
+      DecodeVPERMV3Mask(C, MaskEltSize, Mask);
       break;
     }
     return false;
@@ -5114,8 +5115,9 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     Ops.push_back(N->getOperand(1));
     Ops.push_back(N->getOperand(2));
     SDValue MaskNode = N->getOperand(0);
+    unsigned MaskEltSize = VT.getScalarSizeInBits();
     if (auto *C = getTargetConstantFromNode(MaskNode)) {
-      DecodeVPERMV3Mask(C, VT, Mask);
+      DecodeVPERMV3Mask(C, MaskEltSize, Mask);
       break;
     }
     return false;

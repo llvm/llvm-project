@@ -693,7 +693,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// source location.
   typedef std::map<unsigned, SourceLocation> MacroArgsMap;
 
-  mutable llvm::DenseMap<FileID, MacroArgsMap *> MacroArgsCacheMap;
+  mutable llvm::DenseMap<FileID, std::unique_ptr<MacroArgsMap>>
+      MacroArgsCacheMap;
 
   /// \brief The stack of modules being built, which is used to detect
   /// cycles in the module dependency graph as modules are being built, as
@@ -1672,7 +1673,7 @@ private:
   std::pair<FileID, unsigned>
   getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
                                    unsigned Offset) const;
-  void computeMacroArgsCache(MacroArgsMap *&MacroArgsCache, FileID FID) const;
+  void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
   void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
                                          FileID FID,
                                          SourceLocation SpellLoc,
