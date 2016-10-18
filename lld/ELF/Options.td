@@ -127,6 +127,8 @@ def no_whole_archive: F<"no-whole-archive">,
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
+def nopie: F<"nopie">, HelpText<"Do not create a position independent executable">;
+
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
@@ -174,6 +176,8 @@ def sysroot: J<"sysroot=">, HelpText<"Set the system root">;
 def target1_rel: F<"target1-rel">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_REL32">;
 
 def target1_abs: F<"target1-abs">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_ABS32">;
+
+def target2: J<"target2=">, MetaVarName<"<type>">, HelpText<"Interpret R_ARM_TARGET2 as <type>, where <type> is one of rel, abs, or got-rel.">;
 
 def threads: F<"threads">, HelpText<"Enable use of threads">;
 

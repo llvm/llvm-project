@@ -1107,6 +1107,25 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
     ExecutionCtx = isl_set_intersect(ExecutionCtx, BaseExecutionCtx);
   }
 
+  // If the size of a dimension is dependent on another class, make sure it is
+  // preloaded.
+  for (unsigned i = 1, e = SAI->getNumberOfDimensions(); i < e; ++i) {
+    const SCEV *Dim = SAI->getDimensionSize(i);
+    SetVector<Value *> Values;
+    findValues(Dim, SE, Values);
+    for (auto *Val : Values) {
+      if (auto *BaseIAClass = S.lookupInvariantEquivClass(Val)) {
+        if (!preloadInvariantEquivClass(*BaseIAClass))
+          return false;
+
+        // After we preloaded the BaseIAClass we adjusted the BaseExecutionCtx
+        // and we need to refine the ExecutionCtx.
+        isl_set *BaseExecutionCtx = isl_set_copy(BaseIAClass->ExecutionContext);
+        ExecutionCtx = isl_set_intersect(ExecutionCtx, BaseExecutionCtx);
+      }
+    }
+  }
+
   Instruction *AccInst = MA->getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 

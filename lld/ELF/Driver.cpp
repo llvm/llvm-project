@@ -345,6 +345,20 @@ static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
   return UnresolvedPolicy::ReportError;
 }
 
+static Target2Policy getTarget2Option(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_target2)) {
+    StringRef S = Arg->getValue();
+    if (S == "rel")
+      return Target2Policy::Rel;
+    if (S == "abs")
+      return Target2Policy::Abs;
+    if (S == "got-rel")
+      return Target2Policy::GotRel;
+    error("unknown --target2 option: " + S);
+  }
+  return Target2Policy::GotRel;
+}
+
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_oformat)) {
     StringRef S = Arg->getValue();
@@ -456,7 +470,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
-  Config->Pie = Args.hasArg(OPT_pie);
+  Config->Pie = getArg(Args, OPT_pie, OPT_nopie, false);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
@@ -549,6 +563,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SortSection = getSortKind(Args);
 
   Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
+
+  Config->Target2 = getTarget2Option(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_dynamic_list))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))

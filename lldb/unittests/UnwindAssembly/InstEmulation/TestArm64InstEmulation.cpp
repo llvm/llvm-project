@@ -92,14 +92,14 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 
   // CFA=sp +0
   row_sp = unwind_plan.GetRowForFunctionOffset(0);
-  EXPECT_EQ(0, row_sp->GetOffset());
+  EXPECT_EQ(0ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
 
   // CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(4);
-  EXPECT_EQ(4, row_sp->GetOffset());
+  EXPECT_EQ(4ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
@@ -114,7 +114,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 
   // CFA=fp+16 => fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(8);
-  EXPECT_EQ(8, row_sp->GetOffset());
+  EXPECT_EQ(8ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::fp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
@@ -129,7 +129,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 
   // CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(16);
-  EXPECT_EQ(16, row_sp->GetOffset());
+  EXPECT_EQ(16ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
@@ -144,7 +144,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 
   // CFA=sp +0 => fp= <same> lr= <same>
   row_sp = unwind_plan.GetRowForFunctionOffset(20);
-  EXPECT_EQ(20, row_sp->GetOffset());
+  EXPECT_EQ(20ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
@@ -209,14 +209,14 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
 
   // 0: CFA=sp +0 =>
   row_sp = unwind_plan.GetRowForFunctionOffset(0);
-  EXPECT_EQ(0, row_sp->GetOffset());
+  EXPECT_EQ(0ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
 
   // 4: CFA=sp+48 => x21=[CFA-40] x22=[CFA-48]
   row_sp = unwind_plan.GetRowForFunctionOffset(4);
-  EXPECT_EQ(4, row_sp->GetOffset());
+  EXPECT_EQ(4ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_EQ(48, row_sp->GetCFAValue().GetOffset());
 
@@ -230,7 +230,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
 
   // 8: CFA=sp+48 => x19=[CFA-24] x20=[CFA-32] x21=[CFA-40] x22=[CFA-48]
   row_sp = unwind_plan.GetRowForFunctionOffset(8);
-  EXPECT_EQ(8, row_sp->GetOffset());
+  EXPECT_EQ(8ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_EQ(48, row_sp->GetCFAValue().GetOffset());
 
@@ -245,7 +245,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   // 12: CFA=sp+48 => x19=[CFA-24] x20=[CFA-32] x21=[CFA-40] x22=[CFA-48]
   // fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(12);
-  EXPECT_EQ(12, row_sp->GetOffset());
+  EXPECT_EQ(12ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_EQ(48, row_sp->GetCFAValue().GetOffset());
 
@@ -260,7 +260,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   // 16: CFA=fp+16 => x19=[CFA-24] x20=[CFA-32] x21=[CFA-40] x22=[CFA-48]
   // fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(16);
-  EXPECT_EQ(16, row_sp->GetOffset());
+  EXPECT_EQ(16ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::fp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
@@ -268,7 +268,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   // 28: CFA=sp+48 => x19=[CFA-24] x20=[CFA-32] x21=[CFA-40] x22=[CFA-48]
   // fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(28);
-  EXPECT_EQ(28, row_sp->GetOffset());
+  EXPECT_EQ(28ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(48, row_sp->GetCFAValue().GetOffset());
@@ -276,7 +276,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   // 32: CFA=sp+48 => x19=[CFA-24] x20=[CFA-32] x21=[CFA-40] x22=[CFA-48] fp=
   // <same> lr= <same>
   row_sp = unwind_plan.GetRowForFunctionOffset(32);
-  EXPECT_EQ(32, row_sp->GetOffset());
+  EXPECT_EQ(32ull, row_sp->GetOffset());
 
   // I'd prefer if these restored registers were cleared entirely instead of set
   // to IsSame...
@@ -289,7 +289,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   // 36: CFA=sp+48 => x19= <same> x20= <same> x21=[CFA-40] x22=[CFA-48] fp=
   // <same> lr= <same>
   row_sp = unwind_plan.GetRowForFunctionOffset(36);
-  EXPECT_EQ(36, row_sp->GetOffset());
+  EXPECT_EQ(36ull, row_sp->GetOffset());
 
   EXPECT_TRUE(row_sp->GetRegisterInfo(arm64_dwarf::x19, regloc));
   EXPECT_TRUE(regloc.IsSame());
@@ -300,7 +300,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   // 40: CFA=sp +0 => x19= <same> x20= <same> x21= <same> x22= <same> fp= <same>
   // lr= <same>
   row_sp = unwind_plan.GetRowForFunctionOffset(40);
-  EXPECT_EQ(40, row_sp->GetOffset());
+  EXPECT_EQ(40ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
@@ -363,7 +363,7 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
 
   // 0: CFA=sp +0 =>
   row_sp = unwind_plan.GetRowForFunctionOffset(0);
-  EXPECT_EQ(0, row_sp->GetOffset());
+  EXPECT_EQ(0ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::sp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
@@ -489,7 +489,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
       sample_range, data, sizeof(data), unwind_plan));
 
   row_sp = unwind_plan.GetRowForFunctionOffset(36);
-  EXPECT_EQ(28, row_sp->GetOffset());
+  EXPECT_EQ(28ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::fp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
@@ -499,7 +499,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
   EXPECT_EQ(-32, regloc.GetOffset());
 
   row_sp = unwind_plan.GetRowForFunctionOffset(40);
-  EXPECT_EQ(28, row_sp->GetOffset());
+  EXPECT_EQ(28ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == arm64_dwarf::fp);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());

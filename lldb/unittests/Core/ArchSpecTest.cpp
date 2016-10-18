@@ -21,26 +21,26 @@ TEST(ArchSpecTest, TestParseMachCPUDashSubtypeTripleSimple) {
   // Success conditions.  Valid cpu/subtype combinations using both - and .
   ArchSpec AS;
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12-10", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(10, AS.GetMachOCPUSubType());
+  EXPECT_EQ(12u, AS.GetMachOCPUType());
+  EXPECT_EQ(10u, AS.GetMachOCPUSubType());
 
   AS = ArchSpec();
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12-15", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(15, AS.GetMachOCPUSubType());
+  EXPECT_EQ(12u, AS.GetMachOCPUType());
+  EXPECT_EQ(15u, AS.GetMachOCPUSubType());
 
   AS = ArchSpec();
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12.15", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(15, AS.GetMachOCPUSubType());
+  EXPECT_EQ(12u, AS.GetMachOCPUType());
+  EXPECT_EQ(15u, AS.GetMachOCPUSubType());
 
   // Failure conditions.
 
   // Valid string, unknown cpu/subtype.
   AS = ArchSpec();
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("13.11", AS));
-  EXPECT_EQ(0, AS.GetMachOCPUType());
-  EXPECT_EQ(0, AS.GetMachOCPUSubType());
+  EXPECT_EQ(0u, AS.GetMachOCPUType());
+  EXPECT_EQ(0u, AS.GetMachOCPUSubType());
 
   // Missing / invalid cpu or subtype
   AS = ArchSpec();
@@ -60,22 +60,22 @@ TEST(ArchSpecTest, TestParseMachCPUDashSubtypeTripleSimple) {
 TEST(ArchSpecTest, TestParseMachCPUDashSubtypeTripleExtra) {
   ArchSpec AS;
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12-15-vendor-os", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(15, AS.GetMachOCPUSubType());
+  EXPECT_EQ(12u, AS.GetMachOCPUType());
+  EXPECT_EQ(15u, AS.GetMachOCPUSubType());
   EXPECT_EQ("vendor", AS.GetTriple().getVendorName());
   EXPECT_EQ("os", AS.GetTriple().getOSName());
 
   AS = ArchSpec();
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12-10-vendor-os-name", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(10, AS.GetMachOCPUSubType());
+  EXPECT_EQ(12u, AS.GetMachOCPUType());
+  EXPECT_EQ(10u, AS.GetMachOCPUSubType());
   EXPECT_EQ("vendor", AS.GetTriple().getVendorName());
   EXPECT_EQ("os", AS.GetTriple().getOSName());
 
   AS = ArchSpec();
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12-15-vendor.os-name", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(15, AS.GetMachOCPUSubType());
+  EXPECT_EQ(12u, AS.GetMachOCPUType());
+  EXPECT_EQ(15u, AS.GetMachOCPUSubType());
   EXPECT_EQ("vendor.os", AS.GetTriple().getVendorName());
   EXPECT_EQ("name", AS.GetTriple().getOSName());
 
@@ -83,8 +83,8 @@ TEST(ArchSpecTest, TestParseMachCPUDashSubtypeTripleExtra) {
   // since they are unrecognized.
   AS = ArchSpec();
   EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12-10-vendor", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(10, AS.GetMachOCPUSubType());
+  EXPECT_EQ(12u, AS.GetMachOCPUType());
+  EXPECT_EQ(10u, AS.GetMachOCPUSubType());
   EXPECT_EQ("apple", AS.GetTriple().getVendorName());
   EXPECT_EQ("", AS.GetTriple().getOSName());
 
@@ -100,16 +100,16 @@ TEST(ArchSpecTest, TestSetTriple) {
 
   // Various flavors of valid triples.
   EXPECT_TRUE(AS.SetTriple("12-10-apple-darwin"));
-  EXPECT_EQ(llvm::MachO::CPU_TYPE_ARM, AS.GetMachOCPUType());
-  EXPECT_EQ(10, AS.GetMachOCPUSubType());
+  EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_ARM), AS.GetMachOCPUType());
+  EXPECT_EQ(10u, AS.GetMachOCPUSubType());
   EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
                   .consume_front("armv7f-apple-darwin"));
   EXPECT_EQ(ArchSpec::eCore_arm_armv7f, AS.GetCore());
 
   AS = ArchSpec();
   EXPECT_TRUE(AS.SetTriple("18.100-apple-darwin"));
-  EXPECT_EQ(llvm::MachO::CPU_TYPE_POWERPC, AS.GetMachOCPUType());
-  EXPECT_EQ(100, AS.GetMachOCPUSubType());
+  EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_POWERPC), AS.GetMachOCPUType());
+  EXPECT_EQ(100u, AS.GetMachOCPUSubType());
   EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
                   .consume_front("powerpc-apple-darwin"));
   EXPECT_EQ(ArchSpec::eCore_ppc_ppc970, AS.GetCore());
