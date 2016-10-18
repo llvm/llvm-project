@@ -54,6 +54,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   NoReturnFunctionChecker.cpp
   NonNullParamChecker.cpp
   NullabilityChecker.cpp
+  NumberObjectConversionChecker.cpp
   ObjCAtSyncChecker.cpp
   ObjCContainersASTChecker.cpp
   ObjCContainersChecker.cpp
