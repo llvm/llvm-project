@@ -58,6 +58,40 @@ __ockl_get_global_id(uint dim)
     return (g*s + l) + __ockl_get_global_offset(dim);
 }
 
+// HCC-specific __ockl_get_global_id(uint)
+// Does NOT invoke __ockl_get_global_offset(uint)
+ATTR size_t
+__ockl_get_global_id_hcc(uint dim)
+{
+    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    uint l, g, s;
+
+    switch(dim) {
+    case 0:
+        l = __llvm_amdgcn_workitem_id_x();
+        g = __llvm_amdgcn_workgroup_id_x();
+        s = p->workgroup_size_x;
+        break;
+    case 1:
+        l = __llvm_amdgcn_workitem_id_y();
+        g = __llvm_amdgcn_workgroup_id_y();
+        s = p->workgroup_size_y;
+        break;
+    case 2:
+        l = __llvm_amdgcn_workitem_id_z();
+        g = __llvm_amdgcn_workgroup_id_z();
+        s = p->workgroup_size_z;
+        break;
+    default:
+        l = 0;
+        g = 0;
+        s = 1;
+        break;
+    }
+
+    return (g*s + l);
+}
+
 ATTR size_t
 __ockl_get_local_id(uint dim)
 {

@@ -7,7 +7,7 @@
 ATTR long
 amp_get_global_id(int dim)
 {
-  return __ockl_get_global_id(dim);
+  return __ockl_get_global_id_hcc(dim);
 }
 
 ATTR long
@@ -49,7 +49,7 @@ hc_get_grid_size(int dim)
 ATTR long
 hc_get_workitem_absolute_id(int dim)
 {
-  return __ockl_get_global_id(dim);
+  return __ockl_get_global_id_hcc(dim);
 }
 
 ATTR long
