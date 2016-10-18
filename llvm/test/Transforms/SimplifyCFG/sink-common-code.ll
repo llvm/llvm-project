@@ -340,7 +340,7 @@ if.end:
 ; CHECK-LABEL: test13
 ; CHECK-DAG: select
 ; CHECK-DAG: load volatile
-; CHECK: store volatile {{.*}}, !tbaa !0
+; CHECK: store volatile {{.*}}, !tbaa ![[TBAA:[0-9]]]
 ; CHECK-NOT: load
 ; CHECK-NOT: store
 
@@ -384,12 +384,25 @@ if.else:
   %gepb = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
   %sv2 = load i32, i32* %gepb
   %cmp2 = icmp eq i32 %sv2, 57
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !9, metadata !DIExpression()), !dbg !11
   br label %if.end
 
 if.end:
   %p = phi i1 [ %cmp1, %if.then ], [ %cmp2, %if.else ]
   ret i32 1
 }
+
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+!llvm.module.flags = !{!5, !6}
+!llvm.dbg.cu = !{!7}
+
+!5 = !{i32 2, !"Dwarf Version", i32 4}
+!6 = !{i32 2, !"Debug Info Version", i32 3}
+!7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !10)
+!8 = distinct !DISubprogram(name: "foo", unit: !7)
+!9 = !DILocalVariable(name: "b", line: 1, arg: 2, scope: !8)
+!10 = !DIFile(filename: "a.c", directory: "a/b")
+!11 = !DILocation(line: 1, column: 14, scope: !8)
 
 ; CHECK-LABEL: test14
 ; CHECK: getelementptr
@@ -781,6 +794,6 @@ merge:
 ; CHECK: right:
 ; CHECK-NEXT:   %val1 = call i32 @call_target() [ "deopt"(i32 20) ]
 
-; CHECK: !0 = !{!1, !1, i64 0}
-; CHECK: !1 = !{!"float", !2}
-; CHECK: !2 = !{!"an example type tree"}
+; CHECK: ![[TBAA]] = !{![[TYPE:[0-9]]], ![[TYPE]], i64 0}
+; CHECK: ![[TYPE]] = !{!"float", ![[TEXT:[0-9]]]}
+; CHECK: ![[TEXT]] = !{!"an example type tree"}

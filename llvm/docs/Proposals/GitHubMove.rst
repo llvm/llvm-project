@@ -123,9 +123,9 @@ past discussions about Git:
 - "Sequential IDs are important for LNT and llvmlab bisection tool." [MatthewsRevNum]_.
 
 However, Git can emulate this increasing revision number:
-`git rev-list --count <commit-hash>`. This identifier is unique only within a
-single branch, but this means the tuple `(num, branch-name)` uniquely identifies
-a commit.
+``git rev-list --count <commit-hash>``. This identifier is unique only
+within a single branch, but this means the tuple `(num, branch-name)` uniquely
+identifies a commit.
 
 We can thus use this revision number to ensure that e.g. `clang -v` reports a
 user-friendly revision number (e.g. `master-12345` or `4.0-5321`), addressing

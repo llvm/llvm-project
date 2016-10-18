@@ -1315,7 +1315,9 @@ SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
   assert((TargetFlags == 0 || isTarget) &&
          "Cannot set target flags on target-independent globals");
   if (Alignment == 0)
-    Alignment = getDataLayout().getPrefTypeAlignment(C->getType());
+    Alignment = MF->getFunction()->optForSize()
+                    ? getDataLayout().getABITypeAlignment(C->getType())
+                    : getDataLayout().getPrefTypeAlignment(C->getType());
   unsigned Opc = isTarget ? ISD::TargetConstantPool : ISD::ConstantPool;
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opc, getVTList(VT), None);
@@ -2695,7 +2697,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     if (Tmp2 == 1) return 1;
 
     // Handle NEG.
-    if (ConstantSDNode *CLHS = dyn_cast<ConstantSDNode>(Op.getOperand(0)))
+    if (ConstantSDNode *CLHS = isConstOrConstSplat(Op.getOperand(0)))
       if (CLHS->isNullValue()) {
         APInt KnownZero, KnownOne;
         computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, Depth+1);
@@ -6649,6 +6651,40 @@ bool llvm::isOneConstant(SDValue V) {
 
 bool llvm::isBitwiseNot(SDValue V) {
   return V.getOpcode() == ISD::XOR && isAllOnesConstant(V.getOperand(1));
+}
+
+ConstantSDNode *llvm::isConstOrConstSplat(SDValue N) {
+  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N))
+    return CN;
+
+  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
+    BitVector UndefElements;
+    ConstantSDNode *CN = BV->getConstantSplatNode(&UndefElements);
+
+    // BuildVectors can truncate their operands. Ignore that case here.
+    // FIXME: We blindly ignore splats which include undef which is overly
+    // pessimistic.
+    if (CN && UndefElements.none() &&
+        CN->getValueType(0) == N.getValueType().getScalarType())
+      return CN;
+  }
+
+  return nullptr;
+}
+
+ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N) {
+  if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N))
+    return CN;
+
+  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
+    BitVector UndefElements;
+    ConstantFPSDNode *CN = BV->getConstantFPSplatNode(&UndefElements);
+
+    if (CN && UndefElements.none())
+      return CN;
+  }
+
+  return nullptr;
 }
 
 HandleSDNode::~HandleSDNode() {

@@ -112,6 +112,7 @@ public:
   // XRay-specific lowering for ARM.
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
+  void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
   // Helper function that emits the XRay sleds we've collected for a particular
   // function.
   void EmitXRayTable();

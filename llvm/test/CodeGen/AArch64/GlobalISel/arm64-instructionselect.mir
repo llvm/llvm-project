@@ -79,11 +79,17 @@
 
   define void @load_s64_gpr(i64* %addr) { ret void }
   define void @load_s32_gpr(i32* %addr) { ret void }
+  define void @load_s16_gpr(i16* %addr) { ret void }
+  define void @load_s8_gpr(i8* %addr) { ret void }
   define void @load_s64_fpr(i64* %addr) { ret void }
   define void @load_s32_fpr(i32* %addr) { ret void }
+  define void @load_s16_fpr(i16* %addr) { ret void }
+  define void @load_s8_fpr(i8* %addr) { ret void }
 
   define void @store_s64_gpr(i64* %addr) { ret void }
   define void @store_s32_gpr(i32* %addr) { ret void }
+  define void @store_s16_gpr(i16* %addr) { ret void }
+  define void @store_s8_gpr(i8* %addr) { ret void }
   define void @store_s64_fpr(i64* %addr) { ret void }
   define void @store_s32_fpr(i32* %addr) { ret void }
 
@@ -1496,6 +1502,56 @@ body:             |
 ...
 
 ---
+# CHECK-LABEL: name: load_s16_gpr
+name:            load_s16_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = LDRHHui %0, 0 :: (load 2 from %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s16) = G_LOAD  %0 :: (load 2 from %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: load_s8_gpr
+name:            load_s8_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = LDRBBui %0, 0 :: (load 1 from %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
+
+...
+
+---
 # CHECK-LABEL: name: load_s64_fpr
 name:            load_s64_fpr
 legalized:       true
@@ -1542,6 +1598,56 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s32) = G_LOAD  %0 :: (load 4 from %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: load_s16_fpr
+name:            load_s16_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: fpr16 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = LDRHui %0, 0 :: (load 2 from %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s16) = G_LOAD  %0 :: (load 2 from %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: load_s8_fpr
+name:            load_s8_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: fpr8 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = LDRBui %0, 0 :: (load 1 from %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
 
 ...
 
@@ -1596,6 +1702,60 @@ body:             |
     %0(p0) = COPY %x0
     %1(s32) = COPY %w1
     G_STORE  %1, %0 :: (store 4 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s16_gpr
+name:            store_s16_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %w1
+# CHECK: STRHHui %1, %0, 0 :: (store 2 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %w1
+
+    %0(p0) = COPY %x0
+    %1(s16) = COPY %w1
+    G_STORE  %1, %0 :: (store 2 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s8_gpr
+name:            store_s8_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %w1
+# CHECK: STRBBui %1, %0, 0 :: (store 1 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %w1
+
+    %0(p0) = COPY %x0
+    %1(s8) = COPY %w1
+    G_STORE  %1, %0 :: (store 1 into %ir.addr)
 
 ...
 

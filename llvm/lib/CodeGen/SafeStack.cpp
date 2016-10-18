@@ -714,7 +714,7 @@ bool SafeStack::runOnFunction(Function &F) {
 
   // Collect all points where stack gets unwound and needs to be restored
   // This is only necessary because the runtime (setjmp and unwind code) is
-  // not aware of the unsafe stack and won't unwind/restore it prorerly.
+  // not aware of the unsafe stack and won't unwind/restore it properly.
   // To work around this problem without changing the runtime, we insert
   // instrumentation to restore the unsafe stack pointer when necessary.
   SmallVector<Instruction *, 4> StackRestorePoints;
