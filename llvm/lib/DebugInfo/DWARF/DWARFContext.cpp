@@ -77,7 +77,8 @@ static void dumpAccelSection(raw_ostream &OS, StringRef Name,
   Accel.dump(OS);
 }
 
-void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH) {
+void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
+                        bool SummarizeTypes) {
   if (DumpType == DIDT_All || DumpType == DIDT_Abbrev) {
     OS << ".debug_abbrev contents:\n";
     getDebugAbbrev()->dump(OS);
@@ -106,7 +107,7 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH) {
     OS << "\n.debug_types contents:\n";
     for (const auto &TUS : type_unit_sections())
       for (const auto &TU : TUS)
-        TU->dump(OS);
+        TU->dump(OS, SummarizeTypes);
   }
 
   if ((DumpType == DIDT_All || DumpType == DIDT_TypesDwo) &&
@@ -114,7 +115,7 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH) {
     OS << "\n.debug_types.dwo contents:\n";
     for (const auto &DWOTUS : dwo_type_unit_sections())
       for (const auto &DWOTU : DWOTUS)
-        DWOTU->dump(OS);
+        DWOTU->dump(OS, SummarizeTypes);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_Loc) {

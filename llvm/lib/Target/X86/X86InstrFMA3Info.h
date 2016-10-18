@@ -20,8 +20,7 @@
 #include <cassert>
 #include <set>
 
-using namespace llvm;
-
+namespace llvm {
 /// This class is used to group {132, 213, 231} forms of FMA opcodes together.
 /// Each of the groups has either 3 register opcodes, 3 memory opcodes,
 /// or 6 register and memory opcodes. Also, each group has an attrubutes field
@@ -311,5 +310,6 @@ public:
     return rm_iterator(getX86InstrFMA3Info()->OpcodeToGroup.end());
   }
 };
+} // namespace llvm
 
 #endif

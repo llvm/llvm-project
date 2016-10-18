@@ -188,7 +188,7 @@ static Address castValueFromUintptr(CodeGenFunction &CGF, QualType DstType,
     auto *RefVal = TmpAddr.getPointer();
     TmpAddr = CGF.CreateMemTemp(RefType, Twine(Name) + ".ref");
     auto TmpLVal = CGF.MakeAddrLValue(TmpAddr, RefType);
-    CGF.EmitScalarInit(RefVal, TmpLVal);
+    CGF.EmitStoreThroughLValue(RValue::get(RefVal), TmpLVal, /*isInit*/ true);
   }
 
   return TmpAddr;
@@ -2192,7 +2192,7 @@ static LValue createSectionLVal(CodeGenFunction &CGF, QualType Ty,
                                 llvm::Value *Init = nullptr) {
   auto LVal = CGF.MakeAddrLValue(CGF.CreateMemTemp(Ty, Name), Ty);
   if (Init)
-    CGF.EmitScalarInit(Init, LVal);
+    CGF.EmitStoreThroughLValue(RValue::get(Init), LVal, /*isInit*/ true);
   return LVal;
 }
 

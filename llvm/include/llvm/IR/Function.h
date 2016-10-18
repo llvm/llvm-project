@@ -203,6 +203,12 @@ public:
   /// pgo data.
   Optional<uint64_t> getEntryCount() const;
 
+  /// Set the section prefix for this function.
+  void setSectionPrefix(StringRef Prefix);
+
+  /// Get the section prefix for this function.
+  Optional<StringRef> getSectionPrefix() const;
+
   /// @brief Return true if the function has the attribute.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
     return AttributeSets.hasFnAttribute(Kind);

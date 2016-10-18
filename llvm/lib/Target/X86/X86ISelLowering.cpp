@@ -29151,7 +29151,8 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
 //   into:
 //   srl(ctlz x), log2(bitsize(x))
 // Input pattern is checked by caller.
-SDValue lowerX86CmpEqZeroToCtlzSrl(SDValue Op, EVT ExtTy, SelectionDAG &DAG) {
+static SDValue lowerX86CmpEqZeroToCtlzSrl(SDValue Op, EVT ExtTy,
+                                          SelectionDAG &DAG) {
   SDValue Cmp = Op.getOperand(1);
   EVT VT = Cmp.getOperand(0).getValueType();
   unsigned Log2b = Log2_32(VT.getSizeInBits());

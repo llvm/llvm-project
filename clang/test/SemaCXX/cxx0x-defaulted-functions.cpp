@@ -87,17 +87,14 @@ namespace DefaultedFnExceptionSpec {
 
   template<typename T>
   struct Error {
-    // FIXME: Type canonicalization causes all the errors to point at the first
-    // declaration which has the type 'void () noexcept (T::error)'. We should
-    // get one error for 'Error<int>::Error()' and one for 'Error<int>::~Error()'.
-    void f() noexcept(T::error); // expected-error 2{{has no members}}
+    void f() noexcept(T::error);
 
-    Error() noexcept(T::error);
+    Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
     Error(const Error&) noexcept(T::error);
     Error(Error&&) noexcept(T::error);
     Error &operator=(const Error&) noexcept(T::error);
     Error &operator=(Error&&) noexcept(T::error);
-    ~Error() noexcept(T::error);
+    ~Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
   };
 
   struct DelayImplicit {

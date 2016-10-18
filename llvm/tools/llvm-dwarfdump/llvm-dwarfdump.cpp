@@ -74,6 +74,10 @@ static cl::opt<DIDumpType> DumpType(
         clEnumValN(DIDT_GdbIndex, "gdb_index", ".gdb_index"),
         clEnumValN(DIDT_TUIndex, "tu_index", ".debug_tu_index")));
 
+static cl::opt<bool>
+    SummarizeTypes("summarize-types",
+                   cl::desc("Abbreviate the description of type unit entries"));
+
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)
     return;
@@ -87,7 +91,7 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
   outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
          << "\n\n";
   // Dump the complete DWARF structure.
-  DICtx->dump(outs(), DumpType);
+  DICtx->dump(outs(), DumpType, false, SummarizeTypes);
 }
 
 static void DumpInput(StringRef Filename) {

@@ -40,7 +40,7 @@ class COFFObjectFile;
     }
 
     void dump(raw_ostream &OS, DIDumpType DumpType = DIDT_All,
-              bool DumpEH = false) override;
+              bool DumpEH = false, bool SummarizeTypes = false) override;
 
     DILineInfo getLineInfoForAddress(
         uint64_t Address,

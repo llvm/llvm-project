@@ -241,11 +241,29 @@ HexagonBlockRanges::HexagonBlockRanges(MachineFunction &mf)
 
 
 HexagonBlockRanges::RegisterSet HexagonBlockRanges::getLiveIns(
-      const MachineBasicBlock &B) {
+      const MachineBasicBlock &B, const MachineRegisterInfo &MRI,
+      const TargetRegisterInfo &TRI) {
   RegisterSet LiveIns;
-  for (auto I : B.liveins())
-    if (!Reserved[I.PhysReg])
-      LiveIns.insert({I.PhysReg, 0});
+  RegisterSet Tmp;
+  for (auto I : B.liveins()) {
+    if (I.LaneMask == ~LaneBitmask(0)) {
+      Tmp.insert({I.PhysReg,0});
+      continue;
+    }
+    for (MCSubRegIndexIterator S(I.PhysReg, &TRI); S.isValid(); ++S) {
+      LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
+      if (M & I.LaneMask)
+        Tmp.insert({S.getSubReg(), 0});
+    }
+  }
+
+  for (auto R : Tmp) {
+    if (!Reserved[R.Reg])
+      LiveIns.insert(R);
+    for (auto S : expandToSubRegs(R, MRI, TRI))
+      if (!Reserved[S.Reg])
+        LiveIns.insert(S);
+  }
   return LiveIns;
 }
 
@@ -287,9 +305,8 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
   MachineBasicBlock &B = IndexMap.getBlock();
   MachineRegisterInfo &MRI = B.getParent()->getRegInfo();
 
-  for (auto R : getLiveIns(B))
-    for (auto S : expandToSubRegs(R, MRI, TRI))
-      LiveOnEntry.insert(S);
+  for (auto R : getLiveIns(B, MRI, TRI))
+    LiveOnEntry.insert(R);
 
   for (auto R : LiveOnEntry)
     LastDef[R] = IndexType::Entry;
@@ -340,9 +357,8 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
   // Collect live-on-exit.
   RegisterSet LiveOnExit;
   for (auto *SB : B.successors())
-    for (auto R : getLiveIns(*SB))
-      for (auto S : expandToSubRegs(R, MRI, TRI))
-        LiveOnExit.insert(S);
+    for (auto R : getLiveIns(*SB, MRI, TRI))
+      LiveOnExit.insert(R);
 
   for (auto R : LiveOnExit)
     LastUse[R] = IndexType::Exit;
