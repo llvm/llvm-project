@@ -755,6 +755,33 @@ static Error checkLinkerOptCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+static Error checkSubCommand(const MachOObjectFile *Obj,
+                             const MachOObjectFile::LoadCommandInfo &Load,
+                             uint32_t LoadCommandIndex, const char *CmdName,
+                             size_t SizeOfCmd, const char *CmdStructName,
+                             uint32_t PathOffset, const char *PathFieldName) {
+  if (PathOffset < SizeOfCmd)
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " " + PathFieldName + ".offset field too "
+                          "small, not past the end of the " + CmdStructName);
+  if (PathOffset >= Load.C.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " " + PathFieldName + ".offset field "
+                          "extends past the end of the load command");
+  // Make sure there is a null between the starting offset of the path and
+  // the end of the load command.
+  uint32_t i;
+  const char *P = (const char *)Load.Ptr;
+  for (i = PathOffset; i < Load.C.cmdsize; i++)
+    if (P[i] == '\0')
+      break;
+  if (i >= Load.C.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " " + PathFieldName + " name extends past "
+                          "the end of the load command");
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -985,6 +1012,57 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         return;
     } else if (Load.C.cmd == MachO::LC_LINKER_OPTION) {
       if ((Err = checkLinkerOptCommand(this, Load, I)))
+        return;
+    } else if (Load.C.cmd == MachO::LC_SUB_FRAMEWORK) {
+      if (Load.C.cmdsize < sizeof(MachO::sub_framework_command)) {
+        Err =  malformedError("load command " + Twine(I) +
+                              " LC_SUB_FRAMEWORK cmdsize too small");
+        return;
+      }
+      MachO::sub_framework_command S =
+        getStruct<MachO::sub_framework_command>(this, Load.Ptr);
+      if ((Err = checkSubCommand(this, Load, I, "LC_SUB_FRAMEWORK",
+                                 sizeof(MachO::sub_framework_command),
+                                 "sub_framework_command", S.umbrella,
+                                 "umbrella")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_SUB_UMBRELLA) {
+      if (Load.C.cmdsize < sizeof(MachO::sub_umbrella_command)) {
+        Err =  malformedError("load command " + Twine(I) +
+                              " LC_SUB_UMBRELLA cmdsize too small");
+        return;
+      }
+      MachO::sub_umbrella_command S =
+        getStruct<MachO::sub_umbrella_command>(this, Load.Ptr);
+      if ((Err = checkSubCommand(this, Load, I, "LC_SUB_UMBRELLA",
+                                 sizeof(MachO::sub_umbrella_command),
+                                 "sub_umbrella_command", S.sub_umbrella,
+                                 "sub_umbrella")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_SUB_LIBRARY) {
+      if (Load.C.cmdsize < sizeof(MachO::sub_library_command)) {
+        Err =  malformedError("load command " + Twine(I) +
+                              " LC_SUB_LIBRARY cmdsize too small");
+        return;
+      }
+      MachO::sub_library_command S =
+        getStruct<MachO::sub_library_command>(this, Load.Ptr);
+      if ((Err = checkSubCommand(this, Load, I, "LC_SUB_LIBRARY",
+                                 sizeof(MachO::sub_library_command),
+                                 "sub_library_command", S.sub_library,
+                                 "sub_library")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_SUB_CLIENT) {
+      if (Load.C.cmdsize < sizeof(MachO::sub_client_command)) {
+        Err =  malformedError("load command " + Twine(I) +
+                              " LC_SUB_CLIENT cmdsize too small");
+        return;
+      }
+      MachO::sub_client_command S =
+        getStruct<MachO::sub_client_command>(this, Load.Ptr);
+      if ((Err = checkSubCommand(this, Load, I, "LC_SUB_CLIENT",
+                                 sizeof(MachO::sub_client_command),
+                                 "sub_client_command", S.client, "client")))
         return;
     }
     if (I < LoadCommandCount - 1) {

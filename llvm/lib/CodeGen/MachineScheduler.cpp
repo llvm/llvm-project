@@ -1359,7 +1359,8 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
         : SU(su), BaseReg(reg), Offset(ofs) {}
 
     bool operator<(const MemOpInfo&RHS) const {
-      return std::tie(BaseReg, Offset) < std::tie(RHS.BaseReg, RHS.Offset);
+      return std::tie(BaseReg, Offset, SU->NodeNum) <
+             std::tie(RHS.BaseReg, RHS.Offset, RHS.SU->NodeNum);
     }
   };
 

@@ -9,6 +9,7 @@
 
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
@@ -16,28 +17,6 @@
 #include <vector>
 
 using namespace llvm;
-
-namespace llvm {
-template <> struct DenseMapInfo<CachedHashString> {
-  static CachedHashString getEmptyKey() {
-    StringRef S = DenseMapInfo<StringRef>::getEmptyKey();
-    return {S, 0};
-  }
-  static CachedHashString getTombstoneKey() {
-    StringRef S = DenseMapInfo<StringRef>::getTombstoneKey();
-    return {S, 0};
-  }
-  static unsigned getHashValue(CachedHashString Val) {
-    assert(!isEqual(Val, getEmptyKey()) && "Cannot hash the empty key!");
-    assert(!isEqual(Val, getTombstoneKey()) &&
-           "Cannot hash the tombstone key!");
-    return Val.hash();
-  }
-  static bool isEqual(CachedHashString A, CachedHashString B) {
-    return DenseMapInfo<StringRef>::isEqual(A.val(), B.val());
-  }
-};
-}
 
 StringTableBuilder::~StringTableBuilder() {}
 
@@ -73,7 +52,7 @@ void StringTableBuilder::write(raw_ostream &OS) const {
   OS << Data;
 }
 
-typedef std::pair<CachedHashString, size_t> StringPair;
+typedef std::pair<CachedHashStringRef, size_t> StringPair;
 
 void StringTableBuilder::write(uint8_t *Buf) const {
   assert(isFinalized());
@@ -183,14 +162,14 @@ void StringTableBuilder::clear() {
   StringIndexMap.clear();
 }
 
-size_t StringTableBuilder::getOffset(CachedHashString S) const {
+size_t StringTableBuilder::getOffset(CachedHashStringRef S) const {
   assert(isFinalized());
   auto I = StringIndexMap.find(S);
   assert(I != StringIndexMap.end() && "String is not in table!");
   return I->second;
 }
 
-size_t StringTableBuilder::add(CachedHashString S) {
+size_t StringTableBuilder::add(CachedHashStringRef S) {
   if (K == WinCOFF)
     assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
 

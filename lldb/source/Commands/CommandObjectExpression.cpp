@@ -614,6 +614,9 @@ bool CommandObjectExpression::DoExecute(const char *command,
   if (EvaluateExpression(expr, &(result.GetOutputStream()),
                          &(result.GetErrorStream()), &result)) {
     Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+    if (!target)
+        target = GetDummyTarget();
+
     if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();
       // FIXME: Can we figure out what the user actually typed (e.g. some alias

@@ -355,3 +355,15 @@ INVALID-LINKOPT-BAD-SIZE: macho-invalid-linkopt-bad-size': truncated or malforme
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-linkopt-bad-count 2>&1 | FileCheck -check-prefix INVALID-LINKOPT-BAD-COUNT %s
 INVALID-LINKOPT-BAD-COUNT: macho-invalid-linkopt-bad-count': truncated or malformed object (load command 0 LC_LINKER_OPTION string count 3 does not match number of strings)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-subframe-small 2>&1 | FileCheck -check-prefix INVALID-SUBFRAME-SMALL %s
+INVALID-SUBFRAME-SMALL: macho-invalid-subframe-small': truncated or malformed object (load command 0 LC_SUB_FRAMEWORK cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-subumbrella-offset-small 2>&1 | FileCheck -check-prefix INVALID-SUBUMBRELLA-OFFSET-SMALL %s
+INVALID-SUBUMBRELLA-OFFSET-SMALL: macho-invalid-subumbrella-offset-small': truncated or malformed object (load command 0 LC_SUB_UMBRELLA sub_umbrella.offset field too small, not past the end of the sub_umbrella_command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-sublibrary-name_offset-toobig 2>&1 | FileCheck -check-prefix INVALID-SUBLIB-NAME_OFFSET-TOOBIG %s
+INVALID-SUBLIB-NAME_OFFSET-TOOBIG: macho-invalid-sublibrary-name_offset-toobig': truncated or malformed object (load command 0 LC_SUB_LIBRARY sub_library.offset field extends past the end of the load command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-subclient-name_toobig 2>&1 | FileCheck -check-prefix INVALID-SUBCLIENT-NAME-TOOBIG %s
+INVALID-SUBCLIENT-NAME-TOOBIG: macho-invalid-subclient-name_toobig': truncated or malformed object (load command 0 LC_SUB_CLIENT client name extends past the end of the load command)

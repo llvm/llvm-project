@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the DenseSet class.
+// This file defines the DenseSet and SmallDenseSet classes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +15,7 @@
 #define LLVM_ADT_DENSESET_H
 
 #include "llvm/ADT/DenseMap.h"
+#include <initializer_list>
 
 namespace llvm {
 
@@ -32,13 +33,18 @@ public:
   DenseSetEmpty &getSecond() { return *this; }
   const DenseSetEmpty &getSecond() const { return *this; }
 };
-}
 
-/// DenseSet - This implements a dense probed hash-table based set.
-template<typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT> >
-class DenseSet {
-  typedef DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                   detail::DenseSetPair<ValueT>> MapTy;
+/// Base class for DenseSet and DenseSmallSet.
+///
+/// MapTy should be either
+///
+///   DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+///            detail::DenseSetPair<ValueT>>
+///
+/// or the equivalent SmallDenseMap type.  ValueInfoT must implement the
+/// DenseMapInfo "concept".
+template <typename ValueT, typename MapTy, typename ValueInfoT>
+class DenseSetImpl {
   static_assert(sizeof(typename MapTy::value_type) == sizeof(ValueT),
                 "DenseMap buckets unexpectedly large!");
   MapTy TheMap;
@@ -48,7 +54,12 @@ public:
   typedef ValueT value_type;
   typedef unsigned size_type;
 
-  explicit DenseSet(unsigned NumInitBuckets = 0) : TheMap(NumInitBuckets) {}
+  explicit DenseSetImpl(unsigned InitialReserve = 0) : TheMap(InitialReserve) {}
+
+  DenseSetImpl(std::initializer_list<ValueT> Elems)
+      : DenseSetImpl(Elems.size()) {
+    insert(Elems.begin(), Elems.end());
+  }
 
   bool empty() const { return TheMap.empty(); }
   size_type size() const { return TheMap.size(); }
@@ -75,15 +86,13 @@ public:
     return TheMap.erase(V);
   }
 
-  void swap(DenseSet& RHS) {
-    TheMap.swap(RHS.TheMap);
-  }
+  void swap(DenseSetImpl &RHS) { TheMap.swap(RHS.TheMap); }
 
   // Iterators.
 
   class Iterator {
     typename MapTy::iterator I;
-    friend class DenseSet;
+    friend class DenseSetImpl;
 
   public:
     typedef typename MapTy::iterator::difference_type difference_type;
@@ -184,6 +193,42 @@ public:
     for (; I != E; ++I)
       insert(*I);
   }
+};
+
+} // namespace detail
+
+/// Implements a dense probed hash-table based set.
+template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
+class DenseSet : public detail::DenseSetImpl<
+                     ValueT, DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+                                      detail::DenseSetPair<ValueT>>,
+                     ValueInfoT> {
+  using BaseT =
+      detail::DenseSetImpl<ValueT,
+                           DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+                                    detail::DenseSetPair<ValueT>>,
+                           ValueInfoT>;
+
+public:
+  using BaseT::BaseT;
+};
+
+/// Implements a dense probed hash-table based set with some number of buckets
+/// stored inline.
+template <typename ValueT, unsigned InlineBuckets = 4,
+          typename ValueInfoT = DenseMapInfo<ValueT>>
+class SmallDenseSet
+    : public detail::DenseSetImpl<
+          ValueT, SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
+                                ValueInfoT, detail::DenseSetPair<ValueT>>,
+          ValueInfoT> {
+  using BaseT = detail::DenseSetImpl<
+      ValueT, SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
+                            ValueInfoT, detail::DenseSetPair<ValueT>>,
+      ValueInfoT>;
+
+public:
+  using BaseT::BaseT;
 };
 
 } // end namespace llvm

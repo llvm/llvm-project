@@ -114,27 +114,27 @@ void raw_ostream::SetBufferAndMode(char *BufferStart, size_t Size,
 }
 
 raw_ostream &raw_ostream::operator<<(unsigned long N) {
-  write_ulong(*this, N, 0);
+  write_integer(*this, static_cast<uint64_t>(N), IntegerStyle::Integer);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(long N) {
-  write_long(*this, N, 0);
+  write_integer(*this, static_cast<int64_t>(N), IntegerStyle::Integer);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(unsigned long long N) {
-  write_ulonglong(*this, N, 0);
+  write_integer(*this, static_cast<uint64_t>(N), IntegerStyle::Integer);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(long long N) {
-  write_longlong(*this, N, 0);
+  write_integer(*this, static_cast<int64_t>(N), IntegerStyle::Integer);
   return *this;
 }
 
 raw_ostream &raw_ostream::write_hex(unsigned long long N) {
-  llvm::write_hex(*this, N, 0, false, false);
+  llvm::write_hex(*this, N, HexPrintStyle::Lower);
   return *this;
 }
 
@@ -179,12 +179,12 @@ raw_ostream &raw_ostream::write_escaped(StringRef Str,
 }
 
 raw_ostream &raw_ostream::operator<<(const void *P) {
-  llvm::write_hex(*this, (uintptr_t)P, 0, false, true);
+  llvm::write_hex(*this, (uintptr_t)P, HexPrintStyle::PrefixLower);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(double N) {
-  llvm::write_double(*this, N, 0, 0, FloatStyle::Exponent);
+  llvm::write_double(*this, N, FloatStyle::Exponent);
   return *this;
 }
 
@@ -331,9 +331,19 @@ raw_ostream &raw_ostream::operator<<(const FormattedString &FS) {
 
 raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
   if (FN.Hex) {
-    llvm::write_hex(*this, FN.HexValue, FN.Width, FN.Upper, FN.HexPrefix);
+    HexPrintStyle Style;
+    if (FN.Upper && FN.HexPrefix)
+      Style = HexPrintStyle::PrefixUpper;
+    else if (FN.Upper && !FN.HexPrefix)
+      Style = HexPrintStyle::Upper;
+    else if (!FN.Upper && FN.HexPrefix)
+      Style = HexPrintStyle::PrefixLower;
+    else
+      Style = HexPrintStyle::Lower;
+    llvm::write_hex(*this, FN.HexValue, Style, FN.Width, None);
   } else {
-    llvm::write_longlong(*this, FN.DecValue, FN.Width);
+    llvm::write_integer(*this, FN.DecValue, IntegerStyle::Integer, None,
+                        FN.Width);
   }
   return *this;
 }

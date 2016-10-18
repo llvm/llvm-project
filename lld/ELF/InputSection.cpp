@@ -700,7 +700,7 @@ template <class ELFT> void  MergeInputSection<ELFT>::finalizePieces() {
       auto *OutSec = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
       ArrayRef<uint8_t> D = this->getData(Piece);
       StringRef S((const char *)D.data(), D.size());
-      CachedHashString V(S, Piece.Hash);
+      CachedHashStringRef V(S, Piece.Hash);
       Piece.OutputOff = OutSec->getOffset(V);
     }
     OffsetMap[Piece.InputOff] = Piece.OutputOff;
