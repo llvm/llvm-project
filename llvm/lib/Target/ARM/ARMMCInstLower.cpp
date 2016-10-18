@@ -219,6 +219,11 @@ void ARMAsmPrinter::LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI)
   EmitSled(MI, SledKind::FUNCTION_EXIT);
 }
 
+void ARMAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI)
+{
+  EmitSled(MI, SledKind::TAIL_CALL);
+}
+
 void ARMAsmPrinter::EmitXRayTable()
 {
   if (Sleds.empty())
