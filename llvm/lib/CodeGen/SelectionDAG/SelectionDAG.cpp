@@ -2697,7 +2697,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     if (Tmp2 == 1) return 1;
 
     // Handle NEG.
-    if (ConstantSDNode *CLHS = dyn_cast<ConstantSDNode>(Op.getOperand(0)))
+    if (ConstantSDNode *CLHS = isConstOrConstSplat(Op.getOperand(0)))
       if (CLHS->isNullValue()) {
         APInt KnownZero, KnownOne;
         computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, Depth+1);

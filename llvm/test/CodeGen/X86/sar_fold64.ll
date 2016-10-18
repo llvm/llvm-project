@@ -71,8 +71,6 @@ define i8 @all_sign_bit_ashr(i8 %x) {
   ret i8 %sar
 }
 
-; FIXME
-
 define <4 x i32> @all_sign_bit_ashr_vec(<4 x i32> %x) {
 ; CHECK-LABEL: all_sign_bit_ashr_vec:
 ; CHECK:       # BB#0:
@@ -80,16 +78,6 @@ define <4 x i32> @all_sign_bit_ashr_vec(<4 x i32> %x) {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    psubd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    psrad $5, %xmm0
-; CHECK-NEXT:    psrad $1, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    retq
 ;
   %and = and <4 x i32> %x, <i32 1, i32 1, i32 1 , i32 1>

@@ -10,30 +10,12 @@
 #ifndef LLVM_MC_STRINGTABLEBUILDER_H
 #define LLVM_MC_STRINGTABLEBUILDER_H
 
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include <cassert>
 
 namespace llvm {
 class raw_ostream;
-
-class CachedHashString {
-  const char *P;
-  uint32_t Size;
-  uint32_t Hash;
-
-public:
-  CachedHashString(StringRef S)
-      : CachedHashString(S, DenseMapInfo<StringRef>::getHashValue(S)) {}
-  CachedHashString(StringRef S, uint32_t Hash)
-      : P(S.data()), Size(S.size()), Hash(Hash) {
-    assert(S.size() <= std::numeric_limits<uint32_t>::max());
-  }
-
-  StringRef val() const { return StringRef(P, Size); }
-  uint32_t size() const { return Size; }
-  uint32_t hash() const { return Hash; }
-};
 
 /// \brief Utility for building string tables with deduplicated suffixes.
 class StringTableBuilder {
@@ -41,7 +23,7 @@ public:
   enum Kind { ELF, WinCOFF, MachO, RAW };
 
 private:
-  DenseMap<CachedHashString, size_t> StringIndexMap;
+  DenseMap<CachedHashStringRef, size_t> StringIndexMap;
   size_t Size = 0;
   Kind K;
   unsigned Alignment;
@@ -57,8 +39,8 @@ public:
   /// \brief Add a string to the builder. Returns the position of S in the
   /// table. The position will be changed if finalize is used.
   /// Can only be used before the table is finalized.
-  size_t add(CachedHashString S);
-  size_t add(StringRef S) { return add(CachedHashString(S)); }
+  size_t add(CachedHashStringRef S);
+  size_t add(StringRef S) { return add(CachedHashStringRef(S)); }
 
   /// \brief Analyze the strings and build the final table. No more strings can
   /// be added after this point.
@@ -70,8 +52,10 @@ public:
 
   /// \brief Get the offest of a string in the string table. Can only be used
   /// after the table is finalized.
-  size_t getOffset(CachedHashString S) const;
-  size_t getOffset(StringRef S) const { return getOffset(CachedHashString(S)); }
+  size_t getOffset(CachedHashStringRef S) const;
+  size_t getOffset(StringRef S) const {
+    return getOffset(CachedHashStringRef(S));
+  }
 
   size_t getSize() const { return Size; }
   void clear();

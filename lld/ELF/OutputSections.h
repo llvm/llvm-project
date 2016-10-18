@@ -430,7 +430,7 @@ public:
                      uintX_t Alignment);
   void addSection(InputSectionBase<ELFT> *S) override;
   void writeTo(uint8_t *Buf) override;
-  unsigned getOffset(llvm::CachedHashString Val);
+  unsigned getOffset(llvm::CachedHashStringRef Val);
   void finalize() override;
   void finalizePieces() override;
   bool shouldTailMerge() const;

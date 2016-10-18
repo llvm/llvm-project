@@ -1244,7 +1244,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
     if (!Piece.Live)
       continue;
     StringRef Data = toStringRef(Sec->getData(Piece));
-    CachedHashString V(Data, Piece.Hash);
+    CachedHashStringRef V(Data, Piece.Hash);
     uintX_t OutputOffset = Builder.add(V);
     if (!shouldTailMerge())
       Piece.OutputOff = OutputOffset;
@@ -1252,7 +1252,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
-unsigned MergeOutputSection<ELFT>::getOffset(CachedHashString Val) {
+unsigned MergeOutputSection<ELFT>::getOffset(CachedHashStringRef Val) {
   return Builder.getOffset(Val);
 }
 

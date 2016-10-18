@@ -55,7 +55,8 @@ namespace {
     FrameRef(MachineBasicBlock::iterator I, int64_t Offset, int Idx) :
       MI(I), LocalOffset(Offset), FrameIdx(Idx) {}
     bool operator<(const FrameRef &RHS) const {
-      return LocalOffset < RHS.LocalOffset;
+      return std::tie(LocalOffset, FrameIdx) <
+             std::tie(RHS.LocalOffset, RHS.FrameIdx);
     }
     MachineBasicBlock::iterator getMachineInstr() const { return MI; }
     int64_t getLocalOffset() const { return LocalOffset; }
@@ -318,8 +319,9 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     }
   }
 
-  // Sort the frame references by local offset
-  array_pod_sort(FrameReferenceInsns.begin(), FrameReferenceInsns.end());
+  // Sort the frame references by local offset.
+  // Use frame index as a tie-breaker in case MI's have the same offset.
+  std::sort(FrameReferenceInsns.begin(), FrameReferenceInsns.end());
 
   MachineBasicBlock *Entry = &Fn.front();
 
