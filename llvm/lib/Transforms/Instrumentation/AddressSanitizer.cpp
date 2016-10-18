@@ -187,10 +187,6 @@ static cl::opt<bool> ClUseAfterReturn("asan-use-after-return",
 static cl::opt<bool> ClUseAfterScope("asan-use-after-scope",
                                      cl::desc("Check stack-use-after-scope"),
                                      cl::Hidden, cl::init(false));
-static cl::opt<bool> ClExperimentalPoisoning(
-    "asan-experimental-poisoning",
-    cl::desc("Enable experimental red zones and scope poisoning"), cl::Hidden,
-    cl::init(true));
 // This flag may need to be replaced with -f[no]asan-globals.
 static cl::opt<bool> ClGlobals("asan-globals",
                                cl::desc("Handle global objects"), cl::Hidden,
@@ -2042,15 +2038,13 @@ void FunctionStackPoisoner::initializeCallbacks(Module &M) {
                               IntptrTy, IntptrTy, nullptr));
   }
 
-  if (ClExperimentalPoisoning) {
-    for (size_t Val : {0x00, 0xf1, 0xf2, 0xf3, 0xf5, 0xf8}) {
-      std::ostringstream Name;
-      Name << kAsanSetShadowPrefix;
-      Name << std::setw(2) << std::setfill('0') << std::hex << Val;
-      AsanSetShadowFunc[Val] =
-          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-              Name.str(), IRB.getVoidTy(), IntptrTy, IntptrTy, nullptr));
-    }
+  for (size_t Val : {0x00, 0xf1, 0xf2, 0xf3, 0xf5, 0xf8}) {
+    std::ostringstream Name;
+    Name << kAsanSetShadowPrefix;
+    Name << std::setw(2) << std::setfill('0') << std::hex << Val;
+    AsanSetShadowFunc[Val] =
+        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+            Name.str(), IRB.getVoidTy(), IntptrTy, IntptrTy, nullptr));
   }
 
   AsanAllocaPoisonFunc = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
@@ -2261,12 +2255,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
     assert(ASan.isInterestingAlloca(*APC.AI));
     assert(APC.AI->isStaticAlloca());
 
-    if (ClExperimentalPoisoning) {
-      AllocaToSVDMap[APC.AI] = nullptr;
-    } else {
-      IRBuilder<> IRB(APC.InsBefore);
-      poisonAlloca(APC.AI, APC.Size, IRB, APC.DoPoison);
-    }
+    AllocaToSVDMap[APC.AI] = nullptr;
   }
 
   SmallVector<ASanStackVariableDescription, 16> SVD;
@@ -2392,7 +2381,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
   // As bytes we can use either the same or just red zones only.
   copyToShadow(ShadowAfterScope, ShadowAfterScope, IRB, ShadowBase);
 
-  if (ClExperimentalPoisoning && !StaticAllocaPoisonCallVec.empty()) {
+  if (!StaticAllocaPoisonCallVec.empty()) {
     // Complete AllocaToSVDMap
     for (const auto &Desc : SVD) {
       auto It = AllocaToSVDMap.find(Desc.AI);
@@ -2420,18 +2409,6 @@ void FunctionStackPoisoner::processStaticAllocas() {
   }
 
   SmallVector<uint8_t, 64> ShadowClean(ShadowAfterScope.size(), 0);
-
-  auto UnpoisonStack = [&](IRBuilder<> &IRB) {
-    // Do this always as poisonAlloca can be disabled with
-    // detect_stack_use_after_scope=0.
-    copyToShadow(ShadowAfterScope, ShadowClean, IRB, ShadowBase);
-    if (!ClExperimentalPoisoning && !StaticAllocaPoisonCallVec.empty()) {
-      // If we poisoned some allocas in llvm.lifetime analysis,
-      // unpoison whole stack frame now.
-      poisonAlloca(LocalStackBase, LocalStackSize, IRB, false);
-    }
-  };
-
   SmallVector<uint8_t, 64> ShadowAfterReturn;
 
   // (Un)poison the stack before all ret instructions.
@@ -2480,9 +2457,9 @@ void FunctionStackPoisoner::processStaticAllocas() {
       }
 
       IRBuilder<> IRBElse(ElseTerm);
-      UnpoisonStack(IRBElse);
+      copyToShadow(ShadowAfterScope, ShadowClean, IRBElse, ShadowBase);
     } else {
-      UnpoisonStack(IRBRet);
+      copyToShadow(ShadowAfterScope, ShadowClean, IRBRet, ShadowBase);
     }
   }
 

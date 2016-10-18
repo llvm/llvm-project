@@ -12,6 +12,7 @@
 
 #include "InputFiles.h"
 #include "LTO.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Regex.h"
 
@@ -21,7 +22,7 @@ class Lazy;
 template <class ELFT> class OutputSectionBase;
 struct Symbol;
 
-typedef llvm::CachedHash<StringRef> SymName;
+typedef llvm::CachedHashStringRef SymName;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive

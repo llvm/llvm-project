@@ -1938,7 +1938,7 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   std::unique_ptr<MacroArgsMap> &MacroArgsCache = MacroArgsCacheMap[FID];
   if (!MacroArgsCache) {
     MacroArgsCache = llvm::make_unique<MacroArgsMap>();
-    computeMacroArgsCache(*MacroArgsCache.get(), FID);
+    computeMacroArgsCache(*MacroArgsCache, FID);
   }
 
   assert(!MacroArgsCache->empty());

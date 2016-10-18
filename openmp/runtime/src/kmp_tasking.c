@@ -576,9 +576,13 @@ __kmp_free_task( kmp_int32 gtid, kmp_taskdata_t * taskdata, kmp_info_t * thread 
 static void
 __kmp_free_task_and_ancestors( kmp_int32 gtid, kmp_taskdata_t * taskdata, kmp_info_t * thread )
 {
+#if OMP_45_ENABLED
     // Proxy tasks must always be allowed to free their parents
     // because they can be run in background even in serial mode.
     kmp_int32 task_serial = taskdata->td_flags.task_serial && !taskdata->td_flags.proxy;
+#else
+    kmp_int32 task_serial = taskdata->td_flags.task_serial;
+#endif
     KMP_DEBUG_ASSERT( taskdata -> td_flags.tasktype == TASK_EXPLICIT );
 
     kmp_int32 children = KMP_TEST_THEN_DEC32( (kmp_int32 *)(& taskdata -> td_allocated_child_tasks) ) - 1;

@@ -11,6 +11,9 @@ RUN: not LLVMFuzzer-LeakTest -runs=0 -detect_leaks=1 %S 2>&1 | FileCheck %s --ch
 LEAK_IN_CORPUS: ERROR: LeakSanitizer: detected memory leaks
 LEAK_IN_CORPUS: INFO: a leak has been found in the initial corpus.
 
+RUN: not LLVMFuzzer-LeakTest -runs=100000000 %S/hi.txt 2>&1 | FileCheck %s --check-prefix=MULTI_RUN_LEAK
+MULTI_RUN_LEAK-NOT: pulse
+MULTI_RUN_LEAK: LeakSanitizer: detected memory leaks
 
 RUN: not LLVMFuzzer-LeakTest -runs=100000 -detect_leaks=0 2>&1 | FileCheck %s --check-prefix=LEAK_AFTER
 RUN: not LLVMFuzzer-LeakTest -runs=100000                 2>&1 | FileCheck %s --check-prefix=LEAK_DURING
