@@ -101,6 +101,10 @@ private:
   /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
   StringRef getSymbolForHumans(StringRef Sym) const;
 
+  /// \brief Write out a source file view to the filesystem.
+  void writeSourceFileView(StringRef SourceFile, CoverageMapping *Coverage,
+                           CoveragePrinter *Printer, bool ShowFilenames);
+
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
 
   int show(int argc, const char **argv,
@@ -457,6 +461,28 @@ StringRef CodeCoverageTool::getSymbolForHumans(StringRef Sym) const {
   return DemangledName->getValue();
 }
 
+void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
+                                           CoverageMapping *Coverage,
+                                           CoveragePrinter *Printer,
+                                           bool ShowFilenames) {
+  auto View = createSourceFileView(SourceFile, *Coverage);
+  if (!View) {
+    warning("The file '" + SourceFile + "' isn't covered.");
+    return;
+  }
+
+  auto OSOrErr = Printer->createViewFile(SourceFile, /*InToplevel=*/false);
+  if (Error E = OSOrErr.takeError()) {
+    error("Could not create view file!", toString(std::move(E)));
+    return;
+  }
+  auto OS = std::move(OSOrErr.get());
+
+  View->print(*OS.get(), /*Wholefile=*/true,
+              /*ShowSourceName=*/ShowFilenames);
+  Printer->closeViewFile(std::move(OS));
+}
+
 int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::opt<std::string, true> ObjectFilename(
       cl::Positional, cl::Required, cl::location(this->ObjectFilename),
@@ -765,34 +791,20 @@ int CodeCoverageTool::show(int argc, const char **argv,
     }
   }
 
-  // In -output-dir mode, it's safe to use multiple threads to print files.
-  unsigned ThreadCount = 1;
-  if (ViewOpts.hasOutputDirectory())
-    ThreadCount = std::thread::hardware_concurrency();
-  ThreadPool Pool(ThreadCount);
-
-  for (const std::string &SourceFile : SourceFiles) {
-    Pool.async([this, &SourceFile, &Coverage, &Printer, ShowFilenames] {
-      auto View = createSourceFileView(SourceFile, *Coverage);
-      if (!View) {
-        warning("The file '" + SourceFile + "' isn't covered.");
-        return;
-      }
-
-      auto OSOrErr = Printer->createViewFile(SourceFile, /*InToplevel=*/false);
-      if (Error E = OSOrErr.takeError()) {
-        error("Could not create view file!", toString(std::move(E)));
-        return;
-      }
-      auto OS = std::move(OSOrErr.get());
-
-      View->print(*OS.get(), /*Wholefile=*/true,
-                  /*ShowSourceName=*/ShowFilenames);
-      Printer->closeViewFile(std::move(OS));
-    });
+  // FIXME: Sink the hardware_concurrency() == 1 check into ThreadPool.
+  if (!ViewOpts.hasOutputDirectory() ||
+      std::thread::hardware_concurrency() == 1) {
+    for (const std::string &SourceFile : SourceFiles)
+      writeSourceFileView(SourceFile, Coverage.get(), Printer.get(),
+                          ShowFilenames);
+  } else {
+    // In -output-dir mode, it's safe to use multiple threads to print files.
+    ThreadPool Pool;
+    for (const std::string &SourceFile : SourceFiles)
+      Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
+                 Coverage.get(), Printer.get(), ShowFilenames);
+    Pool.wait();
   }
-
-  Pool.wait();
 
   return 0;
 }
