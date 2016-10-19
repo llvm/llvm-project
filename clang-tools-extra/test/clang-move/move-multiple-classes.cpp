@@ -18,8 +18,19 @@
 // CHECK-OLD-TEST-H: } // namespace c
 
 // CHECK-OLD-TEST-CPP: #include "{{.*}}multiple_class_test.h"
+// CHECK-OLD-TEST-CPP: namespace {
+// CHECK-OLD-TEST-CPP: using a::Move1;
+// CHECK-OLD-TEST-CPP: using namespace a;
+// CHECK-OLD-TEST-CPP: static int k = 0;
+// CHECK-OLD-TEST-CPP: } // anonymous namespace
+// CHECK-OLD-TEST-CPP: namespace b {
+// CHECK-OLD-TEST-CPP: using a::Move1;
+// CHECK-OLD-TEST-CPP: using namespace a;
+// CHECK-OLD-TEST-CPP: using T = a::Move1;
+// CHECK-OLD-TEST-CPP: } // namespace b
 // CHECK-OLD-TEST-CPP: namespace c {
 // CHECK-OLD-TEST-CPP: int NoMove::f() {
+// CHECK-OLD-TEST-CPP:   static int F = 0;
 // CHECK-OLD-TEST-CPP:   return 0;
 // CHECK-OLD-TEST-CPP: }
 // CHECK-OLD-TEST-CPP: } // namespace c
@@ -62,11 +73,23 @@
 // CHECK-NEW-TEST-CPP: namespace a {
 // CHECK-NEW-TEST-CPP: int Move1::f() { return 0; }
 // CHECK-NEW-TEST-CPP: } // namespace a
+// CHECK-NEW-TEST-CPP: namespace {
+// CHECK-NEW-TEST-CPP: using a::Move1;
+// CHECK-NEW-TEST-CPP: using namespace a;
+// CHECK-NEW-TEST-CPP: static int k = 0;
+// CHECK-NEW-TEST-CPP: } // anonymous namespace
 // CHECK-NEW-TEST-CPP: namespace b {
+// CHECK-NEW-TEST-CPP: using a::Move1;
+// CHECK-NEW-TEST-CPP: using namespace a;
+// CHECK-NEW-TEST-CPP: using T = a::Move1;
 // CHECK-NEW-TEST-CPP: int Move2::f() { return 0; }
 // CHECK-NEW-TEST-CPP: } // namespace b
 // CHECK-NEW-TEST-CPP: namespace c {
-// CHECK-NEW-TEST-CPP: int Move3::f() { return 0; }
+// CHECK-NEW-TEST-CPP: int Move3::f() {
+// CHECK-NEW-TEST-CPP:   using a::Move1;
+// CHECK-NEW-TEST-CPP:   using namespace b;
+// CHECK-NEW-TEST-CPP:   return 0;
+// CHECK-NEW-TEST-CPP: }
 // CHECK-NEW-TEST-CPP: int Move4::f() { return 0; }
 // CHECK-NEW-TEST-CPP: int EnclosingMove5::a = 1;
 // CHECK-NEW-TEST-CPP: int EnclosingMove5::Nested::f() { return 0; }

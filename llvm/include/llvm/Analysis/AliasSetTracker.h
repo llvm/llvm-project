@@ -344,15 +344,16 @@ public:
   /// These methods return true if inserting the instruction resulted in the
   /// addition of a new alias set (i.e., the pointer did not alias anything).
   ///
-  bool add(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo); // Add a loc.
-  bool add(LoadInst *LI);
-  bool add(StoreInst *SI);
-  bool add(VAArgInst *VAAI);
-  bool add(MemSetInst *MSI);
-  bool add(Instruction *I);       // Dispatch to one of the other add methods...
+  void add(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo); // Add a loc.
+  void add(LoadInst *LI);
+  void add(StoreInst *SI);
+  void add(VAArgInst *VAAI);
+  void add(MemSetInst *MSI);
+  void add(MemTransferInst *MTI);
+  void add(Instruction *I);       // Dispatch to one of the other add methods...
   void add(BasicBlock &BB);       // Add all instructions in basic block
   void add(const AliasSetTracker &AST); // Add alias relations from another AST
-  bool addUnknown(Instruction *I);
+  void addUnknown(Instruction *I);
 
   void clear();
 
@@ -364,8 +365,7 @@ public:
   /// set is created to contain the pointer (because the pointer didn't alias
   /// anything).
   AliasSet &getAliasSetForPointer(Value *P, uint64_t Size,
-                                  const AAMDNodes &AAInfo,
-                                  bool *New = nullptr);
+                                  const AAMDNodes &AAInfo);
 
   /// Return the alias set containing the location specified if one exists,
   /// otherwise return null.
@@ -427,7 +427,7 @@ private:
   }
 
   AliasSet &addPointer(Value *P, uint64_t Size, const AAMDNodes &AAInfo,
-                       AliasSet::AccessLattice E, bool &NewSet);
+                       AliasSet::AccessLattice E);
   AliasSet *mergeAliasSetsForPointer(const Value *Ptr, uint64_t Size,
                                      const AAMDNodes &AAInfo);
 

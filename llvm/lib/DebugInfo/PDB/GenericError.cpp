@@ -45,11 +45,10 @@ char GenericError::ID = 0;
 
 GenericError::GenericError(generic_error_code C) : GenericError(C, "") {}
 
-GenericError::GenericError(const std::string &Context)
+GenericError::GenericError(StringRef Context)
     : GenericError(generic_error_code::unspecified, Context) {}
 
-GenericError::GenericError(generic_error_code C, const std::string &Context)
-    : Code(C) {
+GenericError::GenericError(generic_error_code C, StringRef Context) : Code(C) {
   ErrMsg = "PDB Error: ";
   std::error_code EC = convertToErrorCode();
   if (Code != generic_error_code::unspecified)
@@ -60,7 +59,7 @@ GenericError::GenericError(generic_error_code C, const std::string &Context)
 
 void GenericError::log(raw_ostream &OS) const { OS << ErrMsg << "\n"; }
 
-const std::string &GenericError::getErrorMessage() const { return ErrMsg; }
+StringRef GenericError::getErrorMessage() const { return ErrMsg; }
 
 std::error_code GenericError::convertToErrorCode() const {
   return std::error_code(static_cast<int>(Code), *Category);

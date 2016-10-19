@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -266,6 +267,50 @@ bool ReplaceFMULS::runOnMachineFunction(MachineFunction &MF) {
           MBBI = NMBBI;
 
           Modified = true;
+        }
+      }
+    }
+  }
+
+  return Modified;
+}
+
+
+//*****************************************************************************
+//**** DetectRoundChange pass
+//*****************************************************************************
+// To prevent any explicit change of the default rounding mode, this pass
+// detects any call of the fesetround function.
+// A warning is generated to ensure the user knows this has happened.
+//
+// Detects an erratum in UT699 LEON 3 processor
+
+char DetectRoundChange::ID = 0;
+
+DetectRoundChange::DetectRoundChange(TargetMachine &tm)
+    : LEONMachineFunctionPass(tm, ID) {}
+
+bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
+  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+
+  bool Modified = false;
+  for (auto MFI = MF.begin(), E = MF.end(); MFI != E; ++MFI) {
+    MachineBasicBlock &MBB = *MFI;
+    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
+      MachineInstr &MI = *MBBI;
+      unsigned Opcode = MI.getOpcode();
+      if (Opcode == SP::CALL && MI.getNumOperands() > 0) {
+        MachineOperand &MO = MI.getOperand(0);
+
+        if (MO.isGlobal()) {
+          StringRef FuncName = MO.getGlobal()->getName();
+          if (FuncName.compare_lower("fesetround") == 0) {
+            errs() << "Error: You are using the detectroundchange "
+                      "option to detect rounding changes that will "
+                      "cause LEON errata. The only way to fix this "
+                      "is to remove the call to fesetround from "
+                      "the source code.\n";
+          }
         }
       }
     }

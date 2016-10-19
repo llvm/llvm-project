@@ -207,7 +207,7 @@ _start:
 
 # RUN: not ld.lld -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=NO_INPUT %s
-# NO_INPUT: no input files.
+# NO_INPUT: ld.lld{{.*}}: no input files
 
 # RUN: not ld.lld %t.no.such.file -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=CANNOT_OPEN %s

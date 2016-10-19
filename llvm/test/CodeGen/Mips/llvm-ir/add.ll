@@ -31,21 +31,27 @@
 ; RUN: llc < %s -march=mips -mcpu=mips64r6 -target-abi n64 -mattr=+micromips -O2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM64
 
+
+; FIXME: This code sequence is inefficient as it should be 'subu $[[T0]], $zero, $[[T0]'. 
+; This sequence is even better as it's a single instruction. See D25485 for the rest of 
+; the cases where this sequence occurs.
+
 define signext i1 @add_i1(i1 signext %a, i1 signext %b) {
 entry:
 ; ALL-LABEL: add_i1:
 
-  ; NOT-R2-R6:  addu    $[[T0:[0-9]+]], $4, $5
-  ; NOT-R2-R6:  sll     $[[T0]], $[[T0]], 31
-  ; NOT-R2-R6:  sra     $2, $[[T0]], 31
+  ; NOT-R2-R6:  addu   $[[T0:[0-9]+]], $4, $5
+  ; NOT-R2-R6:  andi   $[[T0]], $[[T0]], 1
+  ; NOT-R2-R6:  negu   $2, $[[T0]]
 
-  ; R2-R6:      addu    $[[T0:[0-9]+]], $4, $5
-  ; R2-R6:      sll     $[[T0]], $[[T0]], 31
-  ; R2-R6:      sra     $2, $[[T0]], 31
+  ; R2-R6:      addu   $[[T0:[0-9]+]], $4, $5
+  ; R2-R6:      andi   $[[T0]], $[[T0]], 1
+  ; R2-R6:      negu   $2, $[[T0]]
 
   ; MMR6:       addu16  $[[T0:[0-9]+]], $4, $5
-  ; MMR6:       sll     $[[T1:[0-9]+]], $[[T0]], 31
-  ; MMR6:       sra     $2, $[[T1]], 31
+  ; MMR6:       andi16  $[[T0]], $[[T0]], 1
+  ; MMR6:       li16    $[[T1:[0-9]+]], 0
+  ; MMR6:       subu16  $[[T0]], $[[T1]], $[[T0]]
 
   %r = add i1 %a, %b
   ret i1 %r
@@ -303,18 +309,18 @@ define signext i128 @add_i128_4(i128 signext %a) {
 
 define signext i1 @add_i1_3(i1 signext %a) {
 ; ALL-LABEL: add_i1_3:
+  ; GP32:        addiu  $[[T0:[0-9]+]], $4, 1
+  ; GP32:        andi   $[[T0]], $[[T0]], 1
+  ; GP32:        negu   $2, $[[T0]]
 
-  ; ALL:        sll     $[[T0:[0-9]+]], $4, 31
-  ; ALL:        lui     $[[T1:[0-9]+]], 32768
+  ; GP64:        addiu  $[[T0:[0-9]+]], $4, 1
+  ; GP64:        andi   $[[T0]], $[[T0]], 1
+  ; GP64:        negu   $2, $[[T0]]
 
-  ; GP32:       addu    $[[T0]], $[[T0]], $[[T1]]
-  ; GP32:       sra     $[[T1]], $[[T0]], 31
-
-  ; GP64:       addu    $[[T0]], $[[T0]], $[[T1]]
-  ; GP64:       sra     $[[T1]], $[[T0]], 31
-
-  ; MMR6:       addu16  $[[T0]], $[[T0]], $[[T1]]
-  ; MMR6:       sra     $[[T0]], $[[T0]], 31
+  ; MMR6:        addiur2 $[[T0:[0-9]+]], $4, 1
+  ; MMR6:        andi16  $[[T0]], $[[T0]], 1
+  ; MMR6:        li16    $[[T1:[0-9]+]], 0
+  ; MMR6:        subu16  $2, $[[T1]], $[[T0]]
 
   %r = add i1 3, %a
   ret i1 %r

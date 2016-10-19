@@ -11,11 +11,14 @@
 
 // reverse_iterator
 
-// explicit reverse_iterator(Iter x);
+// explicit constexpr reverse_iterator(Iter x);
+//
+// constexpr in c++17
 
 #include <iterator>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It>
@@ -32,4 +35,12 @@ int main()
     test(bidirectional_iterator<const char*>(s));
     test(random_access_iterator<const char*>(s));
     test(s);
+
+#if TEST_STD_VER > 14
+    {
+        constexpr const char *p = "123456789";
+        constexpr std::reverse_iterator<const char *> it(p);
+        static_assert(it.base() == p);
+    }
+#endif
 }

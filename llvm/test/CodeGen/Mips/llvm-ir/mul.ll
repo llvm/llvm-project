@@ -27,7 +27,7 @@
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | \
 ; RUN:   FileCheck %s -check-prefixes=MM32,MM32R6
 ; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips -target-abi n64 -relocation-model=pic | \
-; RUN:   FileCheck %s -check-prefix=64R6
+; RUN:   FileCheck %s -check-prefix=MM64R6
 
 define signext i1 @mul_i1(i1 signext %a, i1 signext %b) {
 entry:
@@ -35,33 +35,39 @@ entry:
 
   ; M2:         mult    $4, $5
   ; M2:         mflo    $[[T0:[0-9]+]]
-  ; M2:         sll     $[[T0]], $[[T0]], 31
-  ; M2:         sra     $2, $[[T0]], 31
+  ; M2:         andi    $[[T0]], $[[T0]], 1
+  ; M2:         negu    $2, $[[T0]]
 
   ; 32R1-R5:    mul     $[[T0:[0-9]+]], $4, $5
-  ; 32R1-R5:    sll     $[[T0]], $[[T0]], 31
-  ; 32R1-R5:    sra     $2, $[[T0]], 31
+  ; 32R1-R5:    andi    $[[T0]], $[[T0]], 1
+  ; 32R1-R5:    negu    $2, $[[T0]]
 
   ; 32R6:       mul     $[[T0:[0-9]+]], $4, $5
-  ; 32R6:       sll     $[[T0]], $[[T0]], 31
-  ; 32R6:       sra     $2, $[[T0]], 31
+  ; 32R6:       andi    $[[T0]], $[[T0]], 1
+  ; 32R6:       negu    $2, $[[T0]]
 
   ; M4:         mult    $4, $5
   ; M4:         mflo    $[[T0:[0-9]+]]
-  ; M4:         sll     $[[T0]], $[[T0]], 31
-  ; M4:         sra     $2, $[[T0]], 31
+  ; M4:         andi    $[[T0]], $[[T0]], 1
+  ; M4:         negu    $2, $[[T0]]
 
   ; 64R1-R5:    mul     $[[T0:[0-9]+]], $4, $5
-  ; 64R1-R5:    sll     $[[T0]], $[[T0]], 31
-  ; 64R1-R5:    sra     $2, $[[T0]], 31
+  ; 64R1-R5:    andi    $[[T0]], $[[T0]], 1
+  ; 64R1-R5:    negu    $2, $[[T0]]
 
   ; 64R6:       mul     $[[T0:[0-9]+]], $4, $5
-  ; 64R6:       sll     $[[T0]], $[[T0]], 31
-  ; 64R6:       sra     $2, $[[T0]], 31
+  ; 64R6:       andi    $[[T0]], $[[T0]], 1
+  ; 64R6:       negu    $2, $[[T0]]
+
+  ; MM64R6:     mul     $[[T0:[0-9]+]], $4, $5
+  ; MM64R6:     andi16  $[[T0]], $[[T0]], 1
+  ; MM64R6:     li16    $[[T1:[0-9]+]], 0
+  ; MM64R6:     subu16  $2, $[[T1]], $[[T0]]
 
   ; MM32:       mul     $[[T0:[0-9]+]], $4, $5
-  ; MM32:       sll     $[[T0]], $[[T0]], 31
-  ; MM32:       sra     $2, $[[T0]], 31
+  ; MM32:       andi16  $[[T0]], $[[T0]], 1
+  ; MM32:       li16    $[[T1:[0-9]+]], 0
+  ; MM32:       subu16  $2, $[[T1]], $[[T0]]
 
   %r = mul i1 %a, %b
   ret i1 %r
@@ -100,6 +106,9 @@ entry:
 
   ; 64R6:       mul     $[[T0:[0-9]+]], $4, $5
   ; 64R6:       seb     $2, $[[T0]]
+
+  ; MM64R6:     mul     $[[T0:[0-9]+]], $4, $5
+  ; MM64R6:     seb     $2, $[[T0]]
 
   ; MM32:       mul     $[[T0:[0-9]+]], $4, $5
   ; MM32:       seb     $2, $[[T0]]
@@ -142,6 +151,9 @@ entry:
   ; 64R6:       mul     $[[T0:[0-9]+]], $4, $5
   ; 64R6:       seh     $2, $[[T0]]
 
+  ; MM64R6:     mul     $[[T0:[0-9]+]], $4, $5
+  ; MM64R6:     seh     $2, $[[T0]]
+
   ; MM32:       mul     $[[T0:[0-9]+]], $4, $5
   ; MM32:       seh     $2, $[[T0]]
 
@@ -161,6 +173,7 @@ entry:
 
   ; 64R1-R5:    mul     $2, $4, $5
   ; 64R6:       mul     $2, $4, $5
+  ; MM64R6:     mul     $2, $4, $5
 
   ; MM32:       mul     $2, $4, $5
 
@@ -204,6 +217,7 @@ entry:
   ; 64R1-R5:    mflo    $2
 
   ; 64R6:       dmul    $2, $4, $5
+  ; MM64R6:     dmul    $2, $4, $5
 
   ; MM32R3:     multu   $[[T0:[0-9]+]], $7
   ; MM32R3:     mflo    $[[T1:[0-9]+]]
@@ -246,6 +260,13 @@ entry:
   ; 64R6-DAG:       dmul    $[[T0:[0-9]+]], $4, $7
   ; 64R6:           daddu   $2, $[[T1]], $[[T0]]
   ; 64R6-DAG:       dmul    $3, $5, $7
+
+  ; MM64R6-DAG:     dmul    $[[T1:[0-9]+]], $5, $6
+  ; MM64R6:         dmuhu   $[[T2:[0-9]+]], $5, $7
+  ; MM64R6:         daddu   $[[T3:[0-9]+]], $[[T2]], $[[T1]]
+  ; MM64R6-DAG:     dmul    $[[T0:[0-9]+]], $4, $7
+  ; MM64R6:         daddu   $2, $[[T1]], $[[T0]]
+  ; MM64R6-DAG:     dmul    $3, $5, $7
 
   ; MM32:           lw      $25, %call16(__multi3)($16)
 

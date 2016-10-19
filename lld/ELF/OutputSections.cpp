@@ -216,7 +216,7 @@ GotSection<ELFT>::getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const {
 }
 
 template <class ELFT>
-typename GotSection<ELFT>::uintX_t GotSection<ELFT>::getMipsTlsOffset() {
+typename GotSection<ELFT>::uintX_t GotSection<ELFT>::getMipsTlsOffset() const {
   return (MipsPageEntries + MipsLocal.size() + MipsGlobal.size()) *
          sizeof(uintX_t);
 }

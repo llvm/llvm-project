@@ -118,6 +118,12 @@
 #define LLVM_LIBRARY_VISIBILITY
 #endif
 
+#if defined(__GNUC__)
+#define LLVM_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
+#else
+#define LLVM_PREFETCH(addr, rw, locality)
+#endif
+
 #if __has_attribute(sentinel) || LLVM_GNUC_PREREQ(3, 0, 0)
 #define LLVM_END_WITH_NULL __attribute__((sentinel))
 #else

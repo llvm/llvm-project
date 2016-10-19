@@ -502,22 +502,18 @@ void GlobalMerge::collectUsedGlobalVariables(Module &M) {
 void GlobalMerge::setMustKeepGlobalVariables(Module &M) {
   collectUsedGlobalVariables(M);
 
-  for (Module::iterator IFn = M.begin(), IEndFn = M.end(); IFn != IEndFn;
-       ++IFn) {
-    for (Function::iterator IBB = IFn->begin(), IEndBB = IFn->end();
-         IBB != IEndBB; ++IBB) {
-      // Follow the invoke link to find the landing pad instruction
-      const InvokeInst *II = dyn_cast<InvokeInst>(IBB->getTerminator());
-      if (!II) continue;
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      Instruction *Pad = BB.getFirstNonPHI();
+      if (!Pad->isEHPad())
+        continue;
 
-      const LandingPadInst *LPInst = II->getUnwindDest()->getLandingPadInst();
-      // Look for globals in the clauses of the landing pad instruction
-      for (unsigned Idx = 0, NumClauses = LPInst->getNumClauses();
-           Idx != NumClauses; ++Idx)
+      // Keep globals used by landingpads and catchpads.
+      for (const Use &U : Pad->operands()) {
         if (const GlobalVariable *GV =
-            dyn_cast<GlobalVariable>(LPInst->getClause(Idx)
-                                     ->stripPointerCasts()))
+                dyn_cast<GlobalVariable>(U->stripPointerCasts()))
           MustKeepGlobalVariables.insert(GV);
+      }
     }
   }
 }

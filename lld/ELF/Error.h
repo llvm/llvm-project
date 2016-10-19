@@ -33,6 +33,7 @@ namespace elf {
 
 extern bool HasError;
 extern llvm::raw_ostream *ErrorOS;
+extern llvm::StringRef Argv0;
 
 void log(const Twine &Msg);
 void warn(const Twine &Msg);

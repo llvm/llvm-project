@@ -351,21 +351,31 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                          .bind("class_static_var_decl"),
                      this);
 
-  auto inAnonymousNamespace = hasParent(namespaceDecl(isAnonymous()));
-  // Match functions/variables definitions which are defined in anonymous
-  // namespace in old cc.
+  auto InOldCCNamedNamespace =
+      allOf(hasParent(namespaceDecl(unless(isAnonymous()))), InOldCC);
+  // Matching using decls/type alias decls which are in named namespace. Those
+  // in classes, functions and anonymous namespaces are covered in other
+  // matchers.
   Finder->addMatcher(
-      namedDecl(anyOf(functionDecl(isDefinition()), varDecl(isDefinition())),
-                inAnonymousNamespace)
-          .bind("decls_in_anonymous_ns"),
+      namedDecl(
+          anyOf(usingDecl(InOldCCNamedNamespace),
+                usingDirectiveDecl(InOldCC, InOldCCNamedNamespace),
+                typeAliasDecl(InOldCC, InOldCCNamedNamespace)))
+          .bind("using_decl"),
       this);
 
-  // Match static functions/variabale definitions in old cc.
+  // Match anonymous namespace decl in old cc.
+  Finder->addMatcher(namespaceDecl(isAnonymous(), InOldCC).bind("anonymous_ns"),
+                     this);
+
+  // Match static functions/variable definitions which are defined in named
+  // namespaces.
+  auto IsOldCCStaticDefinition =
+      allOf(isDefinition(), unless(InMovedClass), InOldCCNamedNamespace,
+            isStaticStorageClass());
   Finder->addMatcher(
-      namedDecl(anyOf(functionDecl(isDefinition(), unless(InMovedClass),
-                                   isStaticStorageClass(), InOldCC),
-                      varDecl(isDefinition(), unless(InMovedClass),
-                              isStaticStorageClass(), InOldCC)))
+      namedDecl(anyOf(functionDecl(IsOldCCStaticDefinition),
+                      varDecl(IsOldCCStaticDefinition)))
           .bind("static_decls"),
       this);
 
@@ -398,12 +408,15 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
     // Skip all forwad declarations which appear after moved class declaration.
     if (RemovedDecls.empty())
       MovedDecls.emplace_back(FWD, &Result.Context->getSourceManager());
-  } else if (const auto *FD = Result.Nodes.getNodeAs<clang::NamedDecl>(
-                 "decls_in_anonymous_ns")) {
-    MovedDecls.emplace_back(FD, &Result.Context->getSourceManager());
+  } else if (const auto *ANS = Result.Nodes.getNodeAs<clang::NamespaceDecl>(
+                 "anonymous_ns")) {
+    MovedDecls.emplace_back(ANS, &Result.Context->getSourceManager());
   } else if (const auto *ND =
                  Result.Nodes.getNodeAs<clang::NamedDecl>("static_decls")) {
     MovedDecls.emplace_back(ND, &Result.Context->getSourceManager());
+  } else if (const auto *UD =
+                 Result.Nodes.getNodeAs<clang::NamedDecl>("using_decl")) {
+    MovedDecls.emplace_back(UD, &Result.Context->getSourceManager());
   }
 }
 

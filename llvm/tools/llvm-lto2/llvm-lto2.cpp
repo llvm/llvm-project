@@ -20,6 +20,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 
 using namespace llvm;
 using namespace lto;
@@ -52,7 +53,7 @@ static cl::opt<bool>
                                        "distributed backend case"));
 
 static cl::opt<int> Threads("-thinlto-threads",
-                            cl::init(thread::hardware_concurrency()));
+                            cl::init(llvm::heavyweight_hardware_concurrency()));
 
 static cl::list<std::string> SymbolResolutions(
     "r",

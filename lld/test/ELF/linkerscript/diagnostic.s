@@ -44,23 +44,24 @@
 # ERR5: line 6:
 
 ## Check that text of lines and pointer to 'bad' token are working ok.
+## Because FileCheck ignores whitespace differences, we replace ' ' with '.'.
 # RUN: echo "UNKNOWN_TAG {" > %t.script
 # RUN: echo ".text : { *(.text) }" >> %t.script
 # RUN: echo ".keep : { *(.keep) }" >> %t.script
 # RUN: echo ".temp : { *(.temp) } }" >> %t.script
-# RUN: not ld.lld -shared %t -o %t1 --script %t.script > %t.log 2>&1
-# RUN: FileCheck -check-prefix=ERR6 %s < %t.log
-# ERR6:      line 1:
-# ERR6-NEXT: UNKNOWN_TAG {
-# RUN: grep '^error: ^' %t.log
+# RUN: not ld.lld -shared %t -o %t1 --script %t.script 2>&1 | \
+# RUN:   sed 's/ /_/g' | FileCheck -check-prefix=ERR6 %s
+# ERR6:      error:_line_1:
+# ERR6-NEXT: error:_UNKNOWN_TAG_{
+# ERR6-NEXT: error:_^
 
 ## One more check that text of lines and pointer to 'bad' token are working ok.
 # RUN: echo "SECTIONS {" > %t.script
 # RUN: echo ".text : { *(.text) }" >> %t.script
 # RUN: echo ".keep : { *(.keep) }" >> %t.script
 # RUN: echo "boom .temp : { *(.temp) } }" >> %t.script
-# RUN: not ld.lld -shared %t -o %t1 --script %t.script > %t.log 2>&1
-# RUN: FileCheck -check-prefix=ERR7 %s < %t.log
-# ERR7:      line 4: malformed number: .temp
-# ERR7-NEXT: boom .temp : { *(.temp) } }
-# RUN: grep '^error:      ^' %t.log
+# RUN: not ld.lld -shared %t -o %t1 --script %t.script 2>&1 | \
+# RUN:   sed 's/ /_/g' | FileCheck -check-prefix=ERR7 %s
+# ERR7:      error:_line_4:_malformed_number:_.temp
+# ERR7-NEXT: error:_boom_.temp_:_{_*(.temp)_}_}
+# ERR7-NEXT: error:______^

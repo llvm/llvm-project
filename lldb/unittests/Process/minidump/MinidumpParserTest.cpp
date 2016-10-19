@@ -19,6 +19,7 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -68,7 +69,11 @@ TEST_F(MinidumpParserTest, GetThreads) {
   ASSERT_EQ(1UL, thread_list.size());
 
   const MinidumpThread thread = thread_list[0];
-  ASSERT_EQ(16001UL, thread.thread_id);
+
+  EXPECT_EQ(16001UL, thread.thread_id);
+
+  llvm::ArrayRef<uint8_t> context = parser->GetThreadContext(thread);
+  EXPECT_EQ(1232UL, context.size());
 }
 
 TEST_F(MinidumpParserTest, GetThreadsTruncatedFile) {
@@ -131,12 +136,109 @@ TEST_F(MinidumpParserTest, GetModuleList) {
   }
 }
 
+TEST_F(MinidumpParserTest, GetFilteredModuleList) {
+  SetUpData("linux-x86_64_not_crashed.dmp");
+  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
+  std::vector<const MinidumpModule *> filtered_modules =
+      parser->GetFilteredModuleList();
+  EXPECT_EQ(10UL, modules.size());
+  EXPECT_EQ(9UL, filtered_modules.size());
+  // EXPECT_GT(modules.size(), filtered_modules.size());
+  bool found = false;
+  for (size_t i = 0; i < filtered_modules.size(); ++i) {
+    llvm::Optional<std::string> name =
+        parser->GetMinidumpString(filtered_modules[i]->module_name_rva);
+    ASSERT_TRUE(name.hasValue());
+    if (name.getValue() == "/tmp/test/linux-x86_64_not_crashed") {
+      ASSERT_FALSE(found) << "There should be only one module with this name "
+                             "in the filtered module list";
+      found = true;
+      ASSERT_EQ(0x400000UL, filtered_modules[i]->base_of_image);
+    }
+  }
+}
+
 TEST_F(MinidumpParserTest, GetExceptionStream) {
   SetUpData("linux-x86_64.dmp");
   const MinidumpExceptionStream *exception_stream =
       parser->GetExceptionStream();
   ASSERT_NE(nullptr, exception_stream);
   ASSERT_EQ(11UL, exception_stream->exception_record.exception_code);
+}
+
+void check_mem_range_exists(std::unique_ptr<MinidumpParser> &parser,
+                            const uint64_t range_start,
+                            const uint64_t range_size) {
+  llvm::Optional<minidump::Range> range = parser->FindMemoryRange(range_start);
+  ASSERT_TRUE(range.hasValue()) << "There is no range containing this address";
+  EXPECT_EQ(range_start, range->start);
+  EXPECT_EQ(range_start + range_size, range->start + range->range_ref.size());
+}
+
+TEST_F(MinidumpParserTest, FindMemoryRange) {
+  SetUpData("linux-x86_64.dmp");
+  // There are two memory ranges in the file (size is in bytes, decimal):
+  // 1) 0x401d46 256
+  // 2) 0x7ffceb34a000 12288
+  EXPECT_FALSE(parser->FindMemoryRange(0x00).hasValue());
+  EXPECT_FALSE(parser->FindMemoryRange(0x2a).hasValue());
+
+  check_mem_range_exists(parser, 0x401d46, 256);
+  EXPECT_FALSE(parser->FindMemoryRange(0x401d46 + 256).hasValue());
+
+  check_mem_range_exists(parser, 0x7ffceb34a000, 12288);
+  EXPECT_FALSE(parser->FindMemoryRange(0x7ffceb34a000 + 12288).hasValue());
+}
+
+TEST_F(MinidumpParserTest, GetMemory) {
+  SetUpData("linux-x86_64.dmp");
+
+  EXPECT_EQ(128UL, parser->GetMemory(0x401d46, 128).size());
+  EXPECT_EQ(256UL, parser->GetMemory(0x401d46, 512).size());
+
+  EXPECT_EQ(12288UL, parser->GetMemory(0x7ffceb34a000, 12288).size());
+  EXPECT_EQ(1024UL, parser->GetMemory(0x7ffceb34a000, 1024).size());
+
+  EXPECT_TRUE(parser->GetMemory(0x500000, 512).empty());
+}
+
+TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
+  SetUpData("fizzbuzz_wow64.dmp");
+
+  // There are a lot of ranges in the file, just testing with some of them
+  EXPECT_FALSE(parser->FindMemoryRange(0x00).hasValue());
+  EXPECT_FALSE(parser->FindMemoryRange(0x2a).hasValue());
+  check_mem_range_exists(parser, 0x10000, 65536); // first range
+  check_mem_range_exists(parser, 0x40000, 4096);
+  EXPECT_FALSE(parser->FindMemoryRange(0x40000 + 4096).hasValue());
+  check_mem_range_exists(parser, 0x77c12000, 8192);
+  check_mem_range_exists(parser, 0x7ffe0000, 4096); // last range
+  EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).hasValue());
+}
+
+void check_region_info(std::unique_ptr<MinidumpParser> &parser,
+                       const uint64_t addr, MemoryRegionInfo::OptionalBool read,
+                       MemoryRegionInfo::OptionalBool write,
+                       MemoryRegionInfo::OptionalBool exec) {
+  auto range_info = parser->GetMemoryRegionInfo(addr);
+  ASSERT_TRUE(range_info.hasValue());
+  EXPECT_EQ(read, range_info->GetReadable());
+  EXPECT_EQ(write, range_info->GetWritable());
+  EXPECT_EQ(exec, range_info->GetExecutable());
+}
+
+TEST_F(MinidumpParserTest, GetMemoryRegionInfo) {
+  SetUpData("fizzbuzz_wow64.dmp");
+
+  const auto yes = MemoryRegionInfo::eYes;
+  const auto no = MemoryRegionInfo::eNo;
+
+  check_region_info(parser, 0x00000, no, no, no);
+  check_region_info(parser, 0x10000, yes, yes, no);
+  check_region_info(parser, 0x20000, yes, yes, no);
+  check_region_info(parser, 0x30000, yes, yes, no);
+  check_region_info(parser, 0x31000, no, no, no);
+  check_region_info(parser, 0x40000, yes, no, no);
 }
 
 // Windows Minidump tests

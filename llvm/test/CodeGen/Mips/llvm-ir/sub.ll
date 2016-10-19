@@ -36,12 +36,13 @@ entry:
 ; ALL-LABEL: sub_i1:
 
   ; NOT-MM:         subu    $[[T0:[0-9]+]], $4, $5
-  ; NOT-MM:         sll     $[[T0]], $[[T0]], 31
-  ; NOT-MM:         sra     $2, $[[T0]], 31
+  ; NOT-MM:         andi    $[[T0]], $[[T0]], 1
+  ; NOT-MM:         negu    $2, $[[T0]]
 
   ; MM:             subu16  $[[T0:[0-9]+]], $4, $5
-  ; MM:             sll     $[[T1:[0-9]+]], $[[T0]], 31
-  ; MM:             sra     $[[T0]], $[[T1]], 31
+  ; MM:             andi16  $[[T0]], $[[T0]], 1
+  ; MM:             li16    $[[T1:[0-9]+]], 0
+  ; MM:             subu16  $2, $[[T1]], $[[T0]]
 
   %r = sub i1 %a, %b
   ret i1 %r

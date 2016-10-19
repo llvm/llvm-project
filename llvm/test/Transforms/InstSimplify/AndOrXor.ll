@@ -29,15 +29,6 @@ define i64 @pow2b(i32 %x) {
   ret i64 %e2
 }
 
-define i32 @sub_neg_nuw(i32 %x, i32 %y) {
-; CHECK-LABEL: @sub_neg_nuw(
-; CHECK-NEXT:    ret i32 %x
-;
-  %neg = sub nuw i32 0, %y
-  %sub = sub i32 %x, %neg
-  ret i32 %sub
-}
-
 define i1 @and_of_icmps0(i32 %b) {
 ; CHECK-LABEL: @and_of_icmps0(
 ; CHECK-NEXT:    ret i1 false

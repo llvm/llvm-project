@@ -43,6 +43,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -64,8 +65,8 @@ extern cl::opt<bool> LTODiscardValueNames;
 
 namespace {
 
-static cl::opt<int> ThreadCount("threads",
-                                cl::init(std::thread::hardware_concurrency()));
+static cl::opt<int>
+    ThreadCount("threads", cl::init(llvm::heavyweight_hardware_concurrency()));
 
 static void diagnosticHandler(const DiagnosticInfo &DI) {
   DiagnosticPrinterRawOStream DP(errs());

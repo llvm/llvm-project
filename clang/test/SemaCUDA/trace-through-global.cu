@@ -35,10 +35,16 @@ __global__ void kernel(int) { hd2(); }
 template <typename T>
 void launch_kernel() {
   kernel<<<0, 0>>>(T());
-  hd1();
-  hd3(T());
+
+  // Notice that these two diagnostics are different: Because the call to hd1
+  // is not dependent on T, the call to hd1 comes from 'launch_kernel', while
+  // the call to hd3, being dependent, comes from 'launch_kernel<int>'.
+  hd1(); // expected-note {{called by 'launch_kernel'}}
+  hd3(T()); // expected-note {{called by 'launch_kernel<int>'}}
 }
 
 void host_fn() {
   launch_kernel<int>();
+  // expected-note@-1 {{called by 'host_fn'}}
+  // expected-note@-2 {{called by 'host_fn'}}
 }

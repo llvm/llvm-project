@@ -163,10 +163,10 @@ public:
 
   // Returns offset of TLS part of the MIPS GOT table. This part goes
   // after 'local' and 'global' entries.
-  uintX_t getMipsTlsOffset();
+  uintX_t getMipsTlsOffset() const;
 
   uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
-  uint32_t getTlsIndexOff() { return TlsIndexOff; }
+  uint32_t getTlsIndexOff() const { return TlsIndexOff; }
 
   // Flag to force GOT to be in output if we have relocations
   // that relies on its address.
