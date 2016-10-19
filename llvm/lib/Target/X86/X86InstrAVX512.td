@@ -1063,6 +1063,51 @@ def : Pat<(v32i16 (X86SubVBroadcast (v16i16 VR256X:$src))),
 def : Pat<(v64i8 (X86SubVBroadcast (v32i8 VR256X:$src))),
           (VINSERTI64x4Zrr (INSERT_SUBREG (v64i8 (IMPLICIT_DEF)), VR256X:$src, sub_ymm),
                            (v32i8 VR256X:$src), 1)>;
+
+def : Pat<(v32i16 (X86SubVBroadcast (bc_v8i16 (loadv2i64 addr:$src)))),
+          (VBROADCASTI32X4rm addr:$src)>;
+def : Pat<(v64i8 (X86SubVBroadcast (bc_v16i8 (loadv2i64 addr:$src)))),
+          (VBROADCASTI32X4rm addr:$src)>;
+
+// Provide fallback in case the load node that is used in the patterns above
+// is used by additional users, which prevents the pattern selection.
+def : Pat<(v8f64 (X86SubVBroadcast (v2f64 VR128X:$src))),
+          (VINSERTF64x4Zrr
+           (VINSERTF32x4Zrr (INSERT_SUBREG (v8f64 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v8f64 (VINSERTF32x4Zrr (INSERT_SUBREG (v8f64 (IMPLICIT_DEF)),
+                                                   VR128X:$src, sub_xmm),
+                                    VR128X:$src, 1)), sub_ymm), 1)>;
+def : Pat<(v8i64 (X86SubVBroadcast (v2i64 VR128X:$src))),
+          (VINSERTI64x4Zrr
+           (VINSERTI32x4Zrr (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v8i64 (VINSERTI32x4Zrr (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)),
+                                                   VR128X:$src, sub_xmm),
+                                    VR128X:$src, 1)), sub_ymm), 1)>;
+
+def : Pat<(v32i16 (X86SubVBroadcast (v8i16 VR128X:$src))),
+          (VINSERTI64x4Zrr
+           (VINSERTI32x4Zrr (INSERT_SUBREG (v32i16 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v32i16 (VINSERTI32x4Zrr (INSERT_SUBREG (v32i16 (IMPLICIT_DEF)),
+                                                    VR128X:$src, sub_xmm),
+                                     VR128X:$src, 1)), sub_ymm), 1)>;
+def : Pat<(v64i8 (X86SubVBroadcast (v16i8 VR128X:$src))),
+          (VINSERTI64x4Zrr
+           (VINSERTI32x4Zrr (INSERT_SUBREG (v64i8 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v64i8 (VINSERTI32x4Zrr (INSERT_SUBREG (v64i8 (IMPLICIT_DEF)),
+                                                   VR128X:$src, sub_xmm),
+                                    VR128X:$src, 1)), sub_ymm), 1)>;
 }
 
 let Predicates = [HasVLX] in {
@@ -1129,6 +1174,30 @@ def : Pat<(v4i64 (X86SubVBroadcast (v2i64 VR128X:$src))),
 }
 
 let Predicates = [HasAVX512, NoDQI] in {
+def : Pat<(v8f64 (X86SubVBroadcast (loadv2f64 addr:$src))),
+          (VBROADCASTF32X4rm addr:$src)>;
+def : Pat<(v8i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
+          (VBROADCASTI32X4rm addr:$src)>;
+
+def : Pat<(v16f32 (X86SubVBroadcast (v4f32 VR128X:$src))),
+          (VINSERTF64x4Zrr
+           (VINSERTF32x4Zrr (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v16f32 (VINSERTF32x4Zrr (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
+                                                    VR128X:$src, sub_xmm),
+                                     VR128X:$src, 1)), sub_ymm), 1)>;
+def : Pat<(v16i32 (X86SubVBroadcast (v4i32 VR128X:$src))),
+          (VINSERTI64x4Zrr
+           (VINSERTI32x4Zrr (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v16i32 (VINSERTI32x4Zrr (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)),
+                                                    VR128X:$src, sub_xmm),
+                                     VR128X:$src, 1)), sub_ymm), 1)>;
+
 def : Pat<(v16f32 (X86SubVBroadcast (loadv8f32 addr:$src))),
           (VBROADCASTF64X4rm addr:$src)>;
 def : Pat<(v16i32 (X86SubVBroadcast (bc_v8i32 (loadv4i64 addr:$src)))),
@@ -1166,6 +1235,25 @@ def : Pat<(v16f32 (X86SubVBroadcast (v8f32 VR256X:$src))),
 def : Pat<(v16i32 (X86SubVBroadcast (v8i32 VR256X:$src))),
           (VINSERTI32x8Zrr (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src, sub_ymm),
                            (v8i32 VR256X:$src), 1)>;
+
+def : Pat<(v16f32 (X86SubVBroadcast (v4f32 VR128X:$src))),
+          (VINSERTF32x8Zrr
+           (VINSERTF32x4Zrr (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v16f32 (VINSERTF32x4Zrr (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
+                                                    VR128X:$src, sub_xmm),
+                                     VR128X:$src, 1)), sub_ymm), 1)>;
+def : Pat<(v16i32 (X86SubVBroadcast (v4i32 VR128X:$src))),
+          (VINSERTI32x8Zrr
+           (VINSERTI32x4Zrr (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)),
+                                           VR128X:$src, sub_xmm),
+                            VR128X:$src, 1),
+           (EXTRACT_SUBREG
+            (v16i32 (VINSERTI32x4Zrr (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)),
+                                                    VR128X:$src, sub_xmm),
+                                     VR128X:$src, 1)), sub_ymm), 1)>;
 }
 
 multiclass avx512_common_broadcast_32x2<bits<8> opc, string OpcodeStr,

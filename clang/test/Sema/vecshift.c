@@ -1,5 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -DERR -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-error-vec-elem-size -verify %s
+// RUN: %clang_cc1 -fsyntax-only -DEXT -DERR -verify %s
+// RUN: %clang_cc1 -fsyntax-only -DEXT -Wno-error-vec-elem-size -verify %s
 
+#ifdef EXT
 typedef __attribute__((__ext_vector_type__(8))) char vector_char8;
 typedef __attribute__((__ext_vector_type__(8))) short vector_short8;
 typedef __attribute__((__ext_vector_type__(8))) int vector_int8;
@@ -12,6 +16,20 @@ typedef __attribute__((__ext_vector_type__(4))) int vector_int4;
 typedef __attribute__((__ext_vector_type__(4))) unsigned char vector_uchar4;
 typedef __attribute__((__ext_vector_type__(4))) unsigned short vector_ushort4;
 typedef __attribute__((__ext_vector_type__(4))) unsigned int vector_uint4;
+#else
+typedef __attribute__((vector_size(8))) char vector_char8;
+typedef __attribute__((vector_size(16))) short vector_short8;
+typedef __attribute__((vector_size(32))) int vector_int8;
+typedef __attribute__((vector_size(8))) unsigned char vector_uchar8;
+typedef __attribute__((vector_size(16))) unsigned short vector_ushort8;
+typedef __attribute__((vector_size(32))) unsigned int vector_uint8;
+typedef __attribute__((vector_size(4))) char vector_char4;
+typedef __attribute__((vector_size(4))) short vector_short4;
+typedef __attribute__((vector_size(16))) int vector_int4;
+typedef __attribute__((vector_size(4))) unsigned char vector_uchar4;
+typedef __attribute__((vector_size(8))) unsigned short vector_ushort4;
+typedef __attribute__((vector_size(16))) unsigned int vector_uint4;
+#endif
 
 char c;
 short s;
@@ -48,16 +66,30 @@ void foo() {
   vus8 = 1 << vus8;
 
   vc8 = vc8 << vc8;
-  vi8 = vi8 << vuc8;
-  vuc8 = vuc8 << vi8;
-  vus8 = vus8 << vui8;
-  vui8 = vui8 << vs8;
+#ifdef ERR
+  vi8 = vi8 << vuc8; // expected-error {{vector operands do not have the same elements sizes}}
+  vuc8 = vuc8 << vi8; // expected-error {{vector operands do not have the same elements sizes}}
+  vus8 = vus8 << vui8; // expected-error {{vector operands do not have the same elements sizes}}
+  vui8 = vui8 << vs8; // expected-error {{vector operands do not have the same elements sizes}}
+#else
+  vi8 = vi8 << vuc8; // expected-warning {{vector operands do not have the same elements sizes}}
+  vuc8 = vuc8 << vi8; // expected-warning {{vector operands do not have the same elements sizes}}
+  vus8 = vus8 << vui8; // expected-warning {{vector operands do not have the same elements sizes}}
+  vui8 = vui8 << vs8; // expected-warning {{vector operands do not have the same elements sizes}}
+#endif
 
   vc8 <<= vc8;
-  vi8 <<= vuc8;
-  vuc8 <<= vi8;
-  vus8 <<= vui8;
-  vui8 <<= vs8;
+#ifdef ERR
+  vi8 <<= vuc8; // expected-error {{vector operands do not have the same elements sizes}}
+  vuc8 <<= vi8; // expected-error {{vector operands do not have the same elements sizes}}
+  vus8 <<= vui8; // expected-error {{vector operands do not have the same elements sizes}}
+  vui8 <<= vs8; // expected-error {{vector operands do not have the same elements sizes}}
+#else
+  vi8 <<= vuc8; // expected-warning {{vector operands do not have the same elements sizes}}
+  vuc8 <<= vi8; // expected-warning {{vector operands do not have the same elements sizes}}
+  vus8 <<= vui8; // expected-warning {{vector operands do not have the same elements sizes}}
+  vui8 <<= vs8; // expected-warning {{vector operands do not have the same elements sizes}}
+#endif
 
   c <<= vc8; // expected-error {{assigning to 'char' from incompatible type}}
   i <<= vuc8; // expected-error {{assigning to 'int' from incompatible type}}

@@ -30,11 +30,11 @@ void elf::warn(const Twine &Msg) {
   if (Config->FatalWarnings)
     error(Msg);
   else
-    *ErrorOS << Msg << "\n";
+    *ErrorOS << "warning: " << Msg << "\n";
 }
 
 void elf::error(const Twine &Msg) {
-  *ErrorOS << Msg << "\n";
+  *ErrorOS << "error: " << Msg << "\n";
   HasError = true;
 }
 
@@ -43,7 +43,7 @@ void elf::error(std::error_code EC, const Twine &Prefix) {
 }
 
 void elf::fatal(const Twine &Msg) {
-  *ErrorOS << Msg << "\n";
+  *ErrorOS << "error: " << Msg << "\n";
   exit(1);
 }
 

@@ -28,7 +28,7 @@ find_first_existing_vc_file(clang_vc "${CLANG_SOURCE_DIR}")
 # The VC revision include that we want to generate.
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/SVNVersion.inc")
 
-set(get_svn_script "${LLVM_MAIN_SRC_DIR}/cmake/modules/GetSVN.cmake")
+set(get_svn_script "${LLVM_CMAKE_PATH}/GetSVN.cmake")
 
 if(DEFINED llvm_vc AND DEFINED clang_vc)
   # Create custom target to generate the VC revision include.

@@ -52,7 +52,7 @@
 # RUN: FileCheck -check-prefix=ERR6 %s < %t.log
 # ERR6:      line 1:
 # ERR6-NEXT: UNKNOWN_TAG {
-# RUN: grep '^^' %t.log
+# RUN: grep '^error: ^' %t.log
 
 ## One more check that text of lines and pointer to 'bad' token are working ok.
 # RUN: echo "SECTIONS {" > %t.script
@@ -63,4 +63,4 @@
 # RUN: FileCheck -check-prefix=ERR7 %s < %t.log
 # ERR7:      line 4: malformed number: .temp
 # ERR7-NEXT: boom .temp : { *(.temp) } }
-# RUN: grep '^     ^' %t.log
+# RUN: grep '^error:      ^' %t.log

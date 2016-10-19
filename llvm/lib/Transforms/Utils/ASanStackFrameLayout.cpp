@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -101,7 +102,7 @@ SmallString<64> ComputeASanStackFrameDescription(
     std::string Name = Var.Name;
     if (Var.Line) {
       Name += ":";
-      Name += std::to_string(Var.Line);
+      Name += to_string(Var.Line);
     }
     StackDescription << " " << Var.Offset << " " << Var.Size << " "
                      << Name.size() << " " << Name;

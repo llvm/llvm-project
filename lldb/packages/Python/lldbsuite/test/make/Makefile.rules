@@ -242,27 +242,27 @@ ifneq "$(DYLIB_NAME)" ""
 endif
 
 # Function that returns the counterpart C++ compiler, given $(CC) as arg.
-cxx_compiler_notdir = $(if $(findstring icc,$(1)), \
-                            $(subst icc,icpc,$(1)), \
-                            $(if $(findstring llvm-gcc,$(1)), \
-                                 $(subst llvm-gcc,llvm-g++,$(1)), \
-                                 $(if $(findstring gcc,$(1)), \
-                                      $(subst gcc,g++,$(1)), \
-                                      $(subst cc,c++,$(1)))))
+cxx_compiler_notdir = $(if $(findstring clang,$(1)), \
+                           $(subst clang,clang++,$(1)), \
+                           $(if $(findstring icc,$(1)), \
+                                $(subst icc,icpc,$(1)), \
+                                $(if $(findstring llvm-gcc,$(1)), \
+                                     $(subst llvm-gcc,llvm-g++,$(1)), \
+                                     $(if $(findstring gcc,$(1)), \
+                                          $(subst gcc,g++,$(1)), \
+                                          $(subst cc,c++,$(1))))))
 cxx_compiler = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_compiler_notdir,$(notdir $(1)))),$(call cxx_compiler_notdir,$(1)))
 
-ifeq ($(findstring clang, $(cxx_compiler)), clang)
-    CXXFLAGS += --driver-mode=g++
-endif
-
 # Function that returns the C++ linker, given $(CC) as arg.
-cxx_linker_notdir = $(if $(findstring icc,$(1)), \
-                          $(subst icc,icpc,$(1)), \
-                          $(if $(findstring llvm-gcc,$(1)), \
-                               $(subst llvm-gcc,llvm-g++,$(1)), \
-                               $(if $(findstring gcc,$(1)), \
-                                    $(subst gcc,g++,$(1)), \
-                                    $(subst cc,c++,$(1)))))
+cxx_linker_notdir = $(if $(findstring clang,$(1)), \
+                         $(subst clang,clang++,$(1)), \
+                         $(if $(findstring icc,$(1)), \
+                              $(subst icc,icpc,$(1)), \
+                              $(if $(findstring llvm-gcc,$(1)), \
+                                   $(subst llvm-gcc,llvm-g++,$(1)), \
+                                   $(if $(findstring gcc,$(1)), \
+                                        $(subst gcc,g++,$(1)), \
+                                        $(subst cc,c++,$(1))))))
 cxx_linker = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_linker_notdir,$(notdir $(1)))),$(call cxx_linker_notdir,$(1)))
 
 ifneq "$(OS)" "Darwin"
@@ -354,9 +354,6 @@ ifneq "$(strip $(DYLIB_CXX_SOURCES))" ""
     DYLIB_OBJECTS +=$(strip $(DYLIB_CXX_SOURCES:.cpp=.o))
     CXX = $(call cxx_compiler,$(CC))
     LD = $(call cxx_linker,$(CC))
-    ifeq ($(findstring clang, $(cxx_linker)), clang)
-      LDFLAGS += --driver-mode=g++
-    endif
 endif
 
 #----------------------------------------------------------------------
@@ -380,9 +377,6 @@ endif
 ifneq "$(strip $(CXX_SOURCES))" ""
 	OBJECTS +=$(strip $(CXX_SOURCES:.cpp=.o))
 	CXX = $(call cxx_compiler,$(CC))
-  ifeq ($(findstring clang, $(cxx_linker)), clang)
-    LDFLAGS += --driver-mode=g++
-  endif
 	LD = $(call cxx_linker,$(CC))
 endif
 
@@ -401,9 +395,6 @@ ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	OBJECTS +=$(strip $(OBJCXX_SOURCES:.mm=.o))
 	CXX = $(call cxx_compiler,$(CC))
 	LD = $(call cxx_linker,$(CC))
-  ifeq ($(findstring clang, $(cxx_linker)), clang)
-    LDFLAGS += --driver-mode=g++
-  endif
 	ifeq "$(findstring lobjc,$(LDFLAGS))" ""
 		LDFLAGS +=-lobjc
 	endif
