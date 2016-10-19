@@ -6533,6 +6533,14 @@ public:
       SourceLocation &Ellipsis,
       Optional<unsigned> &NumExpansions) const;
 
+  /// Given a template argument that contains an unexpanded parameter pack, but
+  /// which has already been substituted, attempt to determine the number of
+  /// elements that will be produced once this argument is fully-expanded.
+  ///
+  /// This is intended for use when transforming 'sizeof...(Arg)' in order to
+  /// avoid actually expanding the pack where possible.
+  Optional<unsigned> getFullyPackExpandedSize(TemplateArgument Arg);
+
   //===--------------------------------------------------------------------===//
   // C++ Template Argument Deduction (C++ [temp.deduct])
   //===--------------------------------------------------------------------===//
@@ -9289,26 +9297,42 @@ public:
   /// Diagnostics that are emitted only if we discover that the given function
   /// must be codegen'ed.  Because handling these correctly adds overhead to
   /// compilation, this is currently only enabled for CUDA compilations.
-  llvm::DenseMap<const FunctionDecl *, std::vector<PartialDiagnosticAt>>
+  llvm::DenseMap<CanonicalDeclPtr<FunctionDecl>,
+                 std::vector<PartialDiagnosticAt>>
       CUDADeferredDiags;
 
-  /// Raw encodings of SourceLocations for which CheckCUDACall has emitted a
-  /// (maybe deferred) "bad call" diagnostic.  We use this to avoid emitting the
-  /// same deferred diag twice.
-  llvm::DenseSet<unsigned> LocsWithCUDACallDiags;
+  /// FunctionDecls plus raw encodings of SourceLocations for which
+  /// CheckCUDACall has emitted a (maybe deferred) "bad call" diagnostic.  We
+  /// use this to avoid emitting the same deferred diag twice.
+  llvm::DenseSet<std::pair<CanonicalDeclPtr<FunctionDecl>, unsigned>>
+      LocsWithCUDACallDiags;
 
-  /// The set of CUDA functions that we've discovered must be emitted by tracing
-  /// the call graph.  Functions that we can tell a priori must be emitted
-  /// aren't added to this set.
-  llvm::DenseSet<FunctionDecl *> CUDAKnownEmittedFns;
+  /// A pair of a canonical FunctionDecl and a SourceLocation.
+  struct FunctionDeclAndLoc {
+    CanonicalDeclPtr<FunctionDecl> FD;
+    SourceLocation Loc;
+  };
+
+  /// An inverse call graph, mapping known-emitted functions to one of their
+  /// known-emitted callers (plus the location of the call).
+  ///
+  /// Functions that we can tell a priori must be emitted aren't added to this
+  /// map.
+  llvm::DenseMap</* Callee = */ CanonicalDeclPtr<FunctionDecl>,
+                 /* Caller = */ FunctionDeclAndLoc>
+      CUDAKnownEmittedFns;
 
   /// A partial call graph maintained during CUDA compilation to support
-  /// deferred diagnostics.  Specifically, functions are only added here if, at
-  /// the time they're added, they are not known-emitted.  As soon as we
-  /// discover that a function is known-emitted, we remove it and everything it
-  /// transitively calls from this set and add those functions to
-  /// CUDAKnownEmittedFns.
-  llvm::DenseMap<FunctionDecl *, llvm::SetVector<FunctionDecl *>> CUDACallGraph;
+  /// deferred diagnostics.
+  ///
+  /// Functions are only added here if, at the time they're considered, they are
+  /// not known-emitted.  As soon as we discover that a function is
+  /// known-emitted, we remove it and everything it transitively calls from this
+  /// set and add those functions to CUDAKnownEmittedFns.
+  llvm::DenseMap</* Caller = */ CanonicalDeclPtr<FunctionDecl>,
+                 /* Callees = */ llvm::MapVector<CanonicalDeclPtr<FunctionDecl>,
+                                                 SourceLocation>>
+      CUDACallGraph;
 
   /// Diagnostic builder for CUDA errors which may or may not be deferred.
   ///
@@ -9331,13 +9355,19 @@ public:
       K_Nop,
       /// Emit the diagnostic immediately (i.e., behave like Sema::Diag()).
       K_Immediate,
+      /// Emit the diagnostic immediately, and, if it's a warning or error, also
+      /// emit a call stack showing how this function can be reached by an a
+      /// priori known-emitted function.
+      K_ImmediateWithCallStack,
       /// Create a deferred diagnostic, which is emitted only if the function
-      /// it's attached to is codegen'ed.
+      /// it's attached to is codegen'ed.  Also emit a call stack as with
+      /// K_ImmediateWithCallStack.
       K_Deferred
     };
 
     CUDADiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
                     FunctionDecl *Fn, Sema &S);
+    ~CUDADiagBuilder();
 
     /// Convertible to bool: True if we immediately emitted an error, false if
     /// we didn't emit an error or we created a deferred error.
@@ -9349,38 +9379,29 @@ public:
     ///
     /// But see CUDADiagIfDeviceCode() and CUDADiagIfHostCode() -- you probably
     /// want to use these instead of creating a CUDADiagBuilder yourself.
-    operator bool() const { return ImmediateDiagBuilder.hasValue(); }
+    operator bool() const { return ImmediateDiag.hasValue(); }
 
     template <typename T>
     friend const CUDADiagBuilder &operator<<(const CUDADiagBuilder &Diag,
                                              const T &Value) {
-      if (Diag.ImmediateDiagBuilder.hasValue())
-        *Diag.ImmediateDiagBuilder << Value;
-      else if (Diag.PartialDiagInfo.hasValue())
-        Diag.PartialDiagInfo->PD << Value;
+      if (Diag.ImmediateDiag.hasValue())
+        *Diag.ImmediateDiag << Value;
+      else if (Diag.PartialDiag.hasValue())
+        *Diag.PartialDiag << Value;
       return Diag;
     }
 
   private:
-    struct PartialDiagnosticInfo {
-      PartialDiagnosticInfo(Sema &S, SourceLocation Loc, PartialDiagnostic PD,
-                            FunctionDecl *Fn)
-          : S(S), Loc(Loc), PD(std::move(PD)), Fn(Fn) {}
-
-      ~PartialDiagnosticInfo() {
-        S.CUDADeferredDiags[Fn].push_back({Loc, std::move(PD)});
-      }
-
-      Sema &S;
-      SourceLocation Loc;
-      PartialDiagnostic PD;
-      FunctionDecl *Fn;
-    };
+    Sema &S;
+    SourceLocation Loc;
+    unsigned DiagID;
+    FunctionDecl *Fn;
+    bool ShowCallStack;
 
     // Invariant: At most one of these Optionals has a value.
     // FIXME: Switch these to a Variant once that exists.
-    llvm::Optional<Sema::SemaDiagnosticBuilder> ImmediateDiagBuilder;
-    llvm::Optional<PartialDiagnosticInfo> PartialDiagInfo;
+    llvm::Optional<SemaDiagnosticBuilder> ImmediateDiag;
+    llvm::Optional<PartialDiagnostic> PartialDiag;
   };
 
   /// Creates a CUDADiagBuilder that emits the diagnostic if the current context
@@ -9757,6 +9778,8 @@ private:
                               llvm::APSInt &Result);
   bool SemaBuiltinConstantArgRange(CallExpr *TheCall, int ArgNum,
                                    int Low, int High);
+  bool SemaBuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+                                      unsigned Multiple);
   bool SemaBuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
                                 int ArgNum, unsigned ExpectedFieldNum,
                                 bool AllowName);

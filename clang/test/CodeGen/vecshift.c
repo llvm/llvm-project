@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1  -Wno-error-vec-elem-size -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1  -Wno-error-vec-elem-size -DEXT -emit-llvm %s -o - | FileCheck %s
 
+#ifdef EXT
 typedef __attribute__((__ext_vector_type__(8))) char vector_char8;
 typedef __attribute__((__ext_vector_type__(8))) short vector_short8;
 typedef __attribute__((__ext_vector_type__(8))) int vector_int8;
@@ -12,6 +14,20 @@ typedef __attribute__((__ext_vector_type__(4))) int vector_int4;
 typedef __attribute__((__ext_vector_type__(4))) unsigned char vector_uchar4;
 typedef __attribute__((__ext_vector_type__(4))) unsigned short vector_ushort4;
 typedef __attribute__((__ext_vector_type__(4))) unsigned int vector_uint4;
+#else
+typedef __attribute__((vector_size(8))) char vector_char8;
+typedef __attribute__((vector_size(16))) short vector_short8;
+typedef __attribute__((vector_size(32))) int vector_int8;
+typedef __attribute__((vector_size(8))) unsigned char vector_uchar8;
+typedef __attribute__((vector_size(16))) unsigned short vector_ushort8;
+typedef __attribute__((vector_size(32))) unsigned int vector_uint8;
+typedef __attribute__((vector_size(4))) char vector_char4;
+typedef __attribute__((vector_size(4))) short vector_short4;
+typedef __attribute__((vector_size(16))) int vector_int4;
+typedef __attribute__((vector_size(4))) unsigned char vector_uchar4;
+typedef __attribute__((vector_size(8))) unsigned short vector_ushort4;
+typedef __attribute__((vector_size(16))) unsigned int vector_uint4;
+#endif
 
 char c;
 short s;

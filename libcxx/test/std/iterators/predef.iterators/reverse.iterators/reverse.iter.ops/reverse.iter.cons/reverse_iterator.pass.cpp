@@ -13,11 +13,14 @@
 
 // template <class U>
 //   requires HasConstructor<Iter, const U&>
-//   reverse_iterator(const reverse_iterator<U> &u);
+//   constexpr reverse_iterator(const reverse_iterator<U> &u);
+//
+// constexpr in c++17
 
 #include <iterator>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It, class U>
@@ -39,4 +42,13 @@ int main()
     test<bidirectional_iterator<Base*> >(bidirectional_iterator<Derived*>(&d));
     test<random_access_iterator<const Base*> >(random_access_iterator<Derived*>(&d));
     test<Base*>(&d);
+
+#if TEST_STD_VER > 14
+    {
+        constexpr const Derived *p = nullptr;
+        constexpr std::reverse_iterator<const Derived *>     it1 = std::make_reverse_iterator(p);
+        constexpr std::reverse_iterator<const Base *>        it2(it1);
+        static_assert(it2.base() == p);
+    }
+#endif
 }

@@ -20,21 +20,22 @@ namespace lld {
 
 bool elf::HasError;
 raw_ostream *elf::ErrorOS;
+StringRef elf::Argv0;
 
 void elf::log(const Twine &Msg) {
   if (Config->Verbose)
-    outs() << Msg << "\n";
+    outs() << Argv0 << ": " << Msg << "\n";
 }
 
 void elf::warn(const Twine &Msg) {
   if (Config->FatalWarnings)
     error(Msg);
   else
-    *ErrorOS << Msg << "\n";
+    *ErrorOS << Argv0 << ": warning: " << Msg << "\n";
 }
 
 void elf::error(const Twine &Msg) {
-  *ErrorOS << Msg << "\n";
+  *ErrorOS << Argv0 << ": error: " << Msg << "\n";
   HasError = true;
 }
 
@@ -43,7 +44,7 @@ void elf::error(std::error_code EC, const Twine &Prefix) {
 }
 
 void elf::fatal(const Twine &Msg) {
-  *ErrorOS << Msg << "\n";
+  *ErrorOS << Argv0 << ": error: " << Msg << "\n";
   exit(1);
 }
 

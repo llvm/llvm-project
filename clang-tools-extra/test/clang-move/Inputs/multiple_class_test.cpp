@@ -6,7 +6,16 @@ int Move1::f() {
 }
 } // namespace a
 
+namespace {
+using a::Move1;
+using namespace a;
+static int k = 0;
+} // anonymous namespace
+
 namespace b {
+using a::Move1;
+using namespace a;
+using T = a::Move1;
 int Move2::f() {
   return 0;
 }
@@ -14,6 +23,8 @@ int Move2::f() {
 
 namespace c {
 int Move3::f() {
+  using a::Move1;
+  using namespace b;
   return 0;
 }
 
@@ -30,6 +41,7 @@ int EnclosingMove5::Nested::f() {
 int EnclosingMove5::Nested::b = 1;
 
 int NoMove::f() {
+  static int F = 0;
   return 0;
 }
 } // namespace c

@@ -11,10 +11,13 @@
 
 // reverse_iterator
 
-// reverse_iterator();
+// constexpr reverse_iterator();
+//
+// constexpr in c++17
 
 #include <iterator>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It>
@@ -30,4 +33,10 @@ int main()
     test<random_access_iterator<char*> >();
     test<char*>();
     test<const char*>();
+
+#if TEST_STD_VER > 14
+    {
+        constexpr std::reverse_iterator<const char *> it;
+    }
+#endif
 }

@@ -8790,6 +8790,16 @@ static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
         << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
       return QualType();
     }
+    if (!S.LangOpts.OpenCL && !S.LangOpts.ZVector) {
+      const BuiltinType *LHSBT = LHSEleType->getAs<clang::BuiltinType>();
+      const BuiltinType *RHSBT = RHSEleType->getAs<clang::BuiltinType>();
+      if (LHSBT != RHSBT &&
+          S.Context.getTypeSize(LHSBT) != S.Context.getTypeSize(RHSBT)) {
+        S.Diag(Loc, diag::warn_typecheck_vector_element_sizes_not_equal)
+            << LHS.get()->getType() << RHS.get()->getType()
+            << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
+      }
+    }
   } else {
     // ...else expand RHS to match the number of elements in LHS.
     QualType VecTy =

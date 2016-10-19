@@ -3,6 +3,7 @@
 misc-throw-by-value-catch-by-reference
 ======================================
 
+"cert-err09-cpp" redirects here as an alias for this check.
 "cert-err61-cpp" redirects here as an alias for this check.
 
 Finds violations of the rule "Throw by value, catch by reference" presented for

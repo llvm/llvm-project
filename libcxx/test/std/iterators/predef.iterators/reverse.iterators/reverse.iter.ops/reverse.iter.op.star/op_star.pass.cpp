@@ -11,7 +11,9 @@
 
 // reverse_iterator
 
-// reference operator*() const;
+// constexpr reference operator*() const;
+//
+// constexpr in c++17
 
 // Be sure to respect LWG 198:
 //    http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#198
@@ -20,6 +22,8 @@
 
 #include <iterator>
 #include <cassert>
+
+#include "test_macros.h"
 
 class A
 {
@@ -44,4 +48,15 @@ int main()
 {
     A a;
     test(&a+1, A());
+
+#if TEST_STD_VER > 14
+    {
+        constexpr const char *p = "123456789";
+        typedef std::reverse_iterator<const char *> RI;
+        constexpr RI it1 = std::make_reverse_iterator(p+1);
+        constexpr RI it2 = std::make_reverse_iterator(p+2);
+        static_assert(*it1 == p[0], "");
+        static_assert(*it2 == p[1], "");
+    }
+#endif
 }
