@@ -70,6 +70,8 @@ std::string getInstrProfErrString(instrprof_error Err) {
     return "Failed to compress data (zlib)";
   case instrprof_error::uncompress_failed:
     return "Failed to uncompress data (zlib)";
+  case instrprof_error::empty_raw_profile:
+    return "Empty raw profile file";
   }
   llvm_unreachable("A value of instrprof_error has no message.");
 }
