@@ -247,6 +247,11 @@ class Parser : public CodeCompletionHandler {
 
   bool SkipFunctionBodies;
 
+  /// The location of the expression statement that is being parsed right now.
+  /// Used to determine if an expression that is being parsed is a statement or
+  /// just a regular sub-expression.
+  SourceLocation ExprStatementTokLoc;
+
 public:
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;

@@ -1224,8 +1224,17 @@ public:
 
   /// \brief Return a normal function type with a typed argument list.
   QualType getFunctionType(QualType ResultTy, ArrayRef<QualType> Args,
-                           const FunctionProtoType::ExtProtoInfo &EPI) const;
+                           const FunctionProtoType::ExtProtoInfo &EPI) const {
+    return getFunctionTypeInternal(ResultTy, Args, EPI, false);
+  }
 
+private:
+  /// \brief Return a normal function type with a typed argument list.
+  QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
+                                   const FunctionProtoType::ExtProtoInfo &EPI,
+                                   bool OnlyWantCanonical) const;
+
+public:
   /// \brief Return the unique reference to the type for the specified type
   /// declaration.
   QualType getTypeDeclType(const TypeDecl *Decl,

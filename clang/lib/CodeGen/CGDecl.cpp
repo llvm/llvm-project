@@ -774,37 +774,6 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   EmitStoreOfScalar(value, lvalue, /* isInitialization */ true);
 }
 
-/// EmitScalarInit - Initialize the given lvalue with the given object.
-void CodeGenFunction::EmitScalarInit(llvm::Value *init, LValue lvalue) {
-  Qualifiers::ObjCLifetime lifetime = lvalue.getObjCLifetime();
-  if (!lifetime)
-    return EmitStoreThroughLValue(RValue::get(init), lvalue, true);
-
-  switch (lifetime) {
-  case Qualifiers::OCL_None:
-    llvm_unreachable("present but none");
-
-  case Qualifiers::OCL_ExplicitNone:
-    // nothing to do
-    break;
-
-  case Qualifiers::OCL_Strong:
-    init = EmitARCRetain(lvalue.getType(), init);
-    break;
-
-  case Qualifiers::OCL_Weak:
-    // Initialize and then skip the primitive store.
-    EmitARCInitWeak(lvalue.getAddress(), init);
-    return;
-
-  case Qualifiers::OCL_Autoreleasing:
-    init = EmitARCRetainAutorelease(lvalue.getType(), init);
-    break;
-  }
-
-  EmitStoreOfScalar(init, lvalue, /* isInitialization */ true);
-}
-
 /// canEmitInitWithFewStoresAfterMemset - Decide whether we can emit the
 /// non-zero parts of the specified initializer with equal or fewer than
 /// NumStores scalar stores.

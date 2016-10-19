@@ -206,3 +206,10 @@ void test13(int i) {
   int x = inlineFunction(i);
   x && x < 10; // no-warning
 }
+
+// Don't warn in a macro
+#define RETURN(X)  do { return; } while (0)
+void macro(void) {
+  RETURN(1); // no-warning
+}
+
