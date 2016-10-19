@@ -2162,6 +2162,60 @@ static std::string formatObjCParamQualifiers(unsigned ObjCQuals,
   return Result;
 }
 
+/// \brief Tries to find the most appropriate type location for an Objective-C
+/// block placeholder.
+///
+/// This function ignores things like typedefs and qualifiers in order to
+/// present the most relevant and accurate block placeholders in code completion
+/// results.
+static void findTypeLocationForBlockDecl(const TypeSourceInfo *TSInfo,
+                                         FunctionTypeLoc &Block,
+                                         FunctionProtoTypeLoc &BlockProto,
+                                         bool SuppressBlock = false) {
+  if (!TSInfo)
+    return;
+  TypeLoc TL = TSInfo->getTypeLoc().getUnqualifiedLoc();
+  while (true) {
+    // Look through typedefs.
+    if (!SuppressBlock) {
+      if (TypedefTypeLoc TypedefTL = TL.getAs<TypedefTypeLoc>()) {
+        if (TypeSourceInfo *InnerTSInfo =
+                TypedefTL.getTypedefNameDecl()->getTypeSourceInfo()) {
+          TL = InnerTSInfo->getTypeLoc().getUnqualifiedLoc();
+          continue;
+        }
+      }
+
+      // Look through qualified types
+      if (QualifiedTypeLoc QualifiedTL = TL.getAs<QualifiedTypeLoc>()) {
+        TL = QualifiedTL.getUnqualifiedLoc();
+        continue;
+      }
+
+      if (AttributedTypeLoc AttrTL = TL.getAs<AttributedTypeLoc>()) {
+        TL = AttrTL.getModifiedLoc();
+        continue;
+      }
+    }
+
+    // Try to get the function prototype behind the block pointer type,
+    // then we're done.
+    if (BlockPointerTypeLoc BlockPtr = TL.getAs<BlockPointerTypeLoc>()) {
+      TL = BlockPtr.getPointeeLoc().IgnoreParens();
+      Block = TL.getAs<FunctionTypeLoc>();
+      BlockProto = TL.getAs<FunctionProtoTypeLoc>();
+    }
+    break;
+  }
+}
+
+static std::string
+formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
+                       FunctionTypeLoc &Block, FunctionProtoTypeLoc &BlockProto,
+                       bool SuppressBlockName = false,
+                       bool SuppressBlock = false,
+                       Optional<ArrayRef<QualType>> ObjCSubsts = None);
+
 static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
                                            const ParmVarDecl *Param,
                                            bool SuppressName = false,
@@ -2192,47 +2246,13 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
     }
     return Result;
   }
-  
+
   // The argument for a block pointer parameter is a block literal with
   // the appropriate type.
   FunctionTypeLoc Block;
   FunctionProtoTypeLoc BlockProto;
-  TypeLoc TL;
-  if (TypeSourceInfo *TSInfo = Param->getTypeSourceInfo()) {
-    TL = TSInfo->getTypeLoc().getUnqualifiedLoc();
-    while (true) {
-      // Look through typedefs.
-      if (!SuppressBlock) {
-        if (TypedefTypeLoc TypedefTL = TL.getAs<TypedefTypeLoc>()) {
-          if (TypeSourceInfo *InnerTSInfo =
-                  TypedefTL.getTypedefNameDecl()->getTypeSourceInfo()) {
-            TL = InnerTSInfo->getTypeLoc().getUnqualifiedLoc();
-            continue;
-          }
-        }
-        
-        // Look through qualified types
-        if (QualifiedTypeLoc QualifiedTL = TL.getAs<QualifiedTypeLoc>()) {
-          TL = QualifiedTL.getUnqualifiedLoc();
-          continue;
-        }
-
-        if (AttributedTypeLoc AttrTL = TL.getAs<AttributedTypeLoc>()) {
-          TL = AttrTL.getModifiedLoc();
-          continue;
-        }
-      }
-      
-      // Try to get the function prototype behind the block pointer type,
-      // then we're done.
-      if (BlockPointerTypeLoc BlockPtr = TL.getAs<BlockPointerTypeLoc>()) {
-        TL = BlockPtr.getPointeeLoc().IgnoreParens();
-        Block = TL.getAs<FunctionTypeLoc>();
-        BlockProto = TL.getAs<FunctionProtoTypeLoc>();
-      }
-      break;
-    }
-  }
+  findTypeLocationForBlockDecl(Param->getTypeSourceInfo(), Block, BlockProto,
+                               SuppressBlock);
 
   if (!Block) {
     // We were unable to find a FunctionProtoTypeLoc with parameter names
@@ -2258,12 +2278,31 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
     
   // We have the function prototype behind the block pointer type, as it was
   // written in the source.
+  return formatBlockPlaceholder(Policy, Param, Block, BlockProto,
+                                /*SuppressBlockName=*/false, SuppressBlock,
+                                ObjCSubsts);
+}
+
+/// \brief Returns a placeholder string that corresponds to an Objective-C block
+/// declaration.
+///
+/// \param BlockDecl A declaration with an Objective-C block type.
+///
+/// \param Block The most relevant type location for that block type.
+///
+/// \param SuppressBlockName Determines wether or not the name of the block
+/// declaration is included in the resulting string.
+static std::string
+formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
+                       FunctionTypeLoc &Block, FunctionProtoTypeLoc &BlockProto,
+                       bool SuppressBlockName, bool SuppressBlock,
+                       Optional<ArrayRef<QualType>> ObjCSubsts) {
   std::string Result;
   QualType ResultType = Block.getTypePtr()->getReturnType();
   if (ObjCSubsts)
-    ResultType = ResultType.substObjCTypeArgs(Param->getASTContext(),
-                                              *ObjCSubsts,
-                                              ObjCSubstitutionContext::Result);
+    ResultType =
+        ResultType.substObjCTypeArgs(BlockDecl->getASTContext(), *ObjCSubsts,
+                                     ObjCSubstitutionContext::Result);
   if (!ResultType->isVoidType() || SuppressBlock)
     ResultType.getAsStringInternal(Result, Policy);
 
@@ -2281,31 +2320,30 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
         Params += ", ";
       Params += FormatFunctionParameter(Policy, Block.getParam(I),
                                         /*SuppressName=*/false,
-                                        /*SuppressBlock=*/true,
-                                        ObjCSubsts);
+                                        /*SuppressBlock=*/true, ObjCSubsts);
 
       if (I == N - 1 && BlockProto.getTypePtr()->isVariadic())
         Params += ", ...";
     }
     Params += ")";
   }
-  
+
   if (SuppressBlock) {
     // Format as a parameter.
     Result = Result + " (^";
-    if (Param->getIdentifier())
-      Result += Param->getIdentifier()->getName();
+    if (!SuppressBlockName && BlockDecl->getIdentifier())
+      Result += BlockDecl->getIdentifier()->getName();
     Result += ")";
     Result += Params;
   } else {
     // Format as a block literal argument.
     Result = '^' + Result;
     Result += Params;
-    
-    if (Param->getIdentifier())
-      Result += Param->getIdentifier()->getName();
+
+    if (!SuppressBlockName && BlockDecl->getIdentifier())
+      Result += BlockDecl->getIdentifier()->getName();
   }
-  
+
   return Result;
 }
 
@@ -3575,21 +3613,59 @@ static ObjCContainerDecl *getContainerDef(ObjCContainerDecl *Container) {
 
 static void AddObjCProperties(const CodeCompletionContext &CCContext,
                               ObjCContainerDecl *Container,
-                              bool AllowCategories,
-                              bool AllowNullaryMethods,
+                              bool AllowCategories, bool AllowNullaryMethods,
                               DeclContext *CurContext,
                               AddedPropertiesSet &AddedProperties,
-                              ResultBuilder &Results) {
+                              ResultBuilder &Results,
+                              bool IsBaseExprStatement = false) {
   typedef CodeCompletionResult Result;
 
   // Retrieve the definition.
   Container = getContainerDef(Container);
   
   // Add properties in this container.
-  for (const auto *P : Container->instance_properties())
-    if (AddedProperties.insert(P->getIdentifier()).second)
-      Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
-                             CurContext);
+  for (const auto *P : Container->instance_properties()) {
+    if (!AddedProperties.insert(P->getIdentifier()).second)
+      continue;
+
+    Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
+                           CurContext);
+
+    // Provide additional block setter completion iff the base expression is a
+    // statement.
+    if (!P->isReadOnly() && IsBaseExprStatement &&
+        P->getType().getTypePtr()->isBlockPointerType()) {
+      FunctionTypeLoc BlockLoc;
+      FunctionProtoTypeLoc BlockProtoLoc;
+      findTypeLocationForBlockDecl(P->getTypeSourceInfo(), BlockLoc,
+                                   BlockProtoLoc);
+
+      // Provide block setter completion only when we are able to find
+      // the FunctionProtoTypeLoc with parameter names for the block.
+      if (BlockLoc) {
+        CodeCompletionBuilder Builder(Results.getAllocator(),
+                                      Results.getCodeCompletionTUInfo());
+        AddResultTypeChunk(Container->getASTContext(),
+                           getCompletionPrintingPolicy(Results.getSema()), P,
+                           CCContext.getBaseType(), Builder);
+        Builder.AddTypedTextChunk(
+            Results.getAllocator().CopyString(P->getName()));
+        Builder.AddChunk(CodeCompletionString::CK_Equal);
+
+        std::string PlaceholderStr = formatBlockPlaceholder(
+            getCompletionPrintingPolicy(Results.getSema()), P, BlockLoc,
+            BlockProtoLoc, /*SuppressBlockName=*/true);
+        // Add the placeholder string.
+        Builder.AddPlaceholderChunk(
+            Builder.getAllocator().CopyString(PlaceholderStr));
+
+        Results.MaybeAddResult(
+            Result(Builder.TakeString(), P,
+                   Results.getBasePriority(P) + CCD_BlockPropertySetter),
+            CurContext);
+      }
+    }
+  }
 
   // Add nullary methods
   if (AllowNullaryMethods) {
@@ -3618,37 +3694,41 @@ static void AddObjCProperties(const CodeCompletionContext &CCContext,
   if (ObjCProtocolDecl *Protocol = dyn_cast<ObjCProtocolDecl>(Container)) {
     for (auto *P : Protocol->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
-                        CurContext, AddedProperties, Results);
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
   } else if (ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Container)){
     if (AllowCategories) {
       // Look through categories.
       for (auto *Cat : IFace->known_categories())
         AddObjCProperties(CCContext, Cat, AllowCategories, AllowNullaryMethods,
-                          CurContext, AddedProperties, Results);
+                          CurContext, AddedProperties, Results,
+                          IsBaseExprStatement);
     }
 
     // Look through protocols.
     for (auto *I : IFace->all_referenced_protocols())
       AddObjCProperties(CCContext, I, AllowCategories, AllowNullaryMethods,
-                        CurContext, AddedProperties, Results);
-    
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
+
     // Look in the superclass.
     if (IFace->getSuperClass())
       AddObjCProperties(CCContext, IFace->getSuperClass(), AllowCategories,
-                        AllowNullaryMethods, CurContext, 
-                        AddedProperties, Results);
+                        AllowNullaryMethods, CurContext, AddedProperties,
+                        Results, IsBaseExprStatement);
   } else if (const ObjCCategoryDecl *Category
                                     = dyn_cast<ObjCCategoryDecl>(Container)) {
     // Look through protocols.
     for (auto *P : Category->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
-                        CurContext, AddedProperties, Results);
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
   }
 }
 
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
-                                           SourceLocation OpLoc,
-                                           bool IsArrow) {
+                                           SourceLocation OpLoc, bool IsArrow,
+                                           bool IsBaseExprStatement) {
   if (!Base || !CodeCompleter)
     return;
   
@@ -3730,13 +3810,14 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       assert(ObjCPtr && "Non-NULL pointer guaranteed above!");
       AddObjCProperties(CCContext, ObjCPtr->getInterfaceDecl(), true,
                         /*AllowNullaryMethods=*/true, CurContext,
-                        AddedProperties, Results);
+                        AddedProperties, Results, IsBaseExprStatement);
     }
 
     // Add properties from the protocols in a qualified interface.
     for (auto *I : BaseType->getAs<ObjCObjectPointerType>()->quals())
       AddObjCProperties(CCContext, I, true, /*AllowNullaryMethods=*/true,
-                        CurContext, AddedProperties, Results);
+                        CurContext, AddedProperties, Results,
+                        IsBaseExprStatement);
   } else if ((IsArrow && BaseType->isObjCObjectPointerType()) ||
              (!IsArrow && BaseType->isObjCObjectType())) {
     // Objective-C instance variable access.
