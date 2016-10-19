@@ -123,7 +123,7 @@ namespace llvm {
     /// \param AlignInBits Type alignment.
     /// \param Encoding    DWARF encoding code, e.g. dwarf::DW_ATE_float.
     DIBasicType *createBasicType(StringRef Name, uint64_t SizeInBits,
-                                 uint64_t AlignInBits, unsigned Encoding);
+                                 uint32_t AlignInBits, unsigned Encoding);
 
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.
@@ -137,7 +137,7 @@ namespace llvm {
     /// \param AlignInBits Alignment. (optional)
     /// \param Name        Pointer type name. (optional)
     DIDerivedType *createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
-                                     uint64_t AlignInBits = 0,
+                                     uint32_t AlignInBits = 0,
                                      StringRef Name = "");
 
     /// Create debugging information entry for a pointer to member.
@@ -147,14 +147,14 @@ namespace llvm {
     /// \param Class Type for which this pointer points to members of.
     DIDerivedType *
     createMemberPointerType(DIType *PointeeTy, DIType *Class,
-                            uint64_t SizeInBits, uint64_t AlignInBits = 0,
+                            uint64_t SizeInBits, uint32_t AlignInBits = 0,
                             DINode::DIFlags Flags = DINode::FlagZero);
 
     /// Create debugging information entry for a c++
     /// style reference or rvalue reference type.
     DIDerivedType *createReferenceType(unsigned Tag, DIType *RTy,
                                        uint64_t SizeInBits = 0,
-                                       uint64_t AlignInBits = 0);
+                                       uint32_t AlignInBits = 0);
 
     /// Create debugging information entry for a typedef.
     /// \param Ty          Original type.
@@ -191,7 +191,8 @@ namespace llvm {
     /// \param Ty           Parent type.
     DIDerivedType *createMemberType(DIScope *Scope, StringRef Name,
                                     DIFile *File, unsigned LineNo,
-                                    uint64_t SizeInBits, uint64_t AlignInBits,
+                                    uint64_t SizeInBits,
+                                    uint32_t AlignInBits,
                                     uint64_t OffsetInBits,
                                     DINode::DIFlags Flags, DIType *Ty);
 
@@ -208,7 +209,7 @@ namespace llvm {
     /// \param Ty                  Parent type.
     DIDerivedType *createBitFieldMemberType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
-        uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+        uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
         uint64_t StorageOffsetInBits, DINode::DIFlags Flags, DIType *Ty);
 
     /// Create debugging information entry for a
@@ -237,7 +238,7 @@ namespace llvm {
     /// \param Ty           Parent type.
     /// \param PropertyNode Property associated with this ivar.
     DIDerivedType *createObjCIVar(StringRef Name, DIFile *File, unsigned LineNo,
-                                  uint64_t SizeInBits, uint64_t AlignInBits,
+                                  uint64_t SizeInBits, uint32_t AlignInBits,
                                   uint64_t OffsetInBits, DINode::DIFlags Flags,
                                   DIType *Ty, MDNode *PropertyNode);
 
@@ -274,7 +275,7 @@ namespace llvm {
     /// \param UniqueIdentifier A unique identifier for the class.
     DICompositeType *createClassType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
-        uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+        uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
         DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
         DIType *VTableHolder = nullptr, MDNode *TemplateParms = nullptr,
         StringRef UniqueIdentifier = "");
@@ -292,7 +293,7 @@ namespace llvm {
     /// \param UniqueIdentifier A unique identifier for the struct.
     DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
-        uint64_t SizeInBits, uint64_t AlignInBits, DINode::DIFlags Flags,
+        uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
         DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "");
 
@@ -309,7 +310,7 @@ namespace llvm {
     /// \param UniqueIdentifier A unique identifier for the union.
     DICompositeType *createUnionType(DIScope *Scope, StringRef Name,
                                      DIFile *File, unsigned LineNumber,
-                                     uint64_t SizeInBits, uint64_t AlignInBits,
+                                     uint64_t SizeInBits, uint32_t AlignInBits,
                                      DINode::DIFlags Flags,
                                      DINodeArray Elements,
                                      unsigned RunTimeLang = 0,
@@ -359,7 +360,7 @@ namespace llvm {
     /// \param AlignInBits  Alignment.
     /// \param Ty           Element type.
     /// \param Subscripts   Subscripts.
-    DICompositeType *createArrayType(uint64_t Size, uint64_t AlignInBits,
+    DICompositeType *createArrayType(uint64_t Size, uint32_t AlignInBits,
                                      DIType *Ty, DINodeArray Subscripts);
 
     /// Create debugging information entry for a vector type.
@@ -367,7 +368,7 @@ namespace llvm {
     /// \param AlignInBits  Alignment.
     /// \param Ty           Element type.
     /// \param Subscripts   Subscripts.
-    DICompositeType *createVectorType(uint64_t Size, uint64_t AlignInBits,
+    DICompositeType *createVectorType(uint64_t Size, uint32_t AlignInBits,
                                       DIType *Ty, DINodeArray Subscripts);
 
     /// Create debugging information entry for an
@@ -383,7 +384,7 @@ namespace llvm {
     /// \param UniqueIdentifier A unique identifier for the enum.
     DICompositeType *createEnumerationType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
-        uint64_t SizeInBits, uint64_t AlignInBits, DINodeArray Elements,
+        uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
         DIType *UnderlyingType, StringRef UniqueIdentifier = "");
 
     /// Create subroutine type.
@@ -416,14 +417,14 @@ namespace llvm {
                                        DIScope *Scope, DIFile *F, unsigned Line,
                                        unsigned RuntimeLang = 0,
                                        uint64_t SizeInBits = 0,
-                                       uint64_t AlignInBits = 0,
+                                       uint32_t AlignInBits = 0,
                                        StringRef UniqueIdentifier = "");
 
     /// Create a temporary forward-declared type.
     DICompositeType *createReplaceableCompositeType(
         unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F, unsigned Line,
         unsigned RuntimeLang = 0, uint64_t SizeInBits = 0,
-        uint64_t AlignInBits = 0, DINode::DIFlags Flags = DINode::FlagFwdDecl,
+        uint32_t AlignInBits = 0, DINode::DIFlags Flags = DINode::FlagFwdDecl,
         StringRef UniqueIdentifier = "");
 
     /// Retain DIScope* in a module even if it is not referenced

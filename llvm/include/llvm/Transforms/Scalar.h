@@ -519,6 +519,12 @@ FunctionPass *createLoopDataPrefetchPass();
 ///===---------------------------------------------------------------------===//
 ModulePass *createNameAnonGlobalPass();
 
+//===----------------------------------------------------------------------===//
+//
+// LibCallsShrinkWrap - Shrink-wraps a call to function if the result is not
+// used.
+//
+FunctionPass *createLibCallsShrinkWrapPass();
 } // End llvm namespace
 
 #endif

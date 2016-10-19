@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Transforms/Utils/ASanStackFrameLayout.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -60,9 +62,6 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
     Vars[i].Alignment = std::max(Vars[i].Alignment, kMinAlignment);
 
   std::stable_sort(Vars.begin(), Vars.end(), CompareVars);
-  SmallString<2048> StackDescriptionStorage;
-  raw_svector_ostream StackDescription(StackDescriptionStorage);
-  StackDescription << NumVars;
 
   ASanStackFrameLayout Layout;
   Layout.Granularity = Granularity;
@@ -75,28 +74,40 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
     size_t Alignment = std::max(Granularity, Vars[i].Alignment);
     (void)Alignment;  // Used only in asserts.
     size_t Size = Vars[i].Size;
-    const char *Name = Vars[i].Name;
     assert((Alignment & (Alignment - 1)) == 0);
     assert(Layout.FrameAlignment >= Alignment);
     assert((Offset % Alignment) == 0);
     assert(Size > 0);
-    assert(Vars[i].LifetimeSize <= Size);
-    StackDescription << " " << Offset << " " << Size << " " << strlen(Name)
-                     << " " << Name;
     size_t NextAlignment = IsLast ? Granularity
                    : std::max(Granularity, Vars[i + 1].Alignment);
-    size_t SizeWithRedzone = VarAndRedzoneSize(Vars[i].Size, NextAlignment);
+    size_t SizeWithRedzone = VarAndRedzoneSize(Size, NextAlignment);
     Vars[i].Offset = Offset;
     Offset += SizeWithRedzone;
   }
   if (Offset % MinHeaderSize) {
     Offset += MinHeaderSize - (Offset % MinHeaderSize);
   }
-  Layout.DescriptionString = StackDescription.str();
   Layout.FrameSize = Offset;
   assert((Layout.FrameSize % MinHeaderSize) == 0);
-
   return Layout;
+}
+
+SmallString<64> ComputeASanStackFrameDescription(
+    const SmallVectorImpl<ASanStackVariableDescription> &Vars) {
+  SmallString<2048> StackDescriptionStorage;
+  raw_svector_ostream StackDescription(StackDescriptionStorage);
+  StackDescription << Vars.size();
+
+  for (const auto &Var : Vars) {
+    std::string Name = Var.Name;
+    if (Var.Line) {
+      Name += ":";
+      Name += to_string(Var.Line);
+    }
+    StackDescription << " " << Var.Offset << " " << Var.Size << " "
+                     << Name.size() << " " << Name;
+  }
+  return StackDescription.str();
 }
 
 SmallVector<uint8_t, 64>
@@ -125,6 +136,7 @@ SmallVector<uint8_t, 64> GetShadowBytesAfterScope(
   const size_t Granularity = Layout.Granularity;
 
   for (const auto &Var : Vars) {
+    assert(Var.LifetimeSize <= Var.Size);
     const size_t LifetimeShadowSize =
         (Var.LifetimeSize + Granularity - 1) / Granularity;
     const size_t Offset = Var.Offset / Granularity;

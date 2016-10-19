@@ -997,9 +997,9 @@ TEST_F(DIBasicTypeTest, get) {
 
 TEST_F(DIBasicTypeTest, getWithLargeValues) {
   auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special",
-                             UINT64_MAX, UINT64_MAX - 1, 7);
+                             UINT64_MAX, UINT32_MAX - 1, 7);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
-  EXPECT_EQ(UINT64_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
 }
 
 TEST_F(DIBasicTypeTest, getUnspecified) {
@@ -1121,9 +1121,9 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
 
   auto *N = DIDerivedType::get(
       Context, dwarf::DW_TAG_pointer_type, "something", File, 1, Scope,
-      BaseType, UINT64_MAX, UINT64_MAX - 1, UINT64_MAX - 2, Flags, ExtraData);
+      BaseType, UINT64_MAX, UINT32_MAX - 1, UINT64_MAX - 2, Flags, ExtraData);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
-  EXPECT_EQ(UINT64_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
   EXPECT_EQ(UINT64_MAX - 2, N->getOffsetInBits());
 }
 
@@ -1137,7 +1137,7 @@ TEST_F(DICompositeTypeTest, get) {
   DIScope *Scope = getSubprogram();
   DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = 2;
-  uint64_t AlignInBits = 3;
+  uint32_t AlignInBits = 3;
   uint64_t OffsetInBits = 4;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   MDTuple *Elements = getTuple();
@@ -1257,7 +1257,7 @@ TEST_F(DICompositeTypeTest, getWithLargeValues) {
   DIScope *Scope = getSubprogram();
   DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = UINT64_MAX;
-  uint64_t AlignInBits = UINT64_MAX - 1;
+  uint32_t AlignInBits = UINT32_MAX - 1;
   uint64_t OffsetInBits = UINT64_MAX - 2;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   MDTuple *Elements = getTuple();
@@ -1283,7 +1283,7 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   DIScope *Scope = getSubprogram();
   DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = 2;
-  uint64_t AlignInBits = 3;
+  uint32_t AlignInBits = 3;
   uint64_t OffsetInBits = 4;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   unsigned RuntimeLang = 6;

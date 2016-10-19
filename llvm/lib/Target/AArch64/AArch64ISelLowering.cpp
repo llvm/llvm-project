@@ -4083,6 +4083,25 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
   // clean.  Some of them require two CSELs to implement.
   AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
+
+  if (DAG.getTarget().Options.UnsafeFPMath) {
+    // Transform "a == 0.0 ? 0.0 : x" to "a == 0.0 ? a : x" and
+    // "a != 0.0 ? x : 0.0" to "a != 0.0 ? x : a" to avoid materializing 0.0.
+    ConstantFPSDNode *RHSVal = dyn_cast<ConstantFPSDNode>(RHS);
+    if (RHSVal && RHSVal->isZero()) {
+      ConstantFPSDNode *CFVal = dyn_cast<ConstantFPSDNode>(FVal);
+      ConstantFPSDNode *CTVal = dyn_cast<ConstantFPSDNode>(TVal);
+
+      if ((CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETUEQ) &&
+          CTVal && CTVal->isZero())
+        TVal = LHS;
+      else if ((CC == ISD::SETNE || CC == ISD::SETONE || CC == ISD::SETUNE) &&
+               CFVal && CFVal->isZero())
+        FVal = LHS;
+    }
+  }
+
+  // Emit first, and possibly only, CSEL.
   SDValue CC1Val = DAG.getConstant(CC1, dl, MVT::i32);
   SDValue CS1 = DAG.getNode(AArch64ISD::CSEL, dl, VT, TVal, FVal, CC1Val, Cmp);
 

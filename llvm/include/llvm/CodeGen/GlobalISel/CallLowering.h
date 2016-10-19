@@ -29,7 +29,17 @@ class Value;
 
 class CallLowering {
   const TargetLowering *TLI;
- protected:
+public:
+  struct ArgInfo {
+    unsigned Reg;
+    Type *Ty;
+    ISD::ArgFlagsTy Flags;
+
+    ArgInfo(unsigned Reg, Type *Ty, ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{})
+        : Reg(Reg), Ty(Ty), Flags(Flags) {}
+  };
+
+protected:
   /// Getter for generic TargetLowering class.
   const TargetLowering *getTLI() const {
     return TLI;
@@ -41,14 +51,6 @@ class CallLowering {
     return static_cast<const XXXTargetLowering *>(TLI);
   }
 
-  struct ArgInfo {
-    unsigned Reg;
-    Type *Ty;
-    ISD::ArgFlagsTy Flags;
-
-    ArgInfo(unsigned Reg, Type *Ty, ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{})
-        : Reg(Reg), Ty(Ty), Flags(Flags) {}
-  };
 
   template <typename FuncInfoTy>
   void setArgFlags(ArgInfo &Arg, unsigned OpNum, const DataLayout &DL,

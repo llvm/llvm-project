@@ -62,8 +62,6 @@ static cl::opt<bool> LowerInterleavedAccesses(
     cl::desc("Enable lowering interleaved accesses to intrinsics"),
     cl::init(true), cl::Hidden);
 
-static unsigned MaxFactor; // The maximum supported interleave factor.
-
 namespace {
 
 class InterleavedAccess : public FunctionPass {
@@ -88,6 +86,9 @@ private:
   DominatorTree *DT;
   const TargetMachine *TM;
   const TargetLowering *TLI;
+
+  /// The maximum supported interleave factor.
+  unsigned MaxFactor;
 
   /// \brief Transform an interleaved load into target specific intrinsics.
   bool lowerInterleavedLoad(LoadInst *LI,
@@ -149,7 +150,7 @@ static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
 ///     <0, 2, 4, 6>    (mask of index 0 to extract even elements)
 ///     <1, 3, 5, 7>    (mask of index 1 to extract odd elements)
 static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
-                               unsigned &Index) {
+                               unsigned &Index, unsigned MaxFactor) {
   if (Mask.size() < 2)
     return false;
 
@@ -167,7 +168,8 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
 ///
 /// E.g. The RE-interleave mask (Factor = 2) could be:
 ///     <0, 4, 1, 5, 2, 6, 3, 7>
-static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor) {
+static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
+                               unsigned MaxFactor) {
   unsigned NumElts = Mask.size();
   if (NumElts < 4)
     return false;
@@ -229,7 +231,8 @@ bool InterleavedAccess::lowerInterleavedLoad(
   unsigned Factor, Index;
 
   // Check if the first shufflevector is DE-interleave shuffle.
-  if (!isDeInterleaveMask(Shuffles[0]->getShuffleMask(), Factor, Index))
+  if (!isDeInterleaveMask(Shuffles[0]->getShuffleMask(), Factor, Index,
+                          MaxFactor))
     return false;
 
   // Holds the corresponding index for each DE-interleave shuffle.
@@ -347,7 +350,7 @@ bool InterleavedAccess::lowerInterleavedStore(
 
   // Check if the shufflevector is RE-interleave shuffle.
   unsigned Factor;
-  if (!isReInterleaveMask(SVI->getShuffleMask(), Factor))
+  if (!isReInterleaveMask(SVI->getShuffleMask(), Factor, MaxFactor))
     return false;
 
   DEBUG(dbgs() << "IA: Found an interleaved store: " << *SI << "\n");

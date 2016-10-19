@@ -93,6 +93,8 @@ void SetSigIntHandler();
 void SetSigTermHandler();
 std::string Base64(const Unit &U);
 int ExecuteCommand(const std::string &Command);
+bool ExecuteCommandAndReadOutput(const std::string &Command, std::string *Out);
+
 size_t GetPeakRSSMb();
 
 // Private copy of SHA1 implementation.

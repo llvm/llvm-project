@@ -9,3 +9,4 @@ int DSO1(int a) {
   return 1;
 }
 
+void Uncovered1() { }

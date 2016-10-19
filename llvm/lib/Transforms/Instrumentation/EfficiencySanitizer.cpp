@@ -102,7 +102,7 @@ static const char *const EsanWhichToolName = "__esan_which_tool";
 struct ShadowMemoryParams {
   uint64_t ShadowMask;
   uint64_t ShadowOffs[3];
-} ShadowParams;
+};
 
 static const ShadowMemoryParams ShadowParams47 = {
     0x00000fffffffffffull,
@@ -230,6 +230,7 @@ private:
   // Remember the counter variable for each struct type to avoid
   // recomputing the variable name later during instrumentation.
   std::map<Type *, GlobalVariable *> StructTyMap;
+  ShadowMemoryParams ShadowParams;
 };
 } // namespace
 

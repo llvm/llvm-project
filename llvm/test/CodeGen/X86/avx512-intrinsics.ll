@@ -4515,8 +4515,8 @@ define <16 x float>@test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool(<16
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm2 = zmm0[2,3,0,1,7,6,5,4,9,8,11,10,12,13,14,15]
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 = zmm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm2 {%k1} = zmm0[2,3,0,1,7,6,5,4,9,8,11,10,12,13,14,15]
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} {z} = zmm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
 ; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
 ; CHECK-NEXT:    vaddps %zmm1, %zmm2, %zmm1
 ; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0

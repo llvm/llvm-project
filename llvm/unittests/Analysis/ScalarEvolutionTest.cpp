@@ -14,12 +14,16 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -327,6 +331,114 @@ TEST_F(ScalarEvolutionsTest, ExpandPtrTypeSCEV) {
   EXPECT_TRUE(isa<ConstantInt>(Gep->getOperand(1)));
   EXPECT_EQ(cast<ConstantInt>(Gep->getOperand(1))->getSExtValue(), -1);
   EXPECT_TRUE(isa<BitCastInst>(Gep->getPrevNode()));
+}
+
+static Instruction *getInstructionByName(Module &M, StringRef Name) {
+  for (auto &F : M)
+    for (auto &I : instructions(F))
+      if (I.getName() == Name)
+        return &I;
+  llvm_unreachable("Expected to find instruction!");
+}
+
+TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "target datalayout = \"e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128\" "
+      "define void @foo(i8* nocapture %arr, i32 %n, i32* %A, i32* %B) "
+      "    local_unnamed_addr { "
+      "entry: "
+      "  %entrycond = icmp sgt i32 %n, 0 "
+      "  br i1 %entrycond, label %loop.ph, label %for.end "
+      " "
+      "loop.ph: "
+      "  %a = load i32, i32* %A, align 4 "
+      "  %b = load i32, i32* %B, align 4 "
+      "  %mul = mul nsw i32 %b, %a "
+      "  %iv0.init = getelementptr inbounds i8, i8* %arr, i32 %mul "
+      "  br label %loop "
+      " "
+      "loop: "
+      "  %iv0 = phi i8* [ %iv0.inc, %loop ], [ %iv0.init, %loop.ph ] "
+      "  %iv1 = phi i32 [ %iv1.inc, %loop ], [ 0, %loop.ph ] "
+      "  %conv = trunc i32 %iv1 to i8 "
+      "  store i8 %conv, i8* %iv0, align 1 "
+      "  %iv0.inc = getelementptr inbounds i8, i8* %iv0, i32 %b "
+      "  %iv1.inc = add nuw nsw i32 %iv1, 1 "
+      "  %exitcond = icmp eq i32 %iv1.inc, %n "
+      "  br i1 %exitcond, label %for.end.loopexit, label %loop "
+      " "
+      "for.end.loopexit: "
+      "  br label %for.end "
+      " "
+      "for.end: "
+      "  ret void "
+      "} "
+      " "
+      "define void @bar(i32* %X, i32* %Y, i32* %Z) { "
+      "  %x = load i32, i32* %X "
+      "  %y = load i32, i32* %Y "
+      "  %z = load i32, i32* %Z "
+      "  ret void "
+      "} ",
+      Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  {
+    auto *IV0 = getInstructionByName(*M, "iv0");
+    auto *IV0Inc = getInstructionByName(*M, "iv0.inc");
+
+    auto *F = M->getFunction("foo");
+    assert(F && "Expected!");
+
+    ScalarEvolution SE = buildSE(*F);
+    auto *FirstExprForIV0 = SE.getSCEV(IV0);
+    auto *FirstExprForIV0Inc = SE.getSCEV(IV0Inc);
+    auto *SecondExprForIV0 = SE.getSCEV(IV0);
+
+    EXPECT_TRUE(isa<SCEVAddRecExpr>(FirstExprForIV0));
+    EXPECT_TRUE(isa<SCEVAddRecExpr>(FirstExprForIV0Inc));
+    EXPECT_TRUE(isa<SCEVAddRecExpr>(SecondExprForIV0));
+  }
+
+  {
+    auto *F = M->getFunction("bar");
+    assert(F && "Expected!");
+
+    ScalarEvolution SE = buildSE(*F);
+
+    auto *LoadArg0 = SE.getSCEV(getInstructionByName(*M, "x"));
+    auto *LoadArg1 = SE.getSCEV(getInstructionByName(*M, "y"));
+    auto *LoadArg2 = SE.getSCEV(getInstructionByName(*M, "z"));
+
+    auto *MulA = SE.getMulExpr(LoadArg0, LoadArg1);
+    auto *MulB = SE.getMulExpr(LoadArg1, LoadArg0);
+
+    EXPECT_EQ(MulA, MulB);
+
+    SmallVector<const SCEV *, 3> Ops0 = { LoadArg0, LoadArg1, LoadArg2 };
+    SmallVector<const SCEV *, 3> Ops1 = { LoadArg0, LoadArg2, LoadArg1 };
+    SmallVector<const SCEV *, 3> Ops2 = { LoadArg1, LoadArg0, LoadArg2 };
+    SmallVector<const SCEV *, 3> Ops3 = { LoadArg1, LoadArg2, LoadArg0 };
+    SmallVector<const SCEV *, 3> Ops4 = { LoadArg2, LoadArg1, LoadArg0 };
+    SmallVector<const SCEV *, 3> Ops5 = { LoadArg2, LoadArg0, LoadArg1 };
+
+    auto *Mul0 = SE.getMulExpr(Ops0);
+    auto *Mul1 = SE.getMulExpr(Ops1);
+    auto *Mul2 = SE.getMulExpr(Ops2);
+    auto *Mul3 = SE.getMulExpr(Ops3);
+    auto *Mul4 = SE.getMulExpr(Ops4);
+    auto *Mul5 = SE.getMulExpr(Ops5);
+
+    EXPECT_EQ(Mul0, Mul1);
+    EXPECT_EQ(Mul1, Mul2);
+    EXPECT_EQ(Mul2, Mul3);
+    EXPECT_EQ(Mul3, Mul4);
+    EXPECT_EQ(Mul4, Mul5);
+  }
 }
 
 }  // end anonymous namespace

@@ -123,8 +123,13 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
                                unsigned OpSize) {
   switch (RegBankID) {
   case AArch64::GPRRegBankID:
-    switch (OpSize) {
-    case 32:
+    if (OpSize <= 32) {
+      assert((OpSize == 32 || (GenericOpc != TargetOpcode::G_SDIV &&
+                               GenericOpc != TargetOpcode::G_UDIV &&
+                               GenericOpc != TargetOpcode::G_LSHR &&
+                               GenericOpc != TargetOpcode::G_ASHR)) &&
+             "operation should have been legalized before now");
+
       switch (GenericOpc) {
       case TargetOpcode::G_OR:
         return AArch64::ORRWrr;
@@ -149,7 +154,7 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       default:
         return GenericOpc;
       }
-    case 64:
+    } else if (OpSize == 64) {
       switch (GenericOpc) {
       case TargetOpcode::G_OR:
         return AArch64::ORRXrr;
@@ -513,14 +518,81 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_CONSTANT: {
-    if (Ty.getSizeInBits() <= 32)
-      I.setDesc(TII.get(AArch64::MOVi32imm));
-    else if (Ty.getSizeInBits() <= 64)
-      I.setDesc(TII.get(AArch64::MOVi64imm));
-    else
-      return false;
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
+
+    const LLT s32 = LLT::scalar(32);
+    const LLT s64 = LLT::scalar(64);
+    const LLT p0 = LLT::pointer(0, 64);
+
+    const unsigned DefReg = I.getOperand(0).getReg();
+    const LLT DefTy = MRI.getType(DefReg);
+    const unsigned DefSize = DefTy.getSizeInBits();
+    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+
+    // FIXME: Redundant check, but even less readable when factored out.
+    if (isFP) {
+      if (Ty != s32 && Ty != s64) {
+        DEBUG(dbgs() << "Unable to materialize FP " << Ty
+                     << " constant, expected: " << s32 << " or " << s64
+                     << '\n');
+        return false;
+      }
+
+      if (RB.getID() != AArch64::FPRRegBankID) {
+        DEBUG(dbgs() << "Unable to materialize FP " << Ty
+                     << " constant on bank: " << RB << ", expected: FPR\n");
+        return false;
+      }
+    } else {
+      if (Ty != s32 && Ty != s64 && Ty != p0) {
+        DEBUG(dbgs() << "Unable to materialize integer " << Ty
+                     << " constant, expected: " << s32 << ", " << s64 << ", or "
+                     << p0 << '\n');
+        return false;
+      }
+
+      if (RB.getID() != AArch64::GPRRegBankID) {
+        DEBUG(dbgs() << "Unable to materialize integer " << Ty
+                     << " constant on bank: " << RB << ", expected: GPR\n");
+        return false;
+      }
+    }
+
+    const unsigned MovOpc =
+        DefSize == 32 ? AArch64::MOVi32imm : AArch64::MOVi64imm;
+
+    I.setDesc(TII.get(MovOpc));
+
+    if (isFP) {
+      const TargetRegisterClass &GPRRC =
+          DefSize == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
+      const TargetRegisterClass &FPRRC =
+          DefSize == 32 ? AArch64::FPR32RegClass : AArch64::FPR64RegClass;
+
+      const unsigned DefGPRReg = MRI.createVirtualRegister(&GPRRC);
+      MachineOperand &RegOp = I.getOperand(0);
+      RegOp.setReg(DefGPRReg);
+
+      BuildMI(MBB, std::next(I.getIterator()), I.getDebugLoc(),
+              TII.get(AArch64::COPY))
+          .addDef(DefReg)
+          .addUse(DefGPRReg);
+
+      if (!RBI.constrainGenericRegister(DefReg, FPRRC, MRI)) {
+        DEBUG(dbgs() << "Failed to constrain G_FCONSTANT def operand\n");
+        return false;
+      }
+
+      MachineOperand &ImmOp = I.getOperand(1);
+      // FIXME: Is going through int64_t always correct?
+      ImmOp.ChangeToImmediate(
+          ImmOp.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
+    }
+
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_FRAME_INDEX: {
@@ -609,7 +681,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     unsigned ZeroReg;
     unsigned NewOpc;
-    if (Ty == LLT::scalar(32)) {
+    if (Ty.isScalar() && Ty.getSizeInBits() <= 32) {
       NewOpc = AArch64::MADDWrrr;
       ZeroReg = AArch64::WZR;
     } else if (Ty == LLT::scalar(64)) {

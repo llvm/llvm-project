@@ -759,9 +759,11 @@ private:
 
   /// Parses AVX512 specific operand primitives: masked registers ({%k<NUM>}, {z})
   /// and memory broadcasting ({1to<NUM>}) primitives, updating Operands vector if required.
-  /// \return \c true if no parsing errors occurred, \c false otherwise.
+  /// return false if no parsing errors occurred, true otherwise.
   bool HandleAVX512Operand(OperandVector &Operands,
                            const MCParsedAsmOperand &Op);
+
+  bool ParseZ(std::unique_ptr<X86Operand> &Z, const SMLoc &StartLoc);
 
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
@@ -1907,6 +1909,28 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
   }
 }
 
+// true on failure, false otherwise
+// If no {z} mark was found - Parser doesn't advance
+bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
+                          const SMLoc &StartLoc) {
+  MCAsmParser &Parser = getParser();
+  // Assuming we are just pass the '{' mark, quering the next token
+  // Searched for {z}, but none was found. Return true, as no parsing error was
+  // encountered
+  if (!(getLexer().is(AsmToken::Identifier) &&
+        (getLexer().getTok().getIdentifier() == "z")))
+    return false;
+  Parser.Lex(); // Eat z
+  // Query and eat the '}' mark
+  if (!getLexer().is(AsmToken::RCurly))
+    return Error(getLexer().getLoc(), "Expected } at this point");
+  Parser.Lex(); // Eat '}'
+  // Assign Z with the {z} mark opernad
+  Z.reset(X86Operand::CreateToken("{z}", StartLoc).release());
+  return false;
+}
+
+// true on failure, false otherwise
 bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
                                        const MCParsedAsmOperand &Op) {
   MCAsmParser &Parser = getParser();
@@ -1918,11 +1942,11 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
       if(getLexer().is(AsmToken::Integer)) {
         // Parse memory broadcasting ({1to<NUM>}).
         if (getLexer().getTok().getIntVal() != 1)
-          return !TokError("Expected 1to<NUM> at this point");
+          return TokError("Expected 1to<NUM> at this point");
         Parser.Lex();  // Eat "1" of 1to8
         if (!getLexer().is(AsmToken::Identifier) ||
             !getLexer().getTok().getIdentifier().startswith("to"))
-          return !TokError("Expected 1to<NUM> at this point");
+          return TokError("Expected 1to<NUM> at this point");
         // Recognize only reasonable suffixes.
         const char *BroadcastPrimitive =
           StringSwitch<const char*>(getLexer().getTok().getIdentifier())
@@ -1932,41 +1956,57 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
             .Case("to16", "{1to16}")
             .Default(nullptr);
         if (!BroadcastPrimitive)
-          return !TokError("Invalid memory broadcast primitive.");
+          return TokError("Invalid memory broadcast primitive.");
         Parser.Lex();  // Eat "toN" of 1toN
         if (!getLexer().is(AsmToken::RCurly))
-          return !TokError("Expected } at this point");
+          return TokError("Expected } at this point");
         Parser.Lex();  // Eat "}"
         Operands.push_back(X86Operand::CreateToken(BroadcastPrimitive,
                                                    consumedToken));
         // No AVX512 specific primitives can pass
         // after memory broadcasting, so return.
-        return true;
+        return false;
       } else {
-        // Parse mask register {%k1}
-        Operands.push_back(X86Operand::CreateToken("{", consumedToken));
-        if (std::unique_ptr<X86Operand> Op = ParseOperand()) {
-          Operands.push_back(std::move(Op));
-          if (!getLexer().is(AsmToken::RCurly))
-            return !TokError("Expected } at this point");
-          Operands.push_back(X86Operand::CreateToken("}", consumeToken()));
-
-          // Parse "zeroing non-masked" semantic {z}
-          if (getLexer().is(AsmToken::LCurly)) {
-            Operands.push_back(X86Operand::CreateToken("{z}", consumeToken()));
-            if (!getLexer().is(AsmToken::Identifier) ||
-                getLexer().getTok().getIdentifier() != "z")
-              return !TokError("Expected z at this point");
-            Parser.Lex();  // Eat the z
+        // Parse either {k}{z}, {z}{k}, {k} or {z}
+        // last one have no meaning, but GCC accepts it
+        // Currently, we're just pass a '{' mark
+        std::unique_ptr<X86Operand> Z;
+        if (ParseZ(Z, consumedToken))
+          return true;
+        // Reaching here means that parsing of the allegadly '{z}' mark yielded
+        // no errors.
+        // Query for the need of further parsing for a {%k<NUM>} mark
+        if (!Z || getLexer().is(AsmToken::LCurly)) {
+          const SMLoc StartLoc = Z ? consumeToken() : consumedToken;
+          // Parse an op-mask register mark ({%k<NUM>}), which is now to be
+          // expected
+          if (std::unique_ptr<X86Operand> Op = ParseOperand()) {
             if (!getLexer().is(AsmToken::RCurly))
-              return !TokError("Expected } at this point");
-            Parser.Lex();  // Eat the }
+              return Error(getLexer().getLoc(), "Expected } at this point");
+            Operands.push_back(X86Operand::CreateToken("{", StartLoc));
+            Operands.push_back(std::move(Op));
+            Operands.push_back(X86Operand::CreateToken("}", consumeToken()));
+          } else
+            return Error(getLexer().getLoc(),
+                          "Expected an op-mask register at this point");
+          // {%k<NUM>} mark is found, inquire for {z}
+          if (getLexer().is(AsmToken::LCurly) && !Z) {
+            // Have we've found a parsing error, or found no (expected) {z} mark
+            // - report an error
+            if (ParseZ(Z, consumeToken()) || !Z)
+              return true;
+
           }
+          // '{z}' on its own is meaningless, hence should be ignored.
+          // on the contrary - have it been accompanied by a K register,
+          // allow it.
+          if (Z)
+            Operands.push_back(std::move(Z));
         }
       }
     }
   }
-  return true;
+  return false;
 }
 
 /// ParseMemOperand: segment: disp(basereg, indexreg, scale).  The '%ds:' prefix
@@ -2323,7 +2363,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     while(1) {
       if (std::unique_ptr<X86Operand> Op = ParseOperand()) {
         Operands.push_back(std::move(Op));
-        if (!HandleAVX512Operand(Operands, *Operands.back()))
+        if (HandleAVX512Operand(Operands, *Operands.back()))
           return true;
       } else {
          return true;

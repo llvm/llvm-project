@@ -73,11 +73,12 @@ static MCInstPrinter *createLanaiMCInstPrinter(const Triple & /*T*/,
   return 0;
 }
 
-MCRelocationInfo *createLanaiElfRelocation(const Triple &TheTriple,
-                                           MCContext &Ctx) {
+static MCRelocationInfo *createLanaiElfRelocation(const Triple &TheTriple,
+                                                  MCContext &Ctx) {
   return createMCRelocationInfo(TheTriple, Ctx);
 }
 
+namespace {
 class LanaiMCInstrAnalysis : public MCInstrAnalysis {
 public:
   explicit LanaiMCInstrAnalysis(const MCInstrInfo *Info)
@@ -106,6 +107,7 @@ public:
     }
   }
 };
+} // end anonymous namespace
 
 static MCInstrAnalysis *createLanaiInstrAnalysis(const MCInstrInfo *Info) {
   return new LanaiMCInstrAnalysis(Info);
