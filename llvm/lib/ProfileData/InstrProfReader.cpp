@@ -46,6 +46,9 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
   if (Buffer->getBufferSize() > std::numeric_limits<unsigned>::max())
     return make_error<InstrProfError>(instrprof_error::too_large);
 
+  if (Buffer->getBufferSize() == 0)
+    return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
+
   std::unique_ptr<InstrProfReader> Result;
   // Create the reader.
   if (IndexedInstrProfReader::hasFormat(*Buffer))
