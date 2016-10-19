@@ -337,11 +337,42 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
          OpType == AMDGPU::OPERAND_REG_INLINE_C_FP;
 }
 
+// Avoid using MCRegisterClass::getSize, since that function will go away
+// (move from MC* level to Target* level). Return size in bits.
+unsigned getRegBitWidth(const MCRegisterClass &RC) {
+  switch (RC.getID()) {
+  case AMDGPU::SGPR_32RegClassID:
+  case AMDGPU::VGPR_32RegClassID:
+  case AMDGPU::VS_32RegClassID:
+  case AMDGPU::SReg_32RegClassID:
+  case AMDGPU::SReg_32_XM0RegClassID:
+    return 32;
+  case AMDGPU::SGPR_64RegClassID:
+  case AMDGPU::VS_64RegClassID:
+  case AMDGPU::SReg_64RegClassID:
+  case AMDGPU::VReg_64RegClassID:
+    return 64;
+  case AMDGPU::VReg_96RegClassID:
+    return 96;
+  case AMDGPU::SGPR_128RegClassID:
+  case AMDGPU::SReg_128RegClassID:
+  case AMDGPU::VReg_128RegClassID:
+    return 128;
+  case AMDGPU::SReg_256RegClassID:
+  case AMDGPU::VReg_256RegClassID:
+    return 256;
+  case AMDGPU::SReg_512RegClassID:
+  case AMDGPU::VReg_512RegClassID:
+    return 512;
+  default:
+    llvm_unreachable("Unexpected register class");
+  }
+}
+
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
-  int RCID = Desc.OpInfo[OpNo].RegClass;
-  const MCRegisterClass &RC = MRI->getRegClass(RCID);
-  return RC.getSize();
+  unsigned RCID = Desc.OpInfo[OpNo].RegClass;
+  return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
 
 bool isInlinableLiteral64(int64_t Literal, bool IsVI) {

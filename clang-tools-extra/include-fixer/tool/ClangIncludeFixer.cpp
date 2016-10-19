@@ -416,7 +416,7 @@ int includeFixerMain(int argc, const char **argv) {
 
   // Write replacements to disk.
   Rewriter Rewrites(SM, LangOptions());
-  for (const auto Replacement : FixerReplacements) {
+  for (const auto &Replacement : FixerReplacements) {
     if (!tooling::applyAllReplacements(Replacement, Rewrites)) {
       llvm::errs() << "Failed to apply replacements.\n";
       return 1;

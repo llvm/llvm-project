@@ -403,10 +403,10 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     int RCID = Desc.OpInfo[OpNo].RegClass;
     if (RCID != -1) {
-      const MCRegisterClass &ImmRC = MRI.getRegClass(RCID);
-      if (ImmRC.getSize() == 4)
+      unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
+      if (RCBits == 32)
         printImmediate32(Op.getImm(), O);
-      else if (ImmRC.getSize() == 8)
+      else if (RCBits == 64)
         printImmediate64(Op.getImm(), O);
       else
         llvm_unreachable("Invalid register class size");
@@ -424,11 +424,11 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       O << "0.0";
     else {
       const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-      const MCRegisterClass &ImmRC = MRI.getRegClass(Desc.OpInfo[OpNo].RegClass);
-
-      if (ImmRC.getSize() == 4)
+      int RCID = Desc.OpInfo[OpNo].RegClass;
+      unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
+      if (RCBits == 32)
         printImmediate32(FloatToBits(Op.getFPImm()), O);
-      else if (ImmRC.getSize() == 8)
+      else if (RCBits == 64)
         printImmediate64(DoubleToBits(Op.getFPImm()), O);
       else
         llvm_unreachable("Invalid register class size");

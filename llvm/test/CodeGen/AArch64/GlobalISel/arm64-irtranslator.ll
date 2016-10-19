@@ -271,14 +271,20 @@ define void @trunc(i64 %a) {
 ; CHECK: [[ADDR42:%[0-9]+]](p42) = COPY %x1
 ; CHECK: [[VAL1:%[0-9]+]](s64) = G_LOAD [[ADDR]](p0) :: (load 8 from %ir.addr, align 16)
 ; CHECK: [[VAL2:%[0-9]+]](s64) = G_LOAD [[ADDR42]](p42) :: (load 8 from %ir.addr42)
-; CHECK: [[SUM:%.*]](s64) = G_ADD [[VAL1]], [[VAL2]]
-; CHECK: %x0 = COPY [[SUM]]
+; CHECK: [[SUM2:%.*]](s64) = G_ADD [[VAL1]], [[VAL2]]
+; CHECK: [[VAL3:%[0-9]+]](s64) = G_LOAD [[ADDR]](p0) :: (volatile load 8 from %ir.addr)
+; CHECK: [[SUM3:%[0-9]+]](s64) = G_ADD [[SUM2]], [[VAL3]]
+; CHECK: %x0 = COPY [[SUM3]]
 ; CHECK: RET_ReallyLR implicit %x0
 define i64 @load(i64* %addr, i64 addrspace(42)* %addr42) {
   %val1 = load i64, i64* %addr, align 16
+
   %val2 = load i64, i64 addrspace(42)* %addr42
-  %sum = add i64 %val1, %val2
-  ret i64 %sum
+  %sum2 = add i64 %val1, %val2
+
+  %val3 = load volatile i64, i64* %addr
+  %sum3 = add i64 %sum2, %val3
+  ret i64 %sum3
 }
 
 ; CHECK-LABEL: name: store
@@ -288,10 +294,12 @@ define i64 @load(i64* %addr, i64 addrspace(42)* %addr42) {
 ; CHECK: [[VAL2:%[0-9]+]](s64) = COPY %x3
 ; CHECK: G_STORE [[VAL1]](s64), [[ADDR]](p0) :: (store 8 into %ir.addr, align 16)
 ; CHECK: G_STORE [[VAL2]](s64), [[ADDR42]](p42) :: (store 8 into %ir.addr42)
+; CHECK: G_STORE [[VAL1]](s64), [[ADDR]](p0) :: (volatile store 8 into %ir.addr)
 ; CHECK: RET_ReallyLR
 define void @store(i64* %addr, i64 addrspace(42)* %addr42, i64 %val1, i64 %val2) {
   store i64 %val1, i64* %addr, align 16
   store i64 %val2, i64 addrspace(42)* %addr42
+  store volatile i64 %val1, i64* %addr
   %sum = add i64 %val1, %val2
   ret void
 }

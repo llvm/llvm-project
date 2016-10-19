@@ -357,6 +357,32 @@ TEST_F(ConstantRangeTest, Add) {
             ConstantRange(APInt(16, 0xe)));
 }
 
+TEST_F(ConstantRangeTest, AddWithNoSignedWrap) {
+  EXPECT_EQ(Empty.addWithNoSignedWrap(APInt(16, 1)), Empty);
+  EXPECT_EQ(Full.addWithNoSignedWrap(APInt(16, 1)),
+            ConstantRange(APInt(16, INT16_MIN+1), APInt(16, INT16_MIN)));
+  EXPECT_EQ(ConstantRange(APInt(8, -50), APInt(8, 50)).addWithNoSignedWrap(APInt(8, 10)),
+            ConstantRange(APInt(8, -40), APInt(8, 60)));
+  EXPECT_EQ(ConstantRange(APInt(8, -50), APInt(8, 120)).addWithNoSignedWrap(APInt(8, 10)),
+            ConstantRange(APInt(8, -40), APInt(8, INT8_MIN)));
+  EXPECT_EQ(ConstantRange(APInt(8, 120), APInt(8, -10)).addWithNoSignedWrap(APInt(8, 5)),
+            ConstantRange(APInt(8, 125), APInt(8, -5)));
+  EXPECT_EQ(ConstantRange(APInt(8, 120), APInt(8, -120)).addWithNoSignedWrap(APInt(8, 10)),
+            ConstantRange(APInt(8, INT8_MIN+10), APInt(8, -110)));
+
+  EXPECT_EQ(Empty.addWithNoSignedWrap(APInt(16, -1)), Empty);
+  EXPECT_EQ(Full.addWithNoSignedWrap(APInt(16, -1)),
+            ConstantRange(APInt(16, INT16_MIN), APInt(16, INT16_MAX)));
+  EXPECT_EQ(ConstantRange(APInt(8, -50), APInt(8, 50)).addWithNoSignedWrap(APInt(8, -10)),
+            ConstantRange(APInt(8, -60), APInt(8, 40)));
+  EXPECT_EQ(ConstantRange(APInt(8, -120), APInt(8, 50)).addWithNoSignedWrap(APInt(8, -10)),
+            ConstantRange(APInt(8, INT8_MIN), APInt(8, 40)));
+  EXPECT_EQ(ConstantRange(APInt(8, 120), APInt(8, -120)).addWithNoSignedWrap(APInt(8, -5)),
+            ConstantRange(APInt(8, 115), APInt(8, -125)));
+  EXPECT_EQ(ConstantRange(APInt(8, 120), APInt(8, -120)).addWithNoSignedWrap(APInt(8, -10)),
+            ConstantRange(APInt(8, 110), APInt(8, INT8_MIN-10)));
+}
+
 TEST_F(ConstantRangeTest, Sub) {
   EXPECT_EQ(Full.sub(APInt(16, 4)), Full);
   EXPECT_EQ(Full.sub(Full), Full);

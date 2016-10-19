@@ -81,6 +81,11 @@ static cl::opt<ReplaceExitVal> ReplaceExitValue(
                clEnumValN(AlwaysRepl, "always",
                           "always replace exit value whenever possible")));
 
+static cl::opt<bool> UsePostIncrementRanges(
+  "indvars-post-increment-ranges", cl::Hidden,
+  cl::desc("Use post increment control-dependent ranges in IndVarSimplify"),
+  cl::init(true));
+
 namespace {
 struct RewritePhi;
 
@@ -887,6 +892,10 @@ class WidenIV {
   ScalarEvolution *SE;
   DominatorTree   *DT;
 
+  // Does the module have any calls to the llvm.experimental.guard intrinsic
+  // at all? If not we can avoid scanning instructions looking for guards.
+  bool HasGuards;
+
   // Result
   PHINode *WidePhi;
   Instruction *WideInc;
@@ -903,16 +912,44 @@ class WidenIV {
   // Value: the kind of extension used to widen this Instruction.
   DenseMap<AssertingVH<Instruction>, ExtendKind> ExtendKindMap;
 
+  typedef std::pair<AssertingVH<Value>, AssertingVH<Instruction>> DefUserPair;
+  // A map with control-dependent ranges for post increment IV uses. The key is
+  // a pair of IV def and a use of this def denoting the context. The value is
+  // a ConstantRange representing possible values of the def at the given
+  // context.
+  DenseMap<DefUserPair, ConstantRange> PostIncRangeInfos;
+
+  Optional<ConstantRange> getPostIncRangeInfo(Value *Def,
+                                              Instruction *UseI) {
+    DefUserPair Key(Def, UseI);
+    auto It = PostIncRangeInfos.find(Key);
+    return It == PostIncRangeInfos.end()
+               ? Optional<ConstantRange>(None)
+               : Optional<ConstantRange>(It->second);
+  }
+
+  void calculatePostIncRanges(PHINode *OrigPhi);
+  void calculatePostIncRange(Instruction *NarrowDef, Instruction *NarrowUser);
+  void updatePostIncRangeInfo(Value *Def, Instruction *UseI, ConstantRange R) {
+    DefUserPair Key(Def, UseI);
+    auto It = PostIncRangeInfos.find(Key);
+    if (It == PostIncRangeInfos.end())
+      PostIncRangeInfos.insert({Key, R});
+    else
+      It->second = R.intersectWith(It->second);
+  }
+
 public:
   WidenIV(const WideIVInfo &WI, LoopInfo *LInfo,
           ScalarEvolution *SEv, DominatorTree *DTree,
-          SmallVectorImpl<WeakVH> &DI) :
+          SmallVectorImpl<WeakVH> &DI, bool HasGuards) :
     OrigPhi(WI.NarrowIV),
     WideType(WI.WidestNativeType),
     LI(LInfo),
     L(LI->getLoopFor(OrigPhi->getParent())),
     SE(SEv),
     DT(DTree),
+    HasGuards(HasGuards),
     WidePhi(nullptr),
     WideInc(nullptr),
     WideIncExpr(nullptr),
@@ -1429,7 +1466,7 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
 ///
 void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
   const SCEV *NarrowSCEV = SE->getSCEV(NarrowDef);
-  bool NeverNegative =
+  bool NonNegativeDef =
       SE->isKnownPredicate(ICmpInst::ICMP_SGE, NarrowSCEV,
                            SE->getConstant(NarrowSCEV->getType(), 0));
   for (User *U : NarrowDef->users()) {
@@ -1439,7 +1476,15 @@ void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
     if (!Widened.insert(NarrowUser).second)
       continue;
 
-    NarrowIVUsers.emplace_back(NarrowDef, NarrowUser, WideDef, NeverNegative);
+    bool NonNegativeUse = false;
+    if (!NonNegativeDef) {
+      // We might have a control-dependent range information for this context.
+      if (auto RangeInfo = getPostIncRangeInfo(NarrowDef, NarrowUser))
+        NonNegativeUse = RangeInfo->getSignedMin().isNonNegative();
+    }
+
+    NarrowIVUsers.emplace_back(NarrowDef, NarrowUser, WideDef,
+                               NonNegativeDef || NonNegativeUse);
   }
 }
 
@@ -1478,6 +1523,19 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       SE->properlyDominates(AddRec->getStart(), L->getHeader()) &&
       SE->properlyDominates(AddRec->getStepRecurrence(*SE), L->getHeader()) &&
       "Loop header phi recurrence inputs do not dominate the loop");
+
+  // Iterate over IV uses (including transitive ones) looking for IV increments
+  // of the form 'add nsw %iv, <const>'. For each increment and each use of
+  // the increment calculate control-dependent range information basing on
+  // dominating conditions inside of the loop (e.g. a range check inside of the
+  // loop). Calculated ranges are stored in PostIncRangeInfos map.
+  //
+  // Control-dependent range information is later used to prove that a narrow
+  // definition is not negative (see pushNarrowIVUsers). It's difficult to do
+  // this on demand because when pushNarrowIVUsers needs this information some
+  // of the dominating conditions might be already widened.
+  if (UsePostIncrementRanges)
+    calculatePostIncRanges(OrigPhi);
 
   // The rewriter provides a value for the desired IV expression. This may
   // either find an existing phi or materialize a new one. Either way, we
@@ -1523,6 +1581,114 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
   return WidePhi;
 }
 
+/// Calculates control-dependent range for the given def at the given context
+/// by looking at dominating conditions inside of the loop
+void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
+                                    Instruction *NarrowUser) {
+  using namespace llvm::PatternMatch;
+
+  Value *NarrowDefLHS;
+  const APInt *NarrowDefRHS;
+  if (!match(NarrowDef, m_NSWAdd(m_Value(NarrowDefLHS),
+                                 m_APInt(NarrowDefRHS))) ||
+      !NarrowDefRHS->isNonNegative())
+    return;
+
+  auto UpdateRangeFromCondition = [&] (Value *Condition,
+                                       bool TrueDest) {
+    CmpInst::Predicate Pred;
+    Value *CmpRHS;
+    if (!match(Condition, m_ICmp(Pred, m_Specific(NarrowDefLHS),
+                                 m_Value(CmpRHS))))
+      return;
+
+    CmpInst::Predicate P =
+            TrueDest ? Pred : CmpInst::getInversePredicate(Pred);  
+
+    auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
+    auto CmpConstrainedLHSRange =
+            ConstantRange::makeAllowedICmpRegion(P, CmpRHSRange);
+    auto NarrowDefRange =
+            CmpConstrainedLHSRange.addWithNoSignedWrap(*NarrowDefRHS);
+
+    updatePostIncRangeInfo(NarrowDef, NarrowUser, NarrowDefRange);
+  };
+
+  auto UpdateRangeFromGuards = [&](Instruction *Ctx) {
+    if (!HasGuards)
+      return;
+
+    for (Instruction &I : make_range(Ctx->getIterator().getReverse(),
+                                     Ctx->getParent()->rend())) {
+      Value *C = nullptr;
+      if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(C))))
+        UpdateRangeFromCondition(C, /*TrueDest=*/true);
+    }
+  };
+
+  UpdateRangeFromGuards(NarrowUser);
+
+  BasicBlock *NarrowUserBB = NarrowUser->getParent();
+  // If NarrowUserBB is statically unreachable asking dominator queries may 
+  // yield suprising results. (e.g. the block may not have a dom tree node)
+  if (!DT->isReachableFromEntry(NarrowUserBB))
+    return;
+
+  for (auto *DTB = (*DT)[NarrowUserBB]->getIDom();
+       L->contains(DTB->getBlock());
+       DTB = DTB->getIDom()) {
+    auto *BB = DTB->getBlock();
+    auto *TI = BB->getTerminator();
+    UpdateRangeFromGuards(TI);
+
+    auto *BI = dyn_cast<BranchInst>(TI);
+    if (!BI || !BI->isConditional())
+      continue;
+
+    auto *TrueSuccessor = BI->getSuccessor(0);
+    auto *FalseSuccessor = BI->getSuccessor(1);
+
+    auto DominatesNarrowUser = [this, NarrowUser] (BasicBlockEdge BBE) {
+      return BBE.isSingleEdge() &&
+             DT->dominates(BBE, NarrowUser->getParent());
+    };
+
+    if (DominatesNarrowUser(BasicBlockEdge(BB, TrueSuccessor)))
+      UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/true);
+
+    if (DominatesNarrowUser(BasicBlockEdge(BB, FalseSuccessor)))
+      UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/false);
+  }
+}
+
+/// Calculates PostIncRangeInfos map for the given IV
+void WidenIV::calculatePostIncRanges(PHINode *OrigPhi) {
+  SmallPtrSet<Instruction *, 16> Visited;
+  SmallVector<Instruction *, 6> Worklist;
+  Worklist.push_back(OrigPhi);
+  Visited.insert(OrigPhi);
+
+  while (!Worklist.empty()) {
+    Instruction *NarrowDef = Worklist.pop_back_val();
+
+    for (Use &U : NarrowDef->uses()) {
+      auto *NarrowUser = cast<Instruction>(U.getUser());
+
+      // Don't go looking outside the current loop.
+      auto *NarrowUserLoop = (*LI)[NarrowUser->getParent()];
+      if (!NarrowUserLoop || !L->contains(NarrowUserLoop))
+        continue;
+
+      if (!Visited.insert(NarrowUser).second)
+        continue;
+
+      Worklist.push_back(NarrowUser);
+
+      calculatePostIncRange(NarrowDef, NarrowUser);
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //  Live IV Reduction - Minimize IVs live across the loop.
 //===----------------------------------------------------------------------===//
@@ -1565,6 +1731,10 @@ void IndVarSimplify::simplifyAndExtend(Loop *L,
                                        LoopInfo *LI) {
   SmallVector<WideIVInfo, 8> WideIVs;
 
+  auto *GuardDecl = L->getBlocks()[0]->getModule()->getFunction(
+          Intrinsic::getName(Intrinsic::experimental_guard));
+  bool HasGuards = GuardDecl && !GuardDecl->use_empty();
+
   SmallVector<PHINode*, 8> LoopPhis;
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
     LoopPhis.push_back(cast<PHINode>(I));
@@ -1594,7 +1764,7 @@ void IndVarSimplify::simplifyAndExtend(Loop *L,
     } while(!LoopPhis.empty());
 
     for (; !WideIVs.empty(); WideIVs.pop_back()) {
-      WidenIV Widener(WideIVs.back(), LI, SE, DT, DeadInsts);
+      WidenIV Widener(WideIVs.back(), LI, SE, DT, DeadInsts, HasGuards);
       if (PHINode *WidePhi = Widener.createWideIV(Rewriter)) {
         Changed = true;
         LoopPhis.push_back(WidePhi);

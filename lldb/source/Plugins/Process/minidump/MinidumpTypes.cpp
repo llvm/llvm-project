@@ -176,3 +176,60 @@ MinidumpExceptionStream::Parse(llvm::ArrayRef<uint8_t> &data) {
 
   return exception_stream;
 }
+
+llvm::ArrayRef<MinidumpMemoryDescriptor>
+MinidumpMemoryDescriptor::ParseMemoryList(llvm::ArrayRef<uint8_t> &data) {
+  const llvm::support::ulittle32_t *mem_ranges_count;
+  Error error = consumeObject(data, mem_ranges_count);
+  if (error.Fail() ||
+      *mem_ranges_count * sizeof(MinidumpMemoryDescriptor) > data.size())
+    return {};
+
+  return llvm::makeArrayRef(
+      reinterpret_cast<const MinidumpMemoryDescriptor *>(data.data()),
+      *mem_ranges_count);
+}
+
+std::pair<llvm::ArrayRef<MinidumpMemoryDescriptor64>, uint64_t>
+MinidumpMemoryDescriptor64::ParseMemory64List(llvm::ArrayRef<uint8_t> &data) {
+  const llvm::support::ulittle64_t *mem_ranges_count;
+  Error error = consumeObject(data, mem_ranges_count);
+  if (error.Fail() ||
+      *mem_ranges_count * sizeof(MinidumpMemoryDescriptor64) > data.size())
+    return {};
+
+  const llvm::support::ulittle64_t *base_rva;
+  error = consumeObject(data, base_rva);
+  if (error.Fail())
+    return {};
+
+  return std::make_pair(
+      llvm::makeArrayRef(
+          reinterpret_cast<const MinidumpMemoryDescriptor64 *>(data.data()),
+          *mem_ranges_count),
+      *base_rva);
+}
+
+std::vector<const MinidumpMemoryInfo *>
+MinidumpMemoryInfo::ParseMemoryInfoList(llvm::ArrayRef<uint8_t> &data) {
+  const MinidumpMemoryInfoListHeader *header;
+  Error error = consumeObject(data, header);
+  if (error.Fail() ||
+      header->size_of_header < sizeof(MinidumpMemoryInfoListHeader) ||
+      header->size_of_entry < sizeof(MinidumpMemoryInfo))
+    return {};
+
+  data = data.drop_front(header->size_of_header -
+                         sizeof(MinidumpMemoryInfoListHeader));
+
+  if (header->size_of_entry * header->num_of_entries > data.size())
+    return {};
+
+  std::vector<const MinidumpMemoryInfo *> result;
+  for (uint64_t i = 0; i < header->num_of_entries; ++i) {
+    result.push_back(reinterpret_cast<const MinidumpMemoryInfo *>(
+        data.data() + i * header->size_of_entry));
+  }
+
+  return result;
+}

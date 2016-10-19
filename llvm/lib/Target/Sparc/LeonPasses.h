@@ -84,6 +84,20 @@ public:
   }
 };
 
+class LLVM_LIBRARY_VISIBILITY DetectRoundChange
+    : public LEONMachineFunctionPass {
+public:
+  static char ID;
+
+  DetectRoundChange(TargetMachine &tm);
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override {
+    return "DetectRoundChange: Leon erratum detection: detect any rounding "
+           "mode change request: use only the round-to-nearest rounding mode";
+  }
+};
+
 class LLVM_LIBRARY_VISIBILITY FixAllFDIVSQRT : public LEONMachineFunctionPass {
 public:
   static char ID;

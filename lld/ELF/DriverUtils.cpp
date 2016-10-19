@@ -98,14 +98,6 @@ void elf::printHelp(const char *Argv0) {
   Table.PrintHelp(outs(), Argv0, "lld", false);
 }
 
-std::string elf::getVersionString() {
-  std::string Version = getLLDVersion();
-  std::string Repo = getLLDRepositoryVersion();
-  if (Repo.empty())
-    return "LLD " + Version + "\n";
-  return "LLD " + Version + " " + Repo + "\n";
-}
-
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
 std::string elf::createResponseFile(const opt::InputArgList &Args) {

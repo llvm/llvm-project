@@ -680,9 +680,26 @@ static Value *SimplifySubInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
   if (Op0 == Op1)
     return Constant::getNullValue(Op0->getType());
 
-  // 0 - X -> 0 if the sub is NUW.
-  if (isNUW && match(Op0, m_Zero()))
-    return Op0;
+  // Is this a negation?
+  if (match(Op0, m_Zero())) {
+    // 0 - X -> 0 if the sub is NUW.
+    if (isNUW)
+      return Op0;
+
+    unsigned BitWidth = Op1->getType()->getScalarSizeInBits();
+    APInt KnownZero(BitWidth, 0);
+    APInt KnownOne(BitWidth, 0);
+    computeKnownBits(Op1, KnownZero, KnownOne, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    if (KnownZero == ~APInt::getSignBit(BitWidth)) {
+      // Op1 is either 0 or the minimum signed value. If the sub is NSW, then
+      // Op1 must be 0 because negating the minimum signed value is undefined.
+      if (isNSW)
+        return Op0;
+
+      // 0 - X -> X if X is 0 or the minimum signed value.
+      return Op1;
+    }
+  }
 
   // (X + Y) - Z -> X + (Y - Z) or Y + (X - Z) if everything simplifies.
   // For example, (X + Y) - Y -> X; (Y + X) - Y -> X

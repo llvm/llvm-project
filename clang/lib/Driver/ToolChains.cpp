@@ -5130,15 +5130,19 @@ void MyriadToolChain::AddClangCXXStdlibIncludeArgs(
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
-  // Only libstdc++, for now.
-  StringRef LibDir = GCCInstallation.getParentLibPath();
-  const GCCVersion &Version = GCCInstallation.getVersion();
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-  const Multilib &Multilib = GCCInstallation.getMultilib();
-
-  addLibStdCXXIncludePaths(
-      LibDir.str() + "/../" + TripleStr.str() + "/include/c++/" + Version.Text,
-      "", TripleStr, "", "", Multilib.includeSuffix(), DriverArgs, CC1Args);
+  if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx) {
+    std::string Path(getDriver().getInstalledDir());
+    Path += "/../include/c++/v1";
+    addSystemInclude(DriverArgs, CC1Args, Path);
+  } else {
+    StringRef LibDir = GCCInstallation.getParentLibPath();
+    const GCCVersion &Version = GCCInstallation.getVersion();
+    StringRef TripleStr = GCCInstallation.getTriple().str();
+    const Multilib &Multilib = GCCInstallation.getMultilib();
+    addLibStdCXXIncludePaths(
+        LibDir.str() + "/../" + TripleStr.str() + "/include/c++/" + Version.Text,
+        "", TripleStr, "", "", Multilib.includeSuffix(), DriverArgs, CC1Args);
+  }
 }
 
 // MyriadToolChain handles several triples:

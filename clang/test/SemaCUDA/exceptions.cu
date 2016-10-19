@@ -50,3 +50,6 @@ inline __host__ __device__ void hd3() {
 }
 
 __device__ void call_hd3() { hd3(); }
+#ifdef __CUDA_ARCH__
+// expected-note@-2 {{called by 'call_hd3'}}
+#endif
