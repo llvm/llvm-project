@@ -38,13 +38,12 @@ struct ASanStackVariableDescription {
   AllocaInst *AI;      // The actual AllocaInst.
   size_t Offset;       // Offset from the beginning of the frame;
                        // set by ComputeASanStackFrameLayout.
+  unsigned Line;       // Line number.
 };
 
 // Output data struct for ComputeASanStackFrameLayout.
 struct ASanStackFrameLayout {
-  size_t Granularity;
-  // Frame description, see DescribeAddressIfStack in ASan runtime.
-  SmallString<64> DescriptionString;
+  size_t Granularity;     // Shadow granularity.
   size_t FrameAlignment;  // Alignment for the entire frame.
   size_t FrameSize;       // Size of the frame in bytes.
 };
@@ -58,6 +57,10 @@ ASanStackFrameLayout ComputeASanStackFrameLayout(
     // At least 4 pointer sizes, power of 2, and >= Granularity.
     // The resulting FrameSize should be multiple of MinHeaderSize.
     size_t MinHeaderSize);
+
+// Compute frame description, see DescribeAddressIfStack in ASan runtime.
+SmallString<64> ComputeASanStackFrameDescription(
+    const SmallVectorImpl<ASanStackVariableDescription> &Vars);
 
 // Returns shadow bytes with marked red zones. This shadow represents the state
 // if the stack frame when all local variables are inside of the own scope.

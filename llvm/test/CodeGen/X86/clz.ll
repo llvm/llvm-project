@@ -279,28 +279,32 @@ define i64 @ctlz_i64(i64 %x) {
 define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X32-LABEL: ctlz_i8_zero_test:
 ; X32:       # BB#0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X32-NEXT:    movb $8, %al
-; X32-NEXT:    testb %cl, %cl
-; X32-NEXT:    je .LBB8_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    movzbl %cl, %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    testb %al, %al
+; X32-NEXT:    je .LBB8_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    bsrl %eax, %eax
 ; X32-NEXT:    xorl $7, %eax
-; X32-NEXT:  .LBB8_2: # %cond.end
+; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB8_1:
+; X32-NEXT:    movb    $8, %al
 ; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ctlz_i8_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movb $8, %al
 ; X64-NEXT:    testb %dil, %dil
-; X64-NEXT:    je .LBB8_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB8_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    bsrl %eax, %eax
 ; X64-NEXT:    xorl $7, %eax
-; X64-NEXT:  .LBB8_2: # %cond.end
+; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB8_1:
+; X64-NEXT:    movb    $8, %al
 ; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X64-NEXT:    retq
 ;
@@ -327,26 +331,30 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 define i16 @ctlz_i16_zero_test(i16 %n) {
 ; X32-LABEL: ctlz_i16_zero_test:
 ; X32:       # BB#0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movw $16, %ax
-; X32-NEXT:    testw %cx, %cx
-; X32-NEXT:    je .LBB9_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    bsrw %cx, %ax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    testw %ax, %ax
+; X32-NEXT:    je .LBB9_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    bsrw %ax, %ax
 ; X32-NEXT:    xorl $15, %eax
-; X32-NEXT:  .LBB9_2: # %cond.end
+; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB9_1:
+; X32-NEXT:    movw    $16, %ax
 ; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ctlz_i16_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movw $16, %ax
 ; X64-NEXT:    testw %di, %di
-; X64-NEXT:    je .LBB9_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB9_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsrw %di, %ax
 ; X64-NEXT:    xorl $15, %eax
-; X64-NEXT:  .LBB9_2: # %cond.end
+; X64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB9_1:
+; X64-NEXT:    movw $16, %ax
 ; X64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; X64-NEXT:    retq
 ;
@@ -367,25 +375,27 @@ define i16 @ctlz_i16_zero_test(i16 %n) {
 define i32 @ctlz_i32_zero_test(i32 %n) {
 ; X32-LABEL: ctlz_i32_zero_test:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    testl %ecx, %ecx
-; X32-NEXT:    je .LBB10_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    bsrl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    je .LBB10_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    bsrl %eax, %eax
 ; X32-NEXT:    xorl $31, %eax
-; X32-NEXT:  .LBB10_2: # %cond.end
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB10_1:
+; X32-NEXT:    movl    $32, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ctlz_i32_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    je .LBB10_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB10_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    xorl $31, %eax
-; X64-NEXT:  .LBB10_2: # %cond.end
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB10_1:
+; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-CLZ-LABEL: ctlz_i32_zero_test:
@@ -464,26 +474,30 @@ define i64 @ctlz_i64_zero_test(i64 %n) {
 define i8 @cttz_i8_zero_test(i8 %n) {
 ; X32-LABEL: cttz_i8_zero_test:
 ; X32:       # BB#0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X32-NEXT:    movb $8, %al
-; X32-NEXT:    testb %cl, %cl
-; X32-NEXT:    je .LBB12_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    movzbl %cl, %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    testb %al, %al
+; X32-NEXT:    je .LBB12_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    bsfl %eax, %eax
-; X32-NEXT:  .LBB12_2: # %cond.end
+; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB12_1
+; X32-NEXT:    movb $8, %al
 ; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i8_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movb $8, %al
 ; X64-NEXT:    testb %dil, %dil
-; X64-NEXT:    je .LBB12_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB12_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    bsfl %eax, %eax
-; X64-NEXT:  .LBB12_2: # %cond.end
+; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB12_1:
+; X64-NEXT:    movb $8, %al
 ; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X64-NEXT:    retq
 ;
@@ -510,23 +524,25 @@ define i8 @cttz_i8_zero_test(i8 %n) {
 define i16 @cttz_i16_zero_test(i16 %n) {
 ; X32-LABEL: cttz_i16_zero_test:
 ; X32:       # BB#0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    testw %ax, %ax
+; X32-NEXT:    je .LBB13_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    bsfw %ax, %ax
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB13_1
 ; X32-NEXT:    movw $16, %ax
-; X32-NEXT:    testw %cx, %cx
-; X32-NEXT:    je .LBB13_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    bsfw %cx, %ax
-; X32-NEXT:  .LBB13_2: # %cond.end
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i16_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movw $16, %ax
 ; X64-NEXT:    testw %di, %di
-; X64-NEXT:    je .LBB13_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB13_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsfw %di, %ax
-; X64-NEXT:  .LBB13_2: # %cond.end
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB13_1:
+; X64-NEXT:    movw $16, %ax
 ; X64-NEXT:    retq
 ;
 ; X32-CLZ-LABEL: cttz_i16_zero_test:
@@ -546,23 +562,25 @@ define i16 @cttz_i16_zero_test(i16 %n) {
 define i32 @cttz_i32_zero_test(i32 %n) {
 ; X32-LABEL: cttz_i32_zero_test:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    je .LBB14_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    bsfl %eax, %eax
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB14_1
 ; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    testl %ecx, %ecx
-; X32-NEXT:    je .LBB14_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    bsfl %ecx, %eax
-; X32-NEXT:  .LBB14_2: # %cond.end
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i32_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    je .LBB14_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB14_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsfl %edi, %eax
-; X64-NEXT:  .LBB14_2: # %cond.end
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB14_1:
+; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-CLZ-LABEL: cttz_i32_zero_test:
@@ -642,25 +660,27 @@ define i64 @cttz_i64_zero_test(i64 %n) {
 define i32 @ctlz_i32_fold_cmov(i32 %n) {
 ; X32-LABEL: ctlz_i32_fold_cmov:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    orl $1, %ecx
-; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    je .LBB16_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    bsrl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    orl $1, %eax
+; X32-NEXT:    je .LBB16_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    bsrl %eax, %eax
 ; X32-NEXT:    xorl $31, %eax
-; X32-NEXT:  .LBB16_2: # %cond.end
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB16_1
+; X32-NEXT:    movl $32, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ctlz_i32_fold_cmov:
 ; X64:       # BB#0:
 ; X64-NEXT:    orl $1, %edi
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    je .LBB16_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB16_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    xorl $31, %eax
-; X64-NEXT:  .LBB16_2: # %cond.end
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB16_1:
+; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-CLZ-LABEL: ctlz_i32_fold_cmov:
@@ -716,26 +736,30 @@ define i32 @ctlz_bsr(i32 %n) {
 define i32 @ctlz_bsr_zero_test(i32 %n) {
 ; X32-LABEL: ctlz_bsr_zero_test:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    testl %ecx, %ecx
-; X32-NEXT:    je .LBB18_2
-; X32-NEXT:  # BB#1: # %cond.false
-; X32-NEXT:    bsrl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    je .LBB18_1
+; X32-NEXT:  # BB#2: # %cond.false
+; X32-NEXT:    bsrl %eax, %eax
 ; X32-NEXT:    xorl $31, %eax
-; X32-NEXT:  .LBB18_2: # %cond.end
+; X32-NEXT:    xorl $31, %eax
+; X32-NEXT:    retl
+; X32-NEXT:  .LBB18_1:
+; X32-NEXT:    movl $32, %eax
 ; X32-NEXT:    xorl $31, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ctlz_bsr_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    je .LBB18_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB18_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    xorl $31, %eax
-; X64-NEXT:  .LBB18_2: # %cond.end
+; X64-NEXT:    xorl $31, %eax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB18_1:
+; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    xorl $31, %eax
 ; X64-NEXT:    retq
 ;

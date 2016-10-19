@@ -23,7 +23,7 @@
 ;    }
 ;
 ; CHECK: p0: ((sext i32 %tmp6 to i64) * %p1)
-; CHECK: p1: ((sext i32 %tmp8 to i64) * (sext i32 %tmp3 to i64) * (%p0 + %p1) * %p3)
+; CHECK: p1: ((sext i32 %tmp3 to i64) * (sext i32 %tmp8 to i64) * (%p0 + %p1) * %p3)
 ; CHECK: p2: ((sext i32 %tmp3 to i64) * (%p0 + %p1))
 ; CHECK: p3: ((sext i32 %tmp5 to i64) * %p0)
 ; CHECK: p4: ((sext i32 %tmp7 to i64) * %p2)

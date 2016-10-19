@@ -29,8 +29,8 @@ PDBContext::PDBContext(const COFFObjectFile &Object,
     Session->setLoadAddress(ImageBase.get());
 }
 
-void PDBContext::dump(raw_ostream &OS, DIDumpType DumpType,
-                      bool DumpEH) {}
+void PDBContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
+                      bool SummarizeTypes) {}
 
 DILineInfo PDBContext::getLineInfoForAddress(uint64_t Address,
                                              DILineInfoSpecifier Specifier) {

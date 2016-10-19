@@ -63,6 +63,12 @@ MDNode *MDBuilder::createFunctionEntryCount(uint64_t Count) {
                       createConstant(ConstantInt::get(Int64Ty, Count))});
 }
 
+MDNode *MDBuilder::createFunctionSectionPrefix(StringRef Prefix) {
+  return MDNode::get(Context,
+                     {createString("function_section_prefix"),
+                      createString(Prefix)});
+}
+
 MDNode *MDBuilder::createRange(const APInt &Lo, const APInt &Hi) {
   assert(Lo.getBitWidth() == Hi.getBitWidth() && "Mismatched bitwidths!");
 

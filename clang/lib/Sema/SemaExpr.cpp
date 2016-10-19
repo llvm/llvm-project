@@ -2889,6 +2889,14 @@ ExprResult Sema::BuildDeclarationNameExpr(
 
   {
     QualType type = VD->getType();
+    if (auto *FPT = type->getAs<FunctionProtoType>()) {
+      // C++ [except.spec]p17:
+      //   An exception-specification is considered to be needed when:
+      //   - in an expression, the function is the unique lookup result or
+      //     the selected member of a set of overloaded functions.
+      ResolveExceptionSpec(Loc, FPT);
+      type = VD->getType();
+    }
     ExprValueKind valueKind = VK_RValue;
 
     switch (D->getKind()) {
@@ -13138,6 +13146,19 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
        Func->getMemberSpecializationInfo()))
     checkSpecializationVisibility(Loc, Func);
 
+  // C++14 [except.spec]p17:
+  //   An exception-specification is considered to be needed when:
+  //   - the function is odr-used or, if it appears in an unevaluated operand,
+  //     would be odr-used if the expression were potentially-evaluated;
+  //
+  // Note, we do this even if MightBeOdrUse is false. That indicates that the
+  // function is a pure virtual function we're calling, and in that case the
+  // function was selected by overload resolution and we need to resolve its
+  // exception specification for a different reason.
+  const FunctionProtoType *FPT = Func->getType()->getAs<FunctionProtoType>();
+  if (FPT && isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+    ResolveExceptionSpec(Loc, FPT);
+
   // If we don't need to mark the function as used, and we don't need to
   // try to provide a definition, there's nothing more to do.
   if ((Func->isUsed(/*CheckUsedAttr=*/false) || !OdrUse) &&
@@ -13195,12 +13216,6 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // Recursive functions should be marked when used from another function.
   // FIXME: Is this really right?
   if (CurContext == Func) return;
-
-  // Resolve the exception specification for any function which is
-  // used: CodeGen will need it.
-  const FunctionProtoType *FPT = Func->getType()->getAs<FunctionProtoType>();
-  if (FPT && isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
-    ResolveExceptionSpec(Loc, FPT);
 
   // Implicit instantiation of function templates and member functions of
   // class templates.

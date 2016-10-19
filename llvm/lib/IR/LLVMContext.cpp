@@ -138,6 +138,11 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   assert(TypeID == MD_type && "type kind id drifted");
   (void)TypeID;
 
+  unsigned SectionPrefixID = getMDKindID("section_prefix");
+  assert(SectionPrefixID == MD_section_prefix &&
+         "section_prefix kind id drifted");
+  (void)SectionPrefixID;
+
   auto *DeoptEntry = pImpl->getOrInsertBundleTag("deopt");
   assert(DeoptEntry->second == LLVMContext::OB_deopt &&
          "deopt operand bundle id drifted!");

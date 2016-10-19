@@ -354,11 +354,11 @@ static bool WaitForProcessToSIGSTOP(const lldb::pid_t pid,
 
 const char *applscript_in_new_tty = "tell application \"Terminal\"\n"
                                     "   activate\n"
-                                    "	do script \"%s\"\n"
+                                    "	do script \"/bin/bash -c '%s';exit\"\n"
                                     "end tell\n";
 
 const char *applscript_in_existing_tty = "\
-set the_shell_script to \"%s\"\n\
+set the_shell_script to \"/bin/bash -c '%s';exit\"\n\
 tell application \"Terminal\"\n\
 	repeat with the_window in (get windows)\n\
 		repeat with the_tab in tabs of the_window\n\

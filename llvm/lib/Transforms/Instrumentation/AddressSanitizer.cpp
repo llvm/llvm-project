@@ -2246,40 +2246,50 @@ void FunctionStackPoisoner::processStaticAllocas() {
   // If we have a call to llvm.localescape, keep it in the entry block.
   if (LocalEscapeCall) LocalEscapeCall->moveBefore(InsBefore);
 
-  // Find static allocas with lifetime analysis.
-  DenseMap<const AllocaInst *, const ASanStackVariableDescription *>
-      AllocaToSVDMap;
-  for (const auto &APC : StaticAllocaPoisonCallVec) {
-    assert(APC.InsBefore);
-    assert(APC.AI);
-    assert(ASan.isInterestingAlloca(*APC.AI));
-    assert(APC.AI->isStaticAlloca());
-
-    AllocaToSVDMap[APC.AI] = nullptr;
-  }
-
   SmallVector<ASanStackVariableDescription, 16> SVD;
   SVD.reserve(AllocaVec.size());
   for (AllocaInst *AI : AllocaVec) {
-    size_t UseAfterScopePoisonSize =
-        AllocaToSVDMap.find(AI) != AllocaToSVDMap.end()
-            ? ASan.getAllocaSizeInBytes(*AI)
-            : 0;
     ASanStackVariableDescription D = {AI->getName().data(),
                                       ASan.getAllocaSizeInBytes(*AI),
-                                      UseAfterScopePoisonSize,
+                                      0,
                                       AI->getAlignment(),
                                       AI,
+                                      0,
                                       0};
     SVD.push_back(D);
   }
+
   // Minimal header size (left redzone) is 4 pointers,
   // i.e. 32 bytes on 64-bit platforms and 16 bytes in 32-bit platforms.
   size_t MinHeaderSize = ASan.LongSize / 2;
   const ASanStackFrameLayout &L =
       ComputeASanStackFrameLayout(SVD, 1ULL << Mapping.Scale, MinHeaderSize);
 
-  DEBUG(dbgs() << L.DescriptionString << " --- " << L.FrameSize << "\n");
+  // Build AllocaToSVDMap for ASanStackVariableDescription lookup.
+  DenseMap<const AllocaInst *, ASanStackVariableDescription *> AllocaToSVDMap;
+  for (auto &Desc : SVD)
+    AllocaToSVDMap[Desc.AI] = &Desc;
+
+  // Update SVD with information from lifetime intrinsics.
+  for (const auto &APC : StaticAllocaPoisonCallVec) {
+    assert(APC.InsBefore);
+    assert(APC.AI);
+    assert(ASan.isInterestingAlloca(*APC.AI));
+    assert(APC.AI->isStaticAlloca());
+
+    ASanStackVariableDescription &Desc = *AllocaToSVDMap[APC.AI];
+    Desc.LifetimeSize = Desc.Size;
+    if (const DILocation *FnLoc = EntryDebugLocation.get()) {
+      if (const DILocation *LifetimeLoc = APC.InsBefore->getDebugLoc().get()) {
+        if (LifetimeLoc->getFile() == FnLoc->getFile())
+          if (unsigned Line = LifetimeLoc->getLine())
+            Desc.Line = std::min(Desc.Line ? Desc.Line : Line, Line);
+      }
+    }
+  }
+
+  auto DescriptionString = ComputeASanStackFrameDescription(SVD);
+  DEBUG(dbgs() << DescriptionString << " --- " << L.FrameSize << "\n");
   uint64_t LocalStackSize = L.FrameSize;
   bool DoStackMalloc = ClUseAfterReturn && !ASan.CompileKernel &&
                        LocalStackSize <= kMaxStackMallocSize;
@@ -2362,7 +2372,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
                     ConstantInt::get(IntptrTy, ASan.LongSize / 8)),
       IntptrPtrTy);
   GlobalVariable *StackDescriptionGlobal =
-      createPrivateGlobalForString(*F.getParent(), L.DescriptionString,
+      createPrivateGlobalForString(*F.getParent(), DescriptionString,
                                    /*AllowMerging*/ true);
   Value *Description = IRB.CreatePointerCast(StackDescriptionGlobal, IntptrTy);
   IRB.CreateStore(Description, BasePlus1);
@@ -2382,21 +2392,11 @@ void FunctionStackPoisoner::processStaticAllocas() {
   copyToShadow(ShadowAfterScope, ShadowAfterScope, IRB, ShadowBase);
 
   if (!StaticAllocaPoisonCallVec.empty()) {
-    // Complete AllocaToSVDMap
-    for (const auto &Desc : SVD) {
-      auto It = AllocaToSVDMap.find(Desc.AI);
-      if (It != AllocaToSVDMap.end()) {
-        It->second = &Desc;
-      }
-    }
-
     const auto &ShadowInScope = GetShadowBytes(SVD, L);
 
     // Poison static allocas near lifetime intrinsics.
     for (const auto &APC : StaticAllocaPoisonCallVec) {
-      // Must be already set.
-      assert(AllocaToSVDMap[APC.AI]);
-      const auto &Desc = *AllocaToSVDMap[APC.AI];
+      const ASanStackVariableDescription &Desc = *AllocaToSVDMap[APC.AI];
       assert(Desc.Offset % L.Granularity == 0);
       size_t Begin = Desc.Offset / L.Granularity;
       size_t End = Begin + (APC.Size + L.Granularity - 1) / L.Granularity;

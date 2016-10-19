@@ -84,7 +84,7 @@ public:
   }
 
   void dump(raw_ostream &OS, DIDumpType DumpType = DIDT_All,
-            bool DumpEH = false) override;
+            bool DumpEH = false, bool SummarizeTypes = false) override;
 
   typedef DWARFUnitSection<DWARFCompileUnit>::iterator_range cu_iterator_range;
   typedef DWARFUnitSection<DWARFTypeUnit>::iterator_range tu_iterator_range;

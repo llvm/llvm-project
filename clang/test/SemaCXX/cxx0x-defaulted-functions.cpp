@@ -89,30 +89,34 @@ namespace DefaultedFnExceptionSpec {
   struct Error {
     void f() noexcept(T::error);
 
-    Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
-    Error(const Error&) noexcept(T::error);
-    Error(Error&&) noexcept(T::error);
-    Error &operator=(const Error&) noexcept(T::error);
-    Error &operator=(Error&&) noexcept(T::error);
-    ~Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} expected-error {{type 'char'}}
+    Error(const Error&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    Error(Error&&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    Error &operator=(const Error&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} expected-error {{type 'double'}}
+    Error &operator=(Error&&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    ~Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} expected-error {{type 'char'}}
   };
 
+  Error<char> c; // expected-note 2{{instantiation of}}
   struct DelayImplicit {
-    Error<int> e;
+    // FIXME: The location of this note is terrible. The instantiation was
+    // triggered by the uses of the functions in the decltype expressions below.
+    Error<int> e; // expected-note 6{{instantiation of}}
   };
+  Error<float> *e;
 
-  // Don't instantiate the exception specification here.
+  // An exception specification is needed if the exception specification for a
+  // a defaulted special member function that calls the function is needed.
+  // Use in an unevaluated operand still results in the exception spec being
+  // needed.
   void test1(decltype(declval<DelayImplicit>() = DelayImplicit(DelayImplicit())));
   void test2(decltype(declval<DelayImplicit>() = declval<const DelayImplicit>()));
   void test3(decltype(DelayImplicit(declval<const DelayImplicit>())));
 
-  // Any odr-use causes the exception specification to be evaluated.
-  struct OdrUse { // \
-    expected-note {{instantiation of exception specification for 'Error'}} \
-    expected-note {{instantiation of exception specification for '~Error'}}
-    Error<int> e;
-  };
-  OdrUse use; // expected-note {{implicit default constructor for 'DefaultedFnExceptionSpec::OdrUse' first required here}}
+  // Any odr-use needs the exception specification.
+  void f(Error<double> *p) {
+    *p = *p; // expected-note {{instantiation of}}
+  }
 }
 
 namespace PR13527 {

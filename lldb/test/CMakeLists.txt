@@ -43,10 +43,15 @@ set(LLDB_TEST_ARCH
 	${LLDB_DEFAULT_TEST_ARCH}
 	CACHE STRING "Specify the architecture to run LLDB tests as (x86|x64).  Determines whether tests are compiled with -m32 or -m64")
 
+# Scrub LLDB_TEST_COMPILER out of the CMake caches
+# TODO: remove the replace lines and the FORCE parameter in a few days once the
+# change has made its way through bots to clean up their CMake caches.
+string(REPLACE "-C;${LLDB_TEST_COMPILER}" "" LLDB_TEST_USER_ARGS_New "${LLDB_TEST_USER_ARGS}")
+
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
-  -C ${LLDB_TEST_COMPILER}
-  CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
+  "${LLDB_TEST_USER_ARGS_New}"
+  CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'" FORCE)
 
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
@@ -56,6 +61,7 @@ set(LLDB_TEST_COMMON_ARGS
   -S nm
   -u CXXFLAGS
   -u CFLAGS
+  -C ${LLDB_TEST_COMPILER}
   )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
