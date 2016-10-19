@@ -37,6 +37,6 @@ __attribute__((always_inline, const)) __private void *
 OCKL_MANGLE_T(to,private)(void *a)
 {
     uint u = (uint)((ulong)a);
-    return OCKL_MANGLE_T(is_local,addr)(a) ? (__private void *)u : (__private void *)0;
+    return OCKL_MANGLE_T(is_private,addr)(a) ? (__private void *)u : (__private void *)0;
 }
 
