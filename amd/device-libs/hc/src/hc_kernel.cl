@@ -104,11 +104,21 @@ hc_get_group_size(int dim)
 }
 
 ATTR2 void
+hc_work_group_barrier(cl_mem_fence_flags flags, memory_scope scope)
+{
+    if (flags) {
+        atomic_work_item_fence(flags, memory_order_release, scope);
+        __llvm_amdgcn_s_barrier();
+        atomic_work_item_fence(flags, memory_order_acquire, scope);
+    } else {
+        __llvm_amdgcn_s_barrier();
+    }
+}
+
+ATTR2 void
 hc_barrier(int n)
 {
-  __llvm_amdgcn_s_waitcnt(0);
-  __llvm_amdgcn_s_dcache_wb();
-  __llvm_amdgcn_s_barrier();
+  hc_work_group_barrier((cl_mem_fence_flags)n, memory_scope_work_group);
 }
 
 ATTR2 void
@@ -116,3 +126,4 @@ amp_barrier(int n)
 {
   hc_barrier(n);
 }
+
