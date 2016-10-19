@@ -14,12 +14,13 @@
 #include <stdio.h>
 #include <sys/localedef.h>
 
+extern "C" {
 
 int isxdigit_l(int __c, locale_t __l) {
     return isxdigit(__c);
 }
 
-int iswxdigit_l(wchar_t __c, locale_t __l) {
+int iswxdigit_l(wint_t __c, locale_t __l) {
     return isxdigit(__c);
 }
 
@@ -62,5 +63,7 @@ size_t mbrtowc_l(wchar_t *__pwc, const char *__pmb,
 struct lconv *localeconv_l(locale_t __l) {
   return localeconv();
 }
+
+};
 
 #endif // __sun__

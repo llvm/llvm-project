@@ -1746,7 +1746,12 @@ typedef struct kmp_disp {
         kmp_lock_t          *th_steal_lock;       // lock used for chunk stealing (8-byte variable)
     };
 #else
+#if KMP_STATIC_STEAL_ENABLED
+    kmp_lock_t              *th_steal_lock;       // lock used for chunk stealing (8-byte variable)
+    void* dummy_padding[1]; // make it 64 bytes on Intel(R) 64
+#else
     void* dummy_padding[2]; // make it 64 bytes on Intel(R) 64
+#endif
 #endif
 #if KMP_USE_INTERNODE_ALIGNMENT
     char more_padding[INTERNODE_CACHE_LINE];

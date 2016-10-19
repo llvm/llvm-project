@@ -1706,8 +1706,14 @@ std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {
   return Phdrs;
 }
 
+// Read a program header type name. The next token must be a
+// name of a program header type or a constant (e.g. "0x3").
 unsigned ScriptParser::readPhdrType() {
   StringRef Tok = next();
+  uint64_t Val;
+  if (readInteger(Tok, Val))
+    return Val;
+
   unsigned Ret = StringSwitch<unsigned>(Tok)
                      .Case("PT_NULL", PT_NULL)
                      .Case("PT_LOAD", PT_LOAD)

@@ -53,7 +53,7 @@ private:
 };
 
 template <typename Check>
-std::string runChecker(StringRef Code, int ExpectedWarningCount) {
+std::string runChecker(StringRef Code, unsigned ExpectedWarningCount) {
   std::map<StringRef, StringRef> AdditionalFileContents = {{"foo.h",
                                                             "namespace foo {\n"
                                                             "namespace bar {\n"
