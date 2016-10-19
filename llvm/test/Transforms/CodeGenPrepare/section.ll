@@ -1,5 +1,5 @@
 ; RUN: opt < %s -codegenprepare -S | FileCheck --check-prefixes=CHECK-OPT %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -o - | FileCheck --check-prefixes=CHECK-LLC %s
+; RUN: llc < %s -o - | FileCheck --check-prefixes=CHECK-LLC %s
 
 target triple = "x86_64-pc-linux-gnu"
 

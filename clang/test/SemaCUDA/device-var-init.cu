@@ -213,3 +213,15 @@ __device__ void df_sema() {
   static int v;
   // expected-error@-1 {{within a __device__ function, only __shared__ variables may be marked 'static'}}
 }
+
+__host__ __device__ void hd_sema() {
+  static int x = 42;
+#ifdef __CUDA_ARCH__
+  // expected-error@-2 {{within a __host__ __device__ function, only __shared__ variables may be marked 'static'}}
+#endif
+}
+
+inline __host__ __device__ void hd_emitted_host_only() {
+  static int x = 42; // no error on device because this is never codegen'ed there.
+}
+void call_hd_emitted_host_only() { hd_emitted_host_only(); }

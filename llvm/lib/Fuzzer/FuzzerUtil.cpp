@@ -19,6 +19,7 @@
 #include <cassert>
 #include <chrono>
 #include <cstring>
+#include <stdio.h>
 #include <signal.h>
 #include <sstream>
 #include <unistd.h>
@@ -304,6 +305,16 @@ void PrintPC(const char *SymbolizedFMT, const char *FallbackFMT, uintptr_t PC) {
     Printf("%s", DescribePC(SymbolizedFMT, PC).c_str());
   else
     Printf(FallbackFMT, PC);
+}
+
+bool ExecuteCommandAndReadOutput(const std::string &Command, std::string *Out) {
+  FILE *Pipe = popen(Command.c_str(), "r");
+  if (!Pipe) return false;
+  char Buff[1024];
+  size_t N;
+  while ((N = fread(Buff, 1, sizeof(Buff), Pipe)) > 0)
+    Out->append(Buff, N);
+  return true;
 }
 
 }  // namespace fuzzer

@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -std=c++14 -S -verify -fcuda-is-device %s -o /dev/null
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify -fcuda-is-device %s
 
 // Check how the force_cuda_host_device pragma interacts with template
-// instantiations.  The errors here are emitted at codegen, so we can't do
-// -fsyntax-only.
+// instantiations.
 
 template <typename T>
 auto foo() {  // expected-note {{declared here}}

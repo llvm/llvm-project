@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-pch %s -o %t
-// RUN: %clang_cc1 -verify -verify-ignore-unexpected=note -include-pch %t -S -o /dev/null %s
+// RUN: %clang_cc1 -verify -verify-ignore-unexpected=note -include-pch %t -fsyntax-only %s
 
 #ifndef HEADER
 #define HEADER

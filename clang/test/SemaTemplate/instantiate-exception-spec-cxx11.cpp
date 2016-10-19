@@ -30,8 +30,6 @@ template<unsigned N> struct S {
   // expected-error {{no member named 'recurse'}} \
   // expected-note 9{{instantiation of exception spec}}
 };
-decltype(S<0>::recurse()) *pVoid1 = 0; // ok, exception spec not needed
-decltype(&S<0>::recurse) pFn = 0; // ok, exception spec not needed
 
 template<> struct S<10> {};
 void (*pFn2)() noexcept = &S<0>::recurse; // expected-note {{instantiation of exception spec}} expected-error {{not superset}}
@@ -39,7 +37,7 @@ void (*pFn2)() noexcept = &S<0>::recurse; // expected-note {{instantiation of ex
 
 namespace dr1330_example {
   template <class T> struct A {
-    void f(...) throw (typename T::X); // expected-error {{'int'}}
+    void f(...) throw (typename T::X);
     void f(int);
   };
 
@@ -48,16 +46,14 @@ namespace dr1330_example {
   }
 
   struct S {
-    template<typename T>
-    static int f() noexcept(noexcept(A<T>().f("boo!"))) { return 0; } // \
-    // expected-note {{instantiation of exception spec}}
-    typedef decltype(f<S>()) X;
+    template<typename T> static void f() throw(typename T::X);
+    typedef decltype(f<S>()) X; // expected-error {{exception specification is not available}}
   };
 
-  int test2() {
-    S().f<S>(); // ok
-    S().f<int>(); // expected-note {{instantiation of exception spec}}
-  }
+  struct T {
+    template<typename T> static void f() throw(T**);
+    typedef decltype(f<S>()) X; // expected-error {{exception specification is not available}}
+  };
 
   template<typename T>
   struct U {
