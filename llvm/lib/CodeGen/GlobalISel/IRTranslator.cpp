@@ -168,31 +168,36 @@ bool IRTranslator::translateBr(const User &U) {
 bool IRTranslator::translateLoad(const User &U) {
   const LoadInst &LI = cast<LoadInst>(U);
 
-  if (!TPC->isGlobalISelAbortEnabled() && !LI.isSimple())
+  if (!TPC->isGlobalISelAbortEnabled() && LI.isAtomic())
     return false;
 
-  assert(LI.isSimple() && "only simple loads are supported at the moment");
+  assert(!LI.isAtomic() && "only non-atomic loads are supported at the moment");
+  auto Flags = LI.isVolatile() ? MachineMemOperand::MOVolatile
+                               : MachineMemOperand::MONone;
+  Flags |= MachineMemOperand::MOLoad;
 
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Res = getOrCreateVReg(LI);
   unsigned Addr = getOrCreateVReg(*LI.getPointerOperand());
   LLT VTy{*LI.getType(), *DL}, PTy{*LI.getPointerOperand()->getType(), *DL};
-
   MIRBuilder.buildLoad(
       Res, Addr,
-      *MF.getMachineMemOperand(
-          MachinePointerInfo(LI.getPointerOperand()), MachineMemOperand::MOLoad,
-          DL->getTypeStoreSize(LI.getType()), getMemOpAlignment(LI)));
+      *MF.getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
+                               Flags, DL->getTypeStoreSize(LI.getType()),
+                               getMemOpAlignment(LI)));
   return true;
 }
 
 bool IRTranslator::translateStore(const User &U) {
   const StoreInst &SI = cast<StoreInst>(U);
 
-  if (!TPC->isGlobalISelAbortEnabled() && !SI.isSimple())
+  if (!TPC->isGlobalISelAbortEnabled() && SI.isAtomic())
     return false;
 
-  assert(SI.isSimple() && "only simple loads are supported at the moment");
+  assert(!SI.isAtomic() && "only non-atomic stores supported at the moment");
+  auto Flags = SI.isVolatile() ? MachineMemOperand::MOVolatile
+                               : MachineMemOperand::MONone;
+  Flags |= MachineMemOperand::MOStore;
 
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Val = getOrCreateVReg(*SI.getValueOperand());
@@ -201,12 +206,10 @@ bool IRTranslator::translateStore(const User &U) {
       PTy{*SI.getPointerOperand()->getType(), *DL};
 
   MIRBuilder.buildStore(
-      Val, Addr,
-      *MF.getMachineMemOperand(
-          MachinePointerInfo(SI.getPointerOperand()),
-          MachineMemOperand::MOStore,
-          DL->getTypeStoreSize(SI.getValueOperand()->getType()),
-          getMemOpAlignment(SI)));
+      Val, Addr, *MF.getMachineMemOperand(
+                     MachinePointerInfo(SI.getPointerOperand()), Flags,
+                     DL->getTypeStoreSize(SI.getValueOperand()->getType()),
+                     getMemOpAlignment(SI)));
   return true;
 }
 

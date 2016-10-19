@@ -289,8 +289,7 @@ AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
 /// getAliasSetForPointer - Return the alias set that the specified pointer
 /// lives in.
 AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer, uint64_t Size,
-                                                 const AAMDNodes &AAInfo,
-                                                 bool *New) {
+                                                 const AAMDNodes &AAInfo) {
   AliasSet::PointerRec &Entry = getEntryFor(Pointer);
 
   if (AliasAnyAS) {
@@ -328,68 +327,55 @@ AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer, uint64_t Size,
     return *AS;
   }
   
-  if (New) *New = true;
   // Otherwise create a new alias set to hold the loaded pointer.
   AliasSets.push_back(new AliasSet());
   AliasSets.back().addPointer(*this, Entry, Size, AAInfo);
   return AliasSets.back();
 }
 
-bool AliasSetTracker::add(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo) {
-  bool NewPtr;
-  addPointer(Ptr, Size, AAInfo, AliasSet::NoAccess, NewPtr);
-  return NewPtr;
+void AliasSetTracker::add(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo) {
+  addPointer(Ptr, Size, AAInfo, AliasSet::NoAccess);
 }
 
-
-bool AliasSetTracker::add(LoadInst *LI) {
+void AliasSetTracker::add(LoadInst *LI) {
   if (isStrongerThanMonotonic(LI->getOrdering())) return addUnknown(LI);
 
   AAMDNodes AAInfo;
   LI->getAAMetadata(AAInfo);
 
   AliasSet::AccessLattice Access = AliasSet::RefAccess;
-  bool NewPtr;
   const DataLayout &DL = LI->getModule()->getDataLayout();
   AliasSet &AS = addPointer(LI->getOperand(0),
-                            DL.getTypeStoreSize(LI->getType()),
-                            AAInfo, Access, NewPtr);
+                            DL.getTypeStoreSize(LI->getType()), AAInfo, Access);
   if (LI->isVolatile()) AS.setVolatile();
-  return NewPtr;
 }
 
-bool AliasSetTracker::add(StoreInst *SI) {
+void AliasSetTracker::add(StoreInst *SI) {
   if (isStrongerThanMonotonic(SI->getOrdering())) return addUnknown(SI);
 
   AAMDNodes AAInfo;
   SI->getAAMetadata(AAInfo);
 
   AliasSet::AccessLattice Access = AliasSet::ModAccess;
-  bool NewPtr;
   const DataLayout &DL = SI->getModule()->getDataLayout();
   Value *Val = SI->getOperand(0);
-  AliasSet &AS = addPointer(SI->getOperand(1),
-                            DL.getTypeStoreSize(Val->getType()),
-                            AAInfo, Access, NewPtr);
+  AliasSet &AS = addPointer(
+      SI->getOperand(1), DL.getTypeStoreSize(Val->getType()), AAInfo, Access);
   if (SI->isVolatile()) AS.setVolatile();
-  return NewPtr;
 }
 
-bool AliasSetTracker::add(VAArgInst *VAAI) {
+void AliasSetTracker::add(VAArgInst *VAAI) {
   AAMDNodes AAInfo;
   VAAI->getAAMetadata(AAInfo);
 
-  bool NewPtr;
   addPointer(VAAI->getOperand(0), MemoryLocation::UnknownSize, AAInfo,
-             AliasSet::ModRefAccess, NewPtr);
-  return NewPtr;
+             AliasSet::ModRefAccess);
 }
 
-bool AliasSetTracker::add(MemSetInst *MSI) {
+void AliasSetTracker::add(MemSetInst *MSI) {
   AAMDNodes AAInfo;
   MSI->getAAMetadata(AAInfo);
 
-  bool NewPtr;
   uint64_t Len;
 
   if (ConstantInt *C = dyn_cast<ConstantInt>(MSI->getLength()))
@@ -398,30 +384,49 @@ bool AliasSetTracker::add(MemSetInst *MSI) {
     Len = MemoryLocation::UnknownSize;
 
   AliasSet &AS =
-      addPointer(MSI->getRawDest(), Len, AAInfo, AliasSet::ModAccess, NewPtr);
+      addPointer(MSI->getRawDest(), Len, AAInfo, AliasSet::ModAccess);
   if (MSI->isVolatile())
     AS.setVolatile();
-  return NewPtr;
 }
 
-bool AliasSetTracker::addUnknown(Instruction *Inst) {
-  if (isa<DbgInfoIntrinsic>(Inst)) 
-    return true; // Ignore DbgInfo Intrinsics.
+void AliasSetTracker::add(MemTransferInst *MTI) {
+  AAMDNodes AAInfo;
+  MTI->getAAMetadata(AAInfo);
+
+  uint64_t Len;
+  if (ConstantInt *C = dyn_cast<ConstantInt>(MTI->getLength()))
+    Len = C->getZExtValue();
+  else
+    Len = MemoryLocation::UnknownSize;
+
+  AliasSet &ASSrc =
+      addPointer(MTI->getRawSource(), Len, AAInfo, AliasSet::RefAccess);
+  if (MTI->isVolatile())
+    ASSrc.setVolatile();
+
+  AliasSet &ASDst =
+      addPointer(MTI->getRawDest(), Len, AAInfo, AliasSet::ModAccess);
+  if (MTI->isVolatile())
+    ASDst.setVolatile();
+}
+
+void AliasSetTracker::addUnknown(Instruction *Inst) {
+  if (isa<DbgInfoIntrinsic>(Inst))
+    return; // Ignore DbgInfo Intrinsics.
   if (!Inst->mayReadOrWriteMemory())
-    return true; // doesn't alias anything
+    return; // doesn't alias anything
 
   AliasSet *AS = findAliasSetForUnknownInst(Inst);
   if (AS) {
     AS->addUnknownInst(Inst, AA);
-    return false;
+    return;
   }
   AliasSets.push_back(new AliasSet());
   AS = &AliasSets.back();
   AS->addUnknownInst(Inst, AA);
-  return true;
 }
 
-bool AliasSetTracker::add(Instruction *I) {
+void AliasSetTracker::add(Instruction *I) {
   // Dispatch to one of the other add methods.
   if (LoadInst *LI = dyn_cast<LoadInst>(I))
     return add(LI);
@@ -431,8 +436,9 @@ bool AliasSetTracker::add(Instruction *I) {
     return add(VAAI);
   if (MemSetInst *MSI = dyn_cast<MemSetInst>(I))
     return add(MSI);
+  if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(I))
+    return add(MTI);
   return addUnknown(I);
-  // FIXME: add support of memcpy and memmove. 
 }
 
 void AliasSetTracker::add(BasicBlock &BB) {
@@ -456,11 +462,10 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
       add(AS.UnknownInsts[i]);
 
     // Loop over all of the pointers in this alias set.
-    bool X;
     for (AliasSet::iterator ASI = AS.begin(), E = AS.end(); ASI != E; ++ASI) {
-      AliasSet &NewAS = addPointer(ASI.getPointer(), ASI.getSize(),
-                                   ASI.getAAInfo(),
-                                   (AliasSet::AccessLattice)AS.Access, X);
+      AliasSet &NewAS =
+          addPointer(ASI.getPointer(), ASI.getSize(), ASI.getAAInfo(),
+                     (AliasSet::AccessLattice)AS.Access);
       if (AS.isVolatile()) NewAS.setVolatile();
     }
   }
@@ -571,10 +576,9 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
 
 AliasSet &AliasSetTracker::addPointer(Value *P, uint64_t Size,
                                       const AAMDNodes &AAInfo,
-                                      AliasSet::AccessLattice E, bool &NewSet) {
+                                      AliasSet::AccessLattice E) {
 
-  NewSet = false;
-  AliasSet &AS = getAliasSetForPointer(P, Size, AAInfo, &NewSet);
+  AliasSet &AS = getAliasSetForPointer(P, Size, AAInfo);
   AS.Access |= E;
 
   if (!AliasAnyAS && (TotalMayAliasSetSize > SaturationThreshold)) {

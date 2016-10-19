@@ -42,30 +42,30 @@ entry:
   ; NOT-R6:       divu    $zero, $[[T1]], $[[T0]]
   ; NOT-R6:       teq     $[[T0]], $zero, 7
   ; NOT-R6:       mfhi    $[[T2:[0-9]+]]
-  ; NOT-R6:       sll     $[[T3:[0-9]+]], $[[T2]], 31
-  ; NOT-R6:       sra     $2, $[[T3]], 31
+  ; NOT-R6:       andi    $[[T0]], $[[T0]], 1
+  ; NOT-R6:       negu    $2, $[[T0]]
 
   ; R6:           andi    $[[T0:[0-9]+]], $5, 1
   ; R6:           andi    $[[T1:[0-9]+]], $4, 1
   ; R6:           modu    $[[T2:[0-9]+]], $[[T1]], $[[T0]]
   ; R6:           teq     $[[T0]], $zero, 7
-  ; R6:           sll     $[[T3:[0-9]+]], $[[T2]], 31
-  ; R6:           sra     $2, $[[T3]], 31
+  ; R6:           negu    $2, $[[T2]]
 
   ; MMR3:         andi16  $[[T0:[0-9]+]], $5, 1
   ; MMR3:         andi16  $[[T1:[0-9]+]], $4, 1
   ; MMR3:         divu    $zero, $[[T1]], $[[T0]]
   ; MMR3:         teq     $[[T0]], $zero, 7
   ; MMR3:         mfhi    $[[T2:[0-9]+]]
-  ; MMR3:         sll     $[[T3:[0-9]+]], $[[T2]], 31
-  ; MMR3:         sra     $2, $[[T3]], 31
+  ; MMR3:         andi16  $[[T0]], $[[T0]], 1
+  ; MMR3:         li16    $[[T1:[0-9]+]], 0
+  ; MMR3:         subu16  $2, $[[T1]], $[[T0]]
 
   ; MMR6:         andi16  $[[T0:[0-9]+]], $5, 1
   ; MMR6:         andi16  $[[T1:[0-9]+]], $4, 1
   ; MMR6:         modu    $[[T2:[0-9]+]], $[[T1]], $[[T0]]
   ; MMR6:         teq     $[[T0]], $zero, 7
-  ; MMR6:         sll     $[[T3:[0-9]+]], $[[T2]], 31
-  ; MMR6:         sra     $2, $[[T3]], 31
+  ; MMR6:         li16    $[[T3:[0-9]+]], 0
+  ; MMR6:         subu16  $2, $[[T3]], $[[T2]]
 
   %r = urem i1 %a, %b
   ret i1 %r

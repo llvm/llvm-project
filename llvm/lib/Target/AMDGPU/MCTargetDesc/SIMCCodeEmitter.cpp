@@ -214,7 +214,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
-    if (getLitEncoding(Op, RC.getSize(), STI) != 255)
+    if (getLitEncoding(Op, AMDGPU::getRegBitWidth(RC) / 8, STI) != 255)
       continue;
 
     // Yes! Encode it

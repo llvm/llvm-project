@@ -472,9 +472,9 @@ define i64 @f41(i32 %a) {
 ; when testing whether the shifted-in bits of the shift right were significant.
 define i64 @f42(i1 %x) {
 ; CHECK-LABEL: f42:
-; CHECK: sll %r2, 31
-; CHECK: sra %r2, 31
-; CHECK: llgcr %r2, %r2
+; CHECK: nilf  %r2, 1
+; CHECK: lcr %r0, %r2
+; CHECK: llgcr %r2, %r0
 ; CHECK: br %r14
   %ext = sext i1 %x to i8
   %ext2 = zext i8 %ext to i64

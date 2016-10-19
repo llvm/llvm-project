@@ -215,7 +215,8 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
   for (NodeAddr<DefNode *> DA : SA.Addr->members_if(DFG->IsDef, *DFG)) {
     DEBUG(dbgs() << "\t\t[DefNode]: " << Print<NodeAddr<DefNode *>>(DA, *DFG)
                  << "\n");
-    RegisterRef DR = DA.Addr->getRegRef(*DFG);
+    RegisterRef DR = DFG->normalizeRef(DA.Addr->getRegRef(*DFG));
+
     auto UseSet = LV->getAllReachedUses(DR, DA);
 
     for (auto UI : UseSet) {
@@ -234,11 +235,11 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
                      << Print<Liveness::RefMap>(phiUse, *DFG) << "\n");
         if (phiUse.size() > 0) {
           for (auto I : phiUse) {
-            if (DR != I.first)
+            if (DR.Reg != I.first)
               continue;
             auto phiUseSet = I.second;
             for (auto phiUI : phiUseSet) {
-              NodeAddr<UseNode *> phiUA = DFG->addr<UseNode *>(phiUI);
+              NodeAddr<UseNode *> phiUA = DFG->addr<UseNode *>(phiUI.first);
               UNodeList.push_back(phiUA);
             }
           }

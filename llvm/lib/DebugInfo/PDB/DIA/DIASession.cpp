@@ -20,25 +20,32 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
-static Error ErrorFromHResult(HRESULT Result) {
+static Error ErrorFromHResult(HRESULT Result, StringRef Context) {
   switch (Result) {
   case E_PDB_NOT_FOUND:
-    return make_error<GenericError>(generic_error_code::invalid_path);
+    return make_error<GenericError>(generic_error_code::invalid_path, Context);
   case E_PDB_FORMAT:
-    return make_error<DIAError>(dia_error_code::invalid_file_format);
+    return make_error<DIAError>(dia_error_code::invalid_file_format, Context);
   case E_INVALIDARG:
-    return make_error<DIAError>(dia_error_code::invalid_parameter);
+    return make_error<DIAError>(dia_error_code::invalid_parameter, Context);
   case E_UNEXPECTED:
-    return make_error<DIAError>(dia_error_code::already_loaded);
+    return make_error<DIAError>(dia_error_code::already_loaded, Context);
   case E_PDB_INVALID_SIG:
   case E_PDB_INVALID_AGE:
-    return make_error<DIAError>(dia_error_code::debug_info_mismatch);
-  default:
-    return make_error<DIAError>(dia_error_code::unspecified);
+    return make_error<DIAError>(dia_error_code::debug_info_mismatch, Context);
+  default: {
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << "HRESULT: " << format_hex(static_cast<DWORD>(Result), 10, true)
+       << ": " << Context;
+    return make_error<DIAError>(dia_error_code::unspecified, OS.str());
+  }
   }
 }
 
@@ -66,7 +73,7 @@ static Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
   HRESULT HR;
   if (FAILED(HR = NoRegCoCreate(msdia_dll, CLSID_DiaSource, IID_IDiaDataSource,
                                 reinterpret_cast<LPVOID *>(&DiaDataSource))))
-    return ErrorFromHResult(HR);
+    return ErrorFromHResult(HR, "Calling NoRegCoCreate");
   return Error::success();
 #endif
 }
@@ -89,10 +96,10 @@ Error DIASession::createFromPdb(StringRef Path,
   const wchar_t *Path16Str = reinterpret_cast<const wchar_t*>(Path16.data());
   HRESULT HR;
   if (FAILED(HR = DiaDataSource->loadDataFromPdb(Path16Str)))
-    return ErrorFromHResult(HR);
+    return ErrorFromHResult(HR, "Calling loadDataFromPdb");
 
   if (FAILED(HR = DiaDataSource->openSession(&DiaSession)))
-    return ErrorFromHResult(HR);
+    return ErrorFromHResult(HR, "Calling openSession");
 
   Session.reset(new DIASession(DiaSession));
   return Error::success();
@@ -114,10 +121,10 @@ Error DIASession::createFromExe(StringRef Path,
   const wchar_t *Path16Str = reinterpret_cast<const wchar_t *>(Path16.data());
   HRESULT HR;
   if (FAILED(HR = DiaDataSource->loadDataForExe(Path16Str, nullptr, nullptr)))
-    return ErrorFromHResult(HR);
+    return ErrorFromHResult(HR, "Calling loadDataForExe");
 
   if (FAILED(HR = DiaDataSource->openSession(&DiaSession)))
-    return ErrorFromHResult(HR);
+    return ErrorFromHResult(HR, "Calling openSession");
 
   Session.reset(new DIASession(DiaSession));
   return Error::success();

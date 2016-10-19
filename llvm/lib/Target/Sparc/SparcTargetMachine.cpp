@@ -157,6 +157,9 @@ void SparcPassConfig::addPreEmitPass(){
   {
     addPass(new ReplaceFMULS(getSparcTargetMachine()));
   }
+  if (this->getSparcTargetMachine().getSubtargetImpl()->detectRoundChange()) {
+    addPass(new DetectRoundChange(getSparcTargetMachine()));
+  }
   if (this->getSparcTargetMachine().getSubtargetImpl()->fixAllFDIVSQRT())
   {
     addPass(new FixAllFDIVSQRT(getSparcTargetMachine()));

@@ -24,6 +24,7 @@ class Function;
 class GlobalValue;
 class MCContext;
 class MCInstrDesc;
+class MCRegisterClass;
 class MCRegisterInfo;
 class MCSection;
 class MCSubtargetInfo;
@@ -151,6 +152,9 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// \brief Does this opearnd support only inlinable literals?
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
+
+/// \brief Get the size in bits of a register from the register class \p RC.
+unsigned getRegBitWidth(const MCRegisterClass &RC);
 
 /// \brief Get size of register operand
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,

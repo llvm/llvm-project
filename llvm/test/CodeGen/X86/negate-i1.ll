@@ -5,16 +5,16 @@
 define i8 @select_i8_neg1_or_0(i1 %a) {
 ; X64-LABEL: select_i8_neg1_or_0:
 ; X64:       # BB#0:
-; X64-NEXT:    shlb $7, %dil
-; X64-NEXT:    sarb $7, %dil
+; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    negb %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i8_neg1_or_0:
 ; X32:       # BB#0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    shlb $7, %al
-; X32-NEXT:    sarb $7, %al
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    negb %al
 ; X32-NEXT:    retl
 ;
   %b = sext i1 %a to i8
@@ -24,16 +24,14 @@ define i8 @select_i8_neg1_or_0(i1 %a) {
 define i8 @select_i8_neg1_or_0_zeroext(i1 zeroext %a) {
 ; X64-LABEL: select_i8_neg1_or_0_zeroext:
 ; X64:       # BB#0:
-; X64-NEXT:    shlb $7, %dil
-; X64-NEXT:    sarb $7, %dil
+; X64-NEXT:    negb %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i8_neg1_or_0_zeroext:
 ; X32:       # BB#0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    shlb $7, %al
-; X32-NEXT:    sarb $7, %al
+; X32-NEXT:    negb %al
 ; X32-NEXT:    retl
 ;
   %b = sext i1 %a to i8
@@ -43,16 +41,16 @@ define i8 @select_i8_neg1_or_0_zeroext(i1 zeroext %a) {
 define i16 @select_i16_neg1_or_0(i1 %a) {
 ; X64-LABEL: select_i16_neg1_or_0:
 ; X64:       # BB#0:
-; X64-NEXT:    shll $15, %edi
-; X64-NEXT:    sarw $15, %di
+; X64-NEXT:    andl $1, %edi
+; X64-NEXT:    negl %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i16_neg1_or_0:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shll $15, %eax
-; X32-NEXT:    sarw $15, %ax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    negl %eax
 ; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; X32-NEXT:    retl
 ;
@@ -64,16 +62,14 @@ define i16 @select_i16_neg1_or_0_zeroext(i1 zeroext %a) {
 ; X64-LABEL: select_i16_neg1_or_0_zeroext:
 ; X64:       # BB#0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    shll $15, %eax
-; X64-NEXT:    sarw $15, %ax
+; X64-NEXT:    negl %eax
 ; X64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i16_neg1_or_0_zeroext:
 ; X32:       # BB#0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shll $15, %eax
-; X32-NEXT:    sarw $15, %ax
+; X32-NEXT:    negl %eax
 ; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; X32-NEXT:    retl
 ;
@@ -84,16 +80,16 @@ define i16 @select_i16_neg1_or_0_zeroext(i1 zeroext %a) {
 define i32 @select_i32_neg1_or_0(i1 %a) {
 ; X64-LABEL: select_i32_neg1_or_0:
 ; X64:       # BB#0:
-; X64-NEXT:    shll $31, %edi
-; X64-NEXT:    sarl $31, %edi
+; X64-NEXT:    andl $1, %edi
+; X64-NEXT:    negl %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i32_neg1_or_0:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shll $31, %eax
-; X32-NEXT:    sarl $31, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    negl %eax
 ; X32-NEXT:    retl
 ;
   %b = sext i1 %a to i32
@@ -104,15 +100,13 @@ define i32 @select_i32_neg1_or_0_zeroext(i1 zeroext %a) {
 ; X64-LABEL: select_i32_neg1_or_0_zeroext:
 ; X64:       # BB#0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    shll $31, %eax
-; X64-NEXT:    sarl $31, %eax
+; X64-NEXT:    negl %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i32_neg1_or_0_zeroext:
 ; X32:       # BB#0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shll $31, %eax
-; X32-NEXT:    sarl $31, %eax
+; X32-NEXT:    negl %eax
 ; X32-NEXT:    retl
 ;
   %b = sext i1 %a to i32
@@ -123,16 +117,16 @@ define i64 @select_i64_neg1_or_0(i1 %a) {
 ; X64-LABEL: select_i64_neg1_or_0:
 ; X64:       # BB#0:
 ; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; X64-NEXT:    shlq $63, %rdi
-; X64-NEXT:    sarq $63, %rdi
+; X64-NEXT:    andl $1, %edi
+; X64-NEXT:    negq %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i64_neg1_or_0:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shll $31, %eax
-; X32-NEXT:    sarl $31, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    negl %eax
 ; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    retl
 ;
@@ -144,15 +138,13 @@ define i64 @select_i64_neg1_or_0_zeroext(i1 zeroext %a) {
 ; X64-LABEL: select_i64_neg1_or_0_zeroext:
 ; X64:       # BB#0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    shlq $63, %rax
-; X64-NEXT:    sarq $63, %rax
+; X64-NEXT:    negq %rax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: select_i64_neg1_or_0_zeroext:
 ; X32:       # BB#0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shll $31, %eax
-; X32-NEXT:    sarl $31, %eax
+; X32-NEXT:    negl %eax
 ; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    retl
 ;

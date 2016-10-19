@@ -98,7 +98,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                                        Fn->isVarArg(), Outs, Fn->getContext());
 
   // If this personality uses funclets, we need to do a bit more work.
-  DenseMap<const AllocaInst *, int *> CatchObjects;
+  DenseMap<const AllocaInst *, TinyPtrVector<int *>> CatchObjects;
   EHPersonality Personality = classifyEHPersonality(
       Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr);
   if (isFuncletEHPersonality(Personality)) {
@@ -115,7 +115,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (const AllocaInst *AI = H.CatchObj.Alloca)
-          CatchObjects.insert({AI, &H.CatchObj.FrameIndex});
+          CatchObjects.insert({AI, {}}).first->second.push_back(
+              &H.CatchObj.FrameIndex);
         else
           H.CatchObj.FrameIndex = INT_MAX;
       }
@@ -158,8 +159,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 
           StaticAllocaMap[AI] = FrameIndex;
           // Update the catch handler information.
-          if (Iter != CatchObjects.end())
-            *Iter->second = FrameIndex;
+          if (Iter != CatchObjects.end()) {
+            for (int *CatchObjPtr : Iter->second)
+              *CatchObjPtr = FrameIndex;
+          }
         } else {
           // FIXME: Overaligned static allocas should be grouped into
           // a single dynamic allocation instead of using a separate

@@ -15,3 +15,5 @@ set(LLVM_LINK_COMPONENTS
 add_kaleidoscope_chapter(BuildingAJIT-Ch5-Server
   server.cpp
   )
+
+export_executable_symbols(BuildingAJIT-Ch5-Server)
