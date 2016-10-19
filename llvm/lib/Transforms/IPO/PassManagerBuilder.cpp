@@ -145,6 +145,11 @@ static cl::opt<bool> EnableGVNHoist(
     "enable-gvn-hoist", cl::init(true), cl::Hidden,
     cl::desc("Enable the GVN hoisting pass (default = on)"));
 
+static cl::opt<bool>
+    DisableLibCallsShrinkWrap("disable-libcalls-shrinkwrap", cl::init(false),
+                              cl::Hidden,
+                              cl::desc("Disable shrink-wrap library calls"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -297,6 +302,8 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
   // Combine silly seq's
   addInstructionCombiningPass(MPM);
+  if (SizeLevel == 0 && !DisableLibCallsShrinkWrap)
+    MPM.add(createLibCallsShrinkWrapPass());
   addExtensionsToPM(EP_Peephole, MPM);
 
   MPM.add(createTailCallEliminationPass()); // Eliminate tail calls

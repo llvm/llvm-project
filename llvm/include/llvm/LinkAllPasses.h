@@ -78,6 +78,7 @@ namespace {
       (void) llvm::createCFLAndersAAWrapperPass();
       (void) llvm::createCFLSteensAAWrapperPass();
       (void) llvm::createStructurizeCFGPass();
+      (void) llvm::createLibCallsShrinkWrapPass();
       (void) llvm::createConstantMergePass();
       (void) llvm::createConstantPropagationPass();
       (void) llvm::createCostModelAnalysisPass();

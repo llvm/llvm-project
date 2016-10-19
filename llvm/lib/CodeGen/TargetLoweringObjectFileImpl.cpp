@@ -296,8 +296,12 @@ selectELFSectionForGlobal(MCContext &Ctx, const GlobalValue *GV,
   } else {
     Name = getSectionPrefixForGlobal(Kind);
   }
-  // FIXME: Extend the section prefix to include hotness catagories such as .hot
-  //  or .unlikely for functions.
+
+  if (const Function *F = dyn_cast<Function>(GV)) {
+    const auto &OptionalPrefix = F->getSectionPrefix();
+    if (OptionalPrefix)
+      Name += *OptionalPrefix;
+  }
 
   if (EmitUniqueSection && UniqueSectionNames) {
     Name.push_back('.');

@@ -39,7 +39,6 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -679,7 +678,6 @@ class RegionInfoBase {
   friend class MachineRegionInfo;
   typedef DenseMap<BlockT *, BlockT *> BBtoBBMap;
   typedef DenseMap<BlockT *, RegionT *> BBtoRegionMap;
-  typedef SmallSetVector<RegionT *, 4> RegionSet;
 
   RegionInfoBase();
   virtual ~RegionInfoBase();

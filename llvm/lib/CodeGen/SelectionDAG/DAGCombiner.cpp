@@ -2387,6 +2387,7 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     if (SDValue Folded = DAG.FoldConstantArithmetic(ISD::UDIV, DL, VT,
                                                     N0C, N1C))
       return Folded;
+
   // fold (udiv x, (1 << c)) -> x >>u c
   if (N1C && !N1C->isOpaque() && N1C->getAPIntValue().isPowerOf2())
     return DAG.getNode(ISD::SRL, DL, VT, N0,
@@ -2395,8 +2396,8 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
 
   // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
   if (N1.getOpcode() == ISD::SHL) {
-    if (ConstantSDNode *SHC = getAsNonOpaqueConstant(N1.getOperand(0))) {
-      if (SHC->getAPIntValue().isPowerOf2()) {
+    if (ConstantSDNode *SHC = isConstOrConstSplat(N1.getOperand(0))) {
+      if (!SHC->isOpaque() && SHC->getAPIntValue().isPowerOf2()) {
         EVT ADDVT = N1.getOperand(1).getValueType();
         SDValue Add = DAG.getNode(ISD::ADD, DL, ADDVT,
                                   N1.getOperand(1),
@@ -4444,19 +4445,15 @@ SDValue DAGCombiner::distributeTruncateThroughAnd(SDNode *N) {
   // (truncate:TruncVT (and N00, N01C)) -> (and (truncate:TruncVT N00), TruncC)
   if (N->hasOneUse() && N->getOperand(0).hasOneUse()) {
     SDValue N01 = N->getOperand(0).getOperand(1);
-
-    if (ConstantSDNode *N01C = isConstOrConstSplat(N01)) {
-      if (!N01C->isOpaque()) {
-        EVT TruncVT = N->getValueType(0);
-        SDValue N00 = N->getOperand(0).getOperand(0);
-        APInt TruncC = N01C->getAPIntValue();
-        TruncC = TruncC.trunc(TruncVT.getScalarSizeInBits());
-        SDLoc DL(N);
-
-        return DAG.getNode(ISD::AND, DL, TruncVT,
-                           DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N00),
-                           DAG.getConstant(TruncC, DL, TruncVT));
-      }
+    if (isConstantOrConstantVector(N01, /* NoOpaques */ true)) {
+      SDLoc DL(N);
+      EVT TruncVT = N->getValueType(0);
+      SDValue N00 = N->getOperand(0).getOperand(0);
+      SDValue Trunc00 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N00);
+      SDValue Trunc01 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N01);
+      AddToWorklist(Trunc00.getNode());
+      AddToWorklist(Trunc01.getNode());
+      return DAG.getNode(ISD::AND, DL, TruncVT, Trunc00, Trunc01);
     }
   }
 
@@ -13177,7 +13174,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // t10: v8i32 = vector_shuffle<0,8,u,u,u,u,u,u> t1, t2
   // t11: v8i32 = vector_shuffle<u,u,0,8,u,u,u,u> t3, t4
   // t12: v8i32 = vector_shuffle<u,u,u,u,0,8,u,u> t5, t6
-  // t13: v8i32 = vector_shuffle<u,u,u,u,u,u,0,8> t7, t8  
+  // t13: v8i32 = vector_shuffle<u,u,u,u,u,u,0,8> t7, t8
   // t20: v8i32 = vector_shuffle<0,1,10,11,u,u,u,u> t10, t11
   // t21: v8i32 = vector_shuffle<u,u,u,u,4,5,14,15> t12, t13
   // t30: v8i32 = vector_shuffle<0,1,2,3,12,13,14,15> t20, t21

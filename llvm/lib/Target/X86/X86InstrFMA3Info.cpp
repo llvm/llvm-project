@@ -16,6 +16,7 @@
 #include "X86InstrInfo.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
+using namespace llvm;
 
 /// This flag is used in the method llvm::call_once() used below to make the
 /// initialization of the map 'OpcodeToGroup' thread safe.

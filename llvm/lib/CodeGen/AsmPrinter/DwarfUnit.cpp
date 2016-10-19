@@ -1412,8 +1412,9 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
       addUInt(MemberDie, dwarf::DW_AT_bit_size, None, Size);
 
       uint64_t Offset = DT->getOffsetInBits();
-      uint64_t Align = DT->getAlignInBits() ? DT->getAlignInBits() : FieldSize;
-      uint64_t AlignMask = ~(Align - 1);
+      uint32_t Align = DT->getAlignInBits() ? DT->getAlignInBits()
+                                               : FieldSize;
+      uint32_t AlignMask = ~(Align - 1);
       // The bits from the start of the storage unit to the start of the field.
       uint64_t StartBitOffset = Offset - (Offset & AlignMask);
       // The byte offset of the field's aligned storage unit inside the struct.

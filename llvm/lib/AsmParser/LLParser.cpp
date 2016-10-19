@@ -3865,7 +3865,7 @@ bool LLParser::ParseDIBasicType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
-  OPTIONAL(align, MDUnsignedField, (0, UINT64_MAX));                           \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
@@ -3888,7 +3888,7 @@ bool LLParser::ParseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(scope, MDField, );                                                  \
   REQUIRED(baseType, MDField, );                                               \
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
-  OPTIONAL(align, MDUnsignedField, (0, UINT64_MAX));                           \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );
@@ -3911,7 +3911,7 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(baseType, MDField, );                                               \
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
-  OPTIONAL(align, MDUnsignedField, (0, UINT64_MAX));                           \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(elements, MDField, );                                               \

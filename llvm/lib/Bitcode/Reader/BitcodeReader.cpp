@@ -2514,7 +2514,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       Metadata *Scope = getDITypeRefOrNull(Record[5]);
       Metadata *BaseType = getDITypeRefOrNull(Record[6]);
       uint64_t SizeInBits = Record[7];
-      uint64_t AlignInBits = Record[8];
+      if (Record[8] > (uint64_t)std::numeric_limits<uint32_t>::max())
+        return error("Alignment value is too large");
+      uint32_t AlignInBits = Record[8];
       uint64_t OffsetInBits = Record[9];
       DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
       Metadata *Elements = getMDOrNull(Record[11]);

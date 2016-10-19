@@ -157,6 +157,8 @@ def HasMips3_32r2 :   Predicate<"Subtarget->hasMips3_32r2()">,
                       AssemblerPredicate<"FeatureMips3_32r2">;
 def HasMips3     :    Predicate<"Subtarget->hasMips3()">,
                       AssemblerPredicate<"FeatureMips3">;
+def NotMips3     :    Predicate<"!Subtarget->hasMips3()">,
+                      AssemblerPredicate<"!FeatureMips3">;
 def HasMips4_32  :    Predicate<"Subtarget->hasMips4_32()">,
                       AssemblerPredicate<"FeatureMips4_32">;
 def NotMips4_32  :    Predicate<"!Subtarget->hasMips4_32()">,
@@ -242,6 +244,9 @@ class PTR_64 { list<Predicate> PTRPredicates = [IsPTR64bit]; }
 //        subtractive predicate will hopefully keep us under the 32 predicate
 //        limit long enough to develop an alternative way to handle P1||P2
 //        predicates.
+class ISA_MIPS1_NOT_MIPS3 {
+  list<Predicate> InsnPredicates = [NotMips3];
+}
 class ISA_MIPS1_NOT_4_32 {
   list<Predicate> InsnPredicates = [NotMips4_32];
 }
@@ -1871,8 +1876,7 @@ let DecoderNamespace = "COP3_" in {
 }
 }
 
-def SYNC : MMRel, StdMMR6Rel, SYNC_FT<"sync">, SYNC_FM,
-           ISA_MIPS32;
+def SYNC : MMRel, StdMMR6Rel, SYNC_FT<"sync">, SYNC_FM, ISA_MIPS2;
 def SYNCI : MMRel, StdMMR6Rel, SYNCI_FT<"synci">, SYNCI_FM, ISA_MIPS32R2;
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -2541,6 +2545,12 @@ def Ulhu : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
 def Ulw : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
                             "ulw\t$rt, $addr">; //, ISA_MIPS1_NOT_32R6_64R6;
 
+def LDMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                                (ins mem_simm16:$addr), "ld $rt, $addr">,
+                                ISA_MIPS1_NOT_MIPS3;
+def SDMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                                (ins mem_simm16:$addr), "sd $rt, $addr">,
+                                ISA_MIPS1_NOT_MIPS3;
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//

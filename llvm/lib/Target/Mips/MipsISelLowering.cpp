@@ -458,9 +458,19 @@ const MipsTargetLowering *MipsTargetLowering::create(const MipsTargetMachine &TM
 FastISel *
 MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
                                   const TargetLibraryInfo *libInfo) const {
-  if (!funcInfo.MF->getTarget().Options.EnableFastISel)
-    return TargetLowering::createFastISel(funcInfo, libInfo);
-  return Mips::createFastISel(funcInfo, libInfo);
+  const MipsTargetMachine &TM =
+      static_cast<const MipsTargetMachine &>(funcInfo.MF->getTarget());
+
+  // We support only the standard encoding [MIPS32,MIPS32R5] ISAs.
+  bool UseFastISel = TM.Options.EnableFastISel && Subtarget.hasMips32() &&
+                     !Subtarget.hasMips32r6() && !Subtarget.inMips16Mode() &&
+                     !Subtarget.inMicroMipsMode();
+
+  // Disable if we don't generate PIC or the ABI isn't O32.
+  if (!TM.isPositionIndependent() || !TM.getABI().IsO32())
+    UseFastISel = false;
+
+  return UseFastISel ? Mips::createFastISel(funcInfo, libInfo) : nullptr;
 }
 
 EVT MipsTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,

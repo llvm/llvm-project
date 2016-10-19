@@ -227,7 +227,7 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, int64_t Value,
 
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, uint64_t SizeInBits,
-                                  uint64_t AlignInBits, unsigned Encoding,
+                                  uint32_t AlignInBits, unsigned Encoding,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIBasicType,
@@ -240,7 +240,7 @@ DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
 DIDerivedType *DIDerivedType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint64_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
+    uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
     Metadata *ExtraData, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
@@ -255,7 +255,7 @@ DIDerivedType *DIDerivedType::getImpl(
 DICompositeType *DICompositeType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint64_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
+    uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
     Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
     Metadata *TemplateParams, MDString *Identifier, StorageType Storage,
     bool ShouldCreate) {
@@ -276,7 +276,7 @@ DICompositeType *DICompositeType::getImpl(
 DICompositeType *DICompositeType::buildODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
-    uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+    uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
     Metadata *VTableHolder, Metadata *TemplateParams) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
@@ -310,7 +310,7 @@ DICompositeType *DICompositeType::buildODRType(
 DICompositeType *DICompositeType::getODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
-    uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+    uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
     Metadata *VTableHolder, Metadata *TemplateParams) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");

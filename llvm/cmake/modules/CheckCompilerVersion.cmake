@@ -1,4 +1,4 @@
-# Check if the host compiler is new enough. LLVM requires at least GCC 4.7,
+# Check if the host compiler is new enough. LLVM requires at least GCC 4.8,
 # MSVC 2013, or Clang 3.1.
 
 include(CheckCXXSourceCompiles)
@@ -8,8 +8,8 @@ if(NOT DEFINED LLVM_COMPILER_CHECKED)
 
   if(NOT LLVM_FORCE_USE_OLD_TOOLCHAIN)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7)
-        message(FATAL_ERROR "Host GCC version must be at least 4.7!")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+        message(FATAL_ERROR "Host GCC version must be at least 4.8!")
       endif()
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.1)
@@ -35,7 +35,7 @@ std::atomic<float> x(0.0f);
 int main() { return (float)x; }"
           LLVM_NO_OLD_LIBSTDCXX)
         if(NOT LLVM_NO_OLD_LIBSTDCXX)
-          message(FATAL_ERROR "Host Clang must be able to find libstdc++4.7 or newer!")
+          message(FATAL_ERROR "Host Clang must be able to find libstdc++4.8 or newer!")
         endif()
         set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
         set(CMAKE_REQUIRED_LIBRARIES ${OLD_CMAKE_REQUIRED_LIBRARIES})

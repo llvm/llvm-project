@@ -20,6 +20,7 @@ add_llvm_library(LLVMTransformUtils
   InstructionNamer.cpp
   IntegerDivision.cpp
   LCSSA.cpp
+  LibCallsShrinkWrap.cpp
   Local.cpp
   LoopSimplify.cpp
   LoopUnroll.cpp

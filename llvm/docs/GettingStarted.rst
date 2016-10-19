@@ -202,7 +202,7 @@ uses the package and provides other details.
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor
-`GCC <http://gcc.gnu.org/>`_                                >=4.7.0      C/C++ compiler\ :sup:`1`
+`GCC <http://gcc.gnu.org/>`_                                >=4.8.0      C/C++ compiler\ :sup:`1`
 `python <http://www.python.org/>`_                          >=2.7        Automated test suite\ :sup:`2`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`
 =========================================================== ============ ==========================================
@@ -261,7 +261,7 @@ For the most popular host toolchains we check for specific minimum versions in
 our build systems:
 
 * Clang 3.1
-* GCC 4.7
+* GCC 4.8
 * Visual Studio 2013
 
 Anything older than these toolchains *may* work, but will require forcing the
@@ -274,9 +274,6 @@ recent version may be required to support all of the C++ features used in LLVM.
 
 We track certain versions of software that are *known* to fail when used as
 part of the host toolchain. These even include linkers at times.
-
-**GCC 4.6.3 on ARM**: Miscompiles ``llvm-readobj`` at ``-O3``. A test failure
-in ``test/Object/readobj-shared-object.test`` is one symptom of the problem.
 
 **GNU ld 2.16.X**. Some 2.16.X versions of the ld linker will produce very long
 warning messages complaining that some "``.gnu.linkonce.t.*``" symbol was
@@ -293,19 +290,6 @@ to a newer version (2.17.50.0.4 or later).
 intermittent failures when building LLVM with position independent code.  The
 symptom is an error about cyclic dependencies.  We recommend upgrading to a
 newer version of Gold.
-
-**Clang 3.0 with libstdc++ 4.7.x**: a few Linux distributions (Ubuntu 12.10,
-Fedora 17) have both Clang 3.0 and libstdc++ 4.7 in their repositories.  Clang
-3.0 does not implement a few builtins that are used in this library.  We
-recommend using the system GCC to compile LLVM and Clang in this case.
-
-**Clang 3.0 on Mageia 2**.  There's a packaging issue: Clang can not find at
-least some (``cxxabi.h``) libstdc++ headers.
-
-**Clang in C++11 mode and libstdc++ 4.7.2**.  This version of libstdc++
-contained `a bug <http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53841>`__ which
-causes Clang to refuse to compile condition_variable header file.  At the time
-of writing, this breaks LLD build.
 
 Getting a Modern Host C++ Toolchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

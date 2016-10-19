@@ -248,7 +248,8 @@ public:
   /// unit's DIE vector.
   ///
   /// The unit needs to have its DIEs extracted for this method to work.
-  const DWARFDebugInfoEntryMinimal *getDIEForOffset(uint32_t Offset) const {
+  const DWARFDebugInfoEntryMinimal *getDIEForOffset(uint32_t Offset) {
+    extractDIEsIfNeeded(false);
     assert(!DieArray.empty());
     auto it = std::lower_bound(
         DieArray.begin(), DieArray.end(), Offset,

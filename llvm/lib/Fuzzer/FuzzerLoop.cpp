@@ -379,17 +379,7 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
   this->MaxMutationLen = MaxMutationLen;
 }
 
-void Fuzzer::CheckExitOnItem() {
-  if (!Options.ExitOnItem.empty()) {
-    if (Corpus.HasUnit(Options.ExitOnItem)) {
-      Printf("INFO: found item with checksum '%s', exiting.\n",
-             Options.ExitOnItem.c_str());
-      _Exit(0);
-    }
-  }
-}
-
-void Fuzzer::CheckExitOnSrcPos() {
+void Fuzzer::CheckExitOnSrcPosOrItem() {
   if (!Options.ExitOnSrcPos.empty()) {
     uintptr_t *PCIDs;
     if (size_t NumNewPCIDs = TPC.GetNewPCIDs(&PCIDs)) {
@@ -401,6 +391,13 @@ void Fuzzer::CheckExitOnSrcPos() {
           _Exit(0);
         }
       }
+    }
+  }
+  if (!Options.ExitOnItem.empty()) {
+    if (Corpus.HasUnit(Options.ExitOnItem)) {
+      Printf("INFO: found item with checksum '%s', exiting.\n",
+             Options.ExitOnItem.c_str());
+      _Exit(0);
     }
   }
 }
@@ -419,6 +416,7 @@ void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
       U.resize(MaxSize);
     if (!Corpus.HasUnit(U)) {
       if (size_t NumFeatures = RunOne(U)) {
+        CheckExitOnSrcPosOrItem();
         Corpus.AddToCorpus(U, NumFeatures);
         Reloaded = true;
       }
@@ -447,6 +445,7 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
 
   for (const auto &U : *InitialCorpus) {
     if (size_t NumFeatures = RunOne(U)) {
+      CheckExitOnSrcPosOrItem();
       Corpus.AddToCorpus(U, NumFeatures);
       if (Options.Verbosity >= 2)
         Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
@@ -482,7 +481,6 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   if (Res && Options.UseCmp)
     TPC.ProcessTORC(MD.GetTraceCmpDictionary(), CurrentUnitData, Size);
 
-  CheckExitOnSrcPos();
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
@@ -726,7 +724,7 @@ void Fuzzer::MutateAndTestOne() {
       Corpus.AddToCorpus({CurrentUnitData, CurrentUnitData + Size}, NumFeatures,
                          /*MayDeleteFile=*/true);
       ReportNewCoverage(&II, {CurrentUnitData, CurrentUnitData + Size});
-      CheckExitOnItem();
+      CheckExitOnSrcPosOrItem();
     }
     StopTraceRecording();
     TryDetectingAMemoryLeak(CurrentUnitData, Size,

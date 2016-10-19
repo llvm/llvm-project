@@ -12,9 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <map>
+#include <set>
+#include <sstream>
+
 #include "FuzzerCorpus.h"
 #include "FuzzerDefs.h"
 #include "FuzzerDictionary.h"
+#include "FuzzerExtFunctions.h"
 #include "FuzzerTracePC.h"
 #include "FuzzerValueBitMap.h"
 
@@ -112,11 +117,100 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   HandleValueProfile(Idx);
 }
 
+static bool IsInterestingCoverageFile(std::string &File) {
+  if (File.find("compiler-rt/lib/") != std::string::npos)
+    return false; // sanitizer internal.
+  if (File.find("/usr/lib/") != std::string::npos)
+    return false;
+  if (File.find("/usr/include/") != std::string::npos)
+    return false;
+  if (File == "<null>")
+    return false;
+  return true;
+}
+
 void TracePC::PrintCoverage() {
+  if (!EF->__sanitizer_symbolize_pc) {
+    Printf("INFO: __sanitizer_symbolize_pc is not available,"
+           " not printing coverage\n");
+    return;
+  }
+  std::map<std::string, std::vector<uintptr_t>> CoveredPCsPerModule;
+  std::map<std::string, uintptr_t> ModuleOffsets;
+  std::set<std::string> CoveredFiles, CoveredFunctions, CoveredLines;
   Printf("COVERAGE:\n");
   for (size_t i = 0; i < Min(NumGuards + 1, kNumPCs); i++) {
-    if (PCs[i])
-      PrintPC("COVERED: %p %F %L\n", "COVERED: %p\n", PCs[i]);
+    if (!PCs[i]) continue;
+    std::string FileStr = DescribePC("%s", PCs[i]);
+    if (!IsInterestingCoverageFile(FileStr)) continue;
+    std::string FixedPCStr = DescribePC("%p", PCs[i]);
+    std::string FunctionStr = DescribePC("%F", PCs[i]);
+    std::string LineStr = DescribePC("%l", PCs[i]);
+    // TODO(kcc): get the module using some other way since this
+    // does not work with ASAN_OPTIONS=strip_path_prefix=something.
+    std::string Module = DescribePC("%m", PCs[i]);
+    std::string OffsetStr = DescribePC("%o", PCs[i]);
+    uintptr_t FixedPC = std::stol(FixedPCStr, 0, 16);
+    uintptr_t PcOffset = std::stol(OffsetStr, 0, 16);
+    ModuleOffsets[Module] = FixedPC - PcOffset;
+    CoveredPCsPerModule[Module].push_back(PcOffset);
+    CoveredFunctions.insert(FunctionStr);
+    CoveredFiles.insert(FileStr);
+    if (!CoveredLines.insert(FileStr + ":" + LineStr).second)
+      continue;
+    Printf("COVERED: %s %s:%s\n", FunctionStr.c_str(),
+           FileStr.c_str(), LineStr.c_str());
+  }
+
+  for (auto &M : CoveredPCsPerModule) {
+    std::set<std::string> UncoveredFiles, UncoveredFunctions;
+    std::map<std::string, std::set<int> > UncoveredLines;  // Func+File => lines
+    auto &ModuleName = M.first;
+    auto &CoveredOffsets = M.second;
+    uintptr_t ModuleOffset = ModuleOffsets[ModuleName];
+    std::sort(CoveredOffsets.begin(), CoveredOffsets.end());
+    Printf("MODULE_WITH_COVERAGE: %s\n", ModuleName.c_str());
+    // sancov does not yet fully support DSOs.
+    // std::string Cmd = "sancov -print-coverage-pcs " + ModuleName;
+    std::string Cmd = "objdump -d " + ModuleName +
+        " | grep 'call.*__sanitizer_cov_trace_pc_guard' | awk -F: '{print $1}'";
+    std::string SanCovOutput;
+    if (!ExecuteCommandAndReadOutput(Cmd, &SanCovOutput)) {
+      Printf("INFO: Command failed: %s\n", Cmd.c_str());
+      continue;
+    }
+    std::istringstream ISS(SanCovOutput);
+    std::string S;
+    while (std::getline(ISS, S, '\n')) {
+      uintptr_t PcOffset = std::stol(S, 0, 16);
+      if (!std::binary_search(CoveredOffsets.begin(), CoveredOffsets.end(),
+                              PcOffset)) {
+        uintptr_t PC = ModuleOffset + PcOffset;
+        auto FileStr = DescribePC("%s", PC);
+        if (!IsInterestingCoverageFile(FileStr)) continue;
+        if (CoveredFiles.count(FileStr) == 0) {
+          UncoveredFiles.insert(FileStr);
+          continue;
+        }
+        auto FunctionStr = DescribePC("%F", PC);
+        if (CoveredFunctions.count(FunctionStr) == 0) {
+          UncoveredFunctions.insert(FunctionStr);
+          continue;
+        }
+        std::string LineStr = DescribePC("%l", PC);
+        uintptr_t Line = std::stoi(LineStr);
+        std::string FileLineStr = FileStr + ":" + LineStr;
+        if (CoveredLines.count(FileLineStr) == 0)
+          UncoveredLines[FunctionStr + " " + FileStr].insert(Line);
+      }
+    }
+    for (auto &FileLine: UncoveredLines)
+      for (int Line : FileLine.second)
+        Printf("UNCOVERED_LINE: %s:%d\n", FileLine.first.c_str(), Line);
+    for (auto &Func : UncoveredFunctions)
+      Printf("UNCOVERED_FUNC: %s\n", Func.c_str());
+    for (auto &File : UncoveredFiles)
+      Printf("UNCOVERED_FILE: %s\n", File.c_str());
   }
 }
 

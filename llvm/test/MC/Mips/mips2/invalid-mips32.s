@@ -40,5 +40,4 @@
         msubu     $15,$a1         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         mtc0      $9,$29,3        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         mul       $s0,$s4,$at     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        sync      0               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        sync      1               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+        sync      1               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: s-type must be zero or unspecified for pre-MIPS32 ISAs
