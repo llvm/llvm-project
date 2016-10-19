@@ -2209,6 +2209,12 @@ static void findTypeLocationForBlockDecl(const TypeSourceInfo *TSInfo,
   }
 }
 
+static std::string
+formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
+                       FunctionTypeLoc &Block, FunctionProtoTypeLoc &BlockProto,
+                       bool SuppressBlock = false,
+                       Optional<ArrayRef<QualType>> ObjCSubsts = None);
+
 static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
                                            const ParmVarDecl *Param,
                                            bool SuppressName = false,
@@ -2271,12 +2277,30 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
     
   // We have the function prototype behind the block pointer type, as it was
   // written in the source.
+  return formatBlockPlaceholder(Policy, Param, Block, BlockProto, SuppressBlock,
+                                ObjCSubsts);
+}
+
+/// \brief Returns a placeholder string that corresponds to an Objective-C block
+/// declaration.
+///
+/// \param BlockDecl A declaration with an Objective-C block type.
+///
+/// \param Block The most relevant type location for that block type.
+///
+/// \param SuppressBlockName Determines wether or not the name of the block
+/// declaration is included in the resulting string.
+static std::string
+formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
+                       FunctionTypeLoc &Block, FunctionProtoTypeLoc &BlockProto,
+                       bool SuppressBlock,
+                       Optional<ArrayRef<QualType>> ObjCSubsts) {
   std::string Result;
   QualType ResultType = Block.getTypePtr()->getReturnType();
   if (ObjCSubsts)
-    ResultType = ResultType.substObjCTypeArgs(Param->getASTContext(),
-                                              *ObjCSubsts,
-                                              ObjCSubstitutionContext::Result);
+    ResultType =
+        ResultType.substObjCTypeArgs(BlockDecl->getASTContext(), *ObjCSubsts,
+                                     ObjCSubstitutionContext::Result);
   if (!ResultType->isVoidType() || SuppressBlock)
     ResultType.getAsStringInternal(Result, Policy);
 
@@ -2294,31 +2318,30 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
         Params += ", ";
       Params += FormatFunctionParameter(Policy, Block.getParam(I),
                                         /*SuppressName=*/false,
-                                        /*SuppressBlock=*/true,
-                                        ObjCSubsts);
+                                        /*SuppressBlock=*/true, ObjCSubsts);
 
       if (I == N - 1 && BlockProto.getTypePtr()->isVariadic())
         Params += ", ...";
     }
     Params += ")";
   }
-  
+
   if (SuppressBlock) {
     // Format as a parameter.
     Result = Result + " (^";
-    if (Param->getIdentifier())
-      Result += Param->getIdentifier()->getName();
+    if (BlockDecl->getIdentifier())
+      Result += BlockDecl->getIdentifier()->getName();
     Result += ")";
     Result += Params;
   } else {
     // Format as a block literal argument.
     Result = '^' + Result;
     Result += Params;
-    
-    if (Param->getIdentifier())
-      Result += Param->getIdentifier()->getName();
+
+    if (BlockDecl->getIdentifier())
+      Result += BlockDecl->getIdentifier()->getName();
   }
-  
+
   return Result;
 }
 
