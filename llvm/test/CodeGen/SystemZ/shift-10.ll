@@ -5,8 +5,8 @@
 ; Test a shift right followed by a sign extension.  This can use two shifts.
 define i64 @f1(i32 %a) {
 ; CHECK-LABEL: f1:
-; CHECK: sllg [[REG:%r[0-5]]], %r2, 62
-; CHECK: srag %r2, [[REG]], 63
+; CHECK: risbg %r0, %r2, 63, 191, 63
+; CHECK: lcgr  %r2, %r0
 ; CHECK: br %r14
   %shr = lshr i32 %a, 1
   %trunc = trunc i32 %shr to i1
@@ -18,8 +18,8 @@ define i64 @f1(i32 %a) {
 ; ashr/sext pair.
 define i64 @f2(i32 %a) {
 ; CHECK-LABEL: f2:
-; CHECK: sllg [[REG:%r[0-5]]], %r2, 33
-; CHECK: srag %r2, [[REG]], 63
+; CHECK: risbg %r0, %r2, 63, 191, 34
+; CHECK: lcgr  %r2, %r0
 ; CHECK: br %r14
   %shr = lshr i32 %a, 30
   %trunc = trunc i32 %shr to i1

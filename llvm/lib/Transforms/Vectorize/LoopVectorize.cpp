@@ -441,6 +441,10 @@ protected:
   /// respective conditions.
   void predicateInstructions();
 
+  /// Collect the instructions from the original loop that would be trivially
+  /// dead in the vectorized loop if generated.
+  void collectTriviallyDeadInstructions();
+
   /// Shrinks vector element sizes to the smallest bitwidth they can be legally
   /// represented as.
   void truncateToMinimalBitwidths();
@@ -763,6 +767,14 @@ protected:
 
   // Record whether runtime checks are added.
   bool AddedSafetyChecks;
+
+  // Holds instructions from the original loop whose counterparts in the
+  // vectorized loop would be trivially dead if generated. For example,
+  // original induction update instructions can become dead because we
+  // separately emit induction "steps" when generating code for the new loop.
+  // Similarly, we create a new latch condition when setting up the structure
+  // of the new loop, so the old one can become dead.
+  SmallPtrSet<Instruction *, 4> DeadInstructions;
 };
 
 class InnerLoopUnroller : public InnerLoopVectorizer {
@@ -3802,6 +3814,11 @@ void InnerLoopVectorizer::vectorizeLoop() {
   // are vectorized, so we can use them to construct the PHI.
   PhiVector PHIsToFix;
 
+  // Collect instructions from the original loop that will become trivially
+  // dead in the vectorized loop. We don't need to vectorize these
+  // instructions.
+  collectTriviallyDeadInstructions();
+
   // Scan the loop in a topological order to ensure that defs are vectorized
   // before users.
   LoopBlocksDFS DFS(OrigLoop);
@@ -4209,6 +4226,29 @@ void InnerLoopVectorizer::fixLCSSAPHIs() {
   }
 }
 
+void InnerLoopVectorizer::collectTriviallyDeadInstructions() {
+  BasicBlock *Latch = OrigLoop->getLoopLatch();
+
+  // We create new control-flow for the vectorized loop, so the original
+  // condition will be dead after vectorization if it's only used by the
+  // branch.
+  auto *Cmp = dyn_cast<Instruction>(Latch->getTerminator()->getOperand(0));
+  if (Cmp && Cmp->hasOneUse())
+    DeadInstructions.insert(Cmp);
+
+  // We create new "steps" for induction variable updates to which the original
+  // induction variables map. An original update instruction will be dead if
+  // all its users except the induction variable are dead.
+  for (auto &Induction : *Legal->getInductionVars()) {
+    PHINode *Ind = Induction.first;
+    auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
+    if (all_of(IndUpdate->users(), [&](User *U) -> bool {
+          return U == Ind || DeadInstructions.count(cast<Instruction>(U));
+        }))
+      DeadInstructions.insert(IndUpdate);
+  }
+}
+
 void InnerLoopVectorizer::predicateInstructions() {
 
   // For each instruction I marked for predication on value C, split I into its
@@ -4535,6 +4575,11 @@ static bool mayDivideByZero(Instruction &I) {
 void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
   // For each instruction in the old loop.
   for (Instruction &I : *BB) {
+
+    // If the instruction will become trivially dead when vectorized, we don't
+    // need to generate it.
+    if (DeadInstructions.count(&I))
+      continue;
 
     // Scalarize instructions that should remain scalar after vectorization.
     if (!(isa<BranchInst>(&I) || isa<PHINode>(&I) ||

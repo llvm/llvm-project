@@ -87,7 +87,8 @@ public:
   typedef decltype(OptimizeLayer)::ModuleSetHandleT ModuleHandle;
 
   KaleidoscopeJIT(MyRemote &Remote)
-      : TM(EngineBuilder().selectTarget()),
+      : TM(EngineBuilder().selectTarget(Triple(Remote.getTargetTriple()), "",
+                                        "", SmallVector<std::string, 0>())),
         DL(TM->createDataLayout()),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,

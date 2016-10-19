@@ -674,6 +674,19 @@ ConstantRange::add(const ConstantRange &Other) const {
   return X;
 }
 
+ConstantRange ConstantRange::addWithNoSignedWrap(const APInt &Other) const {
+  // Calculate the subset of this range such that "X + Other" is
+  // guaranteed not to wrap (overflow) for all X in this subset.
+  // makeGuaranteedNoWrapRegion will produce an exact NSW range since we are
+  // passing a single element range.
+  auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(BinaryOperator::Add,
+                                      ConstantRange(Other),
+                                      OverflowingBinaryOperator::NoSignedWrap);
+  auto NSWConstrainedRange = intersectWith(NSWRange);
+
+  return NSWConstrainedRange.add(ConstantRange(Other));
+}
+
 ConstantRange
 ConstantRange::sub(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())

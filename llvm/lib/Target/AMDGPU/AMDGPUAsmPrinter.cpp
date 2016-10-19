@@ -548,7 +548,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // register.
   ProgInfo.FloatMode = getFPMode(MF);
 
-  ProgInfo.IEEEMode = 0;
+  ProgInfo.IEEEMode = STM.enableIEEEBit(MF);
 
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = 1;

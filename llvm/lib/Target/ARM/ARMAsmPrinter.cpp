@@ -633,16 +633,14 @@ static ARMBuildAttrs::CPUArch getArchForCPU(StringRef CPU,
     return ARMBuildAttrs::v4;
 }
 
-// Returns true if all functions have the same function attribute value
-static bool haveAllFunctionsAttribute(const Module &M, StringRef Attr,
-                                      StringRef Value) {
-  for (auto &F : M)
-    if (F.getFnAttribute(Attr).getValueAsString() != Value)
-      return false;
-
-  return true;
+// Returns true if all functions have the same function attribute value.
+// It also returns true when the module has no functions.
+static bool checkFunctionsAttributeConsistency(const Module &M, StringRef Attr,
+                                               StringRef Value) {
+  return !any_of(M, [&](const Function &F) {
+    return F.getFnAttribute(Attr).getValueAsString() != Value;
+  });
 }
-
 
 void ARMAsmPrinter::emitAttributes() {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
@@ -781,13 +779,15 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP Denormals.
-  if (haveAllFunctionsAttribute(*MMI->getModule(), "denormal-fp-math",
-                                "preserve-sign") ||
+  if (checkFunctionsAttributeConsistency(*MMI->getModule(),
+                                         "denormal-fp-math",
+                                         "preserve-sign") ||
       TM.Options.FPDenormalMode == FPDenormal::PreserveSign)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PreserveFPSign);
-  else if (haveAllFunctionsAttribute(*MMI->getModule(), "denormal-fp-math",
-                                     "positive-zero") ||
+  else if (checkFunctionsAttributeConsistency(*MMI->getModule(),
+                                              "denormal-fp-math",
+                                              "positive-zero") ||
            TM.Options.FPDenormalMode == FPDenormal::PositiveZero)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PositiveZero);
@@ -821,7 +821,8 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP exceptions and rounding
-  if (haveAllFunctionsAttribute(*MMI->getModule(), "no-trapping-math", "true") ||
+  if (checkFunctionsAttributeConsistency(*MMI->getModule(),
+                                         "no-trapping-math", "true") ||
       TM.Options.NoTrappingFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
@@ -1706,6 +1707,83 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(Opc)
                                      .addReg(MI->getOperand(0).getReg())
                                      .addReg(MI->getOperand(1).getReg())
+                                     // Add predicate operands.
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0));
+    return;
+  }
+  case ARM::tTBB_JT:
+  case ARM::tTBH_JT: {
+
+    bool Is8Bit = MI->getOpcode() == ARM::tTBB_JT;
+    unsigned Base = MI->getOperand(0).getReg();
+    unsigned Idx = MI->getOperand(1).getReg();
+    assert(MI->getOperand(1).isKill() && "We need the index register as scratch!");
+
+    // Multiply up idx if necessary.
+    if (!Is8Bit)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLSLri)
+                                       .addReg(Idx)
+                                       .addReg(ARM::CPSR)
+                                       .addReg(Idx)
+                                       .addImm(1)
+                                       // Add predicate operands.
+                                       .addImm(ARMCC::AL)
+                                       .addReg(0));
+
+    if (Base == ARM::PC) {
+      // TBB [base, idx] =
+      //    ADDS idx, idx, base
+      //    LDRB idx, [idx, #4] ; or LDRH if TBH
+      //    LSLS idx, #1
+      //    ADDS pc, pc, idx
+
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
+                                       .addReg(Idx)
+                                       .addReg(Idx)
+                                       .addReg(Base)
+                                       // Add predicate operands.
+                                       .addImm(ARMCC::AL)
+                                       .addReg(0));
+
+      unsigned Opc = Is8Bit ? ARM::tLDRBi : ARM::tLDRHi;
+      EmitToStreamer(*OutStreamer, MCInstBuilder(Opc)
+                                       .addReg(Idx)
+                                       .addReg(Idx)
+                                       .addImm(Is8Bit ? 4 : 2)
+                                       // Add predicate operands.
+                                       .addImm(ARMCC::AL)
+                                       .addReg(0));
+    } else {
+      // TBB [base, idx] =
+      //    LDRB idx, [base, idx] ; or LDRH if TBH
+      //    LSLS idx, #1
+      //    ADDS pc, pc, idx
+
+      unsigned Opc = Is8Bit ? ARM::tLDRBr : ARM::tLDRHr;
+      EmitToStreamer(*OutStreamer, MCInstBuilder(Opc)
+                                       .addReg(Idx)
+                                       .addReg(Base)
+                                       .addReg(Idx)
+                                       // Add predicate operands.
+                                       .addImm(ARMCC::AL)
+                                       .addReg(0));
+    }
+
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLSLri)
+                                     .addReg(Idx)
+                                     .addReg(ARM::CPSR)
+                                     .addReg(Idx)
+                                     .addImm(1)
+                                     // Add predicate operands.
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0));
+
+    OutStreamer->EmitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
+                                     .addReg(ARM::PC)
+                                     .addReg(ARM::PC)
+                                     .addReg(Idx)
                                      // Add predicate operands.
                                      .addImm(ARMCC::AL)
                                      .addReg(0));

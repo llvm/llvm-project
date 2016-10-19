@@ -1759,6 +1759,10 @@ class UnaryVRIa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M3 = type;
 }
 
+class UnaryVRIaGeneric<string mnemonic, bits<16> opcode, Immediate imm>
+  : InstVRIa<opcode, (outs VR128:$V1), (ins imm:$I2, imm32zx4:$M3),
+             mnemonic#"\t$V1, $I2, $M3", []>;
+
 class UnaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m4 = 0,
                 bits<4> m5 = 0>
@@ -1770,15 +1774,50 @@ class UnaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M5 = m5;
 }
 
-multiclass UnaryVRRaSPair<string mnemonic, bits<16> opcode,
-                          SDPatternOperator operator,
-                          SDPatternOperator operator_cc, TypedReg tr1,
-                          TypedReg tr2, bits<4> type, bits<4> modifier = 0,
-                          bits<4> modifier_cc = 1> {
-  def "" : UnaryVRRa<mnemonic, opcode, operator, tr1, tr2, type, 0, modifier>;
+class UnaryVRRaGeneric<string mnemonic, bits<16> opcode, bits<4> m4 = 0,
+                       bits<4> m5 = 0>
+  : InstVRRa<opcode, (outs VR128:$V1), (ins VR128:$V2, imm32zx4:$M3),
+             mnemonic#"\t$V1, $V2, $M3", []> {
+  let M4 = m4;
+  let M5 = m5;
+}
+
+class UnaryVRRaFloatGeneric<string mnemonic, bits<16> opcode, bits<4> m5 = 0>
+  : InstVRRa<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, imm32zx4:$M3, imm32zx4:$M4),
+             mnemonic#"\t$V1, $V2, $M3, $M4", []> {
+  let M5 = m5;
+}
+
+// Declare a pair of instructions, one which sets CC and one which doesn't.
+// The CC-setting form ends with "S" and sets the low bit of M5.
+// The form that does not set CC has an extra operand to optionally allow
+// specifying arbitrary M5 values in assembler.
+multiclass UnaryExtraVRRaSPair<string mnemonic, bits<16> opcode,
+                               SDPatternOperator operator,
+                               SDPatternOperator operator_cc,
+                               TypedReg tr1, TypedReg tr2, bits<4> type> {
+  let M3 = type, M4 = 0 in
+    def "" : InstVRRa<opcode, (outs tr1.op:$V1),
+                      (ins tr2.op:$V2, imm32zx4:$M5),
+                      mnemonic#"\t$V1, $V2, $M5", []>;
+  def : Pat<(tr1.vt (operator (tr2.vt tr2.op:$V2))),
+            (!cast<Instruction>(NAME) tr2.op:$V2, 0)>;
+  def : InstAlias<mnemonic#"\t$V1, $V2",
+                  (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2, 0)>;
   let Defs = [CC] in
-    def S : UnaryVRRa<mnemonic##"s", opcode, operator_cc, tr1, tr2, type, 0,
-                      modifier_cc>;
+    def S : UnaryVRRa<mnemonic##"s", opcode, operator_cc, tr1, tr2,
+                      type, 0, 1>;
+}
+
+multiclass UnaryExtraVRRaSPairGeneric<string mnemonic, bits<16> opcode> {
+  let M4 = 0 in
+    def "" : InstVRRa<opcode, (outs VR128:$V1),
+                     (ins VR128:$V2, imm32zx4:$M3, imm32zx4:$M5),
+                     mnemonic#"\t$V1, $V2, $M3, $M5", []>;
+  def : InstAlias<mnemonic#"\t$V1, $V2, $M3",
+                  (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2,
+                                            imm32zx4:$M3, 0)>;
 }
 
 class UnaryVRX<string mnemonic, bits<16> opcode, SDPatternOperator operator,
@@ -1789,6 +1828,12 @@ class UnaryVRX<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M3 = type;
   let mayLoad = 1;
   let AccessBytes = bytes;
+}
+
+class UnaryVRXGeneric<string mnemonic, bits<16> opcode>
+  : InstVRX<opcode, (outs VR128:$V1), (ins bdxaddr12only:$XBD2, imm32zx4:$M3),
+            mnemonic#"\t$V1, $XBD2, $M3", []> {
+  let mayLoad = 1;
 }
 
 class BinaryRR<string mnemonic, bits<8> opcode, SDPatternOperator operator,
@@ -2011,6 +2056,11 @@ class BinaryVRIb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M4 = type;
 }
 
+class BinaryVRIbGeneric<string mnemonic, bits<16> opcode>
+  : InstVRIb<opcode, (outs VR128:$V1),
+             (ins imm32zx8:$I2, imm32zx8:$I3, imm32zx4:$M4),
+             mnemonic#"\t$V1, $I2, $I3, $M4", []>;
+
 class BinaryVRIc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type>
   : InstVRIc<opcode, (outs tr1.op:$V1), (ins tr2.op:$V3, imm32zx16:$I2),
@@ -2019,6 +2069,11 @@ class BinaryVRIc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                                                  imm32zx16:$I2)))]> {
   let M4 = type;
 }
+
+class BinaryVRIcGeneric<string mnemonic, bits<16> opcode>
+  : InstVRIc<opcode, (outs VR128:$V1),
+             (ins VR128:$V3, imm32zx16:$I2, imm32zx4:$M4),
+             mnemonic#"\t$V1, $V3, $I2, $M4", []>;
 
 class BinaryVRIe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type, bits<4> m5>
@@ -2030,12 +2085,25 @@ class BinaryVRIe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M5 = m5;
 }
 
-class BinaryVRRa<string mnemonic, bits<16> opcode>
-  : InstVRRa<opcode, (outs VR128:$V1), (ins VR128:$V2, imm32zx4:$M3),
-             mnemonic#"\t$V1, $V2, $M3", []> {
-  let M4 = 0;
-  let M5 = 0;
+class BinaryVRIeFloatGeneric<string mnemonic, bits<16> opcode>
+  : InstVRIe<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $I3, $M4, $M5", []>;
+
+class BinaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
+                 TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m4 = 0>
+  : InstVRRa<opcode, (outs tr1.op:$V1), (ins tr2.op:$V2, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $M5",
+             [(set tr1.op:$V1, (tr1.vt (operator (tr2.vt tr2.op:$V2),
+                                                 imm32zx12:$M5)))]> {
+  let M3 = type;
+  let M4 = m4;
 }
+
+class BinaryVRRaFloatGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRa<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, imm32zx4:$M3, imm32zx4:$M4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $M3, $M4, $M5", []>;
 
 class BinaryVRRb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type = 0,
@@ -2053,12 +2121,47 @@ class BinaryVRRb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 multiclass BinaryVRRbSPair<string mnemonic, bits<16> opcode,
                            SDPatternOperator operator,
                            SDPatternOperator operator_cc, TypedReg tr1,
-                           TypedReg tr2, bits<4> type,
-                           bits<4> modifier = 0, bits<4> modifier_cc = 1> {
-  def "" : BinaryVRRb<mnemonic, opcode, operator, tr1, tr2, type, modifier>;
+                           TypedReg tr2, bits<4> type, bits<4> modifier = 0> {
+  def "" : BinaryVRRb<mnemonic, opcode, operator, tr1, tr2, type,
+                      !and (modifier, 14)>;
   let Defs = [CC] in
     def S : BinaryVRRb<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
-                       modifier_cc>;
+                       !add (!and (modifier, 14), 1)>;
+}
+
+class BinaryVRRbSPairGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRb<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+
+// Declare a pair of instructions, one which sets CC and one which doesn't.
+// The CC-setting form ends with "S" and sets the low bit of M5.
+// The form that does not set CC has an extra operand to optionally allow
+// specifying arbitrary M5 values in assembler.
+multiclass BinaryExtraVRRbSPair<string mnemonic, bits<16> opcode,
+                                SDPatternOperator operator,
+                                SDPatternOperator operator_cc,
+                                TypedReg tr1, TypedReg tr2, bits<4> type> {
+  let M4 = type in
+    def "" : InstVRRb<opcode, (outs tr1.op:$V1),
+                      (ins tr2.op:$V2, tr2.op:$V3, imm32zx4:$M5),
+                      mnemonic#"\t$V1, $V2, $V3, $M5", []>;
+  def : Pat<(tr1.vt (operator (tr2.vt tr2.op:$V2), (tr2.vt tr2.op:$V3))),
+            (!cast<Instruction>(NAME) tr2.op:$V2, tr2.op:$V3, 0)>;
+  def : InstAlias<mnemonic#"\t$V1, $V2, $V3",
+                  (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
+                                            tr2.op:$V3, 0)>;
+  let Defs = [CC] in
+    def S : BinaryVRRb<mnemonic##"s", opcode, operator_cc, tr1, tr2, type, 1>;
+}
+
+multiclass BinaryExtraVRRbSPairGeneric<string mnemonic, bits<16> opcode> {
+  def "" : InstVRRb<opcode, (outs VR128:$V1),
+                   (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+                   mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+  def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $M4",
+                  (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
+                                            imm32zx4:$M4, 0)>;
 }
 
 class BinaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
@@ -2073,16 +2176,41 @@ class BinaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M6 = m6;
 }
 
+class BinaryVRRcGeneric<string mnemonic, bits<16> opcode, bits<4> m5 = 0,
+                        bits<4> m6 = 0>
+  : InstVRRc<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, imm32zx4:$M4),
+             mnemonic#"\t$V1, $V2, $V3, $M4", []> {
+  let M5 = m5;
+  let M6 = m6;
+}
+
+class BinaryVRRcFloatGeneric<string mnemonic, bits<16> opcode, bits<4> m6 = 0>
+  : InstVRRc<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []> {
+  let M6 = m6;
+}
+
+// Declare a pair of instructions, one which sets CC and one which doesn't.
+// The CC-setting form ends with "S" and sets the low bit of M5.
 multiclass BinaryVRRcSPair<string mnemonic, bits<16> opcode,
                            SDPatternOperator operator,
                            SDPatternOperator operator_cc, TypedReg tr1,
                            TypedReg tr2, bits<4> type, bits<4> m5,
-                           bits<4> modifier = 0, bits<4> modifier_cc = 1> {
-  def "" : BinaryVRRc<mnemonic, opcode, operator, tr1, tr2, type, m5, modifier>;
+                           bits<4> modifier = 0> {
+  def "" : BinaryVRRc<mnemonic, opcode, operator, tr1, tr2, type,
+                      m5, !and (modifier, 14)>;
   let Defs = [CC] in
     def S : BinaryVRRc<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
-                       m5, modifier_cc>;
+                       m5, !add (!and (modifier, 14), 1)>;
 }
+
+class BinaryVRRcSPairFloatGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRc<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5,
+                  imm32zx4:$M6),
+             mnemonic#"\t$V1, $V2, $V3, $M4, $M5, $M6", []>;
 
 class BinaryVRRf<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr>
@@ -2098,6 +2226,11 @@ class BinaryVRSa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                                                  shift12only:$BD2)))]> {
   let M4 = type;
 }
+
+class BinaryVRSaGeneric<string mnemonic, bits<16> opcode>
+  : InstVRSa<opcode, (outs VR128:$V1),
+             (ins VR128:$V3, shift12only:$BD2, imm32zx4:$M4),
+             mnemonic#"\t$V1, $V3, $BD2, $M4", []>;
 
 class BinaryVRSb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  bits<5> bytes>
@@ -2116,6 +2249,11 @@ class BinaryVRSc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
            [(set GR64:$R1, (operator (tr.vt tr.op:$V3), shift12only:$BD2))]> {
   let M4 = type;
 }
+
+class BinaryVRScGeneric<string mnemonic, bits<16> opcode>
+  : InstVRSc<opcode, (outs GR64:$R1),
+             (ins VR128:$V3, shift12only:$BD2, imm32zx4: $M4),
+             mnemonic#"\t$R1, $V3, $BD2, $M4", []>;
 
 class BinaryVRX<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 TypedReg tr, bits<5> bytes>
@@ -2298,6 +2436,22 @@ class CompareVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M5 = 0;
 }
 
+class CompareVRRaGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRa<opcode, (outs), (ins VR128:$V1, VR128:$V2, imm32zx4:$M3),
+             mnemonic#"\t$V1, $V2, $M3", []> {
+  let isCompare = 1;
+  let M4 = 0;
+  let M5 = 0;
+}
+
+class CompareVRRaFloatGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRa<opcode, (outs),
+             (ins VR64:$V1, VR64:$V2, imm32zx4:$M3, imm32zx4:$M4),
+             mnemonic#"\t$V1, $V2, $M3, $M4", []> {
+  let isCompare = 1;
+  let M5 = 0;
+}
+
 class TestRXE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
               RegisterOperand cls>
   : InstRXE<opcode, (outs), (ins cls:$R1, bdxaddr12only:$XBD2),
@@ -2399,6 +2553,11 @@ class TernaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M3 = type;
 }
 
+class TernaryVRRaFloatGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRa<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, imm32zx4:$M3, imm32zx4:$M4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $M3, $M4, $M5", []>;
+
 class TernaryVRRb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                   TypedReg tr1, TypedReg tr2, bits<4> type,
                   SDPatternOperator m5mask, bits<4> m5or>
@@ -2412,21 +2571,34 @@ class TernaryVRRb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M4 = type;
 }
 
-multiclass TernaryVRRbSPair<string mnemonic, bits<16> opcode,
-                            SDPatternOperator operator,
-                            SDPatternOperator operator_cc, TypedReg tr1,
-                            TypedReg tr2, bits<4> type, bits<4> m5or> {
+// Declare a pair of instructions, one which sets CC and one which doesn't.
+// The CC-setting form ends with "S" and sets the low bit of M5.
+// Also create aliases to make use of M5 operand optional in assembler.
+multiclass TernaryOptVRRbSPair<string mnemonic, bits<16> opcode,
+                               SDPatternOperator operator,
+                               SDPatternOperator operator_cc,
+                               TypedReg tr1, TypedReg tr2, bits<4> type,
+                               bits<4> modifier = 0> {
   def "" : TernaryVRRb<mnemonic, opcode, operator, tr1, tr2, type,
-                       imm32zx4even, !and (m5or, 14)>;
+                       imm32zx4even, !and (modifier, 14)>;
   def : InstAlias<mnemonic#"\t$V1, $V2, $V3",
                   (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
                                             tr2.op:$V3, 0)>;
   let Defs = [CC] in
     def S : TernaryVRRb<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
-                        imm32zx4even, !add(!and (m5or, 14), 1)>;
+                        imm32zx4even, !add(!and (modifier, 14), 1)>;
   def : InstAlias<mnemonic#"s\t$V1, $V2, $V3",
                   (!cast<Instruction>(NAME#"S") tr1.op:$V1, tr2.op:$V2,
                                                 tr2.op:$V3, 0)>;
+}
+
+multiclass TernaryOptVRRbSPairGeneric<string mnemonic, bits<16> opcode> {
+  def "" : InstVRRb<opcode, (outs VR128:$V1),
+                   (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+                   mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+  def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $M4",
+                  (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
+                                            imm32zx4:$M4, 0)>;
 }
 
 class TernaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
@@ -2453,6 +2625,13 @@ class TernaryVRRd<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M6 = 0;
 }
 
+class TernaryVRRdGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRd<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, VR128:$V4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $V4, $M5", []> {
+  let M6 = 0;
+}
+
 class TernaryVRRe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                   TypedReg tr1, TypedReg tr2, bits<4> m5 = 0, bits<4> type = 0>
   : InstVRRe<opcode, (outs tr1.op:$V1),
@@ -2465,6 +2644,11 @@ class TernaryVRRe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M6 = type;
 }
 
+class TernaryVRReFloatGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRe<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+             mnemonic#"\t$V1, $V2, $V3, $V4, $M5, $M6", []>;
+
 class TernaryVRSb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                   TypedReg tr1, TypedReg tr2, RegisterOperand cls, bits<4> type>
   : InstVRSb<opcode, (outs tr1.op:$V1),
@@ -2476,6 +2660,14 @@ class TernaryVRSb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let Constraints = "$V1 = $V1src";
   let DisableEncoding = "$V1src";
   let M4 = type;
+}
+
+class TernaryVRSbGeneric<string mnemonic, bits<16> opcode>
+  : InstVRSb<opcode, (outs VR128:$V1),
+             (ins VR128:$V1src, GR64:$R3, shift12only:$BD2, imm32zx4:$M4),
+             mnemonic#"\t$V1, $R3, $BD2, $M4", []> {
+  let Constraints = "$V1 = $V1src";
+  let DisableEncoding = "$V1src";
 }
 
 class TernaryVRV<string mnemonic, bits<16> opcode, bits<5> bytes,
@@ -2517,6 +2709,15 @@ class QuaternaryVRId<string mnemonic, bits<16> opcode, SDPatternOperator operato
   let M5 = type;
 }
 
+class QuaternaryVRIdGeneric<string mnemonic, bits<16> opcode>
+  : InstVRId<opcode, (outs VR128:$V1),
+             (ins VR128:$V1src, VR128:$V2, VR128:$V3,
+                  imm32zx8:$I4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $I4, $M5", []> {
+  let Constraints = "$V1 = $V1src";
+  let DisableEncoding = "$V1src";
+}
+
 class QuaternaryVRRd<string mnemonic, bits<16> opcode,
                      SDPatternOperator operator, TypedReg tr1, TypedReg tr2,
                      bits<4> type, SDPatternOperator m6mask, bits<4> m6or>
@@ -2531,21 +2732,35 @@ class QuaternaryVRRd<string mnemonic, bits<16> opcode,
   let M5 = type;
 }
 
-multiclass QuaternaryVRRdSPair<string mnemonic, bits<16> opcode,
-                               SDPatternOperator operator,
-                               SDPatternOperator operator_cc, TypedReg tr1,
-                               TypedReg tr2, bits<4> type, bits<4> m6or> {
+// Declare a pair of instructions, one which sets CC and one which doesn't.
+// The CC-setting form ends with "S" and sets the low bit of M6.
+// Also create aliases to make use of M6 operand optional in assembler.
+multiclass QuaternaryOptVRRdSPair<string mnemonic, bits<16> opcode,
+                                  SDPatternOperator operator,
+                                SDPatternOperator operator_cc,
+                                TypedReg tr1, TypedReg tr2, bits<4> type,
+                                bits<4> modifier = 0> {
   def "" : QuaternaryVRRd<mnemonic, opcode, operator, tr1, tr2, type,
-                          imm32zx4even, !and (m6or, 14)>;
+                          imm32zx4even, !and (modifier, 14)>;
   def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $V4",
                   (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
                                             tr2.op:$V3, tr2.op:$V4, 0)>;
   let Defs = [CC] in
     def S : QuaternaryVRRd<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
-                           imm32zx4even, !add (!and (m6or, 14), 1)>;
+                           imm32zx4even, !add (!and (modifier, 14), 1)>;
   def : InstAlias<mnemonic#"s\t$V1, $V2, $V3, $V4",
                   (!cast<Instruction>(NAME#"S") tr1.op:$V1, tr2.op:$V2,
                                                 tr2.op:$V3, tr2.op:$V4, 0)>;
+}
+
+multiclass QuaternaryOptVRRdSPairGeneric<string mnemonic, bits<16> opcode> {
+  def "" : InstVRRd<opcode, (outs VR128:$V1),
+                   (ins VR128:$V2, VR128:$V3, VR128:$V4,
+                        imm32zx4:$M5, imm32zx4:$M6),
+                   mnemonic#"\t$V1, $V2, $V3, $V4, $M5, $M6", []>;
+  def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $V4, $M5",
+                  (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
+                                            VR128:$V4, imm32zx4:$M5, 0)>;
 }
 
 class LoadAndOpRSY<string mnemonic, bits<16> opcode, SDPatternOperator operator,

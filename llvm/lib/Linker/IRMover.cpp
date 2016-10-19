@@ -281,7 +281,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   }
 
   // If all of the element types mapped directly over and the type is not
-  // a nomed struct, then the type is usable as-is.
+  // a named struct, then the type is usable as-is.
   if (!AnyChange && IsUniqued)
     return *Entry = Ty;
 

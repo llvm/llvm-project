@@ -406,9 +406,10 @@ namespace rdf {
 
     RegisterRef() : RegisterRef(0) {}
     explicit RegisterRef(RegisterId R, LaneBitmask M = ~LaneBitmask(0))
-      : Reg(R), Mask(M) {}
+      : Reg(R), Mask(R != 0 ? M : 0) {}
     RegisterRef(const RegisterRef &RR) = default;
     RegisterRef &operator= (const RegisterRef &RR) = default;
+    operator bool() const { return Reg != 0 && Mask != LaneBitmask(0); }
     bool operator== (const RegisterRef &RR) const {
       return Reg == RR.Reg && Mask == RR.Mask;
     }
@@ -511,6 +512,9 @@ namespace rdf {
     RegisterAggr &insert(RegisterRef RR);
     RegisterAggr &insert(const RegisterAggr &RG);
     RegisterAggr &clear(RegisterRef RR);
+    RegisterAggr &clear(const RegisterAggr &RG);
+
+    RegisterRef clearIn(RegisterRef RR) const;
 
     void print(raw_ostream &OS) const;
 
@@ -797,6 +801,8 @@ namespace rdf {
     PackedRegisterRef pack(RegisterRef RR) const { return LMI.pack(RR); }
     RegisterRef unpack(PackedRegisterRef PR) const { return LMI.unpack(PR); }
     RegisterRef makeRegRef(unsigned Reg, unsigned Sub) const;
+    RegisterRef normalizeRef(RegisterRef RR) const;
+    RegisterRef restrictRef(RegisterRef AR, RegisterRef BR) const;
 
     NodeAddr<RefNode*> getNextRelated(NodeAddr<InstrNode*> IA,
         NodeAddr<RefNode*> RA) const;
@@ -966,6 +972,13 @@ namespace rdf {
     return MM;
   }
 
+
+  // Optionally print the lane mask, if it is not ~0.
+  struct PrintLaneMaskOpt {
+    PrintLaneMaskOpt(LaneBitmask M) : Mask(M) {}
+    LaneBitmask Mask;
+  };
+  raw_ostream &operator<< (raw_ostream &OS, const PrintLaneMaskOpt &P);
 
   template <typename T> struct Print;
   template <typename T>

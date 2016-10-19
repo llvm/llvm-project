@@ -38,21 +38,20 @@ char DIAError::ID = 0;
 
 DIAError::DIAError(dia_error_code C) : DIAError(C, "") {}
 
-DIAError::DIAError(const std::string &Context)
+DIAError::DIAError(StringRef Context)
     : DIAError(dia_error_code::unspecified, Context) {}
 
-DIAError::DIAError(dia_error_code C, const std::string &Context) : Code(C) {
+DIAError::DIAError(dia_error_code C, StringRef Context) : Code(C) {
   ErrMsg = "DIA Error: ";
   std::error_code EC = convertToErrorCode();
-  if (Code != dia_error_code::unspecified)
-    ErrMsg += EC.message() + "  ";
+  ErrMsg += EC.message() + "  ";
   if (!Context.empty())
     ErrMsg += Context;
 }
 
 void DIAError::log(raw_ostream &OS) const { OS << ErrMsg << "\n"; }
 
-const std::string &DIAError::getErrorMessage() const { return ErrMsg; }
+StringRef DIAError::getErrorMessage() const { return ErrMsg; }
 
 std::error_code DIAError::convertToErrorCode() const {
   return std::error_code(static_cast<int>(Code), *Category);

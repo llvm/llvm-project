@@ -30,12 +30,28 @@ namespace llvm {
 namespace rdf {
   struct Liveness {
   public:
-    typedef std::map<MachineBasicBlock*,RegisterSet> LiveMapType;
-    typedef std::map<RegisterRef,NodeSet> RefMap;
+    // This is really a std::map, except that it provides a non-trivial
+    // default constructor to the element accessed via [].
+    struct LiveMapType {
+      LiveMapType(const TargetRegisterInfo &tri) : Empty(tri) {}
+
+      RegisterAggr &operator[] (MachineBasicBlock *B) {
+        return Map.emplace(B, Empty).first->second;
+      }
+    private:
+      RegisterAggr Empty;
+      std::map<MachineBasicBlock*,RegisterAggr> Map;
+    };
+
+    typedef std::pair<NodeId,LaneBitmask> NodeRef;
+    typedef std::set<NodeRef> NodeRefSet;
+    // RegisterId in RefMap must be normalized.
+    typedef std::map<RegisterId,NodeRefSet> RefMap;
 
     Liveness(MachineRegisterInfo &mri, const DataFlowGraph &g)
       : DFG(g), TRI(g.getTRI()), MDT(g.getDT()), MDF(g.getDF()),
-        MRI(mri), Empty(), NoRegs(g.getTRI()), Trace(false) {}
+        MRI(mri), LiveMap(g.getTRI()), Empty(), NoRegs(g.getTRI()),
+        Trace(false) {}
 
     NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
         bool FullChain, const RegisterAggr &DefRRs);

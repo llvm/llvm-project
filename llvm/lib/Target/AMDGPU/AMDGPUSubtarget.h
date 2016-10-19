@@ -249,6 +249,10 @@ public:
     return DumpCode;
   }
 
+  bool enableIEEEBit(const MachineFunction &MF) const {
+    return AMDGPU::isCompute(MF.getFunction()->getCallingConv());
+  }
+
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount) const;

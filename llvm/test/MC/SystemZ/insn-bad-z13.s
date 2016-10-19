@@ -20,6 +20,26 @@
 	lcbb	%r0, 0(%v1,%r2), 0
 
 #CHECK: error: invalid operand
+#CHECK: vcdg	%v0, %v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vcdg	%v0, %v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vcdg	%v0, %v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vcdg	%v0, %v0, 0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: vcdg	%v0, %v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vcdg	%v0, %v0, 16, 0, 0
+
+	vcdg	%v0, %v0, 0, 0, -1
+	vcdg	%v0, %v0, 0, 0, 16
+	vcdg	%v0, %v0, 0, -1, 0
+	vcdg	%v0, %v0, 0, 16, 0
+	vcdg	%v0, %v0, -1, 0, 0
+	vcdg	%v0, %v0, 16, 0, 0
+
+#CHECK: error: invalid operand
 #CHECK: vcdgb	%v0, %v0, 0, -1
 #CHECK: error: invalid operand
 #CHECK: vcdgb	%v0, %v0, 0, 16
@@ -32,6 +52,26 @@
 	vcdgb	%v0, %v0, 0, 16
 	vcdgb	%v0, %v0, -1, 0
 	vcdgb	%v0, %v0, 16, 0
+
+#CHECK: error: invalid operand
+#CHECK: vcdlg	%v0, %v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vcdlg	%v0, %v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vcdlg	%v0, %v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vcdlg	%v0, %v0, 0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: vcdlg	%v0, %v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vcdlg	%v0, %v0, 16, 0, 0
+
+	vcdlg	%v0, %v0, 0, 0, -1
+	vcdlg	%v0, %v0, 0, 0, 16
+	vcdlg	%v0, %v0, 0, -1, 0
+	vcdlg	%v0, %v0, 0, 16, 0
+	vcdlg	%v0, %v0, -1, 0, 0
+	vcdlg	%v0, %v0, 16, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vcdlgb	%v0, %v0, 0, -1
@@ -48,6 +88,26 @@
 	vcdlgb	%v0, %v0, 16, 0
 
 #CHECK: error: invalid operand
+#CHECK: vcgd	%v0, %v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vcgd	%v0, %v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vcgd	%v0, %v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vcgd	%v0, %v0, 0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: vcgd	%v0, %v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vcgd	%v0, %v0, 16, 0, 0
+
+	vcgd	%v0, %v0, 0, 0, -1
+	vcgd	%v0, %v0, 0, 0, 16
+	vcgd	%v0, %v0, 0, -1, 0
+	vcgd	%v0, %v0, 0, 16, 0
+	vcgd	%v0, %v0, -1, 0, 0
+	vcgd	%v0, %v0, 16, 0, 0
+
+#CHECK: error: invalid operand
 #CHECK: vcgdb	%v0, %v0, 0, -1
 #CHECK: error: invalid operand
 #CHECK: vcgdb	%v0, %v0, 0, 16
@@ -62,6 +122,26 @@
 	vcgdb	%v0, %v0, 16, 0
 
 #CHECK: error: invalid operand
+#CHECK: vclgd	%v0, %v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vclgd	%v0, %v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vclgd	%v0, %v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vclgd	%v0, %v0, 0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: vclgd	%v0, %v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vclgd	%v0, %v0, 16, 0, 0
+
+	vclgd	%v0, %v0, 0, 0, -1
+	vclgd	%v0, %v0, 0, 0, 16
+	vclgd	%v0, %v0, 0, -1, 0
+	vclgd	%v0, %v0, 0, 16, 0
+	vclgd	%v0, %v0, -1, 0, 0
+	vclgd	%v0, %v0, 16, 0, 0
+
+#CHECK: error: invalid operand
 #CHECK: vclgdb	%v0, %v0, 0, -1
 #CHECK: error: invalid operand
 #CHECK: vclgdb	%v0, %v0, 0, 16
@@ -74,6 +154,20 @@
 	vclgdb	%v0, %v0, 0, 16
 	vclgdb	%v0, %v0, -1, 0
 	vclgdb	%v0, %v0, 16, 0
+
+#CHECK: error: invalid operand
+#CHECK: verim	%v0, %v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: verim	%v0, %v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: verim	%v0, %v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: verim	%v0, %v0, %v0, 256, 0
+
+	verim	%v0, %v0, %v0, 0, -1
+	verim	%v0, %v0, %v0, 0, 16
+	verim	%v0, %v0, %v0, -1, 0
+	verim	%v0, %v0, %v0, 256, 0
 
 #CHECK: error: invalid operand
 #CHECK: verimb	%v0, %v0, %v0, -1
@@ -108,6 +202,20 @@
 	verimh	%v0, %v0, %v0, 256
 
 #CHECK: error: invalid operand
+#CHECK: verll	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: verll	%v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: verll	%v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: verll	%v0, %v0, 4096, 0
+
+	verll	%v0, %v0, 0, -1
+	verll	%v0, %v0, 0, 16
+	verll	%v0, %v0, -1, 0
+	verll	%v0, %v0, 4096, 0
+
+#CHECK: error: invalid operand
 #CHECK: verllb	%v0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: verllb	%v0, %v0, 4096
@@ -138,6 +246,20 @@
 
 	verllh	%v0, %v0, -1
 	verllh	%v0, %v0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: vesl	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vesl	%v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vesl	%v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vesl	%v0, %v0, 4096, 0
+
+	vesl	%v0, %v0, 0, -1
+	vesl	%v0, %v0, 0, 16
+	vesl	%v0, %v0, -1, 0
+	vesl	%v0, %v0, 4096, 0
 
 #CHECK: error: invalid operand
 #CHECK: veslb	%v0, %v0, -1
@@ -172,6 +294,20 @@
 	veslh	%v0, %v0, 4096
 
 #CHECK: error: invalid operand
+#CHECK: vesra	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vesra	%v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vesra	%v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vesra	%v0, %v0, 4096, 0
+
+	vesra	%v0, %v0, 0, -1
+	vesra	%v0, %v0, 0, 16
+	vesra	%v0, %v0, -1, 0
+	vesra	%v0, %v0, 4096, 0
+
+#CHECK: error: invalid operand
 #CHECK: vesrab	%v0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vesrab	%v0, %v0, 4096
@@ -204,6 +340,20 @@
 	vesrah	%v0, %v0, 4096
 
 #CHECK: error: invalid operand
+#CHECK: vesrl	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vesrl	%v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vesrl	%v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vesrl	%v0, %v0, 4096, 0
+
+	vesrl	%v0, %v0, 0, -1
+	vesrl	%v0, %v0, 0, 16
+	vesrl	%v0, %v0, -1, 0
+	vesrl	%v0, %v0, 4096, 0
+
+#CHECK: error: invalid operand
 #CHECK: vesrlb	%v0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vesrlb	%v0, %v0, 4096
@@ -234,6 +384,26 @@
 
 	vesrlh	%v0, %v0, -1
 	vesrlh	%v0, %v0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: vfae	%v0, %v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vfae	%v0, %v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vfae	%v0, %v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vfae	%v0, %v0, %v0, 16, 0
+#CHECK: error: too few operands
+#CHECK: vfae	%v0, %v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfae	%v0, %v0, %v0, 0, 0, 0
+
+	vfae	%v0, %v0, %v0, 0, -1
+	vfae	%v0, %v0, %v0, 0, 16
+	vfae	%v0, %v0, %v0, -1, 0
+	vfae	%v0, %v0, %v0, 16, 0
+	vfae	%v0, %v0, %v0
+	vfae	%v0, %v0, %v0, 0, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vfaeb	%v0, %v0, %v0, -1
@@ -320,6 +490,160 @@
 	vfaezfs	%v0, %v0, %v0, 0, 0
 
 #CHECK: error: invalid operand
+#CHECK: vfee	%v0, %v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vfee	%v0, %v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vfee	%v0, %v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vfee	%v0, %v0, %v0, 16, 0
+#CHECK: error: too few operands
+#CHECK: vfee	%v0, %v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfee	%v0, %v0, %v0, 0, 0, 0
+
+	vfee	%v0, %v0, %v0, 0, -1
+	vfee	%v0, %v0, %v0, 0, 16
+	vfee	%v0, %v0, %v0, -1, 0
+	vfee	%v0, %v0, %v0, 16, 0
+	vfee	%v0, %v0, %v0
+	vfee	%v0, %v0, %v0, 0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vfeeb	%v0, %v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vfeeb	%v0, %v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vfeeb	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeeb	%v0, %v0, %v0, 0, 0
+
+	vfeeb	%v0, %v0, %v0, -1
+	vfeeb	%v0, %v0, %v0, 16
+	vfeeb	%v0, %v0
+	vfeeb	%v0, %v0, %v0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vfeef	%v0, %v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vfeef	%v0, %v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vfeef	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeef	%v0, %v0, %v0, 0, 0
+
+	vfeef	%v0, %v0, %v0, -1
+	vfeef	%v0, %v0, %v0, 16
+	vfeef	%v0, %v0
+	vfeef	%v0, %v0, %v0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vfeeh	%v0, %v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vfeeh	%v0, %v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vfeeh	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeeh	%v0, %v0, %v0, 0, 0
+
+	vfeeh	%v0, %v0, %v0, -1
+	vfeeh	%v0, %v0, %v0, 16
+	vfeeh	%v0, %v0
+	vfeeh	%v0, %v0, %v0, 0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeebs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeebs	%v0, %v0, %v0, 0
+
+	vfeebs	%v0, %v0
+	vfeebs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeefs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeefs	%v0, %v0, %v0, 0
+
+	vfeefs	%v0, %v0
+	vfeefs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeehs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeehs	%v0, %v0, %v0, 0
+
+	vfeehs	%v0, %v0
+	vfeehs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeezb	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeezb	%v0, %v0, %v0, 0
+
+	vfeezb	%v0, %v0
+	vfeezb	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeezf	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeezf	%v0, %v0, %v0, 0
+
+	vfeezf	%v0, %v0
+	vfeezf	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeezh	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeezh	%v0, %v0, %v0, 0
+
+	vfeezh	%v0, %v0
+	vfeezh	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeezbs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeezbs	%v0, %v0, %v0, 0
+
+	vfeezbs	%v0, %v0
+	vfeezbs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeezfs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeezfs	%v0, %v0, %v0, 0
+
+	vfeezfs	%v0, %v0
+	vfeezfs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfeezhs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeezhs	%v0, %v0, %v0, 0
+
+	vfeezhs	%v0, %v0
+	vfeezhs	%v0, %v0, %v0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vfi	%v0, %v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vfi	%v0, %v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vfi	%v0, %v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vfi	%v0, %v0, 0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: vfi	%v0, %v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vfi	%v0, %v0, 16, 0, 0
+
+	vfi	%v0, %v0, 0, 0, -1
+	vfi	%v0, %v0, 0, 0, 16
+	vfi	%v0, %v0, 0, -1, 0
+	vfi	%v0, %v0, 0, 16, 0
+	vfi	%v0, %v0, -1, 0, 0
+	vfi	%v0, %v0, 16, 0, 0
+
+#CHECK: error: invalid operand
 #CHECK: vfidb	%v0, %v0, 0, -1
 #CHECK: error: invalid operand
 #CHECK: vfidb	%v0, %v0, 0, 16
@@ -332,6 +656,26 @@
 	vfidb	%v0, %v0, 0, 16
 	vfidb	%v0, %v0, -1, 0
 	vfidb	%v0, %v0, 16, 0
+
+#CHECK: error: invalid operand
+#CHECK: vftci	%v0, %v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vftci	%v0, %v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vftci	%v0, %v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vftci	%v0, %v0, 0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: vftci	%v0, %v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vftci	%v0, %v0, 4096, 0, 0
+
+	vftci	%v0, %v0, 0, 0, -1
+	vftci	%v0, %v0, 0, 0, 16
+	vftci	%v0, %v0, 0, -1, 0
+	vftci	%v0, %v0, 0, 16, 0
+	vftci	%v0, %v0, -1, 0, 0
+	vftci	%v0, %v0, 4096, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vftcidb	%v0, %v0, -1
@@ -390,60 +734,166 @@
 	vgeg	%v0, 4096(%v0,%r1), 0
 
 #CHECK: error: invalid operand
-#CHECK: vgmb	%v0, 0, -1
+#CHECK: vgm	%v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vgm	%v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vgm	%v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vgm	%v0, 0, 256, 0
+#CHECK: error: invalid operand
+#CHECK: vgm	%v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vgm	%v0, 256, 0, 0
+
+	vgm	%v0, 0, 0, -1
+	vgm	%v0, 0, 0, 16
+	vgm	%v0, 0, -1, 0
+	vgm	%v0, 0, 256, 0
+	vgm	%v0, -1, 0, 0
+	vgm	%v0, 256, 0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vgmb	%v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vgmb	%v0, 0, 256
 #CHECK: error: invalid operand
 #CHECK: vgmb	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vgmb	%v0, 256, 0
 
 	vgmb	%v0, 0, -1
-	vgmb	%v0, 0, -1
+	vgmb	%v0, 0, 256
 	vgmb	%v0, -1, 0
 	vgmb	%v0, 256, 0
 
 #CHECK: error: invalid operand
 #CHECK: vgmf	%v0, 0, -1
 #CHECK: error: invalid operand
-#CHECK: vgmf	%v0, 0, -1
+#CHECK: vgmf	%v0, 0, 256
 #CHECK: error: invalid operand
 #CHECK: vgmf	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vgmf	%v0, 256, 0
 
 	vgmf	%v0, 0, -1
-	vgmf	%v0, 0, -1
+	vgmf	%v0, 0, 256
 	vgmf	%v0, -1, 0
 	vgmf	%v0, 256, 0
 
 #CHECK: error: invalid operand
 #CHECK: vgmg	%v0, 0, -1
 #CHECK: error: invalid operand
-#CHECK: vgmg	%v0, 0, -1
+#CHECK: vgmg	%v0, 0, 256
 #CHECK: error: invalid operand
 #CHECK: vgmg	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vgmg	%v0, 256, 0
 
 	vgmg	%v0, 0, -1
-	vgmg	%v0, 0, -1
+	vgmg	%v0, 0, 256
 	vgmg	%v0, -1, 0
 	vgmg	%v0, 256, 0
 
 #CHECK: error: invalid operand
 #CHECK: vgmh	%v0, 0, -1
 #CHECK: error: invalid operand
-#CHECK: vgmh	%v0, 0, -1
+#CHECK: vgmh	%v0, 0, 256
 #CHECK: error: invalid operand
 #CHECK: vgmh	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vgmh	%v0, 256, 0
 
 	vgmh	%v0, 0, -1
-	vgmh	%v0, 0, -1
+	vgmh	%v0, 0, 256
 	vgmh	%v0, -1, 0
 	vgmh	%v0, 256, 0
+
+#CHECK: error: invalid operand
+#CHECK: vistr	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vistr	%v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vistr	%v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vistr	%v0, %v0, 16, 0
+#CHECK: error: too few operands
+#CHECK: vistr	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vistr	%v0, %v0, 0, 0, 0
+
+	vistr	%v0, %v0, 0, -1
+	vistr	%v0, %v0, 0, 16
+	vistr	%v0, %v0, -1, 0
+	vistr	%v0, %v0, 16, 0
+	vistr	%v0, %v0
+	vistr	%v0, %v0, 0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vistrb	%v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vistrb	%v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vistrb	%v0
+#CHECK: error: invalid operand
+#CHECK: vistrb	%v0, %v0, 0, 0
+
+	vistrb	%v0, %v0, -1
+	vistrb	%v0, %v0, 16
+	vistrb	%v0
+	vistrb	%v0, %v0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vistrf	%v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vistrf	%v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vistrf	%v0
+#CHECK: error: invalid operand
+#CHECK: vistrf	%v0, %v0, 0, 0
+
+	vistrf	%v0, %v0, -1
+	vistrf	%v0, %v0, 16
+	vistrf	%v0
+	vistrf	%v0, %v0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vistrh	%v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vistrh	%v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vistrh	%v0
+#CHECK: error: invalid operand
+#CHECK: vistrh	%v0, %v0, 0, 0
+
+	vistrh	%v0, %v0, -1
+	vistrh	%v0, %v0, 16
+	vistrh	%v0
+	vistrh	%v0, %v0, 0, 0
+
+#CHECK: error: too few operands
+#CHECK: vistrbs	%v0
+#CHECK: error: invalid operand
+#CHECK: vistrbs	%v0, %v0, 0
+
+	vistrbs	%v0
+	vistrbs	%v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vistrfs	%v0
+#CHECK: error: invalid operand
+#CHECK: vistrfs	%v0, %v0, 0
+
+	vistrfs	%v0
+	vistrfs	%v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vistrhs	%v0
+#CHECK: error: invalid operand
+#CHECK: vistrhs	%v0, %v0, 0
+
+	vistrhs	%v0
+	vistrhs	%v0, %v0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vl	%v0, -1
@@ -489,6 +939,26 @@
 	vleb	%v0, -1, 0
 	vleb	%v0, 4096, 0
 	vleb	%v0, 0(%v1,%r2), 0
+
+#CHECK: error: invalid operand
+#CHECK: vled	%v0, %v0, 0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vled	%v0, %v0, 0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vled	%v0, %v0, 0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vled	%v0, %v0, 0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: vled	%v0, %v0, -1, 0, 0
+#CHECK: error: invalid operand
+#CHECK: vled	%v0, %v0, 16, 0, 0
+
+	vled	%v0, %v0, 0, 0, -1
+	vled	%v0, %v0, 0, 0, 16
+	vled	%v0, %v0, 0, -1, 0
+	vled	%v0, %v0, 0, 16, 0
+	vled	%v0, %v0, -1, 0, 0
+	vled	%v0, %v0, 16, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vledb	%v0, %v0, 0, -1
@@ -612,6 +1082,23 @@
 	vleih	%v0, 32768, 0
 
 #CHECK: error: invalid operand
+#CHECK: vlgv	%r0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vlgv	%r0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vlgv	%r0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vlgv	%r0, %v0, 4096, 0
+#CHECK: error: %r0 used in an address
+#CHECK: vlgv	%r0, %v0, 0(%r0), 0
+
+	vlgv	%r0, %v0, 0, -1
+	vlgv	%r0, %v0, 0, 16
+	vlgv	%r0, %v0, -1, 0
+	vlgv	%r0, %v0, 4096, 0
+	vlgv	%r0, %v0, 0(%r0), 0
+
+#CHECK: error: invalid operand
 #CHECK: vlgvb	%r0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vlgvb	%r0, %v0, 4096
@@ -667,6 +1154,23 @@
 	vll	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
+#CHECK: vllez	%v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vllez	%v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vllez	%v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vllez	%v0, 4096, 0
+#CHECK: error: invalid use of vector addressing
+#CHECK: vllez	%v0, 0(%v1,%r2), 0
+
+	vllez	%v0, 0, -1
+	vllez	%v0, 0, 16
+	vllez	%v0, -1, 0
+	vllez	%v0, 4096, 0
+	vllez	%v0, 0(%v1,%r2), 0
+
+#CHECK: error: invalid operand
 #CHECK: vllezb	%v0, -1
 #CHECK: error: invalid operand
 #CHECK: vllezb	%v0, 4096
@@ -719,6 +1223,23 @@
 	vlm	%v0, %v0, 4096
 
 #CHECK: error: invalid operand
+#CHECK: vlrep	%v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vlrep	%v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vlrep	%v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vlrep	%v0, 4096, 0
+#CHECK: error: invalid use of vector addressing
+#CHECK: vlrep	%v0, 0(%v1,%r2), 0
+
+	vlrep	%v0, 0, -1
+	vlrep	%v0, 0, 16
+	vlrep	%v0, -1, 0
+	vlrep	%v0, 4096, 0
+	vlrep	%v0, 0(%v1,%r2), 0
+
+#CHECK: error: invalid operand
 #CHECK: vlrepb	%v0, -1
 #CHECK: error: invalid operand
 #CHECK: vlrepb	%v0, 4096
@@ -761,6 +1282,23 @@
 	vlreph	%v0, -1
 	vlreph	%v0, 4096
 	vlreph	%v0, 0(%v1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: vlvg	%v0, %r0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vlvg	%v0, %r0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vlvg	%v0, %r0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vlvg	%v0, %r0, 4096, 0
+#CHECK: error: %r0 used in an address
+#CHECK: vlvg	%v0, %r0, 0(%r0), 0
+
+	vlvg	%v0, %r0, 0, -1
+	vlvg	%v0, %r0, 0, 16
+	vlvg	%v0, %r0, -1, 0
+	vlvg	%v0, %r0, 4096, 0
+	vlvg	%v0, %r0, 0(%r0), 0
 
 #CHECK: error: invalid operand
 #CHECK: vlvgb	%v0, %r0, -1
@@ -807,12 +1345,152 @@
 	vlvgh	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
+#CHECK: vfene	%v0, %v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vfene	%v0, %v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vfene	%v0, %v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vfene	%v0, %v0, %v0, 16, 0
+#CHECK: error: too few operands
+#CHECK: vfene	%v0, %v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfene	%v0, %v0, %v0, 0, 0, 0
+
+	vfene	%v0, %v0, %v0, 0, -1
+	vfene	%v0, %v0, %v0, 0, 16
+	vfene	%v0, %v0, %v0, -1, 0
+	vfene	%v0, %v0, %v0, 16, 0
+	vfene	%v0, %v0, %v0
+	vfene	%v0, %v0, %v0, 0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vfeneb	%v0, %v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vfeneb	%v0, %v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vfeneb	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeneb	%v0, %v0, %v0, 0, 0
+
+	vfeneb	%v0, %v0, %v0, -1
+	vfeneb	%v0, %v0, %v0, 16
+	vfeneb	%v0, %v0
+	vfeneb	%v0, %v0, %v0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vfenef	%v0, %v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vfenef	%v0, %v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vfenef	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenef	%v0, %v0, %v0, 0, 0
+
+	vfenef	%v0, %v0, %v0, -1
+	vfenef	%v0, %v0, %v0, 16
+	vfenef	%v0, %v0
+	vfenef	%v0, %v0, %v0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: vfeneh	%v0, %v0, %v0, -1
+#CHECK: error: invalid operand
+#CHECK: vfeneh	%v0, %v0, %v0, 16
+#CHECK: error: too few operands
+#CHECK: vfeneh	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfeneh	%v0, %v0, %v0, 0, 0
+
+	vfeneh	%v0, %v0, %v0, -1
+	vfeneh	%v0, %v0, %v0, 16
+	vfeneh	%v0, %v0
+	vfeneh	%v0, %v0, %v0, 0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenebs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenebs	%v0, %v0, %v0, 0
+
+	vfenebs	%v0, %v0
+	vfenebs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenefs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenefs	%v0, %v0, %v0, 0
+
+	vfenefs	%v0, %v0
+	vfenefs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenehs	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenehs	%v0, %v0, %v0, 0
+
+	vfenehs	%v0, %v0
+	vfenehs	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenezb	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenezb	%v0, %v0, %v0, 0
+
+	vfenezb	%v0, %v0
+	vfenezb	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenezf	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenezf	%v0, %v0, %v0, 0
+
+	vfenezf	%v0, %v0
+	vfenezf	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenezh	%v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenezh	%v0, %v0, %v0, 0
+
+	vfenezh	%v0, %v0
+	vfenezh	%v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenezbs %v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenezbs %v0, %v0, %v0, 0
+
+	vfenezbs %v0, %v0
+	vfenezbs %v0, %v0, %v0, 0
+
+#CHECK: error: too few operands
+#CHECK: vfenezfs %v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vfenezfs %v0, %v0, %v0, 0
+
+	vfenezfs %v0, %v0
+	vfenezfs %v0, %v0, %v0, 0
+
+#CHECK: error: invalid operand
 #CHECK: vpdi	%v0, %v0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vpdi	%v0, %v0, %v0, 16
 
 	vpdi	%v0, %v0, %v0, -1
 	vpdi	%v0, %v0, %v0, 16
+
+#CHECK: error: invalid operand
+#CHECK: vrep	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vrep	%v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vrep	%v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vrep	%v0, %v0, 65536, 0
+
+	vrep	%v0, %v0, 0, -1
+	vrep	%v0, %v0, 0, 16
+	vrep	%v0, %v0, -1, 0
+	vrep	%v0, %v0, 65536, 0
 
 #CHECK: error: invalid operand
 #CHECK: vrepb	%v0, %v0, -1
@@ -845,6 +1523,20 @@
 
 	vreph	%v0, %v0, -1
 	vreph	%v0, %v0, 65536
+
+#CHECK: error: invalid operand
+#CHECK: vrepi	%v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vrepi	%v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vrepi	%v0, -32769, 0
+#CHECK: error: invalid operand
+#CHECK: vrepi	%v0, 32768, 0
+
+	vrepi	%v0, 0, -1
+	vrepi	%v0, 0, 16
+	vrepi	%v0, -32769, 0
+	vrepi	%v0, 32768, 0
 
 #CHECK: error: invalid operand
 #CHECK: vrepib	%v0, -32769
@@ -1023,6 +1715,26 @@
 
 	vstm	%v0, %v0, -1
 	vstm	%v0, %v0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: vstrc    %v0, %v0, %v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vstrc    %v0, %v0, %v0, %v0, 0, 16
+#CHECK: error: invalid operand
+#CHECK: vstrc    %v0, %v0, %v0, %v0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: vstrc    %v0, %v0, %v0, %v0, 16, 0
+#CHECK: error: too few operands
+#CHECK: vstrc    %v0, %v0, %v0, %v0
+#CHECK: error: invalid operand
+#CHECK: vstrc    %v0, %v0, %v0, %v0, 0, 0, 0
+
+        vstrc    %v0, %v0, %v0, %v0, 0, -1
+        vstrc    %v0, %v0, %v0, %v0, 0, 16
+        vstrc    %v0, %v0, %v0, %v0, -1, 0
+        vstrc    %v0, %v0, %v0, %v0, 16, 0
+        vstrc    %v0, %v0, %v0, %v0
+        vstrc    %v0, %v0, %v0, %v0, 0, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vstrcb   %v0, %v0, %v0, %v0, -1
