@@ -1629,11 +1629,19 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       break;
 
     case Qualifiers::OCL_Strong:
+      if (isInit) {
+        Src = RValue::get(EmitARCRetain(Dst.getType(), Src.getScalarVal()));
+        break;
+      }
       EmitARCStoreStrong(Dst, Src.getScalarVal(), /*ignore*/ true);
       return;
 
     case Qualifiers::OCL_Weak:
-      EmitARCStoreWeak(Dst.getAddress(), Src.getScalarVal(), /*ignore*/ true);
+      if (isInit)
+        // Initialize and then skip the primitive store.
+        EmitARCInitWeak(Dst.getAddress(), Src.getScalarVal());
+      else
+        EmitARCStoreWeak(Dst.getAddress(), Src.getScalarVal(), /*ignore*/ true);
       return;
 
     case Qualifiers::OCL_Autoreleasing:

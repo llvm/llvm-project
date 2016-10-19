@@ -11,3 +11,26 @@ template<bool A, bool B> void redecl2() noexcept(B); // expected-error {{conflic
 // FIXME: It's not clear whether this is supposed to be valid.
 template<typename A, typename B> void redecl3() throw(A);
 template<typename A, typename B> void redecl3() throw(B);
+
+typedef int I;
+template<bool B> void redecl4(I) noexcept(B);
+template<bool B> void redecl4(I) noexcept(B);
+
+namespace DependentDefaultCtorExceptionSpec {
+  template<typename> struct T { static const bool value = true; };
+
+  template<class A> struct map {
+    typedef A a;
+    map() noexcept(T<a>::value) {}
+  };
+
+  template<class B> struct multimap {
+    typedef B b;
+    multimap() noexcept(T<b>::value) {}
+  };
+
+  // Don't crash here.
+  struct A { multimap<int> Map; } a;
+
+  static_assert(noexcept(A()));
+}

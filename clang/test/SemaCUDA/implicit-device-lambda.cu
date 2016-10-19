@@ -76,6 +76,26 @@ __host__ void host_fn() {
   f4();
 }
 
+__host__ __device__ void hd_fn() {
+  auto f1 = [&] {};
+  f1(); // implicitly __host__ __device__
+
+  auto f2 = [&] __device__ {};
+  f2();
+#ifndef __CUDA_ARCH__
+  // expected-error@-2 {{reference to __device__ function}}
+#endif
+
+  auto f3 = [&] __host__ {};
+  f3();
+#ifdef __CUDA_ARCH__
+  // expected-error@-2 {{reference to __host__ function}}
+#endif
+
+  auto f4 = [&] __host__ __device__ {};
+  f4();
+}
+
 // The special treatment above only applies to lambdas.
 __device__ void foo() {
   struct X {

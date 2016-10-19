@@ -103,9 +103,9 @@ static bool HasRedeclarationWithoutAvailabilityInCategory(const Decl *D) {
   return false;
 }
 
-AvailabilityResult
-Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
-  AvailabilityResult Result = D->getAvailability(Message);
+AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
+    NamedDecl *&D, VersionTuple ContextVersion, std::string *Message) {
+  AvailabilityResult Result = D->getAvailability(Message, ContextVersion);
 
   // For typedefs, if the typedef declaration appears available look
   // to the underlying type to see if it is more restrictive.
@@ -113,7 +113,7 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
     if (Result == AR_Available) {
       if (const TagType *TT = TD->getUnderlyingType()->getAs<TagType>()) {
         D = TT->getDecl();
-        Result = D->getAvailability(Message);
+        Result = D->getAvailability(Message, ContextVersion);
         continue;
       }
     }
@@ -124,7 +124,7 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
       D = IDecl->getDefinition();
-      Result = D->getAvailability(Message);
+      Result = D->getAvailability(Message, ContextVersion);
     }
   }
 
@@ -132,10 +132,18 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
     if (Result == AR_Available) {
       const DeclContext *DC = ECD->getDeclContext();
       if (const EnumDecl *TheEnumDecl = dyn_cast<EnumDecl>(DC))
-        Result = TheEnumDecl->getAvailability(Message);
+        Result = TheEnumDecl->getAvailability(Message, ContextVersion);
     }
 
-  if (Result == AR_NotYetIntroduced) {
+  switch (Result) {
+  case AR_Available:
+    return Result;
+
+  case AR_Unavailable:
+  case AR_Deprecated:
+    return getCurContextAvailability() != Result ? Result : AR_Available;
+
+  case AR_NotYetIntroduced: {
     // Don't do this for enums, they can't be redeclared.
     if (isa<EnumConstantDecl>(D) || isa<EnumDecl>(D))
       return AR_Available;
@@ -158,18 +166,23 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
 
     return Warn ? AR_NotYetIntroduced : AR_Available;
   }
-
-  return Result;
+  }
+  llvm_unreachable("Unknown availability result!");
 }
 
 static void
 DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
                            const ObjCInterfaceDecl *UnknownObjCClass,
                            bool ObjCPropertyAccess) {
+  VersionTuple ContextVersion;
+  if (const DeclContext *DC = S.getCurObjCLexicalContext())
+    ContextVersion = S.getVersionForDecl(cast<Decl>(DC));
+
   std::string Message;
-  // See if this declaration is unavailable, deprecated, or partial.
+  // See if this declaration is unavailable, deprecated, or partial in the
+  // current context.
   if (AvailabilityResult Result =
-          S.ShouldDiagnoseAvailabilityOfDecl(D, &Message)) {
+          S.ShouldDiagnoseAvailabilityOfDecl(D, ContextVersion, &Message)) {
 
     if (Result == AR_NotYetIntroduced && S.getCurFunctionOrMethodDecl()) {
       S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
@@ -179,7 +192,8 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
     const ObjCPropertyDecl *ObjCPDecl = nullptr;
     if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
       if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
-        AvailabilityResult PDeclResult = PD->getAvailability(nullptr);
+        AvailabilityResult PDeclResult =
+            PD->getAvailability(nullptr, ContextVersion);
         if (PDeclResult == Result)
           ObjCPDecl = PD;
       }
@@ -2875,6 +2889,14 @@ ExprResult Sema::BuildDeclarationNameExpr(
 
   {
     QualType type = VD->getType();
+    if (auto *FPT = type->getAs<FunctionProtoType>()) {
+      // C++ [except.spec]p17:
+      //   An exception-specification is considered to be needed when:
+      //   - in an expression, the function is the unique lookup result or
+      //     the selected member of a set of overloaded functions.
+      ResolveExceptionSpec(Loc, FPT);
+      type = VD->getType();
+    }
     ExprValueKind valueKind = VK_RValue;
 
     switch (D->getKind()) {
@@ -13124,6 +13146,19 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
        Func->getMemberSpecializationInfo()))
     checkSpecializationVisibility(Loc, Func);
 
+  // C++14 [except.spec]p17:
+  //   An exception-specification is considered to be needed when:
+  //   - the function is odr-used or, if it appears in an unevaluated operand,
+  //     would be odr-used if the expression were potentially-evaluated;
+  //
+  // Note, we do this even if MightBeOdrUse is false. That indicates that the
+  // function is a pure virtual function we're calling, and in that case the
+  // function was selected by overload resolution and we need to resolve its
+  // exception specification for a different reason.
+  const FunctionProtoType *FPT = Func->getType()->getAs<FunctionProtoType>();
+  if (FPT && isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+    ResolveExceptionSpec(Loc, FPT);
+
   // If we don't need to mark the function as used, and we don't need to
   // try to provide a definition, there's nothing more to do.
   if ((Func->isUsed(/*CheckUsedAttr=*/false) || !OdrUse) &&
@@ -13181,12 +13216,6 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // Recursive functions should be marked when used from another function.
   // FIXME: Is this really right?
   if (CurContext == Func) return;
-
-  // Resolve the exception specification for any function which is
-  // used: CodeGen will need it.
-  const FunctionProtoType *FPT = Func->getType()->getAs<FunctionProtoType>();
-  if (FPT && isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
-    ResolveExceptionSpec(Loc, FPT);
 
   // Implicit instantiation of function templates and member functions of
   // class templates.

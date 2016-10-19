@@ -1787,6 +1787,10 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   }
 
   case ConditionOrInitStatement::InitStmtDecl: {
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
+                                ? diag::warn_cxx14_compat_init_statement
+                                : diag::ext_init_statement)
+        << (CK == Sema::ConditionKind::Switch);
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
     DeclGroupPtrTy DG = ParseSimpleDeclaration(
         Declarator::InitStmtContext, DeclEnd, attrs, /*RequireSemi=*/true);
