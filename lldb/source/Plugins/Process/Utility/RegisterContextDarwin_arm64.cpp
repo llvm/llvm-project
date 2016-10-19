@@ -25,6 +25,8 @@
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Host/Endian.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Thread.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 
@@ -101,7 +103,7 @@ static uint32_t g_fpu_regnums[] = {
 static uint32_t g_exc_regnums[] = {exc_far, exc_esr, exc_exception};
 
 static size_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos_arm64);
+    llvm::array_lengthof(g_register_infos_arm64_le);
 
 RegisterContextDarwin_arm64::RegisterContextDarwin_arm64(
     Thread &thread, uint32_t concrete_frame_idx)
@@ -129,7 +131,7 @@ const RegisterInfo *
 RegisterContextDarwin_arm64::GetRegisterInfoAtIndex(size_t reg) {
   assert(k_num_register_infos == k_num_registers);
   if (reg < k_num_registers)
-    return &g_register_infos_arm64[reg];
+    return &g_register_infos_arm64_le[reg];
   return NULL;
 }
 
@@ -138,7 +140,7 @@ size_t RegisterContextDarwin_arm64::GetRegisterInfosCount() {
 }
 
 const RegisterInfo *RegisterContextDarwin_arm64::GetRegisterInfos() {
-  return g_register_infos_arm64;
+  return g_register_infos_arm64_le;
 }
 
 // Number of registers in each register set
@@ -352,6 +354,46 @@ bool RegisterContextDarwin_arm64::ReadRegister(const RegisterInfo *reg_info,
     value.SetUInt64(gpr.x[reg - gpr_x0]);
     break;
 
+  case gpr_w0:
+  case gpr_w1:
+  case gpr_w2:
+  case gpr_w3:
+  case gpr_w4:
+  case gpr_w5:
+  case gpr_w6:
+  case gpr_w7:
+  case gpr_w8:
+  case gpr_w9:
+  case gpr_w10:
+  case gpr_w11:
+  case gpr_w12:
+  case gpr_w13:
+  case gpr_w14:
+  case gpr_w15:
+  case gpr_w16:
+  case gpr_w17:
+  case gpr_w18:
+  case gpr_w19:
+  case gpr_w20:
+  case gpr_w21:
+  case gpr_w22:
+  case gpr_w23:
+  case gpr_w24:
+  case gpr_w25:
+  case gpr_w26:
+  case gpr_w27:
+  case gpr_w28: {
+    ProcessSP process_sp(m_thread.GetProcess());
+    if (process_sp.get()) {
+      DataExtractor regdata(&gpr.x[reg - gpr_w0], 8, process_sp->GetByteOrder(),
+                            process_sp->GetAddressByteSize());
+      offset_t offset = 0;
+      uint64_t retval = regdata.GetMaxU64(&offset, 8);
+      uint32_t retval_lower32 = static_cast<uint32_t>(retval & 0xffffffff);
+      value.SetUInt32(retval_lower32);
+    }
+  } break;
+
   case fpu_v0:
   case fpu_v1:
   case fpu_v2:
@@ -387,6 +429,88 @@ bool RegisterContextDarwin_arm64::ReadRegister(const RegisterInfo *reg_info,
     value.SetBytes(fpu.v[reg].bytes, reg_info->byte_size,
                    endian::InlHostByteOrder());
     break;
+
+  case fpu_s0:
+  case fpu_s1:
+  case fpu_s2:
+  case fpu_s3:
+  case fpu_s4:
+  case fpu_s5:
+  case fpu_s6:
+  case fpu_s7:
+  case fpu_s8:
+  case fpu_s9:
+  case fpu_s10:
+  case fpu_s11:
+  case fpu_s12:
+  case fpu_s13:
+  case fpu_s14:
+  case fpu_s15:
+  case fpu_s16:
+  case fpu_s17:
+  case fpu_s18:
+  case fpu_s19:
+  case fpu_s20:
+  case fpu_s21:
+  case fpu_s22:
+  case fpu_s23:
+  case fpu_s24:
+  case fpu_s25:
+  case fpu_s26:
+  case fpu_s27:
+  case fpu_s28:
+  case fpu_s29:
+  case fpu_s30:
+  case fpu_s31: {
+    ProcessSP process_sp(m_thread.GetProcess());
+    if (process_sp.get()) {
+      DataExtractor regdata(&fpu.v[reg - fpu_s0], 4, process_sp->GetByteOrder(),
+                            process_sp->GetAddressByteSize());
+      offset_t offset = 0;
+      value.SetFloat(regdata.GetFloat(&offset));
+    }
+  } break;
+
+  case fpu_d0:
+  case fpu_d1:
+  case fpu_d2:
+  case fpu_d3:
+  case fpu_d4:
+  case fpu_d5:
+  case fpu_d6:
+  case fpu_d7:
+  case fpu_d8:
+  case fpu_d9:
+  case fpu_d10:
+  case fpu_d11:
+  case fpu_d12:
+  case fpu_d13:
+  case fpu_d14:
+  case fpu_d15:
+  case fpu_d16:
+  case fpu_d17:
+  case fpu_d18:
+  case fpu_d19:
+  case fpu_d20:
+  case fpu_d21:
+  case fpu_d22:
+  case fpu_d23:
+  case fpu_d24:
+  case fpu_d25:
+  case fpu_d26:
+  case fpu_d27:
+  case fpu_d28:
+  case fpu_d29:
+  case fpu_d30:
+  case fpu_d31: {
+    ProcessSP process_sp(m_thread.GetProcess());
+    if (process_sp.get()) {
+      DataExtractor regdata(&fpu.v[reg - fpu_s0], 8, process_sp->GetByteOrder(),
+                            process_sp->GetAddressByteSize());
+      offset_t offset = 0;
+      value.SetDouble(regdata.GetDouble(&offset));
+    }
+  } break;
 
   case fpu_fpsr:
     value.SetUInt32(fpu.fpsr);
