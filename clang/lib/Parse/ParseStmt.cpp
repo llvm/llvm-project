@@ -396,6 +396,8 @@ StmtResult Parser::ParseExprStatement() {
   // If a case keyword is missing, this is where it should be inserted.
   Token OldToken = Tok;
 
+  ExprStatementTokLoc = Tok.getLocation();
+
   // expression[opt] ';'
   ExprResult Expr(ParseExpression());
   if (Expr.isInvalid()) {
