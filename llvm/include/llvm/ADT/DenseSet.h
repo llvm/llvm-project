@@ -210,7 +210,13 @@ class DenseSet : public detail::DenseSetImpl<
                            ValueInfoT>;
 
 public:
+#if defined(_MSC_VER) && _MSC_VER < 1900
+  explicit DenseSet(unsigned InitialReserve = 0)
+      : DenseSetImpl(InitialReserve) {}
+  DenseSet(std::initializer_list<ValueT> Elems) : DenseSetImpl(Elems) {}
+#else
   using BaseT::BaseT;
+#endif
 };
 
 /// Implements a dense probed hash-table based set with some number of buckets
@@ -228,7 +234,13 @@ class SmallDenseSet
       ValueInfoT>;
 
 public:
+#if defined(_MSC_VER) && _MSC_VER < 1900
+  explicit SmallDenseSet(unsigned InitialReserve = 0)
+      : DenseSetImpl(InitialReserve) {}
+  SmallDenseSet(std::initializer_list<ValueT> Elems) : DenseSetImpl(Elems) {}
+#else
   using BaseT::BaseT;
+#endif
 };
 
 } // end namespace llvm

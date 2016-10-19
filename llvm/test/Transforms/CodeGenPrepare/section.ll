@@ -1,26 +1,21 @@
-; RUN: opt < %s -codegenprepare -S | FileCheck --check-prefixes=CHECK-OPT %s
-; RUN: llc < %s -o - | FileCheck --check-prefixes=CHECK-LLC %s
+; RUN: opt < %s -codegenprepare -S | FileCheck %s
 
 target triple = "x86_64-pc-linux-gnu"
 
 ; This tests that hot/cold functions get correct section prefix assigned
 
-; CHECK-OPT: hot_func{{.*}}!section_prefix ![[HOT_ID:[0-9]+]]
-; CHECK-LLC: .section .text.hot
-; CHECK-LLC-NEXT: .globl hot_func
+; CHECK: hot_func{{.*}}!section_prefix ![[HOT_ID:[0-9]+]]
 define void @hot_func() !prof !15 {
   ret void
 }
 
-; CHECK-OPT: cold_func{{.*}}!section_prefix ![[COLD_ID:[0-9]+]]
-; CHECK-LLC: .section .text.cold
-; CHECK-LLC-NEXT: .globl cold_func
+; CHECK: cold_func{{.*}}!section_prefix ![[COLD_ID:[0-9]+]]
 define void @cold_func() !prof !16 {
   ret void
 }
 
-; CHECK-OPT: ![[HOT_ID]] = !{!"function_section_prefix", !".hot"}
-; CHECK-OPT: ![[COLD_ID]] = !{!"function_section_prefix", !".cold"}
+; CHECK: ![[HOT_ID]] = !{!"function_section_prefix", !".hot"}
+; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !".cold"}
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}

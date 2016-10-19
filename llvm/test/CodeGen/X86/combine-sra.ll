@@ -161,11 +161,10 @@ define <4 x i32> @combine_vec_ashr_ashr2(<4 x i32> %x) {
 define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ; SSE-LABEL: combine_vec_ashr_trunc_and:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,2]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    psrldq {{.*#+}} xmm2 = xmm2[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
@@ -187,9 +186,9 @@ define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ;
 ; AVX-LABEL: combine_vec_ashr_trunc_and:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
 ; AVX-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
 ; AVX-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpsravd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
