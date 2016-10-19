@@ -85,47 +85,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
-class IntervalTimer {
-public:
-  IntervalTimer() : m_start(TimeValue::Now()) {}
-
-  ~IntervalTimer() = default;
-
-  uint64_t GetElapsedNanoSeconds() const { return TimeValue::Now() - m_start; }
-
-  void Reset() { m_start = TimeValue::Now(); }
-
-  int PrintfElapsed(const char *format, ...)
-      __attribute__((format(printf, 2, 3))) {
-    TimeValue now(TimeValue::Now());
-    const uint64_t elapsed_nsec = now - m_start;
-    const char *unit = nullptr;
-    float elapsed_value;
-    if (elapsed_nsec < 1000) {
-      unit = "ns";
-      elapsed_value = (float)elapsed_nsec;
-    } else if (elapsed_nsec < 1000000) {
-      unit = "us";
-      elapsed_value = (float)elapsed_nsec / 1000.0f;
-    } else if (elapsed_nsec < 1000000000) {
-      unit = "ms";
-      elapsed_value = (float)elapsed_nsec / 1000000.0f;
-    } else {
-      unit = "sec";
-      elapsed_value = (float)elapsed_nsec / 1000000000.0f;
-    }
-    int result = printf("%3.2f %s: ", elapsed_value, unit);
-    va_list args;
-    va_start(args, format);
-    result += vprintf(format, args);
-    va_end(args);
-    return result;
-  }
-
-protected:
-  TimeValue m_start;
-};
-
 } // namespace lldb_private
 
 #endif // liblldb_Timer_h_
