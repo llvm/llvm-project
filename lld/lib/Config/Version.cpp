@@ -12,46 +12,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Config/Version.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-namespace lld {
+#define JOIN2(X) #X
+#define JOIN(X, Y) JOIN2(X.Y)
 
-StringRef getLLDRepositoryPath() {
-#ifdef LLD_REPOSITORY_STRING
-  return LLD_REPOSITORY_STRING;
+// A string that describes the lld version number, e.g., "1.0".
+#define VERSION JOIN(LLD_VERSION_MAJOR, LLD_VERSION_MINOR)
+
+// A string that describes SVN repository, e.g.,
+// " (https://llvm.org/svn/llvm-project/lld/trunk 284614)".
+#if defined(LLD_REPOSITORY_STRING) && defined(LLD_REVISION_STRING)
+#define REPO " (" LLD_REPOSITORY_STRING " " LLD_REVISION_STRING ")"
+#elif defined(LLD_REPOSITORY_STRING)
+#define REPO " (" LLD_REPOSITORY_STRING ")"
+#elif defined(LLD_REVISION_STRING)
+#define REPO " (" LLD_REVISION_STRING ")"
 #else
-  return "";
+#define REPO ""
 #endif
-}
 
-StringRef getLLDRevision() {
-#ifdef LLD_REVISION_STRING
-  return LLD_REVISION_STRING;
-#else
-  return "";
-#endif
-}
-
-std::string getLLDRepositoryVersion() {
-  std::string S = getLLDRepositoryPath();
-  std::string T = getLLDRevision();
-  if (S.empty() && T.empty())
-    return "";
-  if (!S.empty() && !T.empty())
-    return "(" + S + " " + T + ")";
-  if (!S.empty())
-    return "(" + S + ")";
-  return "(" + T + ")";
-}
-
-StringRef getLLDVersion() {
-#ifdef LLD_VERSION_STRING
-  return LLD_VERSION_STRING;
-#else
-  return "";
-#endif
-}
-
-} // end namespace lld
+// Returns a version string, e.g.,
+// "LLD 4.0 (https://llvm.org/svn/llvm-project/lld/trunk 284614)".
+StringRef lld::getLLDVersion() { return "LLD " VERSION REPO; }

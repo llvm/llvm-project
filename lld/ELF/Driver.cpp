@@ -19,6 +19,7 @@
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Config/Version.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -41,6 +42,7 @@ LinkerDriver *elf::Driver;
 bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   HasError = false;
   ErrorOS = &Error;
+  Argv0 = Args[0];
 
   Configuration C;
   LinkerDriver D;
@@ -286,7 +288,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     return;
   }
   if (Args.hasArg(OPT_version))
-    outs() << getVersionString();
+    outs() << getLLDVersion() << "\n";
 
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -295,7 +297,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     if (F) {
       Cpio.reset(*F);
       Cpio->append("response.txt", createResponseFile(Args));
-      Cpio->append("version.txt", getVersionString());
+      Cpio->append("version.txt", (getLLDVersion() + "\n").str());
     } else
       error(F.getError(),
             Twine("--reproduce: failed to open ") + Path + ".cpio");
@@ -630,7 +632,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   }
 
   if (Files.empty() && !HasError)
-    error("no input files.");
+    error("no input files");
 
   // If -m <machine_type> was not given, infer it from object files.
   if (Config->EKind == ELFNoneKind) {

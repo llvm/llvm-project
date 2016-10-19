@@ -13,13 +13,16 @@
 
 // template <RandomAccessIterator Iter1, RandomAccessIterator Iter2>
 //   requires HasMinus<Iter2, Iter1>
-//   auto operator-(const reverse_iterator<Iter1>& x, const reverse_iterator<Iter2>& y)
+//   constexpr auto operator-(const reverse_iterator<Iter1>& x, const reverse_iterator<Iter2>& y)
 //   -> decltype(y.base() - x.base());
+//
+// constexpr in c++17
 
 #include <iterator>
 #include <cstddef>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It1, class It2>
@@ -40,4 +43,15 @@ int main()
     test(s, s, 0);
     test(s, s+1, 1);
     test(s+1, s, -1);
+
+#if TEST_STD_VER > 14
+    {
+        constexpr const char *p = "123456789";
+        typedef std::reverse_iterator<const char *> RI;
+        constexpr RI it1 = std::make_reverse_iterator(p);
+        constexpr RI it2 = std::make_reverse_iterator(p+1);
+        static_assert( it1 - it2 ==  1, "");
+        static_assert( it2 - it1 == -1, "");
+    }
+#endif
 }

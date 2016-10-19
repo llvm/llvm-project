@@ -596,7 +596,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   }
   // Bit size, align and offset of the type.
   uint64_t Size = CGM.getContext().getTypeSize(BT);
-  uint64_t Align = CGM.getContext().getTypeAlign(BT);
+  uint32_t Align = CGM.getContext().getTypeAlign(BT);
   return DBuilder.createBasicType(BTName, Size, Align, Encoding);
 }
 
@@ -607,7 +607,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
     Encoding = llvm::dwarf::DW_ATE_lo_user;
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
-  uint64_t Align = CGM.getContext().getTypeAlign(Ty);
+  uint32_t Align = CGM.getContext().getTypeAlign(Ty);
   return DBuilder.createBasicType("complex", Size, Align, Encoding);
 }
 
@@ -721,7 +721,7 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   StringRef RDName = getClassName(RD);
 
   uint64_t Size = 0;
-  uint64_t Align = 0;
+  uint32_t Align = 0;
 
   const RecordDecl *D = RD->getDefinition();
   if (D && D->isCompleteDefinition()) {
@@ -749,7 +749,7 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
   // because that does not return the correct value for references.
   unsigned AS = CGM.getContext().getTargetAddressSpace(PointeeTy);
   uint64_t Size = CGM.getTarget().getPointerWidth(AS);
-  uint64_t Align = CGM.getContext().getTypeAlign(Ty);
+  uint32_t Align = CGM.getContext().getTypeAlign(Ty);
 
   if (Tag == llvm::dwarf::DW_TAG_reference_type ||
       Tag == llvm::dwarf::DW_TAG_rvalue_reference_type)
@@ -776,7 +776,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   SmallVector<llvm::Metadata *, 8> EltTys;
   QualType FType;
   uint64_t FieldSize, FieldOffset;
-  unsigned FieldAlign;
+  uint32_t FieldAlign;
   llvm::DINodeArray Elements;
 
   FieldOffset = 0;
@@ -965,7 +965,7 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
       CGM.getTypes().getCGRecordLayout(RD).getBitFieldInfo(BitFieldDecl);
   uint64_t SizeInBits = BitFieldInfo.Size;
   assert(SizeInBits > 0 && "found named 0-width bitfield");
-  unsigned AlignInBits = CGM.getContext().getTypeAlign(Ty);
+  uint32_t AlignInBits = CGM.getContext().getTypeAlign(Ty);
   uint64_t StorageOffsetInBits =
       CGM.getContext().toBits(BitFieldInfo.StorageOffset);
   uint64_t OffsetInBits = StorageOffsetInBits + BitFieldInfo.Offset;
@@ -987,7 +987,7 @@ CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
   unsigned line = getLineNumber(loc);
 
   uint64_t SizeInBits = 0;
-  unsigned AlignInBits = 0;
+  uint32_t AlignInBits = 0;
   if (!type->isIncompleteArrayType()) {
     TypeInfo TI = CGM.getContext().getTypeInfo(type);
     SizeInBits = TI.Width;
@@ -1181,7 +1181,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
     QualType PointeeTy = ThisPtrTy->getPointeeType();
     unsigned AS = CGM.getContext().getTargetAddressSpace(PointeeTy);
     uint64_t Size = CGM.getTarget().getPointerWidth(AS);
-    uint64_t Align = CGM.getContext().getTypeAlign(ThisPtrTy);
+    uint32_t Align = CGM.getContext().getTypeAlign(ThisPtrTy);
     llvm::DIType *PointeeType = getOrCreateType(PointeeTy, Unit);
     llvm::DIType *ThisPtrType =
         DBuilder.createPointerType(PointeeType, Size, Align);
@@ -1968,7 +1968,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
 
   // Bit size, align and offset of the type.
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
-  uint64_t Align = CGM.getContext().getTypeAlign(Ty);
+  uint32_t Align = CGM.getContext().getTypeAlign(Ty);
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   if (ID->getImplementation())
@@ -2052,7 +2052,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     unsigned FieldLine = getLineNumber(Field->getLocation());
     QualType FType = Field->getType();
     uint64_t FieldSize = 0;
-    unsigned FieldAlign = 0;
+    uint32_t FieldAlign = 0;
 
     if (!FType->isIncompleteArrayType()) {
 
@@ -2134,14 +2134,14 @@ llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
   llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscript);
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
-  uint64_t Align = CGM.getContext().getTypeAlign(Ty);
+  uint32_t Align = CGM.getContext().getTypeAlign(Ty);
 
   return DBuilder.createVectorType(Size, Align, ElementTy, SubscriptArray);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
   uint64_t Size;
-  uint64_t Align;
+  uint32_t Align;
 
   // FIXME: make getTypeAlign() aware of VLAs and incomplete array types
   if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
@@ -2180,9 +2180,11 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
     if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty))
       Count = CAT->getSize().getZExtValue();
     else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
-      llvm::APSInt V;
-      if (VAT->getSizeExpr()->EvaluateAsInt(V, CGM.getContext()))
-        Count = V.getExtValue();
+      if (Expr *Size = VAT->getSizeExpr()) {
+        llvm::APSInt V;
+        if (Size->EvaluateAsInt(V, CGM.getContext()))
+          Count = V.getExtValue();
+      }
     }
 
     // FIXME: Verify this is right for VLAs.
@@ -2264,7 +2266,7 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
   const EnumDecl *ED = Ty->getDecl();
 
   uint64_t Size = 0;
-  uint64_t Align = 0;
+  uint32_t Align = 0;
   if (!ED->getTypeForDecl()->isIncompleteType()) {
     Size = CGM.getContext().getTypeSize(ED->getTypeForDecl());
     Align = CGM.getContext().getTypeAlign(ED->getTypeForDecl());
@@ -2307,7 +2309,7 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
 llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   const EnumDecl *ED = Ty->getDecl();
   uint64_t Size = 0;
-  uint64_t Align = 0;
+  uint32_t Align = 0;
   if (!ED->getTypeForDecl()->isIncompleteType()) {
     Size = CGM.getContext().getTypeSize(ED->getTypeForDecl());
     Align = CGM.getContext().getTypeAlign(ED->getTypeForDecl());
@@ -2607,7 +2609,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     return getOrCreateRecordFwdDecl(Ty, RDContext);
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
-  uint64_t Align = CGM.getContext().getTypeAlign(Ty);
+  uint32_t Align = CGM.getContext().getTypeAlign(Ty);
 
   SmallString<256> FullName = getUniqueTagTypeName(Ty, CGM, TheCU);
 
@@ -2676,7 +2678,7 @@ llvm::DIType *CGDebugInfo::CreateMemberType(llvm::DIFile *Unit, QualType FType,
                                             StringRef Name, uint64_t *Offset) {
   llvm::DIType *FieldTy = CGDebugInfo::getOrCreateType(FType, Unit);
   uint64_t FieldSize = CGM.getContext().getTypeSize(FType);
-  unsigned FieldAlign = CGM.getContext().getTypeAlign(FType);
+  uint32_t FieldAlign = CGM.getContext().getTypeAlign(FType);
   llvm::DIType *Ty =
       DBuilder.createMemberType(Unit, Name, Unit, 0, FieldSize, FieldAlign,
                                 *Offset, llvm::DINode::FlagZero, FieldTy);
@@ -3137,7 +3139,7 @@ llvm::DIType *CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
   SmallVector<llvm::Metadata *, 5> EltTys;
   QualType FType;
   uint64_t FieldSize, FieldOffset;
-  unsigned FieldAlign;
+  uint32_t FieldAlign;
 
   llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
   QualType Type = VD->getType();

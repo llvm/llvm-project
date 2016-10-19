@@ -1773,15 +1773,8 @@ static const CXXRecordDecl *getClassAtVTableLocation(ASTContext &Ctx,
   CharUnits MaxBaseOffset;
   for (auto &&B : RD->bases()) {
     const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
-    CharUnits BaseOffset = Layout.getBaseClassOffset(Base);
-    if (BaseOffset <= Offset && BaseOffset >= MaxBaseOffset) {
-      MaxBase = Base;
-      MaxBaseOffset = BaseOffset;
-    }
-  }
-  for (auto &&B : RD->vbases()) {
-    const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
-    CharUnits BaseOffset = Layout.getVBaseClassOffset(Base);
+    CharUnits BaseOffset = B.isVirtual() ? Layout.getVBaseClassOffset(Base)
+                                         : Layout.getBaseClassOffset(Base);
     if (BaseOffset <= Offset && BaseOffset >= MaxBaseOffset) {
       MaxBase = Base;
       MaxBaseOffset = BaseOffset;

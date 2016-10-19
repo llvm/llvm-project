@@ -69,8 +69,11 @@
 // RUN:   | FileCheck %s -check-prefix=PREPROCESS
 // PREPROCESS: "-E" "-DMYRIAD2" "-I" "foo"
 
-// RUN: %clang -target sparc-myriad -### --driver-mode=g++ %s 2>&1 | FileCheck %s --check-prefix=STDLIBCXX
-// STDLIBCXX: "-lstdc++" "-lc" "-lgcc"
+// RUN: %clang -target sparc-myriad -### --driver-mode=g++ %s 2>&1 | FileCheck %s --check-prefix=LIBSTDCXX
+// LIBSTDCXX: "-lstdc++" "-lc" "-lgcc"
+
+// RUN: %clang -stdlib=libc++ -### -target sparcel-myriad -S -x c++ %s 2>&1 | FileCheck %s -check-prefix=LIBCXX
+// LIBCXX: "-internal-isystem" "{{.*}}/../include/c++/v1"
 
 // RUN: %clang -target sparc-myriad -### -nostdlib %s 2>&1 | FileCheck %s --check-prefix=NOSTDLIB
 // NOSTDLIB-NOT: crtbegin.o

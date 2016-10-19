@@ -220,6 +220,23 @@ namespace PR14858 {
 
   template<typename ...T, typename ...U> void h(X<T...> &) {}
   template<typename ...T, typename ...U> void h(X<U...> &) {} // ok, different
+
+  template<typename ...T> void i(auto (T ...t) -> int(&)[sizeof...(t)]);
+  auto mk_arr(int, int) -> int(&)[2];
+  void test_i() { i<int, int>(mk_arr); }
+
+#if 0 // FIXME: This causes clang to assert.
+  template<typename ...T> using Z = auto (T ...p) -> int (&)[sizeof...(p)];
+  template<typename ...T, typename ...U> void j(Z<T..., U...> &) {}
+  void test_j() { j<int, int>(mk_arr); }
+#endif
+
+  template<typename ...T> struct Q {
+    template<typename ...U> using V = int[sizeof...(U)];
+    template<typename ...U> void f(V<typename U::type..., typename T::type...> *);
+  };
+  struct B { typedef int type; };
+  void test_q(int (&a)[5]) { Q<B, B, B>().f<B, B>(&a); }
 }
 
 namespace redecl {

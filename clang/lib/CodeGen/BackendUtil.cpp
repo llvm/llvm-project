@@ -595,6 +595,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   Options.MCOptions.MCNoExecStack = CodeGenOpts.NoExecStack;
   Options.MCOptions.MCIncrementalLinkerCompatible =
       CodeGenOpts.IncrementalLinkerCompatible;
+  Options.MCOptions.MCPIECopyRelocations =
+      CodeGenOpts.PIECopyRelocations;
   Options.MCOptions.MCFatalWarnings = CodeGenOpts.FatalWarnings;
   Options.MCOptions.AsmVerbose = CodeGenOpts.AsmVerbose;
   Options.MCOptions.PreserveAsmComments = CodeGenOpts.PreserveAsmComments;

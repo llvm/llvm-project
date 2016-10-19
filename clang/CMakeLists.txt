@@ -484,6 +484,8 @@ endif()
 if (CLANG_ENABLE_BOOTSTRAP)
   include(ExternalProject)
 
+  add_custom_target(clang-bootstrap-deps DEPENDS clang)
+
   if(NOT CLANG_STAGE)
     set(CLANG_STAGE stage1)
   endif()
@@ -510,8 +512,8 @@ if (CLANG_ENABLE_BOOTSTRAP)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 
   # If the next stage is LTO we need to depend on LTO and possibly LLVMgold
-  if(BOOTSTRAP_LLVM_ENABLE_LTO OR LLVM_ENABLE_LTO)
-    set(LTO_DEP LTO)
+  if(BOOTSTRAP_LLVM_ENABLE_LTO OR LLVM_ENABLE_LTO AND NOT LLVM_BUILD_INSTRUMENTED)
+    add_dependencies(clang-bootstrap-deps LTO)
     if(APPLE)
       # on Darwin we need to set DARWIN_LTO_LIBRARY so that -flto will work
       # using the just-built compiler, and we need to override DYLD_LIBRARY_PATH
@@ -524,7 +526,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
       set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
     elseif(NOT WIN32)
-      list(APPEND LTO_DEP LLVMgold llvm-ar llvm-ranlib)
+      add_dependencies(clang-bootstrap-deps LLVMgold llvm-ar llvm-ranlib)
       set(LTO_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
       set(LTO_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
     endif()
@@ -535,7 +537,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
     )
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-cleared
-    DEPENDS clang ${LTO_DEP}
+    DEPENDS clang-bootstrap-deps
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${STAMP_DIR}
@@ -562,8 +564,10 @@ if (CLANG_ENABLE_BOOTSTRAP)
     CMAKE_MAKE_PROGRAM
     CMAKE_OSX_ARCHITECTURES)
 
-  if(TARGET compiler-rt)
-    set(RUNTIME_DEP compiler-rt)
+  # We don't need to depend on compiler-rt if we're building instrumented
+  # because the next stage will use the same compiler used to build this stage.
+  if(TARGET compiler-rt AND NOT LLVM_BUILD_INSTRUMENTED)
+    add_dependencies(clang-bootstrap-deps compiler-rt)
   endif()
 
   set(COMPILER_OPTIONS
@@ -572,12 +576,12 @@ if (CLANG_ENABLE_BOOTSTRAP)
     -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
 
   if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
-    set(PGO_DEP llvm-profdata)
+    add_dependencies(clang-bootstrap-deps llvm-profdata)
     set(PGO_OPT -DLLVM_PROFDATA=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profdata)
   endif()
 
   if(LLVM_BUILD_INSTRUMENTED)
-    set(PGO_DEP generate-profdata)
+    add_dependencies(clang-bootstrap-deps generate-profdata)
     set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
@@ -591,8 +595,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
 
     set(COMPILER_OPTIONS)
     set(LTO_LIBRARY)
-    set(RUNTIME_DEP) # Don't set runtime dependencies
-    set(LTO_DEP)     # Don't need to depend on LTO
     set(LTO_AR)
     set(LTO_RANLIB)
   endif()
@@ -627,7 +629,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
   endforeach()
 
   ExternalProject_Add(${NEXT_CLANG_STAGE}
-    DEPENDS clang ${LTO_DEP} ${RUNTIME_DEP} ${PGO_DEP}
+    DEPENDS clang-bootstrap-deps
     PREFIX ${NEXT_CLANG_STAGE}
     SOURCE_DIR ${CMAKE_SOURCE_DIR}
     STAMP_DIR ${STAMP_DIR}

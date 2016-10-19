@@ -19,8 +19,8 @@
 # RUN: ld.lld %t1 -o %t2 -e 0777
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=OCT %s
 
-# WARN: entry symbol foobar not found, assuming 0
-# WARN2: entry symbol _start not found, assuming 0
+# WARN: warning: entry symbol foobar not found, assuming 0
+# WARN2: warning: entry symbol _start not found, assuming 0
 
 # NOENTRY: Entry: 0x0
 # SYM: Entry: 0x11000

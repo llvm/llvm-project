@@ -639,7 +639,7 @@ bool Sema::CheckParameterPacksForExpansion(
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -934,6 +934,63 @@ Sema::getTemplateArgumentPackExpansionPattern(
   }
 
   llvm_unreachable("Invalid TemplateArgument Kind!");
+}
+
+Optional<unsigned> Sema::getFullyPackExpandedSize(TemplateArgument Arg) {
+  assert(Arg.containsUnexpandedParameterPack());
+
+  // If this is a substituted pack, grab that pack. If not, we don't know
+  // the size yet.
+  // FIXME: We could find a size in more cases by looking for a substituted
+  // pack anywhere within this argument, but that's not necessary in the common
+  // case for 'sizeof...(A)' handling.
+  TemplateArgument Pack;
+  switch (Arg.getKind()) {
+  case TemplateArgument::Type:
+    if (auto *Subst = Arg.getAsType()->getAs<SubstTemplateTypeParmPackType>())
+      Pack = Subst->getArgumentPack();
+    else
+      return None;
+    break;
+
+  case TemplateArgument::Expression:
+    if (auto *Subst =
+            dyn_cast<SubstNonTypeTemplateParmPackExpr>(Arg.getAsExpr()))
+      Pack = Subst->getArgumentPack();
+    else if (auto *Subst = dyn_cast<FunctionParmPackExpr>(Arg.getAsExpr()))  {
+      for (ParmVarDecl *PD : *Subst)
+        if (PD->isParameterPack())
+          return None;
+      return Subst->getNumExpansions();
+    } else
+      return None;
+    break;
+
+  case TemplateArgument::Template:
+    if (SubstTemplateTemplateParmPackStorage *Subst =
+            Arg.getAsTemplate().getAsSubstTemplateTemplateParmPack())
+      Pack = Subst->getArgumentPack();
+    else
+      return None;
+    break;
+
+  case TemplateArgument::Declaration:
+  case TemplateArgument::NullPtr:
+  case TemplateArgument::TemplateExpansion:
+  case TemplateArgument::Integral:
+  case TemplateArgument::Pack:
+  case TemplateArgument::Null:
+    return None;
+  }
+
+  // Check that no argument in the pack is itself a pack expansion.
+  for (TemplateArgument Elem : Pack.pack_elements()) {
+    // There's no point recursing in this case; we would have already
+    // expanded this pack expansion into the enclosing pack if we could.
+    if (Elem.isPackExpansion())
+      return None;
+  }
+  return Pack.pack_size();
 }
 
 static void CheckFoldOperand(Sema &S, Expr *E) {

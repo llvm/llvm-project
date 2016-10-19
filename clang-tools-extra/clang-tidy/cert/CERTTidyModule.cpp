@@ -43,6 +43,8 @@ public:
     CheckFactories.registerCheck<misc::MoveConstructorInitCheck>(
         "cert-oop11-cpp");
     // ERR
+    CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
+        "cert-err09-cpp");
     CheckFactories.registerCheck<SetLongJmpCheck>(
         "cert-err52-cpp");
     CheckFactories.registerCheck<StaticObjectExceptionCheck>(
