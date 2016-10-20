@@ -60,6 +60,7 @@ PathDiagnosticEventPiece::~PathDiagnosticEventPiece() {}
 PathDiagnosticCallPiece::~PathDiagnosticCallPiece() {}
 PathDiagnosticControlFlowPiece::~PathDiagnosticControlFlowPiece() {}
 PathDiagnosticMacroPiece::~PathDiagnosticMacroPiece() {}
+PathDiagnosticNotePiece::~PathDiagnosticNotePiece() {}
 
 void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
                            bool ShouldFlattenMacros) const {
@@ -95,6 +96,7 @@ void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
     }
     case PathDiagnosticPiece::Event:
     case PathDiagnosticPiece::ControlFlow:
+    case PathDiagnosticPiece::Note:
       Current.push_back(Piece);
       break;
     }
@@ -354,15 +356,16 @@ static Optional<bool> comparePiece(const PathDiagnosticPiece &X,
   }
 
   switch (X.getKind()) {
-    case clang::ento::PathDiagnosticPiece::ControlFlow:
+    case PathDiagnosticPiece::ControlFlow:
       return compareControlFlow(cast<PathDiagnosticControlFlowPiece>(X),
                                 cast<PathDiagnosticControlFlowPiece>(Y));
-    case clang::ento::PathDiagnosticPiece::Event:
+    case PathDiagnosticPiece::Event:
+    case PathDiagnosticPiece::Note:
       return None;
-    case clang::ento::PathDiagnosticPiece::Macro:
+    case PathDiagnosticPiece::Macro:
       return compareMacro(cast<PathDiagnosticMacroPiece>(X),
                           cast<PathDiagnosticMacroPiece>(Y));
-    case clang::ento::PathDiagnosticPiece::Call:
+    case PathDiagnosticPiece::Call:
       return compareCall(cast<PathDiagnosticCallPiece>(X),
                          cast<PathDiagnosticCallPiece>(Y));
   }
@@ -1108,6 +1111,10 @@ void PathDiagnosticMacroPiece::Profile(llvm::FoldingSetNodeID &ID) const {
   for (PathPieces::const_iterator I = subPieces.begin(), E = subPieces.end();
        I != E; ++I)
     ID.Add(**I);
+}
+
+void PathDiagnosticNotePiece::Profile(llvm::FoldingSetNodeID &ID) const {
+  PathDiagnosticSpotPiece::Profile(ID);
 }
 
 void PathDiagnostic::Profile(llvm::FoldingSetNodeID &ID) const {
