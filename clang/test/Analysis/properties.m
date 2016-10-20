@@ -134,17 +134,11 @@ NSNumber* numberFromMyNumberProperty(MyNumber* aMyNumber)
   NSString *_name;
 }
 @property (retain) NSString * name;
-#if !__has_feature(objc_arc)
-// expected-note@-2 {{Property is declared here}}
-#endif
 @property (assign) id friend;
 @end
 
 @implementation Person
 @synthesize name = _name;
-#if !__has_feature(objc_arc)
-// expected-note@-2 {{Property is synthesized here}}
-#endif
 
 -(void)dealloc {
 #if !__has_feature(objc_arc)
