@@ -151,6 +151,7 @@ template <class ELFT> void elf::writeResult() {
   std::unique_ptr<StringTableSection<ELFT>> DynStrTab;
   std::unique_ptr<SymbolTableSection<ELFT>> DynSymTab;
   std::unique_ptr<EhFrameHeader<ELFT>> EhFrameHdr;
+  std::unique_ptr<GdbIndexSection<ELFT>> GdbIndex;
   std::unique_ptr<GnuHashTableSection<ELFT>> GnuHashTab;
   std::unique_ptr<GotPltSection<ELFT>> GotPlt;
   std::unique_ptr<HashTableSection<ELFT>> HashTab;
@@ -186,6 +187,8 @@ template <class ELFT> void elf::writeResult() {
     GnuHashTab.reset(new GnuHashTableSection<ELFT>);
   if (Config->SysvHash)
     HashTab.reset(new HashTableSection<ELFT>);
+  if (Config->GdbIndex)
+    GdbIndex.reset(new GdbIndexSection<ELFT>);
   StringRef S = Config->Rela ? ".rela.plt" : ".rel.plt";
   GotPlt.reset(new GotPltSection<ELFT>);
   RelaPlt.reset(new RelocationSection<ELFT>(S, false /*Sort*/));
@@ -213,6 +216,7 @@ template <class ELFT> void elf::writeResult() {
   Out<ELFT>::Dynamic = &Dynamic;
   Out<ELFT>::EhFrame = &EhFrame;
   Out<ELFT>::EhFrameHdr = EhFrameHdr.get();
+  Out<ELFT>::GdbIndex = GdbIndex.get();
   Out<ELFT>::GnuHashTab = GnuHashTab.get();
   Out<ELFT>::Got = &Got;
   Out<ELFT>::GotPlt = GotPlt.get();
@@ -771,6 +775,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::finalizeSections() {
+  Out<ELFT>::DebugInfo = findSection(".debug_info");
   Out<ELFT>::PreinitArray = findSection(".preinit_array");
   Out<ELFT>::InitArray = findSection(".init_array");
   Out<ELFT>::FiniArray = findSection(".fini_array");
@@ -902,6 +907,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
+  if (Out<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
+    Add(Out<ELFT>::GdbIndex);
   Add(Out<ELFT>::SymTab);
   Add(Out<ELFT>::ShStrTab);
   Add(Out<ELFT>::StrTab);

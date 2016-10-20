@@ -7,14 +7,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../tsan/test.h"
 
 int main() {
   void *stack_var = malloc(1337);
-  fprintf(stderr, "Test alloc: %p.\n", stack_var);
+  print_address("Test alloc: ", 1, stack_var);
   // Do not return from main to prevent the pointer from going out of scope.
   exit(0);
 }
-// CHECK: Test alloc: [[ADDR:.*]].
+// CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
 // CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:

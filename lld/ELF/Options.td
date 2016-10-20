@@ -86,6 +86,9 @@ def format: J<"format=">, MetaVarName<"<input-format>">,
 def gc_sections: F<"gc-sections">,
   HelpText<"Enable garbage collection of unused sections">;
 
+def gdb_index: F<"gdb-index">,
+  HelpText<"Generate .gdb_index section">;
+
 def hash_style: S<"hash-style">,
   HelpText<"Specify hash style (sysv, gnu or both)">;
 

@@ -5,7 +5,7 @@
 
 # REQUIRES: amdgpu
 
-  .text
+.text
 
 kernel0:
   s_mov_b32 s0, common_var0@GOTPCREL+4
@@ -50,10 +50,20 @@ kernel0:
   .local   local_var1
   .local   local_var2
 
+# R_AMDGPU_ABS32:
 .section nonalloc, "w", @progbits
   .long var0, common_var2+4
   .long var1, common_var1+8
   .long var2, common_var0+12
+
+# R_AMDGPU_ABS64:
+.type ptr, @object
+.data
+  .globl ptr
+  .p2align 3
+ptr:
+  .quad temp
+  .size ptr, 8
 
 # The relocation for local_var{0, 1, 2} and var should be resolved by the
 # linker.
@@ -68,6 +78,7 @@ kernel0:
 # CHECK-NEXT: R_AMDGPU_ABS64 global_var0 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 global_var1 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 global_var2 0x0
+# CHECK-NEXT: R_AMDGPU_ABS64 temp 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weak_var0 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weak_var1 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 weak_var2 0x0
@@ -78,5 +89,5 @@ kernel0:
 # CHECK-NEXT: ]
 
 # OBJDUMP: Contents of section nonalloc:
-# OBJDUMP-NEXT: 0000 00000000 04380000 00000000 08340000
-# OBJDUMP-NEXT: 00000000 0c300000
+# OBJDUMP-NEXT: 0000 00000000 14380000 00000000 18340000
+# OBJDUMP-NEXT: 00000000 1c300000

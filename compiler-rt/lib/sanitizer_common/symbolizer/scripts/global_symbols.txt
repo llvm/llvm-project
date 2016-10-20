@@ -11,11 +11,13 @@ _ZN11__sanitizer17internal_snprintfEPcmPKcz U
 __ctype_b_loc U
 __ctype_get_mb_cur_max U
 __cxa_atexit U
+__divdi3 U
 __dso_handle U
 __errno_location U
 __interceptor_pread w
 __interceptor_read w
 __interceptor_realpath w
+__moddi3 U
 __sanitizer_symbolize_code T
 __sanitizer_symbolize_data T
 __sanitizer_symbolize_demangle T
@@ -31,6 +33,7 @@ catclose U
 catgets U
 catopen U
 ceil U
+clock_gettime U
 cfgetospeed U
 dl_iterate_phdr U
 dlsym U

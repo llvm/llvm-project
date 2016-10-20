@@ -14,6 +14,7 @@
 #include <stdlib.h>
 
 #include "sanitizer/lsan_interface.h"
+#include "../../tsan/test.h"
 
 pthread_key_t key;
 __thread void *p;
@@ -25,7 +26,7 @@ void key_destructor(void *arg) {
 
 void *thread_func(void *arg) {
   p = malloc(1337);
-  fprintf(stderr, "Test alloc: %p.\n", p);
+  print_address("Test alloc: ", 1, p);
   int res = pthread_setspecific(key, (void*)1);
   assert(res == 0);
   return 0;
@@ -41,5 +42,5 @@ int main() {
   assert(res == 0);
   return 0;
 }
-// CHECK: Test alloc: [[ADDR:.*]].
+// CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: [[ADDR]] (1337 bytes)

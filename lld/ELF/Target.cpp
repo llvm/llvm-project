@@ -1172,7 +1172,7 @@ RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
     return R_TLSDESC;
   case R_AARCH64_TLSDESC_CALL:
-    return R_HINT;
+    return R_TLSDESC_CALL;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
     return R_TLS;
@@ -1487,6 +1487,9 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_AMDGPU_REL32_LO:
     write32le(Loc, Val);
     break;
+  case R_AMDGPU_ABS64:
+    write64le(Loc, Val);
+    break;
   case R_AMDGPU_GOTPCREL32_HI:
   case R_AMDGPU_REL32_HI:
     write32le(Loc, Val >> 32);
@@ -1499,6 +1502,7 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
 RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
   case R_AMDGPU_ABS32:
+  case R_AMDGPU_ABS64:
     return R_ABS;
   case R_AMDGPU_REL32:
   case R_AMDGPU_REL32_LO:
@@ -1541,6 +1545,7 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
+  case R_ARM_PREL31:
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
   case R_ARM_THM_CALL:
@@ -1574,11 +1579,12 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_GOTONLY_PC;
   case R_ARM_MOVW_PREL_NC:
   case R_ARM_MOVT_PREL:
-  case R_ARM_PREL31:
   case R_ARM_REL32:
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVT_PREL:
     return R_PC;
+  case R_ARM_NONE:
+    return R_HINT;
   case R_ARM_TLS_LE32:
     return R_TLS;
   }
@@ -1660,8 +1666,6 @@ RelExpr ARMTargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,
 void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
   switch (Type) {
-  case R_ARM_NONE:
-    break;
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
   case R_ARM_GOTOFF32:

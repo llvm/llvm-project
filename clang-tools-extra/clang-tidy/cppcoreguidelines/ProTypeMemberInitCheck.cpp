@@ -27,6 +27,10 @@ namespace cppcoreguidelines {
 
 namespace {
 
+AST_MATCHER(CXXRecordDecl, hasDefaultConstructor) {
+  return Node.hasDefaultConstructor();
+}
+
 // Iterate over all the fields in a record type, both direct and indirect (e.g.
 // if the record contains an anonmyous struct). If OneFieldPerUnion is true and
 // the record type (or indirect field) is a union, forEachField will stop after
@@ -275,6 +279,7 @@ void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxRecordDecl(
           isDefinition(), unless(isInstantiated()),
+          hasDefaultConstructor(),
           anyOf(has(cxxConstructorDecl(isDefaultConstructor(), isDefaulted(),
                                        unless(isImplicit()))),
                 unless(has(cxxConstructorDecl()))),

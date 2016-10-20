@@ -8,7 +8,7 @@ struct OL {
 };
 OL::OL(const OL &Other) : Field(Other.Field) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default' to define a trivial copy constructor [modernize-use-default]
-// CHECK-FIXES: OL::OL(const OL &Other) = default;
+// CHECK-FIXES: OL::OL(const OL &Other)  = default;
 OL &OL::operator=(const OL &Other) {
   Field = Other.Field;
   return *this;
@@ -20,7 +20,7 @@ OL &OL::operator=(const OL &Other) {
 struct IL {
   IL(const IL &Other) : Field(Other.Field) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: IL(const IL &Other) = default;
+  // CHECK-FIXES: IL(const IL &Other)  = default;
   IL &operator=(const IL &Other) {
     Field = Other.Field;
     return *this;
@@ -43,7 +43,8 @@ struct Qual {
                             Mutable(Other.Mutable), Reference(Other.Reference),
                             Const(Other.Const) {}
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use '= default'
-  // CHECK-FIXES: Qual(const Qual &Other) = default;
+  // CHECK-FIXES: Qual(const Qual &Other)
+  // CHECK-FIXES:                          = default;
 
   int Field;
   volatile char Volatile;
@@ -80,6 +81,8 @@ MF &MF::operator=(const MF &Other) {
 struct Comments {
   Comments(const Comments &Other)
       /* don't delete */ : /* this comment */ Field(Other.Field) {}
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use '= default'
+  // CHECK-FIXES: /* don't delete */  = default;
   int Field;
 };
 
@@ -95,7 +98,7 @@ struct MoreComments {
 struct ColonInComment {
   ColonInComment(const ColonInComment &Other) /* : */ : Field(Other.Field) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ColonInComment(const ColonInComment &Other) /* : */ = default;
+  // CHECK-FIXES: ColonInComment(const ColonInComment &Other) /* : */  = default;
   int Field;
 };
 
@@ -116,7 +119,8 @@ struct BF {
   BF(const BF &Other) : Field1(Other.Field1), Field2(Other.Field2), Field3(Other.Field3),
                         Field4(Other.Field4) {}
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use '= default'
-  // CHECK-FIXES: BF(const BF &Other) = default;
+  // CHECK-FIXES: BF(const BF &Other) {{$}}
+  // CHECK-FIXES:                     = default;
   BF &operator=(const BF &);
 
   unsigned Field1 : 3;
@@ -140,7 +144,7 @@ BF &BF::operator=(const BF &Other) {
 struct BC : IL, OL, BF {
   BC(const BC &Other) : IL(Other), OL(Other), BF(Other) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: BC(const BC &Other) = default;
+  // CHECK-FIXES: BC(const BC &Other)  = default;
   BC &operator=(const BC &Other);
 };
 BC &BC::operator=(const BC &Other) {
@@ -156,7 +160,7 @@ BC &BC::operator=(const BC &Other) {
 struct BCWM : IL, OL {
   BCWM(const BCWM &Other) : IL(Other), OL(Other), Bf(Other.Bf) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: BCWM(const BCWM &Other) = default;
+  // CHECK-FIXES: BCWM(const BCWM &Other)  = default;
   BCWM &operator=(const BCWM &);
   BF Bf;
 };
@@ -200,7 +204,7 @@ struct VBC : VA, VB, virtual OL {
   // is a virtual OL at the beginning of VA (which is the same).
   VBC(const VBC &Other) : OL(Other), VA(Other), VB(Other) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: VBC(const VBC &Other) = default;
+  // CHECK-FIXES: VBC(const VBC &Other)  = default;
   VBC &operator=(const VBC &Other);
 };
 VBC &VBC::operator=(const VBC &Other) {
@@ -335,7 +339,7 @@ CIB &CIB::operator=(const CIB &Other) {
 struct NCRef {
   NCRef(NCRef &Other) : Field1(Other.Field1), Field2(Other.Field2) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: NCRef(NCRef &Other) = default;
+  // CHECK-FIXES: NCRef(NCRef &Other)  = default;
   NCRef &operator=(NCRef &);
   int Field1, Field2;
 };
