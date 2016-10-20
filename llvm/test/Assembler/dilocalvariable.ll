@@ -18,11 +18,11 @@
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !4 = !DILocation(scope: !0)
 
-; CHECK: !5 = !DILocalVariable(name: "foo", arg: 3, scope: !0, file: !2, line: 7, type: !3, flags: DIFlagArtificial)
+; CHECK: !5 = !DILocalVariable(name: "foo", arg: 3, scope: !0, file: !2, line: 7, type: !3, flags: DIFlagArtificial, align: 32)
 ; CHECK: !6 = !DILocalVariable(name: "foo", scope: !0, file: !2, line: 7, type: !3, flags: DIFlagArtificial)
 !5 = !DILocalVariable(name: "foo", arg: 3,
                       scope: !0, file: !2, line: 7, type: !3,
-                      flags: DIFlagArtificial)
+                      flags: DIFlagArtificial, align: 32)
 !6 = !DILocalVariable(name: "foo", scope: !0,
                       file: !2, line: 7, type: !3, flags: DIFlagArtificial)
 

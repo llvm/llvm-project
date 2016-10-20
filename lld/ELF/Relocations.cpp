@@ -271,7 +271,7 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
            readSignedLo16<E>(Buf + RI->r_offset);
   }
   warn("can't find matching " + getRelName(Type) + " relocation for " +
-          getRelName(Rel->getType(Config->Mips64EL)));
+       getRelName(Rel->getType(Config->Mips64EL)));
   return 0;
 }
 
@@ -444,8 +444,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     StringRef Name = getSymbolName(File, Body);
-    error("can't create dynamic relocation " + getRelName(Type) +
-          " against " + (Name.empty() ? "readonly segment" : "symbol " + Name));
+    error("can't create dynamic relocation " + getRelName(Type) + " against " +
+          (Name.empty() ? "readonly segment" : "symbol " + Name));
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
@@ -578,7 +578,8 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     SymbolBody &Body = File.getRelocTargetSym(RI);
     uint32_t Type = RI.getType(Config->Mips64EL);
 
-    // We only report undefined symbols if they are referenced somewhere in the code.
+    // We only report undefined symbols if they are referenced somewhere in the
+    // code.
     if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
       reportUndefined(Body);
 

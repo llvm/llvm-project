@@ -10,7 +10,7 @@ using namespace llvm::pdb;
 // deal with the Error value directly, rather than converting to error_code.
 class DIAErrorCategory : public std::error_category {
 public:
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.pdb.dia"; }
+  const char *name() const noexcept override { return "llvm.pdb.dia"; }
 
   std::string message(int Condition) const override {
     switch (static_cast<dia_error_code>(Condition)) {

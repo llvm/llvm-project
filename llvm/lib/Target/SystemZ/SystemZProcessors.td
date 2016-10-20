@@ -83,17 +83,18 @@ def FeatureNoVector : SystemZMissingFeature<"Vector">;
 
 def : Processor<"generic", NoItineraries, []>;
 def : Processor<"z10", NoItineraries, []>;
-def : Processor<"z196", NoItineraries,
+def : ProcessorModel<"z196", Z196Model,
                 [FeatureDistinctOps, FeatureLoadStoreOnCond, FeatureHighWord,
                  FeatureFPExtension, FeaturePopulationCount,
                  FeatureFastSerialization, FeatureInterlockedAccess1]>;
-def : Processor<"zEC12", NoItineraries,
+def : ProcessorModel<"zEC12", ZEC12Model,
                 [FeatureDistinctOps, FeatureLoadStoreOnCond, FeatureHighWord,
                  FeatureFPExtension, FeaturePopulationCount,
                  FeatureFastSerialization, FeatureInterlockedAccess1,
                  FeatureMiscellaneousExtensions,
                  FeatureTransactionalExecution, FeatureProcessorAssist]>;
-def : Processor<"z13", NoItineraries,
+
+def : ProcessorModel<"z13", Z13Model,
                 [FeatureDistinctOps, FeatureLoadStoreOnCond, FeatureHighWord,
                  FeatureFPExtension, FeaturePopulationCount,
                  FeatureFastSerialization, FeatureInterlockedAccess1,

@@ -1712,6 +1712,7 @@ void ModuleBitcodeWriter::writeDIGlobalVariable(
   Record.push_back(N->isDefinition());
   Record.push_back(VE.getMetadataOrNullID(N->getRawExpr()));
   Record.push_back(VE.getMetadataOrNullID(N->getStaticDataMemberDeclaration()));
+  Record.push_back(N->getAlignInBits());
 
   Stream.EmitRecord(bitc::METADATA_GLOBAL_VAR, Record, Abbrev);
   Record.clear();
@@ -1720,7 +1721,21 @@ void ModuleBitcodeWriter::writeDIGlobalVariable(
 void ModuleBitcodeWriter::writeDILocalVariable(
     const DILocalVariable *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  // In order to support all possible bitcode formats in BitcodeReader we need
+  // to distiguish the following cases:
+  // 1) Record has no artificial tag (Record[1]),
+  //   has no obsolete inlinedAt field (Record[9]).
+  //   In this case Record size will be 8, HasAlignment flag is false.
+  // 2) Record has artificial tag (Record[1]),
+  //   has no obsolete inlignedAt field (Record[9]).
+  //   In this case Record size will be 9, HasAlignment flag is false.
+  // 3) Record has both artificial tag (Record[1]) and
+  //   obsolete inlignedAt field (Record[9]).
+  //   In this case Record size will be 10, HasAlignment flag is false.
+  // 4) Record has neither artificial tag, nor inlignedAt field, but
+  //   HasAlignment flag is true and Record[8] contains alignment value.
+  const uint64_t HasAlignmentFlag = 1 << 1;
+  Record.push_back(N->isDistinct() | HasAlignmentFlag);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -1728,6 +1743,7 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
   Record.push_back(N->getArg());
   Record.push_back(N->getFlags());
+  Record.push_back(N->getAlignInBits());
 
   Stream.EmitRecord(bitc::METADATA_LOCAL_VAR, Record, Abbrev);
   Record.clear();

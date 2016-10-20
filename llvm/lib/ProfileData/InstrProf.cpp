@@ -80,7 +80,7 @@ std::string getInstrProfErrString(instrprof_error Err) {
 // will be removed once this transition is complete. Clients should prefer to
 // deal with the Error value directly, rather than converting to error_code.
 class InstrProfErrorCategoryType : public std::error_category {
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.instrprof"; }
+  const char *name() const noexcept override { return "llvm.instrprof"; }
   std::string message(int IE) const override {
     return getInstrProfErrString(static_cast<instrprof_error>(IE));
   }

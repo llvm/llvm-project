@@ -20,7 +20,7 @@ namespace {
 // deal with the Error value directly, rather than converting to error_code.
 class GenericErrorCategory : public std::error_category {
 public:
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.pdb"; }
+  const char *name() const noexcept override { return "llvm.pdb"; }
 
   std::string message(int Condition) const override {
     switch (static_cast<generic_error_code>(Condition)) {

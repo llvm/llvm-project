@@ -263,6 +263,14 @@ public:
   void loadImmediate(MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator MBBI,
                      unsigned Reg, uint64_t Value) const;
+
+  // Sometimes, it is possible for the target to tell, even without
+  // aliasing information, that two MIs access different memory
+  // addresses. This function returns true if two MIs access different
+  // memory addresses and false otherwise.
+  bool
+  areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+                                  AliasAnalysis *AA = nullptr) const override;
 };
 } // end namespace llvm
 

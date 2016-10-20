@@ -158,13 +158,14 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
   }
 
   for (auto &I : *Reader) {
+    const StringRef FuncName = I.Name;
     if (Error E = WC->Writer.addRecord(std::move(I), Input.Weight)) {
       // Only show hint the first time an error occurs.
       instrprof_error IPE = InstrProfError::take(std::move(E));
       std::unique_lock<std::mutex> ErrGuard{WC->ErrLock};
       bool firstTime = WC->WriterErrorCodes.insert(IPE).second;
       handleMergeWriterError(make_error<InstrProfError>(IPE), Input.Filename,
-                             I.Name, firstTime);
+                             FuncName, firstTime);
     }
   }
   if (Reader->hasError())

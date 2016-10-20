@@ -187,7 +187,7 @@ private:
   // GOT entries should have one-to-one mapping with dynamic symbols table.
   // But we use the same container's types for both kind of GOT entries
   // to handle them uniformly.
-  typedef std::pair<const SymbolBody*, uintX_t> MipsGotEntry;
+  typedef std::pair<const SymbolBody *, uintX_t> MipsGotEntry;
   typedef std::vector<MipsGotEntry> MipsGotEntries;
   llvm::DenseMap<MipsGotEntry, size_t> MipsGotMap;
   MipsGotEntries MipsLocal;
@@ -288,9 +288,7 @@ public:
   typename Base::Kind getKind() const override { return Base::SymTable; }
   static bool classof(const Base *B) { return B->getKind() == Base::SymTable; }
 
-  ArrayRef<SymbolTableEntry> getSymbols() const {
-    return Symbols;
-  }
+  ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
   unsigned NumLocals = 0;
   StringTableSection<ELFT> &StrTabSec;

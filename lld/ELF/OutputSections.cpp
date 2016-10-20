@@ -93,8 +93,7 @@ GotSection<ELFT>::GotSection()
   this->Header.sh_addralign = Target->GotEntrySize;
 }
 
-template <class ELFT>
-void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
+template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.GotIndex = Entries.size();
   Entries.push_back(&Sym);
 }
@@ -294,7 +293,7 @@ template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *Buf) {
   auto AddEntry = [&](const MipsGotEntry &SA) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
-    const SymbolBody* Body = SA.first;
+    const SymbolBody *Body = SA.first;
     uintX_t VA = Body->template getVA<ELFT>(SA.second);
     writeUint<ELFT>(Entry, VA);
   };
@@ -1396,8 +1395,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
     S.Symbol->DynsymIndex = ++I;
 }
 
-template <class ELFT>
-void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
+template <class ELFT> void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
   Symbols.push_back({B, StrTabSec.addString(B->getName(), false)});
 }
 

@@ -253,5 +253,8 @@ void X86IntelInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
 
 void X86IntelInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
                                      raw_ostream &O) {
+  if (MI->getOperand(Op).isExpr())
+    return MI->getOperand(Op).getExpr()->print(O, &MAI);
+
   O << formatImm(MI->getOperand(Op).getImm() & 0xff);
 }

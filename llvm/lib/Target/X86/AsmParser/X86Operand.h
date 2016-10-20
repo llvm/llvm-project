@@ -192,8 +192,10 @@ struct X86Operand : public MCParsedAsmOperand {
 
   bool isImmUnsignedi8() const {
     if (!isImm()) return false;
+    // If this isn't a constant expr, just assume it fits and let relaxation
+    // handle it.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
+    if (!CE) return true;
     return isImmUnsignedi8Value(CE->getValue());
   }
 

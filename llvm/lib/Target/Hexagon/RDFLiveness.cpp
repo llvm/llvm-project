@@ -870,7 +870,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
   }
 
   if (Trace) {
-    dbgs() << "\n-- BB#" << B->getNumber() << ": " << LLVM_FUNCTION_NAME
+    dbgs() << "\n-- BB#" << B->getNumber() << ": " << __func__
            << " after recursion into: {";
     for (auto I : *N)
       dbgs() << ' ' << I->getBlock()->getNumber();
