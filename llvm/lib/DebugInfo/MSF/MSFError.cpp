@@ -20,7 +20,7 @@ namespace {
 // deal with the Error value directly, rather than converting to error_code.
 class MSFErrorCategory : public std::error_category {
 public:
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.msf"; }
+  const char *name() const noexcept override { return "llvm.msf"; }
 
   std::string message(int Condition) const override {
     switch (static_cast<msf_error_code>(Condition)) {

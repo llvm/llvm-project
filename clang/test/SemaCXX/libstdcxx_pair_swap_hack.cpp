@@ -13,6 +13,9 @@
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=priority_queue
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=stack
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=queue
+//
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DNAMESPACE=__debug
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DNAMESPACE=__profile
 
 // MSVC's standard library uses a very similar pattern that relies on delayed
 // parsing of exception specifications.
@@ -32,6 +35,13 @@ namespace std {
     swap(a, b);
   }
 
+#ifdef NAMESPACE
+  namespace NAMESPACE {
+#define STD_CLASS std::NAMESPACE::CLASS
+#else
+#define STD_CLASS std::CLASS
+#endif
+
   template<typename A, typename B> struct CLASS {
 #ifdef MSVC
     void swap(CLASS &other) noexcept(noexcept(do_swap(member, other.member)));
@@ -47,6 +57,10 @@ namespace std {
 //    void swap(vector &other) noexcept(noexcept(do_swap(member, other.member)));
 //    A member;
 //  };
+
+#ifdef NAMESPACE
+  }
+#endif
 }
 
 #else
@@ -55,8 +69,8 @@ namespace std {
 #include __FILE__
 
 struct X {};
-using PX = std::CLASS<X, X>;
-using PI = std::CLASS<int, int>;
+using PX = STD_CLASS<X, X>;
+using PI = STD_CLASS<int, int>;
 void swap(X &, X &) noexcept;
 PX px;
 PI pi;

@@ -25,6 +25,22 @@ using namespace clang;
 //  Child Iterators for iterating over subexpressions/substatements
 //===----------------------------------------------------------------------===//
 
+bool CXXOperatorCallExpr::isInfixBinaryOp() const {
+  // An infix binary operator is any operator with two arguments other than
+  // operator() and operator[]. Note that none of these operators can have
+  // default arguments, so it suffices to check the number of argument
+  // expressions.
+  if (getNumArgs() != 2)
+    return false;
+
+  switch (getOperator()) {
+  case OO_Call: case OO_Subscript:
+    return false;
+  default:
+    return true;
+  }
+}
+
 bool CXXTypeidExpr::isPotentiallyEvaluated() const {
   if (isTypeOperand())
     return false;

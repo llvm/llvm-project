@@ -11,7 +11,7 @@ namespace {
 // deal with the Error value directly, rather than converting to error_code.
 class RawErrorCategory : public std::error_category {
 public:
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.pdb.raw"; }
+  const char *name() const noexcept override { return "llvm.pdb.raw"; }
 
   std::string message(int Condition) const override {
     switch (static_cast<raw_error_code>(Condition)) {

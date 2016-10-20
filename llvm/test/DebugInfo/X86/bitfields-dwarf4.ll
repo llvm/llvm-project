@@ -32,7 +32,7 @@ target triple = "x86_64-apple-macosx"
 !2 = !{}
 !3 = !{!4}
 !4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true)
-!5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "PackedBits", file: !1, line: 3, size: 40, align: 8, elements: !6)
+!5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "PackedBits", file: !1, line: 3, size: 40, elements: !6)
 !6 = !{!7, !9, !13}
 
 ; CHECK: DW_TAG_member
@@ -41,9 +41,9 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NOT:  DW_AT_bit_offset
 ; CHECK-NOT:  DW_AT_data_bit_offset
 ; CHECK:      DW_AT_data_member_location [DW_FORM_data1]	(0x00)
-!7 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !5, file: !1, line: 5, baseType: !8, size: 8, align: 8)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !5, file: !1, line: 5, baseType: !8, size: 8)
 
-!8 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+!8 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"b"
@@ -54,11 +54,11 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NOT:  DW_AT_byte_size
 ; CHECK-NEXT: DW_AT_data_bit_offset      [DW_FORM_data1]	(0x08)
 ; CHECK-NOT:  DW_AT_data_member_location
-!9 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !5, file: !1, line: 6, baseType: !10, size: 5, align: 32, offset: 8)
+!9 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !5, file: !1, line: 6, baseType: !10, size: 5, offset: 8)
 
 !10 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint32_t", file: !11, line: 183, baseType: !12)
 !11 = !DIFile(filename: "/Volumes/Data/llvm/_build.ninja.release/bin/../lib/clang/3.9.0/include/stdint.h", directory: "/Volumes/Data/llvm")
-!12 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
+!12 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"c"
@@ -69,7 +69,7 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NEXT: DW_AT_data_bit_offset      [DW_FORM_data1]	(0x0d)
 ; CHECK-NOT:  DW_AT_data_member_location
 ; CHECK: DW_TAG
-!13 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !5, file: !1, line: 7, baseType: !10, size: 27, align: 32, offset: 13)
+!13 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !5, file: !1, line: 7, baseType: !10, size: 27, offset: 13)
 
 !14 = !{i32 2, !"Dwarf Version", i32 4}
 !15 = !{i32 2, !"Debug Info Version", i32 3}

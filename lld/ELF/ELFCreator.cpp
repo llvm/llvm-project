@@ -29,15 +29,10 @@ ELFCreator<ELFT>::ELFCreator(std::uint16_t Type, std::uint16_t Machine) {
                                 ? ELFDATA2LSB
                                 : ELFDATA2MSB;
   Header.e_ident[EI_VERSION] = EV_CURRENT;
-  Header.e_ident[EI_OSABI] = 0;
   Header.e_type = Type;
   Header.e_machine = Machine;
   Header.e_version = EV_CURRENT;
-  Header.e_entry = 0;
-  Header.e_phoff = 0;
-  Header.e_flags = 0;
   Header.e_ehsize = sizeof(Elf_Ehdr);
-  Header.e_phnum = 0;
   Header.e_shentsize = sizeof(Elf_Shdr);
   Header.e_shstrndx = 1;
 
@@ -60,28 +55,28 @@ ELFCreator<ELFT>::ELFCreator(std::uint16_t Type, std::uint16_t Machine) {
 template <class ELFT>
 typename ELFCreator<ELFT>::Section
 ELFCreator<ELFT>::addSection(StringRef Name) {
-  auto Shdr = new (Alloc) Elf_Shdr{};
-  Shdr->sh_name = SecHdrStrTabBuilder.add(Name);
+  auto *Shdr = new (Alloc) Elf_Shdr{};
+  Shdr->sh_name = ShStrTabBuilder.add(Saver.save(Name));
   Sections.push_back(Shdr);
   return {Shdr, Sections.size()};
 }
 
 template <class ELFT>
-typename ELFCreator<ELFT>::Symbol ELFCreator<ELFT>::addSymbol(StringRef Name) {
-  auto Sym = new (Alloc) Elf_Sym{};
-  Sym->st_name = StrTabBuilder.add(Name);
-  StaticSymbols.push_back(Sym);
-  return {Sym, StaticSymbols.size()};
+typename ELFT::Sym *ELFCreator<ELFT>::addSymbol(StringRef Name) {
+  auto *Sym = new (Alloc) Elf_Sym{};
+  Sym->st_name = StrTabBuilder.add(Saver.save(Name));
+  Symbols.push_back(Sym);
+  return Sym;
 }
 
-template <class ELFT> std::size_t ELFCreator<ELFT>::layout() {
-  SecHdrStrTabBuilder.finalizeInOrder();
-  ShStrTab->sh_size = SecHdrStrTabBuilder.getSize();
+template <class ELFT> size_t ELFCreator<ELFT>::layout() {
+  ShStrTabBuilder.finalizeInOrder();
+  ShStrTab->sh_size = ShStrTabBuilder.getSize();
 
   StrTabBuilder.finalizeInOrder();
   StrTab->sh_size = StrTabBuilder.getSize();
 
-  SymTab->sh_size = (StaticSymbols.size() + 1) * sizeof(Elf_Sym);
+  SymTab->sh_size = (Symbols.size() + 1) * sizeof(Elf_Sym);
 
   uintX_t Offset = sizeof(Elf_Ehdr);
   for (Elf_Shdr *Sec : Sections) {
@@ -98,15 +93,15 @@ template <class ELFT> std::size_t ELFCreator<ELFT>::layout() {
   return Offset;
 }
 
-template <class ELFT> void ELFCreator<ELFT>::write(uint8_t *Out) {
+template <class ELFT> void ELFCreator<ELFT>::writeTo(uint8_t *Out) {
   std::memcpy(Out, &Header, sizeof(Elf_Ehdr));
-  SecHdrStrTabBuilder.write(Out + ShStrTab->sh_offset);
+  ShStrTabBuilder.write(Out + ShStrTab->sh_offset);
   StrTabBuilder.write(Out + StrTab->sh_offset);
 
   Elf_Sym *Sym = reinterpret_cast<Elf_Sym *>(Out + SymTab->sh_offset);
   // Skip null.
   ++Sym;
-  for (Elf_Sym *S : StaticSymbols)
+  for (Elf_Sym *S : Symbols)
     *Sym++ = *S;
 
   Elf_Shdr *Shdr = reinterpret_cast<Elf_Shdr *>(Out + Header.e_shoff);

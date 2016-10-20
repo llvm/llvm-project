@@ -70,6 +70,8 @@ std::string getInstrProfErrString(instrprof_error Err) {
     return "Failed to compress data (zlib)";
   case instrprof_error::uncompress_failed:
     return "Failed to uncompress data (zlib)";
+  case instrprof_error::empty_raw_profile:
+    return "Empty raw profile file";
   }
   llvm_unreachable("A value of instrprof_error has no message.");
 }
@@ -78,7 +80,7 @@ std::string getInstrProfErrString(instrprof_error Err) {
 // will be removed once this transition is complete. Clients should prefer to
 // deal with the Error value directly, rather than converting to error_code.
 class InstrProfErrorCategoryType : public std::error_category {
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.instrprof"; }
+  const char *name() const noexcept override { return "llvm.instrprof"; }
   std::string message(int IE) const override {
     return getInstrProfErrString(static_cast<instrprof_error>(IE));
   }

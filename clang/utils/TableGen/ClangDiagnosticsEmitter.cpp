@@ -929,8 +929,7 @@ struct DiagText {
   };
   struct SelectPiece : Piece {
     SelectPiece() {}
-    SelectPiece(SelectPiece &&O) LLVM_NOEXCEPT : Options(std::move(O.Options)) {
-    }
+    SelectPiece(SelectPiece &&O) noexcept : Options(std::move(O.Options)) {}
     std::vector<DiagText> Options;
     void print(std::vector<std::string> &RST) override;
   };
@@ -938,7 +937,7 @@ struct DiagText {
   std::vector<std::unique_ptr<Piece>> Pieces;
 
   DiagText();
-  DiagText(DiagText &&O) LLVM_NOEXCEPT : Pieces(std::move(O.Pieces)) {}
+  DiagText(DiagText &&O) noexcept : Pieces(std::move(O.Pieces)) {}
 
   DiagText(StringRef Text);
   DiagText(StringRef Kind, StringRef Text);

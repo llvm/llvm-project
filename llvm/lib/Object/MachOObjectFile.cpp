@@ -782,6 +782,107 @@ static Error checkSubCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+static Error checkThreadCommand(const MachOObjectFile *Obj,
+                                const MachOObjectFile::LoadCommandInfo &Load,
+                                uint32_t LoadCommandIndex,
+                                const char *CmdName) {
+  if (Load.C.cmdsize < sizeof(MachO::thread_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          CmdName + " cmdsize too small");
+  MachO::thread_command T =
+    getStruct<MachO::thread_command>(Obj, Load.Ptr);
+  const char *state = Load.Ptr + sizeof(MachO::thread_command);
+  const char *end = Load.Ptr + T.cmdsize;
+  uint32_t nflavor = 0;
+  uint32_t cputype = getCPUType(Obj);
+  while (state < end) {
+    if(state + sizeof(uint32_t) > end)
+      return malformedError("load command " + Twine(LoadCommandIndex) +
+                            "flavor in " + CmdName + " extends past end of "
+                            "command");
+    uint32_t flavor;
+    memcpy(&flavor, state, sizeof(uint32_t));
+    if (Obj->isLittleEndian() != sys::IsLittleEndianHost)
+      sys::swapByteOrder(flavor);
+    state += sizeof(uint32_t);
+
+    if(state + sizeof(uint32_t) > end)
+      return malformedError("load command " + Twine(LoadCommandIndex) +
+                            " count in " + CmdName + " extends past end of "
+                            "command");
+    uint32_t count;
+    memcpy(&count, state, sizeof(uint32_t));
+    if (Obj->isLittleEndian() != sys::IsLittleEndianHost)
+      sys::swapByteOrder(count);
+    state += sizeof(uint32_t);
+
+    if (cputype == MachO::CPU_TYPE_X86_64) {
+      if (flavor == MachO::x86_THREAD_STATE64) {
+        if (count != MachO::x86_THREAD_STATE64_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not x86_THREAD_STATE64_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a x86_THREAD_STATE64 flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::x86_thread_state64_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " x86_THREAD_STATE64 extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::x86_thread_state64_t);
+      } else {
+        return malformedError("load command " + Twine(LoadCommandIndex) +
+                              " unknown flavor (" + Twine(flavor) + ") for "
+                              "flavor number " + Twine(nflavor) + " in " +
+                              CmdName + " command");
+      }
+    } else if (cputype == MachO::CPU_TYPE_ARM) {
+      if (flavor == MachO::ARM_THREAD_STATE) {
+        if (count != MachO::ARM_THREAD_STATE_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not ARM_THREAD_STATE_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a ARM_THREAD_STATE flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::arm_thread_state32_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " ARM_THREAD_STATE extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::arm_thread_state32_t);
+      } else {
+        return malformedError("load command " + Twine(LoadCommandIndex) +
+                              " unknown flavor (" + Twine(flavor) + ") for "
+                              "flavor number " + Twine(nflavor) + " in " +
+                              CmdName + " command");
+      }
+    } else if (cputype == MachO::CPU_TYPE_POWERPC) {
+      if (flavor == MachO::PPC_THREAD_STATE) {
+        if (count != MachO::PPC_THREAD_STATE_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not PPC_THREAD_STATE_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a PPC_THREAD_STATE flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::ppc_thread_state32_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " PPC_THREAD_STATE extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::ppc_thread_state32_t);
+      } else {
+        return malformedError("load command " + Twine(LoadCommandIndex) +
+                              " unknown flavor (" + Twine(flavor) + ") for "
+                              "flavor number " + Twine(nflavor) + " in " +
+                              CmdName + " command");
+      }
+    } else {
+      return malformedError("unknown cputype (" + Twine(cputype) + ") load "
+                            "command " + Twine(LoadCommandIndex) + " for " +
+                            CmdName + " command can't be checked");
+    }
+    nflavor++;
+  }
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -839,6 +940,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
   const char *EntryPointLoadCmd = nullptr;
   const char *EncryptLoadCmd = nullptr;
   const char *RoutinesLoadCmd = nullptr;
+  const char *UnixThreadLoadCmd = nullptr;
   for (unsigned I = 0; I < LoadCommandCount; ++I) {
     if (is64Bit()) {
       if (Load.C.cmdsize % 8 != 0) {
@@ -1094,6 +1196,17 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         return;
       }
       RoutinesLoadCmd = Load.Ptr;
+    } else if (Load.C.cmd == MachO::LC_UNIXTHREAD) {
+      if ((Err = checkThreadCommand(this, Load, I, "LC_UNIXTHREAD")))
+        return;
+      if (UnixThreadLoadCmd) {
+        Err = malformedError("more than one LC_UNIXTHREAD command");
+        return;
+      }
+      UnixThreadLoadCmd = Load.Ptr;
+    } else if (Load.C.cmd == MachO::LC_THREAD) {
+      if ((Err = checkThreadCommand(this, Load, I, "LC_THREAD")))
+        return;
     }
     if (I < LoadCommandCount - 1) {
       if (auto LoadOrErr = getNextLoadCommandInfo(this, I, Load))

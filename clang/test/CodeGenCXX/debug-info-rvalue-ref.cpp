@@ -8,5 +8,5 @@ void foo (int &&i)
   printf("%d\n", i);
 }
 
-// CHECK: !DIDerivedType(tag: DW_TAG_rvalue_reference_type, baseType: ![[INT:[0-9]+]], size: 64, align: 64)
+// CHECK: !DIDerivedType(tag: DW_TAG_rvalue_reference_type, baseType: ![[INT:[0-9]+]], size: 64)
 // CHECK: ![[INT]] = !DIBasicType(name: "int"

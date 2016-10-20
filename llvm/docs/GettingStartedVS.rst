@@ -39,13 +39,13 @@ and software you will need.
 
 Hardware
 --------
-Any system that can adequately run Visual Studio 2013 is fine. The LLVM
+Any system that can adequately run Visual Studio 2015 is fine. The LLVM
 source tree and object files, libraries and executables will consume
 approximately 3GB.
 
 Software
 --------
-You will need Visual Studio 2013 or higher, with the latest Update installed. 
+You will need Visual Studio 2015 or higher, with the latest Update installed.
 
 You will also need the `CMake <http://www.cmake.org/>`_ build system since it
 generates the project files you will use to build with. CMake 2.8.12.2 is the

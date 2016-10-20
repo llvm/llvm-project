@@ -146,6 +146,11 @@ else() # if this is included from LLVM's CMake
                              PASSTHROUGH_PREFIXES COMPILER_RT
                              USE_TOOLCHAIN)
     set(deps builtins)
+    # We don't need to depend on the builtins if we're building instrumented
+    # because the next stage will use the same compiler used to build this stage.
+    if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)
+      add_dependencies(clang-bootstrap-deps builtins)
+    endif()
   endif()
 
   # We create a list the names of all the runtime projects in all uppercase and
@@ -196,6 +201,16 @@ else() # if this is included from LLVM's CMake
                                             ${SUB_COMPONENT_CHECK_TARGETS}
                                             ${SUB_INSTALL_TARGETS}
                              USE_TOOLCHAIN)
+    
+    # TODO: This is a hack needed because the libcxx headers are copied into the
+    # build directory during configuration. Without that step the clang in the
+    # build directory cannot find the C++ headers in certain configurations.
+    # I need to build a mechanism for runtime projects to provide CMake code
+    # that executes at LLVM configuration time to handle this case.
+    if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)
+      add_dependencies(clang-bootstrap-deps runtimes-configure)
+    endif()
+
     if(LLVM_INCLUDE_TESTS)
       set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
       set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-runtimes)

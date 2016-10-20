@@ -54,15 +54,10 @@ private:
 public:
   Kind kind() const { return (Kind)SectionKind; }
 
-  // Used for garbage collection.
-  unsigned Live : 1;
-
+  unsigned Live : 1; // for garbage collection
   unsigned Compressed : 1;
-
   uint32_t Alignment;
-
   StringRef Name;
-
   ArrayRef<uint8_t> Data;
   ArrayRef<uint8_t> getData(const SectionPiece &P) const;
 
@@ -167,7 +162,10 @@ public:
   void splitIntoPieces();
 
   // Mark the piece at a given offset live. Used by GC.
-  void markLiveAt(uintX_t Offset) { LiveOffsets.insert(Offset); }
+  void markLiveAt(uintX_t Offset) {
+    assert(this->getSectionHdr()->sh_flags & llvm::ELF::SHF_ALLOC);
+    LiveOffsets.insert(Offset);
+  }
 
   // Translate an offset in the input section to an offset
   // in the output section.

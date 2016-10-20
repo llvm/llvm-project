@@ -121,7 +121,7 @@ public:
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
     std::thread([&, threadCount] {
-      for (std::size_t i = 1; i < threadCount; ++i) {
+      for (size_t i = 1; i < threadCount; ++i) {
         std::thread([=] {
           work();
         }).detach();

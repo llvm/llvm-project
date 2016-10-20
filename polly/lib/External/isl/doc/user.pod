@@ -3688,6 +3688,10 @@ Alternatively, a string representation can be obtained
 directly using the following functions, which always print
 in isl format.
 
+	#include <isl/id.h>
+	__isl_give char *isl_id_to_str(
+		__isl_keep isl_id *id);
+
 	#include <isl/space.h>
 	__isl_give char *isl_space_to_str(
 		__isl_keep isl_space *space);
@@ -8739,8 +8743,8 @@ of type C<isl_union_access_info> can be obtained using
 
 C<isl_union_access_info_to_str> prints the information in flow format.
 
-The output of C<isl_union_access_info_compute_flow> can be examined
-and freed using the following functions.
+The output of C<isl_union_access_info_compute_flow> can be examined,
+copied, and freed using the following functions.
 
 	#include <isl/flow.h>
 	__isl_give isl_union_map *isl_union_flow_get_must_dependence(
@@ -8756,6 +8760,8 @@ and freed using the following functions.
 	__isl_give isl_union_map *isl_union_flow_get_must_no_source(
 		__isl_keep isl_union_flow *flow);
 	__isl_give isl_union_map *isl_union_flow_get_may_no_source(
+		__isl_keep isl_union_flow *flow);
+	__isl_give isl_union_flow *isl_union_flow_copy(
 		__isl_keep isl_union_flow *flow);
 	__isl_null isl_union_flow *isl_union_flow_free(
 		__isl_take isl_union_flow *flow);

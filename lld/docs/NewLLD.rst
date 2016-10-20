@@ -18,9 +18,9 @@ We expect that FreeBSD is going to be the first large system
 to adopt LLD as the system linker.
 We are working on it in collaboration with the FreeBSD project.
 
-The linkers are notably small; as of June 2016,
-the COFF linker is under 7k lines and the ELF linker is about 13k lines,
-while gold is 146K lines.
+The linkers are notably small; as of October 2016,
+the COFF linker is about 7k lines and the ELF linker is about 18k lines,
+while gold is 165K lines.
 
 The linkers are designed to be as fast and simple as possible.
 Because it is simple, it is easy to extend to support new features.

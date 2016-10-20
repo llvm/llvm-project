@@ -235,9 +235,19 @@ class CGDebugInfo {
 
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
+                                uint64_t offsetInBits,
+                                uint32_t AlignInBits,
+                                llvm::DIFile *tunit, llvm::DIScope *scope,
+                                const RecordDecl *RD = nullptr);
+
+  llvm::DIType *createFieldType(StringRef name, QualType type,
+                                SourceLocation loc, AccessSpecifier AS,
                                 uint64_t offsetInBits, llvm::DIFile *tunit,
                                 llvm::DIScope *scope,
-                                const RecordDecl *RD = nullptr);
+                                const RecordDecl *RD = nullptr) {
+    return createFieldType(name, type, loc, AS, offsetInBits, 0, tunit, scope,
+                           RD);
+  }
 
   /// Create new bit field member.
   llvm::DIType *createBitFieldType(const FieldDecl *BitFieldDecl,

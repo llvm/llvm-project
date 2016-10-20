@@ -71,10 +71,10 @@ public:
 
   // Make vanilla 'new' and 'delete' illegal for Stmts.
 protected:
-  void *operator new(size_t bytes) LLVM_NOEXCEPT {
+  void *operator new(size_t bytes) noexcept {
     llvm_unreachable("Stmts cannot be allocated with regular 'new'.");
   }
-  void operator delete(void *data) LLVM_NOEXCEPT {
+  void operator delete(void *data) noexcept {
     llvm_unreachable("Stmts cannot be released with regular 'delete'.");
   }
 
@@ -284,12 +284,12 @@ public:
     return operator new(bytes, *C, alignment);
   }
 
-  void *operator new(size_t bytes, void *mem) LLVM_NOEXCEPT { return mem; }
+  void *operator new(size_t bytes, void *mem) noexcept { return mem; }
 
-  void operator delete(void *, const ASTContext &, unsigned) LLVM_NOEXCEPT {}
-  void operator delete(void *, const ASTContext *, unsigned) LLVM_NOEXCEPT {}
-  void operator delete(void *, size_t) LLVM_NOEXCEPT {}
-  void operator delete(void *, void *) LLVM_NOEXCEPT {}
+  void operator delete(void *, const ASTContext &, unsigned) noexcept {}
+  void operator delete(void *, const ASTContext *, unsigned) noexcept {}
+  void operator delete(void *, size_t) noexcept {}
+  void operator delete(void *, void *) noexcept {}
 
 public:
   /// \brief A placeholder type used to construct an empty shell of a

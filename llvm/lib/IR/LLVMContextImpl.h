@@ -761,22 +761,26 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
   bool IsDefinition;
   Metadata *Expr;
   Metadata *StaticDataMemberDeclaration;
+  uint64_t AlignInBits;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
-                bool IsLocalToUnit, bool IsDefinition, Metadata *Expr,
-                Metadata *StaticDataMemberDeclaration)
+                bool IsLocalToUnit, bool IsDefinition,
+                Metadata *Expr, Metadata *StaticDataMemberDeclaration,
+                uint64_t AlignInBits)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
         IsDefinition(IsDefinition), Expr(Expr),
-        StaticDataMemberDeclaration(StaticDataMemberDeclaration) {}
+        StaticDataMemberDeclaration(StaticDataMemberDeclaration),
+        AlignInBits(AlignInBits) {}
   MDNodeKeyImpl(const DIGlobalVariable *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
         Line(N->getLine()), Type(N->getRawType()),
         IsLocalToUnit(N->isLocalToUnit()), IsDefinition(N->isDefinition()),
         Expr(N->getRawExpr()),
-        StaticDataMemberDeclaration(N->getRawStaticDataMemberDeclaration()) {}
+        StaticDataMemberDeclaration(N->getRawStaticDataMemberDeclaration()),
+        AlignInBits(N->getAlignInBits()) {}
 
   bool isKeyOf(const DIGlobalVariable *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
@@ -786,11 +790,19 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
            IsDefinition == RHS->isDefinition() &&
            Expr == RHS->getRawExpr() &&
            StaticDataMemberDeclaration ==
-               RHS->getRawStaticDataMemberDeclaration();
+               RHS->getRawStaticDataMemberDeclaration() &&
+           AlignInBits == RHS->getAlignInBits();
   }
   unsigned getHashValue() const {
+    // We do not use AlignInBits in hashing function here on purpose:
+    // in most cases this param for local variable is zero (for function param
+    // it is always zero). This leads to lots of hash collisions and errors on
+    // cases with lots of similar variables.
+    // clang/test/CodeGen/debug-info-257-args.c is an example of this problem,
+    // generated IR is random for each run and test fails with Align included.
+    // TODO: make hashing work fine with such situations
     return hash_combine(Scope, Name, LinkageName, File, Line, Type,
-                        IsLocalToUnit, IsDefinition, Expr,
+                        IsLocalToUnit, IsDefinition, /* AlignInBits, */ Expr,
                         StaticDataMemberDeclaration);
   }
 };
@@ -803,23 +815,32 @@ template <> struct MDNodeKeyImpl<DILocalVariable> {
   Metadata *Type;
   unsigned Arg;
   unsigned Flags;
+  uint64_t AlignInBits;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line,
-                Metadata *Type, unsigned Arg, unsigned Flags)
+                Metadata *Type, unsigned Arg, unsigned Flags,
+                uint64_t AlignInBits)
       : Scope(Scope), Name(Name), File(File), Line(Line), Type(Type), Arg(Arg),
-        Flags(Flags) {}
+        Flags(Flags), AlignInBits(AlignInBits) {}
   MDNodeKeyImpl(const DILocalVariable *N)
       : Scope(N->getRawScope()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Type(N->getRawType()), Arg(N->getArg()),
-        Flags(N->getFlags()) {}
+        Flags(N->getFlags()), AlignInBits(N->getAlignInBits()) {}
 
   bool isKeyOf(const DILocalVariable *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
            File == RHS->getRawFile() && Line == RHS->getLine() &&
            Type == RHS->getRawType() && Arg == RHS->getArg() &&
-           Flags == RHS->getFlags();
+           Flags == RHS->getFlags() && AlignInBits == RHS->getAlignInBits();
   }
   unsigned getHashValue() const {
+    // We do not use AlignInBits in hashing function here on purpose:
+    // in most cases this param for local variable is zero (for function param
+    // it is always zero). This leads to lots of hash collisions and errors on
+    // cases with lots of similar variables.
+    // clang/test/CodeGen/debug-info-257-args.c is an example of this problem,
+    // generated IR is random for each run and test fails with Align included.
+    // TODO: make hashing work fine with such situations
     return hash_combine(Scope, Name, File, Line, Type, Arg, Flags);
   }
 };
