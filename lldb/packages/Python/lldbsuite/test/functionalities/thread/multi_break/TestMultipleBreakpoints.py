@@ -45,14 +45,6 @@ class MultipleBreakpointTestCase(TestBase):
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.breakpoint, num_expected_locations=1)
 
-        # The breakpoint list should show 1 location.
-        self.expect(
-            "breakpoint list -f",
-            "Breakpoint location shown correctly",
-            substrs=[
-                "1: file = 'main.cpp', line = %d, locations = 1" %
-                self.breakpoint])
-
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 

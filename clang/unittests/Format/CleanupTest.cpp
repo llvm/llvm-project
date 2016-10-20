@@ -151,6 +151,16 @@ TEST_F(CleanupTest, CtorInitializationSimpleRedundantComma) {
   EXPECT_EQ(Expected, cleanupAroundOffsets({15}, Code));
 }
 
+TEST_F(CleanupTest, CtorInitializationSimpleRedundantColon) {
+  std::string Code = "class A {\nA() : =default; };";
+  std::string Expected = "class A {\nA()  =default; };";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({15}, Code));
+
+  Code = "class A {\nA() : , =default; };";
+  Expected = "class A {\nA()  =default; };";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({15}, Code));
+}
+
 TEST_F(CleanupTest, ListRedundantComma) {
   std::string Code = "void f() { std::vector<int> v = {1,2,,,3,{4,5}}; }";
   std::string Expected = "void f() { std::vector<int> v = {1,2,3,{4,5}}; }";
@@ -239,6 +249,14 @@ TEST_F(CleanupTest, RemoveCommentsAroundDeleteCode) {
   Code = "class A {\nA() : , // comment\n y(1),{} };";
   Expected = "class A {\nA() :  // comment\n y(1){} };";
   EXPECT_EQ(Expected, cleanupAroundOffsets({17}, Code));
+
+  Code = "class A {\nA() // comment\n : ,,{} };";
+  Expected = "class A {\nA() // comment\n {} };";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({30}, Code));
+
+  Code = "class A {\nA() // comment\n : ,,=default; };";
+  Expected = "class A {\nA() // comment\n =default; };";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({30}, Code));
 }
 
 TEST_F(CleanupTest, CtorInitializerInNamespace) {

@@ -380,7 +380,7 @@ void ASTVector<T>::grow(const ASTContext &C, size_t MinSize) {
     NewCapacity = MinSize;
 
   // Allocate the memory from the ASTContext.
-  T *NewElts = new (C, llvm::alignOf<T>()) T[NewCapacity];
+  T *NewElts = new (C, alignof(T)) T[NewCapacity];
 
   // Copy the elements over.
   if (Begin != End) {

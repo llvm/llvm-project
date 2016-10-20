@@ -13,6 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ELFCreator.h"
+#include "Config.h"
+#include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -21,13 +25,45 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
+namespace {
+template <class ELFT> class ELFCreator {
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Ehdr Elf_Ehdr;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+
+public:
+  struct Section {
+    Elf_Shdr *Header;
+    size_t Index;
+  };
+
+  ELFCreator(std::uint16_t Type, std::uint16_t Machine);
+  Section addSection(StringRef Name);
+  Elf_Sym *addSymbol(StringRef Name);
+  size_t layout();
+  void writeTo(uint8_t *Out);
+
+private:
+  Elf_Ehdr Header = {};
+  std::vector<Elf_Shdr *> Sections;
+  std::vector<Elf_Sym *> Symbols;
+  StringTableBuilder ShStrTabBuilder{StringTableBuilder::ELF};
+  StringTableBuilder StrTabBuilder{StringTableBuilder::ELF};
+  BumpPtrAllocator Alloc;
+  StringSaver Saver{Alloc};
+  Elf_Shdr *ShStrTab;
+  Elf_Shdr *StrTab;
+  Elf_Shdr *SymTab;
+};
+}
+
 template <class ELFT>
 ELFCreator<ELFT>::ELFCreator(std::uint16_t Type, std::uint16_t Machine) {
   std::memcpy(Header.e_ident, "\177ELF", 4);
   Header.e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
-  Header.e_ident[EI_DATA] = ELFT::TargetEndianness == llvm::support::little
-                                ? ELFDATA2LSB
-                                : ELFDATA2MSB;
+  Header.e_ident[EI_DATA] =
+      ELFT::TargetEndianness == support::little ? ELFDATA2LSB : ELFDATA2MSB;
   Header.e_ident[EI_VERSION] = EV_CURRENT;
   Header.e_type = Type;
   Header.e_machine = Machine;
@@ -111,7 +147,50 @@ template <class ELFT> void ELFCreator<ELFT>::writeTo(uint8_t *Out) {
     *Shdr++ = *S;
 }
 
-template class elf::ELFCreator<ELF32LE>;
-template class elf::ELFCreator<ELF32BE>;
-template class elf::ELFCreator<ELF64LE>;
-template class elf::ELFCreator<ELF64BE>;
+template <class ELFT>
+std::vector<uint8_t> elf::wrapBinaryWithElfHeader(ArrayRef<uint8_t> Blob,
+                                                  std::string Filename) {
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Sym Elf_Sym;
+
+  // Fill the ELF file header.
+  ELFCreator<ELFT> File(ET_REL, Config->EMachine);
+  auto Sec = File.addSection(".data");
+  Sec.Header->sh_flags = SHF_ALLOC;
+  Sec.Header->sh_size = Blob.size();
+  Sec.Header->sh_type = SHT_PROGBITS;
+  Sec.Header->sh_addralign = 8;
+
+  // Replace non-alphanumeric characters with '_'.
+  std::transform(Filename.begin(), Filename.end(), Filename.begin(),
+                 [](char C) { return isalnum(C) ? C : '_'; });
+
+  // Add _start, _end and _size symbols.
+  auto AddSym = [&](std::string Name, uintX_t SecIdx, uintX_t Value) {
+    Elf_Sym *Sym = File.addSymbol("_binary_" + Filename + Name);
+    Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
+    Sym->st_shndx = SecIdx;
+    Sym->st_value = Value;
+  };
+  AddSym("_start", Sec.Index, 0);
+  AddSym("_end", Sec.Index, Blob.size());
+  AddSym("_size", SHN_ABS, Blob.size());
+
+  // Fix the ELF file layout and write it down to a uint8_t vector.
+  size_t Size = File.layout();
+  std::vector<uint8_t> Ret(Size);
+  File.writeTo(Ret.data());
+
+  // Fill .data section with actual data.
+  memcpy(Ret.data() + Sec.Header->sh_offset, Blob.data(), Blob.size());
+  return Ret;
+}
+
+template std::vector<uint8_t>
+    elf::wrapBinaryWithElfHeader<ELF32LE>(ArrayRef<uint8_t>, std::string);
+template std::vector<uint8_t>
+    elf::wrapBinaryWithElfHeader<ELF32BE>(ArrayRef<uint8_t>, std::string);
+template std::vector<uint8_t>
+    elf::wrapBinaryWithElfHeader<ELF64LE>(ArrayRef<uint8_t>, std::string);
+template std::vector<uint8_t>
+    elf::wrapBinaryWithElfHeader<ELF64BE>(ArrayRef<uint8_t>, std::string);

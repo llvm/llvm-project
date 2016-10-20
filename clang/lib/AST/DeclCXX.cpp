@@ -1797,7 +1797,7 @@ CXXCtorInitializer *CXXCtorInitializer::Create(ASTContext &Context,
                                                VarDecl **Indices,
                                                unsigned NumIndices) {
   void *Mem = Context.Allocate(totalSizeToAlloc<VarDecl *>(NumIndices),
-                               llvm::alignOf<CXXCtorInitializer>());
+                               alignof(CXXCtorInitializer));
   return new (Mem) CXXCtorInitializer(Context, Member, MemberLoc, L, Init, R,
                                       Indices, NumIndices);
 }

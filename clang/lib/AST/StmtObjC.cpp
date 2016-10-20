@@ -50,7 +50,7 @@ ObjCAtTryStmt *ObjCAtTryStmt::Create(const ASTContext &Context,
   unsigned Size =
       sizeof(ObjCAtTryStmt) +
       (1 + NumCatchStmts + (atFinallyStmt != nullptr)) * sizeof(Stmt *);
-  void *Mem = Context.Allocate(Size, llvm::alignOf<ObjCAtTryStmt>());
+  void *Mem = Context.Allocate(Size, alignof(ObjCAtTryStmt));
   return new (Mem) ObjCAtTryStmt(atTryLoc, atTryStmt, CatchStmts, NumCatchStmts,
                                  atFinallyStmt);
 }
@@ -60,7 +60,7 @@ ObjCAtTryStmt *ObjCAtTryStmt::CreateEmpty(const ASTContext &Context,
                                           bool HasFinally) {
   unsigned Size =
       sizeof(ObjCAtTryStmt) + (1 + NumCatchStmts + HasFinally) * sizeof(Stmt *);
-  void *Mem = Context.Allocate(Size, llvm::alignOf<ObjCAtTryStmt>());
+  void *Mem = Context.Allocate(Size, alignof(ObjCAtTryStmt));
   return new (Mem) ObjCAtTryStmt(EmptyShell(), NumCatchStmts, HasFinally);
 }
 

@@ -975,9 +975,9 @@ void *Sema::SaveNestedNameSpecifierAnnotation(CXXScopeSpec &SS) {
   if (SS.isEmpty() || SS.isInvalid())
     return nullptr;
 
-  void *Mem = Context.Allocate((sizeof(NestedNameSpecifierAnnotation) +
-                                                        SS.location_size()),
-                               llvm::alignOf<NestedNameSpecifierAnnotation>());
+  void *Mem = Context.Allocate(
+      (sizeof(NestedNameSpecifierAnnotation) + SS.location_size()),
+      alignof(NestedNameSpecifierAnnotation));
   NestedNameSpecifierAnnotation *Annotation
     = new (Mem) NestedNameSpecifierAnnotation;
   Annotation->NNS = SS.getScopeRep();

@@ -18,7 +18,7 @@
 #include "llvm/Support/ErrorHandling.h"
 using namespace clang;
 
-static const unsigned TypeLocMaxDataAlign = llvm::alignOf<void *>();
+static const unsigned TypeLocMaxDataAlign = alignof(void *);
 
 //===----------------------------------------------------------------------===//
 // TypeLoc Implementation

@@ -2050,8 +2050,7 @@ CFGBlock *CFGBuilder::VisitDeclStmt(DeclStmt *DS) {
                                        E = DS->decl_rend();
        I != E; ++I) {
     // Get the alignment of the new DeclStmt, padding out to >=8 bytes.
-    unsigned A = llvm::AlignOf<DeclStmt>::Alignment < 8
-               ? 8 : llvm::AlignOf<DeclStmt>::Alignment;
+    unsigned A = alignof(DeclStmt) < 8 ? 8 : alignof(DeclStmt);
 
     // Allocate the DeclStmt using the BumpPtrAllocator.  It will get
     // automatically freed with the CFG.

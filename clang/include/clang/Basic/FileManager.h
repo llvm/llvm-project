@@ -65,21 +65,13 @@ class FileEntry {
   mutable std::unique_ptr<vfs::File> File;
   friend class FileManager;
 
+  FileEntry(const FileEntry &) = delete;
   void operator=(const FileEntry &) = delete;
 
 public:
   FileEntry()
       : UniqueID(0, 0), IsNamedPipe(false), InPCH(false), IsValid(false)
   {}
-
-  // FIXME: this is here to allow putting FileEntry in std::map.  Once we have
-  // emplace, we shouldn't need a copy constructor anymore.
-  /// Intentionally does not copy fields that are not set in an uninitialized
-  /// \c FileEntry.
-  FileEntry(const FileEntry &FE) : UniqueID(FE.UniqueID),
-      IsNamedPipe(FE.IsNamedPipe), InPCH(FE.InPCH), IsValid(FE.IsValid) {
-    assert(!isValid() && "Cannot copy an initialized FileEntry");
-  }
 
   StringRef getName() const { return Name; }
   StringRef tryGetRealPathName() const { return RealPathName; }

@@ -607,7 +607,7 @@ public:
 /// as such, doesn't contain the array of TemplateArgumentLoc itself,
 /// but expects the containing object to also provide storage for
 /// that.
-struct LLVM_ALIGNAS(LLVM_PTR_SIZE) ASTTemplateKWAndArgsInfo {
+struct alignas(void *) ASTTemplateKWAndArgsInfo {
   /// \brief The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
 

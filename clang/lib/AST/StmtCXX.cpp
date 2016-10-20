@@ -28,7 +28,7 @@ CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, SourceLocation tryLoc,
   std::size_t Size = sizeof(CXXTryStmt);
   Size += ((handlers.size() + 1) * sizeof(Stmt *));
 
-  void *Mem = C.Allocate(Size, llvm::alignOf<CXXTryStmt>());
+  void *Mem = C.Allocate(Size, alignof(CXXTryStmt));
   return new (Mem) CXXTryStmt(tryLoc, tryBlock, handlers);
 }
 
@@ -37,7 +37,7 @@ CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, EmptyShell Empty,
   std::size_t Size = sizeof(CXXTryStmt);
   Size += ((numHandlers + 1) * sizeof(Stmt *));
 
-  void *Mem = C.Allocate(Size, llvm::alignOf<CXXTryStmt>());
+  void *Mem = C.Allocate(Size, alignof(CXXTryStmt));
   return new (Mem) CXXTryStmt(Empty, numHandlers);
 }
 

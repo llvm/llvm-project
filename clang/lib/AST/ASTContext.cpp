@@ -6882,7 +6882,7 @@ ASTContext::getQualifiedTemplateName(NestedNameSpecifier *NNS,
   QualifiedTemplateName *QTN =
     QualifiedTemplateNames.FindNodeOrInsertPos(ID, InsertPos);
   if (!QTN) {
-    QTN = new (*this, llvm::alignOf<QualifiedTemplateName>())
+    QTN = new (*this, alignof(QualifiedTemplateName))
         QualifiedTemplateName(NNS, TemplateKeyword, Template);
     QualifiedTemplateNames.InsertNode(QTN, InsertPos);
   }
@@ -6910,11 +6910,11 @@ ASTContext::getDependentTemplateName(NestedNameSpecifier *NNS,
 
   NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
   if (CanonNNS == NNS) {
-    QTN = new (*this, llvm::alignOf<DependentTemplateName>())
+    QTN = new (*this, alignof(DependentTemplateName))
         DependentTemplateName(NNS, Name);
   } else {
     TemplateName Canon = getDependentTemplateName(CanonNNS, Name);
-    QTN = new (*this, llvm::alignOf<DependentTemplateName>())
+    QTN = new (*this, alignof(DependentTemplateName))
         DependentTemplateName(NNS, Name, Canon);
     DependentTemplateName *CheckQTN =
       DependentTemplateNames.FindNodeOrInsertPos(ID, InsertPos);
@@ -6946,13 +6946,13 @@ ASTContext::getDependentTemplateName(NestedNameSpecifier *NNS,
   
   NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
   if (CanonNNS == NNS) {
-    QTN = new (*this, llvm::alignOf<DependentTemplateName>())
+    QTN = new (*this, alignof(DependentTemplateName))
         DependentTemplateName(NNS, Operator);
   } else {
     TemplateName Canon = getDependentTemplateName(CanonNNS, Operator);
-    QTN = new (*this, llvm::alignOf<DependentTemplateName>())
+    QTN = new (*this, alignof(DependentTemplateName))
         DependentTemplateName(NNS, Operator, Canon);
-    
+
     DependentTemplateName *CheckQTN
       = DependentTemplateNames.FindNodeOrInsertPos(ID, InsertPos);
     assert(!CheckQTN && "Dependent template name canonicalization broken");

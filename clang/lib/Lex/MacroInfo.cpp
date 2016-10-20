@@ -240,6 +240,6 @@ ModuleMacro *ModuleMacro::create(Preprocessor &PP, Module *OwningModule,
                                  ArrayRef<ModuleMacro *> Overrides) {
   void *Mem = PP.getPreprocessorAllocator().Allocate(
       sizeof(ModuleMacro) + sizeof(ModuleMacro *) * Overrides.size(),
-      llvm::alignOf<ModuleMacro>());
+      alignof(ModuleMacro));
   return new (Mem) ModuleMacro(OwningModule, II, Macro, Overrides);
 }
