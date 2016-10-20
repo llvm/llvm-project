@@ -75,6 +75,14 @@
 # ENTRY-OVERLOAD: Name: _start
 # ENTRY-OVERLOAD-NEXT: Value: [[ENTRY]]
 
+# The entry symbol can be a linker-script-defined symbol.
+# RUN: echo "ENTRY(foo); foo = 1;" > %t.script
+# RUN: ld.lld -o %t2 %t.script %t
+# RUN: llvm-readobj -file-headers -symbols %t2 | \
+# RUN:   FileCheck -check-prefix=ENTRY-SCRIPT %s
+
+# ENTRY-SCRIPT: Entry: 0x1
+
 # RUN: echo "OUTPUT_FORMAT(elf64-x86-64) /*/*/ GROUP(\"%t\" )" > %t.script
 # RUN: ld.lld -o %t2 %t.script
 # RUN: llvm-readobj %t2 > /dev/null

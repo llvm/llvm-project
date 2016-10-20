@@ -24,7 +24,7 @@ namespace {
 // will be removed once this transition is complete. Clients should prefer to
 // deal with the Error value directly, rather than converting to error_code.
 class SampleProfErrorCategoryType : public std::error_category {
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.sampleprof"; }
+  const char *name() const noexcept override { return "llvm.sampleprof"; }
   std::string message(int IE) const override {
     sampleprof_error E = static_cast<sampleprof_error>(IE);
     switch (E) {

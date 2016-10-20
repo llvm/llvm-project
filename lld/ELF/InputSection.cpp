@@ -53,7 +53,8 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Hdr, StringRef Name,
                                          Kind SectionKind)
     : InputSectionData(SectionKind, Name, getSectionContents(File, Hdr),
-                       isCompressed<ELFT>(Hdr, Name), !Config->GcSections),
+                       isCompressed<ELFT>(Hdr, Name),
+                       !Config->GcSections || !(Hdr->sh_flags & SHF_ALLOC)),
       Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
@@ -172,9 +173,8 @@ InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) const {
   return getOffset(Sym.Value);
 }
 
-template<class ELFT>
-InputSectionBase<ELFT>*
-InputSectionBase<ELFT>::getLinkOrderDep() const {
+template <class ELFT>
+InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
   const Elf_Shdr *Hdr = getSectionHdr();
   if ((Hdr->sh_flags & SHF_LINK_ORDER) && Hdr->sh_link != 0)
     return getFile()->getSections()[Hdr->sh_link];
@@ -198,8 +198,7 @@ InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
   return Sections[this->Header->sh_info];
 }
 
-template <class ELFT>
-void InputSection<ELFT>::addThunk(const Thunk<ELFT> *T) {
+template <class ELFT> void InputSection<ELFT>::addThunk(const Thunk<ELFT> *T) {
   Thunks.push_back(T);
 }
 
@@ -451,7 +450,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
       // Patch a nop (0x60000000) to a ld.
       if (BufLoc + 8 <= BufEnd && read32be(BufLoc + 4) == 0x60000000)
         write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
-      // fallthrough
+    // fallthrough
     default:
       Target->relocateOne(BufLoc, Type, SymVA);
       break;
@@ -539,8 +538,7 @@ static unsigned getReloc(IntTy Begin, IntTy Size, const ArrayRef<RelTy> &Rels,
 
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
-template <class ELFT>
-void EhInputSection<ELFT>::split() {
+template <class ELFT> void EhInputSection<ELFT>::split() {
   // Early exit if already split.
   if (!this->Pieces.empty())
     return;
@@ -704,7 +702,7 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) const {
 
 // Create a map from input offsets to output offsets for all section pieces.
 // It is called after finalize().
-template <class ELFT> void  MergeInputSection<ELFT>::finalizePieces() {
+template <class ELFT> void MergeInputSection<ELFT>::finalizePieces() {
   OffsetMap.reserve(this->Pieces.size());
   for (SectionPiece &Piece : this->Pieces) {
     if (!Piece.Live)

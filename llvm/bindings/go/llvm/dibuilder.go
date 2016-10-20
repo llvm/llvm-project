@@ -222,6 +222,7 @@ type DIAutoVariable struct {
 	Type           Metadata
 	AlwaysPreserve bool
 	Flags          int
+	AlignInBits    uint32
 }
 
 // CreateAutoVariable creates local variable debug metadata.
@@ -237,6 +238,7 @@ func (d *DIBuilder) CreateAutoVariable(scope Metadata, v DIAutoVariable) Metadat
 		v.Type.C,
 		boolToCInt(v.AlwaysPreserve),
 		C.unsigned(v.Flags),
+		C.uint32_t(v.AlignInBits),
 	)
 	return Metadata{C: result}
 }
@@ -275,10 +277,9 @@ func (d *DIBuilder) CreateParameterVariable(scope Metadata, v DIParameterVariabl
 
 // DIBasicType holds the values for creating basic type debug metadata.
 type DIBasicType struct {
-	Name        string
-	SizeInBits  uint64
-	AlignInBits uint32
-	Encoding    DwarfTypeEncoding
+	Name       string
+	SizeInBits uint64
+	Encoding   DwarfTypeEncoding
 }
 
 // CreateBasicType creates basic type debug metadata.
@@ -289,7 +290,6 @@ func (d *DIBuilder) CreateBasicType(t DIBasicType) Metadata {
 		d.ref,
 		name,
 		C.uint64_t(t.SizeInBits),
-		C.uint32_t(t.AlignInBits),
 		C.unsigned(t.Encoding),
 	)
 	return Metadata{C: result}

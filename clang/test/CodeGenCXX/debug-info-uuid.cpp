@@ -22,7 +22,6 @@
 // CHECK: [[CONST_GUID_PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type
 // CHECK-SAME:                                baseType: [[CONST_GUID:![0-9]*]]
 // CHECK-SAME:                                size: 64
-// CHECK-SAME:                                align: 64
 
 // CHECK-ITANIUM: !DICompositeType(tag: DW_TAG_structure_type, name: "tmpl_guid2<__uuidof(uuid)>"
 // CHECK-ITANIUM-SAME:             identifier: "_ZTS10tmpl_guid2IXu8__uuidoft4uuidEE"

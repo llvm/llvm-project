@@ -7,6 +7,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -b binary %t.binary -b default %t.o -shared -o %t.out
 
+# RUN: not ld.lld -b foo > %t.log 2>&1
+# RUN: FileCheck -check-prefix=ERR %s < %t.log
+# ERR: error: unknown -format value: foo (supported formats: elf, default, binary)
+
 # CHECK:          Name: .data
 # CHECK-NEXT:     Type: SHT_PROGBITS
 # CHECK-NEXT:     Flags [

@@ -2996,6 +2996,7 @@ class AtomicLoadBinary<SDPatternOperator operator, RegisterOperand cls,
   let mayLoad = 1;
   let mayStore = 1;
   let usesCustomInserter = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 // Specializations of AtomicLoadWBinary.
@@ -3022,6 +3023,7 @@ class AtomicLoadWBinary<SDPatternOperator operator, dag pat,
   let mayLoad = 1;
   let mayStore = 1;
   let usesCustomInserter = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 // Specializations of AtomicLoadWBinary.
@@ -3040,7 +3042,7 @@ multiclass MemorySS<string mnemonic, bits<8> opcode,
   def "" : InstSS<opcode, (outs), (ins bdladdr12onlylen8:$BDL1,
                                        bdaddr12only:$BD2),
                   mnemonic##"\t$BDL1, $BD2", []>;
-  let usesCustomInserter = 1 in {
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
     def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
                                        imm64:$length),
                            [(sequence bdaddr12only:$dest, bdaddr12only:$src,
@@ -3066,7 +3068,7 @@ multiclass StringRRE<string mnemonic, bits<16> opcode,
     let Constraints = "$R1 = $R1src, $R2 = $R2src";
     let DisableEncoding = "$R1src, $R2src";
   }
-  let usesCustomInserter = 1 in
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
     def Loop : Pseudo<(outs GR64:$end),
                       (ins GR64:$start1, GR64:$start2, GR32:$char),
                       [(set GR64:$end, (operator GR64:$start1, GR64:$start2,

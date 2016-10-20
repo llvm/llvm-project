@@ -439,8 +439,7 @@ struct Symbol {
   llvm::AlignedCharArrayUnion<
       DefinedCommon, DefinedRegular<llvm::object::ELF64LE>,
       DefinedSynthetic<llvm::object::ELF64LE>, Undefined,
-      SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
-      Body;
+      SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject> Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }
   const SymbolBody *body() const { return const_cast<Symbol *>(this)->body(); }

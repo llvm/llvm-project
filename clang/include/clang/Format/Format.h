@@ -35,7 +35,7 @@ namespace format {
 enum class ParseError { Success = 0, Error, Unsuitable };
 class ParseErrorCategory final : public std::error_category {
 public:
-  const char *name() const LLVM_NOEXCEPT override;
+  const char *name() const noexcept override;
   std::string message(int EV) const override;
 };
 const std::error_category &getParseCategory();

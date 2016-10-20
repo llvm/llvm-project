@@ -22,12 +22,12 @@ namespace {
 // deal with the Error value directly, rather than converting to error_code.
 class _readobj_error_category : public std::error_category {
 public:
-  const char* name() const LLVM_NOEXCEPT override;
+  const char* name() const noexcept override;
   std::string message(int ev) const override;
 };
 } // namespace
 
-const char *_readobj_error_category::name() const LLVM_NOEXCEPT {
+const char *_readobj_error_category::name() const noexcept {
   return "llvm.readobj";
 }
 

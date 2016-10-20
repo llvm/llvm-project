@@ -14,6 +14,7 @@
 
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/StringSaver.h"
 
 namespace lld {
 namespace elf {
@@ -27,27 +28,23 @@ template <class ELFT> class ELFCreator {
 public:
   struct Section {
     Elf_Shdr *Header;
-    std::size_t Index;
-  };
-
-  struct Symbol {
-    Elf_Sym *Sym;
-    std::size_t Index;
+    size_t Index;
   };
 
   ELFCreator(std::uint16_t Type, std::uint16_t Machine);
   Section addSection(StringRef Name);
-  Symbol addSymbol(StringRef Name);
-  std::size_t layout();
-  void write(uint8_t *Out);
+  Elf_Sym *addSymbol(StringRef Name);
+  size_t layout();
+  void writeTo(uint8_t *Out);
 
 private:
-  Elf_Ehdr Header;
+  Elf_Ehdr Header = {};
   std::vector<Elf_Shdr *> Sections;
-  std::vector<Elf_Sym *> StaticSymbols;
-  llvm::StringTableBuilder SecHdrStrTabBuilder{llvm::StringTableBuilder::ELF};
+  std::vector<Elf_Sym *> Symbols;
+  llvm::StringTableBuilder ShStrTabBuilder{llvm::StringTableBuilder::ELF};
   llvm::StringTableBuilder StrTabBuilder{llvm::StringTableBuilder::ELF};
   llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver{Alloc};
   Elf_Shdr *ShStrTab;
   Elf_Shdr *StrTab;
   Elf_Shdr *SymTab;

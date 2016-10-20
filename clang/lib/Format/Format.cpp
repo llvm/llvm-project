@@ -420,7 +420,7 @@ std::error_code make_error_code(ParseError e) {
   return std::error_code(static_cast<int>(e), getParseCategory());
 }
 
-const char *ParseErrorCategory::name() const LLVM_NOEXCEPT {
+const char *ParseErrorCategory::name() const noexcept {
   return "clang-format.parse_error";
 }
 

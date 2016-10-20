@@ -202,7 +202,7 @@ void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
 
 
 void HexagonGenPredicate::processPredicateGPR(const Register &Reg) {
-  DEBUG(dbgs() << LLVM_FUNCTION_NAME << ": "
+  DEBUG(dbgs() << __func__ << ": "
                << PrintReg(Reg.R, TRI, Reg.S) << "\n");
   typedef MachineRegisterInfo::use_iterator use_iterator;
   use_iterator I = MRI->use_begin(Reg.R), E = MRI->use_end();
@@ -230,7 +230,7 @@ Register HexagonGenPredicate::getPredRegFor(const Register &Reg) {
   if (F != G2P.end())
     return F->second;
 
-  DEBUG(dbgs() << LLVM_FUNCTION_NAME << ": " << PrintRegister(Reg, *TRI));
+  DEBUG(dbgs() << __func__ << ": " << PrintRegister(Reg, *TRI));
   MachineInstr *DefI = MRI->getVRegDef(Reg.R);
   assert(DefI);
   unsigned Opc = DefI->getOpcode();
@@ -346,7 +346,7 @@ bool HexagonGenPredicate::isScalarPred(Register PredReg) {
 
 
 bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
-  DEBUG(dbgs() << LLVM_FUNCTION_NAME << ": " << MI << " " << *MI);
+  DEBUG(dbgs() << __func__ << ": " << MI << " " << *MI);
 
   unsigned Opc = MI->getOpcode();
   assert(isConvertibleToPredForm(MI));
@@ -432,7 +432,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
 
 
 bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
-  DEBUG(dbgs() << LLVM_FUNCTION_NAME << "\n");
+  DEBUG(dbgs() << __func__ << "\n");
   const TargetRegisterClass *PredRC = &Hexagon::PredRegsRegClass;
   bool Changed = false;
   VectOfInst Erase;

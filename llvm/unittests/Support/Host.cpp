@@ -31,9 +31,10 @@ protected:
     Host.setTriple(Triple::normalize(sys::getProcessTriple()));
 
     // Initially this is only testing detection of the number of
-    // physical cores, which is currently only supported for
-    // x86_64 Linux.
+    // physical cores, which is currently only supported/tested for
+    // x86_64 Linux and Darwin.
     SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::Linux));
+    SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::Darwin));
   }
 };
 

@@ -25,7 +25,7 @@ namespace {
 // deal with the Error value directly, rather than converting to error_code.
 class OrcErrorCategory : public std::error_category {
 public:
-  const char *name() const LLVM_NOEXCEPT override { return "orc"; }
+  const char *name() const noexcept override { return "orc"; }
 
   std::string message(int condition) const override {
     switch (static_cast<OrcErrorCode>(condition)) {

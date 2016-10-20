@@ -11,10 +11,12 @@
 // Stack allocation
 //===----------------------------------------------------------------------===//
 
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt),
-                              [(callseq_start timm:$amt)]>;
-def ADJCALLSTACKUP   : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
-                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+let hasNoSchedulingInfo = 1 in {
+  def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt),
+                                [(callseq_start timm:$amt)]>;
+  def ADJCALLSTACKUP   : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
+                                [(callseq_end timm:$amt1, timm:$amt2)]>;
+}
 
 let hasSideEffects = 0 in {
   // Takes as input the value of the stack pointer after a dynamic allocation
@@ -1410,7 +1412,7 @@ let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), [(z_serialize)]>;
 
 // A pseudo instruction that serves as a compiler barrier.
-let hasSideEffects = 1 in
+let hasSideEffects = 1, hasNoSchedulingInfo = 1 in
 def MemBarrier : Pseudo<(outs), (ins), [(z_membarrier)]>;
 
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
@@ -1546,6 +1548,7 @@ def ATOMIC_CMP_SWAPW
   let mayLoad = 1;
   let mayStore = 1;
   let usesCustomInserter = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 let Defs = [CC] in {
