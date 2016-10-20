@@ -344,13 +344,13 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
         return false;
       Args shell_arguments;
       std::string safe_arg;
-      shell_arguments.AppendArgument(shell_executable.c_str());
+      shell_arguments.AppendArgument(shell_executable);
       const llvm::Triple &triple = GetArchitecture().GetTriple();
       if (triple.getOS() == llvm::Triple::Win32 &&
           !triple.isWindowsCygwinEnvironment())
-        shell_arguments.AppendArgument("/C");
+        shell_arguments.AppendArgument(llvm::StringRef("/C"));
       else
-        shell_arguments.AppendArgument("-c");
+        shell_arguments.AppendArgument(llvm::StringRef("-c"));
 
       StreamString shell_command;
       if (will_debug) {
@@ -428,7 +428,7 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
           shell_command.Printf(" %s", arg);
         }
       }
-      shell_arguments.AppendArgument(shell_command.GetString().c_str());
+      shell_arguments.AppendArgument(shell_command.GetString());
       m_executable = m_shell;
       m_arguments = shell_arguments;
       return true;

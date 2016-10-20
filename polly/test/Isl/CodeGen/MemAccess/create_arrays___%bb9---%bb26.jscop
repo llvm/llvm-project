@@ -1,13 +1,13 @@
 {
    "arrays" : [
-     {
+      {
          "name" : "MemRef_B",
-         "sizes" : [ "1024" ],
+         "sizes" : [ "*", "1024" ],
          "type" : "double"
       },
       {
          "name" : "MemRef_A",
-         "sizes" : [ "1056" ],
+         "sizes" : [ "*", "1056" ],
          "type" : "double"
       }
    ],

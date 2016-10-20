@@ -720,6 +720,9 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     if (!MA->hasNewAccessRelation())
       continue;
 
+    assert(!MA->getLatestScopArrayInfo()->getBasePtrOriginSAI() &&
+           "Generating new index expressions to indirect arrays not working");
+
     auto Schedule = isl_ast_build_get_schedule(Build);
     auto PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
 
@@ -767,6 +770,23 @@ void IslNodeBuilder::createSubstitutionsVector(
   isl_ast_expr_free(Expr);
 }
 
+void IslNodeBuilder::generateCopyStmt(
+    ScopStmt *Stmt, __isl_keep isl_id_to_ast_expr *NewAccesses) {
+  assert(Stmt->size() == 2);
+  auto ReadAccess = Stmt->begin();
+  auto WriteAccess = ReadAccess++;
+  assert((*ReadAccess)->isRead() && (*WriteAccess)->isMustWrite());
+  assert((*ReadAccess)->getElementType() == (*WriteAccess)->getElementType() &&
+         "Accesses use the same data type");
+  assert((*ReadAccess)->isArrayKind() && (*WriteAccess)->isArrayKind());
+  auto *AccessExpr =
+      isl_id_to_ast_expr_get(NewAccesses, (*ReadAccess)->getId());
+  auto *LoadValue = ExprBuilder.create(AccessExpr);
+  AccessExpr = isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId());
+  auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
+  Builder.CreateStore(LoadValue, StoreAddr);
+}
+
 void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
   LoopToScevMapT LTS;
   isl_id *Id;
@@ -781,12 +801,17 @@ void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
 
   Stmt = (ScopStmt *)isl_id_get_user(Id);
   auto *NewAccesses = createNewAccesses(Stmt, User);
-  createSubstitutions(Expr, Stmt, LTS);
+  if (Stmt->isCopyStmt()) {
+    generateCopyStmt(Stmt, NewAccesses);
+    isl_ast_expr_free(Expr);
+  } else {
+    createSubstitutions(Expr, Stmt, LTS);
 
-  if (Stmt->isBlockStmt())
-    BlockGen.copyStmt(*Stmt, LTS, NewAccesses);
-  else
-    RegionGen.copyStmt(*Stmt, LTS, NewAccesses);
+    if (Stmt->isBlockStmt())
+      BlockGen.copyStmt(*Stmt, LTS, NewAccesses);
+    else
+      RegionGen.copyStmt(*Stmt, LTS, NewAccesses);
+  }
 
   isl_id_to_ast_expr_free(NewAccesses);
   isl_ast_node_free(User);
@@ -1082,6 +1107,25 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
     ExecutionCtx = isl_set_intersect(ExecutionCtx, BaseExecutionCtx);
   }
 
+  // If the size of a dimension is dependent on another class, make sure it is
+  // preloaded.
+  for (unsigned i = 1, e = SAI->getNumberOfDimensions(); i < e; ++i) {
+    const SCEV *Dim = SAI->getDimensionSize(i);
+    SetVector<Value *> Values;
+    findValues(Dim, SE, Values);
+    for (auto *Val : Values) {
+      if (auto *BaseIAClass = S.lookupInvariantEquivClass(Val)) {
+        if (!preloadInvariantEquivClass(*BaseIAClass))
+          return false;
+
+        // After we preloaded the BaseIAClass we adjusted the BaseExecutionCtx
+        // and we need to refine the ExecutionCtx.
+        isl_set *BaseExecutionCtx = isl_set_copy(BaseIAClass->ExecutionContext);
+        ExecutionCtx = isl_set_intersect(ExecutionCtx, BaseExecutionCtx);
+      }
+    }
+  }
+
   Instruction *AccInst = MA->getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
@@ -1155,8 +1199,12 @@ void IslNodeBuilder::allocateNewArrays() {
     if (SAI->getBasePtr())
       continue;
 
+    assert(SAI->getNumberOfDimensions() > 0 && SAI->getDimensionSize(0) &&
+           "The size of the outermost dimension is used to declare newly "
+           "created arrays that require memory allocation.");
+
     Type *NewArrayType = nullptr;
-    for (unsigned i = SAI->getNumberOfDimensions() - 1; i >= 1; i--) {
+    for (int i = SAI->getNumberOfDimensions() - 1; i >= 0; i--) {
       auto *DimSize = SAI->getDimensionSize(i);
       unsigned UnsignedDimSize = static_cast<const SCEVConstant *>(DimSize)
                                      ->getAPInt()

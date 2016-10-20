@@ -4,7 +4,7 @@ namespace n1 {
 namespace n2 {
 
 
-
+void f(); // So that the namespace isn't empty.
 
 
 // CHECK-MESSAGES: :[[@LINE+4]]:2: warning: namespace 'n2' not terminated with a closing comment [google-readability-namespace-comments]

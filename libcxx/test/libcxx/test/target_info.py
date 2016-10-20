@@ -115,7 +115,7 @@ class DarwinLocalTI(DefaultTargetInfo):
         return False
 
     def add_sanitizer_features(self, sanitizer_type, features):
-        if san == 'Undefined':
+        if sanitizer_type == 'Undefined':
             features.add('sanitizer-new-delete')
 
 

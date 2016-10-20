@@ -348,8 +348,9 @@ def run_python_script(script_and_args):
     @param script_and_args the python script to execute, along with
     the command line arguments to pass to it.
     """
-    command_line = "%s %s" % (sys.executable, script_and_args)
-    process = subprocess.Popen(command_line, shell=True)
+    command = [sys.executable] + script_and_args
+    command_line = " ".join(command)
+    process = subprocess.Popen(command, shell=False)
     script_stdout, script_stderr = process.communicate()
     return_code = process.returncode
     if return_code != 0:
@@ -378,8 +379,7 @@ def do_modify_python_lldb(options, config_build_dir):
         logging.error("failed to find python script: '%s'", script_path)
         sys.exit(-11)
 
-    script_invocation = "%s %s" % (script_path, config_build_dir)
-    run_python_script(script_invocation)
+    run_python_script([script_path, config_build_dir])
 
 
 def get_python_module_path(options):

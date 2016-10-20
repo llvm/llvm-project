@@ -53,6 +53,12 @@ void F12(const bool b = true);
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 'b'
 // CHECK-FIXES: void F12(bool b = true);
 
+template<class T>
+int F13(const bool b = true);
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'b'
+// CHECK-FIXES: int F13(bool b = true);
+int f13 = F13<int>();
+
 struct Foo {
   Foo(const int i);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: parameter 'i'
@@ -63,6 +69,18 @@ struct Foo {
   // CHECK-FIXES: void operator()(int i);
 };
 
+template <class T>
+struct FooT {
+  FooT(const int i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: parameter 'i'
+  // CHECK-FIXES: FooT(int i);
+
+  void operator()(const int i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: parameter 'i'
+  // CHECK-FIXES: void operator()(int i);
+};
+FooT<int> f(1);
+
 // Do not match on definitions
 void NF1(const int i) {}
 void NF2(const int *const i) {}
@@ -72,6 +90,25 @@ void NF5(const int) {}
 void NF6(const int *const) {}
 void NF7(int, const int) {}
 void NF8(const int, const int) {}
+template <class T>
+int NF9(const int, const int) { return 0; }
+int nf9 = NF9<int>(1, 2);
+
+// Do not match on inline member functions
+struct Bar {
+  Bar(const int i) {}
+
+  void operator()(const int i) {}
+};
+
+// Do not match on inline member functions of a templated class
+template <class T>
+struct BarT {
+  BarT(const int i) {}
+
+  void operator()(const int i) {}
+};
+BarT<int> b(1);
 
 // Do not match on other stuff
 void NF(const alias_type& i);

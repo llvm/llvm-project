@@ -266,8 +266,7 @@ int el_set(EditLine *el, int code, ...) {
 
     const char *name = va_arg(vl, const char *);
 
-    for (int i = 0; i < _bindings.size(); i++) {
-      el_binding *bind = _bindings[i];
+    for (auto bind : _bindings) {
       if (strcmp(bind->name, name) == 0) {
         bind->key = va_arg(vl, const char *);
         break;

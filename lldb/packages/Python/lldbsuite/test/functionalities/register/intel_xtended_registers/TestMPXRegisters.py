@@ -1,5 +1,5 @@
 """
-Test the MPX registers.
+Test the Intel(R) MPX registers.
 """
 
 from __future__ import print_function
@@ -21,23 +21,18 @@ class RegisterCommandsTestCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.has_teardown = False
-
-    def tearDown(self):
-        self.dbg.GetSelectedTarget().GetProcess().Destroy()
-        TestBase.tearDown(self)
 
     @skipIf(compiler="clang")
-    @skipIf(oslist=["linux"], compiler="gcc", compiler_version=["<", "5"]) #GCC version >= 5 supports MPX.
     @skipIf(oslist=no_match(['linux']))
     @skipIf(archs=no_match(['i386', 'x86_64']))
+    @skipIf(oslist=["linux"], compiler="gcc", compiler_version=["<", "5"]) #GCC version >= 5 supports Intel(R) MPX.
     def test_mpx_registers_with_example_code(self):
-        """Test MPX registers with example code."""
+        """Test Intel(R) MPX registers with example code."""
         self.build()
         self.mpx_registers_with_example_code()
 
     def mpx_registers_with_example_code(self):
-        """Test MPX registers after running example code."""
+        """Test Intel(R) MPX registers after running example code."""
         self.line = line_number('main.cpp', '// Set a break point here.')
 
         exe = os.path.join(os.getcwd(), "a.out")
@@ -50,7 +45,7 @@ class RegisterCommandsTestCase(TestBase):
         process = target.GetProcess()
 
         if (process.GetState() == lldb.eStateExited):
-            self.skipTest("HW doesn't support MPX feature.")
+            self.skipTest("Intel(R) MPX is not supported.")
         else:
             self.expect("thread backtrace", STOPPED_DUE_TO_BREAKPOINT,
                         substrs = ["stop reason = breakpoint 1."])

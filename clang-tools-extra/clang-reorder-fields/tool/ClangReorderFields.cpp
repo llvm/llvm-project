@@ -80,13 +80,8 @@ int main(int argc, const char **argv) {
 
   for (const auto &File : Files) {
     const auto *Entry = FileMgr.getFile(File);
-    const auto ID = Sources.translateFile(Entry);
-    // The method Rewriter::getRewriteBufferFor returns nullptr if
-    // the file has not been changed.
-    if (const auto *RB = Rewrite.getRewriteBufferFor(ID))
-      RB->write(outs());
-    else
-      outs() << Sources.getMemoryBufferForFile(Entry)->getBuffer();
+    const auto ID = Sources.getOrCreateFileID(Entry, SrcMgr::C_User);
+    Rewrite.getEditBuffer(ID).write(outs());
   }
 
   return ExitCode;

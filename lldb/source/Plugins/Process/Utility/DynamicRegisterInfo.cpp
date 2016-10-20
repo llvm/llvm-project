@@ -125,9 +125,9 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
         // LSBIT - the least significant bit at which the current register value
         // ends at
         static RegularExpression g_bitfield_regex(
-            "([A-Za-z_][A-Za-z0-9_]*)\\[([0-9]+):([0-9]+)\\]");
+            llvm::StringRef("([A-Za-z_][A-Za-z0-9_]*)\\[([0-9]+):([0-9]+)\\]"));
         RegularExpression::Match regex_match(3);
-        if (g_bitfield_regex.Execute(slice_str.c_str(), &regex_match)) {
+        if (g_bitfield_regex.Execute(slice_str, &regex_match)) {
           llvm::StringRef reg_name_str;
           std::string msbit_str;
           std::string lsbit_str;
@@ -305,8 +305,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
 
     std::string encoding_str;
     if (reg_info_dict->GetValueForKeyAsString("encoding", encoding_str))
-      reg_info.encoding =
-          Args::StringToEncoding(encoding_str.c_str(), eEncodingUint);
+      reg_info.encoding = Args::StringToEncoding(encoding_str, eEncodingUint);
     else
       reg_info_dict->GetValueForKeyAsInteger("encoding", reg_info.encoding,
                                              eEncodingUint);
@@ -337,7 +336,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     std::string generic_str;
     if (reg_info_dict->GetValueForKeyAsString("generic", generic_str))
       reg_info.kinds[lldb::eRegisterKindGeneric] =
-          Args::StringToGenericRegister(generic_str.c_str());
+          Args::StringToGenericRegister(generic_str);
     else
       reg_info_dict->GetValueForKeyAsInteger(
           "generic", reg_info.kinds[lldb::eRegisterKindGeneric],

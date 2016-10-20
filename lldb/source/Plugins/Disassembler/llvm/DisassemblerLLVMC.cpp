@@ -371,11 +371,12 @@ public:
           }
         }
 
-        static RegularExpression s_regex("[ \t]*([^ ^\t]+)[ \t]*([^ ^\t].*)?");
+        static RegularExpression s_regex(
+            llvm::StringRef("[ \t]*([^ ^\t]+)[ \t]*([^ ^\t].*)?"));
 
         RegularExpression::Match matches(3);
 
-        if (s_regex.Execute(out_string.c_str(), &matches)) {
+        if (s_regex.Execute(out_string, &matches)) {
           matches.GetMatchAtIndex(out_string.c_str(), 1, m_opcode_name);
           matches.GetMatchAtIndex(out_string.c_str(), 2, m_mnemonics);
         }

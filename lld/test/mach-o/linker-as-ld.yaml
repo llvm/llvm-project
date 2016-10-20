@@ -1,7 +1,7 @@
 # REQUIRES: system-linker-mach-o
 #
-# RUN: mkdir -p %t.dir && cp `which lld` %t.dir/ld \
-# RUN:  && %t.dir/ld -arch x86_64 -macosx_version_min 10.8 %s \
+# RUN: rm -rf %T/ld && ln -s `which lld` %T/ld \
+# RUN:  && %T/ld -arch x86_64 -macosx_version_min 10.8 %s \
 # RUN: %p/Inputs/linker-as-ld.yaml -o %t \
 # RUN:  && llvm-nm %t | FileCheck %s
 #

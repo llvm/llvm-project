@@ -75,6 +75,8 @@
 
 #include <cmpxchg_loop.h>
 
+#include "test_macros.h"
+
 template <class A, class T>
 void
 do_test()
@@ -121,7 +123,7 @@ do_test()
     assert(obj == T(2*sizeof(X)));
 
     {
-        _ALIGNAS_TYPE(A) char storage[sizeof(A)] = {23};
+        TEST_ALIGNAS_TYPE(A) char storage[sizeof(A)] = {23};
         A& zero = *new (storage) A();
         assert(zero == T(0));
         zero.~A();

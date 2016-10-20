@@ -23,8 +23,8 @@ using namespace lldb_private;
 // CommandObjectRegexCommand constructor
 //----------------------------------------------------------------------
 CommandObjectRegexCommand::CommandObjectRegexCommand(
-    CommandInterpreter &interpreter, const char *name, const char *help,
-    const char *syntax, uint32_t max_matches, uint32_t completion_type_mask,
+    CommandInterpreter &interpreter, llvm::StringRef name, llvm::StringRef help,
+  llvm::StringRef syntax, uint32_t max_matches, uint32_t completion_type_mask,
     bool is_removable)
     : CommandObjectRaw(interpreter, name, help, syntax),
       m_max_matches(max_matches), m_completion_type_mask(completion_type_mask),
@@ -89,7 +89,8 @@ bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
                                                 const char *command_cstr) {
   m_entries.resize(m_entries.size() + 1);
   // Only add the regular expression if it compiles
-  if (m_entries.back().regex.Compile(re_cstr)) {
+  if (m_entries.back().regex.Compile(
+          llvm::StringRef::withNullAsEmpty(re_cstr))) {
     m_entries.back().command.assign(command_cstr);
     return true;
   }

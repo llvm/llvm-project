@@ -68,27 +68,31 @@ private:
 
   HostProcess m_process;    // The process being debugged.
   HostThread m_main_thread; // The main thread of the inferior.
-  HANDLE m_image_file;      // The image file of the process being debugged.
 
-  ExceptionRecordSP
-      m_active_exception; // The current exception waiting to be handled
+  // The image file of the process being debugged.
+  HANDLE m_image_file = nullptr;
 
-  Predicate<ExceptionResult>
-      m_exception_pred; // A predicate which gets signalled when an exception
-                        // is finished processing and the debug loop can be
-                        // continued.
+  // The current exception waiting to be handled
+  ExceptionRecordSP m_active_exception;
 
-  HANDLE m_debugging_ended_event; // An event which gets signalled by the
-                                  // debugger thread when it
-  // exits the debugger loop and is detached from the inferior.
+  // A predicate which gets signalled when an exception is finished processing
+  // and the debug loop can be continued.
+  Predicate<ExceptionResult> m_exception_pred;
 
-  std::atomic<DWORD> m_pid_to_detach;   // Signals the loop to detach from the
-                                        // process (specified by pid).
-  std::atomic<bool> m_is_shutting_down; // Signals the debug loop to stop
-                                        // processing certain types of
-                                        // events that block shutdown.
-  bool m_detached; // Indicates we've detached from the inferior process and the
-                   // debug loop can exit.
+  // An event which gets signalled by the debugger thread when it exits the
+  // debugger loop and is detached from the inferior.
+  HANDLE m_debugging_ended_event = nullptr;
+
+  // Signals the loop to detach from the process (specified by pid).
+  std::atomic<DWORD> m_pid_to_detach;
+
+  // Signals the debug loop to stop processing certain types of events that
+  // block shutdown.
+  std::atomic<bool> m_is_shutting_down;
+
+  // Indicates we've detached from the inferior process and the debug loop can
+  // exit.
+  bool m_detached = false;
 
   static lldb::thread_result_t DebuggerThreadLaunchRoutine(void *data);
   lldb::thread_result_t
@@ -99,5 +103,4 @@ private:
                               const ProcessAttachInfo &launch_info);
 };
 }
-
 #endif

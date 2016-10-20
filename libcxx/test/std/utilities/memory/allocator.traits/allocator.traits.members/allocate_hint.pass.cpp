@@ -20,6 +20,8 @@
 #include <cstdint>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 struct A
 {
@@ -52,10 +54,10 @@ struct B
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     A<int> a;
     assert(std::allocator_traits<A<int> >::allocate(a, 10, nullptr) == reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif
     B<int> b;
     assert(std::allocator_traits<B<int> >::allocate(b, 11, nullptr) == reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xFEADBEEF)));
 }

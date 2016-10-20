@@ -33,7 +33,7 @@ KernelBase::KernelBase(PlatformDevice *D, const void *PlatformKernelHandle,
          "cannot construct a kernel object with a null platform kernel handle");
 }
 
-KernelBase::KernelBase(KernelBase &&Other)
+KernelBase::KernelBase(KernelBase &&Other) noexcept
     : PDevice(Other.PDevice), PlatformKernelHandle(Other.PlatformKernelHandle),
       Name(std::move(Other.Name)),
       DemangledName(std::move(Other.DemangledName)) {
@@ -41,7 +41,7 @@ KernelBase::KernelBase(KernelBase &&Other)
   Other.PlatformKernelHandle = nullptr;
 }
 
-KernelBase &KernelBase::operator=(KernelBase &&Other) {
+KernelBase &KernelBase::operator=(KernelBase &&Other) noexcept {
   PDevice = Other.PDevice;
   PlatformKernelHandle = Other.PlatformKernelHandle;
   Name = std::move(Other.Name);

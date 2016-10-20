@@ -84,7 +84,7 @@ enum RejectReasonKind {
   rrkLastAffFunc,
 
   rrkLoopBound,
-  rrkLoopOverlapWithNonAffineSubRegion,
+  rrkLoopHasNoExit,
 
   rrkFuncCall,
   rrkNonSimpleMemoryAccess,
@@ -511,22 +511,18 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// Captures errors when loop overlap with nonaffine subregion.
-class ReportLoopOverlapWithNonAffineSubRegion : public RejectReason {
+/// Captures errors when loop has no exit.
+class ReportLoopHasNoExit : public RejectReason {
   //===--------------------------------------------------------------------===//
 
-  /// If L and R are set then L and R overlap.
-
-  /// The loop contains stmt overlapping nonaffine subregion.
+  /// The loop that has no exit.
   Loop *L;
-
-  /// The nonaffine subregion that contains infinite loop.
-  Region *R;
 
   const DebugLoc Loc;
 
 public:
-  ReportLoopOverlapWithNonAffineSubRegion(Loop *L, Region *R);
+  ReportLoopHasNoExit(Loop *L)
+      : RejectReason(rrkLoopHasNoExit), L(L), Loc(L->getStartLoc()) {}
 
   /// @name LLVM-RTTI interface
   //@{

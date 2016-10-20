@@ -10,6 +10,11 @@
 
 #include <locale>
 #include <cstdarg> // va_start, va_end
+#include <memory>
+#include <type_traits>
+
+typedef _VSTD::remove_pointer<locale_t>::type __locale_struct;
+typedef _VSTD::unique_ptr<__locale_struct, decltype(&uselocale)> __locale_raii;
 
 // FIXME: base currently unused. Needs manual work to construct the new locale
 locale_t newlocale( int mask, const char * locale, locale_t /*base*/ )

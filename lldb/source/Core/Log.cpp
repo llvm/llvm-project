@@ -82,7 +82,7 @@ void Log::VAPrintf(const char *format, va_list args) {
     // Timestamp if requested
     if (m_options.Test(LLDB_LOG_OPTION_PREPEND_TIMESTAMP)) {
       TimeValue now = TimeValue::Now();
-      header.Printf("%9d.%09.9d ", now.seconds(), now.nanoseconds());
+      header.Printf("%9d.%9.9d ", now.seconds(), now.nanoseconds());
     }
 
     // Add the process and thread if requested

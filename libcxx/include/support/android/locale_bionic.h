@@ -11,7 +11,7 @@
 #ifndef _LIBCPP_SUPPORT_ANDROID_LOCALE_BIONIC_H
 #define _LIBCPP_SUPPORT_ANDROID_LOCALE_BIONIC_H
 
-#if defined(__ANDROID__)
+#if defined(__BIONIC__)
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,5 +27,5 @@ extern "C" {
 #include <support/xlocale/__posix_l_fallback.h>
 #include <support/xlocale/__strtonum_fallback.h>
 
-#endif // defined(__ANDROID__)
+#endif // defined(__BIONIC__)
 #endif // _LIBCPP_SUPPORT_ANDROID_LOCALE_BIONIC_H

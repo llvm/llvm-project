@@ -1,46 +1,25 @@
 This is meant to be a general place to list things that should be done "someday"
 
-3.8 Release Goals
-=================
-* LFTS v1 (EricWF, MClow)
-* Filesystem TS (EricWF)
-* ASIO TS (MClow)
-* <regex> Improvements (MClow)
-* Setup ABI Versioning policy (EricWF)
-* Fix PR19302 - Fix UB in list and __tree.
-
 
 ABI Related Tasks
 =================
 * Explicitly manage and verify symbols exported from the dylib.
-* Explore using namespaces for managing symbol visibility.
-* Introduce and document ABI versioning/evolution policy.
 
 CXX Runtime Library Tasks
 =========================
-* Cleanup #ifdef hell in sources files that supports the different ABI libraries.
 * Fix that CMake always link to /usr/lib/libc++abi.dylib on OS X.
-* Fix selection of ABI symbol list on OS X.
-* Have CMake generate linker scripts for libc++.so that it properly links the
-  runtime library.
 * Look into mirroring libsupc++'s typeinfo vtable layout when libsupc++/libstdc++
   is used as the runtime library.
-* Audit libraries that CMake links into libc++. Are they all required?
 * Investigate and document interoperability between libc++ and libstdc++ on
   linux. Do this for every supported c++ runtime library.
 
 Atomic Related Tasks
 ====================
-* Enable mixing of clang and GCC atomics internally. Currently some
-  parts of libc++ use atomics only when clang provides them.
-  (see memory@5380 for an example)
-* Audit use of libatomic builtins in <atomic> with GCC.
 * future should use <atomic> for synchronization.
 
 Test Suite Tasks
 ================
 * Move all libc++ specific tests from test/std into test/libcxx.
-* Improve how LIT handles compiler warnings.
 * Improve the quality and portability of the locale test data.
 * Convert failure tests to use Clang Verify.
 
@@ -52,5 +31,4 @@ Misc Tasks
 * Look at basic_string's move assignment operator, re LWG 2063 and POCMA
 * libc++ is missing try_emplace
 * Put a static_assert in std::allocator to deny const/volatile types (LWG 2447)
-* Document support (or lack of) for C++11 libraries in C++03.
-* Document supported compilers.
+

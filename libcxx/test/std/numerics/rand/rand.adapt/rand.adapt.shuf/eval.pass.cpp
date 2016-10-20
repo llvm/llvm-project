@@ -17,6 +17,8 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class UIntType, UIntType Min, UIntType Max>
 class rand1
 {
@@ -30,14 +32,14 @@ private:
     static_assert(Min < Max, "rand1 invalid parameters");
 public:
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER < 11 && defined(_LIBCPP_VERSION)
     // Workaround for lack of constexpr in C++03
     static const result_type _Min = Min;
     static const result_type _Max = Max;
 #endif
 
-    static _LIBCPP_CONSTEXPR result_type min() {return Min;}
-    static _LIBCPP_CONSTEXPR result_type max() {return Max;}
+    static TEST_CONSTEXPR result_type min() {return Min;}
+    static TEST_CONSTEXPR result_type max() {return Max;}
 
     explicit rand1(result_type sd = Min) : x_(sd)
     {

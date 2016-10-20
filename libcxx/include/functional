@@ -212,6 +212,13 @@ template <class F> unspecified not_fn(F&& f); // C++17
 template<class T> struct is_bind_expression;
 template<class T> struct is_placeholder;
 
+    // See C++14 20.9.9, Function object binders
+template <class T> constexpr bool is_bind_expression_v
+  = is_bind_expression<T>::value; // C++17
+template <class T> constexpr int is_placeholder_v
+  = is_placeholder<T>::value; // C++17
+
+
 template<class Fn, class... BoundArgs>
   unspecified bind(Fn&&, BoundArgs&&...);
 template<class R, class Fn, class... BoundArgs>
@@ -386,15 +393,15 @@ public:
     template<class F>
       function(F);
     template<Allocator Alloc>
-      function(allocator_arg_t, const Alloc&) noexcept;
+      function(allocator_arg_t, const Alloc&) noexcept;            // removed in C++17
     template<Allocator Alloc>
-      function(allocator_arg_t, const Alloc&, nullptr_t) noexcept;
+      function(allocator_arg_t, const Alloc&, nullptr_t) noexcept; // removed in C++17
     template<Allocator Alloc>
-      function(allocator_arg_t, const Alloc&, const function&);
+      function(allocator_arg_t, const Alloc&, const function&);    // removed in C++17
     template<Allocator Alloc>
-      function(allocator_arg_t, const Alloc&, function&&);
+      function(allocator_arg_t, const Alloc&, function&&);         // removed in C++17
     template<class F, Allocator Alloc>
-      function(allocator_arg_t, const Alloc&, F);
+      function(allocator_arg_t, const Alloc&, F);                  // removed in C++17
 
     function& operator=(const function&);
     function& operator=(function&&) noexcept;
@@ -1610,6 +1617,7 @@ public:
     >::type>
     function(_Fp);
 
+#if _LIBCPP_STD_VER <= 14
     template<class _Alloc>
       _LIBCPP_INLINE_VISIBILITY
       function(allocator_arg_t, const _Alloc&) _NOEXCEPT : __f_(0) {}
@@ -1622,6 +1630,7 @@ public:
       function(allocator_arg_t, const _Alloc&, function&&);
     template<class _Fp, class _Alloc, class = typename enable_if<__callable<_Fp>::value>::type>
       function(allocator_arg_t, const _Alloc& __a, _Fp __f);
+#endif
 
     function& operator=(const function&);
     function& operator=(function&&) _NOEXCEPT;
@@ -1682,6 +1691,7 @@ function<_Rp(_ArgTypes...)>::function(const function& __f)
         __f_ = __f.__f_->__clone();
 }
 
+#if _LIBCPP_STD_VER <= 14
 template<class _Rp, class ..._ArgTypes>
 template <class _Alloc>
 function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
@@ -1697,6 +1707,7 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
     else
         __f_ = __f.__f_->__clone();
 }
+#endif
 
 template<class _Rp, class ..._ArgTypes>
 function<_Rp(_ArgTypes...)>::function(function&& __f) _NOEXCEPT
@@ -1715,6 +1726,7 @@ function<_Rp(_ArgTypes...)>::function(function&& __f) _NOEXCEPT
     }
 }
 
+#if _LIBCPP_STD_VER <= 14
 template<class _Rp, class ..._ArgTypes>
 template <class _Alloc>
 function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
@@ -1733,6 +1745,7 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
         __f.__f_ = 0;
     }
 }
+#endif
 
 template<class _Rp, class ..._ArgTypes>
 template <class _Fp, class>
@@ -1758,6 +1771,7 @@ function<_Rp(_ArgTypes...)>::function(_Fp __f)
     }
 }
 
+#if _LIBCPP_STD_VER <= 14
 template<class _Rp, class ..._ArgTypes>
 template <class _Fp, class _Alloc, class>
 function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a0, _Fp __f)
@@ -1783,6 +1797,7 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a0, _Fp _
         }
     }
 }
+#endif
 
 template<class _Rp, class ..._ArgTypes>
 function<_Rp(_ArgTypes...)>&
@@ -1970,9 +1985,19 @@ template<class _Tp> struct __is_bind_expression : public false_type {};
 template<class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_bind_expression
     : public __is_bind_expression<typename remove_cv<_Tp>::type> {};
 
+#if _LIBCPP_STD_VER > 14
+template <class _Tp>
+constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
+#endif
+
 template<class _Tp> struct __is_placeholder : public integral_constant<int, 0> {};
 template<class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_placeholder
     : public __is_placeholder<typename remove_cv<_Tp>::type> {};
+
+#if _LIBCPP_STD_VER > 14
+template <class _Tp>
+constexpr size_t is_placeholder_v = is_placeholder<_Tp>::value;
+#endif
 
 namespace placeholders
 {
@@ -2610,6 +2635,8 @@ struct _LIBCPP_TYPE_VIS_ONLY hash : public __enum_hash<_Tp>
 
 #if _LIBCPP_STD_VER > 14
 
+#define __cpp_lib_invoke 201411
+
 template <class _Fn, class ..._Args>
 result_of_t<_Fn&&(_Args&&...)>
 invoke(_Fn&& __f, _Args&&... __args)
@@ -2629,30 +2656,30 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) &
             noexcept(noexcept(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
 
     template <class ..._Args>
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) &&
             noexcept(noexcept(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
 
     template <class ..._Args>
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) const&
             noexcept(noexcept(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
 
 
     template <class ..._Args>
     _LIBCPP_INLINE_VISIBILITY
     auto operator()(_Args&& ...__args) const&&
             noexcept(noexcept(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...)))
-        -> decltype(!_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
-        { return !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
+        -> decltype(          !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...))
+        { return              !_VSTD::invoke(_VSTD::move(__fd), _VSTD::forward<_Args>(__args)...); }
 
 private:
     template <class _RawFunc,

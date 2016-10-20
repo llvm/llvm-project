@@ -559,9 +559,9 @@ void SimplifyBooleanExprCheck::issueDiag(
     const ast_matchers::MatchFinder::MatchResult &Result, SourceLocation Loc,
     StringRef Description, SourceRange ReplacementRange,
     StringRef Replacement) {
-  CharSourceRange CharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(ReplacementRange), *Result.SourceManager,
-      Result.Context->getLangOpts());
+  CharSourceRange CharRange =
+      Lexer::makeFileCharRange(CharSourceRange::getTokenRange(ReplacementRange),
+                               *Result.SourceManager, getLangOpts());
 
   DiagnosticBuilder Diag = diag(Loc, Description);
   if (!containsDiscardedTokens(Result, CharRange))

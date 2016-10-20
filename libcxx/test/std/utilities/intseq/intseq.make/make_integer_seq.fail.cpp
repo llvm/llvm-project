@@ -14,6 +14,9 @@
 
 // UNSUPPORTED: c++98, c++03, c++11
 
+// This test hangs during recursive template instantiation with libstdc++
+// UNSUPPORTED: libstdc++
+
 #include <utility>
 #include <type_traits>
 #include <cassert>

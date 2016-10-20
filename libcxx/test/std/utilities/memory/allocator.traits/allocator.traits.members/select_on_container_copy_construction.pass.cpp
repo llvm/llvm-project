@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 struct A
 {
@@ -55,7 +57,7 @@ int main()
         const A<int> a(0);
         assert(std::allocator_traits<A<int> >::select_on_container_copy_construction(a).id == 0);
     }
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     {
         B<int> b;
         assert(std::allocator_traits<B<int> >::select_on_container_copy_construction(b).id == 100);
@@ -64,5 +66,5 @@ int main()
         const B<int> b(0);
         assert(std::allocator_traits<B<int> >::select_on_container_copy_construction(b).id == 100);
     }
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif
 }

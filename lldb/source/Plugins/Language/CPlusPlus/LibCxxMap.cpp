@@ -39,21 +39,26 @@ public:
     static ConstString g_left("__left_");
     if (!m_entry_sp)
       return m_entry_sp;
-    return m_entry_sp->GetChildMemberWithName(g_left, true);
+    return m_entry_sp->GetSyntheticChildAtOffset(
+        0, m_entry_sp->GetCompilerType(), true);
   }
 
   ValueObjectSP right() const {
     static ConstString g_right("__right_");
     if (!m_entry_sp)
       return m_entry_sp;
-    return m_entry_sp->GetChildMemberWithName(g_right, true);
+    return m_entry_sp->GetSyntheticChildAtOffset(
+        m_entry_sp->GetProcessSP()->GetAddressByteSize(),
+        m_entry_sp->GetCompilerType(), true);
   }
 
   ValueObjectSP parent() const {
     static ConstString g_parent("__parent_");
     if (!m_entry_sp)
       return m_entry_sp;
-    return m_entry_sp->GetChildMemberWithName(g_parent, true);
+    return m_entry_sp->GetSyntheticChildAtOffset(
+        2 * m_entry_sp->GetProcessSP()->GetAddressByteSize(),
+        m_entry_sp->GetCompilerType(), true);
   }
 
   uint64_t value() const {
@@ -231,6 +236,8 @@ size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   static ConstString g___value_("__value_");
+  static ConstString g_tree_("__tree_");
+  static ConstString g_pair3("__pair3_");
 
   if (m_element_type.GetOpaqueQualType() && m_element_type.GetTypeSystem())
     return true;
@@ -241,10 +248,30 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   if (!deref || error.Fail())
     return false;
   deref = deref->GetChildMemberWithName(g___value_, true);
+  if (deref) {
+    m_element_type = deref->GetCompilerType();
+    return true;
+  }
+  lldb::TemplateArgumentKind kind;
+  deref = m_backend.GetChildAtNamePath({g_tree_, g_pair3});
   if (!deref)
     return false;
-  m_element_type = deref->GetCompilerType();
-  return true;
+  m_element_type =
+      deref->GetCompilerType().GetTemplateArgument(1, kind).GetTemplateArgument(
+          1, kind);
+  if (m_element_type) {
+    std::string name;
+    uint64_t bit_offset_ptr;
+    uint32_t bitfield_bit_size_ptr;
+    bool is_bitfield_ptr;
+    m_element_type = m_element_type.GetFieldAtIndex(
+        0, name, &bit_offset_ptr, &bitfield_bit_size_ptr, &is_bitfield_ptr);
+    m_element_type = m_element_type.GetTypedefedType();
+    return m_element_type.IsValid();
+  } else {
+    m_element_type = m_backend.GetCompilerType().GetTemplateArgument(0, kind);
+    return m_element_type.IsValid();
+  }
 }
 
 void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
@@ -255,10 +282,38 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
     return;
   CompilerType node_type(node->GetCompilerType());
   uint64_t bit_offset;
-  if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) ==
-      UINT32_MAX)
-    return;
-  m_skip_size = bit_offset / 8u;
+  if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) !=
+      UINT32_MAX) {
+    m_skip_size = bit_offset / 8u;
+  } else {
+    ClangASTContext *ast_ctx =
+        llvm::dyn_cast_or_null<ClangASTContext>(node_type.GetTypeSystem());
+    if (!ast_ctx)
+      return;
+    CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
+        ConstString(),
+        {{"ptr0", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+         {"ptr1", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+         {"ptr2", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+         {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
+         {"payload", (m_element_type.GetCompleteType(), m_element_type)}});
+    std::string child_name;
+    uint32_t child_byte_size;
+    int32_t child_byte_offset = 0;
+    uint32_t child_bitfield_bit_size;
+    uint32_t child_bitfield_bit_offset;
+    bool child_is_base_class;
+    bool child_is_deref_of_parent;
+    uint64_t language_flags;
+    if (tree_node_type
+            .GetChildCompilerTypeAtIndex(
+                nullptr, 4, true, true, true, child_name, child_byte_size,
+                child_byte_offset, child_bitfield_bit_size,
+                child_bitfield_bit_offset, child_is_base_class,
+                child_is_deref_of_parent, nullptr, language_flags)
+            .IsValid())
+      m_skip_size = (uint32_t)child_byte_offset;
+  }
 }
 
 lldb::ValueObjectSP
@@ -301,7 +356,12 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
         return lldb::ValueObjectSP();
       }
       GetValueOffset(iterated_sp);
-      iterated_sp = iterated_sp->GetChildMemberWithName(g___value_, true);
+      auto child_sp = iterated_sp->GetChildMemberWithName(g___value_, true);
+      if (child_sp)
+        iterated_sp = child_sp;
+      else
+        iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
+            m_skip_size, m_element_type, true);
       if (!iterated_sp) {
         m_tree = nullptr;
         return lldb::ValueObjectSP();

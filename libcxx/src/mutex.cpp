@@ -195,8 +195,8 @@ recursive_timed_mutex::unlock() _NOEXCEPT
 // keep in sync with:  7741191.
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-static __libcpp_mutex_t mut = _LIBCPP_MUTEX_INITIALIZER;
-static __libcpp_condvar_t cv = _LIBCPP_CONDVAR_INITIALIZER;
+_LIBCPP_SAFE_STATIC static __libcpp_mutex_t mut = _LIBCPP_MUTEX_INITIALIZER;
+_LIBCPP_SAFE_STATIC static __libcpp_condvar_t cv = _LIBCPP_CONDVAR_INITIALIZER;
 #endif
 
 void

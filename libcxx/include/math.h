@@ -308,10 +308,6 @@ extern "C++" {
 
 #include <type_traits>
 
-#ifdef _LIBCPP_MSVCRT
-#include "support/win32/math_win32.h"
-#endif
-
 // signbit
 
 #ifdef signbit

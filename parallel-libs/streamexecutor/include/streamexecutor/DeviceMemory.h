@@ -32,7 +32,7 @@
 #include <cassert>
 #include <cstddef>
 
-#include "streamexecutor/Utils/Error.h"
+#include "streamexecutor/Error.h"
 
 namespace streamexecutor {
 
@@ -46,6 +46,8 @@ template <typename ElemT> class GlobalDeviceMemory;
 /// memory, and an element count for the size of the slice.
 template <typename ElemT> class GlobalDeviceMemorySlice {
 public:
+  using ElementTy = ElemT;
+
   /// Intentionally implicit so GlobalDeviceMemory<T> can be passed to functions
   /// expecting GlobalDeviceMemorySlice<T> arguments.
   GlobalDeviceMemorySlice(const GlobalDeviceMemory<ElemT> &Memory)
@@ -75,7 +77,8 @@ public:
   size_t getByteCount() const { return ElementCount * sizeof(ElemT); }
 
   /// Creates a slice of the memory with the first DropCount elements removed.
-  GlobalDeviceMemorySlice<ElemT> drop_front(size_t DropCount) const {
+  LLVM_ATTRIBUTE_UNUSED_RESULT
+  GlobalDeviceMemorySlice<ElemT> slice(size_t DropCount) const {
     assert(DropCount <= ElementCount &&
            "dropping more than the size of a slice");
     return GlobalDeviceMemorySlice<ElemT>(BaseMemory, ElementOffset + DropCount,
@@ -83,6 +86,7 @@ public:
   }
 
   /// Creates a slice of the memory with the last DropCount elements removed.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
   GlobalDeviceMemorySlice<ElemT> drop_back(size_t DropCount) const {
     assert(DropCount <= ElementCount &&
            "dropping more than the size of a slice");
@@ -92,6 +96,7 @@ public:
 
   /// Creates a slice of the memory that chops off the first DropCount elements
   /// and keeps the next TakeCount elements.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
   GlobalDeviceMemorySlice<ElemT> slice(size_t DropCount,
                                        size_t TakeCount) const {
     assert(DropCount + TakeCount <= ElementCount &&
@@ -128,6 +133,9 @@ public:
   /// Returns an opaque handle to the underlying memory.
   const void *getHandle() const { return Handle; }
 
+  /// Returns the address of the opaque handle as stored by this object.
+  const void *const *getHandleAddress() const { return &Handle; }
+
   // Cannot copy because the handle must be owned by a single object.
   GlobalDeviceMemoryBase(const GlobalDeviceMemoryBase &) = delete;
   GlobalDeviceMemoryBase &operator=(const GlobalDeviceMemoryBase &) = delete;
@@ -138,7 +146,7 @@ protected:
       : TheDevice(D), Handle(Handle), ByteCount(ByteCount) {}
 
   /// Transfer ownership of the underlying handle.
-  GlobalDeviceMemoryBase(GlobalDeviceMemoryBase &&Other)
+  GlobalDeviceMemoryBase(GlobalDeviceMemoryBase &&Other) noexcept
       : TheDevice(Other.TheDevice), Handle(Other.Handle),
         ByteCount(Other.ByteCount) {
     Other.TheDevice = nullptr;
@@ -146,7 +154,7 @@ protected:
     Other.ByteCount = 0;
   }
 
-  GlobalDeviceMemoryBase &operator=(GlobalDeviceMemoryBase &&Other) {
+  GlobalDeviceMemoryBase &operator=(GlobalDeviceMemoryBase &&Other) noexcept {
     TheDevice = Other.TheDevice;
     Handle = Other.Handle;
     ByteCount = Other.ByteCount;
@@ -171,8 +179,10 @@ protected:
 template <typename ElemT>
 class GlobalDeviceMemory : public GlobalDeviceMemoryBase {
 public:
-  GlobalDeviceMemory(GlobalDeviceMemory &&Other) = default;
-  GlobalDeviceMemory &operator=(GlobalDeviceMemory &&Other) = default;
+  using ElementTy = ElemT;
+
+  GlobalDeviceMemory(GlobalDeviceMemory &&) noexcept;
+  GlobalDeviceMemory &operator=(GlobalDeviceMemory &&) noexcept;
 
   /// Returns the number of elements of type ElemT that constitute this
   /// allocation.
@@ -195,6 +205,14 @@ private:
   GlobalDeviceMemory(Device *D, const void *Handle, size_t ElementCount)
       : GlobalDeviceMemoryBase(D, Handle, ElementCount * sizeof(ElemT)) {}
 };
+
+template <typename ElemT>
+GlobalDeviceMemory<ElemT>::GlobalDeviceMemory(
+    GlobalDeviceMemory<ElemT> &&) noexcept = default;
+
+template <typename ElemT>
+GlobalDeviceMemory<ElemT> &GlobalDeviceMemory<ElemT>::
+operator=(GlobalDeviceMemory<ElemT> &&) noexcept = default;
 
 /// A class to represent the size of a dynamic shared memory buffer of elements
 /// of type T on a device.

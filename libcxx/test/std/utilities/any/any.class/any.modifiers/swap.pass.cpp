@@ -89,6 +89,37 @@ void test_noexcept()
       );
 }
 
+void test_self_swap() {
+    {
+        // empty
+        any a;
+        a.swap(a);
+        assertEmpty(a);
+    }
+    { // small
+        using T = small;
+        any a{T{42}};
+        T::reset();
+        a.swap(a);
+        assertContains<T>(a, 42);
+        assert(T::count == 1);
+        assert(T::copied == 0);
+        assert(T::moved == 0);
+    }
+    assert(small::count == 0);
+    { // large
+        using T = large;
+        any a{T{42}};
+        T::reset();
+        a.swap(a);
+        assertContains<T>(a, 42);
+        assert(T::copied == 0);
+        assert(T::moved == 0);
+        assert(T::count == 1);
+    }
+    assert(large::count == 0);
+}
+
 int main()
 {
     test_noexcept();
@@ -98,4 +129,5 @@ int main()
     test_swap<large1, large2>();
     test_swap<small, large>();
     test_swap<large, small>();
+    test_self_swap();
 }

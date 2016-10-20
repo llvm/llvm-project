@@ -34,6 +34,7 @@ namespace llvm {
 
 class Module;
 class ExecutionEngine;
+class ObjectCache;
 
 } // namespace llvm
 
@@ -414,6 +415,7 @@ private:
 
   std::unique_ptr<llvm::LLVMContext> m_context_ap;
   std::unique_ptr<llvm::ExecutionEngine> m_execution_engine_ap;
+  std::unique_ptr<llvm::ObjectCache> m_object_cache_ap;
   std::unique_ptr<llvm::Module>
       m_module_ap; ///< Holder for the module until it's been handed off
   lldb::ModuleWP m_jit_module_wp;

@@ -18,7 +18,7 @@
 # RUN: llvm-objdump -section-headers %t2 | FileCheck %s
 
 # CHECK:     Sections:
-# CHECK-NEXT: Idx Name          Size      Address        
+# CHECK-NEXT: Idx Name          Size      Address
 # CHECK-NEXT:   0               00000000 0000000000000000
 # CHECK-NEXT:   1 .hex1         00000008 0000000000001000
 # CHECK-NEXT:   2 .hex2         00000008 0000000000001010

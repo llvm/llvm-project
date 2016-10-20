@@ -16,6 +16,7 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
 #include "count_new.hpp"
 
 struct A
@@ -65,7 +66,7 @@ int main()
     assert(p2.get());
     }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     nc = globalMemCounter.outstanding_new;
     {
     char c = 'e';

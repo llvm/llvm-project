@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <regex>
 
 // template <class BidirectionalIterator, class Allocator, class charT, class traits>
@@ -25,6 +24,7 @@
 
 extern "C" void LLVMFuzzerTestOneInput(const char *data)
 {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     size_t size = strlen(data);
     if (size > 0)
     {
@@ -37,6 +37,7 @@ extern "C" void LLVMFuzzerTestOneInput(const char *data)
         }
         catch (std::regex_error &) {}
     }
+#endif
 }
 
 

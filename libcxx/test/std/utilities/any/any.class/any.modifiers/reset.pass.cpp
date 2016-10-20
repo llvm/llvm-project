@@ -53,7 +53,7 @@ int main()
     {
         any a(large(1));
         assert(large::count == 1);
-        assertContains<large>(a);
+        assertContains<large>(a, 1);
 
         a.reset();
 

@@ -29,6 +29,11 @@ public:
       lldb_private::UnwindPlan &unwind_plan) override;
 
   bool
+  GetNonCallSiteUnwindPlanFromAssembly(lldb_private::AddressRange &func,
+                                       uint8_t *opcode_data, size_t opcode_size,
+                                       lldb_private::UnwindPlan &unwind_plan);
+
+  bool
   AugmentUnwindPlanFromCallSite(lldb_private::AddressRange &func,
                                 lldb_private::Thread &thread,
                                 lldb_private::UnwindPlan &unwind_plan) override;
@@ -67,8 +72,8 @@ private:
   UnwindAssemblyInstEmulation(const lldb_private::ArchSpec &arch,
                               lldb_private::EmulateInstruction *inst_emulator)
       : UnwindAssembly(arch), m_inst_emulator_ap(inst_emulator),
-        m_range_ptr(NULL), m_thread_ptr(NULL), m_unwind_plan_ptr(NULL),
-        m_curr_row(), m_cfa_reg_info(), m_fp_is_cfa(false), m_register_values(),
+        m_range_ptr(NULL), m_unwind_plan_ptr(NULL), m_curr_row(),
+        m_cfa_reg_info(), m_fp_is_cfa(false), m_register_values(),
         m_pushed_regs(), m_curr_row_modified(false),
         m_forward_branch_offset(0) {
     if (m_inst_emulator_ap.get()) {
@@ -130,7 +135,6 @@ private:
 
   std::unique_ptr<lldb_private::EmulateInstruction> m_inst_emulator_ap;
   lldb_private::AddressRange *m_range_ptr;
-  lldb_private::Thread *m_thread_ptr;
   lldb_private::UnwindPlan *m_unwind_plan_ptr;
   lldb_private::UnwindPlan::RowSP m_curr_row;
   typedef std::map<uint64_t, uint64_t> PushedRegisterToAddrMap;

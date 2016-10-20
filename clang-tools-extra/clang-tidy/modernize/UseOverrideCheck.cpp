@@ -104,7 +104,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
 
   CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Method->getSourceRange()), Sources,
-      Result.Context->getLangOpts());
+      getLangOpts());
 
   if (!FileRange.isValid())
     return;

@@ -1000,7 +1000,7 @@ SwiftLanguage::GetStringPrinterEscapingHelper(
                 return true;
               };
 
-              unsigned utf8_encoded_len = getNumBytesForUTF8(*buffer);
+              unsigned utf8_encoded_len = llvm::getNumBytesForUTF8(*buffer);
 
               if (1 + buffer_end - buffer < utf8_encoded_len) {
                 // I don't have enough bytes - print whatever I have left

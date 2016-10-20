@@ -3,8 +3,8 @@
 # RUN: echo "SECTIONS { }" > %t.script
 # RUN: not ld.lld %t.o -script %t.script -o %t 2>&1 | FileCheck %s
 # CHECK: undefined symbol: _edata
-# CHECK: undefined symbol: _end
 # CHECK: undefined symbol: _etext
+# CHECK: undefined symbol: _end
 
 .global _start,_end,_etext,_edata
 .text

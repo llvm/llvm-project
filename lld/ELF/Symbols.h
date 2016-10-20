@@ -214,6 +214,9 @@ public:
     this->File = F;
   }
 
+  // Return true if the symbol is a PIC function.
+  bool isMipsPIC() const;
+
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
   }
@@ -322,7 +325,7 @@ public:
 
   // Returns an object file for this symbol, or a nullptr if the file
   // was already returned.
-  std::unique_ptr<InputFile> fetch();
+  InputFile *fetch();
 
 protected:
   Lazy(SymbolBody::Kind K, StringRef Name, uint8_t Type)
@@ -340,7 +343,7 @@ public:
   }
 
   ArchiveFile *file() { return (ArchiveFile *)this->File; }
-  std::unique_ptr<InputFile> fetch();
+  InputFile *fetch();
 
 private:
   const llvm::object::Archive::Symbol Sym;
@@ -357,7 +360,7 @@ public:
   }
 
   LazyObjectFile *file() { return (LazyObjectFile *)this->File; }
-  std::unique_ptr<InputFile> fetch();
+  InputFile *fetch();
 };
 
 // Some linker-generated symbols need to be created as
@@ -409,9 +412,6 @@ struct Symbol {
   // Symbol visibility. This is the computed minimum visibility of all
   // observed non-DSO symbols.
   unsigned Visibility : 2;
-
-  // True if the symbol has unnamed_addr.
-  unsigned HasUnnamedAddr : 1;
 
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for

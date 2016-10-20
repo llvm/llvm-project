@@ -10,10 +10,12 @@
 #ifndef LLD_ELF_LINKER_SCRIPT_H
 #define LLD_ELF_LINKER_SCRIPT_H
 
+#include "Config.h"
 #include "Strings.h"
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -26,25 +28,32 @@ class DefinedCommon;
 class ScriptParser;
 class SymbolBody;
 template <class ELFT> class InputSectionBase;
+template <class ELFT> class InputSection;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
 class InputSectionData;
 
+// This represents an expression in the linker script.
+// ScriptParser::readExpr reads an expression and returns an Expr.
+// Later, we evaluate the expression by calling the function
+// with the value of special context variable ".".
 typedef std::function<uint64_t(uint64_t)> Expr;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
 void readLinkerScript(MemoryBufferRef MB);
 
+// Parses a version script.
 void readVersionScript(MemoryBufferRef MB);
 
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
 enum SectionsCommandKind {
-  AssignmentKind,
+  AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  AssertKind
+  AssertKind,   // ASSERT(expr)
+  BytesDataKind // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
 };
 
 struct BaseCommand {
@@ -53,6 +62,7 @@ struct BaseCommand {
   int Kind;
 };
 
+// This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
   SymbolAssignment(StringRef Name, Expr E, bool IsAbsolute)
       : BaseCommand(AssignmentKind), Name(Name), Expression(E),
@@ -70,14 +80,12 @@ struct SymbolAssignment : BaseCommand {
   bool Provide = false;
   bool Hidden = false;
   bool IsAbsolute;
-  InputSectionData *GoesAfter = nullptr;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
-// An output section will only be created if all of its input sections are
-// read-only
-// or all of its input sections are read-write by using the keyword ONLY_IF_RO
-// and ONLY_IF_RW respectively.
+// If an output section is marked as ONLY_IF_RO, the section is created
+// only if its input sections are read-only. Likewise, an output section
+// with ONLY_IF_RW is created if all input sections are RW.
 enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 
 struct OutputSectionCommand : BaseCommand {
@@ -87,7 +95,7 @@ struct OutputSectionCommand : BaseCommand {
   StringRef Name;
   Expr AddrExpr;
   Expr AlignExpr;
-  Expr LmaExpr;
+  Expr LMAExpr;
   Expr SubalignExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
@@ -95,7 +103,26 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
-enum SortKind { SortNone, SortByName, SortByAlignment };
+// This struct represents one section match pattern in SECTIONS() command.
+// It can optionally have negative match pattern for EXCLUDED_FILE command.
+// Also it may be surrounded with SORT() command, so contains sorting rules.
+struct SectionPattern {
+  SectionPattern(llvm::Regex &&Re1, llvm::Regex &&Re2)
+      : ExcludedFileRe(std::forward<llvm::Regex>(Re1)),
+        SectionRe(std::forward<llvm::Regex>(Re2)) {}
+
+  SectionPattern(SectionPattern &&Other) {
+    std::swap(ExcludedFileRe, Other.ExcludedFileRe);
+    std::swap(SectionRe, Other.SectionRe);
+    std::swap(SortOuter, Other.SortOuter);
+    std::swap(SortInner, Other.SortInner);
+  }
+
+  llvm::Regex ExcludedFileRe;
+  llvm::Regex SectionRe;
+  SortSectionPolicy SortOuter;
+  SortSectionPolicy SortInner;
+};
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
@@ -103,16 +130,29 @@ struct InputSectionDescription : BaseCommand {
         FileRe(compileGlobPatterns({FilePattern})) {}
   static bool classof(const BaseCommand *C);
   llvm::Regex FileRe;
-  SortKind SortOuter = SortNone;
-  SortKind SortInner = SortNone;
-  llvm::Regex ExcludedFileRe;
-  llvm::Regex SectionRe;
+
+  // Input sections that matches at least one of SectionPatterns
+  // will be associated with this InputSectionDescription.
+  std::vector<SectionPattern> SectionPatterns;
+
+  std::vector<InputSectionData *> Sections;
 };
 
+// Represents an ASSERT().
 struct AssertCommand : BaseCommand {
   AssertCommand(Expr E) : BaseCommand(AssertKind), Expression(E) {}
   static bool classof(const BaseCommand *C);
   Expr Expression;
+};
+
+// Represents BYTE(), SHORT(), LONG(), or QUAD().
+struct BytesDataCommand : BaseCommand {
+  BytesDataCommand(uint64_t Data, unsigned Size)
+      : BaseCommand(BytesDataKind), Data(Data), Size(Size) {}
+  static bool classof(const BaseCommand *C);
+  uint64_t Data;
+  unsigned Offset;
+  unsigned Size;
 };
 
 struct PhdrsCommand {
@@ -132,27 +172,27 @@ public:
   virtual uint64_t getOutputSectionAddress(StringRef Name) = 0;
   virtual uint64_t getOutputSectionSize(StringRef Name) = 0;
   virtual uint64_t getOutputSectionAlign(StringRef Name) = 0;
+  virtual uint64_t getOutputSectionLMA(StringRef Name) = 0;
   virtual uint64_t getHeaderSize() = 0;
   virtual uint64_t getSymbolValue(StringRef S) = 0;
+  virtual bool isDefined(StringRef S) = 0;
 };
 
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
-  // Used to create symbol assignments outside SECTIONS command.
-  std::vector<std::unique_ptr<SymbolAssignment>> Assignments;
   // Used to assign addresses to sections.
   std::vector<std::unique_ptr<BaseCommand>> Commands;
 
   // Used to assign sections to headers.
   std::vector<PhdrsCommand> PhdrsCommands;
 
-  bool HasContents = false;
+  bool HasSections = false;
 
   llvm::BumpPtrAllocator Alloc;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
-  std::vector<llvm::Regex *> KeptSections;
+  std::vector<InputSectionDescription *> KeptSections;
 };
 
 extern ScriptConfiguration *ScriptConfig;
@@ -164,31 +204,38 @@ template <class ELFT> class LinkerScript final : public LinkerScriptBase {
 public:
   LinkerScript();
   ~LinkerScript();
-  void createAssignments();
+  void processCommands(OutputSectionFactory<ELFT> &Factory);
   void createSections(OutputSectionFactory<ELFT> &Factory);
+  void adjustSectionsBeforeSorting();
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();
   bool ignoreInterpSection();
 
   ArrayRef<uint8_t> getFiller(StringRef Name);
-  Expr getLma(StringRef Name);
+  void writeDataBytes(StringRef Name, uint8_t *Buf);
+  bool hasLMA(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
-  void assignAddresses();
-  int compareSections(StringRef A, StringRef B);
+  void assignOffsets(OutputSectionCommand *Cmd);
+  void assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs);
   bool hasPhdrsCommands();
   uint64_t getOutputSectionAddress(StringRef Name) override;
   uint64_t getOutputSectionSize(StringRef Name) override;
   uint64_t getOutputSectionAlign(StringRef Name) override;
+  uint64_t getOutputSectionLMA(StringRef Name) override;
   uint64_t getHeaderSize() override;
   uint64_t getSymbolValue(StringRef S) override;
+  bool isDefined(StringRef S) override;
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
-private:
-  std::vector<InputSectionBase<ELFT> *>
-  getInputSections(const InputSectionDescription *);
+  int getSectionIndex(StringRef Name);
 
-  void discard(OutputSectionCommand &Cmd);
+private:
+  void computeInputSections(InputSectionDescription *);
+
+  void addSection(OutputSectionFactory<ELFT> &Factory,
+                  InputSectionBase<ELFT> *Sec, StringRef Name);
+  void discard(ArrayRef<InputSectionBase<ELFT> *> V);
 
   std::vector<InputSectionBase<ELFT> *>
   createInputSectionList(OutputSectionCommand &Cmd);
@@ -196,11 +243,19 @@ private:
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
 
-  int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(StringRef PhdrName);
 
   uintX_t Dot;
+  uintX_t LMAOffset = 0;
+  OutputSectionBase<ELFT> *CurOutSec = nullptr;
+  uintX_t ThreadBssOffset = 0;
+  void switchTo(OutputSectionBase<ELFT> *Sec);
+  void flush();
+  void output(InputSection<ELFT> *Sec);
+  void process(BaseCommand &Base);
+  llvm::DenseSet<OutputSectionBase<ELFT> *> AlreadyOutputOS;
+  llvm::DenseSet<InputSectionData *> AlreadyOutputIS;
 };
 
 // Variable template is a C++14 feature, so we can't template

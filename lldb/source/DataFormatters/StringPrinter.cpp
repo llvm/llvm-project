@@ -133,9 +133,9 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
                                                          uint8_t *&next) {
   StringPrinter::StringPrinterBufferPointer<> retval{nullptr};
 
-  unsigned utf8_encoded_len = getNumBytesForUTF8(*buffer);
+  unsigned utf8_encoded_len = llvm::getNumBytesForUTF8(*buffer);
 
-  if (1 + buffer_end - buffer < utf8_encoded_len) {
+  if (1u + std::distance(buffer, buffer_end) < utf8_encoded_len) {
     // I don't have enough bytes - print whatever I have left
     retval = {buffer, static_cast<size_t>(1 + buffer_end - buffer)};
     next = buffer_end + 1;
@@ -266,9 +266,10 @@ StringPrinter::GetDefaultEscapingHelper(GetPrintableElementType elem_type) {
 // use this call if you already have an LLDB-side buffer for the data
 template <typename SourceDataType>
 static bool DumpUTFBufferToStream(
-    ConversionResult (*ConvertFunction)(const SourceDataType **,
-                                        const SourceDataType *, UTF8 **, UTF8 *,
-                                        ConversionFlags),
+    llvm::ConversionResult (*ConvertFunction)(const SourceDataType **,
+                                              const SourceDataType *,
+                                              llvm::UTF8 **, llvm::UTF8 *,
+                                              llvm::ConversionFlags),
     const StringPrinter::ReadBufferAndDumpToStreamOptions &dump_options) {
   Stream &stream(*dump_options.GetStream());
   if (dump_options.GetPrefixToken() != 0)
@@ -303,30 +304,29 @@ static bool DumpUTFBufferToStream(
     }
 
     lldb::DataBufferSP utf8_data_buffer_sp;
-    UTF8 *utf8_data_ptr = nullptr;
-    UTF8 *utf8_data_end_ptr = nullptr;
+    llvm::UTF8 *utf8_data_ptr = nullptr;
+    llvm::UTF8 *utf8_data_end_ptr = nullptr;
 
     if (ConvertFunction) {
       utf8_data_buffer_sp.reset(new DataBufferHeap(4 * bufferSPSize, 0));
-      utf8_data_ptr = (UTF8 *)utf8_data_buffer_sp->GetBytes();
+      utf8_data_ptr = (llvm::UTF8 *)utf8_data_buffer_sp->GetBytes();
       utf8_data_end_ptr = utf8_data_ptr + utf8_data_buffer_sp->GetByteSize();
       ConvertFunction(&data_ptr, data_end_ptr, &utf8_data_ptr,
-                      utf8_data_end_ptr, lenientConversion);
+                      utf8_data_end_ptr, llvm::lenientConversion);
       if (false == zero_is_terminator)
         utf8_data_end_ptr = utf8_data_ptr;
+      // needed because the ConvertFunction will change the value of the
+      // data_ptr.
       utf8_data_ptr =
-          (UTF8 *)utf8_data_buffer_sp->GetBytes(); // needed because the
-                                                   // ConvertFunction will
-                                                   // change the value of the
-                                                   // data_ptr
+          (llvm::UTF8 *)utf8_data_buffer_sp->GetBytes();
     } else {
       // just copy the pointers - the cast is necessary to make the compiler
       // happy
       // but this should only happen if we are reading UTF8 data
-      utf8_data_ptr =
-          const_cast<UTF8 *>(reinterpret_cast<const UTF8 *>(data_ptr));
-      utf8_data_end_ptr =
-          const_cast<UTF8 *>(reinterpret_cast<const UTF8 *>(data_end_ptr));
+      utf8_data_ptr = const_cast<llvm::UTF8 *>(
+          reinterpret_cast<const llvm::UTF8 *>(data_ptr));
+      utf8_data_end_ptr = const_cast<llvm::UTF8 *>(
+          reinterpret_cast<const llvm::UTF8 *>(data_end_ptr));
     }
 
     const bool escape_non_printables = dump_options.GetEscapeNonPrintables();
@@ -512,9 +512,10 @@ bool StringPrinter::ReadStringAndDumpToStream<
 template <typename SourceDataType>
 static bool ReadUTFBufferAndDumpToStream(
     const StringPrinter::ReadStringAndDumpToStreamOptions &options,
-    ConversionResult (*ConvertFunction)(const SourceDataType **,
-                                        const SourceDataType *, UTF8 **, UTF8 *,
-                                        ConversionFlags)) {
+    llvm::ConversionResult (*ConvertFunction)(const SourceDataType **,
+                                              const SourceDataType *,
+                                              llvm::UTF8 **, llvm::UTF8 *,
+                                              llvm::ConversionFlags)) {
   assert(options.GetStream() && "need a Stream to print the string to");
 
   if (options.GetLocation() == 0 ||
@@ -591,21 +592,23 @@ template <>
 bool StringPrinter::ReadStringAndDumpToStream<
     StringPrinter::StringElementType::UTF8>(
     const ReadStringAndDumpToStreamOptions &options) {
-  return ReadUTFBufferAndDumpToStream<UTF8>(options, nullptr);
+  return ReadUTFBufferAndDumpToStream<llvm::UTF8>(options, nullptr);
 }
 
 template <>
 bool StringPrinter::ReadStringAndDumpToStream<
     StringPrinter::StringElementType::UTF16>(
     const ReadStringAndDumpToStreamOptions &options) {
-  return ReadUTFBufferAndDumpToStream<UTF16>(options, ConvertUTF16toUTF8);
+  return ReadUTFBufferAndDumpToStream<llvm::UTF16>(options,
+                                                   llvm::ConvertUTF16toUTF8);
 }
 
 template <>
 bool StringPrinter::ReadStringAndDumpToStream<
     StringPrinter::StringElementType::UTF32>(
     const ReadStringAndDumpToStreamOptions &options) {
-  return ReadUTFBufferAndDumpToStream<UTF32>(options, ConvertUTF32toUTF8);
+  return ReadUTFBufferAndDumpToStream<llvm::UTF32>(options,
+                                                   llvm::ConvertUTF32toUTF8);
 }
 
 template <>
@@ -614,7 +617,7 @@ bool StringPrinter::ReadBufferAndDumpToStream<
     const ReadBufferAndDumpToStreamOptions &options) {
   assert(options.GetStream() && "need a Stream to print the string to");
 
-  return DumpUTFBufferToStream<UTF8>(nullptr, options);
+  return DumpUTFBufferToStream<llvm::UTF8>(nullptr, options);
 }
 
 template <>
@@ -632,7 +635,7 @@ bool StringPrinter::ReadBufferAndDumpToStream<
     const ReadBufferAndDumpToStreamOptions &options) {
   assert(options.GetStream() && "need a Stream to print the string to");
 
-  return DumpUTFBufferToStream(ConvertUTF16toUTF8, options);
+  return DumpUTFBufferToStream(llvm::ConvertUTF16toUTF8, options);
 }
 
 template <>
@@ -641,7 +644,7 @@ bool StringPrinter::ReadBufferAndDumpToStream<
     const ReadBufferAndDumpToStreamOptions &options) {
   assert(options.GetStream() && "need a Stream to print the string to");
 
-  return DumpUTFBufferToStream(ConvertUTF32toUTF8, options);
+  return DumpUTFBufferToStream(llvm::ConvertUTF32toUTF8, options);
 }
 
 } // namespace formatters

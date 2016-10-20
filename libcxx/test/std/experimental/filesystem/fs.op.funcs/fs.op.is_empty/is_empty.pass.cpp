@@ -77,4 +77,33 @@ TEST_CASE(test_is_empty_fails)
     TEST_CHECK_THROW(filesystem_error, is_empty(dir2));
 }
 
+TEST_CASE(test_directory_access_denied)
+{
+    scoped_test_env env;
+    const path dir = env.create_dir("dir");
+    const path file1 = env.create_file("dir/file", 42);
+    permissions(dir, perms::none);
+
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(is_empty(dir, ec) == false);
+    TEST_CHECK(ec);
+    TEST_CHECK(ec != GetTestEC());
+
+    TEST_CHECK_THROW(filesystem_error, is_empty(dir));
+}
+
+
+TEST_CASE(test_fifo_fails)
+{
+    scoped_test_env env;
+    const path fifo = env.create_fifo("fifo");
+
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(is_empty(fifo, ec) == false);
+    TEST_CHECK(ec);
+    TEST_CHECK(ec != GetTestEC());
+
+    TEST_CHECK_THROW(filesystem_error, is_empty(fifo));
+}
+
 TEST_SUITE_END()

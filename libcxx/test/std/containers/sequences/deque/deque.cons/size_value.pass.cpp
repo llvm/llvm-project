@@ -14,7 +14,7 @@
 #include <deque>
 #include <cassert>
 
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 
 template <class T, class Allocator>
@@ -44,7 +44,7 @@ int main()
     test<int, std::allocator<int> >(4095, 78);
     test<int, std::allocator<int> >(4096, 1165);
     test<int, std::allocator<int> >(4097, 157);
-    test<int, stack_allocator<int, 4096> >(4095, 90);
+    test<int, limited_allocator<int, 4096> >(4095, 90);
 #if TEST_STD_VER >= 11
     test<int, min_allocator<int> >(4095, 90);
 #endif

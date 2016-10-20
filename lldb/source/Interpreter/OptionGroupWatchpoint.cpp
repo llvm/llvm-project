@@ -57,7 +57,7 @@ OptionGroupWatchpoint::OptionGroupWatchpoint() : OptionGroup() {}
 OptionGroupWatchpoint::~OptionGroupWatchpoint() {}
 
 Error OptionGroupWatchpoint::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = g_option_table[option_idx].short_option;
@@ -93,10 +93,6 @@ void OptionGroupWatchpoint::OptionParsingStarting(
   watch_size = 0;
 }
 
-const OptionDefinition *OptionGroupWatchpoint::GetDefinitions() {
-  return g_option_table;
-}
-
-uint32_t OptionGroupWatchpoint::GetNumDefinitions() {
-  return llvm::array_lengthof(g_option_table);
+llvm::ArrayRef<OptionDefinition> OptionGroupWatchpoint::GetDefinitions() {
+  return llvm::makeArrayRef(g_option_table);
 }

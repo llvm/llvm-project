@@ -2,10 +2,23 @@ cmake_minimum_required(VERSION 3.1)
 
 option(STREAM_EXECUTOR_UNIT_TESTS "enable unit tests" ON)
 option(STREAM_EXECUTOR_ENABLE_DOXYGEN "enable StreamExecutor doxygen" ON)
-option(STREAM_EXECUTOR_ENABLE_CONFIG_TOOL "enable building streamexecutor-config tool" ON)
+option(
+    STREAM_EXECUTOR_ENABLE_CONFIG_TOOL
+    "enable building streamexecutor-config tool"
+    ON)
+option(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM
+    "enable building the CUDA StreamExecutor platform \
+(see CMake's 'FindCUDA' documentation for info on specifying the CUDA path)"
+    OFF)
+
+configure_file(
+    "include/streamexecutor/PlatformOptions.h.in"
+    "include/streamexecutor/PlatformOptions.h")
 
 # First find includes relative to the streamexecutor top-level source path.
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Also look for configured headers in the top-level binary directory.
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 # If we are not building as part of LLVM, build StreamExecutor as a standalone
 # project using LLVM as an external library:
@@ -26,21 +39,14 @@ if(STREAM_EXECUTOR_STANDALONE)
     include_directories(${LLVM_INCLUDE_DIRS})
     add_definitions(${LLVM_DEFINITIONS})
 
-    # Get the LLVM cxxflags by using llvm-config.
-    #
-    # This is necessary to get -fno-rtti if LLVM is compiled that way.
-    execute_process(
-        COMMAND
-        "${LLVM_BINARY_DIR}/bin/llvm-config"
-        --cxxflags
-        OUTPUT_VARIABLE
-        LLVM_CXXFLAGS
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM_CXXFLAGS}")
+    # If LLVM does not have RTTI, don't use it here either.
+    if (NOT LLVM_ENABLE_RTTI)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+    endif()
 
-    # Find the libraries that correspond to the LLVM components
-    # that we wish to use
-    llvm_map_components_to_libnames(llvm_libs support symbolize)
+    set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
+    include(AddLLVM)
 
     if(STREAM_EXECUTOR_UNIT_TESTS)
         enable_testing()
@@ -55,6 +61,10 @@ else(NOT STREAM_EXECUTOR_STANDALONE)
     endif()
 endif(STREAM_EXECUTOR_STANDALONE)
 
+# Find the libraries that correspond to the LLVM components
+# that we wish to use
+llvm_map_components_to_libnames(llvm_libs support symbolize)
+
 # Insist on C++ 11 features.
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -62,8 +72,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Add warning flags.
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 
+# Check for CUDA if it is enabled.
+if(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM)
+    find_package(CUDA REQUIRED)
+    include_directories(${CUDA_INCLUDE_DIRS})
+    find_library(CUDA_DRIVER_LIBRARY cuda)
+    if(NOT CUDA_DRIVER_LIBRARY)
+        message(FATAL_ERROR
+            "could not find libcuda, \
+is the CUDA driver is installed on your system?")
+    endif()
+    set(
+        STREAM_EXECUTOR_CUDA_PLATFORM_TARGET_OBJECT
+        $<TARGET_OBJECTS:streamexecutor_cuda_platform>)
+    set(
+        STREAM_EXECUTOR_LIBCUDA_LIBRARIES
+        ${CUDA_DRIVER_LIBRARY})
+endif(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM)
+
 add_subdirectory(lib)
 add_subdirectory(examples)
+
+if(STREAM_EXECUTOR_UNIT_TESTS)
+    add_subdirectory(unittests)
+endif()
 
 if(STREAM_EXECUTOR_ENABLE_CONFIG_TOOL )
     add_subdirectory(tools/streamexecutor-config)

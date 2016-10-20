@@ -20,6 +20,19 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
 
+// If an input string is in the form of "foo.N" where N is a number,
+// return N. Otherwise, returns 65536, which is one greater than the
+// lowest priority.
+int elf::getPriority(StringRef S) {
+  size_t Pos = S.rfind('.');
+  if (Pos == StringRef::npos)
+    return 65536;
+  int V;
+  if (S.substr(Pos + 1).getAsInteger(10, V))
+    return 65536;
+  return V;
+}
+
 bool elf::hasWildcard(StringRef S) {
   return S.find_first_of("?*[") != StringRef::npos;
 }

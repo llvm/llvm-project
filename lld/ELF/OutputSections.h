@@ -76,7 +76,10 @@ public:
   OutputSectionBase(StringRef Name, uint32_t Type, uintX_t Flags);
   void setVA(uintX_t VA) { Header.sh_addr = VA; }
   uintX_t getVA() const { return Header.sh_addr; }
+  void setLMAOffset(uintX_t LMAOff) { LMAOffset = LMAOff; }
+  uintX_t getLMA() const { return Header.sh_addr + LMAOffset; }
   void setFileOffset(uintX_t Off) { Header.sh_offset = Off; }
+  uintX_t getFileOffset() { return Header.sh_offset; }
   void setSHName(unsigned Val) { Header.sh_name = Val; }
   void writeHeaderTo(Elf_Shdr *SHdr);
   StringRef getName() { return Name; }
@@ -93,6 +96,7 @@ public:
   uintX_t getSize() const { return Header.sh_size; }
   void setSize(uintX_t Val) { Header.sh_size = Val; }
   uintX_t getFlags() const { return Header.sh_flags; }
+  void updateFlags(uintX_t Val) { Header.sh_flags |= Val; }
   uint32_t getPhdrFlags() const;
   uintX_t getFileOff() const { return Header.sh_offset; }
   uintX_t getAlignment() const { return Header.sh_addralign; }
@@ -107,6 +111,14 @@ public:
   // Typically the first section of each PT_LOAD segment has this flag.
   bool PageAlign = false;
 
+  // Pointer to the first section in PT_LOAD segment, which this section
+  // also resides in. This field is used to correctly compute file offset
+  // of a section. When two sections share the same load segment, difference
+  // between their file offsets should be equal to difference between their
+  // virtual addresses. To compute some section offset we use the following
+  // formula: Off = Off_first + VA - VA_first.
+  OutputSectionBase<ELFT> *FirstInPtLoad = nullptr;
+
   virtual void finalize() {}
   virtual void finalizePieces() {}
   virtual void assignOffsets() {}
@@ -116,6 +128,7 @@ public:
 protected:
   StringRef Name;
   Elf_Shdr Header;
+  uintX_t LMAOffset = 0;
 };
 
 template <class ELFT> class GotSection final : public OutputSectionBase<ELFT> {
@@ -417,7 +430,7 @@ public:
                      uintX_t Alignment);
   void addSection(InputSectionBase<ELFT> *S) override;
   void writeTo(uint8_t *Buf) override;
-  unsigned getOffset(StringRef Val);
+  unsigned getOffset(llvm::CachedHashStringRef Val);
   void finalize() override;
   void finalizePieces() override;
   bool shouldTailMerge() const;
@@ -710,9 +723,10 @@ protected:
   uint8_t *HashBuf = nullptr;
 };
 
-template <class ELFT> class BuildIdFnv1 final : public BuildIdSection<ELFT> {
+template <class ELFT>
+class BuildIdFastHash final : public BuildIdSection<ELFT> {
 public:
-  BuildIdFnv1() : BuildIdSection<ELFT>(8) {}
+  BuildIdFastHash() : BuildIdSection<ELFT>(8) {}
   void writeBuildId(ArrayRef<uint8_t> Buf) override;
 };
 
@@ -803,12 +817,18 @@ template <class ELFT> class OutputSectionFactory {
 public:
   std::pair<OutputSectionBase<ELFT> *, bool> create(InputSectionBase<ELFT> *C,
                                                     StringRef OutsecName);
+  std::pair<OutputSectionBase<ELFT> *, bool>
+  create(const SectionKey<ELFT::Is64Bits> &Key, InputSectionBase<ELFT> *C);
 
 private:
-  Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
-
   llvm::SmallDenseMap<Key, OutputSectionBase<ELFT> *> Map;
 };
+
+template <class ELFT> uint64_t getHeaderSize() {
+  if (Config->OFormatBinary)
+    return 0;
+  return Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+}
 
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;

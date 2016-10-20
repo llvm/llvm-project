@@ -325,6 +325,11 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
         self.runCmd("settings set target.process.extra-startup-command "
                     "QSetLogging:bitmask=LOG_DARWIN_LOG;")
 
+    def darwin_log_available(self):
+        match = self.match("plugin structured-data darwin-log status",
+                           patterns=[r"Availability: ([\S]+)"])
+        return match is not None and (match.group(1) == "available")
+
     def do_test(self, enable_options, settings_commands=None,
                 run_enable_after_breakpoint=False, max_entry_count=None):
         """Runs the test inferior, returning collected events.
@@ -400,6 +405,14 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
 
         # And our one and only breakpoint should have been hit.
         self.assertEquals(breakpoint.GetHitCount(), 1)
+
+        # Check if DarwinLog is available.  This check cannot be done
+        # until after the process has started, as the feature availability
+        # comes through the stub.  The stub isn't running until
+        # the target process is running.  So this is really the earliest
+        # we can check.
+        if not self.darwin_log_available():
+            self.skipTest("DarwinLog not available")
 
         # Now setup the structured data listener.
         #

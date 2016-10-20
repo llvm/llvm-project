@@ -18,11 +18,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
-
-#if _LIBCPP_STD_VER > 11
-#define HAS_FOUR_ITERATOR_VERSION
-#endif
 
 int comparison_count = 0;
 template <typename T>
@@ -46,7 +43,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -67,7 +64,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -84,7 +81,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -105,7 +102,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -121,7 +118,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -137,7 +134,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -153,7 +150,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -169,7 +166,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -190,7 +187,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -211,7 +208,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -227,7 +224,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -243,7 +240,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -264,7 +261,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -285,7 +282,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -301,7 +298,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -317,7 +314,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -333,7 +330,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -349,7 +346,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -371,7 +368,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -387,7 +384,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -403,7 +400,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -419,7 +416,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -435,7 +432,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -451,7 +448,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -467,7 +464,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -483,7 +480,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -499,7 +496,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -515,7 +512,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -536,7 +533,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -552,7 +549,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -573,7 +570,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -594,7 +591,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -615,7 +612,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -636,7 +633,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -652,7 +649,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -678,7 +675,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == true);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
@@ -718,7 +715,7 @@ int main()
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),
                                    std::equal_to<const int>()) == false);
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
         assert(std::is_permutation(forward_iterator<const int*>(ia),
                                    forward_iterator<const int*>(ia + sa),
                                    forward_iterator<const int*>(ib),

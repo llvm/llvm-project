@@ -13,7 +13,7 @@
 
 #include <vector>
 #include <cassert>
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
 
@@ -48,7 +48,7 @@ int main()
             assert(c[j] == j);
     }
     {
-        std::vector<int, stack_allocator<int, 15> > c;
+        std::vector<int, limited_allocator<int, 15> > c;
         c.push_back(0);
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));

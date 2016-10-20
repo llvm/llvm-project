@@ -27,6 +27,7 @@
 #include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ProcessStructReader.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -247,12 +248,15 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEndCreator(
 
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     LibCxxMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_pair_ptr() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_pair_ptr(), m_pair_sp() {
   if (valobj_sp)
     Update();
 }
 
 bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
+  m_pair_sp.reset();
+  m_pair_ptr = nullptr;
+
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
     return false;
@@ -264,7 +268,9 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
 
   if (!valobj_sp)
     return false;
-
+  
+  static ConstString g___i_("__i_");
+  
   // this must be a ValueObject* because it is a child of the ValueObject we are
   // producing children for
   // it if were a ValueObjectSP, we would end up with a loop (iterator ->
@@ -281,6 +287,57 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
                                    SyntheticChildrenTraversal::None),
                        nullptr)
                    .get();
+  
+  if (!m_pair_ptr) {
+    m_pair_ptr = valobj_sp->GetValueForExpressionPath(".__i_.__ptr_", nullptr, nullptr, nullptr,
+                                                      ValueObject::GetValueForExpressionPathOptions()
+                                                      .DontCheckDotVsArrowSyntax()
+                                                      .SetSyntheticChildrenTraversal(
+                                                                                     ValueObject::GetValueForExpressionPathOptions::
+                                                                                     SyntheticChildrenTraversal::None),
+                                                      nullptr)
+    .get();
+    if (m_pair_ptr) {
+      auto __i_(valobj_sp->GetChildMemberWithName(g___i_, true));
+      lldb::TemplateArgumentKind kind;
+      if (!__i_) {
+        m_pair_ptr = nullptr;
+        return false;
+      }
+      CompilerType pair_type(__i_->GetCompilerType().GetTemplateArgument(0, kind));
+      std::string name; uint64_t bit_offset_ptr; uint32_t bitfield_bit_size_ptr; bool is_bitfield_ptr;
+      pair_type = pair_type.GetFieldAtIndex(0, name, &bit_offset_ptr, &bitfield_bit_size_ptr, &is_bitfield_ptr);
+      if (!pair_type) {
+        m_pair_ptr = nullptr;
+        return false;
+      }
+      
+      auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
+      m_pair_ptr = nullptr;
+      if (addr && addr!=LLDB_INVALID_ADDRESS) {
+        ClangASTContext *ast_ctx = llvm::dyn_cast_or_null<ClangASTContext>(pair_type.GetTypeSystem());
+        if (!ast_ctx)
+          return false;
+        CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(ConstString(), {
+          {"ptr0",ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+          {"ptr1",ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+          {"ptr2",ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+          {"cw",ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
+          {"payload",pair_type}
+        });
+        DataBufferSP buffer_sp(new DataBufferHeap(tree_node_type.GetByteSize(nullptr),0));
+        ProcessSP process_sp(target_sp->GetProcessSP());
+        Error error;
+        process_sp->ReadMemory(addr, buffer_sp->GetBytes(), buffer_sp->GetByteSize(), error);
+        if (error.Fail())
+          return false;
+        DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(), process_sp->GetAddressByteSize());
+        auto pair_sp = CreateValueObjectFromData("pair", extractor, valobj_sp->GetExecutionContextRef(), tree_node_type);
+        if (pair_sp)
+          m_pair_sp = pair_sp->GetChildAtIndex(4,true);
+      }
+    }
+  }
 
   return false;
 }
@@ -293,9 +350,11 @@ size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
 lldb::ValueObjectSP
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
-  if (!m_pair_ptr)
-    return lldb::ValueObjectSP();
-  return m_pair_ptr->GetChildAtIndex(idx, true);
+  if (m_pair_ptr)
+    return m_pair_ptr->GetChildAtIndex(idx, true);
+  if (m_pair_sp)
+    return m_pair_sp->GetChildAtIndex(idx, true);
+  return lldb::ValueObjectSP();
 }
 
 bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::

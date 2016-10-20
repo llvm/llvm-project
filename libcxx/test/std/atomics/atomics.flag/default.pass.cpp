@@ -19,6 +19,8 @@
 #include <new>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     std::atomic_flag f;
@@ -26,7 +28,7 @@ int main()
     assert(f.test_and_set() == 0);
     {
         typedef std::atomic_flag A;
-        _ALIGNAS_TYPE(A) char storage[sizeof(A)] = {1};
+        TEST_ALIGNAS_TYPE(A) char storage[sizeof(A)] = {1};
         A& zero = *new (storage) A();
         assert(!zero.test_and_set());
         zero.~A();

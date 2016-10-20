@@ -596,33 +596,33 @@ GoASTContext::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
     static std::once_flag g_once_flag;
     std::call_once(g_once_flag, []() {
       // "void"
-      g_type_map.Append(ConstString("void").GetCString(), eBasicTypeVoid);
+      g_type_map.Append(ConstString("void").GetStringRef(), eBasicTypeVoid);
       // "int"
-      g_type_map.Append(ConstString("int").GetCString(), eBasicTypeInt);
-      g_type_map.Append(ConstString("uint").GetCString(),
+      g_type_map.Append(ConstString("int").GetStringRef(), eBasicTypeInt);
+      g_type_map.Append(ConstString("uint").GetStringRef(),
                         eBasicTypeUnsignedInt);
 
       // Miscellaneous
-      g_type_map.Append(ConstString("bool").GetCString(), eBasicTypeBool);
+      g_type_map.Append(ConstString("bool").GetStringRef(), eBasicTypeBool);
 
       // Others. Should these map to C types?
-      g_type_map.Append(ConstString("byte").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint8").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint16").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint32").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint64").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int8").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int16").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int32").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int64").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("float32").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("float64").GetCString(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uintptr").GetCString(), eBasicTypeOther);
+      g_type_map.Append(ConstString("byte").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint8").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint16").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint32").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint64").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("int8").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("int16").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("int32").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("int64").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("float32").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("float64").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("uintptr").GetStringRef(), eBasicTypeOther);
 
       g_type_map.Sort();
     });
 
-    return g_type_map.Find(name.GetCString(), eBasicTypeInvalid);
+    return g_type_map.Find(name.GetStringRef(), eBasicTypeInvalid);
   }
   return eBasicTypeInvalid;
 }

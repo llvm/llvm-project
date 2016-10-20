@@ -4,12 +4,13 @@
 # RUN: ld.lld -shared %t2.o -o %t2.so
 
 # RUN: echo "SECTIONS { \
+# RUN:  . = SIZEOF_HEADERS; \
 # RUN:  .plt  : { *(.plt) } \
 # RUN:  .text : { *(.text) } \
 # RUN:  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE)); \
 # RUN:  .dynamic        : { *(.dynamic) } \
 # RUN:  .got            : { *(.got) } \
-# RUN:  . = DATA_SEGMENT_RELRO_END (24, .); \
+# RUN:  . = DATA_SEGMENT_RELRO_END (1 ? 24 : 0, .); \
 # RUN:  .got.plt : { *(.got.plt) } \
 # RUN:  .data : { *(.data) } \
 # RUN:  .bss        : { *(.bss) } \
@@ -24,14 +25,14 @@
 # RUN: llvm-readobj -s %t2 | FileCheck %s
 
 # CHECK:       Section {
-# CHECK:         Index: 4
-# CHECK-NEXT:    Name: .got
+# CHECK:         Index:
+# CHECK:         Name: .got
 # CHECK-NEXT:    Type: SHT_PROGBITS
 # CHECK-NEXT:    Flags [
 # CHECK-NEXT:      SHF_ALLOC
 # CHECK-NEXT:      SHF_WRITE
 # CHECK-NEXT:    ]
-# CHECK-NEXT:    Address: 0x2000F0
+# CHECK-NEXT:    Address: 0x10F0
 # CHECK-NEXT:    Offset: 0x10F0
 # CHECK-NEXT:    Size:
 # CHECK-NEXT:    Link:
@@ -40,14 +41,14 @@
 # CHECK-NEXT:    EntrySize:
 # CHECK-NEXT:  }
 # CHECK-NEXT:  Section {
-# CHECK-NEXT:    Index: 5
+# CHECK-NEXT:    Index:
 # CHECK-NEXT:    Name: .got.plt
 # CHECK-NEXT:    Type: SHT_PROGBITS
 # CHECK-NEXT:    Flags [
 # CHECK-NEXT:      SHF_ALLOC
 # CHECK-NEXT:      SHF_WRITE
 # CHECK-NEXT:    ]
-# CHECK-NEXT:    Address: 0x201000
+# CHECK-NEXT:    Address: 0x2000
 # CHECK-NEXT:    Offset: 0x2000
 # CHECK-NEXT:    Size:
 # CHECK-NEXT:    Link:

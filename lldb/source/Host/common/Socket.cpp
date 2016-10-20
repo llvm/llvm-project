@@ -253,9 +253,9 @@ Error Socket::UnixAbstractAccept(llvm::StringRef name,
 bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
                                std::string &host_str, std::string &port_str,
                                int32_t &port, Error *error_ptr) {
-  static RegularExpression g_regex("([^:]+):([0-9]+)");
+  static RegularExpression g_regex(llvm::StringRef("([^:]+):([0-9]+)"));
   RegularExpression::Match regex_match(2);
-  if (g_regex.Execute(host_and_port.data(), &regex_match)) {
+  if (g_regex.Execute(host_and_port, &regex_match)) {
     if (regex_match.GetMatchAtIndex(host_and_port.data(), 1, host_str) &&
         regex_match.GetMatchAtIndex(host_and_port.data(), 2, port_str)) {
       bool ok = false;

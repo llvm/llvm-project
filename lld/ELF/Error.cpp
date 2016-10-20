@@ -26,7 +26,7 @@ void elf::log(const Twine &Msg) {
     outs() << Msg << "\n";
 }
 
-void elf::warning(const Twine &Msg) {
+void elf::warn(const Twine &Msg) {
   if (Config->FatalWarnings)
     error(Msg);
   else
@@ -47,8 +47,8 @@ void elf::fatal(const Twine &Msg) {
   exit(1);
 }
 
-void elf::fatal(const Twine &Msg, const Twine &Prefix) {
-  fatal(Prefix + ": " + Msg);
+void elf::fatal(std::error_code EC, const Twine &Prefix) {
+  fatal(Prefix + ": " + EC.message());
 }
 
 } // namespace lld

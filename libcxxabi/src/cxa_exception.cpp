@@ -12,16 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "config.h"
+#include "threading_support.h"
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate
-#include <cstdlib>          // for malloc, free
 #include <cstring>          // for memset
-#if !LIBCXXABI_HAS_NO_THREADS
-#  include <pthread.h>      // for fallback_malloc.ipp's mutexes
-#endif
 #include "cxa_exception.hpp"
 #include "cxa_handlers.hpp"
+#include "fallback_malloc.h"
 
 // +---------------------------+-----------------------------+---------------+
 // | __cxa_exception           | _Unwind_Exception CLNGC++\0 | thrown object |
@@ -104,20 +102,6 @@ static inline  int decrementHandlerCount(__cxa_exception *exception) {
     return --exception->handlerCount;
 }
 
-#include "fallback_malloc.ipp"
-
-//  Allocate some memory from _somewhere_
-static void *do_malloc(size_t size) {
-    void *ptr = std::malloc(size);
-    if (NULL == ptr) // if malloc fails, fall back to emergency stash
-        ptr = fallback_malloc(size);
-    return ptr;
-}
-
-static void do_free(void *ptr) {
-    is_fallback_ptr(ptr) ? fallback_free(ptr) : std::free(ptr);
-}
-
 /*
     If reason isn't _URC_FOREIGN_EXCEPTION_CAUGHT, then the terminateHandler
     stored in exc is called.  Otherwise the exceptionDestructor stored in 
@@ -158,7 +142,8 @@ extern "C" {
 //  user's exception object.
 _LIBCXXABI_FUNC_VIS void *__cxa_allocate_exception(size_t thrown_size) throw() {
     size_t actual_size = cxa_exception_size_from_exception_thrown_size(thrown_size);
-    __cxa_exception* exception_header = static_cast<__cxa_exception*>(do_malloc(actual_size));
+    __cxa_exception *exception_header =
+        static_cast<__cxa_exception *>(__malloc_with_fallback(actual_size));
     if (NULL == exception_header)
         std::terminate();
     std::memset(exception_header, 0, actual_size);
@@ -168,7 +153,7 @@ _LIBCXXABI_FUNC_VIS void *__cxa_allocate_exception(size_t thrown_size) throw() {
 
 //  Free a __cxa_exception object allocated with __cxa_allocate_exception.
 _LIBCXXABI_FUNC_VIS void __cxa_free_exception(void *thrown_object) throw() {
-    do_free(cxa_exception_from_thrown_object(thrown_object));
+    __free_with_fallback(cxa_exception_from_thrown_object(thrown_object));
 }
 
 
@@ -177,7 +162,7 @@ _LIBCXXABI_FUNC_VIS void __cxa_free_exception(void *thrown_object) throw() {
 //  Otherwise, it will work like __cxa_allocate_exception.
 void * __cxa_allocate_dependent_exception () {
     size_t actual_size = sizeof(__cxa_dependent_exception);
-    void *ptr = do_malloc(actual_size);
+    void *ptr = __malloc_with_fallback(actual_size);
     if (NULL == ptr)
         std::terminate();
     std::memset(ptr, 0, actual_size);
@@ -188,7 +173,7 @@ void * __cxa_allocate_dependent_exception () {
 //  This function shall free a dependent_exception.
 //  It does not affect the reference count of the primary exception.
 void __cxa_free_dependent_exception (void * dependent_exception) {
-    do_free(dependent_exception);
+    __free_with_fallback(dependent_exception);
 }
 
 

@@ -153,7 +153,7 @@ void test_copy_assign_throws()
 
         assert(Tp::count == 1);
         assertEmpty<Tp>(lhs);
-        assertContains<Tp>(rhs);
+        assertContains<Tp>(rhs, 1);
     }
     {
         any lhs((small(2)));
@@ -166,7 +166,7 @@ void test_copy_assign_throws()
         assert(small::count == 1);
         assert(Tp::count == 1);
         assertContains<small>(lhs, 2);
-        assertContains<Tp>(rhs);
+        assertContains<Tp>(rhs, 1);
     }
     {
         any lhs((large(2)));
@@ -179,7 +179,7 @@ void test_copy_assign_throws()
         assert(large::count == 1);
         assert(Tp::count == 1);
         assertContains<large>(lhs, 2);
-        assertContains<Tp>(rhs);
+        assertContains<Tp>(rhs, 1);
     }
 #endif
 }

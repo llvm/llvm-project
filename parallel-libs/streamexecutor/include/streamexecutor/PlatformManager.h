@@ -21,8 +21,8 @@
 
 #include <map>
 
+#include "streamexecutor/Error.h"
 #include "streamexecutor/Platform.h"
-#include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 

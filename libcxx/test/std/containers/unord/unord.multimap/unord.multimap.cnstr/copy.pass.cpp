@@ -82,7 +82,7 @@ int main()
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
     }
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multimap<int, std::string,
                                    test_hash<std::hash<int> >,
@@ -136,8 +136,6 @@ int main()
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
     }
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multimap<int, std::string,
                                    test_hash<std::hash<int> >,

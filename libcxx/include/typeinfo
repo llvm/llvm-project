@@ -77,8 +77,6 @@ class _LIBCPP_EXCEPTION_ABI type_info
     type_info& operator=(const type_info&);
     type_info(const type_info&);
 
-    typedef size_t _LIBCPP_MAY_ALIAS _ASizeT; // Avoid strict-aliasing issues.
-
 protected:
 #ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
     const char* __type_name;
@@ -119,7 +117,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_t hash_code() const _NOEXCEPT
 #ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
-        {return *reinterpret_cast<const _ASizeT *>(&__type_name);}
+        {return reinterpret_cast<size_t>(__type_name);}
 #else
         {if (!(__type_name & _LIBCPP_NONUNIQUE_RTTI_BIT)) return __type_name;
          const char *__ptr = name();

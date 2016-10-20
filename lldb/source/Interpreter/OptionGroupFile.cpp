@@ -38,7 +38,7 @@ OptionGroupFile::OptionGroupFile(uint32_t usage_mask, bool required,
 OptionGroupFile::~OptionGroupFile() {}
 
 Error OptionGroupFile::SetOptionValue(uint32_t option_idx,
-                                      const char *option_arg,
+                                      llvm::StringRef option_arg,
                                       ExecutionContext *execution_context) {
   Error error(m_file.SetValueFromString(option_arg));
   return error;
@@ -69,9 +69,9 @@ OptionGroupFileList::OptionGroupFileList(
 OptionGroupFileList::~OptionGroupFileList() {}
 
 Error OptionGroupFileList::SetOptionValue(uint32_t option_idx,
-                                          const char *option_arg,
+                                          llvm::StringRef option_value,
                                           ExecutionContext *execution_context) {
-  Error error(m_file_list.SetValueFromString(option_arg));
+  Error error(m_file_list.SetValueFromString(option_value));
   return error;
 }
 

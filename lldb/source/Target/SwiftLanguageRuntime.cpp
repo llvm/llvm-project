@@ -3656,6 +3656,12 @@ SwiftDemangleNodeKindToCString(const swift::Demangle::Node::Kind node_kind) {
 #undef NODE
 }
 
+static OptionDefinition g_swift_demangle_options[] = {
+  // clang-format off
+  {LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
+  // clang-format on
+};
+
 class CommandObjectSwift_Demangle : public CommandObjectParsed {
 public:
   CommandObjectSwift_Demangle(CommandInterpreter &interpreter)
@@ -3676,8 +3682,8 @@ public:
 
     virtual ~CommandOptions() {}
 
-    virtual Error SetOptionValue(uint32_t option_idx, const char *option_arg,
-                                 ExecutionContext *execution_context) {
+    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+                                 ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
@@ -3694,15 +3700,16 @@ public:
       return error;
     }
 
-    void OptionParsingStarting(ExecutionContext *execution_context) {
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_expand.Clear();
     }
 
-    const OptionDefinition *GetDefinitions() { return g_option_table; }
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_swift_demangle_options);
+    }
 
     // Options table: Required for subclasses of Options.
 
-    static OptionDefinition g_option_table[];
     OptionValueBoolean m_expand;
   };
 
@@ -3751,11 +3758,6 @@ protected:
 
   CommandOptions m_options;
 };
-
-OptionDefinition CommandObjectSwift_Demangle::CommandOptions::g_option_table[] =
-    {{LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, NULL,
-      NULL, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
-     {0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL}};
 
 class CommandObjectSwift_RefCount : public CommandObjectRaw {
 public:

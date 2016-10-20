@@ -1,14 +1,30 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -disable-output < %s
+; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
-; Verify we only create one SAI object for up.3.ph as it is outside the SCoP.
+; Check for correct code generation of exit PHIs, even if the same PHI value
+; is used again inside the the SCoP.
+; Note that if.else113 is removed from the SCoP because it is never executed.
 ;
 ; CHECK: Region: %for.body
 ;
 ; CHECK:         Arrays {
 ; CHECK-NEXT:        double MemRef_up_3_ph; // Element size 8
 ; CHECK-NEXT:        i32* MemRef_A[*]; // Element size 8
+; CHECK-NEXT:        double MemRef_up_3_ph; // Element size 8
 ; CHECK-NEXT:    }
+;
+; CODEGEN:      polly.merge_new_and_old:
+; CODEGEN-NEXT:   %up.3.ph.ph.merge = phi double [ %up.3.ph.ph.final_reload, %polly.exiting ], [ undef, %for.cond.outer304.region_exiting ]
+;
+; CODEGEN:      for.cond.outer304:
+; CODEGEN-NEXT:   %indvar = phi i64 [ %indvar.next, %polly.merge_new_and_old ], [ 0, %entry ]
+; CODEGEN-NEXT:   %up.3.ph = phi double [ 0.000000e+00, %entry ], [ %up.3.ph.ph.merge, %polly.merge_new_and_old ]
+;
+; CODEGEN:      polly.stmt.if.then111:
+; CODEGEN-NEXT:   store double undef, double* %up.3.ph.s2a
+;
+; CODEGEN:      polly.exiting:
+; CODEGEN-NEXT:   %up.3.ph.ph.final_reload = load double, double* %up.3.ph.s2a
 ;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

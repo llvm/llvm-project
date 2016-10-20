@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 struct A
 {
@@ -63,7 +65,7 @@ int main()
         std::allocator_traits<A<int> >::destroy(a, (A0*)&a0);
         assert(A0::count == 1);
     }
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#if TEST_STD_VER >= 11
     {
         A0::count = 0;
         b_destroy = 0;
@@ -76,5 +78,5 @@ int main()
         assert(A0::count == 1);
         assert(b_destroy == 1);
     }
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif
 }

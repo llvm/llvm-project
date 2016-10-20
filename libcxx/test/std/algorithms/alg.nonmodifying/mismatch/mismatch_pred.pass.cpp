@@ -49,7 +49,7 @@ int main()
     assert(bcp.count() > 0 && bcp.count() < sa);
     bcp.reset();
 
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
     assert(std::mismatch(II(ia), II(ia + sa), II(ib), II(ib + sb), EQ())
             == (std::pair<II, II>(II(ia+3), II(ib+3))));
     assert(std::mismatch(RAI(ia), RAI(ia + sa), RAI(ib), RAI(ib + sb), EQ())
@@ -63,7 +63,7 @@ int main()
     assert(std::mismatch(ia, ia + sa, ib, EQ()) ==
            (std::pair<int*,int*>(ia+3,ib+3)));
 
-#ifdef HAS_FOUR_ITERATOR_VERSION
+#if TEST_STD_VER >= 14
     assert(std::mismatch(ia, ia + sa, ib, ib + sb, EQ()) ==
            (std::pair<int*,int*>(ia+3,ib+3)));
     assert(std::mismatch(ia, ia + sa, ib, ib + 2, EQ()) ==

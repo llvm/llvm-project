@@ -152,7 +152,12 @@ Json::Value exportArrays(const Scop &S) {
 
     Json::Value Array;
     Array["name"] = SAI->getName();
-    for (unsigned i = 1; i < SAI->getNumberOfDimensions(); i++) {
+    unsigned i = 0;
+    if (!SAI->getDimensionSize(i)) {
+      Array["sizes"].append("*");
+      i++;
+    }
+    for (; i < SAI->getNumberOfDimensions(); i++) {
       SAI->getDimensionSize(i)->print(RawStringOstream);
       Array["sizes"].append(RawStringOstream.str());
       Buffer.clear();
@@ -289,6 +294,8 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
   int Index = 0;
   for (ScopStmt &Stmt : S) {
     Json::Value Schedule = JScop["statements"][Index]["schedule"];
+    assert(!Schedule.asString().empty() &&
+           "Schedules that contain extension nodes require special handling.");
     isl_map *Map = isl_map_read_from_str(S.getIslCtx(), Schedule.asCString());
     isl_space *Space = Stmt.getDomainSpace();
 
@@ -477,11 +484,11 @@ bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
   if (SAI->getName() != Array["name"].asCString())
     return false;
 
-  if (SAI->getNumberOfDimensions() != Array["sizes"].size() + 1)
+  if (SAI->getNumberOfDimensions() != Array["sizes"].size())
     return false;
 
-  for (unsigned i = 0; i < Array["sizes"].size(); i++) {
-    SAI->getDimensionSize(i + 1)->print(RawStringOstream);
+  for (unsigned i = 1; i < Array["sizes"].size(); i++) {
+    SAI->getDimensionSize(i)->print(RawStringOstream);
     if (RawStringOstream.str() != Array["sizes"][i].asCString())
       return false;
     Buffer.clear();

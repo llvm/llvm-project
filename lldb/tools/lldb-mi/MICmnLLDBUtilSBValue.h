@@ -70,8 +70,6 @@ private:
   // Attributes:
 private:
   lldb::SBValue &m_rValue;
-  const char *m_pUnkwn;
-  const char *m_pComposite;
   bool m_bValidSBValue; // True = SBValue is a valid object, false = not valid.
   bool m_bHandleCharType;  // True = Yes return text molding to char type, false
                            // = just return data.

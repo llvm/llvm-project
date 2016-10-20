@@ -101,6 +101,12 @@
 		23059A121958B3B2007B8189 /* SBUnixSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = 23059A111958B37B007B8189 /* SBUnixSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		230EC4591D63C3A7008DF59F /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 230EC4571D63C3A7008DF59F /* CMakeLists.txt */; };
 		230EC45B1D63C3BA008DF59F /* ThreadPlanCallOnFunctionExit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 230EC4581D63C3A7008DF59F /* ThreadPlanCallOnFunctionExit.cpp */; };
+		23150FC01DB939F800EA5AB6 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23150FBD1DB939F800EA5AB6 /* CMakeLists.txt */; };
+		23150FC91DB93B9900EA5AB6 /* TestArm64InstEmulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FC61DB93B8C00EA5AB6 /* TestArm64InstEmulation.cpp */; };
+		23150FCF1DB93BD400EA5AB6 /* TestArm64InstEmulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FC61DB93B8C00EA5AB6 /* TestArm64InstEmulation.cpp */; };
+		23150FD01DB93BDB00EA5AB6 /* Testx86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FCC1DB93BC200EA5AB6 /* Testx86AssemblyInspectionEngine.cpp */; };
+		23150FD11DB93BDC00EA5AB6 /* Testx86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FCC1DB93BC200EA5AB6 /* Testx86AssemblyInspectionEngine.cpp */; };
+		23150FD21DB93C1600EA5AB6 /* x86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FBE1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.cpp */; };
 		2326CF441BDD643700A5CEAC /* liblldb-core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2689FFCA13353D7A00698AC0 /* liblldb-core.a */; };
 		2326CF491BDD67D800A5CEAC /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF471BDD67C100A5CEAC /* libncurses.dylib */; };
 		2326CF4B1BDD681800A5CEAC /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF4A1BDD681800A5CEAC /* libz.dylib */; };
@@ -790,7 +796,6 @@
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
-		49684D7C1BAB37F200E6D5D5 /* MIUtilParse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */; };
 		49724D991AD6ED390033C538 /* (null) in Sources */ = {isa = PBXBuildFile; };
 		49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		49753FBB1BEAB2BB00019E45 /* repl_swift in Copy Files */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -1383,6 +1388,7 @@
 				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
 				23D0658E1D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h in Copy Files */,
 				23CB14FB1D66CCF100EDDDE1 /* CMakeLists.txt in Copy Files */,
+				23150FC01DB939F800EA5AB6 /* CMakeLists.txt in Copy Files */,
 				2374D7521D4BB299005C9575 /* GDBRemoteClientBase.h in Copy Files */,
 				23D0658C1D4A7BDA0008EDE6 /* RenderScriptRuntime.h in Copy Files */,
 				23D0658A1D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h in Copy Files */,
@@ -1427,6 +1433,13 @@
 		23059A111958B37B007B8189 /* SBUnixSignals.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBUnixSignals.h; path = include/lldb/API/SBUnixSignals.h; sourceTree = "<group>"; };
 		230EC4571D63C3A7008DF59F /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = source/Target/CMakeLists.txt; sourceTree = "<group>"; };
 		230EC4581D63C3A7008DF59F /* ThreadPlanCallOnFunctionExit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanCallOnFunctionExit.cpp; path = source/Target/ThreadPlanCallOnFunctionExit.cpp; sourceTree = "<group>"; };
+		23150FBD1DB939F800EA5AB6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		23150FBE1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = x86AssemblyInspectionEngine.cpp; sourceTree = "<group>"; };
+		23150FBF1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x86AssemblyInspectionEngine.h; sourceTree = "<group>"; };
+		23150FC51DB93B8C00EA5AB6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		23150FC61DB93B8C00EA5AB6 /* TestArm64InstEmulation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestArm64InstEmulation.cpp; sourceTree = "<group>"; };
+		23150FCB1DB93BC200EA5AB6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		23150FCC1DB93BC200EA5AB6 /* Testx86AssemblyInspectionEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Testx86AssemblyInspectionEngine.cpp; sourceTree = "<group>"; };
 		23173F8B192BA93F005C708F /* lldb-x86-register-enums.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "lldb-x86-register-enums.h"; path = "Utility/lldb-x86-register-enums.h"; sourceTree = "<group>"; };
 		2321F9381BDD332400BA9A93 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SocketAddressTest.cpp; sourceTree = "<group>"; };
@@ -2659,8 +2672,6 @@
 		495BBACF119A0DE700418BEA /* PathMappingList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PathMappingList.h; path = include/lldb/Target/PathMappingList.h; sourceTree = "<group>"; };
 		495D98F31C18F52500B9774B /* SwiftForward.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftForward.h; path = include/lldb/Core/SwiftForward.h; sourceTree = "<group>"; };
 		4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangExternalASTSourceCommon.cpp; path = source/Symbol/ClangExternalASTSourceCommon.cpp; sourceTree = "<group>"; };
-		49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MIUtilParse.cpp; path = "tools/lldb-mi/MIUtilParse.cpp"; sourceTree = SOURCE_ROOT; };
-		49684D791BAB37E400E6D5D5 /* MIUtilParse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MIUtilParse.h; path = "tools/lldb-mi/MIUtilParse.h"; sourceTree = SOURCE_ROOT; };
 		496B01581406DE8900F830D5 /* IRInterpreter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRInterpreter.cpp; path = source/Expression/IRInterpreter.cpp; sourceTree = "<group>"; };
 		496B015A1406DEB100F830D5 /* IRInterpreter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IRInterpreter.h; path = include/lldb/Expression/IRInterpreter.h; sourceTree = "<group>"; };
 		497C86BD122823D800B54702 /* ClangUtilityFunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangUtilityFunction.cpp; path = ExpressionParser/Clang/ClangUtilityFunction.cpp; sourceTree = "<group>"; };
@@ -3501,6 +3512,33 @@
 			path = Kalimba;
 			sourceTree = "<group>";
 		};
+		23150FC31DB93B5700EA5AB6 /* UnwindAssembly */ = {
+			isa = PBXGroup;
+			children = (
+				23150FC41DB93B7500EA5AB6 /* InstEmulation */,
+				23150FCA1DB93BAA00EA5AB6 /* x86 */,
+			);
+			path = UnwindAssembly;
+			sourceTree = "<group>";
+		};
+		23150FC41DB93B7500EA5AB6 /* InstEmulation */ = {
+			isa = PBXGroup;
+			children = (
+				23150FC51DB93B8C00EA5AB6 /* CMakeLists.txt */,
+				23150FC61DB93B8C00EA5AB6 /* TestArm64InstEmulation.cpp */,
+			);
+			path = InstEmulation;
+			sourceTree = "<group>";
+		};
+		23150FCA1DB93BAA00EA5AB6 /* x86 */ = {
+			isa = PBXGroup;
+			children = (
+				23150FCB1DB93BC200EA5AB6 /* CMakeLists.txt */,
+				23150FCC1DB93BC200EA5AB6 /* Testx86AssemblyInspectionEngine.cpp */,
+			);
+			path = x86;
+			sourceTree = "<group>";
+		};
 		2321F9331BDD326500BA9A93 /* unittests */ = {
 			isa = PBXGroup;
 			children = (
@@ -3516,6 +3554,7 @@
 				2321F93F1BDD33D800BA9A93 /* ScriptInterpreter */,
 				23CB15091D66CF2B00EDDDE1 /* Symbol */,
 				23CB150A1D66CF3200EDDDE1 /* SymbolFile */,
+				23150FC31DB93B5700EA5AB6 /* UnwindAssembly */,
 				2321F9421BDD343A00BA9A93 /* Utility */,
 			);
 			path = unittests;
@@ -4627,8 +4666,6 @@
 				266941E91A6DC2AC0063BE93 /* MIUtilFileStd.h */,
 				266941EA1A6DC2AC0063BE93 /* MIUtilMapIdToVariant.cpp */,
 				266941EB1A6DC2AC0063BE93 /* MIUtilMapIdToVariant.h */,
-				49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */,
-				49684D791BAB37E400E6D5D5 /* MIUtilParse.h */,
 				266941EC1A6DC2AC0063BE93 /* MIUtilSingletonBase.h */,
 				266941ED1A6DC2AC0063BE93 /* MIUtilSingletonHelper.h */,
 				266941EE1A6DC2AC0063BE93 /* MIUtilString.cpp */,
@@ -4654,8 +4691,11 @@
 		2692BA17136611CD00F9E14D /* x86 */ = {
 			isa = PBXGroup;
 			children = (
+				23150FBD1DB939F800EA5AB6 /* CMakeLists.txt */,
 				263E949D13661AE400E7D1CE /* UnwindAssembly-x86.cpp */,
 				263E949E13661AE400E7D1CE /* UnwindAssembly-x86.h */,
+				23150FBE1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.cpp */,
+				23150FBF1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.h */,
 			);
 			path = x86;
 			sourceTree = "<group>";
@@ -7380,9 +7420,11 @@
 			files = (
 				AEC6FFA01BE970A2007882C1 /* GoParserTest.cpp in Sources */,
 				23CB15001D66CD3900EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
+				23150FD11DB93BDC00EA5AB6 /* Testx86AssemblyInspectionEngine.cpp in Sources */,
 				239504E51BDD454B00963CEA /* UriParserTest.cpp in Sources */,
 				23CB14FF1D66CD2900EDDDE1 /* FileSpecTest.cpp in Sources */,
 				AF45E1FE1BF57C8D000563EB /* PythonTestSuite.cpp in Sources */,
+				23150FC91DB93B9900EA5AB6 /* TestArm64InstEmulation.cpp in Sources */,
 				3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */,
 				23CB14EF1D66CC1F00EDDDE1 /* DataExtractorTest.cpp in Sources */,
 				2370A3861D66C594000E7BE6 /* GDBRemoteClientBaseTest.cpp in Sources */,
@@ -7408,9 +7450,11 @@
 			files = (
 				23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */,
 				23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
+				23150FD01DB93BDB00EA5AB6 /* Testx86AssemblyInspectionEngine.cpp in Sources */,
 				23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */,
 				23CB15361D66DA9300EDDDE1 /* FileSpecTest.cpp in Sources */,
 				23CB15371D66DA9300EDDDE1 /* PythonTestSuite.cpp in Sources */,
+				23150FCF1DB93BD400EA5AB6 /* TestArm64InstEmulation.cpp in Sources */,
 				23CB15381D66DA9300EDDDE1 /* PythonExceptionStateTests.cpp in Sources */,
 				23CB15391D66DA9300EDDDE1 /* DataExtractorTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,
@@ -8012,6 +8056,7 @@
 				26DB3E1C1379E7AD0080DC73 /* ABIMacOSX_i386.cpp in Sources */,
 				4C848E0818D2892900EC6DD0 /* SwiftASTContext.cpp in Sources */,
 				948B68F11CF9041D002D9401 /* FoundationValueTypes.cpp in Sources */,
+				23150FD21DB93C1600EA5AB6 /* x86AssemblyInspectionEngine.cpp in Sources */,
 				942F52251BC44E780004C182 /* NSException.cpp in Sources */,
 				26DB3E1F1379E7AD0080DC73 /* ABISysV_x86_64.cpp in Sources */,
 				232CB61D191E00CD00EF39FC /* SoftwareBreakpoint.cpp in Sources */,
@@ -8226,7 +8271,6 @@
 				2669423B1A6DC2AC0063BE93 /* MICmnStreamStdout.cpp in Sources */,
 				266942271A6DC2AC0063BE93 /* MICmnLLDBDebugger.cpp in Sources */,
 				2669421C1A6DC2AC0063BE93 /* MICmdCmdTrace.cpp in Sources */,
-				49684D7C1BAB37F200E6D5D5 /* MIUtilParse.cpp in Sources */,
 				266942331A6DC2AC0063BE93 /* MICmnMIValueList.cpp in Sources */,
 				266942221A6DC2AC0063BE93 /* MICmdInvoker.cpp in Sources */,
 				2669420C1A6DC2AC0063BE93 /* MICmdBase.cpp in Sources */,

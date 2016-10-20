@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <memory>
 
 // template <class OuterAlloc, class... InnerAllocs>
@@ -22,7 +24,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
     {
         typedef std::scoped_allocator_adaptor<A1<int>> A;
@@ -39,6 +40,4 @@ int main()
         A a(A1<int>(5), A2<int>(6), A3<int>(8));
         assert(a.outer_allocator() == A1<int>(5));
     }
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

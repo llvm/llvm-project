@@ -134,6 +134,8 @@ __isl_give isl_union_map *PolyhedralInfo::getScheduleForLoop(const Scop *S,
     unsigned int MaxDim = SS->getNumIterators();
     DEBUG(dbgs() << "Maximum depth of Stmt:\t" << MaxDim << "\n");
     auto *ScheduleMap = SS->getSchedule();
+    assert(ScheduleMap &&
+           "Schedules that contain extension nodes require special handling.");
 
     ScheduleMap = isl_map_project_out(ScheduleMap, isl_dim_out, CurrDim + 1,
                                       MaxDim - CurrDim - 1);

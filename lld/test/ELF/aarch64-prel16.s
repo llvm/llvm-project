@@ -14,7 +14,7 @@ _start:
 //       the change of the address of the .data section.
 //       You may found the correct address in the aarch64_abs16.s test,
 //       if it is already fixed. Then, update addends accordingly.
-// RUN: ld.lld %t.o %t256.o -o %t2
+// RUN: ld.lld -z max-page-size=4096 %t.o %t256.o -o %t2
 // RUN: llvm-objdump -s -section=.data %t2 | FileCheck %s
 
 // CHECK: Contents of section .data:

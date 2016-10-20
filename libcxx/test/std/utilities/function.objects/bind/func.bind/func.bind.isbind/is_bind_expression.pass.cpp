@@ -14,12 +14,16 @@
 // template<class T> struct is_bind_expression
 
 #include <functional>
+#include "test_macros.h"
 
 template <bool Expected, class T>
 void
 test(const T&)
 {
     static_assert(std::is_bind_expression<T>::value == Expected, "");
+#if TEST_STD_VER > 14
+    static_assert(std::is_bind_expression_v<T> == Expected, "");
+#endif
 }
 
 struct C {};

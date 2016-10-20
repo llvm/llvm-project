@@ -12,14 +12,14 @@
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t -section-headers %t1 | FileCheck %s
 # CHECK:      Sections:
-# CHECK-NEXT:  Idx Name          Size      Address          Type
-# CHECK-NEXT:    0               00000000 0000000000000000
-# CHECK-NEXT:    1 .aaa          00000008 0000000000000120 DATA
-# CHECK-NEXT:    2 .bbb          00000010 0000000000000128 DATA
-# CHECK-NEXT:    3 .ccc          00000018 0000000000000138 DATA
+# CHECK-NEXT:  Idx Name          Size
+# CHECK-NEXT:    0               00000000
+# CHECK-NEXT:    1 .aaa          00000008
+# CHECK-NEXT:    2 .bbb          00000010
+# CHECK-NEXT:    3 .ccc          00000018
 # CHECK:      SYMBOL TABLE:
 # CHECK-NEXT:  0000000000000000 *UND* 00000000
-# CHECK-NEXT:  0000000000000150 .text 00000000 _start
+# CHECK-NEXT:                   .text 00000000 _start
 # CHECK-NEXT:  0000000000000008 *ABS* 00000000 _aaa
 # CHECK-NEXT:  0000000000000010 *ABS* 00000000 _bbb
 # CHECK-NEXT:  0000000000000018 *ABS* 00000000 _ccc

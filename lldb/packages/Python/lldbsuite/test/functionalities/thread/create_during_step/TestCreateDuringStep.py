@@ -22,7 +22,7 @@ class CreateDuringStepTestCase(TestBase):
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
     @expectedFailureAll(
         oslist=lldbplatformutil.getDarwinOSTriples(),
-        bugnumber="llvm.org/pr15824 thread states not properly maintained")
+        bugnumber="llvm.org/pr15824 thread states not properly maintained, <rdar://problem/28557237>")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
@@ -41,7 +41,7 @@ class CreateDuringStepTestCase(TestBase):
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
     @expectedFailureAll(
         oslist=lldbplatformutil.getDarwinOSTriples(),
-        bugnumber="llvm.org/pr15824 thread states not properly maintained")
+        bugnumber="llvm.org/pr15824 thread states not properly maintained, <rdar://problem/28557237>")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
@@ -60,7 +60,7 @@ class CreateDuringStepTestCase(TestBase):
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
     @expectedFailureAll(
         oslist=lldbplatformutil.getDarwinOSTriples(),
-        bugnumber="llvm.org/pr15824 thread states not properly maintained")
+        bugnumber="<rdar://problem/28574077>")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
@@ -86,29 +86,20 @@ class CreateDuringStepTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        # This should create a breakpoint in the stepping thread.
-        self.bp_num = lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.breakpoint, num_expected_locations=1)
+        # Get the target process
+        target = self.dbg.GetSelectedTarget()
 
-        # The breakpoint list should show 1 location.
-        self.expect(
-            "breakpoint list -f",
-            "Breakpoint location shown correctly",
-            substrs=[
-                "1: file = 'main.cpp', line = %d, locations = 1" %
-                self.breakpoint])
+        # This should create a breakpoint in the stepping thread.
+        self.bkpt = target.BreakpointCreateByLocation("main.cpp", self.breakpoint) 
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
-
-        # Get the target process
-        target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
+
+        # The stop reason of the thread should be breakpoint.
+        stepping_thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, self.bkpt)
+        self.assertTrue(stepping_thread.IsValid(), "We stopped at the right breakpoint")
 
         # Get the number of threads
         num_threads = process.GetNumThreads()
@@ -122,25 +113,6 @@ class CreateDuringStepTestCase(TestBase):
         thread1 = process.GetThreadAtIndex(0)
         thread2 = process.GetThreadAtIndex(1)
 
-        # Make sure both threads are stopped
-        self.assertTrue(
-            thread1.IsStopped(),
-            "Thread 1 didn't stop during breakpoint")
-        self.assertTrue(
-            thread2.IsStopped(),
-            "Thread 2 didn't stop during breakpoint")
-
-        # Find the thread that is stopped at the breakpoint
-        stepping_thread = None
-        for thread in process:
-            expected_bp_desc = "breakpoint %s." % self.bp_num
-            if expected_bp_desc in thread.GetStopDescription(100):
-                stepping_thread = thread
-                break
-        self.assertTrue(
-            stepping_thread is not None,
-            "unable to find thread stopped at %s" %
-            expected_bp_desc)
         current_line = self.breakpoint
         # Keep stepping until we've reached our designated continue point
         while current_line != self.continuepoint:
@@ -170,9 +142,8 @@ class CreateDuringStepTestCase(TestBase):
             num_threads == 3,
             'Number of expected threads and actual threads do not match after thread exit.')
 
-        self.expect("thread list", 'Process state is stopped due to step',
-                    substrs=['stopped',
-                             step_stop_reason])
+        stop_reason = stepping_thread.GetStopReason()
+        self.assertEqual(stop_reason, lldb.eStopReasonPlanComplete, "Stopped for plan completion")
 
         # Run to completion
         self.runCmd("process continue")

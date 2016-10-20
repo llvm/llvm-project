@@ -19,6 +19,7 @@
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolCastCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
+#include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
 #include "NonConstParameterCheck.h"
 #include "RedundantControlFlowCheck.h"
@@ -54,6 +55,8 @@ public:
         "readability-implicit-bool-cast");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
+    CheckFactories.registerCheck<MisplacedArrayIndexCheck>(
+        "readability-misplaced-array-index");
     CheckFactories.registerCheck<StaticDefinitionInAnonymousNamespaceCheck>(
         "readability-static-definition-in-anonymous-namespace");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(

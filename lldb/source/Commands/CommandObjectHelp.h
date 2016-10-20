@@ -75,11 +75,7 @@ public:
       m_show_hidden = false;
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
     // Instance variables to hold the values for command options.
 

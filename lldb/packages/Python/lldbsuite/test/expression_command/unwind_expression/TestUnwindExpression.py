@@ -24,6 +24,7 @@ class UnwindFromExpressionTest(TestBase):
         TestBase.setUp(self)
 
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"])
     def test_unwind_expression(self):
         """Test unwinding from an expression."""
         self.build()

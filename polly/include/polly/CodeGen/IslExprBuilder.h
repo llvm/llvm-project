@@ -166,6 +166,17 @@ public:
   ///         was enabled.
   llvm::Value *getOverflowState() const;
 
+  /// Create LLVM-IR that computes the memory location of an access expression.
+  ///
+  /// For a given isl_ast_expr[ession] of type isl_ast_op_access this function
+  /// creates IR that computes the address the access expression refers to.
+  ///
+  /// @param Expr The ast expression of type isl_ast_op_access
+  ///             for which we generate LLVM-IR.
+  ///
+  /// @return The llvm::Value* containing the result of the computation.
+  llvm::Value *createAccessAddress(__isl_take isl_ast_expr *Expr);
+
 private:
   Scop &S;
 
@@ -203,7 +214,6 @@ private:
   llvm::Value *createId(__isl_take isl_ast_expr *Expr);
   llvm::Value *createInt(__isl_take isl_ast_expr *Expr);
   llvm::Value *createOpAddressOf(__isl_take isl_ast_expr *Expr);
-  llvm::Value *createAccessAddress(__isl_take isl_ast_expr *Expr);
 
   /// Create a binary operation @p Opc and track overflows if requested.
   ///

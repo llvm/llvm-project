@@ -32,9 +32,9 @@
 ; IR-NEXT:   %polly.indvar = phi i64 [ 0, %polly.loop_preheader ], [ %polly.indvar_next, %polly.loop_header ]
 ; ...
 ; IR:  store i64 %polly.indvar, i64* %polly_launch_0_param_1
-; IR-NEXT:  %6 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
-; IR-NEXT:  %7 = bitcast i64* %polly_launch_0_param_1 to i8*
-; IR-NEXT:  store i8* %7, i8** %6
+; IR-NEXT:  [[REGA:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT:  [[REGB:%.+]] = bitcast i64* %polly_launch_0_param_1 to i8*
+; IR-NEXT:  store i8* [[REGB]], i8** [[REGA]]
 ; IR: call i8* @polly_getKernel
 ; ...
 ; IR: call void @polly_freeKernel

@@ -43,7 +43,9 @@ char const __kmp_version_alt_comp[] = KMP_VERSION_PREFIX "alternative compiler s
 #endif /* defined(KMP_GOMP_COMPAT) */
 
 char const __kmp_version_omp_api[] = KMP_VERSION_PREFIX "API version: "
-#if OMP_40_ENABLED
+#if OMP_45_ENABLED
+    "4.5 (201511)";
+#elif OMP_40_ENABLED
     "4.0 (201307)";
 #else
     "3.1 (201107)";
@@ -1548,9 +1550,10 @@ __kmp_fork_call(
             }
 
 #if OMPT_SUPPORT
+            *exit_runtime_p = NULL;
             if (ompt_enabled) {
 #if OMPT_TRACE
-                lw_taskteam.ompt_task_info.frame.exit_runtime_frame = 0;
+                lw_taskteam.ompt_task_info.frame.exit_runtime_frame = NULL;
 
                 if (ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)) {
                     ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
@@ -1745,8 +1748,9 @@ __kmp_fork_call(
                 }
 
 #if OMPT_SUPPORT
+                *exit_runtime_p = NULL;
                 if (ompt_enabled) {
-                    lw_taskteam.ompt_task_info.frame.exit_runtime_frame = 0;
+                    lw_taskteam.ompt_task_info.frame.exit_runtime_frame = NULL;
 
 #if OMPT_TRACE
                     if (ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)) {
@@ -1851,9 +1855,10 @@ __kmp_fork_call(
                 }
 
 #if OMPT_SUPPORT
+                *exit_runtime_p = NULL;
                 if (ompt_enabled) {
 #if OMPT_TRACE
-                    lw_taskteam.ompt_task_info.frame.exit_runtime_frame = 0;
+                    lw_taskteam.ompt_task_info.frame.exit_runtime_frame = NULL;
 
                     if (ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)) {
                         ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
@@ -1885,7 +1890,7 @@ __kmp_fork_call(
                 unwrapped_task, ompt_parallel_id);
 
             lwt->ompt_task_info.task_id = __ompt_task_id_new(gtid);
-            lwt->ompt_task_info.frame.exit_runtime_frame = 0;
+            lwt->ompt_task_info.frame.exit_runtime_frame = NULL;
             __ompt_lw_taskteam_link(lwt, master_th);
 #endif
 
@@ -2228,12 +2233,13 @@ __kmp_join_ompt(
     ompt_parallel_id_t parallel_id,
     fork_context_e fork_context)
 {
+    ompt_task_info_t *task_info = __ompt_get_taskinfo(0);
     if (ompt_callbacks.ompt_callback(ompt_event_parallel_end)) {
-        ompt_task_info_t *task_info = __ompt_get_taskinfo(0);
         ompt_callbacks.ompt_callback(ompt_event_parallel_end)(
             parallel_id, task_info->task_id, OMPT_INVOKER(fork_context));
     }
 
+    task_info->frame.reenter_runtime_frame = NULL;
     __kmp_join_restore_state(thread,team);
 }
 #endif
@@ -2434,7 +2440,7 @@ __kmp_join_call(ident_t *loc, int gtid
              ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
                parallel_id, task_info->task_id);
         }
-        task_info->frame.exit_runtime_frame = 0;
+        task_info->frame.exit_runtime_frame = NULL;
         task_info->task_id = 0;
     }
 #endif
@@ -2760,11 +2766,11 @@ __kmp_get_schedule( int gtid, kmp_sched_t * kind, int * chunk )
     case kmp_sch_trapezoidal:
         *kind = kmp_sched_trapezoidal;
         break;
-/*
+#if KMP_STATIC_STEAL_ENABLED
     case kmp_sch_static_steal:
         *kind = kmp_sched_static_steal;
         break;
-*/
+#endif
     default:
         KMP_FATAL( UnknownSchedulingType, th_type );
     }
@@ -3028,13 +3034,16 @@ __kmp_get_global_icvs( void ) {
       (kmp_int8)__kmp_global.g.g_dynamic,                                 //internal control for dynamic adjustment of threads (per thread)
       (kmp_int8)__kmp_env_blocktime,          //int bt_set;               //internal control for whether blocktime is explicitly set
       __kmp_dflt_blocktime,         //int blocktime;            //internal control for blocktime
+#if KMP_USE_MONITOR
       __kmp_bt_intervals,           //int bt_intervals;         //internal control for blocktime intervals
+#endif
       __kmp_dflt_team_nth,          //int nproc;                //internal control for # of threads for next parallel region (per thread)
                                     // (use a max ub on value if __kmp_parallel_initialize not called yet)
       __kmp_dflt_max_active_levels, //int max_active_levels;    //internal control for max_active_levels
       r_sched,                      //kmp_r_sched_t sched;      //internal control for runtime schedule {sched,chunk} pair
 #if OMP_40_ENABLED
       __kmp_nested_proc_bind.bind_types[0],
+      __kmp_default_device,
 #endif /* OMP_40_ENABLED */
       NULL                          //struct kmp_internal_control *next;
     };
@@ -4167,6 +4176,7 @@ __kmp_allocate_thread( kmp_root_t *root, kmp_team_t *team, int new_tid )
     KMP_ASSERT( __kmp_nth    == __kmp_all_nth );
     KMP_ASSERT( __kmp_all_nth < __kmp_threads_capacity );
 
+#if KMP_USE_MONITOR
     //
     // If this is the first worker thread the RTL is creating, then also
     // launch the monitor thread.  We try to do this as early as possible.
@@ -4194,6 +4204,7 @@ __kmp_allocate_thread( kmp_root_t *root, kmp_team_t *team, int new_tid )
         }
         __kmp_release_bootstrap_lock( & __kmp_monitor_lock );
     }
+#endif
 
     KMP_MB();
     for( new_gtid=1 ; TCR_PTR(__kmp_threads[new_gtid]) != NULL; ++new_gtid ) {
@@ -5502,7 +5513,7 @@ __kmp_launch_thread( kmp_info_t *this_thr )
 #if OMPT_SUPPORT
                 if (ompt_enabled) {
                     /* no frame set while outside task */
-                    task_info->frame.exit_runtime_frame = 0;
+                    task_info->frame.exit_runtime_frame = NULL;
 
                     this_thr->th.ompt_thread_info.state = ompt_state_overhead;
                 }
@@ -5521,7 +5532,7 @@ __kmp_launch_thread( kmp_info_t *this_thr )
                     ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
                         my_parallel_id, task_info->task_id);
                 }
-                task_info->frame.exit_runtime_frame = 0;
+                task_info->frame.exit_runtime_frame = NULL;
                 task_info->task_id = 0;
             }
 #endif
@@ -5776,6 +5787,7 @@ __kmp_internal_end(void)
     TCW_SYNC_4(__kmp_global.g.g_done, TRUE);
 
     if ( i < __kmp_threads_capacity ) {
+#if KMP_USE_MONITOR
         // 2009-09-08 (lev): Other alive roots found. Why do we kill the monitor??
         KMP_MB();       /* Flush all pending memory write invalidates.  */
 
@@ -5797,6 +5809,7 @@ __kmp_internal_end(void)
         }
         __kmp_release_bootstrap_lock( & __kmp_monitor_lock );
         KA_TRACE( 10, ("__kmp_internal_end: monitor reaped\n" ) );
+#endif // KMP_USE_MONITOR
     } else {
         /* TODO move this to cleanup code */
         #ifdef KMP_DEBUG
@@ -5848,6 +5861,7 @@ __kmp_internal_end(void)
         KA_TRACE( 10, ("__kmp_internal_end: all workers reaped\n" ) );
         KMP_MB();
 
+#if KMP_USE_MONITOR
         //
         // See note above: One of the possible fixes for CQ138434 / CQ140126
         //
@@ -5861,7 +5875,7 @@ __kmp_internal_end(void)
         }
         __kmp_release_bootstrap_lock( & __kmp_monitor_lock );
         KA_TRACE( 10, ("__kmp_internal_end: monitor reaped\n" ) );
-
+#endif
     } /* else !__kmp_global.t_active */
     TCW_4(__kmp_init_gtid, FALSE);
     KMP_MB();       /* Flush all pending memory write invalidates.  */
@@ -6126,7 +6140,7 @@ __kmp_register_library_startup(
         double dtime;
         long   ltime;
     } time;
-    #if KMP_OS_WINDOWS
+    #if KMP_ARCH_X86 || KMP_ARCH_X86_64
         __kmp_initialize_system_tick();
     #endif
     __kmp_read_system_time( & time.dtime );
@@ -6332,7 +6346,9 @@ __kmp_do_serial_initialize( void )
     __kmp_init_atomic_lock( & __kmp_atomic_lock_32c );
     __kmp_init_bootstrap_lock( & __kmp_forkjoin_lock  );
     __kmp_init_bootstrap_lock( & __kmp_exit_lock      );
+#if KMP_USE_MONITOR
     __kmp_init_bootstrap_lock( & __kmp_monitor_lock   );
+#endif
     __kmp_init_bootstrap_lock( & __kmp_tp_cached_lock );
 
     /* conduct initialization and initial setup of configuration */
@@ -6362,8 +6378,10 @@ __kmp_do_serial_initialize( void )
 
     // Three vars below moved here from __kmp_env_initialize() "KMP_BLOCKTIME" part
     __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
+#if KMP_USE_MONITOR
     __kmp_monitor_wakeups = KMP_WAKEUPS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
     __kmp_bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
+#endif
     // From "KMP_LIBRARY" part of __kmp_env_initialize()
     __kmp_library = library_throughput;
     // From KMP_SCHEDULE initialization
@@ -6837,6 +6855,9 @@ __kmp_invoke_task_func( int gtid )
                                      , exit_runtime_p
 #endif
                                      );
+#if OMPT_SUPPORT
+        *exit_runtime_p = NULL;
+#endif
     }
 
 #if USE_ITT_BUILD
@@ -7432,7 +7453,9 @@ void
 __kmp_aux_set_blocktime (int arg, kmp_info_t *thread, int tid)
 {
     int blocktime = arg;        /* argument is in milliseconds */
+#if KMP_USE_MONITOR
     int bt_intervals;
+#endif
     int bt_set;
 
     __kmp_save_internal_controls( thread );
@@ -7446,20 +7469,29 @@ __kmp_aux_set_blocktime (int arg, kmp_info_t *thread, int tid)
     set__blocktime_team( thread->th.th_team, tid, blocktime );
     set__blocktime_team( thread->th.th_serial_team, 0, blocktime );
 
+#if KMP_USE_MONITOR
     /* Calculate and set blocktime intervals for the teams */
     bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME(blocktime, __kmp_monitor_wakeups);
 
     set__bt_intervals_team( thread->th.th_team, tid, bt_intervals );
     set__bt_intervals_team( thread->th.th_serial_team, 0, bt_intervals );
+#endif
 
     /* Set whether blocktime has been set to "TRUE" */
     bt_set = TRUE;
 
     set__bt_set_team( thread->th.th_team, tid, bt_set );
     set__bt_set_team( thread->th.th_serial_team, 0, bt_set );
-    KF_TRACE(10, ( "kmp_set_blocktime: T#%d(%d:%d), blocktime=%d, bt_intervals=%d, monitor_updates=%d\n",
-                  __kmp_gtid_from_tid(tid, thread->th.th_team),
-                  thread->th.th_team->t.t_id, tid, blocktime, bt_intervals, __kmp_monitor_wakeups ) );
+    KF_TRACE(10, ( "kmp_set_blocktime: T#%d(%d:%d), blocktime=%d"
+#if KMP_USE_MONITOR
+                   ", bt_intervals=%d, monitor_updates=%d"
+#endif
+                   "\n",
+                   __kmp_gtid_from_tid(tid, thread->th.th_team), thread->th.th_team->t.t_id, tid, blocktime
+#if KMP_USE_MONITOR
+                   , bt_intervals, __kmp_monitor_wakeups
+#endif
+                 ) );
 }
 
 void

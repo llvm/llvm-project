@@ -29,7 +29,8 @@ protected:
   bool atEOF();
   StringRef next();
   StringRef peek();
-  bool skip(StringRef Tok);
+  void skip();
+  bool consume(StringRef Tok);
   void expect(StringRef Expect);
 
   size_t getPos();

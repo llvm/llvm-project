@@ -18,6 +18,7 @@ class NamespaceBreakpointTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
+    @expectedFailureAll(oslist=["windows"])
     def test_breakpoints_func_auto(self):
         """Test that we can set breakpoints correctly by basename to find all functions whose basename is "func"."""
         self.build()

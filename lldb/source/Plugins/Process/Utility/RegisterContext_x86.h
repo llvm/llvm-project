@@ -277,7 +277,9 @@ struct FXSAVE {
   uint32_t mxcsrmask; // MXCSR Mask
   MMSReg stmm[8];     // 8*16 bytes for each FP-reg = 128 bytes
   XMMReg xmm[16];     // 16*16 bytes for each XMM-reg = 256 bytes
-  uint32_t padding[24];
+  uint8_t padding1[48];
+  uint64_t xcr0;
+  uint8_t padding2[40];
 };
 
 //---------------------------------------------------------------------------

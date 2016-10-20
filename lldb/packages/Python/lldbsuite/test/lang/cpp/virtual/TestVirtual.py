@@ -36,7 +36,6 @@ class CppVirtualMadness(TestBase):
     @expectedFailureAll(
         compiler="icc",
         bugnumber="llvm.org/pr16808 lldb does not call the correct virtual function with icc.")
-    @expectedFailureAll(oslist=['windows'])
     def test_virtual_madness(self):
         """Test that expression works correctly with virtual inheritance as well as virtual function."""
         self.build()

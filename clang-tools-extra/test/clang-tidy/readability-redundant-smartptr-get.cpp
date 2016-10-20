@@ -113,6 +113,37 @@ void Positive() {
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
   // CHECK-MESSAGES: i = *PointerWithOverloadedGet().get();
   // CHECK-FIXES: i = *PointerWithOverloadedGet();
+
+  bb = std::unique_ptr<int>().get() == NULL;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+  // CHECK-MESSAGES: bb = std::unique_ptr<int>().get() == NULL;
+  // CHECK-FIXES: bb = std::unique_ptr<int>() == NULL;
+  bb = ss->get() == NULL;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+  // CHECK-MESSAGES: bb = ss->get() == NULL;
+  // CHECK-FIXES: bb = *ss == NULL;
+
+  std::unique_ptr<int> x, y;
+  if (x.get() == nullptr);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant get() call
+  // CHECK-MESSAGES: if (x.get() == nullptr);
+  // CHECK-FIXES: if (x == nullptr);
+  if (nullptr == y.get());
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant get() call
+  // CHECK-MESSAGES: if (nullptr == y.get());
+  // CHECK-FIXES: if (nullptr == y);
+  if (x.get() == NULL);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant get() call
+  // CHECK-MESSAGES: if (x.get() == NULL);
+  // CHECK-FIXES: if (x == NULL);
+  if (NULL == x.get());
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant get() call
+  // CHECK-MESSAGES: if (NULL == x.get());
+  // CHECK-FIXES: if (NULL == x);
+  if (x.get());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant get() call
+  // CHECK-MESSAGES: if (x.get());
+  // CHECK-FIXES: if (x);
 }
 
 void Negative() {
@@ -137,7 +168,5 @@ void Negative() {
   (*Fail2().get()).Do();
 
   int_ptr ip;
-  bool bb = std::unique_ptr<int>().get() == NULL;
-  bb = ip.get() == nullptr;
-  bb = u->get() == NULL;
+  bool bb = ip.get() == nullptr;
 }

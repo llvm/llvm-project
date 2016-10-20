@@ -85,9 +85,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-
   // The rest of this check is only relevant to C++.
-  if (!Result.Context->getLangOpts().CPlusPlus)
+  if (!getLangOpts().CPlusPlus)
     return;
   // Ignore code inside extern "C" {} blocks.
   if (!match(expr(hasAncestor(linkageSpecDecl())), *CastExpr, *Result.Context)
@@ -109,7 +108,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       Lexer::getSourceText(CharSourceRange::getTokenRange(
                                CastExpr->getLParenLoc().getLocWithOffset(1),
                                CastExpr->getRParenLoc().getLocWithOffset(-1)),
-                           SM, Result.Context->getLangOpts());
+                           SM, getLangOpts());
 
   auto diag_builder =
       diag(CastExpr->getLocStart(), "C-style casts are discouraged; use %0");
@@ -123,7 +122,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       CastText.push_back('(');
       diag_builder << FixItHint::CreateInsertion(
           Lexer::getLocForEndOfToken(SubExpr->getLocEnd(), 0, SM,
-                                     Result.Context->getLangOpts()),
+                                     getLangOpts()),
           ")");
     }
     diag_builder << FixItHint::CreateReplacement(ParenRange, CastText);

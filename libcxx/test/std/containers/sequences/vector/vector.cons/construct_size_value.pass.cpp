@@ -15,7 +15,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
 
@@ -34,7 +34,7 @@ test(typename C::size_type n, const typename C::value_type& x)
 int main()
 {
     test<std::vector<int> >(50, 3);
-    test<std::vector<int, stack_allocator<int, 50> > >(50, 5);
+    test<std::vector<int, limited_allocator<int, 50> > >(50, 5);
 #if TEST_STD_VER >= 11
     test<std::vector<int, min_allocator<int>> >(50, 3);
 #endif

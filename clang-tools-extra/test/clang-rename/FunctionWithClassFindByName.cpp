@@ -9,4 +9,4 @@ int main() {
   return 0;
 }
 
-// RUN: clang-rename rename-all -old-name=Foo -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// RUN: clang-rename -qualified-name=Foo -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s

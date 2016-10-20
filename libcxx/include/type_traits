@@ -425,7 +425,7 @@ template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp
 #endif
 
 // addressof
-#if __has_builtin(__builtin_addressof)
+#ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 
 template <class _Tp>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX14
@@ -446,7 +446,7 @@ addressof(_Tp& __x) _NOEXCEPT
     return (_Tp*)&reinterpret_cast<const volatile char&>(__x);
 }
 
-#endif // __has_builtin(__builtin_addressof)
+#endif // _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 
 #if defined(_LIBCPP_HAS_OBJC_ARC) && !defined(_LIBCPP_PREDEFINED_OBJC_ARC_ADDRESSOF)
 // Objective-C++ Automatic Reference Counting uses qualified pointers
@@ -1122,6 +1122,11 @@ struct __unconstref {
     typedef typename remove_const<typename remove_reference<_Tp>::type>::type type;
 };
 
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp>
+using __uncvref_t = typename __uncvref<_Tp>::type;
+#endif
+
 // __is_same_uncvref
 
 template <class _Tp, class _Up>
@@ -1670,10 +1675,10 @@ _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x400);
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x800);
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x1000);
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x2000);
-// MSDN says that MSVC does not support alignment beyond 8192 (=0x2000)
-#if !defined(_LIBCPP_MSVC)
+// PE/COFF does not support alignment beyond 8192 (=0x2000)
+#if !defined(_WIN32)
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x4000);
-#endif // !_LIBCPP_MSVC
+#endif // !_WIN32
 
 #undef _CREATE_ALIGNED_STORAGE_SPECIALIZATION
 
@@ -2077,7 +2082,7 @@ template <class _Tp> _LIBCPP_CONSTEXPR bool is_copy_assignable_v
 template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY is_move_assignable
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     : public is_assignable<typename add_lvalue_reference<_Tp>::type,
-                     const typename add_rvalue_reference<_Tp>::type> {};
+                           typename add_rvalue_reference<_Tp>::type> {};
 #else
     : public is_copy_assignable<_Tp> {};
 #endif
@@ -2155,7 +2160,7 @@ template <class _Tp> _LIBCPP_CONSTEXPR bool is_destructible_v
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename remove_reference<_Tp>::type&&
 move(_Tp&& __t) _NOEXCEPT
 {
@@ -2164,7 +2169,7 @@ move(_Tp&& __t) _NOEXCEPT
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 _Tp&&
 forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
 {
@@ -2172,12 +2177,12 @@ forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 _Tp&&
 forward(typename remove_reference<_Tp>::type&& __t) _NOEXCEPT
 {
     static_assert(!is_lvalue_reference<_Tp>::value,
-                  "Can not forward an rvalue as an lvalue.");
+                  "can not forward an rvalue as an lvalue");
     return static_cast<_Tp&&>(__t);
 }
 
@@ -4351,7 +4356,7 @@ template <class _Tp> struct __is_nothrow_swappable;
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#ifndef _LIBCPP_CXX03_LANG
 typename enable_if
 <
     is_move_constructible<_Tp>::value &&
@@ -4559,7 +4564,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename __sfinae_underlying_type<_Tp>::__promoted_type
 __convert_to_integral(_Tp __val) { return __val; }
 
-#ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp>
 struct __has_operator_addressof_member_imp
@@ -4591,9 +4596,11 @@ struct __has_operator_addressof
                                   || __has_operator_addressof_free_imp<_Tp>::value>
 {};
 
-#endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
+#endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
+
+#define __cpp_lib_void_t 201411
 template <class...> using void_t = void;
 
 # ifndef _LIBCPP_HAS_NO_VARIADICS

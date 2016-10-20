@@ -107,10 +107,10 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
 
   std::string LeftText = clang::Lexer::getSourceText(
       CharSourceRange::getTokenRange(Left->getSourceRange()),
-      *Result.SourceManager, Result.Context->getLangOpts());
+      *Result.SourceManager, getLangOpts());
   std::string RightText = clang::Lexer::getSourceText(
       CharSourceRange::getTokenRange(Right->getSourceRange()),
-      *Result.SourceManager, Result.Context->getLangOpts());
+      *Result.SourceManager, getLangOpts());
 
   if (ResetMember->isArrow())
     LeftText = "*" + LeftText;

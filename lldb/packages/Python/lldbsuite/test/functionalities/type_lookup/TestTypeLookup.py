@@ -25,6 +25,7 @@ class TypeLookupTestCase(TestBase):
         self.line = line_number('main.m', '// break here')
 
     @skipUnlessDarwin
+    @skipIf(archs=['i386'])
     def test_type_lookup(self):
         """Test type lookup command."""
         self.buildDwarf()

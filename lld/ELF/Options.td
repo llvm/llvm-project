@@ -27,6 +27,12 @@ def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
 
 def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
 
+def Tbss: J<"Tbss=">, HelpText<"Same as --section-start with .bss as the sectionname">;
+
+def Tdata: J<"Tdata=">, HelpText<"Same as --section-start with .data as the sectionname">;
+
+def Ttext: J<"Ttext=">, HelpText<"Same as --section-start with .text as the sectionname">;
+
 def allow_multiple_definition: F<"allow-multiple-definition">,
   HelpText<"Allow multiple definitions">;
 
@@ -74,6 +80,9 @@ def fatal_warnings: F<"fatal-warnings">,
 def fini: S<"fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
+def format: J<"format=">, MetaVarName<"<input-format>">,
+  HelpText<"Change the input format of the inputs following this option">;
+
 def gc_sections: F<"gc-sections">,
   HelpText<"Enable garbage collection of unused sections">;
 
@@ -118,6 +127,8 @@ def no_whole_archive: F<"no-whole-archive">,
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
+def nopie: F<"nopie">, HelpText<"Do not create a position independent executable">;
+
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
@@ -144,9 +155,14 @@ def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
 def script: S<"script">, HelpText<"Read linker script">;
 
+def section_start: S<"section-start">, MetaVarName<"<address>">,
+  HelpText<"Set address of section">;
+
 def shared: F<"shared">, HelpText<"Build a shared object">;
 
 def soname: J<"soname=">, HelpText<"Set DT_SONAME">;
+
+def sort_section: S<"sort-section">, HelpText<"Specifies sections sorting rule when linkerscript is used">;
 
 def start_lib: F<"start-lib">,
   HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
@@ -160,6 +176,8 @@ def sysroot: J<"sysroot=">, HelpText<"Set the system root">;
 def target1_rel: F<"target1-rel">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_REL32">;
 
 def target1_abs: F<"target1-abs">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_ABS32">;
+
+def target2: J<"target2=">, MetaVarName<"<type>">, HelpText<"Interpret R_ARM_TARGET2 as <type>, where <type> is one of rel, abs, or got-rel.">;
 
 def threads: F<"threads">, HelpText<"Enable use of threads">;
 
@@ -212,6 +230,7 @@ def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_export_dynamic_symbol: J<"export-dynamic-symbol=">,
   Alias<export_dynamic_symbol>;
 def alias_fini_fini: J<"fini=">, Alias<fini>;
+def alias_format_b: S<"b">, Alias<format>;
 def alias_hash_style_hash_style: J<"hash-style=">, Alias<hash_style>;
 def alias_init_init: J<"init=">, Alias<init>;
 def alias_l__library: J<"library=">, Alias<l>;
@@ -288,11 +307,13 @@ def alias_version_script_version_script: J<"version-script=">,
   Alias<version_script>;
 
 // LTO-related options.
-def lto_jobs: J<"lto-jobs=">, HelpText<"Number of threads to run codegen">;
 def lto_aa_pipeline: J<"lto-aa-pipeline=">,
   HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
 def lto_newpm_passes: J<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
+def lto_partitions: J<"lto-partitions=">,
+  HelpText<"Number of LTO codegen partitions">;
 def disable_verify: F<"disable-verify">;
 def mllvm: S<"mllvm">;
 def save_temps: F<"save-temps">;
+def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;

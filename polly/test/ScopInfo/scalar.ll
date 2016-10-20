@@ -32,12 +32,12 @@ return:
 
 ; CHECK:      Arrays {
 ; CHECK-NEXT:     i64 MemRef_a[*]; // Element size 8
-; CHECK-NEXT:     i64 MemRef_val; [BasePtrOrigin: MemRef_a] // Element size 8
+; CHECK-NEXT:     i64 MemRef_val; // Element size 8
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Arrays (Bounds as pw_affs) {
 ; CHECK-NEXT:     i64 MemRef_a[*]; // Element size 8
-; CHECK-NEXT:     i64 MemRef_val; [BasePtrOrigin: MemRef_a] // Element size 8
+; CHECK-NEXT:     i64 MemRef_val; // Element size 8
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Statements {

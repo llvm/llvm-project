@@ -25,7 +25,8 @@
 # SEC-DEFAULT: 7 .shstrtab     00000032 {{[0-9a-f]*}}
 # SEC-DEFAULT: 8 .strtab       00000008 {{[0-9a-f]*}}
 
-# Sections are put in order specified in linker script.
+# Sections are put in order specified in linker script, other than alloc
+# sections going first.
 # RUN: echo "SECTIONS { \
 # RUN:          .bss : { *(.bss) } \
 # RUN:          other : { *(other) } \

@@ -199,6 +199,30 @@ std::string polly::getIslCompatibleName(const std::string &Prefix,
   return getIslCompatibleName(Prefix, ValStr, Suffix);
 }
 
+#define DEFINE_ISLPTR(TYPE)                                                    \
+  template <> void IslPtr<isl_##TYPE>::dump() const {                          \
+    isl_##TYPE##_dump(Obj);                                                    \
+  }                                                                            \
+  template <> void NonowningIslPtr<isl_##TYPE>::dump() const {                 \
+    isl_##TYPE##_dump(Obj);                                                    \
+  }
+
+namespace polly {
+DEFINE_ISLPTR(val)
+DEFINE_ISLPTR(space)
+DEFINE_ISLPTR(basic_map)
+DEFINE_ISLPTR(map)
+DEFINE_ISLPTR(union_map)
+DEFINE_ISLPTR(basic_set)
+DEFINE_ISLPTR(set)
+DEFINE_ISLPTR(union_set)
+DEFINE_ISLPTR(aff)
+DEFINE_ISLPTR(pw_aff)
+// DEFINE_ISLPTR(union_pw_aff) /* There is no isl_union_pw_aff_dump() */
+DEFINE_ISLPTR(multi_union_pw_aff)
+DEFINE_ISLPTR(union_pw_multi_aff)
+}
+
 void polly::foreachElt(NonowningIslPtr<isl_union_map> UMap,
                        const std::function<void(IslPtr<isl_map> Map)> &F) {
   isl_union_map_foreach_map(

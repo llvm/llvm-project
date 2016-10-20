@@ -35,6 +35,13 @@ public:
       Breakpoint *bkpt, RegularExpression &regex,
       const std::unordered_set<std::string> &func_name_set, bool exact_match);
 
+  static BreakpointResolver *
+  CreateFromStructuredData(Breakpoint *bkpt,
+                           const StructuredData::Dictionary &options_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
+
   ~BreakpointResolverFileRegex() override;
 
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,

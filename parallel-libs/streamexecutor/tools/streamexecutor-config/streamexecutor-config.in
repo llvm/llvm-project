@@ -32,19 +32,41 @@ import shlex
 import subprocess
 import sys
 
-def get_llvm_config_dir():
-  """Gets the path to the llvm-config executable.
+# The following functions are configured by cmake. They use raw triple-quoted
+# strings to surround values that are substituted by cmake at configure time.
+# This kind of quoting should allow for paths that contain spaces.
 
-  Surrounding the cmake replacement with triple quotes should allow for paths
-  that contain quotes."""
+def get_llvm_config_dir():
+  """Gets the path to the llvm-config executable."""
   return r"""@LLVM_BINARY_DIR@/bin"""
 
 def get_cmake_install_prefix():
-  """Gets the value of the cmake variable CMAKE_INSTALL_PREFIX.
-
-  Surrounding the cmake replacement with triple quotes should allow for paths
-  that contain quotes."""
+  """Gets the value of the cmake variable CMAKE_INSTALL_PREFIX."""
   return r"""@CMAKE_INSTALL_PREFIX@"""
+
+def convert_library_name(library_name):
+  """Converts a library name ending in '.framework' into a '-framework' flag.
+
+  This is used to support OS X.
+
+  >>> convert_library_name('')
+  ''
+
+  >>> convert_library_name('/usr/local/lib64/libcuda.so')
+  '/usr/local/lib64/libcuda.so'
+
+  >>> convert_library_name('/Library/Frameworks/cuda.framework')
+  '-framework cuda'
+  """
+  framework_suffix = '.framework'
+  if library_name.endswith(framework_suffix):
+    framework_name = os.path.basename(library_name)[:-len(framework_suffix)]
+    library_name = '-framework ' + framework_name
+  return library_name
+
+def get_cuda_driver_library():
+  """Gets the value of the cmake variable CUDA_DRIVER_LIBRARY."""
+  return convert_library_name(r"""@CUDA_DRIVER_LIBRARY@""")
 
 def cuddle_flag(flag, tokens):
   """If flag appears by itself in tokens, combines it with the next token.
@@ -195,6 +217,9 @@ def main():
     se_flag = '-lstreamexecutor'
     if not has_token(token=se_flag, string=llvm_flags):
       all_flags.append(se_flag)
+    cuda_driver_library = get_cuda_driver_library()
+    if cuda_driver_library:
+      all_flags.append(cuda_driver_library)
     all_flags.append(llvm_flags)
 
   if args.system_libs:

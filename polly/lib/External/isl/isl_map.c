@@ -816,6 +816,50 @@ int isl_basic_map_is_rational(__isl_keep isl_basic_map *bmap)
 	return ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL);
 }
 
+/* Has "map" been marked as a rational map?
+ * In particular, have all basic maps in "map" been marked this way?
+ * An empty map is not considered to be rational.
+ * Maps where only some of the basic maps are marked rational
+ * are not allowed.
+ */
+isl_bool isl_map_is_rational(__isl_keep isl_map *map)
+{
+	int i;
+	isl_bool rational;
+
+	if (!map)
+		return isl_bool_error;
+	if (map->n == 0)
+		return isl_bool_false;
+	rational = isl_basic_map_is_rational(map->p[0]);
+	if (rational < 0)
+		return rational;
+	for (i = 1; i < map->n; ++i) {
+		isl_bool rational_i;
+
+		rational_i = isl_basic_map_is_rational(map->p[i]);
+		if (rational_i < 0)
+			return rational;
+		if (rational != rational_i)
+			isl_die(isl_map_get_ctx(map), isl_error_unsupported,
+				"mixed rational and integer basic maps "
+				"not supported", return isl_bool_error);
+	}
+
+	return rational;
+}
+
+/* Has "set" been marked as a rational set?
+ * In particular, have all basic set in "set" been marked this way?
+ * An empty set is not considered to be rational.
+ * Sets where only some of the basic sets are marked rational
+ * are not allowed.
+ */
+isl_bool isl_set_is_rational(__isl_keep isl_set *set)
+{
+	return isl_map_is_rational(set);
+}
+
 int isl_basic_set_is_rational(__isl_keep isl_basic_set *bset)
 {
 	return isl_basic_map_is_rational(bset);
@@ -9601,12 +9645,16 @@ error:
 __isl_give isl_basic_map *isl_basic_map_range_product(
 	__isl_take isl_basic_map *bmap1, __isl_take isl_basic_map *bmap2)
 {
+	int rational;
 	isl_space *dim_result = NULL;
 	isl_basic_map *bmap;
 	unsigned in, out1, out2, nparam, total, pos;
 	struct isl_dim_map *dim_map1, *dim_map2;
 
-	if (!bmap1 || !bmap2)
+	rational = isl_basic_map_is_rational(bmap1);
+	if (rational >= 0 && rational)
+		rational = isl_basic_map_is_rational(bmap2);
+	if (!bmap1 || !bmap2 || rational < 0)
 		goto error;
 
 	if (!isl_space_match(bmap1->dim, isl_dim_param,
@@ -9640,6 +9688,8 @@ __isl_give isl_basic_map *isl_basic_map_range_product(
 			bmap1->n_ineq + bmap2->n_ineq);
 	bmap = isl_basic_map_add_constraints_dim_map(bmap, bmap1, dim_map1);
 	bmap = isl_basic_map_add_constraints_dim_map(bmap, bmap2, dim_map2);
+	if (rational)
+		bmap = isl_basic_map_set_rational(bmap);
 	bmap = isl_basic_map_simplify(bmap);
 	return isl_basic_map_finalize(bmap);
 error:
@@ -11835,10 +11885,12 @@ __isl_give isl_map *isl_map_uncurry(__isl_take isl_map *map)
 
 /* Construct a basic map mapping the domain of the affine expression
  * to a one-dimensional range prescribed by the affine expression.
+ * If "rational" is set, then construct a rational basic map.
  *
  * A NaN affine expression cannot be converted to a basic map.
  */
-__isl_give isl_basic_map *isl_basic_map_from_aff(__isl_take isl_aff *aff)
+static __isl_give isl_basic_map *isl_basic_map_from_aff2(
+	__isl_take isl_aff *aff, int rational)
 {
 	int k;
 	int pos;
@@ -11869,12 +11921,22 @@ __isl_give isl_basic_map *isl_basic_map_from_aff(__isl_take isl_aff *aff)
 		    aff->v->size - (pos + 1));
 
 	isl_aff_free(aff);
+	if (rational)
+		bmap = isl_basic_map_set_rational(bmap);
 	bmap = isl_basic_map_finalize(bmap);
 	return bmap;
 error:
 	isl_aff_free(aff);
 	isl_basic_map_free(bmap);
 	return NULL;
+}
+
+/* Construct a basic map mapping the domain of the affine expression
+ * to a one-dimensional range prescribed by the affine expression.
+ */
+__isl_give isl_basic_map *isl_basic_map_from_aff(__isl_take isl_aff *aff)
+{
+	return isl_basic_map_from_aff2(aff, 0);
 }
 
 /* Construct a map mapping the domain of the affine expression
@@ -11891,9 +11953,10 @@ __isl_give isl_map *isl_map_from_aff(__isl_take isl_aff *aff)
 /* Construct a basic map mapping the domain the multi-affine expression
  * to its range, with each dimension in the range equated to the
  * corresponding affine expression.
+ * If "rational" is set, then construct a rational basic map.
  */
-__isl_give isl_basic_map *isl_basic_map_from_multi_aff(
-	__isl_take isl_multi_aff *maff)
+__isl_give isl_basic_map *isl_basic_map_from_multi_aff2(
+	__isl_take isl_multi_aff *maff, int rational)
 {
 	int i;
 	isl_space *space;
@@ -11908,13 +11971,15 @@ __isl_give isl_basic_map *isl_basic_map_from_multi_aff(
 
 	space = isl_space_domain(isl_multi_aff_get_space(maff));
 	bmap = isl_basic_map_universe(isl_space_from_domain(space));
+	if (rational)
+		bmap = isl_basic_map_set_rational(bmap);
 
 	for (i = 0; i < maff->n; ++i) {
 		isl_aff *aff;
 		isl_basic_map *bmap_i;
 
 		aff = isl_aff_copy(maff->p[i]);
-		bmap_i = isl_basic_map_from_aff(aff);
+		bmap_i = isl_basic_map_from_aff2(aff, rational);
 
 		bmap = isl_basic_map_flat_range_product(bmap, bmap_i);
 	}
@@ -11926,6 +11991,16 @@ __isl_give isl_basic_map *isl_basic_map_from_multi_aff(
 error:
 	isl_multi_aff_free(maff);
 	return NULL;
+}
+
+/* Construct a basic map mapping the domain the multi-affine expression
+ * to its range, with each dimension in the range equated to the
+ * corresponding affine expression.
+ */
+__isl_give isl_basic_map *isl_basic_map_from_multi_aff(
+	__isl_take isl_multi_aff *ma)
+{
+	return isl_basic_map_from_multi_aff2(ma, 0);
 }
 
 /* Construct a map mapping the domain the multi-affine expression
