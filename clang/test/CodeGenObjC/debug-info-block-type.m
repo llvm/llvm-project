@@ -17,6 +17,6 @@ int main()
   SomeKindOfPredicate p = ^BOOL(id obj) { return obj != nil; };
   // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "__FuncPtr",
   // CHECK-SAME:           line: [[@LINE-2]]
-  // CHECK-SAME:           size: 64, align: 64, offset: 128,
+  // CHECK-SAME:           size: 64, offset: 128,
   return p(nil);
 }

@@ -781,9 +781,12 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 // Wraps a binary blob with an ELF header and footer
 // so that we can link it as a regular ELF file.
 template <class ELFT> InputFile *BinaryFile::createELF() {
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Sym Elf_Sym;
+
   // Fill the ELF file header.
-  ELFCreator<ELFT> ELF(ET_REL, Config->EMachine);
-  auto DataSec = ELF.addSection(".data");
+  ELFCreator<ELFT> File(ET_REL, Config->EMachine);
+  auto DataSec = File.addSection(".data");
   DataSec.Header->sh_flags = SHF_ALLOC;
   DataSec.Header->sh_size = MB.getBufferSize();
   DataSec.Header->sh_type = SHT_PROGBITS;
@@ -795,31 +798,24 @@ template <class ELFT> InputFile *BinaryFile::createELF() {
                  [](char C) { return isalnum(C) ? C : '_'; });
 
   // Add _start, _end and _size symbols.
-  std::string StartSym = "_binary_" + Filepath + "_start";
-  auto SSym = ELF.addSymbol(StartSym);
-  SSym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
-  SSym.Sym->st_shndx = DataSec.Index;
-
-  std::string EndSym = "_binary_" + Filepath + "_end";
-  auto ESym = ELF.addSymbol(EndSym);
-  ESym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
-  ESym.Sym->st_shndx = DataSec.Index;
-  ESym.Sym->st_value = MB.getBufferSize();
-
-  std::string SizeSym = "_binary_" + Filepath + "_size";
-  auto SZSym = ELF.addSymbol(SizeSym);
-  SZSym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
-  SZSym.Sym->st_shndx = SHN_ABS;
-  SZSym.Sym->st_value = MB.getBufferSize();
+  auto AddSym = [&](std::string Name, uintX_t SecIdx, uintX_t Value) {
+    Elf_Sym *Sym = File.addSymbol("_binary_" + Filepath + Name);
+    Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
+    Sym->st_shndx = SecIdx;
+    Sym->st_value = Value;
+  };
+  AddSym("_start", DataSec.Index, 0);
+  AddSym("_end", DataSec.Index, MB.getBufferSize());
+  AddSym("_size", SHN_ABS, MB.getBufferSize());
 
   // Fix the ELF file layout and write it down to ELFData uint8_t vector.
-  std::size_t Size = ELF.layout();
+  size_t Size = File.layout();
   ELFData.resize(Size);
-  ELF.write(ELFData.data());
+  File.writeTo(ELFData.data());
 
   // Fill .data section with actual data.
-  std::copy(MB.getBufferStart(), MB.getBufferEnd(),
-            ELFData.data() + DataSec.Header->sh_offset);
+  memcpy(ELFData.data() + DataSec.Header->sh_offset, MB.getBufferStart(),
+         MB.getBufferSize());
 
   return createELFFile<ObjectFile>(MemoryBufferRef(
       StringRef((char *)ELFData.data(), Size), MB.getBufferIdentifier()));

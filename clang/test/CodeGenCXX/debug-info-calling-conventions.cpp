@@ -8,7 +8,7 @@ void A::thiscallcc() {}
 // CHECK: !DISubprogram(name: "thiscallcc", {{.*}} type: ![[thiscallty:[^,]*]], {{.*}})
 // CHECK: ![[thiscallty]] = !DISubroutineType(cc: DW_CC_BORLAND_thiscall, types: ![[thisargs:[^,)]*]])
 // CHECK: ![[thisargs]] = !{null, ![[thisptrty:[^,}]*]]}
-// CHECK: ![[thisptrty]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{.*}}, size: 32, align: 32, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK: ![[thisptrty]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{.*}}, size: 32, flags: DIFlagArtificial | DIFlagObjectPointer)
 
 void cdeclcc() {}
 void __fastcall fastcallcc() {}

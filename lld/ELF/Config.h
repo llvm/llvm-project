@@ -69,7 +69,6 @@ struct VersionDefinition {
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Configuration {
-  Symbol *EntrySym = nullptr;
   InputFile *FirstElf = nullptr;
   llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef DynamicLinker;
@@ -92,7 +91,6 @@ struct Configuration {
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
-  bool Binary = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
   bool Demangle = true;

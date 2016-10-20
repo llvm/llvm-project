@@ -998,7 +998,9 @@ static void CheckFoldOperand(Sema &S, Expr *E) {
     return;
 
   E = E->IgnoreImpCasts();
-  if (isa<BinaryOperator>(E) || isa<AbstractConditionalOperator>(E)) {
+  auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
+  if ((OCE && OCE->isInfixBinaryOp()) || isa<BinaryOperator>(E) ||
+      isa<AbstractConditionalOperator>(E)) {
     S.Diag(E->getExprLoc(), diag::err_fold_expression_bad_operand)
         << E->getSourceRange()
         << FixItHint::CreateInsertion(E->getLocStart(), "(")

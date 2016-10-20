@@ -3,7 +3,7 @@
 struct B {
 // CHECK: ![[B:[0-9]+]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "B"
 // CHECK-SAME:                             line: [[@LINE-2]],
-// CHECK-SAME:                             size: 8, align: 8,
+// CHECK-SAME:                             size: 8,
 // CHECK-NOT:                              offset:
 // CHECK-NOT:                              DIFlagFwdDecl
 // CHECK-SAME:                             elements: ![[BMEMBERS:[0-9]+]]

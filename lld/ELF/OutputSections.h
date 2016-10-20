@@ -264,6 +264,11 @@ private:
   uintX_t Addend;
 };
 
+struct SymbolTableEntry {
+  SymbolBody *Symbol;
+  size_t StrTabOffset;
+};
+
 template <class ELFT>
 class SymbolTableSection final : public OutputSectionBase<ELFT> {
   typedef OutputSectionBase<ELFT> Base;
@@ -283,7 +288,7 @@ public:
   typename Base::Kind getKind() const override { return Base::SymTable; }
   static bool classof(const Base *B) { return B->getKind() == Base::SymTable; }
 
-  ArrayRef<std::pair<SymbolBody *, size_t>> getSymbols() const {
+  ArrayRef<SymbolTableEntry> getSymbols() const {
     return Symbols;
   }
 
@@ -297,7 +302,7 @@ private:
   const OutputSectionBase<ELFT> *getOutputSection(SymbolBody *Sym);
 
   // A vector of symbols and their string table offsets.
-  std::vector<std::pair<SymbolBody *, size_t>> Symbols;
+  std::vector<SymbolTableEntry> Symbols;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -551,7 +556,7 @@ public:
 
   // Adds symbols to the hash table.
   // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<std::pair<SymbolBody *, size_t>> &Symbols);
+  void addSymbols(std::vector<SymbolTableEntry> &Symbols);
   typename Base::Kind getKind() const override { return Base::GnuHashTable; }
   static bool classof(const Base *B) {
     return B->getKind() == Base::GnuHashTable;

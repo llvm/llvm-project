@@ -12,7 +12,8 @@
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
-// XFAIL: no-aligned-allocation
+// FIXME change this to XFAIL.
+// UNSUPPORTED: no-aligned-allocation
 
 // test operator new
 

@@ -27,8 +27,7 @@ class ModulesInlineFunctionsTestCase(TestBase):
         self.line = line_number('main.m', '// Set breakpoint here.')
 
     @skipUnlessDarwin
-    @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion(
-        '12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @skipIf(macos_version=["<", "10.12"])
     @expectedFailureDarwin("llvm.org/pr25743")
     def test_expr(self):
         self.build()

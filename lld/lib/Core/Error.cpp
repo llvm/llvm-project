@@ -19,7 +19,7 @@ using namespace lld;
 namespace {
 class _YamlReaderErrorCategory : public std::error_category {
 public:
-  const char* name() const LLVM_NOEXCEPT override {
+  const char* name() const noexcept override {
     return "lld.yaml.reader";
   }
 
@@ -50,7 +50,7 @@ class dynamic_error_category : public std::error_category {
 public:
   ~dynamic_error_category() override = default;
 
-  const char *name() const LLVM_NOEXCEPT override {
+  const char *name() const noexcept override {
     return "lld.dynamic_error";
   }
 

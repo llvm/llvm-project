@@ -1432,7 +1432,9 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E;
   assert(Op == "=" || Op == "+=");
   if (consume("ABSOLUTE")) {
-    E = readParenExpr();
+    // The RHS may be something like "ABSOLUTE(.) & 0xff".
+    // Call readExpr1 to read the whole expression.
+    E = readExpr1(readParenExpr(), 0);
     IsAbsolute = true;
   } else {
     E = readExpr();
