@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_TIMEVALUE_H
 #define LLVM_SUPPORT_TIMEVALUE_H
 
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/DataTypes.h"
 #include <string>
 
@@ -112,6 +113,11 @@ namespace sys {
       this->normalize();
     }
 
+    template<typename D>
+    TimeValue(TimePoint<D> TP)
+        : seconds_(sys::toTimeT(TP) + PosixZeroTimeSeconds),
+          nanos_((TimePoint<>(TP).time_since_epoch() % std::chrono::seconds(1)).count()) {}
+
     /// This is a static constructor that returns a TimeValue that represents
     /// the current time.
     /// @brief Creates a TimeValue with the current time (UTC).
@@ -121,6 +127,11 @@ namespace sys {
   /// @name Operators
   /// @{
   public:
+    operator TimePoint<>() const {
+      return toTimePoint(seconds_ - PosixZeroTimeSeconds) +
+             std::chrono::nanoseconds(nanos_);
+    }
+
     /// Add \p that to \p this.
     /// @returns this
     /// @brief Incrementing assignment operator.

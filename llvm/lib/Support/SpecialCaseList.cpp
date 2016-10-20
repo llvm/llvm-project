@@ -32,10 +32,6 @@ namespace llvm {
 /// reason for doing so is efficiency; StringSet is much faster at matching
 /// literal strings than Regex.
 struct SpecialCaseList::Entry {
-  Entry() {}
-  Entry(Entry &&Other)
-      : Strings(std::move(Other.Strings)), RegEx(std::move(Other.RegEx)) {}
-
   StringSet<> Strings;
   std::unique_ptr<Regex> RegEx;
 

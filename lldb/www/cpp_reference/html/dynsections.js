@@ -44,23 +44,42 @@ function toggleLevel(level)
   });
   updateStripes();
 }
-function toggleFolder(id) 
+
+function toggleFolder(id)
 {
-  var n = $('[id^=row_'+id+']');
-  var i = $('[id^=img_'+id+']');
-  var a = $('[id^=arr_'+id+']');
-  var c = n.slice(1);
-  if (c.filter(':first').is(':visible')===true) {
-    i.attr('src','ftv2folderclosed.png');
-    a.attr('src','ftv2pnode.png');
-    c.hide();
-  } else {
-    i.attr('src','ftv2folderopen.png');
-    a.attr('src','ftv2mnode.png');
-    c.show();
+  //The clicked row
+  var currentRow = $('#row_'+id);
+  var currentRowImages = currentRow.find("img");
+
+  //All rows after the clicked row
+  var rows = currentRow.nextAll("tr");
+
+  //Only match elements AFTER this one (can't hide elements before)
+  var childRows = rows.filter(function() {
+    var re = new RegExp('^row_'+id+'\\d+_$', "i"); //only one sub
+    return this.id.match(re);
+  });
+
+  //First row is visible we are HIDING
+  if (childRows.filter(':first').is(':visible')===true) {
+    currentRowImages.filter("[id^=arr]").attr('src', 'ftv2pnode.png');
+    currentRowImages.filter("[id^=img]").attr('src', 'ftv2folderclosed.png');
+    rows.filter("[id^=row_"+id+"]").hide();
+  } else { //We are SHOWING
+    //All sub images
+    var childImages = childRows.find("img");
+    var childImg = childImages.filter("[id^=img]");
+    var childArr = childImages.filter("[id^=arr]");
+
+    currentRow.find("[id^=arr]").attr('src', 'ftv2mnode.png'); //open row
+    currentRow.find("[id^=img]").attr('src', 'ftv2folderopen.png'); //open row
+    childImg.attr('src','ftv2folderclosed.png'); //children closed
+    childArr.attr('src','ftv2pnode.png'); //children closed
+    childRows.show(); //show all children
   }
   updateStripes();
 }
+
 
 function toggleInherit(id)
 {
@@ -76,3 +95,10 @@ function toggleInherit(id)
   }
 }
 
+
+$(document).ready(function() {
+  $('.code,.codeRef').each(function() {
+    $(this).data('powertip',$('#'+$(this).attr('href').replace(/.*\//,'').replace(/[^a-z_A-Z0-9]/g,'_')).html());
+    $(this).powerTip({ placement: 's', smartPlacement: true, mouseOnToPopup: true });
+  });
+});

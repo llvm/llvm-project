@@ -37,6 +37,7 @@ add_llvm_library(LLVMSupport
   BranchProbability.cpp
   CachePruning.cpp
   circular_raw_ostream.cpp
+  Chrono.cpp
   COM.cpp
   CommandLine.cpp
   Compression.cpp

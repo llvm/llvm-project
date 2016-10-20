@@ -662,11 +662,7 @@ public:
   // unique_ptr<MemorySSA> to avoid build breakage on MSVC.
   struct Result {
     Result(std::unique_ptr<MemorySSA> &&MSSA) : MSSA(std::move(MSSA)) {}
-    Result(Result &&R) : MSSA(std::move(R.MSSA)) {}
     MemorySSA &getMSSA() { return *MSSA.get(); }
-
-    Result(const Result &) = delete;
-    void operator=(const Result &) = delete;
 
     std::unique_ptr<MemorySSA> MSSA;
   };

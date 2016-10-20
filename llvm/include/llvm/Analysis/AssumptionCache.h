@@ -100,12 +100,6 @@ class AssumptionAnalysis : public AnalysisInfoMixin<AssumptionAnalysis> {
 public:
   typedef AssumptionCache Result;
 
-  AssumptionAnalysis() {}
-  AssumptionAnalysis(const AssumptionAnalysis &Arg) {}
-  AssumptionAnalysis(AssumptionAnalysis &&Arg) {}
-  AssumptionAnalysis &operator=(const AssumptionAnalysis &RHS) { return *this; }
-  AssumptionAnalysis &operator=(AssumptionAnalysis &&RHS) { return *this; }
-
   AssumptionCache run(Function &F, FunctionAnalysisManager &) {
     return AssumptionCache(F);
   }

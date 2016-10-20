@@ -65,7 +65,7 @@ if (HAS_ATTRIBUTE_WARN_UNUSED_RESULT)
 endif ()
 
 check_c_source_compiles("
-  static void foo(void) __attribute__ ((unused));
+  __attribute__ ((unused)) static void foo(void);
   int main() { return 0; }
   " HAVE___ATTRIBUTE__)
 
@@ -76,12 +76,12 @@ check_c_source_compiles_numeric("
   " HAVE_DECL_FFS)
 
 check_c_source_compiles_numeric("
-  int main() { __builtin_ffs(0); return 0; }
+  int main() { (void)__builtin_ffs(0); return 0; }
   " HAVE_DECL___BUILTIN_FFS)
 
 check_c_source_compiles_numeric("
   #include <intrin.h>
-  int main() { _BitScanForward(NULL, 0); return 0; }
+  int main() { (void)_BitScanForward(NULL, 0); return 0; }
   " HAVE_DECL__BITSCANFORWARD)
 
 if (NOT HAVE_DECL_FFS AND
@@ -98,7 +98,7 @@ check_c_source_compiles_numeric("
 
 check_c_source_compiles_numeric("
   #include <string.h>
-  int main() { _stricmp(\"\", \"\"); return 0; }
+  int main() { (void)_stricmp(\"\", \"\"); return 0; }
   " HAVE_DECL__STRICMP)
 
 if (NOT HAVE_DECL_STRCASECMP AND NOT HAVE_DECL__STRICMP)
@@ -113,7 +113,7 @@ check_c_source_compiles_numeric("
 
 check_c_source_compiles_numeric("
   #include <string.h>
-  int main() { _strnicmp(\"\", \"\", 0); return 0; }
+  int main() { (void)_strnicmp(\"\", \"\", 0); return 0; }
   " HAVE_DECL__STRNICMP)
 
 if (NOT HAVE_DECL_STRNCASECMP AND NOT HAVE_DECL__STRNICMP)

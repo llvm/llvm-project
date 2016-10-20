@@ -8,6 +8,7 @@ add_lld_library(lldELF
   EhFrame.cpp
   ELFCreator.cpp
   Error.cpp
+  GdbIndex.cpp
   ICF.cpp
   InputFiles.cpp
   InputSection.cpp

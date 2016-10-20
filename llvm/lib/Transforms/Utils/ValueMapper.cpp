@@ -38,15 +38,6 @@ struct DelayedBasicBlock {
   BasicBlock *OldBB;
   std::unique_ptr<BasicBlock> TempBB;
 
-  // Explicit move for MSVC.
-  DelayedBasicBlock(DelayedBasicBlock &&X)
-      : OldBB(std::move(X.OldBB)), TempBB(std::move(X.TempBB)) {}
-  DelayedBasicBlock &operator=(DelayedBasicBlock &&X) {
-    OldBB = std::move(X.OldBB);
-    TempBB = std::move(X.TempBB);
-    return *this;
-  }
-
   DelayedBasicBlock(const BlockAddress &Old)
       : OldBB(Old.getBasicBlock()),
         TempBB(BasicBlock::Create(Old.getContext())) {}
@@ -184,17 +175,6 @@ class MDNodeMapper {
     bool HasChanged = false;
     unsigned ID = ~0u;
     TempMDNode Placeholder;
-
-    Data() {}
-    Data(Data &&X)
-        : HasChanged(std::move(X.HasChanged)), ID(std::move(X.ID)),
-          Placeholder(std::move(X.Placeholder)) {}
-    Data &operator=(Data &&X) {
-      HasChanged = std::move(X.HasChanged);
-      ID = std::move(X.ID);
-      Placeholder = std::move(X.Placeholder);
-      return *this;
-    }
   };
 
   /// A graph of uniqued nodes.

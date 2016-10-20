@@ -518,38 +518,6 @@ public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
                  AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI);
 
-  // FIXME:
-  // Hack for MSVC 2013 which sems like it can't synthesize this even 
-  // with default keyword:
-  // LoopAccessInfo(LoopAccessInfo &&LAI) = default;
-  LoopAccessInfo(LoopAccessInfo &&LAI)
-      : PSE(std::move(LAI.PSE)), PtrRtChecking(std::move(LAI.PtrRtChecking)),
-        DepChecker(std::move(LAI.DepChecker)), TheLoop(LAI.TheLoop),
-        NumLoads(LAI.NumLoads), NumStores(LAI.NumStores),
-        MaxSafeDepDistBytes(LAI.MaxSafeDepDistBytes), CanVecMem(LAI.CanVecMem),
-        StoreToLoopInvariantAddress(LAI.StoreToLoopInvariantAddress),
-        Report(std::move(LAI.Report)),
-        SymbolicStrides(std::move(LAI.SymbolicStrides)),
-        StrideSet(std::move(LAI.StrideSet)) {}
-  // LoopAccessInfo &operator=(LoopAccessInfo &&LAI) = default;
-  LoopAccessInfo &operator=(LoopAccessInfo &&LAI) {
-    assert(this != &LAI);
-
-    PSE = std::move(LAI.PSE);
-    PtrRtChecking = std::move(LAI.PtrRtChecking);
-    DepChecker = std::move(LAI.DepChecker);
-    TheLoop = LAI.TheLoop;
-    NumLoads = LAI.NumLoads;
-    NumStores = LAI.NumStores;
-    MaxSafeDepDistBytes = LAI.MaxSafeDepDistBytes;
-    CanVecMem = LAI.CanVecMem;
-    StoreToLoopInvariantAddress = LAI.StoreToLoopInvariantAddress;
-    Report = std::move(LAI.Report);
-    SymbolicStrides = std::move(LAI.SymbolicStrides);
-    StrideSet = std::move(LAI.StrideSet);
-    return *this;
-  }
-
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles.
   bool canVectorizeMemory() const { return CanVecMem; }

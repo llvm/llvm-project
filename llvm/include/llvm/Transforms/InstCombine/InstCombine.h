@@ -31,17 +31,8 @@ class InstCombinePass : public PassInfoMixin<InstCombinePass> {
 public:
   static StringRef name() { return "InstCombinePass"; }
 
-  // Explicitly define constructors for MSVC.
-  InstCombinePass(bool ExpensiveCombines = true)
+  explicit InstCombinePass(bool ExpensiveCombines = true)
       : ExpensiveCombines(ExpensiveCombines) {}
-  InstCombinePass(InstCombinePass &&Arg)
-      : Worklist(std::move(Arg.Worklist)),
-        ExpensiveCombines(Arg.ExpensiveCombines) {}
-  InstCombinePass &operator=(InstCombinePass &&RHS) {
-    Worklist = std::move(RHS.Worklist);
-    ExpensiveCombines = RHS.ExpensiveCombines;
-    return *this;
-  }
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

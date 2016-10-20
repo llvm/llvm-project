@@ -64,21 +64,6 @@ class FunctionToLoopPassAdaptor
 public:
   explicit FunctionToLoopPassAdaptor(LoopPassT Pass)
       : Pass(std::move(Pass)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  FunctionToLoopPassAdaptor(const FunctionToLoopPassAdaptor &Arg)
-      : Pass(Arg.Pass) {}
-  FunctionToLoopPassAdaptor(FunctionToLoopPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
-  friend void swap(FunctionToLoopPassAdaptor &LHS,
-                   FunctionToLoopPassAdaptor &RHS) {
-    using std::swap;
-    swap(LHS.Pass, RHS.Pass);
-  }
-  FunctionToLoopPassAdaptor &operator=(FunctionToLoopPassAdaptor RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
 
   /// \brief Runs the loop passes across every loop in the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {

@@ -854,20 +854,6 @@ class AAManager : public AnalysisInfoMixin<AAManager> {
 public:
   typedef AAResults Result;
 
-  // This type has value semantics. We have to spell these out because MSVC
-  // won't synthesize them.
-  AAManager() {}
-  AAManager(AAManager &&Arg) : ResultGetters(std::move(Arg.ResultGetters)) {}
-  AAManager(const AAManager &Arg) : ResultGetters(Arg.ResultGetters) {}
-  AAManager &operator=(AAManager &&RHS) {
-    ResultGetters = std::move(RHS.ResultGetters);
-    return *this;
-  }
-  AAManager &operator=(const AAManager &RHS) {
-    ResultGetters = RHS.ResultGetters;
-    return *this;
-  }
-
   /// Register a specific AA result.
   template <typename AnalysisT> void registerFunctionAnalysis() {
     ResultGetters.push_back(&getFunctionAAResultImpl<AnalysisT>);

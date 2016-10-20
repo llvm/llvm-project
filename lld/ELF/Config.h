@@ -100,6 +100,7 @@ struct Configuration {
   bool ExportDynamic;
   bool FatalWarnings;
   bool GcSections;
+  bool GdbIndex;
   bool GnuHash = false;
   bool ICF;
   bool Mips64EL = false;

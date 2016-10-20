@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TimeValue.h"
-#include "llvm/Config/config.h"
+#include "llvm/Support/Chrono.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
 
@@ -45,12 +46,10 @@ void TimeValue::normalize() {
   }
 }
 
-} // namespace llvm
+std::string TimeValue::str() const { return to_string(TimePoint<>(*this)); }
 
-/// Include the platform-specific portion of TimeValue class
-#ifdef LLVM_ON_UNIX
-#include "Unix/TimeValue.inc"
-#endif
-#ifdef LLVM_ON_WIN32
-#include "Windows/TimeValue.inc"
-#endif
+TimeValue TimeValue::now() {
+  return TimePoint<>(std::chrono::system_clock::now());
+}
+
+} // namespace llvm

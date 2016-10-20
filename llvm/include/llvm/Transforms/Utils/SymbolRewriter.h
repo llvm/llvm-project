@@ -120,9 +120,6 @@ public:
     Descriptors.splice(Descriptors.begin(), DL);
   }
 
-  RewriteSymbolPass(RewriteSymbolPass &&Other)
-      : Descriptors(std::move(Other.Descriptors)) {}
-
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   // Glue for old PM

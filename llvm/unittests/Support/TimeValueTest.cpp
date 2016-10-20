@@ -37,4 +37,14 @@ TEST(TimeValue, Win32FILETIME) {
   EXPECT_EQ(ft1970, epoch.toWin32Time());
 }
 
+TEST(TimeValue, Chrono) {
+  sys::TimeValue TV;
+  TV.fromEpochTime(0);
+  sys::TimePoint<> TP = TV;
+  EXPECT_EQ(0u, sys::toTimeT(TP));
+
+  TP += std::chrono::seconds(47);
+  TV = TP;
+  EXPECT_EQ(47u, TV.toEpochTime());
+}
 }
