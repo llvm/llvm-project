@@ -1,4 +1,5 @@
 // RUN: llvm-mc -triple i386-unknown-unknown %s --show-encoding  | FileCheck %s
+// RUN: llvm-mc -triple i386-unknown-unknown -output-asm-variant=1 %s | FileCheck --check-prefix=INTEL %s
 
 // CHECK: flds	(%edi)
 // CHECK:  encoding: [0xd9,0x07]
@@ -1415,6 +1416,12 @@
 // CHECK: rorl	305419896
 // CHECK:  encoding: [0xd1,0x0d,0x78,0x56,0x34,0x12]
         	rorl	0x12345678
+
+// CHECK: rorl  $foo, (%ebx)
+// INTEL: ror dword ptr [ebx], foo
+// CHECK:  encoding: [0xc1,0x0b,A]
+// CHECK:    fixup A - offset: 2, value: foo, kind: FK_Data_1
+                rorl    $foo, (%ebx)
 
 // CHECK: shll	$0, 3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0xc1,0xa4,0xcb,0xef,0xbe,0xad,0xde,0x00]

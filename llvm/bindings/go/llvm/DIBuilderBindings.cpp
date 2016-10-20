@@ -83,15 +83,15 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
       ScopeLine, static_cast<DINode::DIFlags>(Flags), IsOptimized));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateAutoVariable(LLVMDIBuilderRef Dref, LLVMMetadataRef Scope,
-                                const char *Name, LLVMMetadataRef File,
-                                unsigned Line, LLVMMetadataRef Ty,
-                                int AlwaysPreserve, unsigned Flags) {
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
+    LLVMDIBuilderRef Dref, LLVMMetadataRef Scope, const char *Name,
+    LLVMMetadataRef File, unsigned Line, LLVMMetadataRef Ty, int AlwaysPreserve,
+    unsigned Flags, uint32_t AlignInBits) {
   DIBuilder *D = unwrap(Dref);
-  return wrap(D->createAutoVariable(
-      unwrap<DIScope>(Scope), Name, unwrap<DIFile>(File), Line,
-      unwrap<DIType>(Ty), AlwaysPreserve, static_cast<DINode::DIFlags>(Flags)));
+  return wrap(
+      D->createAutoVariable(unwrap<DIScope>(Scope), Name, unwrap<DIFile>(File),
+                            Line, unwrap<DIType>(Ty), AlwaysPreserve,
+                            static_cast<DINode::DIFlags>(Flags), AlignInBits));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
@@ -107,10 +107,9 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
 LLVMMetadataRef LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Dref,
                                              const char *Name,
                                              uint64_t SizeInBits,
-                                             uint32_t AlignInBits,
                                              unsigned Encoding) {
   DIBuilder *D = unwrap(Dref);
-  return wrap(D->createBasicType(Name, SizeInBits, AlignInBits, Encoding));
+  return wrap(D->createBasicType(Name, SizeInBits, Encoding));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreatePointerType(LLVMDIBuilderRef Dref,

@@ -51,9 +51,8 @@ private:
   void copyLocalSymbols();
   void addReservedSymbols();
   void createSections();
-  void forEachRelSec(
-      std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
-          Fn);
+  void forEachRelSec(std::function<void(InputSectionBase<ELFT> &,
+                                        const typename ELFT::Shdr &)> Fn);
   void sortSections();
   void finalizeSections();
   void addPredefinedSections();
@@ -529,14 +528,13 @@ template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
 }
 
 // Program header entry
-template<class ELFT>
+template <class ELFT>
 PhdrEntry<ELFT>::PhdrEntry(unsigned Type, unsigned Flags) {
   H.p_type = Type;
   H.p_flags = Flags;
 }
 
-template<class ELFT>
-void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
+template <class ELFT> void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
   Last = Sec;
   if (!First)
     First = Sec;
@@ -1012,8 +1010,7 @@ static typename ELFT::uint computeFlags(typename ELFT::uint F) {
 
 // Decide which program headers to create and which sections to include in each
 // one.
-template <class ELFT>
-std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
+template <class ELFT> std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   std::vector<Phdr> Ret;
   auto AddHdr = [&](unsigned Type, unsigned Flags) -> Phdr * {
     Ret.emplace_back(Type, Flags);

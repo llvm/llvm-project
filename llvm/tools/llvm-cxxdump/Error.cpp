@@ -22,7 +22,7 @@ namespace {
 // deal with the Error value directly, rather than converting to error_code.
 class cxxdump_error_category : public std::error_category {
 public:
-  const char *name() const LLVM_NOEXCEPT override { return "llvm.cxxdump"; }
+  const char *name() const noexcept override { return "llvm.cxxdump"; }
   std::string message(int ev) const override {
     switch (static_cast<cxxdump_error>(ev)) {
     case cxxdump_error::success:

@@ -162,7 +162,8 @@ public:
     return *SymbolBodies[SymbolIndex];
   }
 
-  template <typename RelT> SymbolBody &getRelocTargetSym(const RelT &Rel) const {
+  template <typename RelT>
+  SymbolBody &getRelocTargetSym(const RelT &Rel) const {
     uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
     return getSymbolBody(SymIndex);
   }
@@ -260,8 +261,7 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef M);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
-  template <class ELFT>
-  void parse(llvm::DenseSet<StringRef> &ComdatGroups);
+  template <class ELFT> void parse(llvm::DenseSet<StringRef> &ComdatGroups);
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
   std::unique_ptr<llvm::lto::InputFile> Obj;
 

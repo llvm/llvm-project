@@ -235,8 +235,8 @@ static void checkOptions(opt::InputArgList &Args) {
   }
 }
 
-static StringRef
-getString(opt::InputArgList &Args, unsigned Key, StringRef Default = "") {
+static StringRef getString(opt::InputArgList &Args, unsigned Key,
+                           StringRef Default = "") {
   if (auto *Arg = Args.getLastArg(Key))
     return Arg->getValue();
   return Default;
@@ -265,8 +265,8 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
-static uint64_t
-getZOptionValue(opt::InputArgList &Args, StringRef Key, uint64_t Default) {
+static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
+                                uint64_t Default) {
   for (auto *Arg : Args.filtered(OPT_z)) {
     StringRef Value = Arg->getValue();
     size_t Pos = Value.find("=");

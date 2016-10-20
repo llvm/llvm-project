@@ -28,8 +28,7 @@ template <class ELFT> bool isRelroSection(OutputSectionBase<ELFT> *Sec);
 // This describes a program header entry.
 // Each contains type, access flags and range of output sections that will be
 // placed in it.
-template<class ELFT>
-struct PhdrEntry {
+template <class ELFT> struct PhdrEntry {
   PhdrEntry(unsigned Type, unsigned Flags);
   void add(OutputSectionBase<ELFT> *Sec);
 

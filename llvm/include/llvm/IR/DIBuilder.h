@@ -120,10 +120,9 @@ namespace llvm {
     /// type.
     /// \param Name        Type name.
     /// \param SizeInBits  Size of the type.
-    /// \param AlignInBits Type alignment.
     /// \param Encoding    DWARF encoding code, e.g. dwarf::DW_ATE_float.
     DIBasicType *createBasicType(StringRef Name, uint64_t SizeInBits,
-                                 uint32_t AlignInBits, unsigned Encoding);
+                                 unsigned Encoding);
 
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.
@@ -209,7 +208,7 @@ namespace llvm {
     /// \param Ty                  Parent type.
     DIDerivedType *createBitFieldMemberType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
-        uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
+        uint64_t SizeInBits, uint64_t OffsetInBits,
         uint64_t StorageOffsetInBits, DINode::DIFlags Flags, DIType *Ty);
 
     /// Create debugging information entry for a
@@ -221,10 +220,12 @@ namespace llvm {
     /// \param Ty         Type of the static member.
     /// \param Flags      Flags to encode member attribute, e.g. private.
     /// \param Val        Const initializer of the member.
+    /// \param AlignInBits  Member alignment.
     DIDerivedType *createStaticMemberType(DIScope *Scope, StringRef Name,
                                           DIFile *File, unsigned LineNo,
                                           DIType *Ty, DINode::DIFlags Flags,
-                                          llvm::Constant *Val);
+                                          llvm::Constant *Val,
+                                          uint32_t AlignInBits = 0);
 
     /// Create debugging information entry for Objective-C
     /// instance variable.
@@ -458,19 +459,22 @@ namespace llvm {
     /// \param Expr        The location of the global relative to the attached
     ///                    GlobalVariable.
     /// \param Decl        Reference to the corresponding declaration.
+    /// \param AlignInBits Variable alignment(or 0 if no alignment attr was
+    ///                    specified)
     DIGlobalVariable *createGlobalVariable(DIScope *Context, StringRef Name,
                                            StringRef LinkageName, DIFile *File,
                                            unsigned LineNo, DIType *Ty,
                                            bool isLocalToUnit,
                                            DIExpression *Expr = nullptr,
-                                           MDNode *Decl = nullptr);
+                                           MDNode *Decl = nullptr,
+                                           uint32_t AlignInBits = 0);
 
     /// Identical to createGlobalVariable
     /// except that the resulting DbgNode is temporary and meant to be RAUWed.
     DIGlobalVariable *createTempGlobalVariableFwdDecl(
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
-        MDNode *Decl = nullptr);
+        MDNode *Decl = nullptr, uint32_t AlignInBits = 0);
 
     /// Create a new descriptor for an auto variable.  This is a local variable
     /// that is not a subprogram parameter.
@@ -483,7 +487,8 @@ namespace llvm {
     DILocalVariable *
     createAutoVariable(DIScope *Scope, StringRef Name, DIFile *File,
                        unsigned LineNo, DIType *Ty, bool AlwaysPreserve = false,
-                       DINode::DIFlags Flags = DINode::FlagZero);
+                       DINode::DIFlags Flags = DINode::FlagZero,
+                       uint32_t AlignInBits = 0);
 
     /// Create a new descriptor for a parameter variable.
     ///

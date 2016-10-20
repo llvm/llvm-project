@@ -1516,3 +1516,38 @@ void SystemZInstrInfo::loadImmediate(MachineBasicBlock &MBB,
   }
   BuildMI(MBB, MBBI, DL, get(Opcode), Reg).addImm(Value);
 }
+
+bool SystemZInstrInfo::
+areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+                                AliasAnalysis *AA) const {
+
+  if (!MIa.hasOneMemOperand() || !MIb.hasOneMemOperand())
+    return false;
+
+  // If mem-operands show that the same address Value is used by both
+  // instructions, check for non-overlapping offsets and widths. Not
+  // sure if a register based analysis would be an improvement...
+
+  MachineMemOperand *MMOa = *MIa.memoperands_begin();
+  MachineMemOperand *MMOb = *MIb.memoperands_begin();
+  const Value *VALa = MMOa->getValue();
+  const Value *VALb = MMOb->getValue();
+  bool SameVal = (VALa && VALb && (VALa == VALb));
+  if (!SameVal) {
+    const PseudoSourceValue *PSVa = MMOa->getPseudoValue();
+    const PseudoSourceValue *PSVb = MMOb->getPseudoValue();
+    if (PSVa && PSVb && (PSVa == PSVb))
+      SameVal = true;
+  }
+  if (SameVal) {
+    int OffsetA = MMOa->getOffset(), OffsetB = MMOb->getOffset();
+    int WidthA = MMOa->getSize(), WidthB = MMOb->getSize();
+    int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
+    int HighOffset = OffsetA < OffsetB ? OffsetB : OffsetA;
+    int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+    if (LowOffset + LowWidth <= HighOffset)
+      return true;
+  }
+
+  return false;
+}
