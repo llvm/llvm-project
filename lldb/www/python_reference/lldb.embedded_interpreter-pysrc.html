@@ -58,225 +58,140 @@
 </table>
 <h1 class="epydoc">Source Code for <a href="lldb.embedded_interpreter-module.html">Module lldb.embedded_interpreter</a></h1>
 <pre class="py-src">
-<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">readline</tt> </tt>
-<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">code</tt> </tt>
-<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt> </tt>
-<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">traceback</tt> </tt>
-<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"> </tt>
-<a name="SimpleREPL"></a><div id="SimpleREPL-def"><a name="L6"></a><tt class="py-lineno">  6</tt> <a class="py-toggle" href="#" id="SimpleREPL-toggle" onclick="return toggle('SimpleREPL');">-</a><tt class="py-line"><tt class="py-keyword">class</tt> <a class="py-def-name" href="lldb.embedded_interpreter.SimpleREPL-class.html">SimpleREPL</a><tt class="py-op">(</tt><tt class="py-base-class">code</tt><tt class="py-op">.</tt><tt class="py-base-class">InteractiveConsole</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="SimpleREPL-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="SimpleREPL-expanded"><a name="SimpleREPL.__init__"></a><div id="SimpleREPL.__init__-def"><a name="L7"></a><tt class="py-lineno">  7</tt> <a class="py-toggle" href="#" id="SimpleREPL.__init__-toggle" onclick="return toggle('SimpleREPL.__init__');">-</a><tt class="py-line">   <tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter.SimpleREPL-class.html#__init__">__init__</a><tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">prompt</tt><tt class="py-op">,</tt> <tt class="py-param">dict</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="SimpleREPL.__init__-collapsed" style="display:none;" pad="+++" indent="+++++++"></div><div id="SimpleREPL.__init__-expanded"><a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line">       <tt class="py-name">code</tt><tt class="py-op">.</tt><tt class="py-name">InteractiveConsole</tt><tt class="py-op">.</tt><tt id="link-0" class="py-name" targets="Method lldb.SBAddress.__init__()=lldb.SBAddress-class.html#__init__,Method lldb.SBAttachInfo.__init__()=lldb.SBAttachInfo-class.html#__init__,Method lldb.SBBlock.__init__()=lldb.SBBlock-class.html#__init__,Method lldb.SBBlock.ranges_access.__init__()=lldb.SBBlock.ranges_access-class.html#__init__,Method lldb.SBBreakpoint.__init__()=lldb.SBBreakpoint-class.html#__init__,Method lldb.SBBreakpointLocation.__init__()=lldb.SBBreakpointLocation-class.html#__init__,Method lldb.SBBroadcaster.__init__()=lldb.SBBroadcaster-class.html#__init__,Method lldb.SBCommandInterpreter.__init__()=lldb.SBCommandInterpreter-class.html#__init__,Method lldb.SBCommandReturnObject.__init__()=lldb.SBCommandReturnObject-class.html#__init__,Method lldb.SBCommunication.__init__()=lldb.SBCommunication-class.html#__init__,Method lldb.SBCompileUnit.__init__()=lldb.SBCompileUnit-class.html#__init__,Method lldb.SBData.__init__()=lldb.SBData-class.html#__init__,Method lldb.SBData.read_data_helper.__init__()=lldb.SBData.read_data_helper-class.html#__init__,Method lldb.SBDebugger.__init__()=lldb.SBDebugger-class.html#__init__,Method lldb.SBDeclaration.__init__()=lldb.SBDeclaration-class.html#__init__,Method lldb.SBError.__init__()=lldb.SBError-class.html#__init__,Method lldb.SBEvent.__init__()=lldb.SBEvent-class.html#__init__,Method lldb.SBExpressionOptions.__init__()=lldb.SBExpressionOptions-class.html#__init__,Method lldb.SBFileSpec.__init__()=lldb.SBFileSpec-class.html#__init__,Method lldb.SBFileSpecList.__init__()=lldb.SBFileSpecList-class.html#__init__,Method lldb.SBFrame.__init__()=lldb.SBFrame-class.html#__init__,Method lldb.SBFunction.__init__()=lldb.SBFunction-class.html#__init__,Method lldb.SBHostOS.__init__()=lldb.SBHostOS-class.html#__init__,Method lldb.SBInputReader.__init__()=lldb.SBInputReader-class.html#__init__,Method lldb.SBInstruction.__init__()=lldb.SBInstruction-class.html#__init__,Method lldb.SBInstructionList.__init__()=lldb.SBInstructionList-class.html#__init__,Method lldb.SBLaunchInfo.__init__()=lldb.SBLaunchInfo-class.html#__init__,Method lldb.SBLineEntry.__init__()=lldb.SBLineEntry-class.html#__init__,Method lldb.SBListener.__init__()=lldb.SBListener-class.html#__init__,Method lldb.SBModule.__init__()=lldb.SBModule-class.html#__init__,Method lldb.SBModule.compile_units_access.__init__()=lldb.SBModule.compile_units_access-class.html#__init__,Method lldb.SBModule.sections_access.__init__()=lldb.SBModule.sections_access-class.html#__init__,Method lldb.SBModule.symbols_access.__init__()=lldb.SBModule.symbols_access-class.html#__init__,Method lldb.SBModuleSpec.__init__()=lldb.SBModuleSpec-class.html#__init__,Method lldb.SBModuleSpecList.__init__()=lldb.SBModuleSpecList-class.html#__init__,Method lldb.SBProcess.__init__()=lldb.SBProcess-class.html#__init__,Method lldb.SBProcess.threads_access.__init__()=lldb.SBProcess.threads_access-class.html#__init__,Method lldb.SBSection.__init__()=lldb.SBSection-class.html#__init__,Method lldb.SBSourceManager.__init__()=lldb.SBSourceManager-class.html#__init__,Method lldb.SBStream.__init__()=lldb.SBStream-class.html#__init__,Method lldb.SBStringList.__init__()=lldb.SBStringList-class.html#__init__,Method lldb.SBSymbol.__init__()=lldb.SBSymbol-class.html#__init__,Method lldb.SBSymbolContext.__init__()=lldb.SBSymbolContext-class.html#__init__,Method lldb.SBSymbolContextList.__init__()=lldb.SBSymbolContextList-class.html#__init__,Method lldb.SBTarget.__init__()=lldb.SBTarget-class.html#__init__,Method lldb.SBTarget.modules_access.__init__()=lldb.SBTarget.modules_access-class.html#__init__,Method lldb.SBThread.__init__()=lldb.SBThread-class.html#__init__,Method lldb.SBThread.frames_access.__init__()=lldb.SBThread.frames_access-class.html#__init__,Method lldb.SBType.__init__()=lldb.SBType-class.html#__init__,Method lldb.SBTypeCategory.__init__()=lldb.SBTypeCategory-class.html#__init__,Method lldb.SBTypeCategory.formatters_access_class.__init__()=lldb.SBTypeCategory.formatters_access_class-class.html#__init__,Method lldb.SBTypeFilter.__init__()=lldb.SBTypeFilter-class.html#__init__,Method lldb.SBTypeFormat.__init__()=lldb.SBTypeFormat-class.html#__init__,Method lldb.SBTypeList.__init__()=lldb.SBTypeList-class.html#__init__,Method lldb.SBTypeMember.__init__()=lldb.SBTypeMember-class.html#__init__,Method lldb.SBTypeNameSpecifier.__init__()=lldb.SBTypeNameSpecifier-class.html#__init__,Method lldb.SBTypeSummary.__init__()=lldb.SBTypeSummary-class.html#__init__,Method lldb.SBTypeSynthetic.__init__()=lldb.SBTypeSynthetic-class.html#__init__,Method lldb.SBValue.__init__()=lldb.SBValue-class.html#__init__,Method lldb.SBValueList.__init__()=lldb.SBValueList-class.html#__init__,Method lldb.SBWatchpoint.__init__()=lldb.SBWatchpoint-class.html#__init__,Method lldb.declaration.__init__()=lldb.declaration-class.html#__init__,Method lldb.embedded_interpreter.SimpleREPL.__init__()=lldb.embedded_interpreter.SimpleREPL-class.html#__init__,Method lldb.formatters.Logger.FileLogger.__init__()=lldb.formatters.Logger.FileLogger-class.html#__init__,Method lldb.formatters.Logger.Logger.__init__()=lldb.formatters.Logger.Logger-class.html#__init__,Method lldb.formatters.Logger.NopLogger.__init__()=lldb.formatters.Logger.NopLogger-class.html#__init__,Method lldb.formatters.Logger.StdoutLogger.__init__()=lldb.formatters.Logger.StdoutLogger-class.html#__init__,Method lldb.formatters.attrib_fromdict.AttributesDictionary.__init__()=lldb.formatters.attrib_fromdict.AttributesDictionary-class.html#__init__,Method lldb.formatters.cache.Cache.__init__()=lldb.formatters.cache.Cache-class.html#__init__,Method lldb.formatters.cpp.gnu_libstdcpp.StdListSynthProvider.__init__()=lldb.formatters.cpp.gnu_libstdcpp.StdListSynthProvider-class.html#__init__,Method lldb.formatters.cpp.gnu_libstdcpp.StdMapSynthProvider.__init__()=lldb.formatters.cpp.gnu_libstdcpp.StdMapSynthProvider-class.html#__init__,Method lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider.__init__()=lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider-class.html#__init__,Method lldb.formatters.cpp.libcxx.stddeque_SynthProvider.__init__()=lldb.formatters.cpp.libcxx.stddeque_SynthProvider-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdlist_SynthProvider.__init__()=lldb.formatters.cpp.libcxx.stdlist_SynthProvider-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdlist_entry.__init__()=lldb.formatters.cpp.libcxx.stdlist_entry-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdlist_iterator.__init__()=lldb.formatters.cpp.libcxx.stdlist_iterator-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdmap_SynthProvider.__init__()=lldb.formatters.cpp.libcxx.stdmap_SynthProvider-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdmap_iterator.__init__()=lldb.formatters.cpp.libcxx.stdmap_iterator-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdmap_iterator_node.__init__()=lldb.formatters.cpp.libcxx.stdmap_iterator_node-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdsharedptr_SynthProvider.__init__()=lldb.formatters.cpp.libcxx.stdsharedptr_SynthProvider-class.html#__init__,Method lldb.formatters.cpp.libcxx.stdvector_SynthProvider.__init__()=lldb.formatters.cpp.libcxx.stdvector_SynthProvider-class.html#__init__,Method lldb.formatters.metrics.Counter.__init__()=lldb.formatters.metrics.Counter-class.html#__init__,Method lldb.formatters.metrics.Metrics.__init__()=lldb.formatters.metrics.Metrics-class.html#__init__,Method lldb.formatters.metrics.MetricsPrinter_Compact.__init__()=lldb.formatters.metrics.MetricsPrinter_Compact-class.html#__init__,Method lldb.formatters.metrics.MetricsPrinter_Verbose.__init__()=lldb.formatters.metrics.MetricsPrinter_Verbose-class.html#__init__,Method lldb.formatters.metrics.TimeMetrics.__init__()=lldb.formatters.metrics.TimeMetrics-class.html#__init__,Method lldb.utils.symbolication.Address.__init__()=lldb.utils.symbolication.Address-class.html#__init__,Method lldb.utils.symbolication.Image.__init__()=lldb.utils.symbolication.Image-class.html#__init__,Method lldb.utils.symbolication.Section.__init__()=lldb.utils.symbolication.Section-class.html#__init__,Method lldb.utils.symbolication.Symbolicator.__init__()=lldb.utils.symbolication.Symbolicator-class.html#__init__,Method lldb.value.__init__()=lldb.value-class.html#__init__,Method lldb.value_iter.__init__()=lldb.value_iter-class.html#__init__"><a title="lldb.SBAddress.__init__
-lldb.SBAttachInfo.__init__
-lldb.SBBlock.__init__
-lldb.SBBlock.ranges_access.__init__
-lldb.SBBreakpoint.__init__
-lldb.SBBreakpointLocation.__init__
-lldb.SBBroadcaster.__init__
-lldb.SBCommandInterpreter.__init__
-lldb.SBCommandReturnObject.__init__
-lldb.SBCommunication.__init__
-lldb.SBCompileUnit.__init__
-lldb.SBData.__init__
-lldb.SBData.read_data_helper.__init__
-lldb.SBDebugger.__init__
-lldb.SBDeclaration.__init__
-lldb.SBError.__init__
-lldb.SBEvent.__init__
-lldb.SBExpressionOptions.__init__
-lldb.SBFileSpec.__init__
-lldb.SBFileSpecList.__init__
-lldb.SBFrame.__init__
-lldb.SBFunction.__init__
-lldb.SBHostOS.__init__
-lldb.SBInputReader.__init__
-lldb.SBInstruction.__init__
-lldb.SBInstructionList.__init__
-lldb.SBLaunchInfo.__init__
-lldb.SBLineEntry.__init__
-lldb.SBListener.__init__
-lldb.SBModule.__init__
-lldb.SBModule.compile_units_access.__init__
-lldb.SBModule.sections_access.__init__
-lldb.SBModule.symbols_access.__init__
-lldb.SBModuleSpec.__init__
-lldb.SBModuleSpecList.__init__
-lldb.SBProcess.__init__
-lldb.SBProcess.threads_access.__init__
-lldb.SBSection.__init__
-lldb.SBSourceManager.__init__
-lldb.SBStream.__init__
-lldb.SBStringList.__init__
-lldb.SBSymbol.__init__
-lldb.SBSymbolContext.__init__
-lldb.SBSymbolContextList.__init__
-lldb.SBTarget.__init__
-lldb.SBTarget.modules_access.__init__
-lldb.SBThread.__init__
-lldb.SBThread.frames_access.__init__
-lldb.SBType.__init__
-lldb.SBTypeCategory.__init__
-lldb.SBTypeCategory.formatters_access_class.__init__
-lldb.SBTypeFilter.__init__
-lldb.SBTypeFormat.__init__
-lldb.SBTypeList.__init__
-lldb.SBTypeMember.__init__
-lldb.SBTypeNameSpecifier.__init__
-lldb.SBTypeSummary.__init__
-lldb.SBTypeSynthetic.__init__
-lldb.SBValue.__init__
-lldb.SBValueList.__init__
-lldb.SBWatchpoint.__init__
-lldb.declaration.__init__
-lldb.embedded_interpreter.SimpleREPL.__init__
-lldb.formatters.Logger.FileLogger.__init__
-lldb.formatters.Logger.Logger.__init__
-lldb.formatters.Logger.NopLogger.__init__
-lldb.formatters.Logger.StdoutLogger.__init__
-lldb.formatters.attrib_fromdict.AttributesDictionary.__init__
-lldb.formatters.cache.Cache.__init__
-lldb.formatters.cpp.gnu_libstdcpp.StdListSynthProvider.__init__
-lldb.formatters.cpp.gnu_libstdcpp.StdMapSynthProvider.__init__
-lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider.__init__
-lldb.formatters.cpp.libcxx.stddeque_SynthProvider.__init__
-lldb.formatters.cpp.libcxx.stdlist_SynthProvider.__init__
-lldb.formatters.cpp.libcxx.stdlist_entry.__init__
-lldb.formatters.cpp.libcxx.stdlist_iterator.__init__
-lldb.formatters.cpp.libcxx.stdmap_SynthProvider.__init__
-lldb.formatters.cpp.libcxx.stdmap_iterator.__init__
-lldb.formatters.cpp.libcxx.stdmap_iterator_node.__init__
-lldb.formatters.cpp.libcxx.stdsharedptr_SynthProvider.__init__
-lldb.formatters.cpp.libcxx.stdvector_SynthProvider.__init__
-lldb.formatters.metrics.Counter.__init__
-lldb.formatters.metrics.Metrics.__init__
-lldb.formatters.metrics.MetricsPrinter_Compact.__init__
-lldb.formatters.metrics.MetricsPrinter_Verbose.__init__
-lldb.formatters.metrics.TimeMetrics.__init__
-lldb.utils.symbolication.Address.__init__
-lldb.utils.symbolication.Image.__init__
-lldb.utils.symbolication.Section.__init__
-lldb.utils.symbolication.Symbolicator.__init__
-lldb.value.__init__
-lldb.value_iter.__init__" class="py-name" href="#" onclick="return doclink('link-0', '__init__', 'link-0');">__init__</a></tt><tt class="py-op">(</tt><tt class="py-name">self</tt><tt class="py-op">,</tt><tt class="py-name">dict</tt><tt class="py-op">)</tt> </tt>
-<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line">       <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">prompt</tt> <tt class="py-op">=</tt> <tt class="py-name">prompt</tt> </tt>
-<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line">       <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">loop_exit</tt> <tt class="py-op">=</tt> <tt class="py-name">False</tt> </tt>
-<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line">       <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">dict</tt> <tt class="py-op">=</tt> <tt class="py-name">dict</tt> </tt>
-</div><a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line"> </tt>
-<a name="SimpleREPL.interact"></a><div id="SimpleREPL.interact-def"><a name="L13"></a><tt class="py-lineno"> 13</tt> <a class="py-toggle" href="#" id="SimpleREPL.interact-toggle" onclick="return toggle('SimpleREPL.interact');">-</a><tt class="py-line">   <tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter.SimpleREPL-class.html#interact">interact</a><tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="SimpleREPL.interact-collapsed" style="display:none;" pad="+++" indent="+++++++"></div><div id="SimpleREPL.interact-expanded"><a name="L14"></a><tt class="py-lineno"> 14</tt>  <tt class="py-line">       <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
-<a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line">           <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">ps1</tt> </tt>
-<a name="L16"></a><tt class="py-lineno"> 16</tt>  <tt class="py-line">       <tt class="py-keyword">except</tt> <tt class="py-name">AttributeError</tt><tt class="py-op">:</tt> </tt>
-<a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line">           <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">ps1</tt> <tt class="py-op">=</tt> <tt class="py-string">"&gt;&gt;&gt; "</tt> </tt>
-<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line">       <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
-<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line">           <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">ps2</tt> </tt>
-<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line">       <tt class="py-keyword">except</tt> <tt class="py-name">AttributeError</tt><tt class="py-op">:</tt> </tt>
-<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line">           <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">ps2</tt> <tt class="py-op">=</tt> <tt class="py-string">"... "</tt> </tt>
-<a name="L22"></a><tt class="py-lineno"> 22</tt>  <tt class="py-line"> </tt>
-<a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line">       <tt class="py-keyword">while</tt> <tt class="py-keyword">not</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">loop_exit</tt><tt class="py-op">:</tt> </tt>
-<a name="L24"></a><tt class="py-lineno"> 24</tt>  <tt class="py-line">           <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
-<a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line">               <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-1" class="py-name" targets="Method lldb.embedded_interpreter.SimpleREPL.read_py_command()=lldb.embedded_interpreter.SimpleREPL-class.html#read_py_command"><a title="lldb.embedded_interpreter.SimpleREPL.read_py_command" class="py-name" href="#" onclick="return doclink('link-1', 'read_py_command', 'link-1');">read_py_command</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line">           <tt class="py-keyword">except</tt> <tt class="py-op">(</tt><tt class="py-name">SystemExit</tt><tt class="py-op">,</tt> <tt class="py-name">EOFError</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line">               <tt class="py-comment"># EOF while in Python just breaks out to top level.</tt> </tt>
-<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line">               <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-2" class="py-name" targets="Method lldb.SBCommandReturnObject.write()=lldb.SBCommandReturnObject-class.html#write,Method lldb.SBStream.write()=lldb.SBStream-class.html#write,Method lldb.formatters.Logger.FileLogger.write()=lldb.formatters.Logger.FileLogger-class.html#write,Method lldb.formatters.Logger.Logger.write()=lldb.formatters.Logger.Logger-class.html#write,Method lldb.formatters.Logger.NopLogger.write()=lldb.formatters.Logger.NopLogger-class.html#write,Method lldb.formatters.Logger.StdoutLogger.write()=lldb.formatters.Logger.StdoutLogger-class.html#write"><a title="lldb.SBCommandReturnObject.write
-lldb.SBStream.write
-lldb.formatters.Logger.FileLogger.write
-lldb.formatters.Logger.Logger.write
-lldb.formatters.Logger.NopLogger.write
-lldb.formatters.Logger.StdoutLogger.write" class="py-name" href="#" onclick="return doclink('link-2', 'write', 'link-2');">write</a></tt><tt class="py-op">(</tt><tt class="py-string">'\n'</tt><tt class="py-op">)</tt> </tt>
-<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line">               <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">loop_exit</tt> <tt class="py-op">=</tt> <tt class="py-name">True</tt> </tt>
-<a name="L30"></a><tt class="py-lineno"> 30</tt>  <tt class="py-line">               <tt class="py-keyword">break</tt> </tt>
-<a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line">           <tt class="py-keyword">except</tt> <tt class="py-name">KeyboardInterrupt</tt><tt class="py-op">:</tt> </tt>
-<a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line">               <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-3" class="py-name"><a title="lldb.SBCommandReturnObject.write
-lldb.SBStream.write
-lldb.formatters.Logger.FileLogger.write
-lldb.formatters.Logger.Logger.write
-lldb.formatters.Logger.NopLogger.write
-lldb.formatters.Logger.StdoutLogger.write" class="py-name" href="#" onclick="return doclink('link-3', 'write', 'link-2');">write</a></tt><tt class="py-op">(</tt><tt class="py-string">"\nKeyboardInterrupt\n"</tt><tt class="py-op">)</tt> </tt>
-<a name="L33"></a><tt class="py-lineno"> 33</tt>  <tt class="py-line">               <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">resetbuffer</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-<a name="L34"></a><tt class="py-lineno"> 34</tt>  <tt class="py-line">               <tt class="py-name">more</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
-<a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line">           <tt class="py-keyword">except</tt><tt class="py-op">:</tt> </tt>
-<a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line">               <tt class="py-name">traceback</tt><tt class="py-op">.</tt><tt class="py-name">print_exc</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-</div><a name="L37"></a><tt class="py-lineno"> 37</tt>  <tt class="py-line"> </tt>
-<a name="SimpleREPL.process_input"></a><div id="SimpleREPL.process_input-def"><a name="L38"></a><tt class="py-lineno"> 38</tt> <a class="py-toggle" href="#" id="SimpleREPL.process_input-toggle" onclick="return toggle('SimpleREPL.process_input');">-</a><tt class="py-line">   <tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter.SimpleREPL-class.html#process_input">process_input</a> <tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">in_str</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="SimpleREPL.process_input-collapsed" style="display:none;" pad="+++" indent="+++++++"></div><div id="SimpleREPL.process_input-expanded"><a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line">      <tt class="py-comment"># Canonicalize the format of the input string</tt> </tt>
-<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line">      <tt class="py-name">temp_str</tt> <tt class="py-op">=</tt> <tt class="py-name">in_str</tt> </tt>
-<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line">      <tt class="py-name">temp_str</tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-string">' \t'</tt><tt class="py-op">)</tt> </tt>
-<a name="L42"></a><tt class="py-lineno"> 42</tt>  <tt class="py-line">      <tt class="py-name">words</tt> <tt class="py-op">=</tt> <tt class="py-name">temp_str</tt><tt class="py-op">.</tt><tt id="link-4" class="py-name" targets="Method lldb.SBModule.symbols_access.re_compile_type.split()=lldb.SBModule.symbols_access.re_compile_type-class.html#split"><a title="lldb.SBModule.symbols_access.re_compile_type.split" class="py-name" href="#" onclick="return doclink('link-4', 'split', 'link-4');">split</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-<a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line">      <tt class="py-name">temp_str</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt><tt class="py-string">''</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt class="py-name">words</tt><tt class="py-op">)</tt> </tt>
-<a name="L44"></a><tt class="py-lineno"> 44</tt>  <tt class="py-line"> </tt>
-<a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line">      <tt class="py-comment"># Check the input string to see if it was the quit</tt> </tt>
-<a name="L46"></a><tt class="py-lineno"> 46</tt>  <tt class="py-line">      <tt class="py-comment"># command.  If so, intercept it, so that it doesn't</tt> </tt>
-<a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line">      <tt class="py-comment"># close stdin on us!</tt> </tt>
-<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line">      <tt class="py-keyword">if</tt> <tt class="py-op">(</tt><tt class="py-name">temp_str</tt><tt class="py-op">.</tt><tt class="py-name">lower</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-string">"quit()"</tt> <tt class="py-keyword">or</tt> <tt class="py-name">temp_str</tt><tt class="py-op">.</tt><tt class="py-name">lower</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-string">"exit()"</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line">         <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">loop_exit</tt> <tt class="py-op">=</tt> <tt class="py-name">True</tt> </tt>
-<a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line">         <tt class="py-name">in_str</tt> <tt class="py-op">=</tt> <tt class="py-string">"raise SystemExit "</tt> </tt>
-<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line">      <tt class="py-keyword">return</tt> <tt class="py-name">in_str</tt> </tt>
-</div><a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line"> </tt>
-<a name="SimpleREPL.my_raw_input"></a><div id="SimpleREPL.my_raw_input-def"><a name="L53"></a><tt class="py-lineno"> 53</tt> <a class="py-toggle" href="#" id="SimpleREPL.my_raw_input-toggle" onclick="return toggle('SimpleREPL.my_raw_input');">-</a><tt class="py-line">   <tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter.SimpleREPL-class.html#my_raw_input">my_raw_input</a> <tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">prompt</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="SimpleREPL.my_raw_input-collapsed" style="display:none;" pad="+++" indent="+++++++"></div><div id="SimpleREPL.my_raw_input-expanded"><a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line">      <tt class="py-name">stream</tt> <tt class="py-op">=</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stdout</tt> </tt>
-<a name="L55"></a><tt class="py-lineno"> 55</tt>  <tt class="py-line">      <tt class="py-name">stream</tt><tt class="py-op">.</tt><tt id="link-5" class="py-name"><a title="lldb.SBCommandReturnObject.write
-lldb.SBStream.write
-lldb.formatters.Logger.FileLogger.write
-lldb.formatters.Logger.Logger.write
-lldb.formatters.Logger.NopLogger.write
-lldb.formatters.Logger.StdoutLogger.write" class="py-name" href="#" onclick="return doclink('link-5', 'write', 'link-2');">write</a></tt> <tt class="py-op">(</tt><tt class="py-name">prompt</tt><tt class="py-op">)</tt> </tt>
-<a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line">      <tt class="py-name">stream</tt><tt class="py-op">.</tt><tt id="link-6" class="py-name" targets="Method lldb.SBCommandReturnObject.flush()=lldb.SBCommandReturnObject-class.html#flush,Method lldb.SBStream.flush()=lldb.SBStream-class.html#flush,Method lldb.formatters.Logger.FileLogger.flush()=lldb.formatters.Logger.FileLogger-class.html#flush,Method lldb.formatters.Logger.Logger.flush()=lldb.formatters.Logger.Logger-class.html#flush,Method lldb.formatters.Logger.NopLogger.flush()=lldb.formatters.Logger.NopLogger-class.html#flush,Method lldb.formatters.Logger.StdoutLogger.flush()=lldb.formatters.Logger.StdoutLogger-class.html#flush"><a title="lldb.SBCommandReturnObject.flush
-lldb.SBStream.flush
-lldb.formatters.Logger.FileLogger.flush
-lldb.formatters.Logger.Logger.flush
-lldb.formatters.Logger.NopLogger.flush
-lldb.formatters.Logger.StdoutLogger.flush" class="py-name" href="#" onclick="return doclink('link-6', 'flush', 'link-6');">flush</a></tt> <tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-<a name="L57"></a><tt class="py-lineno"> 57</tt>  <tt class="py-line">      <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
-<a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line">         <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stdin</tt><tt class="py-op">.</tt><tt class="py-name">readline</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line">      <tt class="py-keyword">except</tt> <tt class="py-name">KeyboardInterrupt</tt><tt class="py-op">:</tt> </tt>
-<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line">         <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-string">" \n"</tt> </tt>
-<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line">      <tt class="py-keyword">except</tt> <tt class="py-op">(</tt><tt class="py-name">SystemExit</tt><tt class="py-op">,</tt> <tt class="py-name">EOFError</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-<a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line">         <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-string">"quit()\n"</tt> </tt>
-<a name="L63"></a><tt class="py-lineno"> 63</tt>  <tt class="py-line">      <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">line</tt><tt class="py-op">:</tt> </tt>
-<a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line">         <tt class="py-keyword">raise</tt> <tt class="py-name">EOFError</tt> </tt>
-<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line">      <tt class="py-keyword">if</tt> <tt class="py-name">line</tt><tt class="py-op">[</tt><tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">'\n'</tt><tt class="py-op">:</tt> </tt>
-<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line">         <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-name">line</tt><tt class="py-op">[</tt><tt class="py-op">:</tt><tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">]</tt> </tt>
-<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line">      <tt class="py-keyword">return</tt> <tt class="py-name">line</tt> </tt>
-</div><a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line"> </tt>
-<a name="SimpleREPL.read_py_command"></a><div id="SimpleREPL.read_py_command-def"><a name="L69"></a><tt class="py-lineno"> 69</tt> <a class="py-toggle" href="#" id="SimpleREPL.read_py_command-toggle" onclick="return toggle('SimpleREPL.read_py_command');">-</a><tt class="py-line">   <tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter.SimpleREPL-class.html#read_py_command">read_py_command</a><tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="SimpleREPL.read_py_command-collapsed" style="display:none;" pad="+++" indent="+++++++"></div><div id="SimpleREPL.read_py_command-expanded"><a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line">       <tt class="py-comment"># Read off a complete Python command.</tt> </tt>
-<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line">       <tt class="py-name">more</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
-<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line">       <tt class="py-keyword">while</tt> <tt class="py-number">1</tt><tt class="py-op">:</tt> </tt>
-<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line">           <tt class="py-keyword">if</tt> <tt class="py-name">more</tt><tt class="py-op">:</tt> </tt>
-<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line">               <tt class="py-name">prompt</tt> <tt class="py-op">=</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">ps2</tt> </tt>
-<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line">           <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
-<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line">               <tt class="py-name">prompt</tt> <tt class="py-op">=</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">ps1</tt> </tt>
-<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line">           <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-7" class="py-name" targets="Method lldb.embedded_interpreter.SimpleREPL.my_raw_input()=lldb.embedded_interpreter.SimpleREPL-class.html#my_raw_input"><a title="lldb.embedded_interpreter.SimpleREPL.my_raw_input" class="py-name" href="#" onclick="return doclink('link-7', 'my_raw_input', 'link-7');">my_raw_input</a></tt><tt class="py-op">(</tt><tt class="py-name">prompt</tt><tt class="py-op">)</tt> </tt>
-<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line">           <tt class="py-comment"># Can be None if sys.stdin was redefined</tt> </tt>
-<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line">           <tt class="py-name">encoding</tt> <tt class="py-op">=</tt> <tt class="py-name">getattr</tt><tt class="py-op">(</tt><tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stdin</tt><tt class="py-op">,</tt> <tt class="py-string">"encoding"</tt><tt class="py-op">,</tt> <tt class="py-name">None</tt><tt class="py-op">)</tt> </tt>
-<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line">           <tt class="py-keyword">if</tt> <tt class="py-name">encoding</tt> <tt class="py-keyword">and</tt> <tt class="py-keyword">not</tt> <tt class="py-name">isinstance</tt><tt class="py-op">(</tt><tt class="py-name">line</tt><tt class="py-op">,</tt> <tt class="py-name">unicode</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line">               <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-name">line</tt><tt class="py-op">.</tt><tt class="py-name">decode</tt><tt class="py-op">(</tt><tt class="py-name">encoding</tt><tt class="py-op">)</tt> </tt>
-<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line">           <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-8" class="py-name" targets="Method lldb.embedded_interpreter.SimpleREPL.process_input()=lldb.embedded_interpreter.SimpleREPL-class.html#process_input"><a title="lldb.embedded_interpreter.SimpleREPL.process_input" class="py-name" href="#" onclick="return doclink('link-8', 'process_input', 'link-8');">process_input</a></tt> <tt class="py-op">(</tt><tt class="py-name">line</tt><tt class="py-op">)</tt> </tt>
-<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line">           <tt class="py-name">more</tt> <tt class="py-op">=</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">push</tt><tt class="py-op">(</tt><tt class="py-name">line</tt><tt class="py-op">)</tt> </tt>
-<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line">           <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">more</tt><tt class="py-op">:</tt> </tt>
-<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line">               <tt class="py-keyword">break</tt> </tt>
-</div><a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line"> </tt>
-<a name="SimpleREPL.one_line"></a><div id="SimpleREPL.one_line-def"><a name="L87"></a><tt class="py-lineno"> 87</tt> <a class="py-toggle" href="#" id="SimpleREPL.one_line-toggle" onclick="return toggle('SimpleREPL.one_line');">-</a><tt class="py-line">   <tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter.SimpleREPL-class.html#one_line">one_line</a> <tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">input</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="SimpleREPL.one_line-collapsed" style="display:none;" pad="+++" indent="+++++++"></div><div id="SimpleREPL.one_line-expanded"><a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line">      <tt class="py-name">line</tt> <tt class="py-op">=</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-9" class="py-name"><a title="lldb.embedded_interpreter.SimpleREPL.process_input" class="py-name" href="#" onclick="return doclink('link-9', 'process_input', 'link-8');">process_input</a></tt> <tt class="py-op">(</tt><tt class="py-name">input</tt><tt class="py-op">)</tt> </tt>
-<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line">      <tt class="py-name">more</tt> <tt class="py-op">=</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">push</tt><tt class="py-op">(</tt><tt class="py-name">line</tt><tt class="py-op">)</tt> </tt>
-<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line">      <tt class="py-keyword">if</tt> <tt class="py-name">more</tt><tt class="py-op">:</tt> </tt>
-<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line">         <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-10" class="py-name"><a title="lldb.SBCommandReturnObject.write
-lldb.SBStream.write
-lldb.formatters.Logger.FileLogger.write
-lldb.formatters.Logger.Logger.write
-lldb.formatters.Logger.NopLogger.write
-lldb.formatters.Logger.StdoutLogger.write" class="py-name" href="#" onclick="return doclink('link-10', 'write', 'link-2');">write</a></tt> <tt class="py-op">(</tt><tt class="py-string">"Input not a complete line."</tt><tt class="py-op">)</tt> </tt>
-<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line">         <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">resetbuffer</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line">         <tt class="py-name">more</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
-</div></div><a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line"> </tt>
-<a name="run_python_interpreter"></a><div id="run_python_interpreter-def"><a name="L95"></a><tt class="py-lineno"> 95</tt> <a class="py-toggle" href="#" id="run_python_interpreter-toggle" onclick="return toggle('run_python_interpreter');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter-module.html#run_python_interpreter">run_python_interpreter</a> <tt class="py-op">(</tt><tt class="py-param">dict</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="run_python_interpreter-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="run_python_interpreter-expanded"><a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line">   <tt class="py-comment"># Pass in the dictionary, for continuity from one session to the next.</tt> </tt>
-<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line">   <tt class="py-name">repl</tt> <tt class="py-op">=</tt> <tt id="link-11" class="py-name" targets="Class lldb.embedded_interpreter.SimpleREPL=lldb.embedded_interpreter.SimpleREPL-class.html"><a title="lldb.embedded_interpreter.SimpleREPL" class="py-name" href="#" onclick="return doclink('link-11', 'SimpleREPL', 'link-11');">SimpleREPL</a></tt><tt class="py-op">(</tt><tt class="py-string">'&gt;&gt;&gt; '</tt><tt class="py-op">,</tt> <tt class="py-name">dict</tt><tt class="py-op">)</tt> </tt>
-<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line">   <tt class="py-name">repl</tt><tt class="py-op">.</tt><tt id="link-12" class="py-name" targets="Method lldb.embedded_interpreter.SimpleREPL.interact()=lldb.embedded_interpreter.SimpleREPL-class.html#interact"><a title="lldb.embedded_interpreter.SimpleREPL.interact" class="py-name" href="#" onclick="return doclink('link-12', 'interact', 'link-12');">interact</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
-</div><a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line"> </tt>
-<a name="run_one_line"></a><div id="run_one_line-def"><a name="L100"></a><tt class="py-lineno">100</tt> <a class="py-toggle" href="#" id="run_one_line-toggle" onclick="return toggle('run_one_line');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="lldb.embedded_interpreter-module.html#run_one_line">run_one_line</a> <tt class="py-op">(</tt><tt class="py-param">dict</tt><tt class="py-op">,</tt> <tt class="py-param">input_string</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
-</div><div id="run_one_line-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="run_one_line-expanded"><a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line">   <tt class="py-name">repl</tt> <tt class="py-op">=</tt> <tt id="link-13" class="py-name"><a title="lldb.embedded_interpreter.SimpleREPL" class="py-name" href="#" onclick="return doclink('link-13', 'SimpleREPL', 'link-11');">SimpleREPL</a></tt> <tt class="py-op">(</tt><tt class="py-string">''</tt><tt class="py-op">,</tt> <tt class="py-name">dict</tt><tt class="py-op">)</tt> </tt>
-<a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line">   <tt class="py-name">repl</tt><tt class="py-op">.</tt><tt id="link-14" class="py-name" targets="Method lldb.embedded_interpreter.SimpleREPL.one_line()=lldb.embedded_interpreter.SimpleREPL-class.html#one_line"><a title="lldb.embedded_interpreter.SimpleREPL.one_line" class="py-name" href="#" onclick="return doclink('link-14', 'one_line', 'link-14');">one_line</a></tt> <tt class="py-op">(</tt><tt class="py-name">input_string</tt><tt class="py-op">)</tt> </tt>
-</div><a name="L103"></a><tt class="py-lineno">103</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+&#239;&#187;&#191;import sys
+if sys.version_info[0] < 3:
+    import __builtin__ as builtins
+else:
+    import builtins
+import code
+import lldb
+import traceback
+
+try:
+    import readline
+    import rlcompleter
+except ImportError:
+    have_readline = False
+except AttributeError:
+    # This exception gets hit by the rlcompleter when Linux is using
+    # the readline suppression import.
+    have_readline = False
+else:
+    have_readline = True
+    if 'libedit' in readline.__doc__:
+        readline.parse_and_bind('bind ^I rl_complete')
+    else:
+        readline.parse_and_bind('tab: complete')
+
+g_builtin_override_called = False
+
+
+class LLDBQuitter(object):
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        self()
+
+    def __call__(self, code=None):
+        global g_builtin_override_called
+        g_builtin_override_called = True
+        raise SystemExit(-1)
+
+
+def setquit():
+    '''Redefine builtin functions 'quit()' and 'exit()' to print a message and raise an EOFError exception.'''
+    # This function will be called prior to each interactive
+    # interpreter loop or each single line, so we set the global
+    # g_builtin_override_called to False so we know if a SystemExit
+    # is thrown, we can catch it and tell the difference between
+    # a call to "quit()" or "exit()" and something like
+    # "sys.exit(123)"
+    global g_builtin_override_called
+    g_builtin_override_called = False
+    builtins.quit = LLDBQuitter('quit')
+    builtins.exit = LLDBQuitter('exit')
+
+# When running one line, we might place the string to run in this string
+# in case it would be hard to correctly escape a string's contents
+
+g_run_one_line_str = None
+
+
+def get_terminal_size(fd):
+    try:
+        import fcntl
+        import termios
+        import struct
+        hw = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+    except:
+        hw = (0, 0)
+    return hw
+
+
+def readfunc_stdio(prompt):
+    sys.stdout.write(prompt)
+    return sys.stdin.readline().rstrip()
+
+
+def run_python_interpreter(local_dict):
+    # Pass in the dictionary, for continuity from one session to the next.
+    setquit()
+    try:
+        fd = sys.stdin.fileno()
+        interacted = False
+        if get_terminal_size(fd)[1] == 0:
+            try:
+                import termios
+                old = termios.tcgetattr(fd)
+                if old[3] & termios.ECHO:
+                    # Need to turn off echoing and restore
+                    new = termios.tcgetattr(fd)
+                    new[3] = new[3] & ~termios.ECHO
+                    try:
+                        termios.tcsetattr(fd, termios.TCSADRAIN, new)
+                        interacted = True
+                        code.interact(
+                            banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()'.",
+                            readfunc=readfunc_stdio,
+                            local=local_dict)
+                    finally:
+                        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+            except:
+                pass
+            # Don't need to turn off echoing
+            if not interacted:
+                code.interact(
+                    banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.",
+                    readfunc=readfunc_stdio,
+                    local=local_dict)
+        else:
+            # We have a real interactive terminal
+            code.interact(
+                banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.",
+                local=local_dict)
+    except SystemExit as e:
+        global g_builtin_override_called
+        if not g_builtin_override_called:
+            print('Script exited with %s' % (e))
+
+
+def run_one_line(local_dict, input_string):
+    global g_run_one_line_str
+    setquit()
+    try:
+        repl = code.InteractiveConsole(local_dict)
+        if input_string:
+            repl.runsource(input_string)
+        elif g_run_one_line_str:
+            repl.runsource(g_run_one_line_str)
+
+    except SystemExit as e:
+        global g_builtin_override_called
+        if not g_builtin_override_called:
+            print('Script exited with %s' % (e))
+<script type="text/javascript">
 <!--
 expandto(location.href);
 // -->
@@ -311,7 +226,7 @@ expandto(location.href);
 <table border="0" cellpadding="0" cellspacing="0" width="100%%">
   <tr>
     <td align="left" class="footer">
-    Generated by Epydoc 3.0.1 on Fri Jul 19 13:22:38 2013
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:30 2016
     </td>
     <td align="right" class="footer">
       <a target="mainFrame" href="http://epydoc.sourceforge.net"

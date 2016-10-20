@@ -79,7 +79,7 @@
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a href="lldb.embedded_interpreter.SimpleREPL-class.html" class="summary-name">SimpleREPL</a>
+        <a href="lldb.embedded_interpreter.LLDBQuitter-class.html" class="summary-name">LLDBQuitter</a>
     </td>
   </tr>
 </table>
@@ -106,7 +106,57 @@
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td><span class="summary-sig"><a name="run_python_interpreter"></a><span class="summary-sig-name">run_python_interpreter</span>(<span class="summary-sig-arg">dict</span>)</span></td>
+          <td><span class="summary-sig"><a name="setquit"></a><span class="summary-sig-name">setquit</span>()</span><br />
+      Redefine builtin functions 'quit()' and 'exit()' to print a message 
+      and raise an EOFError exception.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb.embedded_interpreter-pysrc.html#setquit">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_terminal_size"></a><span class="summary-sig-name">get_terminal_size</span>(<span class="summary-sig-arg">fd</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb.embedded_interpreter-pysrc.html#get_terminal_size">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="readfunc_stdio"></a><span class="summary-sig-name">readfunc_stdio</span>(<span class="summary-sig-arg">prompt</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb.embedded_interpreter-pysrc.html#readfunc_stdio">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="run_python_interpreter"></a><span class="summary-sig-name">run_python_interpreter</span>(<span class="summary-sig-arg">local_dict</span>)</span></td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb.embedded_interpreter-pysrc.html#run_python_interpreter">source&nbsp;code</a></span>
             
@@ -122,7 +172,7 @@
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td><span class="summary-sig"><a name="run_one_line"></a><span class="summary-sig-name">run_one_line</span>(<span class="summary-sig-arg">dict</span>,
+          <td><span class="summary-sig"><a name="run_one_line"></a><span class="summary-sig-name">run_one_line</span>(<span class="summary-sig-arg">local_dict</span>,
         <span class="summary-sig-arg">input_string</span>)</span></td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb.embedded_interpreter-pysrc.html#run_one_line">source&nbsp;code</a></span>
@@ -151,6 +201,27 @@
     </table>
   </td>
 </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="have_readline"></a><span class="summary-name">have_readline</span> = <code title="True">True</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="g_builtin_override_called"></a><span class="summary-name">g_builtin_override_called</span> = <code title="False">False</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="g_run_one_line_str"></a><span class="summary-name">g_run_one_line_str</span> = <code title="None">None</code>
+    </td>
+  </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
@@ -187,7 +258,7 @@
 <table border="0" cellpadding="0" cellspacing="0" width="100%%">
   <tr>
     <td align="left" class="footer">
-    Generated by Epydoc 3.0.1 on Fri Jul 19 13:22:33 2013
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:23 2016
     </td>
     <td align="right" class="footer">
       <a target="mainFrame" href="http://epydoc.sourceforge.net"

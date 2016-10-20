@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "EhFrame.h"
 #include "LinkerScript.h"
+#include "GdbIndex.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -54,6 +55,50 @@ template <class ELFT> uint32_t OutputSectionBase<ELFT>::getPhdrFlags() const {
 template <class ELFT>
 void OutputSectionBase<ELFT>::writeHeaderTo(Elf_Shdr *Shdr) {
   *Shdr = Header;
+}
+
+template <class ELFT>
+GdbIndexSection<ELFT>::GdbIndexSection()
+    : OutputSectionBase<ELFT>(".gdb_index", SHT_PROGBITS, 0) {}
+
+template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
+  std::vector<InputSection<ELFT> *> &IS =
+      static_cast<OutputSection<ELFT> *>(Out<ELFT>::DebugInfo)->Sections;
+
+  for (InputSection<ELFT> *I : IS)
+    readDwarf(I);
+}
+
+template <class ELFT>
+void GdbIndexSection<ELFT>::readDwarf(InputSection<ELFT> *I) {
+  std::vector<std::pair<uintX_t, uintX_t>> CuList = readCuList(I);
+  CompilationUnits.insert(CompilationUnits.end(), CuList.begin(), CuList.end());
+}
+
+template <class ELFT> void GdbIndexSection<ELFT>::finalize() {
+  parseDebugSections();
+
+  // GdbIndex header consist from version fields
+  // and 5 more fields with different kinds of offsets.
+  CuTypesOffset = CuListOffset + CompilationUnits.size() * CompilationUnitSize;
+  this->Header.sh_size = CuTypesOffset;
+}
+
+template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
+  write32le(Buf, 7);                  // Write Version
+  write32le(Buf + 4, CuListOffset);   // CU list offset
+  write32le(Buf + 8, CuTypesOffset);  // Types CU list offset
+  write32le(Buf + 12, CuTypesOffset); // Address area offset
+  write32le(Buf + 16, CuTypesOffset); // Symbol table offset
+  write32le(Buf + 20, CuTypesOffset); // Constant pool offset
+  Buf += 24;
+
+  // Write the CU list.
+  for (std::pair<uintX_t, uintX_t> CU : CompilationUnits) {
+    write64le(Buf, CU.first);
+    write64le(Buf + 8, CU.second);
+    Buf += 16;
+  }
 }
 
 template <class ELFT>
@@ -199,25 +244,29 @@ GotSection<ELFT>::getMipsLocalPageOffset(uintX_t EntryValue) {
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const {
-  uintX_t Off = MipsPageEntries;
+  // Calculate offset of the GOT entries block: TLS, global, local.
+  uintX_t GotBlockOff;
   if (B.isTls())
-    Off += MipsLocal.size() + MipsGlobal.size() + B.GotIndex;
+    GotBlockOff = getMipsTlsOffset();
   else if (B.IsInGlobalMipsGot)
-    Off += MipsLocal.size() + B.GotIndex;
-  else if (B.isInGot())
-    Off += B.GotIndex;
+    GotBlockOff = getMipsLocalEntriesNum() * sizeof(uintX_t);
+  else
+    GotBlockOff = MipsPageEntries * sizeof(uintX_t);
+  // Calculate index of the GOT entry in the block.
+  uintX_t GotIndex;
+  if (B.isInGot())
+    GotIndex = B.GotIndex;
   else {
     auto It = MipsGotMap.find({&B, Addend});
     assert(It != MipsGotMap.end());
-    Off += It->second;
+    GotIndex = It->second;
   }
-  return Off * sizeof(uintX_t) - MipsGPOffset;
+  return GotBlockOff + GotIndex * sizeof(uintX_t) - MipsGPOffset;
 }
 
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t GotSection<ELFT>::getMipsTlsOffset() const {
-  return (MipsPageEntries + MipsLocal.size() + MipsGlobal.size()) *
-         sizeof(uintX_t);
+  return (getMipsLocalEntriesNum() + MipsGlobal.size()) * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -256,7 +305,7 @@ template <class ELFT> void GotSection<ELFT>::finalize() {
       // in the GOT entry is calculated as (value + 0x8000) & ~0xffff.
       MipsPageEntries += (OutSec->getSize() + 0x8000 + 0xfffe) / 0xffff;
     }
-    EntriesNum += MipsPageEntries + MipsLocal.size() + MipsGlobal.size();
+    EntriesNum += getMipsLocalEntriesNum() + MipsGlobal.size();
   }
   this->Header.sh_size = EntriesNum * sizeof(uintX_t);
 }
@@ -1143,7 +1192,7 @@ template <class ELFT> void EhOutputSection<ELFT>::finalize() {
     Cie->Piece->OutputOff = Off;
     Off += alignTo(Cie->Piece->size(), sizeof(uintX_t));
 
-    for (SectionPiece *Fde : Cie->FdePieces) {
+    for (EhSectionPiece *Fde : Cie->FdePieces) {
       Fde->OutputOff = Off;
       Off += alignTo(Fde->size(), sizeof(uintX_t));
     }
@@ -1236,11 +1285,15 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   this->Header.sh_entsize = Sec->getSectionHdr()->sh_entsize;
   Sections.push_back(Sec);
 
-  for (SectionPiece &Piece : Sec->Pieces) {
+  auto HashI = Sec->Hashes.begin();
+  for (auto I = Sec->Pieces.begin(), E = Sec->Pieces.end(); I != E; ++I) {
+    SectionPiece &Piece = *I;
+    uint32_t Hash = *HashI;
+    ++HashI;
     if (!Piece.Live)
       continue;
-    StringRef Data = toStringRef(Sec->getData(Piece));
-    CachedHashStringRef V(Data, Piece.Hash);
+    StringRef Data = toStringRef(Sec->getData(I));
+    CachedHashStringRef V(Data, Hash);
     uintX_t OutputOffset = Builder.add(V);
     if (!shouldTailMerge())
       Piece.OutputOff = OutputOffset;
@@ -2057,6 +2110,11 @@ template class BuildIdHexstring<ELF32LE>;
 template class BuildIdHexstring<ELF32BE>;
 template class BuildIdHexstring<ELF64LE>;
 template class BuildIdHexstring<ELF64BE>;
+
+template class GdbIndexSection<ELF32LE>;
+template class GdbIndexSection<ELF32BE>;
+template class GdbIndexSection<ELF64LE>;
+template class GdbIndexSection<ELF64BE>;
 
 template class OutputSectionFactory<ELF32LE>;
 template class OutputSectionFactory<ELF32BE>;

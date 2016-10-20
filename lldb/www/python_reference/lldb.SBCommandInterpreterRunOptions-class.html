@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>lldb.SBCommandInterpreterRunOptions</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="lldb-module.html">Package&nbsp;lldb</a> ::
+        Class&nbsp;SBCommandInterpreterRunOptions
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="lldb.SBCommandInterpreterRunOptions-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class SBCommandInterpreterRunOptions</h1><p class="nomargin-top"><span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions">source&nbsp;code</a></span></p>
+<center>
+<center>  <map id="uml_class_diagram_for_lldb_sbc_2" name="uml_class_diagram_for_lldb_sbc_2">
+<area shape="rect" id="node1_16" href="lldb.SBCommandInterpreterRunOptions-class.html#__swig_setmethods__" title="lldb.SBCommandInterpreterRunOptions.__swig_setmethods__" alt="" coords="17,32,225,52"/>
+<area shape="rect" id="node1_17" href="lldb.SBCommandInterpreterRunOptions-class.html#__swig_getmethods__" title="lldb.SBCommandInterpreterRunOptions.__swig_getmethods__" alt="" coords="17,52,225,72"/>
+<area shape="rect" id="node1_18" href="lldb.SBCommandInterpreterRunOptions-class.html#__setattr__" title="x.__setattr__(&#39;name&#39;, value) &lt;==&gt; x.name = value" alt="" coords="17,75,225,95"/>
+<area shape="rect" id="node1_19" href="lldb.SBCommandInterpreterRunOptions-class.html#__getattr__" title="lldb.SBCommandInterpreterRunOptions.__getattr__" alt="" coords="17,95,225,115"/>
+<area shape="rect" id="node1_20" href="lldb.SBCommandInterpreterRunOptions-class.html#__repr__" title="repr(x)" alt="" coords="17,115,225,135"/>
+<area shape="rect" id="node1_21" href="lldb.SBCommandInterpreterRunOptions-class.html#__init__" title="__init__(lldb::SBCommandInterpreterRunOptions self) &#45;&gt; &#160;SBCommandInterpreterRunOptions" alt="" coords="17,135,225,155"/>
+<area shape="rect" id="node1_22" href="lldb.SBCommandInterpreterRunOptions-class.html#__swig_destroy__" title="delete_SBCommandInterpreterRunOptions(SBCommandInterpreterRunOptions self)" alt="" coords="17,155,225,175"/>
+<area shape="rect" id="node1_23" href="lldb.SBCommandInterpreterRunOptions-class.html#__del__" title="lldb.SBCommandInterpreterRunOptions.__del__" alt="" coords="17,175,225,195"/>
+<area shape="rect" id="node1_24" href="lldb.SBCommandInterpreterRunOptions-class.html#GetStopOnContinue" title="GetStopOnContinue(SBCommandInterpreterRunOptions self) &#45;&gt; bool" alt="" coords="17,195,225,215"/>
+<area shape="rect" id="node1_25" href="lldb.SBCommandInterpreterRunOptions-class.html#SetStopOnContinue" title="SetStopOnContinue(SBCommandInterpreterRunOptions self, bool arg2)" alt="" coords="17,215,225,235"/>
+<area shape="rect" id="node1_26" href="lldb.SBCommandInterpreterRunOptions-class.html#GetStopOnError" title="GetStopOnError(SBCommandInterpreterRunOptions self) &#45;&gt; bool" alt="" coords="17,235,225,255"/>
+<area shape="rect" id="node1_27" href="lldb.SBCommandInterpreterRunOptions-class.html#SetStopOnError" title="SetStopOnError(SBCommandInterpreterRunOptions self, bool arg2)" alt="" coords="17,255,225,275"/>
+<area shape="rect" id="node1_28" href="lldb.SBCommandInterpreterRunOptions-class.html#GetStopOnCrash" title="GetStopOnCrash(SBCommandInterpreterRunOptions self) &#45;&gt; bool" alt="" coords="17,275,225,295"/>
+<area shape="rect" id="node1_29" href="lldb.SBCommandInterpreterRunOptions-class.html#SetStopOnCrash" title="SetStopOnCrash(SBCommandInterpreterRunOptions self, bool arg2)" alt="" coords="17,295,225,315"/>
+<area shape="rect" id="node1_30" href="lldb.SBCommandInterpreterRunOptions-class.html#GetEchoCommands" title="GetEchoCommands(SBCommandInterpreterRunOptions self) &#45;&gt; bool" alt="" coords="17,315,225,335"/>
+<area shape="rect" id="node1_31" href="lldb.SBCommandInterpreterRunOptions-class.html#SetAddToHistory" title="SetAddToHistory(SBCommandInterpreterRunOptions self, bool arg2)" alt="" coords="17,355,225,375"/>
+<area shape="rect" id="node1" href="lldb.SBCommandInterpreterRunOptions-class.html" title="SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed." alt="" coords="5,6,237,381"/>
+</map>
+  <img src="uml_class_diagram_for_lldb_sbc_2.gif" alt='' usemap="#uml_class_diagram_for_lldb_sbc_2" ismap="ismap" class="graph-without-title" />
+</center>
+</center>
+<hr />
+<pre class="literalblock">
+
+SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed.
+A default SBCommandInterpreterRunOptions object has:
+    StopOnContinue: false
+    StopOnError:    false
+    StopOnCrash:    false
+    EchoCommands:   true
+    PrintResults:   true
+    AddToHistory:   true
+
+</pre>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBCommandInterpreterRunOptions-class.html#__setattr__" class="summary-sig-name">__setattr__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>,
+        <span class="summary-sig-arg">value</span>)</span><br />
+      x.__setattr__('name', value) &lt;==&gt; x.name = value</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.__setattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__getattr__"></a><span class="summary-sig-name">__getattr__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.__getattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBCommandInterpreterRunOptions-class.html#__repr__" class="summary-sig-name">__repr__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      repr(x)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBCommandInterpreterRunOptions-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      __init__(lldb::SBCommandInterpreterRunOptions self) -&gt; 
+      SBCommandInterpreterRunOptions</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__swig_destroy__"></a><span class="summary-sig-name">__swig_destroy__</span>(<span class="summary-sig-arg">...</span>)</span><br />
+      delete_SBCommandInterpreterRunOptions(SBCommandInterpreterRunOptions 
+      self)</td>
+          <td align="right" valign="top">
+            
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__del__"></a><span class="summary-sig-name">__del__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.__del__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStopOnContinue"></a><span class="summary-sig-name">GetStopOnContinue</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetStopOnContinue(SBCommandInterpreterRunOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.GetStopOnContinue">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetStopOnContinue"></a><span class="summary-sig-name">SetStopOnContinue</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetStopOnContinue(SBCommandInterpreterRunOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.SetStopOnContinue">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStopOnError"></a><span class="summary-sig-name">GetStopOnError</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetStopOnError(SBCommandInterpreterRunOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.GetStopOnError">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetStopOnError"></a><span class="summary-sig-name">SetStopOnError</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetStopOnError(SBCommandInterpreterRunOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.SetStopOnError">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetStopOnCrash"></a><span class="summary-sig-name">GetStopOnCrash</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetStopOnCrash(SBCommandInterpreterRunOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.GetStopOnCrash">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetStopOnCrash"></a><span class="summary-sig-name">SetStopOnCrash</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetStopOnCrash(SBCommandInterpreterRunOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.SetStopOnCrash">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetEchoCommands"></a><span class="summary-sig-name">GetEchoCommands</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetEchoCommands(SBCommandInterpreterRunOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.GetEchoCommands">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetEchoCommands"></a><span class="summary-sig-name">SetEchoCommands</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetEchoCommands(SBCommandInterpreterRunOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.SetEchoCommands">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetPrintResults"></a><span class="summary-sig-name">GetPrintResults</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetPrintResults(SBCommandInterpreterRunOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.GetPrintResults">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetPrintResults"></a><span class="summary-sig-name">SetPrintResults</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetPrintResults(SBCommandInterpreterRunOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.SetPrintResults">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetAddToHistory"></a><span class="summary-sig-name">GetAddToHistory</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetAddToHistory(SBCommandInterpreterRunOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.GetAddToHistory">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetAddToHistory"></a><span class="summary-sig-name">SetAddToHistory</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetAddToHistory(SBCommandInterpreterRunOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.SetAddToHistory">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__getattribute__</code>,
+      <code>__hash__</code>,
+      <code>__new__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__sizeof__</code>,
+      <code>__str__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS VARIABLES ==================== -->
+<a name="section-ClassVariables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassVariables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_setmethods__"></a><span class="summary-name">__swig_setmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_getmethods__"></a><span class="summary-name">__swig_getmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__setattr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__setattr__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">name</span>,
+        <span class="sig-arg">value</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.__setattr__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>x.__setattr__('name', value) &lt;==&gt; x.name = value</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__setattr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__repr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__repr__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>repr(x)</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__repr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreterRunOptions.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>__init__(lldb::SBCommandInterpreterRunOptions self) -&gt; 
+  SBCommandInterpreterRunOptions</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:25 2016
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

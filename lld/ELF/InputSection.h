@@ -59,7 +59,6 @@ public:
   uint32_t Alignment;
   StringRef Name;
   ArrayRef<uint8_t> Data;
-  ArrayRef<uint8_t> getData(const SectionPiece &P) const;
 
   // If a section is compressed, this has the uncompressed section data.
   std::unique_ptr<uint8_t[]> UncompressedData;
@@ -125,29 +124,19 @@ private:
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;
 
 // SectionPiece represents a piece of splittable section contents.
+// We allocate a lot of these and binary search on them. This means that they
+// have to be as compact as possible, which is why we don't store the size (can
+// be found by looking at the next one) and put the hash in a side table.
 struct SectionPiece {
-  SectionPiece(size_t Off, ArrayRef<uint8_t> Data, uint32_t Hash, bool Live)
-      : InputOff(Off), Hash(Hash), Size(Data.size()),
-        Live(Live || !Config->GcSections) {}
-  SectionPiece(size_t Off, ArrayRef<uint8_t> Data, bool Live = false)
-      : SectionPiece(Off, Data, hash_value(Data), Live) {}
-
-  size_t size() const { return Size; }
+  SectionPiece(size_t Off, bool Live = false)
+      : InputOff(Off), OutputOff(-1), Live(Live || !Config->GcSections) {}
 
   size_t InputOff;
-  size_t OutputOff = -1;
-
-  uint32_t Hash;
-
-private:
-  // We use bitfields because SplitInputSection is accessed by
-  // std::upper_bound very often.
-  // We want to save bits to make it cache friendly.
-  uint32_t Size : 31;
-
-public:
-  uint32_t Live : 1;
+  ssize_t OutputOff : 8 * sizeof(ssize_t) - 1;
+  size_t Live : 1;
 };
+static_assert(sizeof(SectionPiece) == 2 * sizeof(size_t),
+              "SectionPiece is too big");
 
 // This corresponds to a SHF_MERGE section of an input file.
 template <class ELFT> class MergeInputSection : public InputSectionBase<ELFT> {
@@ -176,6 +165,8 @@ public:
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
   std::vector<SectionPiece> Pieces;
+  ArrayRef<uint8_t> getData(std::vector<SectionPiece>::const_iterator I) const;
+  std::vector<uint32_t> Hashes;
 
   // Returns the SectionPiece at a given input section offset.
   SectionPiece *getSectionPiece(uintX_t Offset);
@@ -191,10 +182,13 @@ private:
 
 struct EhSectionPiece : public SectionPiece {
   EhSectionPiece(size_t Off, ArrayRef<uint8_t> Data, unsigned FirstRelocation)
-      : SectionPiece(Off, Data, 0, false), Data(Data.data()),
+      : SectionPiece(Off, false), Data(Data.data()), Size(Data.size()),
         FirstRelocation(FirstRelocation) {}
   const uint8_t *Data;
-  ArrayRef<uint8_t> data() { return {Data, size()}; }
+  uint32_t Size;
+  uint32_t size() const { return Size; }
+
+  ArrayRef<uint8_t> data() { return {Data, Size}; }
   unsigned FirstRelocation;
 };
 

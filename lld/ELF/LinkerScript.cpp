@@ -652,7 +652,16 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
       std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry<ELFT> &E) {
         return E.H.p_type == PT_LOAD;
       });
+
   if (HeaderSize <= MinVA && FirstPTLoad != Phdrs.end()) {
+    // If linker script specifies program headers and first PT_LOAD doesn't 
+    // have both PHDRS and FILEHDR attributes then do nothing
+    if (!Opt.PhdrsCommands.empty()) {
+      size_t SegNum = std::distance(Phdrs.begin(), FirstPTLoad);
+      if (!Opt.PhdrsCommands[SegNum].HasPhdrs ||
+          !Opt.PhdrsCommands[SegNum].HasFilehdr)
+        return;
+    }
     // ELF and Program headers need to be right before the first section in
     // memory. Set their addresses accordingly.
     MinVA = alignDown(MinVA - HeaderSize, Target->PageSize);

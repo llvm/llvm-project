@@ -61,6 +61,7 @@ enum RelExpr {
   R_TLS,
   R_TLSDESC,
   R_TLSDESC_PAGE,
+  R_TLSDESC_CALL,
   R_TLSGD,
   R_TLSGD_PC,
   R_TLSLD,

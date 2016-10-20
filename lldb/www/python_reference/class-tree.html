@@ -71,18 +71,6 @@
     <li> <strong class="uidlink"><a href="lldb.utils.symbolication.Image-class.html">lldb.utils.symbolication.Image</a></strong>:
       <em class="summary">A class that represents an executable image and any associated data</em>
     </li>
-    <li> <strong class="uidlink">code.InteractiveInterpreter</strong>:
-      <em class="summary">Base class for InteractiveConsole.</em>
-    <ul>
-    <li> <strong class="uidlink">code.InteractiveConsole</strong>:
-      <em class="summary">Closely emulate the behavior of the interactive Python interpreter.</em>
-    <ul>
-    <li> <strong class="uidlink"><a href="lldb.embedded_interpreter.SimpleREPL-class.html">lldb.embedded_interpreter.SimpleREPL</a></strong>
-    </li>
-    </ul>
-    </li>
-    </ul>
-    </li>
     <li> <strong class="uidlink"><a href="lldb.formatters.Logger.Logger-class.html">lldb.formatters.Logger.Logger</a></strong>
     </li>
     <li> <strong class="uidlink"><a href="lldb.formatters.metrics.Metrics-class.html">lldb.formatters.metrics.Metrics</a></strong>
@@ -111,6 +99,10 @@
     <li> <strong class="uidlink">object</strong>:
       <em class="summary">The most base type</em>
     <ul>
+    <li> <strong class="uidlink"><a href="lldb.embedded_interpreter.LLDBQuitter-class.html">lldb.embedded_interpreter.LLDBQuitter</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.formatters.synth.PythonObjectSyntheticChildProvider-class.html">lldb.formatters.synth.PythonObjectSyntheticChildProvider</a></strong>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBAddress-class.html">lldb.SBAddress</a></strong>:
       <em class="summary">A section + offset based address class.</em>
     </li>
@@ -123,6 +115,9 @@
     <li> <strong class="uidlink"><a href="lldb.SBBreakpoint-class.html">lldb.SBBreakpoint</a></strong>:
       <em class="summary">Represents a logical breakpoint and its associated settings.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBBreakpointList-class.html">lldb.SBBreakpointList</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBBreakpointList class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBBreakpointLocation-class.html">lldb.SBBreakpointLocation</a></strong>:
       <em class="summary">Represents one unique instance (by address) of a logical 
         breakpoint.</em>
@@ -132,6 +127,9 @@
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBCommandInterpreter-class.html">lldb.SBCommandInterpreter</a></strong>:
       <em class="summary">SBCommandInterpreter handles/interprets commands for lldb.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBCommandInterpreterRunOptions-class.html">lldb.SBCommandInterpreterRunOptions</a></strong>:
+      <em class="summary">SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed.</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBCommandReturnObject-class.html">lldb.SBCommandReturnObject</a></strong>:
       <em class="summary">Represents a container which holds the result from command 
@@ -159,11 +157,14 @@ access to them.</em>
     <li> <strong class="uidlink"><a href="lldb.SBEvent-class.html">lldb.SBEvent</a></strong>:
       <em class="summary">API clients can register to receive events.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBExecutionContext-class.html">lldb.SBExecutionContext</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBExecutionContext class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBExpressionOptions-class.html">lldb.SBExpressionOptions</a></strong>:
       <em class="summary">A container for options to use when evaluating expressions.</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBFileSpec-class.html">lldb.SBFileSpec</a></strong>:
-      <em class="summary">Represents a file specfication that divides the path into a directory and
+      <em class="summary">Represents a file specification that divides the path into a directory and
 basename.</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBFileSpecList-class.html">lldb.SBFileSpecList</a></strong>:
@@ -178,14 +179,14 @@ basename.</em>
     <li> <strong class="uidlink"><a href="lldb.SBHostOS-class.html">lldb.SBHostOS</a></strong>:
       <em class="summary">Proxy of C++ lldb::SBHostOS class</em>
     </li>
-    <li> <strong class="uidlink"><a href="lldb.SBInputReader-class.html">lldb.SBInputReader</a></strong>:
-      <em class="summary">Proxy of C++ lldb::SBInputReader class</em>
-    </li>
     <li> <strong class="uidlink"><a href="lldb.SBInstruction-class.html">lldb.SBInstruction</a></strong>:
       <em class="summary">Proxy of C++ lldb::SBInstruction class</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBInstructionList-class.html">lldb.SBInstructionList</a></strong>:
       <em class="summary">Represents a list of machine instructions.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBLanguageRuntime-class.html">lldb.SBLanguageRuntime</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBLanguageRuntime class</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBLaunchInfo-class.html">lldb.SBLaunchInfo</a></strong>:
       <em class="summary">Proxy of C++ lldb::SBLaunchInfo class</em>
@@ -197,6 +198,12 @@ a source file location.</em>
     <li> <strong class="uidlink"><a href="lldb.SBListener-class.html">lldb.SBListener</a></strong>:
       <em class="summary">API clients can register its own listener to debugger events.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBMemoryRegionInfo-class.html">lldb.SBMemoryRegionInfo</a></strong>:
+      <em class="summary">API clients can get information about memory regions in processes.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBMemoryRegionInfoList-class.html">lldb.SBMemoryRegionInfoList</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBMemoryRegionInfoList class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBModule-class.html">lldb.SBModule</a></strong>:
       <em class="summary">Represents an executable image and its associated object and symbol files.</em>
     </li>
@@ -206,8 +213,24 @@ a source file location.</em>
     <li> <strong class="uidlink"><a href="lldb.SBModuleSpecList-class.html">lldb.SBModuleSpecList</a></strong>:
       <em class="summary">Proxy of C++ lldb::SBModuleSpecList class</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBPlatform-class.html">lldb.SBPlatform</a></strong>:
+      <em class="summary">A class that represents a platform that can represent the current 
+        host or a remote host debug platform.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBPlatformConnectOptions-class.html">lldb.SBPlatformConnectOptions</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBPlatformConnectOptions class</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBPlatformShellCommand-class.html">lldb.SBPlatformShellCommand</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBPlatformShellCommand class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBProcess-class.html">lldb.SBProcess</a></strong>:
       <em class="summary">Represents the process associated with the target program.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBQueue-class.html">lldb.SBQueue</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBQueue class</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBQueueItem-class.html">lldb.SBQueueItem</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBQueueItem class</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBSection-class.html">lldb.SBSection</a></strong>:
       <em class="summary">Represents an executable image section.</em>
@@ -221,6 +244,9 @@ a source file location.</em>
     <li> <strong class="uidlink"><a href="lldb.SBStringList-class.html">lldb.SBStringList</a></strong>:
       <em class="summary">Proxy of C++ lldb::SBStringList class</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBStructuredData-class.html">lldb.SBStructuredData</a></strong>:
+      <em class="summary">A class representing a StructuredData event.</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBSymbol-class.html">lldb.SBSymbol</a></strong>:
       <em class="summary">Represents the symbol possibly associated with a stack frame.</em>
     </li>
@@ -230,17 +256,31 @@ a source file location.</em>
     <li> <strong class="uidlink"><a href="lldb.SBSymbolContextList-class.html">lldb.SBSymbolContextList</a></strong>:
       <em class="summary">Represents a list of symbol context object.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBSyntheticValueProvider-class.html">lldb.SBSyntheticValueProvider</a></strong>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBTarget-class.html">lldb.SBTarget</a></strong>:
       <em class="summary">Represents the target program running under the debugger.</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBThread-class.html">lldb.SBThread</a></strong>:
       <em class="summary">Represents a thread of execution.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBThreadCollection-class.html">lldb.SBThreadCollection</a></strong>:
+      <em class="summary">Represents a collection of SBThread objects.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBThreadPlan-class.html">lldb.SBThreadPlan</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBThreadPlan class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBType-class.html">lldb.SBType</a></strong>:
       <em class="summary">Represents a data type in lldb.</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBTypeCategory-class.html">lldb.SBTypeCategory</a></strong>:
       <em class="summary">Represents a category that can contain formatters for types.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBTypeEnumMember-class.html">lldb.SBTypeEnumMember</a></strong>:
+      <em class="summary">Represents a member of an enum in lldb.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBTypeEnumMemberList-class.html">lldb.SBTypeEnumMemberList</a></strong>:
+      <em class="summary">Represents a list of SBTypeEnumMembers.</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBTypeFilter-class.html">lldb.SBTypeFilter</a></strong>:
       <em class="summary">Represents a filter that can be associated to one or more types.</em>
@@ -254,14 +294,23 @@ a source file location.</em>
     <li> <strong class="uidlink"><a href="lldb.SBTypeMember-class.html">lldb.SBTypeMember</a></strong>:
       <em class="summary">Represents a member of a type in lldb.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBTypeMemberFunction-class.html">lldb.SBTypeMemberFunction</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBTypeMemberFunction class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBTypeNameSpecifier-class.html">lldb.SBTypeNameSpecifier</a></strong>:
       <em class="summary">Represents a general way to provide a type name to LLDB APIs.</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBTypeSummary-class.html">lldb.SBTypeSummary</a></strong>:
       <em class="summary">Represents a summary that can be associated to one or more types.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBTypeSummaryOptions-class.html">lldb.SBTypeSummaryOptions</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBTypeSummaryOptions class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBTypeSynthetic-class.html">lldb.SBTypeSynthetic</a></strong>:
       <em class="summary">Represents a summary that can be associated to one or more types.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.SBUnixSignals-class.html">lldb.SBUnixSignals</a></strong>:
+      <em class="summary">Allows you to manipulate LLDB's signal disposition</em>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBValue-class.html">lldb.SBValue</a></strong>:
       <em class="summary">Represents the value of a variable, a register, or an expression.</em>
@@ -269,8 +318,15 @@ a source file location.</em>
     <li> <strong class="uidlink"><a href="lldb.SBValueList-class.html">lldb.SBValueList</a></strong>:
       <em class="summary">Represents a collection of SBValues.</em>
     </li>
+    <li> <strong class="uidlink"><a href="lldb.SBVariablesOptions-class.html">lldb.SBVariablesOptions</a></strong>:
+      <em class="summary">Proxy of C++ lldb::SBVariablesOptions class</em>
+    </li>
     <li> <strong class="uidlink"><a href="lldb.SBWatchpoint-class.html">lldb.SBWatchpoint</a></strong>:
       <em class="summary">Represents an instance of watchpoint for a specific target program.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider.StdVBoolImplementation-class.html">lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider.StdVBoolImplementation</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider.StdVectorImplementation-class.html">lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider.StdVectorImplementation</a></strong>
     </li>
     <li> <strong class="uidlink"><a href="lldb.SBModule.compile_units_access-class.html">lldb.SBModule.compile_units_access</a></strong>
     </li>
@@ -362,7 +418,7 @@ a source file location.</em>
 <table border="0" cellpadding="0" cellspacing="0" width="100%%">
   <tr>
     <td align="left" class="footer">
-    Generated by Epydoc 3.0.1 on Fri Jul 19 13:22:33 2013
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:21 2016
     </td>
     <td align="right" class="footer">
       <a target="mainFrame" href="http://epydoc.sourceforge.net"
