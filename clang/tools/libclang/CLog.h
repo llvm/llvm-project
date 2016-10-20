@@ -98,6 +98,6 @@ public:
 /// \endcode
 #define LOG_SECTION(NAME) \
     if (clang::cxindex::LogRef Log = clang::cxindex::Logger::make(NAME))
-#define LOG_FUNC_SECTION LOG_SECTION(LLVM_FUNCTION_NAME)
+#define LOG_FUNC_SECTION LOG_SECTION(__func__)
 
 #endif

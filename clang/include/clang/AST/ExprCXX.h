@@ -86,6 +86,9 @@ public:
   }
   bool isAssignmentOp() const { return isAssignmentOp(getOperator()); }
 
+  /// \brief Is this written as an infix binary operator?
+  bool isInfixBinaryOp() const;
+
   /// \brief Returns the location of the operator symbol in the expression.
   ///
   /// When \c getOperator()==OO_Call, this is the location of the right

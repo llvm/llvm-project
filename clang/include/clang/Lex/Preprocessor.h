@@ -424,10 +424,10 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
   public:
     MacroState() : MacroState(nullptr) {}
     MacroState(MacroDirective *MD) : State(MD) {}
-    MacroState(MacroState &&O) LLVM_NOEXCEPT : State(O.State) {
+    MacroState(MacroState &&O) noexcept : State(O.State) {
       O.State = (MacroDirective *)nullptr;
     }
-    MacroState &operator=(MacroState &&O) LLVM_NOEXCEPT {
+    MacroState &operator=(MacroState &&O) noexcept {
       auto S = O.State;
       O.State = (MacroDirective *)nullptr;
       State = S;

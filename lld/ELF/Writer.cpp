@@ -1278,9 +1278,12 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 }
 
 template <class ELFT> static typename ELFT::uint getEntryAddr() {
-  if (Symbol *S = Config->EntrySym)
-    return S->body()->getVA<ELFT>();
-  return Config->EntryAddr;
+  if (Config->Entry.empty())
+    return Config->EntryAddr;
+  if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Entry))
+    return B->getVA<ELFT>();
+  warn("entry symbol " + Config->Entry + " not found, assuming 0");
+  return 0;
 }
 
 template <class ELFT> static uint8_t getELFEncoding() {

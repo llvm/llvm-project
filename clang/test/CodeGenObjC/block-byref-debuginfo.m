@@ -5,7 +5,6 @@
 // expression (256) that locates it inside of the byref descriptor:
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "foo",
 // CHECK-NOT:            line:
-// CHECK-SAME:           align: 64
 // CHECK-SAME:           offset: 256
 
 struct Foo {

@@ -201,6 +201,10 @@ template <class ELFT> void elf::markLive() {
     if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
       return;
 
+    // We don't gc non alloc sections.
+    if (!(R.Sec->getSectionHdr()->sh_flags & SHF_ALLOC))
+      return;
+
     // Usually, a whole section is marked as live or dead, but in mergeable
     // (splittable) sections, each piece of data has independent liveness bit.
     // So we explicitly tell it which offset is in use.
@@ -210,12 +214,9 @@ template <class ELFT> void elf::markLive() {
     if (R.Sec->Live)
       return;
     R.Sec->Live = true;
-    // Add input section to the queue. We don't want to consider relocations
-    // from non-allocatable input sections, because we can bring those
-    // allocatable sections to living which otherwise would be dead.
+    // Add input section to the queue.
     if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(R.Sec))
-      if (S->getSectionHdr()->sh_flags & SHF_ALLOC)
-        Q.push_back(S);
+      Q.push_back(S);
   };
 
   auto MarkSymbol = [&](const SymbolBody *Sym) {
@@ -224,8 +225,7 @@ template <class ELFT> void elf::markLive() {
   };
 
   // Add GC root symbols.
-  if (Config->EntrySym)
-    MarkSymbol(Config->EntrySym->body());
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Entry));
   MarkSymbol(Symtab<ELFT>::X->find(Config->Init));
   MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
   for (StringRef S : Config->Undefined)

@@ -68,8 +68,8 @@ namespace VirtualBase {
   struct A { int a; };
   struct B : virtual A { int b; };
 // BOTH: ![[VBASE_B:[0-9]+]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "B",{{.*}} line: [[@LINE-1]],
-// MSVC-SAME:                                        size: 96, align: 32
-// CHECK-SAME:                                       size: 128, align: 64,
+// MSVC-SAME:                                        size: 96
+// CHECK-SAME:                                       size: 128,
 // BOTH-NOT:                                         offset:
 // BOTH-NOT:                                         DIFlagFwdDecl
 // BOTH-SAME:                                        elements: [[VBASE_B_DEF:![0-9]+]]

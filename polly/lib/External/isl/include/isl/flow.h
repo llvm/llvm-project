@@ -107,6 +107,8 @@ __isl_give isl_union_flow *isl_union_access_info_compute_flow(
 	__isl_take isl_union_access_info *access);
 
 isl_ctx *isl_union_flow_get_ctx(__isl_keep isl_union_flow *flow);
+__isl_give isl_union_flow *isl_union_flow_copy(
+	__isl_keep isl_union_flow *flow);
 __isl_export
 __isl_give isl_union_map *isl_union_flow_get_must_dependence(
 	__isl_keep isl_union_flow *flow);

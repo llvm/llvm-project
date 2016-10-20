@@ -62,7 +62,7 @@ TC
 // CHECK: [[FARG1]] = !DIDerivedType(tag: DW_TAG_pointer_type,
 // CHECK-SAME:                       baseType: ![[FOO]]
 // CHECK-NOT:                        line:
-// CHECK-SAME:                       size: 64, align: 64
+// CHECK-SAME:                       size: 64
 // CHECK-NOT:                        offset: 0
 // CHECK-SAME:                       DIFlagArtificial
 // CHECK: [[FUNTYPE:![0-9]*]] = !DISubroutineType(types: [[FUNARGS:![0-9]*]])
@@ -151,7 +151,7 @@ PaddingAtEnd PaddedObj = {};
 // CHECK-SAME:             templateParams: [[PTOARGS:![0-9]*]]
 // CHECK: [[PTOARGS]] = !{[[PTOARG1:![0-9]*]]}
 // CHECK: [[PTOARG1]] = !DITemplateValueParameter(type: [[CONST_PADDINGATEND_PTR:![0-9]*]], value: %struct.PaddingAtEnd* @PaddedObj)
-// CHECK: [[CONST_PADDINGATEND_PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[PADDINGATEND]], size: 64, align: 64)
+// CHECK: [[CONST_PADDINGATEND_PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[PADDINGATEND]], size: 64)
 template <PaddingAtEnd *>
 struct PaddingAtEndTemplate {
 };

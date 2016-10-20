@@ -17,10 +17,10 @@ void foo (const char *c) {
 
 // CHECK: [[P:![0-9]*]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[CON:![0-9]*]]
 // CHECK: [[CON]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[CH:![0-9]*]]
-// CHECK: [[CH]] = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+// CHECK: [[CH]] = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 // CHECK: [[BS:.*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "basic_string<char>"
 // CHECK-SAME:                         line: 4
-// CHECK-SAME:                         size: 8, align: 8
+// CHECK-SAME:                         size: 8
 // CHECK: [[TYPE:![0-9]*]] = !DISubroutineType(types: [[ARGS:.*]])
 // CHECK: [[ARGS]] = !{!{{.*}}, !{{.*}}, [[P]], [[R:.*]]}
 

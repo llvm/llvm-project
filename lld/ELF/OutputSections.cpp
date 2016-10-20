@@ -491,9 +491,8 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   Elf_Word *Buckets = P;
   Elf_Word *Chains = P + NumSymbols;
 
-  for (const std::pair<SymbolBody *, unsigned> &P :
-       Out<ELFT>::DynSymTab->getSymbols()) {
-    SymbolBody *Body = P.first;
+  for (const SymbolTableEntry &S : Out<ELFT>::DynSymTab->getSymbols()) {
+    SymbolBody *Body = S.Symbol;
     StringRef Name = Body->getName();
     unsigned I = Body->DynsymIndex;
     uint32_t Hash = hashSysv(Name) % NumSymbols;
@@ -623,20 +622,18 @@ void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
 // destructively sort a given vector -- which is needed because
 // GNU-style hash table places some sorting requirements.
 template <class ELFT>
-void GnuHashTableSection<ELFT>::addSymbols(
-    std::vector<std::pair<SymbolBody *, size_t>> &V) {
+void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
   // Ideally this will just be 'auto' but GCC 6.1 is not able
   // to deduce it correctly.
-  std::vector<std::pair<SymbolBody *, size_t>>::iterator Mid =
-      std::stable_partition(V.begin(), V.end(),
-                            [](std::pair<SymbolBody *, size_t> &P) {
-                              return P.first->isUndefined();
-                            });
+  std::vector<SymbolTableEntry>::iterator Mid =
+      std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
+        return S.Symbol->isUndefined();
+      });
   if (Mid == V.end())
     return;
   for (auto I = Mid, E = V.end(); I != E; ++I) {
-    SymbolBody *B = I->first;
-    size_t StrOff = I->second;
+    SymbolBody *B = I->Symbol;
+    size_t StrOff = I->StrTabOffset;
     Symbols.push_back({B, StrOff, hashGnu(B->getName())});
   }
 
@@ -1341,15 +1338,14 @@ SymbolTableSection<ELFT>::SymbolTableSection(
 // See "Global Offset Table" in Chapter 5 in the following document
 // for detailed description:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
-                            const std::pair<SymbolBody *, unsigned> &R) {
+static bool sortMipsSymbols(const SymbolBody *L, const SymbolBody *R) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
   // All other entries go to the first part of GOT in arbitrary order.
-  bool LIsInLocalGot = !L.first->IsInGlobalMipsGot;
-  bool RIsInLocalGot = !R.first->IsInGlobalMipsGot;
+  bool LIsInLocalGot = !L->IsInGlobalMipsGot;
+  bool RIsInLocalGot = !R->IsInGlobalMipsGot;
   if (LIsInLocalGot || RIsInLocalGot)
     return !RIsInLocalGot;
-  return L.first->GotIndex < R.first->GotIndex;
+  return L->GotIndex < R->GotIndex;
 }
 
 static uint8_t getSymbolBinding(SymbolBody *Body) {
@@ -1374,17 +1370,16 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
 
   if (Config->Relocatable) {
     size_t I = NumLocals;
-    for (const std::pair<SymbolBody *, size_t> &P : Symbols)
-      P.first->DynsymIndex = ++I;
+    for (const SymbolTableEntry &S : Symbols)
+      S.Symbol->DynsymIndex = ++I;
     return;
   }
 
   if (!StrTabSec.isDynamic()) {
     std::stable_sort(Symbols.begin(), Symbols.end(),
-                     [](const std::pair<SymbolBody *, unsigned> &L,
-                        const std::pair<SymbolBody *, unsigned> &R) {
-                       return getSymbolBinding(L.first) == STB_LOCAL &&
-                              getSymbolBinding(R.first) != STB_LOCAL;
+                     [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+                       return getSymbolBinding(L.Symbol) == STB_LOCAL &&
+                              getSymbolBinding(R.Symbol) != STB_LOCAL;
                      });
     return;
   }
@@ -1392,10 +1387,13 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
     Out<ELFT>::GnuHashTab->addSymbols(Symbols);
   else if (Config->EMachine == EM_MIPS)
-    std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
+    std::stable_sort(Symbols.begin(), Symbols.end(),
+                     [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+                       return sortMipsSymbols(L.Symbol, R.Symbol);
+                     });
   size_t I = 0;
-  for (const std::pair<SymbolBody *, size_t> &P : Symbols)
-    P.first->DynsymIndex = ++I;
+  for (const SymbolTableEntry &S : Symbols)
+    S.Symbol->DynsymIndex = ++I;
 }
 
 template <class ELFT>
@@ -1446,9 +1444,9 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
   // Write the internal symbol table contents to the output symbol table
   // pointed by Buf.
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
-  for (const std::pair<SymbolBody *, size_t> &P : Symbols) {
-    SymbolBody *Body = P.first;
-    size_t StrOff = P.second;
+  for (const SymbolTableEntry &S : Symbols) {
+    SymbolBody *Body = S.Symbol;
+    size_t StrOff = S.StrTabOffset;
 
     uint8_t Type = Body->Type;
     uintX_t Size = Body->getSize<ELFT>();
@@ -1582,9 +1580,8 @@ template <class ELFT> void VersionTableSection<ELFT>::finalize() {
 
 template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *OutVersym = reinterpret_cast<Elf_Versym *>(Buf) + 1;
-  for (const std::pair<SymbolBody *, size_t> &P :
-       Out<ELFT>::DynSymTab->getSymbols()) {
-    OutVersym->vs_index = P.first->symbol()->VersionId;
+  for (const SymbolTableEntry &S : Out<ELFT>::DynSymTab->getSymbols()) {
+    OutVersym->vs_index = S.Symbol->symbol()->VersionId;
     ++OutVersym;
   }
 }

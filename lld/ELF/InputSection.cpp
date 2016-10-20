@@ -53,7 +53,8 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Hdr, StringRef Name,
                                          Kind SectionKind)
     : InputSectionData(SectionKind, Name, getSectionContents(File, Hdr),
-                       isCompressed<ELFT>(Hdr, Name), !Config->GcSections),
+                       isCompressed<ELFT>(Hdr, Name),
+                       !Config->GcSections || !(Hdr->sh_flags & SHF_ALLOC)),
       Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.

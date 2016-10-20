@@ -322,9 +322,7 @@ public:
 class BinaryFile : public InputFile {
 public:
   explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
-
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
-
   template <class ELFT> InputFile *createELF();
 
 private:

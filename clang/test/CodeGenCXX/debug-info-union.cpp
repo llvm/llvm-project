@@ -12,7 +12,7 @@ E e;
 
 // CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "E"
 // CHECK-SAME:             line: 3
-// CHECK-SAME:             size: 32, align: 32
+// CHECK-SAME:             size: 32
 // CHECK-NOT:              offset:
 // CHECK-SAME:             {{$}}
 // CHECK: !DISubprogram(name: "bb"{{.*}}, line: 6

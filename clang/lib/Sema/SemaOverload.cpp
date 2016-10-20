@@ -1432,7 +1432,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   const auto *FromFn = cast<FunctionType>(CanFrom);
   FunctionType::ExtInfo FromEInfo = FromFn->getExtInfo();
 
-  const auto *ToFn = dyn_cast<FunctionProtoType>(CanTo);
+  const auto *ToFn = cast<FunctionType>(CanTo);
   FunctionType::ExtInfo ToEInfo = ToFn->getExtInfo();
 
   bool Changed = false;
@@ -1445,7 +1445,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
 
   // Drop 'noexcept' if not present in target type.
   if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn);
+    const auto *ToFPT = cast<FunctionProtoType>(ToFn);
     if (FromFPT->isNothrow(Context) && !ToFPT->isNothrow(Context)) {
       FromFn = cast<FunctionType>(
           Context.getFunctionType(FromFPT->getReturnType(),

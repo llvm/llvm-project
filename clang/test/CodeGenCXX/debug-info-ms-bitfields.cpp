@@ -7,4 +7,4 @@ struct S {
   short x : 8;
 } s;
 
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "x", {{.*}}, size: 8, align: 16, offset: 16, flags: DIFlagBitField, extraData: i64 8)
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "x", {{.*}}, size: 8, offset: 16, flags: DIFlagBitField, extraData: i64 8)

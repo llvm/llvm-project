@@ -43,12 +43,25 @@ bool Sema::isLibstdcxxEagerExceptionSpecHack(const Declarator &D) {
   auto *RD = dyn_cast<CXXRecordDecl>(CurContext);
 
   // All the problem cases are member functions named "swap" within class
-  // templates declared directly within namespace std.
-  if (!RD || !getStdNamespace() ||
-      !RD->getEnclosingNamespaceContext()->Equals(getStdNamespace()) ||
-      !RD->getIdentifier() || !RD->getDescribedClassTemplate() ||
+  // templates declared directly within namespace std or std::__debug or
+  // std::__profile.
+  if (!RD || !RD->getIdentifier() || !RD->getDescribedClassTemplate() ||
       !D.getIdentifier() || !D.getIdentifier()->isStr("swap"))
     return false;
+
+  auto *ND = dyn_cast<NamespaceDecl>(RD->getDeclContext());
+  if (!ND)
+    return false;
+
+  bool IsInStd = ND->isStdNamespace();
+  if (!IsInStd) {
+    // This isn't a direct member of namespace std, but it might still be
+    // libstdc++'s std::__debug::array or std::__profile::array.
+    IdentifierInfo *II = ND->getIdentifier();
+    if (!II || !(II->isStr("__debug") || II->isStr("__profile")) ||
+        !ND->isInStdNamespace())
+      return false;
+  }
 
   // Only apply this hack within a system header.
   if (!Context.getSourceManager().isInSystemHeader(D.getLocStart()))
@@ -56,10 +69,10 @@ bool Sema::isLibstdcxxEagerExceptionSpecHack(const Declarator &D) {
 
   return llvm::StringSwitch<bool>(RD->getIdentifier()->getName())
       .Case("array", true)
-      .Case("pair", true)
-      .Case("priority_queue", true)
-      .Case("stack", true)
-      .Case("queue", true)
+      .Case("pair", IsInStd)
+      .Case("priority_queue", IsInStd)
+      .Case("stack", IsInStd)
+      .Case("queue", IsInStd)
       .Default(false);
 }
 
