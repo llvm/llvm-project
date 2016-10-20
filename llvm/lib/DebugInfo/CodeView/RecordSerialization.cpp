@@ -16,6 +16,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -32,98 +33,69 @@ StringRef llvm::codeview::getBytesAsCString(ArrayRef<uint8_t> LeafData) {
   return getBytesAsCharacters(LeafData).split('\0').first;
 }
 
-Error llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
+Error llvm::codeview::consume(msf::StreamReader &Reader, APSInt &Num) {
   // Used to avoid overload ambiguity on APInt construtor.
   bool FalseVal = false;
-  if (Data.size() < 2)
-    return make_error<CodeViewError>(
-        cv_error_code::insufficient_buffer,
-        "Buffer does not contain enough data for an APSInt");
-  uint16_t Short = *reinterpret_cast<const ulittle16_t *>(Data.data());
-  Data = Data.drop_front(2);
+  uint16_t Short;
+  if (auto EC = Reader.readInteger(Short))
+    return EC;
+
   if (Short < LF_NUMERIC) {
     Num = APSInt(APInt(/*numBits=*/16, Short, /*isSigned=*/false),
                  /*isUnsigned=*/true);
     return Error::success();
   }
+
   switch (Short) {
-  case LF_CHAR:
-    if (Data.size() < 1)
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Buffer does not contain enough data for an LF_CHAR");
-    Num = APSInt(APInt(/*numBits=*/8,
-                       *reinterpret_cast<const int8_t *>(Data.data()),
-                       /*isSigned=*/true),
-                 /*isUnsigned=*/false);
-    Data = Data.drop_front(1);
+  case LF_CHAR: {
+    int8_t N;
+    if (auto EC = Reader.readInteger(N))
+      return EC;
+    Num = APSInt(APInt(8, N, true), false);
     return Error::success();
-  case LF_SHORT:
-    if (Data.size() < 2)
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Buffer does not contain enough data for an LF_SHORT");
-    Num = APSInt(APInt(/*numBits=*/16,
-                       *reinterpret_cast<const little16_t *>(Data.data()),
-                       /*isSigned=*/true),
-                 /*isUnsigned=*/false);
-    Data = Data.drop_front(2);
+  }
+  case LF_SHORT: {
+    int16_t N;
+    if (auto EC = Reader.readInteger(N))
+      return EC;
+    Num = APSInt(APInt(16, N, true), false);
     return Error::success();
-  case LF_USHORT:
-    if (Data.size() < 2)
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Buffer does not contain enough data for an LF_USHORT");
-    Num = APSInt(APInt(/*numBits=*/16,
-                       *reinterpret_cast<const ulittle16_t *>(Data.data()),
-                       /*isSigned=*/false),
-                 /*isUnsigned=*/true);
-    Data = Data.drop_front(2);
+  }
+  case LF_USHORT: {
+    uint16_t N;
+    if (auto EC = Reader.readInteger(N))
+      return EC;
+    Num = APSInt(APInt(16, N, false), true);
     return Error::success();
-  case LF_LONG:
-    if (Data.size() < 4)
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Buffer does not contain enough data for an LF_LONG");
-    Num = APSInt(APInt(/*numBits=*/32,
-                       *reinterpret_cast<const little32_t *>(Data.data()),
-                       /*isSigned=*/true),
-                 /*isUnsigned=*/false);
-    Data = Data.drop_front(4);
+  }
+  case LF_LONG: {
+    int32_t N;
+    if (auto EC = Reader.readInteger(N))
+      return EC;
+    Num = APSInt(APInt(32, N, true), false);
     return Error::success();
-  case LF_ULONG:
-    if (Data.size() < 4)
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Buffer does not contain enough data for an LF_ULONG");
-    Num = APSInt(APInt(/*numBits=*/32,
-                       *reinterpret_cast<const ulittle32_t *>(Data.data()),
-                       /*isSigned=*/FalseVal),
-                 /*isUnsigned=*/true);
-    Data = Data.drop_front(4);
+  }
+  case LF_ULONG: {
+    uint32_t N;
+    if (auto EC = Reader.readInteger(N))
+      return EC;
+    Num = APSInt(APInt(32, N, FalseVal), true);
     return Error::success();
-  case LF_QUADWORD:
-    if (Data.size() < 8)
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Buffer does not contain enough data for an LF_QUADWORD");
-    Num = APSInt(APInt(/*numBits=*/64,
-                       *reinterpret_cast<const little64_t *>(Data.data()),
-                       /*isSigned=*/true),
-                 /*isUnsigned=*/false);
-    Data = Data.drop_front(8);
+  }
+  case LF_QUADWORD: {
+    int64_t N;
+    if (auto EC = Reader.readInteger(N))
+      return EC;
+    Num = APSInt(APInt(64, N, true), false);
     return Error::success();
-  case LF_UQUADWORD:
-    if (Data.size() < 8)
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Buffer does not contain enough data for an LF_UQUADWORD");
-    Num = APSInt(APInt(/*numBits=*/64,
-                       *reinterpret_cast<const ulittle64_t *>(Data.data()),
-                       /*isSigned=*/false),
-                 /*isUnsigned=*/true);
-    Data = Data.drop_front(8);
+  }
+  case LF_UQUADWORD: {
+    uint64_t N;
+    if (auto EC = Reader.readInteger(N))
+      return EC;
+    Num = APSInt(APInt(64, N, false), true);
     return Error::success();
+  }
   }
   return make_error<CodeViewError>(cv_error_code::corrupt_record,
                                    "Buffer contains invalid APSInt type");
@@ -131,15 +103,18 @@ Error llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
 
 Error llvm::codeview::consume(StringRef &Data, APSInt &Num) {
   ArrayRef<uint8_t> Bytes(Data.bytes_begin(), Data.bytes_end());
-  auto EC = consume(Bytes, Num);
-  Data = StringRef(reinterpret_cast<const char *>(Bytes.data()), Bytes.size());
+  msf::ByteStream S(Bytes);
+  msf::StreamReader SR(S);
+  auto EC = consume(SR, Num);
+  Data = Data.take_back(SR.bytesRemaining());
   return EC;
 }
 
 /// Decode a numeric leaf value that is known to be a uint64_t.
-Error llvm::codeview::consume_numeric(ArrayRef<uint8_t> &Data, uint64_t &Num) {
+Error llvm::codeview::consume_numeric(msf::StreamReader &Reader,
+                                      uint64_t &Num) {
   APSInt N;
-  if (auto EC = consume(Data, N))
+  if (auto EC = consume(Reader, N))
     return EC;
   if (N.isSigned() || !N.isIntN(64))
     return make_error<CodeViewError>(cv_error_code::corrupt_record,
@@ -148,41 +123,27 @@ Error llvm::codeview::consume_numeric(ArrayRef<uint8_t> &Data, uint64_t &Num) {
   return Error::success();
 }
 
-Error llvm::codeview::consume(ArrayRef<uint8_t> &Data, uint32_t &Item) {
-  const support::ulittle32_t *IntPtr;
-  if (auto EC = consumeObject(Data, IntPtr))
-    return EC;
-  Item = *IntPtr;
-  return Error::success();
+Error llvm::codeview::consume(msf::StreamReader &Reader, uint32_t &Item) {
+  return Reader.readInteger(Item);
 }
 
 Error llvm::codeview::consume(StringRef &Data, uint32_t &Item) {
   ArrayRef<uint8_t> Bytes(Data.bytes_begin(), Data.bytes_end());
-  auto EC = consume(Bytes, Item);
-  Data = StringRef(reinterpret_cast<const char *>(Bytes.data()), Bytes.size());
+  msf::ByteStream S(Bytes);
+  msf::StreamReader SR(S);
+  auto EC = consume(SR, Item);
+  Data = Data.take_back(SR.bytesRemaining());
   return EC;
 }
 
-Error llvm::codeview::consume(ArrayRef<uint8_t> &Data, int32_t &Item) {
-  const support::little32_t *IntPtr;
-  if (auto EC = consumeObject(Data, IntPtr))
-    return EC;
-  Item = *IntPtr;
-  return Error::success();
+Error llvm::codeview::consume(msf::StreamReader &Reader, int32_t &Item) {
+  return Reader.readInteger(Item);
 }
 
-Error llvm::codeview::consume(ArrayRef<uint8_t> &Data, StringRef &Item) {
-  if (Data.empty())
+Error llvm::codeview::consume(msf::StreamReader &Reader, StringRef &Item) {
+  if (Reader.empty())
     return make_error<CodeViewError>(cv_error_code::corrupt_record,
                                      "Null terminated string buffer is empty!");
 
-  StringRef Rest;
-  std::tie(Item, Rest) = getBytesAsCharacters(Data).split('\0');
-  // We expect this to be null terminated.  If it was not, it is an error.
-  if (Data.size() == Item.size())
-    return make_error<CodeViewError>(cv_error_code::corrupt_record,
-                                     "Expected null terminator!");
-
-  Data = ArrayRef<uint8_t>(Rest.bytes_begin(), Rest.bytes_end());
-  return Error::success();
+  return Reader.readZeroString(Item);
 }

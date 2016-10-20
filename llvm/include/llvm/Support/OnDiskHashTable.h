@@ -14,7 +14,6 @@
 #ifndef LLVM_SUPPORT_ONDISKHASHTABLE_H
 #define LLVM_SUPPORT_ONDISKHASHTABLE_H
 
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/EndianStream.h"
@@ -208,7 +207,7 @@ public:
 
     // Pad with zeros so that we can start the hashtable at an aligned address.
     offset_type TableOff = Out.tell();
-    uint64_t N = llvm::OffsetToAlignment(TableOff, alignOf<offset_type>());
+    uint64_t N = llvm::OffsetToAlignment(TableOff, alignof(offset_type));
     TableOff += N;
     while (N--)
       LE.write<uint8_t>(0);

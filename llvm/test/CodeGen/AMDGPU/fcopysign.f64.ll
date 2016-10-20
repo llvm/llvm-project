@@ -23,6 +23,22 @@ define void @test_copysign_f64(double addrspace(1)* %out, double %mag, double %s
   ret void
 }
 
+; FUNC-LABEL: {{^}}test_copysign_f64_f32:
+; GCN-DAG: s_load_dwordx2 s{{\[}}[[SMAG_LO:[0-9]+]]:[[SMAG_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}
+; GCN-DAG: s_load_dword s[[SSIGN:[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}
+; GCN-DAG: s_mov_b32 [[SCONST:s[0-9]+]], 0x7fffffff
+; GCN-DAG: v_mov_b32_e32 v[[VMAG_HI:[0-9]+]], s[[SMAG_HI]]
+; GCN-DAG: v_mov_b32_e32 v[[VSIGN:[0-9]+]], s[[SSIGN]]
+; GCN-DAG: v_bfi_b32 v[[VRESULT_HI:[0-9]+]], [[SCONST]], v[[VMAG_HI]], v[[VSIGN]]
+; GCN-DAG: v_mov_b32_e32 v[[VMAG_LO:[0-9]+]], s[[SMAG_LO]]
+; GCN: buffer_store_dwordx2 v{{\[}}[[VMAG_LO]]:[[VRESULT_HI]]{{\]}}
+define void @test_copysign_f64_f32(double addrspace(1)* %out, double %mag, float %sign) nounwind {
+  %c = fpext float %sign to double
+  %result = call double @llvm.copysign.f64(double %mag, double %c)
+  store double %result, double addrspace(1)* %out, align 8
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}test_copysign_v2f64:
 ; GCN: s_endpgm
 define void @test_copysign_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %mag, <2 x double> %sign) nounwind {

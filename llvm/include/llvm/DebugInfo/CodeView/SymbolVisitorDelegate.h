@@ -17,13 +17,17 @@
 
 namespace llvm {
 
+namespace msf {
+class StreamReader;
+}
+
 namespace codeview {
 
 class SymbolVisitorDelegate {
 public:
   virtual ~SymbolVisitorDelegate() {}
 
-  virtual uint32_t getRecordOffset(ArrayRef<uint8_t> Record) = 0;
+  virtual uint32_t getRecordOffset(msf::StreamReader Reader) = 0;
   virtual StringRef getFileNameForFileOffset(uint32_t FileOffset) = 0;
   virtual StringRef getStringTable() = 0;
 };

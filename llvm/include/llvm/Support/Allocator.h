@@ -22,7 +22,6 @@
 #define LLVM_SUPPORT_ALLOCATOR_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
@@ -74,7 +73,7 @@ public:
 
   /// \brief Allocate space for a sequence of objects without constructing them.
   template <typename T> T *Allocate(size_t Num = 1) {
-    return static_cast<T *>(Allocate(Num * sizeof(T), AlignOf<T>::Alignment));
+    return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
 
   /// \brief Deallocate space for a sequence of objects without constructing them.
@@ -381,7 +380,7 @@ public:
   /// all memory allocated so far.
   void DestroyAll() {
     auto DestroyElements = [](char *Begin, char *End) {
-      assert(Begin == (char*)alignAddr(Begin, alignOf<T>()));
+      assert(Begin == (char *)alignAddr(Begin, alignof(T)));
       for (char *Ptr = Begin; Ptr + sizeof(T) <= End; Ptr += sizeof(T))
         reinterpret_cast<T *>(Ptr)->~T();
     };
@@ -390,7 +389,7 @@ public:
          ++I) {
       size_t AllocatedSlabSize = BumpPtrAllocator::computeSlabSize(
           std::distance(Allocator.Slabs.begin(), I));
-      char *Begin = (char*)alignAddr(*I, alignOf<T>());
+      char *Begin = (char *)alignAddr(*I, alignof(T));
       char *End = *I == Allocator.Slabs.back() ? Allocator.CurPtr
                                                : (char *)*I + AllocatedSlabSize;
 
@@ -400,7 +399,7 @@ public:
     for (auto &PtrAndSize : Allocator.CustomSizedSlabs) {
       void *Ptr = PtrAndSize.first;
       size_t Size = PtrAndSize.second;
-      DestroyElements((char*)alignAddr(Ptr, alignOf<T>()), (char *)Ptr + Size);
+      DestroyElements((char *)alignAddr(Ptr, alignof(T)), (char *)Ptr + Size);
     }
 
     Allocator.Reset();

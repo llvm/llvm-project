@@ -37,11 +37,11 @@
 ; ASM-LABEL: loop_csr: # @loop_csr
 ; ASM:        #DEBUG_VALUE: loop_csr:o [bit_piece offset=0 size=32] <- 0
 ; ASM:        #DEBUG_VALUE: loop_csr:o [bit_piece offset=32 size=32] <- 0
-; ASM: # BB#1:                                 # %for.body.preheader
+; ASM: # BB#2:                                 # %for.body.preheader
 ; ASM:         xorl    %edi, %edi
 ; ASM:         xorl    %esi, %esi
 ; ASM:         .p2align        4, 0x90
-; ASM: .LBB0_2:                                # %for.body
+; ASM: .LBB0_3:                                # %for.body
 ; ASM: [[ox_start:\.Ltmp[0-9]+]]:
 ; ASM:        #DEBUG_VALUE: loop_csr:o [bit_piece offset=0 size=32] <- %EDI
 ; ASM:        .cv_loc 0 1 13 11               # t.c:13:11
@@ -57,7 +57,7 @@
 ; ASM:         movl    %eax, %esi
 ; ASM:         #DEBUG_VALUE: loop_csr:o [bit_piece offset=32 size=32] <- %ESI
 ; ASM:         cmpl    n(%rip), %eax
-; ASM:         jl      .LBB0_2
+; ASM:         jl      .LBB0_3
 ; ASM: [[oy_end:\.Ltmp[0-9]+]]:
 ; ASM:         addl    %edi, %esi
 ; ASM:         movl    %esi, %eax

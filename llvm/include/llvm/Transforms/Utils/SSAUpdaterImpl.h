@@ -120,9 +120,8 @@ public:
       if (Info->NumPreds == 0)
         Info->Preds = nullptr;
       else
-        Info->Preds = static_cast<BBInfo**>
-          (Allocator.Allocate(Info->NumPreds * sizeof(BBInfo*),
-                              AlignOf<BBInfo*>::Alignment));
+        Info->Preds = static_cast<BBInfo **>(Allocator.Allocate(
+            Info->NumPreds * sizeof(BBInfo *), alignof(BBInfo *)));
 
       for (unsigned p = 0; p != Info->NumPreds; ++p) {
         BlkT *Pred = Preds[p];

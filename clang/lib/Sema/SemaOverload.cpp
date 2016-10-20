@@ -1405,6 +1405,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   //   - a pointer
   //   - a member pointer
   //   - a block pointer
+  // Changes here need matching changes in FindCompositePointerType.
   CanQualType CanTo = Context.getCanonicalType(ToType);
   CanQualType CanFrom = Context.getCanonicalType(FromType);
   Type::TypeClass TyClass = CanTo->getTypeClass();
@@ -1417,8 +1418,13 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       CanTo = CanTo.getAs<BlockPointerType>()->getPointeeType();
       CanFrom = CanFrom.getAs<BlockPointerType>()->getPointeeType();
     } else if (TyClass == Type::MemberPointer) {
-      CanTo = CanTo.getAs<MemberPointerType>()->getPointeeType();
-      CanFrom = CanFrom.getAs<MemberPointerType>()->getPointeeType();
+      auto ToMPT = CanTo.getAs<MemberPointerType>();
+      auto FromMPT = CanFrom.getAs<MemberPointerType>();
+      // A function pointer conversion cannot change the class of the function.
+      if (ToMPT->getClass() != FromMPT->getClass())
+        return false;
+      CanTo = ToMPT->getPointeeType();
+      CanFrom = FromMPT->getPointeeType();
     } else {
       return false;
     }
@@ -1757,10 +1763,6 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Compatible conversions (Clang extension for C function overloading)
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType.getUnqualifiedType();
-  } else if (S.IsFunctionConversion(FromType, ToType, FromType)) {
-    // Function pointer conversions (removing 'noexcept') including removal of
-    // 'noreturn' (Clang extension).
-    SCS.Second = ICK_Function_Conversion;
   } else if (IsTransparentUnionStandardConversion(S, From, ToType,
                                              InOverloadResolution,
                                              SCS, CStyle)) {
@@ -1782,34 +1784,36 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   }
   SCS.setToType(1, FromType);
 
-  QualType CanonFrom;
-  QualType CanonTo;
-  // The third conversion can be a qualification conversion (C++ 4p1).
+  // The third conversion can be a function pointer conversion or a
+  // qualification conversion (C++ [conv.fctptr], [conv.qual]).
   bool ObjCLifetimeConversion;
-  if (S.IsQualificationConversion(FromType, ToType, CStyle, 
-                                  ObjCLifetimeConversion)) {
+  if (S.IsFunctionConversion(FromType, ToType, FromType)) {
+    // Function pointer conversions (removing 'noexcept') including removal of
+    // 'noreturn' (Clang extension).
+    SCS.Third = ICK_Function_Conversion;
+  } else if (S.IsQualificationConversion(FromType, ToType, CStyle,
+                                         ObjCLifetimeConversion)) {
     SCS.Third = ICK_Qualification;
     SCS.QualificationIncludesObjCLifetime = ObjCLifetimeConversion;
     FromType = ToType;
-    CanonFrom = S.Context.getCanonicalType(FromType);
-    CanonTo = S.Context.getCanonicalType(ToType);
   } else {
     // No conversion required
     SCS.Third = ICK_Identity;
-
-    // C++ [over.best.ics]p6:
-    //   [...] Any difference in top-level cv-qualification is
-    //   subsumed by the initialization itself and does not constitute
-    //   a conversion. [...]
-    CanonFrom = S.Context.getCanonicalType(FromType);
-    CanonTo = S.Context.getCanonicalType(ToType);
-    if (CanonFrom.getLocalUnqualifiedType()
-                                       == CanonTo.getLocalUnqualifiedType() &&
-        CanonFrom.getLocalQualifiers() != CanonTo.getLocalQualifiers()) {
-      FromType = ToType;
-      CanonFrom = CanonTo;
-    }
   }
+
+  // C++ [over.best.ics]p6:
+  //   [...] Any difference in top-level cv-qualification is
+  //   subsumed by the initialization itself and does not constitute
+  //   a conversion. [...]
+  QualType CanonFrom = S.Context.getCanonicalType(FromType);
+  QualType CanonTo = S.Context.getCanonicalType(ToType);
+  if (CanonFrom.getLocalUnqualifiedType()
+                                     == CanonTo.getLocalUnqualifiedType() &&
+      CanonFrom.getLocalQualifiers() != CanonTo.getLocalQualifiers()) {
+    FromType = ToType;
+    CanonFrom = CanonTo;
+  }
+
   SCS.setToType(2, FromType);
 
   if (CanonFrom == CanonTo)

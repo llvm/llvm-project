@@ -2859,10 +2859,9 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
 }
 
 SDValue AMDGPUTargetLowering::getRsqrtEstimate(SDValue Operand,
-                                               DAGCombinerInfo &DCI,
-                                               unsigned &RefinementSteps,
+                                               SelectionDAG &DAG, int Enabled,
+                                               int &RefinementSteps,
                                                bool &UseOneConstNR) const {
-  SelectionDAG &DAG = DCI.DAG;
   EVT VT = Operand.getValueType();
 
   if (VT == MVT::f32) {
@@ -2877,9 +2876,8 @@ SDValue AMDGPUTargetLowering::getRsqrtEstimate(SDValue Operand,
 }
 
 SDValue AMDGPUTargetLowering::getRecipEstimate(SDValue Operand,
-                                               DAGCombinerInfo &DCI,
-                                               unsigned &RefinementSteps) const {
-  SelectionDAG &DAG = DCI.DAG;
+                                               SelectionDAG &DAG, int Enabled,
+                                               int &RefinementSteps) const {
   EVT VT = Operand.getValueType();
 
   if (VT == MVT::f32) {

@@ -30,6 +30,7 @@ public:
   Error visitTypeStream(const CVTypeArray &Types);
 
   Error visitFieldListMemberStream(ArrayRef<uint8_t> FieldList);
+  Error visitFieldListMemberStream(msf::StreamReader Reader);
 
 private:
   /// The interface to the class that gets notified of each visitation.

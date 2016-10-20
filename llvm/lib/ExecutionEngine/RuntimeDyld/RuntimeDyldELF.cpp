@@ -463,7 +463,11 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
 
   case ELF::R_ARM_NONE:
     break;
+    // Write a 31bit signed offset
   case ELF::R_ARM_PREL31:
+    *TargetPtr &= 0x80000000;
+    *TargetPtr |= (Value - FinalAddress) & ~0x80000000;
+    break;
   case ELF::R_ARM_TARGET1:
   case ELF::R_ARM_ABS32:
     *TargetPtr = Value;

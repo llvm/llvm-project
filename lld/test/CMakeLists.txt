@@ -20,8 +20,8 @@ configure_lit_site_cfg(
   )
 
 set(LLD_TEST_DEPS
-  FileCheck not llvm-ar llvm-as llvm-dis llvm-nm llc
-  lld llvm-config llvm-objdump llvm-readobj yaml2obj obj2yaml
+  FileCheck not llvm-ar llvm-as llvm-dis llvm-dwarfdump llvm-nm
+  llc lld llvm-config llvm-objdump llvm-readobj yaml2obj obj2yaml
   llvm-mc llvm-lib llvm-pdbdump opt
   )
 if (LLVM_INCLUDE_TESTS)

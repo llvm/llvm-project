@@ -121,6 +121,11 @@ static cl::opt<bool>
                   cl::desc("Verify no dangling value in ScalarEvolution's "
                            "ExprValueMap (slow)"));
 
+static cl::opt<unsigned> MulOpsInlineThreshold(
+    "scev-mulops-inline-threshold", cl::Hidden,
+    cl::desc("Threshold for inlining multiplication operands into a SCEV"),
+    cl::init(1000));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -2516,6 +2521,8 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
   if (Idx < Ops.size()) {
     bool DeletedMul = false;
     while (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(Ops[Idx])) {
+      if (Ops.size() > MulOpsInlineThreshold)
+        break;
       // If we have an mul, expand the mul operands onto the end of the operands
       // list.
       Ops.erase(Ops.begin()+Idx);

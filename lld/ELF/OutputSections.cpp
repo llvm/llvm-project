@@ -244,25 +244,29 @@ GotSection<ELFT>::getMipsLocalPageOffset(uintX_t EntryValue) {
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const {
-  uintX_t Off = MipsPageEntries;
+  // Calculate offset of the GOT entries block: TLS, global, local.
+  uintX_t GotBlockOff;
   if (B.isTls())
-    Off += MipsLocal.size() + MipsGlobal.size() + B.GotIndex;
+    GotBlockOff = getMipsTlsOffset();
   else if (B.IsInGlobalMipsGot)
-    Off += MipsLocal.size() + B.GotIndex;
-  else if (B.isInGot())
-    Off += B.GotIndex;
+    GotBlockOff = getMipsLocalEntriesNum() * sizeof(uintX_t);
+  else
+    GotBlockOff = MipsPageEntries * sizeof(uintX_t);
+  // Calculate index of the GOT entry in the block.
+  uintX_t GotIndex;
+  if (B.isInGot())
+    GotIndex = B.GotIndex;
   else {
     auto It = MipsGotMap.find({&B, Addend});
     assert(It != MipsGotMap.end());
-    Off += It->second;
+    GotIndex = It->second;
   }
-  return Off * sizeof(uintX_t) - MipsGPOffset;
+  return GotBlockOff + GotIndex * sizeof(uintX_t) - MipsGPOffset;
 }
 
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t GotSection<ELFT>::getMipsTlsOffset() const {
-  return (MipsPageEntries + MipsLocal.size() + MipsGlobal.size()) *
-         sizeof(uintX_t);
+  return (getMipsLocalEntriesNum() + MipsGlobal.size()) * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -301,7 +305,7 @@ template <class ELFT> void GotSection<ELFT>::finalize() {
       // in the GOT entry is calculated as (value + 0x8000) & ~0xffff.
       MipsPageEntries += (OutSec->getSize() + 0x8000 + 0xfffe) / 0xffff;
     }
-    EntriesNum += MipsPageEntries + MipsLocal.size() + MipsGlobal.size();
+    EntriesNum += getMipsLocalEntriesNum() + MipsGlobal.size();
   }
   this->Header.sh_size = EntriesNum * sizeof(uintX_t);
 }

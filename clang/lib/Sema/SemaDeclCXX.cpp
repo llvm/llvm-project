@@ -1279,7 +1279,9 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
                                                  DecompType.getQualifiers());
 
   auto DiagnoseBadNumberOfBindings = [&]() -> bool {
-    unsigned NumFields = std::distance(RD->field_begin(), RD->field_end());
+    unsigned NumFields =
+        std::count_if(RD->field_begin(), RD->field_end(),
+                      [](FieldDecl *FD) { return !FD->isUnnamedBitfield(); });
     assert(Bindings.size() != NumFields);
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
         << DecompType << (unsigned)Bindings.size() << NumFields

@@ -1,4 +1,4 @@
-// REQUIRES: x86-registered-target
+// REQUIRES: system-windows
 //
 // RUN: rm -rf %t
 // RUN: mkdir %t

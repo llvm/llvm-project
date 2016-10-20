@@ -3,9 +3,6 @@
 
 // REQUIRES: aarch64-registered-target,x86-registered-target
 
-// The union_het_vecint test case crashes on windows bot but only in stage1 and not in stage2.
-// UNSUPPORTED: system-windows
-
 #define SWIFTCALL __attribute__((swiftcall))
 #define OUT __attribute__((swift_indirect_result))
 #define ERROR __attribute__((swift_error_result))

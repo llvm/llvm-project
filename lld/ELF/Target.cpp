@@ -1487,6 +1487,9 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_AMDGPU_REL32_LO:
     write32le(Loc, Val);
     break;
+  case R_AMDGPU_ABS64:
+    write64le(Loc, Val);
+    break;
   case R_AMDGPU_GOTPCREL32_HI:
   case R_AMDGPU_REL32_HI:
     write32le(Loc, Val >> 32);
@@ -1499,6 +1502,7 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
 RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
   case R_AMDGPU_ABS32:
+  case R_AMDGPU_ABS64:
     return R_ABS;
   case R_AMDGPU_REL32:
   case R_AMDGPU_REL32_LO:

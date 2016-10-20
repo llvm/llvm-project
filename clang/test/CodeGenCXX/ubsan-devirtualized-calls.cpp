@@ -16,9 +16,6 @@ struct Derived2 final : Base1, Base2 {
   void f1() override {}
 };
 
-// PR13127 documents some missed devirtualization opportunities, including
-// devirt for methods marked 'final'. We can enable the checks marked 'PR13127'
-// if we implement this in the frontend.
 struct Derived3 : Base1 {
   void f1() override /* nofinal */ {}
 };
@@ -30,10 +27,10 @@ struct Derived4 final : Base1 {
 // CHECK: [[UBSAN_TI_DERIVED1_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived1 to i8*
 // CHECK: [[UBSAN_TI_DERIVED2_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived2 to i8*
 // CHECK: [[UBSAN_TI_DERIVED2_2:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived2 to i8*
-// PR13127: [[UBSAN_TI_DERIVED3:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived3 to i8*
-// PR13127: [[UBSAN_TI_BASE1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI5Base1 to i8*
-// PR13127: [[UBSAN_TI_DERIVED4_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived4 to i8*
-// PR13127: [[UBSAN_TI_DERIVED4_2:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived4 to i8*
+// CHECK: [[UBSAN_TI_DERIVED3:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived3 to i8*
+// CHECK: [[UBSAN_TI_BASE1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI5Base1 to i8*
+// CHECK: [[UBSAN_TI_DERIVED4_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived4 to i8*
+// CHECK: [[UBSAN_TI_DERIVED4_2:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived4 to i8*
 
 // CHECK-LABEL: define void @_Z2t1v
 void t1() {
@@ -59,26 +56,26 @@ void t3() {
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED2_2]] {{.*}}, i{{[0-9]+}} %[[D2_2]]
 }
 
-// PR13127-LABEL: define void @_Z2t4v
+// CHECK-LABEL: define void @_Z2t4v
 void t4() {
   Base1 p;
   Derived3 *badp = static_cast<Derived3 *>(&p); //< Check that &p isa Derived3.
-  // PR13127: %[[P1:[0-9]+]] = ptrtoint %struct.Derived3* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
-  // PR13127-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED3]] {{.*}}, i{{[0-9]+}} %[[P1]]
+  // CHECK: %[[P1:[0-9]+]] = ptrtoint %struct.Derived3* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
+  // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED3]] {{.*}}, i{{[0-9]+}} %[[P1]]
 
   static_cast<Base1 *>(badp)->f1(); //< No devirt, test 'badp isa Base1'.
-  // PR13127: %[[BADP1:[0-9]+]] = ptrtoint %struct.Base1* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
-  // PR13127-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_BASE1]] {{.*}}, i{{[0-9]+}} %[[BADP1]]
+  // CHECK: %[[BADP1:[0-9]+]] = ptrtoint %struct.Base1* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
+  // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_BASE1]] {{.*}}, i{{[0-9]+}} %[[BADP1]]
 }
 
-// PR13127-LABEL: define void @_Z2t5v
+// CHECK-LABEL: define void @_Z2t5v
 void t5() {
   Base1 p;
   Derived4 *badp = static_cast<Derived4 *>(&p); //< Check that &p isa Derived4.
-  // PR13127: %[[P1:[0-9]+]] = ptrtoint %struct.Derived4* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
-  // PR13127-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED4_1]] {{.*}}, i{{[0-9]+}} %[[P1]]
+  // CHECK: %[[P1:[0-9]+]] = ptrtoint %struct.Derived4* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
+  // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED4_1]] {{.*}}, i{{[0-9]+}} %[[P1]]
 
   static_cast<Base1 *>(badp)->f1(); //< Devirt Base1::f1 to Derived4::f1.
-  // PR13127: %[[BADP1:[0-9]+]] = ptrtoint %struct.Derived4* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
-  // PR13127-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED4_2]] {{.*}}, i{{[0-9]+}} %[[BADP1]]
+  // CHECK: %[[BADP1:[0-9]+]] = ptrtoint %struct.Derived4* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
+  // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED4_2]] {{.*}}, i{{[0-9]+}} %[[BADP1]]
 }

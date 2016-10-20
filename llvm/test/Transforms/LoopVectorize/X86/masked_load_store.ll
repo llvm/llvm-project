@@ -341,7 +341,7 @@ for.end:                                          ; preds = %for.cond
 ;
 ;void foo4(double *A, double *B, int *trigger) {
 ;
-;  for (int i=0; i<10000; i++) {
+;  for (int i=0; i<10000; i += 16) {
 ;    if (trigger[i] < 100) {
 ;          A[i] = B[i*2] + trigger[i]; << non-cosecutive access
 ;    }
@@ -410,7 +410,7 @@ if.end:                                           ; preds = %if.then, %for.body
 
 for.inc:                                          ; preds = %if.end
   %12 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %12, 1
+  %inc = add nsw i32 %12, 16
   store i32 %inc, i32* %i, align 4
   br label %for.cond
 

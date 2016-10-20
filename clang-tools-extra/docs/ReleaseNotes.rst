@@ -111,6 +111,12 @@ Improvements to clang-tidy
   Flags function parameters of a pointer type that could be changed to point to
   a constant type instead.
 
+- New `readability-redundant-member-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-member-init.html>`_ check
+
+  Flags member initializations that are unnecessary because the same default
+  constructor would be called if they were not present.
+
 Fixed bugs:
 
 - `modernize-make-unique
