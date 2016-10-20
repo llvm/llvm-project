@@ -240,7 +240,7 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
   }
 
   // After we created final list we should now set OutSec pointer to null,
-  // instead of -1. Otherwise we may get a crash when writing relocs, in 
+  // instead of -1. Otherwise we may get a crash when writing relocs, in
   // case section is discarded by linker script
   for (InputSectionBase<ELFT> *S : Ret)
     S->OutSec = nullptr;
@@ -1432,7 +1432,9 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E;
   assert(Op == "=" || Op == "+=");
   if (consume("ABSOLUTE")) {
-    E = readParenExpr();
+    // The RHS may be something like "ABSOLUTE(.) & 0xff".
+    // Call readExpr1 to read the whole expression.
+    E = readExpr1(readParenExpr(), 0);
     IsAbsolute = true;
   } else {
     E = readExpr();

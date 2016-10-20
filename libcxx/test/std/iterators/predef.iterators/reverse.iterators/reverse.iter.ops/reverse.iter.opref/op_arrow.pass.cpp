@@ -11,7 +11,9 @@
 
 // reverse_iterator
 
-// pointer operator->() const;
+// constexpr pointer operator->() const;
+//
+// constexpr in C++17
 
 // Be sure to respect LWG 198:
 //    http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#198
@@ -22,6 +24,8 @@
 #include <iterator>
 #include <list>
 #include <cassert>
+
+#include "test_macros.h"
 
 class A
 {
@@ -59,6 +63,20 @@ public:
     B       *operator&()       { return nullptr; }
 };
 
+class C
+{
+    int data_;
+public:
+    TEST_CONSTEXPR C() : data_(1) {}
+
+    TEST_CONSTEXPR int get() const {return data_;}
+
+    friend TEST_CONSTEXPR bool operator==(const C& x, const C& y)
+        {return x.data_ == y.data_;}
+};
+
+TEST_CONSTEXPR  C gC;
+
 int main()
 {
     A a;
@@ -86,4 +104,13 @@ int main()
     assert ( ri == l.rend ());
     }
     }
+
+#if TEST_STD_VER > 14
+    {
+        typedef std::reverse_iterator<const C *> RI;
+        constexpr RI it1 = std::make_reverse_iterator(&gC+1);
+
+        static_assert(it1->get() == gC.get(), "");
+    }
+#endif
 }

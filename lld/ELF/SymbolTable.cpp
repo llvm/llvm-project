@@ -246,8 +246,7 @@ SymbolTable<ELFT>::insert(StringRef &Name, uint8_t Type, uint8_t Visibility,
     S->IsUsedInRegularObj = true;
   if (!WasInserted && S->body()->Type != SymbolBody::UnknownType &&
       ((Type == STT_TLS) != S->body()->isTls()))
-    error("TLS attribute mismatch for symbol: " +
-          conflictMsg(S->body(), File));
+    error("TLS attribute mismatch for symbol: " + conflictMsg(S->body(), File));
 
   return {S, WasInserted};
 }

@@ -163,10 +163,10 @@ public:
 
   // Returns offset of TLS part of the MIPS GOT table. This part goes
   // after 'local' and 'global' entries.
-  uintX_t getMipsTlsOffset();
+  uintX_t getMipsTlsOffset() const;
 
   uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
-  uint32_t getTlsIndexOff() { return TlsIndexOff; }
+  uint32_t getTlsIndexOff() const { return TlsIndexOff; }
 
   // Flag to force GOT to be in output if we have relocations
   // that relies on its address.
@@ -187,7 +187,7 @@ private:
   // GOT entries should have one-to-one mapping with dynamic symbols table.
   // But we use the same container's types for both kind of GOT entries
   // to handle them uniformly.
-  typedef std::pair<const SymbolBody*, uintX_t> MipsGotEntry;
+  typedef std::pair<const SymbolBody *, uintX_t> MipsGotEntry;
   typedef std::vector<MipsGotEntry> MipsGotEntries;
   llvm::DenseMap<MipsGotEntry, size_t> MipsGotMap;
   MipsGotEntries MipsLocal;
@@ -264,6 +264,11 @@ private:
   uintX_t Addend;
 };
 
+struct SymbolTableEntry {
+  SymbolBody *Symbol;
+  size_t StrTabOffset;
+};
+
 template <class ELFT>
 class SymbolTableSection final : public OutputSectionBase<ELFT> {
   typedef OutputSectionBase<ELFT> Base;
@@ -283,9 +288,7 @@ public:
   typename Base::Kind getKind() const override { return Base::SymTable; }
   static bool classof(const Base *B) { return B->getKind() == Base::SymTable; }
 
-  ArrayRef<std::pair<SymbolBody *, size_t>> getSymbols() const {
-    return Symbols;
-  }
+  ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
   unsigned NumLocals = 0;
   StringTableSection<ELFT> &StrTabSec;
@@ -297,7 +300,7 @@ private:
   const OutputSectionBase<ELFT> *getOutputSection(SymbolBody *Sym);
 
   // A vector of symbols and their string table offsets.
-  std::vector<std::pair<SymbolBody *, size_t>> Symbols;
+  std::vector<SymbolTableEntry> Symbols;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -551,7 +554,7 @@ public:
 
   // Adds symbols to the hash table.
   // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<std::pair<SymbolBody *, size_t>> &Symbols);
+  void addSymbols(std::vector<SymbolTableEntry> &Symbols);
   typename Base::Kind getKind() const override { return Base::GnuHashTable; }
   static bool classof(const Base *B) {
     return B->getKind() == Base::GnuHashTable;

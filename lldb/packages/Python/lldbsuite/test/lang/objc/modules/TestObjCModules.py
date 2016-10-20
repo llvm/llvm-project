@@ -27,8 +27,7 @@ class ObjCModulesTestCase(TestBase):
 
     @skipUnlessDarwin
     @unittest2.expectedFailure("rdar://20416388")
-    @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion(
-        '12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @skipIf(macos_version=["<", "10.12"])
     def test_expr(self):
         if not self.applies():
             return

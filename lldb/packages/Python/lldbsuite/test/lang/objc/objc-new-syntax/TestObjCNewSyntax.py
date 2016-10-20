@@ -37,8 +37,7 @@ class ObjCNewSyntaxTestCase(TestBase):
         oslist=['macosx'],
         debug_info=['gmodules'],
         bugnumber='rdar://27792848')
-    @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion(
-        '12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_expr(self):
         self.build()

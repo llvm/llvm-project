@@ -157,6 +157,7 @@ def _decorateTest(mode,
                   archs=None, triple=None,
                   debug_info=None,
                   swig_version=None, py_version=None,
+                  macos_version=None,
                   remote=None):
     def fn(self):
         skip_for_os = _match_decorator_property(
@@ -187,6 +188,11 @@ def _decorateTest(mode,
         skip_for_py_version = (
             py_version is None) or _check_expected_version(
             py_version[0], py_version[1], sys.version_info)
+        skip_for_macos_version = (macos_version is None) or (
+            _check_expected_version(
+                macos_version[0],
+                macos_version[1],
+                platform.mac_ver()[0]))
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip
@@ -199,6 +205,7 @@ def _decorateTest(mode,
                       (triple, skip_for_triple, "target triple"),
                       (swig_version, skip_for_swig_version, "swig version"),
                       (py_version, skip_for_py_version, "python version"),
+                      (macos_version, skip_for_macos_version, "macOS version"),
                       (remote, skip_for_remote, "platform locality (remote/local)")]
         reasons = []
         final_skip_result = True
@@ -242,6 +249,7 @@ def expectedFailureAll(bugnumber=None,
                        archs=None, triple=None,
                        debug_info=None,
                        swig_version=None, py_version=None,
+                       macos_version=None,
                        remote=None):
     return _decorateTest(DecorateMode.Xfail,
                          bugnumber=bugnumber,
@@ -250,6 +258,7 @@ def expectedFailureAll(bugnumber=None,
                          archs=archs, triple=triple,
                          debug_info=debug_info,
                          swig_version=swig_version, py_version=py_version,
+                         macos_version=None,
                          remote=remote)
 
 
@@ -265,6 +274,7 @@ def skipIf(bugnumber=None,
            archs=None, triple=None,
            debug_info=None,
            swig_version=None, py_version=None,
+           macos_version=None,
            remote=None):
     return _decorateTest(DecorateMode.Skip,
                          bugnumber=bugnumber,
@@ -273,6 +283,7 @@ def skipIf(bugnumber=None,
                          archs=archs, triple=triple,
                          debug_info=debug_info,
                          swig_version=swig_version, py_version=py_version,
+                         macos_version=macos_version,
                          remote=remote)
 
 

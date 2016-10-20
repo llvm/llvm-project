@@ -25,10 +25,8 @@ class CModulesTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @skipIf(macos_version=["<", "10.12"])
     def test_expr(self):
-        if platform.system() == "Darwin" and platform.release() < StrictVersion('12.0.0'):
-            self.skipTest()
-
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

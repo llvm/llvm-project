@@ -1741,6 +1741,36 @@ error:
 	return NULL;
 }
 
+/* Copy this isl_union_flow object.
+ */
+__isl_give isl_union_flow *isl_union_flow_copy(__isl_keep isl_union_flow *flow)
+{
+	isl_union_flow *copy;
+
+	if (!flow)
+		return NULL;
+
+	copy = isl_union_flow_alloc(isl_union_map_get_space(flow->must_dep));
+
+	if (!copy)
+		return NULL;
+
+	copy->must_dep = isl_union_map_union(copy->must_dep,
+		isl_union_map_copy(flow->must_dep));
+	copy->may_dep = isl_union_map_union(copy->may_dep,
+		isl_union_map_copy(flow->may_dep));
+	copy->must_no_source = isl_union_map_union(copy->must_no_source,
+		isl_union_map_copy(flow->must_no_source));
+	copy->may_no_source = isl_union_map_union(copy->may_no_source,
+		isl_union_map_copy(flow->may_no_source));
+
+	if (!copy->must_dep || !copy->may_dep ||
+	    !copy->must_no_source || !copy->may_no_source)
+		return isl_union_flow_free(copy);
+
+	return copy;
+}
+
 /* Drop the schedule dimensions from the iteration domains in "flow".
  * In particular, the schedule dimensions have been prepended
  * to the iteration domains prior to the dependence analysis by

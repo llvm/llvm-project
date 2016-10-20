@@ -12,12 +12,16 @@
 
 // reverse_iterator
 
-// template <class Iterator> reverse_iterator<Iterator>
+// template <class Iterator>
+//   constexpr reverse_iterator<Iterator>
 //     make_reverse_iterator(Iterator i);
+//
+//   constexpr in c++17
 
 #include <iterator>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It>
@@ -35,5 +39,13 @@ int main()
     random_access_iterator<const char*>e(s+10);
     while ( b != e )
         test ( b++ );
+
+#if TEST_STD_VER > 14
+    {
+        constexpr const char *p = "123456789";
+        constexpr auto it1 = std::make_reverse_iterator(p);
+        static_assert(it1.base() == p, "");
+    }
+#endif
 }
 

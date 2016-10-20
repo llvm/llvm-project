@@ -570,42 +570,33 @@ uint32_t NativeRegisterContextLinux_arm::SetHardwareWatchpoint(
   // Make sure bits 1:0 are clear in our address
   addr &= ~((lldb::addr_t)3);
 
-  // Iterate over stored watchpoints
-  // Find a free wp_index or update reference count if duplicate.
+  // Iterate over stored watchpoints and find a free wp_index
   wp_index = LLDB_INVALID_INDEX32;
   for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
     if ((m_hwp_regs[i].control & 1) == 0) {
       wp_index = i; // Mark last free slot
-    } else if (m_hwp_regs[i].address == addr &&
-               m_hwp_regs[i].control == control_value) {
-      wp_index = i; // Mark duplicate index
-      break;        // Stop searching here
+    } else if (m_hwp_regs[i].address == addr) {
+      return LLDB_INVALID_INDEX32; // We do not support duplicate watchpoints.
     }
   }
 
   if (wp_index == LLDB_INVALID_INDEX32)
     return LLDB_INVALID_INDEX32;
 
-  // Add new or update existing watchpoint
-  if ((m_hwp_regs[wp_index].control & 1) == 0) {
-    // Update watchpoint in local cache
-    m_hwp_regs[wp_index].real_addr = real_addr;
-    m_hwp_regs[wp_index].address = addr;
-    m_hwp_regs[wp_index].control = control_value;
-    m_hwp_regs[wp_index].refcount = 1;
+  // Update watchpoint in local cache
+  m_hwp_regs[wp_index].real_addr = real_addr;
+  m_hwp_regs[wp_index].address = addr;
+  m_hwp_regs[wp_index].control = control_value;
 
-    // PTRACE call to set corresponding watchpoint register.
-    error = WriteHardwareDebugRegs(eDREGTypeWATCH, wp_index);
+  // PTRACE call to set corresponding watchpoint register.
+  error = WriteHardwareDebugRegs(eDREGTypeWATCH, wp_index);
 
-    if (error.Fail()) {
-      m_hwp_regs[wp_index].address = 0;
-      m_hwp_regs[wp_index].control &= ~1;
-      m_hwp_regs[wp_index].refcount = 0;
+  if (error.Fail()) {
+    m_hwp_regs[wp_index].address = 0;
+    m_hwp_regs[wp_index].control &= ~1;
 
-      return LLDB_INVALID_INDEX32;
-    }
-  } else
-    m_hwp_regs[wp_index].refcount++;
+    return LLDB_INVALID_INDEX32;
+  }
 
   return wp_index;
 }
@@ -628,36 +619,25 @@ bool NativeRegisterContextLinux_arm::ClearHardwareWatchpoint(
   if (wp_index >= m_max_hwp_supported)
     return false;
 
-  // Update reference count if multiple references.
-  if (m_hwp_regs[wp_index].refcount > 1) {
-    m_hwp_regs[wp_index].refcount--;
-    return true;
-  } else if (m_hwp_regs[wp_index].refcount == 1) {
-    // Create a backup we can revert to in case of failure.
-    lldb::addr_t tempAddr = m_hwp_regs[wp_index].address;
-    uint32_t tempControl = m_hwp_regs[wp_index].control;
-    uint32_t tempRefCount = m_hwp_regs[wp_index].refcount;
+  // Create a backup we can revert to in case of failure.
+  lldb::addr_t tempAddr = m_hwp_regs[wp_index].address;
+  uint32_t tempControl = m_hwp_regs[wp_index].control;
 
-    // Update watchpoint in local cache
-    m_hwp_regs[wp_index].control &= ~1;
-    m_hwp_regs[wp_index].address = 0;
-    m_hwp_regs[wp_index].refcount = 0;
+  // Update watchpoint in local cache
+  m_hwp_regs[wp_index].control &= ~1;
+  m_hwp_regs[wp_index].address = 0;
 
-    // Ptrace call to update hardware debug registers
-    error = WriteHardwareDebugRegs(eDREGTypeWATCH, wp_index);
+  // Ptrace call to update hardware debug registers
+  error = WriteHardwareDebugRegs(eDREGTypeWATCH, wp_index);
 
-    if (error.Fail()) {
-      m_hwp_regs[wp_index].control = tempControl;
-      m_hwp_regs[wp_index].address = tempAddr;
-      m_hwp_regs[wp_index].refcount = tempRefCount;
+  if (error.Fail()) {
+    m_hwp_regs[wp_index].control = tempControl;
+    m_hwp_regs[wp_index].address = tempAddr;
 
-      return false;
-    }
-
-    return true;
+    return false;
   }
 
-  return false;
+  return true;
 }
 
 Error NativeRegisterContextLinux_arm::ClearAllHardwareWatchpoints() {
@@ -675,19 +655,17 @@ Error NativeRegisterContextLinux_arm::ClearAllHardwareWatchpoints() {
     return error;
 
   lldb::addr_t tempAddr = 0;
-  uint32_t tempControl = 0, tempRefCount = 0;
+  uint32_t tempControl = 0;
 
   for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
     if (m_hwp_regs[i].control & 0x01) {
       // Create a backup we can revert to in case of failure.
       tempAddr = m_hwp_regs[i].address;
       tempControl = m_hwp_regs[i].control;
-      tempRefCount = m_hwp_regs[i].refcount;
 
       // Clear watchpoints in local cache
       m_hwp_regs[i].control &= ~1;
       m_hwp_regs[i].address = 0;
-      m_hwp_regs[i].refcount = 0;
 
       // Ptrace call to update hardware debug registers
       error = WriteHardwareDebugRegs(eDREGTypeWATCH, i);
@@ -695,7 +673,6 @@ Error NativeRegisterContextLinux_arm::ClearAllHardwareWatchpoints() {
       if (error.Fail()) {
         m_hwp_regs[i].control = tempControl;
         m_hwp_regs[i].address = tempAddr;
-        m_hwp_regs[i].refcount = tempRefCount;
 
         return error;
       }
@@ -750,8 +727,8 @@ Error NativeRegisterContextLinux_arm::GetWatchpointHitIndex(
     watch_size = GetWatchpointSize(wp_index);
     watch_addr = m_hwp_regs[wp_index].address;
 
-    if (m_hwp_regs[wp_index].refcount >= 1 && WatchpointIsEnabled(wp_index) &&
-        trap_addr >= watch_addr && trap_addr < watch_addr + watch_size) {
+    if (WatchpointIsEnabled(wp_index) && trap_addr >= watch_addr &&
+        trap_addr < watch_addr + watch_size) {
       m_hwp_regs[wp_index].hit_addr = trap_addr;
       return Error();
     }
