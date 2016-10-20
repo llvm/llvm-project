@@ -49,6 +49,21 @@ typedef signed char __v16qs __attribute__((__vector_size__(16)));
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
 
+/// \brief Adds lower double-precision values in both operands and returns the
+///    sum in the lower 64 bits of the result. The upper 64 bits of the result
+///    are copied from the upper double-precision value of the first operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VADDSD / ADDSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
+///    sum of the lower 64 bits of both operands. The upper 64 bits are copied
+///    from the upper 64 bits of the first source operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_add_sd(__m128d __a, __m128d __b)
 {
@@ -56,12 +71,41 @@ _mm_add_sd(__m128d __a, __m128d __b)
   return __a;
 }
 
+/// \brief Adds two 128-bit vectors of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VADDPD / ADDPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \returns A 128-bit vector of [2 x double] containing the sums of both
+///    operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_add_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)((__v2df)__a + (__v2df)__b);
 }
 
+/// \brief Subtracts the lower double-precision value of the second operand
+///    from the lower double-precision value of the first operand and returns
+///    the difference in the lower 64 bits of the result. The upper 64 bits of
+///    the result are copied from the upper double-precision value of the first
+///    operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSUBSD / SUBSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing the minuend.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing the subtrahend.
+/// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
+///    difference of the lower 64 bits of both operands. The upper 64 bits are
+///    copied from the upper 64 bits of the first source operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sub_sd(__m128d __a, __m128d __b)
 {
@@ -69,12 +113,40 @@ _mm_sub_sd(__m128d __a, __m128d __b)
   return __a;
 }
 
+/// \brief Subtracts two 128-bit vectors of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSUBPD / SUBPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing the minuend.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing the subtrahend.
+/// \returns A 128-bit vector of [2 x double] containing the differences between
+///    both operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sub_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)((__v2df)__a - (__v2df)__b);
 }
 
+/// \brief Multiplies lower double-precision values in both operands and returns
+///    the product in the lower 64 bits of the result. The upper 64 bits of the
+///    result are copied from the upper double-precision value of the first
+///    operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMULSD / MULSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
+///    product of the lower 64 bits of both operands. The upper 64 bits are
+///    copied from the upper 64 bits of the first source operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mul_sd(__m128d __a, __m128d __b)
 {
@@ -82,12 +154,41 @@ _mm_mul_sd(__m128d __a, __m128d __b)
   return __a;
 }
 
+/// \brief Multiplies two 128-bit vectors of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMULPD / MULPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the operands.
+/// \returns A 128-bit vector of [2 x double] containing the products of both
+///    operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mul_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)((__v2df)__a * (__v2df)__b);
 }
 
+/// \brief Divides the lower double-precision value of the first operand by the
+///    lower double-precision value of the second operand and returns the
+///    quotient in the lower 64 bits of the result. The upper 64 bits of the
+///    result are copied from the upper double-precision value of the first
+///    operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VDIVSD / DIVSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing the dividend.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing divisor.
+/// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
+///    quotient of the lower 64 bits of both operands. The upper 64 bits are
+///    copied from the upper 64 bits of the first source operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_div_sd(__m128d __a, __m128d __b)
 {
@@ -95,12 +196,44 @@ _mm_div_sd(__m128d __a, __m128d __b)
   return __a;
 }
 
+/// \brief Performs an element-by-element division of two 128-bit vectors of
+///    [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VDIVPD / DIVPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing the dividend.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing the divisor.
+/// \returns A 128-bit vector of [2 x double] containing the quotients of both
+///    operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_div_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)((__v2df)__a / (__v2df)__b);
 }
 
+/// \brief Calculates the square root of the lower double-precision value of
+///    the second operand and returns it in the lower 64 bits of the result.
+///    The upper 64 bits of the result are copied from the upper double-
+///    precision value of the first operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSQRTSD / SQRTSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the operands. The
+///    upper 64 bits of this operand are copied to the upper 64 bits of the
+///    result.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the operands. The
+///    square root is calculated using the lower 64 bits of this operand.
+/// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
+///    square root of the lower 64 bits of operand __b, and whose upper 64 bits
+///    are copied from the upper 64 bits of operand __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sqrt_sd(__m128d __a, __m128d __b)
 {
@@ -108,150 +241,517 @@ _mm_sqrt_sd(__m128d __a, __m128d __b)
   return (__m128d) { __c[0], __a[1] };
 }
 
+/// \brief Calculates the square root of the each of two values stored in a
+///    128-bit vector of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSQRTPD / SQRTPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector of [2 x double] containing the square roots of the
+///    values in the operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sqrt_pd(__m128d __a)
 {
   return __builtin_ia32_sqrtpd((__v2df)__a);
 }
 
+/// \brief Compares lower 64-bit double-precision values of both operands, and
+///    returns the lesser of the pair of values in the lower 64-bits of the
+///    result. The upper 64 bits of the result are copied from the upper double-
+///    precision value of the first operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMINSD / MINSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the operands. The
+///    lower 64 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the operands. The
+///    lower 64 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
+///    minimum value between both operands. The upper 64 bits are copied from
+///    the upper 64 bits of the first source operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_min_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_minsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Performs element-by-element comparison of the two 128-bit vectors of
+///    [2 x double] and returns the vector containing the lesser of each pair of
+///    values.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMINPD / MINPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the operands.
+/// \returns A 128-bit vector of [2 x double] containing the minimum values
+///    between both operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_min_pd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_minpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares lower 64-bits double-precision values of both operands, and
+///    returns the greater of the pair of values in the lower 64-bits of the
+///    result. The upper 64 bits of the result are copied from the upper double-
+///    precision value of the first operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMAXSD / MAXSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the operands. The
+///    lower 64 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the operands. The
+///    lower 64 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
+///    maximum value between both operands. The upper 64 bits are copied from
+///    the upper 64 bits of the first source operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_max_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_maxsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Performs element-by-element comparison of the two 128-bit vectors of
+///    [2 x double] and returns the vector containing the greater of each pair
+///    of values.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMAXPD / MAXPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the operands.
+/// \returns A 128-bit vector of [2 x double] containing the maximum values
+///    between both operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_max_pd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_maxpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Performs a bitwise AND of two 128-bit vectors of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VPAND / PAND instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \returns A 128-bit vector of [2 x double] containing the bitwise AND of the
+///    values between both operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_and_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)((__v2du)__a & (__v2du)__b);
 }
 
+/// \brief Performs a bitwise AND of two 128-bit vectors of [2 x double], using
+///    the one's complement of the values contained in the first source operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VPANDN / PANDN instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing the left source operand. The
+///    one's complement of this value is used in the bitwise AND.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing the right source operand.
+/// \returns A 128-bit vector of [2 x double] containing the bitwise AND of the
+///    values in the second operand and the one's complement of the first
+///    operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_andnot_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)(~(__v2du)__a & (__v2du)__b);
 }
 
+/// \brief Performs a bitwise OR of two 128-bit vectors of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VPOR / POR instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \returns A 128-bit vector of [2 x double] containing the bitwise OR of the
+///    values between both operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_or_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)((__v2du)__a | (__v2du)__b);
 }
 
+/// \brief Performs a bitwise XOR of two 128-bit vectors of [2 x double].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VPXOR / PXOR instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [2 x double] containing one of the source operands.
+/// \returns A 128-bit vector of [2 x double] containing the bitwise XOR of the
+///    values between both operands.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_xor_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)((__v2du)__a ^ (__v2du)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] for equality. Each comparison yields 0h
+///    for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPEQPD / CMPEQPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpeq_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpeqpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are less than those in the second operand. Each comparison
+///    yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTPD / CMPLTPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmplt_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpltpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are less than or equal to those in the second operand. Each
+///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLEPD / CMPLEPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmple_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmplepd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are greater than those in the second operand. Each comparison
+///    yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTPD / CMPLTPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpgt_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpltpd((__v2df)__b, (__v2df)__a);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are greater than or equal to those in the second operand. Each
+///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLEPD / CMPLEPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpge_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmplepd((__v2df)__b, (__v2df)__a);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are ordered with respect to those in the second operand. A pair
+///    of double-precision values are "ordered" with respect to each other if
+///    neither value is a NaN. Each comparison yields 0h for false,
+///    FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPORDPD / CMPORDPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpord_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpordpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are unordered with respect to those in the second operand. A pair
+///    of double-precision values are "unordered" with respect to each other if
+///    one or both values are NaN. Each comparison yields 0h for false,
+///    FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPUNORDPD / CMPUNORDPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpunord_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpunordpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are unequal to those in the second operand. Each comparison
+///    yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNEQPD / CMPNEQPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpneq_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpneqpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are not less than those in the second operand. Each comparison
+///    yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTPD / CMPNLTPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnlt_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpnltpd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are not less than or equal to those in the second operand. Each
+///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLEPD / CMPNLEPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnle_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpnlepd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are not greater than those in the second operand. Each
+///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTPD / CMPNLTPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpngt_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpnltpd((__v2df)__b, (__v2df)__a);
 }
 
+/// \brief Compares each of the corresponding double-precision values of the
+///    128-bit vectors of [2 x double] to determine if the values in the first
+///    operand are not greater than or equal to those in the second operand.
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLEPD / CMPNLEPD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double].
+/// \param __b
+///    A 128-bit vector of [2 x double].
+/// \returns A 128-bit vector containing the comparison results.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnge_pd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpnlepd((__v2df)__b, (__v2df)__a);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] for equality. The
+///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPEQSD / CMPEQSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpeq_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpeqsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is less than the corresponding value in
+///    the second parameter. The comparison yields 0h for false,
+///    FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTSD / CMPLTSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmplt_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpltsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is less than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0h for
+///    false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLESD / CMPLESD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmple_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmplesd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief  Compares the lower double-precision floating-point values in each
+///    of the two 128-bit floating-point vectors of [2 x double] to determine
+///    if the value in the first parameter is greater than the corresponding
+///    value in the second parameter. The comparison yields 0h for false,
+///    FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTSD / CMPLTSD instruction.
+///
+/// \param __a
+///     A 128-bit vector of [2 x double]. The lower double-precision value is
+///     compared to the lower double-precision value of __b.
+/// \param __b
+///     A 128-bit vector of [2 x double]. The lower double-precision value is
+///     compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///     results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpgt_sd(__m128d __a, __m128d __b)
 {
@@ -259,6 +759,24 @@ _mm_cmpgt_sd(__m128d __a, __m128d __b)
   return (__m128d) { __c[0], __a[1] };
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is greater than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0h for
+///    false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLESD / CMPLESD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpge_sd(__m128d __a, __m128d __b)
 {
@@ -266,36 +784,146 @@ _mm_cmpge_sd(__m128d __a, __m128d __b)
   return (__m128d) { __c[0], __a[1] };
 }
 
+/// \brief  Compares the lower double-precision floating-point values in each
+///    of the two 128-bit floating-point vectors of [2 x double] to determine
+///    if the value in the first parameter is "ordered" with respect to the
+///    corresponding value in the second parameter. The comparison yields 0h for
+///    false, FFFFFFFFFFFFFFFFh for true. A pair of double-precision values are
+///    "ordered" with respect to each other if neither value is a NaN.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPORDSD / CMPORDSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpord_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpordsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief  Compares the lower double-precision floating-point values in each
+///    of the two 128-bit floating-point vectors of [2 x double] to determine
+///    if the value in the first parameter is "unordered" with respect to the
+///    corresponding value in the second parameter. The comparison yields 0h
+///    for false, FFFFFFFFFFFFFFFFh for true. A pair of double-precision values
+///    are "unordered" with respect to each other if one or both values are NaN.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPUNORDSD / CMPUNORDSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpunord_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpunordsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is unequal to the corresponding value in
+///    the second parameter. The comparison yields 0h for false,
+///    FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNEQSD / CMPNEQSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpneq_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpneqsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is not less than the corresponding
+///    value in the second parameter. The comparison yields 0h for false,
+///    FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTSD / CMPNLTSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnlt_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpnltsd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is not less than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0h
+///    for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLESD / CMPNLESD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns  A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnle_sd(__m128d __a, __m128d __b)
 {
   return (__m128d)__builtin_ia32_cmpnlesd((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is not greater than the corresponding
+///    value in the second parameter. The comparison yields 0h for false,
+///    FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTSD / CMPNLTSD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpngt_sd(__m128d __a, __m128d __b)
 {
@@ -303,6 +931,24 @@ _mm_cmpngt_sd(__m128d __a, __m128d __b)
   return (__m128d) { __c[0], __a[1] };
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is not greater than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0h
+///    for false, FFFFFFFFFFFFFFFFh for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLESD / CMPNLESD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns A 128-bit vector. The lower 64 bits contains the comparison
+///    results. The upper 64 bits are copied from the upper 64 bits of __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnge_sd(__m128d __a, __m128d __b)
 {
@@ -310,66 +956,254 @@ _mm_cmpnge_sd(__m128d __a, __m128d __b)
   return (__m128d) { __c[0], __a[1] };
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] for equality. The
+///    comparison yields 0 for false, 1 for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comieq_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_comisdeq((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is less than the corresponding value in
+///    the second parameter. The comparison yields 0 for false, 1 for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comilt_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_comisdlt((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is less than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0 for
+///    false, 1 for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///     A 128-bit vector of [2 x double]. The lower double-precision value is
+///     compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comile_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_comisdle((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is greater than the corresponding value
+///    in the second parameter. The comparison yields 0 for false, 1 for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comigt_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_comisdgt((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is greater than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0 for
+///    false, 1 for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comige_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_comisdge((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is unequal to the corresponding value in
+///    the second parameter. The comparison yields 0 for false, 1 for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comineq_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_comisdneq((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] for equality. The
+///    comparison yields 0 for false, 1 for true. If either of the two lower
+///    double-precision values is NaN, 1 is returned.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results. If either of the two
+///    lower double-precision values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomieq_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_ucomisdeq((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is less than the corresponding value in
+///    the second parameter. The comparison yields 0 for false, 1 for true.
+///    If either of the two lower double-precision values is NaN, 1 is returned.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results. If either of the two
+///    lower double-precision values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomilt_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_ucomisdlt((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is less than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0 for
+///    false, 1 for true. If either of the two lower double-precision values is
+///    NaN, 1 is returned.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///     A 128-bit vector of [2 x double]. The lower double-precision value is
+///     compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower double-precision values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomile_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_ucomisdle((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is greater than the corresponding value
+///    in the second parameter. The comparison yields 0 for false, 1 for true.
+///    If either of the two lower double-precision values is NaN, 0 is returned.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///     A 128-bit vector of [2 x double]. The lower double-precision value is
+///     compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower double-precision values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomigt_sd(__m128d __a, __m128d __b)
 {
   return __builtin_ia32_ucomisdgt((__v2df)__a, (__v2df)__b);
 }
 
+/// \brief Compares the lower double-precision floating-point values in each of
+///    the two 128-bit floating-point vectors of [2 x double] to determine if
+///    the value in the first parameter is greater than or equal to the
+///    corresponding value in the second parameter. The comparison yields 0 for
+///    false, 1 for true.  If either of the two lower double-precision values
+///    is NaN, 0 is returned.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __b.
+/// \param __b
+///    A 128-bit vector of [2 x double]. The lower double-precision value is
+///    compared to the lower double-precision value of __a.
+/// \returns An integer containing the comparison results. If either of the two
+///    lower double-precision values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomige_sd(__m128d __a, __m128d __b)
 {
@@ -2641,7 +3475,7 @@ _mm_insert_epi16(__m128i __a, int __b, int __imm)
 /// \param __a
 ///    A 128-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bits from each 8-bit element in __a, written
-///    to bits [15:0]. The other bits are assigned zeros. 
+///    to bits [15:0]. The other bits are assigned zeros.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_movemask_epi8(__m128i __a)
 {
@@ -2958,7 +3792,7 @@ _mm_unpacklo_epi64(__m128i __a, __m128i __b)
 }
 
 /// \brief Returns the lower 64 bits of a 128-bit integer vector as a 64-bit
-///    integer. 
+///    integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3090,7 +3924,7 @@ _mm_movemask_pd(__m128d __a)
 /// \param i
 ///    An 8-bit immediate value. The least significant two bits specify which
 ///    elements to copy from a and b:
-///    Bit[0] = 0: lower element of a copied to lower element of result. 
+///    Bit[0] = 0: lower element of a copied to lower element of result.
 ///    Bit[0] = 1: upper element of a copied to lower element of result.
 ///    Bit[1] = 0: lower element of b copied to upper element of result.
 ///    Bit[1] = 1: upper element of b copied to upper element of result.

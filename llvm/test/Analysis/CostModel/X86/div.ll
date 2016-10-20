@@ -139,17 +139,16 @@ define i32 @sdiv_uniformconst() {
   ; SSE2: cost of 38 {{.*}} %V8i32 = sdiv
   ; SSSE3: cost of 38 {{.*}} %V8i32 = sdiv
   ; SSE42: cost of 30 {{.*}} %V8i32 = sdiv
-  ; AVX1: cost of 160 {{.*}} %V8i32 = sdiv
+  ; AVX1: cost of 30 {{.*}} %V8i32 = sdiv
   ; AVX2: cost of 15 {{.*}} %V8i32 = sdiv
   ; AVX512: cost of 15 {{.*}} %V8i32 = sdiv
   %V8i32 = sdiv <8 x i32> undef, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   ; SSE2: cost of 76 {{.*}} %V16i32 = sdiv
   ; SSSE3: cost of 76 {{.*}} %V16i32 = sdiv
   ; SSE42: cost of 60 {{.*}} %V16i32 = sdiv
-  ; AVX1: cost of 320 {{.*}} %V16i32 = sdiv
+  ; AVX1: cost of 60 {{.*}} %V16i32 = sdiv
   ; AVX2: cost of 30 {{.*}} %V16i32 = sdiv
-  ; AVX512F: cost of 48 {{.*}} %V16i32 = sdiv
-  ; AVX512BW: cost of 320 {{.*}} %V16i32 = sdiv
+  ; AVX512: cost of 15 {{.*}} %V16i32 = sdiv
   %V16i32 = sdiv <16 x i32> undef, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 
   ; CHECK: cost of 1 {{.*}} %I16 = sdiv
@@ -158,15 +157,15 @@ define i32 @sdiv_uniformconst() {
   ; AVX: cost of 6 {{.*}} %V8i16 = sdiv
   %V8i16 = sdiv <8 x i16> undef, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ; SSE: cost of 12 {{.*}} %V16i16 = sdiv
-  ; AVX1: cost of 320 {{.*}} %V16i16 = sdiv
+  ; AVX1: cost of 12 {{.*}} %V16i16 = sdiv
   ; AVX2: cost of 6 {{.*}} %V16i16 = sdiv
   ; AVX512: cost of 6 {{.*}} %V16i16 = sdiv
   %V16i16 = sdiv <16 x i16> undef, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ; SSE: cost of 24 {{.*}} %V32i16 = sdiv
-  ; AVX1: cost of 640 {{.*}} %V32i16 = sdiv
+  ; AVX1: cost of 24 {{.*}} %V32i16 = sdiv
   ; AVX2: cost of 12 {{.*}} %V32i16 = sdiv
   ; AVX512F: cost of 12 {{.*}} %V32i16 = sdiv
-  ; AVX512BW: cost of 640 {{.*}} %V32i16 = sdiv
+  ; AVX512BW: cost of 6 {{.*}} %V32i16 = sdiv
   %V32i16 = sdiv <32 x i16> undef, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
 
   ; CHECK: cost of 1 {{.*}} %I8 = sdiv
@@ -204,15 +203,14 @@ define i32 @udiv_uniformconst() {
   ; AVX: cost of 15 {{.*}} %V4i32 = udiv
   %V4i32 = udiv <4 x i32> undef, <i32 7, i32 7, i32 7, i32 7>
   ; SSE: cost of 30 {{.*}} %V8i32 = udiv
-  ; AVX1: cost of 160 {{.*}} %V8i32 = udiv
+  ; AVX1: cost of 30 {{.*}} %V8i32 = udiv
   ; AVX2: cost of 15 {{.*}} %V8i32 = udiv
   ; AVX512: cost of 15 {{.*}} %V8i32 = udiv
   %V8i32 = udiv <8 x i32> undef, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   ; SSE: cost of 60 {{.*}} %V16i32 = udiv
-  ; AVX1: cost of 320 {{.*}} %V16i32 = udiv
+  ; AVX1: cost of 60 {{.*}} %V16i32 = udiv
   ; AVX2: cost of 30 {{.*}} %V16i32 = udiv
-  ; AVX512F: cost of 48 {{.*}} %V16i32 = udiv
-  ; AVX512BW: cost of 320 {{.*}} %V16i32 = udiv
+  ; AVX512: cost of 15 {{.*}} %V16i32 = udiv
   %V16i32 = udiv <16 x i32> undef, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 
   ; CHECK: cost of 1 {{.*}} %I16 = udiv
@@ -221,15 +219,15 @@ define i32 @udiv_uniformconst() {
   ; AVX: cost of 6 {{.*}} %V8i16 = udiv
   %V8i16 = udiv <8 x i16> undef, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ; SSE: cost of 12 {{.*}} %V16i16 = udiv
-  ; AVX1: cost of 320 {{.*}} %V16i16 = udiv
+  ; AVX1: cost of 12 {{.*}} %V16i16 = udiv
   ; AVX2: cost of 6 {{.*}} %V16i16 = udiv
   ; AVX512: cost of 6 {{.*}} %V16i16 = udiv
   %V16i16 = udiv <16 x i16> undef, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ; SSE: cost of 24 {{.*}} %V32i16 = udiv
-  ; AVX1: cost of 640 {{.*}} %V32i16 = udiv
+  ; AVX1: cost of 24 {{.*}} %V32i16 = udiv
   ; AVX2: cost of 12 {{.*}} %V32i16 = udiv
   ; AVX512F: cost of 12 {{.*}} %V32i16 = udiv
-  ; AVX512BW: cost of 640 {{.*}} %V32i16 = udiv
+  ; AVX512BW: cost of 6 {{.*}} %V32i16 = udiv
   %V32i16 = udiv <32 x i16> undef, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
 
   ; CHECK: cost of 1 {{.*}} %I8 = udiv
@@ -271,17 +269,16 @@ define i32 @sdiv_uniformconstpow2() {
   ; SSE2: cost of 38 {{.*}} %V8i32 = sdiv
   ; SSSE3: cost of 38 {{.*}} %V8i32 = sdiv
   ; SSE42: cost of 30 {{.*}} %V8i32 = sdiv
-  ; AVX1: cost of 160 {{.*}} %V8i32 = sdiv
+  ; AVX1: cost of 30 {{.*}} %V8i32 = sdiv
   ; AVX2: cost of 15 {{.*}} %V8i32 = sdiv
   ; AVX512: cost of 15 {{.*}} %V8i32 = sdiv
   %V8i32 = sdiv <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   ; SSE2: cost of 76 {{.*}} %V16i32 = sdiv
   ; SSSE3: cost of 76 {{.*}} %V16i32 = sdiv
   ; SSE42: cost of 60 {{.*}} %V16i32 = sdiv
-  ; AVX1: cost of 320 {{.*}} %V16i32 = sdiv
+  ; AVX1: cost of 60 {{.*}} %V16i32 = sdiv
   ; AVX2: cost of 30 {{.*}} %V16i32 = sdiv
-  ; AVX512F: cost of 48 {{.*}} %V16i32 = sdiv
-  ; AVX512BW: cost of 320 {{.*}} %V16i32 = sdiv
+  ; AVX512: cost of 15 {{.*}} %V16i32 = sdiv
   %V16i32 = sdiv <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
 
   ; CHECK: cost of 1 {{.*}} %I16 = sdiv
@@ -290,15 +287,15 @@ define i32 @sdiv_uniformconstpow2() {
   ; AVX: cost of 6 {{.*}} %V8i16 = sdiv
   %V8i16 = sdiv <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
   ; SSE: cost of 12 {{.*}} %V16i16 = sdiv
-  ; AVX1: cost of 320 {{.*}} %V16i16 = sdiv
+  ; AVX1: cost of 12 {{.*}} %V16i16 = sdiv
   ; AVX2: cost of 6 {{.*}} %V16i16 = sdiv
   ; AVX512: cost of 6 {{.*}} %V16i16 = sdiv
   %V16i16 = sdiv <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
   ; SSE: cost of 24 {{.*}} %V32i16 = sdiv
-  ; AVX1: cost of 640 {{.*}} %V32i16 = sdiv
+  ; AVX1: cost of 24 {{.*}} %V32i16 = sdiv
   ; AVX2: cost of 12 {{.*}} %V32i16 = sdiv
   ; AVX512F: cost of 12 {{.*}} %V32i16 = sdiv
-  ; AVX512BW: cost of 640 {{.*}} %V32i16 = sdiv
+  ; AVX512BW: cost of 6 {{.*}} %V32i16 = sdiv
   %V32i16 = sdiv <32 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
 
   ; CHECK: cost of 1 {{.*}} %I8 = sdiv
@@ -336,15 +333,14 @@ define i32 @udiv_uniformconstpow2() {
   ; AVX: cost of 15 {{.*}} %V4i32 = udiv
   %V4i32 = udiv <4 x i32> undef, <i32 16, i32 16, i32 16, i32 16>
   ; SSE: cost of 30 {{.*}} %V8i32 = udiv
-  ; AVX1: cost of 160 {{.*}} %V8i32 = udiv
+  ; AVX1: cost of 30 {{.*}} %V8i32 = udiv
   ; AVX2: cost of 15 {{.*}} %V8i32 = udiv
   ; AVX512: cost of 15 {{.*}} %V8i32 = udiv
   %V8i32 = udiv <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   ; SSE: cost of 60 {{.*}} %V16i32 = udiv
-  ; AVX1: cost of 320 {{.*}} %V16i32 = udiv
+  ; AVX1: cost of 60 {{.*}} %V16i32 = udiv
   ; AVX2: cost of 30 {{.*}} %V16i32 = udiv
-  ; AVX512F: cost of 48 {{.*}} %V16i32 = udiv
-  ; AVX512BW: cost of 320 {{.*}} %V16i32 = udiv
+  ; AVX512: cost of 15 {{.*}} %V16i32 = udiv
   %V16i32 = udiv <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
 
   ; CHECK: cost of 1 {{.*}} %I16 = udiv
@@ -353,15 +349,15 @@ define i32 @udiv_uniformconstpow2() {
   ; AVX: cost of 6 {{.*}} %V8i16 = udiv
   %V8i16 = udiv <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
   ; SSE: cost of 12 {{.*}} %V16i16 = udiv
-  ; AVX1: cost of 320 {{.*}} %V16i16 = udiv
+  ; AVX1: cost of 12 {{.*}} %V16i16 = udiv
   ; AVX2: cost of 6 {{.*}} %V16i16 = udiv
   ; AVX512: cost of 6 {{.*}} %V16i16 = udiv
   %V16i16 = udiv <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
   ; SSE: cost of 24 {{.*}} %V32i16 = udiv
-  ; AVX1: cost of 640 {{.*}} %V32i16 = udiv
+  ; AVX1: cost of 24 {{.*}} %V32i16 = udiv
   ; AVX2: cost of 12 {{.*}} %V32i16 = udiv
   ; AVX512F: cost of 12 {{.*}} %V32i16 = udiv
-  ; AVX512BW: cost of 640 {{.*}} %V32i16 = udiv
+  ; AVX512BW: cost of 6 {{.*}} %V32i16 = udiv
   %V32i16 = udiv <32 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
 
   ; CHECK: cost of 1 {{.*}} %I8 = udiv

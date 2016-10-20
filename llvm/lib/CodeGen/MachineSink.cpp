@@ -24,6 +24,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -60,6 +61,15 @@ UseBlockFreqInfo("machine-sink-bfi",
            cl::desc("Use block frequency info to find successors to sink"),
            cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> SplitEdgeProbabilityThreshold(
+    "machine-sink-split-probability-threshold",
+    cl::desc(
+        "Percentage threshold for splitting single-instruction critical edge. "
+        "If the branch threshold is higher than this threshold, we allow "
+        "speculative execution of up to 1 instruction to avoid branching to "
+        "splitted critical edge"),
+    cl::init(40), cl::Hidden);
+
 STATISTIC(NumSunk,      "Number of machine instructions sunk");
 STATISTIC(NumSplit,     "Number of critical edges split");
 STATISTIC(NumCoalesces, "Number of copies coalesced");
@@ -74,6 +84,7 @@ namespace {
     MachinePostDominatorTree *PDT; // Machine post dominator tree
     MachineLoopInfo *LI;
     const MachineBlockFrequencyInfo *MBFI;
+    const MachineBranchProbabilityInfo *MBPI;
     AliasAnalysis *AA;
 
     // Remember which edges have been considered for breaking.
@@ -105,6 +116,7 @@ namespace {
       AU.addRequired<MachineDominatorTree>();
       AU.addRequired<MachinePostDominatorTree>();
       AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineBranchProbabilityInfo>();
       AU.addPreserved<MachineDominatorTree>();
       AU.addPreserved<MachinePostDominatorTree>();
       AU.addPreserved<MachineLoopInfo>();
@@ -163,6 +175,7 @@ char MachineSinking::ID = 0;
 char &llvm::MachineSinkingID = MachineSinking::ID;
 INITIALIZE_PASS_BEGIN(MachineSinking, "machine-sink",
                 "Machine code sinking", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -283,6 +296,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   PDT = &getAnalysis<MachinePostDominatorTree>();
   LI = &getAnalysis<MachineLoopInfo>();
   MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;
+  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   bool EverMadeChange = false;
@@ -381,6 +395,10 @@ bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr &MI,
     return true;
 
   if (!MI.isCopy() && !TII->isAsCheapAsAMove(MI))
+    return true;
+
+  if (From->isSuccessor(To) && MBPI->getEdgeProbability(From, To) <=
+      BranchProbability(SplitEdgeProbabilityThreshold, 100))
     return true;
 
   // MI is cheap, we probably don't want to break the critical edge for it.

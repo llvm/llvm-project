@@ -78,6 +78,19 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   bool isCFIntrinsic(const SDNode *Intr) const;
 
   void createDebuggerPrologueStackObjects(MachineFunction &MF) const;
+
+  /// \returns True if fixup needs to be emitted for given global value \p GV,
+  /// false otherwise.
+  bool shouldEmitFixup(const GlobalValue *GV) const;
+
+  /// \returns True if GOT relocation needs to be emitted for given global value
+  /// \p GV, false otherwise.
+  bool shouldEmitGOTReloc(const GlobalValue *GV) const;
+
+  /// \returns True if PC-relative relocation needs to be emitted for given
+  /// global value \p GV, false otherwise.
+  bool shouldEmitPCReloc(const GlobalValue *GV) const;
+
 public:
   SITargetLowering(const TargetMachine &tm, const SISubtarget &STI);
 

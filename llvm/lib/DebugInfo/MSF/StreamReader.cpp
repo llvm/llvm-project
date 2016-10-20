@@ -31,6 +31,14 @@ Error StreamReader::readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size) {
   return Error::success();
 }
 
+Error StreamReader::readInteger(uint8_t &Dest) {
+  const uint8_t *P;
+  if (auto EC = readObject(P))
+    return EC;
+  Dest = *P;
+  return Error::success();
+}
+
 Error StreamReader::readInteger(uint16_t &Dest) {
   const support::ulittle16_t *P;
   if (auto EC = readObject(P))
@@ -41,6 +49,46 @@ Error StreamReader::readInteger(uint16_t &Dest) {
 
 Error StreamReader::readInteger(uint32_t &Dest) {
   const support::ulittle32_t *P;
+  if (auto EC = readObject(P))
+    return EC;
+  Dest = *P;
+  return Error::success();
+}
+
+Error StreamReader::readInteger(uint64_t &Dest) {
+  const support::ulittle64_t *P;
+  if (auto EC = readObject(P))
+    return EC;
+  Dest = *P;
+  return Error::success();
+}
+
+Error StreamReader::readInteger(int8_t &Dest) {
+  const int8_t *P;
+  if (auto EC = readObject(P))
+    return EC;
+  Dest = *P;
+  return Error::success();
+}
+
+Error StreamReader::readInteger(int16_t &Dest) {
+  const support::little16_t *P;
+  if (auto EC = readObject(P))
+    return EC;
+  Dest = *P;
+  return Error::success();
+}
+
+Error StreamReader::readInteger(int32_t &Dest) {
+  const support::little32_t *P;
+  if (auto EC = readObject(P))
+    return EC;
+  Dest = *P;
+  return Error::success();
+}
+
+Error StreamReader::readInteger(int64_t &Dest) {
+  const support::little64_t *P;
   if (auto EC = readObject(P))
     return EC;
   Dest = *P;
@@ -90,4 +138,19 @@ Error StreamReader::readStreamRef(ReadableStreamRef &Ref, uint32_t Length) {
   Ref = Stream.slice(Offset, Length);
   Offset += Length;
   return Error::success();
+}
+
+Error StreamReader::skip(uint32_t Amount) {
+  if (Amount > bytesRemaining())
+    return make_error<MSFError>(msf_error_code::insufficient_buffer);
+  Offset += Amount;
+  return Error::success();
+}
+
+uint8_t StreamReader::peek() const {
+  ArrayRef<uint8_t> Buffer;
+  auto EC = Stream.readBytes(Offset, 1, Buffer);
+  assert(!EC && "Cannot peek an empty buffer!");
+  llvm::consumeError(std::move(EC));
+  return Buffer[0];
 }

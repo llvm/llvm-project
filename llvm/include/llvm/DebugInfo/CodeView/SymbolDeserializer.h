@@ -14,6 +14,8 @@
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorDelegate.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -33,11 +35,11 @@ public:
 
 protected:
   template <typename T>
-  Error deserializeRecord(ArrayRef<uint8_t> &Data, SymbolKind Kind,
+  Error deserializeRecord(msf::StreamReader &Reader, SymbolKind Kind,
                           T &Record) const {
-    uint32_t RecordOffset = Delegate ? Delegate->getRecordOffset(Data) : 0;
+    uint32_t RecordOffset = Delegate ? Delegate->getRecordOffset(Reader) : 0;
     SymbolRecordKind RK = static_cast<SymbolRecordKind>(Kind);
-    auto ExpectedRecord = T::deserialize(RK, RecordOffset, Data);
+    auto ExpectedRecord = T::deserialize(RK, RecordOffset, Reader);
     if (!ExpectedRecord)
       return ExpectedRecord.takeError();
     Record = std::move(*ExpectedRecord);
@@ -47,8 +49,9 @@ protected:
 private:
   template <typename T>
   Error defaultVisitKnownRecord(CVSymbol &CVR, T &Record) {
-    ArrayRef<uint8_t> RD = CVR.content();
-    if (auto EC = deserializeRecord(RD, CVR.Type, Record))
+    msf::ByteStream S(CVR.content());
+    msf::StreamReader SR(S);
+    if (auto EC = deserializeRecord(SR, CVR.Type, Record))
       return EC;
     return Error::success();
   }

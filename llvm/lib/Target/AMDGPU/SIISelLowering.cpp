@@ -1813,6 +1813,23 @@ void SITargetLowering::createDebuggerPrologueStackObjects(
   }
 }
 
+bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
+  const Triple &TT = getTargetMachine().getTargetTriple();
+  return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+         AMDGPU::shouldEmitConstantsToTextSection(TT);
+}
+
+bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
+  return (GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+              GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS) &&
+         !shouldEmitFixup(GV) &&
+         !getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+}
+
+bool SITargetLowering::shouldEmitPCReloc(const GlobalValue *GV) const {
+  return !shouldEmitFixup(GV) && !shouldEmitGOTReloc(GV);
+}
+
 /// This transforms the control flow intrinsics to get the branch destination as
 /// last parameter, also switches branch target with BR if the need arise
 SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
@@ -1997,29 +2014,12 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   return DAG.getUNDEF(ASC->getValueType(0));
 }
 
-static bool shouldEmitFixup(const GlobalValue *GV,
-                            const TargetMachine &TM) {
-  // FIXME: We need to emit global variables in constant address space in a
-  // separate section, and use relocations.
-  return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
-}
-
-static bool shouldEmitGOTReloc(const GlobalValue *GV,
-                               const TargetMachine &TM) {
-  return GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
-}
-
-static bool shouldEmitPCReloc(const GlobalValue *GV,
-                              const TargetMachine &TM) {
-  return !shouldEmitFixup(GV, TM) && !shouldEmitGOTReloc(GV, TM);
-}
-
 bool
 SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   // We can fold offsets for anything that doesn't require a GOT relocation.
-  return GA->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-         !shouldEmitGOTReloc(GA->getGlobal(), getTargetMachine());
+  return (GA->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+              GA->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS) &&
+         !shouldEmitGOTReloc(GA->getGlobal());
 }
 
 static SDValue buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
@@ -2076,9 +2076,9 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   const GlobalValue *GV = GSD->getGlobal();
   EVT PtrVT = Op.getValueType();
 
-  if (shouldEmitFixup(GV, getTargetMachine()))
+  if (shouldEmitFixup(GV))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT);
-  else if (shouldEmitPCReloc(GV, getTargetMachine()))
+  else if (shouldEmitPCReloc(GV))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT,
                                    SIInstrInfo::MO_REL32);
 

@@ -225,9 +225,15 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   // but we should now get live on entry for the clobbering definition of the
   // load, since it will walk past the phi node since every argument is the
   // same.
+  // XXX: This currently requires either removing the phi or resetting optimized
+  // on the load
+
+  EXPECT_FALSE(
+      MSSA.isLiveOnEntryDef(Walker->getClobberingMemoryAccess(LoadInst)));
+  // If we reset optimized, we get live on entry.
+  LoadAccess->resetOptimized();
   EXPECT_TRUE(
       MSSA.isLiveOnEntryDef(Walker->getClobberingMemoryAccess(LoadInst)));
-
   // The phi should now be a two entry phi with two live on entry defs.
   for (const auto &Op : DefiningAccess->operands()) {
     MemoryAccess *Operand = cast<MemoryAccess>(&*Op);
@@ -450,24 +456,32 @@ TEST_F(MemorySSATest, WalkerInvariantLoadOpt) {
   EXPECT_EQ(LoadClobber, MSSA.getLiveOnEntryDef());
 }
 
-// At one point, we were building MSSA with 0 AA passes. This ensures that we
-// actually use BasicAA.
-TEST_F(MemorySSATest, AAIsPresentAtBuildTime) {
+// Test loads get reoptimized properly by the walker.
+TEST_F(MemorySSATest, WalkerReopt) {
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
   B.SetInsertPoint(BasicBlock::Create(C, "", F));
-
   Type *Int8 = Type::getInt8Ty(C);
-  Constant *One = ConstantInt::get(Int8, 1);
-  Value *AllocaA = B.CreateAlloca(Int8);
-  Instruction *StoreA = B.CreateStore(One, AllocaA);
-
-  Value *AllocaB = B.CreateAlloca(Int8);
-  B.CreateStore(One, AllocaB);
-  Instruction *LoadA = B.CreateLoad(AllocaA);
+  Value *AllocaA = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
+  Instruction *SIA = B.CreateStore(ConstantInt::get(Int8, 0), AllocaA);
+  Value *AllocaB = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "B");
+  Instruction *SIB = B.CreateStore(ConstantInt::get(Int8, 0), AllocaB);
+  Instruction *LIA = B.CreateLoad(AllocaA);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
-  auto *MU = cast<MemoryUse>(MSSA.getMemoryAccess(LoadA));
-  EXPECT_EQ(MU->getDefiningAccess(), MSSA.getMemoryAccess(StoreA));
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  MemoryAccess *LoadClobber = Walker->getClobberingMemoryAccess(LIA);
+  MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(LIA));
+  EXPECT_EQ(LoadClobber, MSSA.getMemoryAccess(SIA));
+  EXPECT_TRUE(MSSA.isLiveOnEntryDef(Walker->getClobberingMemoryAccess(SIA)));
+  MSSA.removeMemoryAccess(LoadAccess);
+
+  // Create the load memory access pointing to an unoptimized place.
+  MemoryUse *NewLoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+      LIA, MSSA.getMemoryAccess(SIB), LIA->getParent(), MemorySSA::End));
+  // This should it cause it to be optimized
+  EXPECT_EQ(Walker->getClobberingMemoryAccess(NewLoadAccess), LoadClobber);
+  EXPECT_EQ(NewLoadAccess->getDefiningAccess(), LoadClobber);
 }

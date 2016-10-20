@@ -164,6 +164,10 @@ bool isReadOnlySegment(const GlobalValue *GV) {
   return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }
 
+bool shouldEmitConstantsToTextSection(const Triple &TT) {
+  return TT.getOS() != Triple::AMDHSA;
+}
+
 int getIntegerAttribute(const Function &F, StringRef Name, int Default) {
   Attribute A = F.getFnAttribute(Name);
   int Result = Default;

@@ -20,7 +20,6 @@
 #include "lld/Core/LLVM.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/AlignOf.h"
 
 namespace lld {
 namespace elf {

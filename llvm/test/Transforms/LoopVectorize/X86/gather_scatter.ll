@@ -85,7 +85,7 @@ for.end:                                          ; preds = %for.cond
 ; The source code
 ;void foo2 (In * __restrict__ in, float * __restrict__ out, int * __restrict__ trigger) {
 ;
-;  for (int i=0; i<SIZE; ++i) {
+;  for (int i=0; i<SIZE; i += 16) {
 ;    if (trigger[i] > 0) {
 ;      out[i] = in[i].b + (float) 0.5;
 ;    }
@@ -95,9 +95,9 @@ for.end:                                          ; preds = %for.cond
 %struct.In = type { float, float }
 
 ;AVX512-LABEL: @foo2
-;AVX512: getelementptr inbounds %struct.In, %struct.In* %in, <16 x i64> %{{.*}}, i32 1
+;AVX512: getelementptr inbounds %struct.In, %struct.In* %in, <16 x i64> {{.*}}, i32 1
 ;AVX512: llvm.masked.gather.v16f32
-;AVX512: llvm.masked.store.v16f32
+;AVX512: llvm.masked.scatter.v16f32
 ;AVX512: ret void
 define void @foo2(%struct.In* noalias %in, float* noalias %out, i32* noalias %trigger, i32* noalias %index) #0 {
 entry:
@@ -147,7 +147,7 @@ if.end:                                           ; preds = %if.then, %for.body
 
 for.inc:                                          ; preds = %if.end
   %9 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %9, 1
+  %inc = add nsw i32 %9, 16
   store i32 %inc, i32* %i, align 4
   br label %for.cond
 
@@ -162,7 +162,7 @@ for.end:                                          ; preds = %for.cond
 ;};
 ;void foo3 (In * __restrict__ in, Out * __restrict__ out, int * __restrict__ trigger) {
 ;
-;  for (int i=0; i<SIZE; ++i) {
+;  for (int i=0; i<SIZE; i += 16) {
 ;    if (trigger[i] > 0) {
 ;      out[i].b = in[i].b + (float) 0.5;
 ;    }
@@ -170,10 +170,10 @@ for.end:                                          ; preds = %for.cond
 ;}
 
 ;AVX512-LABEL: @foo3
-;AVX512: getelementptr inbounds %struct.In, %struct.In* %in, <16 x i64> %{{.*}}, i32 1
+;AVX512: getelementptr inbounds %struct.In, %struct.In* %in, <16 x i64> {{.*}}, i32 1
 ;AVX512: llvm.masked.gather.v16f32
 ;AVX512: fadd <16 x float>
-;AVX512: getelementptr inbounds %struct.Out, %struct.Out* %out, <16 x i64> %{{.*}}, i32 1
+;AVX512: getelementptr inbounds %struct.Out, %struct.Out* %out, <16 x i64> {{.*}}, i32 1
 ;AVX512: llvm.masked.scatter.v16f32
 ;AVX512: ret void
 
@@ -226,7 +226,7 @@ if.end:                                           ; preds = %if.then, %for.body
 
 for.inc:                                          ; preds = %if.end
   %9 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %9, 1
+  %inc = add nsw i32 %9, 16
   store i32 %inc, i32* %i, align 4
   br label %for.cond
 

@@ -15,47 +15,38 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-template <typename T>
-static Error takeObject(ArrayRef<uint8_t> &Data, const T *&Res) {
-  if (Data.size() < sizeof(*Res))
-    return llvm::make_error<CodeViewError>(cv_error_code::insufficient_buffer);
-  Res = reinterpret_cast<const T *>(Data.data());
-  Data = Data.drop_front(sizeof(*Res));
-  return Error::success();
-}
-
-static Error skipPadding(ArrayRef<uint8_t> &Data) {
-  if (Data.empty())
+static Error skipPadding(msf::StreamReader &Reader) {
+  if (Reader.empty())
     return Error::success();
-  uint8_t Leaf = Data.front();
+
+  uint8_t Leaf = Reader.peek();
   if (Leaf < LF_PAD0)
     return Error::success();
   // Leaf is greater than 0xf0. We should advance by the number of bytes in
   // the low 4 bits.
   unsigned BytesToAdvance = Leaf & 0x0F;
-  if (Data.size() < BytesToAdvance) {
-    return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record,
-                                           "Invalid padding bytes!");
-  }
-  Data = Data.drop_front(BytesToAdvance);
-  return Error::success();
+  return Reader.skip(BytesToAdvance);
 }
 
 template <typename T>
-static Expected<CVMemberRecord> deserializeMemberRecord(ArrayRef<uint8_t> &Data,
-                                                        TypeLeafKind Kind) {
-  ArrayRef<uint8_t> OldData = Data;
+static Expected<CVMemberRecord>
+deserializeMemberRecord(msf::StreamReader &Reader, TypeLeafKind Kind) {
+  msf::StreamReader OldReader = Reader;
   TypeRecordKind RK = static_cast<TypeRecordKind>(Kind);
-  auto ExpectedRecord = T::deserialize(RK, Data);
+  auto ExpectedRecord = T::deserialize(RK, Reader);
   if (!ExpectedRecord)
     return ExpectedRecord.takeError();
-  assert(Data.size() < OldData.size());
-  if (auto EC = skipPadding(Data))
+  assert(Reader.bytesRemaining() < OldReader.bytesRemaining());
+  if (auto EC = skipPadding(Reader))
     return std::move(EC);
 
   CVMemberRecord CVMR;
   CVMR.Kind = Kind;
-  CVMR.Data = OldData.drop_back(Data.size());
+
+  uint32_t RecordLength = OldReader.bytesRemaining() - Reader.bytesRemaining();
+  if (auto EC = OldReader.readBytes(CVMR.Data, RecordLength))
+    return std::move(EC);
+
   return CVMR;
 }
 
@@ -147,9 +138,9 @@ Error CVTypeVisitor::visitTypeStream(const CVTypeArray &Types) {
 }
 
 template <typename MR>
-static Error visitKnownMember(ArrayRef<uint8_t> &Data, TypeLeafKind Leaf,
+static Error visitKnownMember(msf::StreamReader &Reader, TypeLeafKind Leaf,
                               TypeVisitorCallbacks &Callbacks) {
-  auto ExpectedRecord = deserializeMemberRecord<MR>(Data, Leaf);
+  auto ExpectedRecord = deserializeMemberRecord<MR>(Reader, Leaf);
   if (!ExpectedRecord)
     return ExpectedRecord.takeError();
   CVMemberRecord &Record = *ExpectedRecord;
@@ -162,13 +153,12 @@ static Error visitKnownMember(ArrayRef<uint8_t> &Data, TypeLeafKind Leaf,
   return Error::success();
 }
 
-Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
-  while (!Data.empty()) {
-    const support::ulittle16_t *LeafValue;
-    if (auto EC = takeObject(Data, LeafValue))
+Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
+  TypeLeafKind Leaf;
+  while (!Reader.empty()) {
+    if (auto EC = Reader.readEnum(Leaf))
       return EC;
 
-    TypeLeafKind Leaf = static_cast<TypeLeafKind>(uint16_t(*LeafValue));
     CVType Record;
     switch (Leaf) {
     default:
@@ -178,7 +168,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
           cv_error_code::unknown_member_record);
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   case EnumName: {                                                             \
-    if (auto EC = visitKnownMember<Name##Record>(Data, Leaf, Callbacks))       \
+    if (auto EC = visitKnownMember<Name##Record>(Reader, Leaf, Callbacks))     \
       return EC;                                                               \
     break;                                                                     \
   }
@@ -188,4 +178,10 @@ Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
     }
   }
   return Error::success();
+}
+
+Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
+  msf::ByteStream S(Data);
+  msf::StreamReader SR(S);
+  return visitFieldListMemberStream(SR);
 }

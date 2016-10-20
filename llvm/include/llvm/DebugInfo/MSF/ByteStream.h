@@ -28,6 +28,8 @@ class ByteStream : public ReadableStream {
 public:
   ByteStream() {}
   explicit ByteStream(ArrayRef<uint8_t> Data) : Data(Data) {}
+  explicit ByteStream(StringRef Data)
+      : Data(Data.bytes_begin(), Data.bytes_end()) {}
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
