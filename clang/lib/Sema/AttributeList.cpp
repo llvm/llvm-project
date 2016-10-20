@@ -62,7 +62,7 @@ void *AttributeFactory::allocate(size_t size) {
   }
 
   // Otherwise, allocate something new.
-  return Alloc.Allocate(size, llvm::AlignOf<AttributeFactory>::Alignment);
+  return Alloc.Allocate(size, alignof(AttributeFactory));
 }
 
 void AttributeFactory::reclaimPool(AttributeList *cur) {

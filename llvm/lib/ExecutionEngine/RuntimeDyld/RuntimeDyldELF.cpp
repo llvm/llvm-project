@@ -585,22 +585,33 @@ void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
   if (Arch == Triple::UnknownArch ||
       !StringRef(Triple::getArchTypePrefix(Arch)).equals("mips")) {
     IsMipsO32ABI = false;
+    IsMipsN32ABI = false;
     IsMipsN64ABI = false;
     return;
   }
   unsigned AbiVariant;
   Obj.getPlatformFlags(AbiVariant);
   IsMipsO32ABI = AbiVariant & ELF::EF_MIPS_ABI_O32;
+  IsMipsN32ABI = AbiVariant & ELF::EF_MIPS_ABI2;
   IsMipsN64ABI = Obj.getFileFormatName().equals("ELF64-mips");
-  if (AbiVariant & ELF::EF_MIPS_ABI2)
-    llvm_unreachable("Mips N32 ABI is not supported yet");
 }
 
-void RuntimeDyldELF::resolveMIPS64Relocation(const SectionEntry &Section,
-                                             uint64_t Offset, uint64_t Value,
-                                             uint32_t Type, int64_t Addend,
-                                             uint64_t SymOffset,
-                                             SID SectionID) {
+void RuntimeDyldELF::resolveMIPSN32Relocation(const SectionEntry &Section,
+                                              uint64_t Offset, uint64_t Value,
+                                              uint32_t Type, int64_t Addend,
+                                              uint64_t SymOffset,
+                                              SID SectionID) {
+  int64_t CalculatedValue = evaluateMIPS64Relocation(
+      Section, Offset, Value, Type, Addend, SymOffset, SectionID);
+  applyMIPS64Relocation(Section.getAddressWithOffset(Offset), CalculatedValue,
+                        Type);
+}
+
+void RuntimeDyldELF::resolveMIPSN64Relocation(const SectionEntry &Section,
+                                              uint64_t Offset, uint64_t Value,
+                                              uint32_t Type, int64_t Addend,
+                                              uint64_t SymOffset,
+                                              SID SectionID) {
   uint32_t r_type = Type & 0xff;
   uint32_t r_type2 = (Type >> 8) & 0xff;
   uint32_t r_type3 = (Type >> 16) & 0xff;
@@ -669,7 +680,7 @@ RuntimeDyldELF::evaluateMIPS64Relocation(const SectionEntry &Section,
   case ELF::R_MIPS_GOT_PAGE: {
     uint8_t *LocalGOTAddr =
         getSectionAddress(SectionToGOTMap[SectionID]) + SymOffset;
-    uint64_t GOTEntry = readBytesUnaligned(LocalGOTAddr, 8);
+    uint64_t GOTEntry = readBytesUnaligned(LocalGOTAddr, getGOTEntrySize());
 
     Value += Addend;
     if (Type == ELF::R_MIPS_GOT_PAGE)
@@ -679,7 +690,7 @@ RuntimeDyldELF::evaluateMIPS64Relocation(const SectionEntry &Section,
       assert(GOTEntry == Value &&
                    "GOT entry has two different addresses.");
     else
-      writeBytesUnaligned(Value, LocalGOTAddr, 8);
+      writeBytesUnaligned(Value, LocalGOTAddr, getGOTEntrySize());
 
     return (SymOffset - 0x7ff0) & 0xffff;
   }
@@ -1131,9 +1142,12 @@ void RuntimeDyldELF::resolveRelocation(const SectionEntry &Section,
     if (IsMipsO32ABI)
       resolveMIPSRelocation(Section, Offset, (uint32_t)(Value & 0xffffffffL),
                             Type, (uint32_t)(Addend & 0xffffffffL));
+    else if (IsMipsN32ABI)
+      resolveMIPSN32Relocation(Section, Offset, Value, Type, Addend, SymOffset,
+                               SectionID);
     else if (IsMipsN64ABI)
-      resolveMIPS64Relocation(Section, Offset, Value, Type, Addend, SymOffset,
-                              SectionID);
+      resolveMIPSN64Relocation(Section, Offset, Value, Type, Addend, SymOffset,
+                               SectionID);
     else
       llvm_unreachable("Mips ABI not handled");
     break;
@@ -1469,7 +1483,7 @@ RuntimeDyldELF::processRelocationRef(
         Value.Addend += SignExtend32<28>((Opcode & 0x03ffffff) << 2);
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
-  } else if (IsMipsN64ABI) {
+  } else if (IsMipsN32ABI || IsMipsN64ABI) {
     uint32_t r_type = RelType & 0xff;
     RelocationEntry RE(SectionID, Offset, RelType, Value.Addend);
     if (r_type == ELF::R_MIPS_CALL16 || r_type == ELF::R_MIPS_GOT_PAGE
@@ -1806,7 +1820,7 @@ size_t RuntimeDyldELF::getGOTEntrySize() {
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el:
-    if (IsMipsO32ABI)
+    if (IsMipsO32ABI || IsMipsN32ABI)
       Result = sizeof(uint32_t);
     else if (IsMipsN64ABI)
       Result = sizeof(uint64_t);
@@ -1871,7 +1885,7 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
     // For now, initialize all GOT entries to zero.  We'll fill them in as
     // needed when GOT-based relocations are applied.
     memset(Addr, 0, TotalSize);
-    if (IsMipsN64ABI) {
+    if (IsMipsN32ABI || IsMipsN64ABI) {
       // To correctly resolve Mips GOT relocations, we need a mapping from
       // object's sections to GOTs.
       for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();

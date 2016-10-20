@@ -66,7 +66,7 @@ TemplateParameterList::Create(const ASTContext &C, SourceLocation TemplateLoc,
                               SourceLocation RAngleLoc, Expr *RequiresClause) {
   void *Mem = C.Allocate(totalSizeToAlloc<NamedDecl *, Expr *>(
                              Params.size(), RequiresClause ? 1u : 0u),
-                         llvm::alignOf<TemplateParameterList>());
+                         alignof(TemplateParameterList));
   return new (Mem) TemplateParameterList(TemplateLoc, LAngleLoc, Params,
                                          RAngleLoc, RequiresClause);
 }

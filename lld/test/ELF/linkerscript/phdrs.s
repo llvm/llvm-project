@@ -9,6 +9,17 @@
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-readobj -program-headers %t1 | FileCheck %s
 
+## Check that program headers are not written, unless we explicitly tell
+## lld to do this.
+# RUN: echo "PHDRS {all PT_LOAD;} \
+# RUN:       SECTIONS { \
+# RUN:           . = 0x10000200; \
+# RUN:           /DISCARD/ : {*(.text*)}  \
+# RUN:           .foo : {*(.foo.*)} :all \
+# RUN:       }" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-readobj -program-headers %t1 | FileCheck --check-prefix=NOPHDR %s
+
 ## Check the AT(expr)
 # RUN: echo "PHDRS {all PT_LOAD FILEHDR PHDRS AT(0x500 + 0x500) ;} \
 # RUN:       SECTIONS { \
@@ -41,6 +52,22 @@
 # CHECK-NEXT:      PF_W (0x2)
 # CHECK-NEXT:      PF_X (0x1)
 # CHECK-NEXT:    ]
+
+# NOPHDR:     ProgramHeaders [
+# NOPHDR-NEXT:  ProgramHeader {
+# NOPHDR-NEXT:    Type: PT_LOAD (0x1)
+# NOPHDR-NEXT:    Offset: 0x200
+# NOPHDR-NEXT:    VirtualAddress: 0x10000200
+# NOPHDR-NEXT:    PhysicalAddress: 0x10000200
+# NOPHDR-NEXT:    FileSize: 8
+# NOPHDR-NEXT:    MemSize: 8
+# NOPHDR-NEXT:    Flags [ (0x6)
+# NOPHDR-NEXT:      PF_R (0x4)
+# NOPHDR-NEXT:      PF_W (0x2)
+# NOPHDR-NEXT:    ]
+# NOPHDR-NEXT:    Alignment: 4096
+# NOPHDR-NEXT:  }
+# NOPHDR-NEXT: ]
 
 # AT:       ProgramHeaders [
 # AT-NEXT:    ProgramHeader {

@@ -65,7 +65,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
 
   if (Config->SaveTemps)
     checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
-                            /*UseInputModulePath*/ true));
+                                 /*UseInputModulePath*/ true));
 
   lto::ThinBackend Backend;
   if (Config->ThinLtoJobs != -1u)

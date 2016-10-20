@@ -235,8 +235,8 @@ static void checkOptions(opt::InputArgList &Args) {
   }
 }
 
-static StringRef
-getString(opt::InputArgList &Args, unsigned Key, StringRef Default = "") {
+static StringRef getString(opt::InputArgList &Args, unsigned Key,
+                           StringRef Default = "") {
   if (auto *Arg = Args.getLastArg(Key))
     return Arg->getValue();
   return Default;
@@ -265,8 +265,8 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
-static uint64_t
-getZOptionValue(opt::InputArgList &Args, StringRef Key, uint64_t Default) {
+static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
+                                uint64_t Default) {
   for (auto *Arg : Args.filtered(OPT_z)) {
     StringRef Value = Arg->getValue();
     size_t Pos = Value.find("=");
@@ -468,6 +468,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
   Config->FatalWarnings = Args.hasArg(OPT_fatal_warnings);
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
+  Config->GdbIndex = Args.hasArg(OPT_gdb_index);
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);

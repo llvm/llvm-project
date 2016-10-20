@@ -621,8 +621,8 @@ Selector SelectorTable::getSelector(unsigned nKeys, IdentifierInfo **IIV) {
   // variable size array (for parameter types) at the end of them.
   unsigned Size = sizeof(MultiKeywordSelector) + nKeys*sizeof(IdentifierInfo *);
   MultiKeywordSelector *SI =
-    (MultiKeywordSelector*)SelTabImpl.Allocator.Allocate(Size,
-                                         llvm::alignOf<MultiKeywordSelector>());
+      (MultiKeywordSelector *)SelTabImpl.Allocator.Allocate(
+          Size, alignof(MultiKeywordSelector));
   new (SI) MultiKeywordSelector(nKeys, IIV);
   SelTabImpl.Table.InsertNode(SI, InsertPos);
   return Selector(SI);

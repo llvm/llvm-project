@@ -6,13 +6,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../tsan/test.h"
 
 int main() {
   void *p = malloc(1337);
   *reinterpret_cast<void **>(p) = p;
-  fprintf(stderr, "Test alloc: %p.\n", p);
+  print_address("Test alloc: ", 1, p);
 }
-// CHECK: Test alloc: [[ADDR:.*]].
+// CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
 // CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:

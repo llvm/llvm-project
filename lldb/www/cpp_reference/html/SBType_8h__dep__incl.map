@@ -1,14 +1,16 @@
 <map id="SBType.h" name="SBType.h">
-<area shape="rect" id="node3" href="$LLDB_8h.html" title="LLDB.h" alt="" coords="429,625,493,653"/>
-<area shape="rect" id="node5" href="$SBTarget_8h.html" title="SBTarget.h" alt="" coords="520,161,605,189"/>
-<area shape="rect" id="node41" href="$SBValue_8h.html" title="SBValue.h" alt="" coords="560,83,643,111"/>
-<area shape="rect" id="node8" href="$SBBlock_8h.html" title="SBBlock.h" alt="" coords="561,238,644,266"/>
-<area shape="rect" id="node28" href="$SBSymbol_8h.html" title="SBSymbol.h" alt="" coords="69,547,163,575"/>
-<area shape="rect" id="node37" href="$SBProcess_8h.html" title="SBProcess.h" alt="" coords="640,315,736,343"/>
-<area shape="rect" id="node11" href="$SBSymbolContext_8h.html" title="SBSymbolContext.h" alt="" coords="280,315,416,343"/>
-<area shape="rect" id="node14" href="$SBModule_8h.html" title="SBModule.h" alt="" coords="195,393,285,421"/>
-<area shape="rect" id="node34" href="$SBSymbolContextList_8h.html" title="SBSymbolContextList.h" alt="" coords="461,393,619,421"/>
-<area shape="rect" id="node17" href="$SBAddress_8h.html" title="SBAddress.h" alt="" coords="189,470,285,498"/>
-<area shape="rect" id="node20" href="$SBFunction_8h.html" title="SBFunction.h" alt="" coords="237,547,336,575"/>
-<area shape="rect" id="node24" href="$SBLineEntry_8h.html" title="SBLineEntry.h" alt="" coords="411,547,512,575"/>
+<area shape="rect" id="node2" href="$LLDB_8h.html" title="LLDB.h" alt="" coords="517,603,581,629"/>
+<area shape="rect" id="node3" href="$SBTarget_8h.html" title="SBTarget.h" alt="" coords="287,155,373,181"/>
+<area shape="rect" id="node15" href="$SBValue_8h.html" title="SBValue.h" alt="" coords="328,80,409,107"/>
+<area shape="rect" id="node4" href="$SBBlock_8h.html" title="SBBlock.h" alt="" coords="604,229,685,256"/>
+<area shape="rect" id="node11" href="$SBSymbol_8h.html" title="SBSymbol.h" alt="" coords="236,528,329,555"/>
+<area shape="rect" id="node14" href="$SBProcess_8h.html" title="SBProcess.h" alt="" coords="43,304,139,331"/>
+<area shape="rect" id="node5" href="$SBSymbolContext_8h.html" title="SBSymbolContext.h" alt="" coords="577,304,713,331"/>
+<area shape="rect" id="node6" href="$SBModule_8h.html" title="SBModule.h" alt="" coords="683,379,775,405"/>
+<area shape="rect" id="node13" href="$SBSymbolContextList_8h.html" title="SBSymbolContextList.h" alt="" coords="179,379,336,405"/>
+<area shape="rect" id="node7" href="$SBAddress_8h.html" title="SBAddress.h" alt="" coords="461,453,557,480"/>
+<area shape="rect" id="node12" href="$SBStructuredData_8h.html" title="SBStructuredData.h" alt="" coords="683,453,820,480"/>
+<area shape="rect" id="node8" href="$SBFunction_8h.html" title="SBFunction.h" alt="" coords="543,528,643,555"/>
+<area shape="rect" id="node9" href="$SBLineEntry_8h.html" title="SBLineEntry.h" alt="" coords="667,528,769,555"/>
+<area shape="rect" id="node10" href="$SBQueueItem_8h.html" title="SBQueueItem.h" alt="" coords="353,528,468,555"/>
 </map>

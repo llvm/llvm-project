@@ -1024,6 +1024,7 @@ public:
         cleanupLeft(Line->First, tok::comma, tok::r_paren);
         cleanupLeft(Line->First, TT_CtorInitializerComma, tok::l_brace);
         cleanupLeft(Line->First, TT_CtorInitializerColon, tok::l_brace);
+        cleanupLeft(Line->First, TT_CtorInitializerColon, tok::equal);
       }
     }
 

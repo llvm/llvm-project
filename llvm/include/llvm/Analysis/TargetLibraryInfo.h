@@ -297,15 +297,6 @@ public:
   TargetLibraryAnalysis(TargetLibraryInfoImpl PresetInfoImpl)
       : PresetInfoImpl(std::move(PresetInfoImpl)) {}
 
-  // Move semantics. We spell out the constructors for MSVC.
-  TargetLibraryAnalysis(TargetLibraryAnalysis &&Arg)
-      : PresetInfoImpl(std::move(Arg.PresetInfoImpl)), Impls(std::move(Arg.Impls)) {}
-  TargetLibraryAnalysis &operator=(TargetLibraryAnalysis &&RHS) {
-    PresetInfoImpl = std::move(RHS.PresetInfoImpl);
-    Impls = std::move(RHS.Impls);
-    return *this;
-  }
-
   TargetLibraryInfo run(Module &M, ModuleAnalysisManager &);
   TargetLibraryInfo run(Function &F, FunctionAnalysisManager &);
 

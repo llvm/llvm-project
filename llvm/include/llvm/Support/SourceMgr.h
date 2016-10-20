@@ -51,11 +51,6 @@ private:
 
     /// This is the location of the parent include, or null if at the top level.
     SMLoc IncludeLoc;
-
-    SrcBuffer() {}
-
-    SrcBuffer(SrcBuffer &&O)
-        : Buffer(std::move(O.Buffer)), IncludeLoc(O.IncludeLoc) {}
   };
 
   /// This is all of the buffers that we are reading from.

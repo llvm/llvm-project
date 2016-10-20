@@ -56,7 +56,7 @@ namespace clang {
 
 /// Stmt - This represents one statement.
 ///
-class LLVM_ALIGNAS(LLVM_PTR_SIZE) Stmt {
+class alignas(void *) Stmt {
 public:
   enum StmtClass {
     NoStmtClass = 0,
@@ -340,7 +340,7 @@ protected:
 
 public:
   Stmt(StmtClass SC) {
-    static_assert(sizeof(*this) % llvm::AlignOf<void *>::Alignment == 0,
+    static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
     StmtBits.sClass = SC;
     if (StatisticsEnabled) Stmt::addStmtClass(SC);

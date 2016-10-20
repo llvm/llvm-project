@@ -45,7 +45,7 @@ public:
   MemRegionRef(llvm::BumpPtrAllocator *A) : Allocator(A) {}
 
   void *allocate(size_t Sz) {
-    return Allocator->Allocate(Sz, llvm::AlignOf<AlignmentType>::Alignment);
+    return Allocator->Allocate(Sz, alignof(AlignmentType));
   }
 
   template <typename T> T *allocateT() { return Allocator->Allocate<T>(); }

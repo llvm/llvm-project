@@ -4920,14 +4920,14 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   }
 
   // fold (srl (shl x, c), c) -> (and x, cst2)
-  if (N1C && N0.getOpcode() == ISD::SHL && N0.getOperand(1) == N1) {
-    unsigned BitSize = N0.getScalarValueSizeInBits();
-    if (BitSize <= 64) {
-      uint64_t ShAmt = N1C->getZExtValue() + 64 - BitSize;
-      SDLoc DL(N);
-      return DAG.getNode(ISD::AND, DL, VT, N0.getOperand(0),
-                         DAG.getConstant(~0ULL >> ShAmt, DL, VT));
-    }
+  if (N0.getOpcode() == ISD::SHL && N0.getOperand(1) == N1 &&
+      isConstantOrConstantVector(N1, /* NoOpaques */ true)) {
+    SDLoc DL(N);
+    APInt AllBits = APInt::getAllOnesValue(N0.getScalarValueSizeInBits());
+    SDValue Mask =
+        DAG.getNode(ISD::SRL, DL, VT, DAG.getConstant(AllBits, DL, VT), N1);
+    AddToWorklist(Mask.getNode());
+    return DAG.getNode(ISD::AND, DL, VT, N0.getOperand(0), Mask);
   }
 
   // fold (srl (anyextend x), c) -> (and (anyextend (srl x, c)), mask)

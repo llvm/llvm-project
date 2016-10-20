@@ -414,7 +414,7 @@ let Predicates = [FeatureVector] in {
   def VCLZG : UnaryVRRa<"vclzg", 0xE753, ctlz, v128g, v128g, 3>;
 
   // Count trailing zeros.
-  def VCLT  : UnaryVRRaGeneric<"vctz", 0xE752>;
+  def VCTZ  : UnaryVRRaGeneric<"vctz", 0xE752>;
   def VCTZB : UnaryVRRa<"vctzb", 0xE752, cttz, v128b, v128b, 0>;
   def VCTZH : UnaryVRRa<"vctzh", 0xE752, cttz, v128h, v128h, 1>;
   def VCTZF : UnaryVRRa<"vctzf", 0xE752, cttz, v128f, v128f, 2>;

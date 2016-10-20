@@ -358,16 +358,6 @@ private:
   ModulePathStringTableTy ModulePathStringTable;
 
 public:
-  ModuleSummaryIndex() = default;
-  ModuleSummaryIndex(ModuleSummaryIndex &&Arg)
-      : GlobalValueMap(std::move(Arg.GlobalValueMap)),
-        ModulePathStringTable(std::move(Arg.ModulePathStringTable)) {}
-  ModuleSummaryIndex &operator=(ModuleSummaryIndex &&RHS) {
-    GlobalValueMap = std::move(RHS.GlobalValueMap);
-    ModulePathStringTable = std::move(RHS.ModulePathStringTable);
-    return *this;
-  }
-
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }
   const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }
   gvsummary_iterator end() { return GlobalValueMap.end(); }

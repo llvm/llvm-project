@@ -57,32 +57,6 @@
 </table>
 <!-- ==================== PACKAGE DESCRIPTION ==================== -->
 <h1 class="epydoc">Package lldb</h1><p class="nomargin-top"><span class="codelink"><a href="lldb-pysrc.html">source&nbsp;code</a></span></p>
-<pre class="literalblock">
-
-The lldb module contains the public APIs for Python binding.
-
-Some of the important classes are describe here:
-
-o SBTarget: Represents the target program running under the debugger.
-o SBProcess: Represents the process associated with the target program.
-o SBThread: Represents a thread of execution. SBProcess contains SBThread(s).
-o SBFrame: Represents one of the stack frames associated with a thread. SBThread
-      contains SBFrame(s).
-o SBSymbolContext: A container that stores various debugger related info.
-o SBValue: Represents the value of a variable, a register, or an expression.
-o SBModule: Represents an executable image and its associated object and symbol
-      files.  SBTarget contains SBModule(s).
-o SBBreakpoint: Represents a logical breakpoint and its associated settings.
-      SBTarget contains SBBreakpoint(s).
-o SBSymbol: Represents the symbol possibly associated with a stack frame.
-o SBCompileUnit: Represents a compilation unit, or compiled source file.
-o SBFunction: Represents a generic function, which can be inlined or not.
-o SBBlock: Represents a lexical block. SBFunction contains SBBlock(s).
-o SBLineEntry: Specifies an association with a contiguous range of instructions
-      and a source file location. SBCompileUnit contains SBLineEntry(s).
-
-</pre>
-
 <!-- ==================== SUBMODULES ==================== -->
 <a name="section-Submodules"></a>
 <table class="summary" border="1" cellpadding="3"
@@ -115,6 +89,7 @@ o SBLineEntry: Specifies an association with a contiguous range of instructions
     </ul>
     </li>
     <li> <strong class="uidlink"><a href="lldb.formatters.metrics-module.html">lldb.formatters.metrics</a></strong>: <em class="summary">Objective-C runtime wrapper for use by LLDB Python formatters</em>    </li>
+    <li> <strong class="uidlink"><a href="lldb.formatters.synth-module.html">lldb.formatters.synth</a></strong>    </li>
     </ul>
     </li>
     <li> <strong class="uidlink"><a href="lldb.runtime-module.html">lldb.runtime</a></strong>    </li>
@@ -180,6 +155,14 @@ o SBLineEntry: Specifies an association with a contiguous range of instructions
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBBreakpointList-class.html" class="summary-name">SBBreakpointList</a><br />
+      Proxy of C++ lldb::SBBreakpointList class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBBreakpointLocation-class.html" class="summary-name">SBBreakpointLocation</a><br />
       Represents one unique instance (by address) of a logical 
         breakpoint.
@@ -199,6 +182,14 @@ o SBLineEntry: Specifies an association with a contiguous range of instructions
     </td><td class="summary">
         <a href="lldb.SBCommandInterpreter-class.html" class="summary-name">SBCommandInterpreter</a><br />
       SBCommandInterpreter handles/interprets commands for lldb.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBCommandInterpreterRunOptions-class.html" class="summary-name">SBCommandInterpreterRunOptions</a><br />
+      SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed.
     </td>
   </tr>
 <tr>
@@ -271,6 +262,14 @@ access to them.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBExecutionContext-class.html" class="summary-name">SBExecutionContext</a><br />
+      Proxy of C++ lldb::SBExecutionContext class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBExpressionOptions-class.html" class="summary-name">SBExpressionOptions</a><br />
       A container for options to use when evaluating expressions.
     </td>
@@ -280,7 +279,7 @@ access to them.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a href="lldb.SBFileSpec-class.html" class="summary-name">SBFileSpec</a><br />
-      Represents a file specfication that divides the path into a directory and
+      Represents a file specification that divides the path into a directory and
 basename.
     </td>
   </tr>
@@ -320,14 +319,6 @@ basename.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a href="lldb.SBInputReader-class.html" class="summary-name">SBInputReader</a><br />
-      Proxy of C++ lldb::SBInputReader class
-    </td>
-  </tr>
-<tr>
-    <td width="15%" align="right" valign="top" class="summary">
-      <span class="summary-type">&nbsp;</span>
-    </td><td class="summary">
         <a href="lldb.SBInstruction-class.html" class="summary-name">SBInstruction</a><br />
       Proxy of C++ lldb::SBInstruction class
     </td>
@@ -338,6 +329,14 @@ basename.
     </td><td class="summary">
         <a href="lldb.SBInstructionList-class.html" class="summary-name">SBInstructionList</a><br />
       Represents a list of machine instructions.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBLanguageRuntime-class.html" class="summary-name">SBLanguageRuntime</a><br />
+      Proxy of C++ lldb::SBLanguageRuntime class
     </td>
   </tr>
 <tr>
@@ -369,6 +368,22 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBMemoryRegionInfo-class.html" class="summary-name">SBMemoryRegionInfo</a><br />
+      API clients can get information about memory regions in processes.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBMemoryRegionInfoList-class.html" class="summary-name">SBMemoryRegionInfoList</a><br />
+      Proxy of C++ lldb::SBMemoryRegionInfoList class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBModule-class.html" class="summary-name">SBModule</a><br />
       Represents an executable image and its associated object and symbol files.
     </td>
@@ -393,8 +408,49 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBPlatform-class.html" class="summary-name">SBPlatform</a><br />
+      A class that represents a platform that can represent the current 
+        host or a remote host debug platform.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBPlatformConnectOptions-class.html" class="summary-name">SBPlatformConnectOptions</a><br />
+      Proxy of C++ lldb::SBPlatformConnectOptions class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBPlatformShellCommand-class.html" class="summary-name">SBPlatformShellCommand</a><br />
+      Proxy of C++ lldb::SBPlatformShellCommand class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBProcess-class.html" class="summary-name">SBProcess</a><br />
       Represents the process associated with the target program.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBQueue-class.html" class="summary-name">SBQueue</a><br />
+      Proxy of C++ lldb::SBQueue class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBQueueItem-class.html" class="summary-name">SBQueueItem</a><br />
+      Proxy of C++ lldb::SBQueueItem class
     </td>
   </tr>
 <tr>
@@ -433,6 +489,14 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBStructuredData-class.html" class="summary-name">SBStructuredData</a><br />
+      A class representing a StructuredData event.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBSymbol-class.html" class="summary-name">SBSymbol</a><br />
       Represents the symbol possibly associated with a stack frame.
     </td>
@@ -457,6 +521,13 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBSyntheticValueProvider-class.html" class="summary-name">SBSyntheticValueProvider</a>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBTarget-class.html" class="summary-name">SBTarget</a><br />
       Represents the target program running under the debugger.
     </td>
@@ -473,6 +544,22 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBThreadCollection-class.html" class="summary-name">SBThreadCollection</a><br />
+      Represents a collection of SBThread objects.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBThreadPlan-class.html" class="summary-name">SBThreadPlan</a><br />
+      Proxy of C++ lldb::SBThreadPlan class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBType-class.html" class="summary-name">SBType</a><br />
       Represents a data type in lldb.
     </td>
@@ -483,6 +570,22 @@ a source file location.
     </td><td class="summary">
         <a href="lldb.SBTypeCategory-class.html" class="summary-name">SBTypeCategory</a><br />
       Represents a category that can contain formatters for types.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBTypeEnumMember-class.html" class="summary-name">SBTypeEnumMember</a><br />
+      Represents a member of an enum in lldb.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBTypeEnumMemberList-class.html" class="summary-name">SBTypeEnumMemberList</a><br />
+      Represents a list of SBTypeEnumMembers.
     </td>
   </tr>
 <tr>
@@ -521,6 +624,14 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBTypeMemberFunction-class.html" class="summary-name">SBTypeMemberFunction</a><br />
+      Proxy of C++ lldb::SBTypeMemberFunction class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBTypeNameSpecifier-class.html" class="summary-name">SBTypeNameSpecifier</a><br />
       Represents a general way to provide a type name to LLDB APIs.
     </td>
@@ -537,8 +648,24 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a href="lldb.SBTypeSummaryOptions-class.html" class="summary-name">SBTypeSummaryOptions</a><br />
+      Proxy of C++ lldb::SBTypeSummaryOptions class
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a href="lldb.SBTypeSynthetic-class.html" class="summary-name">SBTypeSynthetic</a><br />
       Represents a summary that can be associated to one or more types.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBUnixSignals-class.html" class="summary-name">SBUnixSignals</a><br />
+      Allows you to manipulate LLDB's signal disposition
     </td>
   </tr>
 <tr>
@@ -555,6 +682,14 @@ a source file location.
     </td><td class="summary">
         <a href="lldb.SBValueList-class.html" class="summary-name">SBValueList</a><br />
       Represents a collection of SBValues.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb.SBVariablesOptions-class.html" class="summary-name">SBVariablesOptions</a><br />
+      Proxy of C++ lldb::SBVariablesOptions class
     </td>
   </tr>
 <tr>
@@ -689,6 +824,24 @@ a source file location.
       -&gt; uint32_t</td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb-pysrc.html#SBBreakpoint_GetNumBreakpointLocationsFromEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBCommandInterpreter_EventIsCommandInterpreterEvent"></a><span class="summary-sig-name">SBCommandInterpreter_EventIsCommandInterpreterEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBCommandInterpreter_EventIsCommandInterpreterEvent(SBEvent event) 
+      -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBCommandInterpreter_EventIsCommandInterpreterEvent">source&nbsp;code</a></span>
             
           </td>
         </tr>
@@ -1148,6 +1301,39 @@ a source file location.
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBHostOS_GetLLDBPath"></a><span class="summary-sig-name">SBHostOS_GetLLDBPath</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBHostOS_GetLLDBPath(lldb::PathType path_type) -&gt; SBFileSpec</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBHostOS_GetLLDBPath">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">SBFileSpec</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBHostOS_GetLLDBPythonPath"></a><span class="summary-sig-name">SBHostOS_GetLLDBPythonPath</span>()</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBHostOS_GetLLDBPythonPath">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">SBFileSpec</span>
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1155,6 +1341,22 @@ a source file location.
           <td><span class="summary-sig"><a name="SBHostOS_GetProgramFileSpec"></a><span class="summary-sig-name">SBHostOS_GetProgramFileSpec</span>()</span></td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb-pysrc.html#SBHostOS_GetProgramFileSpec">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">SBFileSpec</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBHostOS_GetUserHomeDirectory"></a><span class="summary-sig-name">SBHostOS_GetUserHomeDirectory</span>()</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBHostOS_GetUserHomeDirectory">source&nbsp;code</a></span>
             
           </td>
         </tr>
@@ -1186,8 +1388,8 @@ a source file location.
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td><span class="summary-sig"><a name="SBHostOS_ThreadCreate"></a><span class="summary-sig-name">SBHostOS_ThreadCreate</span>(<span class="summary-sig-arg">*args</span>)</span><br />
-      SBHostOS_ThreadCreate(str const * name, void *(*)(void *) 
-      thread_function, void * thread_arg, SBError err) -&gt; lldb::thread_t</td>
+      SBHostOS_ThreadCreate(str const * name, lldb::thread_func_t arg2, 
+      void * thread_arg, SBError err) -&gt; lldb::thread_t</td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb-pysrc.html#SBHostOS_ThreadCreate">source&nbsp;code</a></span>
             
@@ -1238,10 +1440,46 @@ a source file location.
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td><span class="summary-sig"><a name="SBHostOS_ThreadJoin"></a><span class="summary-sig-name">SBHostOS_ThreadJoin</span>(<span class="summary-sig-arg">*args</span>)</span><br />
-      SBHostOS_ThreadJoin(lldb::thread_t thread, void ** result, SBError 
-      err) -&gt; bool</td>
+      SBHostOS_ThreadJoin(lldb::thread_t thread, lldb::thread_result_t * 
+      result, SBError err) -&gt; bool</td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb-pysrc.html#SBHostOS_ThreadJoin">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBLanguageRuntime_GetLanguageTypeFromString"></a><span class="summary-sig-name">SBLanguageRuntime_GetLanguageTypeFromString</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBLanguageRuntime_GetLanguageTypeFromString(str const * string) -&gt;
+      lldb::LanguageType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBLanguageRuntime_GetLanguageTypeFromString">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBLanguageRuntime_GetNameForLanguageType"></a><span class="summary-sig-name">SBLanguageRuntime_GetNameForLanguageType</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBLanguageRuntime_GetNameForLanguageType(lldb::LanguageType language)
+      -&gt; str const *</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBLanguageRuntime_GetNameForLanguageType">source&nbsp;code</a></span>
             
           </td>
         </tr>
@@ -1286,6 +1524,23 @@ a source file location.
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBProcess_EventIsStructuredDataEvent"></a><span class="summary-sig-name">SBProcess_EventIsStructuredDataEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBProcess_EventIsStructuredDataEvent(SBEvent event) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBProcess_EventIsStructuredDataEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">str const *</span>
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1293,6 +1548,23 @@ a source file location.
           <td><span class="summary-sig"><a name="SBProcess_GetBroadcasterClassName"></a><span class="summary-sig-name">SBProcess_GetBroadcasterClassName</span>()</span></td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb-pysrc.html#SBProcess_GetBroadcasterClassName">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBProcess_GetInterruptedFromEvent"></a><span class="summary-sig-name">SBProcess_GetInterruptedFromEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBProcess_GetInterruptedFromEvent(SBEvent event) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBProcess_GetInterruptedFromEvent">source&nbsp;code</a></span>
             
           </td>
         </tr>
@@ -1388,6 +1660,41 @@ a source file location.
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBProcess_GetStructuredDataFromEvent"></a><span class="summary-sig-name">SBProcess_GetStructuredDataFromEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBProcess_GetStructuredDataFromEvent(SBEvent event) -&gt; 
+      SBStructuredData</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBProcess_GetStructuredDataFromEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBTarget_EventIsTargetEvent"></a><span class="summary-sig-name">SBTarget_EventIsTargetEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBTarget_EventIsTargetEvent(SBEvent event) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBTarget_EventIsTargetEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">str const *</span>
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1408,10 +1715,78 @@ a source file location.
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
+          <td><span class="summary-sig"><a name="SBTarget_GetModuleAtIndexFromEvent"></a><span class="summary-sig-name">SBTarget_GetModuleAtIndexFromEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBTarget_GetModuleAtIndexFromEvent(uint32_t const idx, SBEvent event)
+      -&gt; SBModule</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBTarget_GetModuleAtIndexFromEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBTarget_GetNumModulesFromEvent"></a><span class="summary-sig-name">SBTarget_GetNumModulesFromEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBTarget_GetNumModulesFromEvent(SBEvent event) -&gt; uint32_t</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBTarget_GetNumModulesFromEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBTarget_GetTargetFromEvent"></a><span class="summary-sig-name">SBTarget_GetTargetFromEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      SBTarget_GetTargetFromEvent(SBEvent event) -&gt; SBTarget</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBTarget_GetTargetFromEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
           <td><span class="summary-sig"><a name="SBThread_EventIsThreadEvent"></a><span class="summary-sig-name">SBThread_EventIsThreadEvent</span>(<span class="summary-sig-arg">*args</span>)</span><br />
       SBThread_EventIsThreadEvent(SBEvent event) -&gt; bool</td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb-pysrc.html#SBThread_EventIsThreadEvent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">str const *</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SBThread_GetBroadcasterClassName"></a><span class="summary-sig-name">SBThread_GetBroadcasterClassName</span>()</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBThread_GetBroadcasterClassName">source&nbsp;code</a></span>
             
           </td>
         </tr>
@@ -1715,6 +2090,22 @@ a source file location.
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
+          <td><span class="summary-sig"><a name="is_numeric_type"></a><span class="summary-sig-name">is_numeric_type</span>(<span class="summary-sig-arg">basic_type</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#is_numeric_type">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
           <td><span class="summary-sig"><a name="lldb_iter"></a><span class="summary-sig-name">lldb_iter</span>(<span class="summary-sig-arg">obj</span>,
         <span class="summary-sig-arg">getsize</span>,
         <span class="summary-sig-arg">getelem</span>)</span><br />
@@ -1746,6 +2137,13 @@ a source file location.
     </table>
   </td>
 </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="INT32_MAX"></a><span class="summary-name">INT32_MAX</span> = <code title="2147483647">2147483647</code>
+    </td>
+  </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
@@ -1834,6 +2232,20 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="LLDB_INVALID_LINE_NUMBER"></a><span class="summary-name">LLDB_INVALID_LINE_NUMBER</span> = <code title="4294967295">4294967295</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="LLDB_INVALID_MODULE_VERSION"></a><span class="summary-name">LLDB_INVALID_MODULE_VERSION</span> = <code title="4294967295">4294967295</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="LLDB_INVALID_OFFSET"></a><span class="summary-name">LLDB_INVALID_OFFSET</span> = <code title="18446744073709551615">18446744073709551615</code>
     </td>
   </tr>
@@ -1848,7 +2260,21 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="LLDB_INVALID_QUEUE_ID"></a><span class="summary-name">LLDB_INVALID_QUEUE_ID</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="LLDB_INVALID_REGNUM"></a><span class="summary-name">LLDB_INVALID_REGNUM</span> = <code title="4294967295">4294967295</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="LLDB_INVALID_SIGNAL_NUMBER"></a><span class="summary-name">LLDB_INVALID_SIGNAL_NUMBER</span> = <code title="2147483647">2147483647</code>
     </td>
   </tr>
 <tr>
@@ -2198,6 +2624,13 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eArgRawInput"></a><span class="summary-name">eArgRawInput</span> = <code title="83">83</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eArgTypeAddress"></a><span class="summary-name">eArgTypeAddress</span> = <code title="0">0</code>
     </td>
   </tr>
@@ -2254,483 +2687,532 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeByteSize"></a><span class="summary-name">eArgTypeByteSize</span> = <code title="8">8</code>
+        <a name="eArgTypeBreakpointName"></a><span class="summary-name">eArgTypeBreakpointName</span> = <code title="8">8</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeClassName"></a><span class="summary-name">eArgTypeClassName</span> = <code title="9">9</code>
+        <a name="eArgTypeByteSize"></a><span class="summary-name">eArgTypeByteSize</span> = <code title="9">9</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeCommandName"></a><span class="summary-name">eArgTypeCommandName</span> = <code title="10">10</code>
+        <a name="eArgTypeClassName"></a><span class="summary-name">eArgTypeClassName</span> = <code title="10">10</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeCount"></a><span class="summary-name">eArgTypeCount</span> = <code title="11">11</code>
+        <a name="eArgTypeCommandName"></a><span class="summary-name">eArgTypeCommandName</span> = <code title="11">11</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeDirectoryName"></a><span class="summary-name">eArgTypeDirectoryName</span> = <code title="12">12</code>
+        <a name="eArgTypeCount"></a><span class="summary-name">eArgTypeCount</span> = <code title="12">12</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeDisassemblyFlavor"></a><span class="summary-name">eArgTypeDisassemblyFlavor</span> = <code title="13">13</code>
+        <a name="eArgTypeDescriptionVerbosity"></a><span class="summary-name">eArgTypeDescriptionVerbosity</span> = <code title="13">13</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeEndAddress"></a><span class="summary-name">eArgTypeEndAddress</span> = <code title="14">14</code>
+        <a name="eArgTypeDirectoryName"></a><span class="summary-name">eArgTypeDirectoryName</span> = <code title="14">14</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeExprFormat"></a><span class="summary-name">eArgTypeExprFormat</span> = <code title="17">17</code>
+        <a name="eArgTypeDisassemblyFlavor"></a><span class="summary-name">eArgTypeDisassemblyFlavor</span> = <code title="15">15</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeExpression"></a><span class="summary-name">eArgTypeExpression</span> = <code title="15">15</code>
+        <a name="eArgTypeEndAddress"></a><span class="summary-name">eArgTypeEndAddress</span> = <code title="16">16</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeExpressionPath"></a><span class="summary-name">eArgTypeExpressionPath</span> = <code title="16">16</code>
+        <a name="eArgTypeExprFormat"></a><span class="summary-name">eArgTypeExprFormat</span> = <code title="19">19</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeFilename"></a><span class="summary-name">eArgTypeFilename</span> = <code title="18">18</code>
+        <a name="eArgTypeExpression"></a><span class="summary-name">eArgTypeExpression</span> = <code title="17">17</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeFormat"></a><span class="summary-name">eArgTypeFormat</span> = <code title="19">19</code>
+        <a name="eArgTypeExpressionPath"></a><span class="summary-name">eArgTypeExpressionPath</span> = <code title="18">18</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeFrameIndex"></a><span class="summary-name">eArgTypeFrameIndex</span> = <code title="20">20</code>
+        <a name="eArgTypeFilename"></a><span class="summary-name">eArgTypeFilename</span> = <code title="20">20</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeFullName"></a><span class="summary-name">eArgTypeFullName</span> = <code title="21">21</code>
+        <a name="eArgTypeFormat"></a><span class="summary-name">eArgTypeFormat</span> = <code title="21">21</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeFunctionName"></a><span class="summary-name">eArgTypeFunctionName</span> = <code title="22">22</code>
+        <a name="eArgTypeFrameIndex"></a><span class="summary-name">eArgTypeFrameIndex</span> = <code title="22">22</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeFunctionOrSymbol"></a><span class="summary-name">eArgTypeFunctionOrSymbol</span> = <code title="23">23</code>
+        <a name="eArgTypeFullName"></a><span class="summary-name">eArgTypeFullName</span> = <code title="23">23</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeGDBFormat"></a><span class="summary-name">eArgTypeGDBFormat</span> = <code title="24">24</code>
+        <a name="eArgTypeFunctionName"></a><span class="summary-name">eArgTypeFunctionName</span> = <code title="24">24</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeIndex"></a><span class="summary-name">eArgTypeIndex</span> = <code title="25">25</code>
+        <a name="eArgTypeFunctionOrSymbol"></a><span class="summary-name">eArgTypeFunctionOrSymbol</span> = <code title="25">25</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeLanguage"></a><span class="summary-name">eArgTypeLanguage</span> = <code title="26">26</code>
+        <a name="eArgTypeGDBFormat"></a><span class="summary-name">eArgTypeGDBFormat</span> = <code title="26">26</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeLastArg"></a><span class="summary-name">eArgTypeLastArg</span> = <code title="76">76</code>
+        <a name="eArgTypeHelpText"></a><span class="summary-name">eArgTypeHelpText</span> = <code title="27">27</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeLineNum"></a><span class="summary-name">eArgTypeLineNum</span> = <code title="27">27</code>
+        <a name="eArgTypeIndex"></a><span class="summary-name">eArgTypeIndex</span> = <code title="28">28</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeLogCategory"></a><span class="summary-name">eArgTypeLogCategory</span> = <code title="28">28</code>
+        <a name="eArgTypeLanguage"></a><span class="summary-name">eArgTypeLanguage</span> = <code title="29">29</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeLogChannel"></a><span class="summary-name">eArgTypeLogChannel</span> = <code title="29">29</code>
+        <a name="eArgTypeLastArg"></a><span class="summary-name">eArgTypeLastArg</span> = <code title="84">84</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeMethod"></a><span class="summary-name">eArgTypeMethod</span> = <code title="30">30</code>
+        <a name="eArgTypeLineNum"></a><span class="summary-name">eArgTypeLineNum</span> = <code title="30">30</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeName"></a><span class="summary-name">eArgTypeName</span> = <code title="31">31</code>
+        <a name="eArgTypeLogCategory"></a><span class="summary-name">eArgTypeLogCategory</span> = <code title="31">31</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeNewPathPrefix"></a><span class="summary-name">eArgTypeNewPathPrefix</span> = <code title="32">32</code>
+        <a name="eArgTypeLogChannel"></a><span class="summary-name">eArgTypeLogChannel</span> = <code title="32">32</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeNone"></a><span class="summary-name">eArgTypeNone</span> = <code title="71">71</code>
+        <a name="eArgTypeMethod"></a><span class="summary-name">eArgTypeMethod</span> = <code title="33">33</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeNumLines"></a><span class="summary-name">eArgTypeNumLines</span> = <code title="33">33</code>
+        <a name="eArgTypeName"></a><span class="summary-name">eArgTypeName</span> = <code title="34">34</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeNumberPerLine"></a><span class="summary-name">eArgTypeNumberPerLine</span> = <code title="34">34</code>
+        <a name="eArgTypeNewPathPrefix"></a><span class="summary-name">eArgTypeNewPathPrefix</span> = <code title="35">35</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeOffset"></a><span class="summary-name">eArgTypeOffset</span> = <code title="35">35</code>
+        <a name="eArgTypeNone"></a><span class="summary-name">eArgTypeNone</span> = <code title="78">78</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeOldPathPrefix"></a><span class="summary-name">eArgTypeOldPathPrefix</span> = <code title="36">36</code>
+        <a name="eArgTypeNumLines"></a><span class="summary-name">eArgTypeNumLines</span> = <code title="36">36</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeOneLiner"></a><span class="summary-name">eArgTypeOneLiner</span> = <code title="37">37</code>
+        <a name="eArgTypeNumberPerLine"></a><span class="summary-name">eArgTypeNumberPerLine</span> = <code title="37">37</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypePid"></a><span class="summary-name">eArgTypePid</span> = <code title="38">38</code>
+        <a name="eArgTypeOffset"></a><span class="summary-name">eArgTypeOffset</span> = <code title="38">38</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypePlatform"></a><span class="summary-name">eArgTypePlatform</span> = <code title="72">72</code>
+        <a name="eArgTypeOldPathPrefix"></a><span class="summary-name">eArgTypeOldPathPrefix</span> = <code title="39">39</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypePlugin"></a><span class="summary-name">eArgTypePlugin</span> = <code title="39">39</code>
+        <a name="eArgTypeOneLiner"></a><span class="summary-name">eArgTypeOneLiner</span> = <code title="40">40</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeProcessName"></a><span class="summary-name">eArgTypeProcessName</span> = <code title="40">40</code>
+        <a name="eArgTypePath"></a><span class="summary-name">eArgTypePath</span> = <code title="41">41</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypePythonClass"></a><span class="summary-name">eArgTypePythonClass</span> = <code title="41">41</code>
+        <a name="eArgTypePermissionsNumber"></a><span class="summary-name">eArgTypePermissionsNumber</span> = <code title="42">42</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypePythonFunction"></a><span class="summary-name">eArgTypePythonFunction</span> = <code title="42">42</code>
+        <a name="eArgTypePermissionsString"></a><span class="summary-name">eArgTypePermissionsString</span> = <code title="43">43</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypePythonScript"></a><span class="summary-name">eArgTypePythonScript</span> = <code title="43">43</code>
+        <a name="eArgTypePid"></a><span class="summary-name">eArgTypePid</span> = <code title="44">44</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeQueueName"></a><span class="summary-name">eArgTypeQueueName</span> = <code title="44">44</code>
+        <a name="eArgTypePlatform"></a><span class="summary-name">eArgTypePlatform</span> = <code title="79">79</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeRegisterName"></a><span class="summary-name">eArgTypeRegisterName</span> = <code title="45">45</code>
+        <a name="eArgTypePlugin"></a><span class="summary-name">eArgTypePlugin</span> = <code title="45">45</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeRegularExpression"></a><span class="summary-name">eArgTypeRegularExpression</span> = <code title="46">46</code>
+        <a name="eArgTypeProcessName"></a><span class="summary-name">eArgTypeProcessName</span> = <code title="46">46</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeRunArgs"></a><span class="summary-name">eArgTypeRunArgs</span> = <code title="47">47</code>
+        <a name="eArgTypePythonClass"></a><span class="summary-name">eArgTypePythonClass</span> = <code title="47">47</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeRunMode"></a><span class="summary-name">eArgTypeRunMode</span> = <code title="48">48</code>
+        <a name="eArgTypePythonFunction"></a><span class="summary-name">eArgTypePythonFunction</span> = <code title="48">48</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeScriptLang"></a><span class="summary-name">eArgTypeScriptLang</span> = <code title="50">50</code>
+        <a name="eArgTypePythonScript"></a><span class="summary-name">eArgTypePythonScript</span> = <code title="49">49</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeScriptedCommandSynchronicity"></a><span class="summary-name">eArgTypeScriptedCommandSynchronicity</span> = <code title="49">49</code>
+        <a name="eArgTypeQueueName"></a><span class="summary-name">eArgTypeQueueName</span> = <code title="50">50</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSearchWord"></a><span class="summary-name">eArgTypeSearchWord</span> = <code title="51">51</code>
+        <a name="eArgTypeRegisterName"></a><span class="summary-name">eArgTypeRegisterName</span> = <code title="51">51</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSelector"></a><span class="summary-name">eArgTypeSelector</span> = <code title="52">52</code>
+        <a name="eArgTypeRegularExpression"></a><span class="summary-name">eArgTypeRegularExpression</span> = <code title="52">52</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSettingIndex"></a><span class="summary-name">eArgTypeSettingIndex</span> = <code title="53">53</code>
+        <a name="eArgTypeRunArgs"></a><span class="summary-name">eArgTypeRunArgs</span> = <code title="53">53</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSettingKey"></a><span class="summary-name">eArgTypeSettingKey</span> = <code title="54">54</code>
+        <a name="eArgTypeRunMode"></a><span class="summary-name">eArgTypeRunMode</span> = <code title="54">54</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSettingPrefix"></a><span class="summary-name">eArgTypeSettingPrefix</span> = <code title="55">55</code>
+        <a name="eArgTypeScriptLang"></a><span class="summary-name">eArgTypeScriptLang</span> = <code title="56">56</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSettingVariableName"></a><span class="summary-name">eArgTypeSettingVariableName</span> = <code title="56">56</code>
+        <a name="eArgTypeScriptedCommandSynchronicity"></a><span class="summary-name">eArgTypeScriptedCommandSynchronicity</span> = <code title="55">55</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeShlibName"></a><span class="summary-name">eArgTypeShlibName</span> = <code title="57">57</code>
+        <a name="eArgTypeSearchWord"></a><span class="summary-name">eArgTypeSearchWord</span> = <code title="57">57</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSortOrder"></a><span class="summary-name">eArgTypeSortOrder</span> = <code title="59">59</code>
+        <a name="eArgTypeSelector"></a><span class="summary-name">eArgTypeSelector</span> = <code title="58">58</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSourceFile"></a><span class="summary-name">eArgTypeSourceFile</span> = <code title="58">58</code>
+        <a name="eArgTypeSettingIndex"></a><span class="summary-name">eArgTypeSettingIndex</span> = <code title="59">59</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeStartAddress"></a><span class="summary-name">eArgTypeStartAddress</span> = <code title="60">60</code>
+        <a name="eArgTypeSettingKey"></a><span class="summary-name">eArgTypeSettingKey</span> = <code title="60">60</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSummaryString"></a><span class="summary-name">eArgTypeSummaryString</span> = <code title="61">61</code>
+        <a name="eArgTypeSettingPrefix"></a><span class="summary-name">eArgTypeSettingPrefix</span> = <code title="61">61</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeSymbol"></a><span class="summary-name">eArgTypeSymbol</span> = <code title="62">62</code>
+        <a name="eArgTypeSettingVariableName"></a><span class="summary-name">eArgTypeSettingVariableName</span> = <code title="62">62</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeThreadID"></a><span class="summary-name">eArgTypeThreadID</span> = <code title="63">63</code>
+        <a name="eArgTypeShlibName"></a><span class="summary-name">eArgTypeShlibName</span> = <code title="63">63</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeThreadIndex"></a><span class="summary-name">eArgTypeThreadIndex</span> = <code title="64">64</code>
+        <a name="eArgTypeSortOrder"></a><span class="summary-name">eArgTypeSortOrder</span> = <code title="65">65</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeThreadName"></a><span class="summary-name">eArgTypeThreadName</span> = <code title="65">65</code>
+        <a name="eArgTypeSourceFile"></a><span class="summary-name">eArgTypeSourceFile</span> = <code title="64">64</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeUnixSignal"></a><span class="summary-name">eArgTypeUnixSignal</span> = <code title="67">67</code>
+        <a name="eArgTypeStartAddress"></a><span class="summary-name">eArgTypeStartAddress</span> = <code title="66">66</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeUnsignedInteger"></a><span class="summary-name">eArgTypeUnsignedInteger</span> = <code title="66">66</code>
+        <a name="eArgTypeSummaryString"></a><span class="summary-name">eArgTypeSummaryString</span> = <code title="67">67</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeValue"></a><span class="summary-name">eArgTypeValue</span> = <code title="69">69</code>
+        <a name="eArgTypeSymbol"></a><span class="summary-name">eArgTypeSymbol</span> = <code title="68">68</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeVarName"></a><span class="summary-name">eArgTypeVarName</span> = <code title="68">68</code>
+        <a name="eArgTypeThreadID"></a><span class="summary-name">eArgTypeThreadID</span> = <code title="69">69</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeWatchType"></a><span class="summary-name">eArgTypeWatchType</span> = <code title="75">75</code>
+        <a name="eArgTypeThreadIndex"></a><span class="summary-name">eArgTypeThreadIndex</span> = <code title="70">70</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeWatchpointID"></a><span class="summary-name">eArgTypeWatchpointID</span> = <code title="73">73</code>
+        <a name="eArgTypeThreadName"></a><span class="summary-name">eArgTypeThreadName</span> = <code title="71">71</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeWatchpointIDRange"></a><span class="summary-name">eArgTypeWatchpointIDRange</span> = <code title="74">74</code>
+        <a name="eArgTypeTypeName"></a><span class="summary-name">eArgTypeTypeName</span> = <code title="72">72</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eArgTypeWidth"></a><span class="summary-name">eArgTypeWidth</span> = <code title="70">70</code>
+        <a name="eArgTypeUnixSignal"></a><span class="summary-name">eArgTypeUnixSignal</span> = <code title="74">74</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eArgTypeUnsignedInteger"></a><span class="summary-name">eArgTypeUnsignedInteger</span> = <code title="73">73</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eArgTypeValue"></a><span class="summary-name">eArgTypeValue</span> = <code title="76">76</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eArgTypeVarName"></a><span class="summary-name">eArgTypeVarName</span> = <code title="75">75</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eArgTypeWatchType"></a><span class="summary-name">eArgTypeWatchType</span> = <code title="82">82</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eArgTypeWatchpointID"></a><span class="summary-name">eArgTypeWatchpointID</span> = <code title="80">80</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eArgTypeWatchpointIDRange"></a><span class="summary-name">eArgTypeWatchpointIDRange</span> = <code title="81">81</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eArgTypeWidth"></a><span class="summary-name">eArgTypeWidth</span> = <code title="77">77</code>
     </td>
   </tr>
 <tr>
@@ -3080,6 +3562,62 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eCommandProcessMustBeLaunched"></a><span class="summary-name">eCommandProcessMustBeLaunched</span> = <code title="64">64</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eCommandProcessMustBePaused"></a><span class="summary-name">eCommandProcessMustBePaused</span> = <code title="128">128</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eCommandRequiresFrame"></a><span class="summary-name">eCommandRequiresFrame</span> = <code title="8">8</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eCommandRequiresProcess"></a><span class="summary-name">eCommandRequiresProcess</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eCommandRequiresRegContext"></a><span class="summary-name">eCommandRequiresRegContext</span> = <code title="16">16</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eCommandRequiresTarget"></a><span class="summary-name">eCommandRequiresTarget</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eCommandRequiresThread"></a><span class="summary-name">eCommandRequiresThread</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eCommandTryTargetAPILock"></a><span class="summary-name">eCommandTryTargetAPILock</span> = <code title="32">32</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eConnectionStatusEndOfFile"></a><span class="summary-name">eConnectionStatusEndOfFile</span> = <code title="1">1</code>
     </td>
   </tr>
@@ -3088,6 +3626,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eConnectionStatusError"></a><span class="summary-name">eConnectionStatusError</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eConnectionStatusInterrupted"></a><span class="summary-name">eConnectionStatusInterrupted</span> = <code title="6">6</code>
     </td>
   </tr>
 <tr>
@@ -3220,6 +3765,13 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eErrorTypeExpression"></a><span class="summary-name">eErrorTypeExpression</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eErrorTypeGeneric"></a><span class="summary-name">eErrorTypeGeneric</span> = <code title="1">1</code>
     </td>
   </tr>
@@ -3248,7 +3800,287 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatAddressInfo"></a><span class="summary-name">eFormatAddressInfo</span> = <code title="34">34</code>
+        <a name="eErrorTypeWin32"></a><span class="summary-name">eErrorTypeWin32</span> = <code title="5">5</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionCompleted"></a><span class="summary-name">eExpressionCompleted</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionDiscarded"></a><span class="summary-name">eExpressionDiscarded</span> = <code title="3">3</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionEvaluationComplete"></a><span class="summary-name">eExpressionEvaluationComplete</span> = <code title="3">3</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionEvaluationExecution"></a><span class="summary-name">eExpressionEvaluationExecution</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionEvaluationIRGen"></a><span class="summary-name">eExpressionEvaluationIRGen</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionEvaluationParse"></a><span class="summary-name">eExpressionEvaluationParse</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionHitBreakpoint"></a><span class="summary-name">eExpressionHitBreakpoint</span> = <code title="5">5</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionInterrupted"></a><span class="summary-name">eExpressionInterrupted</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionParseError"></a><span class="summary-name">eExpressionParseError</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionResultUnavailable"></a><span class="summary-name">eExpressionResultUnavailable</span> = <code title="7">7</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionSetupError"></a><span class="summary-name">eExpressionSetupError</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionStoppedForDebug"></a><span class="summary-name">eExpressionStoppedForDebug</span> = <code title="8">8</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eExpressionTimedOut"></a><span class="summary-name">eExpressionTimedOut</span> = <code title="6">6</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFileFilePermissionsUserRX"></a><span class="summary-name">eFileFilePermissionsUserRX</span> = <code title="320">320</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsDirectoryDefault"></a><span class="summary-name">eFilePermissionsDirectoryDefault</span> = <code title="448">448</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsEveryoneR"></a><span class="summary-name">eFilePermissionsEveryoneR</span> = <code title="292">292</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsEveryoneRW"></a><span class="summary-name">eFilePermissionsEveryoneRW</span> = <code title="438">438</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsEveryoneRWX"></a><span class="summary-name">eFilePermissionsEveryoneRWX</span> = <code title="511">511</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsEveryoneRX"></a><span class="summary-name">eFilePermissionsEveryoneRX</span> = <code title="365">365</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsEveryoneW"></a><span class="summary-name">eFilePermissionsEveryoneW</span> = <code title="146">146</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsEveryoneX"></a><span class="summary-name">eFilePermissionsEveryoneX</span> = <code title="73">73</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsFileDefault"></a><span class="summary-name">eFilePermissionsFileDefault</span> = <code title="384">384</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsGroupExecute"></a><span class="summary-name">eFilePermissionsGroupExecute</span> = <code title="8">8</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsGroupRW"></a><span class="summary-name">eFilePermissionsGroupRW</span> = <code title="48">48</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsGroupRWX"></a><span class="summary-name">eFilePermissionsGroupRWX</span> = <code title="56">56</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsGroupRX"></a><span class="summary-name">eFilePermissionsGroupRX</span> = <code title="40">40</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsGroupRead"></a><span class="summary-name">eFilePermissionsGroupRead</span> = <code title="32">32</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsGroupWrite"></a><span class="summary-name">eFilePermissionsGroupWrite</span> = <code title="16">16</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsUserExecute"></a><span class="summary-name">eFilePermissionsUserExecute</span> = <code title="64">64</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsUserRW"></a><span class="summary-name">eFilePermissionsUserRW</span> = <code title="384">384</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsUserRWX"></a><span class="summary-name">eFilePermissionsUserRWX</span> = <code title="448">448</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsUserRead"></a><span class="summary-name">eFilePermissionsUserRead</span> = <code title="256">256</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsUserWrite"></a><span class="summary-name">eFilePermissionsUserWrite</span> = <code title="128">128</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsWorldExecute"></a><span class="summary-name">eFilePermissionsWorldExecute</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsWorldRW"></a><span class="summary-name">eFilePermissionsWorldRW</span> = <code title="6">6</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsWorldRWX"></a><span class="summary-name">eFilePermissionsWorldRWX</span> = <code title="7">7</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsWorldRX"></a><span class="summary-name">eFilePermissionsWorldRX</span> = <code title="5">5</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsWorldRead"></a><span class="summary-name">eFilePermissionsWorldRead</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFilePermissionsWorldWrite"></a><span class="summary-name">eFilePermissionsWorldWrite</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFormatAddressInfo"></a><span class="summary-name">eFormatAddressInfo</span> = <code title="35">35</code>
     </td>
   </tr>
 <tr>
@@ -3297,7 +4129,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatCharArray"></a><span class="summary-name">eFormatCharArray</span> = <code title="33">33</code>
+        <a name="eFormatCharArray"></a><span class="summary-name">eFormatCharArray</span> = <code title="34">34</code>
     </td>
   </tr>
 <tr>
@@ -3325,7 +4157,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatComplexInteger"></a><span class="summary-name">eFormatComplexInteger</span> = <code title="32">32</code>
+        <a name="eFormatComplexInteger"></a><span class="summary-name">eFormatComplexInteger</span> = <code title="33">33</code>
     </td>
   </tr>
 <tr>
@@ -3367,7 +4199,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatHexFloat"></a><span class="summary-name">eFormatHexFloat</span> = <code title="35">35</code>
+        <a name="eFormatHexFloat"></a><span class="summary-name">eFormatHexFloat</span> = <code title="36">36</code>
     </td>
   </tr>
 <tr>
@@ -3381,7 +4213,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatInstruction"></a><span class="summary-name">eFormatInstruction</span> = <code title="36">36</code>
+        <a name="eFormatInstruction"></a><span class="summary-name">eFormatInstruction</span> = <code title="37">37</code>
     </td>
   </tr>
 <tr>
@@ -3444,14 +4276,21 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatVectorOfFloat32"></a><span class="summary-name">eFormatVectorOfFloat32</span> = <code title="29">29</code>
+        <a name="eFormatVectorOfFloat16"></a><span class="summary-name">eFormatVectorOfFloat16</span> = <code title="29">29</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatVectorOfFloat64"></a><span class="summary-name">eFormatVectorOfFloat64</span> = <code title="30">30</code>
+        <a name="eFormatVectorOfFloat32"></a><span class="summary-name">eFormatVectorOfFloat32</span> = <code title="30">30</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFormatVectorOfFloat64"></a><span class="summary-name">eFormatVectorOfFloat64</span> = <code title="31">31</code>
     </td>
   </tr>
 <tr>
@@ -3486,7 +4325,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatVectorOfUInt128"></a><span class="summary-name">eFormatVectorOfUInt128</span> = <code title="31">31</code>
+        <a name="eFormatVectorOfUInt128"></a><span class="summary-name">eFormatVectorOfUInt128</span> = <code title="32">32</code>
     </td>
   </tr>
 <tr>
@@ -3521,7 +4360,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFormatVoid"></a><span class="summary-name">eFormatVoid</span> = <code title="37">37</code>
+        <a name="eFormatVoid"></a><span class="summary-name">eFormatVoid</span> = <code title="38">38</code>
     </td>
   </tr>
 <tr>
@@ -3542,7 +4381,14 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFrameCompareOlder"></a><span class="summary-name">eFrameCompareOlder</span> = <code title="4">4</code>
+        <a name="eFrameCompareOlder"></a><span class="summary-name">eFrameCompareOlder</span> = <code title="5">5</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eFrameCompareSameParent"></a><span class="summary-name">eFrameCompareSameParent</span> = <code title="3">3</code>
     </td>
   </tr>
 <tr>
@@ -3556,7 +4402,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eFrameCompareYounger"></a><span class="summary-name">eFrameCompareYounger</span> = <code title="3">3</code>
+        <a name="eFrameCompareYounger"></a><span class="summary-name">eFrameCompareYounger</span> = <code title="4">4</code>
     </td>
   </tr>
 <tr>
@@ -3606,6 +4452,48 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eFunctionNameTypeSelector"></a><span class="summary-name">eFunctionNameTypeSelector</span> = <code title="32">32</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eGdbSignalArithmetic"></a><span class="summary-name">eGdbSignalArithmetic</span> = <code title="147">147</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eGdbSignalBadAccess"></a><span class="summary-name">eGdbSignalBadAccess</span> = <code title="145">145</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eGdbSignalBadInstruction"></a><span class="summary-name">eGdbSignalBadInstruction</span> = <code title="146">146</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eGdbSignalBreakpoint"></a><span class="summary-name">eGdbSignalBreakpoint</span> = <code title="150">150</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eGdbSignalEmulation"></a><span class="summary-name">eGdbSignalEmulation</span> = <code title="148">148</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eGdbSignalSoftware"></a><span class="summary-name">eGdbSignalSoftware</span> = <code title="149">149</code>
     </td>
   </tr>
 <tr>
@@ -3703,6 +4591,20 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eInstrumentationRuntimeTypeAddressSanitizer"></a><span class="summary-name">eInstrumentationRuntimeTypeAddressSanitizer</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eInstrumentationRuntimeTypeThreadSanitizer"></a><span class="summary-name">eInstrumentationRuntimeTypeThreadSanitizer</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eLanguageTypeAda83"></a><span class="summary-name">eLanguageTypeAda83</span> = <code title="3">3</code>
     </td>
   </tr>
@@ -3718,6 +4620,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eLanguageTypeC"></a><span class="summary-name">eLanguageTypeC</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeC11"></a><span class="summary-name">eLanguageTypeC11</span> = <code title="29">29</code>
     </td>
   </tr>
 <tr>
@@ -3745,6 +4654,27 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eLanguageTypeC_plus_plus_03"></a><span class="summary-name">eLanguageTypeC_plus_plus_03</span> = <code title="25">25</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeC_plus_plus_11"></a><span class="summary-name">eLanguageTypeC_plus_plus_11</span> = <code title="26">26</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeC_plus_plus_14"></a><span class="summary-name">eLanguageTypeC_plus_plus_14</span> = <code title="33">33</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eLanguageTypeCobol74"></a><span class="summary-name">eLanguageTypeCobol74</span> = <code title="5">5</code>
     </td>
   </tr>
@@ -3760,6 +4690,34 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eLanguageTypeD"></a><span class="summary-name">eLanguageTypeD</span> = <code title="19">19</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeDylan"></a><span class="summary-name">eLanguageTypeDylan</span> = <code title="32">32</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeExtRenderScript"></a><span class="summary-name">eLanguageTypeExtRenderScript</span> = <code title="37">37</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeFortran03"></a><span class="summary-name">eLanguageTypeFortran03</span> = <code title="34">34</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeFortran08"></a><span class="summary-name">eLanguageTypeFortran08</span> = <code title="35">35</code>
     </td>
   </tr>
 <tr>
@@ -3787,6 +4745,20 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eLanguageTypeGo"></a><span class="summary-name">eLanguageTypeGo</span> = <code title="22">22</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeHaskell"></a><span class="summary-name">eLanguageTypeHaskell</span> = <code title="24">24</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eLanguageTypeJava"></a><span class="summary-name">eLanguageTypeJava</span> = <code title="11">11</code>
     </td>
   </tr>
@@ -3794,7 +4766,35 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eLanguageTypeJulia"></a><span class="summary-name">eLanguageTypeJulia</span> = <code title="31">31</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeMipsAssembler"></a><span class="summary-name">eLanguageTypeMipsAssembler</span> = <code title="36">36</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eLanguageTypeModula2"></a><span class="summary-name">eLanguageTypeModula2</span> = <code title="10">10</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeModula3"></a><span class="summary-name">eLanguageTypeModula3</span> = <code title="23">23</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeOCaml"></a><span class="summary-name">eLanguageTypeOCaml</span> = <code title="27">27</code>
     </td>
   </tr>
 <tr>
@@ -3809,6 +4809,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eLanguageTypeObjC_plus_plus"></a><span class="summary-name">eLanguageTypeObjC_plus_plus</span> = <code title="17">17</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeOpenCL"></a><span class="summary-name">eLanguageTypeOpenCL</span> = <code title="21">21</code>
     </td>
   </tr>
 <tr>
@@ -3836,6 +4843,20 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eLanguageTypeRust"></a><span class="summary-name">eLanguageTypeRust</span> = <code title="28">28</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLanguageTypeSwift"></a><span class="summary-name">eLanguageTypeSwift</span> = <code title="30">30</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eLanguageTypeUPC"></a><span class="summary-name">eLanguageTypeUPC</span> = <code title="18">18</code>
     </td>
   </tr>
@@ -3850,7 +4871,21 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eLaunchFlagCloseTTYOnExit"></a><span class="summary-name">eLaunchFlagCloseTTYOnExit</span> = <code title="2048">2048</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eLaunchFlagDebug"></a><span class="summary-name">eLaunchFlagDebug</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLaunchFlagDetachOnError"></a><span class="summary-name">eLaunchFlagDetachOnError</span> = <code title="512">512</code>
     </td>
   </tr>
 <tr>
@@ -3865,6 +4900,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eLaunchFlagDisableSTDIO"></a><span class="summary-name">eLaunchFlagDisableSTDIO</span> = <code title="16">16</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eLaunchFlagDontSetExitStatus"></a><span class="summary-name">eLaunchFlagDontSetExitStatus</span> = <code title="256">256</code>
     </td>
   </tr>
 <tr>
@@ -3906,7 +4948,70 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eLaunchFlagShellExpandArguments"></a><span class="summary-name">eLaunchFlagShellExpandArguments</span> = <code title="1024">1024</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eLaunchFlagStopAtEntry"></a><span class="summary-name">eLaunchFlagStopAtEntry</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMatchTypeNormal"></a><span class="summary-name">eMatchTypeNormal</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMatchTypeRegex"></a><span class="summary-name">eMatchTypeRegex</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMatchTypeStartsWith"></a><span class="summary-name">eMatchTypeStartsWith</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMemberFunctionKindConstructor"></a><span class="summary-name">eMemberFunctionKindConstructor</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMemberFunctionKindDestructor"></a><span class="summary-name">eMemberFunctionKindDestructor</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMemberFunctionKindInstanceMethod"></a><span class="summary-name">eMemberFunctionKindInstanceMethod</span> = <code title="3">3</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMemberFunctionKindStaticMethod"></a><span class="summary-name">eMemberFunctionKindStaticMethod</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eMemberFunctionKindUnknown"></a><span class="summary-name">eMemberFunctionKindUnknown</span> = <code title="0">0</code>
     </td>
   </tr>
 <tr>
@@ -3920,7 +5025,14 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eNumLanguageTypes"></a><span class="summary-name">eNumLanguageTypes</span> = <code title="21">21</code>
+        <a name="eNumInstrumentationRuntimeTypes"></a><span class="summary-name">eNumInstrumentationRuntimeTypes</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eNumLanguageTypes"></a><span class="summary-name">eNumLanguageTypes</span> = <code title="38">38</code>
     </td>
   </tr>
 <tr>
@@ -3935,6 +5047,69 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eOnlyThisThread"></a><span class="summary-name">eOnlyThisThread</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeClangDir"></a><span class="summary-name">ePathTypeClangDir</span> = <code title="8">8</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeGlobalLLDBTempSystemDir"></a><span class="summary-name">ePathTypeGlobalLLDBTempSystemDir</span> = <code title="7">7</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeHeaderDir"></a><span class="summary-name">ePathTypeHeaderDir</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeLLDBShlibDir"></a><span class="summary-name">ePathTypeLLDBShlibDir</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeLLDBSystemPlugins"></a><span class="summary-name">ePathTypeLLDBSystemPlugins</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeLLDBTempSystemDir"></a><span class="summary-name">ePathTypeLLDBTempSystemDir</span> = <code title="6">6</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeLLDBUserPlugins"></a><span class="summary-name">ePathTypeLLDBUserPlugins</span> = <code title="5">5</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypePythonDir"></a><span class="summary-name">ePathTypePythonDir</span> = <code title="3">3</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="ePathTypeSupportExecutableDir"></a><span class="summary-name">ePathTypeSupportExecutableDir</span> = <code title="1">1</code>
     </td>
   </tr>
 <tr>
@@ -3962,6 +5137,48 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eQueueItemKindBlock"></a><span class="summary-name">eQueueItemKindBlock</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eQueueItemKindFunction"></a><span class="summary-name">eQueueItemKindFunction</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eQueueItemKindUnknown"></a><span class="summary-name">eQueueItemKindUnknown</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eQueueKindConcurrent"></a><span class="summary-name">eQueueKindConcurrent</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eQueueKindSerial"></a><span class="summary-name">eQueueKindSerial</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eQueueKindUnknown"></a><span class="summary-name">eQueueKindUnknown</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eRegisterKindDWARF"></a><span class="summary-name">eRegisterKindDWARF</span> = <code title="1">1</code>
     </td>
   </tr>
@@ -3969,14 +5186,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eRegisterKindGCC"></a><span class="summary-name">eRegisterKindGCC</span> = <code title="0">0</code>
-    </td>
-  </tr>
-<tr>
-    <td width="15%" align="right" valign="top" class="summary">
-      <span class="summary-type">&nbsp;</span>
-    </td><td class="summary">
-        <a name="eRegisterKindGDB"></a><span class="summary-name">eRegisterKindGDB</span> = <code title="3">3</code>
+        <a name="eRegisterKindEHFrame"></a><span class="summary-name">eRegisterKindEHFrame</span> = <code title="0">0</code>
     </td>
   </tr>
 <tr>
@@ -3991,6 +5201,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eRegisterKindLLDB"></a><span class="summary-name">eRegisterKindLLDB</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eRegisterKindProcessPlugin"></a><span class="summary-name">eRegisterKindProcessPlugin</span> = <code title="3">3</code>
     </td>
   </tr>
 <tr>
@@ -4074,7 +5291,42 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eScriptLanguageUnknown"></a><span class="summary-name">eScriptLanguageUnknown</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeARMexidx"></a><span class="summary-name">eSectionTypeARMexidx</span> = <code title="38">38</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeARMextab"></a><span class="summary-name">eSectionTypeARMextab</span> = <code title="39">39</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeAbsoluteAddress"></a><span class="summary-name">eSectionTypeAbsoluteAddress</span> = <code title="42">42</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eSectionTypeCode"></a><span class="summary-name">eSectionTypeCode</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeCompactUnwind"></a><span class="summary-name">eSectionTypeCompactUnwind</span> = <code title="40">40</code>
     </td>
   </tr>
 <tr>
@@ -4088,28 +5340,28 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFAppleNames"></a><span class="summary-name">eSectionTypeDWARFAppleNames</span> = <code title="26">26</code>
+        <a name="eSectionTypeDWARFAppleNames"></a><span class="summary-name">eSectionTypeDWARFAppleNames</span> = <code title="29">29</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFAppleNamespaces"></a><span class="summary-name">eSectionTypeDWARFAppleNamespaces</span> = <code title="28">28</code>
+        <a name="eSectionTypeDWARFAppleNamespaces"></a><span class="summary-name">eSectionTypeDWARFAppleNamespaces</span> = <code title="31">31</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFAppleObjC"></a><span class="summary-name">eSectionTypeDWARFAppleObjC</span> = <code title="29">29</code>
+        <a name="eSectionTypeDWARFAppleObjC"></a><span class="summary-name">eSectionTypeDWARFAppleObjC</span> = <code title="32">32</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFAppleTypes"></a><span class="summary-name">eSectionTypeDWARFAppleTypes</span> = <code title="27">27</code>
+        <a name="eSectionTypeDWARFAppleTypes"></a><span class="summary-name">eSectionTypeDWARFAppleTypes</span> = <code title="30">30</code>
     </td>
   </tr>
 <tr>
@@ -4123,70 +5375,91 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugAranges"></a><span class="summary-name">eSectionTypeDWARFDebugAranges</span> = <code title="16">16</code>
+        <a name="eSectionTypeDWARFDebugAddr"></a><span class="summary-name">eSectionTypeDWARFDebugAddr</span> = <code title="16">16</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugFrame"></a><span class="summary-name">eSectionTypeDWARFDebugFrame</span> = <code title="17">17</code>
+        <a name="eSectionTypeDWARFDebugAranges"></a><span class="summary-name">eSectionTypeDWARFDebugAranges</span> = <code title="17">17</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugInfo"></a><span class="summary-name">eSectionTypeDWARFDebugInfo</span> = <code title="18">18</code>
+        <a name="eSectionTypeDWARFDebugFrame"></a><span class="summary-name">eSectionTypeDWARFDebugFrame</span> = <code title="18">18</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugLine"></a><span class="summary-name">eSectionTypeDWARFDebugLine</span> = <code title="19">19</code>
+        <a name="eSectionTypeDWARFDebugInfo"></a><span class="summary-name">eSectionTypeDWARFDebugInfo</span> = <code title="19">19</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugLoc"></a><span class="summary-name">eSectionTypeDWARFDebugLoc</span> = <code title="20">20</code>
+        <a name="eSectionTypeDWARFDebugLine"></a><span class="summary-name">eSectionTypeDWARFDebugLine</span> = <code title="20">20</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugMacInfo"></a><span class="summary-name">eSectionTypeDWARFDebugMacInfo</span> = <code title="21">21</code>
+        <a name="eSectionTypeDWARFDebugLoc"></a><span class="summary-name">eSectionTypeDWARFDebugLoc</span> = <code title="21">21</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugPubNames"></a><span class="summary-name">eSectionTypeDWARFDebugPubNames</span> = <code title="22">22</code>
+        <a name="eSectionTypeDWARFDebugMacInfo"></a><span class="summary-name">eSectionTypeDWARFDebugMacInfo</span> = <code title="22">22</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugPubTypes"></a><span class="summary-name">eSectionTypeDWARFDebugPubTypes</span> = <code title="23">23</code>
+        <a name="eSectionTypeDWARFDebugMacro"></a><span class="summary-name">eSectionTypeDWARFDebugMacro</span> = <code title="23">23</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugRanges"></a><span class="summary-name">eSectionTypeDWARFDebugRanges</span> = <code title="24">24</code>
+        <a name="eSectionTypeDWARFDebugPubNames"></a><span class="summary-name">eSectionTypeDWARFDebugPubNames</span> = <code title="24">24</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeDWARFDebugStr"></a><span class="summary-name">eSectionTypeDWARFDebugStr</span> = <code title="25">25</code>
+        <a name="eSectionTypeDWARFDebugPubTypes"></a><span class="summary-name">eSectionTypeDWARFDebugPubTypes</span> = <code title="25">25</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeDWARFDebugRanges"></a><span class="summary-name">eSectionTypeDWARFDebugRanges</span> = <code title="26">26</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeDWARFDebugStr"></a><span class="summary-name">eSectionTypeDWARFDebugStr</span> = <code title="27">27</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeDWARFDebugStrOffsets"></a><span class="summary-name">eSectionTypeDWARFDebugStrOffsets</span> = <code title="28">28</code>
     </td>
   </tr>
 <tr>
@@ -4270,35 +5543,42 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeEHFrame"></a><span class="summary-name">eSectionTypeEHFrame</span> = <code title="34">34</code>
+        <a name="eSectionTypeEHFrame"></a><span class="summary-name">eSectionTypeEHFrame</span> = <code title="37">37</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeELFDynamicLinkInfo"></a><span class="summary-name">eSectionTypeELFDynamicLinkInfo</span> = <code title="33">33</code>
+        <a name="eSectionTypeELFDynamicLinkInfo"></a><span class="summary-name">eSectionTypeELFDynamicLinkInfo</span> = <code title="36">36</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeELFDynamicSymbols"></a><span class="summary-name">eSectionTypeELFDynamicSymbols</span> = <code title="31">31</code>
+        <a name="eSectionTypeELFDynamicSymbols"></a><span class="summary-name">eSectionTypeELFDynamicSymbols</span> = <code title="34">34</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeELFRelocationEntries"></a><span class="summary-name">eSectionTypeELFRelocationEntries</span> = <code title="32">32</code>
+        <a name="eSectionTypeELFRelocationEntries"></a><span class="summary-name">eSectionTypeELFRelocationEntries</span> = <code title="35">35</code>
     </td>
   </tr>
 <tr>
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeELFSymbolTable"></a><span class="summary-name">eSectionTypeELFSymbolTable</span> = <code title="30">30</code>
+        <a name="eSectionTypeELFSymbolTable"></a><span class="summary-name">eSectionTypeELFSymbolTable</span> = <code title="33">33</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSectionTypeGoSymtab"></a><span class="summary-name">eSectionTypeGoSymtab</span> = <code title="41">41</code>
     </td>
   </tr>
 <tr>
@@ -4312,7 +5592,7 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="eSectionTypeOther"></a><span class="summary-name">eSectionTypeOther</span> = <code title="35">35</code>
+        <a name="eSectionTypeOther"></a><span class="summary-name">eSectionTypeOther</span> = <code title="43">43</code>
     </td>
   </tr>
 <tr>
@@ -4431,6 +5711,13 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eStopReasonInstrumentation"></a><span class="summary-name">eStopReasonInstrumentation</span> = <code title="10">10</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eStopReasonInvalid"></a><span class="summary-name">eStopReasonInvalid</span> = <code title="0">0</code>
     </td>
   </tr>
@@ -4474,6 +5761,34 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eStopReasonWatchpoint"></a><span class="summary-name">eStopReasonWatchpoint</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eStopShowColumnAnsi"></a><span class="summary-name">eStopShowColumnAnsi</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eStopShowColumnAnsiOrCaret"></a><span class="summary-name">eStopShowColumnAnsiOrCaret</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eStopShowColumnCaret"></a><span class="summary-name">eStopShowColumnCaret</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eStopShowColumnNone"></a><span class="summary-name">eStopShowColumnNone</span> = <code title="3">3</code>
     </td>
   </tr>
 <tr>
@@ -4530,6 +5845,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eSymbolContextTarget"></a><span class="summary-name">eSymbolContextTarget</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSymbolContextVariable"></a><span class="summary-name">eSymbolContextVariable</span> = <code title="128">128</code>
     </td>
   </tr>
 <tr>
@@ -4670,6 +5992,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eSymbolTypeParam"></a><span class="summary-name">eSymbolTypeParam</span> = <code title="14">14</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eSymbolTypeReExported"></a><span class="summary-name">eSymbolTypeReExported</span> = <code title="28">28</code>
     </td>
   </tr>
 <tr>
@@ -4942,6 +6271,167 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eTypeHasChildren"></a><span class="summary-name">eTypeHasChildren</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeHasValue"></a><span class="summary-name">eTypeHasValue</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeInstanceIsPointer"></a><span class="summary-name">eTypeInstanceIsPointer</span> = <code title="4194304">4194304</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsArray"></a><span class="summary-name">eTypeIsArray</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsBlock"></a><span class="summary-name">eTypeIsBlock</span> = <code title="8">8</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsBuiltIn"></a><span class="summary-name">eTypeIsBuiltIn</span> = <code title="16">16</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsCPlusPlus"></a><span class="summary-name">eTypeIsCPlusPlus</span> = <code title="64">64</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsClass"></a><span class="summary-name">eTypeIsClass</span> = <code title="32">32</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsComplex"></a><span class="summary-name">eTypeIsComplex</span> = <code title="1048576">1048576</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsEnumeration"></a><span class="summary-name">eTypeIsEnumeration</span> = <code title="128">128</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsFloat"></a><span class="summary-name">eTypeIsFloat</span> = <code title="524288">524288</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsFuncPrototype"></a><span class="summary-name">eTypeIsFuncPrototype</span> = <code title="256">256</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsInteger"></a><span class="summary-name">eTypeIsInteger</span> = <code title="262144">262144</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsMember"></a><span class="summary-name">eTypeIsMember</span> = <code title="512">512</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsObjC"></a><span class="summary-name">eTypeIsObjC</span> = <code title="1024">1024</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsPointer"></a><span class="summary-name">eTypeIsPointer</span> = <code title="2048">2048</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsReference"></a><span class="summary-name">eTypeIsReference</span> = <code title="4096">4096</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsScalar"></a><span class="summary-name">eTypeIsScalar</span> = <code title="131072">131072</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsSigned"></a><span class="summary-name">eTypeIsSigned</span> = <code title="2097152">2097152</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsStructUnion"></a><span class="summary-name">eTypeIsStructUnion</span> = <code title="8192">8192</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsTemplate"></a><span class="summary-name">eTypeIsTemplate</span> = <code title="16384">16384</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsTypedef"></a><span class="summary-name">eTypeIsTypedef</span> = <code title="32768">32768</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeIsVector"></a><span class="summary-name">eTypeIsVector</span> = <code title="65536">65536</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eTypeOptionCascade"></a><span class="summary-name">eTypeOptionCascade</span> = <code title="1">1</code>
     </td>
   </tr>
@@ -4956,6 +6446,13 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
+        <a name="eTypeOptionHideEmptyAggregates"></a><span class="summary-name">eTypeOptionHideEmptyAggregates</span> = <code title="256">256</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
         <a name="eTypeOptionHideNames"></a><span class="summary-name">eTypeOptionHideNames</span> = <code title="64">64</code>
     </td>
   </tr>
@@ -4964,6 +6461,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eTypeOptionHideValue"></a><span class="summary-name">eTypeOptionHideValue</span> = <code title="16">16</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeOptionNonCacheable"></a><span class="summary-name">eTypeOptionNonCacheable</span> = <code title="128">128</code>
     </td>
   </tr>
 <tr>
@@ -4992,6 +6496,20 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eTypeOptionSkipReferences"></a><span class="summary-name">eTypeOptionSkipReferences</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeSummaryCapped"></a><span class="summary-name">eTypeSummaryCapped</span> = <code title="True">True</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eTypeSummaryUncapped"></a><span class="summary-name">eTypeSummaryUncapped</span> = <code title="False">False</code>
     </td>
   </tr>
 <tr>
@@ -5048,6 +6566,13 @@ a source file location.
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a name="eValueTypeVariableStatic"></a><span class="summary-name">eValueTypeVariableStatic</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eValueTypeVariableThreadLocal"></a><span class="summary-name">eValueTypeVariableThreadLocal</span> = <code title="8">8</code>
     </td>
   </tr>
 <tr>
@@ -5124,8 +6649,22 @@ a source file location.
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a href="lldb-module.html#frame" class="summary-name">frame</a> = <code title="&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SBFrame *' at 0x19\
-f2a80&gt; &gt;">&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SB<code class="variable-ellipsis">...</code></code>
+        <a name="eWatchpointKindRead"></a><span class="summary-name">eWatchpointKindRead</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="eWatchpointKindWrite"></a><span class="summary-name">eWatchpointKindWrite</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb-module.html#frame" class="summary-name">frame</a> = <code title="&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SBFrame *' at 0x7f\
+7d6335bbd0&gt; &gt;">&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SB<code class="variable-ellipsis">...</code></code>
     </td>
   </tr>
 <tr>
@@ -5139,7 +6678,7 @@ f2a80&gt; &gt;">&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SB<cod
     <td width="15%" align="right" valign="top" class="summary">
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
-        <a name="kNumFormats"></a><span class="summary-name">kNumFormats</span> = <code title="38">38</code>
+        <a name="kNumFormats"></a><span class="summary-name">kNumFormats</span> = <code title="39">39</code>
     </td>
   </tr>
 <tr>
@@ -5154,7 +6693,15 @@ f2a80&gt; &gt;">&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SB<cod
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a href="lldb-module.html#process" class="summary-name">process</a> = <code title="&lt;lldb.SBProcess; proxy of &lt;Swig Object of type 'lldb::SBProcess *' at \
-0x19f2f00&gt; &gt;">&lt;lldb.SBProcess; proxy of &lt;Swig Object of type 'lldb<code class="variable-ellipsis">...</code></code>
+0x7f7d6335bb70&gt; &gt;">&lt;lldb.SBProcess; proxy of &lt;Swig Object of type 'lldb<code class="variable-ellipsis">...</code></code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="lldb-module.html#swig_version" class="summary-name">swig_version</a> = <code title="(2, 0, 11)"><code class="variable-group">(</code>2<code class="variable-op">, </code>0<code class="variable-op">, </code>11<code class="variable-group">)</code></code><br />
+      The lldb module contains the public APIs for Python binding.
     </td>
   </tr>
 <tr>
@@ -5162,7 +6709,7 @@ f2a80&gt; &gt;">&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SB<cod
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a href="lldb-module.html#target" class="summary-name">target</a> = <code title="&lt;lldb.SBTarget; proxy of &lt;Swig Object of type 'lldb::SBTarget *' at 0x\
-19f2870&gt; &gt;">&lt;lldb.SBTarget; proxy of &lt;Swig Object of type 'lldb::<code class="variable-ellipsis">...</code></code>
+7f7d6335bb40&gt; &gt;">&lt;lldb.SBTarget; proxy of &lt;Swig Object of type 'lldb::<code class="variable-ellipsis">...</code></code>
     </td>
   </tr>
 <tr>
@@ -5170,7 +6717,7 @@ f2a80&gt; &gt;">&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SB<cod
       <span class="summary-type">&nbsp;</span>
     </td><td class="summary">
         <a href="lldb-module.html#thread" class="summary-name">thread</a> = <code title="&lt;lldb.SBThread; proxy of &lt;Swig Object of type 'lldb::SBThread *' at 0x\
-19f2ed0&gt; &gt;">&lt;lldb.SBThread; proxy of &lt;Swig Object of type 'lldb::<code class="variable-ellipsis">...</code></code>
+7f7d6335bba0&gt; &gt;">&lt;lldb.SBThread; proxy of &lt;Swig Object of type 'lldb::<code class="variable-ellipsis">...</code></code>
     </td>
   </tr>
 </table>
@@ -5204,8 +6751,8 @@ f2a80&gt; &gt;">&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SB<cod
   <dl class="fields">
     <dt>Value:</dt>
       <dd><table><tr><td><pre class="variable">
-&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SBFrame *' at 0x19<span class="variable-linewrap"><img src="crarr.png" alt="\" /></span>
-f2a80&gt; &gt;
+&lt;lldb.SBFrame; proxy of &lt;Swig Object of type 'lldb::SBFrame *' at 0x7f<span class="variable-linewrap"><img src="crarr.png" alt="\" /></span>
+7d6335bbd0&gt; &gt;
 </pre></td></tr></table>
 </dd>
   </dl>
@@ -5224,7 +6771,49 @@ f2a80&gt; &gt;
     <dt>Value:</dt>
       <dd><table><tr><td><pre class="variable">
 &lt;lldb.SBProcess; proxy of &lt;Swig Object of type 'lldb::SBProcess *' at <span class="variable-linewrap"><img src="crarr.png" alt="\" /></span>
-0x19f2f00&gt; &gt;
+0x7f7d6335bb70&gt; &gt;
+</pre></td></tr></table>
+</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="swig_version"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <h3 class="epydoc">swig_version</h3>
+  <pre class="literalblock">
+
+The lldb module contains the public APIs for Python binding.
+
+Some of the important classes are described here:
+
+o SBTarget: Represents the target program running under the debugger.
+o SBProcess: Represents the process associated with the target program.
+o SBThread: Represents a thread of execution. SBProcess contains SBThread(s).
+o SBFrame: Represents one of the stack frames associated with a thread. SBThread
+      contains SBFrame(s).
+o SBSymbolContext: A container that stores various debugger related info.
+o SBValue: Represents the value of a variable, a register, or an expression.
+o SBModule: Represents an executable image and its associated object and symbol
+      files.  SBTarget contains SBModule(s).
+o SBBreakpoint: Represents a logical breakpoint and its associated settings.
+      SBTarget contains SBBreakpoint(s).
+o SBSymbol: Represents the symbol possibly associated with a stack frame.
+o SBCompileUnit: Represents a compilation unit, or compiled source file.
+o SBFunction: Represents a generic function, which can be inlined or not.
+o SBBlock: Represents a lexical block. SBFunction contains SBBlock(s).
+o SBLineEntry: Specifies an association with a contiguous range of instructions
+      and a source file location. SBCompileUnit contains SBLineEntry(s).
+
+</pre>
+  <dl class="fields">
+  </dl>
+  <dl class="fields">
+    <dt>Value:</dt>
+      <dd><table><tr><td><pre class="variable">
+<code class="variable-group">(</code>2<code class="variable-op">, </code>0<code class="variable-op">, </code>11<code class="variable-group">)</code>
 </pre></td></tr></table>
 </dd>
   </dl>
@@ -5243,7 +6832,7 @@ f2a80&gt; &gt;
     <dt>Value:</dt>
       <dd><table><tr><td><pre class="variable">
 &lt;lldb.SBTarget; proxy of &lt;Swig Object of type 'lldb::SBTarget *' at 0x<span class="variable-linewrap"><img src="crarr.png" alt="\" /></span>
-19f2870&gt; &gt;
+7f7d6335bb40&gt; &gt;
 </pre></td></tr></table>
 </dd>
   </dl>
@@ -5262,7 +6851,7 @@ f2a80&gt; &gt;
     <dt>Value:</dt>
       <dd><table><tr><td><pre class="variable">
 &lt;lldb.SBThread; proxy of &lt;Swig Object of type 'lldb::SBThread *' at 0x<span class="variable-linewrap"><img src="crarr.png" alt="\" /></span>
-19f2ed0&gt; &gt;
+7f7d6335bba0&gt; &gt;
 </pre></td></tr></table>
 </dd>
   </dl>
@@ -5297,7 +6886,7 @@ f2a80&gt; &gt;
 <table border="0" cellpadding="0" cellspacing="0" width="100%%">
   <tr>
     <td align="left" class="footer">
-    Generated by Epydoc 3.0.1 on Fri Jul 19 13:22:33 2013
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:23 2016
     </td>
     <td align="right" class="footer">
       <a target="mainFrame" href="http://epydoc.sourceforge.net"

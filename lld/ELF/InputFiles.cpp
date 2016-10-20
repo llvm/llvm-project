@@ -718,7 +718,7 @@ static Symbol *createBitcodeSymbol(DenseSet<StringRef> &KeptComdats,
     if (!Keep)
       return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
                                            CanOmitFromDynSym, F);
-}
+  }
 
   if (Flags & BasicSymbolRef::SF_Undefined)
     return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,

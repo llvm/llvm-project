@@ -1722,7 +1722,7 @@ void ModuleBitcodeWriter::writeDILocalVariable(
     const DILocalVariable *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
   // In order to support all possible bitcode formats in BitcodeReader we need
-  // to distiguish the following cases:
+  // to distinguish the following cases:
   // 1) Record has no artificial tag (Record[1]),
   //   has no obsolete inlinedAt field (Record[9]).
   //   In this case Record size will be 8, HasAlignment flag is false.
@@ -1735,7 +1735,7 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   // 4) Record has neither artificial tag, nor inlignedAt field, but
   //   HasAlignment flag is true and Record[8] contains alignment value.
   const uint64_t HasAlignmentFlag = 1 << 1;
-  Record.push_back(N->isDistinct() | HasAlignmentFlag);
+  Record.push_back((uint64_t)N->isDistinct() | HasAlignmentFlag);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));

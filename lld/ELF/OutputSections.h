@@ -11,6 +11,7 @@
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
 #include "Config.h"
+#include "GdbIndex.h"
 #include "Relocations.h"
 
 #include "lld/Core/LLVM.h"
@@ -131,6 +132,31 @@ protected:
   uintX_t LMAOffset = 0;
 };
 
+template <class ELFT>
+class GdbIndexSection final : public OutputSectionBase<ELFT> {
+  typedef typename ELFT::uint uintX_t;
+
+  const unsigned OffsetTypeSize = 4;
+  const unsigned CuListOffset = 6 * OffsetTypeSize;
+  const unsigned CompilationUnitSize = 16;
+  const unsigned AddressEntrySize = 16 + OffsetTypeSize;
+  const unsigned SymTabEntrySize = 2 * OffsetTypeSize;
+
+public:
+  GdbIndexSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+
+  // Pairs of [CU Offset, CU length].
+  std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
+
+private:
+  void parseDebugSections();
+  void readDwarf(InputSection<ELFT> *I);
+
+  uint32_t CuTypesOffset;
+};
+
 template <class ELFT> class GotSection final : public OutputSectionBase<ELFT> {
   typedef OutputSectionBase<ELFT> Base;
   typedef typename ELFT::uint uintX_t;
@@ -187,7 +213,7 @@ private:
   // GOT entries should have one-to-one mapping with dynamic symbols table.
   // But we use the same container's types for both kind of GOT entries
   // to handle them uniformly.
-  typedef std::pair<const SymbolBody*, uintX_t> MipsGotEntry;
+  typedef std::pair<const SymbolBody *, uintX_t> MipsGotEntry;
   typedef std::vector<MipsGotEntry> MipsGotEntries;
   llvm::DenseMap<MipsGotEntry, size_t> MipsGotMap;
   MipsGotEntries MipsLocal;
@@ -288,9 +314,7 @@ public:
   typename Base::Kind getKind() const override { return Base::SymTable; }
   static bool classof(const Base *B) { return B->getKind() == Base::SymTable; }
 
-  ArrayRef<SymbolTableEntry> getSymbols() const {
-    return Symbols;
-  }
+  ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
   unsigned NumLocals = 0;
   StringTableSection<ELFT> &StrTabSec;
@@ -770,6 +794,7 @@ template <class ELFT> struct Out {
   static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhOutputSection<ELFT> *EhFrame;
+  static GdbIndexSection<ELFT> *GdbIndex;
   static GnuHashTableSection<ELFT> *GnuHashTab;
   static GotPltSection<ELFT> *GotPlt;
   static GotSection<ELFT> *Got;
@@ -791,6 +816,7 @@ template <class ELFT> struct Out {
   static VersionTableSection<ELFT> *VerSym;
   static VersionNeedSection<ELFT> *VerNeed;
   static Elf_Phdr *TlsPhdr;
+  static OutputSectionBase<ELFT> *DebugInfo;
   static OutputSectionBase<ELFT> *ElfHeader;
   static OutputSectionBase<ELFT> *ProgramHeaders;
 
@@ -839,6 +865,7 @@ template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
+template <class ELFT> GdbIndexSection<ELFT> *Out<ELFT>::GdbIndex;
 template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
 template <class ELFT> GotPltSection<ELFT> *Out<ELFT>::GotPlt;
 template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;
@@ -860,6 +887,7 @@ template <class ELFT> VersionDefinitionSection<ELFT> *Out<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *Out<ELFT>::VerSym;
 template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;
 template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::DebugInfo;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::PreinitArray;

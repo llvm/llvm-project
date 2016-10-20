@@ -143,14 +143,14 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return handleNoRelaxTlsRelocation<ELFT>(Type, Body, C, Offset, Addend,
                                             Expr);
 
-  if ((Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE || Expr == R_HINT) &&
+  if ((Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE || Expr == R_TLSDESC_CALL) &&
       Config->Shared) {
     if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
       uintX_t Off = Out<ELFT>::Got->getGlobalDynOffset(Body);
       Out<ELFT>::RelaDyn->addReloc(
           {Target->TlsDescRel, Out<ELFT>::Got, Off, false, &Body, 0});
     }
-    if (Expr != R_HINT)
+    if (Expr != R_TLSDESC_CALL)
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
@@ -177,7 +177,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 1;
   }
 
-  if (Expr == R_TLSDESC_PAGE || Expr == R_TLSDESC || Expr == R_HINT ||
+  if (Expr == R_TLSDESC_PAGE || Expr == R_TLSDESC || Expr == R_TLSDESC_CALL ||
       Target->isTlsGlobalDynamicRel(Type)) {
     if (Config->Shared) {
       if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
@@ -271,7 +271,7 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
            readSignedLo16<E>(Buf + RI->r_offset);
   }
   warn("can't find matching " + getRelName(Type) + " relocation for " +
-          getRelName(Rel->getType(Config->Mips64EL)));
+       getRelName(Rel->getType(Config->Mips64EL)));
   return 0;
 }
 
@@ -304,9 +304,10 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   // These expressions always compute a constant
   if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
       E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF || E == R_MIPS_TLSGD ||
-      E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC ||
-      E == R_TLSGD || E == R_PPC_PLT_OPD || E == R_TLSDESC_PAGE ||
-      E == R_HINT || E == R_THUNK_PC || E == R_THUNK_PLT_PC)
+      E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC ||
+      E == R_TLSGD_PC || E == R_TLSGD || E == R_PPC_PLT_OPD ||
+      E == R_TLSDESC_CALL || E == R_TLSDESC_PAGE || E == R_HINT ||
+      E == R_THUNK_PC || E == R_THUNK_PLT_PC)
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -444,8 +445,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     StringRef Name = getSymbolName(File, Body);
-    error("can't create dynamic relocation " + getRelName(Type) +
-          " against " + (Name.empty() ? "readonly segment" : "symbol " + Name));
+    error("can't create dynamic relocation " + getRelName(Type) + " against " +
+          (Name.empty() ? "readonly segment" : "symbol " + Name));
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
@@ -578,7 +579,8 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     SymbolBody &Body = File.getRelocTargetSym(RI);
     uint32_t Type = RI.getType(Config->Mips64EL);
 
-    // We only report undefined symbols if they are referenced somewhere in the code.
+    // We only report undefined symbols if they are referenced somewhere in the
+    // code.
     if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
       reportUndefined(Body);
 
@@ -599,7 +601,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     uintX_t Offset;
     if (PieceI != PieceE) {
       assert(PieceI->InputOff <= RI.r_offset && "Relocation not in any piece");
-      if (PieceI->OutputOff == (size_t)-1)
+      if (PieceI->OutputOff == -1)
         continue;
       Offset = PieceI->OutputOff + RI.r_offset - PieceI->InputOff;
     } else {
@@ -620,8 +622,9 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    // Ignore "hint" relocation because it is for optional code optimization.
-    if (Expr == R_HINT)
+    // Ignore "hint" and TLS Descriptor call relocation because they are
+    // only markers for relaxation.
+    if (Expr == R_HINT || Expr == R_TLSDESC_CALL)
       continue;
 
     if (needsPlt(Expr) || Expr == R_THUNK_ABS || Expr == R_THUNK_PC ||

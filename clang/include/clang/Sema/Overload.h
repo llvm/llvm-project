@@ -727,8 +727,9 @@ namespace clang {
     CandidateSetKind Kind;
 
     unsigned NumInlineSequences;
-    llvm::AlignedCharArray<llvm::AlignOf<ImplicitConversionSequence>::Alignment,
-                           16 * sizeof(ImplicitConversionSequence)> InlineSpace;
+    llvm::AlignedCharArray<alignof(ImplicitConversionSequence),
+                           16 * sizeof(ImplicitConversionSequence)>
+        InlineSpace;
 
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     void operator=(const OverloadCandidateSet &) = delete;

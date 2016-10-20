@@ -68,3 +68,12 @@ void m() {
   // CHECK-FIXES: auto clj = std::bind(add, 1, add(2, 5));
 }
 
+namespace C {
+  int add(int x, int y){ return x + y; }
+}
+
+void n() {
+  auto clj = std::bind(C::add, 1, 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
+  // CHECK-FIXES: auto clj = [] { return C::add(1, 1); };
+}

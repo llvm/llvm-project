@@ -57,11 +57,10 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
     LLVMMetadataRef CompositeType, int IsLocalToUnit, int IsDefinition,
     unsigned ScopeLine, unsigned Flags, int IsOptimized);
 
-LLVMMetadataRef
-LLVMDIBuilderCreateAutoVariable(LLVMDIBuilderRef D, LLVMMetadataRef Scope,
-                                const char *Name, LLVMMetadataRef File,
-                                unsigned Line, LLVMMetadataRef Ty,
-                                int AlwaysPreserve, unsigned Flags);
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
+    LLVMDIBuilderRef D, LLVMMetadataRef Scope, const char *Name,
+    LLVMMetadataRef File, unsigned Line, LLVMMetadataRef Ty, int AlwaysPreserve,
+    unsigned Flags, uint32_t AlignInBits);
 
 LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
     LLVMDIBuilderRef D, LLVMMetadataRef Scope, const char *Name, unsigned ArgNo,
@@ -71,7 +70,6 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
 LLVMMetadataRef LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef D,
                                              const char *Name,
                                              uint64_t SizeInBits,
-                                             uint32_t AlignInBits,
                                              unsigned Encoding);
 
 LLVMMetadataRef LLVMDIBuilderCreatePointerType(LLVMDIBuilderRef D,
