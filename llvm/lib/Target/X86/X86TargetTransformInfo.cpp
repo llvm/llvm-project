@@ -156,6 +156,25 @@ int X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
   }
 
+  static const CostTblEntry AVX512BWCostTable[] = {
+    // Vectorizing division is a bad idea. See the SSE2 table for more comments.
+    { ISD::SDIV,  MVT::v64i8,  64*20 },
+    { ISD::SDIV,  MVT::v32i16, 32*20 },
+    { ISD::SDIV,  MVT::v16i32, 16*20 },
+    { ISD::SDIV,  MVT::v8i64,  8*20 },
+    { ISD::UDIV,  MVT::v64i8,  64*20 },
+    { ISD::UDIV,  MVT::v32i16, 32*20 },
+    { ISD::UDIV,  MVT::v16i32, 16*20 },
+    { ISD::UDIV,  MVT::v8i64,  8*20 },
+  };
+
+  // Look for AVX512BW lowering tricks for custom cases.
+  if (ST->hasBWI()) {
+    if (const auto *Entry = CostTableLookup(AVX512BWCostTable, ISD,
+                                            LT.second))
+      return LT.first * Entry->Cost;
+  }
+
   static const CostTblEntry AVX512CostTable[] = {
     { ISD::SHL,     MVT::v16i32,    1 },
     { ISD::SRL,     MVT::v16i32,    1 },
@@ -244,7 +263,16 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v16i16,     10 }, // extend/vpsravd/pack sequence.
     { ISD::SRA,  MVT::v2i64,       4 }, // srl/xor/sub sequence.
     { ISD::SRA,  MVT::v4i64,       4 }, // srl/xor/sub sequence.
+  };
 
+  // Look for AVX2 lowering tricks for custom cases.
+  if (ST->hasAVX2()) {
+    if (const auto *Entry = CostTableLookup(AVX2CustomCostTable, ISD,
+                                            LT.second))
+      return LT.first * Entry->Cost;
+  }
+
+  static const CostTblEntry AVXCustomCostTable[] = {
     // Vectorizing division is a bad idea. See the SSE2 table for more comments.
     { ISD::SDIV,  MVT::v32i8,  32*20 },
     { ISD::SDIV,  MVT::v16i16, 16*20 },
@@ -257,8 +285,8 @@ int X86TTIImpl::getArithmeticInstrCost(
   };
 
   // Look for AVX2 lowering tricks for custom cases.
-  if (ST->hasAVX2()) {
-    if (const auto *Entry = CostTableLookup(AVX2CustomCostTable, ISD,
+  if (ST->hasAVX()) {
+    if (const auto *Entry = CostTableLookup(AVXCustomCostTable, ISD,
                                             LT.second))
       return LT.first * Entry->Cost;
   }

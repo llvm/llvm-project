@@ -296,9 +296,9 @@ FunctionType *FunctionType::get(Type *ReturnType,
   FunctionType *FT;
 
   if (I == pImpl->FunctionTypes.end()) {
-    FT = (FunctionType*) pImpl->TypeAllocator.
-      Allocate(sizeof(FunctionType) + sizeof(Type*) * (Params.size() + 1),
-               AlignOf<FunctionType>::Alignment);
+    FT = (FunctionType *)pImpl->TypeAllocator.Allocate(
+        sizeof(FunctionType) + sizeof(Type *) * (Params.size() + 1),
+        alignof(FunctionType));
     new (FT) FunctionType(ReturnType, Params, isVarArg);
     pImpl->FunctionTypes.insert(FT);
   } else {

@@ -199,10 +199,7 @@ struct DeductionFailureInfo {
   void *Data;
 
   /// \brief A diagnostic indicating why deduction failed.
-  union {
-    void *Align;
-    char Diagnostic[sizeof(PartialDiagnosticAt)];
-  };
+  alignas(PartialDiagnosticAt) char Diagnostic[sizeof(PartialDiagnosticAt)];
 
   /// \brief Retrieve the diagnostic which caused this deduction failure,
   /// if any.

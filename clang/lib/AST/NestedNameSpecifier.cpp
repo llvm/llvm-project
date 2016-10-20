@@ -34,8 +34,8 @@ NestedNameSpecifier::FindOrInsert(const ASTContext &Context,
   NestedNameSpecifier *NNS
     = Context.NestedNameSpecifiers.FindNodeOrInsertPos(ID, InsertPos);
   if (!NNS) {
-    NNS = new (Context, llvm::alignOf<NestedNameSpecifier>())
-        NestedNameSpecifier(Mockup);
+    NNS =
+        new (Context, alignof(NestedNameSpecifier)) NestedNameSpecifier(Mockup);
     Context.NestedNameSpecifiers.InsertNode(NNS, InsertPos);
   }
 
@@ -113,8 +113,7 @@ NestedNameSpecifier *
 NestedNameSpecifier::GlobalSpecifier(const ASTContext &Context) {
   if (!Context.GlobalNestedNameSpecifier)
     Context.GlobalNestedNameSpecifier =
-        new (Context, llvm::alignOf<NestedNameSpecifier>())
-            NestedNameSpecifier();
+        new (Context, alignof(NestedNameSpecifier)) NestedNameSpecifier();
   return Context.GlobalNestedNameSpecifier;
 }
 
@@ -687,7 +686,7 @@ NestedNameSpecifierLocBuilder::getWithLocInContext(ASTContext &Context) const {
   // FIXME: After copying the source-location information, should we free
   // our (temporary) buffer and adopt the ASTContext-allocated memory?
   // Doing so would optimize repeated calls to getWithLocInContext().
-  void *Mem = Context.Allocate(BufferSize, llvm::alignOf<void *>());
+  void *Mem = Context.Allocate(BufferSize, alignof(void *));
   memcpy(Mem, Buffer, BufferSize);
   return NestedNameSpecifierLoc(Representation, Mem);
 }

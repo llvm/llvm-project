@@ -346,9 +346,8 @@ namespace llvm {
 
     IndexListEntry* createEntry(MachineInstr *mi, unsigned index) {
       IndexListEntry *entry =
-        static_cast<IndexListEntry*>(
-          ileAllocator.Allocate(sizeof(IndexListEntry),
-          alignOf<IndexListEntry>()));
+          static_cast<IndexListEntry *>(ileAllocator.Allocate(
+              sizeof(IndexListEntry), alignof(IndexListEntry)));
 
       new (entry) IndexListEntry(mi, index);
 

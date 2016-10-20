@@ -133,7 +133,7 @@ struct SectionPiece {
 
   size_t InputOff;
   ssize_t OutputOff : 8 * sizeof(ssize_t) - 1;
-  uint32_t Live : 1;
+  size_t Live : 1;
 };
 static_assert(sizeof(SectionPiece) == 2 * sizeof(size_t),
               "SectionPiece is too big");

@@ -241,8 +241,16 @@ public:
   ///
   /// It can be passed a flag to get debug logging as the passes are run.
   PassManager(bool DebugLogging = false) : DebugLogging(DebugLogging) {}
-  PassManager(PassManager &&) = default;
-  PassManager &operator=(PassManager &&) = default;
+  // We have to explicitly define all the special member functions because MSVC
+  // refuses to generate them.
+  PassManager(PassManager &&Arg)
+      : Passes(std::move(Arg.Passes)),
+        DebugLogging(std::move(Arg.DebugLogging)) {}
+  PassManager &operator=(PassManager &&RHS) {
+    Passes = std::move(RHS.Passes);
+    DebugLogging = std::move(RHS.DebugLogging);
+    return *this;
+  }
 
   /// \brief Run all of the passes in this manager over the IR.
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,

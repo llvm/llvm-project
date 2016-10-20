@@ -1041,7 +1041,7 @@ private:
 
 public:
   explicit IntervalMap(Allocator &a) : height(0), rootSize(0), allocator(a) {
-    assert((uintptr_t(data.buffer) & (alignOf<RootLeaf>() - 1)) == 0 &&
+    assert((uintptr_t(data.buffer) & (alignof(RootLeaf) - 1)) == 0 &&
            "Insufficient alignment");
     new(&rootLeaf()) RootLeaf();
   }

@@ -1268,13 +1268,13 @@ namespace llvm {
     bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override;
 
     /// Use rsqrt* to speed up sqrt calculations.
-    SDValue getRsqrtEstimate(SDValue Operand, DAGCombinerInfo &DCI,
-                             unsigned &RefinementSteps,
+    SDValue getRsqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+                             int &RefinementSteps,
                              bool &UseOneConstNR) const override;
 
     /// Use rcp* to speed up fdiv calculations.
-    SDValue getRecipEstimate(SDValue Operand, DAGCombinerInfo &DCI,
-                             unsigned &RefinementSteps) const override;
+    SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+                             int &RefinementSteps) const override;
 
     /// Reassociate floating point divisions into multiply by reciprocal.
     unsigned combineRepeatedFPDivisors() const override;

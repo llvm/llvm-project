@@ -337,7 +337,7 @@ ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
     return;
   }
 
-  if (SectionTableOffset & (AlignOf<Elf_Shdr>::Alignment - 1)) {
+  if (SectionTableOffset & (alignof(Elf_Shdr) - 1)) {
     // Invalid address alignment of section headers
     EC = object_error::parse_failed;
     return;

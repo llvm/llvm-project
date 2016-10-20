@@ -450,8 +450,7 @@ void printTraceSymbol(Symbol *Sym);
 template <typename T, typename... ArgT>
 void replaceBody(Symbol *S, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(S->Body), "Body too small");
-  static_assert(llvm::AlignOf<T>::Alignment <=
-                    llvm::AlignOf<decltype(S->Body)>::Alignment,
+  static_assert(alignof(T) <= alignof(decltype(S->Body)),
                 "Body not aligned enough");
   assert(static_cast<SymbolBody *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a SymbolBody");

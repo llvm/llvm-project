@@ -78,7 +78,7 @@ class GlobalsAAResult::FunctionInfo {
       return (AlignedMap *)P;
     }
     enum { NumLowBitsAvailable = 3 };
-    static_assert(AlignOf<AlignedMap>::Alignment >= (1 << NumLowBitsAvailable),
+    static_assert(alignof(AlignedMap) >= (1 << NumLowBitsAvailable),
                   "AlignedMap insufficiently aligned to have enough low bits.");
   };
 

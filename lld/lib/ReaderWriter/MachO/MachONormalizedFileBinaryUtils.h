@@ -71,22 +71,19 @@ using llvm::sys::getSwappedBytes;
 
 template<typename T>
 static inline uint16_t read16(const T *loc, bool isBig) {
-  assert((uint64_t)loc % llvm::alignOf<T>() == 0 &&
-         "invalid pointer alignment");
+  assert((uint64_t)loc % alignof(T) == 0 && "invalid pointer alignment");
   return isBig ? read16be(loc) : read16le(loc);
 }
 
 template<typename T>
 static inline uint32_t read32(const T *loc, bool isBig) {
-  assert((uint64_t)loc % llvm::alignOf<T>() == 0 &&
-         "invalid pointer alignment");
+  assert((uint64_t)loc % alignof(T) == 0 && "invalid pointer alignment");
   return isBig ? read32be(loc) : read32le(loc);
 }
 
 template<typename T>
 static inline uint64_t read64(const T *loc, bool isBig) {
-  assert((uint64_t)loc % llvm::alignOf<T>() == 0 &&
-         "invalid pointer alignment");
+  assert((uint64_t)loc % alignof(T) == 0 && "invalid pointer alignment");
   return isBig ? read64be(loc) : read64le(loc);
 }
 
