@@ -145,7 +145,8 @@ namespace clang {
     /// pointer-to-member conversion, or boolean conversion.
     ImplicitConversionKind Second : 8;
 
-    /// Third - The third conversion can be a qualification conversion.
+    /// Third - The third conversion can be a qualification conversion
+    /// or a function conversion.
     ImplicitConversionKind Third : 8;
 
     /// \brief Whether this is the deprecated conversion of a
@@ -727,8 +728,9 @@ namespace clang {
     CandidateSetKind Kind;
 
     unsigned NumInlineSequences;
-    llvm::AlignedCharArray<llvm::AlignOf<ImplicitConversionSequence>::Alignment,
-                           16 * sizeof(ImplicitConversionSequence)> InlineSpace;
+    llvm::AlignedCharArray<alignof(ImplicitConversionSequence),
+                           16 * sizeof(ImplicitConversionSequence)>
+        InlineSpace;
 
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     void operator=(const OverloadCandidateSet &) = delete;

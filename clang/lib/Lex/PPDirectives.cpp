@@ -69,7 +69,7 @@ MacroInfo *Preprocessor::AllocateMacroInfo(SourceLocation L) {
 
 MacroInfo *Preprocessor::AllocateDeserializedMacroInfo(SourceLocation L,
                                                        unsigned SubModuleID) {
-  static_assert(llvm::AlignOf<MacroInfo>::Alignment >= sizeof(SubModuleID),
+  static_assert(alignof(MacroInfo) >= sizeof(SubModuleID),
                 "alignment for MacroInfo is less than the ID");
   DeserializedMacroInfoChain *MIChain =
       BP.Allocate<DeserializedMacroInfoChain>();

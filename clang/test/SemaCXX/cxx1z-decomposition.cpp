@@ -47,4 +47,10 @@ void enclosing() {
   (void) [n] {}; // expected-error {{'n' in capture list does not name a variable}}
 }
 
+void bitfield() {
+  struct { int a : 3, : 4, b : 5; } a;
+  auto &[x, y] = a;
+  auto &[p, q, r] = a; // expected-error {{decomposes into 2 elements, but 3 names were provided}}
+}
+
 // FIXME: by-value array copies

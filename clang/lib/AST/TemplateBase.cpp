@@ -530,7 +530,7 @@ const ASTTemplateArgumentListInfo *
 ASTTemplateArgumentListInfo::Create(ASTContext &C,
                                     const TemplateArgumentListInfo &List) {
   std::size_t size = totalSizeToAlloc<TemplateArgumentLoc>(List.size());
-  void *Mem = C.Allocate(size, llvm::alignOf<ASTTemplateArgumentListInfo>());
+  void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
   return new (Mem) ASTTemplateArgumentListInfo(List);
 }
 

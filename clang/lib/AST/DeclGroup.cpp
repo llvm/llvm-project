@@ -19,7 +19,7 @@ using namespace clang;
 DeclGroup* DeclGroup::Create(ASTContext &C, Decl **Decls, unsigned NumDecls) {
   assert(NumDecls > 1 && "Invalid DeclGroup");
   unsigned Size = totalSizeToAlloc<Decl *>(NumDecls);
-  void* Mem = C.Allocate(Size, llvm::AlignOf<DeclGroup>::Alignment);
+  void *Mem = C.Allocate(Size, alignof(DeclGroup));
   new (Mem) DeclGroup(NumDecls, Decls);
   return static_cast<DeclGroup*>(Mem);
 }

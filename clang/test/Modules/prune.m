@@ -5,9 +5,6 @@
 @import Module;
 #endif
 
-// We need 'touch' and 'find' for this test to work.
-// REQUIRES: shell
-
 // Clear out the module cache
 // RUN: rm -rf %t
 // Run Clang twice so we end up creating the timestamp file (the second time).
@@ -28,7 +25,7 @@
 // Set the DependsOnModule access time back more than four days.
 // This shouldn't prune anything, because the timestamp has been updated, so
 // the pruning mechanism won't fire.
-// RUN: find %t -name DependsOnModule*.pcm | xargs touch -a -t 201101010000
+// RUN: find %t -name DependsOnModule*.pcm | sed -e 's/\\/\//g' | xargs touch -a -t 201101010000
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -F %S/Inputs -fmodules-cache-path=%t -fmodules -fmodules-prune-interval=172800 -fmodules-prune-after=345600 %s -verify
 // RUN: ls %t | grep modules.timestamp
 // RUN: ls -R %t | grep ^Module.*pcm
@@ -37,7 +34,7 @@
 // Set both timestamp and DependsOnModule.pcm back beyond the cutoff.
 // This should trigger pruning, which will remove DependsOnModule but not Module.
 // RUN: touch -m -a -t 201101010000 %t/modules.timestamp 
-// RUN: find %t -name DependsOnModule*.pcm | xargs touch -a -t 201101010000
+// RUN: find %t -name DependsOnModule*.pcm | sed -e 's/\\/\//g' | xargs touch -a -t 201101010000
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -F %S/Inputs -fmodules-cache-path=%t -fmodules -fmodules-prune-interval=172800 -fmodules-prune-after=345600 %s -verify
 // RUN: ls %t | grep modules.timestamp
 // RUN: ls -R %t | grep ^Module.*pcm
