@@ -281,6 +281,9 @@ static void ReportPiece(raw_ostream &o,
       ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), FM, SM, LangOpts,
                   indent, depth);
       break;
+    case PathDiagnosticPiece::Note:
+      // FIXME: Extend the plist format to support those.
+      break;
   }
 }
 

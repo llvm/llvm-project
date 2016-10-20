@@ -180,6 +180,18 @@ public:
   const BugType& getBugType() const { return BT; }
   BugType& getBugType() { return BT; }
 
+  /// \brief True when the report has an execution path associated with it.
+  ///
+  /// A report is said to be path-sensitive if it was thrown against a
+  /// particular exploded node in the path-sensitive analysis graph.
+  /// Path-sensitive reports have their intermediate path diagnostics
+  /// auto-generated, perhaps with the help of checker-defined visitors,
+  /// and may contain extra notes.
+  /// Path-insensitive reports consist only of a single warning message
+  /// in a specific location, and perhaps extra notes.
+  /// Path-sensitive checkers are allowed to throw path-insensitive reports.
+  bool isPathSensitive() const { return ErrorNode != nullptr; }
+
   const ExplodedNode *getErrorNode() const { return ErrorNode; }
 
   StringRef getDescription() const { return Description; }
@@ -256,13 +268,23 @@ public:
   /// the extra note should appear.
   void addNote(StringRef Msg, const PathDiagnosticLocation &Pos,
                ArrayRef<SourceRange> Ranges) {
-    PathDiagnosticNotePiece *P =
-        new PathDiagnosticNotePiece(Pos, Msg);
+    PathDiagnosticNotePiece *P = new PathDiagnosticNotePiece(Pos, Msg);
 
     for (const auto &R : Ranges)
       P->addRange(R);
 
     Notes.push_back(P);
+  }
+
+  // FIXME: Instead of making an override, we could have default-initialized
+  // Ranges with {}, however it crashes the MSVC 2013 compiler.
+  void addNote(StringRef Msg, const PathDiagnosticLocation &Pos) {
+    std::vector<SourceRange> Ranges;
+    addNote(Msg, Pos, Ranges);
+  }
+
+  virtual const NoteList &getNotes() {
+    return Notes;
   }
 
   /// \brief This allows for addition of meta data to the diagnostic.
