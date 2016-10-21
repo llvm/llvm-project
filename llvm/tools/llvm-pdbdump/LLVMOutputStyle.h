@@ -31,6 +31,7 @@ private:
   Error dumpStreamSummary();
   Error dumpFreePageMap();
   Error dumpBlockRanges();
+  Error dumpGlobalsStream();
   Error dumpStreamBytes();
   Error dumpStreamBlocks();
   Error dumpInfoStream();

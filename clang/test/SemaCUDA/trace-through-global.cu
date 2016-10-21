@@ -6,8 +6,7 @@
 #include "Inputs/cuda.h"
 
 __device__ void device_fn(int) {}
-// expected-note@-1 {{declared here}}
-// expected-note@-2 {{declared here}}
+// expected-note@-1 2 {{declared here}}
 
 inline __host__ __device__ int hd1() {
   device_fn(0);  // expected-error {{reference to __device__ function}}
@@ -45,6 +44,5 @@ void launch_kernel() {
 
 void host_fn() {
   launch_kernel<int>();
-  // expected-note@-1 {{called by 'host_fn'}}
-  // expected-note@-2 {{called by 'host_fn'}}
+  // expected-note@-1 2 {{called by 'host_fn'}}
 }

@@ -35,10 +35,7 @@ define i8 @negate_zero_or_minsigned_nsw(i8 %x) {
 define <4 x i32> @negate_zero_or_minsigned_nsw_vec(<4 x i32> %x) {
 ; CHECK-LABEL: negate_zero_or_minsigned_nsw_vec:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pslld $31, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    psubd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %signbit = shl <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>

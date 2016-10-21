@@ -10124,9 +10124,6 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl,
     // member.
     if (Var->isConstexpr() && !Var->isThisDeclarationADefinition() &&
         !Var->isThisDeclarationADemotedDefinition()) {
-      assert((!Var->isThisDeclarationADemotedDefinition() ||
-              getLangOpts().Modules) &&
-             "Demoting decls is only in the contest of modules!");
       if (Var->isStaticDataMember()) {
         // C++1z removes the relevant rule; the in-class declaration is always
         // a definition there.

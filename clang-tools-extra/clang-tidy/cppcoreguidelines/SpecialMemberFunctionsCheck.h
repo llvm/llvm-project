@@ -31,7 +31,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;
 
-  enum class SpecialMemberFunctionKind {
+  enum class SpecialMemberFunctionKind : uint8_t {
     Destructor,
     CopyConstructor,
     CopyAssignment,
@@ -43,7 +43,7 @@ public:
 
   using ClassDefiningSpecialMembersMap =
       llvm::DenseMap<ClassDefId,
-                     llvm::SmallSetVector<SpecialMemberFunctionKind, 5>>;
+                     llvm::SmallVector<SpecialMemberFunctionKind, 5>>;
 
 private:
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;

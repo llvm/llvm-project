@@ -9250,17 +9250,17 @@ public:
                  std::vector<PartialDiagnosticAt>>
       CUDADeferredDiags;
 
-  /// FunctionDecls plus raw encodings of SourceLocations for which
-  /// CheckCUDACall has emitted a (maybe deferred) "bad call" diagnostic.  We
-  /// use this to avoid emitting the same deferred diag twice.
-  llvm::DenseSet<std::pair<CanonicalDeclPtr<FunctionDecl>, unsigned>>
-      LocsWithCUDACallDiags;
-
-  /// A pair of a canonical FunctionDecl and a SourceLocation.
+  /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
+  /// key in a hashtable, both the FD and location are hashed.
   struct FunctionDeclAndLoc {
     CanonicalDeclPtr<FunctionDecl> FD;
     SourceLocation Loc;
   };
+
+  /// FunctionDecls and SourceLocations for which CheckCUDACall has emitted a
+  /// (maybe deferred) "bad call" diagnostic.  We use this to avoid emitting the
+  /// same deferred diag twice.
+  llvm::DenseSet<FunctionDeclAndLoc> LocsWithCUDACallDiags;
 
   /// An inverse call graph, mapping known-emitted functions to one of their
   /// known-emitted callers (plus the location of the call).
@@ -10034,5 +10034,32 @@ struct LateParsedTemplate {
 };
 
 } // end namespace clang
+
+namespace llvm {
+// Hash a FunctionDeclAndLoc by looking at both its FunctionDecl and its
+// SourceLocation.
+template <> struct DenseMapInfo<clang::Sema::FunctionDeclAndLoc> {
+  using FunctionDeclAndLoc = clang::Sema::FunctionDeclAndLoc;
+  using FDBaseInfo = DenseMapInfo<clang::CanonicalDeclPtr<clang::FunctionDecl>>;
+
+  static FunctionDeclAndLoc getEmptyKey() {
+    return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
+  }
+
+  static FunctionDeclAndLoc getTombstoneKey() {
+    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
+  }
+
+  static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
+    return hash_combine(FDBaseInfo::getHashValue(FDL.FD),
+                        FDL.Loc.getRawEncoding());
+  }
+
+  static bool isEqual(const FunctionDeclAndLoc &LHS,
+                      const FunctionDeclAndLoc &RHS) {
+    return LHS.FD == RHS.FD && LHS.Loc == RHS.Loc;
+  }
+};
+} // namespace llvm
 
 #endif

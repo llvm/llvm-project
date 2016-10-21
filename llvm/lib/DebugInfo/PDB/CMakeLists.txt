@@ -31,6 +31,8 @@ add_pdb_impl_folder(Raw
   Raw/DbiStream.cpp
   Raw/DbiStreamBuilder.cpp
   Raw/EnumTables.cpp
+  Raw/GlobalsStream.cpp
+  Raw/GSI.cpp
   Raw/Hash.cpp
   Raw/InfoStream.cpp
   Raw/InfoStreamBuilder.cpp
