@@ -370,13 +370,8 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
         info.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
       WINLOG_IFANY(WINDOWS_LOG_EVENT | WINDOWS_LOG_EXCEPTION |
                        WINDOWS_LOG_PROCESS,
-<<<<<<< HEAD
-                   "Breakpoint exception is cue to detach from process 0x%x",
-                   m_pid_to_detach);
-=======
                    "Breakpoint exception is cue to detach from process 0x%lx",
                    m_pid_to_detach.load());
->>>>>>> origin/upstream
       ::DebugActiveProcessStop(m_pid_to_detach);
       m_detached = true;
     }
