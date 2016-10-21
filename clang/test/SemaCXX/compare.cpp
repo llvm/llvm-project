@@ -201,10 +201,9 @@ int test1(int i) {
 
 enum E { e };
 void test2(int i, void *vp) {
-  if (&i == vp) { } // ok
   if (test1 == vp) { } // expected-warning{{equality comparison between function pointer and void pointer}}
   if (test1 == e) { } // expected-error{{comparison between pointer and integer}}
-  if (vp < 0) { } // expected-error {{comparison between pointer and zero}}
+  if (vp < 0) { }
   if (test1 < e) { } // expected-error{{comparison between pointer and integer}}
 }
 

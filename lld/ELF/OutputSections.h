@@ -217,6 +217,7 @@ private:
   typedef std::vector<MipsGotEntry> MipsGotEntries;
   llvm::DenseMap<MipsGotEntry, size_t> MipsGotMap;
   MipsGotEntries MipsLocal;
+  MipsGotEntries MipsLocal32;
   MipsGotEntries MipsGlobal;
 
   // Write MIPS-specific parts of the GOT.
