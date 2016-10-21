@@ -465,12 +465,13 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
     break;
     // Write a 31bit signed offset
   case ELF::R_ARM_PREL31:
-    *TargetPtr &= 0x80000000;
-    *TargetPtr |= (Value - FinalAddress) & ~0x80000000;
+    support::ulittle32_t::ref{TargetPtr} =
+        (support::ulittle32_t::ref{TargetPtr} & 0x80000000) |
+        ((Value - FinalAddress) & ~0x80000000);
     break;
   case ELF::R_ARM_TARGET1:
   case ELF::R_ARM_ABS32:
-    *TargetPtr = Value;
+    support::ulittle32_t::ref{TargetPtr} = Value;
     break;
     // Write first 16 bit of 32 bit value to the mov instruction.
     // Last 4 bit should be shifted.
@@ -480,9 +481,9 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
       Value = Value & 0xFFFF;
     else if (Type == ELF::R_ARM_MOVT_ABS)
       Value = (Value >> 16) & 0xFFFF;
-    *TargetPtr &= ~0x000F0FFF;
-    *TargetPtr |= Value & 0xFFF;
-    *TargetPtr |= ((Value >> 12) & 0xF) << 16;
+    support::ulittle32_t::ref{TargetPtr} =
+        (support::ulittle32_t::ref{TargetPtr} & ~0x000F0FFF) | (Value & 0xFFF) |
+        (((Value >> 12) & 0xF) << 16);
     break;
     // Write 24 bit relative value to the branch instruction.
   case ELF::R_ARM_PC24: // Fall through.
@@ -490,9 +491,9 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
   case ELF::R_ARM_JUMP24:
     int32_t RelValue = static_cast<int32_t>(Value - FinalAddress - 8);
     RelValue = (RelValue & 0x03FFFFFC) >> 2;
-    assert((*TargetPtr & 0xFFFFFF) == 0xFFFFFE);
-    *TargetPtr &= 0xFF000000;
-    *TargetPtr |= RelValue;
+    assert((support::ulittle32_t::ref{TargetPtr} & 0xFFFFFF) == 0xFFFFFE);
+    support::ulittle32_t::ref{TargetPtr} =
+        (support::ulittle32_t::ref{TargetPtr} & 0xFF000000) | RelValue;
     break;
   }
 }

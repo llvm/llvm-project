@@ -1,7 +1,7 @@
 // General blacklist usage.
 
 // PR12920
-// REQUIRES: clang-driver, shell
+// REQUIRES: clang-driver
 
 // Make sure we don't match the -NOT lines with the linker invocation.
 // Delimiters match the start of the cc1 and the start of the linker lines

@@ -7,7 +7,7 @@
 // expected-no-diagnostics
 // REQUIRES: x86-registered-target
 // It doesn't pass on win32.
-// REQUIRES: shell
+// XFAIL: win32
 #ifndef ARRAY
 #ifndef HEADER
 #define HEADER
