@@ -215,6 +215,8 @@ cl::opt<bool> DumpLineInfo("line-info",
                            cl::cat(FileOptions), cl::sub(RawSubcommand));
 
 // SYMBOL OPTIONS
+cl::opt<bool> DumpGlobals("globals", cl::desc("dump globals stream data"),
+                          cl::cat(SymbolOptions), cl::sub(RawSubcommand));
 cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
                              cl::cat(SymbolOptions), cl::sub(RawSubcommand));
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
@@ -559,6 +561,7 @@ int main(int argc_, const char *argv_[]) {
     opts::raw::DumpModules = true;
     opts::raw::DumpModuleFiles = true;
     opts::raw::DumpModuleSyms = true;
+    opts::raw::DumpGlobals = true;
     opts::raw::DumpPublics = true;
     opts::raw::DumpSectionHeaders = true;
     opts::raw::DumpStreamSummary = true;

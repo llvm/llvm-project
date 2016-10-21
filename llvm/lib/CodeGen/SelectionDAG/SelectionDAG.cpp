@@ -2144,23 +2144,21 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
     break;
   case ISD::SHL:
-    // (shl X, C1) & C2 == 0   iff   (X & C2 >>u C1) == 0
-    if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      unsigned ShAmt = SA->getZExtValue();
-
+    if (ConstantSDNode *SA = isConstOrConstSplat(Op.getOperand(1))) {
       // If the shift count is an invalid immediate, don't do anything.
-      if (ShAmt >= BitWidth)
+      APInt ShAmt = SA->getAPIntValue();
+      if (ShAmt.uge(BitWidth))
         break;
 
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-      KnownZero <<= ShAmt;
-      KnownOne  <<= ShAmt;
+      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      KnownZero = KnownZero << ShAmt;
+      KnownOne = KnownOne << ShAmt;
       // low bits known zero.
-      KnownZero |= APInt::getLowBitsSet(BitWidth, ShAmt);
+      KnownZero |= APInt::getLowBitsSet(BitWidth, ShAmt.getZExtValue());
     }
     break;
   case ISD::SRL:
-    // (ushr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
+    // FIXME: Reuse isConstOrConstSplat + APInt from above.
     if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       unsigned ShAmt = SA->getZExtValue();
 
@@ -2177,6 +2175,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     }
     break;
   case ISD::SRA:
+    // FIXME: Reuse isConstOrConstSplat + APInt from above.
     if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       unsigned ShAmt = SA->getZExtValue();
 

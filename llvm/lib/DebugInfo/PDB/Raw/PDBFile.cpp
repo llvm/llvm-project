@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
@@ -215,6 +216,22 @@ Error PDBFile::parseStreamData() {
 
 llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
   return ContainerLayout.DirectoryBlocks;
+}
+
+Expected<GlobalsStream &> PDBFile::getPDBGlobalsStream() {
+  if (!Globals) {
+    auto DbiS = getPDBDbiStream();
+    if (!DbiS)
+      return DbiS.takeError();
+
+    auto GlobalS = MappedBlockStream::createIndexedStream(
+        ContainerLayout, *Buffer, DbiS->getGlobalSymbolStreamIndex());
+    auto TempGlobals = llvm::make_unique<GlobalsStream>(std::move(GlobalS));
+    if (auto EC = TempGlobals->reload())
+      return std::move(EC);
+    Globals = std::move(TempGlobals);
+  }
+  return *Globals;
 }
 
 Expected<InfoStream &> PDBFile::getPDBInfoStream() {

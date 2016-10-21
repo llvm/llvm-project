@@ -7,20 +7,13 @@
 #include "Inputs/cuda.h"
 
 extern "C" void host_fn() {}
-// expected-note@-1 {{'host_fn' declared here}}
-// expected-note@-2 {{'host_fn' declared here}}
-// expected-note@-3 {{'host_fn' declared here}}
-// expected-note@-4 {{'host_fn' declared here}}
-// expected-note@-5 {{'host_fn' declared here}}
-// expected-note@-6 {{'host_fn' declared here}}
-// expected-note@-7 {{'host_fn' declared here}}
+// expected-note@-1 7 {{'host_fn' declared here}}
 
 struct Dummy {};
 
 struct S {
   S() {}
-  // expected-note@-1 {{'S' declared here}}
-  // expected-note@-2 {{'S' declared here}}
+  // expected-note@-1 2 {{'S' declared here}}
   ~S() { host_fn(); }
   // expected-note@-1 {{'~S' declared here}}
   int x;

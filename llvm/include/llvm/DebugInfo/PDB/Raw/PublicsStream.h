@@ -22,10 +22,10 @@
 namespace llvm {
 namespace pdb {
 class DbiStream;
+struct GSIHashHeader;
 class PDBFile;
 
 class PublicsStream {
-  struct GSIHashHeader;
   struct HeaderInfo;
 
 public:

@@ -774,7 +774,7 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   // like this is unfortunate, but because we must continue parsing as normal
   // after encountering a deferred error, it's otherwise very tricky for us to
   // ensure that we only emit this deferred error once.
-  if (!LocsWithCUDACallDiags.insert({Caller, Loc.getRawEncoding()}).second)
+  if (!LocsWithCUDACallDiags.insert({Caller, Loc}).second)
     return true;
 
   CUDADiagBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller, *this)

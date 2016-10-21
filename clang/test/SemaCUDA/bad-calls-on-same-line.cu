@@ -28,8 +28,7 @@ struct Selector<double> {
 template <typename T>
 inline __host__ __device__ void hd() {
   Selector<T>().f();
-  // expected-error@-1 {{reference to __device__ function}}
-  // expected-error@-2 {{reference to __device__ function}}
+  // expected-error@-1 2 {{reference to __device__ function}}
 }
 
 void host_fn() {

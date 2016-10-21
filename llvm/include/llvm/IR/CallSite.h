@@ -623,7 +623,29 @@ public:
   }
 
 private:
+  friend struct DenseMapInfo<CallSite>;
   User::op_iterator getCallee() const;
+};
+
+template <> struct DenseMapInfo<CallSite> {
+  using BaseInfo = llvm::DenseMapInfo<decltype(CallSite::I)>;
+
+  static CallSite getEmptyKey() {
+    CallSite CS;
+    CS.I = BaseInfo::getEmptyKey();
+    return CS;
+  }
+  static CallSite getTombstoneKey() {
+    CallSite CS;
+    CS.I = BaseInfo::getTombstoneKey();
+    return CS;
+  }
+  static unsigned getHashValue(const CallSite &CS) {
+    return BaseInfo::getHashValue(CS.I);
+  }
+  static bool isEqual(const CallSite &LHS, const CallSite &RHS) {
+    return LHS == RHS;
+  }
 };
 
 /// ImmutableCallSite - establish a view to a call site for examination

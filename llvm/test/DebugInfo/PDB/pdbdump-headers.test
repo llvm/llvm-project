@@ -1,5 +1,5 @@
 ; RUN: llvm-pdbdump raw -headers -tpi-records -tpi-record-bytes -module-syms \
-; RUN:              -sym-record-bytes -publics -module-files \
+; RUN:              -sym-record-bytes -globals -publics -module-files \
 ; RUN:              -stream-summary -stream-blocks -ipi-records -ipi-record-bytes \
 ; RUN:              -section-contribs -section-map -section-headers -line-info \
 ; RUN:              -tpi-hash -fpo -page-stats %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
@@ -794,7 +794,12 @@
 ; EMPTY-NEXT:     SecByteLength: 4294967295
 ; EMPTY-NEXT:   }
 ; EMPTY-NEXT: ]
-; EMPTY:      Publics Stream {
+; EMPTY-NEXT: Globals Stream {
+; EMPTY-NEXT:   Stream number: 6
+; EMPTY-NEXT:   Number of buckets: 2
+; EMPTY-NEXT:   Hash Buckets: [0, 12]
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Publics Stream {
 ; EMPTY-NEXT:   Stream number: 7
 ; EMPTY-NEXT:   SymHash: 556
 ; EMPTY-NEXT:   AddrMap: 8
@@ -1552,6 +1557,11 @@
 ; ALL:     SecByteLength: 4294967295
 ; ALL:   }
 ; ALL: ]
+; ALL: Globals Stream {
+; ALL:   Stream number: 6
+; ALL:   Number of buckets: 2
+; ALL:   Hash Buckets: [0, 12]
+; ALL: }
 ; ALL: Publics Stream {
 ; ALL:   Stream number: 7
 ; ALL:   SymHash: 556

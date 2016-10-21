@@ -502,7 +502,7 @@ static void dumpArchive(const Archive *Arc) {
         OS.flush();
         reportError(Arc->getFileName(), Buf);
       }
-      ChildOrErr.takeError();
+      consumeError(ChildOrErr.takeError());
       continue;
     }
 
