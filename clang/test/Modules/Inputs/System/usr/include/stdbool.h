@@ -1,1 +1,1 @@
-// Testing hack: does not define bool/true/false.
+#include_next <stdbool.h>

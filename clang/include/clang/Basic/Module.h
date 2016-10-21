@@ -201,6 +201,10 @@ public:
   /// built.
   unsigned ConfigMacrosExhaustive : 1;
 
+  /// \brief Whether files in this module can only include non-modular headers
+  /// and headers from used modules.
+  unsigned NoUndeclaredIncludes : 1;
+
   /// \brief Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {

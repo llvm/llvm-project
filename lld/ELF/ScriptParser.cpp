@@ -138,16 +138,11 @@ StringRef ScriptParserBase::peek() {
 }
 
 bool ScriptParserBase::consume(StringRef Tok) {
-  if (Error)
-    return false;
-  if (atEOF()) {
-    setError("unexpected EOF");
-    return false;
+  if (peek() == Tok) {
+    skip();
+    return true;
   }
-  if (Tokens[Pos] != Tok)
-    return false;
-  ++Pos;
-  return true;
+  return false;
 }
 
 void ScriptParserBase::skip() { (void)next(); }

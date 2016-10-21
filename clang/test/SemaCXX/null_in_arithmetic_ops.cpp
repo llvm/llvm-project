@@ -71,8 +71,8 @@ void f() {
   b = a == NULL || a != NULL; // expected-warning 2{{comparison between NULL and non-pointer ('int' and NULL)}}
   b = NULL == a || NULL != a; // expected-warning 2{{comparison between NULL and non-pointer (NULL and 'int')}}
 
-  b = &a < NULL || NULL < &a || &a > NULL || NULL > &a;
-  b = &a <= NULL || NULL <= &a || &a >= NULL || NULL >= &a;
+  b = &a < NULL || NULL < &a || &a > NULL || NULL > &a; // expected-error 4{{ordered comparison between pointer and zero}}
+  b = &a <= NULL || NULL <= &a || &a >= NULL || NULL >= &a; // expected-error 4{{ordered comparison between pointer and zero}}
   b = &a == NULL || NULL == &a || &a != NULL || NULL != &a;
 
   b = 0 == a;

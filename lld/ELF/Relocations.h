@@ -19,6 +19,9 @@ class InputSectionData;
 template <class ELFT> class InputSection;
 template <class ELFT> class InputSectionBase;
 
+// List of target-independent relocation types. Relocations read
+// from files are converted to these types so that the main code
+// doesn't have to know about architecture-specific details.
 enum RelExpr {
   R_ABS,
   R_GOT,
@@ -65,9 +68,10 @@ enum RelExpr {
   R_TLSGD,
   R_TLSGD_PC,
   R_TLSLD,
-  R_TLSLD_PC
+  R_TLSLD_PC,
 };
 
+// Architecture-neutral representation of relocation.
 struct Relocation {
   RelExpr Expr;
   uint32_t Type;
