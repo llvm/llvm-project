@@ -1631,7 +1631,6 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
     switch (MI.getOpcode()) {
     default:
       break;
-
     case AArch64::LDURQi:
     case AArch64::STURQi:
     case AArch64::LDRQui:

@@ -4463,8 +4463,8 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
 
   // If the input is a buildvector just emit a smaller one.
   if (Vec.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getNode(ISD::BUILD_VECTOR,
-         dl, ResultVT, makeArrayRef(Vec->op_begin() + IdxVal, ElemsPerChunk));
+    return DAG.getNode(ISD::BUILD_VECTOR, dl, ResultVT,
+                       makeArrayRef(Vec->op_begin() + IdxVal, ElemsPerChunk));
 
   SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, dl);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResultVT, Vec, VecIdx);
@@ -19419,7 +19419,7 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
   SmallVector<SDValue, 64> LUTVec;
   for (int i = 0; i < NumBytes; ++i)
     LUTVec.push_back(DAG.getConstant(LUT[i % 16], DL, MVT::i8));
-  SDValue InRegLUT = DAG.getNode(ISD::BUILD_VECTOR, DL, CurrVT, LUTVec);
+  SDValue InRegLUT = DAG.getBuildVector(CurrVT, DL, LUTVec);
 
   // Begin by bitcasting the input to byte vector, then split those bytes
   // into lo/hi nibbles and use the PSHUFB LUT to perform CLTZ on each of them.
@@ -25528,16 +25528,17 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       any_of(Mask, [](int M) { return M == SM_SentinelZero; });
 
   if (is128BitLaneCrossingShuffleMask(MaskVT, Mask)) {
-    // If we have a single input lane-crossing shuffle with 32-bit scalars then
-    // lower to VPERMD/VPERMPS.
+    // If we have a single input lane-crossing shuffle then lower to VPERMV.
     if (UnaryShuffle && (Depth >= 3 || HasVariableMask) && !MaskContainsZeros &&
         Subtarget.hasAVX2() && (MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) {
-      SDValue VPermIdx[8];
-      for (int i = 0; i < 8; ++i)
-        VPermIdx[i] = Mask[i] < 0 ? DAG.getUNDEF(MVT::i32)
-                                  : DAG.getConstant(Mask[i], DL, MVT::i32);
+      MVT VPermMaskSVT = MVT::getIntegerVT(MaskEltSizeInBits);
+      SmallVector<SDValue, 8> VPermIdx;
+      for (int M : Mask)
+        VPermIdx.push_back(M < 0 ? DAG.getUNDEF(VPermMaskSVT)
+                                 : DAG.getConstant(M, DL, VPermMaskSVT));
 
-      SDValue VPermMask = DAG.getBuildVector(MVT::v8i32, DL, VPermIdx);
+      MVT VPermMaskVT = MVT::getVectorVT(VPermMaskSVT, NumMaskElts);
+      SDValue VPermMask = DAG.getBuildVector(VPermMaskVT, DL, VPermIdx);
       DCI.AddToWorklist(VPermMask.getNode());
       Res = DAG.getBitcast(MaskVT, V1);
       DCI.AddToWorklist(Res.getNode());
@@ -31778,7 +31779,7 @@ static SDValue combineVZext(SDNode *N, SelectionDAG &DAG,
       Cst = Cst.zextOrTrunc(SVT.getSizeInBits());
       Vals.push_back(DAG.getConstant(Cst, DL, SVT));
     }
-    return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Vals);
+    return DAG.getBuildVector(VT, DL, Vals);
   }
 
   // (vzext (bitcast (vzext (x)) -> (vzext x)

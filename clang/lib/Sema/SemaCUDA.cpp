@@ -439,7 +439,7 @@ bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
 // ForceCUDAHostDeviceDepth > 0 (corresponding to code within a
 //   #pragma clang force_cuda_host_device_begin/end
 // pair).
-void Sema::maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *NewD,
+void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
                                        const LookupResult &Previous) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
 

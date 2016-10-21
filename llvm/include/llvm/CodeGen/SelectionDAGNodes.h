@@ -1123,7 +1123,9 @@ public:
   /// Return the synchronization scope for this memory operation.
   SynchronizationScope getSynchScope() const { return MMO->getSynchScope(); }
 
-  /// Return the atomic ordering requirements for this memory operation.
+  /// Return the atomic ordering requirements for this memory operation. For
+  /// cmpxchg atomic operations, return the atomic ordering requirements when
+  /// store occurs.
   AtomicOrdering getOrdering() const { return MMO->getOrdering(); }
 
   /// Return the type of the in-memory value.
@@ -1202,13 +1204,6 @@ public:
     unsigned Op = getOpcode();
     return Op == ISD::ATOMIC_CMP_SWAP ||
            Op == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS;
-  }
-
-  /// For cmpxchg atomic operations, return the atomic ordering requirements
-  /// when store occurs.
-  AtomicOrdering getSuccessOrdering() const {
-    assert(isCompareAndSwap() && "Must be cmpxchg operation");
-    return MMO->getSuccessOrdering();
   }
 
   /// For cmpxchg atomic operations, return the atomic ordering requirements

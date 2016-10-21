@@ -668,7 +668,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   bool IsVoid = FuncTy->getReturnType()->isVoidTy();
   unsigned ResultReg;
   if (IsVoid) {
-    Opc = IsDirect ? WebAssembly::CALL_VOID : WebAssembly::CALL_INDIRECT_VOID;
+    Opc = IsDirect ? WebAssembly::CALL_VOID : WebAssembly::PCALL_INDIRECT_VOID;
   } else {
     if (!Subtarget->hasSIMD128() && Call->getType()->isVectorTy())
       return false;
@@ -679,39 +679,39 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     case MVT::i8:
     case MVT::i16:
     case MVT::i32:
-      Opc = IsDirect ? WebAssembly::CALL_I32 : WebAssembly::CALL_INDIRECT_I32;
+      Opc = IsDirect ? WebAssembly::CALL_I32 : WebAssembly::PCALL_INDIRECT_I32;
       ResultReg = createResultReg(&WebAssembly::I32RegClass);
       break;
     case MVT::i64:
-      Opc = IsDirect ? WebAssembly::CALL_I64 : WebAssembly::CALL_INDIRECT_I64;
+      Opc = IsDirect ? WebAssembly::CALL_I64 : WebAssembly::PCALL_INDIRECT_I64;
       ResultReg = createResultReg(&WebAssembly::I64RegClass);
       break;
     case MVT::f32:
-      Opc = IsDirect ? WebAssembly::CALL_F32 : WebAssembly::CALL_INDIRECT_F32;
+      Opc = IsDirect ? WebAssembly::CALL_F32 : WebAssembly::PCALL_INDIRECT_F32;
       ResultReg = createResultReg(&WebAssembly::F32RegClass);
       break;
     case MVT::f64:
-      Opc = IsDirect ? WebAssembly::CALL_F64 : WebAssembly::CALL_INDIRECT_F64;
+      Opc = IsDirect ? WebAssembly::CALL_F64 : WebAssembly::PCALL_INDIRECT_F64;
       ResultReg = createResultReg(&WebAssembly::F64RegClass);
       break;
     case MVT::v16i8:
       Opc =
-          IsDirect ? WebAssembly::CALL_v16i8 : WebAssembly::CALL_INDIRECT_v16i8;
+          IsDirect ? WebAssembly::CALL_v16i8 : WebAssembly::PCALL_INDIRECT_v16i8;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
     case MVT::v8i16:
       Opc =
-          IsDirect ? WebAssembly::CALL_v8i16 : WebAssembly::CALL_INDIRECT_v8i16;
+          IsDirect ? WebAssembly::CALL_v8i16 : WebAssembly::PCALL_INDIRECT_v8i16;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
     case MVT::v4i32:
       Opc =
-          IsDirect ? WebAssembly::CALL_v4i32 : WebAssembly::CALL_INDIRECT_v4i32;
+          IsDirect ? WebAssembly::CALL_v4i32 : WebAssembly::PCALL_INDIRECT_v4i32;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
     case MVT::v4f32:
       Opc =
-          IsDirect ? WebAssembly::CALL_v4f32 : WebAssembly::CALL_INDIRECT_v4f32;
+          IsDirect ? WebAssembly::CALL_v4f32 : WebAssembly::PCALL_INDIRECT_v4f32;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
     default:

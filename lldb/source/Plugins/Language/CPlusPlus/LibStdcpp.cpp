@@ -63,21 +63,6 @@ private:
   lldb::ValueObjectSP m_pair_sp;
 };
 
-class LibStdcppSharedPtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
-public:
-  explicit LibStdcppSharedPtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  size_t CalculateNumChildren() override;
-
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-
-  bool Update() override;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
-};
-
 } // end of anonymous namespace
 
 LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd(
@@ -350,81 +335,4 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
     }
   }
   return false;
-}
-
-LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
-    lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp) {
-  if (valobj_sp)
-    Update();
-}
-
-size_t LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() { return 1; }
-
-lldb::ValueObjectSP
-LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
-  ValueObjectSP valobj_sp = m_backend.GetSP();
-  if (!valobj_sp)
-    return lldb::ValueObjectSP();
-
-  if (idx == 0)
-    return valobj_sp->GetChildMemberWithName(ConstString("_M_ptr"), true);
-  else
-    return lldb::ValueObjectSP();
-}
-
-bool LibStdcppSharedPtrSyntheticFrontEnd::Update() { return false; }
-
-bool LibStdcppSharedPtrSyntheticFrontEnd::MightHaveChildren() { return true; }
-
-size_t LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
-  if (name == ConstString("_M_ptr"))
-    return 0;
-  return UINT32_MAX;
-}
-
-SyntheticChildrenFrontEnd *
-lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator(
-    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  return (valobj_sp ? new LibStdcppSharedPtrSyntheticFrontEnd(valobj_sp)
-                    : nullptr);
-}
-
-bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
-  if (!valobj_sp)
-    return false;
-
-  ValueObjectSP ptr_sp(
-      valobj_sp->GetChildMemberWithName(ConstString("_M_ptr"), true));
-  if (!ptr_sp)
-    return false;
-
-  ValueObjectSP usecount_sp(valobj_sp->GetChildAtNamePath(
-      {ConstString("_M_refcount"), ConstString("_M_pi"),
-       ConstString("_M_use_count")}));
-  if (!usecount_sp)
-    return false;
-
-  if (ptr_sp->GetValueAsUnsigned(0) == 0 ||
-      usecount_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
-    return true;
-  }
-
-  Error error;
-  ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-  if (pointee_sp && error.Success()) {
-    if (pointee_sp->DumpPrintableRepresentation(
-            stream, ValueObject::eValueObjectRepresentationStyleSummary,
-            lldb::eFormatInvalid,
-            ValueObject::ePrintableRepresentationSpecialCasesDisable, false)) {
-      return true;
-    }
-  }
-
-  stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
-  return true;
 }

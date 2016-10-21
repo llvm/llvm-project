@@ -48,6 +48,7 @@ FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
 FunctionPass *createWebAssemblyPeephole();
+FunctionPass *createWebAssemblyCallIndirectFixup();
 
 } // end namespace llvm
 
