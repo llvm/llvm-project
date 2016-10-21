@@ -2978,7 +2978,7 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
   }
 
   auto &F = getFunction();
-  MapVector<const Value *, SmallPtrSet<MemoryAccess *, 8>> ReadOnlyPairs;
+  MapVector<const Value *, SmallSetVector<MemoryAccess *, 8>> ReadOnlyPairs;
   SmallPtrSet<const Value *, 4> NonReadOnlyBaseValues;
   for (AliasGroupTy &AG : AliasGroups) {
     NonReadOnlyBaseValues.clear();

@@ -24,11 +24,13 @@ configure_lit_site_cfg(
   )
 
 set(LLDB_TEST_DEPS
-  FileCheck
   LLDBUnitTests
   lldb
-  not
   )
+
+if(NOT LLDB_BUILT_STANDALONE)
+  list(APPEND LLDB_TEST_DEPS FileCheck not)
+endif()
   
 # lldb-server is not built on every platform.
 if (TARGET lldb-server)

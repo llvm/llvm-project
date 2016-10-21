@@ -415,25 +415,8 @@ private:
     BlockInfo()
         : HasBackEdges(false), UnprocessedSuccessors(0),
           ProcessedPredecessors(0) {}
-    BlockInfo(BlockInfo &&RHS)
-        : ExitMap(std::move(RHS.ExitMap)),
-          HasBackEdges(RHS.HasBackEdges),
-          UnprocessedSuccessors(RHS.UnprocessedSuccessors),
-          ProcessedPredecessors(RHS.ProcessedPredecessors) {}
-
-    BlockInfo &operator=(BlockInfo &&RHS) {
-      if (this != &RHS) {
-        ExitMap = std::move(RHS.ExitMap);
-        HasBackEdges = RHS.HasBackEdges;
-        UnprocessedSuccessors = RHS.UnprocessedSuccessors;
-        ProcessedPredecessors = RHS.ProcessedPredecessors;
-      }
-      return *this;
-    }
-
-  private:
-    BlockInfo(const BlockInfo &) = delete;
-    void operator=(const BlockInfo &) = delete;
+    BlockInfo(BlockInfo &&) = default;
+    BlockInfo &operator=(BlockInfo &&) = default;
   };
 
   // We implement the CFGVisitor API
