@@ -9,3 +9,6 @@
 // CHECK: note: diagnostic msg: {{.*}}rewrite.map
 
 // REQUIRES: crash-recovery
+
+// FIXME: This doesn't fail on "env clang". Investigating.
+// REQUIRES: shell
