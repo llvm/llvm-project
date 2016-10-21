@@ -781,44 +781,12 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 // Wraps a binary blob with an ELF header and footer
 // so that we can link it as a regular ELF file.
 template <class ELFT> InputFile *BinaryFile::createELF() {
-  typedef typename ELFT::uint uintX_t;
-  typedef typename ELFT::Sym Elf_Sym;
+  ArrayRef<uint8_t> Blob((uint8_t *)MB.getBufferStart(), MB.getBufferSize());
+  StringRef Filename = MB.getBufferIdentifier();
+  Buffer = wrapBinaryWithElfHeader<ELFT>(Blob, Filename);
 
-  // Fill the ELF file header.
-  ELFCreator<ELFT> File(ET_REL, Config->EMachine);
-  auto DataSec = File.addSection(".data");
-  DataSec.Header->sh_flags = SHF_ALLOC;
-  DataSec.Header->sh_size = MB.getBufferSize();
-  DataSec.Header->sh_type = SHT_PROGBITS;
-  DataSec.Header->sh_addralign = 8;
-
-  // Replace non-alphanumeric characters with '_'.
-  std::string Filepath = MB.getBufferIdentifier();
-  std::transform(Filepath.begin(), Filepath.end(), Filepath.begin(),
-                 [](char C) { return isalnum(C) ? C : '_'; });
-
-  // Add _start, _end and _size symbols.
-  auto AddSym = [&](std::string Name, uintX_t SecIdx, uintX_t Value) {
-    Elf_Sym *Sym = File.addSymbol("_binary_" + Filepath + Name);
-    Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
-    Sym->st_shndx = SecIdx;
-    Sym->st_value = Value;
-  };
-  AddSym("_start", DataSec.Index, 0);
-  AddSym("_end", DataSec.Index, MB.getBufferSize());
-  AddSym("_size", SHN_ABS, MB.getBufferSize());
-
-  // Fix the ELF file layout and write it down to ELFData uint8_t vector.
-  size_t Size = File.layout();
-  ELFData.resize(Size);
-  File.writeTo(ELFData.data());
-
-  // Fill .data section with actual data.
-  memcpy(ELFData.data() + DataSec.Header->sh_offset, MB.getBufferStart(),
-         MB.getBufferSize());
-
-  return createELFFile<ObjectFile>(MemoryBufferRef(
-      StringRef((char *)ELFData.data(), Size), MB.getBufferIdentifier()));
+  return createELFFile<ObjectFile>(
+      MemoryBufferRef(toStringRef(Buffer), Filename));
 }
 
 static bool isBitcode(MemoryBufferRef MB) {

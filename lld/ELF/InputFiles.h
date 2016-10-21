@@ -326,7 +326,7 @@ public:
   template <class ELFT> InputFile *createELF();
 
 private:
-  std::vector<uint8_t> ELFData;
+  std::vector<uint8_t> Buffer;
 };
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
