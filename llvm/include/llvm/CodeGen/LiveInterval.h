@@ -23,7 +23,6 @@
 
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>

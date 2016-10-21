@@ -102,13 +102,6 @@ public:
     recalculate(F);
   }
 
-  DominatorTree(DominatorTree &&Arg)
-      : Base(std::move(static_cast<Base &>(Arg))) {}
-  DominatorTree &operator=(DominatorTree &&RHS) {
-    Base::operator=(std::move(static_cast<Base &>(RHS)));
-    return *this;
-  }
-
   /// \brief Returns *false* if the other dominator tree matches this dominator
   /// tree.
   inline bool compare(const DominatorTree &Other) const {

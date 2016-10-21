@@ -4920,14 +4920,14 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   }
 
   // fold (srl (shl x, c), c) -> (and x, cst2)
-  if (N1C && N0.getOpcode() == ISD::SHL && N0.getOperand(1) == N1) {
-    unsigned BitSize = N0.getScalarValueSizeInBits();
-    if (BitSize <= 64) {
-      uint64_t ShAmt = N1C->getZExtValue() + 64 - BitSize;
-      SDLoc DL(N);
-      return DAG.getNode(ISD::AND, DL, VT, N0.getOperand(0),
-                         DAG.getConstant(~0ULL >> ShAmt, DL, VT));
-    }
+  if (N0.getOpcode() == ISD::SHL && N0.getOperand(1) == N1 &&
+      isConstantOrConstantVector(N1, /* NoOpaques */ true)) {
+    SDLoc DL(N);
+    APInt AllBits = APInt::getAllOnesValue(N0.getScalarValueSizeInBits());
+    SDValue Mask =
+        DAG.getNode(ISD::SRL, DL, VT, DAG.getConstant(AllBits, DL, VT), N1);
+    AddToWorklist(Mask.getNode());
+    return DAG.getNode(ISD::AND, DL, VT, N0.getOperand(0), Mask);
   }
 
   // fold (srl (anyextend x), c) -> (and (anyextend (srl x, c)), mask)
@@ -14862,11 +14862,21 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
-  // Expose the DAG combiner to the target combiner implementations.
-  TargetLowering::DAGCombinerInfo DCI(DAG, Level, false, this);
+  // TODO: Handle half and/or extended types?
+  EVT VT = Op.getValueType();
+  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
+    return SDValue();
 
-  unsigned Iterations = 0;
-  if (SDValue Est = TLI.getRecipEstimate(Op, DCI, Iterations)) {
+  // If estimates are explicitly disabled for this function, we're done.
+  MachineFunction &MF = DAG.getMachineFunction();
+  int Enabled = TLI.getRecipEstimateDivEnabled(VT, MF);
+  if (Enabled == TLI.ReciprocalEstimate::Disabled)
+    return SDValue();
+
+  // Estimates may be explicitly enabled for this type with a custom number of
+  // refinement steps.
+  int Iterations = TLI.getDivRefinementSteps(VT, MF);
+  if (SDValue Est = TLI.getRecipEstimate(Op, DAG, Enabled, Iterations)) {
     if (Iterations) {
       // Newton iteration for a function: F(X) is X_{i+1} = X_i - F(X_i)/F'(X_i)
       // For the reciprocal, we need to find the zero of the function:
@@ -14881,7 +14891,7 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
       AddToWorklist(Est.getNode());
 
       // Newton iterations: Est = Est + Est (1 - Arg * Est)
-      for (unsigned i = 0; i < Iterations; ++i) {
+      for (int i = 0; i < Iterations; ++i) {
         SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Op, Est, Flags);
         AddToWorklist(NewEst.getNode());
 
@@ -15003,16 +15013,29 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags *Flags,
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
-  // Expose the DAG combiner to the target combiner implementations.
-  TargetLowering::DAGCombinerInfo DCI(DAG, Level, false, this);
-  unsigned Iterations = 0;
+  // TODO: Handle half and/or extended types?
+  EVT VT = Op.getValueType();
+  if (VT.getScalarType() != MVT::f32 && VT.getScalarType() != MVT::f64)
+    return SDValue();
+
+  // If estimates are explicitly disabled for this function, we're done.
+  MachineFunction &MF = DAG.getMachineFunction();
+  int Enabled = TLI.getRecipEstimateSqrtEnabled(VT, MF);
+  if (Enabled == TLI.ReciprocalEstimate::Disabled)
+    return SDValue();
+
+  // Estimates may be explicitly enabled for this type with a custom number of
+  // refinement steps.
+  int Iterations = TLI.getSqrtRefinementSteps(VT, MF);
+
   bool UseOneConstNR = false;
-  if (SDValue Est = TLI.getRsqrtEstimate(Op, DCI, Iterations, UseOneConstNR)) {
+  if (SDValue Est =
+      TLI.getRsqrtEstimate(Op, DAG, Enabled, Iterations, UseOneConstNR)) {
     AddToWorklist(Est.getNode());
     if (Iterations) {
       Est = UseOneConstNR
-                ? buildSqrtNROneConst(Op, Est, Iterations, Flags, Reciprocal)
-                : buildSqrtNRTwoConst(Op, Est, Iterations, Flags, Reciprocal);
+      ? buildSqrtNROneConst(Op, Est, Iterations, Flags, Reciprocal)
+      : buildSqrtNRTwoConst(Op, Est, Iterations, Flags, Reciprocal);
     }
     return Est;
   }

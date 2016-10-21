@@ -41,11 +41,6 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  LanaiTTIImpl(const LanaiTTIImpl &Arg)
-      : BaseT(static_cast<const BaseT &>(Arg)), ST(Arg.ST), TLI(Arg.TLI) {}
-  LanaiTTIImpl(LanaiTTIImpl &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))), ST(Arg.ST), TLI(Arg.TLI) {}
-
   bool shouldBuildLookupTables() const { return false; }
 
   TargetTransformInfo::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {

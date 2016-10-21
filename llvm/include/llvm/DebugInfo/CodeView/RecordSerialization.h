@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cinttypes>
@@ -40,53 +41,40 @@ struct RecordPrefix {
 StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData);
 StringRef getBytesAsCString(ArrayRef<uint8_t> LeafData);
 
-/// Consumes sizeof(T) bytes from the given byte sequence. Returns an error if
-/// there are not enough bytes remaining. Reinterprets the consumed bytes as a
-/// T object and points 'Res' at them.
-template <typename T, typename U>
-inline Error consumeObject(U &Data, const T *&Res) {
-  if (Data.size() < sizeof(*Res))
-    return make_error<CodeViewError>(
-        cv_error_code::insufficient_buffer,
-        "Insufficient bytes for expected object type");
-  Res = reinterpret_cast<const T *>(Data.data());
-  Data = Data.drop_front(sizeof(*Res));
-  return Error::success();
-}
-
-inline Error consume(ArrayRef<uint8_t> &Data) { return Error::success(); }
+inline Error consume(msf::StreamReader &Reader) { return Error::success(); }
 
 /// Decodes a numeric "leaf" value. These are integer literals encountered in
 /// the type stream. If the value is positive and less than LF_NUMERIC (1 <<
 /// 15), it is emitted directly in Data. Otherwise, it has a tag like LF_CHAR
 /// that indicates the bitwidth and sign of the numeric data.
-Error consume(ArrayRef<uint8_t> &Data, APSInt &Num);
-Error consume(StringRef &Data, APSInt &Num);
+Error consume(msf::StreamReader &Reader, APSInt &Num);
 
 /// Decodes a numeric leaf value that is known to be a particular type.
-Error consume_numeric(ArrayRef<uint8_t> &Data, uint64_t &Value);
+Error consume_numeric(msf::StreamReader &Reader, uint64_t &Value);
 
 /// Decodes signed and unsigned fixed-length integers.
-Error consume(ArrayRef<uint8_t> &Data, uint32_t &Item);
-Error consume(StringRef &Data, uint32_t &Item);
-Error consume(ArrayRef<uint8_t> &Data, int32_t &Item);
+Error consume(msf::StreamReader &Reader, uint32_t &Item);
+Error consume(msf::StreamReader &Reader, int32_t &Item);
 
 /// Decodes a null terminated string.
-Error consume(ArrayRef<uint8_t> &Data, StringRef &Item);
+Error consume(msf::StreamReader &Reader, StringRef &Item);
+
+Error consume(StringRef &Data, APSInt &Num);
+Error consume(StringRef &Data, uint32_t &Item);
 
 /// Decodes an arbitrary object whose layout matches that of the underlying
 /// byte sequence, and returns a pointer to the object.
-template <typename T> Error consume(ArrayRef<uint8_t> &Data, T *&Item) {
-  return consumeObject(Data, Item);
+template <typename T> Error consume(msf::StreamReader &Reader, T *&Item) {
+  return Reader.readObject(Item);
 }
 
 template <typename T, typename U> struct serialize_conditional_impl {
   serialize_conditional_impl(T &Item, U Func) : Item(Item), Func(Func) {}
 
-  Error deserialize(ArrayRef<uint8_t> &Data) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     if (!Func())
       return Error::success();
-    return consume(Data, Item);
+    return consume(Reader, Item);
   }
 
   T &Item;
@@ -101,26 +89,8 @@ serialize_conditional_impl<T, U> serialize_conditional(T &Item, U Func) {
 template <typename T, typename U> struct serialize_array_impl {
   serialize_array_impl(ArrayRef<T> &Item, U Func) : Item(Item), Func(Func) {}
 
-  Error deserialize(ArrayRef<uint8_t> &Data) const {
-    uint32_t N = Func();
-    if (N == 0)
-      return Error::success();
-
-    uint32_t Size = sizeof(T) * N;
-
-    if (Size / sizeof(T) != N)
-      return make_error<CodeViewError>(
-          cv_error_code::corrupt_record,
-          "Array<T> length is not a multiple of sizeof(T)");
-
-    if (Data.size() < Size)
-      return make_error<CodeViewError>(
-          cv_error_code::corrupt_record,
-          "Array<T> does not contain enough data for all elements");
-
-    Item = ArrayRef<T>(reinterpret_cast<const T *>(Data.data()), N);
-    Data = Data.drop_front(Size);
-    return Error::success();
+  Error deserialize(msf::StreamReader &Reader) const {
+    return Reader.readArray(Item, Func());
   }
 
   ArrayRef<T> &Item;
@@ -130,11 +100,11 @@ template <typename T, typename U> struct serialize_array_impl {
 template <typename T> struct serialize_vector_tail_impl {
   serialize_vector_tail_impl(std::vector<T> &Item) : Item(Item) {}
 
-  Error deserialize(ArrayRef<uint8_t> &Data) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     T Field;
     // Stop when we run out of bytes or we hit record padding bytes.
-    while (!Data.empty() && Data.front() < LF_PAD0) {
-      if (auto EC = consume(Data, Field))
+    while (!Reader.empty() && Reader.peek() < LF_PAD0) {
+      if (auto EC = consume(Reader, Field))
         return EC;
       Item.push_back(Field);
     }
@@ -148,24 +118,18 @@ struct serialize_null_term_string_array_impl {
   serialize_null_term_string_array_impl(std::vector<StringRef> &Item)
       : Item(Item) {}
 
-  Error deserialize(ArrayRef<uint8_t> &Data) const {
-    if (Data.empty())
+  Error deserialize(msf::StreamReader &Reader) const {
+    if (Reader.empty())
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer,
                                        "Null terminated string is empty!");
 
-    StringRef Field;
-    // Stop when we run out of bytes or we hit record padding bytes.
-    while (Data.front() != 0) {
-      if (auto EC = consume(Data, Field))
+    while (Reader.peek() != 0) {
+      StringRef Field;
+      if (auto EC = Reader.readZeroString(Field))
         return EC;
       Item.push_back(Field);
-      if (Data.empty())
-        return make_error<CodeViewError>(
-            cv_error_code::insufficient_buffer,
-            "Null terminated string has no null terminator!");
     }
-    Data = Data.drop_front(1);
-    return Error::success();
+    return Reader.skip(1);
   }
 
   std::vector<StringRef> &Item;
@@ -174,10 +138,9 @@ struct serialize_null_term_string_array_impl {
 template <typename T> struct serialize_arrayref_tail_impl {
   serialize_arrayref_tail_impl(ArrayRef<T> &Item) : Item(Item) {}
 
-  Error deserialize(ArrayRef<uint8_t> &Data) const {
-    uint32_t Count = Data.size() / sizeof(T);
-    Item = ArrayRef<T>(reinterpret_cast<const T *>(Data.begin()), Count);
-    return Error::success();
+  Error deserialize(msf::StreamReader &Reader) const {
+    uint32_t Count = Reader.bytesRemaining() / sizeof(T);
+    return Reader.readArray(Item, Count);
   }
 
   ArrayRef<T> &Item;
@@ -186,8 +149,8 @@ template <typename T> struct serialize_arrayref_tail_impl {
 template <typename T> struct serialize_numeric_impl {
   serialize_numeric_impl(T &Item) : Item(Item) {}
 
-  Error deserialize(ArrayRef<uint8_t> &Data) const {
-    return consume_numeric(Data, Item);
+  Error deserialize(msf::StreamReader &Reader) const {
+    return consume_numeric(Reader, Item);
   }
 
   T &Item;
@@ -238,43 +201,45 @@ template <typename T> serialize_numeric_impl<T> serialize_numeric(T &Item) {
 #define CV_NUMERIC_FIELD(I) serialize_numeric(I)
 
 template <typename T, typename U>
-Error consume(ArrayRef<uint8_t> &Data,
+Error consume(msf::StreamReader &Reader,
               const serialize_conditional_impl<T, U> &Item) {
-  return Item.deserialize(Data);
+  return Item.deserialize(Reader);
 }
 
 template <typename T, typename U>
-Error consume(ArrayRef<uint8_t> &Data, const serialize_array_impl<T, U> &Item) {
-  return Item.deserialize(Data);
+Error consume(msf::StreamReader &Reader,
+              const serialize_array_impl<T, U> &Item) {
+  return Item.deserialize(Reader);
 }
 
-inline Error consume(ArrayRef<uint8_t> &Data,
+inline Error consume(msf::StreamReader &Reader,
                      const serialize_null_term_string_array_impl &Item) {
-  return Item.deserialize(Data);
+  return Item.deserialize(Reader);
 }
 
 template <typename T>
-Error consume(ArrayRef<uint8_t> &Data,
+Error consume(msf::StreamReader &Reader,
               const serialize_vector_tail_impl<T> &Item) {
-  return Item.deserialize(Data);
+  return Item.deserialize(Reader);
 }
 
 template <typename T>
-Error consume(ArrayRef<uint8_t> &Data,
+Error consume(msf::StreamReader &Reader,
               const serialize_arrayref_tail_impl<T> &Item) {
-  return Item.deserialize(Data);
+  return Item.deserialize(Reader);
 }
 
 template <typename T>
-Error consume(ArrayRef<uint8_t> &Data, const serialize_numeric_impl<T> &Item) {
-  return Item.deserialize(Data);
+Error consume(msf::StreamReader &Reader,
+              const serialize_numeric_impl<T> &Item) {
+  return Item.deserialize(Reader);
 }
 
 template <typename T, typename U, typename... Args>
-Error consume(ArrayRef<uint8_t> &Data, T &&X, U &&Y, Args &&... Rest) {
-  if (auto EC = consume(Data, X))
+Error consume(msf::StreamReader &Reader, T &&X, U &&Y, Args &&... Rest) {
+  if (auto EC = consume(Reader, X))
     return EC;
-  return consume(Data, Y, std::forward<Args>(Rest)...);
+  return consume(Reader, Y, std::forward<Args>(Rest)...);
 }
 
 #define CV_DESERIALIZE(...)                                                    \

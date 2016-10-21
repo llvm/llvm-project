@@ -14,7 +14,6 @@
 #ifndef LLVM_SUPPORT_ENDIAN_H
 #define LLVM_SUPPORT_ENDIAN_H
 
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
 
@@ -29,7 +28,7 @@ namespace detail {
   /// \brief ::value is either alignment, or alignof(T) if alignment is 0.
   template<class T, int alignment>
   struct PickAlignment {
-    enum {value = alignment == 0 ? AlignOf<T>::Alignment : alignment};
+    enum { value = alignment == 0 ? alignof(T) : alignment };
   };
 } // end namespace detail
 

@@ -202,8 +202,15 @@ void GotSection<ELFT>::addMipsEntry(SymbolBody &Sym, uintX_t Addend,
     // Ignore addends for preemptible symbols. They got single GOT entry anyway.
     AddEntry(Sym, 0, MipsGlobal);
     Sym.IsInGlobalMipsGot = true;
-  } else
+  } else if (Expr == R_MIPS_GOT_OFF32) {
+    AddEntry(Sym, Addend, MipsLocal32);
+    Sym.Is32BitMipsGot = true;
+  } else {
+    // Hold local GOT entries accessed via a 16-bit index separately.
+    // That allows to write them in the beginning of the GOT and keep
+    // their indexes as less as possible to escape relocation's overflow.
     AddEntry(Sym, Addend, MipsLocal);
+  }
 }
 
 template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
@@ -250,6 +257,8 @@ GotSection<ELFT>::getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const {
     GotBlockOff = getMipsTlsOffset();
   else if (B.IsInGlobalMipsGot)
     GotBlockOff = getMipsLocalEntriesNum() * sizeof(uintX_t);
+  else if (B.Is32BitMipsGot)
+    GotBlockOff = (MipsPageEntries + MipsLocal.size()) * sizeof(uintX_t);
   else
     GotBlockOff = MipsPageEntries * sizeof(uintX_t);
   // Calculate index of the GOT entry in the block.
@@ -288,7 +297,7 @@ const SymbolBody *GotSection<ELFT>::getMipsFirstGlobalEntry() const {
 
 template <class ELFT>
 unsigned GotSection<ELFT>::getMipsLocalEntriesNum() const {
-  return MipsPageEntries + MipsLocal.size();
+  return MipsPageEntries + MipsLocal.size() + MipsLocal32.size();
 }
 
 template <class ELFT> void GotSection<ELFT>::finalize() {
@@ -347,6 +356,7 @@ template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *Buf) {
     writeUint<ELFT>(Entry, VA);
   };
   std::for_each(std::begin(MipsLocal), std::end(MipsLocal), AddEntry);
+  std::for_each(std::begin(MipsLocal32), std::end(MipsLocal32), AddEntry);
   std::for_each(std::begin(MipsGlobal), std::end(MipsGlobal), AddEntry);
   // Initialize TLS-related GOT entries. If the entry has a corresponding
   // dynamic relocations, leave it initialized by zero. Write down adjusted

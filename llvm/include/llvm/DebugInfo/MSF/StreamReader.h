@@ -29,8 +29,14 @@ public:
 
   Error readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer);
   Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
+  Error readInteger(uint8_t &Dest);
   Error readInteger(uint16_t &Dest);
   Error readInteger(uint32_t &Dest);
+  Error readInteger(uint64_t &Dest);
+  Error readInteger(int8_t &Dest);
+  Error readInteger(int16_t &Dest);
+  Error readInteger(int32_t &Dest);
+  Error readInteger(int64_t &Dest);
   Error readZeroString(StringRef &Dest);
   Error readFixedString(StringRef &Dest, uint32_t Length);
   Error readStreamRef(ReadableStreamRef &Ref);
@@ -100,6 +106,10 @@ public:
   uint32_t getOffset() const { return Offset; }
   uint32_t getLength() const { return Stream.getLength(); }
   uint32_t bytesRemaining() const { return getLength() - getOffset(); }
+
+  Error skip(uint32_t Amount);
+
+  uint8_t peek() const;
 
 private:
   ReadableStreamRef Stream;

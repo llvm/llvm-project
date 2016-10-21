@@ -71,6 +71,7 @@ class AMDGPUTargetELFStreamer : public AMDGPUTargetStreamer {
     NT_AMDGPU_HSA_HLDEBUG_TARGET = 102
   };
 
+  static const char *NoteName;
   MCStreamer &Streamer;
 
 public:

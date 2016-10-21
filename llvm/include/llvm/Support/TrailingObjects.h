@@ -62,7 +62,7 @@ namespace trailing_objects_internal {
 template <typename First, typename... Rest> class AlignmentCalcHelper {
 private:
   enum {
-    FirstAlignment = AlignOf<First>::Alignment,
+    FirstAlignment = alignof(First),
     RestAlignment = AlignmentCalcHelper<Rest...>::Alignment,
   };
 
@@ -74,7 +74,7 @@ public:
 
 template <typename First> class AlignmentCalcHelper<First> {
 public:
-  enum { Alignment = AlignOf<First>::Alignment };
+  enum { Alignment = alignof(First) };
 };
 
 /// The base class for TrailingObjects* classes.
@@ -143,8 +143,7 @@ class TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
       ParentType;
 
   struct RequiresRealignment {
-    static const bool value =
-        llvm::AlignOf<PrevTy>::Alignment < llvm::AlignOf<NextTy>::Alignment;
+    static const bool value = alignof(PrevTy) < alignof(NextTy);
   };
 
   static LLVM_CONSTEXPR bool requiresRealignment() {
@@ -174,7 +173,7 @@ protected:
 
     if (requiresRealignment())
       return reinterpret_cast<const NextTy *>(
-          llvm::alignAddr(Ptr, llvm::alignOf<NextTy>()));
+          llvm::alignAddr(Ptr, alignof(NextTy)));
     else
       return reinterpret_cast<const NextTy *>(Ptr);
   }
@@ -188,8 +187,7 @@ protected:
                     Obj, TrailingObjectsBase::OverloadToken<PrevTy>());
 
     if (requiresRealignment())
-      return reinterpret_cast<NextTy *>(
-          llvm::alignAddr(Ptr, llvm::alignOf<NextTy>()));
+      return reinterpret_cast<NextTy *>(llvm::alignAddr(Ptr, alignof(NextTy)));
     else
       return reinterpret_cast<NextTy *>(Ptr);
   }
@@ -201,9 +199,8 @@ protected:
       size_t SizeSoFar, size_t Count1,
       typename ExtractSecondType<MoreTys, size_t>::type... MoreCounts) {
     return ParentType::additionalSizeToAllocImpl(
-        (requiresRealignment()
-             ? llvm::alignTo<llvm::AlignOf<NextTy>::Alignment>(SizeSoFar)
-             : SizeSoFar) +
+        (requiresRealignment() ? llvm::alignTo<alignof(NextTy)>(SizeSoFar)
+                               : SizeSoFar) +
             sizeof(NextTy) * Count1,
         MoreCounts...);
   }
@@ -216,10 +213,9 @@ protected:
     static_assert(sizeof...(MoreTys) == sizeof...(MoreCounts),
                   "Number of counts do not match number of types");
     static const size_t value = ParentType::template AdditionalSizeToAllocImpl<
-        (RequiresRealignment::value
-             ? llvm::AlignTo<llvm::AlignOf<NextTy>::Alignment>::
-                   template from_value<SizeSoFar>::value
-             : SizeSoFar) +
+        (RequiresRealignment::value ? llvm::AlignTo<alignof(NextTy)>::
+                                          template from_value<SizeSoFar>::value
+                                    : SizeSoFar) +
             sizeof(NextTy) * Count1,
         MoreCounts...>::value;
   };
@@ -407,9 +403,7 @@ public:
       enum {
         Size = TotalSizeToAlloc<Tys...>::template with_counts<Counts...>::value
       };
-      typedef llvm::AlignedCharArray<
-          llvm::AlignOf<BaseTy>::Alignment, Size
-          > type;
+      typedef llvm::AlignedCharArray<alignof(BaseTy), Size> type;
     };
   };
 

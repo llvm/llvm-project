@@ -374,24 +374,12 @@ define <4 x i32> @combine_vec_lshr_shl_mask0(<4 x i32> %x) {
 define <4 x i32> @combine_vec_lshr_shl_mask1(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_lshr_shl_mask1:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pmulld {{.*}}(%rip), %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrld $5, %xmm1
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    psrld $3, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrld $4, %xmm1
-; SSE-NEXT:    psrld $2, %xmm0
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_shl_mask1:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,3,4,5]
-; AVX-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 =  shl <4 x i32> %x, <i32 2, i32 3, i32 4, i32 5>
   %2 = lshr <4 x i32> %1, <i32 2, i32 3, i32 4, i32 5>

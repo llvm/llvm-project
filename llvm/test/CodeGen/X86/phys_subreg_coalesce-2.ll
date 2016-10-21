@@ -14,7 +14,9 @@ forcond.preheader:		; preds = %entry
 ifthen:		; preds = %entry
 	ret i32 0
 ; CHECK: forbody{{$}}
+; There should be no mov instruction in the for body.
 ; CHECK-NOT: mov
+; CHECK: jbe
 forbody:		; preds = %forbody, %forcond.preheader
 	%indvar = phi i32 [ 0, %forcond.preheader ], [ %divisor.02, %forbody ]		; <i32> [#uses=3]
 	%accumulator.01 = phi i32 [ 1, %forcond.preheader ], [ %div, %forbody ]		; <i32> [#uses=1]

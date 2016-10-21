@@ -333,13 +333,13 @@ define void @test_small_memcpy_i64_global_to_global_align16(i64 addrspace(1)* no
 
 ; FUNC-LABEL: {{^}}test_memcpy_const_string_align4:
 ; SI: s_getpc_b64
-; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, hello.align4+4
+; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, hello.align4+20
 ; SI: s_addc_u32
-; SI: s_load_dwordx4
-; SI: s_load_dwordx4
-; SI: s_load_dwordx2
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
+; SI-DAG: s_load_dwordx4
+; SI-DAG: s_load_dwordx4
+; SI-DAG: s_load_dwordx2
+; SI-DAG: buffer_store_dwordx4
+; SI-DAG: buffer_store_dwordx4
 define void @test_memcpy_const_string_align4(i8 addrspace(1)* noalias %out) nounwind {
   %str = bitcast [16 x i8] addrspace(2)* @hello.align4 to i8 addrspace(2)*
   call void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* %out, i8 addrspace(2)* %str, i64 32, i32 4, i1 false)

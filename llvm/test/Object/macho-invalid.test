@@ -394,3 +394,15 @@ INVALID-THREAD-UNKNOWN-CPUTYPE: macho-invalid-thread-unknown-cputype': truncated
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-unixthread-more-than-one 2>&1 | FileCheck -check-prefix INVALID-UNIXTHREAD-MORE-THAN-ONE %s
 INVALID-UNIXTHREAD-MORE-THAN-ONE: macho-invalid-unixthread-more-than-one': truncated or malformed object (more than one LC_UNIXTHREAD command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-twolevelhints-bad-size 2>&1 | FileCheck -check-prefix INVALID-TWOLEVELHINTS-BAD-SIZE %s
+INVALID-TWOLEVELHINTS-BAD-SIZE: macho-invalid-twolevelhints-bad-size': truncated or malformed object (load command 0 LC_TWOLEVEL_HINTS has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-twolevelhints-more-than-one 2>&1 | FileCheck -check-prefix INVALID-TWOLEVELHINTS-MORE-THAN-ONE %s
+INVALID-TWOLEVELHINTS-MORE-THAN-ONE: macho-invalid-twolevelhints-more-than-one': truncated or malformed object (more than one LC_TWOLEVEL_HINTS command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-twolevelhints-offset 2>&1 | FileCheck -check-prefix INVALID-TWOLEVELHINTS-OFFSET %s
+INVALID-TWOLEVELHINTS-OFFSET: macho-invalid-twolevelhints-offset': truncated or malformed object (offset field of LC_TWOLEVEL_HINTS command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-twolevelhints-offset-nhints 2>&1 | FileCheck -check-prefix INVALID-TWOLEVELHINTS-OFFSET-HNINTS %s
+INVALID-TWOLEVELHINTS-OFFSET-HNINTS: macho-invalid-twolevelhints-offset-nhints': truncated or malformed object (offset field plus nhints times sizeof(struct twolevel_hint) field of LC_TWOLEVEL_HINTS command 0 extends past the end of the file)

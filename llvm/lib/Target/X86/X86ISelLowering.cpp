@@ -53,7 +53,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetRecip.h"
 #include "X86IntrinsicsInfo.h"
 #include <bitset>
 #include <numeric>
@@ -84,15 +83,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
   // X86-SSE is even stranger. It uses -1 or 0 for vector masks.
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
-
-  // By default (and when -ffast-math is on), enable estimate codegen with 1
-  // refinement step for floats (not doubles) except scalar division. Scalar
-  // division estimates are disabled because they break too much real-world
-  // code. These defaults are intended to match GCC behavior.
-  ReciprocalEstimates.set("sqrtf", true, 1);
-  ReciprocalEstimates.set("divf", false, 1);
-  ReciprocalEstimates.set("vec-sqrtf", true, 1);
-  ReciprocalEstimates.set("vec-divf", true, 1);
 
   // For 64-bit, since we have so many registers, use the ILP scheduler.
   // For 32-bit, use the register pressure specific scheduling.
@@ -15239,11 +15229,10 @@ bool X86TargetLowering::isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const {
 /// The minimum architected relative accuracy is 2^-12. We need one
 /// Newton-Raphson step to have a good float result (24 bits of precision).
 SDValue X86TargetLowering::getRsqrtEstimate(SDValue Op,
-                                            DAGCombinerInfo &DCI,
-                                            unsigned &RefinementSteps,
+                                            SelectionDAG &DAG, int Enabled,
+                                            int &RefinementSteps,
                                             bool &UseOneConstNR) const {
   EVT VT = Op.getValueType();
-  const char *RecipOp;
 
   // SSE1 has rsqrtss and rsqrtps. AVX adds a 256-bit variant for rsqrtps.
   // TODO: Add support for AVX512 (v16f32).
@@ -15252,30 +15241,24 @@ SDValue X86TargetLowering::getRsqrtEstimate(SDValue Op,
   // instructions: convert to single, rsqrtss, convert back to double, refine
   // (3 steps = at least 13 insts). If an 'rsqrtsd' variant was added to the ISA
   // along with FMA, this could be a throughput win.
-  if (VT == MVT::f32 && Subtarget.hasSSE1())
-    RecipOp = "sqrtf";
-  else if ((VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
-           (VT == MVT::v8f32 && Subtarget.hasAVX()))
-    RecipOp = "vec-sqrtf";
-  else
-    return SDValue();
+  if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
+      (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+      (VT == MVT::v8f32 && Subtarget.hasAVX())) {
+    if (RefinementSteps == ReciprocalEstimate::Unspecified)
+      RefinementSteps = 1;
 
-  TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
-  if (!Recips.isEnabled(RecipOp))
-    return SDValue();
-
-  RefinementSteps = Recips.getRefinementSteps(RecipOp);
-  UseOneConstNR = false;
-  return DCI.DAG.getNode(X86ISD::FRSQRT, SDLoc(Op), VT, Op);
+    UseOneConstNR = false;
+    return DAG.getNode(X86ISD::FRSQRT, SDLoc(Op), VT, Op);
+  }
+  return SDValue();
 }
 
 /// The minimum architected relative accuracy is 2^-12. We need one
 /// Newton-Raphson step to have a good float result (24 bits of precision).
-SDValue X86TargetLowering::getRecipEstimate(SDValue Op,
-                                            DAGCombinerInfo &DCI,
-                                            unsigned &RefinementSteps) const {
+SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
+                                            int Enabled,
+                                            int &RefinementSteps) const {
   EVT VT = Op.getValueType();
-  const char *RecipOp;
 
   // SSE1 has rcpss and rcpps. AVX adds a 256-bit variant for rcpps.
   // TODO: Add support for AVX512 (v16f32).
@@ -15284,20 +15267,22 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op,
   // 15 instructions: convert to single, rcpss, convert back to double, refine
   // (3 steps = 12 insts). If an 'rcpsd' variant was added to the ISA
   // along with FMA, this could be a throughput win.
-  if (VT == MVT::f32 && Subtarget.hasSSE1())
-    RecipOp = "divf";
-  else if ((VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
-           (VT == MVT::v8f32 && Subtarget.hasAVX()))
-    RecipOp = "vec-divf";
-  else
-    return SDValue();
 
-  TargetRecip Recips = getTargetRecipForFunc(DCI.DAG.getMachineFunction());
-  if (!Recips.isEnabled(RecipOp))
-    return SDValue();
+  if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
+      (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+      (VT == MVT::v8f32 && Subtarget.hasAVX())) {
+    // Enable estimate codegen with 1 refinement step for vector division.
+    // Scalar division estimates are disabled because they break too much
+    // real-world code. These defaults are intended to match GCC behavior.
+    if (VT == MVT::f32 && Enabled == ReciprocalEstimate::Unspecified)
+      return SDValue();
 
-  RefinementSteps = Recips.getRefinementSteps(RecipOp);
-  return DCI.DAG.getNode(X86ISD::FRCP, SDLoc(Op), VT, Op);
+    if (RefinementSteps == ReciprocalEstimate::Unspecified)
+      RefinementSteps = 1;
+
+    return DAG.getNode(X86ISD::FRCP, SDLoc(Op), VT, Op);
+  }
+  return SDValue();
 }
 
 /// If we have at least two divisions that use the same divisor, convert to

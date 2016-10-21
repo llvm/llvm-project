@@ -86,16 +86,6 @@ class ProfileSummaryAnalysis
 public:
   typedef ProfileSummaryInfo Result;
 
-  ProfileSummaryAnalysis() {}
-  ProfileSummaryAnalysis(const ProfileSummaryAnalysis &Arg) {}
-  ProfileSummaryAnalysis(ProfileSummaryAnalysis &&Arg) {}
-  ProfileSummaryAnalysis &operator=(const ProfileSummaryAnalysis &RHS) {
-    return *this;
-  }
-  ProfileSummaryAnalysis &operator=(ProfileSummaryAnalysis &&RHS) {
-    return *this;
-  }
-
   Result run(Module &M, ModuleAnalysisManager &);
 
 private:

@@ -89,140 +89,33 @@ V6::~V6() {}
 V7::~V7() {}
 V8::~V8() {}
 
-struct Abstract1 {
-  virtual ~Abstract1() {}
-  virtual void method() = 0;
-
-  char c;
-};
-
-struct Abstract2 : Abstract1 {
-  ~Abstract2() override = default;
-  double d;
-};
-
-struct Final final : Abstract2 {
-  void method() override {}
-};
-
-// Ensure alignment is a compile-time constant.
-char LLVM_ATTRIBUTE_UNUSED test_arr1
-  [AlignOf<char>::Alignment > 0]
-  [AlignOf<short>::Alignment > 0]
-  [AlignOf<int>::Alignment > 0]
-  [AlignOf<long>::Alignment > 0]
-  [AlignOf<long long>::Alignment > 0]
-  [AlignOf<float>::Alignment > 0]
-  [AlignOf<double>::Alignment > 0]
-  [AlignOf<long double>::Alignment > 0]
-  [AlignOf<void *>::Alignment > 0]
-  [AlignOf<int *>::Alignment > 0]
-  [AlignOf<double (*)(double)>::Alignment > 0]
-  [AlignOf<double (S6::*)()>::Alignment > 0];
-char LLVM_ATTRIBUTE_UNUSED test_arr2
-  [AlignOf<A1>::Alignment > 0]
-  [AlignOf<A2>::Alignment > 0]
-  [AlignOf<A4>::Alignment > 0]
-  [AlignOf<A8>::Alignment > 0];
-char LLVM_ATTRIBUTE_UNUSED test_arr3
-  [AlignOf<S1>::Alignment > 0]
-  [AlignOf<S2>::Alignment > 0]
-  [AlignOf<S3>::Alignment > 0]
-  [AlignOf<S4>::Alignment > 0]
-  [AlignOf<S5>::Alignment > 0]
-  [AlignOf<S6>::Alignment > 0];
-char LLVM_ATTRIBUTE_UNUSED test_arr4
-  [AlignOf<D1>::Alignment > 0]
-  [AlignOf<D2>::Alignment > 0]
-  [AlignOf<D3>::Alignment > 0]
-  [AlignOf<D4>::Alignment > 0]
-  [AlignOf<D5>::Alignment > 0]
-  [AlignOf<D6>::Alignment > 0]
-  [AlignOf<D7>::Alignment > 0]
-  [AlignOf<D8>::Alignment > 0]
-  [AlignOf<D9>::Alignment > 0];
-char LLVM_ATTRIBUTE_UNUSED test_arr5
-  [AlignOf<V1>::Alignment > 0]
-  [AlignOf<V2>::Alignment > 0]
-  [AlignOf<V3>::Alignment > 0]
-  [AlignOf<V4>::Alignment > 0]
-  [AlignOf<V5>::Alignment > 0]
-  [AlignOf<V6>::Alignment > 0]
-  [AlignOf<V7>::Alignment > 0]
-  [AlignOf<V8>::Alignment > 0];
-
-TEST(AlignOfTest, BasicAlignmentInvariants) {
-  EXPECT_LE(1u, alignOf<A1>());
-  EXPECT_LE(2u, alignOf<A2>());
-  EXPECT_LE(4u, alignOf<A4>());
-  EXPECT_LE(8u, alignOf<A8>());
-
-  EXPECT_EQ(1u, alignOf<char>());
-  EXPECT_LE(alignOf<char>(),   alignOf<short>());
-  EXPECT_LE(alignOf<short>(),  alignOf<int>());
-  EXPECT_LE(alignOf<int>(),    alignOf<long>());
-  EXPECT_LE(alignOf<long>(),   alignOf<long long>());
-  EXPECT_LE(alignOf<char>(),   alignOf<float>());
-  EXPECT_LE(alignOf<float>(),  alignOf<double>());
-  EXPECT_LE(alignOf<char>(),   alignOf<long double>());
-  EXPECT_LE(alignOf<char>(),   alignOf<void *>());
-  EXPECT_EQ(alignOf<void *>(), alignOf<int *>());
-  EXPECT_LE(alignOf<char>(),   alignOf<S1>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<S2>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<S3>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<S4>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<S5>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<S6>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D1>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D2>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D3>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D4>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D5>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D6>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D7>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D8>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<D9>());
-  EXPECT_LE(alignOf<S1>(),     alignOf<V1>());
-  EXPECT_LE(alignOf<V1>(),     alignOf<V2>());
-  EXPECT_LE(alignOf<V1>(),     alignOf<V3>());
-  EXPECT_LE(alignOf<V1>(),     alignOf<V4>());
-  EXPECT_LE(alignOf<V1>(),     alignOf<V5>());
-  EXPECT_LE(alignOf<V1>(),     alignOf<V6>());
-  EXPECT_LE(alignOf<V1>(),     alignOf<V7>());
-  EXPECT_LE(alignOf<V1>(),     alignOf<V8>());
-
-  EXPECT_LE(alignOf<char>(), alignOf<Abstract1>());
-  EXPECT_LE(alignOf<double>(), alignOf<Abstract2>());
-  EXPECT_LE(alignOf<Abstract2>(), alignOf<Final>());
-}
+template <typename M> struct T { M m; };
 
 TEST(AlignOfTest, BasicAlignedArray) {
-  EXPECT_LE(1u, alignOf<AlignedCharArrayUnion<A1> >());
-  EXPECT_LE(2u, alignOf<AlignedCharArrayUnion<A2> >());
-  EXPECT_LE(4u, alignOf<AlignedCharArrayUnion<A4> >());
-  EXPECT_LE(8u, alignOf<AlignedCharArrayUnion<A8> >());
+  EXPECT_LE(1u, alignof(AlignedCharArrayUnion<A1>));
+  EXPECT_LE(2u, alignof(AlignedCharArrayUnion<A2>));
+  EXPECT_LE(4u, alignof(AlignedCharArrayUnion<A4>));
+  EXPECT_LE(8u, alignof(AlignedCharArrayUnion<A8>));
 
   EXPECT_LE(1u, sizeof(AlignedCharArrayUnion<A1>));
   EXPECT_LE(2u, sizeof(AlignedCharArrayUnion<A2>));
   EXPECT_LE(4u, sizeof(AlignedCharArrayUnion<A4>));
   EXPECT_LE(8u, sizeof(AlignedCharArrayUnion<A8>));
 
-  EXPECT_EQ(1u, (alignOf<AlignedCharArrayUnion<A1> >()));
-  EXPECT_EQ(2u, (alignOf<AlignedCharArrayUnion<A1, A2> >()));
-  EXPECT_EQ(4u, (alignOf<AlignedCharArrayUnion<A1, A2, A4> >()));
-  EXPECT_EQ(8u, (alignOf<AlignedCharArrayUnion<A1, A2, A4, A8> >()));
+  EXPECT_EQ(1u, (alignof(AlignedCharArrayUnion<A1>)));
+  EXPECT_EQ(2u, (alignof(AlignedCharArrayUnion<A1, A2>)));
+  EXPECT_EQ(4u, (alignof(AlignedCharArrayUnion<A1, A2, A4>)));
+  EXPECT_EQ(8u, (alignof(AlignedCharArrayUnion<A1, A2, A4, A8>)));
 
   EXPECT_EQ(1u, sizeof(AlignedCharArrayUnion<A1>));
   EXPECT_EQ(2u, sizeof(AlignedCharArrayUnion<A1, A2>));
   EXPECT_EQ(4u, sizeof(AlignedCharArrayUnion<A1, A2, A4>));
   EXPECT_EQ(8u, sizeof(AlignedCharArrayUnion<A1, A2, A4, A8>));
 
-  EXPECT_EQ(1u, (alignOf<AlignedCharArrayUnion<A1[1]> >()));
-  EXPECT_EQ(2u, (alignOf<AlignedCharArrayUnion<A1[2], A2[1]> >()));
-  EXPECT_EQ(4u, (alignOf<AlignedCharArrayUnion<A1[42], A2[55],
-                                               A4[13]> >()));
-  EXPECT_EQ(8u, (alignOf<AlignedCharArrayUnion<A1[2], A2[1],
-                                               A4, A8> >()));
+  EXPECT_EQ(1u, (alignof(AlignedCharArrayUnion<A1[1]>)));
+  EXPECT_EQ(2u, (alignof(AlignedCharArrayUnion<A1[2], A2[1]>)));
+  EXPECT_EQ(4u, (alignof(AlignedCharArrayUnion<A1[42], A2[55], A4[13]>)));
+  EXPECT_EQ(8u, (alignof(AlignedCharArrayUnion<A1[2], A2[1], A4, A8>)));
 
   EXPECT_EQ(1u,  sizeof(AlignedCharArrayUnion<A1[1]>));
   EXPECT_EQ(2u,  sizeof(AlignedCharArrayUnion<A1[2], A2[1]>));
@@ -233,49 +126,48 @@ TEST(AlignOfTest, BasicAlignedArray) {
   // For other tests we simply assert that the alignment of the union mathes
   // that of the fundamental type and hope that we have any weird type
   // productions that would trigger bugs.
-  EXPECT_EQ(alignOf<char>(), alignOf<AlignedCharArrayUnion<char> >());
-  EXPECT_EQ(alignOf<short>(), alignOf<AlignedCharArrayUnion<short> >());
-  EXPECT_EQ(alignOf<int>(), alignOf<AlignedCharArrayUnion<int> >());
-  EXPECT_EQ(alignOf<long>(), alignOf<AlignedCharArrayUnion<long> >());
-  EXPECT_EQ(alignOf<long long>(),
-            alignOf<AlignedCharArrayUnion<long long> >());
-  EXPECT_EQ(alignOf<float>(), alignOf<AlignedCharArrayUnion<float> >());
-  EXPECT_EQ(alignOf<double>(), alignOf<AlignedCharArrayUnion<double> >());
-  EXPECT_EQ(alignOf<long double>(),
-            alignOf<AlignedCharArrayUnion<long double> >());
-  EXPECT_EQ(alignOf<void *>(), alignOf<AlignedCharArrayUnion<void *> >());
-  EXPECT_EQ(alignOf<int *>(), alignOf<AlignedCharArrayUnion<int *> >());
-  EXPECT_EQ(alignOf<double (*)(double)>(),
-            alignOf<AlignedCharArrayUnion<double (*)(double)> >());
-  EXPECT_EQ(alignOf<double (S6::*)()>(),
-            alignOf<AlignedCharArrayUnion<double (S6::*)()> >());
-  EXPECT_EQ(alignOf<S1>(), alignOf<AlignedCharArrayUnion<S1> >());
-  EXPECT_EQ(alignOf<S2>(), alignOf<AlignedCharArrayUnion<S2> >());
-  EXPECT_EQ(alignOf<S3>(), alignOf<AlignedCharArrayUnion<S3> >());
-  EXPECT_EQ(alignOf<S4>(), alignOf<AlignedCharArrayUnion<S4> >());
-  EXPECT_EQ(alignOf<S5>(), alignOf<AlignedCharArrayUnion<S5> >());
-  EXPECT_EQ(alignOf<S6>(), alignOf<AlignedCharArrayUnion<S6> >());
-  EXPECT_EQ(alignOf<D1>(), alignOf<AlignedCharArrayUnion<D1> >());
-  EXPECT_EQ(alignOf<D2>(), alignOf<AlignedCharArrayUnion<D2> >());
-  EXPECT_EQ(alignOf<D3>(), alignOf<AlignedCharArrayUnion<D3> >());
-  EXPECT_EQ(alignOf<D4>(), alignOf<AlignedCharArrayUnion<D4> >());
-  EXPECT_EQ(alignOf<D5>(), alignOf<AlignedCharArrayUnion<D5> >());
-  EXPECT_EQ(alignOf<D6>(), alignOf<AlignedCharArrayUnion<D6> >());
-  EXPECT_EQ(alignOf<D7>(), alignOf<AlignedCharArrayUnion<D7> >());
-  EXPECT_EQ(alignOf<D8>(), alignOf<AlignedCharArrayUnion<D8> >());
-  EXPECT_EQ(alignOf<D9>(), alignOf<AlignedCharArrayUnion<D9> >());
-  EXPECT_EQ(alignOf<V1>(), alignOf<AlignedCharArrayUnion<V1> >());
-  EXPECT_EQ(alignOf<V2>(), alignOf<AlignedCharArrayUnion<V2> >());
-  EXPECT_EQ(alignOf<V3>(), alignOf<AlignedCharArrayUnion<V3> >());
-  EXPECT_EQ(alignOf<V4>(), alignOf<AlignedCharArrayUnion<V4> >());
-  EXPECT_EQ(alignOf<V5>(), alignOf<AlignedCharArrayUnion<V5> >());
-  EXPECT_EQ(alignOf<V6>(), alignOf<AlignedCharArrayUnion<V6> >());
-  EXPECT_EQ(alignOf<V7>(), alignOf<AlignedCharArrayUnion<V7> >());
+  EXPECT_EQ(alignof(T<char>), alignof(AlignedCharArrayUnion<char>));
+  EXPECT_EQ(alignof(T<short>), alignof(AlignedCharArrayUnion<short>));
+  EXPECT_EQ(alignof(T<int>), alignof(AlignedCharArrayUnion<int>));
+  EXPECT_EQ(alignof(T<long>), alignof(AlignedCharArrayUnion<long>));
+  EXPECT_EQ(alignof(T<long long>), alignof(AlignedCharArrayUnion<long long>));
+  EXPECT_EQ(alignof(T<float>), alignof(AlignedCharArrayUnion<float>));
+  EXPECT_EQ(alignof(T<double>), alignof(AlignedCharArrayUnion<double>));
+  EXPECT_EQ(alignof(T<long double>),
+            alignof(AlignedCharArrayUnion<long double>));
+  EXPECT_EQ(alignof(T<void *>), alignof(AlignedCharArrayUnion<void *>));
+  EXPECT_EQ(alignof(T<int *>), alignof(AlignedCharArrayUnion<int *>));
+  EXPECT_EQ(alignof(T<double (*)(double)>),
+            alignof(AlignedCharArrayUnion<double (*)(double)>));
+  EXPECT_EQ(alignof(T<double (S6::*)()>),
+            alignof(AlignedCharArrayUnion<double (S6::*)()>));
+  EXPECT_EQ(alignof(S1), alignof(AlignedCharArrayUnion<S1>));
+  EXPECT_EQ(alignof(S2), alignof(AlignedCharArrayUnion<S2>));
+  EXPECT_EQ(alignof(S3), alignof(AlignedCharArrayUnion<S3>));
+  EXPECT_EQ(alignof(S4), alignof(AlignedCharArrayUnion<S4>));
+  EXPECT_EQ(alignof(S5), alignof(AlignedCharArrayUnion<S5>));
+  EXPECT_EQ(alignof(S6), alignof(AlignedCharArrayUnion<S6>));
+  EXPECT_EQ(alignof(D1), alignof(AlignedCharArrayUnion<D1>));
+  EXPECT_EQ(alignof(D2), alignof(AlignedCharArrayUnion<D2>));
+  EXPECT_EQ(alignof(D3), alignof(AlignedCharArrayUnion<D3>));
+  EXPECT_EQ(alignof(D4), alignof(AlignedCharArrayUnion<D4>));
+  EXPECT_EQ(alignof(D5), alignof(AlignedCharArrayUnion<D5>));
+  EXPECT_EQ(alignof(D6), alignof(AlignedCharArrayUnion<D6>));
+  EXPECT_EQ(alignof(D7), alignof(AlignedCharArrayUnion<D7>));
+  EXPECT_EQ(alignof(D8), alignof(AlignedCharArrayUnion<D8>));
+  EXPECT_EQ(alignof(D9), alignof(AlignedCharArrayUnion<D9>));
+  EXPECT_EQ(alignof(V1), alignof(AlignedCharArrayUnion<V1>));
+  EXPECT_EQ(alignof(V2), alignof(AlignedCharArrayUnion<V2>));
+  EXPECT_EQ(alignof(V3), alignof(AlignedCharArrayUnion<V3>));
+  EXPECT_EQ(alignof(V4), alignof(AlignedCharArrayUnion<V4>));
+  EXPECT_EQ(alignof(V5), alignof(AlignedCharArrayUnion<V5>));
+  EXPECT_EQ(alignof(V6), alignof(AlignedCharArrayUnion<V6>));
+  EXPECT_EQ(alignof(V7), alignof(AlignedCharArrayUnion<V7>));
 
   // Some versions of MSVC get this wrong somewhat disturbingly. The failure
-  // appears to be benign: alignOf<V8>() produces a preposterous value: 12
+  // appears to be benign: alignof(V8) produces a preposterous value: 12
 #ifndef _MSC_VER
-  EXPECT_EQ(alignOf<V8>(), alignOf<AlignedCharArrayUnion<V8> >());
+  EXPECT_EQ(alignof(V8), alignof(AlignedCharArrayUnion<V8>));
 #endif
 
   EXPECT_EQ(sizeof(char), sizeof(AlignedCharArrayUnion<char>));
@@ -343,11 +235,11 @@ TEST(AlignOfTest, BasicAlignedArray) {
   EXPECT_EQ(sizeof(V8), sizeof(AlignedCharArrayUnion<V8>));
 #endif
 
-  EXPECT_EQ(1u, (alignOf<AlignedCharArray<1, 1> >()));
-  EXPECT_EQ(2u, (alignOf<AlignedCharArray<2, 1> >()));
-  EXPECT_EQ(4u, (alignOf<AlignedCharArray<4, 1> >()));
-  EXPECT_EQ(8u, (alignOf<AlignedCharArray<8, 1> >()));
-  EXPECT_EQ(16u, (alignOf<AlignedCharArray<16, 1> >()));
+  EXPECT_EQ(1u, (alignof(AlignedCharArray<1, 1>)));
+  EXPECT_EQ(2u, (alignof(AlignedCharArray<2, 1>)));
+  EXPECT_EQ(4u, (alignof(AlignedCharArray<4, 1>)));
+  EXPECT_EQ(8u, (alignof(AlignedCharArray<8, 1>)));
+  EXPECT_EQ(16u, (alignof(AlignedCharArray<16, 1>)));
 
   EXPECT_EQ(1u, sizeof(AlignedCharArray<1, 1>));
   EXPECT_EQ(7u, sizeof(AlignedCharArray<1, 7>));
