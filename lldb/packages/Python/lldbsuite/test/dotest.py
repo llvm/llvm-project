@@ -483,6 +483,8 @@ def parseOptionsAndInitTestdirs():
         # Shut off multiprocessing mode when test directories are specified.
         configuration.no_multiprocess_test_runner = True
 
+    lldbtest_config.codesign_identity = args.codesign_identity
+
     #print("testdirs:", testdirs)
 
 

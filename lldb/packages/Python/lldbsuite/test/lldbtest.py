@@ -1545,8 +1545,8 @@ class Base(unittest2.TestCase):
 
     def signBinary(self, binary_path):
         if sys.platform.startswith("darwin"):
-            codesign_cmd = "codesign --force --sign lldb_codesign %s" % (
-                binary_path)
+            codesign_cmd = "codesign --force --sign \"%s\" %s" % (
+                lldbtest_config.codesign_identity, binary_path)
             call(codesign_cmd, shell=True)
 
     def findBuiltClang(self):

@@ -159,6 +159,11 @@ def create_parser():
         dest='log_success',
         action='store_true',
         help="Leave logs/traces even for successful test runs (useful for creating reference log files during debugging.)")
+    group.add_argument(
+        '--codesign-identity',
+        metavar='Codesigning identity',
+        default='lldb_codesign',
+        help='The codesigning identity to use')
 
     # Configuration options
     group = parser.add_argument_group('Remote platform options')
