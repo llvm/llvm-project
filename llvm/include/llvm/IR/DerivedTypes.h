@@ -138,7 +138,7 @@ public:
     return T->getTypeID() == FunctionTyID;
   }
 };
-static_assert(AlignOf<FunctionType>::Alignment >= AlignOf<Type *>::Alignment,
+static_assert(alignof(FunctionType) >= alignof(Type *),
               "Alignment sufficient for objects appended to FunctionType");
 
 bool Type::isFunctionVarArg() const {

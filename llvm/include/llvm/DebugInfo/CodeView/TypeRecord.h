@@ -22,6 +22,11 @@
 #include <utility>
 
 namespace llvm {
+
+namespace msf {
+class StreamReader;
+}
+
 namespace codeview {
 
 using llvm::support::little32_t;
@@ -92,7 +97,7 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static Expected<MemberPointerInfo> deserialize(ArrayRef<uint8_t> &Data);
+  static Expected<MemberPointerInfo> deserialize(msf::StreamReader &Reader);
 
   TypeIndex getContainingType() const { return ContainingType; }
   PointerToMemberRepresentation getRepresentation() const {
@@ -134,7 +139,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<ModifierRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+                                              msf::StreamReader &Reader);
 
   TypeIndex getModifiedType() const { return ModifiedType; }
   ModifierOptions getModifiers() const { return Modifiers; }
@@ -165,7 +170,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<ProcedureRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+                                               msf::StreamReader &Reader);
 
   static uint32_t getLayoutSize() { return 2 + sizeof(Layout); }
 
@@ -211,7 +216,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<MemberFunctionRecord> deserialize(TypeRecordKind Kind,
-                                                    ArrayRef<uint8_t> &Data);
+                                                    msf::StreamReader &Reader);
 
   TypeIndex getReturnType() const { return ReturnType; }
   TypeIndex getClassType() const { return ClassType; }
@@ -258,7 +263,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<MemberFuncIdRecord> deserialize(TypeRecordKind Kind,
-                                                  ArrayRef<uint8_t> &Data);
+                                                  msf::StreamReader &Reader);
   TypeIndex getClassType() const { return ClassType; }
   TypeIndex getFunctionType() const { return FunctionType; }
   StringRef getName() const { return Name; }
@@ -287,7 +292,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<ArgListRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+                                             msf::StreamReader &Reader);
 
   ArrayRef<TypeIndex> getIndices() const { return StringIndices; }
 
@@ -333,7 +338,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<PointerRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+                                             msf::StreamReader &Reader);
 
   TypeIndex getReferentType() const { return ReferentType; }
   PointerKind getPointerKind() const { return PtrKind; }
@@ -410,7 +415,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<NestedTypeRecord> deserialize(TypeRecordKind Kind,
-                                                ArrayRef<uint8_t> &Data);
+                                                msf::StreamReader &Reader);
 
   TypeIndex getNestedType() const { return Type; }
   StringRef getName() const { return Name; }
@@ -438,7 +443,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap) { return false; }
 
   static Expected<FieldListRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+                                               msf::StreamReader &Reader);
 
   ArrayRef<uint8_t> Data;
 };
@@ -457,7 +462,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<ArrayRecord> deserialize(TypeRecordKind Kind,
-                                           ArrayRef<uint8_t> &Data);
+                                           msf::StreamReader &Reader);
 
   TypeIndex getElementType() const { return ElementType; }
   TypeIndex getIndexType() const { return IndexType; }
@@ -526,7 +531,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<ClassRecord> deserialize(TypeRecordKind Kind,
-                                           ArrayRef<uint8_t> &Data);
+                                           msf::StreamReader &Reader);
 
   HfaKind getHfa() const { return Hfa; }
   WindowsRTClassKind getWinRTKind() const { return WinRTKind; }
@@ -568,7 +573,7 @@ struct UnionRecord : public TagRecord {
         Hfa(Hfa), Size(Size) {}
 
   static Expected<UnionRecord> deserialize(TypeRecordKind Kind,
-                                           ArrayRef<uint8_t> &Data);
+                                           msf::StreamReader &Reader);
 
   HfaKind getHfa() const { return Hfa; }
   uint64_t getSize() const { return Size; }
@@ -605,7 +610,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<EnumRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+                                          msf::StreamReader &Reader);
 
   TypeIndex getUnderlyingType() const { return UnderlyingType; }
   TypeIndex UnderlyingType;
@@ -638,7 +643,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<BitFieldRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+                                              msf::StreamReader &Reader);
 
   TypeIndex getType() const { return Type; }
   uint8_t getBitOffset() const { return BitOffset; }
@@ -670,7 +675,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<VFTableShapeRecord> deserialize(TypeRecordKind Kind,
-                                                  ArrayRef<uint8_t> &Data);
+                                                  msf::StreamReader &Reader);
 
   ArrayRef<VFTableSlotKind> getSlots() const {
     if (!SlotsRef.empty())
@@ -705,7 +710,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<TypeServer2Record> deserialize(TypeRecordKind Kind,
-                                                 ArrayRef<uint8_t> &Data);
+                                                 msf::StreamReader &Reader);
 
   StringRef getGuid() const { return Guid; }
 
@@ -736,7 +741,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<StringIdRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+                                              msf::StreamReader &Reader);
 
   TypeIndex getId() const { return Id; }
 
@@ -764,7 +769,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<FuncIdRecord> deserialize(TypeRecordKind Kind,
-                                            ArrayRef<uint8_t> &Data);
+                                            msf::StreamReader &Reader);
 
   TypeIndex getParentScope() const { return ParentScope; }
 
@@ -797,7 +802,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<UdtSourceLineRecord> deserialize(TypeRecordKind Kind,
-                                                   ArrayRef<uint8_t> &Data);
+                                                   msf::StreamReader &Reader);
 
   TypeIndex getUDT() const { return UDT; }
   TypeIndex getSourceFile() const { return SourceFile; }
@@ -826,10 +831,10 @@ public:
 
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static Expected<UdtModSourceLineRecord> deserialize(TypeRecordKind Kind,
-                                                      ArrayRef<uint8_t> &Data) {
+  static Expected<UdtModSourceLineRecord>
+  deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
     const Layout *L = nullptr;
-    CV_DESERIALIZE(Data, L);
+    CV_DESERIALIZE(Reader, L);
 
     return UdtModSourceLineRecord(L->UDT, L->SourceFile, L->LineNumber,
                                   L->Module);
@@ -867,7 +872,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<BuildInfoRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+                                               msf::StreamReader &Reader);
 
   ArrayRef<TypeIndex> getArgs() const { return ArgIndices; }
   SmallVector<TypeIndex, 4> ArgIndices;
@@ -901,7 +906,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<VFTableRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+                                             msf::StreamReader &Reader);
 
   TypeIndex getCompleteClass() const { return CompleteClass; }
   TypeIndex getOverriddenVTable() const { return OverriddenVFTable; }
@@ -947,7 +952,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<OneMethodRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+                                               msf::StreamReader &Reader);
 
   TypeIndex getType() const { return Type; }
   MethodKind getKind() const { return Kind; }
@@ -990,7 +995,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<MethodOverloadListRecord>
-  deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data);
+  deserialize(TypeRecordKind Kind, msf::StreamReader &Reader);
 
   ArrayRef<OneMethodRecord> getMethods() const { return Methods; }
   std::vector<OneMethodRecord> Methods;
@@ -1020,8 +1025,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static Expected<OverloadedMethodRecord> deserialize(TypeRecordKind Kind,
-                                                      ArrayRef<uint8_t> &Data);
+  static Expected<OverloadedMethodRecord>
+  deserialize(TypeRecordKind Kind, msf::StreamReader &Reader);
 
   uint16_t getNumOverloads() const { return NumOverloads; }
   TypeIndex getMethodList() const { return MethodList; }
@@ -1053,7 +1058,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<DataMemberRecord> deserialize(TypeRecordKind Kind,
-                                                ArrayRef<uint8_t> &Data);
+                                                msf::StreamReader &Reader);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getType() const { return Type; }
@@ -1086,8 +1091,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static Expected<StaticDataMemberRecord> deserialize(TypeRecordKind Kind,
-                                                      ArrayRef<uint8_t> &Data);
+  static Expected<StaticDataMemberRecord>
+  deserialize(TypeRecordKind Kind, msf::StreamReader &Reader);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getType() const { return Type; }
@@ -1118,7 +1123,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<EnumeratorRecord> deserialize(TypeRecordKind Kind,
-                                                ArrayRef<uint8_t> &Data);
+                                                msf::StreamReader &Reader);
 
   MemberAccess getAccess() const { return Access; }
   APSInt getValue() const { return Value; }
@@ -1148,7 +1153,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<VFPtrRecord> deserialize(TypeRecordKind Kind,
-                                           ArrayRef<uint8_t> &Data);
+                                           msf::StreamReader &Reader);
 
   TypeIndex getType() const { return Type; }
   TypeIndex Type;
@@ -1173,7 +1178,7 @@ public:
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   static Expected<BaseClassRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+                                               msf::StreamReader &Reader);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getBaseType() const { return Type; }
@@ -1204,8 +1209,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static Expected<VirtualBaseClassRecord> deserialize(TypeRecordKind Kind,
-                                                      ArrayRef<uint8_t> &Data);
+  static Expected<VirtualBaseClassRecord>
+  deserialize(TypeRecordKind Kind, msf::StreamReader &Reader);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getBaseType() const { return BaseType; }
@@ -1241,8 +1246,8 @@ public:
 
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static Expected<ListContinuationRecord> deserialize(TypeRecordKind Kind,
-                                                      ArrayRef<uint8_t> &Data);
+  static Expected<ListContinuationRecord>
+  deserialize(TypeRecordKind Kind, msf::StreamReader &Reader);
   TypeIndex ContinuationIndex;
 
 private:

@@ -89,15 +89,9 @@ private:
 
   class StaticGlobalRenamer {
   public:
-    StaticGlobalRenamer() {}
-
-    StaticGlobalRenamer(StaticGlobalRenamer &&Other)
-      : NextId(Other.NextId) {}
-
-    StaticGlobalRenamer& operator=(StaticGlobalRenamer &&Other) {
-      NextId = Other.NextId;
-      return *this;
-    }
+    StaticGlobalRenamer() = default;
+    StaticGlobalRenamer(StaticGlobalRenamer &&) = default;
+    StaticGlobalRenamer &operator=(StaticGlobalRenamer &&) = default;
 
     void rename(Module &M) {
       for (auto &F : M)
@@ -124,44 +118,10 @@ private:
     struct SourceModuleEntry {
       std::unique_ptr<ResourceOwner<Module>> SourceMod;
       std::set<Function*> StubsToClone;
-
-      SourceModuleEntry() = default;
-      SourceModuleEntry(SourceModuleEntry &&Other)
-          : SourceMod(std::move(Other.SourceMod)),
-            StubsToClone(std::move(Other.StubsToClone)) {}
-      SourceModuleEntry& operator=(SourceModuleEntry &&Other) {
-        SourceMod = std::move(Other.SourceMod);
-        StubsToClone = std::move(Other.StubsToClone);
-        return *this;
-      }
     };
 
     typedef std::vector<SourceModuleEntry> SourceModulesList;
     typedef typename SourceModulesList::size_type SourceModuleHandle;
-
-    LogicalDylib() = default;
-
-    // Explicit move constructor to make MSVC happy.
-    LogicalDylib(LogicalDylib &&Other)
-      : ExternalSymbolResolver(std::move(Other.ExternalSymbolResolver)),
-        MemMgr(std::move(Other.MemMgr)),
-        StubsMgr(std::move(Other.StubsMgr)),
-        StaticRenamer(std::move(Other.StaticRenamer)),
-        ModuleAdder(std::move(Other.ModuleAdder)),
-        SourceModules(std::move(Other.SourceModules)),
-        BaseLayerHandles(std::move(Other.BaseLayerHandles)) {}
-
-    // Explicit move assignment operator to make MSVC happy.
-    LogicalDylib& operator=(LogicalDylib &&Other) {
-      ExternalSymbolResolver = std::move(Other.ExternalSymbolResolver);
-      MemMgr = std::move(Other.MemMgr);
-      StubsMgr = std::move(Other.StubsMgr);
-      StaticRenamer = std::move(Other.StaticRenamer);
-      ModuleAdder = std::move(Other.ModuleAdder);
-      SourceModules = std::move(Other.SourceModules);
-      BaseLayerHandles = std::move(Other.BaseLayerHandles);
-      return *this;
-    }
 
     SourceModuleHandle
     addSourceModule(std::unique_ptr<ResourceOwner<Module>> M) {

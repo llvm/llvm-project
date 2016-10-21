@@ -290,6 +290,7 @@ protected:
   Triple::ArchType Arch;
   bool IsTargetLittleEndian;
   bool IsMipsO32ABI;
+  bool IsMipsN32ABI;
   bool IsMipsN64ABI;
 
   // True if all sections should be passed to the memory manager, false if only
@@ -353,6 +354,7 @@ protected:
 
   virtual void setMipsABI(const ObjectFile &Obj) {
     IsMipsO32ABI = false;
+    IsMipsN32ABI = false;
     IsMipsN64ABI = false;
   }
 

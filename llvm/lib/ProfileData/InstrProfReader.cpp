@@ -289,7 +289,7 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
   if (CurrentPos + sizeof(RawInstrProf::Header) > End)
     return make_error<InstrProfError>(instrprof_error::malformed);
   // The writer ensures each profile is padded to start at an aligned address.
-  if (reinterpret_cast<size_t>(CurrentPos) % alignOf<uint64_t>())
+  if (reinterpret_cast<size_t>(CurrentPos) % alignof(uint64_t))
     return make_error<InstrProfError>(instrprof_error::malformed);
   // The magic should have the same byte order as in the previous header.
   uint64_t Magic = *reinterpret_cast<const uint64_t *>(CurrentPos);

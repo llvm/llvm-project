@@ -435,12 +435,6 @@ protected:
   explicit TargetTransformInfoImplCRTPBase(const DataLayout &DL) : BaseT(DL) {}
 
 public:
-  // Provide value semantics. MSVC requires that we spell all of these out.
-  TargetTransformInfoImplCRTPBase(const TargetTransformInfoImplCRTPBase &Arg)
-      : BaseT(static_cast<const BaseT &>(Arg)) {}
-  TargetTransformInfoImplCRTPBase(TargetTransformInfoImplCRTPBase &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
-
   using BaseT::getCallCost;
 
   unsigned getCallCost(const Function *F, int NumArgs) {

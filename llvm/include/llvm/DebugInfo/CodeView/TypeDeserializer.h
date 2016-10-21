@@ -11,6 +11,8 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEDESERIALIZER_H
 
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -32,12 +34,11 @@ public:
 #include "TypeRecords.def"
 
 protected:
-
   template <typename T>
-  Error deserializeRecord(ArrayRef<uint8_t> &Data, TypeLeafKind Kind,
+  Error deserializeRecord(msf::StreamReader &Reader, TypeLeafKind Kind,
                           T &Record) const {
     TypeRecordKind RK = static_cast<TypeRecordKind>(Kind);
-    auto ExpectedRecord = T::deserialize(RK, Data);
+    auto ExpectedRecord = T::deserialize(RK, Reader);
     if (!ExpectedRecord)
       return ExpectedRecord.takeError();
     Record = std::move(*ExpectedRecord);
@@ -46,15 +47,17 @@ protected:
 
 private:
   template <typename T> Error defaultVisitKnownRecord(CVType &CVR, T &Record) {
-    ArrayRef<uint8_t> RD = CVR.content();
-    if (auto EC = deserializeRecord(RD, CVR.Type, Record))
+    msf::ByteStream S(CVR.content());
+    msf::StreamReader SR(S);
+    if (auto EC = deserializeRecord(SR, CVR.Type, Record))
       return EC;
     return Error::success();
   }
   template <typename T>
   Error defaultVisitKnownMember(CVMemberRecord &CVMR, T &Record) {
-    ArrayRef<uint8_t> RD = CVMR.Data;
-    if (auto EC = deserializeRecord(RD, CVMR.Kind, Record))
+    msf::ByteStream S(CVMR.Data);
+    msf::StreamReader SR(S);
+    if (auto EC = deserializeRecord(SR, CVMR.Kind, Record))
       return EC;
     return Error::success();
   }

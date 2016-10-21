@@ -93,13 +93,13 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
 SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther,
                        uint8_t Type)
     : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(true),
-      IsInGlobalMipsGot(false), Type(Type), StOther(StOther),
-      NameOffset(NameOffset) {}
+      IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
+      StOther(StOther), NameOffset(NameOffset) {}
 
 SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
     : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(false),
-      IsInGlobalMipsGot(false), Type(Type), StOther(StOther),
-      Name({Name.data(), Name.size()}) {}
+      IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
+      StOther(StOther), Name({Name.data(), Name.size()}) {}
 
 StringRef SymbolBody::getName() const {
   assert(!isLocal());

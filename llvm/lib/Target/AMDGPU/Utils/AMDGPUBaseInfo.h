@@ -55,6 +55,10 @@ bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
+/// \returns True if constants should be emitted to .text section for given
+/// target triple \p TT, false otherwise.
+bool shouldEmitConstantsToTextSection(const Triple &TT);
+
 /// \returns Integer value requested using \p F's \p Name attribute.
 ///
 /// \returns \p Default if attribute is not present.

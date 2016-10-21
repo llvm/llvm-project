@@ -1229,7 +1229,7 @@ void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
 
 MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
     : AA(AA), DT(DT), F(Func), LiveOnEntryDef(nullptr), Walker(nullptr),
-      NextID(0) {
+      NextID(INVALID_MEMORYACCESS_ID) {
   buildMemorySSA();
 }
 
@@ -1332,7 +1332,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     }
 
     if (isUseTriviallyOptimizableToLiveOnEntry(*AA, MU->getMemoryInst())) {
-      MU->setDefiningAccess(MSSA->getLiveOnEntryDef());
+      MU->setDefiningAccess(MSSA->getLiveOnEntryDef(), true);
       continue;
     }
 
@@ -1428,13 +1428,13 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     // At the end of this loop, UpperBound is either a clobber, or lower bound
     // PHI walking may cause it to be < LowerBound, and in fact, < LastKill.
     if (FoundClobberResult || UpperBound < LocInfo.LastKill) {
-      MU->setDefiningAccess(VersionStack[UpperBound]);
+      MU->setDefiningAccess(VersionStack[UpperBound], true);
       // We were last killed now by where we got to
       LocInfo.LastKill = UpperBound;
     } else {
       // Otherwise, we checked all the new ones, and now we know we can get to
       // LastKill.
-      MU->setDefiningAccess(VersionStack[LocInfo.LastKill]);
+      MU->setDefiningAccess(VersionStack[LocInfo.LastKill], true);
     }
     LocInfo.LowerBound = VersionStack.size() - 1;
     LocInfo.LowerBoundBlock = BB;
@@ -1754,8 +1754,27 @@ void MemorySSA::removeMemoryAccess(MemoryAccess *MA) {
   }
 
   // Re-point the uses at our defining access
-  if (!MA->use_empty())
-    MA->replaceAllUsesWith(NewDefTarget);
+  if (!MA->use_empty()) {
+    // Reset optimized on users of this store, and reset the uses.
+    // A few notes:
+    // 1. This is a slightly modified version of RAUW to avoid walking the
+    // uses twice here.
+    // 2. If we wanted to be complete, we would have to reset the optimized
+    // flags on users of phi nodes if doing the below makes a phi node have all
+    // the same arguments. Instead, we prefer users to removeMemoryAccess those
+    // phi nodes, because doing it here would be N^3.
+    if (MA->hasValueHandle())
+      ValueHandleBase::ValueIsRAUWd(MA, NewDefTarget);
+    // Note: We assume MemorySSA is not used in metadata since it's not really
+    // part of the IR.
+
+    while (!MA->use_empty()) {
+      Use &U = *MA->use_begin();
+      if (MemoryUse *MU = dyn_cast<MemoryUse>(U.getUser()))
+        MU->resetOptimized();
+      U.set(NewDefTarget);
+    }
+  }
 
   // The call below to erase will destroy MA, so we can't change the order we
   // are doing things here
@@ -2115,6 +2134,7 @@ void MemorySSA::CachingWalker::invalidateInfo(MemoryAccess *MA) {
   if (MemoryUse *MU = dyn_cast<MemoryUse>(MA)) {
     UpwardsMemoryQuery Q(MU->getMemoryInst(), MU);
     Cache.remove(MU, Q.StartingLoc, Q.IsCall);
+    MU->resetOptimized();
   } else {
     // If it is not a use, the best we can do right now is destroy the cache.
     Cache.clear();
@@ -2188,6 +2208,13 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   if (!StartingAccess)
     return MA;
 
+  // If this is an already optimized use or def, return the optimized result.
+  // Note: Currently, we do not store the optimized def result because we'd need
+  // a separate field, since we can't use it as the defining access.
+  if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
+    if (MU->isOptimized())
+      return MU->getDefiningAccess();
+
   const Instruction *I = StartingAccess->getMemoryInst();
   UpwardsMemoryQuery Q(I, StartingAccess);
   // We can't sanely do anything with a fences, they conservatively
@@ -2202,6 +2229,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
     MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
     Cache.insert(StartingAccess, LiveOnEntry, Q.StartingLoc, Q.IsCall);
+    if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
+      MU->setDefiningAccess(LiveOnEntry, true);
     return LiveOnEntry;
   }
 
@@ -2218,6 +2247,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   DEBUG(dbgs() << *DefiningAccess << "\n");
   DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
   DEBUG(dbgs() << *Result << "\n");
+  if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
+    MU->setDefiningAccess(Result, true);
 
   return Result;
 }

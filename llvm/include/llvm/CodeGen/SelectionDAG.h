@@ -183,8 +183,8 @@ class SelectionDAG {
   /// The AllocatorType for allocating SDNodes. We use
   /// pool allocation with recycling.
   typedef RecyclingAllocator<BumpPtrAllocator, SDNode, sizeof(LargestSDNode),
-                             AlignOf<MostAlignedSDNode>::Alignment>
-    NodeAllocatorType;
+                             alignof(MostAlignedSDNode)>
+      NodeAllocatorType;
 
   /// Pool allocation for nodes.
   NodeAllocatorType NodeAllocator;

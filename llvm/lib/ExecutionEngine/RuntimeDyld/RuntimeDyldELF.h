@@ -55,9 +55,12 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   void resolveSystemZRelocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
 
-  void resolveMIPS64Relocation(const SectionEntry &Section, uint64_t Offset,
-                               uint64_t Value, uint32_t Type, int64_t Addend,
-                               uint64_t SymOffset, SID SectionID);
+  void resolveMIPSN32Relocation(const SectionEntry &Section, uint64_t Offset,
+                                uint64_t Value, uint32_t Type, int64_t Addend,
+                                uint64_t SymOffset, SID SectionID);
+  void resolveMIPSN64Relocation(const SectionEntry &Section, uint64_t Offset,
+                                uint64_t Value, uint32_t Type, int64_t Addend,
+                                uint64_t SymOffset, SID SectionID);
 
   int64_t evaluateMIPS64Relocation(const SectionEntry &Section,
                                    uint64_t Offset, uint64_t Value,

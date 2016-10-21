@@ -3349,11 +3349,27 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N) {
 
   SDLoc dl(N);
 
-  // For operands whose TypeAction is to promote, the promoted node to construct
-  // a new *_EXTEND_VECTOR_INREG node.
+  // For operands whose TypeAction is to promote, extend the promoted node
+  // appropriately (ZERO_EXTEND or SIGN_EXTEND) from the original pre-promotion
+  // type, and then construct a new *_EXTEND_VECTOR_INREG node to the promote-to
+  // type..
   if (getTypeAction(N->getOperand(0).getValueType())
       == TargetLowering::TypePromoteInteger) {
-    SDValue Promoted = GetPromotedInteger(N->getOperand(0));
+    SDValue Promoted;
+
+    switch(N->getOpcode()) {
+      case ISD::SIGN_EXTEND_VECTOR_INREG:
+        Promoted = SExtPromotedInteger(N->getOperand(0));
+        break;
+      case ISD::ZERO_EXTEND_VECTOR_INREG:
+        Promoted = ZExtPromotedInteger(N->getOperand(0));
+        break;
+      case ISD::ANY_EXTEND_VECTOR_INREG:
+        Promoted = GetPromotedInteger(N->getOperand(0));
+        break;
+      default:
+        llvm_unreachable("Node has unexpected Opcode");
+    }
     return DAG.getNode(N->getOpcode(), dl, NVT, Promoted);
   }
 

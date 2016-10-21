@@ -64,10 +64,10 @@ public:
 
   static Expected<ProcSym> deserialize(SymbolRecordKind Kind,
                                        uint32_t RecordOffset,
-                                       ArrayRef<uint8_t> &Data) {
+                                       msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return ProcSym(Kind, RecordOffset, H, Name);
   }
@@ -104,12 +104,12 @@ public:
 
   static Expected<Thunk32Sym> deserialize(SymbolRecordKind Kind,
                                           uint32_t RecordOffset,
-                                          ArrayRef<uint8_t> &Data) {
+                                          msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
     ArrayRef<uint8_t> VariantData;
 
-    CV_DESERIALIZE(Data, H, Name, CV_ARRAY_FIELD_TAIL(VariantData));
+    CV_DESERIALIZE(Reader, H, Name, CV_ARRAY_FIELD_TAIL(VariantData));
 
     return Thunk32Sym(Kind, RecordOffset, H, Name, VariantData);
   }
@@ -138,10 +138,10 @@ public:
 
   static Expected<TrampolineSym> deserialize(SymbolRecordKind Kind,
                                              uint32_t RecordOffset,
-                                             ArrayRef<uint8_t> &Data) {
+                                             msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
 
-    CV_DESERIALIZE(Data, H);
+    CV_DESERIALIZE(Reader, H);
 
     return TrampolineSym(Kind, RecordOffset, H);
   }
@@ -171,11 +171,11 @@ public:
 
   static Expected<SectionSym> deserialize(SymbolRecordKind Kind,
                                           uint32_t RecordOffset,
-                                          ArrayRef<uint8_t> &Data) {
+                                          msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
 
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return SectionSym(Kind, RecordOffset, H, Name);
   }
@@ -204,11 +204,11 @@ public:
 
   static Expected<CoffGroupSym> deserialize(SymbolRecordKind Kind,
                                             uint32_t RecordOffset,
-                                            ArrayRef<uint8_t> &Data) {
+                                            msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
 
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return CoffGroupSym(Kind, RecordOffset, H, Name);
   }
@@ -226,7 +226,7 @@ public:
 
   static Expected<ScopeEndSym> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     return ScopeEndSym(Kind, RecordOffset);
   }
   uint32_t RecordOffset;
@@ -246,11 +246,11 @@ public:
 
   static Expected<CallerSym> deserialize(SymbolRecordKind Kind,
                                          uint32_t RecordOffset,
-                                         ArrayRef<uint8_t> &Data) {
+                                         msf::StreamReader &Reader) {
     const Hdr *Header;
     ArrayRef<TypeIndex> Indices;
 
-    CV_DESERIALIZE(Data, Header, CV_ARRAY_FIELD_N(Indices, Header->Count));
+    CV_DESERIALIZE(Reader, Header, CV_ARRAY_FIELD_N(Indices, Header->Count));
 
     return CallerSym(Kind, RecordOffset, Header, Indices);
   }
@@ -456,10 +456,10 @@ public:
 
   static Expected<InlineSiteSym> deserialize(SymbolRecordKind Kind,
                                              uint32_t RecordOffset,
-                                             ArrayRef<uint8_t> &Data) {
+                                             msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     ArrayRef<uint8_t> Annotations;
-    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Annotations));
+    CV_DESERIALIZE(Reader, H, CV_ARRAY_FIELD_TAIL(Annotations));
 
     return InlineSiteSym(RecordOffset, H, Annotations);
   }
@@ -493,10 +493,10 @@ public:
 
   static Expected<PublicSym32> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return PublicSym32(RecordOffset, H, Name);
   }
@@ -522,10 +522,10 @@ public:
 
   static Expected<RegisterSym> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return RegisterSym(RecordOffset, H, Name);
   }
@@ -552,10 +552,10 @@ public:
 
   static Expected<ProcRefSym> deserialize(SymbolRecordKind Kind,
                                           uint32_t RecordOffset,
-                                          ArrayRef<uint8_t> &Data) {
+                                          msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return ProcRefSym(RecordOffset, H, Name);
   }
@@ -581,10 +581,10 @@ public:
 
   static Expected<LocalSym> deserialize(SymbolRecordKind Kind,
                                         uint32_t RecordOffset,
-                                        ArrayRef<uint8_t> &Data) {
+                                        msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return LocalSym(RecordOffset, H, Name);
   }
@@ -624,10 +624,10 @@ public:
 
   static Expected<DefRangeSym> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     ArrayRef<LocalVariableAddrGap> Gaps;
-    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+    CV_DESERIALIZE(Reader, H, CV_ARRAY_FIELD_TAIL(Gaps));
 
     return DefRangeSym(RecordOffset, H, Gaps);
   }
@@ -658,10 +658,10 @@ public:
 
   static Expected<DefRangeSubfieldSym> deserialize(SymbolRecordKind Kind,
                                                    uint32_t RecordOffset,
-                                                   ArrayRef<uint8_t> &Data) {
+                                                   msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     ArrayRef<LocalVariableAddrGap> Gaps;
-    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+    CV_DESERIALIZE(Reader, H, CV_ARRAY_FIELD_TAIL(Gaps));
 
     return DefRangeSubfieldSym(RecordOffset, H, Gaps);
   }
@@ -702,10 +702,10 @@ public:
 
   static Expected<DefRangeRegisterSym> deserialize(SymbolRecordKind Kind,
                                                    uint32_t RecordOffset,
-                                                   ArrayRef<uint8_t> &Data) {
+                                                   msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     ArrayRef<LocalVariableAddrGap> Gaps;
-    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+    CV_DESERIALIZE(Reader, H, CV_ARRAY_FIELD_TAIL(Gaps));
 
     return DefRangeRegisterSym(RecordOffset, H, Gaps);
   }
@@ -750,10 +750,10 @@ public:
 
   static Expected<DefRangeSubfieldRegisterSym>
   deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
-              ArrayRef<uint8_t> &Data) {
+              msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     ArrayRef<LocalVariableAddrGap> Gaps;
-    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+    CV_DESERIALIZE(Reader, H, CV_ARRAY_FIELD_TAIL(Gaps));
 
     return DefRangeSubfieldRegisterSym(RecordOffset, H, Gaps);
   }
@@ -785,10 +785,10 @@ public:
 
   static Expected<DefRangeFramePointerRelSym>
   deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
-              ArrayRef<uint8_t> &Data) {
+              msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     ArrayRef<LocalVariableAddrGap> Gaps;
-    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+    CV_DESERIALIZE(Reader, H, CV_ARRAY_FIELD_TAIL(Gaps));
 
     return DefRangeFramePointerRelSym(RecordOffset, H, Gaps);
   }
@@ -830,12 +830,12 @@ public:
     Header.Range = {};
   }
 
-  static Expected<DefRangeRegisterRelSym> deserialize(SymbolRecordKind Kind,
-                                                      uint32_t RecordOffset,
-                                                      ArrayRef<uint8_t> &Data) {
+  static Expected<DefRangeRegisterRelSym>
+  deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
+              msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     ArrayRef<LocalVariableAddrGap> Gaps;
-    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+    CV_DESERIALIZE(Reader, H, CV_ARRAY_FIELD_TAIL(Gaps));
 
     return DefRangeRegisterRelSym(RecordOffset, H, Gaps);
   }
@@ -876,9 +876,9 @@ public:
 
   static Expected<DefRangeFramePointerRelFullScopeSym>
   deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
-              ArrayRef<uint8_t> &Data) {
+              msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
-    CV_DESERIALIZE(Data, H);
+    CV_DESERIALIZE(Reader, H);
 
     return DefRangeFramePointerRelFullScopeSym(RecordOffset, H);
   }
@@ -906,10 +906,10 @@ public:
 
   static Expected<BlockSym> deserialize(SymbolRecordKind Kind,
                                         uint32_t RecordOffset,
-                                        ArrayRef<uint8_t> &Data) {
+                                        msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return BlockSym(RecordOffset, H, Name);
   }
@@ -940,10 +940,10 @@ public:
 
   static Expected<LabelSym> deserialize(SymbolRecordKind Kind,
                                         uint32_t RecordOffset,
-                                        ArrayRef<uint8_t> &Data) {
+                                        msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return LabelSym(RecordOffset, H, Name);
   }
@@ -972,10 +972,10 @@ public:
 
   static Expected<ObjNameSym> deserialize(SymbolRecordKind Kind,
                                           uint32_t RecordOffset,
-                                          ArrayRef<uint8_t> &Data) {
+                                          msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return ObjNameSym(RecordOffset, H, Name);
   }
@@ -1001,10 +1001,10 @@ public:
 
   static Expected<EnvBlockSym> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     std::vector<StringRef> Fields;
-    CV_DESERIALIZE(Data, H, CV_STRING_ARRAY_NULL_TERM(Fields));
+    CV_DESERIALIZE(Reader, H, CV_STRING_ARRAY_NULL_TERM(Fields));
 
     return EnvBlockSym(RecordOffset, H, Fields);
   }
@@ -1030,10 +1030,10 @@ public:
 
   static Expected<ExportSym> deserialize(SymbolRecordKind Kind,
                                          uint32_t RecordOffset,
-                                         ArrayRef<uint8_t> &Data) {
+                                         msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return ExportSym(RecordOffset, H, Name);
   }
@@ -1060,10 +1060,10 @@ public:
 
   static Expected<FileStaticSym> deserialize(SymbolRecordKind Kind,
                                              uint32_t RecordOffset,
-                                             ArrayRef<uint8_t> &Data) {
+                                             msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return FileStaticSym(RecordOffset, H, Name);
   }
@@ -1097,10 +1097,10 @@ public:
 
   static Expected<Compile2Sym> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Version;
-    CV_DESERIALIZE(Data, H, Version);
+    CV_DESERIALIZE(Reader, H, Version);
 
     return Compile2Sym(RecordOffset, H, Version);
   }
@@ -1135,10 +1135,10 @@ public:
 
   static Expected<Compile3Sym> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Version;
-    CV_DESERIALIZE(Data, H, Version);
+    CV_DESERIALIZE(Reader, H, Version);
 
     return Compile3Sym(RecordOffset, H, Version);
   }
@@ -1168,9 +1168,9 @@ public:
 
   static Expected<FrameProcSym> deserialize(SymbolRecordKind Kind,
                                             uint32_t RecordOffset,
-                                            ArrayRef<uint8_t> &Data) {
+                                            msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
-    CV_DESERIALIZE(Data, H);
+    CV_DESERIALIZE(Reader, H);
 
     return FrameProcSym(RecordOffset, H);
   }
@@ -1196,9 +1196,9 @@ public:
 
   static Expected<CallSiteInfoSym> deserialize(SymbolRecordKind Kind,
                                                uint32_t RecordOffset,
-                                               ArrayRef<uint8_t> &Data) {
+                                               msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
-    CV_DESERIALIZE(Data, H);
+    CV_DESERIALIZE(Reader, H);
 
     return CallSiteInfoSym(RecordOffset, H);
   }
@@ -1226,11 +1226,11 @@ public:
       : SymbolRecord(SymbolRecordKind::HeapAllocationSiteSym),
         RecordOffset(RecordOffset), Header(*H) {}
 
-  static Expected<HeapAllocationSiteSym> deserialize(SymbolRecordKind Kind,
-                                                     uint32_t RecordOffset,
-                                                     ArrayRef<uint8_t> &Data) {
+  static Expected<HeapAllocationSiteSym>
+  deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
+              msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
-    CV_DESERIALIZE(Data, H);
+    CV_DESERIALIZE(Reader, H);
 
     return HeapAllocationSiteSym(RecordOffset, H);
   }
@@ -1260,9 +1260,9 @@ public:
 
   static Expected<FrameCookieSym> deserialize(SymbolRecordKind Kind,
                                               uint32_t RecordOffset,
-                                              ArrayRef<uint8_t> &Data) {
+                                              msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
-    CV_DESERIALIZE(Data, H);
+    CV_DESERIALIZE(Reader, H);
 
     return FrameCookieSym(RecordOffset, H);
   }
@@ -1290,10 +1290,10 @@ public:
 
   static Expected<UDTSym> deserialize(SymbolRecordKind Kind,
                                       uint32_t RecordOffset,
-                                      ArrayRef<uint8_t> &Data) {
+                                      msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return UDTSym(RecordOffset, H, Name);
   }
@@ -1317,9 +1317,9 @@ public:
 
   static Expected<BuildInfoSym> deserialize(SymbolRecordKind Kind,
                                             uint32_t RecordOffset,
-                                            ArrayRef<uint8_t> &Data) {
+                                            msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
-    CV_DESERIALIZE(Data, H);
+    CV_DESERIALIZE(Reader, H);
 
     return BuildInfoSym(RecordOffset, H);
   }
@@ -1344,10 +1344,10 @@ public:
 
   static Expected<BPRelativeSym> deserialize(SymbolRecordKind Kind,
                                              uint32_t RecordOffset,
-                                             ArrayRef<uint8_t> &Data) {
+                                             msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return BPRelativeSym(RecordOffset, H, Name);
   }
@@ -1374,10 +1374,10 @@ public:
 
   static Expected<RegRelativeSym> deserialize(SymbolRecordKind Kind,
                                               uint32_t RecordOffset,
-                                              ArrayRef<uint8_t> &Data) {
+                                              msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return RegRelativeSym(RecordOffset, H, Name);
   }
@@ -1404,11 +1404,11 @@ public:
 
   static Expected<ConstantSym> deserialize(SymbolRecordKind Kind,
                                            uint32_t RecordOffset,
-                                           ArrayRef<uint8_t> &Data) {
+                                           msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     APSInt Value;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Value, Name);
+    CV_DESERIALIZE(Reader, H, Value, Name);
 
     return ConstantSym(RecordOffset, H, Value, Name);
   }
@@ -1436,10 +1436,10 @@ public:
 
   static Expected<DataSym> deserialize(SymbolRecordKind Kind,
                                        uint32_t RecordOffset,
-                                       ArrayRef<uint8_t> &Data) {
+                                       msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return DataSym(RecordOffset, H, Name);
   }
@@ -1470,10 +1470,10 @@ public:
 
   static Expected<ThreadLocalDataSym> deserialize(SymbolRecordKind Kind,
                                                   uint32_t RecordOffset,
-                                                  ArrayRef<uint8_t> &Data) {
+                                                  msf::StreamReader &Reader) {
     const Hdr *H = nullptr;
     StringRef Name;
-    CV_DESERIALIZE(Data, H, Name);
+    CV_DESERIALIZE(Reader, H, Name);
 
     return ThreadLocalDataSym(RecordOffset, H, Name);
   }

@@ -14,6 +14,7 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -837,7 +838,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);
   InitLibcallCallingConvs(LibcallCallingConvs);
-  ReciprocalEstimates.set("all", false, 0);
 }
 
 void TargetLoweringBase::initActions() {
@@ -1485,22 +1485,6 @@ MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
   return MVT::i32; // return the default value
 }
 
-TargetRecip
-TargetLoweringBase::getTargetRecipForFunc(MachineFunction &MF) const {
-  const Function *F = MF.getFunction();
-  StringRef RecipAttrName = "reciprocal-estimates";
-  if (!F->hasFnAttribute(RecipAttrName))
-    return ReciprocalEstimates;
-
-  // Make a copy of the target's default reciprocal codegen settings.
-  TargetRecip Recips = ReciprocalEstimates;
-
-  // Override any settings that are customized for this function.
-  StringRef RecipString = F->getFnAttribute(RecipAttrName).getValueAsString();
-  Recips.set(RecipString);
-  return Recips;
-}
-
 /// getVectorTypeBreakdown - Vector types are broken down into some number of
 /// legal first class types.  For example, MVT::v8f32 maps to 2 MVT::v4f32
 /// with Altivec or SSE1, or 8 promoted MVT::f64 values with the X86 FP stack.
@@ -1890,4 +1874,192 @@ unsigned TargetLoweringBase::getMaximumJumpTableSize() const {
 
 void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
   MaximumJumpTableSize = Val;
+}
+
+//===----------------------------------------------------------------------===//
+//  Reciprocal Estimates
+//===----------------------------------------------------------------------===//
+
+/// Get the reciprocal estimate attribute string for a function that will
+/// override the target defaults.
+static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
+  const Function *F = MF.getFunction();
+  StringRef RecipAttrName = "reciprocal-estimates";
+  if (!F->hasFnAttribute(RecipAttrName))
+    return StringRef();
+
+  return F->getFnAttribute(RecipAttrName).getValueAsString();
+}
+
+/// Construct a string for the given reciprocal operation of the given type.
+/// This string should match the corresponding option to the front-end's
+/// "-mrecip" flag assuming those strings have been passed through in an
+/// attribute string. For example, "vec-divf" for a division of a vXf32.
+static std::string getReciprocalOpName(bool IsSqrt, EVT VT) {
+  std::string Name = VT.isVector() ? "vec-" : "";
+
+  Name += IsSqrt ? "sqrt" : "div";
+
+  // TODO: Handle "half" or other float types?
+  if (VT.getScalarType() == MVT::f64) {
+    Name += "d";
+  } else {
+    assert(VT.getScalarType() == MVT::f32 &&
+           "Unexpected FP type for reciprocal estimate");
+    Name += "f";
+  }
+
+  return Name;
+}
+
+/// Return the character position and value (a single numeric character) of a
+/// customized refinement operation in the input string if it exists. Return
+/// false if there is no customized refinement step count.
+static bool parseRefinementStep(StringRef In, size_t &Position,
+                                uint8_t &Value) {
+  const char RefStepToken = ':';
+  Position = In.find(RefStepToken);
+  if (Position == StringRef::npos)
+    return false;
+
+  StringRef RefStepString = In.substr(Position + 1);
+  // Allow exactly one numeric character for the additional refinement
+  // step parameter.
+  if (RefStepString.size() == 1) {
+    char RefStepChar = RefStepString[0];
+    if (RefStepChar >= '0' && RefStepChar <= '9') {
+      Value = RefStepChar - '0';
+      return true;
+    }
+  }
+  report_fatal_error("Invalid refinement step for -recip.");
+}
+
+/// For the input attribute string, return one of the ReciprocalEstimate enum
+/// status values (enabled, disabled, or not specified) for this operation on
+/// the specified data type.
+static int getOpEnabled(bool IsSqrt, EVT VT, StringRef Override) {
+  if (Override.empty())
+    return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+
+  SmallVector<StringRef, 4> OverrideVector;
+  SplitString(Override, OverrideVector, ",");
+  unsigned NumArgs = OverrideVector.size();
+
+  // Check if "all", "none", or "default" was specified.
+  if (NumArgs == 1) {
+    // Look for an optional setting of the number of refinement steps needed
+    // for this type of reciprocal operation.
+    size_t RefPos;
+    uint8_t RefSteps;
+    if (parseRefinementStep(Override, RefPos, RefSteps)) {
+      // Split the string for further processing.
+      Override = Override.substr(0, RefPos);
+    }
+
+    // All reciprocal types are enabled.
+    if (Override == "all")
+      return TargetLoweringBase::ReciprocalEstimate::Enabled;
+
+    // All reciprocal types are disabled.
+    if (Override == "none")
+      return TargetLoweringBase::ReciprocalEstimate::Disabled;
+
+    // Target defaults for enablement are used.
+    if (Override == "default")
+      return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+  }
+
+  // The attribute string may omit the size suffix ('f'/'d').
+  std::string VTName = getReciprocalOpName(IsSqrt, VT);
+  std::string VTNameNoSize = VTName;
+  VTName.pop_back();
+  static const char DisabledPrefix = '!';
+
+  for (StringRef RecipType : OverrideVector) {
+    size_t RefPos;
+    uint8_t RefSteps;
+    if (parseRefinementStep(RecipType, RefPos, RefSteps))
+      RecipType = RecipType.substr(0, RefPos);
+
+    // Ignore the disablement token for string matching.
+    bool IsDisabled = RecipType[0] == DisabledPrefix;
+    if (IsDisabled)
+      RecipType = RecipType.substr(1);
+
+    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+      return IsDisabled ? TargetLoweringBase::ReciprocalEstimate::Disabled
+                        : TargetLoweringBase::ReciprocalEstimate::Enabled;
+  }
+
+  return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+}
+
+/// For the input attribute string, return the customized refinement step count
+/// for this operation on the specified data type. If the step count does not
+/// exist, return the ReciprocalEstimate enum value for unspecified.
+static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
+  if (Override.empty())
+    return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+
+  SmallVector<StringRef, 4> OverrideVector;
+  SplitString(Override, OverrideVector, ",");
+  unsigned NumArgs = OverrideVector.size();
+
+  // Check if "all", "default", or "none" was specified.
+  if (NumArgs == 1) {
+    // Look for an optional setting of the number of refinement steps needed
+    // for this type of reciprocal operation.
+    size_t RefPos;
+    uint8_t RefSteps;
+    if (!parseRefinementStep(Override, RefPos, RefSteps))
+      return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+
+    // Split the string for further processing.
+    Override = Override.substr(0, RefPos);
+    assert(Override != "none" &&
+           "Disabled reciprocals, but specifed refinement steps?");
+
+    // If this is a general override, return the specified number of steps.
+    if (Override == "all" || Override == "default")
+      return RefSteps;
+  }
+
+  // The attribute string may omit the size suffix ('f'/'d').
+  std::string VTName = getReciprocalOpName(IsSqrt, VT);
+  std::string VTNameNoSize = VTName;
+  VTName.pop_back();
+
+  for (StringRef RecipType : OverrideVector) {
+    size_t RefPos;
+    uint8_t RefSteps;
+    if (!parseRefinementStep(RecipType, RefPos, RefSteps))
+      continue;
+
+    RecipType = RecipType.substr(0, RefPos);
+    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+      return RefSteps;
+  }
+
+  return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+}
+
+int TargetLoweringBase::getRecipEstimateSqrtEnabled(EVT VT,
+                                                    MachineFunction &MF) const {
+  return getOpEnabled(true, VT, getRecipEstimateForFunc(MF));
+}
+
+int TargetLoweringBase::getRecipEstimateDivEnabled(EVT VT,
+                                                   MachineFunction &MF) const {
+  return getOpEnabled(false, VT, getRecipEstimateForFunc(MF));
+}
+
+int TargetLoweringBase::getSqrtRefinementSteps(EVT VT,
+                                               MachineFunction &MF) const {
+  return getOpRefinementSteps(true, VT, getRecipEstimateForFunc(MF));
+}
+
+int TargetLoweringBase::getDivRefinementSteps(EVT VT,
+                                              MachineFunction &MF) const {
+  return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(MF));
 }

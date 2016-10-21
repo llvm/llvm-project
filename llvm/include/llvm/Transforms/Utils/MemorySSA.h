@@ -110,6 +110,11 @@ class Instruction;
 class MemoryAccess;
 class LLVMContext;
 class raw_ostream;
+enum {
+  // Used to signify what the default invalid ID is for MemoryAccess's
+  // getID()
+  INVALID_MEMORYACCESS_ID = 0
+};
 
 template <class T> class memoryaccess_def_iterator_base;
 using memoryaccess_def_iterator = memoryaccess_def_iterator_base<MemoryAccess>;
@@ -157,7 +162,8 @@ protected:
   friend class MemoryDef;
   friend class MemoryPhi;
 
-  /// \brief Used internally to give IDs to MemoryAccesses for printing
+  /// \brief Used for debugging and tracking things about MemoryAccesses.
+  /// Guaranteed unique among MemoryAccesses, no guarantees otherwise.
   virtual unsigned getID() const = 0;
 
   MemoryAccess(LLVMContext &C, unsigned Vty, BasicBlock *BB,
@@ -235,7 +241,7 @@ public:
   void *operator new(size_t s) { return User::operator new(s, 1); }
 
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
-      : MemoryUseOrDef(C, DMA, MemoryUseVal, MI, BB) {}
+      : MemoryUseOrDef(C, DMA, MemoryUseVal, MI, BB), OptimizedID(0) {}
 
   static inline bool classof(const MemoryUse *) { return true; }
   static inline bool classof(const Value *MA) {
@@ -243,6 +249,18 @@ public:
   }
 
   void print(raw_ostream &OS) const override;
+  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
+    if (Optimized)
+      OptimizedID = DMA->getID();
+    MemoryUseOrDef::setDefiningAccess(DMA);
+  }
+  bool isOptimized() const {
+    return getDefiningAccess() && OptimizedID == getDefiningAccess()->getID();
+  }
+  /// \brief Reset the ID of what this MemoryUse was optimized to, causing it to
+  /// be rewalked by the walker if necessary.
+  /// This really should only be called by tests.
+  void resetOptimized() { OptimizedID = INVALID_MEMORYACCESS_ID; }
 
 protected:
   friend class MemorySSA;
@@ -250,6 +268,9 @@ protected:
   unsigned getID() const override {
     llvm_unreachable("MemoryUses do not have IDs");
   }
+
+private:
+  unsigned int OptimizedID;
 };
 
 template <>
@@ -288,8 +309,6 @@ public:
 protected:
   friend class MemorySSA;
 
-  // For debugging only. This gets used to give memory accesses pretty numbers
-  // when printing them out
   unsigned getID() const override { return ID; }
 
 private:
@@ -446,8 +465,6 @@ protected:
     User::allocHungoffUses(N, /* IsPhi */ true);
   }
 
-  /// For debugging only. This gets used to give memory accesses pretty numbers
-  /// when printing them out
   unsigned getID() const final { return ID; }
 
 private:
@@ -662,11 +679,7 @@ public:
   // unique_ptr<MemorySSA> to avoid build breakage on MSVC.
   struct Result {
     Result(std::unique_ptr<MemorySSA> &&MSSA) : MSSA(std::move(MSSA)) {}
-    Result(Result &&R) : MSSA(std::move(R.MSSA)) {}
     MemorySSA &getMSSA() { return *MSSA.get(); }
-
-    Result(const Result &) = delete;
-    void operator=(const Result &) = delete;
 
     std::unique_ptr<MemorySSA> MSSA;
   };

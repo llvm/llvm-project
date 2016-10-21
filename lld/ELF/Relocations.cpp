@@ -62,10 +62,11 @@ namespace elf {
 
 static bool refersToGotEntry(RelExpr Expr) {
   return Expr == R_GOT || Expr == R_GOT_OFF || Expr == R_MIPS_GOT_LOCAL_PAGE ||
-         Expr == R_MIPS_GOT_OFF || Expr == R_MIPS_TLSGD ||
-         Expr == R_MIPS_TLSLD || Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC ||
-         Expr == R_GOT_FROM_END || Expr == R_TLSGD || Expr == R_TLSGD_PC ||
-         Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE;
+         Expr == R_MIPS_GOT_OFF || Expr == R_MIPS_GOT_OFF32 ||
+         Expr == R_MIPS_TLSGD || Expr == R_MIPS_TLSLD ||
+         Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC || Expr == R_GOT_FROM_END ||
+         Expr == R_TLSGD || Expr == R_TLSGD_PC || Expr == R_TLSDESC ||
+         Expr == R_TLSDESC_PAGE;
 }
 
 static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
@@ -303,11 +304,11 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
                                      const SymbolBody &Body) {
   // These expressions always compute a constant
   if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
-      E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF || E == R_MIPS_TLSGD ||
-      E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC ||
-      E == R_TLSGD_PC || E == R_TLSGD || E == R_PPC_PLT_OPD ||
-      E == R_TLSDESC_CALL || E == R_TLSDESC_PAGE || E == R_HINT ||
-      E == R_THUNK_PC || E == R_THUNK_PLT_PC)
+      E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF ||
+      E == R_MIPS_GOT_OFF32 || E == R_MIPS_TLSGD || E == R_GOT_PAGE_PC ||
+      E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC || E == R_TLSGD ||
+      E == R_PPC_PLT_OPD || E == R_TLSDESC_CALL || E == R_TLSDESC_PAGE ||
+      E == R_HINT || E == R_THUNK_PC || E == R_THUNK_PLT_PC)
     return true;
 
   // These never do, except if the entire file is position dependent or if

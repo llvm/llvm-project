@@ -86,6 +86,8 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUHsaProgramScopeGlobal(
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
 
+const char *AMDGPUTargetELFStreamer::NoteName = "AMD";
+
 AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(MCStreamer &S)
     : AMDGPUTargetStreamer(S), Streamer(S) { }
 
@@ -100,15 +102,14 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(uint32_t Major,
   MCSectionELF *Note =
       OS.getContext().getELFSection(".note", ELF::SHT_NOTE, ELF::SHF_ALLOC);
 
-  unsigned NameSZ = 4;
-
   OS.PushSection();
   OS.SwitchSection(Note);
-  OS.EmitIntValue(NameSZ, 4);                            // namesz
-  OS.EmitIntValue(8, 4);                                 // descz
-  OS.EmitIntValue(NT_AMDGPU_HSA_CODE_OBJECT_VERSION, 4); // type
-  OS.EmitBytes(StringRef("AMD", NameSZ));                // name
-  OS.EmitIntValue(Major, 4);                             // desc
+  OS.EmitIntValue(strlen(NoteName) + 1, 4);                // namesz
+  OS.EmitIntValue(8, 4);                                   // descz
+  OS.EmitIntValue(NT_AMDGPU_HSA_CODE_OBJECT_VERSION, 4);   // type
+  OS.EmitBytes(StringRef(NoteName, strlen(NoteName) + 1)); // name
+  OS.EmitValueToAlignment(4);
+  OS.EmitIntValue(Major, 4);                               // desc
   OS.EmitIntValue(Minor, 4);
   OS.EmitValueToAlignment(4);
   OS.PopSection();
@@ -124,7 +125,6 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
   MCSectionELF *Note =
       OS.getContext().getELFSection(".note", ELF::SHT_NOTE, ELF::SHF_ALLOC);
 
-  unsigned NameSZ = 4;
   uint16_t VendorNameSize = VendorName.size() + 1;
   uint16_t ArchNameSize = ArchName.size() + 1;
   unsigned DescSZ = sizeof(VendorNameSize) + sizeof(ArchNameSize) +
@@ -133,11 +133,12 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
 
   OS.PushSection();
   OS.SwitchSection(Note);
-  OS.EmitIntValue(NameSZ, 4);                            // namesz
-  OS.EmitIntValue(DescSZ, 4);                            // descsz
-  OS.EmitIntValue(NT_AMDGPU_HSA_ISA, 4);                 // type
-  OS.EmitBytes(StringRef("AMD", 4));                     // name
-  OS.EmitIntValue(VendorNameSize, 2);                    // desc
+  OS.EmitIntValue(strlen(NoteName) + 1, 4);                // namesz
+  OS.EmitIntValue(DescSZ, 4);                              // descsz
+  OS.EmitIntValue(NT_AMDGPU_HSA_ISA, 4);                   // type
+  OS.EmitBytes(StringRef(NoteName, strlen(NoteName) + 1)); // name
+  OS.EmitValueToAlignment(4);
+  OS.EmitIntValue(VendorNameSize, 2);                      // desc
   OS.EmitIntValue(ArchNameSize, 2);
   OS.EmitIntValue(Major, 4);
   OS.EmitIntValue(Minor, 4);

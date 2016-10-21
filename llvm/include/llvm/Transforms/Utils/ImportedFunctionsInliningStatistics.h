@@ -48,26 +48,8 @@ private:
   struct InlineGraphNode {
     // Default-constructible and movable.
     InlineGraphNode() = default;
-    // FIXME: make them default ctors when we won't support ancient compilers
-    // like MSVS-2013.
-    InlineGraphNode(InlineGraphNode &&Other)
-      : InlinedCallees(std::move(Other.InlinedCallees)),
-      NumberOfInlines(Other.NumberOfInlines),
-      NumberOfRealInlines(Other.NumberOfRealInlines),
-      Imported(Other.Imported),
-      Visited(Other.Visited) {}
-
-    InlineGraphNode &operator=(InlineGraphNode &&Other) {
-      InlinedCallees = std::move(Other.InlinedCallees);
-      NumberOfInlines = Other.NumberOfInlines;
-      NumberOfRealInlines = Other.NumberOfRealInlines;
-      Imported = Other.Imported;
-      Visited = Other.Visited;
-      return *this;
-    }
-
-    InlineGraphNode(const InlineGraphNode &) = delete;
-    InlineGraphNode &operator=(const InlineGraphNode &) = delete;
+    InlineGraphNode(InlineGraphNode &&) = default;
+    InlineGraphNode &operator=(InlineGraphNode &&) = default;
 
     llvm::SmallVector<InlineGraphNode *, 8> InlinedCallees;
     /// Incremented every direct inline.

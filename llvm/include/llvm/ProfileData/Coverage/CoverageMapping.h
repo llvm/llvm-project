@@ -291,13 +291,8 @@ struct FunctionRecord {
   FunctionRecord(StringRef Name, ArrayRef<StringRef> Filenames)
       : Name(Name), Filenames(Filenames.begin(), Filenames.end()) {}
 
-  FunctionRecord(FunctionRecord &&FR)
-      : Name(FR.Name), Filenames(std::move(FR.Filenames)),
-        CountedRegions(std::move(FR.CountedRegions)),
-        ExecutionCount(FR.ExecutionCount) {}
-
-  FunctionRecord(const FunctionRecord &) = delete;
-  const FunctionRecord &operator=(const FunctionRecord &) = delete;
+  FunctionRecord(FunctionRecord &&FR) = default;
+  FunctionRecord &operator=(FunctionRecord &&) = default;
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count) {
     if (CountedRegions.empty())
@@ -404,10 +399,6 @@ public:
   CoverageData() {}
 
   CoverageData(StringRef Filename) : Filename(Filename) {}
-
-  CoverageData(CoverageData &&RHS)
-      : Filename(std::move(RHS.Filename)), Segments(std::move(RHS.Segments)),
-        Expansions(std::move(RHS.Expansions)) {}
 
   /// \brief Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }

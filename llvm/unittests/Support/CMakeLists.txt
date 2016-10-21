@@ -9,6 +9,7 @@ add_llvm_unittest(SupportTests
   BlockFrequencyTest.cpp
   BranchProbabilityTest.cpp
   Casting.cpp
+  Chrono.cpp
   CommandLineTest.cpp
   CompressionTest.cpp
   ConvertUTFTest.cpp

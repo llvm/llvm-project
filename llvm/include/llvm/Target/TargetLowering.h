@@ -61,7 +61,6 @@ namespace llvm {
   class MCSymbol;
   template<typename T> class SmallVectorImpl;
   class DataLayout;
-  struct TargetRecip;
   class TargetRegisterClass;
   class TargetLibraryInfo;
   class TargetLoweringObjectFile;
@@ -246,6 +245,37 @@ public:
     // Default behavior is to replace SQRT(X) with X*RSQRT(X).
     return false;
   }
+
+  /// Reciprocal estimate status values used by the functions below.
+  enum ReciprocalEstimate : int {
+    Unspecified = -1,
+    Disabled = 0,
+    Enabled = 1
+  };
+
+  /// Return a ReciprocalEstimate enum value for a square root of the given type
+  /// based on the function's attributes. If the operation is not overridden by
+  /// the function's attributes, "Unspecified" is returned and target defaults
+  /// are expected to be used for instruction selection.
+  int getRecipEstimateSqrtEnabled(EVT VT, MachineFunction &MF) const;
+
+  /// Return a ReciprocalEstimate enum value for a division of the given type
+  /// based on the function's attributes. If the operation is not overridden by
+  /// the function's attributes, "Unspecified" is returned and target defaults
+  /// are expected to be used for instruction selection.
+  int getRecipEstimateDivEnabled(EVT VT, MachineFunction &MF) const;
+
+  /// Return the refinement step count for a square root of the given type based
+  /// on the function's attributes. If the operation is not overridden by
+  /// the function's attributes, "Unspecified" is returned and target defaults
+  /// are expected to be used for instruction selection.
+  int getSqrtRefinementSteps(EVT VT, MachineFunction &MF) const;
+
+  /// Return the refinement step count for a division of the given type based
+  /// on the function's attributes. If the operation is not overridden by
+  /// the function's attributes, "Unspecified" is returned and target defaults
+  /// are expected to be used for instruction selection.
+  int getDivRefinementSteps(EVT VT, MachineFunction &MF) const;
 
   /// Returns true if target has indicated at least one type should be bypassed.
   bool isSlowDivBypassed() const { return !BypassSlowDivWidths.empty(); }
@@ -538,12 +568,6 @@ public:
       }
     }
   }
-
-  /// Return the reciprocal estimate code generation preferences for this target
-  /// after potentially overriding settings using the function's attributes.
-  /// FIXME: Like all unsafe-math target settings, this should really be an
-  /// instruction-level attribute/metadata/FMF.
-  TargetRecip getTargetRecipForFunc(MachineFunction &MF) const;
 
   /// Vector types are broken down into some number of legal first class types.
   /// For example, EVT::v8f32 maps to 2 EVT::v4f32 with Altivec or SSE1, or 8
@@ -2158,7 +2182,6 @@ protected:
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
   MachineBasicBlock *emitPatchPoint(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const;
-  TargetRecip ReciprocalEstimates;
 };
 
 /// This class defines information used to lower LLVM code to legal SelectionDAG
@@ -2971,31 +2994,35 @@ public:
   /// roots.
 
   /// Return a reciprocal square root estimate value for the input operand.
-  /// The RefinementSteps output is the number of Newton-Raphson refinement
-  /// iterations required to generate a sufficient (though not necessarily
-  /// IEEE-754 compliant) estimate for the value type.
+  /// \p Enabled is a ReciprocalEstimate enum with value either 'Unspecified' or
+  /// 'Enabled' as set by a potential default override attribute.
+  /// If \p RefinementSteps is 'Unspecified', the number of Newton-Raphson
+  /// refinement iterations required to generate a sufficient (though not
+  /// necessarily IEEE-754 compliant) estimate is returned in that parameter.
   /// The boolean UseOneConstNR output is used to select a Newton-Raphson
   /// algorithm implementation that uses one constant or two constants.
   /// A target may choose to implement its own refinement within this function.
   /// If that's true, then return '0' as the number of RefinementSteps to avoid
   /// any further refinement of the estimate.
   /// An empty SDValue return means no estimate sequence can be created.
-  virtual SDValue getRsqrtEstimate(SDValue Operand, DAGCombinerInfo &DCI,
-                                   unsigned &RefinementSteps,
+  virtual SDValue getRsqrtEstimate(SDValue Operand, SelectionDAG &DAG,
+                                   int Enabled, int &RefinementSteps,
                                    bool &UseOneConstNR) const {
     return SDValue();
   }
 
   /// Return a reciprocal estimate value for the input operand.
-  /// The RefinementSteps output is the number of Newton-Raphson refinement
-  /// iterations required to generate a sufficient (though not necessarily
-  /// IEEE-754 compliant) estimate for the value type.
+  /// \p Enabled is a ReciprocalEstimate enum with value either 'Unspecified' or
+  /// 'Enabled' as set by a potential default override attribute.
+  /// If \p RefinementSteps is 'Unspecified', the number of Newton-Raphson
+  /// refinement iterations required to generate a sufficient (though not
+  /// necessarily IEEE-754 compliant) estimate is returned in that parameter.
   /// A target may choose to implement its own refinement within this function.
   /// If that's true, then return '0' as the number of RefinementSteps to avoid
   /// any further refinement of the estimate.
   /// An empty SDValue return means no estimate sequence can be created.
-  virtual SDValue getRecipEstimate(SDValue Operand, DAGCombinerInfo &DCI,
-                                   unsigned &RefinementSteps) const {
+  virtual SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG,
+                                   int Enabled, int &RefinementSteps) const {
     return SDValue();
   }
 

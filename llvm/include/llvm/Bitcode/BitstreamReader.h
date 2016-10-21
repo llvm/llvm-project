@@ -58,9 +58,6 @@ private:
   /// information in the BlockInfo block. Only llvm-bcanalyzer uses this.
   bool IgnoreBlockInfoNames;
 
-  BitstreamReader(const BitstreamReader&) = delete;
-  void operator=(const BitstreamReader&) = delete;
-
 public:
   BitstreamReader() : IgnoreBlockInfoNames(true) {
   }
@@ -72,18 +69,6 @@ public:
 
   BitstreamReader(std::unique_ptr<MemoryObject> BitcodeBytes)
       : BitcodeBytes(std::move(BitcodeBytes)), IgnoreBlockInfoNames(true) {}
-
-  BitstreamReader(BitstreamReader &&Other) {
-    *this = std::move(Other);
-  }
-
-  BitstreamReader &operator=(BitstreamReader &&Other) {
-    BitcodeBytes = std::move(Other.BitcodeBytes);
-    // Explicitly swap block info, so that nothing gets destroyed twice.
-    std::swap(BlockInfoRecords, Other.BlockInfoRecords);
-    IgnoreBlockInfoNames = Other.IgnoreBlockInfoNames;
-    return *this;
-  }
 
   void init(const unsigned char *Start, const unsigned char *End) {
     assert(((End-Start) & 3) == 0 &&"Bitcode stream not a multiple of 4 bytes");

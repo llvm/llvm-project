@@ -325,6 +325,7 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     // of sum the symbol's value and the addend.
     return Out<ELFT>::Got->getMipsLocalPageOffset(Body.getVA<ELFT>(A));
   case R_MIPS_GOT_OFF:
+  case R_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend
     // should be applied to the GOT entry content not to the GOT entry offset.
     // That is why we use separate expression type.

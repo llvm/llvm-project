@@ -201,7 +201,6 @@ namespace llvm {
     /// \param File                File where this member is defined.
     /// \param LineNo              Line number.
     /// \param SizeInBits          Member size.
-    /// \param AlignInBits         Member alignment.
     /// \param OffsetInBits        Member offset.
     /// \param StorageOffsetInBits Member storage offset.
     /// \param Flags               Flags to encode member attribute.

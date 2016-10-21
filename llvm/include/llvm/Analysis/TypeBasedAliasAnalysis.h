@@ -27,9 +27,6 @@ class TypeBasedAAResult : public AAResultBase<TypeBasedAAResult> {
   friend AAResultBase<TypeBasedAAResult>;
 
 public:
-  explicit TypeBasedAAResult() {}
-  TypeBasedAAResult(TypeBasedAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
-
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.

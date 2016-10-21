@@ -85,17 +85,8 @@ struct StratifiedLink {
 template <typename T> class StratifiedSets {
 public:
   StratifiedSets() = default;
-
-  // TODO: Figure out how to make MSVC not call the copy ctor here, and delete
-  // it.
-
-  // Can't default these due to compile errors in MSVC2013
-  StratifiedSets(StratifiedSets &&Other) { *this = std::move(Other); }
-  StratifiedSets &operator=(StratifiedSets &&Other) {
-    Values = std::move(Other.Values);
-    Links = std::move(Other.Links);
-    return *this;
-  }
+  StratifiedSets(StratifiedSets &&) = default;
+  StratifiedSets &operator=(StratifiedSets &&) = default;
 
   StratifiedSets(DenseMap<T, StratifiedInfo> Map,
                  std::vector<StratifiedLink> Links)

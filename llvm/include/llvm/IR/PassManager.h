@@ -65,22 +65,6 @@ namespace llvm {
 /// the IR is not mutated at all.
 class PreservedAnalyses {
 public:
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  PreservedAnalyses() {}
-  PreservedAnalyses(const PreservedAnalyses &Arg)
-      : PreservedPassIDs(Arg.PreservedPassIDs) {}
-  PreservedAnalyses(PreservedAnalyses &&Arg)
-      : PreservedPassIDs(std::move(Arg.PreservedPassIDs)) {}
-  friend void swap(PreservedAnalyses &LHS, PreservedAnalyses &RHS) {
-    using std::swap;
-    swap(LHS.PreservedPassIDs, RHS.PreservedPassIDs);
-  }
-  PreservedAnalyses &operator=(PreservedAnalyses RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
-
   /// \brief Convenience factory function for the empty preserved set.
   static PreservedAnalyses none() { return PreservedAnalyses(); }
 
@@ -323,9 +307,6 @@ private:
   typedef detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>
       PassConceptT;
 
-  PassManager(const PassManager &) = delete;
-  PassManager &operator=(const PassManager &) = delete;
-
   std::vector<std::unique_ptr<PassConceptT>> Passes;
 
   /// \brief Flag indicating whether we should do debug logging.
@@ -358,19 +339,8 @@ public:
   /// A flag can be passed to indicate that the manager should perform debug
   /// logging.
   AnalysisManager(bool DebugLogging = false) : DebugLogging(DebugLogging) {}
-
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  AnalysisManager(AnalysisManager &&Arg)
-      : AnalysisPasses(std::move(Arg.AnalysisPasses)),
-        AnalysisResults(std::move(Arg.AnalysisResults)),
-        DebugLogging(std::move(Arg.DebugLogging)) {}
-  AnalysisManager &operator=(AnalysisManager &&RHS) {
-    AnalysisPasses = std::move(RHS.AnalysisPasses);
-    AnalysisResults = std::move(RHS.AnalysisResults);
-    DebugLogging = std::move(RHS.DebugLogging);
-    return *this;
-  }
+  AnalysisManager(AnalysisManager &&) = default;
+  AnalysisManager &operator=(AnalysisManager &&) = default;
 
   /// \brief Returns true if the analysis manager has an empty results cache.
   bool empty() const {
@@ -543,9 +513,6 @@ public:
   }
 
 private:
-  AnalysisManager(const AnalysisManager &) = delete;
-  AnalysisManager &operator=(const AnalysisManager &) = delete;
-
   /// \brief Lookup a registered analysis pass.
   PassConceptT &lookupPass(void *PassID) {
     typename AnalysisPassMapT::iterator PI = AnalysisPasses.find(PassID);
@@ -731,16 +698,6 @@ public:
   };
 
   explicit InnerAnalysisManagerProxy(AnalysisManagerT &AM) : AM(&AM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  InnerAnalysisManagerProxy(const InnerAnalysisManagerProxy &Arg)
-      : AM(Arg.AM) {}
-  InnerAnalysisManagerProxy(InnerAnalysisManagerProxy &&Arg)
-      : AM(std::move(Arg.AM)) {}
-  InnerAnalysisManagerProxy &operator=(InnerAnalysisManagerProxy RHS) {
-    std::swap(AM, RHS.AM);
-    return *this;
-  }
 
   /// \brief Run the analysis pass and create our proxy result object.
   ///
@@ -795,14 +752,6 @@ public:
   class Result {
   public:
     explicit Result(const AnalysisManagerT &AM) : AM(&AM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : AM(Arg.AM) {}
-    Result(Result &&Arg) : AM(std::move(Arg.AM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(AM, RHS.AM);
-      return *this;
-    }
 
     const AnalysisManagerT &getManager() const { return *AM; }
 
@@ -814,16 +763,6 @@ public:
   };
 
   OuterAnalysisManagerProxy(const AnalysisManagerT &AM) : AM(&AM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  OuterAnalysisManagerProxy(const OuterAnalysisManagerProxy &Arg)
-      : AM(Arg.AM) {}
-  OuterAnalysisManagerProxy(OuterAnalysisManagerProxy &&Arg)
-      : AM(std::move(Arg.AM)) {}
-  OuterAnalysisManagerProxy &operator=(OuterAnalysisManagerProxy RHS) {
-    std::swap(AM, RHS.AM);
-    return *this;
-  }
 
   /// \brief Run the analysis pass and create our proxy result object.
   /// Nothing to see here, it just forwards the \c AM reference into the
@@ -879,21 +818,6 @@ class ModuleToFunctionPassAdaptor
 public:
   explicit ModuleToFunctionPassAdaptor(FunctionPassT Pass)
       : Pass(std::move(Pass)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  ModuleToFunctionPassAdaptor(const ModuleToFunctionPassAdaptor &Arg)
-      : Pass(Arg.Pass) {}
-  ModuleToFunctionPassAdaptor(ModuleToFunctionPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
-  friend void swap(ModuleToFunctionPassAdaptor &LHS,
-                   ModuleToFunctionPassAdaptor &RHS) {
-    using std::swap;
-    swap(LHS.Pass, RHS.Pass);
-  }
-  ModuleToFunctionPassAdaptor &operator=(ModuleToFunctionPassAdaptor RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
 
   /// \brief Runs the function pass across every function in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
@@ -1014,19 +938,6 @@ template <typename PassT>
 class RepeatedPass : public PassInfoMixin<RepeatedPass<PassT>> {
 public:
   RepeatedPass(int Count, PassT P) : Count(Count), P(std::move(P)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  RepeatedPass(const RepeatedPass &Arg) : Count(Arg.Count), P(Arg.P) {}
-  RepeatedPass(RepeatedPass &&Arg) : Count(Arg.Count), P(std::move(Arg.P)) {}
-  friend void swap(RepeatedPass &LHS, RepeatedPass &RHS) {
-    using std::swap;
-    swap(LHS.Count, RHS.Count);
-    swap(LHS.P, RHS.P);
-  }
-  RepeatedPass &operator=(RepeatedPass RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
 
   template <typename IRUnitT, typename AnalysisManagerT, typename... Ts>
   PreservedAnalyses run(IRUnitT &Arg, AnalysisManagerT &AM, Ts &&... Args) {

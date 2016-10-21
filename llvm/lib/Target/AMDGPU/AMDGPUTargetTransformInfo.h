@@ -64,13 +64,6 @@ public:
       ST(TM->getSubtargetImpl(F)),
       TLI(ST->getTargetLowering()) {}
 
-  // Provide value semantics. MSVC requires that we spell all of these out.
-  AMDGPUTTIImpl(const AMDGPUTTIImpl &Arg)
-      : BaseT(static_cast<const BaseT &>(Arg)), ST(Arg.ST), TLI(Arg.TLI) {}
-  AMDGPUTTIImpl(AMDGPUTTIImpl &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))), ST(std::move(Arg.ST)),
-        TLI(std::move(Arg.TLI)) {}
-
   bool hasBranchDivergence() { return true; }
 
   void getUnrollingPreferences(Loop *L, TTI::UnrollingPreferences &UP);

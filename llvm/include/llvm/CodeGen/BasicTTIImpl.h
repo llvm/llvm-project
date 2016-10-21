@@ -97,12 +97,6 @@ protected:
   using TargetTransformInfoImplBase::DL;
 
 public:
-  // Provide value semantics. MSVC requires that we spell all of these out.
-  BasicTTIImplBase(const BasicTTIImplBase &Arg)
-      : BaseT(static_cast<const BaseT &>(Arg)) {}
-  BasicTTIImplBase(BasicTTIImplBase &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
-
   /// \name Scalar TTI Implementations
   /// @{
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
@@ -961,13 +955,6 @@ class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
 
 public:
   explicit BasicTTIImpl(const TargetMachine *ST, const Function &F);
-
-  // Provide value semantics. MSVC requires that we spell all of these out.
-  BasicTTIImpl(const BasicTTIImpl &Arg)
-      : BaseT(static_cast<const BaseT &>(Arg)), ST(Arg.ST), TLI(Arg.TLI) {}
-  BasicTTIImpl(BasicTTIImpl &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))), ST(std::move(Arg.ST)),
-        TLI(std::move(Arg.TLI)) {}
 };
 
 }

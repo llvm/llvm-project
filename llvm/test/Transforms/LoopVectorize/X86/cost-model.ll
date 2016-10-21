@@ -67,7 +67,7 @@ for:
   %t2 = load float, float* %arrayidx3, align 4
   %add = fadd fast float %t1, %s.02
   %add4 = fadd fast float %add, %t2
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 32
   %cmp1 = icmp slt i64 %indvars.iv.next, %t0
   br i1 %cmp1, label %for, label %loopexit
 

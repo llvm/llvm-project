@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -20,9 +21,9 @@ using namespace llvm::codeview;
 //===----------------------------------------------------------------------===//
 
 Expected<MemberPointerInfo>
-MemberPointerInfo::deserialize(ArrayRef<uint8_t> &Data) {
+MemberPointerInfo::deserialize(msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  if (auto EC = consumeObject(Data, L))
+  if (auto EC = Reader.readObject(L))
     return std::move(EC);
 
   TypeIndex T = L->ClassType;
@@ -32,10 +33,10 @@ MemberPointerInfo::deserialize(ArrayRef<uint8_t> &Data) {
   return MemberPointerInfo(T, PMR);
 }
 
-Expected<ModifierRecord> ModifierRecord::deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data) {
+Expected<ModifierRecord>
+ModifierRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  if (auto EC = consumeObject(Data, L))
+  if (auto EC = Reader.readObject(L))
     return std::move(EC);
 
   TypeIndex M = L->ModifiedType;
@@ -45,9 +46,9 @@ Expected<ModifierRecord> ModifierRecord::deserialize(TypeRecordKind Kind,
 }
 
 Expected<ProcedureRecord>
-ProcedureRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+ProcedureRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  if (auto EC = consumeObject(Data, L))
+  if (auto EC = Reader.readObject(L))
     return std::move(EC);
   return ProcedureRecord(L->ReturnType, L->CallConv, L->Options,
                          L->NumParameters, L->ArgListType);
@@ -55,24 +56,25 @@ ProcedureRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
 
 Expected<MemberFunctionRecord>
 MemberFunctionRecord::deserialize(TypeRecordKind Kind,
-                                  ArrayRef<uint8_t> &Data) {
+                                  msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  CV_DESERIALIZE(Data, L);
+  CV_DESERIALIZE(Reader, L);
   return MemberFunctionRecord(L->ReturnType, L->ClassType, L->ThisType,
                               L->CallConv, L->Options, L->NumParameters,
                               L->ArgListType, L->ThisAdjustment);
 }
 
 Expected<MemberFuncIdRecord>
-MemberFuncIdRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+MemberFuncIdRecord::deserialize(TypeRecordKind Kind,
+                                msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Name);
+  CV_DESERIALIZE(Reader, L, Name);
   return MemberFuncIdRecord(L->ClassType, L->FunctionType, Name);
 }
 
 Expected<ArgListRecord> ArgListRecord::deserialize(TypeRecordKind Kind,
-                                                   ArrayRef<uint8_t> &Data) {
+                                                   msf::StreamReader &Reader) {
   if (Kind != TypeRecordKind::StringList && Kind != TypeRecordKind::ArgList)
     return make_error<CodeViewError>(
         cv_error_code::corrupt_record,
@@ -80,14 +82,14 @@ Expected<ArgListRecord> ArgListRecord::deserialize(TypeRecordKind Kind,
 
   const Layout *L = nullptr;
   ArrayRef<TypeIndex> Indices;
-  CV_DESERIALIZE(Data, L, CV_ARRAY_FIELD_N(Indices, L->NumArgs));
+  CV_DESERIALIZE(Reader, L, CV_ARRAY_FIELD_N(Indices, L->NumArgs));
   return ArgListRecord(Kind, Indices);
 }
 
 Expected<PointerRecord> PointerRecord::deserialize(TypeRecordKind Kind,
-                                                   ArrayRef<uint8_t> &Data) {
+                                                   msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  if (auto EC = consumeObject(Data, L))
+  if (auto EC = Reader.readObject(L))
     return std::move(EC);
 
   PointerKind PtrKind = L->getPtrKind();
@@ -97,7 +99,7 @@ Expected<PointerRecord> PointerRecord::deserialize(TypeRecordKind Kind,
   uint8_t Size = L->getPtrSize();
 
   if (L->isPointerToMember()) {
-    if (auto ExpectedMPI = MemberPointerInfo::deserialize(Data))
+    if (auto ExpectedMPI = MemberPointerInfo::deserialize(Reader))
       return PointerRecord(L->PointeeType, PtrKind, Mode, Options, Size,
                            *ExpectedMPI);
     else
@@ -108,38 +110,39 @@ Expected<PointerRecord> PointerRecord::deserialize(TypeRecordKind Kind,
 }
 
 Expected<NestedTypeRecord>
-NestedTypeRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+NestedTypeRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Name);
+  CV_DESERIALIZE(Reader, L, Name);
   return NestedTypeRecord(L->Type, Name);
 }
 
 Expected<FieldListRecord>
-FieldListRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
-  auto FieldListData = Data;
-  Data = ArrayRef<uint8_t>();
-  return FieldListRecord(FieldListData);
+FieldListRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
+  ArrayRef<uint8_t> Data;
+  if (auto EC = Reader.readBytes(Data, Reader.bytesRemaining()))
+    return std::move(EC);
+  return FieldListRecord(Data);
 }
 
 Expected<ArrayRecord> ArrayRecord::deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data) {
+                                               msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   uint64_t Size;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Size), Name);
+  CV_DESERIALIZE(Reader, L, CV_NUMERIC_FIELD(Size), Name);
   return ArrayRecord(L->ElementType, L->IndexType, Size, Name);
 }
 
 Expected<ClassRecord> ClassRecord::deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data) {
+                                               msf::StreamReader &Reader) {
   uint64_t Size = 0;
   StringRef Name;
   StringRef UniqueName;
   uint16_t Props;
   const Layout *L = nullptr;
 
-  CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Size), Name,
+  CV_DESERIALIZE(Reader, L, CV_NUMERIC_FIELD(Size), Name,
                  CV_CONDITIONAL_FIELD(UniqueName, L->hasUniqueName()));
 
   Props = L->Properties;
@@ -154,14 +157,14 @@ Expected<ClassRecord> ClassRecord::deserialize(TypeRecordKind Kind,
 }
 
 Expected<UnionRecord> UnionRecord::deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data) {
+                                               msf::StreamReader &Reader) {
   uint64_t Size = 0;
   StringRef Name;
   StringRef UniqueName;
   uint16_t Props;
 
   const Layout *L = nullptr;
-  CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Size), Name,
+  CV_DESERIALIZE(Reader, L, CV_NUMERIC_FIELD(Size), Name,
                  CV_CONDITIONAL_FIELD(UniqueName, L->hasUniqueName()));
 
   Props = L->Properties;
@@ -174,11 +177,11 @@ Expected<UnionRecord> UnionRecord::deserialize(TypeRecordKind Kind,
 }
 
 Expected<EnumRecord> EnumRecord::deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data) {
+                                             msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
   StringRef UniqueName;
-  CV_DESERIALIZE(Data, L, Name,
+  CV_DESERIALIZE(Reader, L, Name,
                  CV_CONDITIONAL_FIELD(UniqueName, L->hasUniqueName()));
 
   uint16_t P = L->Properties;
@@ -187,97 +190,98 @@ Expected<EnumRecord> EnumRecord::deserialize(TypeRecordKind Kind,
                     UniqueName, L->UnderlyingType);
 }
 
-Expected<BitFieldRecord> BitFieldRecord::deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data) {
+Expected<BitFieldRecord>
+BitFieldRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  CV_DESERIALIZE(Data, L);
+  CV_DESERIALIZE(Reader, L);
   return BitFieldRecord(L->Type, L->BitSize, L->BitOffset);
 }
 
 Expected<VFTableShapeRecord>
-VFTableShapeRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+VFTableShapeRecord::deserialize(TypeRecordKind Kind,
+                                msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  if (auto EC = consumeObject(Data, L))
+  if (auto EC = Reader.readObject(L))
     return std::move(EC);
 
   std::vector<VFTableSlotKind> Slots;
   uint16_t Count = L->VFEntryCount;
   while (Count > 0) {
-    if (Data.empty())
-      return make_error<CodeViewError>(cv_error_code::corrupt_record,
-                                       "VTableShapeRecord contains no entries");
-
     // Process up to 2 nibbles at a time (if there are at least 2 remaining)
-    uint8_t Value = Data[0] & 0x0F;
+    uint8_t Data;
+    if (auto EC = Reader.readInteger(Data))
+      return std::move(EC);
+
+    uint8_t Value = Data & 0x0F;
     Slots.push_back(static_cast<VFTableSlotKind>(Value));
     if (--Count > 0) {
-      Value = (Data[0] & 0xF0) >> 4;
+      Value = (Data & 0xF0) >> 4;
       Slots.push_back(static_cast<VFTableSlotKind>(Value));
       --Count;
     }
-    Data = Data.slice(1);
   }
 
   return VFTableShapeRecord(Slots);
 }
 
 Expected<TypeServer2Record>
-TypeServer2Record::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+TypeServer2Record::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Name);
+  CV_DESERIALIZE(Reader, L, Name);
   return TypeServer2Record(StringRef(L->Guid, 16), L->Age, Name);
 }
 
-Expected<StringIdRecord> StringIdRecord::deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data) {
+Expected<StringIdRecord>
+StringIdRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Name);
+  CV_DESERIALIZE(Reader, L, Name);
   return StringIdRecord(L->id, Name);
 }
 
 Expected<FuncIdRecord> FuncIdRecord::deserialize(TypeRecordKind Kind,
-                                                 ArrayRef<uint8_t> &Data) {
+                                                 msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Name);
+  CV_DESERIALIZE(Reader, L, Name);
   return FuncIdRecord(L->ParentScope, L->FunctionType, Name);
 }
 
 Expected<UdtSourceLineRecord>
-UdtSourceLineRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+UdtSourceLineRecord::deserialize(TypeRecordKind Kind,
+                                 msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  CV_DESERIALIZE(Data, L);
+  CV_DESERIALIZE(Reader, L);
   return UdtSourceLineRecord(L->UDT, L->SourceFile, L->LineNumber);
 }
 
 Expected<BuildInfoRecord>
-BuildInfoRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+BuildInfoRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   ArrayRef<TypeIndex> Indices;
-  CV_DESERIALIZE(Data, L, CV_ARRAY_FIELD_N(Indices, L->NumArgs));
+  CV_DESERIALIZE(Reader, L, CV_ARRAY_FIELD_N(Indices, L->NumArgs));
   return BuildInfoRecord(Indices);
 }
 
 Expected<VFTableRecord> VFTableRecord::deserialize(TypeRecordKind Kind,
-                                                   ArrayRef<uint8_t> &Data) {
+                                                   msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
   std::vector<StringRef> Names;
-  CV_DESERIALIZE(Data, L, Name, CV_ARRAY_FIELD_TAIL(Names));
+  CV_DESERIALIZE(Reader, L, Name, CV_ARRAY_FIELD_TAIL(Names));
   return VFTableRecord(L->CompleteClass, L->OverriddenVFTable, L->VFPtrOffset,
                        Name, Names);
 }
 
 Expected<OneMethodRecord>
-OneMethodRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+OneMethodRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
   int32_t VFTableOffset = -1;
 
-  CV_DESERIALIZE(Data, L, CV_CONDITIONAL_FIELD(VFTableOffset,
-                                               L->Attrs.isIntroducedVirtual()),
+  CV_DESERIALIZE(Reader, L, CV_CONDITIONAL_FIELD(
+                                VFTableOffset, L->Attrs.isIntroducedVirtual()),
                  Name);
 
   MethodOptions Options = L->Attrs.getFlags();
@@ -294,13 +298,14 @@ OneMethodRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
 
 Expected<MethodOverloadListRecord>
 MethodOverloadListRecord::deserialize(TypeRecordKind Kind,
-                                      ArrayRef<uint8_t> &Data) {
+                                      msf::StreamReader &Reader) {
   std::vector<OneMethodRecord> Methods;
-  while (!Data.empty()) {
+  while (!Reader.empty()) {
     const Layout *L = nullptr;
     int32_t VFTableOffset = -1;
-    CV_DESERIALIZE(Data, L, CV_CONDITIONAL_FIELD(
-                                VFTableOffset, L->Attrs.isIntroducedVirtual()));
+    CV_DESERIALIZE(
+        Reader, L,
+        CV_CONDITIONAL_FIELD(VFTableOffset, L->Attrs.isIntroducedVirtual()));
 
     MethodOptions Options = L->Attrs.getFlags();
     MethodKind MethKind = L->Attrs.getMethodKind();
@@ -320,72 +325,72 @@ MethodOverloadListRecord::deserialize(TypeRecordKind Kind,
 
 Expected<OverloadedMethodRecord>
 OverloadedMethodRecord::deserialize(TypeRecordKind Kind,
-                                    ArrayRef<uint8_t> &Data) {
+                                    msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Name);
+  CV_DESERIALIZE(Reader, L, Name);
   return OverloadedMethodRecord(L->MethodCount, L->MethList, Name);
 }
 
 Expected<DataMemberRecord>
-DataMemberRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+DataMemberRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   uint64_t Offset;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Offset), Name);
+  CV_DESERIALIZE(Reader, L, CV_NUMERIC_FIELD(Offset), Name);
   return DataMemberRecord(L->Attrs.getAccess(), L->Type, Offset, Name);
 }
 
 Expected<StaticDataMemberRecord>
 StaticDataMemberRecord::deserialize(TypeRecordKind Kind,
-                                    ArrayRef<uint8_t> &Data) {
+                                    msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Name);
+  CV_DESERIALIZE(Reader, L, Name);
   return StaticDataMemberRecord(L->Attrs.getAccess(), L->Type, Name);
 }
 
 Expected<EnumeratorRecord>
-EnumeratorRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+EnumeratorRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   APSInt Value;
   StringRef Name;
-  CV_DESERIALIZE(Data, L, Value, Name);
+  CV_DESERIALIZE(Reader, L, Value, Name);
   return EnumeratorRecord(L->Attrs.getAccess(), Value, Name);
 }
 
 Expected<VFPtrRecord> VFPtrRecord::deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data) {
+                                               msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  if (auto EC = consumeObject(Data, L))
+  if (auto EC = Reader.readObject(L))
     return std::move(EC);
   return VFPtrRecord(L->Type);
 }
 
 Expected<BaseClassRecord>
-BaseClassRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+BaseClassRecord::deserialize(TypeRecordKind Kind, msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   uint64_t Offset;
-  CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Offset));
+  CV_DESERIALIZE(Reader, L, CV_NUMERIC_FIELD(Offset));
   return BaseClassRecord(L->Attrs.getAccess(), L->BaseType, Offset);
 }
 
 Expected<VirtualBaseClassRecord>
 VirtualBaseClassRecord::deserialize(TypeRecordKind Kind,
-                                    ArrayRef<uint8_t> &Data) {
+                                    msf::StreamReader &Reader) {
   const Layout *L = nullptr;
   uint64_t Offset;
   uint64_t Index;
-  CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Offset), CV_NUMERIC_FIELD(Index));
+  CV_DESERIALIZE(Reader, L, CV_NUMERIC_FIELD(Offset), CV_NUMERIC_FIELD(Index));
   return VirtualBaseClassRecord(L->Attrs.getAccess(), L->BaseType, L->VBPtrType,
                                 Offset, Index);
 }
 
 Expected<ListContinuationRecord>
 ListContinuationRecord::deserialize(TypeRecordKind Kind,
-                                    ArrayRef<uint8_t> &Data) {
+                                    msf::StreamReader &Reader) {
   const Layout *L = nullptr;
-  CV_DESERIALIZE(Data, L);
+  CV_DESERIALIZE(Reader, L);
   return ListContinuationRecord(L->ContinuationIndex);
 }
 

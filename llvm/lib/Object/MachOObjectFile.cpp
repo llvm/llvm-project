@@ -883,6 +883,35 @@ static Error checkThreadCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+static Error checkTwoLevelHintsCommand(const MachOObjectFile *Obj,
+                                       const MachOObjectFile::LoadCommandInfo
+                                         &Load,
+                                       uint32_t LoadCommandIndex,
+                                       const char **LoadCmd) {
+  if (Load.C.cmdsize != sizeof(MachO::twolevel_hints_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_TWOLEVEL_HINTS has incorrect cmdsize");
+  if (*LoadCmd != nullptr)
+    return malformedError("more than one LC_TWOLEVEL_HINTS command");
+  MachO::twolevel_hints_command Hints =
+    getStruct<MachO::twolevel_hints_command>(Obj, Load.Ptr);
+  uint64_t FileSize = Obj->getData().size();
+  if (Hints.offset > FileSize)
+    return malformedError("offset field of LC_TWOLEVEL_HINTS command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  uint64_t BigSize = Hints.nhints;
+  BigSize *= Hints.nhints * sizeof(MachO::twolevel_hint);
+  BigSize += Hints.offset;
+  if (BigSize > FileSize)
+    return malformedError("offset field plus nhints times sizeof(struct "
+                          "twolevel_hint) field of LC_TWOLEVEL_HINTS command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  *LoadCmd = Load.Ptr;
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -941,6 +970,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
   const char *EncryptLoadCmd = nullptr;
   const char *RoutinesLoadCmd = nullptr;
   const char *UnixThreadLoadCmd = nullptr;
+  const char *TwoLevelHintsLoadCmd = nullptr;
   for (unsigned I = 0; I < LoadCommandCount; ++I) {
     if (is64Bit()) {
       if (Load.C.cmdsize % 8 != 0) {
@@ -1207,6 +1237,10 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
     } else if (Load.C.cmd == MachO::LC_THREAD) {
       if ((Err = checkThreadCommand(this, Load, I, "LC_THREAD")))
         return;
+    } else if (Load.C.cmd == MachO::LC_TWOLEVEL_HINTS) {
+       if ((Err = checkTwoLevelHintsCommand(this, Load, I,
+                                            &TwoLevelHintsLoadCmd)))
+         return;
     }
     if (I < LoadCommandCount - 1) {
       if (auto LoadOrErr = getNextLoadCommandInfo(this, I, Load))
