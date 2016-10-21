@@ -10456,6 +10456,7 @@
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
+					"-DNDEBUG",
 				);
 				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
