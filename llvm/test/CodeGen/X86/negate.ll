@@ -4,8 +4,7 @@
 define i32 @negate_nuw(i32 %x) {
 ; CHECK-LABEL: negate_nuw:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    negl %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 ;
   %neg = sub nuw i32 0, %x
@@ -15,9 +14,7 @@ define i32 @negate_nuw(i32 %x) {
 define <4 x i32> @negate_nuw_vec(<4 x i32> %x) {
 ; CHECK-LABEL: negate_nuw_vec:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    psubd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %neg = sub nuw <4 x i32> zeroinitializer, %x
@@ -27,9 +24,7 @@ define <4 x i32> @negate_nuw_vec(<4 x i32> %x) {
 define i8 @negate_zero_or_minsigned_nsw(i8 %x) {
 ; CHECK-LABEL: negate_zero_or_minsigned_nsw:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $-128, %dil
-; CHECK-NEXT:    negb %dil
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 ;
   %signbit = and i8 %x, 128
@@ -55,7 +50,6 @@ define i8 @negate_zero_or_minsigned(i8 %x) {
 ; CHECK-LABEL: negate_zero_or_minsigned:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    shlb $7, %dil
-; CHECK-NEXT:    negb %dil
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
 ;
@@ -67,10 +61,7 @@ define i8 @negate_zero_or_minsigned(i8 %x) {
 define <4 x i32> @negate_zero_or_minsigned_vec(<4 x i32> %x) {
 ; CHECK-LABEL: negate_zero_or_minsigned_vec:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    psubd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
   %signbit = and <4 x i32> %x, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>

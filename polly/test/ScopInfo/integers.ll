@@ -111,8 +111,24 @@ bb:
   store i3 %indvar, i3* %scevgep, align 8
   %indvar.next = add nsw i3 %indvar, 1
   %sub = sub i3 %n, 3
-; CHECK:  'bb => return' in function 'f6'
-; CHECK: [n] -> { Stmt_bb[0] : n = 3 };
+; CHECK-LABEL:  'bb => return' in function 'f6'
+; CHECK:         Context:
+; CHECK-NEXT:    [n] -> {  : -4 <= n <= 3 }
+; CHECK-NEXT:    Assumed Context:
+; CHECK-NEXT:    [n] -> {  :  }
+; CHECK-NEXT:    Invalid Context:
+; CHECK-NEXT:    [n] -> {  : 1 = 0 }
+
+; CHECK:     Statements {
+; CHECK-NEXT:    Stmt_bb
+; CHECK-NEXT:        Domain :=
+; CHECK-NEXT:            [n] -> { Stmt_bb[i0] : i0 >= 0 and 8*floor((2 - n)/8) >= -5 - n + i0 and 8*floor((2 - n)/8) <= -2 - n };
+; CHECK-NEXT:        Schedule :=
+; CHECK-NEXT:            [n] -> { Stmt_bb[i0] -> [i0] };
+; CHECK-NEXT:        MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:            [n] -> { Stmt_bb[i0] -> MemRef_a[i0] };
+; CHECK-NEXT:}
+
   %exitcond = icmp eq i3 %indvar, %sub
   br i1 %exitcond, label %return, label %bb
 

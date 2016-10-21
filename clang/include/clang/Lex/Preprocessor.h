@@ -350,14 +350,6 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
           ThePPLexer(std::move(ThePPLexer)),
           TheTokenLexer(std::move(TheTokenLexer)),
           TheDirLookup(std::move(TheDirLookup)) {}
-    IncludeStackInfo(IncludeStackInfo &&RHS)
-        : CurLexerKind(std::move(RHS.CurLexerKind)),
-          TheSubmodule(std::move(RHS.TheSubmodule)),
-          TheLexer(std::move(RHS.TheLexer)),
-          ThePTHLexer(std::move(RHS.ThePTHLexer)),
-          ThePPLexer(std::move(RHS.ThePPLexer)),
-          TheTokenLexer(std::move(RHS.TheTokenLexer)),
-          TheDirLookup(std::move(RHS.TheDirLookup)) {}
   };
   std::vector<IncludeStackInfo> IncludeMacroStack;
 

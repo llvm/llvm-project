@@ -295,6 +295,7 @@ void initializeRegionOnlyViewerPass(PassRegistry&);
 void initializeRegionPrinterPass(PassRegistry&);
 void initializeRegionViewerPass(PassRegistry&);
 void initializeRegisterCoalescerPass(PassRegistry&);
+void initializeStripGCRelocatesPass(PassRegistry&);
 void initializeRenameIndependentSubregsPass(PassRegistry&);
 void initializeResetMachineFunctionPass(PassRegistry &);
 void initializeReversePostOrderFunctionAttrsLegacyPassPass(PassRegistry&);

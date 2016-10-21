@@ -260,8 +260,8 @@
                         that when the thread information is displayed in a context where
                         we only want to show thread information, we can do so.
                         
-					<p>For both thread and frame formats, you can use ${target.script:<i>python_func</i>}, ${process.script:<i>python_func</i>} and ${thread.script:<i>python_func</i>}
-						(and of course ${frame.script:<i>python_func</i>} for frame formats)<br/>
+					<p>For both thread and frame formats, you can use ${script.target:<i>python_func</i>}, ${script.process:<i>python_func</i>} and ${script.thread:<i>python_func</i>}
+						(and of course ${script.frame:<i>python_func</i>} for frame formats)<br/>
 						In all cases, the signature of <i>python_func</i> is expected to be:<br/>
 							<p><code>
 								def <i>python_func</i>(<i>object</i>,unused):<br/>
@@ -273,7 +273,7 @@
 						def thread_printer_func (thread,unused):<br/>
 						&nbsp;&nbsp;return "Thread %s has %d frames\n" % (thread.name, thread.num_frames)<br/></code><p>
 							
-						And you set it up with <code><br/><b>(lldb)</b> settings set thread-format "${thread.script:thread_printer_func}"<br/></code>
+						And you set it up with <code><br/><b>(lldb)</b> settings set thread-format "${script.thread:thread_printer_func}"<br/></code>
 						you would see output like:
 						</p>
 						<code>* Thread main has 21 frames</code>

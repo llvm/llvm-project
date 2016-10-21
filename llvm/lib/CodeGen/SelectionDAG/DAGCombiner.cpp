@@ -1914,17 +1914,33 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                        DAG.getConstant(-N1C->getAPIntValue(), DL, VT));
   }
 
-  // Right-shifting everything out but the sign bit followed by negation is the
-  // same as flipping arithmetic/logical shift type without the negation:
-  // -(X >>u 31) -> (X >>s 31)
-  // -(X >>s 31) -> (X >>u 31)
-  if (isNullConstantOrNullSplatConstant(N0) &&
-      (N1->getOpcode() == ISD::SRA || N1->getOpcode() == ISD::SRL)) {
-    ConstantSDNode *ShiftAmt = isConstOrConstSplat(N1.getOperand(1));
-    if (ShiftAmt && ShiftAmt->getZExtValue() == VT.getScalarSizeInBits() - 1) {
-      auto NewOpc = N1->getOpcode() == ISD::SRA ? ISD::SRL :ISD::SRA;
-      if (!LegalOperations || TLI.isOperationLegal(NewOpc, VT))
-        return DAG.getNode(NewOpc, DL, VT, N1.getOperand(0), N1.getOperand(1));
+  if (isNullConstantOrNullSplatConstant(N0)) {
+    unsigned BitWidth = VT.getScalarSizeInBits();
+    // Right-shifting everything out but the sign bit followed by negation is
+    // the same as flipping arithmetic/logical shift type without the negation:
+    // -(X >>u 31) -> (X >>s 31)
+    // -(X >>s 31) -> (X >>u 31)
+    if (N1->getOpcode() == ISD::SRA || N1->getOpcode() == ISD::SRL) {
+      ConstantSDNode *ShiftAmt = isConstOrConstSplat(N1.getOperand(1));
+      if (ShiftAmt && ShiftAmt->getZExtValue() == BitWidth - 1) {
+        auto NewSh = N1->getOpcode() == ISD::SRA ? ISD::SRL : ISD::SRA;
+        if (!LegalOperations || TLI.isOperationLegal(NewSh, VT))
+          return DAG.getNode(NewSh, DL, VT, N1.getOperand(0), N1.getOperand(1));
+      }
+    }
+
+    // 0 - X --> 0 if the sub is NUW.
+    if (N->getFlags()->hasNoUnsignedWrap())
+      return N0;
+
+    if (DAG.MaskedValueIsZero(N1, ~APInt::getSignBit(BitWidth))) {
+      // N1 is either 0 or the minimum signed value. If the sub is NSW, then
+      // N1 must be 0 because negating the minimum signed value is undefined.
+      if (N->getFlags()->hasNoSignedWrap())
+        return N0;
+
+      // 0 - X --> X if X is 0 or the minimum signed value.
+      return N1;
     }
   }
 

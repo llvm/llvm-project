@@ -432,9 +432,6 @@ private:
                      bool PreambleEndsAtStartOfLine)
         : Buffer(Buffer), Owner(std::move(Owner)), Size(Size),
           PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
-    ComputedPreamble(ComputedPreamble &&C)
-        : Buffer(C.Buffer), Owner(std::move(C.Owner)), Size(C.Size),
-          PreambleEndsAtStartOfLine(C.PreambleEndsAtStartOfLine) {}
   };
   ComputedPreamble ComputePreamble(CompilerInvocation &Invocation,
                                    unsigned MaxLines);
