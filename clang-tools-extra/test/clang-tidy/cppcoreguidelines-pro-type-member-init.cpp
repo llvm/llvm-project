@@ -450,3 +450,9 @@ struct NegativeIncompleteArrayMember {
   NegativeIncompleteArrayMember() {}
   char e[];
 };
+
+template <typename T> class NoCrash {
+  class B : public NoCrash {
+    template <typename U> B(U u) {}
+  };
+};

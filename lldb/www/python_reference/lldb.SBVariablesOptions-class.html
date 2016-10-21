@@ -1,0 +1,668 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>lldb.SBVariablesOptions</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="lldb-module.html">Package&nbsp;lldb</a> ::
+        Class&nbsp;SBVariablesOptions
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="lldb.SBVariablesOptions-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class SBVariablesOptions</h1><p class="nomargin-top"><span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions">source&nbsp;code</a></span></p>
+<center>
+<center>  <map id="uml_class_diagram_for_lldb_sbv_3" name="uml_class_diagram_for_lldb_sbv_3">
+<area shape="rect" id="node1_16" href="lldb.SBVariablesOptions-class.html#__swig_setmethods__" title="lldb.SBVariablesOptions.__swig_setmethods__" alt="" coords="16,32,216,52"/>
+<area shape="rect" id="node1_17" href="lldb.SBVariablesOptions-class.html#__swig_getmethods__" title="lldb.SBVariablesOptions.__swig_getmethods__" alt="" coords="16,52,216,72"/>
+<area shape="rect" id="node1_18" href="lldb.SBVariablesOptions-class.html#__setattr__" title="x.__setattr__(&#39;name&#39;, value) &lt;==&gt; x.name = value" alt="" coords="16,75,216,95"/>
+<area shape="rect" id="node1_19" href="lldb.SBVariablesOptions-class.html#__getattr__" title="lldb.SBVariablesOptions.__getattr__" alt="" coords="16,95,216,115"/>
+<area shape="rect" id="node1_20" href="lldb.SBVariablesOptions-class.html#__repr__" title="repr(x)" alt="" coords="16,115,216,135"/>
+<area shape="rect" id="node1_21" href="lldb.SBVariablesOptions-class.html#__init__" title="__init__(lldb::SBVariablesOptions self) &#45;&gt; SBVariablesOptions &#160;__init__(lldb::SBVariablesOptions self, SBVariablesOptions options) &#45;&gt; &#160;SBVariablesOptions" alt="" coords="16,135,216,155"/>
+<area shape="rect" id="node1_22" href="lldb.SBVariablesOptions-class.html#__swig_destroy__" title="delete_SBVariablesOptions(SBVariablesOptions self)" alt="" coords="16,155,216,175"/>
+<area shape="rect" id="node1_23" href="lldb.SBVariablesOptions-class.html#__del__" title="lldb.SBVariablesOptions.__del__" alt="" coords="16,175,216,195"/>
+<area shape="rect" id="node1_24" href="lldb.SBVariablesOptions-class.html#__nonzero__" title="lldb.SBVariablesOptions.__nonzero__" alt="" coords="16,195,216,215"/>
+<area shape="rect" id="node1_25" href="lldb.SBVariablesOptions-class.html#IsValid" title="IsValid(SBVariablesOptions self) &#45;&gt; bool" alt="" coords="16,215,216,235"/>
+<area shape="rect" id="node1_26" href="lldb.SBVariablesOptions-class.html#GetIncludeArguments" title="GetIncludeArguments(SBVariablesOptions self) &#45;&gt; bool" alt="" coords="16,235,216,255"/>
+<area shape="rect" id="node1_27" href="lldb.SBVariablesOptions-class.html#SetIncludeArguments" title="SetIncludeArguments(SBVariablesOptions self, bool arg2)" alt="" coords="16,255,216,275"/>
+<area shape="rect" id="node1_28" href="lldb.SBVariablesOptions-class.html#GetIncludeLocals" title="GetIncludeLocals(SBVariablesOptions self) &#45;&gt; bool" alt="" coords="16,275,216,295"/>
+<area shape="rect" id="node1_29" href="lldb.SBVariablesOptions-class.html#SetIncludeLocals" title="SetIncludeLocals(SBVariablesOptions self, bool arg2)" alt="" coords="16,295,216,315"/>
+<area shape="rect" id="node1_30" href="lldb.SBVariablesOptions-class.html#GetIncludeStatics" title="GetIncludeStatics(SBVariablesOptions self) &#45;&gt; bool" alt="" coords="16,315,216,335"/>
+<area shape="rect" id="node1_31" href="lldb.SBVariablesOptions-class.html#SetUseDynamic" title="SetUseDynamic(SBVariablesOptions self, lldb::DynamicValueType arg2)" alt="" coords="16,355,216,375"/>
+<area shape="rect" id="node1" href="lldb.SBVariablesOptions-class.html" title="Proxy of C++ lldb::SBVariablesOptions class" alt="" coords="4,6,228,381"/>
+</map>
+  <img src="uml_class_diagram_for_lldb_sbv_3.gif" alt='' usemap="#uml_class_diagram_for_lldb_sbv_3" ismap="ismap" class="graph-without-title" />
+</center>
+</center>
+<hr />
+<p>Proxy of C++ lldb::SBVariablesOptions class</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBVariablesOptions-class.html#__setattr__" class="summary-sig-name">__setattr__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>,
+        <span class="summary-sig-arg">value</span>)</span><br />
+      x.__setattr__('name', value) &lt;==&gt; x.name = value</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.__setattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__getattr__"></a><span class="summary-sig-name">__getattr__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.__getattr__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBVariablesOptions-class.html#__repr__" class="summary-sig-name">__repr__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      repr(x)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="lldb.SBVariablesOptions-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      __init__(lldb::SBVariablesOptions self) -&gt; SBVariablesOptions 
+      __init__(lldb::SBVariablesOptions self, SBVariablesOptions options) 
+      -&gt; SBVariablesOptions</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__swig_destroy__"></a><span class="summary-sig-name">__swig_destroy__</span>(<span class="summary-sig-arg">...</span>)</span><br />
+      delete_SBVariablesOptions(SBVariablesOptions self)</td>
+          <td align="right" valign="top">
+            
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__del__"></a><span class="summary-sig-name">__del__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.__del__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__nonzero__"></a><span class="summary-sig-name">__nonzero__</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.__nonzero__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="IsValid"></a><span class="summary-sig-name">IsValid</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      IsValid(SBVariablesOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.IsValid">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetIncludeArguments"></a><span class="summary-sig-name">GetIncludeArguments</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetIncludeArguments(SBVariablesOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.GetIncludeArguments">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetIncludeArguments"></a><span class="summary-sig-name">SetIncludeArguments</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetIncludeArguments(SBVariablesOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.SetIncludeArguments">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetIncludeLocals"></a><span class="summary-sig-name">GetIncludeLocals</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetIncludeLocals(SBVariablesOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.GetIncludeLocals">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetIncludeLocals"></a><span class="summary-sig-name">SetIncludeLocals</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetIncludeLocals(SBVariablesOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.SetIncludeLocals">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetIncludeStatics"></a><span class="summary-sig-name">GetIncludeStatics</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetIncludeStatics(SBVariablesOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.GetIncludeStatics">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetIncludeStatics"></a><span class="summary-sig-name">SetIncludeStatics</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetIncludeStatics(SBVariablesOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.SetIncludeStatics">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetInScopeOnly"></a><span class="summary-sig-name">GetInScopeOnly</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetInScopeOnly(SBVariablesOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.GetInScopeOnly">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetInScopeOnly"></a><span class="summary-sig-name">SetInScopeOnly</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetInScopeOnly(SBVariablesOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.SetInScopeOnly">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetIncludeRuntimeSupportValues"></a><span class="summary-sig-name">GetIncludeRuntimeSupportValues</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetIncludeRuntimeSupportValues(SBVariablesOptions self) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.GetIncludeRuntimeSupportValues">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetIncludeRuntimeSupportValues"></a><span class="summary-sig-name">SetIncludeRuntimeSupportValues</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetIncludeRuntimeSupportValues(SBVariablesOptions self, bool arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.SetIncludeRuntimeSupportValues">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetUseDynamic"></a><span class="summary-sig-name">GetUseDynamic</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetUseDynamic(SBVariablesOptions self) -&gt; lldb::DynamicValueType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.GetUseDynamic">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetUseDynamic"></a><span class="summary-sig-name">SetUseDynamic</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetUseDynamic(SBVariablesOptions self, lldb::DynamicValueType arg2)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.SetUseDynamic">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__getattribute__</code>,
+      <code>__hash__</code>,
+      <code>__new__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__sizeof__</code>,
+      <code>__str__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS VARIABLES ==================== -->
+<a name="section-ClassVariables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassVariables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_setmethods__"></a><span class="summary-name">__swig_setmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__swig_getmethods__"></a><span class="summary-name">__swig_getmethods__</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__setattr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__setattr__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">name</span>,
+        <span class="sig-arg">value</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.__setattr__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>x.__setattr__('name', value) &lt;==&gt; x.name = value</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__setattr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__repr__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__repr__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#_swig_repr">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>repr(x)</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__repr__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">*args</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="lldb-pysrc.html#SBVariablesOptions.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>__init__(lldb::SBVariablesOptions self) -&gt; SBVariablesOptions 
+  __init__(lldb::SBVariablesOptions self, SBVariablesOptions options) -&gt;
+  SBVariablesOptions</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://lldb.llvm.org">LLDB python API</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:29 2016
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

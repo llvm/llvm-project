@@ -59,38 +59,38 @@
 <!-- ==================== CLASS DESCRIPTION ==================== -->
 <h1 class="epydoc">Class SBModule</h1><p class="nomargin-top"><span class="codelink"><a href="lldb-pysrc.html#SBModule">source&nbsp;code</a></span></p>
 <center>
-<center>  <map id="uml_class_diagram_for_lldb_sbm" name="uml_class_diagram_for_lldb_sbm">
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__swig_setmethods__" title="lldb.SBModule.__swig_setmethods__" alt="" coords="17,31,237,49"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__swig_getmethods__" title="lldb.SBModule.__swig_getmethods__" alt="" coords="17,49,237,68"/>
-<area shape="rect" id="node28" href="lldb.SBModule.symbols_access-class.html" title="lldb.SBModule.symbols_access" alt="" coords="17,68,237,87"/>
-<area shape="rect" id="node28" href="lldb.SBModule.sections_access-class.html" title="lldb.SBModule.sections_access" alt="" coords="17,87,237,105"/>
-<area shape="rect" id="node28" href="lldb.SBModule.compile_units_access-class.html" title="lldb.SBModule.compile_units_access" alt="" coords="17,105,237,124"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#addr_size" title="A read only property that returns the size in bytes of an address for this &#160;module." alt="" coords="17,124,237,143"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#byte_order" title="A read only property that returns an lldb enumeration value &#160;(lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that &#160;represents the byte order for this module." alt="" coords="17,143,237,161"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#compile_units" title="A read only property that returns a list() of lldb.SBCompileUnit objects &#160;contained in this module." alt="" coords="17,161,237,180"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#file" title="A read only property that returns an lldb object that represents the file &#160;(lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged." alt="" coords="17,180,237,199"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#num_sections" title="A read only property that returns number of sections in the module as an &#160;integer." alt="" coords="17,199,237,217"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#num_symbols" title="A read only property that returns number of symbols in the module symbol &#160;table as an integer." alt="" coords="17,217,237,236"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#platform_file" title="A read only property that returns an lldb object that represents the file &#160;(lldb.SBFileSpec) for this object file for this module as it is represented on the current host system." alt="" coords="17,236,237,255"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#section" title="A read only property that can be used to access compile units by index &#160;(&quot;compile_unit = module.compile_unit[0]&quot;), name (&quot;compile_unit = &#160;module.compile_unit[&#39;main.cpp&#39;]&quot;), or using a regular expression &#160;(&quot;compile_unit = module.compile_unit[re.compile(...)]&quot;)." alt="" coords="17,255,237,273"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#uuid" title="A read only property that returns a standard python uuid.UUID object that &#160;represents the UUID of this module." alt="" coords="17,292,237,311"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__setattr__" title="x.__setattr__(&#39;name&#39;, value) &lt;==&gt; x.name = value" alt="" coords="17,313,237,332"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__getattr__" title="lldb.SBModule.__getattr__" alt="" coords="17,332,237,351"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__repr__" title="repr(x)" alt="" coords="17,351,237,369"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__iter__" title="lldb.SBModule.__iter__" alt="" coords="17,369,237,388"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__len__" title="lldb.SBModule.__len__" alt="" coords="17,388,237,407"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#section_iter" title="lldb.SBModule.section_iter" alt="" coords="17,407,237,425"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#compile_unit_iter" title="lldb.SBModule.compile_unit_iter" alt="" coords="17,425,237,444"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#symbol_in_section_iter" title="Given a module and its contained section, returns an iterator on the &#160;symbols within the section." alt="" coords="17,444,237,463"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__init__" title="__init__(lldb::SBModule self) &#45;&gt; SBModule __init__(lldb::SBModule self, &#160;SBModule rhs) &#45;&gt; SBModule __init__(lldb::SBModule self, SBModuleSpec &#160;module_spec) &#45;&gt; SBModule __init__(lldb::SBModule self, SBProcess process, &#160;lldb::addr_t header_addr) &#45;&gt; SBModule" alt="" coords="17,463,237,481"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__swig_destroy__" title="delete_SBModule(SBModule self)" alt="" coords="17,481,237,500"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__del__" title="lldb.SBModule.__del__" alt="" coords="17,500,237,519"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__nonzero__" title="lldb.SBModule.__nonzero__" alt="" coords="17,519,237,537"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#IsValid" title="IsValid(SBModule self) &#45;&gt; bool" alt="" coords="17,537,237,556"/>
-<area shape="rect" id="node28" href="lldb.SBModule-class.html#__ne__" title="lldb.SBModule.__ne__" alt="" coords="17,575,237,593"/>
-<area shape="rect" id="node1" href="lldb.SBModule-class.html" title="Represents an executable image and its associated object and symbol files." alt="" coords="5,6,248,599"/>
+<center>  <map id="uml_class_diagram_for_lldb_sbm_3" name="uml_class_diagram_for_lldb_sbm_3">
+<area shape="rect" id="node1_28" href="lldb.SBModule-class.html#__swig_setmethods__" title="lldb.SBModule.__swig_setmethods__" alt="" coords="17,31,237,51"/>
+<area shape="rect" id="node1_29" href="lldb.SBModule-class.html#__swig_getmethods__" title="lldb.SBModule.__swig_getmethods__" alt="" coords="17,51,237,71"/>
+<area shape="rect" id="node1_30" href="lldb.SBModule.symbols_access-class.html" title="lldb.SBModule.symbols_access" alt="" coords="17,71,237,91"/>
+<area shape="rect" id="node1_31" href="lldb.SBModule.sections_access-class.html" title="lldb.SBModule.sections_access" alt="" coords="17,91,237,111"/>
+<area shape="rect" id="node1_32" href="lldb.SBModule.compile_units_access-class.html" title="lldb.SBModule.compile_units_access" alt="" coords="17,111,237,131"/>
+<area shape="rect" id="node1_33" href="lldb.SBModule-class.html#addr_size" title="A read only property that returns the size in bytes of an address for this &#160;module." alt="" coords="17,131,237,151"/>
+<area shape="rect" id="node1_34" href="lldb.SBModule-class.html#byte_order" title="A read only property that returns an lldb enumeration value &#160;(lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that &#160;represents the byte order for this module." alt="" coords="17,151,237,171"/>
+<area shape="rect" id="node1_35" href="lldb.SBModule-class.html#compile_units" title="A read only property that returns a list() of lldb.SBCompileUnit objects &#160;contained in this module." alt="" coords="17,171,237,191"/>
+<area shape="rect" id="node1_36" href="lldb.SBModule-class.html#file" title="A read only property that returns an lldb object that represents the file &#160;(lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged." alt="" coords="17,191,237,211"/>
+<area shape="rect" id="node1_37" href="lldb.SBModule-class.html#num_sections" title="A read only property that returns number of sections in the module as an &#160;integer." alt="" coords="17,211,237,231"/>
+<area shape="rect" id="node1_38" href="lldb.SBModule-class.html#num_symbols" title="A read only property that returns number of symbols in the module symbol &#160;table as an integer." alt="" coords="17,231,237,251"/>
+<area shape="rect" id="node1_39" href="lldb.SBModule-class.html#platform_file" title="A read only property that returns an lldb object that represents the file &#160;(lldb.SBFileSpec) for this object file for this module as it is represented on the current host system." alt="" coords="17,251,237,271"/>
+<area shape="rect" id="node1_40" href="lldb.SBModule-class.html#section" title="A read only property that can be used to access compile units by index &#160;(&quot;compile_unit = module.compile_unit[0]&quot;), name (&quot;compile_unit = &#160;module.compile_unit[&#39;main.cpp&#39;]&quot;), or using a regular expression &#160;(&quot;compile_unit = module.compile_unit[re.compile(...)]&quot;)." alt="" coords="17,271,237,291"/>
+<area shape="rect" id="node1_41" href="lldb.SBModule-class.html#uuid" title="A read only property that returns a standard python uuid.UUID object that &#160;represents the UUID of this module." alt="" coords="17,311,237,331"/>
+<area shape="rect" id="node1_42" href="lldb.SBModule-class.html#__setattr__" title="x.__setattr__(&#39;name&#39;, value) &lt;==&gt; x.name = value" alt="" coords="17,333,237,353"/>
+<area shape="rect" id="node1_43" href="lldb.SBModule-class.html#__getattr__" title="lldb.SBModule.__getattr__" alt="" coords="17,353,237,373"/>
+<area shape="rect" id="node1_44" href="lldb.SBModule-class.html#__repr__" title="repr(x)" alt="" coords="17,373,237,393"/>
+<area shape="rect" id="node1_45" href="lldb.SBModule-class.html#__iter__" title="lldb.SBModule.__iter__" alt="" coords="17,393,237,413"/>
+<area shape="rect" id="node1_46" href="lldb.SBModule-class.html#__len__" title="lldb.SBModule.__len__" alt="" coords="17,413,237,433"/>
+<area shape="rect" id="node1_47" href="lldb.SBModule-class.html#section_iter" title="lldb.SBModule.section_iter" alt="" coords="17,433,237,453"/>
+<area shape="rect" id="node1_48" href="lldb.SBModule-class.html#compile_unit_iter" title="lldb.SBModule.compile_unit_iter" alt="" coords="17,453,237,473"/>
+<area shape="rect" id="node1_49" href="lldb.SBModule-class.html#symbol_in_section_iter" title="Given a module and its contained section, returns an iterator on the &#160;symbols within the section." alt="" coords="17,473,237,493"/>
+<area shape="rect" id="node1_50" href="lldb.SBModule-class.html#__init__" title="__init__(lldb::SBModule self) &#45;&gt; SBModule __init__(lldb::SBModule self, &#160;SBModule rhs) &#45;&gt; SBModule __init__(lldb::SBModule self, SBModuleSpec &#160;module_spec) &#45;&gt; SBModule __init__(lldb::SBModule self, SBProcess process, &#160;lldb::addr_t header_addr) &#45;&gt; SBModule" alt="" coords="17,493,237,513"/>
+<area shape="rect" id="node1_51" href="lldb.SBModule-class.html#__swig_destroy__" title="delete_SBModule(SBModule self)" alt="" coords="17,513,237,533"/>
+<area shape="rect" id="node1_52" href="lldb.SBModule-class.html#__del__" title="lldb.SBModule.__del__" alt="" coords="17,533,237,553"/>
+<area shape="rect" id="node1_53" href="lldb.SBModule-class.html#__nonzero__" title="lldb.SBModule.__nonzero__" alt="" coords="17,553,237,573"/>
+<area shape="rect" id="node1_54" href="lldb.SBModule-class.html#IsValid" title="IsValid(SBModule self) &#45;&gt; bool" alt="" coords="17,573,237,593"/>
+<area shape="rect" id="node1_55" href="lldb.SBModule-class.html#__ne__" title="lldb.SBModule.__ne__" alt="" coords="17,613,237,633"/>
+<area shape="rect" id="node1" href="lldb.SBModule-class.html" title="Represents an executable image and its associated object and symbol files." alt="" coords="5,5,249,640"/>
 </map>
-  <img src="uml_class_diagram_for_lldb_sbm.gif" alt='' usemap="#uml_class_diagram_for_lldb_sbm" ismap="ismap" class="graph-without-title" />
+  <img src="uml_class_diagram_for_lldb_sbm_3.gif" alt='' usemap="#uml_class_diagram_for_lldb_sbm_3" ismap="ismap" class="graph-without-title" />
 </center>
 </center>
 <hr />
@@ -115,24 +115,24 @@ SBModule supports symbol iteration, for example,
 and rich comparion methods which allow the API program to use,
 
     if thisModule == thatModule:
-        print 'This module is the same as that module'
+        print('This module is the same as that module')
 
 to test module equality.  A module also contains object file sections, namely
 SBSection.  SBModule supports section iteration through section_iter(), for
 example,
 
-    print 'Number of sections: %d' % module.GetNumSections()
+    print('Number of sections: %d' % module.GetNumSections())
     for sec in module.section_iter():
-        print sec
+        print(sec)
 
 And to iterate the symbols within a SBSection, use symbol_in_section_iter(),
 
     # Iterates the text section and prints each symbols within each sub-section.
     for subsec in text_sec:
-        print INDENT + repr(subsec)
+        print(INDENT + repr(subsec))
         for sym in exe_module.symbol_in_section_iter(subsec):
-            print INDENT2 + repr(sym)
-            print INDENT2 + 'symbol type: %s' % symbol_type_to_str(sym.GetType())
+            print(INDENT2 + repr(sym))
+            print(INDENT2 + 'symbol type: %s' % symbol_type_to_str(sym.GetType()))
 
 produces this following output:
 
@@ -532,6 +532,41 @@ produces this following output:
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
+          <td><span class="summary-sig"><a name="GetRemoteInstallFileSpec"></a><span class="summary-sig-name">GetRemoteInstallFileSpec</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetRemoteInstallFileSpec(SBModule self) -&gt; SBFileSpec</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBModule.GetRemoteInstallFileSpec">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="SetRemoteInstallFileSpec"></a><span class="summary-sig-name">SetRemoteInstallFileSpec</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      SetRemoteInstallFileSpec(SBModule self, SBFileSpec file) -&gt; bool</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBModule.SetRemoteInstallFileSpec">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
           <td><span class="summary-sig"><a href="lldb.SBModule-class.html#GetUUIDString" class="summary-sig-name">GetUUIDString</a>(<span class="summary-sig-arg">self</span>)</span><br />
       GetUUIDString(SBModule self) -&gt; str const *</td>
           <td align="right" valign="top">
@@ -824,6 +859,24 @@ FindFunctions(SBModule self, str const * name) -&gt; SBSymbolContextList</td>
     </td><td class="summary">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
+          <td><span class="summary-sig"><a name="GetTypeByID"></a><span class="summary-sig-name">GetTypeByID</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      GetTypeByID(SBModule self, lldb::user_id_t uid) -&gt; SBType</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBModule.GetTypeByID">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
           <td><span class="summary-sig"><a name="GetBasicType"></a><span class="summary-sig-name">GetBasicType</span>(<span class="summary-sig-arg">self</span>,
         <span class="summary-sig-arg">*args</span>)</span><br />
       GetBasicType(SBModule self, lldb::BasicType type) -&gt; SBType</td>
@@ -952,6 +1005,40 @@ GetTypes(SBModule self) -&gt; SBTypeList</td>
       GetVersion(SBModule self) -&gt; uint32_t</td>
           <td align="right" valign="top">
             <span class="codelink"><a href="lldb-pysrc.html#SBModule.GetVersion">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetSymbolFileSpec"></a><span class="summary-sig-name">GetSymbolFileSpec</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetSymbolFileSpec(SBModule self) -&gt; SBFileSpec</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBModule.GetSymbolFileSpec">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="GetObjectFileHeaderAddress"></a><span class="summary-sig-name">GetObjectFileHeaderAddress</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      GetObjectFileHeaderAddress(SBModule self) -&gt; SBAddress</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="lldb-pysrc.html#SBModule.GetObjectFileHeaderAddress">source&nbsp;code</a></span>
             
           </td>
         </tr>
@@ -1964,7 +2051,7 @@ Find the first global (or static) variable by name.
 <table border="0" cellpadding="0" cellspacing="0" width="100%%">
   <tr>
     <td align="left" class="footer">
-    Generated by Epydoc 3.0.1 on Fri Jul 19 13:22:35 2013
+    Generated by Epydoc 3.0.1 on Fri Oct 14 13:55:27 2016
     </td>
     <td align="right" class="footer">
       <a target="mainFrame" href="http://epydoc.sourceforge.net"

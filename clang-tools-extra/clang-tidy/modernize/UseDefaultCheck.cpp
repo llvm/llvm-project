@@ -20,37 +20,6 @@ namespace modernize {
 
 static const char SpecialFunction[] = "SpecialFunction";
 
-/// \brief Finds the SourceLocation of the colon ':' before the initialization
-/// list in the definition of a constructor.
-static SourceLocation getColonLoc(const ASTContext *Context,
-                                  const CXXConstructorDecl *Ctor) {
-  // FIXME: First init is the first initialization that is going to be
-  // performed, no matter what was the real order in the source code. If the
-  // order of the inits is wrong in the code, it may result in a false negative.
-  SourceLocation FirstInit = (*Ctor->init_begin())->getSourceLocation();
-  SourceLocation LastArg =
-      Ctor->getParamDecl(Ctor->getNumParams() - 1)->getLocEnd();
-  // We need to find the colon between the ')' and the first initializer.
-  bool Invalid = false;
-  StringRef Text = Lexer::getSourceText(
-      CharSourceRange::getCharRange(LastArg, FirstInit),
-      Context->getSourceManager(), Context->getLangOpts(), &Invalid);
-  if (Invalid)
-    return SourceLocation();
-
-  size_t ColonPos = Text.rfind(':');
-  if (ColonPos == StringRef::npos)
-    return SourceLocation();
-
-  Text = Text.drop_front(ColonPos + 1);
-  if (std::strspn(Text.data(), " \t\r\n") != Text.size()) {
-    // If there are comments, preprocessor directives or anything, abort.
-    return SourceLocation();
-  }
-  // FIXME: don't remove comments in the middle of the initializers.
-  return LastArg.getLocWithOffset(ColonPos);
-}
-
 /// \brief Finds all the named non-static fields of \p Record.
 static std::set<const FieldDecl *>
 getAllNamedFields(const CXXRecordDecl *Record) {
@@ -262,7 +231,6 @@ void UseDefaultCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   std::string SpecialFunctionName;
-  SourceLocation StartLoc, EndLoc;
 
   // Both CXXConstructorDecl and CXXDestructorDecl inherit from CXXMethodDecl.
   const auto *SpecialFunctionDecl =
@@ -280,14 +248,12 @@ void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Body)
     return;
 
-  // Default locations.
-  StartLoc = Body->getLBracLoc();
-  EndLoc = Body->getRBracLoc();
-
   // If there are comments inside the body, don't do the change.
   if (!SpecialFunctionDecl->isCopyAssignmentOperator() &&
       !bodyEmpty(Result.Context, Body))
     return;
+
+  std::vector<FixItHint> RemoveInitializers;
 
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(SpecialFunctionDecl)) {
     if (Ctor->getNumParams() == 0) {
@@ -297,10 +263,9 @@ void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
         return;
       SpecialFunctionName = "copy constructor";
       // If there are constructor initializers, they must be removed.
-      if (Ctor->getNumCtorInitializers() != 0) {
-        StartLoc = getColonLoc(Result.Context, Ctor);
-        if (!StartLoc.isValid())
-          return;
+      for (const auto *Init : Ctor->inits()) {
+        RemoveInitializers.emplace_back(
+            FixItHint::CreateRemoval(Init->getSourceRange()));
       }
     }
   } else if (isa<CXXDestructorDecl>(SpecialFunctionDecl)) {
@@ -313,8 +278,8 @@ void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
 
   diag(SpecialFunctionDecl->getLocStart(),
        "use '= default' to define a trivial " + SpecialFunctionName)
-      << FixItHint::CreateReplacement(
-          CharSourceRange::getTokenRange(StartLoc, EndLoc), "= default;");
+      << FixItHint::CreateReplacement(Body->getSourceRange(), "= default;")
+      << RemoveInitializers;
 }
 
 } // namespace modernize

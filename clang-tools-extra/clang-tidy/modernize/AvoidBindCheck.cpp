@@ -108,8 +108,9 @@ void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   Finder->addMatcher(
-      callExpr(callee(namedDecl(hasName("::std::bind"))),
-               hasArgument(0, declRefExpr(to(functionDecl().bind("f")))))
+      callExpr(
+          callee(namedDecl(hasName("::std::bind"))),
+          hasArgument(0, declRefExpr(to(functionDecl().bind("f"))).bind("ref")))
           .bind("bind"),
       this);
 }
@@ -148,14 +149,17 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
 
   bool HasCapturedArgument = llvm::any_of(
       Args, [](const BindArgument &B) { return B.Kind == BK_Other; });
-
+  const auto *Ref = Result.Nodes.getNodeAs<DeclRefExpr>("ref");
   Stream << "[" << (HasCapturedArgument ? "=" : "") << "]";
   addPlaceholderArgs(Args, Stream);
-  Stream << " { return " << F->getName() << "(";
+  Stream << " { return ";
+  Ref->printPretty(Stream, nullptr, Result.Context->getPrintingPolicy());
+  Stream<< "(";
   addFunctionCallArgs(Args, Stream);
   Stream << "); };";
 
-  Diag << FixItHint::CreateReplacement(MatchedDecl->getSourceRange(), Stream.str());
+  Diag << FixItHint::CreateReplacement(MatchedDecl->getSourceRange(),
+                                       Stream.str());
 }
 
 } // namespace modernize

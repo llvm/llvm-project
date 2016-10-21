@@ -7482,16 +7482,17 @@ __kmp_aux_set_blocktime (int arg, kmp_info_t *thread, int tid)
 
     set__bt_set_team( thread->th.th_team, tid, bt_set );
     set__bt_set_team( thread->th.th_serial_team, 0, bt_set );
-    KF_TRACE(10, ( "kmp_set_blocktime: T#%d(%d:%d), blocktime=%d"
 #if KMP_USE_MONITOR
-                   ", bt_intervals=%d, monitor_updates=%d"
+    KF_TRACE(10, ("kmp_set_blocktime: T#%d(%d:%d), blocktime=%d, "
+                  "bt_intervals=%d, monitor_updates=%d\n",
+                  __kmp_gtid_from_tid(tid, thread->th.th_team),
+                  thread->th.th_team->t.t_id, tid, blocktime, bt_intervals,
+                  __kmp_monitor_wakeups));
+#else
+    KF_TRACE(10, ("kmp_set_blocktime: T#%d(%d:%d), blocktime=%d\n",
+                  __kmp_gtid_from_tid(tid, thread->th.th_team),
+                  thread->th.th_team->t.t_id, tid, blocktime));
 #endif
-                   "\n",
-                   __kmp_gtid_from_tid(tid, thread->th.th_team), thread->th.th_team->t.t_id, tid, blocktime
-#if KMP_USE_MONITOR
-                   , bt_intervals, __kmp_monitor_wakeups
-#endif
-                 ) );
 }
 
 void

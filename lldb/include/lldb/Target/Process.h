@@ -2608,6 +2608,8 @@ public:
   bool RunPreResumeActions();
 
   void ClearPreResumeActions();
+  
+  void ClearPreResumeAction(PreResumeActionCallback callback, void *baton);
 
   ProcessRunLock &GetRunLock();
 
@@ -2942,6 +2944,9 @@ protected:
     PreResumeCallbackAndBaton(PreResumeActionCallback in_callback,
                               void *in_baton)
         : callback(in_callback), baton(in_baton) {}
+    bool operator== (const PreResumeCallbackAndBaton &rhs) {
+      return callback == rhs.callback && baton == rhs.baton;
+    }
   };
 
   using StructuredDataPluginMap =
