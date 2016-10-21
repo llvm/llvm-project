@@ -36,6 +36,8 @@ const char *kSymFileExtension = ".sym";
 const char *kFSIllegalChars = "\\/:*?\"<>|";
 
 std::string GetEscapedHostname(const char *hostname) {
+  if (hostname == nullptr)
+    hostname = "unknown";
   std::string result(hostname);
   size_t size = result.size();
   for (size_t i = 0; i < size; ++i) {
