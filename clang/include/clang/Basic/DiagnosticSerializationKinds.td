@@ -21,6 +21,12 @@ def err_fe_pch_malformed_block : Error<
 def err_fe_pch_file_modified : Error<
     "file '%0' has been modified since the precompiled header '%1' was built">,
     DefaultFatal;
+def err_fe_module_file_modified : Error<
+    "file '%0' has been modified since the module file '%1' was built">,
+    DefaultFatal;
+def err_fe_ast_file_modified : Error<
+    "file '%0' has been modified since the AST file '%1' was built">,
+    DefaultFatal;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
 def note_pch_required_by : Note<"'%0' required by '%1'">;
