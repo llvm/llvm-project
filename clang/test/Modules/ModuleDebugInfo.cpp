@@ -1,7 +1,7 @@
 // Test that (the same) debug info is emitted for an Objective-C++
 // module and a C++ precompiled header.
 
-// REQUIRES: asserts, shell
+// REQUIRES: asserts
 
 // Modules:
 // RUN: rm -rf %t

@@ -14,7 +14,6 @@
 // RUN: diff %t/base.pcm %t/check.pcm
 //
 // We expect an empty module to be less than 30KB (and at least 10K, for now).
-// REQUIRES: shell
 // RUN: wc -c %t/base.pcm | FileCheck --check-prefix=CHECK-SIZE %s
 // CHECK-SIZE: {{(^|[^0-9])[12][0-9][0-9][0-9][0-9]($|[^0-9])}}
 

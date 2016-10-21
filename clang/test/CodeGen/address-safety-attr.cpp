@@ -9,11 +9,10 @@ int DefinedInDifferentFile(int *a);
 // RUN: echo "fun:*BlacklistedFunction*" > %t.func.blacklist
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address -fsanitize-blacklist=%t.func.blacklist | FileCheck -check-prefix=BLFUNC %s
 
-// RUN: echo "src:%s" > %t.file.blacklist
+// The blacklist file uses regexps, so escape backslashes, which are common in
+// Windows paths.
+// RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t.file.blacklist
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address -fsanitize-blacklist=%t.file.blacklist | FileCheck -check-prefix=BLFILE %s
-
-// FIXME: %t.file.blacklist is like "src:x:\path\to\clang\test\CodeGen\address-safety-attr.cpp"
-// REQUIRES: shell
 
 // The sanitize_address attribute should be attached to functions
 // when AddressSanitizer is enabled, unless no_sanitize_address attribute

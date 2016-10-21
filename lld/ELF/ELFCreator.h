@@ -11,6 +11,8 @@
 #define LLD_ELF_ELF_CREATOR_H
 
 #include "lld/Core/LLVM.h"
+#include <string>
+#include <vector>
 
 namespace lld {
 namespace elf {
@@ -18,7 +20,7 @@ namespace elf {
 // Wraps a given binary blob with an ELF header so that the blob
 // can be linked as an ELF file. Used for "--format binary".
 template <class ELFT>
-std::vector<uint8_t> wrapBinaryWithElfHeader(ArrayRef<uint8_t> Data,
+std::vector<uint8_t> wrapBinaryWithElfHeader(llvm::ArrayRef<uint8_t> Data,
                                              std::string Filename);
 }
 }
