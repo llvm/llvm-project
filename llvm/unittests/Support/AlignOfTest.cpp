@@ -89,6 +89,8 @@ V6::~V6() {}
 V7::~V7() {}
 V8::~V8() {}
 
+template <typename M> struct T { M m; };
+
 TEST(AlignOfTest, BasicAlignedArray) {
   EXPECT_LE(1u, alignof(AlignedCharArrayUnion<A1>));
   EXPECT_LE(2u, alignof(AlignedCharArrayUnion<A2>));
@@ -124,19 +126,20 @@ TEST(AlignOfTest, BasicAlignedArray) {
   // For other tests we simply assert that the alignment of the union mathes
   // that of the fundamental type and hope that we have any weird type
   // productions that would trigger bugs.
-  EXPECT_EQ(alignof(char), alignof(AlignedCharArrayUnion<char>));
-  EXPECT_EQ(alignof(short), alignof(AlignedCharArrayUnion<short>));
-  EXPECT_EQ(alignof(int), alignof(AlignedCharArrayUnion<int>));
-  EXPECT_EQ(alignof(long), alignof(AlignedCharArrayUnion<long>));
-  EXPECT_EQ(alignof(long long), alignof(AlignedCharArrayUnion<long long>));
-  EXPECT_EQ(alignof(float), alignof(AlignedCharArrayUnion<float>));
-  EXPECT_EQ(alignof(double), alignof(AlignedCharArrayUnion<double>));
-  EXPECT_EQ(alignof(long double), alignof(AlignedCharArrayUnion<long double>));
-  EXPECT_EQ(alignof(void *), alignof(AlignedCharArrayUnion<void *>));
-  EXPECT_EQ(alignof(int *), alignof(AlignedCharArrayUnion<int *>));
-  EXPECT_EQ(alignof(double (*)(double)),
+  EXPECT_EQ(alignof(T<char>), alignof(AlignedCharArrayUnion<char>));
+  EXPECT_EQ(alignof(T<short>), alignof(AlignedCharArrayUnion<short>));
+  EXPECT_EQ(alignof(T<int>), alignof(AlignedCharArrayUnion<int>));
+  EXPECT_EQ(alignof(T<long>), alignof(AlignedCharArrayUnion<long>));
+  EXPECT_EQ(alignof(T<long long>), alignof(AlignedCharArrayUnion<long long>));
+  EXPECT_EQ(alignof(T<float>), alignof(AlignedCharArrayUnion<float>));
+  EXPECT_EQ(alignof(T<double>), alignof(AlignedCharArrayUnion<double>));
+  EXPECT_EQ(alignof(T<long double>),
+            alignof(AlignedCharArrayUnion<long double>));
+  EXPECT_EQ(alignof(T<void *>), alignof(AlignedCharArrayUnion<void *>));
+  EXPECT_EQ(alignof(T<int *>), alignof(AlignedCharArrayUnion<int *>));
+  EXPECT_EQ(alignof(T<double (*)(double)>),
             alignof(AlignedCharArrayUnion<double (*)(double)>));
-  EXPECT_EQ(alignof(double (S6::*)()),
+  EXPECT_EQ(alignof(T<double (S6::*)()>),
             alignof(AlignedCharArrayUnion<double (S6::*)()>));
   EXPECT_EQ(alignof(S1), alignof(AlignedCharArrayUnion<S1>));
   EXPECT_EQ(alignof(S2), alignof(AlignedCharArrayUnion<S2>));

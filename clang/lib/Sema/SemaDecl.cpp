@@ -8445,7 +8445,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                 ? cast<NamedDecl>(FunctionTemplate)
                                 : NewFD);
 
-    if (isFriend && D.isRedeclaration()) {
+    if (isFriend && NewFD->getPreviousDecl()) {
       AccessSpecifier Access = AS_public;
       if (!NewFD->isInvalidDecl())
         Access = NewFD->getPreviousDecl()->getAccess();
@@ -8901,8 +8901,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         NewFD->setPreviousDeclaration(cast<FunctionDecl>(OldDecl));
         if (isa<CXXMethodDecl>(NewFD))
           NewFD->setAccess(OldDecl->getAccess());
-      } else {
-        Redeclaration = false;
       }
     }
   }

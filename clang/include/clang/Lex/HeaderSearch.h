@@ -523,8 +523,10 @@ public:
   /// \brief Retrieve the module that corresponds to the given file, if any.
   ///
   /// \param File The header that we wish to map to a module.
-  ModuleMap::KnownHeader findModuleForHeader(const FileEntry *File) const;
-  
+  /// \param AllowTextual Whether we want to find textual headers too.
+  ModuleMap::KnownHeader findModuleForHeader(const FileEntry *File,
+                                             bool AllowTextual = false) const;
+
   /// \brief Read the contents of the given module map file.
   ///
   /// \param File The module map file.

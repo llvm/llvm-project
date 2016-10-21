@@ -7882,6 +7882,29 @@ bool darwin::Linker::NeedsTempPath(const InputInfoList &Inputs) const {
   return false;
 }
 
+/// \brief Pass -no_deduplicate to ld64 under certain conditions:
+///
+/// - Either -O0 or -O1 is explicitly specified
+/// - No -O option is specified *and* this is a compile+link (implicit -O0)
+///
+/// Also do *not* add -no_deduplicate when no -O option is specified and this
+/// is just a link (we can't imply -O0)
+static bool shouldLinkerNotDedup(bool IsLinkerOnlyAction, const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O0))
+      return true;
+    if (A->getOption().matches(options::OPT_O))
+      return llvm::StringSwitch<bool>(A->getValue())
+                    .Case("1", true)
+                    .Default(false);
+    return false; // OPT_Ofast & OPT_O4
+  }
+
+  if (!IsLinkerOnlyAction) // Implicit -O0 for compile+linker only.
+    return true;
+  return false;
+}
+
 void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                                  ArgStringList &CmdArgs,
                                  const InputInfoList &Inputs) const {
@@ -7937,6 +7960,10 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       }
     }
   }
+
+  // ld64 version 262 and above run the deduplicate pass by default.
+  if (Version[0] >= 262 && shouldLinkerNotDedup(C.getJobs().empty(), Args))
+    CmdArgs.push_back("-no_deduplicate");
 
   // Derived from the "link" spec.
   Args.AddAllArgs(CmdArgs, options::OPT_static);

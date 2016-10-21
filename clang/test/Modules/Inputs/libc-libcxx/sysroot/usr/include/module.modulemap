@@ -1,0 +1,9 @@
+module libc [no_undeclared_includes] {
+  module math { header "math.h" export * }
+  module stdlib { header "stdlib.h" export * }
+  module stdatomic { header "stdatomic.h" export * }
+  module stddef { header "stddef.h" export * }
+  module stdint { header "stdint.h" export * }
+  module stdio { header "stdio.h" export * }
+  module util { header "util.h" export * }
+}

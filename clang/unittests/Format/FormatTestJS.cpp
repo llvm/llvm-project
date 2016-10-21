@@ -1276,6 +1276,12 @@ TEST_F(FormatTestJS, TemplateStrings) {
   verifyFormat("var x = ` \\${foo}`;\n");
 }
 
+TEST_F(FormatTestJS, TemplateStringASI) {
+  verifyFormat("var x = `hello${world}`;", "var x = `hello${\n"
+                                           "    world\n"
+                                           "}`;");
+}
+
 TEST_F(FormatTestJS, NestedTemplateStrings) {
   verifyFormat(
       "var x = `<ul>${xs.map(x => `<li>${x}</li>`).join('\\n')}</ul>`;");

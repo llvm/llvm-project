@@ -34,6 +34,7 @@ add_lld_library(lldELF
   BitWriter
   Codegen
   Core
+  DebugInfoDWARF
   Demangle
   IPO
   Linker
