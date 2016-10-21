@@ -406,8 +406,13 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   } else if (const auto *FWD =
                  Result.Nodes.getNodeAs<clang::CXXRecordDecl>("fwd_decl")) {
     // Skip all forwad declarations which appear after moved class declaration.
-    if (RemovedDecls.empty())
-      MovedDecls.emplace_back(FWD, &Result.Context->getSourceManager());
+    if (RemovedDecls.empty()) {
+      if (const auto *DCT = FWD->getDescribedClassTemplate()) {
+        MovedDecls.emplace_back(DCT, &Result.Context->getSourceManager());
+      } else {
+        MovedDecls.emplace_back(FWD, &Result.Context->getSourceManager());
+      }
+    }
   } else if (const auto *ANS = Result.Nodes.getNodeAs<clang::NamespaceDecl>(
                  "anonymous_ns")) {
     MovedDecls.emplace_back(ANS, &Result.Context->getSourceManager());

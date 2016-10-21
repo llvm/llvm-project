@@ -748,6 +748,9 @@
 		4CCA645613B40B82003BDF98 /* AppleObjCTrampolineHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA644813B40B82003BDF98 /* AppleObjCTrampolineHandler.cpp */; };
 		4CCA645813B40B82003BDF98 /* AppleThreadPlanStepThroughObjCTrampoline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA644A13B40B82003BDF98 /* AppleThreadPlanStepThroughObjCTrampoline.cpp */; };
 		4CD0BD0F134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD0BD0E134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp */; };
+		4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */; };
+		4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */; };
+		4CDB8D6F1DBA91B6006C5B13 /* LibStdcppSmartPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D691DBA91A6006C5B13 /* LibStdcppSmartPointer.cpp */; };
 		4CE4F673162C971A00F75CB3 /* SBExpressionOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CE4F672162C971A00F75CB3 /* SBExpressionOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4CE4F675162C973F00F75CB3 /* SBExpressionOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4F674162C973F00F75CB3 /* SBExpressionOptions.cpp */; };
 		4CF3D80C15AF4DC800845BF3 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EDB919B414F6F10D008FF64B /* Security.framework */; };
@@ -2576,6 +2579,9 @@
 		4CCA644B13B40B82003BDF98 /* AppleThreadPlanStepThroughObjCTrampoline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleThreadPlanStepThroughObjCTrampoline.h; sourceTree = "<group>"; };
 		4CD0BD0C134BFAB600CB44D4 /* ValueObjectDynamicValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueObjectDynamicValue.h; path = include/lldb/Core/ValueObjectDynamicValue.h; sourceTree = "<group>"; };
 		4CD0BD0E134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectDynamicValue.cpp; path = source/Core/ValueObjectDynamicValue.cpp; sourceTree = "<group>"; };
+		4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppUniquePointer.cpp; path = Language/CPlusPlus/LibStdcppUniquePointer.cpp; sourceTree = "<group>"; };
+		4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppTuple.cpp; path = Language/CPlusPlus/LibStdcppTuple.cpp; sourceTree = "<group>"; };
+		4CDB8D691DBA91A6006C5B13 /* LibStdcppSmartPointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppSmartPointer.cpp; path = Language/CPlusPlus/LibStdcppSmartPointer.cpp; sourceTree = "<group>"; };
 		4CE4F672162C971A00F75CB3 /* SBExpressionOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBExpressionOptions.h; path = include/lldb/API/SBExpressionOptions.h; sourceTree = "<group>"; };
 		4CE4F674162C973F00F75CB3 /* SBExpressionOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBExpressionOptions.cpp; path = source/API/SBExpressionOptions.cpp; sourceTree = "<group>"; };
 		4CE4F676162CE1E100F75CB3 /* SBExpressionOptions.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBExpressionOptions.i; sourceTree = "<group>"; };
@@ -5997,6 +6003,9 @@
 		945261B01B9A11BE00BF138D /* Formatters */ = {
 			isa = PBXGroup;
 			children = (
+				4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */,
+				4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */,
+				4CDB8D691DBA91A6006C5B13 /* LibStdcppSmartPointer.cpp */,
 				49DEF1201CD7BD90006A7C7D /* BlockPointer.h */,
 				49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */,
 				945261B41B9A11E800BF138D /* CxxStringTypes.h */,
@@ -7044,6 +7053,7 @@
 				AF77E0A91A033D740096C0EA /* RegisterContextPOSIXCore_powerpc.cpp in Sources */,
 				2689FFF313353DB600698AC0 /* BreakpointIDList.cpp in Sources */,
 				2689FFF513353DB600698AC0 /* BreakpointList.cpp in Sources */,
+				4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */,
 				AF77E08F1A033C700096C0EA /* ABISysV_ppc.cpp in Sources */,
 				2689FFF713353DB600698AC0 /* BreakpointLocation.cpp in Sources */,
 				2689FFF913353DB600698AC0 /* BreakpointLocationCollection.cpp in Sources */,
@@ -7255,6 +7265,7 @@
 				26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */,
 				2689008013353E2200698AC0 /* CommandInterpreter.cpp in Sources */,
 				AF77E0A41A033D360096C0EA /* RegisterContextPOSIX_powerpc.cpp in Sources */,
+				4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */,
 				AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */,
 				9447DE431BD5963300E67212 /* DumpValueObjectOptions.cpp in Sources */,
 				2689008113353E2200698AC0 /* CommandObject.cpp in Sources */,
@@ -7516,6 +7527,7 @@
 				2690B3711381D5C300ECFBAE /* Memory.cpp in Sources */,
 				4C562CC71CC07DF700C52EAC /* PDBASTParser.cpp in Sources */,
 				B28058A1139988B0002D96D0 /* InferiorCallPOSIX.cpp in Sources */,
+				4CDB8D6F1DBA91B6006C5B13 /* LibStdcppSmartPointer.cpp in Sources */,
 				AF20F76A1AF18F9000751A6E /* ABISysV_arm64.cpp in Sources */,
 				26F73062139D8FDB00FD51C7 /* History.cpp in Sources */,
 				4CCA644D13B40B82003BDF98 /* ItaniumABILanguageRuntime.cpp in Sources */,

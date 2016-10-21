@@ -73,6 +73,8 @@ Improvements to clang-tidy
   Warns when ``std::move`` is applied to a forwarding reference instead of
   ``std::forward``.
 
+- `misc-pointer-and-integral-operation` check was removed.
+
 - New `misc-use-after-move
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-use-after-move.html>`_ check
 

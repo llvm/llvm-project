@@ -1940,13 +1940,14 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
       return R_MIPS_GOT_LOCAL_PAGE;
   // fallthrough
   case R_MIPS_CALL16:
-  case R_MIPS_CALL_HI16:
-  case R_MIPS_CALL_LO16:
   case R_MIPS_GOT_DISP:
-  case R_MIPS_GOT_HI16:
-  case R_MIPS_GOT_LO16:
   case R_MIPS_TLS_GOTTPREL:
     return R_MIPS_GOT_OFF;
+  case R_MIPS_CALL_HI16:
+  case R_MIPS_CALL_LO16:
+  case R_MIPS_GOT_HI16:
+  case R_MIPS_GOT_LO16:
+    return R_MIPS_GOT_OFF32;
   case R_MIPS_GOT_PAGE:
     return R_MIPS_GOT_LOCAL_PAGE;
   case R_MIPS_TLS_GD:

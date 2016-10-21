@@ -239,10 +239,6 @@ Checks:
     Description: 
     Name:        misc-non-copyable-objects
   - Category:    Miscellaneous
-    Label:       Suspicious pointer / integer operations
-    Description: 
-    Name:        misc-pointer-and-integral-operation
-  - Category:    Miscellaneous
     Label:       Find redundant expressions
     Description: 
     Name:        misc-redundant-expression

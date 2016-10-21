@@ -270,7 +270,7 @@ public:
   const ScopArrayInfo *getBasePtrOriginSAI() const { return BasePtrOriginSAI; }
 
   /// The set of derived indirect SAIs for this origin SAI.
-  const SmallPtrSetImpl<ScopArrayInfo *> &getDerivedSAIs() const {
+  const SmallSetVector<ScopArrayInfo *, 2> &getDerivedSAIs() const {
     return DerivedSAIs;
   }
 
@@ -369,7 +369,7 @@ private:
   const ScopArrayInfo *BasePtrOriginSAI;
 
   /// For origin SAIs the set of derived indirect SAIs.
-  SmallPtrSet<ScopArrayInfo *, 2> DerivedSAIs;
+  SmallSetVector<ScopArrayInfo *, 2> DerivedSAIs;
 
   /// The base pointer.
   AssertingVH<Value> BasePtr;
