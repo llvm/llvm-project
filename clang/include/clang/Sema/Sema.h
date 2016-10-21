@@ -9445,7 +9445,7 @@ public:
 
   /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to FD,
   /// depending on FD and the current compilation settings.
-  void maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *FD,
+  void maybeAddCUDAHostDeviceAttrs(FunctionDecl *FD,
                                    const LookupResult &Previous);
 
 public:

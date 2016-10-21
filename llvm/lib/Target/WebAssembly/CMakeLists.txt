@@ -12,6 +12,7 @@ add_public_tablegen_target(WebAssemblyCommonTableGen)
 add_llvm_target(WebAssemblyCodeGen
   WebAssemblyArgumentMove.cpp
   WebAssemblyAsmPrinter.cpp
+  WebAssemblyCallIndirectFixup.cpp
   WebAssemblyCFGStackify.cpp
   WebAssemblyFastISel.cpp
   WebAssemblyFixIrreducibleControlFlow.cpp

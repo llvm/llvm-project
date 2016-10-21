@@ -557,45 +557,27 @@ public:
   // performing watchpoint actions.
   class WatchpointSentry {
   public:
-    WatchpointSentry(ProcessSP p_sp, WatchpointSP w_sp) : process_sp(p_sp), 
-                     watchpoint_sp(w_sp) {
-      if (process_sp && watchpoint_sp) {
+    WatchpointSentry(Process *p, Watchpoint *w) : process(p), watchpoint(w) {
+      if (process && watchpoint) {
         const bool notify = false;
-        watchpoint_sp->TurnOnEphemeralMode();
-        process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
-        process_sp->AddPreResumeAction(SentryPreResumeAction, this);
+        watchpoint->TurnOnEphemeralMode();
+        process->DisableWatchpoint(watchpoint, notify);
       }
     }
-    
-    void DoReenable() {
-      if (process_sp && watchpoint_sp) {
-        bool was_disabled = watchpoint_sp->IsDisabledDuringEphemeralMode();
-        watchpoint_sp->TurnOffEphemeralMode();
-        const bool notify = false;
-        if (was_disabled) {
-          process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
-        } else {
-          process_sp->EnableWatchpoint(watchpoint_sp.get(), notify);
-        }
-      }
-    }
-    
+
     ~WatchpointSentry() {
-        DoReenable();
-        if (process_sp)
-            process_sp->ClearPreResumeAction(SentryPreResumeAction, this);
-    }
-    
-    static bool SentryPreResumeAction(void *sentry_void) {
-        WatchpointSentry *sentry = (WatchpointSentry *) sentry_void;
-        sentry->DoReenable();
-        return true;
+      if (process && watchpoint) {
+        if (!watchpoint->IsDisabledDuringEphemeralMode()) {
+          const bool notify = false;
+          process->EnableWatchpoint(watchpoint, notify);
+        }
+        watchpoint->TurnOffEphemeralMode();
+      }
     }
 
   private:
-    ProcessSP process_sp;
-    WatchpointSP watchpoint_sp;
-    bool sentry_triggered = false;
+    Process *process;
+    Watchpoint *watchpoint;
   };
 
   StopInfoWatchpoint(Thread &thread, break_id_t watch_id,
@@ -677,12 +659,12 @@ protected:
               GetValue()));
       if (wp_sp) {
         ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
-        ProcessSP process_sp = exe_ctx.GetProcessSP();
+        Process *process = exe_ctx.GetProcessPtr();
 
         // This sentry object makes sure the current watchpoint is disabled
         // while performing watchpoint actions,
         // and it is then enabled after we are finished.
-        WatchpointSentry sentry(process_sp, wp_sp);
+        WatchpointSentry sentry(process, wp_sp.get());
 
         {
           // check if this process is running on an architecture where
@@ -690,10 +672,10 @@ protected:
           // before the associated instruction runs. if so, disable the WP,
           // single-step and then
           // re-enable the watchpoint
-          if (process_sp) {
+          if (process) {
             uint32_t num;
             bool wp_triggers_after;
-            if (process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
+            if (process->GetWatchpointSupportInfo(num, wp_triggers_after)
                     .Success()) {
               if (!wp_triggers_after) {
                 StopInfoSP stored_stop_info_sp = thread_sp->GetStopInfo();
@@ -707,10 +689,10 @@ protected:
                 new_plan_sp->SetIsMasterPlan(true);
                 new_plan_sp->SetOkayToDiscard(false);
                 new_plan_sp->SetPrivate(true);
-                process_sp->GetThreadList().SetSelectedThreadByID(
+                process->GetThreadList().SetSelectedThreadByID(
                     thread_sp->GetID());
-                process_sp->ResumeSynchronous(nullptr);
-                process_sp->GetThreadList().SetSelectedThreadByID(
+                process->ResumeSynchronous(nullptr);
+                process->GetThreadList().SetSelectedThreadByID(
                     thread_sp->GetID());
                 thread_sp->SetStopInfo(stored_stop_info_sp);
               }
@@ -757,8 +739,6 @@ protected:
         if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount())
           m_should_stop = false;
 
-        Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
-
         if (m_should_stop && wp_sp->GetConditionText() != nullptr) {
           // We need to make sure the user sees any parse errors in their
           // condition, so we'll hook the
@@ -798,6 +778,7 @@ protected:
               }
             }
           } else {
+            Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
             StreamSP error_sp = debugger.GetAsyncErrorStream();
             error_sp->Printf(
                 "Stopped due to an error evaluating condition of watchpoint ");
@@ -819,20 +800,8 @@ protected:
         // If the condition says to stop, we run the callback to further decide
         // whether to stop.
         if (m_should_stop) {
-            // FIXME: For now the callbacks have to run in async mode - the
-            // first time we restart we need
-            // to get out of there.  So set it here.
-            // When we figure out how to nest watchpoint hits then this will
-            // change.
-
-          bool old_async = debugger.GetAsyncExecution();
-          debugger.SetAsyncExecution(true);
-          
           StoppointCallbackContext context(event_ptr, exe_ctx, false);
           bool stop_requested = wp_sp->InvokeCallback(&context);
-          
-          debugger.SetAsyncExecution(old_async);
-          
           // Also make sure that the callback hasn't continued the target.
           // If it did, when we'll set m_should_stop to false and get out of
           // here.

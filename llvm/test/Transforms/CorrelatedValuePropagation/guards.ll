@@ -93,3 +93,20 @@ continue:
   %result = or i1 %dead, %alive
   ret i1 %result
 }
+
+; Check that we handle the case when the guard is the very first instruction in
+; a basic block.
+define i1 @test6(i32 %a) {
+; CHECK-LABEL: @test6(
+; CHECK: %alive = icmp eq i32 %a, 8
+; CHECK-NEXT: %result = or i1 false, %alive
+  %cmp = icmp ult i32 %a, 16
+  br label %continue
+
+continue:
+  call void(i1,...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  %dead = icmp eq i32 %a, 16
+  %alive = icmp eq i32 %a, 8
+  %result = or i1 %dead, %alive
+  ret i1 %result
+}

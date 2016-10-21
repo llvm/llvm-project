@@ -978,12 +978,11 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   if (!GuardDecl || GuardDecl->use_empty())
     return;
 
-  for (BasicBlock::iterator I = BBI->getIterator(),
-                            E = BBI->getParent()->begin(); I != E; I--) {
+  for (Instruction &I : make_range(BBI->getIterator().getReverse(),
+                                   BBI->getParent()->rend())) {
     Value *Cond = nullptr;
-    if (!match(&*I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(Cond))))
-      continue;
-    BBLV = intersect(BBLV, getValueFromCondition(Val, Cond));
+    if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(Cond))))
+      BBLV = intersect(BBLV, getValueFromCondition(Val, Cond));
   }
 }
 

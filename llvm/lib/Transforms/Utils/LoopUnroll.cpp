@@ -189,7 +189,8 @@ static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
 ///
 /// PreserveCondBr indicates whether the conditional branch of the LatchBlock
 /// needs to be preserved.  It is needed when we use trip count upper bound to
-/// fully unroll the loop.
+/// fully unroll the loop. If PreserveOnlyFirst is also set then only the first
+/// conditional branch needs to be preserved.
 ///
 /// Similarly, TripMultiple divides the number of times that the LatchBlock may
 /// execute without exiting the loop.
@@ -207,10 +208,10 @@ static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
 /// DominatorTree if they are non-null.
 bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
                       bool AllowRuntime, bool AllowExpensiveTripCount,
-                      bool PreserveCondBr, unsigned TripMultiple, LoopInfo *LI,
-                      ScalarEvolution *SE, DominatorTree *DT,
-                      AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
-                      bool PreserveLCSSA) {
+                      bool PreserveCondBr, bool PreserveOnlyFirst,
+                      unsigned TripMultiple, LoopInfo *LI, ScalarEvolution *SE,
+                      DominatorTree *DT, AssumptionCache *AC,
+                      OptimizationRemarkEmitter *ORE, bool PreserveLCSSA) {
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
     DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
@@ -550,7 +551,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       assert(NeedConditional &&
              "NeedCondition cannot be modified by both complete "
              "unrolling and runtime unrolling");
-      NeedConditional = (PreserveCondBr && j);
+      NeedConditional = (PreserveCondBr && j && !(PreserveOnlyFirst && i != 0));
     } else if (j != BreakoutTrip && (TripMultiple == 0 || j % TripMultiple != 0)) {
       // If we know the trip count or a multiple of it, we can safely use an
       // unconditional branch for some iterations.

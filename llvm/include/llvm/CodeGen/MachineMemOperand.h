@@ -202,15 +202,11 @@ public:
     return static_cast<SynchronizationScope>(AtomicInfo.SynchScope);
   }
 
-  /// Return the atomic ordering requirements for this memory operation.
+  /// Return the atomic ordering requirements for this memory operation. For
+  /// cmpxchg atomic operations, return the atomic ordering requirements when
+  /// store occurs.
   AtomicOrdering getOrdering() const {
     return static_cast<AtomicOrdering>(AtomicInfo.Ordering);
-  }
-
-  /// For cmpxchg atomic operations, return the atomic ordering requirements
-  /// when store occurs.
-  AtomicOrdering getSuccessOrdering() const {
-    return getOrdering();
   }
 
   /// For cmpxchg atomic operations, return the atomic ordering requirements
