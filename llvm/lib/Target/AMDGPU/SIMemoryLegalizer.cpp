@@ -336,7 +336,7 @@ bool SIMemoryLegalizer::ExpandAtomicCmpxchg(MachineBasicBlock::iterator &MI) {
   bool Changed = false;
 
   const MachineMemOperand *MMO = *MI->memoperands_begin();
-  AtomicOrdering SuccessOrdering = MMO->getSuccessOrdering();
+  AtomicOrdering SuccessOrdering = MMO->getOrdering();
   AtomicOrdering FailureOrdering = MMO->getFailureOrdering();
   AMDGPUSynchronizationScope SynchScope =
       static_cast<AMDGPUSynchronizationScope>(MMO->getSynchScope());
