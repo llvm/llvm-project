@@ -4,7 +4,6 @@
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -std=c++11 -fopenmp -fnoopenmp-use-tls -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=ARRAY %s
 // expected-no-diagnostics
-// REQUIRES: x86-registered-target
 #ifndef ARRAY
 #ifndef HEADER
 #define HEADER

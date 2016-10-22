@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -DNOEXCEPT= %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT= %s
-// FIXME: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT=noexcept %s
+// RUN: %clang_cc1 -fsyntax-only -DNOEXCEPT= -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT= -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT=noexcept -verify %s
 
 template<typename T> T f0(T) NOEXCEPT;
 int f0(int) NOEXCEPT;
@@ -94,3 +94,18 @@ Y1<f0> y1;
 Y1<&f0> y1a;
 Y2<f0> y2;
 Y3<f0> y3;
+
+#if __cplusplus > 201402L
+namespace MixedNoexcept {
+  inline namespace A {
+    void f() noexcept; // expected-note {{candidate}}
+  }
+  inline namespace B {
+    void f(); // expected-note {{candidate}}
+  }
+  void (*p)() noexcept = &f; // ok
+  void (*q)() = &f; // expected-error {{ambiguous}}
+}
+#else
+// expected-no-diagnostics
+#endif

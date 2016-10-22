@@ -898,19 +898,6 @@ public:
         NumTypos(0),
         ManglingContextDecl(ManglingContextDecl), MangleNumbering() { }
 
-    // FIXME: This is here only to make MSVC 2013 happy.  Remove it and rely on
-    // the default move constructor once MSVC 2013 is gone.
-    ExpressionEvaluationContextRecord(ExpressionEvaluationContextRecord &&E)
-        : Context(E.Context), ParentCleanup(E.ParentCleanup),
-          IsDecltype(E.IsDecltype), NumCleanupObjects(E.NumCleanupObjects),
-          NumTypos(E.NumTypos),
-          SavedMaybeODRUseExprs(std::move(E.SavedMaybeODRUseExprs)),
-          Lambdas(std::move(E.Lambdas)),
-          ManglingContextDecl(E.ManglingContextDecl),
-          MangleNumbering(std::move(E.MangleNumbering)),
-          DelayedDecltypeCalls(std::move(E.DelayedDecltypeCalls)),
-          DelayedDecltypeBinds(std::move(E.DelayedDecltypeBinds)) {}
-
     /// \brief Retrieve the mangling numbering context, used to consistently
     /// number constructs like lambdas for mangling.
     MangleNumberingContext &getMangleNumberingContext(ASTContext &Ctx);
@@ -1349,13 +1336,19 @@ public:
       bool *MissingEmptyExceptionSpecification = nullptr,
       bool AllowNoexceptAllMatchWithNoSpec = false,
       bool IsOperatorNew = false);
-  bool CheckExceptionSpecSubset(
-      const PartialDiagnostic &DiagID, const PartialDiagnostic & NoteID,
-      const FunctionProtoType *Superset, SourceLocation SuperLoc,
-      const FunctionProtoType *Subset, SourceLocation SubLoc);
-  bool CheckParamExceptionSpec(const PartialDiagnostic & NoteID,
-      const FunctionProtoType *Target, SourceLocation TargetLoc,
-      const FunctionProtoType *Source, SourceLocation SourceLoc);
+  bool CheckExceptionSpecSubset(const PartialDiagnostic &DiagID,
+                                const PartialDiagnostic &NestedDiagID,
+                                const PartialDiagnostic &NoteID,
+                                const FunctionProtoType *Superset,
+                                SourceLocation SuperLoc,
+                                const FunctionProtoType *Subset,
+                                SourceLocation SubLoc);
+  bool CheckParamExceptionSpec(const PartialDiagnostic &NestedDiagID,
+                               const PartialDiagnostic &NoteID,
+                               const FunctionProtoType *Target,
+                               SourceLocation TargetLoc,
+                               const FunctionProtoType *Source,
+                               SourceLocation SourceLoc);
 
   TypeResult ActOnTypeName(Scope *S, Declarator &D);
 
@@ -8994,15 +8987,13 @@ public:
     ExprResult &cond, ExprResult &lhs, ExprResult &rhs,
     ExprValueKind &VK, ExprObjectKind &OK, SourceLocation questionLoc);
   QualType FindCompositePointerType(SourceLocation Loc, Expr *&E1, Expr *&E2,
-                                    bool *NonStandardCompositeType = nullptr,
                                     bool ConvertArgs = true);
   QualType FindCompositePointerType(SourceLocation Loc,
                                     ExprResult &E1, ExprResult &E2,
-                                    bool *NonStandardCompositeType = nullptr,
                                     bool ConvertArgs = true) {
     Expr *E1Tmp = E1.get(), *E2Tmp = E2.get();
-    QualType Composite = FindCompositePointerType(
-        Loc, E1Tmp, E2Tmp, NonStandardCompositeType, ConvertArgs);
+    QualType Composite =
+        FindCompositePointerType(Loc, E1Tmp, E2Tmp, ConvertArgs);
     E1 = E1Tmp;
     E2 = E2Tmp;
     return Composite;
@@ -9047,13 +9038,7 @@ public:
     /// that their unqualified forms (T1 and T2) are either the same
     /// or T1 is a base class of T2.
     Ref_Related,
-    /// Ref_Compatible_With_Added_Qualification - The two types are
-    /// reference-compatible with added qualification, meaning that
-    /// they are reference-compatible and the qualifiers on T1 (cv1)
-    /// are greater than the qualifiers on T2 (cv2).
-    Ref_Compatible_With_Added_Qualification,
-    /// Ref_Compatible - The two types are reference-compatible and
-    /// have equivalent qualifiers (cv1 == cv2).
+    /// Ref_Compatible - The two types are reference-compatible.
     Ref_Compatible
   };
 
@@ -9303,17 +9288,17 @@ public:
                  std::vector<PartialDiagnosticAt>>
       CUDADeferredDiags;
 
-  /// FunctionDecls plus raw encodings of SourceLocations for which
-  /// CheckCUDACall has emitted a (maybe deferred) "bad call" diagnostic.  We
-  /// use this to avoid emitting the same deferred diag twice.
-  llvm::DenseSet<std::pair<CanonicalDeclPtr<FunctionDecl>, unsigned>>
-      LocsWithCUDACallDiags;
-
-  /// A pair of a canonical FunctionDecl and a SourceLocation.
+  /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
+  /// key in a hashtable, both the FD and location are hashed.
   struct FunctionDeclAndLoc {
     CanonicalDeclPtr<FunctionDecl> FD;
     SourceLocation Loc;
   };
+
+  /// FunctionDecls and SourceLocations for which CheckCUDACall has emitted a
+  /// (maybe deferred) "bad call" diagnostic.  We use this to avoid emitting the
+  /// same deferred diag twice.
+  llvm::DenseSet<FunctionDeclAndLoc> LocsWithCUDACallDiags;
 
   /// An inverse call graph, mapping known-emitted functions to one of their
   /// known-emitted callers (plus the location of the call).
@@ -9485,7 +9470,7 @@ public:
 
   /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to FD,
   /// depending on FD and the current compilation settings.
-  void maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *FD,
+  void maybeAddCUDAHostDeviceAttrs(FunctionDecl *FD,
                                    const LookupResult &Previous);
 
 public:
@@ -10091,5 +10076,32 @@ struct LateParsedTemplate {
 };
 
 } // end namespace clang
+
+namespace llvm {
+// Hash a FunctionDeclAndLoc by looking at both its FunctionDecl and its
+// SourceLocation.
+template <> struct DenseMapInfo<clang::Sema::FunctionDeclAndLoc> {
+  using FunctionDeclAndLoc = clang::Sema::FunctionDeclAndLoc;
+  using FDBaseInfo = DenseMapInfo<clang::CanonicalDeclPtr<clang::FunctionDecl>>;
+
+  static FunctionDeclAndLoc getEmptyKey() {
+    return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
+  }
+
+  static FunctionDeclAndLoc getTombstoneKey() {
+    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
+  }
+
+  static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
+    return hash_combine(FDBaseInfo::getHashValue(FDL.FD),
+                        FDL.Loc.getRawEncoding());
+  }
+
+  static bool isEqual(const FunctionDeclAndLoc &LHS,
+                      const FunctionDeclAndLoc &RHS) {
+    return LHS.FD == RHS.FD && LHS.Loc == RHS.Loc;
+  }
+};
+} // namespace llvm
 
 #endif

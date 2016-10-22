@@ -257,7 +257,7 @@ private:
 
   struct BeforeInfo {
     BeforeInfo() : Visited(0) {}
-    BeforeInfo(BeforeInfo &&O) : Vect(std::move(O.Vect)), Visited(O.Visited) {}
+    BeforeInfo(BeforeInfo &&) = default;
 
     BeforeVect Vect;
     int Visited;

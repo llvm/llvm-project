@@ -175,6 +175,7 @@ public:
 
   const list_type &getJobs() const { return Jobs; }
 
+  bool empty() const { return Jobs.empty(); }
   size_type size() const { return Jobs.size(); }
   iterator begin() { return Jobs.begin(); }
   const_iterator begin() const { return Jobs.begin(); }

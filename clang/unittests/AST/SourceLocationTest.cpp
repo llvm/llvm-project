@@ -148,6 +148,96 @@ TEST(VarDecl, VMTypeFixedVarDeclRange) {
                              varDecl(), Lang_C89));
 }
 
+TEST(TypeLoc, IntRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 1);
+  EXPECT_TRUE(Verifier.match("int a;", typeLoc()));
+}
+
+TEST(TypeLoc, LongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 1);
+  EXPECT_TRUE(Verifier.match("long a;", typeLoc()));
+}
+
+TEST(TypeLoc, LongDoubleRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 6);
+  EXPECT_TRUE(Verifier.match("long double a;", typeLoc()));
+}
+
+TEST(TypeLoc, DoubleLongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 8);
+  EXPECT_TRUE(Verifier.match("double long a;", typeLoc()));
+}
+
+TEST(TypeLoc, LongIntRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 6);
+  EXPECT_TRUE(Verifier.match("long int a;", typeLoc()));
+}
+
+TEST(TypeLoc, IntLongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 5);
+  EXPECT_TRUE(Verifier.match("int long a;", typeLoc()));
+}
+
+TEST(TypeLoc, UnsignedIntRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 10);
+  EXPECT_TRUE(Verifier.match("unsigned int a;", typeLoc()));
+}
+
+TEST(TypeLoc, IntUnsignedRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 5);
+  EXPECT_TRUE(Verifier.match("int unsigned a;", typeLoc()));
+}
+
+TEST(TypeLoc, LongLongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 6);
+  EXPECT_TRUE(Verifier.match("long long a;", typeLoc()));
+}
+
+TEST(TypeLoc, UnsignedLongLongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 15);
+  EXPECT_TRUE(Verifier.match("unsigned long long a;", typeLoc()));
+}
+
+TEST(TypeLoc, LongUnsignedLongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 15);
+  EXPECT_TRUE(Verifier.match("long unsigned long a;", typeLoc()));
+}
+
+TEST(TypeLoc, LongLongUnsignedRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 11);
+  EXPECT_TRUE(Verifier.match("long long unsigned a;", typeLoc()));
+}
+
+TEST(TypeLoc, ConstLongLongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 7, 1, 12);
+  EXPECT_TRUE(Verifier.match("const long long a = 0;", typeLoc()));
+}
+
+TEST(TypeLoc, LongConstLongRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 12);
+  EXPECT_TRUE(Verifier.match("long const long a = 0;", typeLoc()));
+}
+
+TEST(TypeLoc, LongLongConstRange) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(1, 1, 1, 6);
+  EXPECT_TRUE(Verifier.match("long long const a = 0;", typeLoc()));
+}
+
 TEST(CXXConstructorDecl, NoRetFunTypeLocRange) {
   RangeVerifier<CXXConstructorDecl> Verifier;
   Verifier.expectRange(1, 11, 1, 13);

@@ -1,0 +1,4 @@
+module "libc++" {
+  module math { header "math.h" export * }
+  module stdlib { header "stdlib.h" export * }
+}

@@ -4172,6 +4172,7 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   DerivedToBase = false;
   ObjCConversion = false;
   ObjCLifetimeConversion = false;
+  QualType ConvertedT2;
   if (UnqualT1 == UnqualT2) {
     // Nothing to do.
   } else if (isCompleteType(Loc, OrigT2) &&
@@ -4182,6 +4183,15 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
            UnqualT2->isObjCObjectOrInterfaceType() &&
            Context.canBindObjCObjectType(UnqualT1, UnqualT2))
     ObjCConversion = true;
+  else if (UnqualT2->isFunctionType() &&
+           IsFunctionConversion(UnqualT2, UnqualT1, ConvertedT2))
+    // C++1z [dcl.init.ref]p4:
+    //   cv1 T1" is reference-compatible with "cv2 T2" if [...] T2 is "noexcept
+    //   function" and T1 is "function"
+    //
+    // We extend this to also apply to 'noreturn', so allow any function
+    // conversion between function types.
+    return Ref_Compatible;
   else
     return Ref_Incompatible;
 
@@ -4220,10 +4230,8 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   T1Quals.removeUnaligned();
   T2Quals.removeUnaligned();
 
-  if (T1Quals == T2Quals)
+  if (T1Quals.compatiblyIncludes(T2Quals))
     return Ref_Compatible;
-  else if (T1Quals.compatiblyIncludes(T2Quals))
-    return Ref_Compatible_With_Added_Qualification;
   else
     return Ref_Related;
 }
@@ -4401,8 +4409,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     //        reference-compatible with "cv2 T2," or
     //
     // Per C++ [over.ics.ref]p4, we don't check the bit-field property here.
-    if (InitCategory.isLValue() &&
-        RefRelationship >= Sema::Ref_Compatible_With_Added_Qualification) {
+    if (InitCategory.isLValue() && RefRelationship == Sema::Ref_Compatible) {
       // C++ [over.ics.ref]p1:
       //   When a parameter of reference type binds directly (8.5.3)
       //   to an argument expression, the implicit conversion sequence
@@ -4464,10 +4471,10 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //
   //            -- is an xvalue, class prvalue, array prvalue or function
   //               lvalue and "cv1 T1" is reference-compatible with "cv2 T2", or
-  if (RefRelationship >= Sema::Ref_Compatible_With_Added_Qualification &&
+  if (RefRelationship == Sema::Ref_Compatible &&
       (InitCategory.isXValue() ||
-      (InitCategory.isPRValue() && (T2->isRecordType() || T2->isArrayType())) ||
-      (InitCategory.isLValue() && T2->isFunctionType()))) {
+       (InitCategory.isPRValue() && (T2->isRecordType() || T2->isArrayType())) ||
+       (InitCategory.isLValue() && T2->isFunctionType()))) {
     ICS.setStandard();
     ICS.Standard.First = ICK_Identity;
     ICS.Standard.Second = DerivedToBase? ICK_Derived_To_Base
@@ -7624,12 +7631,12 @@ public:
   }
 
   // C++ [over.match.oper]p16:
-  //   For every pointer to member type T, there exist candidate operator
-  //   functions of the form
+  //   For every pointer to member type T or type std::nullptr_t, there
+  //   exist candidate operator functions of the form
   //
   //        bool operator==(T,T);
   //        bool operator!=(T,T);
-  void addEqualEqualOrNotEqualMemberPointerOverloads() {
+  void addEqualEqualOrNotEqualMemberPointerOrNullptrOverloads() {
     /// Set of (canonical) types that we've already handled.
     llvm::SmallPtrSet<QualType, 8> AddedTypes;
 
@@ -7646,13 +7653,22 @@ public:
         QualType ParamTypes[2] = { *MemPtr, *MemPtr };
         S.AddBuiltinCandidate(S.Context.BoolTy, ParamTypes, Args, CandidateSet);
       }
+
+      if (CandidateTypes[ArgIdx].hasNullPtrType()) {
+        CanQualType NullPtrTy = S.Context.getCanonicalType(S.Context.NullPtrTy);
+        if (AddedTypes.insert(NullPtrTy).second) {
+          QualType ParamTypes[2] = { NullPtrTy, NullPtrTy };
+          S.AddBuiltinCandidate(S.Context.BoolTy, ParamTypes, Args,
+                                CandidateSet);
+        }
+      }
     }
   }
 
   // C++ [over.built]p15:
   //
-  //   For every T, where T is an enumeration type, a pointer type, or 
-  //   std::nullptr_t, there exist candidate operator functions of the form
+  //   For every T, where T is an enumeration type or a pointer type,
+  //   there exist candidate operator functions of the form
   //
   //        bool       operator<(T, T);
   //        bool       operator>(T, T);
@@ -7736,17 +7752,6 @@ public:
 
         QualType ParamTypes[2] = { *Enum, *Enum };
         S.AddBuiltinCandidate(S.Context.BoolTy, ParamTypes, Args, CandidateSet);
-      }
-      
-      if (CandidateTypes[ArgIdx].hasNullPtrType()) {
-        CanQualType NullPtrTy = S.Context.getCanonicalType(S.Context.NullPtrTy);
-        if (AddedTypes.insert(NullPtrTy).second &&
-            !UserDefinedBinaryOperators.count(std::make_pair(NullPtrTy,
-                                                             NullPtrTy))) {
-          QualType ParamTypes[2] = { NullPtrTy, NullPtrTy };
-          S.AddBuiltinCandidate(S.Context.BoolTy, ParamTypes, Args,
-                                CandidateSet);
-        }
       }
     }
   }
@@ -8443,7 +8448,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
 
   case OO_EqualEqual:
   case OO_ExclaimEqual:
-    OpBuilder.addEqualEqualOrNotEqualMemberPointerOverloads();
+    OpBuilder.addEqualEqualOrNotEqualMemberPointerOrNullptrOverloads();
     // Fall through.
 
   case OO_Less:

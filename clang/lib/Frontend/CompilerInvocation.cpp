@@ -1433,7 +1433,8 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
 
   for (const Arg *A : Args.filtered(OPT_fmodules_ignore_macro)) {
     StringRef MacroDef = A->getValue();
-    Opts.ModulesIgnoreMacros.insert(MacroDef.split('=').first);
+    Opts.ModulesIgnoreMacros.insert(
+        llvm::CachedHashString(MacroDef.split('=').first));
   }
 
   // Add -I..., -F..., and -index-header-map options in order.
@@ -2543,7 +2544,8 @@ std::string CompilerInvocation::getModuleHash() const {
     if (!hsOpts.ModulesIgnoreMacros.empty()) {
       // Check whether we're ignoring this macro.
       StringRef MacroDef = I->first;
-      if (hsOpts.ModulesIgnoreMacros.count(MacroDef.split('=').first))
+      if (hsOpts.ModulesIgnoreMacros.count(
+              llvm::CachedHashString(MacroDef.split('=').first)))
         continue;
     }
 

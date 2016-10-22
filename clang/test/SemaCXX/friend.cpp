@@ -379,3 +379,12 @@ namespace tag_redecl {
     X *q = p;
   }
 }
+
+namespace default_arg {
+  void f();
+  void f(void*); // expected-note {{previous}}
+  struct X {
+    friend void f(int a, int b = 0) {}
+    friend void f(void *p = 0) {} // expected-error {{must be the only}}
+  };
+}

@@ -7199,9 +7199,7 @@ class DataRecursiveIntBinOpEvaluator {
     enum { AnyExprKind, BinOpKind, BinOpVisitedLHSKind } Kind;
 
     Job() = default;
-    Job(Job &&J)
-        : E(J.E), LHSResult(J.LHSResult), Kind(J.Kind),
-          SpecEvalRAII(std::move(J.SpecEvalRAII)) {}
+    Job(Job &&) = default;
 
     void startSpeculativeEval(EvalInfo &Info) {
       SpecEvalRAII = SpeculativeEvaluationRAII(Info);
