@@ -99,6 +99,12 @@ def availability(issue):
   if status.endswith(' c++11'):
     status = status[:-6]
     avail_suffix = ' (C++11 onwards)'
+  elif status.endswith(' c++14'):
+    status = status[:-6]
+    avail_suffix = ' (C++14 onwards)'
+  elif status.endswith(' c++17'):
+    status = status[:-6]
+    avail_suffix = ' (C++17 onwards)'
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="none"'
@@ -161,7 +167,7 @@ for dr in drs:
     <td%s align="center">%s</td>
   </tr>''' % (row_style, dr.issue, dr.url, dr.issue, dr.status, dr.title, avail_style, avail)
 
-for status, num in count.items():
+for status, num in sorted(count.items()):
   print "%s: %s" % (status, num)
 
 print >> out_file, '''\
