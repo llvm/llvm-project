@@ -1003,3 +1003,58 @@ define <32 x i16> @combine_vpermi2var_32i16_as_permw(<32 x i16> %x0, <32 x i16> 
   %res1 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %res0, <32 x i16> <i16 0, i16 31, i16 1, i16 30, i16 2, i16 29, i16 3, i16 28, i16 4, i16 27, i16 5, i16 26, i16 6, i16 25, i16 7, i16 24, i16 8, i16 23, i16 9, i16 22, i16 10, i16 21, i16 11, i16 20, i16 12, i16 19, i16 13, i16 18, i16 14, i16 17, i16 15, i16 16>, <32 x i16> %res0, i32 -1)
   ret <32 x i16> %res1
 }
+
+define <8 x double> @combine_vpermi2var_vpermt2var_8f64_as_vperm2(<8 x double> %x0, <8 x double> %x1) {
+; X32-LABEL: combine_vpermi2var_vpermt2var_8f64_as_vperm2:
+; X32:       # BB#0:
+; X32-NEXT:    vmovapd {{.*#+}} zmm2 = [4,0,14,0,3,0,12,0,7,0,8,0,0,0,15,0]
+; X32-NEXT:    vpermt2pd %zmm0, %zmm2, %zmm1
+; X32-NEXT:    vmovapd %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_vpermt2var_8f64_as_vperm2:
+; X64:       # BB#0:
+; X64-NEXT:    vmovapd {{.*#+}} zmm2 = [4,14,3,12,7,8,0,15]
+; X64-NEXT:    vpermt2pd %zmm0, %zmm2, %zmm1
+; X64-NEXT:    vmovapd %zmm1, %zmm0
+; X64-NEXT:    retq
+  %res0 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 15, i64 0, i64 8, i64 7, i64 12, i64 6, i64 11, i64 4>, <8 x double> %x1, i8 -1)
+  %res1 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 12, i64 5, i64 14, i64 7, i64 8, i64 1, i64 10, i64 3>, <8 x double> %res0, <8 x double> %res0, i8 -1)
+  ret <8 x double> %res1
+}
+
+define <16 x i32> @combine_vpermi2var_vpermt2var_16i32_as_vpermd(<16 x i32> %x0, <16 x i32> %x1) {
+; X32-LABEL: combine_vpermi2var_vpermt2var_16i32_as_vpermd:
+; X32:       # BB#0:
+; X32-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,31,2,2,4,29,6,27,8,25,10,23,12,21,14,19]
+; X32-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_vpermt2var_16i32_as_vpermd:
+; X64:       # BB#0:
+; X64-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,31,2,2,4,29,6,27,8,25,10,23,12,21,14,19]
+; X64-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; X64-NEXT:    retq
+  %res0 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> <i32 0, i32 31, i32 2, i32 29, i32 4, i32 27, i32 6, i32 25, i32 8, i32 23, i32 10, i32 21, i32 12, i32 19, i32 14, i32 17>, <16 x i32> %x1, i16 -1)
+  %res1 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 0, i32 17, i32 2, i32 18, i32 4, i32 19, i32 6, i32 21, i32 8, i32 23, i32 10, i32 25, i32 12, i32 27, i32 14, i32 29>, <16 x i32> %res0, <16 x i32> %res0, i16 -1)
+  ret <16 x i32> %res1
+}
+
+define <32 x i16> @combine_vpermt2var_vpermi2var_32i16_as_permw(<32 x i16> %x0, <32 x i16> %x1) {
+; X32-LABEL: combine_vpermt2var_vpermi2var_32i16_as_permw:
+; X32:       # BB#0:
+; X32-NEXT:    vmovdqu16 {{.*#+}} zmm2 = [17,39,19,38,21,37,23,36,25,35,27,34,29,33,31,32,1,47,3,46,5,45,7,44,9,43,11,42,13,41,15,40]
+; X32-NEXT:    vpermt2w %zmm0, %zmm2, %zmm1
+; X32-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermt2var_vpermi2var_32i16_as_permw:
+; X64:       # BB#0:
+; X64-NEXT:    vmovdqu16 {{.*#+}} zmm2 = [17,39,19,38,21,37,23,36,25,35,27,34,29,33,31,32,1,47,3,46,5,45,7,44,9,43,11,42,13,41,15,40]
+; X64-NEXT:    vpermt2w %zmm0, %zmm2, %zmm1
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-NEXT:    retq
+  %res0 = call <32 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.512(<32 x i16> <i16 0, i16 63, i16 1, i16 61, i16 2, i16 59, i16 3, i16 57, i16 4, i16 55, i16 5, i16 53, i16 6, i16 51, i16 7, i16 49, i16 8, i16 47, i16 9, i16 45, i16 10, i16 43, i16 11, i16 41, i16 12, i16 39, i16 13, i16 37, i16 14, i16 35, i16 15, i16 33>, <32 x i16> %x0, <32 x i16> %x1, i32 -1)
+  %res1 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %res0, <32 x i16> <i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0, i16 31, i16 30, i16 29, i16 28, i16 27, i16 26, i16 25, i16 24, i16 23, i16 22, i16 21, i16 20, i16 19, i16 18, i16 17, i16 16>, <32 x i16> %res0, i32 -1)
+  ret <32 x i16> %res1
+}

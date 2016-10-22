@@ -3313,28 +3313,24 @@ _mm256_mask_permutexvar_epi16 (__m256i __W, __mmask16 __M, __m256i __A,
 }
 
 #define _mm_mask_alignr_epi8(W, U, A, B, N) __extension__ ({ \
-  (__m128i)__builtin_ia32_palignr128_mask((__v16qi)(__m128i)(A), \
-                                          (__v16qi)(__m128i)(B), (int)(N), \
-                                          (__v16qi)(__m128i)(W), \
-                                          (__mmask16)(U)); })
+  (__m128i)__builtin_ia32_selectb_128((__mmask16)(U), \
+                                      _mm_alignr_epi8((A), (B), (int)(N)), \
+                                      (__v16qi)(__m128i)(W)); })
 
 #define _mm_maskz_alignr_epi8(U, A, B, N) __extension__ ({ \
-  (__m128i)__builtin_ia32_palignr128_mask((__v16qi)(__m128i)(A), \
-                                          (__v16qi)(__m128i)(B), (int)(N), \
-                                          (__v16qi)_mm_setzero_si128(), \
-                                          (__mmask16)(U)); })
+  (__m128i)__builtin_ia32_selectb_128((__mmask16)(U), \
+                                      _mm_alignr_epi8((A), (B), (int)(N)), \
+                                      (__v16qi)_mm_setzero_si128()); })
 
 #define _mm256_mask_alignr_epi8(W, U, A, B, N) __extension__ ({ \
-  (__m256i)__builtin_ia32_palignr256_mask((__v32qi)(__m256i)(A), \
-                                          (__v32qi)(__m256i)(B), (int)(N), \
-                                          (__v32qi)(__m256i)(W), \
-                                          (__mmask32)(U)); })
+  (__m256i)__builtin_ia32_selectb_256((__mmask32)(U), \
+                                      _mm256_alignr_epi8((A), (B), (int)(N)), \
+                                      (__v32qi)(__m256i)(W)); })
 
 #define _mm256_maskz_alignr_epi8(U, A, B, N) __extension__ ({ \
-  (__m256i)__builtin_ia32_palignr256_mask((__v32qi)(__m256i)(A), \
-                                          (__v32qi)(__m256i)(B), (int)(N), \
-                                          (__v32qi)_mm256_setzero_si256(), \
-                                          (__mmask32)(U)); })
+  (__m256i)__builtin_ia32_selectb_256((__mmask32)(U), \
+                                      _mm256_alignr_epi8((A), (B), (int)(N)), \
+                                      (__v32qi)_mm256_setzero_si256()); })
 
 #define _mm_dbsad_epu8(A, B, imm) __extension__ ({ \
   (__m128i)__builtin_ia32_dbpsadbw128_mask((__v16qi)(__m128i)(A), \
