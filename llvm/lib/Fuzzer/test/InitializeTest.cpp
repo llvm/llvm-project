@@ -12,7 +12,7 @@
 static char *argv0;
 
 extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
-  assert(argc > 0);
+  assert(*argc > 0);
   argv0 = **argv;
   return 0;
 }

@@ -459,6 +459,25 @@ define i32 @stackpointer_dependency(i8* readnone) {
   ret i32 %3
 }
 
+; Stackify a call_indirect with respect to its ordering
+
+; CHECK-LABEL: call_indirect_stackify:
+; CHECK: i32.load  $push[[L4:.+]]=, 0($0)
+; CHECK-NEXT: tee_local $push[[L3:.+]]=, $0=, $pop[[L4]]
+; CHECK-NEXT: i32.load  $push[[L0:.+]]=, 0($0)
+; CHECK-NEXT: i32.load  $push[[L1:.+]]=, 0($pop[[L0]])
+; CHECK-NEXT: i32.call_indirect $push{{.+}}=, $pop[[L3]], $1, $pop[[L1]]
+%class.call_indirect = type { i32 (...)** }
+define i32 @call_indirect_stackify(%class.call_indirect** %objptr, i32 %arg) {
+  %obj = load %class.call_indirect*, %class.call_indirect** %objptr
+  %addr = bitcast %class.call_indirect* %obj to i32(%class.call_indirect*, i32)***
+  %vtable = load i32(%class.call_indirect*, i32)**, i32(%class.call_indirect*, i32)*** %addr
+  %vfn = getelementptr inbounds i32(%class.call_indirect*, i32)*, i32(%class.call_indirect*, i32)** %vtable, i32 0
+  %f = load i32(%class.call_indirect*, i32)*, i32(%class.call_indirect*, i32)** %vfn
+  %ret = call i32 %f(%class.call_indirect* %obj, i32 %arg)
+  ret i32 %ret
+}
+
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!1}
 

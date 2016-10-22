@@ -135,7 +135,7 @@ private:
 /// *All* Error instances must be checked before destruction, even if
 /// they're moved-assigned or constructed from Success values that have already
 /// been checked. This enforces checking through all levels of the call stack.
-class Error {
+class LLVM_NODISCARD Error {
 
   // ErrorList needs to be able to yank ErrorInfoBase pointers out of this
   // class to add to the error list.
@@ -611,7 +611,7 @@ private:
 /// Error cannot be copied, this class replaces getError() with
 /// takeError(). It also adds an bool errorIsA<ErrT>() method for testing the
 /// error class type.
-template <class T> class Expected {
+template <class T> class LLVM_NODISCARD Expected {
   template <class OtherT> friend class Expected;
   static const bool isRef = std::is_reference<T>::value;
   typedef ReferenceStorage<typename std::remove_reference<T>::type> wrap;

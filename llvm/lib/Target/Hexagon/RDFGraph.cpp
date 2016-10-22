@@ -630,7 +630,7 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
   // uses or defs, and those lists do not allow sub-registers.
   if (Op.getSubReg() != 0)
     return false;
-  uint32_t Reg = Op.getReg();
+  RegisterId Reg = Op.getReg();
   const MCPhysReg *ImpR = Op.isDef() ? D.getImplicitDefs()
                                      : D.getImplicitUses();
   if (!ImpR)
@@ -643,7 +643,7 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
 
 
 RegisterRef RegisterAggr::normalize(RegisterRef RR) const {
-  uint32_t SuperReg = RR.Reg;
+  RegisterId SuperReg = RR.Reg;
   while (true) {
     MCSuperRegIterator SR(SuperReg, &TRI, false);
     if (!SR.isValid())
@@ -706,7 +706,7 @@ RegisterAggr &RegisterAggr::insert(RegisterRef RR) {
 }
 
 RegisterAggr &RegisterAggr::insert(const RegisterAggr &RG) {
-  for (std::pair<uint32_t,LaneBitmask> P : RG.Masks)
+  for (std::pair<RegisterId,LaneBitmask> P : RG.Masks)
     insert(RegisterRef(P.first, P.second));
   return *this;
 }
@@ -725,7 +725,7 @@ RegisterAggr &RegisterAggr::clear(RegisterRef RR) {
 }
 
 RegisterAggr &RegisterAggr::clear(const RegisterAggr &RG) {
-  for (std::pair<uint32_t,LaneBitmask> P : RG.Masks)
+  for (std::pair<RegisterId,LaneBitmask> P : RG.Masks)
     clear(RegisterRef(P.first, P.second));
   return *this;
 }
@@ -850,7 +850,7 @@ unsigned DataFlowGraph::DefStack::nextDown(unsigned P) const {
 // Register information.
 
 // Get the list of references aliased to RR. Lane masks are ignored.
-RegisterSet DataFlowGraph::getAliasSet(uint32_t Reg) const {
+RegisterSet DataFlowGraph::getAliasSet(RegisterId Reg) const {
   // Do not include RR in the alias set.
   RegisterSet AS;
   assert(TargetRegisterInfo::isPhysicalRegister(Reg));
@@ -866,9 +866,9 @@ RegisterSet DataFlowGraph::getLandingPadLiveIns() const {
   const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn()
                                             : nullptr;
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  if (uint32_t R = TLI.getExceptionPointerRegister(PF))
+  if (RegisterId R = TLI.getExceptionPointerRegister(PF))
     LR.insert(RegisterRef(R));
-  if (uint32_t R = TLI.getExceptionSelectorRegister(PF))
+  if (RegisterId R = TLI.getExceptionSelectorRegister(PF))
     LR.insert(RegisterRef(R));
   return LR;
 }
@@ -1072,7 +1072,7 @@ RegisterRef DataFlowGraph::makeRegRef(unsigned Reg, unsigned Sub) const {
 
 RegisterRef DataFlowGraph::normalizeRef(RegisterRef RR) const {
   // FIXME copied from RegisterAggr
-  uint32_t SuperReg = RR.Reg;
+  RegisterId SuperReg = RR.Reg;
   while (true) {
     MCSuperRegIterator SR(SuperReg, &TRI, false);
     if (!SR.isValid())

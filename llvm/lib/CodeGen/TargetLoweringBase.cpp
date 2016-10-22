@@ -1973,7 +1973,7 @@ static int getOpEnabled(bool IsSqrt, EVT VT, StringRef Override) {
   // The attribute string may omit the size suffix ('f'/'d').
   std::string VTName = getReciprocalOpName(IsSqrt, VT);
   std::string VTNameNoSize = VTName;
-  VTName.pop_back();
+  VTNameNoSize.pop_back();
   static const char DisabledPrefix = '!';
 
   for (StringRef RecipType : OverrideVector) {
@@ -2028,7 +2028,7 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
   // The attribute string may omit the size suffix ('f'/'d').
   std::string VTName = getReciprocalOpName(IsSqrt, VT);
   std::string VTNameNoSize = VTName;
-  VTName.pop_back();
+  VTNameNoSize.pop_back();
 
   for (StringRef RecipType : OverrideVector) {
     size_t RefPos;

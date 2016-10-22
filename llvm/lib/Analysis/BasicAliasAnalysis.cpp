@@ -409,6 +409,8 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
     unsigned PointerSize = DL.getPointerSizeInBits(AS);
+    // Assume all GEP operands are constants until proven otherwise.
+    bool GepHasConstantOffset = true;
     for (User::const_op_iterator I = GEPOp->op_begin() + 1, E = GEPOp->op_end();
          I != E; ++I) {
       const Value *Index = *I;
@@ -432,6 +434,8 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
           DL.getTypeAllocSize(*GTI) * CIdx->getSExtValue();
         continue;
       }
+
+      GepHasConstantOffset = false;
 
       uint64_t Scale = DL.getTypeAllocSize(*GTI);
       unsigned ZExtBits = 0, SExtBits = 0;
@@ -458,7 +462,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       //   A[x][x] -> x*16 + x*4 -> x*20
       // This also ensures that 'x' only appears in the index list once.
       for (unsigned i = 0, e = Decomposed.VarIndices.size(); i != e; ++i) {
-        if (Decomposed.VarIndices[i].V == Index && 
+        if (Decomposed.VarIndices[i].V == Index &&
             Decomposed.VarIndices[i].ZExtBits == ZExtBits &&
             Decomposed.VarIndices[i].SExtBits == SExtBits) {
           Scale += Decomposed.VarIndices[i].Scale;
@@ -479,10 +483,12 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
     }
 
     // Take care of wrap-arounds
-    Decomposed.StructOffset =
-      adjustToPointerSize(Decomposed.StructOffset, PointerSize);
-    Decomposed.OtherOffset =
-      adjustToPointerSize(Decomposed.OtherOffset, PointerSize);
+    if (GepHasConstantOffset) {
+      Decomposed.StructOffset =
+          adjustToPointerSize(Decomposed.StructOffset, PointerSize);
+      Decomposed.OtherOffset =
+          adjustToPointerSize(Decomposed.OtherOffset, PointerSize);
+    }
 
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);

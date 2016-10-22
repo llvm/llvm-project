@@ -31,6 +31,7 @@ class WritableStream;
 
 namespace pdb {
 class DbiStream;
+class GlobalsStream;
 class InfoStream;
 class NameHashTable;
 class PDBFileBuilder;
@@ -86,6 +87,7 @@ public:
 
   Expected<InfoStream &> getPDBInfoStream();
   Expected<DbiStream &> getPDBDbiStream();
+  Expected<GlobalsStream &> getPDBGlobalsStream();
   Expected<TpiStream &> getPDBTpiStream();
   Expected<TpiStream &> getPDBIpiStream();
   Expected<PublicsStream &> getPDBPublicsStream();
@@ -102,6 +104,7 @@ private:
   std::vector<uint32_t> FpmPages;
   msf::MSFLayout ContainerLayout;
 
+  std::unique_ptr<GlobalsStream> Globals;
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;
   std::unique_ptr<TpiStream> Tpi;

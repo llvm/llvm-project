@@ -3946,8 +3946,11 @@ define <4 x i32>@test_int_x86_avx512_mask_valign_d_128(<4 x i32> %x0, <4 x i32> 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    valignd $22, %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x03,0xd1,0x16]
+; CHECK-NEXT:    ## xmm2 {%k1} = xmm1[2,3],xmm0[0,1]
 ; CHECK-NEXT:    valignd $22, %xmm1, %xmm0, %xmm3 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0x89,0x03,0xd9,0x16]
+; CHECK-NEXT:    ## xmm3 {%k1} {z} = xmm1[2,3],xmm0[0,1]
 ; CHECK-NEXT:    valignd $22, %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf3,0x7d,0x08,0x03,0xc1,0x16]
+; CHECK-NEXT:    ## xmm0 = xmm1[2,3],xmm0[0,1]
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0 ## encoding: [0x62,0xf1,0x6d,0x08,0xfe,0xc0]
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0xfe,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -3966,7 +3969,9 @@ define <8 x i32>@test_int_x86_avx512_mask_valign_d_256(<8 x i32> %x0, <8 x i32> 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    valignd $22, %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x03,0xd1,0x16]
+; CHECK-NEXT:    ## ymm2 {%k1} = ymm1[6,7],ymm0[0,1,2,3,4,5]
 ; CHECK-NEXT:    valignd $22, %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf3,0x7d,0x28,0x03,0xc1,0x16]
+; CHECK-NEXT:    ## ymm0 = ymm1[6,7],ymm0[0,1,2,3,4,5]
 ; CHECK-NEXT:    vpaddd %ymm0, %ymm2, %ymm0 ## encoding: [0x62,0xf1,0x6d,0x28,0xfe,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.mask.valign.d.256(<8 x i32> %x0, <8 x i32> %x1, i32 22, <8 x i32> %x3, i8 %x4)
@@ -3982,7 +3987,9 @@ define <2 x i64>@test_int_x86_avx512_mask_valign_q_128(<2 x i64> %x0, <2 x i64> 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    valignq $22, %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x03,0xd1,0x16]
+; CHECK-NEXT:    ## xmm2 {%k1} = xmm1[0,1]
 ; CHECK-NEXT:    valignq $22, %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf3,0xfd,0x08,0x03,0xc1,0x16]
+; CHECK-NEXT:    ## xmm0 = xmm1[0,1]
 ; CHECK-NEXT:    vpaddq %xmm0, %xmm2, %xmm0 ## encoding: [0x62,0xf1,0xed,0x08,0xd4,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.valign.q.128(<2 x i64> %x0, <2 x i64> %x1, i32 22, <2 x i64> %x3, i8 %x4)
@@ -3998,7 +4005,9 @@ define <4 x i64>@test_int_x86_avx512_mask_valign_q_256(<4 x i64> %x0, <4 x i64> 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    valignq $22, %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x03,0xd1,0x16]
+; CHECK-NEXT:    ## ymm2 {%k1} = ymm1[2,3],ymm0[0,1]
 ; CHECK-NEXT:    valignq $22, %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf3,0xfd,0x28,0x03,0xc1,0x16]
+; CHECK-NEXT:    ## ymm0 = ymm1[2,3],ymm0[0,1]
 ; CHECK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0 ## encoding: [0x62,0xf1,0xed,0x28,0xd4,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx512.mask.valign.q.256(<4 x i64> %x0, <4 x i64> %x1, i32 22, <4 x i64> %x3, i8 %x4)

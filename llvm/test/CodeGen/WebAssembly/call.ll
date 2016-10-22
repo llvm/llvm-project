@@ -97,6 +97,24 @@ define i32 @call_indirect_i32(i32 ()* %callee) {
   ret i32 %t
 }
 
+; CHECK-LABEL: call_indirect_arg:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: {{^}} call_indirect $1, $0{{$}}
+; CHECK-NEXT: return{{$}}
+define void @call_indirect_arg(void (i32)* %callee, i32 %arg) {
+  call void %callee(i32 %arg)
+  ret void
+}
+
+; CHECK-LABEL: call_indirect_arg_2:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: {{^}} i32.call_indirect $drop=, $1, $2, $0{{$}}
+; CHECK-NEXT: return{{$}}
+define void @call_indirect_arg_2(i32 (i32, i32)* %callee, i32 %arg, i32 %arg2) {
+  call i32 %callee(i32 %arg, i32 %arg2)
+  ret void
+}
+
 ; CHECK-LABEL: tail_call_void_nullary:
 ; CHECK-NEXT: {{^}} call void_nullary@FUNCTION{{$}}
 ; CHECK-NEXT: return{{$}}

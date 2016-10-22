@@ -55,6 +55,8 @@ void DecodePSRLDQMask(MVT VT, unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
 
 void DecodePALIGNRMask(MVT VT, unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
 
+void DecodeVALIGNMask(MVT VT, unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
+
 /// Decodes the shuffle masks for pshufd/pshufw/vpermilpd/vpermilps.
 /// VT indicates the type of the vector allowing it to handle different
 /// datatypes and vector widths.

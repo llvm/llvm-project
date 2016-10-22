@@ -100,6 +100,7 @@ set(Tests
   ShrinkControlFlowTest
   ShrinkValueProfileTest
   StrcmpTest
+  StrncmpOOBTest
   StrncmpTest
   StrstrTest
   SwapCmpTest

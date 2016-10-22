@@ -1000,14 +1000,22 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   if (Convergent)
     UP.AllowRemainder = false;
 
-  // Try to find the trip count upper bound if it is allowed and we cannot find
-  // exact trip count.
-  if (UP.UpperBound) {
-    if (!TripCount) {
-      MaxTripCount = SE->getSmallConstantMaxTripCount(L);
-      // Only unroll with small upper bound.
-      if (MaxTripCount > UnrollMaxUpperBound)
-        MaxTripCount = 0;
+  // Try to find the trip count upper bound if we cannot find the exact trip
+  // count.
+  bool MaxOrZero = false;
+  if (!TripCount) {
+    MaxTripCount = SE->getSmallConstantMaxTripCount(L);
+    MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
+    // We can unroll by the upper bound amount if it's generally allowed or if
+    // we know that the loop is executed either the upper bound or zero times.
+    // (MaxOrZero unrolling keeps only the first loop test, so the number of
+    // loop tests remains the same compared to the non-unrolled version, whereas
+    // the generic upper bound unrolling keeps all but the last loop test so the
+    // number of loop tests goes up which may end up being worse on targets with
+    // constriained branch predictor resources so is controlled by an option.)
+    // In addition we only unroll small upper bounds.
+    if (!(UP.UpperBound || MaxOrZero) || MaxTripCount > UnrollMaxUpperBound) {
+      MaxTripCount = 0;
     }
   }
 
@@ -1025,8 +1033,8 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
 
   // Unroll the loop.
   if (!UnrollLoop(L, UP.Count, TripCount, UP.Force, UP.Runtime,
-                  UP.AllowExpensiveTripCount, UseUpperBound, TripMultiple, LI,
-                  SE, &DT, &AC, &ORE, PreserveLCSSA))
+                  UP.AllowExpensiveTripCount, UseUpperBound, MaxOrZero,
+                  TripMultiple, LI, SE, &DT, &AC, &ORE, PreserveLCSSA))
     return false;
 
   // If loop has an unroll count pragma or unrolled by explicitly set count

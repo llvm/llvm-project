@@ -103,7 +103,8 @@ namespace rdf {
 
     // Phi information:
     //
-    // map: NodeId -> (map: RegisterRef -> NodeSet)
+    // RealUseMap
+    // map: NodeId -> (map: RegisterId -> NodeRefSet)
     //      phi id -> (map: register -> set of reached non-phi uses)
     std::map<NodeId, RefMap> RealUseMap;
 

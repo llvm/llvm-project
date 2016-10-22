@@ -548,8 +548,9 @@ private:
   /// pair of exact and max expressions that are eventually summarized in
   /// ExitNotTakenInfo and BackedgeTakenInfo.
   struct ExitLimit {
-    const SCEV *ExactNotTaken;
-    const SCEV *MaxNotTaken;
+    const SCEV *ExactNotTaken; // The exit is not taken exactly this many times
+    const SCEV *MaxNotTaken; // The exit is not taken at most this many times
+    bool MaxOrZero; // Not taken either exactly MaxNotTaken or zero times
 
     /// A set of predicate guards for this ExitLimit. The result is only valid
     /// if all of the predicates in \c Predicates evaluate to 'true' at
@@ -561,12 +562,13 @@ private:
       Predicates.insert(P);
     }
 
-    /*implicit*/ ExitLimit(const SCEV *E) : ExactNotTaken(E), MaxNotTaken(E) {}
+    /*implicit*/ ExitLimit(const SCEV *E)
+        : ExactNotTaken(E), MaxNotTaken(E), MaxOrZero(false) {}
 
     ExitLimit(
-        const SCEV *E, const SCEV *M,
+        const SCEV *E, const SCEV *M, bool MaxOrZero,
         ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
-        : ExactNotTaken(E), MaxNotTaken(M) {
+        : ExactNotTaken(E), MaxNotTaken(M), MaxOrZero(MaxOrZero) {
       assert((isa<SCEVCouldNotCompute>(ExactNotTaken) ||
               !isa<SCEVCouldNotCompute>(MaxNotTaken)) &&
              "Exact is not allowed to be less precise than Max");
@@ -575,11 +577,12 @@ private:
           addPredicate(P);
     }
 
-    ExitLimit(const SCEV *E, const SCEV *M,
+    ExitLimit(const SCEV *E, const SCEV *M, bool MaxOrZero,
               const SmallPtrSetImpl<const SCEVPredicate *> &PredSet)
-        : ExitLimit(E, M, {&PredSet}) {}
+        : ExitLimit(E, M, MaxOrZero, {&PredSet}) {}
 
-    ExitLimit(const SCEV *E, const SCEV *M) : ExitLimit(E, M, None) {}
+    ExitLimit(const SCEV *E, const SCEV *M, bool MaxOrZero)
+        : ExitLimit(E, M, MaxOrZero, None) {}
 
     /// Test whether this ExitLimit contains any computed information, or
     /// whether it's all SCEVCouldNotCompute values.
@@ -628,6 +631,9 @@ private:
     /// ExitNotTaken has an element for every exiting block in the loop.
     PointerIntPair<const SCEV *, 1> MaxAndComplete;
 
+    /// True iff the backedge is taken either exactly Max or zero times.
+    bool MaxOrZero;
+
     /// \name Helper projection functions on \c MaxAndComplete.
     /// @{
     bool isComplete() const { return MaxAndComplete.getInt(); }
@@ -644,7 +650,7 @@ private:
 
     /// Initialize BackedgeTakenInfo from a list of exact exit counts.
     BackedgeTakenInfo(SmallVectorImpl<EdgeExitInfo> &&ExitCounts, bool Complete,
-                      const SCEV *MaxCount);
+                      const SCEV *MaxCount, bool MaxOrZero);
 
     /// Test whether this BackedgeTakenInfo contains any computed information,
     /// or whether it's all SCEVCouldNotCompute values.
@@ -682,6 +688,10 @@ private:
 
     /// Get the max backedge taken count for the loop.
     const SCEV *getMax(ScalarEvolution *SE) const;
+
+    /// Return true if the number of times this backedge is taken is either the
+    /// value returned by getMax or zero.
+    bool isMaxOrZero(ScalarEvolution *SE) const;
 
     /// Return true if any backedge taken count expressions refer to the given
     /// subexpression.
@@ -1353,6 +1363,10 @@ public:
   /// Similar to getBackedgeTakenCount, except return the least SCEV value
   /// that is known never to be less than the actual backedge taken count.
   const SCEV *getMaxBackedgeTakenCount(const Loop *L);
+
+  /// Return true if the backedge taken count is either the value returned by
+  /// getMaxBackedgeTakenCount or zero.
+  bool isBackedgeTakenCountMaxOrZero(const Loop *L);
 
   /// Return true if the specified loop has an analyzable loop-invariant
   /// backedge-taken count.

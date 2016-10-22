@@ -790,7 +790,7 @@ namespace rdf {
 
     // Make this std::unordered_map for speed of accessing elements.
     // Map: Register (physical or virtual) -> DefStack
-    typedef std::unordered_map<uint32_t,DefStack> DefStackMap;
+    typedef std::unordered_map<RegisterId,DefStack> DefStackMap;
 
     void build(unsigned Options = BuildOptions::None);
     void pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DM);
@@ -863,7 +863,7 @@ namespace rdf {
   private:
     void reset();
 
-    RegisterSet getAliasSet(uint32_t Reg) const;
+    RegisterSet getAliasSet(RegisterId Reg) const;
     RegisterSet getLandingPadLiveIns() const;
 
     NodeAddr<NodeBase*> newNode(uint16_t Attrs);

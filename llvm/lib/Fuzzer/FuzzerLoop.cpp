@@ -332,7 +332,7 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {
     Printf( " ft: %zd", N);
   if (MaxCoverage.CallerCalleeCoverage)
     Printf(" indir: %zd", MaxCoverage.CallerCalleeCoverage);
-  if (size_t N = Corpus.size()) {
+  if (!Corpus.empty()) {
     Printf(" corp: %zd", Corpus.NumActiveUnits());
     if (size_t N = Corpus.SizeInBytes()) {
       if (N < (1<<14))

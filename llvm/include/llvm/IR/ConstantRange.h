@@ -38,6 +38,8 @@
 
 namespace llvm {
 
+class MDNode;
+
 /// This class represents a range of values.
 ///
 class ConstantRange {
@@ -329,6 +331,11 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ConstantRange &CR) {
   CR.print(OS);
   return OS;
 }
+
+/// Parse out a conservative ConstantRange from !range metadata.
+///
+/// E.g. if RangeMD is !{i32 0, i32 10, i32 15, i32 20} then return [0, 20).
+ConstantRange getConstantRangeFromMetadata(const MDNode &RangeMD);
 
 } // End llvm namespace
 
