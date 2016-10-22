@@ -4263,7 +4263,7 @@ static void TryReferenceInitializationCore(Sema &S,
   bool T1Function = T1->isFunctionType();
   if (isLValueRef || T1Function) {
     if (InitCategory.isLValue() &&
-        (RefRelationship >= Sema::Ref_Compatible_With_Added_Qualification ||
+        (RefRelationship == Sema::Ref_Compatible ||
          (Kind.isCStyleOrFunctionalCast() &&
           RefRelationship == Sema::Ref_Related))) {
       //   - is an lvalue (but is not a bit-field), and "cv1 T1" is
@@ -4336,7 +4336,7 @@ static void TryReferenceInitializationCore(Sema &S,
   //        "cv1 T1" is reference-compatible with "cv2 T2"
   // Note: functions are handled below.
   if (!T1Function &&
-      (RefRelationship >= Sema::Ref_Compatible_With_Added_Qualification ||
+      (RefRelationship == Sema::Ref_Compatible ||
        (Kind.isCStyleOrFunctionalCast() &&
         RefRelationship == Sema::Ref_Related)) &&
       (InitCategory.isXValue() ||
@@ -4393,8 +4393,7 @@ static void TryReferenceInitializationCore(Sema &S,
       return;
     }
 
-    if ((RefRelationship == Sema::Ref_Compatible ||
-         RefRelationship == Sema::Ref_Compatible_With_Added_Qualification) &&
+    if (RefRelationship == Sema::Ref_Compatible &&
         isRValueRef && InitCategory.isLValue()) {
       Sequence.SetFailed(
         InitializationSequence::FK_RValueReferenceBindingToLValue);

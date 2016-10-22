@@ -282,7 +282,8 @@ private:
 /// \brief A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
-class SmallSetVector : public SetVector<T, SmallVector<T, N>, SmallSet<T, N> > {
+class SmallSetVector
+    : public SetVector<T, SmallVector<T, N>, SmallDenseSet<T, N>> {
 public:
   SmallSetVector() {}
 

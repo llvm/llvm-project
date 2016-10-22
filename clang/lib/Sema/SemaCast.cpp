@@ -1165,7 +1165,7 @@ TryLValueToRValueCast(Sema &Self, Expr *SrcExpr, QualType DestType,
                                         ToType, FromType,
                                         DerivedToBase, ObjCConversion,
                                         ObjCLifetimeConversion) 
-        < Sema::Ref_Compatible_With_Added_Qualification) {
+        != Sema::Ref_Compatible) {
     if (CStyle)
       return TC_NotApplicable;
     msg = diag::err_bad_lvalue_to_rvalue_cast;

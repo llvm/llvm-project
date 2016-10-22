@@ -863,14 +863,13 @@ namespace dr580 { // dr580: partial
 
 // dr582: na
 
-namespace dr583 { // dr583: no
+namespace dr583 { // dr583: 4.0
   // see n3624
   int *p;
-  // FIXME: These are all ill-formed.
-  bool b1 = p < 0;
-  bool b2 = p > 0;
-  bool b3 = p <= 0;
-  bool b4 = p >= 0;
+  bool b1 = p < 0; // expected-error {{ordered comparison between pointer and zero}}
+  bool b2 = p > 0; // expected-error {{ordered comparison between pointer and zero}}
+  bool b3 = p <= 0; // expected-error {{ordered comparison between pointer and zero}}
+  bool b4 = p >= 0; // expected-error {{ordered comparison between pointer and zero}}
 }
 
 // dr584: na
