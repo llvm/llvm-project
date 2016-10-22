@@ -166,7 +166,8 @@ template<class I, class C> int foomain(I argc, C **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd aligned (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
+// FIXME: Should argc really be a pointer?
+#pragma omp distribute parallel for simd aligned (*argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (I k = 0; k < argc; ++k) ++k;
 
 #pragma omp target

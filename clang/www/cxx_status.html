@@ -612,7 +612,9 @@ as the draft C++1z standard evolves.
     <tr>
       <td>Make exception specifications part of the type system</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0012r1.html">P0012R1</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">Partial</td>
+      <!-- We don't correctly support throwing noexcept function types and
+           catching as non-noexcept yet, nor mangling exception specifications. -->
     </tr>
     <tr>
       <td><tt>__has_include</tt> in preprocessor conditionals</td>
@@ -723,6 +725,8 @@ as the draft C++1z standard evolves.
       <td>Structured bindings</td>
       <td><a href="http://wg21.link/p0217r3">P0217R3</a></td>
       <td class="partial" align="center">Partial</td>
+      <!-- We don't implement structured bindings of arrays yet, anticipating
+           this being removed from the working draft -->
     </tr>
     <tr>
       <td>Separate variable and condition for <tt>if</tt> and <tt>switch</tt></td>

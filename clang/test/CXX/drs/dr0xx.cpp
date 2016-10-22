@@ -961,10 +961,11 @@ namespace dr85 { // dr85: yes
 // dr86: dup 446
 
 namespace dr87 { // dr87: no
+  // FIXME: Superseded by dr1975
   template<typename T> struct X {};
   // FIXME: This is invalid.
   X<void() throw()> x;
-  // ... but this is valid.
+  // This is valid under dr87 but not under dr1975.
   X<void(void() throw())> y;
 }
 
@@ -1013,9 +1014,14 @@ namespace dr91 { // dr91: yes
   int k = f(U());
 }
 
-namespace dr92 { // FIXME: Issue is still open.
+namespace dr92 { // dr92: 4.0 c++17
   void f() throw(int, float);
-  void (*p)() throw(int) = &f; // expected-error {{target exception specification is not superset of source}}
+  void (*p)() throw(int) = &f;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{target exception specification is not superset of source}}
+#else
+  // expected-warning@-4 {{target exception specification is not superset of source}}
+#endif
   void (*q)() throw(int);
   void (**pp)() throw() = &q;
 #if __cplusplus <= 201402L

@@ -11,6 +11,7 @@
 #define LLVM_CLANG_LEX_HEADERSEARCHOPTIONS_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -144,7 +145,7 @@ public:
 
   /// \brief The set of macro names that should be ignored for the purposes
   /// of computing the module hash.
-  llvm::SmallSetVector<std::string, 16> ModulesIgnoreMacros;
+  llvm::SmallSetVector<llvm::CachedHashString, 16> ModulesIgnoreMacros;
 
   /// \brief The set of user-provided virtual filesystem overlay files.
   std::vector<std::string> VFSOverlayFiles;

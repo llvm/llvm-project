@@ -85,7 +85,9 @@ class CachedHashString {
     return P == getEmptyKeyPtr() || P == getTombstoneKeyPtr();
   }
 
-  explicit CachedHashString(char *EmptyOrTombstonePtr)
+  struct ConstructEmptyOrTombstoneTy {};
+
+  CachedHashString(ConstructEmptyOrTombstoneTy, char *EmptyOrTombstonePtr)
       : P(EmptyOrTombstonePtr), Size(0), Hash(0) {
     assert(isEmptyOrTombstone());
   }
@@ -93,6 +95,8 @@ class CachedHashString {
   // TODO: Use small-string optimization to avoid allocating.
 
 public:
+  explicit CachedHashString(const char *S) : CachedHashString(StringRef(S)) {}
+
   // Explicit because copying and hashing a string isn't free.
   explicit CachedHashString(StringRef S)
       : CachedHashString(S, DenseMapInfo<StringRef>::getHashValue(S)) {}
@@ -148,10 +152,12 @@ public:
 
 template <> struct DenseMapInfo<CachedHashString> {
   static CachedHashString getEmptyKey() {
-    return CachedHashString(CachedHashString::getEmptyKeyPtr());
+    return CachedHashString(CachedHashString::ConstructEmptyOrTombstoneTy(),
+                            CachedHashString::getEmptyKeyPtr());
   }
   static CachedHashString getTombstoneKey() {
-    return CachedHashString(CachedHashString::getTombstoneKeyPtr());
+    return CachedHashString(CachedHashString::ConstructEmptyOrTombstoneTy(),
+                            CachedHashString::getTombstoneKeyPtr());
   }
   static unsigned getHashValue(const CachedHashString &S) {
     assert(!isEqual(S, getEmptyKey()) && "Cannot hash the empty key!");

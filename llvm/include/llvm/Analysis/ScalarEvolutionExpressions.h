@@ -558,10 +558,10 @@ namespace llvm {
       auto It = RewriteResults.find(S);
       if (It != RewriteResults.end())
         return It->second;
-      auto *Result = SCEVVisitor<SC, const SCEV *>::visit(S);
-      assert(RewriteResults.insert({S, Result}).second &&
-             "Should insert a new entry");
-      return Result;
+      auto* Visited = SCEVVisitor<SC, const SCEV *>::visit(S);
+      auto Result = RewriteResults.try_emplace(S, Visited);
+      assert(Result.second && "Should insert a new entry");
+      return Result.first->second;
     }
 
     const SCEV *visitConstant(const SCEVConstant *Constant) {
