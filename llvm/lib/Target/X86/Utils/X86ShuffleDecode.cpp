@@ -151,6 +151,16 @@ void DecodePALIGNRMask(MVT VT, unsigned Imm,
   }
 }
 
+void DecodeVALIGNMask(MVT VT, unsigned Imm,
+                      SmallVectorImpl<int> &ShuffleMask) {
+  int NumElts = VT.getVectorNumElements();
+  // Not all bits of the immediate are used so mask it.
+  assert(isPowerOf2_32(NumElts) && "NumElts should be power of 2");
+  Imm = Imm & (NumElts - 1);
+  for (int i = 0; i != NumElts; ++i)
+    ShuffleMask.push_back(i + Imm);
+}
+
 /// DecodePSHUFMask - This decodes the shuffle masks for pshufw, pshufd, and vpermilp*.
 /// VT indicates the type of the vector allowing it to handle different
 /// datatypes and vector widths.

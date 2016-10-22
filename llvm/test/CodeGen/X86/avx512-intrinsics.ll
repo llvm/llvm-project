@@ -846,7 +846,7 @@ declare i16 @llvm.x86.avx512.ptestm.d.512(<16 x i32>, <16 x i32>, i16)
 define <8 x i64> @test_valign_q(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_valign_q:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    valignq $2, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    valignq {{.*#+}} zmm0 = zmm1[2,3,4,5,6,7],zmm0[0,1]
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.valign.q.512(<8 x i64> %a, <8 x i64> %b, i32 2, <8 x i64> zeroinitializer, i8 -1)
   ret <8 x i64> %res
@@ -856,7 +856,7 @@ define <8 x i64> @test_mask_valign_q(<8 x i64> %a, <8 x i64> %b, <8 x i64> %src,
 ; CHECK-LABEL: test_mask_valign_q:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    valignq $2, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    valignq {{.*#+}} zmm2 {%k1} = zmm1[2,3,4,5,6,7],zmm0[0,1]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.valign.q.512(<8 x i64> %a, <8 x i64> %b, i32 2, <8 x i64> %src, i8 %mask)
@@ -869,7 +869,7 @@ define <16 x i32> @test_maskz_valign_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) 
 ; CHECK-LABEL: test_maskz_valign_d:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    valignd $5, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    valignd {{.*#+}} zmm0 {%k1} {z} = zmm1[5,6,7,8,9,10,11,12,13,14,15],zmm0[0,1,2,3,4]
 ; CHECK-NEXT:    retq
   %res = call <16 x i32> @llvm.x86.avx512.mask.valign.d.512(<16 x i32> %a, <16 x i32> %b, i32 5, <16 x i32> zeroinitializer, i16 %mask)
   ret <16 x i32> %res
