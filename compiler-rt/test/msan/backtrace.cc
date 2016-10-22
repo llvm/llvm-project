@@ -15,7 +15,7 @@ void f() {
     if (!buf[i])
       exit(1);
   char **s = backtrace_symbols(buf, sz);
-  assert(s > 0);
+  assert(s != 0);
   for (int i = 0; i < sz; ++i)
     printf("%d\n", (int)strlen(s[i]));
 }

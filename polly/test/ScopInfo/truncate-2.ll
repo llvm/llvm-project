@@ -5,15 +5,16 @@
 ;        A[(char)(N)]++;
 ;    }
 ;
+; FIXME: We should the truncate precisely... or just make it a separate parameter.
 ; CHECK:       Assumed Context:
 ; CHECK-NEXT:  [N] -> {  :  }
 ; CHECK-NEXT:  Invalid Context:
-; CHECK-NEXT:  [N] -> {  : 1 = 0 }
+; CHECK-NEXT:  [N] -> { : N >= 128 }
 ;
 ; CHECK:         ReadAccess :=	[Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:        [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : 256*floor((-N + o0)/256) = -N + o0 and -128 <= o0 <= 127 };
+; CHECK-NEXT:        [N] -> { Stmt_for_body[i0] -> MemRef_A[N] };
 ; CHECK-NEXT:    MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:        [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : 256*floor((-N + o0)/256) = -N + o0 and -128 <= o0 <= 127 };
+; CHECK-NEXT:        [N] -> { Stmt_for_body[i0] -> MemRef_A[N] };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

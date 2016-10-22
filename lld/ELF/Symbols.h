@@ -79,11 +79,6 @@ public:
 
   uint8_t getVisibility() const { return StOther & 0x3; }
 
-  unsigned DynsymIndex = 0;
-  uint32_t GotIndex = -1;
-  uint32_t GotPltIndex = -1;
-  uint32_t PltIndex = -1;
-  uint32_t GlobalDynIndex = -1;
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
   template <class ELFT> bool hasThunk() const;
@@ -101,6 +96,12 @@ public:
 
   // The file from which this symbol was created.
   InputFile *File = nullptr;
+
+  unsigned DynsymIndex = 0;
+  uint32_t GotIndex = -1;
+  uint32_t GotPltIndex = -1;
+  uint32_t PltIndex = -1;
+  uint32_t GlobalDynIndex = -1;
 
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);

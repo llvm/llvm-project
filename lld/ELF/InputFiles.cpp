@@ -141,7 +141,7 @@ template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
 }
 
 template <class ELFT>
-void elf::ObjectFile<ELFT>::parse(DenseSet<StringRef> &ComdatGroups) {
+void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   // Read section and symbol tables.
   initializeSections(ComdatGroups);
   initializeSymbols();
@@ -227,7 +227,7 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 
 template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSections(
-    DenseSet<StringRef> &ComdatGroups) {
+    DenseSet<CachedHashStringRef> &ComdatGroups) {
   uint64_t Size = this->ELFObj.getNumSections();
   Sections.resize(Size);
   unsigned I = -1;
@@ -248,7 +248,8 @@ void elf::ObjectFile<ELFT>::initializeSections(
     switch (Sec.sh_type) {
     case SHT_GROUP:
       Sections[I] = &InputSection<ELFT>::Discarded;
-      if (ComdatGroups.insert(getShtGroupSignature(Sec)).second)
+      if (ComdatGroups.insert(CachedHashStringRef(getShtGroupSignature(Sec)))
+              .second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
@@ -693,8 +694,8 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
 }
 
 template <class ELFT>
-static Symbol *createBitcodeSymbol(DenseSet<StringRef> &KeptComdats,
-                                   DenseSet<StringRef> &ComdatGroups,
+static Symbol *createBitcodeSymbol(DenseSet<CachedHashStringRef> &KeptComdats,
+                                   DenseSet<CachedHashStringRef> &ComdatGroups,
                                    const lto::InputFile::Symbol &ObjSym,
                                    StringSaver &Saver, BitcodeFile *F) {
   StringRef NameRef = Saver.save(ObjSym.getName());
@@ -707,12 +708,14 @@ static Symbol *createBitcodeSymbol(DenseSet<StringRef> &KeptComdats,
 
   StringRef C = check(ObjSym.getComdat());
   if (!C.empty()) {
-    bool Keep = KeptComdats.count(C);
+    auto CH = CachedHashStringRef(C);
+    bool Keep = KeptComdats.count(CH);
     if (!Keep) {
       StringRef N = Saver.save(C);
-      if (ComdatGroups.insert(N).second) {
+      CachedHashStringRef NH(N, CH.hash());
+      if (ComdatGroups.insert(NH).second) {
         Keep = true;
-        KeptComdats.insert(C);
+        KeptComdats.insert(NH);
       }
     }
     if (!Keep)
@@ -734,7 +737,7 @@ static Symbol *createBitcodeSymbol(DenseSet<StringRef> &KeptComdats,
 }
 
 template <class ELFT>
-void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
+void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 
   // Here we pass a new MemoryBufferRef which is identified by ArchiveName
   // (the fully resolved path of the archive) + member name + offset of the
@@ -747,7 +750,7 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
   Obj = check(lto::InputFile::create(MemoryBufferRef(
       MB.getBuffer(), Saver.save(ArchiveName + MB.getBufferIdentifier() +
                                  utostr(OffsetInArchive)))));
-  DenseSet<StringRef> KeptComdats;
+  DenseSet<CachedHashStringRef> KeptComdats;
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
     Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ComdatGroups,
                                                 ObjSym, Saver, this));
@@ -872,10 +875,10 @@ template void ArchiveFile::parse<ELF32BE>();
 template void ArchiveFile::parse<ELF64LE>();
 template void ArchiveFile::parse<ELF64BE>();
 
-template void BitcodeFile::parse<ELF32LE>(DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF32BE>(DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64LE>(DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64BE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32LE>(DenseSet<CachedHashStringRef> &);
+template void BitcodeFile::parse<ELF32BE>(DenseSet<CachedHashStringRef> &);
+template void BitcodeFile::parse<ELF64LE>(DenseSet<CachedHashStringRef> &);
+template void BitcodeFile::parse<ELF64BE>(DenseSet<CachedHashStringRef> &);
 
 template void LazyObjectFile::parse<ELF32LE>();
 template void LazyObjectFile::parse<ELF32BE>();

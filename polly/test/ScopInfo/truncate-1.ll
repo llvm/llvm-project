@@ -5,13 +5,14 @@
 ;        A[i]++;
 ;    }
 ;
+; FIXME: We should the truncate precisely... or just make it a separate parameter.
 ; CHECK:       Assumed Context:
 ; CHECK-NEXT:  [N] -> {  :  }
 ; CHECK-NEXT:  Invalid Context:
-; CHECK-NEXT:  [N] -> {  : 1 = 0 }
+; CHECK-NEXT:  [N] -> { : N <= -129 or N >= 128 }
 ;
 ; CHECK:       Domain :=
-; CHECK-NEXT:    [N] -> { Stmt_for_body[i0] : i0 >= 0 and 256*floor((128 + N)/256) < N - i0 };
+; CHECK-NEXT:    [N] -> { Stmt_for_body[i0] : 0 <= i0 < N };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
