@@ -5555,6 +5555,12 @@ basic_regex<_CharT, _Traits>::__match_at_start_ecma(
             switch (__s.__do_)
             {
             case __state::__end_state:
+                if (__flags & regex_constants::match_not_null &&
+                    __s.__current_ == __first)
+                {
+                  __states.pop_back();
+                  break;
+                }
                 __m.__matches_[0].first = __first;
                 __m.__matches_[0].second = _VSTD::next(__first, __s.__current_ - __first);
                 __m.__matches_[0].matched = true;
@@ -5618,6 +5624,12 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
             switch (__s.__do_)
             {
             case __state::__end_state:
+                if (__flags & regex_constants::match_not_null &&
+                    __s.__current_ == __first)
+                {
+                  __states.pop_back();
+                  break;
+                }
                 if (!__matched || __highest_j < __s.__current_ - __s.__first_)
                     __highest_j = __s.__current_ - __s.__first_;
                 __matched = true;
@@ -5703,6 +5715,12 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
             switch (__s.__do_)
             {
             case __state::__end_state:
+                if (__flags & regex_constants::match_not_null &&
+                    __s.__current_ == __first)
+                {
+                  __states.pop_back();
+                  break;
+                }
                 if (!__matched || __highest_j < __s.__current_ - __s.__first_)
                 {
                     __highest_j = __s.__current_ - __s.__first_;

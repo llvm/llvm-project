@@ -36,21 +36,9 @@ static cl::opt<bool> IgnoreIntegerWrapping(
 // compile time.
 static int const MaxDisjunctionsInPwAff = 100;
 
-// The maximal number of bits for which a zero-extend is modeled precisely.
-static unsigned const MaxZextSmallBitWidth = 7;
-
-// The maximal number of bits for which a truncate is modeled precisely.
-static unsigned const MaxTruncateSmallBitWidth = 31;
-
-/// Return true if a zero-extend from @p Width bits is precisely modeled.
-static bool isPreciseZeroExtend(unsigned Width) {
-  return Width <= MaxZextSmallBitWidth;
-}
-
-/// Return true if a truncate from @p Width bits is precisely modeled.
-static bool isPreciseTruncate(unsigned Width) {
-  return Width <= MaxTruncateSmallBitWidth;
-}
+// The maximal number of bits for which a general expression is modeled
+// precisely.
+static unsigned const MaxSmallBitWidth = 7;
 
 /// Add the number of basic sets in @p Domain to @p User
 static isl_stat addNumBasicSets(__isl_take isl_set *Domain,
@@ -97,26 +85,6 @@ static void combine(__isl_keep PWACtx &PWAC0, const __isl_take PWACtx &PWAC1,
                     isl_pw_aff *(Fn)(isl_pw_aff *, isl_pw_aff *)) {
   PWAC0.first = Fn(PWAC0.first, PWAC1.first);
   PWAC0.second = isl_set_union(PWAC0.second, PWAC1.second);
-}
-
-/// Set the possible wrapping of @p Expr to @p Flags.
-static const SCEV *setNoWrapFlags(ScalarEvolution &SE, const SCEV *Expr,
-                                  SCEV::NoWrapFlags Flags) {
-  auto *NAry = dyn_cast<SCEVNAryExpr>(Expr);
-  if (!NAry)
-    return Expr;
-
-  SmallVector<const SCEV *, 8> Ops(NAry->op_begin(), NAry->op_end());
-  switch (Expr->getSCEVType()) {
-  case scAddExpr:
-    return SE.getAddExpr(Ops, Flags);
-  case scMulExpr:
-    return SE.getMulExpr(Ops, Flags);
-  case scAddRecExpr:
-    return SE.getAddRecExpr(Ops, cast<SCEVAddRecExpr>(Expr)->getLoop(), Flags);
-  default:
-    return Expr;
-  }
 }
 
 static __isl_give isl_pw_aff *getWidthExpValOnDomain(unsigned Width,
@@ -241,6 +209,15 @@ bool SCEVAffinator::hasNSWAddRecForLoop(Loop *L) const {
   return false;
 }
 
+bool SCEVAffinator::computeModuloForExpr(const SCEV *Expr) {
+  unsigned Width = TD.getTypeSizeInBits(Expr->getType());
+  // We assume nsw expressions never overflow.
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
+    if (NAry->getNoWrapFlags() & SCEV::FlagNSW)
+      return false;
+  return Width <= MaxSmallBitWidth;
+}
+
 __isl_give PWACtx SCEVAffinator::visit(const SCEV *Expr) {
 
   auto Key = std::make_pair(Expr, BB);
@@ -267,16 +244,23 @@ __isl_give PWACtx SCEVAffinator::visit(const SCEV *Expr) {
     PWAC = getPWACtxFromPWA(isl_pw_aff_alloc(Domain, Affine));
   } else {
     PWAC = SCEVVisitor<SCEVAffinator, PWACtx>::visit(Expr);
-    PWAC = checkForWrapping(Expr, PWAC);
+    if (computeModuloForExpr(Expr))
+      PWAC.first = addModuloSemantic(PWAC.first, Expr->getType());
+    else
+      PWAC = checkForWrapping(Expr, PWAC);
   }
 
-  if (!Factor->getType()->isIntegerTy(1))
+  if (!Factor->getType()->isIntegerTy(1)) {
     combine(PWAC, visitConstant(Factor), isl_pw_aff_mul);
+    if (computeModuloForExpr(Key.first))
+      PWAC.first = addModuloSemantic(PWAC.first, Expr->getType());
+  }
 
   // For compile time reasons we need to simplify the PWAC before we cache and
   // return it.
   PWAC.first = isl_pw_aff_coalesce(PWAC.first);
-  PWAC = checkForWrapping(Key.first, PWAC);
+  if (!computeModuloForExpr(Key.first))
+    PWAC = checkForWrapping(Key.first, PWAC);
 
   CachedExpressions[Key] = copyPWACtx(PWAC);
   return PWAC;
@@ -314,12 +298,9 @@ SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   auto OpPWAC = visit(Op);
 
   unsigned Width = TD.getTypeSizeInBits(Expr->getType());
-  bool Precise = isPreciseTruncate(Width);
 
-  if (Precise) {
-    OpPWAC.first = addModuloSemantic(OpPWAC.first, Expr->getType());
+  if (computeModuloForExpr(Expr))
     return OpPWAC;
-  }
 
   auto *Dom = isl_pw_aff_domain(isl_pw_aff_copy(OpPWAC.first));
   auto *ExpPWA = getWidthExpValOnDomain(Width - 1, Dom);
@@ -380,28 +361,17 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
   // assumptions and assume the "former negative" piece will not exist.
 
   auto *Op = Expr->getOperand();
-  unsigned Width = TD.getTypeSizeInBits(Op->getType());
-
-  bool Precise = isPreciseZeroExtend(Width);
-
-  auto Flags = getNoWrapFlags(Op);
-  auto NoWrapFlags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
-  bool OpCanWrap = Precise && !(Flags & SCEV::FlagNSW);
-  if (OpCanWrap)
-    Op = setNoWrapFlags(SE, Op, NoWrapFlags);
-
   auto OpPWAC = visit(Op);
-  if (OpCanWrap)
-    OpPWAC.first = addModuloSemantic(OpPWAC.first, Op->getType());
 
   // If the width is to big we assume the negative part does not occur.
-  if (!Precise) {
+  if (!computeModuloForExpr(Op)) {
     takeNonNegativeAssumption(OpPWAC);
     return OpPWAC;
   }
 
   // If the width is small build the piece for the non-negative part and
   // the one for the negative part and unify them.
+  unsigned Width = TD.getTypeSizeInBits(Op->getType());
   interpretAsUnsigned(OpPWAC, Width);
   return OpPWAC;
 }

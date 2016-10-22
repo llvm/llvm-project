@@ -114,7 +114,7 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
 
   for (InputFile *File : Lto->compile()) {
     ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(File);
-    DenseSet<StringRef> DummyGroups;
+    DenseSet<CachedHashStringRef> DummyGroups;
     Obj->parse(DummyGroups);
     ObjectFiles.push_back(Obj);
   }

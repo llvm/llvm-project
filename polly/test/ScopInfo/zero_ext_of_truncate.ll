@@ -9,13 +9,14 @@
 ;      }
 ;    }
 ;
+; FIXME: The truncated value should be a paramter.
 ; CHECK:         Assumed Context:
 ; CHECK-NEXT:    [N, tmp, M] -> { : }
 ; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [N, tmp, M] -> { : N < 0 or (N > 0 and M < 0) or (N > 0 and 256*floor((128 + tmp)/256) > tmp) }
+; CHECK-NEXT:    [N, tmp, M] -> { : N < 0 or (N > 0 and tmp >= 128) or (N > 0 and tmp < 0) or (N > 0 and M < 0) }
 ;
 ; CHECK:         Domain :=
-; CHECK-NEXT:    [N, tmp, M] -> { Stmt_if_then[i0] : 0 <= i0 < N and 256*floor((128 + tmp)/256) > tmp - M };
+; CHECK-NEXT:    [N, tmp, M] -> { Stmt_if_then[i0] : M > tmp and 0 <= i0 < N };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

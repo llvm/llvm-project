@@ -113,6 +113,10 @@ private:
   /// @returns The isl representation @p PWAC with a posisbly adjusted domain.
   __isl_give PWACtx checkForWrapping(const llvm::SCEV *Expr, PWACtx PWAC) const;
 
+  /// Whether to track the value of this expression precisely, rather than
+  /// assuming it won't wrap.
+  bool computeModuloForExpr(const llvm::SCEV *Expr);
+
   __isl_give PWACtx visit(const llvm::SCEV *E);
   __isl_give PWACtx visitConstant(const llvm::SCEVConstant *E);
   __isl_give PWACtx visitTruncateExpr(const llvm::SCEVTruncateExpr *E);
