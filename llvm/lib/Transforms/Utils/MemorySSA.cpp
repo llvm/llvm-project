@@ -144,10 +144,10 @@ public:
   }
 
 private:
-  // FIXME: MSVC 2013 does not properly implement C++11 union rules, once we
-  // require newer versions, this should be made an anonymous union again.
-  ImmutableCallSite CS;
-  MemoryLocation Loc;
+  union {
+      ImmutableCallSite CS;
+      MemoryLocation Loc;
+  };
 };
 }
 

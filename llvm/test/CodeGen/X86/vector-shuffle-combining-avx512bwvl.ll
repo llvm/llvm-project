@@ -57,3 +57,20 @@ define <16 x i16> @combine_vpermi2var_16i16_as_permw(<16 x i16> %x0, <16 x i16> 
   %res1 = call <16 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.256(<16 x i16> %res0, <16 x i16> <i16 0, i16 15, i16 1, i16 14, i16 2, i16 13, i16 3, i16 12, i16 4, i16 11, i16 5, i16 10, i16 6, i16 9, i16 7, i16 8>, <16 x i16> %res0, i16 -1)
   ret <16 x i16> %res1
 }
+
+define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_vperm2(<16 x i16> %x0, <16 x i16> %x1) {
+; X32-LABEL: combine_vpermt2var_vpermi2var_16i16_as_vperm2:
+; X32:       # BB#0:
+; X32-NEXT:    vmovdqu16 {{.*#+}} ymm2 = [0,31,2,2,4,29,6,27,8,25,10,23,12,21,14,19]
+; X32-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermt2var_vpermi2var_16i16_as_vperm2:
+; X64:       # BB#0:
+; X64-NEXT:    vmovdqu16 {{.*#+}} ymm2 = [0,31,2,2,4,29,6,27,8,25,10,23,12,21,14,19]
+; X64-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
+; X64-NEXT:    retq
+  %res0 = call <16 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.256(<16 x i16> %x0, <16 x i16> <i16 0, i16 31, i16 2, i16 29, i16 4, i16 27, i16 6, i16 25, i16 8, i16 23, i16 10, i16 21, i16 12, i16 19, i16 14, i16 17>, <16 x i16> %x1, i16 -1)
+  %res1 = call <16 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.256(<16 x i16> <i16 0, i16 17, i16 2, i16 18, i16 4, i16 19, i16 6, i16 21, i16 8, i16 23, i16 10, i16 25, i16 12, i16 27, i16 14, i16 29>, <16 x i16> %res0, <16 x i16> %res0, i16 -1)
+  ret <16 x i16> %res1
+}

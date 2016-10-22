@@ -7346,8 +7346,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   }
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
-  case X86::BI__builtin_ia32_palignr128_mask:
-  case X86::BI__builtin_ia32_palignr256_mask:
   case X86::BI__builtin_ia32_palignr512_mask: {
     unsigned ShiftVal = cast<llvm::ConstantInt>(Ops[2])->getZExtValue();
 
