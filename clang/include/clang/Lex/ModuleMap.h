@@ -180,7 +180,8 @@ private:
 
   /// \brief The set of attributes that can be attached to a module.
   struct Attributes {
-    Attributes() : IsSystem(), IsExternC(), IsExhaustive() {}
+    Attributes()
+        : IsSystem(), IsExternC(), IsExhaustive(), NoUndeclaredIncludes() {}
 
     /// \brief Whether this is a system module.
     unsigned IsSystem : 1;
@@ -193,6 +194,10 @@ private:
 
     /// \brief Whether this is a module who has its swift_names inferred.
     unsigned IsSwiftInferImportAsMember : 1;
+
+    /// \brief Whether files in this module can only include non-modular headers
+    /// and headers from used modules.
+    unsigned NoUndeclaredIncludes : 1;
   };
 
   /// \brief A directory for which framework modules can be inferred.
@@ -327,10 +332,15 @@ public:
   ///
   /// \param File The header file that is likely to be included.
   ///
+  /// \param AllowTextual If \c true and \p File is a textual header, return
+  /// its owning module. Otherwise, no KnownHeader will be returned if the
+  /// file is only known as a textual header.
+  ///
   /// \returns The module KnownHeader, which provides the module that owns the
   /// given header file.  The KnownHeader is default constructed to indicate
   /// that no module owns this header file.
-  KnownHeader findModuleForHeader(const FileEntry *File);
+  KnownHeader findModuleForHeader(const FileEntry *File,
+                                  bool AllowTextual = false);
 
   /// \brief Retrieve all the modules that contain the given header file. This
   /// may not include umbrella modules, nor information from external sources,

@@ -5,7 +5,6 @@
 // RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -triple x86_64-unknown-linux-gnu -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -triple x86_64-unknown-linux-gnu -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print
 // expected-no-diagnostics
-// REQUIRES: x86-registered-target
 
 #ifndef HEADER
 #define HEADER

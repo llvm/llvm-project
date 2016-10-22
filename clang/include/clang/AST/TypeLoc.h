@@ -512,7 +512,7 @@ private:
 
 
 struct BuiltinLocInfo {
-  SourceLocation BuiltinLoc;
+  SourceRange BuiltinRange;
 };
 
 /// \brief Wrapper for source info for builtin types.
@@ -522,10 +522,19 @@ class BuiltinTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                               BuiltinLocInfo> {
 public:
   SourceLocation getBuiltinLoc() const {
-    return getLocalData()->BuiltinLoc;
+    return getLocalData()->BuiltinRange.getBegin();
   }
   void setBuiltinLoc(SourceLocation Loc) {
-    getLocalData()->BuiltinLoc = Loc;
+    getLocalData()->BuiltinRange = Loc;
+  }
+  void expandBuiltinRange(SourceRange Range) {
+    SourceRange &BuiltinRange = getLocalData()->BuiltinRange;
+    if (!BuiltinRange.getBegin().isValid()) {
+      BuiltinRange = Range;
+    } else {
+      BuiltinRange.setBegin(std::min(Range.getBegin(), BuiltinRange.getBegin()));
+      BuiltinRange.setEnd(std::max(Range.getEnd(), BuiltinRange.getEnd()));
+    }
   }
 
   SourceLocation getNameLoc() const { return getBuiltinLoc(); }
@@ -554,7 +563,7 @@ public:
   }
 
   SourceRange getLocalSourceRange() const {
-    return SourceRange(getBuiltinLoc(), getBuiltinLoc());
+    return getLocalData()->BuiltinRange;
   }
 
   TypeSpecifierSign getWrittenSignSpec() const {

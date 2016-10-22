@@ -16,10 +16,54 @@ __host__ __device__ void test(S* s) {
   delete s;
 }
 
+// Code should work with no explicit declarations/definitions of
+// allocator functions.
+__host__ __device__ void test_default_global_delete_hd(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+
+__device__ void test_default_global_delete(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+__host__ void test_default_global_delete(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+
+// It should work with only some of allocators (re-)declared.
+__device__ void operator delete(void *ptr);
+
+__host__ __device__ void test_partial_global_delete_hd(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+
+__device__ void test_partial_global_delete(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+__host__ void test_partial_global_delete(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+
+
+// We should be able to define both host and device variants.
 __host__ void operator delete(void *ptr) {}
 __device__ void operator delete(void *ptr) {}
 
-__host__ __device__ void test_global_delete(int *ptr) {
+__host__ __device__ void test_overloaded_global_delete_hd(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+
+__device__ void test_overloaded_global_delete(int *ptr) {
+  // Again, there should be no ambiguity between which operator delete we call.
+  ::delete ptr;
+}
+__host__ void test_overloaded_global_delete(int *ptr) {
   // Again, there should be no ambiguity between which operator delete we call.
   ::delete ptr;
 }

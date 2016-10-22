@@ -5,7 +5,7 @@ typedef __SIZE_TYPE__ size_t;
 extern "C" void *memset(void *, int, size_t);
 extern "C" void *memmove(void *s1, const void *s2, size_t n);
 extern "C" void *memcpy(void *s1, const void *s2, size_t n);
-extern "C" void *memcmp(void *s1, const void *s2, size_t n);
+extern "C" int memcmp(void *s1, const void *s2, size_t n);
 extern "C" int strncmp(const char *s1, const char *s2, size_t n);
 extern "C" int strncasecmp(const char *s1, const char *s2, size_t n);
 extern "C" char *strncpy(char *dst, const char *src, size_t n);
@@ -28,11 +28,12 @@ void f() {
     expected-note {{explicitly cast the argument}}
   if (memmove(b1, b2, sizeof(b1)) == 0) {}
 
+  // FIXME: This fixit is bogus.
   if (memcpy(b1, b2, sizeof(b1) < 0)) {} // \
     expected-warning{{size argument in 'memcpy' call is a comparison}} \
     expected-note {{did you mean to compare}} \
     expected-note {{explicitly cast the argument}}
-  if (memcpy(b1, b2, sizeof(b1)) < 0) {}
+  if (memcpy(b1, b2, sizeof(b1)) < 0) {} // expected-error {{ordered comparison between pointer and zero}}
 
   if (memcmp(b1, b2, sizeof(b1) <= 0)) {} // \
     expected-warning{{size argument in 'memcmp' call is a comparison}} \
@@ -58,11 +59,12 @@ void f() {
     expected-note {{explicitly cast the argument}}
   if (strncpy(b1, b2, sizeof(b1)) == 0 || true) {}
 
+  // FIXME: This fixit is bogus.
   if (strncat(b1, b2, sizeof(b1) - 1 >= 0 && true)) {} // \
     expected-warning{{size argument in 'strncat' call is a comparison}} \
     expected-note {{did you mean to compare}} \
     expected-note {{explicitly cast the argument}}
-  if (strncat(b1, b2, sizeof(b1) - 1) >= 0 && true) {}
+  if (strncat(b1, b2, sizeof(b1) - 1) >= 0 && true) {} // expected-error {{ordered comparison between pointer and zero}}
 
   if (strndup(b1, sizeof(b1) != 0)) {} // \
     expected-warning{{size argument in 'strndup' call is a comparison}} \

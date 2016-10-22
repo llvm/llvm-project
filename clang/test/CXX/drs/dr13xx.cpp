@@ -54,8 +54,19 @@ namespace dr1330 { // dr1330: 4.0 c++11
   // the "T has not yet been instantiated" error here, rather than giving
   // confusing errors later on.
 #endif
-  void (B<P>::*bpf2)() throw(int) = &B<P>::f; // expected-error-re {{{{not superset|different exception spec}}}}
+  void (B<P>::*bpf2)() throw(int) = &B<P>::f;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{not superset}}
+#else
+  // expected-warning@-4 {{not superset}}
+#endif
   void (B<P>::*bpf3)() = &B<P>::f;
+  void (B<P>::*bpf4)() throw() = &B<P>::f;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{not superset}}
+#else
+  // expected-error@-4 {{different exception specifications}}
+#endif
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(B<P>().g()), "");
