@@ -16,7 +16,6 @@
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/DataTypes.h"
@@ -461,11 +460,6 @@ template <typename T> class ArrayRef;
     RHS = R;
     return Result;
   }
-
-  /// Parse out a conservative ConstantRange from !range metadata.
-  ///
-  /// E.g. if RangeMD is !{i32 0, i32 10, i32 15, i32 20} then return [0, 20).
-  ConstantRange getConstantRangeFromMetadata(const MDNode &RangeMD);
 
   /// Return true if RHS is known to be implied true by LHS.  Return false if
   /// RHS is known to be implied false by LHS.  Otherwise, return None if no

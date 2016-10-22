@@ -922,3 +922,25 @@ void ConstantRange::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void ConstantRange::dump() const {
   print(dbgs());
 }
+
+ConstantRange llvm::getConstantRangeFromMetadata(const MDNode &Ranges) {
+  const unsigned NumRanges = Ranges.getNumOperands() / 2;
+  assert(NumRanges >= 1 && "Must have at least one range!");
+  assert(Ranges.getNumOperands() % 2 == 0 && "Must be a sequence of pairs");
+
+  auto *FirstLow = mdconst::extract<ConstantInt>(Ranges.getOperand(0));
+  auto *FirstHigh = mdconst::extract<ConstantInt>(Ranges.getOperand(1));
+
+  ConstantRange CR(FirstLow->getValue(), FirstHigh->getValue());
+
+  for (unsigned i = 1; i < NumRanges; ++i) {
+    auto *Low = mdconst::extract<ConstantInt>(Ranges.getOperand(2 * i + 0));
+    auto *High = mdconst::extract<ConstantInt>(Ranges.getOperand(2 * i + 1));
+
+    // Note: unionWith will potentially create a range that contains values not
+    // contained in any of the original N ranges.
+    CR = CR.unionWith(ConstantRange(Low->getValue(), High->getValue()));
+  }
+
+  return CR;
+}

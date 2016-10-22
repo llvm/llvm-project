@@ -537,13 +537,32 @@ namespace llvm {
     T.visitAll(Root);
   }
 
-  /// Recursively visits a SCEV expression and re-writes it.
+  /// This visitor recursively visits a SCEV expression and re-writes it.
+  /// The result from each visit is cached, so it will return the same
+  /// SCEV for the same input.
   template<typename SC>
   class SCEVRewriteVisitor : public SCEVVisitor<SC, const SCEV *> {
   protected:
     ScalarEvolution &SE;
+    // Memoize the result of each visit so that we only compute once for
+    // the same input SCEV. This is to avoid redundant computations when
+    // a SCEV is referenced by multiple SCEVs. Without memoization, this
+    // visit algorithm would have exponential time complexity in the worst
+    // case, causing the compiler to hang on certain tests.
+    DenseMap<const SCEV *, const SCEV *> RewriteResults;
+
   public:
     SCEVRewriteVisitor(ScalarEvolution &SE) : SE(SE) {}
+
+    const SCEV *visit(const SCEV *S) {
+      auto It = RewriteResults.find(S);
+      if (It != RewriteResults.end())
+        return It->second;
+      auto* Visited = SCEVVisitor<SC, const SCEV *>::visit(S);
+      auto Result = RewriteResults.try_emplace(S, Visited);
+      assert(Result.second && "Should insert a new entry");
+      return Result.first->second;
+    }
 
     const SCEV *visitConstant(const SCEVConstant *Constant) {
       return Constant;

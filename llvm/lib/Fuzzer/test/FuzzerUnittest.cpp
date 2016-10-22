@@ -491,6 +491,8 @@ void TestChangeBinaryInteger(Mutator M, int NumIter) {
   uint8_t CH3[8] = {0x00, 0x11, 0x2a, 0x33, 0x44, 0x55, 0x66, 0x77};
   uint8_t CH4[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x4f, 0x66, 0x77};
   uint8_t CH5[8] = {0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88};
+  uint8_t CH6[8] = {0x00, 0x11, 0x22, 0x00, 0x00, 0x00, 0x08, 0x77}; // Size
+  uint8_t CH7[8] = {0x00, 0x08, 0x00, 0x33, 0x44, 0x55, 0x66, 0x77}; // Sw(Size)
 
   int FoundMask = 0;
   for (int i = 0; i < NumIter; i++) {
@@ -502,8 +504,10 @@ void TestChangeBinaryInteger(Mutator M, int NumIter) {
     else if (NewSize == 8 && !memcmp(CH3, T, 8)) FoundMask |= 1 << 3;
     else if (NewSize == 8 && !memcmp(CH4, T, 8)) FoundMask |= 1 << 4;
     else if (NewSize == 8 && !memcmp(CH5, T, 8)) FoundMask |= 1 << 5;
+    else if (NewSize == 8 && !memcmp(CH6, T, 8)) FoundMask |= 1 << 6;
+    else if (NewSize == 8 && !memcmp(CH7, T, 8)) FoundMask |= 1 << 7;
   }
-  EXPECT_EQ(FoundMask, 63);
+  EXPECT_EQ(FoundMask, 255);
 }
 
 TEST(FuzzerMutate, ChangeBinaryInteger1) {
@@ -581,7 +585,7 @@ TEST(Corpus, Distribution) {
   Random Rand(0);
   InputCorpus C("");
   size_t N = 10;
-  size_t TriesPerUnit = 1<<20;
+  size_t TriesPerUnit = 1<<16;
   for (size_t i = 0; i < N; i++)
     C.AddToCorpus(Unit{ static_cast<uint8_t>(i) }, 0);
 

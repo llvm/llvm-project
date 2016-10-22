@@ -652,9 +652,9 @@ define <8 x float>@test_int_x86_avx512_mask_broadcastf32x2_256(<4 x float> %x0, 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %edi, %k1 ## encoding: [0xc5,0xf9,0x92,0xcf]
 ; CHECK-NEXT:    vbroadcastf32x2 %xmm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x19,0xc8]
-; CHECK-NEXT:    ## ymm1 = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    ## ymm1 {%k1} = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vbroadcastf32x2 %xmm0, %ymm2 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x19,0xd0]
-; CHECK-NEXT:    ## ymm2 = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    ## ymm2 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vbroadcastf32x2 %xmm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x19,0xc0]
 ; CHECK-NEXT:    ## ymm0 = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vaddps %ymm2, %ymm1, %ymm1 ## encoding: [0x62,0xf1,0x74,0x28,0x58,0xca]
@@ -675,9 +675,9 @@ define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x2_256(<4 x i32> %x0, <8 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %edi, %k1 ## encoding: [0xc5,0xf9,0x92,0xcf]
 ; CHECK-NEXT:    vbroadcasti32x2 (%rsi), %ymm1 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x59,0x0e]
-; CHECK-NEXT:    ## ymm1 = mem[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    ## ymm1 {%k1} = mem[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %ymm2 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x59,0xd0]
-; CHECK-NEXT:    ## ymm2 = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    ## ymm2 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x59,0xc0]
 ; CHECK-NEXT:    ## ymm0 = xmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vpaddd %ymm0, %ymm2, %ymm0 ## encoding: [0x62,0xf1,0x6d,0x28,0xfe,0xc0]

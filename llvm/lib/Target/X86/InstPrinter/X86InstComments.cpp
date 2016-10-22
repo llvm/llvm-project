@@ -255,6 +255,10 @@ static std::string getMaskName(const MCInst *MI, const char *DestName,
   CASE_MASKZ_UNPCK(UNPCKLPS, r)
   CASE_MASKZ_SHUF(PALIGNR, r)
   CASE_MASKZ_SHUF(PALIGNR, m)
+  CASE_MASKZ_SHUF(ALIGNQ, r)
+  CASE_MASKZ_SHUF(ALIGNQ, m)
+  CASE_MASKZ_SHUF(ALIGND, r)
+  CASE_MASKZ_SHUF(ALIGND, m)
   CASE_MASKZ_SHUF(SHUFPD, m)
   CASE_MASKZ_SHUF(SHUFPD, r)
   CASE_MASKZ_SHUF(SHUFPS, m)
@@ -277,6 +281,26 @@ static std::string getMaskName(const MCInst *MI, const char *DestName,
   CASE_MASKZ_VSHUF(64X2, r)
   CASE_MASKZ_VSHUF(32X4, m)
   CASE_MASKZ_VSHUF(32X4, r)
+  CASE_MASKZ_INS_COMMON(BROADCASTF64X2, Z128, rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTI64X2, Z128, rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTF64X2, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTI64X2, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTF64X4, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTI64X4, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTF32X4, Z256, rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTI32X4, Z256, rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTF32X4, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTI32X4, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTF32X8, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTI32X8, , rm)
+  CASE_MASKZ_INS_COMMON(BROADCASTF32X2, Z256, r)
+  CASE_MASKZ_INS_COMMON(BROADCASTI32X2, Z256, r)
+  CASE_MASKZ_INS_COMMON(BROADCASTF32X2, Z256, m)
+  CASE_MASKZ_INS_COMMON(BROADCASTI32X2, Z256, m)
+  CASE_MASKZ_INS_COMMON(BROADCASTF32X2, Z, r)
+  CASE_MASKZ_INS_COMMON(BROADCASTI32X2, Z, r)
+  CASE_MASKZ_INS_COMMON(BROADCASTF32X2, Z, m)
+  CASE_MASKZ_INS_COMMON(BROADCASTI32X2, Z, m)
     MaskWithZero = true;
     MaskRegName = getRegName(MI->getOperand(1).getReg());
     break;
@@ -320,6 +344,10 @@ static std::string getMaskName(const MCInst *MI, const char *DestName,
   CASE_MASK_UNPCK(UNPCKLPS, r)
   CASE_MASK_SHUF(PALIGNR, r)
   CASE_MASK_SHUF(PALIGNR, m)
+  CASE_MASK_SHUF(ALIGNQ, r)
+  CASE_MASK_SHUF(ALIGNQ, m)
+  CASE_MASK_SHUF(ALIGND, r)
+  CASE_MASK_SHUF(ALIGND, m)
   CASE_MASK_SHUF(SHUFPD, m)
   CASE_MASK_SHUF(SHUFPD, r)
   CASE_MASK_SHUF(SHUFPS, m)
@@ -342,6 +370,26 @@ static std::string getMaskName(const MCInst *MI, const char *DestName,
   CASE_MASK_VSHUF(64X2, r)
   CASE_MASK_VSHUF(32X4, m)
   CASE_MASK_VSHUF(32X4, r)
+  CASE_MASK_INS_COMMON(BROADCASTF64X2, Z128, rm)
+  CASE_MASK_INS_COMMON(BROADCASTI64X2, Z128, rm)
+  CASE_MASK_INS_COMMON(BROADCASTF64X2, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTI64X2, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTF64X4, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTI64X4, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTF32X4, Z256, rm)
+  CASE_MASK_INS_COMMON(BROADCASTI32X4, Z256, rm)
+  CASE_MASK_INS_COMMON(BROADCASTF32X4, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTI32X4, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTF32X8, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTI32X8, , rm)
+  CASE_MASK_INS_COMMON(BROADCASTF32X2, Z256, r)
+  CASE_MASK_INS_COMMON(BROADCASTI32X2, Z256, r)
+  CASE_MASK_INS_COMMON(BROADCASTF32X2, Z256, m)
+  CASE_MASK_INS_COMMON(BROADCASTI32X2, Z256, m)
+  CASE_MASK_INS_COMMON(BROADCASTF32X2, Z, r)
+  CASE_MASK_INS_COMMON(BROADCASTI32X2, Z, r)
+  CASE_MASK_INS_COMMON(BROADCASTF32X2, Z, m)
+  CASE_MASK_INS_COMMON(BROADCASTI32X2, Z, m)
     MaskRegName = getRegName(MI->getOperand(2).getReg());
     break;
   }
@@ -578,6 +626,42 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
       DecodePALIGNRMask(getRegOperandVectorVT(MI, MVT::i8, 0),
                         MI->getOperand(NumOperands - 1).getImm(),
                         ShuffleMask);
+    break;
+
+  CASE_AVX512_INS_COMMON(ALIGNQ, Z, rri)
+  CASE_AVX512_INS_COMMON(ALIGNQ, Z256, rri)
+  CASE_AVX512_INS_COMMON(ALIGNQ, Z128, rri)
+    Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+
+  CASE_AVX512_INS_COMMON(ALIGNQ, Z, rmi)
+  CASE_AVX512_INS_COMMON(ALIGNQ, Z256, rmi)
+  CASE_AVX512_INS_COMMON(ALIGNQ, Z128, rmi)
+    Src2Name = getRegName(MI->getOperand(NumOperands-(RegForm?3:7)).getReg());
+    DestName = getRegName(MI->getOperand(0).getReg());
+    if (MI->getOperand(NumOperands - 1).isImm())
+      DecodeVALIGNMask(getRegOperandVectorVT(MI, MVT::i64, 0),
+                       MI->getOperand(NumOperands - 1).getImm(),
+                       ShuffleMask);
+    break;
+
+  CASE_AVX512_INS_COMMON(ALIGND, Z, rri)
+  CASE_AVX512_INS_COMMON(ALIGND, Z256, rri)
+  CASE_AVX512_INS_COMMON(ALIGND, Z128, rri)
+    Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
+    RegForm = true;
+    LLVM_FALLTHROUGH;
+
+  CASE_AVX512_INS_COMMON(ALIGND, Z, rmi)
+  CASE_AVX512_INS_COMMON(ALIGND, Z256, rmi)
+  CASE_AVX512_INS_COMMON(ALIGND, Z128, rmi)
+    Src2Name = getRegName(MI->getOperand(NumOperands-(RegForm?3:7)).getReg());
+    DestName = getRegName(MI->getOperand(0).getReg());
+    if (MI->getOperand(NumOperands - 1).isImm())
+      DecodeVALIGNMask(getRegOperandVectorVT(MI, MVT::i32, 0),
+                       MI->getOperand(NumOperands - 1).getImm(),
+                       ShuffleMask);
     break;
 
   CASE_SHUF(PSHUFD, ri)

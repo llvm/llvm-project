@@ -24,6 +24,7 @@
 
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 
+#include "GSI.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -44,8 +45,6 @@ using namespace llvm::support;
 using namespace llvm::pdb;
 
 
-static const unsigned IPHR_HASH = 4096;
-
 // This is PSGSIHDR struct defined in
 // https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
 struct PublicsStream::HeaderInfo {
@@ -57,18 +56,6 @@ struct PublicsStream::HeaderInfo {
   char Padding[2];
   ulittle32_t OffThunkTable;
   ulittle32_t NumSections;
-};
-
-// This is GSIHashHdr.
-struct PublicsStream::GSIHashHeader {
-  enum : unsigned {
-    HdrSignature = ~0U,
-    HdrVersion = 0xeffe0000 + 19990810,
-  };
-  ulittle32_t VerSignature;
-  ulittle32_t VerHdr;
-  ulittle32_t HrSize;
-  ulittle32_t NumBuckets;
 };
 
 PublicsStream::PublicsStream(PDBFile &File,
@@ -98,40 +85,15 @@ Error PublicsStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Publics Stream does not contain a header.");
 
-  if (Reader.readObject(HashHdr))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Publics Stream does not contain a header.");
+  if (auto EC = readGSIHashHeader(HashHdr, Reader))
+    return EC;
 
-  // An array of HashRecord follows. Read them.
-  if (HashHdr->HrSize % sizeof(PSHashRecord))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Invalid HR array size.");
-  uint32_t NumHashRecords = HashHdr->HrSize / sizeof(PSHashRecord);
-  if (auto EC = Reader.readArray(HashRecords, NumHashRecords))
-    return joinErrors(std::move(EC),
-                      make_error<RawError>(raw_error_code::corrupt_file,
-                                           "Could not read an HR array"));
+  if (auto EC = readGSIHashRecords(HashRecords, HashHdr, Reader))
+    return EC;
 
-  // A bitmap of a fixed length follows.
-  size_t BitmapSizeInBits = alignTo(IPHR_HASH + 1, 32);
-  uint32_t NumBitmapEntries = BitmapSizeInBits / 8;
-  if (auto EC = Reader.readBytes(Bitmap, NumBitmapEntries))
-    return joinErrors(std::move(EC),
-                      make_error<RawError>(raw_error_code::corrupt_file,
-                                           "Could not read a bitmap."));
-  for (uint8_t B : Bitmap)
-    NumBuckets += countPopulation(B);
-
-  // We don't yet understand the following data structures completely,
-  // but we at least know the types and sizes. Here we are trying
-  // to read the stream till end so that we at least can detect
-  // corrupted streams.
-
-  // Hash buckets follow.
-  if (auto EC = Reader.readArray(HashBuckets, NumBuckets))
-    return joinErrors(std::move(EC),
-                      make_error<RawError>(raw_error_code::corrupt_file,
-                                           "Hash buckets corrupted."));
+  if (auto EC = readGSIHashBuckets(HashBuckets, HashHdr, Reader))
+    return EC;
+  NumBuckets = HashBuckets.size();
 
   // Something called "address map" follows.
   uint32_t NumAddressMapEntries = Header->AddrMap / sizeof(uint32_t);

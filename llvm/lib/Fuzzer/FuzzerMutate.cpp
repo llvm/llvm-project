@@ -299,15 +299,21 @@ size_t ChangeBinaryInteger(uint8_t *Data, size_t Size, Random &Rand) {
   size_t Off = Rand(Size - sizeof(T) + 1);
   assert(Off + sizeof(T) <= Size);
   T Val;
-  memcpy(&Val, Data + Off, sizeof(Val));
-  T Add = Rand(21);
-  Add -= 10;
-  if (Rand.RandBool())
-    Val = Bswap(T(Bswap(Val) + Add));  // Add assuming different endiannes.
-  else
-    Val = Val + Add;                   // Add assuming current endiannes.
-  if (Add == 0 || Rand.RandBool())     // Maybe negate.
-    Val = -Val;
+  if (Off < 64 && !Rand(4)) {
+    Val = Size;
+    if (Rand.RandBool())
+      Val = Bswap(Val);
+  } else {
+    memcpy(&Val, Data + Off, sizeof(Val));
+    T Add = Rand(21);
+    Add -= 10;
+    if (Rand.RandBool())
+      Val = Bswap(T(Bswap(Val) + Add)); // Add assuming different endiannes.
+    else
+      Val = Val + Add;               // Add assuming current endiannes.
+    if (Add == 0 || Rand.RandBool()) // Maybe negate.
+      Val = -Val;
+  }
   memcpy(Data + Off, &Val, sizeof(Val));
   return Size;
 }

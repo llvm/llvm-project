@@ -146,4 +146,29 @@ entry:
   store i32 %trunc, i32 addrspace(1)* %out
   ret void
 }
+
+; GCN-LABEL: {{^}}simplify_i24_crash:
+; GCN: v_mul_i32_i24_e32 v[[VAL_LO:[0-9]+]]
+; GCN: v_mov_b32_e32 v[[VAL_HI:[0-9]+]], v[[VAL_LO]]
+; GCN: buffer_store_dwordx2 v{{\[}}[[VAL_LO]]:[[VAL_HI]]{{\]}}
+define void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 %arg0, <2 x i32> %arg1, <2 x i32> %arg2) {
+bb:
+  %cmp = icmp eq i32 %arg0, 0
+  br i1 %cmp, label %bb11, label %bb7
+
+bb11:
+  %tmp14 = shufflevector <2 x i32> %arg1, <2 x i32> undef, <2 x i32> zeroinitializer
+  %tmp16 = shufflevector <2 x i32> %arg2, <2 x i32> undef, <2 x i32> zeroinitializer
+  %tmp17 = shl <2 x i32> %tmp14, <i32 8, i32 8>
+  %tmp18 = ashr <2 x i32> %tmp17, <i32 8, i32 8>
+  %tmp19 = shl <2 x i32> %tmp16, <i32 8, i32 8>
+  %tmp20 = ashr <2 x i32> %tmp19, <i32 8, i32 8>
+  %tmp21 = mul <2 x i32> %tmp18, %tmp20
+  store <2 x i32> %tmp21, <2 x i32> addrspace(1)* %out
+  br label %bb7
+
+bb7:
+  ret void
+
+}
 attributes #0 = { nounwind }

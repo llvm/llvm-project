@@ -596,3 +596,15 @@ define zeroext i1 @invert(i32 %flags, i32 %flag) nounwind {
   ret i1 %tobool
 }
 
+define zeroext i1 @extend(i32 %bit, i64 %bits) {
+; CHECK-LABEL: extend:
+; CHECK:       # BB#0:
+; CHECK-NEXT:  btl %edi, %esi
+entry:
+  %and = and i32 %bit, 31
+  %sh_prom = zext i32 %and to i64
+  %shl = shl i64 1, %sh_prom
+  %and1 = and i64 %shl, %bits
+  %tobool = icmp ne i64 %and1, 0
+  ret i1 %tobool
+}
