@@ -435,9 +435,8 @@ define <4 x double> @shuffle_v4f64_0415(<4 x double> %a, <4 x double> %b) {
 ;
 ; AVX512VL-LABEL: shuffle_v4f64_0415:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,0,2,1]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,1,3]
-; AVX512VL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
+; AVX512VL-NEXT:    vmovapd {{.*#+}} ymm2 = [0,4,1,5]
+; AVX512VL-NEXT:    vpermt2pd %ymm1, %ymm2, %ymm0
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x double> %shuffle
