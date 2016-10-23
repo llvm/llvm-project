@@ -456,7 +456,7 @@ struct less_second {
 template <class T, T... I> struct integer_sequence {
   typedef T value_type;
 
-  static LLVM_CONSTEXPR size_t size() { return sizeof...(I); }
+  static constexpr size_t size() { return sizeof...(I); }
 };
 
 /// \brief Alias for the common case of a sequence of size_ts.
@@ -483,7 +483,7 @@ template <> struct rank<0> {};
 
 /// Find the length of an array.
 template <class T, std::size_t N>
-LLVM_CONSTEXPR inline size_t array_lengthof(T (&)[N]) {
+constexpr inline size_t array_lengthof(T (&)[N]) {
   return N;
 }
 
