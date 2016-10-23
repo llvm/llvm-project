@@ -63,9 +63,10 @@ public:
         CallOperator->getType()->getAs<FunctionProtoType>();
     ASTContext &Context = CallOperator->getASTContext();
 
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.Variadic = Proto->isVariadic();
     QualType Key =
-        Context.getFunctionType(Context.VoidTy, Proto->getParamTypes(),
-                                FunctionProtoType::ExtProtoInfo());
+        Context.getFunctionType(Context.VoidTy, Proto->getParamTypes(), EPI);
     Key = Context.getCanonicalType(Key);
     return ++ManglingNumbers[Key->castAs<FunctionProtoType>()];
   }
