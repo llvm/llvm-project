@@ -178,8 +178,8 @@ class MVT {
 
     SimpleValueType SimpleTy;
 
-    LLVM_CONSTEXPR MVT() : SimpleTy(INVALID_SIMPLE_VALUE_TYPE) {}
-    LLVM_CONSTEXPR MVT(SimpleValueType SVT) : SimpleTy(SVT) { }
+    constexpr MVT() : SimpleTy(INVALID_SIMPLE_VALUE_TYPE) {}
+    constexpr MVT(SimpleValueType SVT) : SimpleTy(SVT) {}
 
     bool operator>(const MVT& S)  const { return SimpleTy >  S.SimpleTy; }
     bool operator<(const MVT& S)  const { return SimpleTy <  S.SimpleTy; }

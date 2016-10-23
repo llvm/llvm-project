@@ -81,13 +81,12 @@ namespace llvm {
 
     /// Construct an ArrayRef from a std::array
     template <size_t N>
-    /*implicit*/ LLVM_CONSTEXPR ArrayRef(const std::array<T, N> &Arr)
-      : Data(Arr.data()), Length(N) {}
+    /*implicit*/ constexpr ArrayRef(const std::array<T, N> &Arr)
+        : Data(Arr.data()), Length(N) {}
 
     /// Construct an ArrayRef from a C array.
     template <size_t N>
-    /*implicit*/ LLVM_CONSTEXPR ArrayRef(const T (&Arr)[N])
-      : Data(Arr), Length(N) {}
+    /*implicit*/ constexpr ArrayRef(const T (&Arr)[N]) : Data(Arr), Length(N) {}
 
     /// Construct an ArrayRef from a std::initializer_list.
     /*implicit*/ ArrayRef(const std::initializer_list<T> &Vec)
@@ -291,13 +290,12 @@ namespace llvm {
 
     /// Construct an ArrayRef from a std::array
     template <size_t N>
-    /*implicit*/ LLVM_CONSTEXPR MutableArrayRef(std::array<T, N> &Arr)
-      : ArrayRef<T>(Arr) {}
+    /*implicit*/ constexpr MutableArrayRef(std::array<T, N> &Arr)
+        : ArrayRef<T>(Arr) {}
 
     /// Construct an MutableArrayRef from a C array.
     template <size_t N>
-    /*implicit*/ LLVM_CONSTEXPR MutableArrayRef(T (&Arr)[N])
-      : ArrayRef<T>(Arr) {}
+    /*implicit*/ constexpr MutableArrayRef(T (&Arr)[N]) : ArrayRef<T>(Arr) {}
 
     T *data() const { return const_cast<T*>(ArrayRef<T>::data()); }
 
