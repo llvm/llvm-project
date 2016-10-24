@@ -17,7 +17,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(FIND_PATHS "${LLDB_PATH_TO_LLVM_BUILD}/bin")
   endif()
   find_program(LLVM_CONFIG "llvm-config"
-    PATHS ${FIND_PATHS})
+    HINTS ${FIND_PATHS})
 
   if(LLVM_CONFIG)
     message(STATUS "Found LLVM_CONFIG as ${LLVM_CONFIG}")
