@@ -791,6 +791,17 @@ let Uses = [RM] in {
                        "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
                        [(set v4i32:$XT, (v4i32 immAllZerosV))]>;
 
+  let isCodeGenOnly = 1 in {
+    def XXLXORdpz : XX3Form_SetZero<60, 154,
+                         (outs vsfrc:$XT), (ins),
+                         "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
+                         [(set f64:$XT, (fpimm0))]>;
+    def XXLXORspz : XX3Form_SetZero<60, 154,
+                         (outs vssrc:$XT), (ins),
+                         "xxlxor $XT, $XT, $XT", IIC_VecGeneral,
+                         [(set f32:$XT, (fpimm0))]>;
+  }
+
   // Permutation Instructions
   def XXMRGHW : XX3Form<60, 18,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),

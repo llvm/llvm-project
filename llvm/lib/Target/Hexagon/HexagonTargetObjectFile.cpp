@@ -101,22 +101,22 @@ void HexagonTargetObjectFile::Initialize(MCContext &Ctx,
 }
 
 MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
-  TRACE("[SelectSectionForGlobal] GV(" << GV->getName() << ") ");
-  TRACE("input section(" << GV->getSection() << ") ");
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  TRACE("[SelectSectionForGlobal] GO(" << GO->getName() << ") ");
+  TRACE("input section(" << GO->getSection() << ") ");
 
-  TRACE((GV->hasPrivateLinkage() ? "private_linkage " : "")
-         << (GV->hasLocalLinkage() ? "local_linkage " : "")
-         << (GV->hasInternalLinkage() ? "internal " : "")
-         << (GV->hasExternalLinkage() ? "external " : "")
-         << (GV->hasCommonLinkage() ? "common_linkage " : "")
-         << (GV->hasCommonLinkage() ? "common " : "" )
+  TRACE((GO->hasPrivateLinkage() ? "private_linkage " : "")
+         << (GO->hasLocalLinkage() ? "local_linkage " : "")
+         << (GO->hasInternalLinkage() ? "internal " : "")
+         << (GO->hasExternalLinkage() ? "external " : "")
+         << (GO->hasCommonLinkage() ? "common_linkage " : "")
+         << (GO->hasCommonLinkage() ? "common " : "" )
          << (Kind.isCommon() ? "kind_common " : "" )
          << (Kind.isBSS() ? "kind_bss " : "" )
          << (Kind.isBSSLocal() ? "kind_bss_local " : "" ));
 
-  if (isGlobalInSmallSection(GV, TM))
-    return selectSmallSectionForGlobal(GV, Kind, TM);
+  if (isGlobalInSmallSection(GO, TM))
+    return selectSmallSectionForGlobal(GO, Kind, TM);
 
   if (Kind.isCommon()) {
     // This is purely for LTO+Linker Script because commons don't really have a
@@ -128,50 +128,50 @@ MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
 
   TRACE("default_ELF_section\n");
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, TM);
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }
 
 MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
-  TRACE("[getExplicitSectionGlobal] GV(" << GV->getName() << ") from("
-        << GV->getSection() << ") ");
-  TRACE((GV->hasPrivateLinkage() ? "private_linkage " : "")
-         << (GV->hasLocalLinkage() ? "local_linkage " : "")
-         << (GV->hasInternalLinkage() ? "internal " : "")
-         << (GV->hasExternalLinkage() ? "external " : "")
-         << (GV->hasCommonLinkage() ? "common_linkage " : "")
-         << (GV->hasCommonLinkage() ? "common " : "" )
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  TRACE("[getExplicitSectionGlobal] GO(" << GO->getName() << ") from("
+        << GO->getSection() << ") ");
+  TRACE((GO->hasPrivateLinkage() ? "private_linkage " : "")
+         << (GO->hasLocalLinkage() ? "local_linkage " : "")
+         << (GO->hasInternalLinkage() ? "internal " : "")
+         << (GO->hasExternalLinkage() ? "external " : "")
+         << (GO->hasCommonLinkage() ? "common_linkage " : "")
+         << (GO->hasCommonLinkage() ? "common " : "" )
          << (Kind.isCommon() ? "kind_common " : "" )
          << (Kind.isBSS() ? "kind_bss " : "" )
          << (Kind.isBSSLocal() ? "kind_bss_local " : "" ));
 
-  if (GV->hasSection()) {
-    StringRef Section = GV->getSection();
+  if (GO->hasSection()) {
+    StringRef Section = GO->getSection();
     if (Section.find(".access.text.group") != StringRef::npos)
-      return getContext().getELFSection(GV->getSection(), ELF::SHT_PROGBITS,
+      return getContext().getELFSection(GO->getSection(), ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
     if (Section.find(".access.data.group") != StringRef::npos)
-      return getContext().getELFSection(GV->getSection(), ELF::SHT_PROGBITS,
+      return getContext().getELFSection(GO->getSection(), ELF::SHT_PROGBITS,
                                         ELF::SHF_WRITE | ELF::SHF_ALLOC);
   }
 
-  if (isGlobalInSmallSection(GV, TM))
-    return selectSmallSectionForGlobal(GV, Kind, TM);
+  if (isGlobalInSmallSection(GO, TM))
+    return selectSmallSectionForGlobal(GO, Kind, TM);
 
   // Otherwise, we work the same as ELF.
   TRACE("default_ELF_section\n");
-  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GV, Kind, TM);
+  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, Kind, TM);
 }
 
 
 /// Return true if this global value should be placed into small data/bss
 /// section.
-bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalValue *GV,
+bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
       const TargetMachine &TM) const {
   // Only global variables, not functions.
   DEBUG(dbgs() << "Checking if value is in small-data, -G"
-               << SmallDataThreshold << ": \"" << GV->getName() << "\": ");
-  const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV);
+               << SmallDataThreshold << ": \"" << GO->getName() << "\": ");
+  const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO);
   if (!GVar) {
     DEBUG(dbgs() << "no, not a global variable\n");
     return false;
@@ -297,9 +297,9 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
 }
 
 MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
-  const Type *GTy = GV->getType()->getElementType();
-  unsigned Size = getSmallestAddressableSize(GTy, GV, TM);
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  const Type *GTy = GO->getType()->getElementType();
+  unsigned Size = getSmallestAddressableSize(GTy, GO, TM);
 
   // If we have -ffunction-section or -fdata-section then we should emit the
   // global value to a unique section specifically for it... even for sdata.
@@ -325,7 +325,7 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
 
     if (EmitUniquedSection) {
       Name.append(".");
-      Name.append(GV->getName());
+      Name.append(GO->getName());
     }
     TRACE(" unique sbss(" << Name << ")\n");
     return getContext().getELFSection(Name.str(), ELF::SHT_NOBITS,
@@ -352,7 +352,7 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
   // case the Kind could be wrong for it.
   if (Kind.isMergeableConst()) {
     TRACE(" const_object_as_data ");
-    const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV);
+    const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO);
     if (GVar->hasSection() && isSmallDataSection(GVar->getSection()))
       Kind = SectionKind::getData();
   }
@@ -369,7 +369,7 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
 
     if (EmitUniquedSection) {
       Name.append(".");
-      Name.append(GV->getName());
+      Name.append(GO->getName());
     }
     TRACE(" unique sdata(" << Name << ")\n");
     return getContext().getELFSection(Name.str(), ELF::SHT_PROGBITS,
@@ -378,5 +378,5 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
 
   TRACE("default ELF section\n");
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, TM);
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }

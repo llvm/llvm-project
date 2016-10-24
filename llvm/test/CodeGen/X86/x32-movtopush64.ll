@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s
 
 declare void @bar(i32*, i32*, i32*, i32*, i32*, i64*, i32, i32, i32)
 

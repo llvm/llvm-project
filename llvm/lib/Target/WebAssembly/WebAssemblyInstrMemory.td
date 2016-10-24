@@ -58,16 +58,16 @@ let Defs = [ARGUMENTS] in {
 // Basic load.
 def LOAD_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
                                    P2Align:$p2align), [],
-                 "i32.load\t$dst, ${off}(${addr})${p2align}", 0x2a>;
+                 "i32.load\t$dst, ${off}(${addr})${p2align}", 0x28>;
 def LOAD_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
                                    P2Align:$p2align), [],
-                 "i64.load\t$dst, ${off}(${addr})${p2align}", 0x2b>;
+                 "i64.load\t$dst, ${off}(${addr})${p2align}", 0x29>;
 def LOAD_F32 : I<(outs F32:$dst), (ins i32imm:$off, I32:$addr,
                                    P2Align:$p2align), [],
-                 "f32.load\t$dst, ${off}(${addr})${p2align}", 0x2c>;
+                 "f32.load\t$dst, ${off}(${addr})${p2align}", 0x2a>;
 def LOAD_F64 : I<(outs F64:$dst), (ins i32imm:$off, I32:$addr,
                                    P2Align:$p2align), [],
-                 "f64.load\t$dst, ${off}(${addr})${p2align}", 0x2d>;
+                 "f64.load\t$dst, ${off}(${addr})${p2align}", 0x2b>;
 
 } // Defs = [ARGUMENTS]
 
@@ -142,34 +142,34 @@ let Defs = [ARGUMENTS] in {
 // Extending load.
 def LOAD8_S_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i32.load8_s\t$dst, ${off}(${addr})${p2align}", 0x20>;
+                     "i32.load8_s\t$dst, ${off}(${addr})${p2align}", 0x2c>;
 def LOAD8_U_I32  : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i32.load8_u\t$dst, ${off}(${addr})${p2align}", 0x21>;
+                     "i32.load8_u\t$dst, ${off}(${addr})${p2align}", 0x2d>;
 def LOAD16_S_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i32.load16_s\t$dst, ${off}(${addr})${p2align}", 0x22>;
+                     "i32.load16_s\t$dst, ${off}(${addr})${p2align}", 0x2e>;
 def LOAD16_U_I32 : I<(outs I32:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i32.load16_u\t$dst, ${off}(${addr})${p2align}", 0x23>;
+                     "i32.load16_u\t$dst, ${off}(${addr})${p2align}", 0x2f>;
 def LOAD8_S_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i64.load8_s\t$dst, ${off}(${addr})${p2align}", 0x24>;
+                     "i64.load8_s\t$dst, ${off}(${addr})${p2align}", 0x30>;
 def LOAD8_U_I64  : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i64.load8_u\t$dst, ${off}(${addr})${p2align}", 0x25>;
+                     "i64.load8_u\t$dst, ${off}(${addr})${p2align}", 0x31>;
 def LOAD16_S_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i64.load16_s\t$dst, ${off}(${addr})${p2align}", 0x26>;
+                     "i64.load16_s\t$dst, ${off}(${addr})${p2align}", 0x32>;
 def LOAD16_U_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i64.load16_u\t$dst, ${off}(${addr})${p2align}", 0x27>;
+                     "i64.load16_u\t$dst, ${off}(${addr})${p2align}", 0x33>;
 def LOAD32_S_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i64.load32_s\t$dst, ${off}(${addr})${p2align}", 0x28>;
+                     "i64.load32_s\t$dst, ${off}(${addr})${p2align}", 0x34>;
 def LOAD32_U_I64 : I<(outs I64:$dst), (ins i32imm:$off, I32:$addr,
                                        P2Align:$p2align), [],
-                     "i64.load32_u\t$dst, ${off}(${addr})${p2align}", 0x29>;
+                     "i64.load32_u\t$dst, ${off}(${addr})${p2align}", 0x35>;
 
 } // Defs = [ARGUMENTS]
 
@@ -449,16 +449,16 @@ let Defs = [ARGUMENTS] in {
 // Note: WebAssembly inverts SelectionDAG's usual operand order.
 def STORE_I32  : I<(outs), (ins i32imm:$off, I32:$addr,
                             P2Align:$p2align, I32:$val), [],
-                   "i32.store\t${off}(${addr})${p2align}, $val", 0x33>;
+                   "i32.store\t${off}(${addr})${p2align}, $val", 0x36>;
 def STORE_I64  : I<(outs), (ins i32imm:$off, I32:$addr,
                             P2Align:$p2align, I64:$val), [],
-                   "i64.store\t${off}(${addr})${p2align}, $val", 0x34>;
+                   "i64.store\t${off}(${addr})${p2align}, $val", 0x37>;
 def STORE_F32  : I<(outs), (ins i32imm:$off, I32:$addr,
                             P2Align:$p2align, F32:$val), [],
-                   "f32.store\t${off}(${addr})${p2align}, $val", 0x35>;
+                   "f32.store\t${off}(${addr})${p2align}, $val", 0x38>;
 def STORE_F64  : I<(outs), (ins i32imm:$off, I32:$addr,
                             P2Align:$p2align, F64:$val), [],
-                   "f64.store\t${off}(${addr})${p2align}, $val", 0x36>;
+                   "f64.store\t${off}(${addr})${p2align}, $val", 0x39>;
 
 } // Defs = [ARGUMENTS]
 
@@ -541,19 +541,19 @@ let Defs = [ARGUMENTS] in {
 // Truncating store.
 def STORE8_I32  : I<(outs), (ins i32imm:$off, I32:$addr,
                              P2Align:$p2align, I32:$val), [],
-                    "i32.store8\t${off}(${addr})${p2align}, $val", 0x2e>;
+                    "i32.store8\t${off}(${addr})${p2align}, $val", 0x3a>;
 def STORE16_I32 : I<(outs), (ins i32imm:$off, I32:$addr,
                              P2Align:$p2align, I32:$val), [],
-                    "i32.store16\t${off}(${addr})${p2align}, $val", 0x2f>;
+                    "i32.store16\t${off}(${addr})${p2align}, $val", 0x3b>;
 def STORE8_I64  : I<(outs), (ins i32imm:$off, I32:$addr,
                              P2Align:$p2align, I64:$val), [],
-                    "i64.store8\t${off}(${addr})${p2align}, $val", 0x30>;
+                    "i64.store8\t${off}(${addr})${p2align}, $val", 0x3c>;
 def STORE16_I64 : I<(outs), (ins i32imm:$off, I32:$addr,
                              P2Align:$p2align, I64:$val), [],
-                    "i64.store16\t${off}(${addr})${p2align}, $val", 0x31>;
+                    "i64.store16\t${off}(${addr})${p2align}, $val", 0x3d>;
 def STORE32_I64 : I<(outs), (ins i32imm:$off, I32:$addr,
                              P2Align:$p2align, I64:$val), [],
-                    "i64.store32\t${off}(${addr})${p2align}, $val", 0x32>;
+                    "i64.store32\t${off}(${addr})${p2align}, $val", 0x3e>;
 
 } // Defs = [ARGUMENTS]
 
@@ -667,7 +667,7 @@ let Defs = [ARGUMENTS] in {
 // Current memory size.
 def CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins),
                            [(set I32:$dst, (int_wasm_current_memory))],
-                           "current_memory\t$dst", 0x3b>,
+                           "current_memory\t$dst", 0x3f>,
                          Requires<[HasAddr32]>;
 def CURRENT_MEMORY_I64 : I<(outs I64:$dst), (ins),
                            [(set I64:$dst, (int_wasm_current_memory))],
@@ -677,7 +677,7 @@ def CURRENT_MEMORY_I64 : I<(outs I64:$dst), (ins),
 // Grow memory.
 def GROW_MEMORY_I32 : I<(outs), (ins I32:$delta),
                         [(int_wasm_grow_memory I32:$delta)],
-                        "grow_memory\t$delta", 0x39>,
+                        "grow_memory\t$delta", 0x40>,
                       Requires<[HasAddr32]>;
 def GROW_MEMORY_I64 : I<(outs), (ins I64:$delta),
                         [(int_wasm_grow_memory I64:$delta)],

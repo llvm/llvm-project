@@ -241,8 +241,10 @@ public:
   ///
   /// It can be passed a flag to get debug logging as the passes are run.
   PassManager(bool DebugLogging = false) : DebugLogging(DebugLogging) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
+  // FIXME: These are equivalent to the default move constructor/move
+  // assignment. However, using = default triggers linker errors due to the
+  // explicit instantiations below. Find away to use the default and remove the
+  // duplicated code here.
   PassManager(PassManager &&Arg)
       : Passes(std::move(Arg.Passes)),
         DebugLogging(std::move(Arg.DebugLogging)) {}

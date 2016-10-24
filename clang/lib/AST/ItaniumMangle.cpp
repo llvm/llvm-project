@@ -467,6 +467,8 @@ private:
                               bool recursive = false);
   void mangleUnresolvedName(NestedNameSpecifier *qualifier,
                             DeclarationName name,
+                            const TemplateArgumentLoc *TemplateArgs,
+                            unsigned NumTemplateArgs,
                             unsigned KnownArity = UnknownArity);
 
   void mangleFunctionEncodingBareType(const FunctionDecl *FD);
@@ -541,6 +543,8 @@ private:
                         NestedNameSpecifier *qualifier,
                         NamedDecl *firstQualifierLookup,
                         DeclarationName name,
+                        const TemplateArgumentLoc *TemplateArgs,
+                        unsigned NumTemplateArgs,
                         unsigned knownArity);
   void mangleCastExpression(const Expr *E, StringRef CastEncoding);
   void mangleInitListElements(const InitListExpr *InitList);
@@ -1159,9 +1163,10 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
 
 /// Mangle an unresolved-name, which is generally used for names which
 /// weren't resolved to specific entities.
-void CXXNameMangler::mangleUnresolvedName(NestedNameSpecifier *qualifier,
-                                          DeclarationName name,
-                                          unsigned knownArity) {
+void CXXNameMangler::mangleUnresolvedName(
+    NestedNameSpecifier *qualifier, DeclarationName name,
+    const TemplateArgumentLoc *TemplateArgs, unsigned NumTemplateArgs,
+    unsigned knownArity) {
   if (qualifier) mangleUnresolvedPrefix(qualifier);
   switch (name.getNameKind()) {
     // <base-unresolved-name> ::= <simple-id>
@@ -1189,6 +1194,11 @@ void CXXNameMangler::mangleUnresolvedName(NestedNameSpecifier *qualifier,
     case DeclarationName::ObjCZeroArgSelector:
       llvm_unreachable("Can't mangle Objective-C selector names here!");
   }
+
+  // The <simple-id> and on <operator-name> productions end in an optional
+  // <template-args>.
+  if (TemplateArgs)
+    mangleTemplateArgs(TemplateArgs, NumTemplateArgs);
 }
 
 void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
@@ -3143,12 +3153,14 @@ void CXXNameMangler::mangleMemberExpr(const Expr *base,
                                       NestedNameSpecifier *qualifier,
                                       NamedDecl *firstQualifierLookup,
                                       DeclarationName member,
+                                      const TemplateArgumentLoc *TemplateArgs,
+                                      unsigned NumTemplateArgs,
                                       unsigned arity) {
   // <expression> ::= dt <expression> <unresolved-name>
   //              ::= pt <expression> <unresolved-name>
   if (base)
     mangleMemberExprBase(base, isArrow);
-  mangleUnresolvedName(qualifier, member, arity);
+  mangleUnresolvedName(qualifier, member, TemplateArgs, NumTemplateArgs, arity);
 }
 
 /// Look at the callee of the given call expression and determine if
@@ -3446,7 +3458,9 @@ recurse:
     const MemberExpr *ME = cast<MemberExpr>(E);
     mangleMemberExpr(ME->getBase(), ME->isArrow(),
                      ME->getQualifier(), nullptr,
-                     ME->getMemberDecl()->getDeclName(), Arity);
+                     ME->getMemberDecl()->getDeclName(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
+                     Arity);
     break;
   }
 
@@ -3454,9 +3468,9 @@ recurse:
     const UnresolvedMemberExpr *ME = cast<UnresolvedMemberExpr>(E);
     mangleMemberExpr(ME->isImplicitAccess() ? nullptr : ME->getBase(),
                      ME->isArrow(), ME->getQualifier(), nullptr,
-                     ME->getMemberName(), Arity);
-    if (ME->hasExplicitTemplateArgs())
-      mangleTemplateArgs(ME->getTemplateArgs(), ME->getNumTemplateArgs());
+                     ME->getMemberName(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
+                     Arity);
     break;
   }
 
@@ -3466,21 +3480,17 @@ recurse:
     mangleMemberExpr(ME->isImplicitAccess() ? nullptr : ME->getBase(),
                      ME->isArrow(), ME->getQualifier(),
                      ME->getFirstQualifierFoundInScope(),
-                     ME->getMember(), Arity);
-    if (ME->hasExplicitTemplateArgs())
-      mangleTemplateArgs(ME->getTemplateArgs(), ME->getNumTemplateArgs());
+                     ME->getMember(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
+                     Arity);
     break;
   }
 
   case Expr::UnresolvedLookupExprClass: {
     const UnresolvedLookupExpr *ULE = cast<UnresolvedLookupExpr>(E);
-    mangleUnresolvedName(ULE->getQualifier(), ULE->getName(), Arity);
-
-    // All the <unresolved-name> productions end in a
-    // base-unresolved-name, where <template-args> are just tacked
-    // onto the end.
-    if (ULE->hasExplicitTemplateArgs())
-      mangleTemplateArgs(ULE->getTemplateArgs(), ULE->getNumTemplateArgs());
+    mangleUnresolvedName(ULE->getQualifier(), ULE->getName(),
+                         ULE->getTemplateArgs(), ULE->getNumTemplateArgs(),
+                         Arity);
     break;
   }
 
@@ -3735,7 +3745,10 @@ recurse:
   case Expr::CXXOperatorCallExprClass: {
     const CXXOperatorCallExpr *CE = cast<CXXOperatorCallExpr>(E);
     unsigned NumArgs = CE->getNumArgs();
-    mangleOperatorName(CE->getOperator(), /*Arity=*/NumArgs);
+    // A CXXOperatorCallExpr for OO_Arrow models only semantics, not syntax
+    // (the enclosing MemberExpr covers the syntactic portion).
+    if (CE->getOperator() != OO_Arrow)
+      mangleOperatorName(CE->getOperator(), /*Arity=*/NumArgs);
     // Mangle the arguments.
     for (unsigned i = 0; i != NumArgs; ++i)
       mangleExpression(CE->getArg(i));
@@ -3796,13 +3809,9 @@ recurse:
 
   case Expr::DependentScopeDeclRefExprClass: {
     const DependentScopeDeclRefExpr *DRE = cast<DependentScopeDeclRefExpr>(E);
-    mangleUnresolvedName(DRE->getQualifier(), DRE->getDeclName(), Arity);
-
-    // All the <unresolved-name> productions end in a
-    // base-unresolved-name, where <template-args> are just tacked
-    // onto the end.
-    if (DRE->hasExplicitTemplateArgs())
-      mangleTemplateArgs(DRE->getTemplateArgs(), DRE->getNumTemplateArgs());
+    mangleUnresolvedName(DRE->getQualifier(), DRE->getDeclName(),
+                         DRE->getTemplateArgs(), DRE->getNumTemplateArgs(),
+                         Arity);
     break;
   }
 

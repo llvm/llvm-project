@@ -120,11 +120,10 @@ int main()
     test_npos(S(), SV("12345"), 5, S(""));
     test_npos(S(), SV("12345"), 6, S("not happening"));
     }
+
     {
-    typedef std::string S;
-    typedef std::string_view SV;
-    S s;
-    SV sv = "EFGH";
+    std::string s;
+    std::string_view sv = "EFGH";
     char arr[] = "IJKL";
 
     s.append("CDEF", 0);    // calls append(const char *, len)
@@ -138,7 +137,7 @@ int main()
     s.append(sv, 0);  // calls append(T, pos, npos)
     assert(s == sv);
     s.clear();
-    
+
     s.append(sv, 0, std::string::npos);   // calls append(T, pos, npos)
     assert(s == sv);
     s.clear();
@@ -154,10 +153,11 @@ int main()
     s.append(arr, 0);     // calls append(const char *, len)
     assert(s == "");
     s.clear();
+    }
 
     {
-    S s = "ABCD";
-    SV sv = s;
+    std::string s = "ABCD";
+    std::string_view sv = s;
     s.append(sv);
     assert(s == "ABCDABCD");
 
@@ -169,16 +169,15 @@ int main()
     s.append(sv, sv.size());
     assert(s == "ABCDABCDABCDABCD");
     }
-    
+
     {
-    S s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    SV sv = s;
+    std::string s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::string_view sv = s;
     s.append(sv);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
     sv = s;
     s.append(sv, 0, std::string::npos);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    }
     }
 }

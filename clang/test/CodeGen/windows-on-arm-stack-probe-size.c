@@ -5,7 +5,7 @@
 // RUN:     | FileCheck %s -check-prefix CHECK-4096
 
 // RUN: %clang_cc1 -triple thumbv7-windows-itanium -fms-extensions -O2 -emit-llvm %s -o - \
-// RUN:     | FileCheck %s -check-prefix CHECK
+// RUN:     | FileCheck %s
 
 __declspec(dllimport) void initialise(signed char buffer[4096]);
 

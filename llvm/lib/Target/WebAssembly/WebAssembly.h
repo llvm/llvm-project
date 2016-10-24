@@ -43,6 +43,7 @@ FunctionPass *createWebAssemblyOptimizeLiveIntervals();
 FunctionPass *createWebAssemblyStoreResults();
 FunctionPass *createWebAssemblyRegStackify();
 FunctionPass *createWebAssemblyRegColoring();
+FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyFixIrreducibleControlFlow();
 FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyLowerBrUnless();

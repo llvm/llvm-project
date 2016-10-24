@@ -406,3 +406,6 @@ INVALID-TWOLEVELHINTS-OFFSET: macho-invalid-twolevelhints-offset': truncated or 
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-twolevelhints-offset-nhints 2>&1 | FileCheck -check-prefix INVALID-TWOLEVELHINTS-OFFSET-HNINTS %s
 INVALID-TWOLEVELHINTS-OFFSET-HNINTS: macho-invalid-twolevelhints-offset-nhints': truncated or malformed object (offset field plus nhints times sizeof(struct twolevel_hint) field of LC_TWOLEVEL_HINTS command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-fat_cputype 2>&1 | FileCheck -check-prefix INVALID-FAT-CPUTYPE %s
+INVALID-FAT-CPUTYPE: macho-invalid-fat_cputype truncated or malformed object (universal header architecture: 0's cputype does not match object file's mach header)

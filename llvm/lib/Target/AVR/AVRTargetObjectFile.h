@@ -21,7 +21,7 @@ class AVRTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
   void Initialize(MCContext &ctx, const TargetMachine &TM) override;
 
-  MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 
 private:

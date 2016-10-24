@@ -132,15 +132,15 @@ void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
 /// classifies the global in a variety of ways that make various target
 /// implementations simpler.  The target implementation is free to ignore this
 /// extra info of course.
-SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
+SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
                                                        const TargetMachine &TM){
-  assert(!GV->isDeclaration() && !GV->hasAvailableExternallyLinkage() &&
+  assert(!GO->isDeclaration() && !GO->hasAvailableExternallyLinkage() &&
          "Can only be used for global definitions");
 
   Reloc::Model ReloModel = TM.getRelocationModel();
 
   // Early exit - functions should be always in text sections.
-  const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV);
+  const auto *GVar = dyn_cast<GlobalVariable>(GO);
   if (!GVar)
     return SectionKind::getText();
 
@@ -201,7 +201,8 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
       // Otherwise, just drop it into a mergable constant section.  If we have
       // a section for this size, use it, otherwise use the arbitrary sized
       // mergable section.
-      switch (GV->getParent()->getDataLayout().getTypeAllocSize(C->getType())) {
+      switch (
+          GVar->getParent()->getDataLayout().getTypeAllocSize(C->getType())) {
       case 4:  return SectionKind::getMergeableConst4();
       case 8:  return SectionKind::getMergeableConst8();
       case 16: return SectionKind::getMergeableConst16();
@@ -234,13 +235,13 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
 /// variable or function definition.  This should not be passed external (or
 /// available externally) globals.
 MCSection *TargetLoweringObjectFile::SectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // Select section name.
-  if (GV->hasSection())
-    return getExplicitSectionGlobal(GV, Kind, TM);
+  if (GO->hasSection())
+    return getExplicitSectionGlobal(GO, Kind, TM);
 
   // Use default section depending on the 'type' of global
-  return SelectSectionForGlobal(GV, Kind, TM);
+  return SelectSectionForGlobal(GO, Kind, TM);
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(

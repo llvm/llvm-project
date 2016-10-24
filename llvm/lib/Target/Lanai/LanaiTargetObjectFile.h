@@ -18,19 +18,20 @@ class LanaiTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *SmallDataSection;
   MCSection *SmallBSSSection;
 
+  bool isGlobalInSmallSection(const GlobalObject *GO, const TargetMachine &TM,
+                              SectionKind Kind) const;
+  bool isGlobalInSmallSectionImpl(const GlobalObject *GO,
+                                  const TargetMachine &TM) const;
+
 public:
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
   /// Return true if this global address should be placed into small data/bss
   /// section.
-  bool isGlobalInSmallSection(const GlobalValue *GV, const TargetMachine &TM,
-                              SectionKind Kind) const;
-  bool isGlobalInSmallSection(const GlobalValue *GV,
+  bool isGlobalInSmallSection(const GlobalObject *GO,
                               const TargetMachine &TM) const;
-  bool isGlobalInSmallSectionImpl(const GlobalValue *GV,
-                                  const TargetMachine &TM) const;
 
-  MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 
   /// Return true if this constant should be placed into small data section.

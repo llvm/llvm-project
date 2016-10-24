@@ -559,14 +559,6 @@ addOptionalSynthetic(StringRef Name, OutputSectionBase<ELFT> *Sec,
   return Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
 }
 
-template <class ELFT>
-static void addSynthetic(StringRef Name, OutputSectionBase<ELFT> *Sec,
-                         typename ELFT::uint Val) {
-  SymbolBody *S = Symtab<ELFT>::X->find(Name);
-  if (!S || S->isUndefined() || S->isShared())
-    Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, STV_HIDDEN);
-}
-
 // The beginning and the ending of .rel[a].plt section are marked
 // with __rel[a]_iplt_{start,end} symbols if it is a statically linked
 // executable. The runtime needs these symbols in order to resolve
@@ -953,13 +945,9 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End,
                     OutputSectionBase<ELFT> *OS) {
-    if (OS) {
-      addSynthetic(Start, OS, 0);
-      addSynthetic(End, OS, DefinedSynthetic<ELFT>::SectionEnd);
-    } else {
-      addOptionalSynthetic(Start, (OutputSectionBase<ELFT> *)nullptr, 0);
-      addOptionalSynthetic(End, (OutputSectionBase<ELFT> *)nullptr, 0);
-    }
+    // These symbols resolve to the image base if the section does not exist.
+    addOptionalSynthetic(Start, OS, 0);
+    addOptionalSynthetic(End, OS, OS ? DefinedSynthetic<ELFT>::SectionEnd : 0);
   };
 
   Define("__preinit_array_start", "__preinit_array_end",

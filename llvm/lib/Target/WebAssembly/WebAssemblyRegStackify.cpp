@@ -24,6 +24,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -404,18 +405,18 @@ static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
   return true;
 }
 
-/// Get the appropriate tee_local opcode for the given register class.
-static unsigned GetTeeLocalOpcode(const TargetRegisterClass *RC) {
+/// Get the appropriate tee opcode for the given register class.
+static unsigned GetTeeOpcode(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
-    return WebAssembly::TEE_LOCAL_I32;
+    return WebAssembly::TEE_I32;
   if (RC == &WebAssembly::I64RegClass)
-    return WebAssembly::TEE_LOCAL_I64;
+    return WebAssembly::TEE_I64;
   if (RC == &WebAssembly::F32RegClass)
-    return WebAssembly::TEE_LOCAL_F32;
+    return WebAssembly::TEE_F32;
   if (RC == &WebAssembly::F64RegClass)
-    return WebAssembly::TEE_LOCAL_F64;
+    return WebAssembly::TEE_F64;
   if (RC == &WebAssembly::V128RegClass)
-    return WebAssembly::TEE_LOCAL_V128;
+    return WebAssembly::TEE_V128;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -513,8 +514,8 @@ static MachineInstr *RematerializeCheapDef(
 
 /// A multiple-use def in the same block with no intervening memory or register
 /// dependencies; move the def down, nest it with the current instruction, and
-/// insert a tee_local to satisfy the rest of the uses. As an illustration,
-/// rewrite this:
+/// insert a tee to satisfy the rest of the uses. As an illustration, rewrite
+/// this:
 ///
 ///    Reg = INST ...        // Def
 ///    INST ..., Reg, ...    // Insert
@@ -524,7 +525,7 @@ static MachineInstr *RematerializeCheapDef(
 /// to this:
 ///
 ///    DefReg = INST ...     // Def (to become the new Insert)
-///    TeeReg, Reg = TEE_LOCAL_... DefReg
+///    TeeReg, Reg = TEE_... DefReg
 ///    INST ..., TeeReg, ... // Insert
 ///    INST ..., Reg, ...
 ///    INST ..., Reg, ...
@@ -547,7 +548,7 @@ static MachineInstr *MoveAndTeeForMultiUse(
   unsigned DefReg = MRI.createVirtualRegister(RegClass);
   MachineOperand &DefMO = Def->getOperand(0);
   MachineInstr *Tee = BuildMI(MBB, Insert, Insert->getDebugLoc(),
-                              TII->get(GetTeeLocalOpcode(RegClass)), TeeReg)
+                              TII->get(GetTeeOpcode(RegClass)), TeeReg)
                           .addReg(Reg, RegState::Define)
                           .addReg(DefReg, getUndefRegState(DefMO.isDead()));
   Op.setReg(TeeReg);
@@ -759,18 +760,11 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
 
         // Argument instructions represent live-in registers and not real
         // instructions.
-        if (Def->getOpcode() == WebAssembly::ARGUMENT_I32 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_I64 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_F32 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_F64 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_v16i8 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_v8i16 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_v4i32 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_v4f32)
+        if (WebAssembly::isArgument(*Def))
           continue;
 
         // Decide which strategy to take. Prefer to move a single-use value
-        // over cloning it, and prefer cloning over introducing a tee_local.
+        // over cloning it, and prefer cloning over introducing a tee.
         // For moving, we require the def to be in the same block as the use;
         // this makes things simpler (LiveIntervals' handleMove function only
         // supports intra-block moves) and it's MachineSink's job to catch all
