@@ -897,7 +897,7 @@ llvm::Error Util::synthesizeDebugNotes(NormalizedFile &file) {
       llvm::sys::fs::file_status stat;
       if (!llvm::sys::fs::status(fullPath, stat))
         if (llvm::sys::fs::exists(stat))
-          modTime = stat.getLastModificationTime().toEpochTime();
+          modTime = llvm::sys::toTimeT(stat.getLastModificationTime());
 
       _stabs.push_back(mach_o::Stab(nullptr, N_OSO, _ctx.getCPUSubType(), 1,
                                     modTime, fullPath));
