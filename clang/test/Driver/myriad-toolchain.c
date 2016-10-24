@@ -9,7 +9,7 @@
 // LINK_WITH_RTEMS: Inputs{{.*}}crtn.o
 
 // RUN: %clang -c -no-canonical-prefixes -### -target sparc-myriad-rtems-elf -x c++ %s \
-// RUN: --gcc-toolchain=%S/Inputs/basic_myriad_tree 2>&1 | FileCheck %s -check-prefix=COMPILE_CXX
+// RUN: -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/basic_myriad_tree 2>&1 | FileCheck %s -check-prefix=COMPILE_CXX
 // COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2/../../../../sparc-myriad-elf/include/c++/4.8.2"
 // COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2/../../../../sparc-myriad-elf/include/c++/4.8.2/sparc-myriad-elf"
 // COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2/../../../../sparc-myriad-elf/include/c++/4.8.2/backward"
@@ -69,7 +69,7 @@
 // RUN:   | FileCheck %s -check-prefix=PREPROCESS
 // PREPROCESS: "-E" "-DMYRIAD2" "-I" "foo"
 
-// RUN: %clang -target sparc-myriad -### --driver-mode=g++ %s 2>&1 | FileCheck %s --check-prefix=LIBSTDCXX
+// RUN: %clang -stdlib=platform -target sparc-myriad -### --driver-mode=g++ %s 2>&1 | FileCheck %s --check-prefix=LIBSTDCXX
 // LIBSTDCXX: "-lstdc++" "-lc" "-lgcc"
 
 // RUN: %clang -stdlib=libc++ -### -target sparcel-myriad -S -x c++ %s 2>&1 | FileCheck %s -check-prefix=LIBCXX

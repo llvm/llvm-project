@@ -19,6 +19,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TimeValue.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 

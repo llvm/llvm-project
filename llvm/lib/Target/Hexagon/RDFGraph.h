@@ -329,7 +329,9 @@ namespace rdf {
     NodeAddr() : Addr(nullptr), Id(0) {}
     NodeAddr(T A, NodeId I) : Addr(A), Id(I) {}
     NodeAddr(const NodeAddr&) = default;
+    NodeAddr(NodeAddr&&) = default;
     NodeAddr &operator= (const NodeAddr&) = default;
+    NodeAddr &operator= (NodeAddr&&) = default;
 
     bool operator== (const NodeAddr<T> &NA) const {
       assert((Addr == NA.Addr) == (Id == NA.Id));
@@ -407,8 +409,10 @@ namespace rdf {
     RegisterRef() : RegisterRef(0) {}
     explicit RegisterRef(RegisterId R, LaneBitmask M = ~LaneBitmask(0))
       : Reg(R), Mask(R != 0 ? M : 0) {}
-    RegisterRef(const RegisterRef &RR) = default;
-    RegisterRef &operator= (const RegisterRef &RR) = default;
+    RegisterRef(const RegisterRef&) = default;
+    RegisterRef(RegisterRef&&) = default;
+    RegisterRef &operator= (const RegisterRef&) = default;
+    RegisterRef &operator= (RegisterRef&&) = default;
     operator bool() const { return Reg != 0 && Mask != LaneBitmask(0); }
     bool operator== (const RegisterRef &RR) const {
       return Reg == RR.Reg && Mask == RR.Mask;

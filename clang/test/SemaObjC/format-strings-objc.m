@@ -264,3 +264,41 @@ void testObjCModifierFlags() {
   NSLog(@"%2$[tt]@ %1$[tt]@", @"Foo", @"Bar"); // no-warning
   NSLog(@"%2$[tt]@ %1$[tt]s", @"Foo", @"Bar"); // expected-warning {{object format flags cannot be used with 's' conversion specifier}}
 }
+
+// rdar://23622446
+@interface RD23622446_Tester: NSObject
+
++ (void)stringWithFormat:(const char *)format, ... __attribute__((format(__printf__, 1, 2)));
+
+@end
+
+@implementation RD23622446_Tester
+
+__attribute__ ((format_arg(1)))
+const char *rd23622446(const char *format) {
+  return format;
+}
+
++ (void)stringWithFormat:(const char *)format, ... {
+  return;
+}
+
+- (const char *)test:(const char *)format __attribute__ ((format_arg(1))) {
+  return format;
+}
+
+- (NSString *)str:(NSString *)format __attribute__ ((format_arg(1))) {
+  return format;
+}
+
+- (void)foo {
+  [RD23622446_Tester stringWithFormat:rd23622446("%u"), 1, 2]; // expected-warning {{data argument not used by format string}}
+  [RD23622446_Tester stringWithFormat:[self test: "%u"], 1, 2]; // expected-warning {{data argument not used by format string}}
+  [RD23622446_Tester stringWithFormat:[self test: "%s %s"], "name"]; // expected-warning {{more '%' conversions than data arguments}}
+  NSLog([self str: @"%@ %@"], @"name"); // expected-warning {{more '%' conversions than data arguments}}
+  [RD23622446_Tester stringWithFormat:rd23622446("%d"), 1]; // ok
+  [RD23622446_Tester stringWithFormat:[self test: "%d %d"], 1, 2]; // ok
+  NSLog([self str: @"%@"], @"string"); // ok
+}
+
+@end

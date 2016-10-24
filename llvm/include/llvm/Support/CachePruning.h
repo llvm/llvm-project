@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_CACHE_PRUNING_H
 
 #include "llvm/ADT/StringRef.h"
+#include <chrono>
 
 namespace llvm {
 
@@ -29,7 +30,7 @@ public:
   /// Define the pruning interval. This is intended to be used to avoid scanning
   /// the directory too often. It does not impact the decision of which file to
   /// prune. A value of 0 forces the scan to occurs.
-  CachePruning &setPruningInterval(int PruningInterval) {
+  CachePruning &setPruningInterval(std::chrono::seconds PruningInterval) {
     Interval = PruningInterval;
     return *this;
   }
@@ -37,7 +38,7 @@ public:
   /// Define the expiration for a file. When a file hasn't been accessed for
   /// \p ExpireAfter seconds, it is removed from the cache. A value of 0 disable
   /// the expiration-based pruning.
-  CachePruning &setEntryExpiration(unsigned ExpireAfter) {
+  CachePruning &setEntryExpiration(std::chrono::seconds ExpireAfter) {
     Expiration = ExpireAfter;
     return *this;
   }
@@ -59,8 +60,8 @@ public:
 private:
   // Options that matches the setters above.
   std::string Path;
-  unsigned Expiration = 0;
-  unsigned Interval = 0;
+  std::chrono::seconds Expiration;
+  std::chrono::seconds Interval;
   unsigned PercentageOfAvailableSpace = 0;
 };
 

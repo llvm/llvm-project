@@ -30,6 +30,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <functional>
@@ -734,7 +735,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
   }
 
   auto ModifiedTime = Status.getLastModificationTime();
-  std::string ModifiedTimeStr = ModifiedTime.str();
+  std::string ModifiedTimeStr = to_string(ModifiedTime);
   size_t found = ModifiedTimeStr.rfind(":");
   ViewOpts.CreatedTimeStr = (found != std::string::npos)
                                 ? "Created: " + ModifiedTimeStr.substr(0, found)

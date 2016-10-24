@@ -53,7 +53,8 @@ MCAsmBackend *createAArch64beAsmBackend(const Target &T,
 
 MCObjectWriter *createAArch64ELFObjectWriter(raw_pwrite_stream &OS,
                                              uint8_t OSABI,
-                                             bool IsLittleEndian);
+                                             bool IsLittleEndian,
+                                             bool IsILP32);
 
 MCObjectWriter *createAArch64MachObjectWriter(raw_pwrite_stream &OS,
                                               uint32_t CPUType,
