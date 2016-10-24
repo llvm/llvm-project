@@ -91,12 +91,12 @@ public:
     return ReadOnlySection;
   }
 
-  MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override {
     return DataSection;
   }
 
-  MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 };
 

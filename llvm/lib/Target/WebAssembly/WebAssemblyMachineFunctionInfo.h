@@ -64,6 +64,7 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   static const unsigned UnusedReg = -1u;
 
   void stackifyVReg(unsigned VReg) {
+    assert(MF.getRegInfo().getUniqueVRegDef(VReg));
     if (TargetRegisterInfo::virtReg2Index(VReg) >= VRegStackified.size())
       VRegStackified.resize(TargetRegisterInfo::virtReg2Index(VReg) + 1);
     VRegStackified.set(TargetRegisterInfo::virtReg2Index(VReg));

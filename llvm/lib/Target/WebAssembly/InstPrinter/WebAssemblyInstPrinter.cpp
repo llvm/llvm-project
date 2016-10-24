@@ -149,16 +149,27 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (OpNo < MII.get(MI->getOpcode()).getNumDefs())
       O << '=';
   } else if (Op.isImm()) {
-    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
-            (MII.get(MI->getOpcode()).TSFlags &
-             WebAssemblyII::VariableOpIsImmediate)) &&
+    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+    assert((OpNo < Desc.getNumOperands() ||
+            (Desc.TSFlags & WebAssemblyII::VariableOpIsImmediate)) &&
            "WebAssemblyII::VariableOpIsImmediate should be set for "
            "variable_ops immediate ops");
-    // TODO: (MII.get(MI->getOpcode()).TSFlags &
-    //        WebAssemblyII::VariableOpImmediateIsLabel)
-    // can tell us whether this is an immediate referencing a label in the
-    // control flow stack, and it may be nice to pretty-print.
-    O << Op.getImm();
+
+    if (Desc.TSFlags & WebAssemblyII::VariableOpImmediateIsType) {
+      switch (Op.getImm()) {
+      case int64_t(WebAssembly::ValType::I32): O << "i32"; break;
+      case int64_t(WebAssembly::ValType::I64): O << "i64"; break;
+      case int64_t(WebAssembly::ValType::F32): O << "f32"; break;
+      case int64_t(WebAssembly::ValType::F64): O << "f64"; break;
+      default: llvm_unreachable("unknown local type");
+      }
+    } else {
+      // TODO: (MII.get(MI->getOpcode()).TSFlags &
+      //        WebAssemblyII::VariableOpImmediateIsLabel)
+      // can tell us whether this is an immediate referencing a label in the
+      // control flow stack, and it may be nice to pretty-print.
+      O << Op.getImm();
+    }
   } else if (Op.isFPImm()) {
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     assert(OpNo < Desc.getNumOperands() &&
@@ -200,18 +211,18 @@ WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
                                                          unsigned OpNo,
                                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
-  switch (Imm) {
-  case WebAssembly::Void: break;
-  case WebAssembly::I32: O << "i32"; break;
-  case WebAssembly::I64: O << "i64"; break;
-  case WebAssembly::F32: O << "f32"; break;
-  case WebAssembly::F64: O << "f64"; break;
-  case WebAssembly::I8x16: O << "i8x16"; break;
-  case WebAssembly::I16x8: O << "i16x8"; break;
-  case WebAssembly::I32x4: O << "i32x4"; break;
-  case WebAssembly::I64x2: O << "i32x4"; break;
-  case WebAssembly::F32x4: O << "f32x4"; break;
-  case WebAssembly::F64x2: O << "f64x2"; break;
+  switch (WebAssembly::ExprType(Imm)) {
+  case WebAssembly::ExprType::Void: break;
+  case WebAssembly::ExprType::I32: O << "i32"; break;
+  case WebAssembly::ExprType::I64: O << "i64"; break;
+  case WebAssembly::ExprType::F32: O << "f32"; break;
+  case WebAssembly::ExprType::F64: O << "f64"; break;
+  case WebAssembly::ExprType::I8x16: O << "i8x16"; break;
+  case WebAssembly::ExprType::I16x8: O << "i16x8"; break;
+  case WebAssembly::ExprType::I32x4: O << "i32x4"; break;
+  case WebAssembly::ExprType::I64x2: O << "i32x4"; break;
+  case WebAssembly::ExprType::F32x4: O << "f32x4"; break;
+  case WebAssembly::ExprType::F64x2: O << "f64x2"; break;
   }
 }
 

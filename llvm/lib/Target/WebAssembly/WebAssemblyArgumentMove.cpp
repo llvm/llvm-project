@@ -30,6 +30,7 @@
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -63,23 +64,6 @@ FunctionPass *llvm::createWebAssemblyArgumentMove() {
   return new WebAssemblyArgumentMove();
 }
 
-/// Test whether the given instruction is an ARGUMENT.
-static bool IsArgument(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case WebAssembly::ARGUMENT_I32:
-  case WebAssembly::ARGUMENT_I64:
-  case WebAssembly::ARGUMENT_F32:
-  case WebAssembly::ARGUMENT_F64:
-  case WebAssembly::ARGUMENT_v16i8:
-  case WebAssembly::ARGUMENT_v8i16:
-  case WebAssembly::ARGUMENT_v4i32:
-  case WebAssembly::ARGUMENT_v4f32:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({
     dbgs() << "********** Argument Move **********\n"
@@ -92,7 +76,7 @@ bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
 
   // Look for the first NonArg instruction.
   for (MachineInstr &MI : EntryMBB) {
-    if (!IsArgument(MI)) {
+    if (!WebAssembly::isArgument(MI)) {
       InsertPt = MI;
       break;
     }
@@ -101,7 +85,7 @@ bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
   // Now move any argument instructions later in the block
   // to before our first NonArg instruction.
   for (MachineInstr &MI : llvm::make_range(InsertPt, EntryMBB.end())) {
-    if (IsArgument(MI)) {
+    if (WebAssembly::isArgument(MI)) {
       EntryMBB.insert(InsertPt, MI.removeFromParent());
       Changed = true;
     }

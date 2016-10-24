@@ -4,7 +4,7 @@
 ; test cases have been minimized as much as possible, but still most of the test
 ; cases could break if instruction scheduling heuristics for cortex-a53 change
 ; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=1 -stats 2>&1 \
-; RUN:  | FileCheck %s --check-prefix CHECK
+; RUN:  | FileCheck %s
 ; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=0 -stats 2>&1 \
 ; RUN:  | FileCheck %s --check-prefix CHECK-NOWORKAROUND
 ; The following run lines are just to verify whether or not this pass runs by

@@ -4,7 +4,7 @@
 ; attributes values. This checks the "default" behaviour when these FP function
 ; attributes are not set at all.
 
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15  | FileCheck %s --check-prefix=CHECK
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15  | FileCheck %s
 
 ; CHECK: .eabi_attribute 20, 1
 ; CHECK: .eabi_attribute 21, 1

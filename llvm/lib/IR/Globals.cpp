@@ -213,6 +213,14 @@ bool GlobalValue::canIncreaseAlignment() const {
   return true;
 }
 
+GlobalObject *GlobalValue::getBaseObject() {
+  if (auto *GO = dyn_cast<GlobalObject>(this))
+    return GO;
+  if (auto *GA = dyn_cast<GlobalAlias>(this))
+    return GA->getBaseObject();
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // GlobalVariable Implementation
 //===----------------------------------------------------------------------===//

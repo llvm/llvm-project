@@ -44,6 +44,8 @@ namespace WebAssembly {
 enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
+  /// Local index.
+  OPERAND_LOCAL,
   /// 32-bit integer immediates.
   OPERAND_I32IMM,
   /// 64-bit integer immediates.
@@ -78,6 +80,9 @@ enum {
   // For immediate values in the variable_ops range, this flag indicates
   // whether the value represents a control-flow label.
   VariableOpImmediateIsLabel = (1 << 1),
+  // For immediate values in the variable_ops range, this flag indicates
+  // whether the value represents a ValType.
+  VariableOpImmediateIsType = (1 << 2),
 };
 } // end namespace WebAssemblyII
 
@@ -144,8 +149,22 @@ static const unsigned LoadP2AlignOperandNo = 3;
 static const unsigned StoreP2AlignOperandNo = 2;
 
 /// This is used to indicate block signatures.
-enum ExprType {
+enum class ExprType {
   Void = 0,
+  I32  = 1,
+  I64  = 2,
+  F32  = 3,
+  F64  = 4,
+  I8x16 = 5,
+  I16x8 = 6,
+  I32x4 = 7,
+  I64x2 = 8,
+  F32x4 = 9,
+  F64x2 = 10
+};
+
+/// This is used to indicate local types.
+enum class ValType {
   I32  = 1,
   I64  = 2,
   F32  = 3,

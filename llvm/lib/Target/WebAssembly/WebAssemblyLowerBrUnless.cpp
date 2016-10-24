@@ -107,9 +107,9 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       // instruction to invert it.
       if (!Inverted) {
         unsigned Tmp = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-        MFI.stackifyVReg(Tmp);
         BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::EQZ_I32), Tmp)
             .addReg(Cond);
+        MFI.stackifyVReg(Tmp);
         Cond = Tmp;
         Inverted = true;
       }

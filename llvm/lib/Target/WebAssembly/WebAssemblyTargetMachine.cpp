@@ -41,6 +41,11 @@ static cl::opt<bool> EnableEmSjLj(
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));
 
+static cl::opt<bool> ExplicitLocals(
+    "wasm-explicit-locals",
+    cl::desc("WebAssembly with explicit get_local/set_local"),
+    cl::init(false));
+
 extern "C" void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(
@@ -255,6 +260,10 @@ void WebAssemblyPassConfig::addPreEmitPass() {
     // that become stackified.
     addPass(createWebAssemblyRegColoring());
   }
+
+  // Insert explicit get_local and set_local operators.
+  if (ExplicitLocals)
+    addPass(createWebAssemblyExplicitLocals());
 
   // Eliminate multiple-entry loops.
   addPass(createWebAssemblyFixIrreducibleControlFlow());

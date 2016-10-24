@@ -9,7 +9,7 @@ For more information on WebAssembly itself, see the design documents:
 
 The following documents contain some information on the planned semantics and
 binary encoding of WebAssembly itself:
-  * https://github.com/WebAssembly/design/blob/master/AstSemantics.md
+  * https://github.com/WebAssembly/design/blob/master/Semantics.md
   * https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md
 
 The backend is built, tested and archived on the following waterfall:

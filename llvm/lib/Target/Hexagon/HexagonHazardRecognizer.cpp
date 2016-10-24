@@ -96,9 +96,9 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
 
   // Keep the set of definitions for each packet, which is used to determine
   // if a .new can be used.
-  for (ConstMIOperands MO(*MI); MO.isValid(); ++MO)
-    if (MO->isReg() && MO->isDef() && !MO->isImplicit())
-      RegDefs.insert(MO->getReg());
+  for (const MachineOperand &MO : MI->operands())
+    if (MO.isReg() && MO.isDef() && !MO.isImplicit())
+      RegDefs.insert(MO.getReg());
 
   if (TII->isZeroCost(MI->getOpcode()))
     return;

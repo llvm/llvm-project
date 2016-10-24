@@ -18,6 +18,12 @@
 #
 # The script will modify the output directory which is given as the first
 # argument to the script.
+#
+# FIXME: We should really be using a simpler approach to building this object
+# file, and it should be available as a regular cmake rule. Conceptually, we
+# want to be doing "ld -r" followed by "objcopy -G" to create a relocatable
+# object file with only our entry points exposed. However, this does not work at
+# present, see PR30750.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
