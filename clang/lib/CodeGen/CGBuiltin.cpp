@@ -6979,6 +6979,18 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
                                                     std::max(NumElts, 8U)));
 }
 
+static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
+                            ArrayRef<Value *> Ops) {
+  Value *Cmp = CGF.Builder.CreateICmp(Pred, Ops[0], Ops[1]);
+  Value *Res = CGF.Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
+
+  if (Ops.size() == 2)
+    return Res;
+
+  assert(Ops.size() == 4);
+  return EmitX86Select(CGF, Ops[3], Res, Ops[2]);
+}
+
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
   if (BuiltinID == X86::BI__builtin_ms_va_start ||
@@ -7511,43 +7523,58 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                          Ops[1]);
   }
 
-  // TODO: Handle 64/512-bit vector widths of min/max.
   case X86::BI__builtin_ia32_pmaxsb128:
   case X86::BI__builtin_ia32_pmaxsw128:
   case X86::BI__builtin_ia32_pmaxsd128:
+  case X86::BI__builtin_ia32_pmaxsq128_mask:
   case X86::BI__builtin_ia32_pmaxsb256:
   case X86::BI__builtin_ia32_pmaxsw256:
-  case X86::BI__builtin_ia32_pmaxsd256: {
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SGT, Ops[0], Ops[1]);
-    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
-  }
+  case X86::BI__builtin_ia32_pmaxsd256:
+  case X86::BI__builtin_ia32_pmaxsq256_mask:
+  case X86::BI__builtin_ia32_pmaxsb512_mask:
+  case X86::BI__builtin_ia32_pmaxsw512_mask:
+  case X86::BI__builtin_ia32_pmaxsd512_mask:
+  case X86::BI__builtin_ia32_pmaxsq512_mask:
+    return EmitX86MinMax(*this, ICmpInst::ICMP_SGT, Ops);
   case X86::BI__builtin_ia32_pmaxub128:
   case X86::BI__builtin_ia32_pmaxuw128:
   case X86::BI__builtin_ia32_pmaxud128:
+  case X86::BI__builtin_ia32_pmaxuq128_mask:
   case X86::BI__builtin_ia32_pmaxub256:
   case X86::BI__builtin_ia32_pmaxuw256:
-  case X86::BI__builtin_ia32_pmaxud256: {
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Ops[0], Ops[1]);
-    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
-  }
+  case X86::BI__builtin_ia32_pmaxud256:
+  case X86::BI__builtin_ia32_pmaxuq256_mask:
+  case X86::BI__builtin_ia32_pmaxub512_mask:
+  case X86::BI__builtin_ia32_pmaxuw512_mask:
+  case X86::BI__builtin_ia32_pmaxud512_mask:
+  case X86::BI__builtin_ia32_pmaxuq512_mask:
+    return EmitX86MinMax(*this, ICmpInst::ICMP_UGT, Ops);
   case X86::BI__builtin_ia32_pminsb128:
   case X86::BI__builtin_ia32_pminsw128:
   case X86::BI__builtin_ia32_pminsd128:
+  case X86::BI__builtin_ia32_pminsq128_mask:
   case X86::BI__builtin_ia32_pminsb256:
   case X86::BI__builtin_ia32_pminsw256:
-  case X86::BI__builtin_ia32_pminsd256: {
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SLT, Ops[0], Ops[1]);
-    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
-  }
+  case X86::BI__builtin_ia32_pminsd256:
+  case X86::BI__builtin_ia32_pminsq256_mask:
+  case X86::BI__builtin_ia32_pminsb512_mask:
+  case X86::BI__builtin_ia32_pminsw512_mask:
+  case X86::BI__builtin_ia32_pminsd512_mask:
+  case X86::BI__builtin_ia32_pminsq512_mask:
+    return EmitX86MinMax(*this, ICmpInst::ICMP_SLT, Ops);
   case X86::BI__builtin_ia32_pminub128:
   case X86::BI__builtin_ia32_pminuw128:
   case X86::BI__builtin_ia32_pminud128:
+  case X86::BI__builtin_ia32_pminuq128_mask:
   case X86::BI__builtin_ia32_pminub256:
   case X86::BI__builtin_ia32_pminuw256:
-  case X86::BI__builtin_ia32_pminud256: {
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, Ops[0], Ops[1]);
-    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
-  }
+  case X86::BI__builtin_ia32_pminud256:
+  case X86::BI__builtin_ia32_pminuq256_mask:
+  case X86::BI__builtin_ia32_pminub512_mask:
+  case X86::BI__builtin_ia32_pminuw512_mask:
+  case X86::BI__builtin_ia32_pminud512_mask:
+  case X86::BI__builtin_ia32_pminuq512_mask:
+    return EmitX86MinMax(*this, ICmpInst::ICMP_ULT, Ops);
 
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:
