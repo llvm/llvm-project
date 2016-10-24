@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=unix.StdCLibraryFunctions,debug.ExprInspection -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -analyze -analyzer-checker=unix.StdCLibraryFunctions,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 
