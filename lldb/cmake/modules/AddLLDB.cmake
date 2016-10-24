@@ -61,15 +61,15 @@ macro(add_lldb_library name)
         llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
                                 -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group
                                 -Wl,--start-group ${SWIFT_ALL_LIBS} -Wl,--end-group
-                                -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group
+                                -Wl,--start-group ${CLANG_ALL_LIBS} -Wl,--end-group
           )
       else()
         llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
-                                ${LLDB_USED_LIBS} ${SWIFT_ALL_LIBS} ${CLANG_USED_LIBS}
+                                ${LLDB_USED_LIBS} ${SWIFT_ALL_LIBS} ${CLANG_ALL_LIBS}
           )
       endif()
     else()
-      llvm_add_library(${name} ${libking} ${srcs})
+        llvm_add_library(${name} ${libkind} ${srcs})
     endif()
 
     if (${name} STREQUAL "liblldb")
