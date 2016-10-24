@@ -106,6 +106,10 @@ def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
     "Disable latency scheduling heuristic">;
 
+def FeatureUseRSqrt : SubtargetFeature<
+    "use-reciprocal-square-root", "UseRSqrt", "true",
+    "Use the reciprocal square root approximation">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -227,6 +231,7 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                     FeatureNEON,
                                     FeaturePerfMon,
                                     FeaturePostRAScheduler,
+                                    FeatureUseRSqrt,
                                     FeatureZCZeroing
                                     ]>;
 

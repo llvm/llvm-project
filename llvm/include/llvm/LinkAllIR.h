@@ -31,7 +31,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/TimeValue.h"
 #include <cstdlib>
 
 namespace {

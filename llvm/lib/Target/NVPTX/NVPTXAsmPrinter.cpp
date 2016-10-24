@@ -45,7 +45,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/TimeValue.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <sstream>

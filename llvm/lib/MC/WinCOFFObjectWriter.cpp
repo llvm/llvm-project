@@ -34,7 +34,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JamCRC.h"
-#include "llvm/Support/TimeValue.h"
 #include <cstdio>
 #include <ctime>
 

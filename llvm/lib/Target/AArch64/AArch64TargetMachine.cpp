@@ -159,7 +159,11 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 }
 
 // Helper function to build a DataLayout string
-static std::string computeDataLayout(const Triple &TT, bool LittleEndian) {
+static std::string computeDataLayout(const Triple &TT,
+                                     const MCTargetOptions &Options,
+                                     bool LittleEndian) {
+  if (Options.getABIName() == "ilp32")
+    return "e-m:e-p:32:32-i8:8-i16:16-i64:64-S128";
   if (TT.isOSBinFormatMachO())
     return "e-m:o-i64:64-i128:128-n32:64-S128";
   if (LittleEndian)
@@ -188,8 +192,10 @@ AArch64TargetMachine::AArch64TargetMachine(
     CodeModel::Model CM, CodeGenOpt::Level OL, bool LittleEndian)
     // This nested ternary is horrible, but DL needs to be properly
     // initialized before TLInfo is constructed.
-    : LLVMTargetMachine(T, computeDataLayout(TT, LittleEndian), TT, CPU, FS,
-                        Options, getEffectiveRelocModel(TT, RM), CM, OL),
+    : LLVMTargetMachine(T, computeDataLayout(TT, Options.MCOptions,
+                                             LittleEndian),
+                        TT, CPU, FS, Options,
+			getEffectiveRelocModel(TT, RM), CM, OL),
       TLOF(createTLOF(getTargetTriple())),
       isLittle(LittleEndian) {
   initAsmInfo();

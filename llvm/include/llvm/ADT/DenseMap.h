@@ -742,6 +742,8 @@ class SmallDenseMap
   // simplicity of referring to them.
   typedef DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT> BaseT;
   friend class DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+  static_assert(isPowerOf2_64(InlineBuckets),
+                "InlineBuckets must be a power of 2.");
 
   unsigned Small : 1;
   unsigned NumEntries : 31;

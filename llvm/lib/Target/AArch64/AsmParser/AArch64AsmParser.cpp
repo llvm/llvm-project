@@ -119,9 +119,11 @@ public:
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "AArch64GenAsmMatcher.inc"
   };
+  bool IsILP32;
   AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, STI) {
+    IsILP32 = Options.getABIName() == "ilp32";
     MCAsmParserExtension::Initialize(Parser);
     MCStreamer &S = getParser().getStreamer();
     if (S.getTargetStreamer() == nullptr)
@@ -4690,7 +4692,7 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
              "consecutive same-size even/odd register pair");
     return MatchOperand_ParseFail;
   }
-  
+
   unsigned Pair = 0;
   if(isXReg) {
     Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube64,

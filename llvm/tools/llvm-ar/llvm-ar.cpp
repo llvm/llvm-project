@@ -528,7 +528,7 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
     failIfError(sys::fs::status(*MI, Status), *MI);
     auto ModTimeOrErr = Member.getLastModified();
     failIfError(ModTimeOrErr.takeError());
-    if (sys::TimeValue(Status.getLastModificationTime()) < ModTimeOrErr.get()) {
+    if (Status.getLastModificationTime() < ModTimeOrErr.get()) {
       if (PosName.empty())
         return IA_AddOldMember;
       return IA_MoveOldMember;

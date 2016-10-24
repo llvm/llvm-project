@@ -541,12 +541,14 @@ namespace {
 class ELFAArch64AsmBackend : public AArch64AsmBackend {
 public:
   uint8_t OSABI;
+  bool IsILP32;
 
-  ELFAArch64AsmBackend(const Target &T, uint8_t OSABI, bool IsLittleEndian)
-    : AArch64AsmBackend(T, IsLittleEndian), OSABI(OSABI) {}
+  ELFAArch64AsmBackend(const Target &T, uint8_t OSABI, bool IsLittleEndian,
+                       bool IsILP32)
+    : AArch64AsmBackend(T, IsLittleEndian), OSABI(OSABI), IsILP32(IsILP32) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian);
+    return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian, IsILP32);
   }
 
   void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
@@ -593,7 +595,8 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
 
   assert(TheTriple.isOSBinFormatELF() && "Expect either MachO or ELF target");
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
-  return new ELFAArch64AsmBackend(T, OSABI, /*IsLittleEndian=*/true);
+  bool IsILP32 = Options.getABIName() == "ilp32";
+  return new ELFAArch64AsmBackend(T, OSABI, /*IsLittleEndian=*/true, IsILP32);
 }
 
 MCAsmBackend *llvm::createAArch64beAsmBackend(const Target &T,
@@ -604,5 +607,6 @@ MCAsmBackend *llvm::createAArch64beAsmBackend(const Target &T,
   assert(TheTriple.isOSBinFormatELF() &&
          "Big endian is only supported for ELF targets!");
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
-  return new ELFAArch64AsmBackend(T, OSABI, /*IsLittleEndian=*/false);
+  bool IsILP32 = Options.getABIName() == "ilp32";
+  return new ELFAArch64AsmBackend(T, OSABI, /*IsLittleEndian=*/false, IsILP32);
 }

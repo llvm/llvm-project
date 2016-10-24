@@ -32,3 +32,38 @@ entry:
   store i32 %V1, i32* @G1
   ret void
 }
+
+;; Check that memoryphi optimization happens during EarlyCSE, enabling
+;; more load CSE opportunities.
+; CHECK-LABEL: @test_memphiopt(
+; CHECK-NOMEMSSA-LABEL: @test_memphiopt(
+define void @test_memphiopt(i1 %c, i32* %p) {
+; CHECK-LABEL: entry:
+; CHECK-NOMEMSSA-LABEL: entry:
+entry:
+; CHECK: load
+; CHECK-NOMEMSSA: load
+  %v1 = load i32, i32* @G1
+  br i1 %c, label %then, label %end
+
+; CHECK-LABEL: then:
+; CHECK-NOMEMSSA-LABEL: then:
+then:
+; CHECK: load
+; CHECK-NOMEMSSA: load
+  %pv = load i32, i32* %p
+; CHECK-NOT: store
+; CHECK-NOMEMSSA-NOT: store
+  store i32 %pv, i32* %p
+  br label %end
+
+; CHECK-LABEL: end:
+; CHECK-NOMEMSSA-LABEL: end:
+end:
+; CHECK-NOT: load
+; CHECK-NOMEMSSA: load
+  %v2 = load i32, i32* @G1
+  %sum = add i32 %v1, %v2
+  store i32 %sum, i32* @G2
+  ret void
+}

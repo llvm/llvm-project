@@ -25,24 +25,79 @@ using namespace llvm;
 namespace {
 class AArch64ELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  AArch64ELFObjectWriter(uint8_t OSABI, bool IsLittleEndian);
+  AArch64ELFObjectWriter(uint8_t OSABI, bool IsLittleEndian, bool IsILP32);
 
   ~AArch64ELFObjectWriter() override;
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
-
+  bool IsILP32;
 private:
 };
 }
 
 AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI,
-                                               bool IsLittleEndian)
+                                               bool IsLittleEndian,
+                                               bool IsILP32)
     : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_AARCH64,
-                              /*HasRelocationAddend*/ true) {}
+                              /*HasRelocationAddend*/ true),
+      IsILP32(IsILP32) {}
 
 AArch64ELFObjectWriter::~AArch64ELFObjectWriter() {}
+
+#define R_CLS(rtype) \
+        IsILP32 ? ELF::R_AARCH64_P32_##rtype : ELF::R_AARCH64_##rtype
+#define BAD_ILP32_MOV(lp64rtype) "ILP32 absolute MOV relocation not "\
+        "supported (LP64 eqv: " #lp64rtype ")"
+
+// assumes IsILP32 is true
+bool isNonILP32reloc(const MCFixup &Fixup, AArch64MCExpr::VariantKind RefKind,
+                     MCContext &Ctx)
+{
+  if ((unsigned)Fixup.getKind() != AArch64::fixup_aarch64_movw)
+    return false;
+  switch(RefKind) {
+    case AArch64MCExpr::VK_ABS_G3:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G3));
+      return true;
+    case AArch64MCExpr::VK_ABS_G2:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G2));
+      return true;
+    case AArch64MCExpr::VK_ABS_G2_S:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_SABS_G2));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_ABS_G2_NC:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G2_NC));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_ABS_G1_S:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_SABS_G1));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_ABS_G1_NC:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G1_NC));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_DTPREL_G2:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLD_MOVW_DTPREL_G2));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_DTPREL_G1_NC:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLD_MOVW_DTPREL_G1_NC));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_TPREL_G2:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLE_MOVW_TPREL_G2));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_TPREL_G1_NC:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLE_MOVW_TPREL_G1_NC));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_GOTTPREL_G1:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSIE_MOVW_GOTTPREL_G1));
+      return ELF::R_AARCH64_NONE;
+    case AArch64MCExpr::VK_GOTTPREL_G0_NC:
+      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSIE_MOVW_GOTTPREL_G0_NC));
+      return ELF::R_AARCH64_NONE;
+    default: return false;
+  }
+  return false;
+}
 
 unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCValue &Target,
@@ -67,147 +122,161 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;
     case FK_Data_2:
-      return ELF::R_AARCH64_PREL16;
+      return R_CLS(PREL16);
     case FK_Data_4:
-      return ELF::R_AARCH64_PREL32;
+      return R_CLS(PREL32);
     case FK_Data_8:
-      return ELF::R_AARCH64_PREL64;
+      if (IsILP32) {
+        Ctx.reportError(Fixup.getLoc(), "ILP32 8 byte PC relative data "
+                        "relocation not supported (LP64 eqv: PREL64)");
+        return ELF::R_AARCH64_NONE;
+      } else
+        return ELF::R_AARCH64_PREL64;
     case AArch64::fixup_aarch64_pcrel_adr_imm21:
       assert(SymLoc == AArch64MCExpr::VK_NONE && "unexpected ADR relocation");
-      return ELF::R_AARCH64_ADR_PREL_LO21;
+      return R_CLS(ADR_PREL_LO21);
     case AArch64::fixup_aarch64_pcrel_adrp_imm21:
       if (SymLoc == AArch64MCExpr::VK_ABS && !IsNC)
-        return ELF::R_AARCH64_ADR_PREL_PG_HI21;
+        return R_CLS(ADR_PREL_PG_HI21);
       if (SymLoc == AArch64MCExpr::VK_GOT && !IsNC)
-        return ELF::R_AARCH64_ADR_GOT_PAGE;
+        return R_CLS(ADR_GOT_PAGE);
       if (SymLoc == AArch64MCExpr::VK_GOTTPREL && !IsNC)
-        return ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21;
+        return R_CLS(TLSIE_ADR_GOTTPREL_PAGE21);
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && !IsNC)
-        return ELF::R_AARCH64_TLSDESC_ADR_PAGE21;
+        return R_CLS(TLSDESC_ADR_PAGE21);
       Ctx.reportError(Fixup.getLoc(),
                       "invalid symbol kind for ADRP relocation");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_pcrel_branch26:
-      return ELF::R_AARCH64_JUMP26;
+      return R_CLS(JUMP26);
     case AArch64::fixup_aarch64_pcrel_call26:
-      return ELF::R_AARCH64_CALL26;
+      return R_CLS(CALL26);
     case AArch64::fixup_aarch64_ldr_pcrel_imm19:
       if (SymLoc == AArch64MCExpr::VK_GOTTPREL)
-        return ELF::R_AARCH64_TLSIE_LD_GOTTPREL_PREL19;
-      return ELF::R_AARCH64_LD_PREL_LO19;
+        return R_CLS(TLSIE_LD_GOTTPREL_PREL19);
+      return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
-      return ELF::R_AARCH64_TSTBR14;
+      return R_CLS(TSTBR14);
     case AArch64::fixup_aarch64_pcrel_branch19:
-      return ELF::R_AARCH64_CONDBR19;
+      return R_CLS(CONDBR19);
     default:
       Ctx.reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
       return ELF::R_AARCH64_NONE;
     }
   } else {
+    if (IsILP32 && isNonILP32reloc(Fixup, RefKind, Ctx))
+        return ELF::R_AARCH64_NONE;
     switch ((unsigned)Fixup.getKind()) {
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;
     case FK_Data_2:
-      return ELF::R_AARCH64_ABS16;
+      return R_CLS(ABS16);
     case FK_Data_4:
-      return ELF::R_AARCH64_ABS32;
+      return R_CLS(ABS32);
     case FK_Data_8:
-      return ELF::R_AARCH64_ABS64;
+      if (IsILP32) {
+        Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(ABS64));
+        return ELF::R_AARCH64_NONE;
+      } else
+        return ELF::R_AARCH64_ABS64;
     case AArch64::fixup_aarch64_add_imm12:
       if (RefKind == AArch64MCExpr::VK_DTPREL_HI12)
-        return ELF::R_AARCH64_TLSLD_ADD_DTPREL_HI12;
+        return R_CLS(TLSLD_ADD_DTPREL_HI12);
       if (RefKind == AArch64MCExpr::VK_TPREL_HI12)
-        return ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12;
+        return R_CLS(TLSLE_ADD_TPREL_HI12);
       if (RefKind == AArch64MCExpr::VK_DTPREL_LO12_NC)
-        return ELF::R_AARCH64_TLSLD_ADD_DTPREL_LO12_NC;
+        return R_CLS(TLSLD_ADD_DTPREL_LO12_NC);
       if (RefKind == AArch64MCExpr::VK_DTPREL_LO12)
-        return ELF::R_AARCH64_TLSLD_ADD_DTPREL_LO12;
+        return R_CLS(TLSLD_ADD_DTPREL_LO12);
       if (RefKind == AArch64MCExpr::VK_TPREL_LO12_NC)
-        return ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC;
+        return R_CLS(TLSLE_ADD_TPREL_LO12_NC);
       if (RefKind == AArch64MCExpr::VK_TPREL_LO12)
-        return ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12;
+        return R_CLS(TLSLE_ADD_TPREL_LO12);
       if (RefKind == AArch64MCExpr::VK_TLSDESC_LO12)
-        return ELF::R_AARCH64_TLSDESC_ADD_LO12_NC;
+        return R_CLS(TLSDESC_ADD_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
-        return ELF::R_AARCH64_ADD_ABS_LO12_NC;
+        return R_CLS(ADD_ABS_LO12_NC);
 
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for add (uimm12) instruction");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale1:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
-        return ELF::R_AARCH64_LDST8_ABS_LO12_NC;
+        return R_CLS(LDST8_ABS_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST8_DTPREL_LO12;
+        return R_CLS(TLSLD_LDST8_DTPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST8_DTPREL_LO12_NC;
+        return R_CLS(TLSLD_LDST8_DTPREL_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_TPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST8_TPREL_LO12;
+        return R_CLS(TLSLE_LDST8_TPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_TPREL && IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC;
+        return R_CLS(TLSLE_LDST8_TPREL_LO12_NC);
 
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 8-bit load/store instruction");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale2:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
-        return ELF::R_AARCH64_LDST16_ABS_LO12_NC;
+        return R_CLS(LDST16_ABS_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST16_DTPREL_LO12;
+        return R_CLS(TLSLD_LDST16_DTPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST16_DTPREL_LO12_NC;
+        return R_CLS(TLSLD_LDST16_DTPREL_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_TPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST16_TPREL_LO12;
+        return R_CLS(TLSLE_LDST16_TPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_TPREL && IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC;
+        return R_CLS(TLSLE_LDST16_TPREL_LO12_NC);
 
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 16-bit load/store instruction");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale4:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
-        return ELF::R_AARCH64_LDST32_ABS_LO12_NC;
+        return R_CLS(LDST32_ABS_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST32_DTPREL_LO12;
+        return R_CLS(TLSLD_LDST32_DTPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST32_DTPREL_LO12_NC;
+        return R_CLS(TLSLD_LDST32_DTPREL_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_TPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST32_TPREL_LO12;
+        return R_CLS(TLSLE_LDST32_TPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_TPREL && IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC;
+        return R_CLS(TLSLE_LDST32_TPREL_LO12_NC);
 
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 32-bit load/store instruction");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale8:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
-        return ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+        return R_CLS(LDST64_ABS_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_GOT && IsNC)
-        return ELF::R_AARCH64_LD64_GOT_LO12_NC;
+        return R_CLS(LD64_GOT_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST64_DTPREL_LO12;
+        return R_CLS(TLSLD_LDST64_DTPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_DTPREL && IsNC)
-        return ELF::R_AARCH64_TLSLD_LDST64_DTPREL_LO12_NC;
+        return R_CLS(TLSLD_LDST64_DTPREL_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_TPREL && !IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST64_TPREL_LO12;
+        return R_CLS(TLSLE_LDST64_TPREL_LO12);
       if (SymLoc == AArch64MCExpr::VK_TPREL && IsNC)
-        return ELF::R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC;
+        return R_CLS(TLSLE_LDST64_TPREL_LO12_NC);
       if (SymLoc == AArch64MCExpr::VK_GOTTPREL && IsNC)
-        return ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
+        return IsILP32 ? ELF::R_AARCH64_P32_TLSIE_LD32_GOTTPREL_LO12_NC
+                       : ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && IsNC)
-        return ELF::R_AARCH64_TLSDESC_LD64_LO12_NC;
+        return IsILP32 ? ELF::R_AARCH64_P32_TLSDESC_LD32_LO12_NC
+                       : ELF::R_AARCH64_TLSDESC_LD64_LO12_NC;
 
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 64-bit load/store instruction");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale16:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
-        return ELF::R_AARCH64_LDST128_ABS_LO12_NC;
+        return R_CLS(LDST128_ABS_LO12_NC);
 
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 128-bit load/store instruction");
       return ELF::R_AARCH64_NONE;
+    // ILP32 case not reached here, tested with isNonILP32reloc
     case AArch64::fixup_aarch64_movw:
       if (RefKind == AArch64MCExpr::VK_ABS_G3)
         return ELF::R_AARCH64_MOVW_UABS_G3;
@@ -218,37 +287,37 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if (RefKind == AArch64MCExpr::VK_ABS_G2_NC)
         return ELF::R_AARCH64_MOVW_UABS_G2_NC;
       if (RefKind == AArch64MCExpr::VK_ABS_G1)
-        return ELF::R_AARCH64_MOVW_UABS_G1;
+        return R_CLS(MOVW_UABS_G1);
       if (RefKind == AArch64MCExpr::VK_ABS_G1_S)
         return ELF::R_AARCH64_MOVW_SABS_G1;
       if (RefKind == AArch64MCExpr::VK_ABS_G1_NC)
         return ELF::R_AARCH64_MOVW_UABS_G1_NC;
       if (RefKind == AArch64MCExpr::VK_ABS_G0)
-        return ELF::R_AARCH64_MOVW_UABS_G0;
+        return R_CLS(MOVW_UABS_G0);
       if (RefKind == AArch64MCExpr::VK_ABS_G0_S)
-        return ELF::R_AARCH64_MOVW_SABS_G0;
+        return R_CLS(MOVW_SABS_G0);
       if (RefKind == AArch64MCExpr::VK_ABS_G0_NC)
-        return ELF::R_AARCH64_MOVW_UABS_G0_NC;
+        return R_CLS(MOVW_UABS_G0_NC);
       if (RefKind == AArch64MCExpr::VK_DTPREL_G2)
         return ELF::R_AARCH64_TLSLD_MOVW_DTPREL_G2;
       if (RefKind == AArch64MCExpr::VK_DTPREL_G1)
-        return ELF::R_AARCH64_TLSLD_MOVW_DTPREL_G1;
+        return R_CLS(TLSLD_MOVW_DTPREL_G1);
       if (RefKind == AArch64MCExpr::VK_DTPREL_G1_NC)
         return ELF::R_AARCH64_TLSLD_MOVW_DTPREL_G1_NC;
       if (RefKind == AArch64MCExpr::VK_DTPREL_G0)
-        return ELF::R_AARCH64_TLSLD_MOVW_DTPREL_G0;
+        return R_CLS(TLSLD_MOVW_DTPREL_G0);
       if (RefKind == AArch64MCExpr::VK_DTPREL_G0_NC)
-        return ELF::R_AARCH64_TLSLD_MOVW_DTPREL_G0_NC;
+        return R_CLS(TLSLD_MOVW_DTPREL_G0_NC);
       if (RefKind == AArch64MCExpr::VK_TPREL_G2)
         return ELF::R_AARCH64_TLSLE_MOVW_TPREL_G2;
       if (RefKind == AArch64MCExpr::VK_TPREL_G1)
-        return ELF::R_AARCH64_TLSLE_MOVW_TPREL_G1;
+        return R_CLS(TLSLE_MOVW_TPREL_G1);
       if (RefKind == AArch64MCExpr::VK_TPREL_G1_NC)
         return ELF::R_AARCH64_TLSLE_MOVW_TPREL_G1_NC;
       if (RefKind == AArch64MCExpr::VK_TPREL_G0)
-        return ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0;
+        return R_CLS(TLSLE_MOVW_TPREL_G0);
       if (RefKind == AArch64MCExpr::VK_TPREL_G0_NC)
-        return ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC;
+        return R_CLS(TLSLE_MOVW_TPREL_G0_NC);
       if (RefKind == AArch64MCExpr::VK_GOTTPREL_G1)
         return ELF::R_AARCH64_TLSIE_MOVW_GOTTPREL_G1;
       if (RefKind == AArch64MCExpr::VK_GOTTPREL_G0_NC)
@@ -257,7 +326,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
                       "invalid fixup for movz/movk instruction");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_tlsdesc_call:
-      return ELF::R_AARCH64_TLSDESC_CALL;
+      return R_CLS(TLSDESC_CALL);
     default:
       Ctx.reportError(Fixup.getLoc(), "Unknown ELF relocation type");
       return ELF::R_AARCH64_NONE;
@@ -269,8 +338,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 
 MCObjectWriter *llvm::createAArch64ELFObjectWriter(raw_pwrite_stream &OS,
                                                    uint8_t OSABI,
-                                                   bool IsLittleEndian) {
+                                                   bool IsLittleEndian,
+                                                   bool IsILP32) {
   MCELFObjectTargetWriter *MOTW =
-      new AArch64ELFObjectWriter(OSABI, IsLittleEndian);
+      new AArch64ELFObjectWriter(OSABI, IsLittleEndian, IsILP32);
   return createELFObjectWriter(MOTW, OS, IsLittleEndian);
 }

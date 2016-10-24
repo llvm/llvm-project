@@ -317,6 +317,8 @@ void LibCallsShrinkWrap::checkCandidate(CallInst &CI) {
   if (!TLI.getLibFunc(*Callee, Func) || !TLI.has(Func))
     return;
 
+  if (CI.getNumArgOperands() == 0)
+    return;
   // TODO: Handle long double in other formats.
   Type *ArgType = CI.getArgOperand(0)->getType();
   if (!(ArgType->isFloatTy() || ArgType->isDoubleTy() ||
