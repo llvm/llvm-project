@@ -612,27 +612,57 @@ static StyleKind findStyleKind(
 
 static void addUsage(IdentifierNamingCheck::NamingCheckFailureMap &Failures,
                      const IdentifierNamingCheck::NamingCheckId &Decl,
-                     SourceRange Range) {
+                     SourceRange Range, SourceManager *SourceMgr = nullptr) {
   // Do nothing if the provided range is invalid.
   if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid())
+    return;
+
+  // If we have a source manager, use it to convert to the spelling location for
+  // performing the fix. This is necessary because macros can map the same
+  // spelling location to different source locations, and we only want to fix
+  // the token once, before it is expanded by the macro.
+  SourceLocation FixLocation = Range.getBegin();
+  if (SourceMgr)
+    FixLocation = SourceMgr->getSpellingLoc(FixLocation);
+  if (FixLocation.isInvalid())
     return;
 
   // Try to insert the identifier location in the Usages map, and bail out if it
   // is already in there
   auto &Failure = Failures[Decl];
-  if (!Failure.RawUsageLocs.insert(Range.getBegin().getRawEncoding()).second)
+  if (!Failure.RawUsageLocs.insert(FixLocation.getRawEncoding()).second)
     return;
 
-  Failure.ShouldFix = Failure.ShouldFix && !Range.getBegin().isMacroID() &&
-                      !Range.getEnd().isMacroID();
+  if (!Failure.ShouldFix)
+    return;
+
+  // Check if the range is entirely contained within a macro argument.
+  SourceLocation MacroArgExpansionStartForRangeBegin;
+  SourceLocation MacroArgExpansionStartForRangeEnd;
+  bool RangeIsEntirelyWithinMacroArgument =
+      SourceMgr &&
+      SourceMgr->isMacroArgExpansion(Range.getBegin(),
+                                     &MacroArgExpansionStartForRangeBegin) &&
+      SourceMgr->isMacroArgExpansion(Range.getEnd(),
+                                     &MacroArgExpansionStartForRangeEnd) &&
+      MacroArgExpansionStartForRangeBegin == MacroArgExpansionStartForRangeEnd;
+
+  // Check if the range contains any locations from a macro expansion.
+  bool RangeContainsMacroExpansion = RangeIsEntirelyWithinMacroArgument ||
+                                     Range.getBegin().isMacroID() ||
+                                     Range.getEnd().isMacroID();
+
+  bool RangeCanBeFixed =
+      RangeIsEntirelyWithinMacroArgument || !RangeContainsMacroExpansion;
+  Failure.ShouldFix = RangeCanBeFixed;
 }
 
 /// Convenience method when the usage to be added is a NamedDecl
 static void addUsage(IdentifierNamingCheck::NamingCheckFailureMap &Failures,
-                     const NamedDecl *Decl, SourceRange Range) {
+                     const NamedDecl *Decl, SourceRange Range, SourceManager *SourceMgr = nullptr) {
   return addUsage(Failures, IdentifierNamingCheck::NamingCheckId(
                                 Decl->getLocation(), Decl->getNameAsString()),
-                  Range);
+                  Range, SourceMgr);
 }
 
 void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
@@ -719,7 +749,7 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>("declRef")) {
     SourceRange Range = DeclRef->getNameInfo().getSourceRange();
-    addUsage(NamingCheckFailures, DeclRef->getDecl(), Range);
+    addUsage(NamingCheckFailures, DeclRef->getDecl(), Range, Result.SourceManager);
     return;
   }
 
