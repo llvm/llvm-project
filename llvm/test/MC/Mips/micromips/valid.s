@@ -207,3 +207,7 @@ recip.s $f2, $f4            # CHECK: recip.s $f2, $f4       # encoding: [0x54,0x
 recip.d $f2, $f4            # CHECK: recip.d $f2, $f4       # encoding: [0x54,0x44,0x52,0x3b]
 rsqrt.s $f3, $f5            # CHECK: rsqrt.s $f3, $f5       # encoding: [0x54,0x65,0x02,0x3b]
 rsqrt.d $f2, $f4            # CHECK: rsqrt.d $f2, $f4       # encoding: [0x54,0x44,0x42,0x3b]
+sync                        # CHECK: sync                   # encoding: [0x00,0x00,0x6b,0x7c]
+sync 0                      # CHECK: sync 0                 # encoding: [0x00,0x00,0x6b,0x7c]
+sync 1                      # CHECK: sync 1                 # encoding: [0x00,0x01,0x6b,0x7c]
+synci 64($5)                # CHECK: synci 64($5)           # encoding: [0x42,0x00,0x00,0x40]

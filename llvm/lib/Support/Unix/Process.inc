@@ -17,7 +17,6 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/MutexGuard.h"
-#include "llvm/Support/TimeValue.h"
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -60,22 +59,14 @@
 using namespace llvm;
 using namespace sys;
 
-static std::pair<TimeValue, TimeValue> getRUsageTimes() {
+static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsageTimes() {
 #if defined(HAVE_GETRUSAGE)
   struct rusage RU;
   ::getrusage(RUSAGE_SELF, &RU);
-  return std::make_pair(
-      TimeValue(
-          static_cast<TimeValue::SecondsType>(RU.ru_utime.tv_sec),
-          static_cast<TimeValue::NanoSecondsType>(
-              RU.ru_utime.tv_usec * TimeValue::NANOSECONDS_PER_MICROSECOND)),
-      TimeValue(
-          static_cast<TimeValue::SecondsType>(RU.ru_stime.tv_sec),
-          static_cast<TimeValue::NanoSecondsType>(
-              RU.ru_stime.tv_usec * TimeValue::NANOSECONDS_PER_MICROSECOND)));
+  return { toDuration(RU.ru_utime), toDuration(RU.ru_stime) };
 #else
 #warning Cannot get usage times on this platform
-  return std::make_pair(TimeValue(), TimeValue());
+  return {};
 #endif
 }
 
@@ -121,9 +112,9 @@ size_t Process::GetMallocUsage() {
 #endif
 }
 
-void Process::GetTimeUsage(TimeValue &elapsed, TimeValue &user_time,
-                           TimeValue &sys_time) {
-  elapsed = TimeValue::now();
+void Process::GetTimeUsage(TimePoint<> &elapsed, std::chrono::nanoseconds &user_time,
+                           std::chrono::nanoseconds &sys_time) {
+  elapsed = std::chrono::system_clock::now();
   std::tie(user_time, sys_time) = getRUsageTimes();
 }
 
@@ -449,8 +440,8 @@ static unsigned GetRandomNumberSeed() {
 
   // Otherwise, swizzle the current time and the process ID to form a reasonable
   // seed.
-  TimeValue Now = TimeValue::now();
-  return hash_combine(Now.seconds(), Now.nanoseconds(), ::getpid());
+  const auto Now = std::chrono::high_resolution_clock::now();
+  return hash_combine(Now.time_since_epoch().count(), ::getpid());
 }
 #endif
 
