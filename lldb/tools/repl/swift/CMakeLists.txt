@@ -10,16 +10,26 @@ if(NOT LLDB_BUILT_STANDALONE)
   set(swift_depends swift swift-stdlib)
 endif()
 
+set(swift_compile_cmd "${LLDB_SWIFTC}"
+                      -resource-dir "${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift"
+                      -module-cache-path "${module_cache_dir}")
+
+if(CMAKE_CROSSCOMPILING)
+  set(swift_compile_cmd ${swift_compile_cmd} -target "${LLVM_HOST_TRIPLE}" -sdk "${CMAKE_SYSROOT}")
+  if(CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN)
+    set(swift_compile_cmd ${swift_compile_cmd} -tools-directory "${CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN}")
+  endif()
+endif()
+
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-  set(linux_only_flags -Xlinker -rpath -Xlinker \$ORIGIN/../lib/swift/linux)
+  set(swift_compile_cmd ${swift_compile_cmd} -Xlinker -rpath -Xlinker \$ORIGIN/../lib/swift/linux)
 endif()
 
 add_custom_command_target(
     unused_var
-    COMMAND "${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc"
+    COMMAND "${swift_compile_cmd}"
             -o "${output_dir}/repl_swift"
-            -module-cache-path "${module_cache_dir}"
-            ${linux_only_flags} "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
+            "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
     OUTPUT "${output_dir}/repl_swift"
     VERBATIM
     ALL
