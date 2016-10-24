@@ -400,6 +400,32 @@ int X86TTIImpl::getArithmeticInstrCost(
       ISD = ISD::MUL;
   }
 
+  static const CostTblEntry SSE41CostTable[] = {
+    { ISD::SHL,  MVT::v16i8,    11 }, // pblendvb sequence.
+    { ISD::SHL,  MVT::v32i8,  2*11 }, // pblendvb sequence.
+    { ISD::SHL,  MVT::v8i16,    14 }, // pblendvb sequence.
+    { ISD::SHL,  MVT::v16i16, 2*14 }, // pblendvb sequence.
+
+    { ISD::SRL,  MVT::v16i8,    12 }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v32i8,  2*12 }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v8i16,    14 }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v16i16, 2*14 }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v4i32,    11 }, // Shift each lane + blend.
+    { ISD::SRL,  MVT::v8i32,  2*11 }, // Shift each lane + blend.
+
+    { ISD::SRA,  MVT::v16i8,    24 }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v32i8,  2*24 }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v8i16,    14 }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v16i16, 2*14 }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v4i32,    12 }, // Shift each lane + blend.
+    { ISD::SRA,  MVT::v8i32,  2*12 }, // Shift each lane + blend.
+  };
+
+  if (ST->hasSSE41()) {
+    if (const auto *Entry = CostTableLookup(SSE41CostTable, ISD, LT.second))
+      return LT.first * Entry->Cost;
+  }
+
   static const CostTblEntry SSE2CostTable[] = {
     // We don't correctly identify costs of casts because they are marked as
     // custom.

@@ -132,7 +132,7 @@ struct OptReportLocationInfo {
       return true;
     else if (InterleaveCount > RHS.InterleaveCount)
       return false;
-    else if (InterleaveCount < RHS.InterleaveCount)
+    else if (UnrollCount < RHS.UnrollCount)
       return true;
     return false;
   }

@@ -627,6 +627,8 @@ class Configuration(object):
                 '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
                 '-Wall', '-Wextra', '-Werror'
             ]
+            # FIXME turn this back on after fixing potential breakage.
+            #self.cxx.addWarningFlagIfSupported('-Wshadow')
             self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
             self.cxx.addWarningFlagIfSupported('-Wno-attributes')
             self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')

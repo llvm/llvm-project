@@ -81,8 +81,8 @@ void test_multi_arg()
 {
     test_one_arg<T>();
     using Opt = std::optional<T>;
-    Opt opt;
     {
+        Opt opt;
         opt.emplace(101, 41);
         assert(static_cast<bool>(opt) == true);
         assert(*opt == T(101, 41));
