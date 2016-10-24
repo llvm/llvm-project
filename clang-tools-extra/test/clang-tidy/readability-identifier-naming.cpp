@@ -95,14 +95,41 @@ SYSTEM_MACRO(var1);
 USER_MACRO(var2);
 // NO warnings or fixes expected as var2 is declared in a macro expansion
 
-int global;
-#define USE_IN_MACRO(m) auto use_##m = m
-USE_IN_MACRO(global);
-// NO warnings or fixes expected as global is used in a macro expansion
-
 #define BLA int FOO_bar
 BLA;
 // NO warnings or fixes expected as FOO_bar is from macro expansion
+
+int global0;
+#define USE_NUMBERED_GLOBAL(number) auto use_global##number = global##number
+USE_NUMBERED_GLOBAL(0);
+// NO warnings or fixes expected as global0 is pieced together in a macro
+// expansion.
+
+int global1;
+#define USE_NUMBERED_BAL(prefix, number) \
+  auto use_##prefix##bal##number = prefix##bal##number
+USE_NUMBERED_BAL(glo, 1);
+// NO warnings or fixes expected as global1 is pieced together in a macro
+// expansion.
+
+int global2;
+#define USE_RECONSTRUCTED(glo, bal) auto use_##glo##bal = glo##bal
+USE_RECONSTRUCTED(glo, bal2);
+// NO warnings or fixes expected as global2 is pieced together in a macro
+// expansion.
+
+int global;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'global'
+// CHECK-FIXES: {{^}}int g_global;{{$}}
+#define USE_IN_MACRO(m) auto use_##m = m
+USE_IN_MACRO(global);
+
+int global3;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'global3'
+// CHECK-FIXES: {{^}}int g_global3;{{$}}
+#define ADD_TO_SELF(m) (m) + (m)
+int g_twice_global3 = ADD_TO_SELF(global3);
+// CHECK-FIXES: {{^}}int g_twice_global3 = ADD_TO_SELF(g_global3);{{$}}
 
 enum my_enumeration {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for enum 'my_enumeration'

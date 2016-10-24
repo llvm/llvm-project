@@ -22,7 +22,7 @@ namespace llvm {
 
 struct NewArchiveMember {
   std::unique_ptr<MemoryBuffer> Buf;
-  sys::TimeValue ModTime = sys::TimeValue::PosixZeroTime();
+  sys::TimePoint<std::chrono::seconds> ModTime;
   unsigned UID = 0, GID = 0, Perms = 0644;
 
   NewArchiveMember() = default;

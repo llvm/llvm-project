@@ -166,6 +166,8 @@ public:
     return rv;
   }
 
+  bool addErrorSuffix(const Twine &Suffix);
+
   /// \brief Get the next AsmToken in the stream, possibly handling file
   /// inclusion first.
   virtual const AsmToken &Lex() = 0;
@@ -177,10 +179,14 @@ public:
   bool TokError(const Twine &Msg, SMRange Range = None);
 
   bool parseTokenLoc(SMLoc &Loc);
-  bool parseToken(AsmToken::TokenKind T, const Twine &Msg);
-  bool parseOptionalToken(AsmToken::TokenKind T, bool &Present);
+  bool parseToken(AsmToken::TokenKind T, const Twine &Msg = "unexpected token");
+  /// \brief Attempt to parse and consume token, returning true on
+  /// success.
+  bool parseOptionalToken(AsmToken::TokenKind T);
 
   bool parseEOL(const Twine &ErrMsg);
+
+  bool parseMany(std::function<bool()> parseOne, bool hasComma = true);
 
   bool parseIntToken(int64_t &V, const Twine &ErrMsg);
 

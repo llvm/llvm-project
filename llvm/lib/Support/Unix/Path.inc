@@ -451,7 +451,8 @@ std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {
   return std::error_code();
 #elif defined(HAVE_FUTIMES)
   timeval Times[2];
-  Times[0] = Times[1] = sys::toTimeVal(Time);
+  Times[0] = Times[1] = sys::toTimeVal(
+      std::chrono::time_point_cast<std::chrono::microseconds>(Time));
   if (::futimes(FD, Times))
     return std::error_code(errno, std::generic_category());
   return std::error_code();

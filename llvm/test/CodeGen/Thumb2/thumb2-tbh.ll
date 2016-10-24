@@ -1,6 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -relocation-model=pic | FileCheck %s --check-prefix=CHECK --check-prefix=T2
-; RUN: llc < %s -mtriple=thumbv6m-apple-darwin -relocation-model=pic | FileCheck %s --check-prefix=CHECK --check-prefix=T1
-; RUN: llc < %s -mtriple=thumbv6m-apple-darwin -relocation-model=static | FileCheck %s --check-prefix=CHECK --check-prefix=T1
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -relocation-model=pic | FileCheck %s
 
 ; Thumb2 target should reorder the bb's in order to use tbb / tbh.
 
@@ -22,10 +20,8 @@ declare noalias i8* @calloc(i32, i32) nounwind
 define i32 @main(i32 %argc, i8** nocapture %argv) nounwind {
 ; CHECK-LABEL: main:
 ; CHECK-NOT: adr {{r[0-9]+}}, LJTI
-; T1:          lsls r[[x:[0-9]+]], {{r[0-9]+}}, #1
 ; CHECK: [[PCREL_ANCHOR:LCPI[0-9]+_[0-9]+]]:
-; T2-NEXT:     tbb [pc, {{r[0-9]+}}]
-; T1-NEXT:     add  pc, r[[x]]
+; CHECK-NEXT:     tbb [pc, {{r[0-9]+}}]
 
 ; CHECK: LJTI0_0:
 ; CHECK-NEXT: .data_region jt8

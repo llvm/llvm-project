@@ -1451,6 +1451,23 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   return LoopBB;
 }
 
+static unsigned getMOVRELDPseudo(const TargetRegisterClass *VecRC) {
+  switch (VecRC->getSize()) {
+  case 4:
+    return AMDGPU::V_MOVRELD_B32_V1;
+  case 8:
+    return AMDGPU::V_MOVRELD_B32_V2;
+  case 16:
+    return AMDGPU::V_MOVRELD_B32_V4;
+  case 32:
+    return AMDGPU::V_MOVRELD_B32_V8;
+  case 64:
+    return AMDGPU::V_MOVRELD_B32_V16;
+  default:
+    llvm_unreachable("unsupported size for MOVRELD pseudos");
+  }
+}
+
 static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
                                           MachineBasicBlock &MBB,
                                           const SISubtarget &ST) {
@@ -1504,20 +1521,13 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
 
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
     } else {
-      const MCInstrDesc &MovRelDesc = TII->get(AMDGPU::V_MOVRELD_B32_e32);
+      const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(VecRC));
 
-      MachineInstr *MovRel =
-        BuildMI(MBB, I, DL, MovRelDesc)
-        .addReg(SrcVec->getReg(), RegState::Undef, SubReg) // vdst
-        .addOperand(*Val)
-        .addReg(Dst, RegState::ImplicitDefine)
-        .addReg(SrcVec->getReg(), RegState::Implicit);
-
-      const int ImpDefIdx = MovRelDesc.getNumOperands() +
-        MovRelDesc.getNumImplicitUses();
-      const int ImpUseIdx = ImpDefIdx + 1;
-
-      MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
+      BuildMI(MBB, I, DL, MovRelDesc)
+          .addReg(Dst, RegState::Define)
+          .addReg(SrcVec->getReg())
+          .addOperand(*Val)
+          .addImm(SubReg - AMDGPU::sub0);
     }
 
     MI.eraseFromParent();
@@ -1555,20 +1565,13 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
       .addReg(PhiReg, RegState::Implicit)
       .addReg(AMDGPU::M0, RegState::Implicit);
   } else {
-    const MCInstrDesc &MovRelDesc = TII->get(AMDGPU::V_MOVRELD_B32_e32);
-    // vdst is not actually read and just provides the base register index.
-    MachineInstr *MovRel =
-      BuildMI(*LoopBB, InsPt, DL, MovRelDesc)
-    .addReg(PhiReg, RegState::Undef, SubReg) // vdst
-    .addOperand(*Val)
-    .addReg(Dst, RegState::ImplicitDefine)
-    .addReg(PhiReg, RegState::Implicit);
+    const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(VecRC));
 
-    const int ImpDefIdx = MovRelDesc.getNumOperands() +
-      MovRelDesc.getNumImplicitUses();
-    const int ImpUseIdx = ImpDefIdx + 1;
-
-    MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
+    BuildMI(*LoopBB, InsPt, DL, MovRelDesc)
+        .addReg(Dst, RegState::Define)
+        .addReg(PhiReg)
+        .addOperand(*Val)
+        .addImm(SubReg - AMDGPU::sub0);
   }
 
   MI.eraseFromParent();

@@ -119,6 +119,39 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     return true;
   }
 
+  const char *OSLogVisibilityFlagsStart = nullptr,
+             *OSLogVisibilityFlagsEnd = nullptr;
+  if (*I == '{') {
+    OSLogVisibilityFlagsStart = I++;
+    // Find the end of the modifier.
+    while (I != E && *I != '}') {
+      I++;
+    }
+    if (I == E) {
+      if (Warn)
+        H.HandleIncompleteSpecifier(Start, E - Start);
+      return true;
+    }
+    assert(*I == '}');
+    OSLogVisibilityFlagsEnd = I++;
+
+    // Just see if 'private' or 'public' is the first word. os_log itself will
+    // do any further parsing.
+    const char *P = OSLogVisibilityFlagsStart + 1;
+    while (P < OSLogVisibilityFlagsEnd && isspace(*P))
+      P++;
+    const char *WordStart = P;
+    while (P < OSLogVisibilityFlagsEnd && (isalnum(*P) || *P == '_'))
+      P++;
+    const char *WordEnd = P;
+    StringRef Word(WordStart, WordEnd - WordStart);
+    if (Word == "private") {
+      FS.setIsPrivate(WordStart);
+    } else if (Word == "public") {
+      FS.setIsPublic(WordStart);
+    }
+  }
+
   // Look for flags (if any).
   bool hasMore = true;
   for ( ; I != E; ++I) {
@@ -253,6 +286,10 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     // POSIX specific.
     case 'C': k = ConversionSpecifier::CArg; break;
     case 'S': k = ConversionSpecifier::SArg; break;
+    // Apple extension for os_log
+    case 'P':
+      k = ConversionSpecifier::PArg;
+      break;
     // Objective-C.
     case '@': k = ConversionSpecifier::ObjCObjArg; break;
     // Glibc specific.
@@ -301,7 +338,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
                                            conversionPosition);
     return true;
   }
-  
+
   PrintfConversionSpecifier CS(conversionPosition, k);
   FS.setConversionSpecifier(CS);
   if (CS.consumesDataArgument() && !FS.usesPositionalArg())
@@ -541,6 +578,7 @@ ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
         return Ctx.IntTy;
       return ArgType(Ctx.WideCharTy, "wchar_t");
     case ConversionSpecifier::pArg:
+    case ConversionSpecifier::PArg:
       return ArgType::CPointerTy;
     case ConversionSpecifier::ObjCObjArg:
       return ArgType::ObjCPointerTy;
@@ -900,7 +938,7 @@ bool PrintfSpecifier::hasValidPrecision() const {
   if (Precision.getHowSpecified() == OptionalAmount::NotSpecified)
     return true;
 
-  // Precision is only valid with the diouxXaAeEfFgGs conversions
+  // Precision is only valid with the diouxXaAeEfFgGsP conversions
   switch (CS.getKind()) {
   case ConversionSpecifier::dArg:
   case ConversionSpecifier::DArg:
@@ -922,6 +960,7 @@ bool PrintfSpecifier::hasValidPrecision() const {
   case ConversionSpecifier::sArg:
   case ConversionSpecifier::FreeBSDrArg:
   case ConversionSpecifier::FreeBSDyArg:
+  case ConversionSpecifier::PArg:
     return true;
 
   default:

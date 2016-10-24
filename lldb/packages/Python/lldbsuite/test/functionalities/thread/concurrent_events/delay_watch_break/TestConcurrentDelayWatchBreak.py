@@ -16,7 +16,7 @@ class ConcurrentDelayWatchBreak(ConcurrentEventsBase):
     @skipIfRemoteDueToDeadlock
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    def test_delay_watch_break(self):
+    def test(self):
         """Test (1-second delay) watchpoint and a breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(
