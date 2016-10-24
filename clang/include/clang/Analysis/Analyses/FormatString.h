@@ -122,12 +122,13 @@ class ConversionSpecifier {
 public:
   enum Kind {
     InvalidSpecifier = 0,
-      // C99 conversion specifiers.
+    // C99 conversion specifiers.
     cArg,
     dArg,
     DArg, // Apple extension
     iArg,
-    IntArgBeg = dArg, IntArgEnd = iArg,
+    IntArgBeg = dArg,
+    IntArgEnd = iArg,
 
     oArg,
     OArg, // Apple extension
@@ -135,7 +136,8 @@ public:
     UArg, // Apple extension
     xArg,
     XArg,
-    UIntArgBeg = oArg, UIntArgEnd = XArg,
+    UIntArgBeg = oArg,
+    UIntArgEnd = XArg,
 
     fArg,
     FArg,
@@ -145,7 +147,8 @@ public:
     GArg,
     aArg,
     AArg,
-    DoubleArgBeg = fArg, DoubleArgEnd = AArg,
+    DoubleArgBeg = fArg,
+    DoubleArgEnd = AArg,
 
     sArg,
     pArg,
@@ -164,8 +167,9 @@ public:
     ZArg, // MS extension
 
     // Objective-C specific specifiers.
-    ObjCObjArg,  // '@'
-    ObjCBeg = ObjCObjArg, ObjCEnd = ObjCObjArg,
+    ObjCObjArg, // '@'
+    ObjCBeg = ObjCObjArg,
+    ObjCEnd = ObjCObjArg,
 
     // FreeBSD kernel specific specifiers.
     FreeBSDbArg,
@@ -174,13 +178,15 @@ public:
     FreeBSDyArg,
 
     // GlibC specific specifiers.
-    PrintErrno,   // 'm'
+    PrintErrno, // 'm'
 
-    PrintfConvBeg = ObjCObjArg, PrintfConvEnd = PrintErrno,
+    PrintfConvBeg = ObjCObjArg,
+    PrintfConvEnd = PrintErrno,
 
     // ** Scanf-specific **
     ScanListArg, // '['
-    ScanfConvBeg = ScanListArg, ScanfConvEnd = ScanListArg
+    ScanfConvBeg = ScanListArg,
+    ScanfConvEnd = ScanListArg
   };
 
   ConversionSpecifier(bool isPrintf = true)
@@ -442,15 +448,15 @@ class PrintfSpecifier : public analyze_format_string::FormatSpecifier {
   OptionalFlag HasAlternativeForm; // '#'
   OptionalFlag HasLeadingZeroes; // '0'
   OptionalFlag HasObjCTechnicalTerm; // '[tt]'
-  OptionalFlag IsPrivate; // '{private}'
-  OptionalFlag IsPublic; // '{public}'
+  OptionalFlag IsPrivate;            // '{private}'
+  OptionalFlag IsPublic;             // '{public}'
   OptionalAmount Precision;
 public:
-  PrintfSpecifier() :
-    FormatSpecifier(/* isPrintf = */ true),
-    HasThousandsGrouping("'"), IsLeftJustified("-"), HasPlusPrefix("+"),
-    HasSpacePrefix(" "), HasAlternativeForm("#"), HasLeadingZeroes("0"),
-    HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public") {}
+  PrintfSpecifier()
+      : FormatSpecifier(/* isPrintf = */ true), HasThousandsGrouping("'"),
+        IsLeftJustified("-"), HasPlusPrefix("+"), HasSpacePrefix(" "),
+        HasAlternativeForm("#"), HasLeadingZeroes("0"),
+        HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public") {}
 
   static PrintfSpecifier Parse(const char *beg, const char *end);
 
@@ -479,12 +485,8 @@ public:
   void setHasObjCTechnicalTerm(const char *position) {
     HasObjCTechnicalTerm.setPosition(position);
   }
-  void setIsPrivate(const char *position) {
-    IsPrivate.setPosition(position);
-  }
-  void setIsPublic(const char *position) {
-    IsPublic.setPosition(position);
-  }
+  void setIsPrivate(const char *position) { IsPrivate.setPosition(position); }
+  void setIsPublic(const char *position) { IsPublic.setPosition(position); }
   void setUsesPositionalArg() { UsesPositionalArg = true; }
 
     // Methods for querying the format specifier.
