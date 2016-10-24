@@ -13037,10 +13037,7 @@ SDValue DAGCombiner::createBuildVecShuffle(SDLoc DL, SDNode *N,
     if (VectorMask[i] <= 0)
       continue;
 
-    SDValue Extract = N->getOperand(i);
-    unsigned ExtIndex =
-        cast<ConstantSDNode>(Extract.getOperand(1))->getZExtValue();
-
+    unsigned ExtIndex = N->getOperand(i).getConstantOperandVal(1);
     if (VectorMask[i] == (int)LeftIdx) {
       Mask[i] = ExtIndex;
     } else if (VectorMask[i] == (int)LeftIdx + 1) {

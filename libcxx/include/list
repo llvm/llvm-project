@@ -1751,15 +1751,15 @@ list<_Tp, _Alloc>::erase(const_iterator __p)
     --base::__sz();
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __c_node* __c = __get_db()->__find_c_and_lock(this);
-    for (__i_node** __p = __c->end_; __p != __c->beg_; )
+    for (__i_node** __ip = __c->end_; __ip != __c->beg_; )
     {
-        --__p;
-        iterator* __i = static_cast<iterator*>((*__p)->__i_);
+        --__ip;
+        iterator* __i = static_cast<iterator*>((*__ip)->__i_);
         if (__i->__ptr_ == __n)
         {
-            (*__p)->__c_ = nullptr;
-            if (--__c->end_ != __p)
-                memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+            (*__ip)->__c_ = nullptr;
+            if (--__c->end_ != __ip)
+                memmove(__ip, __ip+1, (__c->end_ - __ip)*sizeof(__i_node*));
         }
     }
     __get_db()->unlock();
@@ -1961,16 +1961,16 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c)
         __libcpp_db* __db = __get_db();
         __c_node* __cn1 = __db->__find_c_and_lock(this);
         __c_node* __cn2 = __db->__find_c(&__c);
-        for (__i_node** __p = __cn2->end_; __p != __cn2->beg_;)
+        for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
         {
-            --__p;
-            iterator* __i = static_cast<iterator*>((*__p)->__i_);
+            --__ip;
+            iterator* __i = static_cast<iterator*>((*__ip)->__i_);
             if (__i->__ptr_ != __c.__end_as_link())
             {
-                __cn1->__add(*__p);
-                (*__p)->__c_ = __cn1;
-                if (--__cn2->end_ != __p)
-                    memmove(__p, __p+1, (__cn2->end_ - __p)*sizeof(__i_node*));
+                __cn1->__add(*__ip);
+                (*__ip)->__c_ = __cn1;
+                if (--__cn2->end_ != __ip)
+                    memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
             }
         }
         __db->unlock();
@@ -2004,16 +2004,16 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
         __libcpp_db* __db = __get_db();
         __c_node* __cn1 = __db->__find_c_and_lock(this);
         __c_node* __cn2 = __db->__find_c(&__c);
-        for (__i_node** __p = __cn2->end_; __p != __cn2->beg_;)
+        for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
         {
-            --__p;
-            iterator* __j = static_cast<iterator*>((*__p)->__i_);
+            --__ip;
+            iterator* __j = static_cast<iterator*>((*__ip)->__i_);
             if (__j->__ptr_ == __f)
             {
-                __cn1->__add(*__p);
-                (*__p)->__c_ = __cn1;
-                if (--__cn2->end_ != __p)
-                    memmove(__p, __p+1, (__cn2->end_ - __p)*sizeof(__i_node*));
+                __cn1->__add(*__ip);
+                (*__ip)->__c_ = __cn1;
+                if (--__cn2->end_ != __ip)
+                    memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
             }
         }
         __db->unlock();
@@ -2058,19 +2058,19 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         __libcpp_db* __db = __get_db();
         __c_node* __cn1 = __db->__find_c_and_lock(this);
         __c_node* __cn2 = __db->__find_c(&__c);
-        for (__i_node** __p = __cn2->end_; __p != __cn2->beg_;)
+        for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
         {
-            --__p;
-            iterator* __j = static_cast<iterator*>((*__p)->__i_);
+            --__ip;
+            iterator* __j = static_cast<iterator*>((*__ip)->__i_);
             for (__link_pointer __k = __f.__ptr_;
                                           __k != __l.__ptr_; __k = __k->__next_)
             {
                 if (__j->__ptr_ == __k)
                 {
-                    __cn1->__add(*__p);
-                    (*__p)->__c_ = __cn1;
-                    if (--__cn2->end_ != __p)
-                        memmove(__p, __p+1, (__cn2->end_ - __p)*sizeof(__i_node*));
+                    __cn1->__add(*__ip);
+                    (*__ip)->__c_ = __cn1;
+                    if (--__cn2->end_ != __ip)
+                        memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
                 }
             }
         }

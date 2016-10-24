@@ -79,15 +79,12 @@ define <4 x i32> @combine_vec_lshr_by_zero(<4 x i32> %x) {
 define <4 x i32> @combine_vec_lshr_known_zero0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_lshr_known_zero0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
-; SSE-NEXT:    psrld $4, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_known_zero0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrld $4, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 15, i32 15, i32 15, i32 15>
   %2 = lshr <4 x i32> %1, <i32 4, i32 4, i32 4, i32 4>
@@ -292,21 +289,12 @@ define <4 x i32> @combine_vec_lshr_trunc_lshr1(<4 x i64> %x) {
 define <4 x i32> @combine_vec_lshr_trunc_lshr_zero0(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_lshr_trunc_lshr_zero0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    psrlq $48, %xmm0
-; SSE-NEXT:    psrlq $48, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    psrld $24, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_trunc_lshr_zero0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpsrlq $48, %ymm0, %ymm0
-; AVX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX-NEXT:    vpsrld $24, %xmm0, %xmm0
-; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = lshr <4 x i64> %x, <i64 48, i64 48, i64 48, i64 48>
   %2 = trunc <4 x i64> %1 to <4 x i32>

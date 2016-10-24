@@ -1996,6 +1996,18 @@ bool SelectionDAG::MaskedValueIsZero(SDValue Op, const APInt &Mask,
   return (KnownZero & Mask) == Mask;
 }
 
+/// If a SHL/SRA/SRL node has a constant or splat constant shift amount that
+/// is less than the element bit-width of the shift node, return it.
+static const APInt *getValidShiftAmountConstant(SDValue V) {
+  if (ConstantSDNode *SA = isConstOrConstSplat(V.getOperand(1))) {
+    // Shifting more than the bitwidth is not valid.
+    const APInt &ShAmt = SA->getAPIntValue();
+    if (ShAmt.ult(V.getScalarValueSizeInBits()))
+      return &ShAmt;
+  }
+  return nullptr;
+}
+
 /// Determine which bits of Op are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bitsets.
 void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
@@ -2144,57 +2156,34 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
     break;
   case ISD::SHL:
-    if (ConstantSDNode *SA = isConstOrConstSplat(Op.getOperand(1))) {
-      // If the shift count is an invalid immediate, don't do anything.
-      APInt ShAmt = SA->getAPIntValue();
-      if (ShAmt.uge(BitWidth))
-        break;
-
+    if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
-      KnownZero = KnownZero << ShAmt;
-      KnownOne = KnownOne << ShAmt;
-      // low bits known zero.
-      KnownZero |= APInt::getLowBitsSet(BitWidth, ShAmt.getZExtValue());
+      KnownZero = KnownZero << *ShAmt;
+      KnownOne = KnownOne << *ShAmt;
+      // Low bits are known zero.
+      KnownZero |= APInt::getLowBitsSet(BitWidth, ShAmt->getZExtValue());
     }
     break;
   case ISD::SRL:
-    // FIXME: Reuse isConstOrConstSplat + APInt from above.
-    if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      unsigned ShAmt = SA->getZExtValue();
-
-      // If the shift count is an invalid immediate, don't do anything.
-      if (ShAmt >= BitWidth)
-        break;
-
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-      KnownZero = KnownZero.lshr(ShAmt);
-      KnownOne  = KnownOne.lshr(ShAmt);
-
-      APInt HighBits = APInt::getHighBitsSet(BitWidth, ShAmt);
-      KnownZero |= HighBits;  // High bits known zero.
+    if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
+      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      KnownZero = KnownZero.lshr(*ShAmt);
+      KnownOne  = KnownOne.lshr(*ShAmt);
+      // High bits are known zero.
+      APInt HighBits = APInt::getHighBitsSet(BitWidth, ShAmt->getZExtValue());
+      KnownZero |= HighBits;
     }
     break;
   case ISD::SRA:
-    // FIXME: Reuse isConstOrConstSplat + APInt from above.
-    if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      unsigned ShAmt = SA->getZExtValue();
-
-      // If the shift count is an invalid immediate, don't do anything.
-      if (ShAmt >= BitWidth)
-        break;
-
-      // If any of the demanded bits are produced by the sign extension, we also
-      // demand the input sign bit.
-      APInt HighBits = APInt::getHighBitsSet(BitWidth, ShAmt);
-
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-      KnownZero = KnownZero.lshr(ShAmt);
-      KnownOne  = KnownOne.lshr(ShAmt);
-
-      // Handle the sign bits.
+    if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
+      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      KnownZero = KnownZero.lshr(*ShAmt);
+      KnownOne  = KnownOne.lshr(*ShAmt);
+      // If we know the value of the sign bit, then we know it is copied across
+      // the high bits by the shift amount.
+      APInt HighBits = APInt::getHighBitsSet(BitWidth, ShAmt->getZExtValue());
       APInt SignBit = APInt::getSignBit(BitWidth);
-      SignBit = SignBit.lshr(ShAmt);  // Adjust to where it is now in the mask.
-
+      SignBit = SignBit.lshr(*ShAmt);  // Adjust to where it is now in the mask.
       if (KnownZero.intersects(SignBit)) {
         KnownZero |= HighBits;  // New bits are known zero.
       } else if (KnownOne.intersects(SignBit)) {

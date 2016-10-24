@@ -51,7 +51,7 @@ public:
 #if defined(_MSC_VER) && _MSC_VER < 1900
 #define STL_CONSTEXPR
 #else
-#define STL_CONSTEXPR LLVM_CONSTEXPR
+#define STL_CONSTEXPR constexpr
 #endif
 
   static STL_CONSTEXPR result_type min() { return generator_type::min(); }
