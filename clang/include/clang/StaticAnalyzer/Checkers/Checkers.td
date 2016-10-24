@@ -416,6 +416,10 @@ def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   DescFile<"VforkChecker.cpp">;
 
+def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
+  HelpText<"Improve modeling of the C standard library functions">,
+  DescFile<"StdLibraryFunctionsChecker.cpp">;
+
 } // end "unix"
 
 let ParentPackage = UnixAlpha in {
