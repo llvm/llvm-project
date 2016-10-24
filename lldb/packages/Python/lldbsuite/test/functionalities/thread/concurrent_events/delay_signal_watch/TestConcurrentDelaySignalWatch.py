@@ -16,7 +16,7 @@ class ConcurrentDelaySignalWatch(ConcurrentEventsBase):
     @skipIfRemoteDueToDeadlock
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    def test_delay_signal_watch(self):
+    def test(self):
         """Test a watchpoint and a (1 second delay) signal in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(

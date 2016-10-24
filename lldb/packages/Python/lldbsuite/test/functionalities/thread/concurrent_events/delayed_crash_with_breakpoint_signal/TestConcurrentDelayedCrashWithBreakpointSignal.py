@@ -15,7 +15,7 @@ class ConcurrentDelayedCrashWithBreakpointSignal(ConcurrentEventsBase):
     @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    def test_delayed_crash_with_breakpoint_signal(self):
+    def test(self):
         """ Test a thread with a delayed crash while other threads generate a signal and hit a breakpoint. """
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_delay_crash_threads=1,

@@ -119,11 +119,10 @@ int main()
     test_npos(S(), SV("12345"), 5, S(""));
     test_npos(S(), SV("12345"), 6, S("not happening"));
     }
+
     {
-    typedef std::string S;
-    typedef std::string_view SV;
-    S s = "ABCD";
-    SV sv = "EFGH";
+    std::string s = "ABCD";
+    std::string_view sv = "EFGH";
     char arr[] = "IJKL";
 
     s.assign("CDEF", 0);    // calls assign(const char *, len)
@@ -137,7 +136,7 @@ int main()
     s.assign(sv, 0);  // calls assign(T, pos, npos)
     assert(s == sv);
     s.clear();
-    
+
     s.assign(sv, 0, std::string::npos);   // calls assign(T, pos, npos)
     assert(s == sv);
     s.clear();
@@ -153,10 +152,11 @@ int main()
     s.assign(arr, 0);     // calls assign(const char *, len)
     assert(s == "");
     s.clear();
+    }
 
     {
-    S s = "ABCD";
-    SV sv = s;
+    std::string s = "ABCD";
+    std::string_view sv = s;
     s.assign(sv);
     assert(s == "ABCD");
 
@@ -164,16 +164,15 @@ int main()
     s.assign(sv, 0, std::string::npos);
     assert(s == "ABCD");
     }
-    
+
     {
-    S s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    SV sv = s;
+    std::string s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::string_view sv = s;
     s.assign(sv);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
     sv = s;
     s.assign(sv, 0, std::string::npos);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    }
     }
 }

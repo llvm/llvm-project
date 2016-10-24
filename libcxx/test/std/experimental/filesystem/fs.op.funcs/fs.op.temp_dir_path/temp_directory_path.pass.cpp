@@ -51,7 +51,6 @@ TEST_CASE(basic_tests)
     const path dir_perms = env.create_dir("bad_perms_dir");
     const path nested_dir = env.create_dir("bad_perms_dir/nested");
     permissions(dir_perms, perms::none);
-    const std::error_code set_ec = std::make_error_code(std::errc::address_in_use);
     const std::error_code expect_ec = std::make_error_code(std::errc::not_a_directory);
     struct TestCase {
       std::string name;
@@ -66,7 +65,7 @@ TEST_CASE(basic_tests)
         PutEnv(TC.name, TC.p);
     }
     for (auto& TC : cases) {
-        std::error_code ec = set_ec;
+        std::error_code ec = GetTestEC();
         path ret = temp_directory_path(ec);
         TEST_CHECK(!ec);
         TEST_CHECK(ret == TC.p);
@@ -75,21 +74,25 @@ TEST_CASE(basic_tests)
         // Set the env variable to a path that does not exist and check
         // that it fails.
         PutEnv(TC.name, dne);
-        ec = set_ec;
+        ec = GetTestEC();
         ret = temp_directory_path(ec);
-        TEST_CHECK(ec == expect_ec);
+        LIBCPP_ONLY(TEST_CHECK(ec == expect_ec));
+        TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(ec);
         TEST_CHECK(ret == "");
 
         // Set the env variable to point to a file and check that it fails.
         PutEnv(TC.name, file);
-        ec = set_ec;
+        ec = GetTestEC();
         ret = temp_directory_path(ec);
-        TEST_CHECK(ec == expect_ec);
+        LIBCPP_ONLY(TEST_CHECK(ec == expect_ec));
+        TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(ec);
         TEST_CHECK(ret == "");
 
         // Set the env variable to point to a dir we can't access
         PutEnv(TC.name, nested_dir);
-        ec = set_ec;
+        ec = GetTestEC();
         ret = temp_directory_path(ec);
         TEST_CHECK(ec == std::make_error_code(std::errc::permission_denied));
         TEST_CHECK(ret == "");
@@ -99,7 +102,7 @@ TEST_CASE(basic_tests)
     }
     // No env variables are defined
     {
-        std::error_code ec = set_ec;
+        std::error_code ec = GetTestEC();
         path ret = temp_directory_path(ec);
         TEST_CHECK(!ec);
         TEST_CHECK(ret == "/tmp");

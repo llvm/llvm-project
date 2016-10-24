@@ -35,7 +35,8 @@ TEST_CASE(test_signatures)
     std::error_code ec; ((void)ec);
     ASSERT_NOT_NOEXCEPT(fs::permissions(p, opts));
     // Not noexcept because of narrow contract
-    ASSERT_NOT_NOEXCEPT(fs::permissions(p, opts, ec));
+    LIBCPP_ONLY(
+        ASSERT_NOT_NOEXCEPT(fs::permissions(p, opts, ec)));
 }
 
 TEST_CASE(test_error_reporting)
