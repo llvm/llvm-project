@@ -17,7 +17,7 @@ class ConcurrentManySignals(ConcurrentEventsBase):
         "Skip this long running test")
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    def test_many_signals(self):
+    def test(self):
         """Test 100 signals from 100 threads."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_signal_threads=100)

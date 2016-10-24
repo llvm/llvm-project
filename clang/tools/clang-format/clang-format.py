@@ -52,7 +52,7 @@ def main():
   # Get the current text.
   encoding = vim.eval("&encoding")
   buf = vim.current.buffer
-  text = '\n'.join(buf)
+  text = unicode('\n'.join(buf), encoding)
 
   # Determine range to format.
   if vim.eval('exists("l:lines")') == '1':

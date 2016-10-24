@@ -16,7 +16,7 @@ class ConcurrentTwoWatchpointsOneSignal(ConcurrentEventsBase):
     @skipIfRemoteDueToDeadlock
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    def test_two_watchpoints_one_signal(self):
+    def test(self):
         """Test two threads that trigger a watchpoint and one signal thread. """
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_watchpoint_threads=2, num_signal_threads=1)

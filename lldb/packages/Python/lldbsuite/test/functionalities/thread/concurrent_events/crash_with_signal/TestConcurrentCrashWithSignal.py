@@ -15,7 +15,7 @@ class ConcurrentCrashWithSignal(ConcurrentEventsBase):
     @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
-    def test_crash_with_signal(self):
+    def test(self):
         """ Test a thread that crashes while another thread generates a signal."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_crash_threads=1, num_signal_threads=1)
