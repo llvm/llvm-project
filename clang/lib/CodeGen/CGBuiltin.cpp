@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenFunction.h"
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
+#include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -464,17 +464,6 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   return Builder.CreateCall(F, {EmitScalarExpr(E), CI});
 }
 
-namespace {
-  struct CallObjCArcUse final : EHScopeStack::Cleanup {
-    CallObjCArcUse(llvm::Value *object) : object(object) {}
-    llvm::Value *object;
-
-    void Emit(CodeGenFunction &CGF, Flags flags) override {
-      CGF.EmitARCIntrinsicUse(object);
-    }
-  };
-}
-
 // Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
 // handle them here.
 enum class CodeGenFunction::MSVCIntrin {
@@ -574,6 +563,18 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
   }
   }
   llvm_unreachable("Incorrect MSVC intrinsic!");
+}
+
+namespace {
+// ARC cleanup for __builtin_os_log_format
+struct CallObjCArcUse final : EHScopeStack::Cleanup {
+  CallObjCArcUse(llvm::Value *object) : object(object) {}
+  llvm::Value *object;
+
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    CGF.EmitARCIntrinsicUse(object);
+  }
+};
 }
 
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
@@ -2242,77 +2243,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       return RValue::get(llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy));
     break;
   }
-  case Builtin::BI__builtin_os_log_format: {
-    assert(E->getNumArgs() >= 2 &&
-           "__builtin_os_log_format takes at least 2 arguments");
-    analyze_os_log::OSLogBufferLayout Layout;
-    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
-    Address BufAddr = EmitPointerWithAlignment(E->getArg(0));
-    // Ignore argument 1, the format string. It is not currently used.
-    CharUnits offset;
-    Builder.CreateStore(
-      Builder.getInt8(Layout.getSummaryByte()),
-      Builder.CreateConstByteGEP(BufAddr, offset++, "summary"));
-    Builder.CreateStore(
-      Builder.getInt8(Layout.getNumArgsByte()),
-      Builder.CreateConstByteGEP(BufAddr, offset++, "numArgs"));
-
-    llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
-    for (const auto &item : Layout.Items) {
-      Builder.CreateStore(
-        Builder.getInt8(item.getDescriptorByte()),
-        Builder.CreateConstByteGEP(BufAddr, offset++, "argDescriptor"));
-      Builder.CreateStore(
-        Builder.getInt8(item.getSizeByte()),
-        Builder.CreateConstByteGEP(BufAddr, offset++, "argSize"));
-      Address addr = Builder.CreateConstByteGEP(BufAddr, offset);
-      if (const Expr *expr = item.getExpr()) {
-        addr = Builder.CreateElementBitCast(addr,
-                                            ConvertTypeForMem(expr->getType()));
-        // Check if this is a retainable type.
-        if (expr->getType()->isObjCRetainableType()) {
-          assert(getEvaluationKind(expr->getType()) == TEK_Scalar &&
-                 "Only scalar can be a ObjC retainable type");
-          llvm::Value *SV = EmitScalarExpr(expr, /*Ignore*/ false);
-          RValue RV = RValue::get(SV);
-          LValue LV = MakeAddrLValue(addr, expr->getType());
-          EmitStoreThroughLValue(RV, LV);
-          // Check if the object is constant, if not, save it in
-          // RetainableOperands.
-          if (!isa<Constant>(SV))
-            RetainableOperands.push_back(SV);
-        } else {
-          EmitAnyExprToMem(expr, addr, Qualifiers(), /*isInit*/true);
-        }
-      } else {
-        addr = Builder.CreateElementBitCast(addr, Int32Ty);
-        Builder.CreateStore(
-          Builder.getInt32(item.getConstValue().getQuantity()), addr);
-      }
-      offset += item.getSize();
-    }
-
-    // Push a clang.arc.use cleanup for each object in RetainableOperands. The
-    // cleanup will cause the use to appear after the final log call, keeping
-    // the object valid while it’s held in the log buffer.  Note that if there’s
-    // a release cleanup on the object, it will already be active; since
-    // cleanups are emitted in reverse order, the use will occur before the
-    // object is released.
-    if (!RetainableOperands.empty() && getLangOpts().ObjCAutoRefCount &&
-        CGM.getCodeGenOpts().OptimizationLevel != 0)
-      for (llvm::Value *object : RetainableOperands)
-         pushFullExprCleanup<CallObjCArcUse>(getARCCleanupKind(), object);
-
-    return RValue::get(BufAddr.getPointer());
-  }
-
-  case Builtin::BI__builtin_os_log_format_buffer_size: {
-    analyze_os_log::OSLogBufferLayout Layout;
-    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
-    return RValue::get(ConstantInt::get(ConvertType(E->getType()),
-                                        Layout.getSize().getQuantity()));
-  }
-
+      
   case Builtin::BI__builtin_coro_size: {
     auto & Context = getContext();
     auto SizeTy = Context.getSizeType();
@@ -2678,6 +2609,76 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       CGM.ErrorUnsupported(E, "__builtin_thread_pointer");
     // Fall through - it's already mapped to the intrinsic by GCCBuiltin.
     break;
+  }
+  case Builtin::BI__builtin_os_log_format: {
+    assert(E->getNumArgs() >= 2 &&
+           "__builtin_os_log_format takes at least 2 arguments");
+    analyze_os_log::OSLogBufferLayout Layout;
+    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
+    Address BufAddr = EmitPointerWithAlignment(E->getArg(0));
+    // Ignore argument 1, the format string. It is not currently used.
+    CharUnits Offset;
+    Builder.CreateStore(
+        Builder.getInt8(Layout.getSummaryByte()),
+        Builder.CreateConstByteGEP(BufAddr, Offset++, "summary"));
+    Builder.CreateStore(
+        Builder.getInt8(Layout.getNumArgsByte()),
+        Builder.CreateConstByteGEP(BufAddr, Offset++, "numArgs"));
+
+    llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
+    for (const auto &Item : Layout.Items) {
+      Builder.CreateStore(
+          Builder.getInt8(Item.getDescriptorByte()),
+          Builder.CreateConstByteGEP(BufAddr, Offset++, "argDescriptor"));
+      Builder.CreateStore(
+          Builder.getInt8(Item.getSizeByte()),
+          Builder.CreateConstByteGEP(BufAddr, Offset++, "argSize"));
+      Address Addr = Builder.CreateConstByteGEP(BufAddr, Offset);
+      if (const Expr *TheExpr = Item.getExpr()) {
+        Addr = Builder.CreateElementBitCast(
+            Addr, ConvertTypeForMem(TheExpr->getType()));
+        // Check if this is a retainable type.
+        if (TheExpr->getType()->isObjCRetainableType()) {
+          assert(getEvaluationKind(TheExpr->getType()) == TEK_Scalar &&
+                 "Only scalar can be a ObjC retainable type");
+          llvm::Value *SV = EmitScalarExpr(TheExpr, /*Ignore*/ false);
+          RValue RV = RValue::get(SV);
+          LValue LV = MakeAddrLValue(Addr, TheExpr->getType());
+          EmitStoreThroughLValue(RV, LV);
+          // Check if the object is constant, if not, save it in
+          // RetainableOperands.
+          if (!isa<Constant>(SV))
+            RetainableOperands.push_back(SV);
+        } else {
+          EmitAnyExprToMem(TheExpr, Addr, Qualifiers(), /*isInit*/ true);
+        }
+      } else {
+        Addr = Builder.CreateElementBitCast(Addr, Int32Ty);
+        Builder.CreateStore(
+            Builder.getInt32(Item.getConstValue().getQuantity()), Addr);
+      }
+      Offset += Item.size();
+    }
+
+    // Push a clang.arc.use cleanup for each object in RetainableOperands. The
+    // cleanup will cause the use to appear after the final log call, keeping
+    // the object valid while it’s held in the log buffer.  Note that if there’s
+    // a release cleanup on the object, it will already be active; since
+    // cleanups are emitted in reverse order, the use will occur before the
+    // object is released.
+    if (!RetainableOperands.empty() && getLangOpts().ObjCAutoRefCount &&
+        CGM.getCodeGenOpts().OptimizationLevel != 0)
+      for (llvm::Value *object : RetainableOperands)
+        pushFullExprCleanup<CallObjCArcUse>(getARCCleanupKind(), object);
+
+    return RValue::get(BufAddr.getPointer());
+  }
+
+  case Builtin::BI__builtin_os_log_format_buffer_size: {
+    analyze_os_log::OSLogBufferLayout Layout;
+    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
+    return RValue::get(ConstantInt::get(ConvertType(E->getType()),
+                                        Layout.size().getQuantity()));
   }
   }
 

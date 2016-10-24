@@ -31,8 +31,8 @@ public:
     ScalarKind = 0,
 
     // The item is a count, which describes the length of the following item to
-    // be copied. A count may only be followed by an item of kind StringKind or
-    // PointerKind.
+    // be copied. A count may only be followed by an item of kind StringKind,
+    // WideStringKind, or PointerKind.
     CountKind,
 
     // The item is a pointer to a C string. If preceded by a count 'n',
@@ -45,7 +45,14 @@ public:
 
     // The item is a pointer to an Objective-C object. os_log() may retain the
     // object for later processing.
-    ObjCObjKind
+    ObjCObjKind,
+
+    // The item is a pointer to wide-char string.
+    WideStringKind,
+
+    // The item is corresponding to the '%m' format specifier, no value is
+    // populated in the buffer and the runtime is loading the errno value.
+    ErrnoKind
   };
 
   enum {
@@ -65,23 +72,23 @@ private:
 
 public:
   OSLogBufferItem(Kind kind, const Expr *expr, CharUnits size, unsigned flags)
-    : TheKind(kind), TheExpr(expr), Size(size), Flags(flags) {}
+      : TheKind(kind), TheExpr(expr), Size(size), Flags(flags) {}
 
   OSLogBufferItem(ASTContext &Ctx, CharUnits value, unsigned flags)
-    : TheKind(CountKind), ConstValue(value),
-      Size(Ctx.getTypeSizeInChars(Ctx.IntTy)), Flags(flags) {}
+      : TheKind(CountKind), ConstValue(value),
+        Size(Ctx.getTypeSizeInChars(Ctx.IntTy)), Flags(flags) {}
 
   unsigned char getDescriptorByte() const {
     unsigned char result = 0;
-    if (getIsPrivate()) result |= 0x01;
-    if (getIsPublic()) result |= 0x02;
+    if (getIsPrivate())
+      result |= IsPrivate;
+    if (getIsPublic())
+      result |= IsPublic;
     result |= ((unsigned)getKind()) << 4;
     return result;
   }
 
-  unsigned char getSizeByte() const {
-    return getSize().getQuantity();
-  }
+  unsigned char getSizeByte() const { return size().getQuantity(); }
 
   Kind getKind() const { return TheKind; }
   bool getIsPrivate() const { return (Flags & IsPrivate) != 0; }
@@ -89,50 +96,51 @@ public:
 
   const Expr *getExpr() const { return TheExpr; }
   CharUnits getConstValue() const { return ConstValue; }
-  CharUnits getSize() const { return Size; }
+  CharUnits size() const { return Size; }
 };
 
 class OSLogBufferLayout {
 public:
   SmallVector<OSLogBufferItem, 4> Items;
 
-  CharUnits getSize() const {
+  enum Flags { HasPrivateItems = 1, HasNonScalarItems = 1 << 1 };
+
+  CharUnits size() const {
     CharUnits result;
     result += CharUnits::fromQuantity(2); // summary byte, num-args byte
     for (auto &item : Items) {
       // descriptor byte, size byte
-      result += item.getSize() + CharUnits::fromQuantity(2);
+      result += item.size() + CharUnits::fromQuantity(2);
     }
     return result;
   }
 
-  bool getHasPrivateItems() const {
-    return std::any_of(Items.begin(), Items.end(),
-      [](const OSLogBufferItem &item) { return item.getIsPrivate(); });
+  bool hasPrivateItems() const {
+    return llvm::any_of(
+        Items, [](const OSLogBufferItem &Item) { return Item.getIsPrivate(); });
   }
 
-  bool getHasPublicItems() const {
-    return std::any_of(Items.begin(), Items.end(),
-      [](const OSLogBufferItem &item) { return item.getIsPublic(); });
+  bool hasPublicItems() const {
+    return llvm::any_of(
+        Items, [](const OSLogBufferItem &Item) { return Item.getIsPublic(); });
   }
 
-  bool getHasNonScalar() const {
-    return std::any_of(Items.begin(), Items.end(),
-      [](const OSLogBufferItem &item) {
-        return item.getKind() != OSLogBufferItem::ScalarKind;
-      });
+  bool hasNonScalar() const {
+    return llvm::any_of(Items, [](const OSLogBufferItem &Item) {
+      return Item.getKind() != OSLogBufferItem::ScalarKind;
+    });
   }
 
   unsigned char getSummaryByte() const {
     unsigned char result = 0;
-    if (getHasPrivateItems()) result |= 0x01;
-    if (getHasNonScalar()) result |= 0x02;
+    if (hasPrivateItems())
+      result |= HasPrivateItems;
+    if (hasNonScalar())
+      result |= HasNonScalarItems;
     return result;
   }
 
-  unsigned char getNumArgsByte() const {
-    return Items.size();
-  }
+  unsigned char getNumArgsByte() const { return Items.size(); }
 };
 
 // Given a call 'E' to one of the builtins __builtin_os_log_format() or
