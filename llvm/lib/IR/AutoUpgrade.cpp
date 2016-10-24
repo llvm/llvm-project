@@ -246,6 +246,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name == "sse41.pminud" ||
          Name.startswith("avx2.pmax") ||
          Name.startswith("avx2.pmin") ||
+         Name.startswith("avx512.mask.pmax") ||
+         Name.startswith("avx512.mask.pmin") ||
          Name.startswith("avx2.vbroadcast") ||
          Name.startswith("avx2.pbroadcast") ||
          Name.startswith("avx.vpermil.") ||
@@ -640,7 +642,12 @@ static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
   Value *Op0 = CI.getArgOperand(0);
   Value *Op1 = CI.getArgOperand(1);
   Value *Cmp = Builder.CreateICmp(Pred, Op0, Op1);
-  return Builder.CreateSelect(Cmp, Op0, Op1);
+  Value *Res = Builder.CreateSelect(Cmp, Op0, Op1);
+
+  if (CI.getNumArgOperands() == 4)
+    Res = EmitX86Select(Builder, CI.getArgOperand(3), Res, CI.getArgOperand(2));
+
+  return Res;
 }
 
 static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
@@ -708,22 +715,26 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     } else if (IsX86 && (Name == "sse41.pmaxsb" ||
                          Name == "sse2.pmaxs.w" ||
                          Name == "sse41.pmaxsd" ||
-                         Name.startswith("avx2.pmaxs"))) {
+                         Name.startswith("avx2.pmaxs") ||
+                         Name.startswith("avx512.mask.pmaxs"))) {
       Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_SGT);
     } else if (IsX86 && (Name == "sse2.pmaxu.b" ||
                          Name == "sse41.pmaxuw" ||
                          Name == "sse41.pmaxud" ||
-                         Name.startswith("avx2.pmaxu"))) {
+                         Name.startswith("avx2.pmaxu") ||
+                         Name.startswith("avx512.mask.pmaxu"))) {
       Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_UGT);
     } else if (IsX86 && (Name == "sse41.pminsb" ||
                          Name == "sse2.pmins.w" ||
                          Name == "sse41.pminsd" ||
-                         Name.startswith("avx2.pmins"))) {
+                         Name.startswith("avx2.pmins") ||
+                         Name.startswith("avx512.mask.pmins"))) {
       Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_SLT);
     } else if (IsX86 && (Name == "sse2.pminu.b" ||
                          Name == "sse41.pminuw" ||
                          Name == "sse41.pminud" ||
-                         Name.startswith("avx2.pminu"))) {
+                         Name.startswith("avx2.pminu") ||
+                         Name.startswith("avx512.mask.pminu"))) {
       Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_ULT);
     } else if (IsX86 && (Name == "sse2.cvtdq2pd" ||
                          Name == "sse2.cvtps2pd" ||
