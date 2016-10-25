@@ -38,8 +38,6 @@ class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   void operator=(const GlobalVariable &) = delete;
   GlobalVariable(const GlobalVariable &) = delete;
 
-  void setParent(Module *parent);
-
   bool isConstantGlobal : 1;                   // Is this a global constant?
   bool isExternallyInitializedConstant : 1;    // Is this a global whose value
                                                // can change from its initial

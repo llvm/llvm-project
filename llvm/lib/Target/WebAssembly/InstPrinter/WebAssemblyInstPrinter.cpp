@@ -154,6 +154,7 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
             (Desc.TSFlags & WebAssemblyII::VariableOpIsImmediate)) &&
            "WebAssemblyII::VariableOpIsImmediate should be set for "
            "variable_ops immediate ops");
+    (void)Desc;
     // TODO: (MII.get(MI->getOpcode()).TSFlags &
     //        WebAssemblyII::VariableOpImmediateIsLabel)
     // can tell us whether this is an immediate referencing a label in the

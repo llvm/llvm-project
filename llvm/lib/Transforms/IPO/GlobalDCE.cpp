@@ -162,45 +162,29 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &) {
       GIF.setResolver(nullptr);
     }
 
-  if (!DeadFunctions.empty()) {
-    // Now that all interferences have been dropped, delete the actual objects
-    // themselves.
-    for (Function *F : DeadFunctions) {
-      RemoveUnusedGlobalValue(*F);
-      M.getFunctionList().erase(F);
-    }
-    NumFunctions += DeadFunctions.size();
+  // Now that all interferences have been dropped, delete the actual objects
+  // themselves.
+  auto EraseUnusedGlobalValue = [&](GlobalValue *GV) {
+    RemoveUnusedGlobalValue(*GV);
+    GV->eraseFromParent();
     Changed = true;
-  }
+  };
 
-  if (!DeadGlobalVars.empty()) {
-    for (GlobalVariable *GV : DeadGlobalVars) {
-      RemoveUnusedGlobalValue(*GV);
-      M.getGlobalList().erase(GV);
-    }
-    NumVariables += DeadGlobalVars.size();
-    Changed = true;
-  }
+  NumFunctions += DeadFunctions.size();
+  for (Function *F : DeadFunctions)
+    EraseUnusedGlobalValue(F);
 
-  // Now delete any dead aliases.
-  if (!DeadAliases.empty()) {
-    for (GlobalAlias *GA : DeadAliases) {
-      RemoveUnusedGlobalValue(*GA);
-      M.getAliasList().erase(GA);
-    }
-    NumAliases += DeadAliases.size();
-    Changed = true;
-  }
+  NumVariables += DeadGlobalVars.size();
+  for (GlobalVariable *GV : DeadGlobalVars)
+    EraseUnusedGlobalValue(GV);
 
-  // Now delete any dead aliases.
-  if (!DeadIFuncs.empty()) {
-    for (GlobalIFunc *GIF : DeadIFuncs) {
-      RemoveUnusedGlobalValue(*GIF);
-      M.getIFuncList().erase(GIF);
-    }
-    NumIFuncs += DeadIFuncs.size();
-    Changed = true;
-  }
+  NumAliases += DeadAliases.size();
+  for (GlobalAlias *GA : DeadAliases)
+    EraseUnusedGlobalValue(GA);
+
+  NumIFuncs += DeadIFuncs.size();
+  for (GlobalIFunc *GIF : DeadIFuncs)
+    EraseUnusedGlobalValue(GIF);
 
   // Make sure that all memory is released
   AliveGlobals.clear();

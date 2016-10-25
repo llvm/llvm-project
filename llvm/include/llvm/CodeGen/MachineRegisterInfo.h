@@ -898,10 +898,11 @@ public:
           advance();
         } while (Op && Op->getParent() == P);
       } else if (ByBundle) {
-        MachineInstr &P = getBundleStart(*Op->getParent());
+        MachineBasicBlock::instr_iterator P =
+            getBundleStart(Op->getParent()->getIterator());
         do {
           advance();
-        } while (Op && &getBundleStart(*Op->getParent()) == &P);
+        } while (Op && getBundleStart(Op->getParent()->getIterator()) == P);
       }
 
       return *this;
@@ -1000,10 +1001,11 @@ public:
           advance();
         } while (Op && Op->getParent() == P);
       } else if (ByBundle) {
-        MachineInstr &P = getBundleStart(*Op->getParent());
+        MachineBasicBlock::instr_iterator P =
+            getBundleStart(Op->getParent()->getIterator());
         do {
           advance();
-        } while (Op && &getBundleStart(*Op->getParent()) == &P);
+        } while (Op && getBundleStart(Op->getParent()->getIterator()) == P);
       }
 
       return *this;
@@ -1016,7 +1018,7 @@ public:
     MachineInstr &operator*() const {
       assert(Op && "Cannot dereference end iterator!");
       if (ByBundle)
-        return getBundleStart(*Op->getParent());
+        return *getBundleStart(Op->getParent()->getIterator());
       return *Op->getParent();
     }
 

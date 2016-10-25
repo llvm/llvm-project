@@ -74,8 +74,6 @@ private:
 
   friend class SymbolTableListTraits<Function>;
 
-  void setParent(Module *parent);
-
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list

@@ -599,9 +599,7 @@ define <8 x i64> @sext_16i8_to_8i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; AVX512-LABEL: sext_16i8_to_8i64:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vpmovzxbq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,zero,zero,zero,xmm0[5],zero,zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vpsllq $56, %zmm0, %zmm0
-; AVX512-NEXT:    vpsraq $56, %zmm0, %zmm0
+; AVX512-NEXT:    vpmovsxbq %xmm0, %zmm0
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: sext_16i8_to_8i64:

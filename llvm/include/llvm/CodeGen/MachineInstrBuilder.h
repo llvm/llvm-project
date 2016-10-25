@@ -460,7 +460,8 @@ public:
   /// Create an MIBundleBuilder representing an existing instruction or bundle
   /// that has MI as its head.
   explicit MIBundleBuilder(MachineInstr *MI)
-      : MBB(*MI->getParent()), Begin(MI), End(getBundleEnd(*MI)) {}
+      : MBB(*MI->getParent()), Begin(MI),
+        End(getBundleEnd(MI->getIterator())) {}
 
   /// Return a reference to the basic block containing this bundle.
   MachineBasicBlock &getMBB() const { return MBB; }

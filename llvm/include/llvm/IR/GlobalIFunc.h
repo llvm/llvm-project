@@ -35,8 +35,6 @@ class GlobalIFunc final : public GlobalIndirectSymbol,
   void operator=(const GlobalIFunc &) = delete;
   GlobalIFunc(const GlobalIFunc &) = delete;
 
-  void setParent(Module *parent);
-
   GlobalIFunc(Type *Ty, unsigned AddressSpace, LinkageTypes Linkage,
               const Twine &Name, Constant *Resolver, Module *Parent);
 
