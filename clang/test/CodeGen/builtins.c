@@ -355,6 +355,9 @@ void test_float_builtin_ops(float F, double D, long double LD) {
 
 }
 
+// __builtin_longjmp isn't supported on all platforms, so only test it on X86.
+#ifdef __x86_64__
+
 // CHECK-LABEL: define void @test_builtin_longjmp
 void test_builtin_longjmp(void **buffer) {
   // CHECK: [[BITCAST:%.*]] = bitcast
@@ -363,11 +366,16 @@ void test_builtin_longjmp(void **buffer) {
   // CHECK-NEXT: unreachable
 }
 
+#endif
+
 // CHECK-LABEL: define i64 @test_builtin_readcyclecounter
 long long test_builtin_readcyclecounter() {
   // CHECK: call i64 @llvm.readcyclecounter()
   return __builtin_readcyclecounter();
 }
+
+// Behavior of __builtin_os_log differs between platforms, so only test on X86
+#ifdef __x86_64__
 
 // CHECK-LABEL: define void @test_builtin_os_log
 // CHECK: (i8* [[BUF:%.*]], i32 [[I:%.*]], i8* [[DATA:%.*]])
@@ -506,3 +514,5 @@ void test_builtin_os_log_percent(void *buf, const char *data) {
   // CHECK: store i8* [[DATA2]], i8** [[ARG1_PTR]]
   __builtin_os_log_format(buf, "%s %%", data);
 }
+
+#endif
