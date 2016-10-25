@@ -83,7 +83,7 @@ class StdLibraryFunctionsChecker : public Checker<check::PostCall, eval::Call> {
   /// a non-negative integer, which less than 5 and not equal to 2. For
   /// `ComparesToArgument', holds information about how exactly to compare to
   /// the argument.
-  typedef std::vector<std::pair<int64_t, int64_t>> IntRangeVectorTy;
+  typedef std::vector<std::pair<uint64_t, uint64_t>> IntRangeVectorTy;
 
   /// A reference to an argument or return value by its number.
   /// ArgNo in CallExpr and CallEvent is defined as Unsigned, but
@@ -274,7 +274,7 @@ StdLibraryFunctionsChecker::ValueRange::applyAsWithinRange(
     const llvm::APSInt &MinusInf = BVF.getMinValue(T);
     const llvm::APSInt &PlusInf = BVF.getMaxValue(T);
 
-    const llvm::APSInt &Left = BVF.getValue(R[0].first - 1, T);
+    const llvm::APSInt &Left = BVF.getValue(R[0].first - 1ULL, T);
     if (Left != PlusInf) {
       assert(MinusInf <= Left);
       State = CM.assumeWithinInclusiveRange(State, *N, MinusInf, Left, false);
@@ -282,7 +282,7 @@ StdLibraryFunctionsChecker::ValueRange::applyAsWithinRange(
         return nullptr;
     }
 
-    const llvm::APSInt &Right = BVF.getValue(R[E - 1].second + 1, T);
+    const llvm::APSInt &Right = BVF.getValue(R[E - 1].second + 1ULL, T);
     if (Right != MinusInf) {
       assert(Right <= PlusInf);
       State = CM.assumeWithinInclusiveRange(State, *N, Right, PlusInf, false);
@@ -291,8 +291,8 @@ StdLibraryFunctionsChecker::ValueRange::applyAsWithinRange(
     }
 
     for (size_t I = 1; I != E; ++I) {
-      const llvm::APSInt &Min = BVF.getValue(R[I - 1].second + 1, T);
-      const llvm::APSInt &Max = BVF.getValue(R[I].first - 1, T);
+      const llvm::APSInt &Min = BVF.getValue(R[I - 1].second + 1ULL, T);
+      const llvm::APSInt &Max = BVF.getValue(R[I].first - 1ULL, T);
       assert(Min <= Max);
       State = CM.assumeWithinInclusiveRange(State, *N, Min, Max, false);
       if (!State)

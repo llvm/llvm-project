@@ -21,8 +21,6 @@
 # NOGC: Name: c
 # NOGC: Name: x
 # NOGC: Name: y
-# NOGC: Name: __preinit_array_start
-# NOGC: Name: __preinit_array_end
 # NOGC: Name: d
 
 # GC1:     Name: .eh_frame
@@ -38,8 +36,6 @@
 # GC1:     Name: c
 # GC1-NOT: Name: x
 # GC1-NOT: Name: y
-# GC1:     Name: __preinit_array_start
-# GC1:     Name: __preinit_array_end
 # GC1-NOT: Name: d
 
 # GC2:     Name: .eh_frame
@@ -55,8 +51,6 @@
 # GC2:     Name: c
 # GC2-NOT: Name: x
 # GC2-NOT: Name: y
-# GC2:     Name: __preinit_array_start
-# GC2:     Name: __preinit_array_end
 # GC2:     Name: d
 
 .globl _start, d

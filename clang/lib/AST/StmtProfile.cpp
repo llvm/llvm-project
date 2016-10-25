@@ -1190,6 +1190,12 @@ void StmtProfiler::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *S) {
   if (S->isTypeDependent()) {
     // Type-dependent operator calls are profiled like their underlying
     // syntactic operator.
+    //
+    // An operator call to operator-> is always implicit, so just skip it. The
+    // enclosing MemberExpr will profile the actual member access.
+    if (S->getOperator() == OO_Arrow)
+      return Visit(S->getArg(0));
+
     UnaryOperatorKind UnaryOp = UO_Extension;
     BinaryOperatorKind BinaryOp = BO_Comma;
     Stmt::StmtClass SC = DecodeOperatorCall(S, UnaryOp, BinaryOp);
