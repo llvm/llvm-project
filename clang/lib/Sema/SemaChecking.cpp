@@ -4149,7 +4149,7 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
         const Expr *Arg = ME->getArg(ArgIndex - 1);
         return checkFormatStringExpr(
             S, Arg, Args, HasVAListArg, format_idx, firstDataArg, Type,
-            CallType, InFunctionCall, CheckedVarArgs, UncoveredArg, Offset);
+            CallType, InFunctionCall, CheckedVarArgs, UncoveredArg);
       }
     }
 
