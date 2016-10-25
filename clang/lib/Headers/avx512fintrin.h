@@ -9658,6 +9658,243 @@ _mm512_mask_abs_pd(__m512d __W, __mmask8 __K, __m512d __A)
   return (__m512d)_mm512_mask_and_epi64((__v8di)__W, __K, _mm512_set1_epi64(0x7FFFFFFFFFFFFFFF),(__v8di)__A);
 }
 
+// Vector-reduction arithmetic accepts vectors as inputs and produces scalars as
+// outputs. This class of vector operation forms the basis of many scientific
+// computations. In vector-reduction arithmetic, the evaluation off is
+// independent of the order of the input elements of V.
+
+// Used bisection method. At each step, we partition the vector with previous
+// step in half, and the operation is performed on its two halves.
+// This takes log2(n) steps where n is the number of elements in the vector.
+
+// Vec512 - Vector with size 512.
+// Operator - Can be one of following: +,*,&&,||
+// T2  - Can get 'i' for int and 'f' for float.
+// T1 - Can get 'i' for int and 'd' for double.
+
+#define _mm512_reduce_operator_64bit(Vec512, Operator, T2, T1)         \
+  __extension__({                                                      \
+    __m256##T1 Vec256 = __builtin_shufflevector(                       \
+                            (__v8d##T2)Vec512,                         \
+                            (__v8d##T2)Vec512,                         \
+                            0, 1, 2, 3)                                \
+                        Operator                                       \
+                        __builtin_shufflevector(                       \
+                            (__v8d##T2)Vec512,                         \
+                            (__v8d##T2)Vec512,                         \
+                            4, 5, 6, 7);                               \
+    __m128##T1 Vec128 = __builtin_shufflevector(                       \
+                            (__v4d##T2)Vec256,                         \
+                            (__v4d##T2)Vec256,                         \
+                            0, 1)                                      \
+                        Operator                                       \
+                        __builtin_shufflevector(                       \
+                            (__v4d##T2)Vec256,                         \
+                            (__v4d##T2)Vec256,                         \
+                            2, 3);                                     \
+    Vec128 = __builtin_shufflevector((__v2d##T2)Vec128,                \
+                                     (__v2d##T2)Vec128, 0, -1)         \
+             Operator                                                  \
+             __builtin_shufflevector((__v2d##T2)Vec128,                \
+                                     (__v2d##T2)Vec128, 1, -1);        \
+    return Vec128[0];                                                  \
+  })
+
+static __inline__ long long __DEFAULT_FN_ATTRS _mm512_reduce_add_epi64(__m512i __W) {
+  _mm512_reduce_operator_64bit(__W, +, i, i);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS _mm512_reduce_mul_epi64(__m512i __W) {
+  _mm512_reduce_operator_64bit(__W, *, i, i);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS _mm512_reduce_and_epi64(__m512i __W) {
+  _mm512_reduce_operator_64bit(__W, &, i, i);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS _mm512_reduce_or_epi64(__m512i __W) {
+  _mm512_reduce_operator_64bit(__W, |, i, i);
+}
+
+static __inline__ double __DEFAULT_FN_ATTRS _mm512_reduce_add_pd(__m512d __W) {
+  _mm512_reduce_operator_64bit(__W, +, f, d);
+}
+
+static __inline__ double __DEFAULT_FN_ATTRS _mm512_reduce_mul_pd(__m512d __W) {
+  _mm512_reduce_operator_64bit(__W, *, f, d);
+}
+
+// Vec512 - Vector with size 512.
+// Operator - Can be one of following: +,*,&&,||
+// Mask - Intrinsic Mask
+// Neutral - Identity element: {+,0},{*,1},{&&,0xFFFFFFFFFFFFFFFF},{||,0}
+// T2  - Can get 'i' for int and 'f' for float.
+// T1 - Can get 'i' for int and 'd' for packed double-precision.
+// T3 - Can be Pd for packed double or q for q-word.
+
+#define _mm512_mask_reduce_operator_64bit(Vec512, Operator, Mask, Neutral,     \
+                                          T2, T1, T3)                          \
+  __extension__({                                                              \
+    Vec512 = __builtin_ia32_select##T3##_512(                                  \
+                 (__mmask8)Mask, (__v8d##T2)Vec512,                            \
+                 (__v8d##T2)_mm512_set1_epi64(Neutral));                       \
+    _mm512_reduce_operator_64bit(Vec512, Operator, T2, T1);                    \
+  })
+
+static __inline__ long long __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_add_epi64(__mmask8 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_64bit(__W, +, __M, 0, i, i, q);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_mul_epi64(__mmask8 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_64bit(__W, *, __M, 1, i, i, q);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_and_epi64(__mmask8 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_64bit(__W, &, __M, 0xFFFFFFFFFFFFFFFF, i, i, q);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_or_epi64(__mmask8 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_64bit(__W, |, __M, 0, i, i, q);
+}
+
+static __inline__ double __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_add_pd(__mmask8 __M, __m512d __W) {
+  _mm512_mask_reduce_operator_64bit(__W, +, __M, 0, f, d, pd);
+}
+
+static __inline__ double __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_mul_pd(__mmask8 __M, __m512d __W) {
+  _mm512_mask_reduce_operator_64bit(__W, *, __M, 1, f, d, pd);
+}
+
+// Vec512 - Vector with size 512.
+// Operator - Can be one of following: +,*,&&,||
+// T2 - Can get 'i' for int and ' ' for packed single.
+// T1 - Can get 'i' for int and 'f' for float.
+
+#define _mm512_reduce_operator_32bit(Vec512, Operator, T2, T1) __extension__({ \
+    __m256##T1 Vec256 =                                                        \
+            (__m256##T1)__builtin_shufflevector(                               \
+                                    (__v16s##T2)Vec512,                        \
+                                    (__v16s##T2)Vec512,                        \
+                                    0, 1, 2, 3, 4, 5, 6, 7)                    \
+                                Operator                                       \
+            (__m256##T1)__builtin_shufflevector(                               \
+                                    (__v16s##T2)Vec512,                        \
+                                    (__v16s##T2)Vec512,                        \
+                                    8, 9, 10, 11, 12, 13, 14, 15);             \
+    __m128##T1 Vec128 =                                                        \
+             (__m128##T1)__builtin_shufflevector(                              \
+                                    (__v8s##T2)Vec256,                         \
+                                    (__v8s##T2)Vec256,                         \
+                                    0, 1, 2, 3)                                \
+                                Operator                                       \
+             (__m128##T1)__builtin_shufflevector(                              \
+                                    (__v8s##T2)Vec256,                         \
+                                    (__v8s##T2)Vec256,                         \
+                                    4, 5, 6, 7);                               \
+    Vec128 = (__m128##T1)__builtin_shufflevector(                              \
+                                    (__v4s##T2)Vec128,                         \
+                                    (__v4s##T2)Vec128,                         \
+                                    0, 1, -1, -1)                              \
+                                Operator                                       \
+             (__m128##T1)__builtin_shufflevector(                              \
+                                    (__v4s##T2)Vec128,                         \
+                                    (__v4s##T2)Vec128,                         \
+                                    2, 3, -1, -1);                             \
+    Vec128 = (__m128##T1)__builtin_shufflevector(                              \
+                                    (__v4s##T2)Vec128,                         \
+                                    (__v4s##T2)Vec128,                         \
+                                    0, -1, -1, -1)                             \
+                                Operator                                       \
+             (__m128##T1)__builtin_shufflevector(                              \
+                                    (__v4s##T2)Vec128,                         \
+                                    (__v4s##T2)Vec128,                         \
+                                    1, -1, -1, -1);                            \
+    return Vec128[0];                                                          \
+  })
+
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_reduce_add_epi32(__m512i __W) {
+  _mm512_reduce_operator_32bit(__W, +, i, i);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS 
+_mm512_reduce_mul_epi32(__m512i __W) {
+  _mm512_reduce_operator_32bit(__W, *, i, i);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS 
+_mm512_reduce_and_epi32(__m512i __W) {
+  _mm512_reduce_operator_32bit(__W, &, i, i);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS 
+_mm512_reduce_or_epi32(__m512i __W) {
+  _mm512_reduce_operator_32bit(__W, |, i, i);
+}
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_reduce_add_ps(__m512 __W) {
+  _mm512_reduce_operator_32bit(__W, +, f, );
+}
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_reduce_mul_ps(__m512 __W) {
+  _mm512_reduce_operator_32bit(__W, *, f, );
+}
+
+// Vec512 - Vector with size 512.
+// Operator - Can be one of following: +,*,&&,||
+// Mask - Intrinsic Mask
+// Neutral - Identity element: {+,0},{*,1},{&&,0xFFFFFFFF},{||,0}
+// T2  - Can get 'i' for int and 'f' for float.
+// T1 - Can get 'i' for int and 'd' for double.
+// T3 - Can be Ps for packed single or d for d-word.
+
+#define _mm512_mask_reduce_operator_32bit(Vec512, Operator, Mask, Neutral,     \
+                                          T2, T1, T3)                          \
+  __extension__({                                                              \
+    Vec512 = (__m512##T1)__builtin_ia32_select##T3##_512(                      \
+        (__mmask16)Mask, (__v16s##T2)Vec512,                                   \
+        (__v16s##T2)_mm512_set1_epi32(Neutral));                               \
+    _mm512_reduce_operator_32bit(Vec512, Operator, T2, T1);                    \
+  })
+
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_add_epi32( __mmask16 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_32bit(__W, +, __M, 0, i, i, d);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_mul_epi32( __mmask16 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_32bit(__W, *, __M, 1, i, i, d);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_and_epi32( __mmask16 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_32bit(__W, &, __M, 0xFFFFFFFF, i, i, d);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_or_epi32(__mmask16 __M, __m512i __W) {
+  _mm512_mask_reduce_operator_32bit(__W, |, __M, 0, i, i, d);
+}
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_add_ps(__mmask16 __M, __m512 __W) {
+  _mm512_mask_reduce_operator_32bit(__W, +, __M, 0, f, , ps);
+}
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_mul_ps(__mmask16 __M, __m512 __W) {
+  _mm512_mask_reduce_operator_32bit(__W, *, __M, 1, f, , ps);
+}
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif // __AVX512FINTRIN_H
