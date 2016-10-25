@@ -21,6 +21,11 @@ class Random {
   size_t Rand() { return R(); }
   size_t RandBool() { return Rand() % 2; }
   size_t operator()(size_t n) { return n ? Rand() % n : 0; }
+  intptr_t operator()(intptr_t From, intptr_t To) {
+    assert(From < To);
+    intptr_t RangeSize = To - From + 1;
+    return operator()(RangeSize) + From;
+  }
   std::mt19937 &Get_mt19937() { return R; }
  private:
   std::mt19937 R;

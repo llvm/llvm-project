@@ -205,8 +205,6 @@ template <class T>
 DictionaryEntry MutationDispatcher::MakeDictionaryEntryFromCMP(
     T Arg1, T Arg2, const uint8_t *Data, size_t Size) {
   ScopedDoingMyOwnMemmem scoped_doing_my_own_memmem;
-  if (Rand.RandBool()) Arg1 = Bswap(Arg1);
-  if (Rand.RandBool()) Arg2 = Bswap(Arg2);
   bool HandleFirst = Rand.RandBool();
   T ExistingBytes, DesiredBytes;
   Word W;
@@ -214,6 +212,9 @@ DictionaryEntry MutationDispatcher::MakeDictionaryEntryFromCMP(
   for (int Arg = 0; Arg < 2; Arg++) {
     ExistingBytes = HandleFirst ? Arg1 : Arg2;
     DesiredBytes = HandleFirst ? Arg2 : Arg1;
+    DesiredBytes += Rand(-1, 1);
+    if (Rand.RandBool()) ExistingBytes = Bswap(ExistingBytes);
+    if (Rand.RandBool()) DesiredBytes = Bswap(DesiredBytes);
     HandleFirst = !HandleFirst;
     W.Set(reinterpret_cast<uint8_t*>(&DesiredBytes), sizeof(T));
     const size_t kMaxNumPositions = 8;
@@ -236,15 +237,9 @@ size_t MutationDispatcher::Mutate_AddWordFromTORC(
     uint8_t *Data, size_t Size, size_t MaxSize) {
   Word W;
   DictionaryEntry DE;
-  bool Debug = false;
   if (Rand.RandBool()) {
     auto X = TPC.TORC8.Get(Rand.Rand());
     DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
-    if (X.A > 10000 &&X.B > 10000) Debug = false;
-    if (Debug) {
-      Printf("ZZZ %zx %zx\n", X.A, X.B);
-      DE.Print();
-    }
   } else {
     auto X = TPC.TORC4.Get(Rand.Rand());
     if ((X.A >> 16) == 0 && (X.B >> 16) == 0 && Rand.RandBool())
@@ -255,9 +250,6 @@ size_t MutationDispatcher::Mutate_AddWordFromTORC(
   }
   Size = ApplyDictionaryEntry(Data, Size, MaxSize, DE);
   if (!Size) return 0;
-  if (Debug) {
-    Printf("DONE\n");
-  }
   DictionaryEntry &DERef =
       CmpDictionaryEntriesDeque[CmpDictionaryEntriesDequeIdx++ %
                                 kCmpDictionaryEntriesDequeSize];

@@ -149,8 +149,6 @@ TEST(VerifierTest, InvalidFunctionLinkage) {
                                           "have external or weak linkage!"));
 }
 
-#ifndef _MSC_VER
-// FIXME: This test causes an ICE in MSVC 2013.
 TEST(VerifierTest, StripInvalidDebugInfo) {
   {
     LLVMContext C;
@@ -205,7 +203,6 @@ TEST(VerifierTest, StripInvalidDebugInfo) {
     EXPECT_FALSE(verifyModule(M));
   }
 }
-#endif
 
 TEST(VerifierTest, StripInvalidDebugInfoLegacy) {
   LLVMContext C;

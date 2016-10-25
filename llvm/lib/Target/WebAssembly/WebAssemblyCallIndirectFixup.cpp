@@ -100,8 +100,11 @@ bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
         auto Uses = MI.explicit_uses();
         MachineInstr::mop_iterator it = Uses.begin();
         const MachineOperand MO = *it;
-        unsigned num = MI.getOperandNo(it);
-        MI.RemoveOperand(num);
+
+        // Set up the flags immediate, which currently has no defined flags
+        // so it's always zero.
+        it->ChangeToImmediate(0);
+
         MI.addOperand(MF, MO);
 
         DEBUG(dbgs() << "  After transform: " << MI);

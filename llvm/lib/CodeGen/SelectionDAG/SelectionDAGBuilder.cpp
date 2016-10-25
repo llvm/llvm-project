@@ -8433,9 +8433,10 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
 
   const int64_t N = Clusters.size();
   const unsigned MinJumpTableEntries = TLI.getMinimumJumpTableEntries();
+  const unsigned SmallNumberOfEntries = MinJumpTableEntries / 2;
   const unsigned MaxJumpTableSize =
-    OptForSize ? UINT_MAX : TLI.getMaximumJumpTableSize() ?
-                            TLI.getMaximumJumpTableSize() : UINT_MAX;
+                   OptForSize || TLI.getMaximumJumpTableSize() == 0
+                   ? UINT_MAX : TLI.getMaximumJumpTableSize();
 
   if (N < 2 || N < MinJumpTableEntries)
     return;
@@ -8459,7 +8460,6 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
                            .getLimitedValue(UINT_MAX - 1) + 1;
   if (JumpTableSize <= MaxJumpTableSize &&
       isDense(Clusters, TotalCases, 0, N - 1, MinDensity)) {
-
     CaseCluster JTCluster;
     if (buildJumpTable(Clusters, 0, N - 1, SI, DefaultMBB, JTCluster)) {
       Clusters[0] = JTCluster;
@@ -8483,13 +8483,23 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
   SmallVector<unsigned, 8> MinPartitions(N);
   // LastElement[i] is the last element of the partition starting at i.
   SmallVector<unsigned, 8> LastElement(N);
-  // NumTables[i]: nbr of >= MinJumpTableSize partitions from Clusters[i..N-1].
-  SmallVector<unsigned, 8> NumTables(N);
+  // PartitionsScore[i] is used to break ties when choosing between two
+  // partitionings resulting in the same number of partitions.
+  SmallVector<unsigned, 8> PartitionsScore(N);
+  // For PartitionsScore, a small number of comparisons is considered as good as
+  // a jump table and a single comparison is considered better than a jump
+  // table.
+  enum PartitionScores : unsigned {
+    NoTable = 0,
+    Table = 1,
+    FewCases = 1,
+    SingleCase = 2
+  };
 
   // Base case: There is only one way to partition Clusters[N-1].
   MinPartitions[N - 1] = 1;
   LastElement[N - 1] = N - 1;
-  NumTables[N - 1] = 0;
+  PartitionsScore[N - 1] = PartitionScores::SingleCase;
 
   // Note: loop indexes are signed to avoid underflow.
   for (int64_t i = N - 2; i >= 0; i--) {
@@ -8497,7 +8507,7 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
     // Baseline: Put Clusters[i] into a partition on its own.
     MinPartitions[i] = MinPartitions[i + 1] + 1;
     LastElement[i] = i;
-    NumTables[i] = NumTables[i + 1];
+    PartitionsScore[i] = PartitionsScore[i + 1] + PartitionScores::SingleCase;
 
     // Search for a solution that results in fewer partitions.
     for (int64_t j = N - 1; j > i; j--) {
@@ -8508,16 +8518,23 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
       if (JumpTableSize <= MaxJumpTableSize &&
           isDense(Clusters, TotalCases, i, j, MinDensity)) {
         unsigned NumPartitions = 1 + (j == N - 1 ? 0 : MinPartitions[j + 1]);
-        bool IsTable = j - i + 1 >= MinJumpTableEntries;
-        unsigned Tables = IsTable + (j == N - 1 ? 0 : NumTables[j + 1]);
+        unsigned Score = j == N - 1 ? 0 : PartitionsScore[j + 1];
+        int64_t NumEntries = j - i + 1;
 
-        // If this j leads to fewer partitions, or same number of partitions
-        // with more lookup tables, it is a better partitioning.
+        if (NumEntries == 1)
+          Score += PartitionScores::SingleCase;
+        else if (NumEntries <= SmallNumberOfEntries)
+          Score += PartitionScores::FewCases;
+        else if (NumEntries >= MinJumpTableEntries)
+          Score += PartitionScores::Table;
+
+        // If this leads to fewer partitions, or to the same number of
+        // partitions with better score, it is a better partitioning.
         if (NumPartitions < MinPartitions[i] ||
-            (NumPartitions == MinPartitions[i] && Tables > NumTables[i])) {
+            (NumPartitions == MinPartitions[i] && Score > PartitionsScore[i])) {
           MinPartitions[i] = NumPartitions;
           LastElement[i] = j;
-          NumTables[i] = Tables;
+          PartitionsScore[i] = Score;
         }
       }
     }

@@ -44,6 +44,18 @@ DISubprogram *getDISubprogram(const MDNode *Scope);
 bool StripDebugInfo(Module &M);
 bool stripDebugInfo(Function &F);
 
+/// Downgrade the debug info in a module to contain only line table information.
+///
+/// In order to convert debug info to what -gline-tables-only would have
+/// created, this does the following:
+///   1) Delete all debug intrinsics.
+///   2) Delete all non-CU named metadata debug info nodes.
+///   3) Create new DebugLocs for each instruction.
+///   4) Create a new CU debug info, and similarly for every metadata node
+///      that's reachable from the CU debug info.
+///   All debug type metadata nodes are unreachable and garbage collected.
+bool stripNonLineTableDebugInfo(Module &M);
+
 /// \brief Return Debug Info Metadata Version by checking module flags.
 unsigned getDebugMetadataVersionFromModule(const Module &M);
 

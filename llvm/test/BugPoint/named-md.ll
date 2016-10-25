@@ -1,4 +1,4 @@
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crash-too-many-cus -silence-passes > /dev/null
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crash-too-many-cus -silence-passes -disable-strip-debuginfo > /dev/null
 ; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck %s
 ; RUN-DISABLE: bugpoint -disable-namedmd-remove -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crash-too-many-cus -silence-passes > /dev/null
 ; RUN-DISABLE: llvm-dis %t-reduced-simplified.bc -o - | FileCheck %s

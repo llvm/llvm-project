@@ -199,8 +199,8 @@ static bool addDiscriminators(Function &F) {
       // discriminator is needed to distinguish both instructions.
       auto R1 = Scopes.insert({Scope, nullptr});
       DILexicalBlockFile *&NewScope = R1.first->second;
-      unsigned Discriminator = InsertSuccess ? ++LDM[L] : LDM[L];
       if (!NewScope) {
+        unsigned Discriminator = InsertSuccess ? ++LDM[L] : LDM[L];
         auto *File = Builder.createFile(DIL->getFilename(),
                                         Scope->getDirectory());
         NewScope = Builder.createLexicalBlockFile(Scope, File, Discriminator);

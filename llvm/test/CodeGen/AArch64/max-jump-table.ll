@@ -1,7 +1,7 @@
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40                   -o - 2>%t; FileCheck %s --check-prefixes=CHECK,CHECK0  <%t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table=4 -o - 2>%t; FileCheck %s --check-prefixes=CHECK,CHECK4  <%t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table=8 -o - 2>%t; FileCheck %s --check-prefixes=CHECK,CHECK8  <%t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m1   -o - 2>%t; FileCheck %s --check-prefixes=CHECK,CHECKM1 <%t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40                        -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK0  < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=4 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK4  < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=8 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK8  < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m1        -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM1 < %t
 
 declare void @ext(i32)
 
@@ -27,7 +27,7 @@ entry:
     i32 17, label %bb17
   ]
 ; CHECK-LABEL: function jt1:
-; CHECK: Jump Tables:
+; CHECK-NEXT: Jump Tables:
 ; CHECK0-NEXT: jt#0:
 ; CHECK0-NOT: jt#1:
 ; CHECK4-NEXT: jt#0:
@@ -37,10 +37,9 @@ entry:
 ; CHECK4-NOT: jt#4:
 ; CHECK8-NEXT: jt#0:
 ; CHECK8-SAME: jt#1:
-; CHECK8-SAME: jt#2: BB#14 BB#15 BB#16 BB#17{{$}}
-; CHECK8-NOT: jt#3:
+; CHECK8-NOT: jt#2:
 ; CHECKM1-NEXT: jt#0:
-; CHECKM1-SAME: jt#1: BB#13 BB#14 BB#15 BB#16 BB#17{{$}}
+; CHECKM1-SAME: jt#1
 ; CHECKM1-NOT: jt#2:
 ; CHEC-NEXT: Function Live Ins:
 
@@ -77,7 +76,7 @@ entry:
     i32 15, label %bb6
   ]
 ; CHECK-LABEL: function jt2:
-; CHECK: Jump Tables:
+; CHECK-NEXT: Jump Tables:
 ; CHECK0-NEXT: jt#0:  BB#1 BB#2 BB#3 BB#4 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#5 BB#6{{$}}
 ; CHECK4-NEXT: jt#0:  BB#1 BB#2 BB#3 BB#4{{$}}
 ; CHECK8-NEXT: jt#0:  BB#1 BB#2 BB#3 BB#4{{$}}
