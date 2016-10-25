@@ -599,6 +599,17 @@ class SYNC_FM_MM : MMArch {
   let Inst{5-0}   = 0x3c;
 }
 
+class SYNCI_FM_MM : MMArch {
+  bits<5> rs;
+  bits<16> offset;
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010000;
+  let Inst{25-21} = 0b10000;
+  let Inst{20-16} = rs;
+  let Inst{15-0}  = offset;
+}
+
 class BRK_FM_MM : MMArch {
   bits<10> code_1;
   bits<10> code_2;

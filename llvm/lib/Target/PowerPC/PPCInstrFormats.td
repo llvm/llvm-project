@@ -1076,6 +1076,13 @@ class XX3Form_Zero<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let XB = XT;
 }
 
+class XX3Form_SetZero<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
+               InstrItinClass itin, list<dag> pattern>
+    : XX3Form<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
+  let XB = XT;
+  let XA = XT;
+}
+
 class XX3Form_1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr, 
                 InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {

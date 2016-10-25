@@ -48,7 +48,7 @@
 #include <stack>
 
 /// \brief The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "1.1.0"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
 
 /// \brief Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -57,9 +57,6 @@ using namespace llvm;
 using namespace coverage;
 
 class CoverageExporterJson {
-  /// \brief A Name of the object file coverage is for.
-  StringRef ObjectFilename;
-
   /// \brief Output stream to print JSON to.
   raw_ostream &OS;
 
@@ -71,9 +68,6 @@ class CoverageExporterJson {
 
   /// \brief Tracks state of the JSON output.
   std::stack<JsonState> State;
-
-  /// \brief Get the object filename.
-  StringRef getObjectFilename() const { return ObjectFilename; }
 
   /// \brief Emit a serialized scalar.
   void emitSerialized(const int64_t Value) { OS << Value; }
@@ -170,7 +164,6 @@ class CoverageExporterJson {
 
     // Start Export.
     emitDictStart();
-    emitDictElement("object", getObjectFilename());
 
     emitDictKey("files");
 
@@ -410,9 +403,8 @@ class CoverageExporterJson {
   }
 
 public:
-  CoverageExporterJson(StringRef ObjectFilename,
-                       const CoverageMapping &CoverageMapping, raw_ostream &OS)
-      : ObjectFilename(ObjectFilename), OS(OS), Coverage(CoverageMapping) {
+  CoverageExporterJson(const CoverageMapping &CoverageMapping, raw_ostream &OS)
+      : OS(OS), Coverage(CoverageMapping) {
     State.push(JsonState::None);
   }
 
@@ -421,10 +413,9 @@ public:
 };
 
 /// \brief Export the given CoverageMapping to a JSON Format.
-void exportCoverageDataToJson(StringRef ObjectFilename,
-                              const CoverageMapping &CoverageMapping,
+void exportCoverageDataToJson(const CoverageMapping &CoverageMapping,
                               raw_ostream &OS) {
-  auto Exporter = CoverageExporterJson(ObjectFilename, CoverageMapping, OS);
+  auto Exporter = CoverageExporterJson(CoverageMapping, OS);
 
   Exporter.print();
 }

@@ -2657,6 +2657,23 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       MB = 64 - countTrailingOnes(Imm64);
       SH = 0;
 
+      if (Val.getOpcode() == ISD::ANY_EXTEND) {
+        auto Op0 = Val.getOperand(0);
+        if ( Op0.getOpcode() == ISD::SRL &&
+           isInt32Immediate(Op0.getOperand(1).getNode(), Imm) && Imm <= MB) {
+
+           auto ResultType = Val.getNode()->getValueType(0);
+           auto ImDef = CurDAG->getMachineNode(PPC::IMPLICIT_DEF, dl,
+                                               ResultType);
+           SDValue IDVal (ImDef, 0);
+
+           Val = SDValue(CurDAG->getMachineNode(PPC::INSERT_SUBREG, dl,
+                         ResultType, IDVal, Op0.getOperand(0),
+                         getI32Imm(1, dl)), 0);
+           SH = 64 - Imm;
+        }
+      }
+
       // If the operand is a logical right shift, we can fold it into this
       // instruction: rldicl(rldicl(x, 64-n, n), 0, mb) -> rldicl(x, 64-n, mb)
       // for n <= mb. The right shift is really a left rotate followed by a

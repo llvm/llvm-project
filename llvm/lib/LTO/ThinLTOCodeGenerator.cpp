@@ -836,8 +836,8 @@ void ThinLTOCodeGenerator::run() {
   }
 
   CachePruning(CacheOptions.Path)
-      .setPruningInterval(CacheOptions.PruningInterval)
-      .setEntryExpiration(CacheOptions.Expiration)
+      .setPruningInterval(std::chrono::seconds(CacheOptions.PruningInterval))
+      .setEntryExpiration(std::chrono::seconds(CacheOptions.Expiration))
       .setMaxSize(CacheOptions.MaxPercentageOfAvailableSpace)
       .prune();
 

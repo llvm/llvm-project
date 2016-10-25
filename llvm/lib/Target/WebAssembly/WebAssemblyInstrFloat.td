@@ -15,26 +15,26 @@
 let Defs = [ARGUMENTS] in {
 
 let isCommutable = 1 in
-defm ADD : BinaryFP<fadd, "add ", 0x75, 0x89>;
-defm SUB : BinaryFP<fsub, "sub ", 0x76, 0x8a>;
+defm ADD : BinaryFP<fadd, "add ", 0x92, 0xa0>;
+defm SUB : BinaryFP<fsub, "sub ", 0x93, 0xa1>;
 let isCommutable = 1 in
-defm MUL : BinaryFP<fmul, "mul ", 0x77, 0x8b>;
-defm DIV : BinaryFP<fdiv, "div ", 0x78, 0x8c>;
-defm SQRT : UnaryFP<fsqrt, "sqrt", 0x82, 0x96>;
+defm MUL : BinaryFP<fmul, "mul ", 0x94, 0xa2>;
+defm DIV : BinaryFP<fdiv, "div ", 0x95, 0xa3>;
+defm SQRT : UnaryFP<fsqrt, "sqrt", 0x91, 0x9f>;
 
-defm ABS : UnaryFP<fabs, "abs ", 0x7b, 0x8f>;
-defm NEG : UnaryFP<fneg, "neg ", 0x7c, 0x90>;
-defm COPYSIGN : BinaryFP<fcopysign, "copysign", 0x7d, 0x91>;
+defm ABS : UnaryFP<fabs, "abs ", 0x8b, 0x99>;
+defm NEG : UnaryFP<fneg, "neg ", 0x8c, 0x9a>;
+defm COPYSIGN : BinaryFP<fcopysign, "copysign", 0x98, 0xa6>;
 
 let isCommutable = 1 in {
-defm MIN : BinaryFP<fminnan, "min ", 0x79, 0x8d>;
-defm MAX : BinaryFP<fmaxnan, "max ", 0x7a, 0x8e>;
+defm MIN : BinaryFP<fminnan, "min ", 0x96, 0xa4>;
+defm MAX : BinaryFP<fmaxnan, "max ", 0x97, 0xa5>;
 } // isCommutable = 1
 
-defm CEIL : UnaryFP<fceil, "ceil", 0x7e, 0x92>;
-defm FLOOR : UnaryFP<ffloor, "floor", 0x7f, 0x93>;
-defm TRUNC : UnaryFP<ftrunc, "trunc", 0x80, 0x94>;
-defm NEAREST : UnaryFP<fnearbyint, "nearest", 0x81, 0x95>;
+defm CEIL : UnaryFP<fceil, "ceil", 0x8d, 0x9b>;
+defm FLOOR : UnaryFP<ffloor, "floor", 0x8e, 0x9c>;
+defm TRUNC : UnaryFP<ftrunc, "trunc", 0x8f, 0x9d>;
+defm NEAREST : UnaryFP<fnearbyint, "nearest", 0x90, 0x9e>;
 
 } // Defs = [ARGUMENTS]
 
@@ -51,13 +51,13 @@ def : Pat<(frint f64:$src), (NEAREST_F64 f64:$src)>;
 let Defs = [ARGUMENTS] in {
 
 let isCommutable = 1 in {
-defm EQ : ComparisonFP<SETOEQ, "eq  ", 0x83, 0x97>;
-defm NE : ComparisonFP<SETUNE, "ne  ", 0x84, 0x98>;
+defm EQ : ComparisonFP<SETOEQ, "eq  ", 0x5b, 0x61>;
+defm NE : ComparisonFP<SETUNE, "ne  ", 0x5c, 0x62>;
 } // isCommutable = 1
-defm LT : ComparisonFP<SETOLT, "lt  ", 0x85, 0x99>;
-defm LE : ComparisonFP<SETOLE, "le  ", 0x86, 0x9a>;
-defm GT : ComparisonFP<SETOGT, "gt  ", 0x87, 0x9b>;
-defm GE : ComparisonFP<SETOGE, "ge  ", 0x88, 0x9c>;
+defm LT : ComparisonFP<SETOLT, "lt  ", 0x5d, 0x63>;
+defm LE : ComparisonFP<SETOLE, "le  ", 0x5e, 0x64>;
+defm GT : ComparisonFP<SETOGT, "gt  ", 0x5f, 0x65>;
+defm GE : ComparisonFP<SETOGE, "ge  ", 0x60, 0x66>;
 
 } // Defs = [ARGUMENTS]
 
@@ -79,10 +79,10 @@ let Defs = [ARGUMENTS] in {
 
 def SELECT_F32 : I<(outs F32:$dst), (ins F32:$lhs, F32:$rhs, I32:$cond),
                    [(set F32:$dst, (select I32:$cond, F32:$lhs, F32:$rhs))],
-                   "f32.select\t$dst, $lhs, $rhs, $cond">;
+                   "f32.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
 def SELECT_F64 : I<(outs F64:$dst), (ins F64:$lhs, F64:$rhs, I32:$cond),
                    [(set F64:$dst, (select I32:$cond, F64:$lhs, F64:$rhs))],
-                   "f64.select\t$dst, $lhs, $rhs, $cond">;
+                   "f64.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
 
 } // Defs = [ARGUMENTS]
 

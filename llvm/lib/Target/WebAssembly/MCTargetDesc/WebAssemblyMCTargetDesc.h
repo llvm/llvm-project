@@ -26,6 +26,7 @@ class MCContext;
 class MCInstrInfo;
 class MCObjectWriter;
 class MCSubtargetInfo;
+class MVT;
 class Target;
 class Triple;
 class raw_pwrite_stream;
@@ -44,6 +45,8 @@ namespace WebAssembly {
 enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
+  /// Local index.
+  OPERAND_LOCAL,
   /// 32-bit integer immediates.
   OPERAND_I32IMM,
   /// 64-bit integer immediates.
@@ -57,17 +60,6 @@ enum OperandType {
   /// signature immediate for block/loop.
   OPERAND_SIGNATURE
 };
-
-/// WebAssembly-specific directive identifiers.
-enum Directive {
-  // FIXME: This is not the real binary encoding.
-  DotParam = UINT64_MAX - 0,   ///< .param
-  DotResult = UINT64_MAX - 1,  ///< .result
-  DotLocal = UINT64_MAX - 2,   ///< .local
-  DotEndFunc = UINT64_MAX - 3, ///< .endfunc
-  DotIndIdx = UINT64_MAX - 4,  ///< .indidx
-};
-
 } // end namespace WebAssembly
 
 namespace WebAssemblyII {
@@ -77,7 +69,7 @@ enum {
   VariableOpIsImmediate = (1 << 0),
   // For immediate values in the variable_ops range, this flag indicates
   // whether the value represents a control-flow label.
-  VariableOpImmediateIsLabel = (1 << 1),
+  VariableOpImmediateIsLabel = (1 << 1)
 };
 } // end namespace WebAssemblyII
 
@@ -136,27 +128,49 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
 }
 
 /// The operand number of the load or store address in load/store instructions.
-static const unsigned LoadAddressOperandNo = 2;
-static const unsigned StoreAddressOperandNo = 1;
+static const unsigned LoadAddressOperandNo = 3;
+static const unsigned StoreAddressOperandNo = 2;
 
 /// The operand number of the load or store p2align in load/store instructions.
-static const unsigned LoadP2AlignOperandNo = 3;
-static const unsigned StoreP2AlignOperandNo = 2;
+static const unsigned LoadP2AlignOperandNo = 1;
+static const unsigned StoreP2AlignOperandNo = 0;
 
 /// This is used to indicate block signatures.
-enum ExprType {
-  Void = 0,
-  I32  = 1,
-  I64  = 2,
-  F32  = 3,
-  F64  = 4,
-  I8x16 = 5,
-  I16x8 = 6,
-  I32x4 = 7,
-  I64x2 = 8,
-  F32x4 = 9,
-  F64x2 = 10
+enum class ExprType {
+  Void    = 0x40,
+  I32     = 0x7f,
+  I64     = 0x7e,
+  F32     = 0x7d,
+  F64     = 0x7c,
+  I8x16   = 0x7b,
+  I16x8   = 0x7a,
+  I32x4   = 0x79,
+  F32x4   = 0x78,
+  B8x16   = 0x77,
+  B16x8   = 0x76,
+  B32x4   = 0x75
 };
+
+/// This is used to indicate local types.
+enum class ValType {
+  I32     = 0x7f,
+  I64     = 0x7e,
+  F32     = 0x7d,
+  F64     = 0x7c,
+  I8x16   = 0x7b,
+  I16x8   = 0x7a,
+  I32x4   = 0x79,
+  F32x4   = 0x78,
+  B8x16   = 0x77,
+  B16x8   = 0x76,
+  B32x4   = 0x75
+};
+
+/// Instruction opcodes emitted via means other than CodeGen.
+static const unsigned Nop = 0x01;
+static const unsigned End = 0x0b;
+
+ValType toValType(const MVT &Ty);
 
 } // end namespace WebAssembly
 } // end namespace llvm

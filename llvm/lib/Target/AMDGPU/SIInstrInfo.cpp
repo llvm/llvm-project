@@ -909,6 +909,32 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent();
     break;
   }
+  case AMDGPU::V_MOVRELD_B32_V1:
+  case AMDGPU::V_MOVRELD_B32_V2:
+  case AMDGPU::V_MOVRELD_B32_V4:
+  case AMDGPU::V_MOVRELD_B32_V8:
+  case AMDGPU::V_MOVRELD_B32_V16: {
+    const MCInstrDesc &MovRelDesc = get(AMDGPU::V_MOVRELD_B32_e32);
+    unsigned VecReg = MI.getOperand(0).getReg();
+    bool IsUndef = MI.getOperand(1).isUndef();
+    unsigned SubReg = AMDGPU::sub0 + MI.getOperand(3).getImm();
+    assert(VecReg == MI.getOperand(1).getReg());
+
+    MachineInstr *MovRel =
+        BuildMI(MBB, MI, DL, MovRelDesc)
+            .addReg(RI.getSubReg(VecReg, SubReg), RegState::Undef)
+            .addOperand(MI.getOperand(2))
+            .addReg(VecReg, RegState::ImplicitDefine)
+            .addReg(VecReg, RegState::Implicit | (IsUndef ? RegState::Undef : 0));
+
+    const int ImpDefIdx =
+        MovRelDesc.getNumOperands() + MovRelDesc.getNumImplicitUses();
+    const int ImpUseIdx = ImpDefIdx + 1;
+    MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
+
+    MI.eraseFromParent();
+    break;
+  }
   case AMDGPU::SI_PC_ADD_REL_OFFSET: {
     MachineFunction &MF = *MBB.getParent();
     unsigned Reg = MI.getOperand(0).getReg();

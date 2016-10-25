@@ -6,7 +6,7 @@
 ;
 ; The new pass manager doesn't re-use any threshold based infrastructure for
 ; the always inliner, but test that we get the correct result.
-; RUN: opt < %s -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
+; RUN: opt < %s -passes=always-inline -S | FileCheck %s
 
 define i32 @inner1() alwaysinline {
   ret i32 1

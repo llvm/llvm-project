@@ -53,10 +53,10 @@ public:
                                    const Constant *C,
                                    unsigned &Align) const override;
 
-  MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
 
-  MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 
   MCSection *getSectionForJumpTable(const Function &F,
@@ -103,10 +103,10 @@ public:
                        ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
                        const TargetMachine &TM) const override;
 
-  MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 
-  MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
@@ -144,10 +144,10 @@ public:
   ~TargetLoweringObjectFileCOFF() override {}
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
-  MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
 
-  MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 
   void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,

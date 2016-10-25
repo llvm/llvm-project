@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -56,30 +57,59 @@ MCCodeEmitter *llvm::createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII) {
 void WebAssemblyMCCodeEmitter::encodeInstruction(
     const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
     const MCSubtargetInfo &STI) const {
-  // FIXME: This is not the real binary encoding. This is an extremely
-  // over-simplified encoding where we just use uint64_t for everything. This
-  // is a temporary measure.
-  support::endian::Writer<support::little>(OS).write<uint64_t>(MI.getOpcode());
+  uint64_t Start = OS.tell();
+
+  uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
+  assert(Binary < UINT8_MAX && "Multi-byte opcodes not supported yet");
+  OS << uint8_t(Binary);
+
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-  if (Desc.isVariadic())
-    support::endian::Writer<support::little>(OS).write<uint64_t>(
-        MI.getNumOperands() - Desc.NumOperands);
   for (unsigned i = 0, e = MI.getNumOperands(); i < e; ++i) {
     const MCOperand &MO = MI.getOperand(i);
     if (MO.isReg()) {
-      support::endian::Writer<support::little>(OS).write<uint64_t>(MO.getReg());
+      /* nothing to encode */
     } else if (MO.isImm()) {
-      support::endian::Writer<support::little>(OS).write<uint64_t>(MO.getImm());
+      if (i < Desc.getNumOperands()) {
+        assert(Desc.TSFlags == 0 &&
+               "WebAssembly non-variable_ops don't use TSFlags");
+        const MCOperandInfo &Info = Desc.OpInfo[i];
+        if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
+          encodeSLEB128(int32_t(MO.getImm()), OS);
+        } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
+          encodeSLEB128(int64_t(MO.getImm()), OS);
+        } else {
+          encodeULEB128(uint64_t(MO.getImm()), OS);
+        }
+      } else {
+        assert(Desc.TSFlags == (WebAssemblyII::VariableOpIsImmediate |
+                                WebAssemblyII::VariableOpImmediateIsLabel));
+        encodeULEB128(uint64_t(MO.getImm()), OS);
+      }
     } else if (MO.isFPImm()) {
-      support::endian::Writer<support::little>(OS).write<double>(MO.getFPImm());
+      assert(i < Desc.getNumOperands() &&
+             "Unexpected floating-point immediate as a non-fixed operand");
+      assert(Desc.TSFlags == 0 &&
+             "WebAssembly variable_ops floating point ops don't use TSFlags");
+      const MCOperandInfo &Info = Desc.OpInfo[i];
+      if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
+        // TODO: MC converts all floating point immediate operands to double.
+        // This is fine for numeric values, but may cause NaNs to change bits.
+        float f = float(MO.getFPImm());
+        support::endian::Writer<support::little>(OS).write<float>(f);
+      } else {
+        assert(Info.OperandType == WebAssembly::OPERAND_F64IMM);
+        double d = MO.getFPImm();
+        support::endian::Writer<support::little>(OS).write<double>(d);
+      }
     } else if (MO.isExpr()) {
-      support::endian::Writer<support::little>(OS).write<uint64_t>(0);
       Fixups.push_back(MCFixup::create(
-          (1 + MCII.get(MI.getOpcode()).isVariadic() + i) * sizeof(uint64_t),
-          MO.getExpr(),
+          OS.tell() - Start, MO.getExpr(),
           STI.getTargetTriple().isArch64Bit() ? FK_Data_8 : FK_Data_4,
           MI.getLoc()));
       ++MCNumFixups;
+      encodeULEB128(STI.getTargetTriple().isArch64Bit() ? UINT64_MAX
+                                                        : uint64_t(UINT32_MAX),
+                    OS);
     } else {
       llvm_unreachable("unexpected operand kind");
     }

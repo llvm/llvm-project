@@ -562,6 +562,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v8i16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v4i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v4f32, Custom);
+    if (Subtarget.hasP8Altivec())
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
+    if (Subtarget.hasVSX())
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v2f64, Custom);
 
     // Altivec does not contain unordered floating-point compare instructions
     setCondCodeAction(ISD::SETUO, MVT::v4f32, Expand);
@@ -12366,4 +12370,21 @@ bool PPCTargetLowering::useLoadStackGuardNode() const {
 void PPCTargetLowering::insertSSPDeclarations(Module &M) const {
   if (!Subtarget.isTargetLinux())
     return TargetLowering::insertSSPDeclarations(M);
+}
+
+bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
+
+  if (!VT.isSimple() || !Subtarget.hasVSX())
+    return false;
+
+  switch(VT.getSimpleVT().SimpleTy) {
+  default:
+    // For FP types that are currently not supported by PPC backend, return
+    // false. Examples: f16, f80.
+    return false;
+  case MVT::f32:
+  case MVT::f64:
+  case MVT::ppcf128:
+    return Imm.isPosZero();
+  }
 }

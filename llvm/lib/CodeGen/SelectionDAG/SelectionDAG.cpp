@@ -403,7 +403,6 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddPointer(GA->getGlobal());
     ID.AddInteger(GA->getOffset());
     ID.AddInteger(GA->getTargetFlags());
-    ID.AddInteger(GA->getAddressSpace());
     break;
   }
   case ISD::BasicBlock:
@@ -1262,7 +1261,6 @@ SDValue SelectionDAG::getGlobalAddress(const GlobalValue *GV, const SDLoc &DL,
   ID.AddPointer(GV);
   ID.AddInteger(Offset);
   ID.AddInteger(TargetFlags);
-  ID.AddInteger(GV->getType()->getAddressSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
     return SDValue(E, 0);
@@ -2425,8 +2423,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   }
   case ISD::EXTRACT_ELEMENT: {
     computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-    const unsigned Index =
-      cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    const unsigned Index = Op.getConstantOperandVal(1);
     const unsigned BitWidth = Op.getValueSizeInBits();
 
     // Remove low part of known bits mask
@@ -2569,17 +2566,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   case ISD::SRA:
     Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
     // SRA X, C   -> adds C sign bits.
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      Tmp += C->getZExtValue();
-      if (Tmp > VTBits) Tmp = VTBits;
+    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
+      APInt ShiftVal = C->getAPIntValue();
+      ShiftVal += Tmp;
+      Tmp = ShiftVal.uge(VTBits) ? VTBits : ShiftVal.getZExtValue();
     }
     return Tmp;
   case ISD::SHL:
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
       // shl destroys sign bits.
       Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
-      if (C->getZExtValue() >= VTBits ||      // Bad shift.
-          C->getZExtValue() >= Tmp) break;    // Shifted all sign bits out.
+      if (C->getAPIntValue().uge(VTBits) ||      // Bad shift.
+          C->getAPIntValue().uge(Tmp)) break;    // Shifted all sign bits out.
       return Tmp - C->getZExtValue();
     }
     break;
@@ -2718,8 +2716,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
 
     // Get reverse index (starting from 1), Op1 value indexes elements from
     // little end. Sign starts at big end.
-    const int rIndex = Items - 1 -
-      cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    const int rIndex = Items - 1 - Op.getConstantOperandVal(1);
 
     // If the sign portion ends in our element the subtraction gives correct
     // result. Otherwise it gives either negative or > bitwidth result

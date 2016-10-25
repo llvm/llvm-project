@@ -134,3 +134,13 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
     TargetRegistry::RegisterAsmTargetStreamer(*T, createAsmTargetStreamer);
   }
 }
+
+WebAssembly::ValType WebAssembly::toValType(const MVT &Ty) {
+  switch (Ty.SimpleTy) {
+  case MVT::i32: return WebAssembly::ValType::I32;
+  case MVT::i64: return WebAssembly::ValType::I64;
+  case MVT::f32: return WebAssembly::ValType::F32;
+  case MVT::f64: return WebAssembly::ValType::F64;
+  default: llvm_unreachable("unexpected type");
+  }
+}

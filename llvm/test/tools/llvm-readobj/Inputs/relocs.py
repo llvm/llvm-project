@@ -715,6 +715,94 @@ class Relocs_Elf_AArch64(Enum):
   R_AARCH64_TLSDESC                     = 0x407
   R_AARCH64_IRELATIVE                   = 0x408
 
+class Relocs_Elf_AArch64_ILP32(Enum):
+  R_AARCH64_P32_NONE                         = 0
+  R_AARCH64_P32_ABS32                        = 1
+  R_AARCH64_P32_ABS16                        = 2
+  R_AARCH64_P32_PREL32                       = 3
+  R_AARCH64_P32_PREL16                       = 4
+  R_AARCH64_P32_MOVW_UABS_G0                 = 5
+  R_AARCH64_P32_MOVW_UABS_G0_NC              = 6
+  R_AARCH64_P32_MOVW_UABS_G1                 = 7
+  R_AARCH64_P32_MOVW_SABS_G0                 = 8
+  R_AARCH64_P32_LD_PREL_LO19                 = 9
+  R_AARCH64_P32_ADR_PREL_LO21                = 10
+  R_AARCH64_P32_ADR_PREL_PG_HI21             = 11
+  R_AARCH64_P32_ADD_ABS_LO12_NC              = 12
+  R_AARCH64_P32_LDST8_ABS_LO12_NC            = 13
+  R_AARCH64_P32_LDST16_ABS_LO12_NC           = 14
+  R_AARCH64_P32_LDST32_ABS_LO12_NC           = 15
+  R_AARCH64_P32_LDST64_ABS_LO12_NC           = 16
+  R_AARCH64_P32_LDST128_ABS_LO12_NC          = 17
+  R_AARCH64_P32_TSTBR14                      = 18
+  R_AARCH64_P32_CONDBR19                     = 19
+  R_AARCH64_P32_JUMP26                       = 20
+  R_AARCH64_P32_CALL26                       = 21
+  R_AARCH64_P32_MOVW_PREL_G0                 = 22
+  R_AARCH64_P32_MOVW_PREL_G0_NC              = 23
+  R_AARCH64_P32_MOVW_PREL_G1                 = 24
+  R_AARCH64_P32_GOT_LD_PREL19                = 25
+  R_AARCH64_P32_ADR_GOT_PAGE                 = 26
+  R_AARCH64_P32_LD32_GOT_LO12_NC             = 27
+  R_AARCH64_P32_LD32_GOTPAGE_LO14            = 28
+  R_AARCH64_P32_TLSGD_ADR_PREL21             = 80
+  R_AARCH64_P32_TLS_GD_ADR_PAGE21            = 81
+  R_AARCH64_P32_TLSGD_ADD_LO12_NC            = 82
+  R_AARCH64_P32_TLSLD_ADR_PREL21             = 83
+  R_AARCH64_P32_TLDLD_ADR_PAGE21             = 84
+  R_AARCH64_P32_TLSLD_ADR_LO12_NC            = 85
+  R_AARCH64_P32_TLSLD_LD_PREL19              = 86
+  R_AARCH64_P32_TLDLD_MOVW_DTPREL_G1         = 87
+  R_AARCH64_P32_TLSLD_MOVW_DTPREL_G0         = 88
+  R_AARCH64_P32_TLSLD_MOVW_DTPREL_G0_NC      = 89
+  R_AARCH64_P32_TLSLD_MOVW_ADD_DTPREL_HI12   = 90
+  R_AARCH64_P32_TLSLD_ADD_DTPREL_LO12        = 91
+  R_AARCH64_P32_TLSLD_ADD_DTPREL_LO12_NC     = 92
+  R_AARCH64_P32_TLSLD_LDST8_DTPREL_LO12      = 93
+  R_AARCH64_P32_TLSLD_LDST8_DTPREL_LO12_NC   = 94
+  R_AARCH64_P32_TLSLD_LDST16_DTPREL_LO12     = 95
+  R_AARCH64_P32_TLSLD_LDST16_DTPREL_LO12_NC  = 96
+  R_AARCH64_P32_TLSLD_LDST32_DTPREL_LO12     = 97
+  R_AARCH64_P32_TLSLD_LDST32_DTPREL_LO12_NC  = 98
+  R_AARCH64_P32_TLSLD_LDST64_DTPREL_LO12     = 99
+  R_AARCH64_P32_TLSLD_LDST64_DTPREL_LO12_NC  = 100
+  R_AARCH64_P32_TLSLD_LDST128_DTPREL_LO12    = 101
+  R_AARCH64_P32_TLSLD_LDST128_DTPREL_LO12_NC = 102
+  R_AARCH64_P32_TLSIE_MOVW_GOTTPREL_PAGE21   = 103
+  R_AARCH64_P32_TLSIE_LD32_GOTTPREL_LO12_NC  = 104
+  R_AARCH64_P32_TLSIE_LD_GOTTPREL_PREL19     = 105
+  R_AARCH64_P32_TLSLE_MOVEW_TPREL_G1         = 106
+  R_AARCH64_P32_TLSLE_MOVW_TPREL_G0          = 107
+  R_AARCH64_P32_TLSLE_MOVW_TPREL_G0_NC       = 108
+  R_AARCH64_P32_TLS_MOVW_TPREL_HI12          = 109
+  R_AARCH64_P32_TLSLE_ADD_TPREL_LO12         = 110
+  R_AARCH64_P32_TLSLE_ADD_TPREL_LO12_NC      = 111
+  R_AARCH64_P32_TLSLE_LDST8_TPREL_LO12       = 112
+  R_AARCH64_P32_TLSLE_LDST8_TPREL_LO12_NC    = 113
+  R_AARCH64_P32_TLSLE_LDST16_TPREL_LO12      = 114
+  R_AARCH64_P32_TLSLE_LDST16_TPREL_LO12_NC   = 115
+  R_AARCH64_P32_TLSLE_LDST32_TPREL_LO12      = 116
+  R_AARCH64_P32_TLSLE_LDST32_TPREL_LO12_NC   = 117
+  R_AARCH64_P32_TLSLE_LDST64_TPREL_LO12      = 118
+  R_AARCH64_P32_TLSLE_LDST64_TPREL_LO12_NC   = 119
+  R_AARCH64_P32_TLSLE_LDST128_TPREL_LO12     = 120
+  R_AARCH64_P32_TLSLE_LDST128_TPREL_LO12_NC  = 121
+  R_AARCH64_P32_TLSDESC_LD_PRELL19           = 122
+  R_AARCH64_P32_TLSDESC_ADR_PREL21           = 123
+  R_AARCH64_P32_TLSDESC_ADR_PAGE21           = 124
+  R_AARCH64_P32_TLSDESSC_LD32_LO12           = 125
+  R_AARCH64_P32_TLSDESC_ADD_LO12             = 126
+  R_AARCH64_P32_TLSDESC_CALL                 = 127
+  R_AARCH64_P32_COPY                         = 180
+  R_AARCH64_P32_GLOB_DAT                     = 181
+  R_AARCH64_P32_JUMP_SLOT                    = 182
+  R_AARCH64_P32_RELATIVE                     = 183
+  R_AARCH64_P32_TLS_DTPREL                   = 184
+  R_AARCH64_P32_TLS_DTPMOD                   = 185
+  R_AARCH64_P32_TLS_TPREL                    = 186
+  R_AARCH64_P32_TLSDESC                      = 187
+  R_AARCH64_P32_IRELATIVE                    = 188
+
 class Relocs_Elf_ARM(Enum):
   R_ARM_NONE                  = 0x00
   R_ARM_PC24                  = 0x01
@@ -1107,6 +1195,9 @@ craftElf("relocs.obj.elf-i386",     "i386-pc-linux-gnu",           Relocs_Elf_i3
 craftElf("relocs.obj.elf-ppc64",   "powerpc64-unknown-linux-gnu", Relocs_Elf_PPC64.entries(),
          ("@t = thread_local global i32 0, align 4", "define i32* @f{0}() nounwind {{ ret i32* @t }}", 2))
 craftElf("relocs.obj.elf-aarch64",  "aarch64",                     Relocs_Elf_AArch64.entries(), "movz x0, #:abs_g0:sym")
+craftElf("relocs.obj.elf-aarch64-ilp32", "aarch64",
+         Relocs_Elf_AArch64_ILP32.entries(), "movz x0, #:abs_g0:sym")
+Relocs_Elf_AArch64_ILP32
 craftElf("relocs.obj.elf-arm",      "arm-unknown-unknown",         Relocs_Elf_ARM.entries(), "b sym")
 craftElf("relocs.obj.elf-mips",     "mips-unknown-linux",          Relocs_Elf_Mips.entries(), "lui $2, %hi(sym)")
 craftElf("relocs.obj.elf-mips64el", "mips64el-unknown-linux",        Relocs_Elf_Mips.entries(), "lui $2, %hi(sym)")

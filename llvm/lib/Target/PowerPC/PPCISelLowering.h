@@ -769,6 +769,7 @@ namespace llvm {
     bool useLoadStackGuardNode() const override;
     void insertSSPDeclarations(Module &M) const override;
 
+    bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
   private:
     struct ReuseLoadInfo {
       SDValue Ptr;

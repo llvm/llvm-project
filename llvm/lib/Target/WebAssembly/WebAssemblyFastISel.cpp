@@ -348,6 +348,10 @@ void WebAssemblyFastISel::materializeLoadStoreOperands(Address &Addr) {
 void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
                                                const MachineInstrBuilder &MIB,
                                                MachineMemOperand *MMO) {
+  // Set the alignment operand (this is rewritten in SetP2AlignOperands).
+  // TODO: Disable SetP2AlignOperands for FastISel and just do it here.
+  MIB.addImm(0);
+
   if (const GlobalValue *GV = Addr.getGlobalValue())
     MIB.addGlobalAddress(GV, Addr.getOffset());
   else
@@ -357,10 +361,6 @@ void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
     MIB.addReg(Addr.getReg());
   else
     MIB.addFrameIndex(Addr.getFI());
-
-  // Set the alignment operand (this is rewritten in SetP2AlignOperands).
-  // TODO: Disable SetP2AlignOperands for FastISel and just do it here.
-  MIB.addImm(0);
 
   MIB.addMemOperand(MMO);
 }
@@ -542,8 +542,8 @@ unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
                                          &WebAssembly::I64RegClass :
                                          &WebAssembly::I32RegClass);
     unsigned Opc = Subtarget->hasAddr64() ?
-                   WebAssembly::COPY_LOCAL_I64 :
-                   WebAssembly::COPY_LOCAL_I32;
+                   WebAssembly::COPY_I64 :
+                   WebAssembly::COPY_I32;
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
         .addFrameIndex(SI->second);
     return ResultReg;

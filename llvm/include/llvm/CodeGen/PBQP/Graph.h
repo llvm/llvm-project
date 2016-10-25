@@ -110,27 +110,11 @@ namespace PBQP {
         ThisEdgeAdjIdxs[1] = NodeEntry::getInvalidAdjEdgeIdx();
       }
 
-      void invalidate() {
-        NIds[0] = NIds[1] = Graph::invalidNodeId();
-        ThisEdgeAdjIdxs[0] = ThisEdgeAdjIdxs[1] =
-          NodeEntry::getInvalidAdjEdgeIdx();
-        Costs = nullptr;
-      }
-
       void connectToN(Graph &G, EdgeId ThisEdgeId, unsigned NIdx) {
         assert(ThisEdgeAdjIdxs[NIdx] == NodeEntry::getInvalidAdjEdgeIdx() &&
                "Edge already connected to NIds[NIdx].");
         NodeEntry &N = G.getNode(NIds[NIdx]);
         ThisEdgeAdjIdxs[NIdx] = N.addAdjEdgeId(ThisEdgeId);
-      }
-
-      void connectTo(Graph &G, EdgeId ThisEdgeId, NodeId NId) {
-        if (NId == NIds[0])
-          connectToN(G, ThisEdgeId, 0);
-        else {
-          assert(NId == NIds[1] && "Edge does not connect NId.");
-          connectToN(G, ThisEdgeId, 1);
-        }
       }
 
       void connect(Graph &G, EdgeId ThisEdgeId) {

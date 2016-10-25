@@ -27,6 +27,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -292,19 +293,6 @@ static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred,
   return false;
 }
 
-/// Test whether MI is a child of some other node in an expression tree.
-static bool IsChild(const MachineInstr &MI,
-                    const WebAssemblyFunctionInfo &MFI) {
-  if (MI.getNumOperands() == 0)
-    return false;
-  const MachineOperand &MO = MI.getOperand(0);
-  if (!MO.isReg() || MO.isImplicit() || !MO.isDef())
-    return false;
-  unsigned Reg = MO.getReg();
-  return TargetRegisterInfo::isVirtualRegister(Reg) &&
-         MFI.isVRegStackified(Reg);
-}
-
 /// Insert a BLOCK marker for branches to MBB (if needed).
 static void PlaceBlockMarker(
     MachineBasicBlock &MBB, MachineFunction &MF,
@@ -365,7 +353,7 @@ static void PlaceBlockMarker(
     // beginning of the local expression tree and any nested BLOCKs.
     InsertPos = Header->getFirstTerminator();
     while (InsertPos != Header->begin() &&
-           IsChild(*std::prev(InsertPos), MFI) &&
+           WebAssembly::isChild(*std::prev(InsertPos), MFI) &&
            std::prev(InsertPos)->getOpcode() != WebAssembly::LOOP &&
            std::prev(InsertPos)->getOpcode() != WebAssembly::END_BLOCK &&
            std::prev(InsertPos)->getOpcode() != WebAssembly::END_LOOP)
@@ -375,7 +363,7 @@ static void PlaceBlockMarker(
   // Add the BLOCK.
   MachineInstr *Begin = BuildMI(*Header, InsertPos, DebugLoc(),
                                 TII.get(WebAssembly::BLOCK))
-      .addImm(WebAssembly::Void);
+      .addImm(int64_t(WebAssembly::ExprType::Void));
 
   // Mark the end of the block.
   InsertPos = MBB.begin();
@@ -425,7 +413,7 @@ static void PlaceLoopMarker(
     ++InsertPos;
   MachineInstr *Begin = BuildMI(MBB, InsertPos, DebugLoc(),
                                 TII.get(WebAssembly::LOOP))
-      .addImm(WebAssembly::Void);
+      .addImm(int64_t(WebAssembly::ExprType::Void));
 
   // Mark the end of the loop.
   MachineInstr *End = BuildMI(*AfterLoop, AfterLoop->begin(), DebugLoc(),
@@ -471,16 +459,14 @@ static void FixEndsAtEndOfFunction(
 
   WebAssembly::ExprType retType;
   switch (MFI.getResults().front().SimpleTy) {
-  case MVT::i32: retType = WebAssembly::I32; break;
-  case MVT::i64: retType = WebAssembly::I64; break;
-  case MVT::f32: retType = WebAssembly::F32; break;
-  case MVT::f64: retType = WebAssembly::F64; break;
-  case MVT::v16i8: retType = WebAssembly::I8x16; break;
-  case MVT::v8i16: retType = WebAssembly::I16x8; break;
-  case MVT::v4i32: retType = WebAssembly::I32x4; break;
-  case MVT::v2i64: retType = WebAssembly::I64x2; break;
-  case MVT::v4f32: retType = WebAssembly::F32x4; break;
-  case MVT::v2f64: retType = WebAssembly::F64x2; break;
+  case MVT::i32: retType = WebAssembly::ExprType::I32; break;
+  case MVT::i64: retType = WebAssembly::ExprType::I64; break;
+  case MVT::f32: retType = WebAssembly::ExprType::F32; break;
+  case MVT::f64: retType = WebAssembly::ExprType::F64; break;
+  case MVT::v16i8: retType = WebAssembly::ExprType::I8x16; break;
+  case MVT::v8i16: retType = WebAssembly::ExprType::I16x8; break;
+  case MVT::v4i32: retType = WebAssembly::ExprType::I32x4; break;
+  case MVT::v4f32: retType = WebAssembly::ExprType::F32x4; break;
   default: llvm_unreachable("unexpected return type");
   }
 

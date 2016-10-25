@@ -73,6 +73,9 @@ public:
   void emitResult(ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
   void emitEndFunc() override;
+  void emitIndirectFunctionType(StringRef name,
+                                SmallVectorImpl<MVT> &Params,
+                                SmallVectorImpl<MVT> &Results) override;
   void emitIndIdx(const MCExpr *Value) override;
 };
 

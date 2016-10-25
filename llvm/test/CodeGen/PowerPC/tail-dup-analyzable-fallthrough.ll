@@ -5,7 +5,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; Check that the conditional return block of fmax_double3.exit was not
 ; duplicated into the if.then.i block
 ; CHECK: # %if.then.i
-; CHECK: lxvd2x
+; CHECK: xxlxor
 ; CHECK: stxvd2x
 ; CHECK-NOT: bclr
 ; CHECK: {{^}}.LBB{{[0-9_]+}}:

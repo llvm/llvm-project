@@ -26,6 +26,7 @@
 namespace llvm {
 
 class Comdat;
+class GlobalObject;
 class PointerType;
 class Module;
 
@@ -491,6 +492,11 @@ public:
   // Returns true if the alignment of the value can be unilaterally
   // increased.
   bool canIncreaseAlignment() const;
+
+  const GlobalObject *getBaseObject() const {
+    return const_cast<GlobalValue *>(this)->getBaseObject();
+  }
+  GlobalObject *getBaseObject();
 
   /// This method unlinks 'this' from the containing module, but does not delete
   /// it.

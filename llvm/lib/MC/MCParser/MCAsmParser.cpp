@@ -68,11 +68,14 @@ bool MCAsmParser::parseIntToken(int64_t &V, const Twine &Msg) {
   return false;
 }
 
-bool MCAsmParser::parseOptionalToken(AsmToken::TokenKind T, bool &Present) {
-  Present = (getTok().getKind() == T);
+bool MCAsmParser::parseOptionalToken(AsmToken::TokenKind T) {
+  bool Present = (getTok().getKind() == T);
+  // if token is EOL and current token is # this is an EOL comment.
+  if (getTok().getKind() == AsmToken::Hash && T == AsmToken::EndOfStatement)
+    Present = true;
   if (Present)
-    Lex();
-  return false;
+    parseToken(T);
+  return Present;
 }
 
 bool MCAsmParser::check(bool P, const Twine &Msg) {
@@ -97,7 +100,36 @@ bool MCAsmParser::Error(SMLoc L, const Twine &Msg, SMRange Range) {
   Msg.toVector(PErr.Msg);
   PErr.Range = Range;
   PendingErrors.push_back(PErr);
+
+  // If we threw this parsing error after a lexing error, this should
+  // supercede the lexing error and so we remove it from the Lexer
+  // before it can propagate
+  if (getTok().is(AsmToken::Error))
+    getLexer().Lex();
   return true;
+}
+
+bool MCAsmParser::addErrorSuffix(const Twine &Suffix) {
+  // Make sure lexing errors have propagated to the parser.
+  if (getTok().is(AsmToken::Error))
+    Lex();
+  for (auto &PErr : PendingErrors)
+    Suffix.toVector(PErr.Msg);
+  return true;
+}
+
+bool MCAsmParser::parseMany(std::function<bool()> parseOne, bool hasComma) {
+  if (parseOptionalToken(AsmToken::EndOfStatement))
+    return false;
+  while (1) {
+    if (parseOne())
+      return true;
+    if (parseOptionalToken(AsmToken::EndOfStatement))
+      return false;
+    if (hasComma && parseToken(AsmToken::Comma))
+      return true;
+  }
+  return false;
 }
 
 bool MCAsmParser::parseExpression(const MCExpr *&Res) {

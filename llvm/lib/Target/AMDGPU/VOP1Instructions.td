@@ -538,6 +538,26 @@ def V_MOV_B32_indirect : VPseudoInstSI<(outs),
   let VOP1 = 1;
 }
 
+// This is a pseudo variant of the v_movreld_b32 instruction in which the
+// vector operand appears only twice, once as def and once as use. Using this
+// pseudo avoids problems with the Two Address instructions pass.
+class V_MOVRELD_B32_pseudo<RegisterClass rc> : VPseudoInstSI <
+  (outs rc:$vdst),
+  (ins rc:$vsrc, VSrc_b32:$val, i32imm:$offset)> {
+  let VOP1 = 1;
+
+  let Constraints = "$vsrc = $vdst";
+  let Uses = [M0, EXEC];
+
+  let SubtargetPredicate = HasMovrel;
+}
+
+def V_MOVRELD_B32_V1 : V_MOVRELD_B32_pseudo<VGPR_32>;
+def V_MOVRELD_B32_V2 : V_MOVRELD_B32_pseudo<VReg_64>;
+def V_MOVRELD_B32_V4 : V_MOVRELD_B32_pseudo<VReg_128>;
+def V_MOVRELD_B32_V8 : V_MOVRELD_B32_pseudo<VReg_256>;
+def V_MOVRELD_B32_V16 : V_MOVRELD_B32_pseudo<VReg_512>;
+
 let Predicates = [isVI] in {
 
 def : Pat <

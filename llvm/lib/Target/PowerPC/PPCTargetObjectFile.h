@@ -22,7 +22,7 @@ namespace llvm {
 
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
-    MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+    MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
 
     /// \brief Describe a TLS variable address within debug info.

@@ -18,8 +18,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -45,7 +46,7 @@ public:
   Expected<uint32_t> getSize() const;
 
   Expected<sys::fs::perms> getAccessMode() const;
-  Expected<sys::TimeValue> getLastModified() const;
+  Expected<sys::TimePoint<std::chrono::seconds>> getLastModified() const;
   llvm::StringRef getRawLastModified() const {
     return StringRef(ArMemHdr->LastModified,
                      sizeof(ArMemHdr->LastModified)).rtrim(' ');
@@ -102,7 +103,7 @@ public:
     Expected<StringRef> getName() const;
     Expected<std::string> getFullName() const;
     Expected<StringRef> getRawName() const { return Header.getRawName(); }
-    Expected<sys::TimeValue> getLastModified() const {
+    Expected<sys::TimePoint<std::chrono::seconds>> getLastModified() const {
       return Header.getLastModified();
     }
     StringRef getRawLastModified() const {

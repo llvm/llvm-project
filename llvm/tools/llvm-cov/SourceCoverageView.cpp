@@ -149,11 +149,6 @@ std::string SourceCoverageView::getSourceName() const {
   return SourceText.str();
 }
 
-std::string SourceCoverageView::getVerboseSourceName() const {
-  return getSourceName() + " (Binary: " +
-         sys::path::filename(getOptions().ObjectFilename).str() + ")";
-}
-
 void SourceCoverageView::addExpansion(
     const coverage::CounterMappingRegion &Region,
     std::unique_ptr<SourceCoverageView> View) {
