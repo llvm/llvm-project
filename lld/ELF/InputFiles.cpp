@@ -694,8 +694,7 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
 }
 
 template <class ELFT>
-static Symbol *createBitcodeSymbol(DenseSet<CachedHashStringRef> &KeptComdats,
-                                   DenseSet<CachedHashStringRef> &ComdatGroups,
+static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
                                    const lto::InputFile::Symbol &ObjSym,
                                    StringSaver &Saver, BitcodeFile *F) {
   StringRef NameRef = Saver.save(ObjSym.getName());
@@ -706,22 +705,10 @@ static Symbol *createBitcodeSymbol(DenseSet<CachedHashStringRef> &KeptComdats,
   uint8_t Visibility = mapVisibility(ObjSym.getVisibility());
   bool CanOmitFromDynSym = ObjSym.canBeOmittedFromSymbolTable();
 
-  StringRef C = check(ObjSym.getComdat());
-  if (!C.empty()) {
-    auto CH = CachedHashStringRef(C);
-    bool Keep = KeptComdats.count(CH);
-    if (!Keep) {
-      StringRef N = Saver.save(C);
-      CachedHashStringRef NH(N, CH.hash());
-      if (ComdatGroups.insert(NH).second) {
-        Keep = true;
-        KeptComdats.insert(NH);
-      }
-    }
-    if (!Keep)
-      return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                           CanOmitFromDynSym, F);
-  }
+  int C = check(ObjSym.getComdatIndex());
+  if (C != -1 && !KeptComdats[C])
+    return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
+                                         CanOmitFromDynSym, F);
 
   if (Flags & BasicSymbolRef::SF_Undefined)
     return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
@@ -750,10 +737,16 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   Obj = check(lto::InputFile::create(MemoryBufferRef(
       MB.getBuffer(), Saver.save(ArchiveName + MB.getBufferIdentifier() +
                                  utostr(OffsetInArchive)))));
-  DenseSet<CachedHashStringRef> KeptComdats;
+
+  std::vector<bool> KeptComdats;
+  for (StringRef S : Obj->getComdatTable()) {
+    StringRef N = Saver.save(S);
+    KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(N)).second);
+  }
+
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
-    Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ComdatGroups,
-                                                ObjSym, Saver, this));
+    Symbols.push_back(
+        createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, Saver, this));
 }
 
 template <template <class> class T>

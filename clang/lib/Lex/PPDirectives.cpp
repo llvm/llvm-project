@@ -1847,7 +1847,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
       // If the file is still not found, just go with the vanilla diagnostic
       if (!File)
-        Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
+        Diag(FilenameTok, diag::err_pp_file_not_found) << Filename
+                                                       << FilenameRange;
     }
   }
 

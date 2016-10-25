@@ -526,9 +526,11 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
 
     sym.size = 0;
     sym.comdat_key = nullptr;
-    StringRef C = check(Sym.getComdat());
-    if (!C.empty())
+    int CI = check(Sym.getComdatIndex());
+    if (CI != -1) {
+      StringRef C = Obj->getComdatTable()[CI];
       sym.comdat_key = strdup(C.str().c_str());
+    }
 
     sym.resolution = LDPR_UNKNOWN;
   }

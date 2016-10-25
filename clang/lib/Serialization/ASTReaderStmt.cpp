@@ -2871,6 +2871,11 @@ void ASTStmtReader::VisitOMPTeamsDistributeDirective(
   VisitOMPLoopDirective(D);
 }
 
+void ASTStmtReader::VisitOMPTeamsDistributeSimdDirective(
+    OMPTeamsDistributeSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
 //===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
@@ -3595,6 +3600,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       auto CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTeamsDistributeDirective::CreateEmpty(Context, NumClauses,
                                                    CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPTeamsDistributeSimdDirective::CreateEmpty(Context, NumClauses,
+                                                       CollapsedNum, Empty);
       break;
     }
 
