@@ -25,7 +25,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
       z < -10000 &&
       z >= -10005 &&
       z != -10003 &&
-      a == 4242) {
+      a == 4242 &&
+      true) {
     fprintf(stderr, "BINGO; Found the target: size %zd (%zd, %zd, %d, %d), exiting.\n",
             Size, x, y, z, a);
     exit(1);

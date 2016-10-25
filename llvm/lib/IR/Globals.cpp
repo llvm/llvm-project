@@ -265,10 +265,6 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
     M.getGlobalList().push_back(this);
 }
 
-void GlobalVariable::setParent(Module *parent) {
-  Parent = parent;
-}
-
 void GlobalVariable::removeFromParent() {
   getParent()->getGlobalList().remove(getIterator());
 }
@@ -367,10 +363,6 @@ GlobalAlias *GlobalAlias::create(const Twine &Name, GlobalValue *Aliasee) {
   return create(Aliasee->getLinkage(), Name, Aliasee);
 }
 
-void GlobalAlias::setParent(Module *parent) {
-  Parent = parent;
-}
-
 void GlobalAlias::removeFromParent() {
   getParent()->getAliasList().remove(getIterator());
 }
@@ -402,10 +394,6 @@ GlobalIFunc *GlobalIFunc::create(Type *Ty, unsigned AddressSpace,
                                  LinkageTypes Link, const Twine &Name,
                                  Constant *Resolver, Module *ParentModule) {
   return new GlobalIFunc(Ty, AddressSpace, Link, Name, Resolver, ParentModule);
-}
-
-void GlobalIFunc::setParent(Module *parent) {
-  Parent = parent;
 }
 
 void GlobalIFunc::removeFromParent() {

@@ -478,9 +478,6 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
       Res = 1;
   }
 
-  if (Res && Options.UseCmp)
-    TPC.ProcessTORC(MD.GetTraceCmpDictionary(), CurrentUnitData, Size);
-
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
@@ -514,8 +511,6 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
   TPC.ResetMaps();
-  if (Options.UseCmp)
-    TPC.ResetTORC();
   if (Options.UseCounters)
     TPC.ResetGuards();
   int Res = CB(DataCopy, Size);

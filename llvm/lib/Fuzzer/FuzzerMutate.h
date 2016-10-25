@@ -55,9 +55,8 @@ public:
   size_t Mutate_AddWordFromTemporaryAutoDictionary(uint8_t *Data, size_t Size,
                                                    size_t MaxSize);
 
-  /// Mutates data by adding a word from the trace-cmp dictionary.
-  size_t Mutate_AddWordFromTraceCmpDictionary(uint8_t *Data, size_t Size,
-                                              size_t MaxSize);
+  /// Mutates data by adding a word from the TORC.
+  size_t Mutate_AddWordFromTORC(uint8_t *Data, size_t Size, size_t MaxSize);
 
   /// Mutates data by adding a word from the persistent automatic dictionary.
   size_t Mutate_AddWordFromPersistentAutoDictionary(uint8_t *Data, size_t Size,
@@ -92,8 +91,6 @@ public:
 
   Random &GetRand() { return Rand; }
 
-  Dictionary *GetTraceCmpDictionary() { return &TraceCmpDictionary; }
-
 private:
 
   struct Mutator {
@@ -110,6 +107,12 @@ private:
                       size_t ToSize, size_t MaxToSize);
   size_t CopyPartOf(const uint8_t *From, size_t FromSize, uint8_t *To,
                     size_t ToSize);
+  size_t ApplyDictionaryEntry(uint8_t *Data, size_t Size, size_t MaxSize,
+                              DictionaryEntry &DE);
+
+  template <class T>
+  DictionaryEntry MakeDictionaryEntryFromCMP(T Arg1, T Arg2,
+                                             const uint8_t *Data, size_t Size);
 
   Random &Rand;
   const FuzzingOptions &Options;
@@ -123,11 +126,13 @@ private:
   // entries that led to successfull discoveries in the past mutations.
   Dictionary PersistentAutoDictionary;
 
-  // Dictionary from tracing CMP instructions.
-  Dictionary TraceCmpDictionary;
-
   std::vector<Mutator> CurrentMutatorSequence;
   std::vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
+
+  static const size_t kCmpDictionaryEntriesDequeSize = 16;
+  DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
+  size_t CmpDictionaryEntriesDequeIdx = 0;
+
   const InputCorpus *Corpus = nullptr;
   std::vector<uint8_t> MutateInPlaceHere;
 

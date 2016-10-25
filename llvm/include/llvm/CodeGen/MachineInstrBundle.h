@@ -41,34 +41,33 @@ MachineBasicBlock::instr_iterator finalizeBundle(MachineBasicBlock &MBB,
 /// MachineFunction. Return true if any bundles are finalized.
 bool finalizeBundles(MachineFunction &MF);
 
-/// getBundleStart - Returns the first instruction in the bundle containing MI.
-///
-inline MachineInstr &getBundleStart(MachineInstr &MI) {
-  MachineBasicBlock::instr_iterator I(MI);
+/// Returns an iterator to the first instruction in the bundle containing \p I.
+inline MachineBasicBlock::instr_iterator getBundleStart(
+    MachineBasicBlock::instr_iterator I) {
   while (I->isBundledWithPred())
     --I;
-  return *I;
+  return I;
 }
 
-inline const MachineInstr &getBundleStart(const MachineInstr &MI) {
-  MachineBasicBlock::const_instr_iterator I(MI);
+/// Returns an iterator to the first instruction in the bundle containing \p I.
+inline MachineBasicBlock::const_instr_iterator getBundleStart(
+    MachineBasicBlock::const_instr_iterator I) {
   while (I->isBundledWithPred())
     --I;
-  return *I;
+  return I;
 }
 
-/// Return an iterator pointing beyond the bundle containing MI.
-inline MachineBasicBlock::instr_iterator getBundleEnd(MachineInstr &MI) {
-  MachineBasicBlock::instr_iterator I(MI);
+/// Returns an iterator pointing beyond the bundle containing \p I.
+inline MachineBasicBlock::instr_iterator getBundleEnd(
+    MachineBasicBlock::instr_iterator I) {
   while (I->isBundledWithSucc())
     ++I;
   return ++I;
 }
 
-/// Return an iterator pointing beyond the bundle containing MI.
-inline MachineBasicBlock::const_instr_iterator
-getBundleEnd(const MachineInstr &MI) {
-  MachineBasicBlock::const_instr_iterator I(MI);
+/// Returns an iterator pointing beyond the bundle containing \p I.
+inline MachineBasicBlock::const_instr_iterator getBundleEnd(
+    MachineBasicBlock::const_instr_iterator I) {
   while (I->isBundledWithSucc())
     ++I;
   return ++I;
@@ -115,7 +114,7 @@ protected:
   ///
   explicit MachineOperandIteratorBase(MachineInstr &MI, bool WholeBundle) {
     if (WholeBundle) {
-      InstrI = getBundleStart(MI).getIterator();
+      InstrI = getBundleStart(MI.getIterator());
       InstrE = MI.getParent()->instr_end();
     } else {
       InstrI = InstrE = MI.getIterator();
