@@ -42,7 +42,7 @@ namespace {
 
 class WebAssemblyAsmPrinter final : public AsmPrinter {
   const MachineRegisterInfo *MRI;
-  const WebAssemblyFunctionInfo *MFI;
+  WebAssemblyFunctionInfo *MFI;
 
 public:
   WebAssemblyAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
@@ -166,8 +166,8 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
   if (ResultVTs.size() == 1)
     getTargetStreamer()->emitResult(ResultVTs);
 
-  bool AnyWARegs = false;
-  SmallVector<MVT, 16> LocalTypes;
+  // FIXME: When ExplicitLocals is enabled by default, we won't need
+  // to define the locals here (and MFI can go back to being pointer-to-const).
   for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(Idx);
     unsigned WAReg = MFI->getWAReg(VReg);
@@ -180,11 +180,10 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
     // Don't declare stackified registers.
     if (int(WAReg) < 0)
       continue;
-    LocalTypes.push_back(getRegType(VReg));
-    AnyWARegs = true;
+    MFI->addLocal(getRegType(VReg));
   }
-  if (AnyWARegs)
-    getTargetStreamer()->emitLocal(LocalTypes);
+
+  getTargetStreamer()->emitLocal(MFI->getLocals());
 
   AsmPrinter::EmitFunctionBodyStart();
 }

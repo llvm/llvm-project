@@ -348,6 +348,10 @@ void WebAssemblyFastISel::materializeLoadStoreOperands(Address &Addr) {
 void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
                                                const MachineInstrBuilder &MIB,
                                                MachineMemOperand *MMO) {
+  // Set the alignment operand (this is rewritten in SetP2AlignOperands).
+  // TODO: Disable SetP2AlignOperands for FastISel and just do it here.
+  MIB.addImm(0);
+
   if (const GlobalValue *GV = Addr.getGlobalValue())
     MIB.addGlobalAddress(GV, Addr.getOffset());
   else
@@ -357,10 +361,6 @@ void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
     MIB.addReg(Addr.getReg());
   else
     MIB.addFrameIndex(Addr.getFI());
-
-  // Set the alignment operand (this is rewritten in SetP2AlignOperands).
-  // TODO: Disable SetP2AlignOperands for FastISel and just do it here.
-  MIB.addImm(0);
 
   MIB.addMemOperand(MMO);
 }

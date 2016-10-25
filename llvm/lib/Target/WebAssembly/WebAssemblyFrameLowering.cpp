@@ -96,9 +96,9 @@ static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
       MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES)),
       MachineMemOperand::MOStore, 4, 4);
   BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::STORE_I32))
+      .addImm(2)  // p2align
       .addExternalSymbol(SPSymbol)
       .addReg(Zero)
-      .addImm(2)  // p2align
       .addReg(SrcReg)
       .addMemOperand(MMO);
 }
@@ -148,9 +148,9 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   // Load the SP value.
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::LOAD_I32),
           StackSize ? SPReg : (unsigned)WebAssembly::SP32)
+      .addImm(2)       // p2align
       .addExternalSymbol(SPSymbol)
       .addReg(Zero)    // addr
-      .addImm(2)       // p2align
       .addMemOperand(LoadMMO);
 
   if (StackSize) {

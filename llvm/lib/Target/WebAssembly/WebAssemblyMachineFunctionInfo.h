@@ -28,6 +28,7 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
 
   std::vector<MVT> Params;
   std::vector<MVT> Results;
+  std::vector<MVT> Locals;
 
   /// A mapping from CodeGen vreg index to WebAssembly register number.
   std::vector<unsigned> WARegs;
@@ -54,6 +55,9 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
 
   void addResult(MVT VT) { Results.push_back(VT); }
   const std::vector<MVT> &getResults() const { return Results; }
+
+  void addLocal(MVT VT) { Locals.push_back(VT); }
+  const std::vector<MVT> &getLocals() const { return Locals; }
 
   unsigned getVarargBufferVreg() const {
     assert(VarargVreg != -1U && "Vararg vreg hasn't been set");

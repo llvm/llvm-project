@@ -65,13 +65,13 @@ def BLOCK     : I<(outs), (ins Signature:$sig), [], "block   \t$sig", 0x02>;
 def LOOP      : I<(outs), (ins Signature:$sig), [], "loop    \t$sig", 0x03>;
 
 // END_BLOCK and END_LOOP are represented with the same opcode in wasm.
-def END_BLOCK : I<(outs), (ins), [], "end_block", 0x0f>;
-def END_LOOP  : I<(outs), (ins), [], "end_loop", 0x0f>;
+def END_BLOCK : I<(outs), (ins), [], "end_block", 0x0b>;
+def END_LOOP  : I<(outs), (ins), [], "end_loop", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
 multiclass RETURN<WebAssemblyRegClass vt> {
   def RETURN_#vt : I<(outs), (ins vt:$val), [(WebAssemblyreturn vt:$val)],
-                     "return  \t$val">;
+                     "return  \t$val", 0x0f>;
   // Equivalent to RETURN_#vt, for use at the end of a function when wasm
   // semantics return by falling off the end of the block.
   let isCodeGenOnly = 1 in
@@ -81,7 +81,7 @@ multiclass RETURN<WebAssemblyRegClass vt> {
 multiclass SIMD_RETURN<ValueType vt> {
   def RETURN_#vt : SIMD_I<(outs), (ins V128:$val),
                           [(WebAssemblyreturn (vt V128:$val))],
-                          "return  \t$val">;
+                          "return  \t$val", 0x0f>;
   // Equivalent to RETURN_#vt, for use at the end of a function when wasm
   // semantics return by falling off the end of the block.
   let isCodeGenOnly = 1 in
@@ -100,14 +100,14 @@ let isReturn = 1 in {
   defm : SIMD_RETURN<v4i32>;
   defm : SIMD_RETURN<v4f32>;
 
-  def RETURN_VOID : I<(outs), (ins), [(WebAssemblyreturn)], "return">;
+  def RETURN_VOID : I<(outs), (ins), [(WebAssemblyreturn)], "return", 0x0f>;
 
   // This is to RETURN_VOID what FALLTHROUGH_RETURN_#vt is to RETURN_#vt.
   let isCodeGenOnly = 1 in
   def FALLTHROUGH_RETURN_VOID : I<(outs), (ins), []>;
 } // isReturn = 1
 
-def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable">;
+def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable", 0x00>;
 
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 

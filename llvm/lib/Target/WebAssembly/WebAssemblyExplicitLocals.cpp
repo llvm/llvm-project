@@ -109,15 +109,15 @@ static unsigned getTeeLocalOpcode(const TargetRegisterClass *RC) {
 }
 
 /// Get the type associated with the given register class.
-static WebAssembly::ValType typeForRegClass(const TargetRegisterClass *RC) {
+static MVT typeForRegClass(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
-    return WebAssembly::ValType::I32;
+    return MVT::i32;
   if (RC == &WebAssembly::I64RegClass)
-    return WebAssembly::ValType::I64;
+    return MVT::i64;
   if (RC == &WebAssembly::F32RegClass)
-    return WebAssembly::ValType::F32;
+    return MVT::f32;
   if (RC == &WebAssembly::F64RegClass)
-    return WebAssembly::ValType::F64;
+    return MVT::f64;
   llvm_unreachable("unrecognized register class");
 }
 
@@ -272,21 +272,15 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // Insert a .locals directive to declare the locals.
-  MachineInstrBuilder DeclareLocals;
+  // Define the locals.
   for (size_t i = 0, e = MRI.getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
     auto I = Reg2Local.find(Reg);
     if (I == Reg2Local.end() || I->second < MFI.getParams().size())
       continue;
 
-    if (!DeclareLocals) {
-      DeclareLocals = BuildMI(*MF.begin(), MF.begin()->begin(), DebugLoc(),
-                              TII->get(WebAssembly::DECLARE_LOCALS));
-      Changed = true;
-    }
-
-    DeclareLocals.addImm(int64_t(typeForRegClass(MRI.getRegClass(Reg))));
+    MFI.addLocal(typeForRegClass(MRI.getRegClass(Reg)));
+    Changed = true;
   }
 
 #ifndef NDEBUG

@@ -60,7 +60,8 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
   uint64_t Start = OS.tell();
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  encodeULEB128(Binary, OS);
+  assert(Binary < UINT8_MAX && "Multi-byte opcodes not supported yet");
+  OS << uint8_t(Binary);
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   for (unsigned i = 0, e = MI.getNumOperands(); i < e; ++i) {
@@ -68,16 +69,20 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     if (MO.isReg()) {
       /* nothing to encode */
     } else if (MO.isImm()) {
-      assert(i < Desc.getNumOperands() &&
-             "Unexpected integer immediate as a non-fixed operand");
-      assert(Desc.TSFlags == 0 &&
-             "WebAssembly variable_ops integer ops don't use TSFlags");
-      const MCOperandInfo &Info = Desc.OpInfo[i];
-      if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
-        encodeSLEB128(int32_t(MO.getImm()), OS);
-      } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
-        encodeSLEB128(int64_t(MO.getImm()), OS);
+      if (i < Desc.getNumOperands()) {
+        assert(Desc.TSFlags == 0 &&
+               "WebAssembly non-variable_ops don't use TSFlags");
+        const MCOperandInfo &Info = Desc.OpInfo[i];
+        if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
+          encodeSLEB128(int32_t(MO.getImm()), OS);
+        } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
+          encodeSLEB128(int64_t(MO.getImm()), OS);
+        } else {
+          encodeULEB128(uint64_t(MO.getImm()), OS);
+        }
       } else {
+        assert(Desc.TSFlags == (WebAssemblyII::VariableOpIsImmediate |
+                                WebAssemblyII::VariableOpImmediateIsLabel));
         encodeULEB128(uint64_t(MO.getImm()), OS);
       }
     } else if (MO.isFPImm()) {

@@ -1,8 +1,8 @@
 // Metadata section
-// CHECK: {"version":"1.1.0","type":"llvm.coverage.json.export","data":[
+// CHECK: {"version":"{{[0-9]\.[0-9]\.[0-9]}}","type":"llvm.coverage.json.export","data":[
 
 // Open Export
-// CHECK-SAME: {"object":"{{[^"]+}}","files":[
+// CHECK-SAME: {"files":[
 
 // File Object
 // CHECK-SAME: {"filename":"{{[^"]+}}universal-binary.c",
