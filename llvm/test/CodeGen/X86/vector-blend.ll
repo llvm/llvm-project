@@ -1007,8 +1007,6 @@ entry:
 define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ; SSE2-LABEL: blend_neg_logic_v4i32_2:
 ; SSE2:       # BB#0: # %entry
-; SSE2-NEXT:    psrld $31, %xmm1
-; SSE2-NEXT:    pslld $31, %xmm1
 ; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-NEXT:    psubd %xmm0, %xmm1
@@ -1017,8 +1015,6 @@ define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ;
 ; SSSE3-LABEL: blend_neg_logic_v4i32_2:
 ; SSSE3:       # BB#0: # %entry
-; SSSE3-NEXT:    psrld $31, %xmm1
-; SSSE3-NEXT:    pslld $31, %xmm1
 ; SSSE3-NEXT:    psrad $31, %xmm1
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSSE3-NEXT:    psubd %xmm0, %xmm1
@@ -1028,8 +1024,7 @@ define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ; SSE41-LABEL: blend_neg_logic_v4i32_2:
 ; SSE41:       # BB#0: # %entry
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    psrld $31, %xmm1
-; SSE41-NEXT:    pslld $31, %xmm1
+; SSE41-NEXT:    psrad $31, %xmm1
 ; SSE41-NEXT:    pxor %xmm3, %xmm3
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
@@ -1039,8 +1034,7 @@ define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ;
 ; AVX-LABEL: blend_neg_logic_v4i32_2:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpsrld $31, %xmm1, %xmm1
-; AVX-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpsubd %xmm0, %xmm2, %xmm2
 ; AVX-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0

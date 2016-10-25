@@ -180,13 +180,6 @@ defm : LOCAL<F32>;
 defm : LOCAL<F64>;
 defm : LOCAL<V128>, Requires<[HasSIMD128]>;
 
-// Set TSFlags{0} to 1 to indicate that the variable_ops are immediates.
-// Set TSFlags{2} to 1 to indicate that the immediates are ValTypes.
-def DECLARE_LOCALS : I<(outs), (ins variable_ops), [], ".local  \t"> {
-  let TSFlags{0} = 1;
-  let TSFlags{2} = 1;
-}
-
 let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1 in {
 def CONST_I32 : I<(outs I32:$res), (ins i32imm_op:$imm),
                   [(set I32:$res, imm:$imm)],

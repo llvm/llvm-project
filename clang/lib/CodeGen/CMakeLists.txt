@@ -87,7 +87,9 @@ add_clang_library(clangCodeGen
   ${codegen_deps}
 
   LINK_LIBS
+  clangAnalysis
   clangAST
+  clangAnalysis
   clangBasic
   clangFrontend
   clangLex

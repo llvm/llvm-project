@@ -103,20 +103,32 @@ configure_file(
   @ONLY)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  install(EXPORT LLVMExports DESTINATION ${LLVM_INSTALL_PACKAGE_DIR})
+  install(EXPORT LLVMExports DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
+          COMPONENT cmake-exports)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLVMConfig.cmake
     ${llvm_cmake_builddir}/LLVMConfigVersion.cmake
     LLVM-Config.cmake
-    DESTINATION ${LLVM_INSTALL_PACKAGE_DIR})
+    DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
+    COMPONENT cmake-exports)
 
   install(DIRECTORY .
     DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
+    COMPONENT cmake-exports
     FILES_MATCHING PATTERN *.cmake
     PATTERN .svn EXCLUDE
     PATTERN LLVMConfig.cmake EXCLUDE
     PATTERN LLVMConfigVersion.cmake EXCLUDE
     PATTERN LLVM-Config.cmake EXCLUDE
     PATTERN GetHostTriple.cmake EXCLUDE)
+
+  if (NOT CMAKE_CONFIGURATION_TYPES)
+    # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS
+    add_custom_target(cmake-exports)
+    add_custom_target(install-cmake-exports
+                      COMMAND "${CMAKE_COMMAND}"
+                                  -DCMAKE_INSTALL_COMPONENT=cmake-exports
+                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  endif()
 endif()

@@ -57,7 +57,7 @@ public:
     if (!FS.consumesDataArgument() &&
         FS.getConversionSpecifier().getKind() !=
             clang::analyze_format_string::ConversionSpecifier::PrintErrno)
-      return false;
+      return true;
 
     ArgsData.emplace_back();
     unsigned ArgIndex = FS.getArgIndex();

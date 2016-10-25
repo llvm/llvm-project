@@ -154,22 +154,11 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
             (Desc.TSFlags & WebAssemblyII::VariableOpIsImmediate)) &&
            "WebAssemblyII::VariableOpIsImmediate should be set for "
            "variable_ops immediate ops");
-
-    if (Desc.TSFlags & WebAssemblyII::VariableOpImmediateIsType) {
-      switch (Op.getImm()) {
-      case int64_t(WebAssembly::ValType::I32): O << "i32"; break;
-      case int64_t(WebAssembly::ValType::I64): O << "i64"; break;
-      case int64_t(WebAssembly::ValType::F32): O << "f32"; break;
-      case int64_t(WebAssembly::ValType::F64): O << "f64"; break;
-      default: llvm_unreachable("unknown local type");
-      }
-    } else {
-      // TODO: (MII.get(MI->getOpcode()).TSFlags &
-      //        WebAssemblyII::VariableOpImmediateIsLabel)
-      // can tell us whether this is an immediate referencing a label in the
-      // control flow stack, and it may be nice to pretty-print.
-      O << Op.getImm();
-    }
+    // TODO: (MII.get(MI->getOpcode()).TSFlags &
+    //        WebAssemblyII::VariableOpImmediateIsLabel)
+    // can tell us whether this is an immediate referencing a label in the
+    // control flow stack, and it may be nice to pretty-print.
+    O << Op.getImm();
   } else if (Op.isFPImm()) {
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     assert(OpNo < Desc.getNumOperands() &&
@@ -220,9 +209,10 @@ WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
   case WebAssembly::ExprType::I8x16: O << "i8x16"; break;
   case WebAssembly::ExprType::I16x8: O << "i16x8"; break;
   case WebAssembly::ExprType::I32x4: O << "i32x4"; break;
-  case WebAssembly::ExprType::I64x2: O << "i32x4"; break;
   case WebAssembly::ExprType::F32x4: O << "f32x4"; break;
-  case WebAssembly::ExprType::F64x2: O << "f64x2"; break;
+  case WebAssembly::ExprType::B8x16: O << "b8x16"; break;
+  case WebAssembly::ExprType::B16x8: O << "b16x8"; break;
+  case WebAssembly::ExprType::B32x4: O << "b32x4"; break;
   }
 }
 

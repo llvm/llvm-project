@@ -75,10 +75,10 @@ let Defs = [ARGUMENTS] in {
 
 def SELECT_I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs, I32:$cond),
                    [(set I32:$dst, (select I32:$cond, I32:$lhs, I32:$rhs))],
-                   "i32.select\t$dst, $lhs, $rhs, $cond">;
+                   "i32.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
 def SELECT_I64 : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs, I32:$cond),
                    [(set I64:$dst, (select I32:$cond, I64:$lhs, I64:$rhs))],
-                   "i64.select\t$dst, $lhs, $rhs, $cond">;
+                   "i64.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
 
 } // Defs = [ARGUMENTS]
 
