@@ -1138,15 +1138,20 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM) {
   auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
   auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
   if (!DT)
-    report_fatal_error("LoopUnrollPass: DominatorTreeAnalysis not cached at a higher level");
+    report_fatal_error(
+        "LoopUnrollPass: DominatorTreeAnalysis not cached at a higher level");
   if (!LI)
-    report_fatal_error("LoopUnrollPass: LoopAnalysis not cached at a higher level");
+    report_fatal_error(
+        "LoopUnrollPass: LoopAnalysis not cached at a higher level");
   if (!SE)
-    report_fatal_error("LoopUnrollPass: ScalarEvolutionAnalysis not cached at a higher level");
+    report_fatal_error(
+        "LoopUnrollPass: ScalarEvolutionAnalysis not cached at a higher level");
   if (!TTI)
-    report_fatal_error("LoopUnrollPass: TargetIRAnalysis not cached at a higher level");
+    report_fatal_error(
+        "LoopUnrollPass: TargetIRAnalysis not cached at a higher level");
   if (!AC)
-    report_fatal_error("LoopUnrollPass: AssumptionAnalysis not cached at a higher level");
+    report_fatal_error(
+        "LoopUnrollPass: AssumptionAnalysis not cached at a higher level");
   if (!ORE)
     report_fatal_error("LoopUnrollPass: OptimizationRemarkEmitterAnalysis not "
                        "cached at a higher level");

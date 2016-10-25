@@ -1950,9 +1950,6 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
                         And, Constant::getNullValue(And->getType()));
   }
 
-  // FIXME: This transform can create illegal types. Use the DataLayout to
-  // decide when to try this?
-
   // Transform (icmp pred iM (shl iM %v, N), C)
   // -> (icmp pred i(M-N) (trunc %v iM to i(M-N)), (trunc (C>>N))
   // Transform the shl to a trunc if (trunc (C>>N)) has no loss and M-N.
@@ -1960,7 +1957,8 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
   // free on the target. It has the additional benefit of comparing to a
   // smaller constant, which will be target friendly.
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
-  if (Shl->hasOneUse() && Amt != 0 && C->countTrailingZeros() >= Amt) {
+  if (Shl->hasOneUse() && Amt != 0 && C->countTrailingZeros() >= Amt &&
+      DL.isLegalInteger(TypeBits - Amt)) {
     Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
     if (X->getType()->isVectorTy())
       TruncTy = VectorType::get(TruncTy, X->getType()->getVectorNumElements());

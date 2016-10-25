@@ -232,7 +232,7 @@ void Watchpoint::TurnOffEphemeralMode() {
 }
 
 bool Watchpoint::IsDisabledDuringEphemeralMode() {
-  return m_disabled_count > 1;
+  return m_disabled_count > 1 && m_is_ephemeral;
 }
 
 void Watchpoint::SetEnabled(bool enabled, bool notify) {

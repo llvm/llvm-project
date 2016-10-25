@@ -437,6 +437,10 @@ protected:
   /// See PR14725.
   void fixLCSSAPHIs();
 
+  /// Iteratively sink the scalarized operands of a predicated instruction into
+  /// the block that was created for it.
+  void sinkScalarOperands(Instruction *PredInst);
+
   /// Predicate conditional instructions that require predication on their
   /// respective conditions.
   void predicateInstructions();
@@ -4249,15 +4253,82 @@ void InnerLoopVectorizer::collectTriviallyDeadInstructions() {
   }
 }
 
+void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
+
+  // The basic block and loop containing the predicated instruction.
+  auto *PredBB = PredInst->getParent();
+  auto *VectorLoop = LI->getLoopFor(PredBB);
+
+  // Initialize a worklist with the operands of the predicated instruction.
+  SetVector<Value *> Worklist(PredInst->op_begin(), PredInst->op_end());
+
+  // Holds instructions that we need to analyze again. An instruction may be
+  // reanalyzed if we don't yet know if we can sink it or not.
+  SmallVector<Instruction *, 8> InstsToReanalyze;
+
+  // Returns true if a given use occurs in the predicated block. Phi nodes use
+  // their operands in their corresponding predecessor blocks.
+  auto isBlockOfUsePredicated = [&](Use &U) -> bool {
+    auto *I = cast<Instruction>(U.getUser());
+    BasicBlock *BB = I->getParent();
+    if (auto *Phi = dyn_cast<PHINode>(I))
+      BB = Phi->getIncomingBlock(
+          PHINode::getIncomingValueNumForOperand(U.getOperandNo()));
+    return BB == PredBB;
+  };
+
+  // Iteratively sink the scalarized operands of the predicated instruction
+  // into the block we created for it. When an instruction is sunk, it's
+  // operands are then added to the worklist. The algorithm ends after one pass
+  // through the worklist doesn't sink a single instruction.
+  bool Changed;
+  do {
+
+    // Add the instructions that need to be reanalyzed to the worklist, and
+    // reset the changed indicator.
+    Worklist.insert(InstsToReanalyze.begin(), InstsToReanalyze.end());
+    InstsToReanalyze.clear();
+    Changed = false;
+
+    while (!Worklist.empty()) {
+      auto *I = dyn_cast<Instruction>(Worklist.pop_back_val());
+
+      // We can't sink an instruction if it is a phi node, is already in the
+      // predicated block, is not in the loop, or may have side effects.
+      if (!I || isa<PHINode>(I) || I->getParent() == PredBB ||
+          !VectorLoop->contains(I) || I->mayHaveSideEffects())
+        continue;
+
+      // It's legal to sink the instruction if all its uses occur in the
+      // predicated block. Otherwise, there's nothing to do yet, and we may
+      // need to reanalyze the instruction.
+      if (!all_of(I->uses(), isBlockOfUsePredicated)) {
+        InstsToReanalyze.push_back(I);
+        continue;
+      }
+
+      // Move the instruction to the beginning of the predicated block, and add
+      // it's operands to the worklist.
+      I->moveBefore(&*PredBB->getFirstInsertionPt());
+      Worklist.insert(I->op_begin(), I->op_end());
+
+      // The sinking may have enabled other instructions to be sunk, so we will
+      // need to iterate.
+      Changed = true;
+    }
+  } while (Changed);
+}
+
 void InnerLoopVectorizer::predicateInstructions() {
 
   // For each instruction I marked for predication on value C, split I into its
-  // own basic block to form an if-then construct over C.
-  // Since I may be fed by extractelement and/or be feeding an insertelement
-  // generated during scalarization we try to move such instructions into the
-  // predicated basic block as well. For the insertelement this also means that
-  // the PHI will be created for the resulting vector rather than for the
-  // scalar instruction.
+  // own basic block to form an if-then construct over C. Since I may be fed by
+  // an extractelement instruction or other scalar operand, we try to
+  // iteratively sink its scalar operands into the predicated block. If I feeds
+  // an insertelement instruction, we try to move this instruction into the
+  // predicated block as well. For non-void types, a phi node will be created
+  // for the resulting value (either vector or scalar).
+  //
   // So for some predicated instruction, e.g. the conditional sdiv in:
   //
   // for.body:
@@ -4331,13 +4402,7 @@ void InnerLoopVectorizer::predicateInstructions() {
     auto *T = SplitBlockAndInsertIfThen(KV.second, &*I, /*Unreachable=*/false,
                                         /*BranchWeights=*/nullptr, DT, LI);
     I->moveBefore(T);
-    // Try to move any extractelement we may have created for the predicated
-    // instruction into the Then block.
-    for (Use &Op : I->operands()) {
-      auto *OpInst = dyn_cast<ExtractElementInst>(&*Op);
-      if (OpInst && OpInst->hasOneUse()) // TODO: more accurately - hasOneUser()
-        OpInst->moveBefore(&*I);
-    }
+    sinkScalarOperands(&*I);
 
     I->getParent()->setName(Twine("pred.") + I->getOpcodeName() + ".if");
     BB->setName(Twine("pred.") + I->getOpcodeName() + ".continue");

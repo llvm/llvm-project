@@ -2317,10 +2317,8 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
 
   // If we know the sign bits of both operands are zero, strength reduce to a
   // udiv instead.  Handles (X&15) /s 4 -> X&15 >> 2
-  if (!VT.isVector()) {
-    if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
-      return DAG.getNode(ISD::UDIV, DL, N1.getValueType(), N0, N1);
-  }
+  if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
+    return DAG.getNode(ISD::UDIV, DL, N1.getValueType(), N0, N1);
 
   // fold (sdiv X, pow2) -> simple ops after legalize
   // FIXME: We check for the exact bit here because the generic lowering gives
@@ -2473,10 +2471,8 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (isSigned) {
     // If we know the sign bits of both operands are zero, strength reduce to a
     // urem instead.  Handles (X & 0x0FFFFFFF) %s 16 -> X&15
-    if (!VT.isVector()) {
-      if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
-        return DAG.getNode(ISD::UREM, DL, VT, N0, N1);
-    }
+    if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
+      return DAG.getNode(ISD::UREM, DL, VT, N0, N1);
   } else {
     // fold (urem x, pow2) -> (and x, pow2-1)
     if (N1C && !N1C->isNullValue() && !N1C->isOpaque() &&

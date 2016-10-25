@@ -250,6 +250,10 @@ static void EncodeFixedValueType(MVT::SimpleValueType VT,
   }
 }
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma optimize("",off) // MSVC 2015 optimizer can't deal with this function.
+#endif
+
 static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
                             std::vector<unsigned char> &Sig) {
 
@@ -336,6 +340,10 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
 
   EncodeFixedValueType(VT, Sig);
 }
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma optimize("",on)
+#endif
 
 /// ComputeFixedEncoding - If we can encode the type signature for this
 /// intrinsic into 32 bits, return it.  If not, return ~0U.

@@ -19,26 +19,26 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-NEXT:    vpextrd $1, %xmm0, %ebp
+; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    vmovd %xmm0, %esi
 ; X32-NEXT:    vpextrd $2, %xmm0, %edi
 ; X32-NEXT:    vpextrd $3, %xmm0, %ebx
-; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB0_1: # %CF
 ; X32-NEXT:    # =>This Loop Header: Depth=1
 ; X32-NEXT:    # Child Loop BB0_2 Depth 2
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    movl %ebp, %eax
-; X32-NEXT:    cltd
-; X32-NEXT:    idivl %ebp
+; X32-NEXT:    divl %ebp
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    cltd
-; X32-NEXT:    idivl %esi
+; X32-NEXT:    divl %esi
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    movl %edi, %eax
-; X32-NEXT:    cltd
-; X32-NEXT:    idivl %edi
+; X32-NEXT:    divl %edi
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    cltd
-; X32-NEXT:    idivl %ebx
+; X32-NEXT:    divl %ebx
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB0_2: # %CF237
 ; X32-NEXT:    # Parent Loop BB0_1 Depth=1
@@ -58,26 +58,26 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpextrd $1, %xmm0, %r8d
+; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    vmovd %xmm0, %r9d
 ; X64-NEXT:    vpextrd $2, %xmm0, %edi
 ; X64-NEXT:    vpextrd $3, %xmm0, %ecx
-; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_1: # %CF
 ; X64-NEXT:    # =>This Loop Header: Depth=1
 ; X64-NEXT:    # Child Loop BB0_2 Depth 2
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %r8d, %eax
-; X64-NEXT:    cltd
-; X64-NEXT:    idivl %r8d
+; X64-NEXT:    divl %r8d
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %r9d, %eax
-; X64-NEXT:    cltd
-; X64-NEXT:    idivl %r9d
+; X64-NEXT:    divl %r9d
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    cltd
-; X64-NEXT:    idivl %edi
+; X64-NEXT:    divl %edi
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    cltd
-; X64-NEXT:    idivl %ecx
+; X64-NEXT:    divl %ecx
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_2: # %CF237
 ; X64-NEXT:    # Parent Loop BB0_1 Depth=1
