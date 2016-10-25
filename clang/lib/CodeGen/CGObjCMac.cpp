@@ -6562,15 +6562,20 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocolRef(
   const ObjCProtocolDecl *PD) {
   llvm::GlobalVariable *&Entry = Protocols[PD->getIdentifier()];
 
-  if (!Entry)
+  if (!Entry) {
     // We use the initializer as a marker of whether this is a forward
     // reference or not. At module finalization we add the empty
     // contents for protocols which were referenced but never defined.
-    Entry =
-        new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
-                                 false, llvm::GlobalValue::ExternalLinkage,
-                                 nullptr,
-                                 "\01l_OBJC_PROTOCOL_$_" + PD->getObjCRuntimeNameAsString());
+    llvm::SmallString<64> Protocol;
+    llvm::raw_svector_ostream(Protocol) << "\01l_OBJC_PROTOCOL_$_"
+                                        << PD->getObjCRuntimeNameAsString();
+
+    Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
+                                     false, llvm::GlobalValue::ExternalLinkage,
+                                     nullptr, Protocol);
+    if (!CGM.getTriple().isOSBinFormatMachO())
+      Entry->setComdat(CGM.getModule().getOrInsertComdat(Protocol));
+  }
 
   return Entry;
 }
@@ -6688,10 +6693,16 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
     Entry->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
     Entry->setInitializer(Init);
   } else {
-    Entry =
-      new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
-                               false, llvm::GlobalValue::WeakAnyLinkage, Init,
-                               "\01l_OBJC_PROTOCOL_$_" + PD->getObjCRuntimeNameAsString());
+    llvm::SmallString<64> Protocol;
+    llvm::raw_svector_ostream(Protocol) << "\01l_OBJC_PROTOCOL_$_"
+                                        << PD->getObjCRuntimeNameAsString();
+
+    Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
+                                     false, llvm::GlobalValue::WeakAnyLinkage,
+                                     Init, Protocol);
+    if (!CGM.getTriple().isOSBinFormatMachO())
+      Entry->setComdat(CGM.getModule().getOrInsertComdat(Protocol));
+
     Entry->setAlignment(
       CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABITy));
 
@@ -6702,13 +6713,20 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
 
   // Use this protocol meta-data to build protocol list table in section
   // __DATA, __objc_protolist
+  llvm::SmallString<64> ProtocolRef;
+  llvm::raw_svector_ostream(ProtocolRef) << "\01l_OBJC_LABEL_PROTOCOL_$_"
+                                         << PD->getObjCRuntimeNameAsString();
+
   llvm::GlobalVariable *PTGV =
     new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABIPtrTy,
                              false, llvm::GlobalValue::WeakAnyLinkage, Entry,
-                             "\01l_OBJC_LABEL_PROTOCOL_$_" + PD->getObjCRuntimeNameAsString());
+                             ProtocolRef);
+  if (!CGM.getTriple().isOSBinFormatMachO())
+    PTGV->setComdat(CGM.getModule().getOrInsertComdat(ProtocolRef));
   PTGV->setAlignment(
     CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABIPtrTy));
-  PTGV->setSection("__DATA, __objc_protolist, coalesced, no_dead_strip");
+  if (CGM.getTriple().isOSBinFormatMachO())
+    PTGV->setSection("__DATA, __objc_protolist, coalesced, no_dead_strip");
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   CGM.addCompilerUsedGlobal(PTGV);
   return Entry;

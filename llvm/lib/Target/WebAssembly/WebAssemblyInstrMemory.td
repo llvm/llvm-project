@@ -667,23 +667,20 @@ def : Pat<(truncstorei32 I64:$val, (WebAssemblywrapper texternalsym:$off)),
 let Defs = [ARGUMENTS] in {
 
 // Current memory size.
-def CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins),
-                           [(set I32:$dst, (int_wasm_current_memory))],
+def CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
+                           [],
                            "current_memory\t$dst", 0x3f>,
                          Requires<[HasAddr32]>;
-def CURRENT_MEMORY_I64 : I<(outs I64:$dst), (ins),
-                           [(set I64:$dst, (int_wasm_current_memory))],
-                           "current_memory\t$dst">,
-                         Requires<[HasAddr64]>;
 
 // Grow memory.
-def GROW_MEMORY_I32 : I<(outs), (ins I32:$delta),
-                        [(int_wasm_grow_memory I32:$delta)],
+def GROW_MEMORY_I32 : I<(outs), (ins i32imm:$flags, I32:$delta),
+                        [],
                         "grow_memory\t$delta", 0x40>,
                       Requires<[HasAddr32]>;
-def GROW_MEMORY_I64 : I<(outs), (ins I64:$delta),
-                        [(int_wasm_grow_memory I64:$delta)],
-                        "grow_memory\t$delta">,
-                      Requires<[HasAddr64]>;
 
 } // Defs = [ARGUMENTS]
+
+def : Pat<(int_wasm_current_memory),
+          (CURRENT_MEMORY_I32 0)>;
+def : Pat<(int_wasm_grow_memory I32:$delta),
+          (GROW_MEMORY_I32 0, $delta)>;

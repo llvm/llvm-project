@@ -135,7 +135,7 @@ scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
       ResolvedReloc<ELFT> R = resolveReloc(EH, Rels[I2]);
       if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
         continue;
-      if (R.Sec->getSectionHdr()->sh_flags & SHF_EXECINSTR)
+      if (R.Sec->getFlags() & SHF_EXECINSTR)
         continue;
       Enqueue({R.Sec, 0});
     }
@@ -164,14 +164,14 @@ scanEhFrameSection(EhInputSection<ELFT> &EH,
 // 1) Sections used by the loader (.init, .fini, .ctors, .dtors or .jcr)
 // 2) Non-allocatable sections which typically contain debugging information
 template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
-  switch (Sec->getSectionHdr()->sh_type) {
+  switch (Sec->getType()) {
   case SHT_FINI_ARRAY:
   case SHT_INIT_ARRAY:
   case SHT_NOTE:
   case SHT_PREINIT_ARRAY:
     return true;
   default:
-    if (!(Sec->getSectionHdr()->sh_flags & SHF_ALLOC))
+    if (!(Sec->getFlags() & SHF_ALLOC))
       return true;
 
     // We do not want to reclaim sections if they can be referred
@@ -201,7 +201,7 @@ template <class ELFT> void elf::markLive() {
       return;
 
     // We don't gc non alloc sections.
-    if (!(R.Sec->getSectionHdr()->sh_flags & SHF_ALLOC))
+    if (!(R.Sec->getFlags() & SHF_ALLOC))
       return;
 
     // Usually, a whole section is marked as live or dead, but in mergeable

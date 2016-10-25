@@ -132,7 +132,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
                                     InputSectionBase<ELFT> &C,
                                     typename ELFT::uint Offset,
                                     typename ELFT::uint Addend, RelExpr Expr) {
-  if (!(C.getSectionHdr()->sh_flags & SHF_ALLOC))
+  if (!(C.getFlags() & SHF_ALLOC))
     return 0;
 
   if (!Body.isTls())
@@ -558,7 +558,7 @@ template <class ELFT, class RelTy>
 static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   typedef typename ELFT::uint uintX_t;
 
-  bool IsWrite = C.getSectionHdr()->sh_flags & SHF_WRITE;
+  bool IsWrite = C.getFlags() & SHF_WRITE;
 
   auto AddDyn = [=](const DynamicReloc<ELFT> &Reloc) {
     Out<ELFT>::RelaDyn->addReloc(Reloc);

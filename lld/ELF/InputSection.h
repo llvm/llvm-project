@@ -101,7 +101,11 @@ public:
 
   static InputSectionBase<ELFT> Discarded;
 
-  const Elf_Shdr *getSectionHdr() const { return Header; }
+  uintX_t getFlags() const { return Header->sh_flags; }
+  uint32_t getType() const { return Header->sh_type; }
+  uintX_t getEntsize() const { return Header->sh_entsize; }
+  uint32_t getLink() const { return Header->sh_link; }
+  uint32_t getInfo() const { return Header->sh_info; }
   ObjectFile<ELFT> *getFile() const { return File; }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
   InputSectionBase *getLinkOrderDep() const;
@@ -152,7 +156,7 @@ public:
 
   // Mark the piece at a given offset live. Used by GC.
   void markLiveAt(uintX_t Offset) {
-    assert(this->getSectionHdr()->sh_flags & llvm::ELF::SHF_ALLOC);
+    assert(this->getFlags() & llvm::ELF::SHF_ALLOC);
     LiveOffsets.insert(Offset);
   }
 

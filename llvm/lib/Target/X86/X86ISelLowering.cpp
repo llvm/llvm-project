@@ -4427,6 +4427,40 @@ static SDValue getConstVector(ArrayRef<int> Values, MVT VT, SelectionDAG &DAG,
   return ConstsNode;
 }
 
+static SDValue getConstVector(ArrayRef<APInt> Values, SmallBitVector &Undefs,
+                              MVT VT, SelectionDAG &DAG, const SDLoc &dl) {
+  assert(Values.size() == Undefs.size() && "Unequal constant and undef arrays");
+  SmallVector<SDValue, 32> Ops;
+  bool Split = false;
+
+  MVT ConstVecVT = VT;
+  unsigned NumElts = VT.getVectorNumElements();
+  bool In64BitMode = DAG.getTargetLoweringInfo().isTypeLegal(MVT::i64);
+  if (!In64BitMode && VT.getVectorElementType() == MVT::i64) {
+    ConstVecVT = MVT::getVectorVT(MVT::i32, NumElts * 2);
+    Split = true;
+  }
+
+  MVT EltVT = ConstVecVT.getVectorElementType();
+  for (unsigned i = 0, e = Values.size(); i != e; ++i) {
+    if (Undefs[i]) {
+      Ops.append(Split ? 2 : 1, DAG.getUNDEF(EltVT));
+      continue;
+    }
+    const APInt &V = Values[i];
+    assert(V.getBitWidth() == VT.getScalarSizeInBits() && "Unexpected sizes");
+    if (Split) {
+      Ops.push_back(DAG.getConstant(V.trunc(32), dl, EltVT));
+      Ops.push_back(DAG.getConstant(V.lshr(32).trunc(32), dl, EltVT));
+    } else {
+      Ops.push_back(DAG.getConstant(V, dl, EltVT));
+    }
+  }
+
+  SDValue ConstsNode = DAG.getBuildVector(ConstVecVT, dl, Ops);
+  return DAG.getBitcast(VT, ConstsNode);
+}
+
 /// Returns a vector of specified type with all zero elements.
 static SDValue getZeroVector(MVT VT, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG, const SDLoc &dl) {
@@ -31817,10 +31851,11 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   return OptimizeConditionalInDecrement(N, DAG);
 }
 
-static SDValue combineVZext(SDNode *N, SelectionDAG &DAG,
-                            TargetLowering::DAGCombinerInfo &DCI,
-                            const X86Subtarget &Subtarget) {
+static SDValue combineVSZext(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI,
+                             const X86Subtarget &Subtarget) {
   SDLoc DL(N);
+  unsigned Opcode = N->getOpcode();
   MVT VT = N->getSimpleValueType(0);
   MVT SVT = VT.getVectorElementType();
   SDValue Op = N->getOperand(0);
@@ -31829,25 +31864,28 @@ static SDValue combineVZext(SDNode *N, SelectionDAG &DAG,
   unsigned InputBits = OpEltVT.getSizeInBits() * VT.getVectorNumElements();
 
   // Perform any constant folding.
+  // FIXME: Reduce constant pool usage and don't fold when OptSize is enabled.
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
-    SmallVector<SDValue, 4> Vals;
-    for (int i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+    unsigned NumDstElts = VT.getVectorNumElements();
+    SmallBitVector Undefs(NumDstElts, false);
+    SmallVector<APInt, 4> Vals(NumDstElts, APInt(SVT.getSizeInBits(), 0));
+    for (unsigned i = 0; i != NumDstElts; ++i) {
       SDValue OpElt = Op.getOperand(i);
       if (OpElt.getOpcode() == ISD::UNDEF) {
-        Vals.push_back(DAG.getUNDEF(SVT));
+        Undefs[i] = true;
         continue;
       }
       APInt Cst = cast<ConstantSDNode>(OpElt.getNode())->getAPIntValue();
-      assert(Cst.getBitWidth() == OpEltVT.getSizeInBits());
-      Cst = Cst.zextOrTrunc(SVT.getSizeInBits());
-      Vals.push_back(DAG.getConstant(Cst, DL, SVT));
+      Vals[i] = Opcode == X86ISD::VZEXT ? Cst.zextOrTrunc(SVT.getSizeInBits())
+                                        : Cst.sextOrTrunc(SVT.getSizeInBits());
     }
-    return DAG.getBuildVector(VT, DL, Vals);
+    return getConstVector(Vals, Undefs, VT, DAG, DL);
   }
 
   // (vzext (bitcast (vzext (x)) -> (vzext x)
+  // TODO: (vsext (bitcast (vsext (x)) -> (vsext x)
   SDValue V = peekThroughBitcasts(Op);
-  if (V != Op && V.getOpcode() == X86ISD::VZEXT) {
+  if (Opcode == X86ISD::VZEXT && V != Op && V.getOpcode() == X86ISD::VZEXT) {
     MVT InnerVT = V.getSimpleValueType();
     MVT InnerEltVT = InnerVT.getVectorElementType();
 
@@ -31872,7 +31910,9 @@ static SDValue combineVZext(SDNode *N, SelectionDAG &DAG,
   // Check if we can bypass extracting and re-inserting an element of an input
   // vector. Essentially:
   // (bitcast (sclr2vec (ext_vec_elt x))) -> (bitcast x)
-  if (V.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+  // TODO: Add X86ISD::VSEXT support
+  if (Opcode == X86ISD::VZEXT &&
+      V.getOpcode() == ISD::SCALAR_TO_VECTOR &&
       V.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       V.getOperand(0).getSimpleValueType().getSizeInBits() == InputBits) {
     SDValue ExtractedV = V.getOperand(0);
@@ -31994,7 +32034,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SETCC:          return combineSetCC(N, DAG, Subtarget);
   case X86ISD::SETCC:       return combineX86SetCC(N, DAG, DCI, Subtarget);
   case X86ISD::BRCOND:      return combineBrCond(N, DAG, DCI, Subtarget);
-  case X86ISD::VZEXT:       return combineVZext(N, DAG, DCI, Subtarget);
+  case X86ISD::VSEXT:
+  case X86ISD::VZEXT:       return combineVSZext(N, DAG, DCI, Subtarget);
   case X86ISD::SHUFP:       // Handle all target specific shuffles
   case X86ISD::INSERTPS:
   case X86ISD::PALIGNR:

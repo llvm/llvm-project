@@ -1208,6 +1208,19 @@ define i1 @icmp_shl16(i32 %x) {
   ret i1 %cmp
 }
 
+; FIXME: We shouldn't be creating illegal types like i15 in InstCombine.
+
+define i1 @icmp_shl17(i32 %x) {
+; CHECK-LABEL: @icmp_shl17(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %x to i15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i15 [[TMP1]], 18
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i32 %x, 17
+  %cmp = icmp slt i32 %shl, 2359296
+  ret i1 %cmp
+}
+
 define <2 x i1> @icmp_shl16_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_shl16_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> %x to <2 x i16>

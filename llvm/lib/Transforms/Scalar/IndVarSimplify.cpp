@@ -1552,6 +1552,11 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
     WideInc =
       cast<Instruction>(WidePhi->getIncomingValueForBlock(LatchBlock));
     WideIncExpr = SE->getSCEV(WideInc);
+    // Propagate the debug location associated with the original loop increment
+    // to the new (widened) increment.
+    auto *OrigInc =
+      cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
+    WideInc->setDebugLoc(OrigInc->getDebugLoc());
   }
 
   DEBUG(dbgs() << "Wide IV: " << *WidePhi << "\n");
