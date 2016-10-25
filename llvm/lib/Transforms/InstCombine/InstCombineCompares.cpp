@@ -1950,6 +1950,9 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
                         And, Constant::getNullValue(And->getType()));
   }
 
+  // FIXME: This transform can create illegal types. Use the DataLayout to
+  // decide when to try this?
+
   // Transform (icmp pred iM (shl iM %v, N), C)
   // -> (icmp pred i(M-N) (trunc %v iM to i(M-N)), (trunc (C>>N))
   // Transform the shl to a trunc if (trunc (C>>N)) has no loss and M-N.
