@@ -443,8 +443,8 @@ void ARMPassConfig::addPreSched2() {
       return this->TM->getSubtarget<ARMSubtarget>(F).restrictIT();
     }));
 
-    addPass(createIfConverter([this](const Function &F) {
-      return !this->TM->getSubtarget<ARMSubtarget>(F).isThumb1Only();
+    addPass(createIfConverter([](const MachineFunction &MF) {
+      return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }
   addPass(createThumb2ITBlockPass());
@@ -454,8 +454,8 @@ void ARMPassConfig::addPreEmitPass() {
   addPass(createThumb2SizeReductionPass());
 
   // Constant island pass work on unbundled instructions.
-  addPass(createUnpackMachineBundles([this](const Function &F) {
-    return this->TM->getSubtarget<ARMSubtarget>(F).isThumb2();
+  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+    return MF.getSubtarget<ARMSubtarget>().isThumb2();
   }));
 
   // Don't optimize barriers at -O0.

@@ -6,7 +6,7 @@
 ; Attempt the import now, ensure below that file containing inline assembly
 ; is not imported from. Otherwise we would need to promote its local variable
 ; used in the inline assembly, which would not see the rename.
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s
 
 define i32 @main() #0 {
 entry:

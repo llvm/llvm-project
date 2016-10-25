@@ -31,10 +31,10 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/TimeValue.h"
 #include <cassert>
 #include <cstdint>
 #include <ctime>
@@ -209,8 +209,8 @@ public:
   // getters
   file_type type() const { return Type; }
   perms permissions() const { return Perms; }
-  TimeValue getLastAccessedTime() const;
-  TimeValue getLastModificationTime() const;
+  TimePoint<> getLastAccessedTime() const;
+  TimePoint<> getLastModificationTime() const;
   UniqueID getUniqueID() const;
 
   #if defined(LLVM_ON_UNIX)
@@ -540,7 +540,7 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
 /// @returns errc::success if the file times were successfully set, otherwise a
 ///          platform-specific error_code or errc::function_not_supported on
 ///          platforms where the functionality isn't available.
-std::error_code setLastModificationAndAccessTime(int FD, TimeValue Time);
+std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time);
 
 /// @brief Is status available?
 ///

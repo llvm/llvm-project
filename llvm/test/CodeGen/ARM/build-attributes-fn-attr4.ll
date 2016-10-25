@@ -4,7 +4,7 @@
 ; attributes values.
 ; Here we check the denormal-fp-math=positive-zero value.
 
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15  | FileCheck %s --check-prefix=CHECK
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15  | FileCheck %s
 
 ; CHECK: .eabi_attribute 20, 0
 

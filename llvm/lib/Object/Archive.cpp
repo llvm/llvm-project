@@ -239,7 +239,8 @@ Expected<sys::fs::perms> ArchiveMemberHeader::getAccessMode() const {
   return static_cast<sys::fs::perms>(Ret);
 }
 
-Expected<sys::TimeValue> ArchiveMemberHeader::getLastModified() const {
+Expected<sys::TimePoint<std::chrono::seconds>>
+ArchiveMemberHeader::getLastModified() const {
   unsigned Seconds;
   if (StringRef(ArMemHdr->LastModified,
                 sizeof(ArMemHdr->LastModified)).rtrim(' ')
@@ -256,9 +257,7 @@ Expected<sys::TimeValue> ArchiveMemberHeader::getLastModified() const {
                           "archive member header at offset " + Twine(Offset));
   }
 
-  sys::TimeValue Ret;
-  Ret.fromEpochTime(Seconds);
-  return Ret;
+  return sys::toTimePoint(Seconds);
 }
 
 Expected<unsigned> ArchiveMemberHeader::getUID() const {

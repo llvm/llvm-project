@@ -927,6 +927,7 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   /// Control Instructions
   def SYNC_MM    : MMRel, SYNC_FT<"sync">, SYNC_FM_MM;
+  def SYNCI_MM   : MMRel, SYNCI_FT<"synci">, SYNCI_FM_MM;
   def BREAK_MM   : MMRel, BRK_FT<"break">, BRK_FM_MM;
   def SYSCALL_MM : MMRel, SYS_FT<"syscall", uimm10, II_SYSCALL>, SYS_FM_MM;
   def WAIT_MM    : WaitMM<"wait">, WAIT_FM_MM;

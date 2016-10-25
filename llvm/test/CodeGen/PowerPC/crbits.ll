@@ -13,7 +13,7 @@ entry:
 ; CHECK-LABEL: @test1
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK-DAG: li [[REG1:[0-9]+]], 1
-; CHECK-DAG: lfs [[REG2:[0-9]+]],
+; CHECK-DAG: xxlxor [[REG2:[0-9]+]], [[REG2]], [[REG2]]
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 2, [[REG2]]
 ; CHECK: crnor
 ; CHECK: crnor
@@ -33,7 +33,7 @@ entry:
 ; CHECK-LABEL: @test2
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK-DAG: li [[REG1:[0-9]+]], 1
-; CHECK-DAG: lfs [[REG2:[0-9]+]],
+; CHECK-DAG: xxlxor [[REG2:[0-9]+]], [[REG2]], [[REG2]]
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 2, [[REG2]]
 ; CHECK: crnor
 ; CHECK: crnor
@@ -55,7 +55,7 @@ entry:
 ; CHECK-LABEL: @test3
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK-DAG: li [[REG1:[0-9]+]], 1
-; CHECK-DAG: lfs [[REG2:[0-9]+]],
+; CHECK-DAG: xxlxor [[REG2:[0-9]+]], [[REG2]], [[REG2]]
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 2, [[REG2]]
 ; CHECK: crnor
 ; CHECK: crnor

@@ -194,7 +194,8 @@ public:
   typedef LoadCommandList::const_iterator load_command_iterator;
 
   static Expected<std::unique_ptr<MachOObjectFile>>
-  create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits);
+  create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
+         uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0);
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
@@ -443,7 +444,8 @@ public:
 private:
 
   MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
-                  Error &Err);
+                  Error &Err, uint32_t UniversalCputype = 0,
+                  uint32_t UniversalIndex = 0);
 
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
 

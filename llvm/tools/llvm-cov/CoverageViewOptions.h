@@ -36,7 +36,6 @@ struct CoverageViewOptions {
   std::vector<std::string> DemanglerOpts;
   uint32_t TabSize;
   std::string ProjectTitle;
-  std::string ObjectFilename;
   std::string CreatedTimeStr;
 
   /// \brief Change the output's stream color if the colors are enabled.

@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -force-precise-rotation-cost < %s | FileCheck %s -check-prefix=CHECK
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -force-precise-rotation-cost < %s | FileCheck %s
 
 define void @bar()  {
 ; Test that all edges in the loop chain are fall through with profile data.

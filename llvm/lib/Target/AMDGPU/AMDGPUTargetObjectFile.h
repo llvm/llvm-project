@@ -23,7 +23,7 @@ namespace llvm {
 
 class AMDGPUTargetObjectFile : public TargetLoweringObjectFileELF {
   public:
-    MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
+    MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
 };
 

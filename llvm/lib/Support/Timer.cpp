@@ -116,8 +116,10 @@ static inline size_t getMemUsage() {
 }
 
 TimeRecord TimeRecord::getCurrentTime(bool Start) {
+  using Seconds = std::chrono::duration<double, std::ratio<1>>;
   TimeRecord Result;
-  sys::TimeValue now(0,0), user(0,0), sys(0,0);
+  sys::TimePoint<> now;
+  std::chrono::nanoseconds user, sys;
 
   if (Start) {
     Result.MemUsed = getMemUsage();
@@ -127,9 +129,9 @@ TimeRecord TimeRecord::getCurrentTime(bool Start) {
     Result.MemUsed = getMemUsage();
   }
 
-  Result.WallTime   =  now.seconds() +  now.microseconds() / 1000000.0;
-  Result.UserTime   = user.seconds() + user.microseconds() / 1000000.0;
-  Result.SystemTime =  sys.seconds() +  sys.microseconds() / 1000000.0;
+  Result.WallTime = Seconds(now.time_since_epoch()).count();
+  Result.UserTime = Seconds(user).count();
+  Result.SystemTime = Seconds(sys).count();
   return Result;
 }
 

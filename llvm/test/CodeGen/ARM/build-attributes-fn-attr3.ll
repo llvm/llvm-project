@@ -4,7 +4,7 @@
 ; functions have consistent function attributes values.
 ; Here we check values no-trapping-math=true and denormal-fp-math=ieee.
 
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15  | FileCheck %s --check-prefix=CHECK
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15  | FileCheck %s
 
 ; CHECK: .eabi_attribute 20, 1
 ; CHECK: .eabi_attribute 21, 0

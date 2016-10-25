@@ -4598,6 +4598,6 @@ NVPTXTargetObjectFile::~NVPTXTargetObjectFile() {
 }
 
 MCSection *NVPTXTargetObjectFile::SelectSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return getDataSection();
 }

@@ -658,3 +658,9 @@ Instruction fusion was introduced in ISA 2.06 and more opportunities added in
 ISA 2.07.  LLVM needs to add infrastructure to recognize fusion opportunities
 and force instruction pairs to be scheduled together.
 
+-----------------------------------------------------------------------------
+
+More general handling of any_extend and zero_extend:
+
+See https://reviews.llvm.org/D24924#555306
+

@@ -28,7 +28,8 @@ def ADJCALLSTACKUP : I<(outs), (ins i32imm:$amt, i32imm:$amt2),
 multiclass CALL<WebAssemblyRegClass vt, string prefix> {
   def CALL_#vt : I<(outs vt:$dst), (ins i32imm:$callee, variable_ops),
                    [(set vt:$dst, (WebAssemblycall1 (i32 imm:$callee)))],
-                   !strconcat(prefix, "call\t$dst, $callee")>;
+                   !strconcat(prefix, "call\t$dst, $callee"),
+                   0x10>;
   let isCodeGenOnly = 1 in {
     def PCALL_INDIRECT_#vt : I<(outs vt:$dst), (ins I32:$callee, variable_ops),
                               [(set vt:$dst, (WebAssemblycall1 I32:$callee))],
@@ -36,14 +37,16 @@ multiclass CALL<WebAssemblyRegClass vt, string prefix> {
   } // isCodeGenOnly = 1
   def CALL_INDIRECT_#vt : I<(outs vt:$dst), (ins variable_ops),
                             [],
-                            !strconcat(prefix, "call_indirect\t$dst")>;
+                            !strconcat(prefix, "call_indirect\t$dst"),
+                            0x11>;
 }
 
 multiclass SIMD_CALL<ValueType vt, string prefix> {
   def CALL_#vt : SIMD_I<(outs V128:$dst), (ins i32imm:$callee, variable_ops),
                          [(set (vt V128:$dst),
                                (WebAssemblycall1 (i32 imm:$callee)))],
-                         !strconcat(prefix, "call\t$dst, $callee")>;
+                         !strconcat(prefix, "call\t$dst, $callee"),
+                         0x10>;
   let isCodeGenOnly = 1 in {
     def PCALL_INDIRECT_#vt : SIMD_I<(outs V128:$dst),
                                     (ins I32:$callee, variable_ops),
@@ -54,7 +57,8 @@ multiclass SIMD_CALL<ValueType vt, string prefix> {
   def CALL_INDIRECT_#vt : SIMD_I<(outs V128:$dst),
                                   (ins variable_ops),
                                   [],
-                                  !strconcat(prefix, "call_indirect\t$dst")>;
+                                  !strconcat(prefix, "call_indirect\t$dst"),
+                                  0x11>;
 }
 
 let Uses = [SP32, SP64], isCall = 1 in {
@@ -69,7 +73,7 @@ let Uses = [SP32, SP64], isCall = 1 in {
 
   def CALL_VOID : I<(outs), (ins i32imm:$callee, variable_ops),
                     [(WebAssemblycall0 (i32 imm:$callee))],
-                    "call    \t$callee">;
+                    "call    \t$callee", 0x10>;
   let isCodeGenOnly = 1 in {
     def PCALL_INDIRECT_VOID : I<(outs), (ins I32:$callee, variable_ops),
                       [(WebAssemblycall0 I32:$callee)],
@@ -77,7 +81,7 @@ let Uses = [SP32, SP64], isCall = 1 in {
   } // isCodeGenOnly = 1
   def CALL_INDIRECT_VOID : I<(outs), (ins variable_ops),
                              [],
-                             "call_indirect\t">;
+                             "call_indirect\t", 0x11>;
 } // Uses = [SP32,SP64], isCall = 1
 
 } // Defs = [ARGUMENTS]

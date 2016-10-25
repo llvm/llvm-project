@@ -60,19 +60,19 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           ? MRI.getRegClass(DestReg)
           : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(DestReg);
 
-  unsigned CopyLocalOpcode;
+  unsigned CopyOpcode;
   if (RC == &WebAssembly::I32RegClass)
-    CopyLocalOpcode = WebAssembly::COPY_LOCAL_I32;
+    CopyOpcode = WebAssembly::COPY_I32;
   else if (RC == &WebAssembly::I64RegClass)
-    CopyLocalOpcode = WebAssembly::COPY_LOCAL_I64;
+    CopyOpcode = WebAssembly::COPY_I64;
   else if (RC == &WebAssembly::F32RegClass)
-    CopyLocalOpcode = WebAssembly::COPY_LOCAL_F32;
+    CopyOpcode = WebAssembly::COPY_F32;
   else if (RC == &WebAssembly::F64RegClass)
-    CopyLocalOpcode = WebAssembly::COPY_LOCAL_F64;
+    CopyOpcode = WebAssembly::COPY_F64;
   else
     llvm_unreachable("Unexpected register class");
 
-  BuildMI(MBB, I, DL, get(CopyLocalOpcode), DestReg)
+  BuildMI(MBB, I, DL, get(CopyOpcode), DestReg)
       .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
 }
 

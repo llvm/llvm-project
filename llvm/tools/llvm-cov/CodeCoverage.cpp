@@ -30,6 +30,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <functional>
@@ -38,8 +39,7 @@
 using namespace llvm;
 using namespace coverage;
 
-void exportCoverageDataToJson(StringRef ObjectFilename,
-                              const coverage::CoverageMapping &CoverageMapping,
+void exportCoverageDataToJson(const coverage::CoverageMapping &CoverageMapping,
                               raw_ostream &OS);
 
 namespace {
@@ -569,13 +569,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     CompareFilenamesOnly = FilenameEquivalence;
 
     ViewOpts.Format = Format;
-    SmallString<128> ObjectFilePath(this->ObjectFilename);
-    if (std::error_code EC = sys::fs::make_absolute(ObjectFilePath)) {
-      error(EC.message(), this->ObjectFilename);
-      return 1;
-    }
-    sys::path::native(ObjectFilePath);
-    ViewOpts.ObjectFilename = ObjectFilePath.c_str();
     switch (ViewOpts.Format) {
     case CoverageViewOptions::OutputFormat::Text:
       ViewOpts.Colors = UseColor == cl::BOU_UNSET
@@ -734,7 +727,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
   }
 
   auto ModifiedTime = Status.getLastModificationTime();
-  std::string ModifiedTimeStr = ModifiedTime.str();
+  std::string ModifiedTimeStr = to_string(ModifiedTime);
   size_t found = ModifiedTimeStr.rfind(":");
   ViewOpts.CreatedTimeStr = (found != std::string::npos)
                                 ? "Created: " + ModifiedTimeStr.substr(0, found)
@@ -842,7 +835,7 @@ int CodeCoverageTool::export_(int argc, const char **argv,
     return 1;
   }
 
-  exportCoverageDataToJson(ObjectFilename, *Coverage.get(), outs());
+  exportCoverageDataToJson(*Coverage.get(), outs());
 
   return 0;
 }

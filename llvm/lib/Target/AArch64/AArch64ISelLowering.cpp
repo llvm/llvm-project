@@ -959,6 +959,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::ST4LANEpost:       return "AArch64ISD::ST4LANEpost";
   case AArch64ISD::SMULL:             return "AArch64ISD::SMULL";
   case AArch64ISD::UMULL:             return "AArch64ISD::UMULL";
+  case AArch64ISD::FRSQRTE:           return "AArch64ISD::FRSQRTE";
+  case AArch64ISD::FRECPE:            return "AArch64ISD::FRECPE";
   }
   return nullptr;
 }
@@ -4607,6 +4609,54 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
 //===----------------------------------------------------------------------===//
 //                          AArch64 Optimization Hooks
 //===----------------------------------------------------------------------===//
+
+static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
+                           SDValue Operand, SelectionDAG &DAG,
+                           int &ExtraSteps) {
+  EVT VT = Operand.getValueType();
+  if (ST->hasNEON() &&
+      (VT == MVT::f64 || VT == MVT::v1f64 || VT == MVT::v2f64 ||
+       VT == MVT::f32 || VT == MVT::v1f32 ||
+       VT == MVT::v2f32 || VT == MVT::v4f32)) {
+    if (ExtraSteps == TargetLoweringBase::ReciprocalEstimate::Unspecified)
+      // For the reciprocal estimates, convergence is quadratic, so the number
+      // of digits is doubled after each iteration.  In ARMv8, the accuracy of
+      // the initial estimate is 2^-8.  Thus the number of extra steps to refine
+      // the result for float (23 mantissa bits) is 2 and for double (52
+      // mantissa bits) is 3.
+      ExtraSteps = VT == MVT::f64 ? 3 : 2;
+
+    return DAG.getNode(Opcode, SDLoc(Operand), VT, Operand);
+  }
+
+  return SDValue();
+}
+
+SDValue AArch64TargetLowering::getRsqrtEstimate(SDValue Operand,
+                                                SelectionDAG &DAG, int Enabled,
+                                                int &ExtraSteps,
+                                                bool &UseOneConst) const {
+  if (Enabled == ReciprocalEstimate::Enabled ||
+      (Enabled == ReciprocalEstimate::Unspecified && Subtarget->useRSqrt()))
+    if (SDValue Estimate = getEstimate(Subtarget, AArch64ISD::FRSQRTE, Operand,
+                                       DAG, ExtraSteps)) {
+      UseOneConst = true;
+      return Estimate;
+    }
+
+  return SDValue();
+}
+
+SDValue AArch64TargetLowering::getRecipEstimate(SDValue Operand,
+                                                SelectionDAG &DAG, int Enabled,
+                                                int &ExtraSteps) const {
+  if (Enabled == ReciprocalEstimate::Enabled)
+    if (SDValue Estimate = getEstimate(Subtarget, AArch64ISD::FRECPE, Operand,
+                                       DAG, ExtraSteps))
+      return Estimate;
+
+  return SDValue();
+}
 
 //===----------------------------------------------------------------------===//
 //                          AArch64 Inline Assembly Support

@@ -21,6 +21,7 @@
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -353,9 +354,9 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
     Expected<uint64_t> Size = C.getSize();
     failIfError(Size.takeError());
     outs() << ' ' << format("%6llu", Size.get());
-    Expected<sys::TimeValue> ModTimeOrErr = C.getLastModified();
+    auto ModTimeOrErr = C.getLastModified();
     failIfError(ModTimeOrErr.takeError());
-    outs() << ' ' << ModTimeOrErr.get().str();
+    outs() << ' ' << ModTimeOrErr.get();
     outs() << ' ';
   }
   outs() << Name << "\n";
@@ -387,7 +388,7 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
   // If we're supposed to retain the original modification times, etc. do so
   // now.
   if (OriginalDates) {
-    Expected<sys::TimeValue> ModTimeOrErr = C.getLastModified();
+    auto ModTimeOrErr = C.getLastModified();
     failIfError(ModTimeOrErr.takeError());
     failIfError(
         sys::fs::setLastModificationAndAccessTime(FD, ModTimeOrErr.get()));
@@ -525,7 +526,7 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
     // operation.
     sys::fs::file_status Status;
     failIfError(sys::fs::status(*MI, Status), *MI);
-    Expected<sys::TimeValue> ModTimeOrErr = Member.getLastModified();
+    auto ModTimeOrErr = Member.getLastModified();
     failIfError(ModTimeOrErr.takeError());
     if (Status.getLastModificationTime() < ModTimeOrErr.get()) {
       if (PosName.empty())

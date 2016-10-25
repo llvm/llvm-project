@@ -35,6 +35,8 @@ static void writeTimestampFile(StringRef TimestampFile) {
 
 /// Prune the cache of files that haven't been accessed in a long time.
 bool CachePruning::prune() {
+  using namespace std::chrono;
+
   if (Path.empty())
     return false;
 
@@ -45,7 +47,7 @@ bool CachePruning::prune() {
   if (!isPathDir)
     return false;
 
-  if (Expiration == 0 && PercentageOfAvailableSpace == 0) {
+  if (Expiration == seconds(0) && PercentageOfAvailableSpace == 0) {
     DEBUG(dbgs() << "No pruning settings set, exit early\n");
     // Nothing will be pruned, early exit
     return false;
@@ -55,7 +57,7 @@ bool CachePruning::prune() {
   SmallString<128> TimestampFile(Path);
   sys::path::append(TimestampFile, "llvmcache.timestamp");
   sys::fs::file_status FileStatus;
-  sys::TimeValue CurrentTime = sys::TimeValue::now();
+  const auto CurrentTime = system_clock::now();
   if (auto EC = sys::fs::status(TimestampFile, FileStatus)) {
     if (EC == errc::no_such_file_or_directory) {
       // If the timestamp file wasn't there, create one now.
@@ -65,14 +67,14 @@ bool CachePruning::prune() {
       return false;
     }
   } else {
-    if (Interval) {
+    if (Interval == seconds(0)) {
       // Check whether the time stamp is older than our pruning interval.
       // If not, do nothing.
-      sys::TimeValue TimeStampModTime = FileStatus.getLastModificationTime();
-      auto TimeInterval = sys::TimeValue(sys::TimeValue::SecondsType(Interval));
+      const auto TimeStampModTime = FileStatus.getLastModificationTime();
       auto TimeStampAge = CurrentTime - TimeStampModTime;
-      if (TimeStampAge <= TimeInterval) {
-        DEBUG(dbgs() << "Timestamp file too recent (" << TimeStampAge.seconds()
+      if (TimeStampAge <= Interval) {
+        DEBUG(dbgs() << "Timestamp file too recent ("
+                     << duration_cast<seconds>(TimeStampAge).count()
                      << "s old), do not prune.\n");
         return false;
       }
@@ -103,7 +105,6 @@ bool CachePruning::prune() {
   std::error_code EC;
   SmallString<128> CachePathNative;
   sys::path::native(Path, CachePathNative);
-  auto TimeExpiration = sys::TimeValue(sys::TimeValue::SecondsType(Expiration));
   // Walk all of the files within this directory.
   for (sys::fs::directory_iterator File(CachePathNative, EC), FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
@@ -119,11 +120,11 @@ bool CachePruning::prune() {
     }
 
     // If the file hasn't been used recently enough, delete it
-    sys::TimeValue FileAccessTime = FileStatus.getLastAccessedTime();
+    const auto FileAccessTime = FileStatus.getLastAccessedTime();
     auto FileAge = CurrentTime - FileAccessTime;
-    if (FileAge > TimeExpiration) {
-      DEBUG(dbgs() << "Remove " << File->path() << " (" << FileAge.seconds()
-                   << "s old)\n");
+    if (FileAge > Expiration) {
+      DEBUG(dbgs() << "Remove " << File->path() << " ("
+                   << duration_cast<seconds>(FileAge).count() << "s old)\n");
       sys::fs::remove(File->path());
       continue;
     }

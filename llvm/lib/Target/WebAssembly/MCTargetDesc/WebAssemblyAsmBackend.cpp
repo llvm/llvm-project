@@ -66,8 +66,10 @@ bool WebAssemblyAsmBackend::writeNopData(uint64_t Count,
   if (Count == 0)
     return true;
 
-  // FIXME: Do something.
-  return false;
+  for (uint64_t i = 0; i < Count; ++i)
+    OW->write8(WebAssembly::Nop);
+
+  return true;
 }
 
 void WebAssemblyAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,

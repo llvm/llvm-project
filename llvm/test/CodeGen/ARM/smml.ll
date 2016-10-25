@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s -check-prefix=CHECK
+; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s
 ; RUN: llc -mtriple=armv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6
 ; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7
 ; RUN: llc -mtriple=thumb-eabi %s -o - | FileCheck %s -check-prefix=CHECK-THUMB
