@@ -30,8 +30,6 @@ class GlobalAlias : public GlobalIndirectSymbol,
   void operator=(const GlobalAlias &) = delete;
   GlobalAlias(const GlobalAlias &) = delete;
 
-  void setParent(Module *parent);
-
   GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Linkage,
               const Twine &Name, Constant *Aliasee, Module *Parent);
 
