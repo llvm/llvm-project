@@ -68,6 +68,13 @@ class DictionaryEntry {
   size_t GetUseCount() const { return UseCount; }
   size_t GetSuccessCount() const {return SuccessCount; }
 
+  void Print(const char *PrintAfter = "\n") {
+    PrintASCII(W.data(), W.size());
+    if (HasPositionHint())
+      Printf("@%zd", GetPositionHint());
+    Printf("%s", PrintAfter);
+  }
+
 private:
   Word W;
   size_t PositionHint = std::numeric_limits<size_t>::max();

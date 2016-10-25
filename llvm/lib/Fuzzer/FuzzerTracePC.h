@@ -27,13 +27,18 @@ namespace fuzzer {
 template<class T, size_t kSizeT>
 struct TableOfRecentCompares {
   static const size_t kSize = kSizeT;
+  struct Pair {
+    T A, B;
+  };
   void Insert(size_t Idx, T Arg1, T Arg2) {
     Idx = Idx % kSize;
-    Table[Idx][0] = Arg1;
-    Table[Idx][1] = Arg2;
+    Table[Idx].A = Arg1;
+    Table[Idx].B = Arg2;
   }
-  void Clear() { memset(Table, 0, sizeof(Table)); }
-  T Table[kSize][2];
+
+  Pair Get(size_t I) { return Table[I % kSize]; }
+
+  Pair Table[kSize];
 };
 
 class TracePC {
@@ -67,11 +72,6 @@ class TracePC {
     memset(Counters, 0, sizeof(Counters));
   }
 
-  void ResetTORC() {
-    TORC4.Clear();
-    TORC8.Clear();
-  }
-
   void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
   void PrintFeatureSet();
 
@@ -88,7 +88,9 @@ class TracePC {
 
   bool UsingTracePcGuard() const {return NumModules; }
 
-  void ProcessTORC(Dictionary *Dict, const uint8_t *Data, size_t Size);
+  static const size_t kTORCSize = 1 << 5;
+  TableOfRecentCompares<uint32_t, kTORCSize> TORC4;
+  TableOfRecentCompares<uint64_t, kTORCSize> TORC8;
 
 private:
   bool UseCounters = false;
@@ -113,9 +115,6 @@ private:
   static const size_t kNumCounters = 1 << 14;
   alignas(8) uint8_t Counters[kNumCounters];
 
-  static const size_t kTORCSize = 1 << 12;
-  TableOfRecentCompares<uint32_t, kTORCSize> TORC4;
-  TableOfRecentCompares<uint64_t, kTORCSize> TORC8;
   void TORCInsert(size_t Idx, uint8_t Arg1, uint8_t Arg2) {
     // Do nothing, too small to be interesting.
   }
@@ -128,13 +127,6 @@ private:
   void TORCInsert(size_t Idx, uint64_t Arg1, uint64_t Arg2) {
     TORC8.Insert(Idx, Arg1, Arg2);
   }
-
-  template <class T>
-  void TORCToDict(const TableOfRecentCompares<T, kTORCSize> &TORC,
-                  Dictionary *Dict, const uint8_t *Data, size_t Size);
-  template <class T>
-  void TORCToDict(Dictionary *Dict, T FindInData, T Substitute,
-                  const uint8_t *Data, size_t Size);
 
   static const size_t kNumPCs = 1 << 24;
   uintptr_t PCs[kNumPCs];

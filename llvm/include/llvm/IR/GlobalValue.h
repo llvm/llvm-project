@@ -140,6 +140,12 @@ protected:
   }
 
   Module *Parent;             // The containing module.
+
+  // Used by SymbolTableListTraits.
+  void setParent(Module *parent) {
+    Parent = parent;
+  }
+
 public:
   enum ThreadLocalMode {
     NotThreadLocal = 0,
