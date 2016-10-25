@@ -44,7 +44,7 @@ private:
     }
   };
   DenseMap<GlobalVariable *, PerFunctionProfileData> ProfileDataMap;
-  std::vector<Value *> UsedVars;
+  std::vector<GlobalValue *> UsedVars;
   std::vector<GlobalVariable *> ReferencedNames;
   GlobalVariable *NamesVar;
   size_t NamesSize;
