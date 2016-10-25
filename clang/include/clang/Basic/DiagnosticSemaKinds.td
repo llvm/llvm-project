@@ -7598,7 +7598,7 @@ def warn_cfstring_truncated : Warning<
 def err_os_log_format_not_string_constant : Error<
   "os_log() format argument is not a string constant">;
 def err_os_log_argument_too_big : Error<
-  "os_log() argument %d is too big (%d bytes, max %d)">;
+  "os_log() argument %0 is too big (%1 bytes, max %2)">;
 def warn_os_log_format_narg : Error<
  "os_log() '%%n' format specifier is not allowed">, DefaultError;
 
