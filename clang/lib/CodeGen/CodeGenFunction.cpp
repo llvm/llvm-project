@@ -1066,6 +1066,13 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (SpecDecl->hasBody(SpecDecl))
       Loc = SpecDecl->getLocation();
 
+  Stmt *Body = FD->getBody();
+
+  // Initialize helper which will detect jumps which can cause invalid lifetime
+  // markers.
+  if (Body && ShouldEmitLifetimeMarkers)
+    Bypasses.Init(Body);
+
   // Emit the standard function prologue.
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
 
@@ -1095,7 +1102,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // Implicit copy-assignment gets the same special treatment as implicit
     // copy-constructors.
     emitImplicitAssignmentOperatorBody(Args);
-  } else if (Stmt *Body = FD->getBody()) {
+  } else if (Body) {
     EmitFunctionBody(Args, Body);
   } else
     llvm_unreachable("no definition for emitted function");

@@ -432,7 +432,7 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
     }
     assert(Shift >= 0);
     Changes[i].Spaces += Shift;
-    if (i + 1 != End)
+    if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
     Changes[i].StartOfTokenColumn += Shift;
   }

@@ -85,6 +85,7 @@ protected:
   // The file this section is from.
   ObjectFile<ELFT> *File;
 
+public:
   // These corresponds to the fields in Elf_Shdr.
   uintX_t Flags;
   uintX_t Entsize;
@@ -92,7 +93,6 @@ protected:
   uint32_t Link;
   uint32_t Info;
 
-public:
   InputSectionBase()
       : InputSectionData(Regular, "", ArrayRef<uint8_t>(), false, false),
         Repl(this) {}
@@ -117,11 +117,6 @@ public:
 
   static InputSectionBase<ELFT> Discarded;
 
-  uintX_t getFlags() const { return Flags; }
-  uint32_t getType() const { return Type; }
-  uintX_t getEntsize() const { return Entsize; }
-  uint32_t getLink() const { return Link; }
-  uint32_t getInfo() const { return Info; }
   ObjectFile<ELFT> *getFile() const { return File; }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
   InputSectionBase *getLinkOrderDep() const;
@@ -172,7 +167,7 @@ public:
 
   // Mark the piece at a given offset live. Used by GC.
   void markLiveAt(uintX_t Offset) {
-    assert(this->getFlags() & llvm::ELF::SHF_ALLOC);
+    assert(this->Flags & llvm::ELF::SHF_ALLOC);
     LiveOffsets.insert(Offset);
   }
 

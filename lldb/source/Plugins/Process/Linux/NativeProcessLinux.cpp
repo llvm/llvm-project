@@ -1361,7 +1361,11 @@ Error NativeProcessLinux::SetupSoftwareSingleStepping(
     error = SetSoftwareBreakpoint(next_pc, 0);
   }
 
-  if (error.Fail())
+  // If setting the breakpoint fails because next_pc is out of
+  // the address space, ignore it and let the debugee segfault.
+  if (error.GetError() == EIO || error.GetError() == EFAULT) {
+    return Error();
+  } else if (error.Fail())
     return error;
 
   m_threads_stepping_with_breakpoint.insert({thread.GetID(), next_pc});

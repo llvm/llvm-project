@@ -1842,8 +1842,8 @@ public:
   StringRef getName() const { return getStringOperand(1); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
   DITypeRef getType() const { return DITypeRef(getRawType()); }
-  uint64_t getAlignInBits() const { return AlignInBits; }
-  uint64_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
+  uint32_t getAlignInBits() const { return AlignInBits; }
+  uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
 
   StringRef getFilename() const {
     if (auto *F = getFile())

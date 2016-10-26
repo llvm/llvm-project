@@ -29,6 +29,7 @@
 #include <map>
 
 namespace llvm {
+class DWARFDebugLine;
 namespace lto {
 class InputFile;
 }
@@ -42,6 +43,21 @@ using llvm::object::Archive;
 class InputFile;
 class Lazy;
 class SymbolBody;
+
+// Debugging information helper class. The main purpose is to
+// retrieve source file and line for error reporting. Linker may
+// find reasonable number of errors in a single object file, so
+// we cache debugging information in order to parse it only once
+// for each object file we link.
+template <class ELFT> class DIHelper {
+public:
+  typedef typename ELFT::uint uintX_t;
+
+  DIHelper(InputFile *F);
+  std::string getLineInfo(uintX_t Offset);
+private:
+  std::unique_ptr<llvm::DWARFDebugLine> DwarfLine;
+};
 
 // The root class of input files.
 class InputFile {
@@ -171,6 +187,10 @@ public:
 
   const Elf_Shdr *getSymbolTable() const { return this->Symtab; };
 
+  // DI helper allows manipilating debugging information for this
+  // object file. Used for error reporting.
+  DIHelper<ELFT> *getDIHelper();
+
   // Get MIPS GP0 value defined by this file. This value represents the gp value
   // used to create the relocatable object and required to support
   // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.
@@ -183,6 +203,11 @@ public:
   // SymbolBodies and Thunks for sections in this file are allocated
   // using this buffer.
   llvm::BumpPtrAllocator Alloc;
+
+  // Name of source file obtained from STT_FILE symbol value,
+  // or empty string if there is no such symbol in object file
+  // symbol table.
+  StringRef SourceFile;
 
 private:
   void
@@ -211,6 +236,7 @@ private:
   llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
   llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
   llvm::SpecificBumpPtrAllocator<EhInputSection<ELFT>> EHAlloc;
+  std::unique_ptr<DIHelper<ELFT>> DIH;
 };
 
 // LazyObjectFile is analogous to ArchiveFile in the sense that

@@ -1010,12 +1010,18 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       bool IsMSCatchParam =
           D.isExceptionVariable() && getTarget().getCXXABI().isMicrosoft();
 
-      // Emit a lifetime intrinsic if meaningful.  There's no point
-      // in doing this if we don't have a valid insertion point (?).
+      // Emit a lifetime intrinsic if meaningful. There's no point in doing this
+      // if we don't have a valid insertion point (?).
       if (HaveInsertPoint() && !IsMSCatchParam) {
-        uint64_t size = CGM.getDataLayout().getTypeAllocSize(allocaTy);
-        emission.SizeForLifetimeMarkers =
-          EmitLifetimeStart(size, address.getPointer());
+        // goto or switch-case statements can break lifetime into several
+        // regions which need more efforts to handle them correctly. PR28267
+        // This is rare case, but it's better just omit intrinsics than have
+        // them incorrectly placed.
+        if (!Bypasses.IsBypassed(&D)) {
+          uint64_t size = CGM.getDataLayout().getTypeAllocSize(allocaTy);
+          emission.SizeForLifetimeMarkers =
+              EmitLifetimeStart(size, address.getPointer());
+        }
       } else {
         assert(!emission.useLifetimeMarkers());
       }

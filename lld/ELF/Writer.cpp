@@ -346,7 +346,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (Config->Discard == DiscardPolicy::Locals)
     return false;
 
-  return !Sec || !(Sec->getFlags() & SHF_MERGE);
+  return !Sec || !(Sec->Flags & SHF_MERGE);
 }
 
 template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
@@ -676,7 +676,7 @@ void Writer<ELFT>::forEachRelSec(
       // creating GOT, PLT, copy relocations, etc.
       // Note that relocations for non-alloc sections are directly
       // processed by InputSection::relocateNonAlloc.
-      if (!(IS->getFlags() & SHF_ALLOC))
+      if (!(IS->Flags & SHF_ALLOC))
         continue;
       if (auto *S = dyn_cast<InputSection<ELFT>>(IS)) {
         for (const Elf_Shdr *RelSec : S->RelocSections)
