@@ -140,8 +140,8 @@ template <class ELFT> void ELFFileBase<ELFT>::initStringTable() {
 }
 
 template <class ELFT>
-elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
-    : ELFFileBase<ELFT>(Base::ObjectKind, M) {}
+elf::ObjectFile<ELFT>::ObjectFile(BumpPtrAllocator &Alloc, MemoryBufferRef M)
+    : ELFFileBase<ELFT>(Base::ObjectKind, M), Alloc(Alloc) {}
 
 template <class ELFT>
 ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getNonLocalSymbols() {
@@ -547,7 +547,7 @@ ArchiveFile::getMember(const Archive::Symbol *Sym) {
 }
 
 template <class ELFT>
-SharedFile<ELFT>::SharedFile(MemoryBufferRef M)
+SharedFile<ELFT>::SharedFile(BumpPtrAllocator &Alloc, MemoryBufferRef M)
     : ELFFileBase<ELFT>(Base::SharedKind, M), AsNeeded(Config->AsNeeded) {}
 
 template <class ELFT>
@@ -793,7 +793,7 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 }
 
 template <template <class> class T>
-static InputFile *createELFFile(MemoryBufferRef MB) {
+static InputFile *createELFFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB) {
   unsigned char Size;
   unsigned char Endian;
   std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
@@ -802,13 +802,13 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF32LE>(MB);
+    Obj = new T<ELF32LE>(Alloc, MB);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF32BE>(MB);
+    Obj = new T<ELF32BE>(Alloc, MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF64LE>(MB);
+    Obj = new T<ELF64LE>(Alloc, MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF64BE>(MB);
+    Obj = new T<ELF64BE>(Alloc, MB);
   else
     fatal("invalid file class: " + MB.getBufferIdentifier());
 
@@ -825,7 +825,7 @@ template <class ELFT> InputFile *BinaryFile::createELF() {
   Buffer = wrapBinaryWithElfHeader<ELFT>(Blob, Filename);
 
   return createELFFile<ObjectFile>(
-      MemoryBufferRef(toStringRef(Buffer), Filename));
+      Alloc, MemoryBufferRef(toStringRef(Buffer), Filename));
 }
 
 static bool isBitcode(MemoryBufferRef MB) {
@@ -833,17 +833,18 @@ static bool isBitcode(MemoryBufferRef MB) {
   return identify_magic(MB.getBuffer()) == file_magic::bitcode;
 }
 
-InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
+InputFile *elf::createObjectFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB,
+                                 StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
-  InputFile *F =
-      isBitcode(MB) ? new BitcodeFile(MB) : createELFFile<ObjectFile>(MB);
+  InputFile *F = isBitcode(MB) ? new BitcodeFile(MB)
+                               : createELFFile<ObjectFile>(Alloc, MB);
   F->ArchiveName = ArchiveName;
   F->OffsetInArchive = OffsetInArchive;
   return F;
 }
 
-InputFile *elf::createSharedFile(MemoryBufferRef MB) {
-  return createELFFile<SharedFile>(MB);
+InputFile *elf::createSharedFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB) {
+  return createELFFile<SharedFile>(Alloc, MB);
 }
 
 MemoryBufferRef LazyObjectFile::getBuffer() {

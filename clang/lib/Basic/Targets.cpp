@@ -2176,6 +2176,9 @@ public:
       .Case("kaveri",    GK_GFX7)
       .Case("hawaii",    GK_GFX7)
       .Case("mullins",   GK_GFX7)
+      .Case("gfx700",    GK_GFX7)
+      .Case("gfx701",    GK_GFX7)
+      .Case("gfx702",    GK_GFX7)
       .Case("tonga",     GK_GFX8)
       .Case("iceland",   GK_GFX8)
       .Case("carrizo",   GK_GFX8)
@@ -2183,6 +2186,12 @@ public:
       .Case("stoney",    GK_GFX8)
       .Case("polaris10", GK_GFX8)
       .Case("polaris11", GK_GFX8)
+      .Case("gfx800",    GK_GFX8)
+      .Case("gfx801",    GK_GFX8)
+      .Case("gfx802",    GK_GFX8)
+      .Case("gfx803",    GK_GFX8)
+      .Case("gfx804",    GK_GFX8)
+      .Case("gfx810",    GK_GFX8)
       .Default(GK_NONE);
   }
 

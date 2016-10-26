@@ -452,6 +452,12 @@ else ()
         endif ()
       endforeach ()
 
+      # Needed for clear_cache on debug mode, due to r7's usage in inline asm.
+      # Release mode already sets it via -O2/3, Debug mode doesn't.
+      if (${arch} STREQUAL "armhf")
+        list(APPEND BUILTIN_CFLAGS -fomit-frame-pointer)
+      endif()
+
       add_compiler_rt_runtime(clang_rt.builtins
                               STATIC
                               ARCHS ${arch}

@@ -14,8 +14,7 @@ entry:
 
 ; GCN-LABEL: {{^}}stored_fi_to_lds:
 ; GCN: s_load_dword [[LDSPTR:s[0-9]+]]
-; GCN: v_mov_b32_e32 [[ZERO1:v[0-9]+]], 0{{$}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ZERO1]]
+; GCN: buffer_store_dword v{{[0-9]+}}, off,
 ; GCN: v_mov_b32_e32 [[ZERO0:v[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 [[VLDSPTR:v[0-9]+]], [[LDSPTR]]
 ; GCN: ds_write_b32  [[VLDSPTR]], [[ZERO0]]
@@ -118,7 +117,7 @@ define void @stored_fi_to_fi() #0 {
 }
 
 ; GCN-LABEL: {{^}}stored_fi_to_global:
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dword [[FI]]
 define void @stored_fi_to_global(float* addrspace(1)* %ptr) #0 {
@@ -152,18 +151,20 @@ define void @stored_fi_to_global_2_small_objects(float* addrspace(1)* %ptr) #0 {
 }
 
 ; GCN-LABEL: {{^}}stored_fi_to_global_huge_frame_offset:
-; GCN: v_mov_b32_e32 [[VAL_0:v[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 [[BASE_0:v[0-9]+]], 0{{$}}
-; GCN: buffer_store_dword [[VAL_0]], [[BASE_0]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
+; GCN: buffer_store_dword [[BASE_0]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
 
+; FIXME: Re-initialize
 ; GCN: v_mov_b32_e32 [[BASE_0_1:v[0-9]+]], 0{{$}}
-; GCN: v_add_i32_e32 [[BASE_1_OFF_0:v[0-9]+]], vcc, 0x3ffc, [[BASE_0_1]]
 
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
-; GCN: v_add_i32_e32 [[BASE_1_OFF_1:v[0-9]+]], vcc, 56, [[BASE_0_1]]
-; GCN: buffer_store_dword [[K]], [[BASE_1_OFF_0]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
+; GCN-DAG: v_add_i32_e32 [[BASE_1_OFF_1:v[0-9]+]], vcc, 0x3ffc, [[BASE_0_1]]
 
-; GCN: buffer_store_dword [[BASE_1_OFF_1]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+
+; GCN: v_add_i32_e32 [[BASE_1_OFF_2:v[0-9]+]], vcc, 56, [[BASE_0_1]]
+; GCN: buffer_store_dword [[K]], [[BASE_1_OFF_1]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_store_dword [[BASE_1_OFF_2]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 define void @stored_fi_to_global_huge_frame_offset(i32* addrspace(1)* %ptr) #0 {
   %tmp0 = alloca [4096 x i32]
   %tmp1 = alloca [4096 x i32]

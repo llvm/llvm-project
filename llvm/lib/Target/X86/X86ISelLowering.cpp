@@ -16149,6 +16149,11 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
+  // AVX512 fallback is to lower selects of scalar floats to masked moves.
+  if (Cond.getValueType() == MVT::i1 && (VT == MVT::f64 || VT == MVT::f32) &&
+      Subtarget.hasAVX512())
+    return DAG.getNode(X86ISD::SELECTS, DL, VT, Cond, Op1, Op2);
+
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
     SDValue Op1Scalar;
     if (ISD::isBuildVectorOfConstantSDNodes(Op1.getNode()))

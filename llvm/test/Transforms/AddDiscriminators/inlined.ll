@@ -75,9 +75,7 @@ attributes #3 = { nounwind readnone }
 !17 = distinct !DILexicalBlock(scope: !7, file: !1, line: 1, column: 9)
 !18 = !DILocation(line: 1, column: 9, scope: !7)
 !19 = !DILocation(line: 1, column: 27, scope: !12, inlinedAt: !13)
-; CHECK: ![[BR]] =  !DILocation(line: 1, column: 9, scope: ![[BF2:[0-9]+]])
-; CHECK: ![[BF2]] = !DILexicalBlockFile(scope: ![[BF]],
-; CHECK-SAME:                           discriminator: 1)
+; CHECK: ![[BR]] =  !DILocation(line: 1, column: 9, scope: !14)
 !20 = !DILocation(line: 1, column: 9, scope: !14)
 !21 = distinct !{!21, !18}
 !22 = !DILocation(line: 1, column: 56, scope: !12)

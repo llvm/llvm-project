@@ -167,7 +167,7 @@ public:
   ArrayRef<SymbolBody *> getLocalSymbols();
   ArrayRef<SymbolBody *> getNonLocalSymbols();
 
-  explicit ObjectFile(MemoryBufferRef M);
+  explicit ObjectFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef M);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
   ArrayRef<InputSectionBase<ELFT> *> getSections() const { return Sections; }
@@ -202,7 +202,7 @@ public:
 
   // SymbolBodies and Thunks for sections in this file are allocated
   // using this buffer.
-  llvm::BumpPtrAllocator Alloc;
+  llvm::BumpPtrAllocator &Alloc;
 
   // Name of source file obtained from STT_FILE symbol value,
   // or empty string if there is no such symbol in object file
@@ -324,7 +324,7 @@ public:
     return F->kind() == Base::SharedKind;
   }
 
-  explicit SharedFile(MemoryBufferRef M);
+  explicit SharedFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef M);
 
   void parseSoName();
   void parseRest();
@@ -356,11 +356,13 @@ public:
 
 private:
   std::vector<uint8_t> Buffer;
+  llvm::BumpPtrAllocator Alloc;
 };
 
-InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
+InputFile *createObjectFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef MB,
+                            StringRef ArchiveName = "",
                             uint64_t OffsetInArchive = 0);
-InputFile *createSharedFile(MemoryBufferRef MB);
+InputFile *createSharedFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef MB);
 
 } // namespace elf
 } // namespace lld
