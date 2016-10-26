@@ -51,3 +51,5 @@ void outOfLineInlineUseRightH(void (OutOfLineInline<int>::*)() = &OutOfLineInlin
 inline int *getStaticDataMemberRight() {
   return WithUndefinedStaticDataMember<int[]>::undefined;
 }
+
+inline WithAttributes<int> make_with_attributes_right() { return WithAttributes<int>(); }

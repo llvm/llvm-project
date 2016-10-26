@@ -550,10 +550,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // order to avoid blowing out the stack.
     while (true) {
       Stmt *Next;
-      if (CaseStmt *CS = dyn_cast<CaseStmt>(SubStmt))
-        Next = CS->getSubStmt();
-      else if (DefaultStmt *DS = dyn_cast<DefaultStmt>(SubStmt))
-        Next = DS->getSubStmt();
+      if (SwitchCase *SC = dyn_cast<SwitchCase>(SubStmt))
+        Next = SC->getSubStmt();
       else if (LabelStmt *LS = dyn_cast<LabelStmt>(SubStmt))
         Next = LS->getSubStmt();
       else

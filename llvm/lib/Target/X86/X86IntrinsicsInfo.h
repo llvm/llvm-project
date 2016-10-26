@@ -1521,6 +1521,8 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(avx512_mask3_vfmsub_ps_256, FMA_OP_MASK3, X86ISD::FMSUB, 0),
   X86_INTRINSIC_DATA(avx512_mask3_vfmsub_ps_512, FMA_OP_MASK3, X86ISD::FMSUB,
                      X86ISD::FMSUB_RND),
+  X86_INTRINSIC_DATA(avx512_mask3_vfmsub_sd, FMA_OP_SCALAR_MASK3, X86ISD::FMSUB_RND, 0),
+  X86_INTRINSIC_DATA(avx512_mask3_vfmsub_ss, FMA_OP_SCALAR_MASK3, X86ISD::FMSUB_RND, 0),
 
   X86_INTRINSIC_DATA(avx512_mask3_vfmsubadd_pd_128, FMA_OP_MASK3, X86ISD::FMSUBADD, 0),
   X86_INTRINSIC_DATA(avx512_mask3_vfmsubadd_pd_256, FMA_OP_MASK3, X86ISD::FMSUBADD, 0),
@@ -1539,6 +1541,8 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(avx512_mask3_vfnmsub_ps_256, FMA_OP_MASK3, X86ISD::FNMSUB, 0),
   X86_INTRINSIC_DATA(avx512_mask3_vfnmsub_ps_512, FMA_OP_MASK3, X86ISD::FNMSUB,
                      X86ISD::FNMSUB_RND),
+  X86_INTRINSIC_DATA(avx512_mask3_vfnmsub_sd, FMA_OP_SCALAR_MASK3, X86ISD::FNMSUB_RND, 0),
+  X86_INTRINSIC_DATA(avx512_mask3_vfnmsub_ss, FMA_OP_SCALAR_MASK3, X86ISD::FNMSUB_RND, 0),
   X86_INTRINSIC_DATA(avx512_maskz_fixupimm_pd_128, FIXUPIMM_MASKZ,
                      X86ISD::VFIXUPIMM, 0),
   X86_INTRINSIC_DATA(avx512_maskz_fixupimm_pd_256, FIXUPIMM_MASKZ,

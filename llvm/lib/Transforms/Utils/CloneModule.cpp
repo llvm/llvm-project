@@ -119,6 +119,11 @@ std::unique_ptr<Module> llvm::CloneModule(
     }
     if (I->hasInitializer())
       GV->setInitializer(MapValue(I->getInitializer(), VMap));
+
+    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+    I->getAllMetadata(MDs);
+    for (auto MD : MDs)
+      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
   }
 
   // Similarly, copy over function bodies now...
