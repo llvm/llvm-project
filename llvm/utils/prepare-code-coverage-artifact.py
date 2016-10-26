@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 '''Prepare a code coverage artifact.
 
 - Collate raw profiles into one indexed profile.
@@ -13,7 +15,7 @@ import subprocess
 import sys
 
 def merge_raw_profiles(host_llvm_profdata, profile_data_dir, preserve_profiles):
-    print ':: Merging raw profiles...',
+    print(':: Merging raw profiles...', end='')
     sys.stdout.flush()
     raw_profiles = glob.glob(os.path.join(profile_data_dir, '*.profraw'))
     manifest_path = os.path.join(profile_data_dir, 'profiles.manifest')
@@ -26,12 +28,12 @@ def merge_raw_profiles(host_llvm_profdata, profile_data_dir, preserve_profiles):
         for raw_profile in raw_profiles:
             os.remove(raw_profile)
     os.remove(manifest_path)
-    print 'Done!'
+    print('Done!')
     return profdata_path
 
 def prepare_html_report(host_llvm_cov, profile, report_dir, binary,
                         restricted_dirs):
-    print ':: Preparing html report for {0}...'.format(binary),
+    print(':: Preparing html report for {0}...'.format(binary), end='')
     sys.stdout.flush()
     binary_report_dir = os.path.join(report_dir, os.path.basename(binary))
     invocation = [host_llvm_cov, 'show', binary, '-format', 'html',
@@ -42,7 +44,7 @@ def prepare_html_report(host_llvm_cov, profile, report_dir, binary,
     with open(os.path.join(binary_report_dir, 'summary.txt'), 'wb') as Summary:
         subprocess.check_call([host_llvm_cov, 'report', binary,
                                '-instr-profile', profile], stdout=Summary)
-    print 'Done!'
+    print('Done!')
 
 def prepare_html_reports(host_llvm_cov, profdata_path, report_dir, binaries,
                          restricted_dirs):
@@ -73,7 +75,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.use_existing_profdata and args.only_merge:
-        print '--use-existing-profdata and --only-merge are incompatible'
+        print('--use-existing-profdata and --only-merge are incompatible')
         exit(1)
 
     if args.use_existing_profdata:
