@@ -5,6 +5,7 @@
 
 @G1 = global i32 zeroinitializer
 @G2 = global i32 zeroinitializer
+@G3 = global i32 zeroinitializer
 
 ;; Simple load value numbering across non-clobbering store.
 ; CHECK-LABEL: @test1(
@@ -65,5 +66,43 @@ end:
   %v2 = load i32, i32* @G1
   %sum = add i32 %v1, %v2
   store i32 %sum, i32* @G2
+  ret void
+}
+
+
+;; Check that MemoryPhi optimization and MemoryUse re-optimization
+;; happens during EarlyCSE, enabling more load CSE opportunities.
+; CHECK-LABEL: @test_memphiopt2(
+; CHECK-NOMEMSSA-LABEL: @test_memphiopt2(
+define void @test_memphiopt2(i1 %c, i32* %p) {
+; CHECK-LABEL: entry:
+; CHECK-NOMEMSSA-LABEL: entry:
+entry:
+; CHECK: load
+; CHECK-NOMEMSSA: load
+  %v1 = load i32, i32* @G1
+; CHECK: store
+; CHECK-NOMEMSSA: store
+  store i32 %v1, i32* @G2
+  br i1 %c, label %then, label %end
+
+; CHECK-LABEL: then:
+; CHECK-NOMEMSSA-LABEL: then:
+then:
+; CHECK: load
+; CHECK-NOMEMSSA: load
+  %pv = load i32, i32* %p
+; CHECK-NOT: store
+; CHECK-NOMEMSSA-NOT: store
+  store i32 %pv, i32* %p
+  br label %end
+
+; CHECK-LABEL: end:
+; CHECK-NOMEMSSA-LABEL: end:
+end:
+; CHECK-NOT: load
+; CHECK-NOMEMSSA: load
+  %v2 = load i32, i32* @G1
+  store i32 %v2, i32* @G3
   ret void
 }

@@ -45,9 +45,13 @@ static cl::opt<bool> JumpIsExpensiveOverride(
     cl::desc("Do not create extra branches to split comparison logic."),
     cl::Hidden);
 
+static cl::opt<unsigned> MinimumJumpTableEntries
+  ("min-jump-table-entries", cl::init(4), cl::Hidden,
+   cl::desc("Set minimum number of entries to use a jump table."));
+
 static cl::opt<unsigned> MaximumJumpTableSize
-  ("max-jump-table", cl::init(0), cl::Hidden,
-   cl::desc("Set maximum number of jump table entries; zero for no limit."));
+  ("max-jump-table-size", cl::init(0), cl::Hidden,
+   cl::desc("Set maximum size of jump tables; zero for no limit."));
 
 // Although this default value is arbitrary, it is not random. It is assumed
 // that a condition that evaluates the same way by a higher percentage than this
@@ -826,7 +830,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   PrefLoopAlignment = 0;
   GatherAllAliasesMaxDepth = 6;
   MinStackArgumentAlignment = 1;
-  MinimumJumpTableEntries = 4;
   // TODO: the default will be switched to 0 in the next commit, along
   // with the Target-specific changes necessary.
   MaxAtomicSizeInBitsSupported = 1024;
@@ -1866,6 +1869,14 @@ Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
 
 Value *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
   return nullptr;
+}
+
+unsigned TargetLoweringBase::getMinimumJumpTableEntries() const {
+  return MinimumJumpTableEntries;
+}
+
+void TargetLoweringBase::setMinimumJumpTableEntries(unsigned Val) {
+  MinimumJumpTableEntries = Val;
 }
 
 unsigned TargetLoweringBase::getMaximumJumpTableSize() const {

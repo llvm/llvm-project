@@ -106,6 +106,8 @@ class InputFile {
   // FIXME: Remove the LLVMContext once we have bitcode symbol tables.
   LLVMContext Ctx;
   std::unique_ptr<object::IRObjectFile> Obj;
+  std::vector<StringRef> Comdats;
+  DenseMap<const Comdat *, unsigned> ComdatMap;
 
 public:
   /// Create an InputFile.
@@ -124,6 +126,7 @@ public:
     friend LTO;
 
     object::basic_symbol_iterator I;
+    const InputFile *File;
     const GlobalValue *GV;
     uint32_t Flags;
     SmallString<64> Name;
@@ -154,7 +157,10 @@ public:
     }
 
   public:
-    Symbol(object::basic_symbol_iterator I) : I(I) { skip(); }
+    Symbol(object::basic_symbol_iterator I, const InputFile *File)
+        : I(I), File(File) {
+      skip();
+    }
 
     StringRef getName() const { return Name; }
     StringRef getIRName() const {
@@ -176,22 +182,13 @@ public:
       return GV && GV->isThreadLocal();
     }
 
-    Expected<StringRef> getComdat() const {
-      if (!GV)
-        return "";
-      const GlobalObject *GO;
-      if (auto *GA = dyn_cast<GlobalAlias>(GV)) {
-        GO = GA->getBaseObject();
-        if (!GO)
-          return make_error<StringError>("Unable to determine comdat of alias!",
-                                         inconvertibleErrorCode());
-      } else {
-        GO = cast<GlobalObject>(GV);
-      }
-      if (const Comdat *C = GO->getComdat())
-        return C->getName();
-      return "";
-    }
+    // Returns the index of the comdat this symbol is in or -1 if the symbol
+    // is not in a comdat.
+    // FIXME: We have to return Expected<int> because aliases point to an
+    // arbitrary ConstantExpr and that might not actually be a constant. That
+    // means we might not be able to find what an alias is aliased to and
+    // so find its comdat.
+    Expected<int> getComdatIndex() const;
 
     uint64_t getCommonSize() const {
       assert(Flags & object::BasicSymbolRef::SF_Common);
@@ -212,7 +209,8 @@ public:
     Symbol Sym;
 
   public:
-    symbol_iterator(object::basic_symbol_iterator I) : Sym(I) {}
+    symbol_iterator(object::basic_symbol_iterator I, const InputFile *File)
+        : Sym(I, File) {}
 
     symbol_iterator &operator++() {
       ++Sym.I;
@@ -236,8 +234,8 @@ public:
 
   /// A range over the symbols in this InputFile.
   iterator_range<symbol_iterator> symbols() {
-    return llvm::make_range(symbol_iterator(Obj->symbol_begin()),
-                            symbol_iterator(Obj->symbol_end()));
+    return llvm::make_range(symbol_iterator(Obj->symbol_begin(), this),
+                            symbol_iterator(Obj->symbol_end(), this));
   }
 
   StringRef getDataLayoutStr() const {
@@ -251,6 +249,9 @@ public:
   MemoryBufferRef getMemoryBufferRef() const {
     return Obj->getMemoryBufferRef();
   }
+
+  // Returns a table with all the comdats used by this file.
+  ArrayRef<StringRef> getComdatTable() const { return Comdats; }
 };
 
 /// This class wraps an output stream for a native object. Most clients should

@@ -8,18 +8,13 @@ libFuzzer – a library for coverage-guided fuzz testing.
 Introduction
 ============
 
-LibFuzzer is a library for in-process, coverage-guided, evolutionary fuzzing
-of other libraries.
+LibFuzzer is in-process, coverage-guided, evolutionary fuzzing engine.
 
-LibFuzzer is similar in concept to American Fuzzy Lop (AFL_), but it performs
-all of its fuzzing inside a single process.  This in-process fuzzing can be more
-restrictive and fragile, but is potentially much faster as there is no overhead
-for process start-up.
-
-The fuzzer is linked with the library under test, and feeds fuzzed inputs to the
+LibFuzzer is linked with the library under test, and feeds fuzzed inputs to the
 library via a specific fuzzing entrypoint (aka "target function"); the fuzzer
 then tracks which areas of the code are reached, and generates mutations on the
-corpus of input data in order to maximize the code coverage.  The code coverage
+corpus of input data in order to maximize the code coverage.
+The code coverage
 information for libFuzzer is provided by LLVM's SanitizerCoverage_
 instrumentation.
 
@@ -28,8 +23,8 @@ Contact: libfuzzer(#)googlegroups.com
 Versions
 ========
 
-LibFuzzer is under active development so a current (or at least very recent)
-version of Clang is the only supported variant.
+LibFuzzer is under active development so you will need the current
+(or at least a very recent) version of the Clang compiler.
 
 (If `building Clang from trunk`_ is too time-consuming or difficult, then
 the Clang binaries that the Chromium developers build are likely to be
@@ -51,7 +46,6 @@ compiler to build (and is used to `fuzz various parts of LLVM itself`_).
 However the fuzzer itself does not (and should not) depend on any part of LLVM
 infrastructure and can be used for other projects without requiring the rest
 of LLVM.
-
 
 
 Getting Started
@@ -83,13 +77,12 @@ options. Note that the libFuzzer library contains the ``main()`` function:
   svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer
   # Alternative: get libFuzzer from a dedicated git mirror:
   # git clone https://chromium.googlesource.com/chromium/llvm-project/llvm/lib/Fuzzer
-  clang++ -c -g -O2 -std=c++11 Fuzzer/*.cpp -IFuzzer
-  ar ruv libFuzzer.a Fuzzer*.o
+  ./Fuzzer/build.sh  # Produces libFuzzer.a
 
 Then build the fuzzing target function and the library under test using
 the SanitizerCoverage_ option, which instruments the code so that the fuzzer
 can retrieve code coverage information (to guide the fuzzing).  Linking with
-the libFuzzer code then gives an fuzzer executable.
+the libFuzzer code then gives a fuzzer executable.
 
 You should also enable one or more of the *sanitizers*, which help to expose
 latent bugs by making incorrect behavior generate errors at runtime:
@@ -834,7 +827,7 @@ Q. What about Windows then? The fuzzer contains code that does not build on Wind
 
 Volunteers are welcome.
 
-Q. When this Fuzzer is not a good solution for a problem?
+Q. When libFuzzer is not a good solution for a problem?
 ---------------------------------------------------------
 
 * If the test inputs are validated by the target library and the validator

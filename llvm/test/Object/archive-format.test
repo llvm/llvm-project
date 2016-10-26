@@ -4,11 +4,11 @@ string table or not.
 RUN: mkdir -p %t
 RUN: cd %t
 
-RUN: echo -n bar. > 0123456789abcde
-RUN: echo -n zed. > 0123456789abcdef
+RUN: printf bar. > 0123456789abcde
+RUN: printf zed. > 0123456789abcdef
 RUN: mkdir -p foo
-RUN: echo -n bar2 > foo/0123456789abcde
-RUN: echo -n zed2 > foo/0123456789abcdef
+RUN: printf bar2 > foo/0123456789abcde
+RUN: printf zed2 > foo/0123456789abcdef
 
 RUN: rm -f %t.a
 RUN: llvm-ar --format=gnu rc %t.a 0123456789abcde 0123456789abcdef foo/0123456789abcde foo/0123456789abcdef

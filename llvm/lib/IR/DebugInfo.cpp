@@ -300,6 +300,299 @@ bool llvm::StripDebugInfo(Module &M) {
   return Changed;
 }
 
+namespace {
+
+/// Helper class to downgrade -g metadata to -gline-tables-only metadata.
+class DebugTypeInfoRemoval {
+  DenseMap<Metadata *, Metadata *> Replacements;
+
+public:
+  /// The (void)() type.
+  MDNode *EmptySubroutineType;
+
+private:
+  /// Remember what linkage name we originally had before stripping. If we end
+  /// up making two subprograms identical who originally had different linkage
+  /// names, then we need to make one of them distinct, to avoid them getting
+  /// uniqued. Maps the new node to the old linkage name.
+  DenseMap<DISubprogram *, StringRef> NewToLinkageName;
+
+  // TODO: Remember the distinct subprogram we created for a given linkage name,
+  // so that we can continue to unique whenever possible. Map <newly created
+  // node, old linkage name> to the first (possibly distinct) mdsubprogram
+  // created for that combination. This is not strictly needed for correctness,
+  // but can cut down on the number of MDNodes and let us diff cleanly with the
+  // output of -gline-tables-only.
+
+public:
+  DebugTypeInfoRemoval(LLVMContext &C)
+      : EmptySubroutineType(DISubroutineType::get(C, DINode::FlagZero, 0,
+                                                  MDNode::get(C, {}))) {}
+
+  Metadata *map(Metadata *M) {
+    if (!M)
+      return nullptr;
+    auto Replacement = Replacements.find(M);
+    if (Replacement != Replacements.end())
+      return Replacement->second;
+
+    return M;
+  }
+  MDNode *mapNode(Metadata *N) { return dyn_cast_or_null<MDNode>(map(N)); }
+
+  /// Recursively remap N and all its referenced children. Does a DF post-order
+  /// traversal, so as to remap bottoms up.
+  void traverseAndRemap(MDNode *N) { traverse(N); }
+
+private:
+  // Create a new DISubprogram, to replace the one given.
+  DISubprogram *getReplacementSubprogram(DISubprogram *MDS) {
+    auto *FileAndScope = cast_or_null<DIFile>(map(MDS->getFile()));
+    StringRef LinkageName = MDS->getName().empty() ? MDS->getLinkageName() : "";
+    DISubprogram *Declaration = nullptr;
+    auto *Type = cast_or_null<DISubroutineType>(map(MDS->getType()));
+    DITypeRef ContainingType(map(MDS->getContainingType()));
+    auto *Unit = cast_or_null<DICompileUnit>(map(MDS->getUnit()));
+    auto Variables = nullptr;
+    auto TemplateParams = nullptr;
+
+    // Make a distinct DISubprogram, for situations that warrent it.
+    auto distinctMDSubprogram = [&]() {
+      return DISubprogram::getDistinct(
+          MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
+          FileAndScope, MDS->getLine(), Type, MDS->isLocalToUnit(),
+          MDS->isDefinition(), MDS->getScopeLine(), ContainingType,
+          MDS->getVirtuality(), MDS->getVirtualIndex(),
+          MDS->getThisAdjustment(), MDS->getFlags(), MDS->isOptimized(), Unit,
+          TemplateParams, Declaration, Variables);
+    };
+
+    if (MDS->isDistinct())
+      return distinctMDSubprogram();
+
+    auto *NewMDS = DISubprogram::get(
+        MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
+        FileAndScope, MDS->getLine(), Type, MDS->isLocalToUnit(),
+        MDS->isDefinition(), MDS->getScopeLine(), ContainingType,
+        MDS->getVirtuality(), MDS->getVirtualIndex(), MDS->getThisAdjustment(),
+        MDS->getFlags(), MDS->isOptimized(), Unit, TemplateParams, Declaration,
+        Variables);
+
+    StringRef OldLinkageName = MDS->getLinkageName();
+
+    // See if we need to make a distinct one.
+    auto OrigLinkage = NewToLinkageName.find(NewMDS);
+    if (OrigLinkage != NewToLinkageName.end()) {
+      if (OrigLinkage->second == OldLinkageName)
+        // We're good.
+        return NewMDS;
+
+      // Otherwise, need to make a distinct one.
+      // TODO: Query the map to see if we already have one.
+      return distinctMDSubprogram();
+    }
+
+    NewToLinkageName.insert({NewMDS, MDS->getLinkageName()});
+    return NewMDS;
+  }
+
+  /// Create a new compile unit, to replace the one given
+  DICompileUnit *getReplacementCU(DICompileUnit *CU) {
+    // Drop skeleton CUs.
+    if (CU->getDWOId())
+      return nullptr;
+
+    auto *File = cast_or_null<DIFile>(map(CU->getFile()));
+    MDTuple *EnumTypes = nullptr;
+    MDTuple *RetainedTypes = nullptr;
+    MDTuple *GlobalVariables = nullptr;
+    MDTuple *ImportedEntities = nullptr;
+    return DICompileUnit::getDistinct(
+        CU->getContext(), CU->getSourceLanguage(), File, CU->getProducer(),
+        CU->isOptimized(), CU->getFlags(), CU->getRuntimeVersion(),
+        CU->getSplitDebugFilename(), DICompileUnit::LineTablesOnly, EnumTypes,
+        RetainedTypes, GlobalVariables, ImportedEntities, CU->getMacros(),
+        CU->getDWOId(), CU->getSplitDebugInlining());
+  }
+
+  DILocation *getReplacementMDLocation(DILocation *MLD) {
+    auto *Scope = map(MLD->getScope());
+    auto *InlinedAt = map(MLD->getInlinedAt());
+    if (MLD->isDistinct())
+      return DILocation::getDistinct(MLD->getContext(), MLD->getLine(),
+                                     MLD->getColumn(), Scope, InlinedAt);
+    return DILocation::get(MLD->getContext(), MLD->getLine(), MLD->getColumn(),
+                           Scope, InlinedAt);
+  }
+
+  /// Create a new generic MDNode, to replace the one given
+  MDNode *getReplacementMDNode(MDNode *N) {
+    SmallVector<Metadata *, 8> Ops;
+    Ops.reserve(N->getNumOperands());
+    for (auto &I : N->operands())
+      if (I)
+        Ops.push_back(map(I));
+    auto *Ret = MDNode::get(N->getContext(), Ops);
+    return Ret;
+  }
+
+  /// Attempt to re-map N to a newly created node.
+  void remap(MDNode *N) {
+    if (Replacements.count(N))
+      return;
+
+    auto doRemap = [&](MDNode *N) -> MDNode * {
+      if (!N)
+        return nullptr;
+      if (auto *MDSub = dyn_cast<DISubprogram>(N)) {
+        remap(MDSub->getUnit());
+        return getReplacementSubprogram(MDSub);
+      }
+      if (isa<DISubroutineType>(N))
+        return EmptySubroutineType;
+      if (auto *CU = dyn_cast<DICompileUnit>(N))
+        return getReplacementCU(CU);
+      if (isa<DIFile>(N))
+        return N;
+      if (auto *MDLB = dyn_cast<DILexicalBlockBase>(N))
+        // Remap to our referenced scope (recursively).
+        return mapNode(MDLB->getScope());
+      if (auto *MLD = dyn_cast<DILocation>(N))
+        return getReplacementMDLocation(MLD);
+
+      // Otherwise, if we see these, just drop them now. Not strictly necessary,
+      // but this speeds things up a little.
+      if (isa<DINode>(N))
+        return nullptr;
+
+      return getReplacementMDNode(N);
+    };
+    Replacements[N] = doRemap(N);
+  }
+
+  /// Do the remapping traversal.
+  void traverse(MDNode *);
+};
+
+} // Anonymous namespace.
+
+void DebugTypeInfoRemoval::traverse(MDNode *N) {
+  if (!N || Replacements.count(N))
+    return;
+
+  // To avoid cycles, as well as for efficiency sake, we will sometimes prune
+  // parts of the graph.
+  auto prune = [](MDNode *Parent, MDNode *Child) {
+    if (auto *MDS = dyn_cast<DISubprogram>(Parent))
+      return Child == MDS->getVariables().get();
+    return false;
+  };
+
+  SmallVector<MDNode *, 16> ToVisit;
+  DenseSet<MDNode *> Opened;
+
+  // Visit each node starting at N in post order, and map them.
+  ToVisit.push_back(N);
+  while (!ToVisit.empty()) {
+    auto *N = ToVisit.back();
+    if (!Opened.insert(N).second) {
+      // Close it.
+      remap(N);
+      ToVisit.pop_back();
+      continue;
+    }
+    for (auto &I : N->operands())
+      if (auto *MDN = dyn_cast_or_null<MDNode>(I))
+        if (!Opened.count(MDN) && !Replacements.count(MDN) && !prune(N, MDN) &&
+            !isa<DICompileUnit>(MDN))
+          ToVisit.push_back(MDN);
+  }
+}
+
+bool llvm::stripNonLineTableDebugInfo(Module &M) {
+  bool Changed = false;
+
+  // First off, delete the debug intrinsics.
+  auto RemoveUses = [&](StringRef Name) {
+    if (auto *DbgVal = M.getFunction(Name)) {
+      while (!DbgVal->use_empty())
+        cast<Instruction>(DbgVal->user_back())->eraseFromParent();
+      DbgVal->eraseFromParent();
+      Changed = true;
+    }
+  };
+  RemoveUses("llvm.dbg.declare");
+  RemoveUses("llvm.dbg.value");
+
+  // Delete non-CU debug info named metadata nodes.
+  for (auto NMI = M.named_metadata_begin(), NME = M.named_metadata_end();
+       NMI != NME;) {
+    NamedMDNode *NMD = &*NMI;
+    ++NMI;
+    // Specifically keep dbg.cu around.
+    if (NMD->getName() == "llvm.dbg.cu")
+      continue;
+  }
+
+  // Drop all dbg attachments from global variables.
+  for (auto &GV : M.globals())
+    GV.eraseMetadata(LLVMContext::MD_dbg);
+
+  DebugTypeInfoRemoval Mapper(M.getContext());
+  auto remap = [&](llvm::MDNode *Node) -> llvm::MDNode * {
+    if (!Node)
+      return nullptr;
+    Mapper.traverseAndRemap(Node);
+    auto *NewNode = Mapper.mapNode(Node);
+    Changed |= Node != NewNode;
+    Node = NewNode;
+    return NewNode;
+  };
+
+  // Rewrite the DebugLocs to be equivalent to what
+  // -gline-tables-only would have created.
+  for (auto &F : M) {
+    if (auto *SP = F.getSubprogram()) {
+      Mapper.traverseAndRemap(SP);
+      auto *NewSP = cast<DISubprogram>(Mapper.mapNode(SP));
+      Changed |= SP != NewSP;
+      F.setSubprogram(NewSP);
+    }
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (I.getDebugLoc() == DebugLoc())
+          continue;
+
+        // Make a replacement.
+        auto &DL = I.getDebugLoc();
+        auto *Scope = DL.getScope();
+        MDNode *InlinedAt = DL.getInlinedAt();
+        Scope = remap(Scope);
+        InlinedAt = remap(InlinedAt);
+        I.setDebugLoc(
+            DebugLoc::get(DL.getLine(), DL.getCol(), Scope, InlinedAt));
+      }
+    }
+  }
+
+  // Create a new llvm.dbg.cu, which is equivalent to the one
+  // -gline-tables-only would have created.
+  for (auto &NMD : M.getNamedMDList()) {
+    SmallVector<MDNode *, 8> Ops;
+    for (MDNode *Op : NMD.operands())
+      Ops.push_back(remap(Op));
+ 
+    if (!Changed)
+      continue;
+ 
+    NMD.clearOperands();
+    for (auto *Op : Ops)
+      if (Op)
+        NMD.addOperand(Op);
+  }
+  return Changed;
+}
+
 unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
   if (auto *Val = mdconst::dyn_extract_or_null<ConstantInt>(
           M.getModuleFlag("Debug Info Version")))

@@ -403,6 +403,11 @@ protected:
   void SetupModule() { OldM = new Module("", C); }
 
   void CreateOldModule() {
+    auto GV = new GlobalVariable(
+        *OldM, Type::getInt32Ty(C), false, GlobalValue::ExternalLinkage,
+        ConstantInt::get(Type::getInt32Ty(C), 1), "gv");
+    GV->addMetadata(LLVMContext::MD_type, *MDNode::get(C, {}));
+
     DIBuilder DBuilder(*OldM);
     IRBuilder<> IBuilder(C);
 
@@ -458,5 +463,10 @@ TEST_F(CloneModule, Subprogram) {
   EXPECT_EQ(SP->getName(), "f");
   EXPECT_EQ(SP->getFile()->getFilename(), "filename.c");
   EXPECT_EQ(SP->getLine(), (unsigned)4);
+}
+
+TEST_F(CloneModule, GlobalMetadata) {
+  GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
+  EXPECT_NE(nullptr, NewGV->getMetadata(LLVMContext::MD_type));
 }
 }

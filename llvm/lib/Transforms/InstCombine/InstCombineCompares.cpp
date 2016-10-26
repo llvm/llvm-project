@@ -1957,7 +1957,8 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
   // free on the target. It has the additional benefit of comparing to a
   // smaller constant, which will be target friendly.
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
-  if (Shl->hasOneUse() && Amt != 0 && C->countTrailingZeros() >= Amt) {
+  if (Shl->hasOneUse() && Amt != 0 && C->countTrailingZeros() >= Amt &&
+      DL.isLegalInteger(TypeBits - Amt)) {
     Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
     if (X->getType()->isVectorTy())
       TruncTy = VectorType::get(TruncTy, X->getType()->getVectorNumElements());

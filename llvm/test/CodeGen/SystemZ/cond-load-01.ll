@@ -128,3 +128,17 @@ exit:
   %res = phi i32 [ %easy, %entry ], [ %other, %load ]
   ret i32 %res
 }
+
+; Test that volatile loads do not use LOC, since if the condition is false,
+; it is unspecified whether or not the load happens.  LOCR is fine though.
+define i32 @f10(i32 %easy, i32 *%ptr, i32 %limit) {
+; CHECK-LABEL: f10:
+; CHECK: l {{%r[0-9]*}}, 0(%r3)
+; CHECK: locr
+; CHECK: br %r14
+  %cond = icmp ult i32 %limit, 42
+  %other = load volatile i32, i32 *%ptr
+  %res = select i1 %cond, i32 %easy, i32 %other
+  ret i32 %res
+}
+

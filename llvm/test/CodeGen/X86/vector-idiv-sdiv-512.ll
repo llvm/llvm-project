@@ -1439,7 +1439,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpsubb %ymm7, %ymm4, %ymm4
 ; AVX512F-NEXT:    vpaddb %ymm8, %ymm4, %ymm8
 ; AVX512F-NEXT:    vpmovsxbw %xmm8, %ymm9
-; AVX512F-NEXT:    vpmovsxbw {{.*}}(%rip), %ymm4
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
 ; AVX512F-NEXT:    vpmullw %ymm4, %ymm9, %ymm9
 ; AVX512F-NEXT:    vpmovsxwd %ymm9, %zmm9
 ; AVX512F-NEXT:    vpmovdb %zmm9, %xmm9

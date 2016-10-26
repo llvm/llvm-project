@@ -1299,8 +1299,10 @@ public:
   /// \brief Drop all references and remove the node from parent module.
   void eraseFromParent();
 
-  /// \brief Remove all uses and clear node vector.
-  void dropAllReferences();
+  /// Remove all uses and clear node vector.
+  void dropAllReferences() { clearOperands(); }
+  /// Drop all references to this node's operands.
+  void clearOperands();
 
   ~NamedMDNode();
 

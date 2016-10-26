@@ -337,25 +337,28 @@ Failure values are constructed using ``make_error<T>``, where ``T`` is any class
 that inherits from the ErrorInfo utility, E.g.:
 
 .. code-block:: c++
-
-  class MyError : public ErrorInfo<MyError> {
+  class BadFileFormat : public ErrorInfo<BadFileFormat> {
   public:
-    MyError(std::string Msg) : Msg(Msg) {}
-    void log(OStream &OS) const override { OS << "MyError - " << Msg; }
     static char ID;
-  private:
-    std::string Msg;
+    std::string Path;
+
+    BadFileFormat(StringRef Path) : Path(Path.str()) {}
+
+    void log(raw_ostream &OS) const override {
+      OS << Path << " is malformed";
+    }
+
+    std::error_code convertToErrorCode() const override {
+      return make_error_code(object_error::parse_failed);
+    }
   };
 
-  char MyError::ID = 0; // In MyError.cpp
+  char FileExists::ID; // This should be declared in the C++ file.
 
-  Error bar() {
-    if (checkErrorCondition)
-      return make_error<MyError>("Error condition detected");
-
-    // No error - proceed with bar.
-
-    // Return success value.
+  Error printFormattedFile(StringRef Path) {
+    if (<check for valid format>)
+      return make_error<InvalidObjectFile>(Path);
+    // print file contents.
     return Error::success();
   }
 
@@ -375,34 +378,57 @@ success, enabling the following idiom:
 For functions that can fail but need to return a value the ``Expected<T>``
 utility can be used. Values of this type can be constructed with either a
 ``T``, or an ``Error``. Expected<T> values are also implicitly convertible to
-boolean, but with the opposite convention to Error: true for success, false for
-error. If success, the ``T`` value can be accessed via the dereference operator.
-If failure, the ``Error`` value can be extracted using the ``takeError()``
-method. Idiomatic usage looks like:
+boolean, but with the opposite convention to ``Error``: true for success, false
+for error. If success, the ``T`` value can be accessed via the dereference
+operator. If failure, the ``Error`` value can be extracted using the
+``takeError()`` method. Idiomatic usage looks like:
 
 .. code-block:: c++
 
-  Expected<float> parseAndSquareRoot(IStream &IS) {
-    float f;
-    IS >> f;
-    if (f < 0)
-      return make_error<FloatingPointError>(...);
-    return sqrt(f);
+  Expected<FormattedFile> openFormattedFile(StringRef Path) {
+    // If badly formatted, return an error.
+    if (auto Err = checkFormat(Path))
+      return std::move(Err);
+    // Otherwise return a FormattedFile instance.
+    return FormattedFile(Path);
   }
 
-  Error foo(IStream &IS) {
-    if (auto SqrtOrErr = parseAndSquartRoot(IS)) {
-      float Sqrt = *SqrtOrErr;
-      // ...
+  Error processFormattedFile(StringRef Path) {
+    // Try to open a formatted file
+    if (auto FileOrErr = openFormattedFile(Path)) {
+      // On success, grab a reference to the file and continue.
+      auto &File = *FileOrErr;
+      ...
     } else
-      return SqrtOrErr.takeError();
+      // On error, extract the Error value and return it.
+      return FileOrErr.takeError();
   }
 
-All Error instances, whether success or failure, must be either checked or
-moved from (via std::move or a return) before they are destructed. Accidentally
-discarding an unchecked error will cause a program abort at the point where the
-unchecked value's destructor is run, making it easy to identify and fix
-violations of this rule.
+If an ``Expected<T>`` value is in success mode then the ``takeError()`` method
+will return a success value. Using this fact, the above function can be
+rewritten as:
+
+.. code-block:: c++
+
+  Error processFormattedFile(StringRef Path) {
+    // Try to open a formatted file
+    auto FileOrErr = openFormattedFile(Path);
+    if (auto Err = FileOrErr.takeError())
+      // On error, extract the Error value and return it.
+      return Err;
+    // On success, grab a reference to the file and continue.
+    auto &File = *FileOrErr;
+    ...
+  }
+
+This second form is often more readable for functions that involve multiple
+``Expected<T>`` values as it limits the indentation required.
+
+All ``Error`` instances, whether success or failure, must be either checked or
+moved from (via ``std::move`` or a return) before they are destructed.
+Accidentally discarding an unchecked error will cause a program abort at the
+point where the unchecked value's destructor is run, making it easy to identify
+and fix violations of this rule.
 
 Success values are considered checked once they have been tested (by invoking
 the boolean conversion operator):
@@ -428,22 +454,311 @@ been activated:
 
 .. code-block:: c++
 
-  auto Err = canFail(...);
-  if (auto Err2 =
-       handleErrors(std::move(Err),
-         [](std::unique_ptr<MyError> M) {
-           // Try to handle 'M'. If successful, return a success value from
-           // the handler.
-           if (tryToHandle(M))
-             return Error::success();
+  handleErrors(
+    processFormattedFile(…),
+    [](const BadFileFormat &BFF) {
+      report(“Unable to process “ + BFF.Path + “: bad format”);
+    },
+    [](const FileNotFound &FNF) {
+      report("File not found " + FNF.Path);
+    });
 
-           // We failed to handle 'M' - return it from the handler.
-           // This value will be passed back from catchErrors and
-           // wind up in Err2, where it will be returned from this function.
-           return Error(std::move(M));
-         })))
-    return Err2;
+The ``handleErrors`` function takes an error as its first argument, followed by
+a variadic list of "handlers", each of which must be a callable type (a
+function, lambda, or class with a call operator) with one argument. The
+``handleErrors`` function will visit each handler in the sequence and check its
+argument type against the dynamic type of the error, running the first handler
+that matches. This is the same process that is used for catch clauses in C++
+exceptions.
 
+Since the list of handlers passed to ``handleErrors`` may not cover every error
+type that can occur, the ``handleErrors`` function also returns an Error value
+that must be checked or propagated. If the error value that is passed to
+``handleErrors`` does not match any of the handlers it will be returned from
+handleErrors. Idiomatic use of ``handleErrors`` thus looks like:
+
+.. code-block:: c++
+
+  if (auto Err =
+        handleErrors(
+          processFormattedFile(...),
+          [](const BadFileFormat &BFF) {
+            report(“Unable to process “ + BFF.Path + “: bad format”);
+          },
+          [](const FileNotFound &FNF) {
+            report("File not found " + FNF.Path);
+          }))
+    return Err;
+
+In cases where you truly know that the handler list is exhaustive the
+``handleAllErrors`` function can be used instead. This is identical to
+``handleErrors`` except that it will terminate the program if an unhandled
+error is passed in, and can therefore return void. The ``handleAllErrors``
+function should generally be avoided: the introduction of a new error type
+elsewhere in the program can easily turn a formerly exhaustive list of errors
+into a non-exhaustive list, risking unexpected program termination. Where
+possible, use handleErrors and propagate unknown errors up the stack instead.
+
+StringError
+"""""""""""
+
+Many kinds of errors have no recovery strategy, the only action that can be
+taken is to report them to the user so that the user can attempt to fix the
+environment. In this case representing the error as a string makes perfect
+sense. LLVM provides the ``StringError`` class for this purpose. It takes two
+arguments: A string error message, and an equivalent ``std::error_code`` for
+interoperability:
+
+.. code-block:: c++
+
+  make_error<StringError>("Bad executable",
+                          make_error_code(errc::executable_format_error"));
+
+If you're certain that the error you're building will never need to be converted
+to a ``std::error_code`` you can use the ``inconvertibleErrorCode()`` function:
+
+.. code-block:: c++
+
+  make_error<StringError>("Bad executable", inconvertibleErrorCode());
+
+This should be done only after careful consideration. If any attempt is made to
+convert this error to a ``std::error_code`` it will trigger immediate program
+termination. Unless you are certain that your errors will not need
+interoperability you should look for an existing ``std::error_code`` that you
+can convert to, and even (as painful as it is) consider introducing a new one as
+a stopgap measure.
+
+Interoperability with std::error_code and ErrorOr
+"""""""""""""""""""""""""""""""""""""""""""""""""
+
+Many existing LLVM APIs use ``std::error_code`` and its partner ``ErrorOr<T>``
+(which plays the same role as ``Expected<T>``, but wraps a ``std::error_code``
+rather than an ``Error``). The infectious nature of error types means that an
+attempt to change one of these functions to return ``Error`` or ``Expected<T>``
+instead often results in an avalanche of changes to callers, callers of callers,
+and so on. (The first such attempt, returning an ``Error`` from
+MachOObjectFile’s constructor, was abandoned after the diff reached 3000 lines,
+impacted half a dozen libraries, and was still growing).
+
+To solve this problem, the ``Error``/``std::error_code`` interoperability requirement was
+introduced. Two pairs of functions allow any ``Error`` value to be converted to a
+``std::error_code``, any ``Expected<T>`` to be converted to an ``ErrorOr<T>``, and vice
+versa:
+
+.. code-block:: c++
+
+  std::error_code errorToErrorCode(Error Err);
+  Error errorCodeToError(std::error_code EC);
+
+  template <typename T> ErrorOr<T> expectedToErrorOr(Expected<T> TOrErr);
+  template <typename T> Expected<T> errorOrToExpected(ErrorOr<T> TOrEC);
+
+
+Using these APIs it is easy to make surgical patches that update individual
+functions from ``std::error_code`` to ``Error``, and from ``ErrorOr<T>`` to
+``Expected<T>``.
+
+Returning Errors from error handlers
+""""""""""""""""""""""""""""""""""""
+
+Error recovery attempts may themselves fail. For that reason, ``handleErrors``
+actually recognises three different forms of handler signature:
+
+.. code-block:: c++
+
+  // Error must be handled, no new errors produced:
+  void(UserDefinedError &E);
+
+  // Error must be handled, new errors can be produced:
+  Error(UserDefinedError &E);
+
+  // Original error can be inspected, then re-wrapped and returned (or a new
+  // error can be produced):
+  Error(std::unique_ptr<UserDefinedError> E);
+
+Any error returned from a handler will be returned from the ``handleErrors``
+function so that it can be handled itself, or propagated up the stack.
+
+Using ExitOnError to simplify tool code
+"""""""""""""""""""""""""""""""""""""""
+
+Library code should never call ``exit`` for a recoverable error, however in tool
+code (especially command line tools) this can be a reasonable approach. Calling
+``exit`` upon encountering an error dramatically simplifies control flow as the
+error no longer needs to be propagated up the stack. This allows code to be
+written in straight-line style, as long as each fallible call is wrapped in a
+check and call to exit. The ``ExitOnError`` class supports this pattern by
+providing call operators that inspect ``Error`` values, stripping the error away
+in the success case and logging to ``stderr`` then exiting in the failure case.
+
+To use this class, declare a global ``ExitOnError`` variable in your program:
+
+.. code-block:: c++
+
+  ExitOnError ExitOnErr;
+
+Calls to fallible functions can then be wrapped with a call to ``ExitOnErr``,
+turning them into non-failing calls:
+
+.. code-block:: c++
+
+  Error mayFail();
+  Expected<int> mayFail2();
+
+  void foo() {
+    ExitOnErr(mayFail());
+    int X = ExitOnErr(mayFail2());
+  }
+
+On failure, the error’s log message will be written to ``stderr``, optionally
+preceded by a string “banner” that can be set by calling the setBanner method. A
+mapping can also be supplied from ``Error`` values to exit codes using the
+``setExitCodeMapper`` method:
+
+.. code-block:: c++
+
+  int main(int argc, char *argv[]) {
+    ExitOnErr.setBanner(std::string(argv[0]) + “ error:”);
+    ExitOnErr.setExitCodeMapper(
+      [](const Error &Err) {
+        if (Err.isA<BadFileFormat>())
+          return 2;
+        return 1;
+      });
+
+Use ``ExitOnError`` in your tool code where possible as it can greatly improve
+readability.
+
+Fallible constructors
+"""""""""""""""""""""
+
+Some classes require resource acquisition or other complex initialization that
+can fail during construction. Unfortunately constructors can’t return errors,
+and having clients test objects after they’re constructed to ensure that they’re
+valid is error prone as it’s all too easy to forget the test. To work around
+this, use the named constructor idiom and return an ``Expected<T>``:
+
+.. code-block:: c++
+
+  class Foo {
+  public:
+
+    static Expected<Foo> Create(Resource R1, Resource R2) {
+      Error Err;
+      Foo F(R1, R2, Err);
+      if (Err)
+        return std::move(Err);
+      return std::move(F);
+    }
+
+  private:
+
+    Foo(Resource R1, Resource R2, Error &Err) {
+      ErrorAsOutParameter EAO(&Err);
+      if (auto Err2 = R1.acquire()) {
+        Err = std::move(Err2);
+        return;
+      }
+      Err = R2.acquire();
+    }
+  };
+
+
+Here, the named constructor passes an ``Error`` by reference into the actual
+constructor, which the constructor can then use to return errors. The
+``ErrorAsOutParameter`` utility sets the ``Error`` value's checked flag on entry
+to the constructor so that the error can be assigned to, then resets it on exit
+to force the client (the named constructor) to check the error.
+
+By using this idiom, clients attempting to construct a Foo receive either a
+well-formed Foo or an Error, never an object in an invalid state.
+
+Propagating and consuming errors based on types
+"""""""""""""""""""""""""""""""""""""""""""""""
+
+In some contexts, certain types of error are known to be benign. For example,
+when walking an archive, some clients may be happy to skip over badly formatted
+object files rather than terminating the walk immediately. Skipping badly
+formatted objects could be achieved using an elaborate handler method, but the
+Error.h header provides two utilities that make this idiom much cleaner: the
+type inspection method, ``isA``, and the ``consumeError`` function:
+
+.. code-block:: c++
+
+  Error walkArchive(Archive A) {
+    for (unsigned I = 0; I != A.numMembers(); ++I) {
+      auto ChildOrErr = A.getMember(I);
+      if (auto Err = ChildOrErr.takeError()) {
+        if (Err.isA<BadFileFormat>())
+          consumeError(std::move(Err))
+        else
+          return Err;
+      }
+      auto &Child = *ChildOrErr;
+      // Use Child
+      ...
+    }
+    return Error::success();
+  }
+
+Concatenating Errors with joinErrors
+""""""""""""""""""""""""""""""""""""
+
+In the archive walking example above ``BadFileFormat`` errors are simply
+consumed and ignored. If the client had wanted report these errors after
+completing the walk over the archive they could use the ``joinErrors`` utility:
+
+.. code-block:: c++
+
+  Error walkArchive(Archive A) {
+    Error DeferredErrs = Error::success();
+    for (unsigned I = 0; I != A.numMembers(); ++I) {
+      auto ChildOrErr = A.getMember(I);
+      if (auto Err = ChildOrErr.takeError())
+        if (Err.isA<BadFileFormat>())
+          DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
+        else
+          return Err;
+      auto &Child = *ChildOrErr;
+      // Use Child
+      ...
+    }
+    return DeferredErrs;
+  }
+
+The ``joinErrors`` routine builds a special error type called ``ErrorList``,
+which holds a list of user defined errors. The ``handleErrors`` routine
+recognizes this type and will attempt to handle each of the contained erorrs in
+order. If all contained errors can be handled, ``handleErrors`` will return
+``Error::success()``, otherwise ``handleErrors`` will concatenate the remaining
+errors and return the resulting ``ErrorList``.
+
+Building fallible iterators and iterator ranges
+"""""""""""""""""""""""""""""""""""""""""""""""
+
+The archive walking examples above retrieve archive members by index, however
+this requires considerable boiler-plate for iteration and error checking. We can
+clean this up by using ``Error`` with the "fallible iterator" pattern. The usual
+C++ iterator patterns do not allow for failure on increment, but we can
+incorporate support for it by having iterators hold an Error reference through
+which they can report failure. In this pattern, if an increment operation fails
+the failure is recorded via the Error reference and the iterator value is set to
+the end of the range in order to terminate the loop. This ensures that the
+dereference operation is safe anywhere that an ordinary iterator dereference
+would be safe (i.e. when the iterator is not equal to end). Where this pattern
+is followed (as in the ``llvm::object::Archive`` class) the result is much
+cleaner iteration idiom:
+
+.. code-block:: c++
+
+  Error Err;
+  for (auto &Child : Ar->children(Err)) {
+    // Use Child - we only enter the loop when it’s valid
+    ...
+  }
+  // Check Err after the loop to ensure it didn’t break due to an error.
+  if (Err)
+    return Err;
 
 .. _function_apis:
 

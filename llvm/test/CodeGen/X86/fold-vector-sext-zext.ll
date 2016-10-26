@@ -83,9 +83,8 @@ define <4 x i32> @test_sext_4i8_4i32_undef() {
 define <4 x i64> @test_sext_4i8_4i64() {
 ; X32-LABEL: test_sext_4i8_4i64:
 ; X32:       # BB#0:
-; X32-NEXT:    vpmovsxbq {{\.LCPI.*}}, %xmm0
-; X32-NEXT:    vpmovsxbq {{\.LCPI.*}}, %xmm1
-; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,4294967295,4294967295]
+; X32-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_4i8_4i64:
@@ -104,9 +103,7 @@ define <4 x i64> @test_sext_4i8_4i64_undef() {
 ; X32-LABEL: test_sext_4i8_4i64_undef:
 ; X32:       # BB#0:
 ; X32-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-NEXT:    vpmovsxbq %xmm0, %xmm0
-; X32-NEXT:    vpmovsxbq {{\.LCPI.*}}, %xmm1
-; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_4i8_4i64_undef:
