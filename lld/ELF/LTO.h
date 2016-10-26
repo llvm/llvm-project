@@ -49,6 +49,7 @@ public:
 private:
   std::unique_ptr<llvm::lto::LTO> LtoObj;
   std::vector<SmallString<0>> Buff;
+  llvm::BumpPtrAllocator Alloc;
 };
 }
 }

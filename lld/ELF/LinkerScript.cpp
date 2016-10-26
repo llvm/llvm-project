@@ -156,7 +156,7 @@ static bool matchConstraints(ArrayRef<InputSectionBase<ELFT> *> Sections,
     return true;
   bool IsRW = llvm::any_of(Sections, [=](InputSectionData *Sec2) {
     auto *Sec = static_cast<InputSectionBase<ELFT> *>(Sec2);
-    return Sec->getFlags() & SHF_WRITE;
+    return Sec->Flags & SHF_WRITE;
   });
   return (IsRW && Kind == ConstraintKind::ReadWrite) ||
          (!IsRW && Kind == ConstraintKind::ReadOnly);
@@ -269,11 +269,11 @@ static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
   // supported by bfd or gold, so we can just create multiple section in that
   // case.
   typedef typename ELFT::uint uintX_t;
-  uintX_t Flags = C->getFlags() & (SHF_MERGE | SHF_STRINGS);
+  uintX_t Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
 
   uintX_t Alignment = 0;
   if (isa<MergeInputSection<ELFT>>(C))
-    Alignment = std::max<uintX_t>(C->Alignment, C->getEntsize());
+    Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
 
   return SectionKey<ELFT::Is64Bits>{OutsecName, /*Type*/ 0, Flags, Alignment};
 }

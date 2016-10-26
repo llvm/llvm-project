@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri %s -o %t.o
-# RUN: lld -flavor gnu %t.o -o %t
+# RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj -sections -symbols -program-headers %t | FileCheck %s
 
 # REQUIRES: amdgpu

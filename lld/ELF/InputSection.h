@@ -85,6 +85,7 @@ protected:
   // The file this section is from.
   ObjectFile<ELFT> *File;
 
+public:
   // These corresponds to the fields in Elf_Shdr.
   uintX_t Flags;
   uintX_t Entsize;
@@ -92,7 +93,6 @@ protected:
   uint32_t Link;
   uint32_t Info;
 
-public:
   InputSectionBase()
       : InputSectionData(Regular, "", ArrayRef<uint8_t>(), false, false),
         Repl(this) {}
@@ -117,11 +117,6 @@ public:
 
   static InputSectionBase<ELFT> Discarded;
 
-  uintX_t getFlags() const { return Flags; }
-  uint32_t getType() const { return Type; }
-  uintX_t getEntsize() const { return Entsize; }
-  uint32_t getLink() const { return Link; }
-  uint32_t getInfo() const { return Info; }
   ObjectFile<ELFT> *getFile() const { return File; }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
   InputSectionBase *getLinkOrderDep() const;
@@ -167,12 +162,12 @@ template <class ELFT> class MergeInputSection : public InputSectionBase<ELFT> {
 public:
   MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header,
                     StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
   void splitIntoPieces();
 
   // Mark the piece at a given offset live. Used by GC.
   void markLiveAt(uintX_t Offset) {
-    assert(this->getFlags() & llvm::ELF::SHF_ALLOC);
+    assert(this->Flags & llvm::ELF::SHF_ALLOC);
     LiveOffsets.insert(Offset);
   }
 
@@ -218,7 +213,7 @@ public:
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::uint uintX_t;
   EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
   void split();
   template <class RelTy> void split(ArrayRef<RelTy> Rels);
 
@@ -259,7 +254,7 @@ public:
   // InputSection that is dependent on us (reverse dependency for GC)
   InputSectionBase<ELFT> *DependentSection = nullptr;
 
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   InputSectionBase<ELFT> *getRelocatedSection();
 
@@ -314,7 +309,7 @@ class MipsReginfoInputSection : public InputSectionBase<ELFT> {
 public:
   MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
                           StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
 };
@@ -326,7 +321,7 @@ class MipsOptionsInputSection : public InputSectionBase<ELFT> {
 public:
   MipsOptionsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
                           StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
 };
@@ -338,7 +333,7 @@ class MipsAbiFlagsInputSection : public InputSectionBase<ELFT> {
 public:
   MipsAbiFlagsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
                            StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   const llvm::object::Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;
 };

@@ -966,8 +966,8 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   this->updateAlignment(S->Alignment);
   // Keep sh_entsize value of the input section to be able to perform merging
   // later during a final linking using the generated relocatable object.
-  if (Config->Relocatable && (S->getFlags() & SHF_MERGE))
-    this->Header.sh_entsize = S->getEntsize();
+  if (Config->Relocatable && (S->Flags & SHF_MERGE))
+    this->Header.sh_entsize = S->Entsize;
 }
 
 // This function is called after we sort input sections
@@ -1304,7 +1304,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *Sec = cast<MergeInputSection<ELFT>>(C);
   Sec->OutSec = this;
   this->updateAlignment(Sec->Alignment);
-  this->Header.sh_entsize = Sec->getEntsize();
+  this->Header.sh_entsize = Sec->Entsize;
   Sections.push_back(Sec);
 
   auto HashI = Sec->Hashes.begin();
@@ -1896,7 +1896,7 @@ void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 
 template <class ELFT>
 static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
-  return S->getFlags() & ~SHF_GROUP & ~SHF_COMPRESSED;
+  return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
 
 template <class ELFT>
@@ -1913,11 +1913,10 @@ static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
   // output sections for them to allow merging at final linking stage.
   uintX_t Alignment = 0;
   if (isa<MergeInputSection<ELFT>>(C) ||
-      (Config->Relocatable && (C->getFlags() & SHF_MERGE)))
-    Alignment = std::max<uintX_t>(C->Alignment, C->getEntsize());
+      (Config->Relocatable && (C->Flags & SHF_MERGE)))
+    Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
 
-  uint32_t Type = C->getType();
-  return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
+  return SectionKey<ELFT::Is64Bits>{OutsecName, C->Type, Flags, Alignment};
 }
 
 template <class ELFT>
@@ -1939,7 +1938,7 @@ OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
     return {Sec, false};
   }
 
-  uint32_t Type = C->getType();
+  uint32_t Type = C->Type;
   switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
     Sec = new OutputSection<ELFT>(Key.Name, Type, Flags);

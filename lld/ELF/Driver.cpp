@@ -39,7 +39,8 @@ using namespace lld::elf;
 Configuration *elf::Config;
 LinkerDriver *elf::Driver;
 
-bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
+bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
+               raw_ostream &Error) {
   HasError = false;
   ErrorOS = &Error;
   Argv0 = Args[0];
@@ -51,7 +52,7 @@ bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   Driver = &D;
   ScriptConfig = &SC;
 
-  Driver->main(Args);
+  Driver->main(Args, CanExitEarly);
   InputFile::freePool();
   return !HasError;
 }
@@ -137,7 +138,7 @@ void LinkerDriver::addFile(StringRef Path) {
   case file_magic::archive:
     if (InWholeArchive) {
       for (MemoryBufferRef MB : getArchiveMembers(MBRef))
-        Files.push_back(createObjectFile(MB, Path));
+        Files.push_back(createObjectFile(Alloc, MB, Path));
       return;
     }
     Files.push_back(new ArchiveFile(MBRef));
@@ -147,13 +148,13 @@ void LinkerDriver::addFile(StringRef Path) {
       error("attempted static link of dynamic object " + Path);
       return;
     }
-    Files.push_back(createSharedFile(MBRef));
+    Files.push_back(createSharedFile(Alloc, MBRef));
     return;
   default:
     if (InLib)
       Files.push_back(new LazyObjectFile(MBRef));
     else
-      Files.push_back(createObjectFile(MBRef));
+      Files.push_back(createObjectFile(Alloc, MBRef));
   }
 }
 
@@ -281,7 +282,7 @@ static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
   return Default;
 }
 
-void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
+void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
   if (Args.hasArg(OPT_help)) {
@@ -290,6 +291,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   }
   if (Args.hasArg(OPT_version))
     outs() << getLLDVersion() << "\n";
+  Config->ExitEarly = CanExitEarly && !Args.hasArg(OPT_full_shutdown);
 
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it

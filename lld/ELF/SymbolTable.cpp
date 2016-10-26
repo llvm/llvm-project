@@ -227,6 +227,13 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
   return {Sym, IsNew};
 }
 
+// Construct a string in the form of "Sym in File1 and File2".
+// Used to construct an error message.
+static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
+  return maybeDemangle(Existing->getName()) + " in " +
+         getFilename(Existing->File) + " and " + getFilename(NewFile);
+}
+
 // Find an existing symbol or create and insert a new one, then apply the given
 // attributes.
 template <class ELFT>
@@ -249,18 +256,6 @@ SymbolTable<ELFT>::insert(StringRef &Name, uint8_t Type, uint8_t Visibility,
     error("TLS attribute mismatch for symbol: " + conflictMsg(S->body(), File));
 
   return {S, WasInserted};
-}
-
-// Construct a string in the form of "Sym in File1 and File2".
-// Used to construct an error message.
-template <typename ELFT>
-std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
-                                           InputFile *NewFile) {
-  std::string Sym = Existing->getName();
-  if (Config->Demangle)
-    Sym = demangle(Sym);
-  return Sym + " in " + getFilename(Existing->File) + " and " +
-         getFilename(NewFile);
 }
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name) {
@@ -293,7 +288,7 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, uint8_t Binding,
     // its type. See also comment in addLazyArchive.
     if (S->isWeak())
       L->Type = Type;
-    else if (InputFile *F = L->fetch())
+    else if (InputFile *F = L->fetch(Alloc))
       addFile(F);
   }
   return S;
@@ -510,7 +505,7 @@ void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
-    addFile(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
+    addFile(createObjectFile(Alloc, MBInfo.first, F->getName(), MBInfo.second));
 }
 
 template <class ELFT>
@@ -531,7 +526,7 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
   } else {
     MemoryBufferRef MBRef = Obj.getBuffer();
     if (!MBRef.getBuffer().empty())
-      addFile(createObjectFile(MBRef));
+      addFile(createObjectFile(Alloc, MBRef));
   }
 }
 
@@ -539,7 +534,7 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
 template <class ELFT> void SymbolTable<ELFT>::scanUndefinedFlags() {
   for (StringRef S : Config->Undefined)
     if (auto *L = dyn_cast_or_null<Lazy>(find(S)))
-      if (InputFile *File = L->fetch())
+      if (InputFile *File = L->fetch(Alloc))
         addFile(File);
 }
 

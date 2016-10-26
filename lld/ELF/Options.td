@@ -80,6 +80,9 @@ def fatal_warnings: F<"fatal-warnings">,
 def fini: S<"fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
+def full_shutdown : F<"full-shutdown">,
+  HelpText<"Perform a full shutdown instead of calling _exit">;
+
 def format: J<"format=">, MetaVarName<"<input-format>">,
   HelpText<"Change the input format of the inputs following this option">;
 

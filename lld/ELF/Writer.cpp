@@ -23,6 +23,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
+#include <unistd.h>
+#endif
+
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
@@ -316,6 +320,14 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
   if (auto EC = Buffer->commit())
     error(EC, "failed to write to the output file");
+  if (Config->ExitEarly) {
+    // Flush the output streams and exit immediately.  A full shutdown is a good
+    // test that we are keeping track of all allocated memory, but actually
+    // freeing it is a wast of time in a regular linker run.
+    outs().flush();
+    errs().flush();
+    _exit(0);
+  }
 }
 
 template <class ELFT>
@@ -346,7 +358,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (Config->Discard == DiscardPolicy::Locals)
     return false;
 
-  return !Sec || !(Sec->getFlags() & SHF_MERGE);
+  return !Sec || !(Sec->Flags & SHF_MERGE);
 }
 
 template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
@@ -676,7 +688,7 @@ void Writer<ELFT>::forEachRelSec(
       // creating GOT, PLT, copy relocations, etc.
       // Note that relocations for non-alloc sections are directly
       // processed by InputSection::relocateNonAlloc.
-      if (!(IS->getFlags() & SHF_ALLOC))
+      if (!(IS->Flags & SHF_ALLOC))
         continue;
       if (auto *S = dyn_cast<InputSection<ELFT>>(IS)) {
         for (const Elf_Shdr *RelSec : S->RelocSections)
