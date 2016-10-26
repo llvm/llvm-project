@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Strings.h"
+#include "Config.h"
 #include "Error.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -123,4 +124,10 @@ std::string elf::demangle(StringRef Name) {
   std::string S(Buf);
   free(Buf);
   return S;
+}
+
+std::string elf::maybeDemangle(StringRef Name) {
+  if (Config->Demangle)
+    return demangle(Name);
+  return Name;
 }

@@ -128,6 +128,7 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  bool ExitEarly;
   bool ZWxneeded;
   DiscardPolicy Discard;
   SortSectionPolicy SortSection;

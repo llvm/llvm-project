@@ -200,7 +200,7 @@ InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
     : InputSectionBase<ELFT>(F, Header, Name, Base::Regular) {}
 
 template <class ELFT>
-bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+bool InputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == Base::Regular;
 }
 
@@ -527,7 +527,7 @@ EhInputSection<ELFT>::EhInputSection(elf::ObjectFile<ELFT> *F,
 }
 
 template <class ELFT>
-bool EhInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+bool EhInputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == InputSectionBase<ELFT>::EHFrame;
 }
 
@@ -664,7 +664,7 @@ template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
 }
 
 template <class ELFT>
-bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+bool MergeInputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == InputSectionBase<ELFT>::Merge;
 }
 
@@ -766,7 +766,7 @@ MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(elf::ObjectFile<ELFT> *F,
 }
 
 template <class ELFT>
-bool MipsReginfoInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+bool MipsReginfoInputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == InputSectionBase<ELFT>::MipsReginfo;
 }
 
@@ -797,7 +797,7 @@ MipsOptionsInputSection<ELFT>::MipsOptionsInputSection(elf::ObjectFile<ELFT> *F,
 }
 
 template <class ELFT>
-bool MipsOptionsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+bool MipsOptionsInputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == InputSectionBase<ELFT>::MipsOptions;
 }
 
@@ -816,7 +816,7 @@ MipsAbiFlagsInputSection<ELFT>::MipsAbiFlagsInputSection(
 }
 
 template <class ELFT>
-bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == InputSectionBase<ELFT>::MipsAbiFlags;
 }
 

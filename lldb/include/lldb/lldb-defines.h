@@ -157,8 +157,8 @@
 ///     assignment operators in C++ classes.
 //----------------------------------------------------------------------
 #define DISALLOW_COPY_AND_ASSIGN(TypeName)                                     \
-  TypeName(const TypeName &);                                                  \
-  const TypeName &operator=(const TypeName &)
+  TypeName(const TypeName &) = delete;                                         \
+  const TypeName &operator=(const TypeName &) = delete
 
 #endif // #if defined(__cplusplus)
 

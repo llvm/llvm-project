@@ -137,10 +137,6 @@ void test_sfinae_constraints() {
         static_assert(!std::is_constructible<std::any, T>::value, "");
     }
     {
-        using DecayTag = std::decay_t<BadTag>;
-        static_assert(!std::is_constructible<std::any, DecayTag>::value, "");
-    }
-    {
         // Test that the ValueType&& constructor SFINAE's away when the
         // argument is non-copyable
         struct NoCopy {
