@@ -21,11 +21,6 @@ class CreateDuringStepTestCase(TestBase):
         self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    @expectedFailureAndroid("llvm.org/pr24497", archs=['arm', 'aarch64'])
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=["arm"],
-        bugnumber="llvm.org/pr24497")
     # IO error due to breakpoint at invalid address
     @expectedFailureAll(triple=re.compile('^mips'))
     def test_step_inst_with(self):

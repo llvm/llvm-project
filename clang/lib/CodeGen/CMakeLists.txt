@@ -82,6 +82,7 @@ add_clang_library(clangCodeGen
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
   TargetInfo.cpp
+  VarBypassDetector.cpp
 
   DEPENDS
   ${codegen_deps}

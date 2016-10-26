@@ -2189,6 +2189,11 @@ linearFunctionTestReplace(Loop *L,
 
   IRBuilder<> Builder(BI);
 
+  // The new loop exit condition should reuse the debug location of the
+  // original loop exit condition.
+  if (auto *Cond = dyn_cast<Instruction>(BI->getCondition()))
+    Builder.SetCurrentDebugLocation(Cond->getDebugLoc());
+
   // LFTR can ignore IV overflow and truncate to the width of
   // BECount. This avoids materializing the add(zext(add)) expression.
   unsigned CmpIndVarSize = SE->getTypeSizeInBits(CmpIndVar->getType());

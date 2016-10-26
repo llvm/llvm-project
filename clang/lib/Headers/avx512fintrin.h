@@ -8338,17 +8338,17 @@ __builtin_ia32_gatherdiv16sf ((__v8sf) __v1_old,\
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_fmadd_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
- return (__m128) __builtin_ia32_vfmaddss3_mask ((__v4sf) __A,
+ return (__m128) __builtin_ia32_vfmaddss3_mask ((__v4sf) __W,
+          (__v4sf) __A,
           (__v4sf) __B,
-          (__v4sf) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fmadd_round_ss(W, U, A, B, R) __extension__({\
-  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(A), \
-                                        (__v4sf)(__m128)(B), \
-                                        (__v4sf)(__m128)(W), (__mmask8)(U), \
+  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(W), \
+                                        (__v4sf)(__m128)(A), \
+                                        (__v4sf)(__m128)(B), (__mmask8)(U), \
                                         (int)(R)); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -8386,17 +8386,17 @@ _mm_mask3_fmadd_ss (__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_fmsub_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
- return (__m128) __builtin_ia32_vfmaddss3_mask ((__v4sf) __A,
+ return (__m128) __builtin_ia32_vfmaddss3_mask ((__v4sf) __W,
+          (__v4sf) __A,
           -(__v4sf) __B,
-          (__v4sf) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fmsub_round_ss(W, U, A, B, R) __extension__ ({\
-  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(A), \
-                                        -(__v4sf)(__m128)(B), \
-                                        (__v4sf)(__m128)(W), (__mmask8)(U), \
+  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(W), \
+                                        (__v4sf)(__m128)(A), \
+                                        (__v4sf)(__m128)(B), (__mmask8)(U), \
                                         (int)(R)); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -8434,17 +8434,17 @@ _mm_mask3_fmsub_ss (__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_fnmadd_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
- return (__m128) __builtin_ia32_vfmaddss3_mask (-(__v4sf) __A,
+ return (__m128) __builtin_ia32_vfmaddss3_mask ((__v4sf) __W,
+          -(__v4sf) __A,
           (__v4sf) __B,
-          (__v4sf) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fnmadd_round_ss(W, U, A, B, R) __extension__ ({\
-  (__m128)__builtin_ia32_vfmaddss3_mask(-(__v4sf)(__m128)(A), \
-                                        (__v4sf)(__m128)(B), \
-                                        (__v4sf)(__m128)(W), (__mmask8)(U), \
+  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(W), \
+                                        -(__v4sf)(__m128)(A), \
+                                        (__v4sf)(__m128)(B), (__mmask8)(U), \
                                         (int)(R)); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -8482,17 +8482,17 @@ _mm_mask3_fnmadd_ss (__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_fnmsub_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
- return (__m128) __builtin_ia32_vfmaddss3_mask (-(__v4sf) __A,
+ return (__m128) __builtin_ia32_vfmaddss3_mask ((__v4sf) __W,
+          -(__v4sf) __A,
           -(__v4sf) __B,
-          (__v4sf) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fnmsub_round_ss(W, U, A, B, R) __extension__ ({\
-  (__m128)__builtin_ia32_vfmaddss3_mask(-(__v4sf)(__m128)(A), \
-                                        -(__v4sf)(__m128)(B), \
-                                        (__v4sf)(__m128)(W), (__mmask8)(U), \
+  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(W), \
+                                        -(__v4sf)(__m128)(A), \
+                                        -(__v4sf)(__m128)(B), (__mmask8)(U), \
                                         (int)(R)); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -8530,17 +8530,17 @@ _mm_mask3_fnmsub_ss (__m128 __W, __m128 __X, __m128 __Y, __mmask8 __U)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mask_fmadd_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
 {
- return (__m128d) __builtin_ia32_vfmaddsd3_mask ( (__v2df) __A,
+ return (__m128d) __builtin_ia32_vfmaddsd3_mask ( (__v2df) __W,
+          (__v2df) __A,
           (__v2df) __B,
-          (__v2df) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fmadd_round_sd(W, U, A, B, R) __extension__({\
-  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(A), \
-                                         (__v2df)(__m128d)(B), \
-                                         (__v2df)(__m128d)(W), (__mmask8)(U), \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \
+                                         (__v2df)(__m128d)(A), \
+                                         (__v2df)(__m128d)(B), (__mmask8)(U), \
                                          (int)(R)); })
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -8578,17 +8578,17 @@ _mm_mask3_fmadd_sd (__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mask_fmsub_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
 {
- return (__m128d) __builtin_ia32_vfmaddsd3_mask ( (__v2df) __A,
+ return (__m128d) __builtin_ia32_vfmaddsd3_mask ( (__v2df) __W,
+          (__v2df) __A,
           -(__v2df) __B,
-          (__v2df) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fmsub_round_sd(W, U, A, B, R) __extension__ ({\
-  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(A), \
-                                         -(__v2df)(__m128d)(B), \
-                                         (__v2df)(__m128d)(W), (__mmask8)(U), \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \
+                                         (__v2df)(__m128d)(A), \
+                                         -(__v2df)(__m128d)(B), (__mmask8)(U), \
                                          (int)(R)); })
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -8626,17 +8626,17 @@ _mm_mask3_fmsub_sd (__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mask_fnmadd_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
 {
- return (__m128d) __builtin_ia32_vfmaddsd3_mask ( -(__v2df) __A,
+ return (__m128d) __builtin_ia32_vfmaddsd3_mask ( (__v2df) __W,
+          -(__v2df) __A,
           (__v2df) __B,
-          (__v2df) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fnmadd_round_sd(W, U, A, B, R) __extension__ ({\
-  (__m128d)__builtin_ia32_vfmaddsd3_mask(-(__v2df)(__m128d)(A), \
-                                         (__v2df)(__m128d)(B), \
-                                         (__v2df)(__m128d)(W), (__mmask8)(U), \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \
+                                         -(__v2df)(__m128d)(A), \
+                                         (__v2df)(__m128d)(B), (__mmask8)(U), \
                                          (int)(R)); })
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -8674,17 +8674,17 @@ _mm_mask3_fnmadd_sd (__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mask_fnmsub_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
 {
- return (__m128d) __builtin_ia32_vfmaddsd3_mask ( -(__v2df) __A,
+ return (__m128d) __builtin_ia32_vfmaddsd3_mask ( (__v2df) __W,
+          -(__v2df) __A,
           -(__v2df) __B,
-          (__v2df) __W,
           (__mmask8) __U,
           _MM_FROUND_CUR_DIRECTION);
 }
 
 #define _mm_mask_fnmsub_round_sd(W, U, A, B, R) __extension__ ({\
-  (__m128d)__builtin_ia32_vfmaddsd3_mask(-(__v2df)(__m128d)(A), \
-                                         -(__v2df)(__m128d)(B), \
-                                         (__v2df)(__m128d)(W), (__mmask8)(U), \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \
+                                         -(__v2df)(__m128d)(A), \
+                                         -(__v2df)(__m128d)(B), (__mmask8)(U), \
                                          (int)(R)); })
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
