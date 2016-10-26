@@ -16,6 +16,41 @@ New entries should be added directly below the "Version" header.
 Version 4.0
 -----------
 
+
+* r285101 - Add -fvisibility-inlines-hidden when building libc++.
+
+  Although this change removes symbols, it should still be non-ABI breaking
+  since all of the definitions removed are inline functions. For this reason
+  removing these symbols is safe because every "linkage unit" which uses these
+  functions will contain their own definition.
+
+  x86_64-linux-gnu
+  ----------------
+  SYMBOL REMOVED: _ZNSt12bad_any_castD0Ev
+  SYMBOL REMOVED: _ZNSt12experimental15fundamentals_v112bad_any_castD0Ev
+  SYMBOL REMOVED: _ZNSt3__114__codecvt_utf8IDiED0Ev
+  SYMBOL REMOVED: _ZNSt3__114__codecvt_utf8IDsED0Ev
+  SYMBOL REMOVED: _ZNSt3__114__codecvt_utf8IwED0Ev
+  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDiLb0EED0Ev
+  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDiLb1EED0Ev
+  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDsLb0EED0Ev
+  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDsLb1EED0Ev
+  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IwLb0EED0Ev
+  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IwLb1EED0Ev
+  SYMBOL REMOVED: _ZNSt3__117__assoc_sub_stateD0Ev
+  SYMBOL REMOVED: _ZNSt3__117__assoc_sub_stateD2Ev
+  SYMBOL REMOVED: _ZNSt3__117__libcpp_sscanf_lEPKcP15__locale_structS1_z
+  SYMBOL REMOVED: _ZNSt3__119__libcpp_asprintf_lEPPcP15__locale_structPKcz
+  SYMBOL REMOVED: _ZNSt3__119__libcpp_snprintf_lEPcmP15__locale_structPKcz
+  SYMBOL REMOVED: _ZNSt3__120__codecvt_utf8_utf16IDiED0Ev
+  SYMBOL REMOVED: _ZNSt3__120__codecvt_utf8_utf16IDsED0Ev
+  SYMBOL REMOVED: _ZNSt3__120__codecvt_utf8_utf16IwED0Ev
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  No Changes - inline symbols are already hidden
+
+
 * r284206 - Implement C++17 aligned allocation in <new>
 
   x86_64-linux-gnu

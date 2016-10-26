@@ -249,6 +249,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(ArchMember)
 LLVM_YAML_IS_SEQUENCE_VECTOR(const lld::Reference *)
 // Always write DefinedAtoms content bytes as a flow sequence.
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(ImplicitHex8)
+
 // for compatibility with gcc-4.7 in C++11 mode, add extra namespace
 namespace llvm {
 namespace yaml {
@@ -567,10 +568,10 @@ template <> struct DocumentListTraits<std::vector<const lld::File *> > {
 
 // YAML conversion for const lld::File*
 template <> struct MappingTraits<const lld::File *> {
-
   class NormArchiveFile : public lld::ArchiveLibraryFile {
   public:
-    NormArchiveFile(IO &io) : ArchiveLibraryFile(""), _path() {}
+    NormArchiveFile(IO &io) : ArchiveLibraryFile("") {}
+
     NormArchiveFile(IO &io, const lld::File *file)
         : ArchiveLibraryFile(file->path()), _path(file->path()) {
       // If we want to support writing archives, this constructor would
@@ -627,6 +628,7 @@ template <> struct MappingTraits<const lld::File *> {
         _undefinedAtomsRef(_undefinedAtoms._atoms),
         _sharedLibraryAtomsRef(_sharedLibraryAtoms._atoms),
         _absoluteAtomsRef(_absoluteAtoms._atoms) {}
+
     NormalizedFile(IO &io, const lld::File *file)
         : File(file->path(), kindNormalizedObject), _io(io),
           _rnb(new RefNameBuilder(*file)), _path(file->path()),
@@ -673,7 +675,7 @@ template <> struct MappingTraits<const lld::File *> {
     }
 
     IO                                  &_io;
-    std::unique_ptr<RefNameBuilder> _rnb;
+    std::unique_ptr<RefNameBuilder>      _rnb;
     StringRef                            _path;
     AtomList<lld::DefinedAtom>           _definedAtoms;
     AtomList<lld::UndefinedAtom>         _undefinedAtoms;
@@ -732,13 +734,12 @@ template <> struct MappingTraits<const lld::File *> {
 
 // YAML conversion for const lld::Reference*
 template <> struct MappingTraits<const lld::Reference *> {
-
   class NormalizedReference : public lld::Reference {
   public:
     NormalizedReference(IO &io)
         : lld::Reference(lld::Reference::KindNamespace::all,
                          lld::Reference::KindArch::all, 0),
-          _target(nullptr), _targetName(), _offset(0), _addend(0), _tag(0) {}
+          _target(nullptr), _offset(0), _addend(0), _tag(0) {}
 
     NormalizedReference(IO &io, const lld::Reference *ref)
         : lld::Reference(ref->kindNamespace(), ref->kindArch(),
@@ -768,6 +769,7 @@ template <> struct MappingTraits<const lld::Reference *> {
       setKindValue(_mappedKind.value);
       return this;
     }
+
     void bind(const RefNameResolver &);
     static StringRef targetName(IO &io, const lld::Reference *ref);
 
@@ -804,13 +806,13 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
   class NormalizedAtom : public lld::DefinedAtom {
   public:
     NormalizedAtom(IO &io)
-        : _file(fileFromContext(io)), _name(), _refName(), _contentType(),
-          _alignment(1), _content(), _references() {
+        : _file(fileFromContext(io)), _contentType(), _alignment(1) {
       static uint32_t ordinalCounter = 1;
       _ordinal = ordinalCounter++;
     }
+
     NormalizedAtom(IO &io, const lld::DefinedAtom *atom)
-        : _file(fileFromContext(io)), _name(atom->name()), _refName(),
+        : _file(fileFromContext(io)), _name(atom->name()),
           _scope(atom->scope()), _interpose(atom->interposable()),
           _merge(atom->merge()), _contentType(atom->contentType()),
           _alignment(atom->alignment()), _sectionChoice(atom->sectionChoice()),
@@ -991,11 +993,10 @@ template <> struct MappingTraits<lld::DefinedAtom *> {
 
 // YAML conversion for const lld::UndefinedAtom*
 template <> struct MappingTraits<const lld::UndefinedAtom *> {
-
   class NormalizedAtom : public lld::UndefinedAtom {
   public:
     NormalizedAtom(IO &io)
-        : _file(fileFromContext(io)), _name(), _canBeNull(canBeNullNever) {}
+        : _file(fileFromContext(io)), _canBeNull(canBeNullNever) {}
 
     NormalizedAtom(IO &io, const lld::UndefinedAtom *atom)
         : _file(fileFromContext(io)), _name(atom->name()),
@@ -1059,8 +1060,9 @@ template <> struct MappingTraits<const lld::SharedLibraryAtom *> {
   class NormalizedAtom : public lld::SharedLibraryAtom {
   public:
     NormalizedAtom(IO &io)
-        : _file(fileFromContext(io)), _name(), _loadName(), _canBeNull(false),
+        : _file(fileFromContext(io)), _canBeNull(false),
           _type(Type::Unknown), _size(0) {}
+
     NormalizedAtom(IO &io, const lld::SharedLibraryAtom *atom)
         : _file(fileFromContext(io)), _name(atom->name()),
           _loadName(atom->loadName()), _canBeNull(atom->canBeNullAtRuntime()),
@@ -1133,11 +1135,11 @@ template <> struct MappingTraits<lld::SharedLibraryAtom *> {
 
 // YAML conversion for const lld::AbsoluteAtom*
 template <> struct MappingTraits<const lld::AbsoluteAtom *> {
-
   class NormalizedAtom : public lld::AbsoluteAtom {
   public:
     NormalizedAtom(IO &io)
-        : _file(fileFromContext(io)), _name(), _scope(), _value(0) {}
+        : _file(fileFromContext(io)), _scope(), _value(0) {}
+
     NormalizedAtom(IO &io, const lld::AbsoluteAtom *atom)
         : _file(fileFromContext(io)), _name(atom->name()),
           _scope(atom->scope()), _value(atom->value()) {}
@@ -1158,6 +1160,7 @@ template <> struct MappingTraits<const lld::AbsoluteAtom *> {
                                    << ", " << _name.size() << ")\n");
       return this;
     }
+
     // Extract current File object from YAML I/O parsing context
     const lld::File &fileFromContext(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());

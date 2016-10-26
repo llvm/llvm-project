@@ -244,7 +244,13 @@ clang-include-fixer to insert the selected header."
         (clang-include-fixer--select-header context)
         ;; Call clang-include-fixer again to insert the selected header.
         (clang-include-fixer--start
-         #'clang-include-fixer--replace-buffer
+         (let ((old-tick (buffer-chars-modified-tick)))
+           (lambda (stdout)
+             (when (/= old-tick (buffer-chars-modified-tick))
+               ;; Replacing the buffer now would undo the user’s changes.
+               (user-error (concat "The buffer has been changed "
+                                   "before the header could be inserted")))
+             (clang-include-fixer--replace-buffer stdout)))
          (format "-insert-header=%s"
                  (clang-include-fixer--encode-json context)))))))
   nil)

@@ -966,8 +966,8 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   this->updateAlignment(S->Alignment);
   // Keep sh_entsize value of the input section to be able to perform merging
   // later during a final linking using the generated relocatable object.
-  if (Config->Relocatable && (S->getSectionHdr()->sh_flags & SHF_MERGE))
-    this->Header.sh_entsize = S->getSectionHdr()->sh_entsize;
+  if (Config->Relocatable && (S->getFlags() & SHF_MERGE))
+    this->Header.sh_entsize = S->getEntsize();
 }
 
 // This function is called after we sort input sections
@@ -1304,7 +1304,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *Sec = cast<MergeInputSection<ELFT>>(C);
   Sec->OutSec = this;
   this->updateAlignment(Sec->Alignment);
-  this->Header.sh_entsize = Sec->getSectionHdr()->sh_entsize;
+  this->Header.sh_entsize = Sec->getEntsize();
   Sections.push_back(Sec);
 
   auto HashI = Sec->Hashes.begin();
@@ -1565,7 +1565,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     break;
   }
   case SymbolBody::DefinedCommonKind:
-    return CommonInputSection<ELFT>::X->OutSec;
+    return InputSection<ELFT>::CommonInputSection->OutSec;
   case SymbolBody::SharedKind:
     if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
       return Out<ELFT>::Bss;
@@ -1896,13 +1896,12 @@ void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 
 template <class ELFT>
 static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
-  return S->getSectionHdr()->sh_flags & ~SHF_GROUP & ~SHF_COMPRESSED;
+  return S->getFlags() & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
 
 template <class ELFT>
 static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
                                             StringRef OutsecName) {
-  const typename ELFT::Shdr *H = C->getSectionHdr();
   typedef typename ELFT::uint uintX_t;
   uintX_t Flags = getOutFlags(C);
 
@@ -1914,10 +1913,10 @@ static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
   // output sections for them to allow merging at final linking stage.
   uintX_t Alignment = 0;
   if (isa<MergeInputSection<ELFT>>(C) ||
-      (Config->Relocatable && (H->sh_flags & SHF_MERGE)))
-    Alignment = std::max(H->sh_addralign, H->sh_entsize);
+      (Config->Relocatable && (C->getFlags() & SHF_MERGE)))
+    Alignment = std::max<uintX_t>(C->Alignment, C->getEntsize());
 
-  uint32_t Type = H->sh_type;
+  uint32_t Type = C->getType();
   return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
 }
 
@@ -1940,7 +1939,7 @@ OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
     return {Sec, false};
   }
 
-  uint32_t Type = C->getSectionHdr()->sh_type;
+  uint32_t Type = C->getType();
   switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
     Sec = new OutputSection<ELFT>(Key.Name, Type, Flags);

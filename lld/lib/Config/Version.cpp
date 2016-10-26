@@ -15,24 +15,29 @@
 
 using namespace llvm;
 
-#define JOIN2(X) #X
-#define JOIN(X, Y) JOIN2(X.Y)
+// Returns an SVN repository path, which is usually "trunk".
+static std::string getRepositoryPath() {
+  StringRef S = LLD_REPOSITORY_STRING;
+  size_t Pos = S.find("lld/");
+  if (Pos != StringRef::npos)
+    return S.substr(Pos + 4);
+  return S;
+}
 
-// A string that describes the lld version number, e.g., "1.0".
-#define VERSION JOIN(LLD_VERSION_MAJOR, LLD_VERSION_MINOR)
+// Returns an SVN repository name, e.g., " (trunk 284614)"
+// or an empty string if no repository info is available.
+static std::string getRepository() {
+  std::string Repo = getRepositoryPath();
+  std::string Rev = LLD_REVISION_STRING;
 
-// A string that describes SVN repository, e.g.,
-// " (https://llvm.org/svn/llvm-project/lld/trunk 284614)".
-#if defined(LLD_REPOSITORY_STRING) && defined(LLD_REVISION_STRING)
-#define REPO " (" LLD_REPOSITORY_STRING " " LLD_REVISION_STRING ")"
-#elif defined(LLD_REPOSITORY_STRING)
-#define REPO " (" LLD_REPOSITORY_STRING ")"
-#elif defined(LLD_REVISION_STRING)
-#define REPO " (" LLD_REVISION_STRING ")"
-#else
-#define REPO ""
-#endif
+  if (Repo.empty() && Rev.empty())
+    return "";
+  if (!Repo.empty() && !Rev.empty())
+    return " (" + Repo + " " + Rev + ")";
+  return " (" + Repo + Rev + ")";
+}
 
-// Returns a version string, e.g.,
-// "LLD 4.0 (https://llvm.org/svn/llvm-project/lld/trunk 284614)".
-StringRef lld::getLLDVersion() { return "LLD " VERSION REPO; }
+// Returns a version string, e.g., "LLD 4.0 (lld/trunk 284614)".
+std::string lld::getLLDVersion() {
+  return "LLD " + std::string(LLD_VERSION_STRING) + getRepository();
+}

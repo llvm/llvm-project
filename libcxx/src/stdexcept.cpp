@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "__refstring"
 #include "stdexcept"
 #include "new"
 #include "string"
 #include "system_error"
+#include "__refstring"
 
 /* For _LIBCPPABI_VERSION */
 #if defined(LIBCXX_BUILDING_LIBCXXABI) || defined(__APPLE__) || defined(LIBCXXRT)
@@ -19,6 +19,7 @@
 #endif
 
 static_assert(sizeof(std::__libcpp_refstring) == sizeof(const char *), "");
+
 
 namespace std  // purposefully not using versioning namespace
 {

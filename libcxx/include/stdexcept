@@ -53,17 +53,23 @@ public:
 #pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP___REFSTRING
 _LIBCPP_BEGIN_NAMESPACE_STD
-class _LIBCPP_HIDDEN __libcpp_refstring {
-#ifdef __clang__
-    const char *__imp_ __attribute__((__unused__)); // only clang emits a warning
-#else
-    const char *__imp_;
-#endif
+
+class _LIBCPP_HIDDEN __libcpp_refstring
+{
+    const char* __imp_;
+
+    bool __uses_refcount() const;
+public:
+    explicit __libcpp_refstring(const char* msg);
+    __libcpp_refstring(const __libcpp_refstring& s) _NOEXCEPT;
+    __libcpp_refstring& operator=(const __libcpp_refstring& s) _NOEXCEPT;
+    ~__libcpp_refstring();
+
+    const char* c_str() const _NOEXCEPT {return __imp_;}
 };
+
 _LIBCPP_END_NAMESPACE_STD
-#endif
 
 namespace std  // purposefully not using versioning namespace
 {
