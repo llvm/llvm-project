@@ -261,8 +261,9 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Target->NeedsThunks)
     forEachRelSec(createThunks<ELFT>);
 
-  CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
-  CommonInputSection<ELFT>::X = &Common;
+  InputSection<ELFT> Common =
+      InputSection<ELFT>::createCommonInputSection(getCommonSymbols<ELFT>());
+  InputSection<ELFT>::CommonInputSection = &Common;
 
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
@@ -345,7 +346,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (Config->Discard == DiscardPolicy::Locals)
     return false;
 
-  return !Sec || !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
+  return !Sec || !(Sec->getFlags() & SHF_MERGE);
 }
 
 template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
@@ -675,7 +676,7 @@ void Writer<ELFT>::forEachRelSec(
       // creating GOT, PLT, copy relocations, etc.
       // Note that relocations for non-alloc sections are directly
       // processed by InputSection::relocateNonAlloc.
-      if (!(IS->getSectionHdr()->sh_flags & SHF_ALLOC))
+      if (!(IS->getFlags() & SHF_ALLOC))
         continue;
       if (auto *S = dyn_cast<InputSection<ELFT>>(IS)) {
         for (const Elf_Shdr *RelSec : S->RelocSections)
@@ -825,8 +826,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // If linker script processor hasn't added common symbol section yet,
   // then add it to .bss now.
-  if (!CommonInputSection<ELFT>::X->OutSec) {
-    Out<ELFT>::Bss->addSection(CommonInputSection<ELFT>::X);
+  if (!InputSection<ELFT>::CommonInputSection->OutSec) {
+    Out<ELFT>::Bss->addSection(InputSection<ELFT>::CommonInputSection);
     Out<ELFT>::Bss->assignOffsets();
   }
 

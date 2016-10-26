@@ -6,6 +6,8 @@
 
 ;;; Code:
 
+(require 'clang-include-fixer)
+
 (require 'cc-mode)
 (require 'ert)
 

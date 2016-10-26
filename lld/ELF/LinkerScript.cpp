@@ -156,7 +156,7 @@ static bool matchConstraints(ArrayRef<InputSectionBase<ELFT> *> Sections,
     return true;
   bool IsRW = llvm::any_of(Sections, [=](InputSectionData *Sec2) {
     auto *Sec = static_cast<InputSectionBase<ELFT> *>(Sec2);
-    return Sec->getSectionHdr()->sh_flags & SHF_WRITE;
+    return Sec->getFlags() & SHF_WRITE;
   });
   return (IsRW && Kind == ConstraintKind::ReadWrite) ||
          (!IsRW && Kind == ConstraintKind::ReadOnly);
@@ -184,7 +184,7 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
         if (!isDiscarded(S) && !S->OutSec && Pat.SectionRe.match(S->Name))
           I->Sections.push_back(S);
       if (Pat.SectionRe.match("COMMON"))
-        I->Sections.push_back(CommonInputSection<ELFT>::X);
+        I->Sections.push_back(InputSection<ELFT>::CommonInputSection);
     }
 
     // Sort sections as instructed by SORT-family commands and --sort-section
@@ -268,13 +268,12 @@ static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
   // Fortunately, creating symbols in the middle of a merge section is not
   // supported by bfd or gold, so we can just create multiple section in that
   // case.
-  const typename ELFT::Shdr *H = C->getSectionHdr();
   typedef typename ELFT::uint uintX_t;
-  uintX_t Flags = H->sh_flags & (SHF_MERGE | SHF_STRINGS);
+  uintX_t Flags = C->getFlags() & (SHF_MERGE | SHF_STRINGS);
 
   uintX_t Alignment = 0;
   if (isa<MergeInputSection<ELFT>>(C))
-    Alignment = std::max(H->sh_addralign, H->sh_entsize);
+    Alignment = std::max<uintX_t>(C->Alignment, C->getEntsize());
 
   return SectionKey<ELFT::Is64Bits>{OutsecName, /*Type*/ 0, Flags, Alignment};
 }

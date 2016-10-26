@@ -2935,7 +2935,7 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
         HasWriteAccess.insert(MA->getBaseAddr());
       MemAccInst Acc(MA->getAccessInstruction());
       if (MA->isRead() && isa<MemTransferInst>(Acc))
-        PtrToAcc[cast<MemTransferInst>(Acc)->getSource()] = MA;
+        PtrToAcc[cast<MemTransferInst>(Acc)->getRawSource()] = MA;
       else
         PtrToAcc[Acc.getPointerOperand()] = MA;
       AST.add(Acc);
