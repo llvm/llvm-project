@@ -38,20 +38,35 @@
 using namespace clang;
 using namespace CodeGen;
 
+/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
+/// markers.
+static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
+                                      const LangOptions &LangOpts) {
+  // Asan uses markers for use-after-scope checks.
+  if (CGOpts.SanitizeAddressUseAfterScope)
+    return true;
+
+  // Disable lifetime markers in msan builds.
+  // FIXME: Remove this when msan works with lifetime markers.
+  if (LangOpts.Sanitize.has(SanitizerKind::Memory))
+    return false;
+
+  // For now, only in optimized builds.
+  return CGOpts.OptimizationLevel != 0;
+}
+
 CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
       Builder(cgm, cgm.getModule().getContext(), llvm::ConstantFolder(),
               CGBuilderInserterTy(this)),
       CurFn(nullptr), ReturnValue(Address::invalid()),
-      CapturedStmtInfo(nullptr),
-      SanOpts(CGM.getLangOpts().Sanitize), IsSanitizerScope(false),
-      CurFuncIsThunk(false), AutoreleaseResult(false), SawAsmBlock(false),
-      IsOutlinedSEHHelper(false),
-      BlockInfo(nullptr), BlockPointer(nullptr),
-      LambdaThisCaptureField(nullptr), NormalCleanupDest(nullptr),
-      NextCleanupDestIndex(1), FirstBlockInfo(nullptr), EHResumeBlock(nullptr),
-      ExceptionSlot(nullptr), EHSelectorSlot(nullptr),
-      DebugInfo(CGM.getModuleDebugInfo()),
+      CapturedStmtInfo(nullptr), SanOpts(CGM.getLangOpts().Sanitize),
+      IsSanitizerScope(false), CurFuncIsThunk(false), AutoreleaseResult(false),
+      SawAsmBlock(false), IsOutlinedSEHHelper(false), BlockInfo(nullptr),
+      BlockPointer(nullptr), LambdaThisCaptureField(nullptr),
+      NormalCleanupDest(nullptr), NextCleanupDestIndex(1),
+      FirstBlockInfo(nullptr), EHResumeBlock(nullptr), ExceptionSlot(nullptr),
+      EHSelectorSlot(nullptr), DebugInfo(CGM.getModuleDebugInfo()),
       DisableDebugInfo(false), DidCallStackSave(false), IndirectBranch(nullptr),
       PGO(cgm), SwitchInsn(nullptr), SwitchWeights(nullptr),
       CaseRangeBlock(nullptr), UnreachableBlock(nullptr), NumReturnExprs(0),
@@ -60,7 +75,9 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
       CXXStructorImplicitParamDecl(nullptr),
       CXXStructorImplicitParamValue(nullptr), OutermostConditional(nullptr),
       CurLexicalScope(nullptr), TerminateLandingPad(nullptr),
-      TerminateHandler(nullptr), TrapBB(nullptr) {
+      TerminateHandler(nullptr), TrapBB(nullptr),
+      ShouldEmitLifetimeMarkers(
+          shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), CGM.getLangOpts())) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
 

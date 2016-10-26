@@ -1157,11 +1157,6 @@ bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
     }
   }
 
-  // FIXME: Temporarily force the use of the old DynamicLoader plugin until all
-  // the different use cases have been tested & the updated SPIs are available
-  // everywhere.
-  use_new_spi_interface = false;
-
   if (log) {
     if (use_new_spi_interface)
       log->Printf(

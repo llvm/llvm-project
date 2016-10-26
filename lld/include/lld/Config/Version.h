@@ -19,7 +19,7 @@
 
 namespace lld {
 /// \brief Retrieves a string representing the complete lld version.
-llvm::StringRef getLLDVersion();
+std::string getLLDVersion();
 }
 
 #endif // LLD_VERSION_H
