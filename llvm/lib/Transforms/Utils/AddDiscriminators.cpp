@@ -57,12 +57,10 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -163,14 +161,10 @@ static bool addDiscriminators(Function &F) {
     return false;
 
   bool Changed = false;
-  Module *M = F.getParent();
-  LLVMContext &Ctx = M->getContext();
-  DIBuilder Builder(*M, /*AllowUnresolved*/ false);
 
   typedef std::pair<StringRef, unsigned> Location;
-  typedef SmallDenseMap<DIScope *, DILexicalBlockFile *, 1> ScopeMap;
-  typedef DenseMap<const BasicBlock *, ScopeMap> BBScopeMap;
-  typedef DenseMap<Location, BBScopeMap> LocationBBMap;
+  typedef DenseSet<const BasicBlock *> BBSet;
+  typedef DenseMap<Location, BBSet> LocationBBMap;
   typedef DenseMap<Location, unsigned> LocationDiscriminatorMap;
   typedef DenseSet<Location> LocationSet;
 
@@ -187,29 +181,18 @@ static bool addDiscriminators(Function &F) {
       const DILocation *DIL = I.getDebugLoc();
       if (!DIL)
         continue;
-      DIScope *Scope = DIL->getScope();
       Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
       auto &BBMap = LBM[L];
-      auto R = BBMap.insert({&B, ScopeMap()});
+      auto R = BBMap.insert(&B);
       if (BBMap.size() == 1)
         continue;
-      bool InsertSuccess = R.second;
-      ScopeMap &Scopes = R.first->second; 
       // If we could insert more than one block with the same line+file, a
       // discriminator is needed to distinguish both instructions.
-      auto R1 = Scopes.insert({Scope, nullptr});
-      DILexicalBlockFile *&NewScope = R1.first->second;
-      if (!NewScope) {
-        unsigned Discriminator = InsertSuccess ? ++LDM[L] : LDM[L];
-        auto *File = Builder.createFile(DIL->getFilename(),
-                                        Scope->getDirectory());
-        NewScope = Builder.createLexicalBlockFile(Scope, File, Discriminator);
-      }
-      I.setDebugLoc(DILocation::get(Ctx, DIL->getLine(), DIL->getColumn(),
-                                    NewScope, DIL->getInlinedAt()));
+      unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
+      I.setDebugLoc(DIL->cloneWithDiscriminator(Discriminator));
       DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
                    << DIL->getColumn() << ":"
-                   << dyn_cast<DILexicalBlockFile>(NewScope)->getDiscriminator()
+                   << Discriminator << " "
                    << I << "\n");
       Changed = true;
     }
@@ -232,13 +215,7 @@ static bool addDiscriminators(Function &F) {
       Location L =
           std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
       if (!CallLocations.insert(L).second) {
-        auto *Scope = CurrentDIL->getScope();
-        auto *File = Builder.createFile(CurrentDIL->getFilename(),
-                                        Scope->getDirectory());
-        auto *NewScope = Builder.createLexicalBlockFile(Scope, File, ++LDM[L]);
-        Current->setDebugLoc(DILocation::get(Ctx, CurrentDIL->getLine(),
-                                             CurrentDIL->getColumn(), NewScope,
-                                             CurrentDIL->getInlinedAt()));
+        Current->setDebugLoc(CurrentDIL->cloneWithDiscriminator(++LDM[L]));
         Changed = true;
       }
     }

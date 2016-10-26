@@ -413,6 +413,21 @@ void AliasSetTracker::add(MemTransferInst *MTI) {
 void AliasSetTracker::addUnknown(Instruction *Inst) {
   if (isa<DbgInfoIntrinsic>(Inst))
     return; // Ignore DbgInfo Intrinsics.
+
+  if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
+    // These intrinsics will show up as affecting memory, but they are just
+    // markers.
+    switch (II->getIntrinsicID()) {
+    default:
+      break;
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::assume:
+      return;
+    }
+  }
   if (!Inst->mayReadOrWriteMemory())
     return; // doesn't alias anything
 

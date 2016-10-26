@@ -161,7 +161,7 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
   // shouldn't be significant in ELF.) We need to be able to read both.
   ArrayRef<uint8_t> Buf; // Compressed data
   size_t Size;           // Uncompressed size
-  if (getFlags() & SHF_COMPRESSED)
+  if (Flags & SHF_COMPRESSED)
     std::tie(Buf, Size) = getElfCompressedData(Data);
   else
     std::tie(Buf, Size) = getRawCompressedData(Data);
@@ -182,8 +182,8 @@ InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) const {
 
 template <class ELFT>
 InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
-  if ((getFlags() & SHF_LINK_ORDER) && getLink() != 0)
-    return getFile()->getSections()[getLink()];
+  if ((Flags & SHF_LINK_ORDER) && Link != 0)
+    return getFile()->getSections()[Link];
   return nullptr;
 }
 
@@ -206,9 +206,9 @@ bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 
 template <class ELFT>
 InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
-  assert(this->getType() == SHT_RELA || this->getType() == SHT_REL);
+  assert(this->Type == SHT_RELA || this->Type == SHT_REL);
   ArrayRef<InputSectionBase<ELFT> *> Sections = this->File->getSections();
-  return Sections[this->getInfo()];
+  return Sections[this->Info];
 }
 
 template <class ELFT> void InputSection<ELFT>::addThunk(const Thunk<ELFT> *T) {
@@ -418,7 +418,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   // vector only for SHF_ALLOC'ed sections. For other sections,
   // we handle relocations directly here.
   auto *IS = dyn_cast<InputSection<ELFT>>(this);
-  if (IS && !(IS->getFlags() & SHF_ALLOC)) {
+  if (IS && !(IS->Flags & SHF_ALLOC)) {
     for (const Elf_Shdr *RelSec : IS->RelocSections) {
       if (RelSec->sh_type == SHT_RELA)
         IS->relocateNonAlloc(Buf, IS->File->getObj().relas(RelSec));
@@ -474,15 +474,15 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
 }
 
 template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
-  if (this->getType() == SHT_NOBITS)
+  if (this->Type == SHT_NOBITS)
     return;
 
   // If -r is given, then an InputSection may be a relocation section.
-  if (this->getType() == SHT_RELA) {
+  if (this->Type == SHT_RELA) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rela>());
     return;
   }
-  if (this->getType() == SHT_REL) {
+  if (this->Type == SHT_REL) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rel>());
     return;
   }
@@ -605,7 +605,7 @@ std::vector<SectionPiece>
 MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
   std::vector<SectionPiece> V;
   size_t Off = 0;
-  bool IsAlloca = this->getFlags() & SHF_ALLOC;
+  bool IsAlloca = this->Flags & SHF_ALLOC;
   while (!Data.empty()) {
     size_t End = findNull(Data, EntSize);
     if (End == StringRef::npos)
@@ -636,7 +636,7 @@ MergeInputSection<ELFT>::splitNonStrings(ArrayRef<uint8_t> Data,
   std::vector<SectionPiece> V;
   size_t Size = Data.size();
   assert((Size % EntSize) == 0);
-  bool IsAlloca = this->getFlags() & SHF_ALLOC;
+  bool IsAlloca = this->Flags & SHF_ALLOC;
   for (unsigned I = 0, N = Size; I != N; I += EntSize) {
     Hashes.push_back(hash_value(toStringRef(Data.slice(I, EntSize))));
     V.emplace_back(I, !IsAlloca);
@@ -652,13 +652,13 @@ MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
 
 template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   ArrayRef<uint8_t> Data = this->Data;
-  uintX_t EntSize = this->getEntsize();
-  if (this->getFlags() & SHF_STRINGS)
+  uintX_t EntSize = this->Entsize;
+  if (this->Flags & SHF_STRINGS)
     this->Pieces = splitStrings(Data, EntSize);
   else
     this->Pieces = splitNonStrings(Data, EntSize);
 
-  if (Config->GcSections && (this->getFlags() & SHF_ALLOC))
+  if (Config->GcSections && (this->Flags & SHF_ALLOC))
     for (uintX_t Off : LiveOffsets)
       this->getSectionPiece(Off)->Live = true;
 }

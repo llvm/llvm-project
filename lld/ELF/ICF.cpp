@@ -119,7 +119,7 @@ private:
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
 template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
-  uint64_t Flags = S->getFlags();
+  uint64_t Flags = S->Flags;
   uint64_t H = hash_combine(Flags, S->getSize());
   for (const Elf_Shdr *Rel : S->RelocSections)
     H = hash_combine(H, (uint64_t)Rel->sh_size);
@@ -141,7 +141,7 @@ template <class ELFT> bool ICF<ELFT>::isEligible(InputSectionBase<ELFT> *Sec) {
   if (Name == ".init" || Name == ".fini")
     return false;
 
-  return (S->getFlags() & SHF_ALLOC) && !(S->getFlags() & SHF_WRITE);
+  return (S->Flags & SHF_ALLOC) && !(S->Flags & SHF_WRITE);
 }
 
 template <class ELFT>
@@ -230,7 +230,7 @@ bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
     }
   }
 
-  return A->getFlags() == B->getFlags() && A->getSize() == B->getSize() &&
+  return A->Flags == B->Flags && A->getSize() == B->getSize() &&
          A->Data == B->Data;
 }
 

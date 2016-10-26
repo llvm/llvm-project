@@ -4148,6 +4148,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     ReplacedNode(Node);
     break;
   }
+  case ISD::SDIV:
+  case ISD::SREM:
+  case ISD::UDIV:
+  case ISD::UREM:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR: {
@@ -4157,7 +4161,20 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       TruncOp = ISD::BITCAST;
     } else {
       assert(OVT.isInteger() && "Cannot promote logic operation");
-      ExtOp   = ISD::ANY_EXTEND;
+
+      switch (Node->getOpcode()) {
+      default:
+        ExtOp = ISD::ANY_EXTEND;
+        break;
+      case ISD::SDIV:
+      case ISD::SREM:
+        ExtOp = ISD::SIGN_EXTEND;
+        break;
+      case ISD::UDIV:
+      case ISD::UREM:
+        ExtOp = ISD::ZERO_EXTEND;
+        break;
+      }
       TruncOp = ISD::TRUNCATE;
     }
     // Promote each of the values to the new type.

@@ -1270,6 +1270,9 @@ public:
   /// instructions that are on different basic blocks.
   inline unsigned getDiscriminator() const;
 
+  /// Returns a new DILocation with updated \p Discriminator.
+  inline DILocation *cloneWithDiscriminator(unsigned Discriminator) const;
+
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawInlinedAt() const {
     if (getNumOperands() == 2)
@@ -1612,6 +1615,22 @@ unsigned DILocation::getDiscriminator() const {
   return 0;
 }
 
+DILocation *DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
+  DIScope *Scope = getScope();
+  // Skip all parent DILexicalBlockFile that already have a discriminator
+  // assigned. We do not want to have nested DILexicalBlockFiles that have
+  // mutliple discriminators because only the leaf DILexicalBlockFile's
+  // dominator will be used.
+  for (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope);
+       LBF && LBF->getDiscriminator() != 0;
+       LBF = dyn_cast<DILexicalBlockFile>(Scope))
+    Scope = LBF->getScope();
+  DILexicalBlockFile *NewScope =
+      DILexicalBlockFile::get(getContext(), Scope, getFile(), Discriminator);
+  return DILocation::get(getContext(), getLine(), getColumn(), NewScope,
+                         getInlinedAt());
+}
+
 class DINamespace : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -1842,8 +1861,8 @@ public:
   StringRef getName() const { return getStringOperand(1); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
   DITypeRef getType() const { return DITypeRef(getRawType()); }
-  uint64_t getAlignInBits() const { return AlignInBits; }
-  uint64_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
+  uint32_t getAlignInBits() const { return AlignInBits; }
+  uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
 
   StringRef getFilename() const {
     if (auto *F = getFile())

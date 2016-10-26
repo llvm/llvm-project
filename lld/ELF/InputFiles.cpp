@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/LTO/LTO.h"
@@ -34,6 +35,39 @@ using namespace lld;
 using namespace lld::elf;
 
 std::vector<InputFile *> InputFile::Pool;
+
+template <class ELFT> DIHelper<ELFT>::DIHelper(elf::InputFile *F) {
+  Expected<std::unique_ptr<object::ObjectFile>> Obj =
+      object::ObjectFile::createObjectFile(F->MB);
+  if (!Obj)
+    return;
+
+  DWARFContextInMemory Dwarf(*Obj.get());
+  DwarfLine.reset(new DWARFDebugLine(&Dwarf.getLineSection().Relocs));
+  DataExtractor LineData(Dwarf.getLineSection().Data,
+                         ELFT::TargetEndianness == support::little,
+                         ELFT::Is64Bits ? 8 : 4);
+  // The second parameter is offset in .debug_line section
+  // for compilation unit (CU) of interest. We have only one
+  // CU (object file), so offset is always 0.
+  DwarfLine->getOrParseLineTable(LineData, 0);
+}
+
+template <class ELFT> std::string DIHelper<ELFT>::getLineInfo(uintX_t Offset) {
+  if (!DwarfLine)
+    return "";
+
+  DILineInfo LineInfo;
+  DILineInfoSpecifier Spec;
+  // The offset to CU is 0 (see DIHelper constructor).
+  const DWARFDebugLine::LineTable *LineTbl = DwarfLine->getLineTable(0);
+  if (!LineTbl)
+    return "";
+  LineTbl->getFileLineInfoForAddress(Offset, nullptr, Spec.FLIKind, LineInfo);
+  return LineInfo.Line != 0
+             ? LineInfo.FileName + " (" + std::to_string(LineInfo.Line) + ")"
+             : "";
+}
 
 // Deletes all InputFile instances created so far.
 void InputFile::freePool() {
@@ -106,8 +140,8 @@ template <class ELFT> void ELFFileBase<ELFT>::initStringTable() {
 }
 
 template <class ELFT>
-elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
-    : ELFFileBase<ELFT>(Base::ObjectKind, M) {}
+elf::ObjectFile<ELFT>::ObjectFile(BumpPtrAllocator &Alloc, MemoryBufferRef M)
+    : ELFFileBase<ELFT>(Base::ObjectKind, M), Alloc(Alloc) {}
 
 template <class ELFT>
 ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getNonLocalSymbols() {
@@ -130,6 +164,13 @@ ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
   if (!this->Symtab)
     return this->SymbolBodies;
   return makeArrayRef(this->SymbolBodies).slice(1);
+}
+
+template <class ELFT> DIHelper<ELFT> *elf::ObjectFile<ELFT>::getDIHelper() {
+  if (!DIH)
+    DIH.reset(new DIHelper<ELFT>(this));
+
+  return DIH.get();
 }
 
 template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
@@ -432,6 +473,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
+    if (Sym->getType() == STT_FILE)
+      SourceFile = check(Sym->getName(this->StringTable));
     if (Sym->st_shndx == SHN_UNDEF)
       return new (this->Alloc)
           Undefined(Sym->st_name, Sym->st_other, Sym->getType(), this);
@@ -504,7 +547,7 @@ ArchiveFile::getMember(const Archive::Symbol *Sym) {
 }
 
 template <class ELFT>
-SharedFile<ELFT>::SharedFile(MemoryBufferRef M)
+SharedFile<ELFT>::SharedFile(BumpPtrAllocator &Alloc, MemoryBufferRef M)
     : ELFFileBase<ELFT>(Base::SharedKind, M), AsNeeded(Config->AsNeeded) {}
 
 template <class ELFT>
@@ -750,7 +793,7 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 }
 
 template <template <class> class T>
-static InputFile *createELFFile(MemoryBufferRef MB) {
+static InputFile *createELFFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB) {
   unsigned char Size;
   unsigned char Endian;
   std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
@@ -759,13 +802,13 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF32LE>(MB);
+    Obj = new T<ELF32LE>(Alloc, MB);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF32BE>(MB);
+    Obj = new T<ELF32BE>(Alloc, MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF64LE>(MB);
+    Obj = new T<ELF64LE>(Alloc, MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF64BE>(MB);
+    Obj = new T<ELF64BE>(Alloc, MB);
   else
     fatal("invalid file class: " + MB.getBufferIdentifier());
 
@@ -782,7 +825,7 @@ template <class ELFT> InputFile *BinaryFile::createELF() {
   Buffer = wrapBinaryWithElfHeader<ELFT>(Blob, Filename);
 
   return createELFFile<ObjectFile>(
-      MemoryBufferRef(toStringRef(Buffer), Filename));
+      Alloc, MemoryBufferRef(toStringRef(Buffer), Filename));
 }
 
 static bool isBitcode(MemoryBufferRef MB) {
@@ -790,17 +833,18 @@ static bool isBitcode(MemoryBufferRef MB) {
   return identify_magic(MB.getBuffer()) == file_magic::bitcode;
 }
 
-InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
+InputFile *elf::createObjectFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB,
+                                 StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
-  InputFile *F =
-      isBitcode(MB) ? new BitcodeFile(MB) : createELFFile<ObjectFile>(MB);
+  InputFile *F = isBitcode(MB) ? new BitcodeFile(MB)
+                               : createELFFile<ObjectFile>(Alloc, MB);
   F->ArchiveName = ArchiveName;
   F->OffsetInArchive = OffsetInArchive;
   return F;
 }
 
-InputFile *elf::createSharedFile(MemoryBufferRef MB) {
-  return createELFFile<SharedFile>(MB);
+InputFile *elf::createSharedFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB) {
+  return createELFFile<SharedFile>(Alloc, MB);
 }
 
 MemoryBufferRef LazyObjectFile::getBuffer() {
@@ -897,3 +941,8 @@ template InputFile *BinaryFile::createELF<ELF32LE>();
 template InputFile *BinaryFile::createELF<ELF32BE>();
 template InputFile *BinaryFile::createELF<ELF64LE>();
 template InputFile *BinaryFile::createELF<ELF64BE>();
+
+template class elf::DIHelper<ELF32LE>;
+template class elf::DIHelper<ELF32BE>;
+template class elf::DIHelper<ELF64LE>;
+template class elf::DIHelper<ELF64BE>;
