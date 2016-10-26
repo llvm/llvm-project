@@ -33,28 +33,31 @@ template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
                                             const typename ELFT::Shdr *Hdr) {
   if (!File || Hdr->sh_type == SHT_NOBITS)
-    return {};
+    return makeArrayRef<uint8_t>(nullptr, Hdr->sh_size);
   return check(File->getObj().getSectionContents(Hdr));
 }
 
 // ELF supports ZLIB-compressed section. Returns true if the section
 // is compressed.
 template <class ELFT>
-static bool isCompressed(const typename ELFT::Shdr *Hdr, StringRef Name) {
-  return (Hdr->sh_flags & SHF_COMPRESSED) || Name.startswith(".zdebug");
+static bool isCompressed(typename ELFT::uint Flags, StringRef Name) {
+  return (Flags & SHF_COMPRESSED) || Name.startswith(".zdebug");
 }
 
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
-                                         const Elf_Shdr *Hdr, StringRef Name,
+                                         uintX_t Flags, uint32_t Type,
+                                         uintX_t Entsize, uint32_t Link,
+                                         uint32_t Info, uintX_t Addralign,
+                                         ArrayRef<uint8_t> Data, StringRef Name,
                                          Kind SectionKind)
-    : InputSectionData(SectionKind, Name, getSectionContents(File, Hdr),
-                       isCompressed<ELFT>(Hdr, Name),
-                       !Config->GcSections || !(Hdr->sh_flags & SHF_ALLOC)),
-      Header(Hdr), File(File), Repl(this) {
+    : InputSectionData(SectionKind, Name, Data, isCompressed<ELFT>(Flags, Name),
+                       !Config->GcSections || !(Flags & SHF_ALLOC)),
+      File(File), Flags(Flags), Entsize(Entsize), Type(Type), Link(Link),
+      Info(Info), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  uint64_t V = std::max<uint64_t>(Hdr->sh_addralign, 1);
+  uint64_t V = std::max<uint64_t>(Addralign, 1);
   if (!isPowerOf2_64(V))
     fatal(getFilename(File) + ": section sh_addralign is not a power of 2");
 
@@ -66,11 +69,19 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   Alignment = V;
 }
 
+template <class ELFT>
+InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
+                                         const Elf_Shdr *Hdr, StringRef Name,
+                                         Kind SectionKind)
+    : InputSectionBase(File, Hdr->sh_flags, Hdr->sh_type, Hdr->sh_entsize,
+                       Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
+                       getSectionContents(File, Hdr), Name, SectionKind) {}
+
 template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
   if (auto *D = dyn_cast<InputSection<ELFT>>(this))
     if (D->getThunksSize() > 0)
       return D->getThunkOff() + D->getThunksSize();
-  return Header->sh_size;
+  return Data.size();
 }
 
 // Returns a string for an error message.
@@ -177,6 +188,13 @@ InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
 }
 
 template <class ELFT>
+InputSection<ELFT>::InputSection(uintX_t Flags, uint32_t Type,
+                                 uintX_t Addralign, ArrayRef<uint8_t> Data)
+    : InputSectionBase<ELFT>(nullptr, Flags, Type,
+                             /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Addralign,
+                             Data, "", Base::Regular) {}
+
+template <class ELFT>
 InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
                                  const Elf_Shdr *Header, StringRef Name)
     : InputSectionBase<ELFT>(F, Header, Name, Base::Regular) {}
@@ -198,7 +216,7 @@ template <class ELFT> void InputSection<ELFT>::addThunk(const Thunk<ELFT> *T) {
 }
 
 template <class ELFT> uint64_t InputSection<ELFT>::getThunkOff() const {
-  return this->Header->sh_size;
+  return this->Data.size();
 }
 
 template <class ELFT> uint64_t InputSection<ELFT>::getThunksSize() const {
@@ -458,15 +476,14 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
 template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   if (this->getType() == SHT_NOBITS)
     return;
-  ELFFile<ELFT> &EObj = this->File->getObj();
 
   // If -r is given, then an InputSection may be a relocation section.
   if (this->getType() == SHT_RELA) {
-    copyRelocations(Buf + OutSecOff, EObj.relas(this->Header));
+    copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rela>());
     return;
   }
   if (this->getType() == SHT_REL) {
-    copyRelocations(Buf + OutSecOff, EObj.rels(this->Header));
+    copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rel>());
     return;
   }
 
@@ -804,27 +821,28 @@ bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
-CommonInputSection<ELFT>::CommonInputSection(std::vector<DefinedCommon *> Syms)
-    : InputSection<ELFT>(nullptr, &Hdr, "") {
-  Hdr.sh_size = 0;
-  Hdr.sh_type = SHT_NOBITS;
-  Hdr.sh_flags = SHF_ALLOC | SHF_WRITE;
-  this->Live = true;
-
+InputSection<ELFT> InputSection<ELFT>::createCommonInputSection(
+    std::vector<DefinedCommon *> Syms) {
   // Sort the common symbols by alignment as an heuristic to pack them better.
   std::stable_sort(Syms.begin(), Syms.end(),
                    [](const DefinedCommon *A, const DefinedCommon *B) {
                      return A->Alignment > B->Alignment;
                    });
 
+  size_t Size = 0;
+  uintX_t Alignment = 1;
   for (DefinedCommon *Sym : Syms) {
-    this->Alignment = std::max<uintX_t>(this->Alignment, Sym->Alignment);
-    Hdr.sh_size = alignTo(Hdr.sh_size, Sym->Alignment);
+    Alignment = std::max<uintX_t>(Alignment, Sym->Alignment);
+    Size = alignTo(Size, Sym->Alignment);
 
     // Compute symbol offset relative to beginning of input section.
-    Sym->Offset = Hdr.sh_size;
-    Hdr.sh_size += Sym->Size;
+    Sym->Offset = Size;
+    Size += Sym->Size;
   }
+  ArrayRef<uint8_t> Data = makeArrayRef<uint8_t>(nullptr, Size);
+  InputSection Ret(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Data);
+  Ret.Live = true;
+  return Ret;
 }
 
 template class elf::InputSectionBase<ELF32LE>;
@@ -861,8 +879,3 @@ template class elf::MipsAbiFlagsInputSection<ELF32LE>;
 template class elf::MipsAbiFlagsInputSection<ELF32BE>;
 template class elf::MipsAbiFlagsInputSection<ELF64LE>;
 template class elf::MipsAbiFlagsInputSection<ELF64BE>;
-
-template class elf::CommonInputSection<ELF32LE>;
-template class elf::CommonInputSection<ELF32BE>;
-template class elf::CommonInputSection<ELF64LE>;
-template class elf::CommonInputSection<ELF64BE>;

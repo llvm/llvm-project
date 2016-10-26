@@ -382,8 +382,8 @@ VirtualBaseClassRecord::deserialize(TypeRecordKind Kind,
   uint64_t Offset;
   uint64_t Index;
   CV_DESERIALIZE(Reader, L, CV_NUMERIC_FIELD(Offset), CV_NUMERIC_FIELD(Index));
-  return VirtualBaseClassRecord(L->Attrs.getAccess(), L->BaseType, L->VBPtrType,
-                                Offset, Index);
+  return VirtualBaseClassRecord(Kind, L->Attrs.getAccess(), L->BaseType,
+                                L->VBPtrType, Offset, Index);
 }
 
 Expected<ListContinuationRecord>

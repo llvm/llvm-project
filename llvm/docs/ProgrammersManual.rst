@@ -398,8 +398,9 @@ operator. If failure, the ``Error`` value can be extracted using the
     if (auto FileOrErr = openFormattedFile(Path)) {
       // On success, grab a reference to the file and continue.
       auto &File = *FileOrErr;
-      // ...
-    } else     // On error, extract the Error value and return it.
+      ...
+    } else
+      // On error, extract the Error value and return it.
       return FileOrErr.takeError();
   }
 
@@ -417,7 +418,7 @@ rewritten as:
       return Err;
     // On success, grab a reference to the file and continue.
     auto &File = *FileOrErr;
-    // ...
+    ...
   }
 
 This second form is often more readable for functions that involve multiple
@@ -504,7 +505,7 @@ StringError
 Many kinds of errors have no recovery strategy, the only action that can be
 taken is to report them to the user so that the user can attempt to fix the
 environment. In this case representing the error as a string makes perfect
-sense. LLVM provides the ``StringError class for this purpose. It takes two
+sense. LLVM provides the ``StringError`` class for this purpose. It takes two
 arguments: A string error message, and an equivalent ``std::error_code`` for
 interoperability:
 
@@ -582,11 +583,11 @@ Using ExitOnError to simplify tool code
 """""""""""""""""""""""""""""""""""""""
 
 Library code should never call ``exit`` for a recoverable error, however in tool
-code (especially comamnd line tools) this can be a reasonable approach. Calling
+code (especially command line tools) this can be a reasonable approach. Calling
 ``exit`` upon encountering an error dramatically simplifies control flow as the
 error no longer needs to be propagated up the stack. This allows code to be
 written in straight-line style, as long as each fallible call is wrapped in a
-check and call to exit. The ``ExitOnError``` class supports this pattern by
+check and call to exit. The ``ExitOnError`` class supports this pattern by
 providing call operators that inspect ``Error`` values, stripping the error away
 in the success case and logging to ``stderr`` then exiting in the failure case.
 
@@ -614,14 +615,16 @@ preceded by a string “banner” that can be set by calling the setBanner metho
 mapping can also be supplied from ``Error`` values to exit codes using the
 ``setExitCodeMapper`` method:
 
-int main(int argc, char *argv[]) {
-  ExitOnErr.setBanner(std::string(argv[0]) + “ error:”);
-  ExitOnErr.setExitCodeMapper(
-    [](const Error &Err) {
-      if (Err.isA<BadFileFormat>())
-        return 2;
-      return 1;
-    });
+.. code-block:: c++
+
+  int main(int argc, char *argv[]) {
+    ExitOnErr.setBanner(std::string(argv[0]) + “ error:”);
+    ExitOnErr.setExitCodeMapper(
+      [](const Error &Err) {
+        if (Err.isA<BadFileFormat>())
+          return 2;
+        return 1;
+      });
 
 Use ``ExitOnError`` in your tool code where possible as it can greatly improve
 readability.
@@ -640,7 +643,7 @@ this, use the named constructor idiom and return an ``Expected<T>``:
   class Foo {
   public:
 
-    static Expected<Foo> Create(Resource R1, Resource R2) {
+    static Expected<Foo> Create(Resource R1, Resource R2) {
       Error Err;
       Foo F(R1, R2, Err);
       if (Err)
@@ -676,7 +679,7 @@ Propagating and consuming errors based on types
 In some contexts, certain types of error are known to be benign. For example,
 when walking an archive, some clients may be happy to skip over badly formatted
 object files rather than terminating the walk immediately. Skipping badly
-formatted objects could be achieved using an elaborate handler method, But the
+formatted objects could be achieved using an elaborate handler method, but the
 Error.h header provides two utilities that make this idiom much cleaner: the
 type inspection method, ``isA``, and the ``consumeError`` function:
 
@@ -685,13 +688,15 @@ type inspection method, ``isA``, and the ``consumeError`` function:
   Error walkArchive(Archive A) {
     for (unsigned I = 0; I != A.numMembers(); ++I) {
       auto ChildOrErr = A.getMember(I);
-      if (auto Err = ChildOrErr.takeError())
+      if (auto Err = ChildOrErr.takeError()) {
         if (Err.isA<BadFileFormat>())
           consumeError(std::move(Err))
         else
           return Err;
-        auto &Child = *ChildOrErr;
-      // do work
+      }
+      auto &Child = *ChildOrErr;
+      // Use Child
+      ...
     }
     return Error::success();
   }
@@ -715,7 +720,8 @@ completing the walk over the archive they could use the ``joinErrors`` utility:
         else
           return Err;
       auto &Child = *ChildOrErr;
-      // do work
+      // Use Child
+      ...
     }
     return DeferredErrs;
   }
@@ -732,22 +738,23 @@ Building fallible iterators and iterator ranges
 
 The archive walking examples above retrieve archive members by index, however
 this requires considerable boiler-plate for iteration and error checking. We can
-clean this up considerably by using ``Error`` with the "fallible iterator"
-pattern. The usual C++ iterator patterns do not allow for failure on increment,
-but we can incorporate support for it by having iterators hold an Error
-reference through which they can report failure. In this pattern, if an
-increment operation fails the failure is recorded via the Error reference and
-the iterator value is set to the end of the range in order to terminate the
-loop. This ensures that the dereference operation is safe anywhere that an
-ordinary iterator dereference would be safe (i.e. when the iterator is not equal
-to end). Where this pattern is followed (as in the ``llvm::object::Archive``
-class) the result is much cleaner iteration idiom:
+clean this up by using ``Error`` with the "fallible iterator" pattern. The usual
+C++ iterator patterns do not allow for failure on increment, but we can
+incorporate support for it by having iterators hold an Error reference through
+which they can report failure. In this pattern, if an increment operation fails
+the failure is recorded via the Error reference and the iterator value is set to
+the end of the range in order to terminate the loop. This ensures that the
+dereference operation is safe anywhere that an ordinary iterator dereference
+would be safe (i.e. when the iterator is not equal to end). Where this pattern
+is followed (as in the ``llvm::object::Archive`` class) the result is much
+cleaner iteration idiom:
 
 .. code-block:: c++
 
   Error Err;
   for (auto &Child : Ar->children(Err)) {
-    // Use Child - we only enter the loop when it’s valid.
+    // Use Child - we only enter the loop when it’s valid
+    ...
   }
   // Check Err after the loop to ensure it didn’t break due to an error.
   if (Err)

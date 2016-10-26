@@ -24,6 +24,17 @@
 
 // CHECK: ![[HasVirtualMethod_base]] = !DIDerivedType(tag: DW_TAG_inheritance, scope: ![[HasPrimaryBase]], baseType: ![[HasVirtualMethod]])
 
+// CHECK: ![[HasIndirectVirtualBase:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "HasIndirectVirtualBase"
+// CHECK-SAME: elements: ![[elements:[0-9]+]]
+
+// CHECK: !DIDerivedType(tag: DW_TAG_inheritance, scope: ![[HasIndirectVirtualBase]], baseType: ![[HasPrimaryBase]]
+// CHECK-NOT: DIFlagIndirectVirtualBase
+// CHECK-SAME: )
+
+// CHECK: !DIDerivedType(tag: DW_TAG_inheritance, scope: ![[HasIndirectVirtualBase]], baseType: ![[SecondaryVTable]]
+// CHECK-SAME: flags:
+// CHECK-SAME: DIFlagIndirectVirtualBase
+
 // CHECK: ![[DynamicNoVFPtr:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "DynamicNoVFPtr",
 // CHECK-SAME: elements: ![[elements:[0-9]+]]
 
@@ -52,3 +63,6 @@ struct HasPrimaryBase : virtual SecondaryVTable, HasVirtualMethod { };
 
 HasPrimaryBase has_primary_base;
 
+struct HasIndirectVirtualBase : public HasPrimaryBase {};
+
+HasIndirectVirtualBase has_indirect_virtual_base;

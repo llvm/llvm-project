@@ -84,8 +84,9 @@ StringRef DINode::getFlagString(DIFlags Flag) {
 
 DINode::DIFlags DINode::splitFlags(DIFlags Flags,
                                    SmallVectorImpl<DIFlags> &SplitFlags) {
-  // Accessibility and member pointer flags need to be specially handled, since
-  // they're packed together.
+  // Flags that are packed together need to be specially handled, so
+  // that, for example, we emit "DIFlagPublic" and not
+  // "DIFlagPrivate | DIFlagProtected".
   if (DIFlags A = Flags & FlagAccessibility) {
     if (A == FlagPrivate)
       SplitFlags.push_back(FlagPrivate);
@@ -103,6 +104,10 @@ DINode::DIFlags DINode::splitFlags(DIFlags Flags,
     else
       SplitFlags.push_back(FlagVirtualInheritance);
     Flags &= ~R;
+  }
+  if ((Flags & FlagIndirectVirtualBase) == FlagIndirectVirtualBase) {
+    Flags &= ~FlagIndirectVirtualBase;
+    SplitFlags.push_back(FlagIndirectVirtualBase);
   }
 
 #define HANDLE_DI_FLAG(ID, NAME)                                               \

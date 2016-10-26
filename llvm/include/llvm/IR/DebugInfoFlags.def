@@ -42,6 +42,11 @@ HANDLE_DI_FLAG((1 << 18), IntroducedVirtual)
 HANDLE_DI_FLAG((1 << 19), BitField)
 HANDLE_DI_FLAG((1 << 20), NoReturn)
 
+// To avoid needing a dedicated value for IndirectVirtualBase, we use
+// the bitwise or of Virtual and FwdDecl, which does not otherwise
+// make sense for inheritance.
+HANDLE_DI_FLAG((1 << 2) | (1 << 5), IndirectVirtualBase)
+
 #ifdef DI_FLAG_LARGEST_NEEDED
 // intended to be used with ADT/BitmaskEnum.h
 // NOTE: always must be equal to largest flag, check this when adding new flag

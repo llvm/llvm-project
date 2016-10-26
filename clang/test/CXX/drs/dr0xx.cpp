@@ -1030,7 +1030,7 @@ namespace dr92 { // dr92: 4.0 c++17
   // expected-error@-4 {{cannot initialize}}
 #endif
 
-  void g(void() throw()); // expected-note 0-2 {{no known conversion}}
+  void g(void() throw()); // expected-note 0-2 {{no known conversion}} expected-warning 0-1{{mangled name of 'g' will change in C++17}}
   void h() throw() {
     g(f); // expected-error-re {{{{is not superset|no matching function}}}}
     g(q); // expected-error-re {{{{is not superset|no matching function}}}}

@@ -58,6 +58,7 @@
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/ObjCARC.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <system_error>
 using namespace llvm;
 
@@ -364,18 +365,10 @@ std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
 void LTOCodeGenerator::preserveDiscardableGVs(
     Module &TheModule,
     llvm::function_ref<bool(const GlobalValue &)> mustPreserveGV) {
-  SetVector<Constant *> UsedValuesSet;
-  if (GlobalVariable *LLVMUsed =
-          TheModule.getGlobalVariable("llvm.compiler.used")) {
-    ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
-    for (auto &V : Inits->operands())
-      UsedValuesSet.insert(cast<Constant>(&V));
-    LLVMUsed->eraseFromParent();
-  }
-  llvm::Type *i8PTy = llvm::Type::getInt8PtrTy(TheModule.getContext());
+  std::vector<GlobalValue *> Used;
   auto mayPreserveGlobal = [&](GlobalValue &GV) {
     if (!GV.isDiscardableIfUnused() || GV.isDeclaration() ||
-        !mustPreserveGV(GV)) 
+        !mustPreserveGV(GV))
       return;
     if (GV.hasAvailableExternallyLinkage())
       return emitWarning(
@@ -384,7 +377,7 @@ void LTOCodeGenerator::preserveDiscardableGVs(
     if (GV.hasInternalLinkage())
       return emitWarning((Twine("Linker asked to preserve internal global: '") +
                    GV.getName() + "'").str());
-    UsedValuesSet.insert(ConstantExpr::getBitCast(&GV, i8PTy));
+    Used.push_back(&GV);
   };
   for (auto &GV : TheModule)
     mayPreserveGlobal(GV);
@@ -393,15 +386,10 @@ void LTOCodeGenerator::preserveDiscardableGVs(
   for (auto &GV : TheModule.aliases())
     mayPreserveGlobal(GV);
 
-  if (UsedValuesSet.empty())
+  if (Used.empty())
     return;
 
-  llvm::ArrayType *ATy = llvm::ArrayType::get(i8PTy, UsedValuesSet.size());
-  auto *LLVMUsed = new llvm::GlobalVariable(
-      TheModule, ATy, false, llvm::GlobalValue::AppendingLinkage,
-      llvm::ConstantArray::get(ATy, UsedValuesSet.getArrayRef()),
-      "llvm.compiler.used");
-  LLVMUsed->setSection("llvm.metadata");
+  appendToCompilerUsed(TheModule, Used);
 }
 
 void LTOCodeGenerator::applyScopeRestrictions() {

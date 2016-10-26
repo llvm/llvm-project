@@ -184,7 +184,7 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
         if (!isDiscarded(S) && !S->OutSec && Pat.SectionRe.match(S->Name))
           I->Sections.push_back(S);
       if (Pat.SectionRe.match("COMMON"))
-        I->Sections.push_back(CommonInputSection<ELFT>::X);
+        I->Sections.push_back(InputSection<ELFT>::CommonInputSection);
     }
 
     // Sort sections as instructed by SORT-family commands and --sort-section
