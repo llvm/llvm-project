@@ -2921,10 +2921,13 @@ CGObjCMac::EmitProtocolList(Twine Name,
                                                   ProtocolRefs.size()),
                              ProtocolRefs);
 
+  StringRef Section;
+  if (CGM.getTriple().isOSBinFormatMachO())
+    Section = "__OBJC,__cat_cls_meth,regular,no_dead_strip";
+
   llvm::Constant *Init = llvm::ConstantStruct::getAnon(Values);
   llvm::GlobalVariable *GV =
-    CreateMetadataVar(Name, Init, "__OBJC,__cat_cls_meth,regular,no_dead_strip",
-                      CGM.getPointerAlign(), false);
+      CreateMetadataVar(Name, Init, Section, CGM.getPointerAlign(), false);
   return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.ProtocolListPtrTy);
 }
 
@@ -3030,12 +3033,13 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(Twine Name,
   Values[2] = llvm::ConstantArray::get(AT, Properties);
   llvm::Constant *Init = llvm::ConstantStruct::getAnon(Values);
 
+  StringRef Section;
+  if (CGM.getTriple().isOSBinFormatMachO())
+    Section = (ObjCABI == 2) ? "__DATA, __objc_const"
+                             : "__OBJC,__property,regular,no_dead_strip";
+
   llvm::GlobalVariable *GV =
-    CreateMetadataVar(Name, Init,
-                      (ObjCABI == 2) ? "__DATA, __objc_const" :
-                      "__OBJC,__property,regular,no_dead_strip",
-                      CGM.getPointerAlign(),
-                      true);
+      CreateMetadataVar(Name, Init, Section, CGM.getPointerAlign(), true);
   return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.PropertyListPtrTy);
 }
 
@@ -3051,9 +3055,12 @@ CGObjCCommonMac::EmitProtocolMethodTypes(Twine Name,
                                              MethodTypes.size());
   llvm::Constant *Init = llvm::ConstantArray::get(AT, MethodTypes);
 
-  llvm::GlobalVariable *GV = CreateMetadataVar(
-      Name, Init, (ObjCABI == 2) ? "__DATA, __objc_const" : StringRef(),
-      CGM.getPointerAlign(), true);
+  StringRef Section;
+  if (CGM.getTriple().isOSBinFormatMachO() && ObjCABI == 2)
+    Section = "__DATA, __objc_const";
+
+  llvm::GlobalVariable *GV =
+      CreateMetadataVar(Name, Init, Section, CGM.getPointerAlign(), true);
   return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.Int8PtrPtrTy);
 }
 
@@ -5961,18 +5968,21 @@ llvm::GlobalVariable * CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   }
   llvm::Constant *Init = llvm::ConstantStruct::get(ObjCTypes.ClassRonfABITy,
                                                    Values);
+
+  llvm::SmallString<64> ROLabel;
+  llvm::raw_svector_ostream(ROLabel)
+      << ((flags & NonFragileABI_Class_Meta) ? "\01l_OBJC_METACLASS_RO_$_"
+                                             : "\01l_OBJC_CLASS_RO_$_")
+      << ClassName;
+
   llvm::GlobalVariable *CLASS_RO_GV =
-    new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassRonfABITy, false,
-                             llvm::GlobalValue::PrivateLinkage,
-                             Init,
-                             (flags & NonFragileABI_Class_Meta) ?
-                             std::string("\01l_OBJC_METACLASS_RO_$_")+ClassName :
-                             std::string("\01l_OBJC_CLASS_RO_$_")+ClassName);
+      new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassRonfABITy, false,
+                               llvm::GlobalValue::PrivateLinkage, Init, ROLabel);
   CLASS_RO_GV->setAlignment(
     CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ClassRonfABITy));
-  CLASS_RO_GV->setSection("__DATA, __objc_const");
+  if (CGM.getTriple().isOSBinFormatMachO())
+    CLASS_RO_GV->setSection("__DATA, __objc_const");
   return CLASS_RO_GV;
-
 }
 
 /// BuildClassMetaData - This routine defines that to-level meta-data
@@ -6010,9 +6020,10 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassMetaData(
   if (Init->getType() != GV->getValueType())
     Init = llvm::ConstantExpr::getBitCast(Init, GV->getValueType());
   GV->setInitializer(Init);
-  GV->setSection("__DATA, __objc_data");
+  if (CGM.getTriple().isOSBinFormatMachO())
+    GV->setSection("__DATA, __objc_data");
   GV->setAlignment(
-    CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ClassnfABITy));
+      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ClassnfABITy));
   if (!CGM.getTriple().isOSBinFormatCOFF())
     if (HiddenVisibility)
       GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
@@ -6344,7 +6355,8 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
                                ExtCatName.str());
   GCATV->setAlignment(
     CGM.getDataLayout().getABITypeAlignment(ObjCTypes.CategorynfABITy));
-  GCATV->setSection("__DATA, __objc_const");
+  if (CGM.getTriple().isOSBinFormatMachO())
+    GCATV->setSection("__DATA, __objc_const");
   CGM.addCompilerUsedGlobal(GCATV);
   DefinedCategories.push_back(GCATV);
 
@@ -6431,7 +6443,8 @@ CGObjCNonFragileABIMac::EmitMethodList(Twine Name, MethodListType MLT,
                                       llvm::GlobalValue::PrivateLinkage, Init,
                                       Prefix + Name);
   GV->setAlignment(CGM.getDataLayout().getABITypeAlignment(Init->getType()));
-  GV->setSection("__DATA, __objc_const");
+  if (CGM.getTriple().isOSBinFormatMachO())
+    GV->setSection("__DATA, __objc_const");
   CGM.addCompilerUsedGlobal(GV);
   return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.MethodListnfABIPtrTy);
 }
@@ -6487,7 +6500,8 @@ CGObjCNonFragileABIMac::EmitIvarOffsetVar(const ObjCInterfaceDecl *ID,
       IvarOffsetGV->setVisibility(llvm::GlobalValue::DefaultVisibility);
   }
 
-  IvarOffsetGV->setSection("__DATA, __objc_ivar");
+  if (CGM.getTriple().isOSBinFormatMachO())
+    IvarOffsetGV->setSection("__DATA, __objc_ivar");
   return IvarOffsetGV;
 }
 
@@ -6563,8 +6577,8 @@ llvm::Constant *CGObjCNonFragileABIMac::EmitIvarList(
                              Prefix + OID->getObjCRuntimeNameAsString());
   GV->setAlignment(
     CGM.getDataLayout().getABITypeAlignment(Init->getType()));
-  GV->setSection("__DATA, __objc_const");
-
+  if (CGM.getTriple().isOSBinFormatMachO())
+    GV->setSection("__DATA, __objc_const");
   CGM.addCompilerUsedGlobal(GV);
   return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.IvarListnfABIPtrTy);
 }
@@ -6573,15 +6587,20 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocolRef(
   const ObjCProtocolDecl *PD) {
   llvm::GlobalVariable *&Entry = Protocols[PD->getIdentifier()];
 
-  if (!Entry)
+  if (!Entry) {
     // We use the initializer as a marker of whether this is a forward
     // reference or not. At module finalization we add the empty
     // contents for protocols which were referenced but never defined.
-    Entry =
-        new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
-                                 false, llvm::GlobalValue::ExternalLinkage,
-                                 nullptr,
-                                 "\01l_OBJC_PROTOCOL_$_" + PD->getObjCRuntimeNameAsString());
+    llvm::SmallString<64> Protocol;
+    llvm::raw_svector_ostream(Protocol) << "\01l_OBJC_PROTOCOL_$_"
+                                        << PD->getObjCRuntimeNameAsString();
+
+    Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
+                                     false, llvm::GlobalValue::ExternalLinkage,
+                                     nullptr, Protocol);
+    if (!CGM.getTriple().isOSBinFormatMachO())
+      Entry->setComdat(CGM.getModule().getOrInsertComdat(Protocol));
+  }
 
   return Entry;
 }
@@ -6699,10 +6718,16 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
     Entry->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
     Entry->setInitializer(Init);
   } else {
-    Entry =
-      new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
-                               false, llvm::GlobalValue::WeakAnyLinkage, Init,
-                               "\01l_OBJC_PROTOCOL_$_" + PD->getObjCRuntimeNameAsString());
+    llvm::SmallString<64> Protocol;
+    llvm::raw_svector_ostream(Protocol) << "\01l_OBJC_PROTOCOL_$_"
+                                        << PD->getObjCRuntimeNameAsString();
+
+    Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABITy,
+                                     false, llvm::GlobalValue::WeakAnyLinkage,
+                                     Init, Protocol);
+    if (!CGM.getTriple().isOSBinFormatMachO())
+      Entry->setComdat(CGM.getModule().getOrInsertComdat(Protocol));
+
     Entry->setAlignment(
       CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABITy));
 
@@ -6713,13 +6738,20 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
 
   // Use this protocol meta-data to build protocol list table in section
   // __DATA, __objc_protolist
+  llvm::SmallString<64> ProtocolRef;
+  llvm::raw_svector_ostream(ProtocolRef) << "\01l_OBJC_LABEL_PROTOCOL_$_"
+                                         << PD->getObjCRuntimeNameAsString();
+
   llvm::GlobalVariable *PTGV =
     new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ProtocolnfABIPtrTy,
                              false, llvm::GlobalValue::WeakAnyLinkage, Entry,
-                             "\01l_OBJC_LABEL_PROTOCOL_$_" + PD->getObjCRuntimeNameAsString());
+                             ProtocolRef);
+  if (!CGM.getTriple().isOSBinFormatMachO())
+    PTGV->setComdat(CGM.getModule().getOrInsertComdat(ProtocolRef));
   PTGV->setAlignment(
     CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABIPtrTy));
-  PTGV->setSection("__DATA, __objc_protolist, coalesced, no_dead_strip");
+  if (CGM.getTriple().isOSBinFormatMachO())
+    PTGV->setSection("__DATA, __objc_protolist, coalesced, no_dead_strip");
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   CGM.addCompilerUsedGlobal(PTGV);
   return Entry;
@@ -6770,9 +6802,9 @@ CGObjCNonFragileABIMac::EmitProtocolList(Twine Name,
   GV = new llvm::GlobalVariable(CGM.getModule(), Init->getType(), false,
                                 llvm::GlobalValue::PrivateLinkage,
                                 Init, Name);
-  GV->setSection("__DATA, __objc_const");
-  GV->setAlignment(
-    CGM.getDataLayout().getABITypeAlignment(Init->getType()));
+  GV->setAlignment(CGM.getDataLayout().getABITypeAlignment(Init->getType()));
+  if (CGM.getTriple().isOSBinFormatMachO())
+    GV->setSection("__DATA, __objc_const");
   CGM.addCompilerUsedGlobal(GV);
   return llvm::ConstantExpr::getBitCast(GV,
                                         ObjCTypes.ProtocolListnfABIPtrTy);
@@ -7469,7 +7501,8 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
   Entry->setAlignment(DL.getABITypeAlignment(ObjCTypes.EHTypeTy));
 
   if (ForDefinition)
-    Entry->setSection("__DATA,__objc_const");
+    if (CGM.getTriple().isOSBinFormatMachO())
+      Entry->setSection("__DATA,__objc_const");
 
   return Entry;
 }

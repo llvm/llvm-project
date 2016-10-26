@@ -885,29 +885,12 @@ void CodeGenFunction::EmitAutoVarDecl(const VarDecl &D) {
   EmitAutoVarCleanups(emission);
 }
 
-/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
-/// markers.
-static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
-                                      const LangOptions &LangOpts) {
-  // Asan uses markers for use-after-scope checks.
-  if (CGOpts.SanitizeAddressUseAfterScope)
-    return true;
-
-  // Disable lifetime markers in msan builds.
-  // FIXME: Remove this when msan works with lifetime markers.
-  if (LangOpts.Sanitize.has(SanitizerKind::Memory))
-    return false;
-
-  // For now, only in optimized builds.
-  return CGOpts.OptimizationLevel != 0;
-}
-
 /// Emit a lifetime.begin marker if some criteria are satisfied.
 /// \return a pointer to the temporary size Value if a marker was emitted, null
 /// otherwise
 llvm::Value *CodeGenFunction::EmitLifetimeStart(uint64_t Size,
                                                 llvm::Value *Addr) {
-  if (!shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), getLangOpts()))
+  if (!ShouldEmitLifetimeMarkers)
     return nullptr;
 
   llvm::Value *SizeV = llvm::ConstantInt::get(Int64Ty, Size);
@@ -1027,12 +1010,18 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       bool IsMSCatchParam =
           D.isExceptionVariable() && getTarget().getCXXABI().isMicrosoft();
 
-      // Emit a lifetime intrinsic if meaningful.  There's no point
-      // in doing this if we don't have a valid insertion point (?).
+      // Emit a lifetime intrinsic if meaningful. There's no point in doing this
+      // if we don't have a valid insertion point (?).
       if (HaveInsertPoint() && !IsMSCatchParam) {
-        uint64_t size = CGM.getDataLayout().getTypeAllocSize(allocaTy);
-        emission.SizeForLifetimeMarkers =
-          EmitLifetimeStart(size, address.getPointer());
+        // goto or switch-case statements can break lifetime into several
+        // regions which need more efforts to handle them correctly. PR28267
+        // This is rare case, but it's better just omit intrinsics than have
+        // them incorrectly placed.
+        if (!Bypasses.IsBypassed(&D)) {
+          uint64_t size = CGM.getDataLayout().getTypeAllocSize(allocaTy);
+          emission.SizeForLifetimeMarkers =
+              EmitLifetimeStart(size, address.getPointer());
+        }
       } else {
         assert(!emission.useLifetimeMarkers());
       }

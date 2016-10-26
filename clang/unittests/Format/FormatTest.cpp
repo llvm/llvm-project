@@ -11597,6 +11597,17 @@ TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
   EXPECT_EQ(Expected, *Result);
 }
 
+TEST_F(FormatTest, AllignTrailingComments) {
+  EXPECT_EQ("#define MACRO(V)                       \\\n"
+            "  V(Rt2) /* one more char */           \\\n"
+            "  V(Rs)  /* than here  */              \\\n"
+            "/* comment 3 */\n",
+            format("#define MACRO(V)\\\n"
+                   "V(Rt2)  /* one more char */ \\\n"
+                   "V(Rs) /* than here  */    \\\n"
+                   "/* comment 3 */         \\\n",
+                   getLLVMStyleWithColumns(40)));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang

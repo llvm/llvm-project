@@ -301,6 +301,15 @@
 // CHECK-GENTOO-4-9-3: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-3: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
+// Test support for Gentoo's gcc-config -- clang should prefer the older
+// (4.9.3) version over the newer (5.4.0) due to preference specified
+// in /etc/env.d/gcc/x86_64-pc-linux-gnu.
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3 %s
+//
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target mips64-unknown-linux-gnuabi64 -stdlib=libstdc++ \

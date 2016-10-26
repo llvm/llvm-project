@@ -14616,6 +14616,13 @@ int __ovld atom_xor(volatile __local int *p, int val);
 unsigned int __ovld atom_xor(volatile __local unsigned int *p, unsigned int val);
 #endif
 
+#if defined(cl_khr_int64_extended_atomics)
+long __ovld atom_xor(volatile __global long *p, long val);
+unsigned long __ovld atom_xor(volatile __global unsigned long *p, unsigned long val);
+long __ovld atom_xor(volatile __local long *p, long val);
+unsigned long __ovld atom_xor(volatile __local unsigned long *p, unsigned long val);
+#endif
+
 #if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : disable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : disable

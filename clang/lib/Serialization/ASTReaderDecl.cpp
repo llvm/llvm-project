@@ -3930,7 +3930,10 @@ void ASTDeclReader::UpdateDecl(Decl *D, ModuleFile &ModuleFile,
       if (Record[Idx++]) {
         AttrVec Attrs;
         Reader.ReadAttributes(F, Attrs, Record, Idx);
-        D->setAttrsImpl(Attrs, Reader.getContext());
+        // If the declaration already has attributes, we assume that some other
+        // AST file already loaded them.
+        if (!D->hasAttrs())
+          D->setAttrsImpl(Attrs, Reader.getContext());
       }
       break;
     }
