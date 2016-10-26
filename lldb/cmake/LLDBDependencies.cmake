@@ -149,9 +149,39 @@ macro(add_libs_from_path build_dir lib_prefix lib_list)
   endforeach()
 endmacro(add_libs_from_path)
 
-add_libs_from_path(${LLDB_PATH_TO_SWIFT_BUILD} "swift" SWIFT_ALL_LIBS)
-add_libs_from_path(${LLDB_PATH_TO_CLANG_BUILD} "clang" CLANG_ALL_LIBS)
-add_libs_from_path(${LLDB_PATH_TO_LLVM_BUILD} "LLVM" LLVM_ALL_LIBS)
+if (LLDB_BUILT_STANDALONE)
+  add_libs_from_path(${LLDB_PATH_TO_SWIFT_BUILD} "swift" SWIFT_ALL_LIBS)
+  add_libs_from_path(${LLDB_PATH_TO_CLANG_BUILD} "clang" CLANG_ALL_LIBS)
+  add_libs_from_path(${LLDB_PATH_TO_LLVM_BUILD} "LLVM" LLVM_ALL_LIBS)
+else()
+  set(CLANG_ALL_LIBS
+    clangAnalysis
+    clangAST
+    clangBasic
+    clangCodeGen
+    clangDriver
+    clangEdit
+    clangFrontend
+    clangLex
+    clangParse
+    clangRewrite
+    clangRewriteFrontend
+    clangSema
+    clangSerialization)
+  set(SWIFT_ALL_LIBS
+    swiftBasic
+    swiftAST
+    swiftIDE
+    swiftFrontend
+    swiftSerialization
+    swiftClangImporter
+    swiftParse
+    swiftSIL
+    swiftSILOptimizer
+    swiftASTSectionImporter
+    swiftRemoteAST
+    )
+endif()
 
 set(LLDB_SYSTEM_LIBS)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT __ANDROID_NDK__)
@@ -194,8 +224,13 @@ endif()
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
 list(APPEND LLDB_SYSTEM_LIBS uuid)
 endif()
-# this needs to be linked statially
-list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
+
+if(LLDB_BUILT_STANDALONE)
+  # this needs to be linked statially
+  list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
+else()
+  list(APPEND LLDB_SYSTEM_LIBS libcmark_static)
+endif()
 
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}

@@ -72,6 +72,12 @@ class TestDictionaryNSObjectAnyObject(TestBase):
                 'Int64(3)',
                 'Int64(4)'])
 
+        self.expect(
+            "frame variable -d run -- d3",
+            substrs=[
+                'key = "hello"',
+                'value = 123'])
+
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()

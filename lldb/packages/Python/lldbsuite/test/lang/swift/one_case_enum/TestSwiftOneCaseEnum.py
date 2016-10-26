@@ -58,26 +58,11 @@ class TestSwiftOneCaseEnum(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
 
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        maybeEvent = self.frame().FindVariable("maybeEvent")
+        event = self.frame().FindVariable("event")
+        lldbutil.check_variable(self, maybeEvent, use_dynamic=False, use_synthetic=True, value="Goofus")
+        lldbutil.check_variable(self, event, use_dynamic=False, use_synthetic=True, value="Goofus")
 
-        event = self.frame.FindVariable("event")
-        lldbutil.check_variable(self, event, True, value="Goofus")
-
-        process.Continue()
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        event = self.frame.FindVariable("event")
-        lldbutil.check_variable(self, event, True, value="Goofus")
 
 if __name__ == '__main__':
     import atexit

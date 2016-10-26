@@ -17,6 +17,7 @@ func main() {
                                             2 as NSNumber : 2 as NSNumber,
                                             3 as NSNumber : 3 as NSNumber,
                                             4 as NSNumber : 4 as NSNumber]
+  var d3: AnyObject = Dictionary<String, Int>(dictionaryLiteral: ("hello", 123)) as NSDictionary
   print("break here")
 }
 

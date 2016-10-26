@@ -393,9 +393,16 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     ValueObjectSP buffer_sp(valobj.GetNonSyntheticValue()->GetChildAtNamePath(
         {g_buffer, g__storage, g_rawValue}));
 
+    // For the old Array version which using ManagedBufferPointer.
+    // TODO: this can be removed eventually.
     if (!buffer_sp)
       buffer_sp = valobj.GetNonSyntheticValue()->GetChildAtNamePath(
           {g_buffer, g___bufferPointer, g__nativeBuffer});
+
+    // For the new Array version which uses SIL tail-allocated arrays.
+    if (!buffer_sp)
+      buffer_sp = valobj.GetNonSyntheticValue()->GetChildAtNamePath(
+          {g_buffer, g__storage});
 
     if (!buffer_sp)
       return nullptr;

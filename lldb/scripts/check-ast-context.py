@@ -71,6 +71,8 @@ class Parser(object):
     def find_if(self, f):
         return self.find_if_impl(self.cursor, f)
 
+    def diagnostics(self):
+      return self.parser.diagnostics
 
 class Index(object):
 
@@ -150,6 +152,10 @@ def detect_source_layout(args):
                 'lib',
                 'libclang.dylib')):
             args.llvmbuild = os.path.join(args.llvmbuild, args.llvmbarch)
+    if not(os.path.exists(args.swiftbuild)):
+      args.swiftbuild = os.path.abspath(os.path.join(args.llvmbuild,'..',args.llvmbarch.replace('llvm','swift')))
+      if not(os.path.exists(args.swiftbuild)):
+        return False
     if os.path.isdir(
         os.path.join(
             args.lldb,
@@ -308,6 +314,18 @@ def main():
     parser = index.parse(
         args.file,
         macros + lang + sdk + includes)
+
+    failed = False
+
+    for diag in parser.diagnostics():
+      if diag.severity < clang.cindex.Diagnostic.Error:
+        if args.verbose:
+          print(str(diag))
+      else:
+        print(str(diag))
+        failed = True
+    if failed:
+      sys.exit(1)
 
     def search_lambda(cursor):
         try:

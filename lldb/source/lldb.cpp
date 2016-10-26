@@ -12,7 +12,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(LLDB_REVISION)
 // Xcode writes this file out in a build step.
 // cmake builds get this through another mechanism.
 // Both produce LLDB_REVISION.

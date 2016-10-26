@@ -163,7 +163,8 @@ public:
   virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
                                              uint32_t actual_line);
 
-  virtual lldb::DataBufferSP GetASTData(lldb::LanguageType language);
+  virtual std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language);
 
   virtual bool ForceInlineSourceFileCheck();
 

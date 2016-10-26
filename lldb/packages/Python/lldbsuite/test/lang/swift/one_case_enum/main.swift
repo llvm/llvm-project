@@ -9,21 +9,16 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-protocol Event {
-    
-}
-
-enum SillyEvent : Event {
+enum Event {
     case Goofus
 }
 
-func doStuff<T>(_ event: T) -> T {
-    return event // Set breakpoint here
-}
-
 func main() {
-  var event: Event = SillyEvent.Goofus
-  doStuff(event) // Set breakpoint here
+  var maybeEvent: Event? = .Goofus
+  var event: Event = .Goofus
+  print(event)
+  print(maybeEvent) // Set breakpoint here
 }
 
 main()
+

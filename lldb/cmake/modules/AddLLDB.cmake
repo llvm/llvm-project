@@ -122,6 +122,10 @@ macro(add_lldb_executable name)
             INSTALL_RPATH "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
     endif()
   endif()
+
+  # Might need the following in an else clause for above to cover non-Apple
+  # set(rpath_prefix "$ORIGIN")
+  # set_target_properties(${name} PROPERTIES INSTALL_RPATH "${rpath_prefix}/../lib")
 endmacro(add_lldb_executable)
 
 # Support appending linker flags to an existing target.

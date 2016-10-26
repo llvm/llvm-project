@@ -598,6 +598,126 @@ bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(
       StringPrinter::StringElementType::ASCII>(read_options);
 }
 
+template <int Key> struct TypePreservingNSNumber;
+
+template <> struct TypePreservingNSNumber<0> {
+  typedef int64_t SixtyFourValueType;
+  typedef int32_t ThirtyTwoValueType;
+
+  static constexpr const char *FormatString = "Int(%" PRId64 ")";
+};
+
+template <> struct TypePreservingNSNumber<1> {
+  typedef int64_t ValueType;
+  static constexpr const char *FormatString = "Int64(%" PRId64 ")";
+};
+
+template <> struct TypePreservingNSNumber<2> {
+  typedef int32_t ValueType;
+  static constexpr const char *FormatString = "Int32(%" PRId32 ")";
+};
+
+template <> struct TypePreservingNSNumber<3> {
+  typedef int16_t ValueType;
+  static constexpr const char *FormatString = "Int16(%" PRId16 ")";
+};
+
+template <> struct TypePreservingNSNumber<4> {
+  typedef int8_t ValueType;
+  static constexpr const char *FormatString = "Int8(%" PRId8 ")";
+};
+
+template <> struct TypePreservingNSNumber<5> {
+  typedef uint64_t SixtyFourValueType;
+  typedef uint32_t ThirtyTwoValueType;
+
+  static constexpr const char *FormatString = "UInt(%" PRIu64 ")";
+};
+
+template <> struct TypePreservingNSNumber<6> {
+  typedef uint64_t ValueType;
+  static constexpr const char *FormatString = "UInt64(%" PRIu64 ")";
+};
+
+template <> struct TypePreservingNSNumber<7> {
+  typedef uint32_t ValueType;
+  static constexpr const char *FormatString = "UInt32(%" PRIu32 ")";
+};
+
+template <> struct TypePreservingNSNumber<8> {
+  typedef uint16_t ValueType;
+  static constexpr const char *FormatString = "UInt16(%" PRIu16 ")";
+};
+
+template <> struct TypePreservingNSNumber<9> {
+  typedef uint8_t ValueType;
+  static constexpr const char *FormatString = "UInt8(%" PRIu8 ")";
+};
+
+template <> struct TypePreservingNSNumber<10> {
+  typedef float ValueType;
+  static constexpr const char *FormatString = "Float(%f)";
+};
+
+template <> struct TypePreservingNSNumber<11> {
+  typedef double ValueType;
+  static constexpr const char *FormatString = "Double(%f)";
+};
+
+template <> struct TypePreservingNSNumber<12> {
+  typedef double SixtyFourValueType;
+  typedef float ThirtyTwoValueType;
+
+  static constexpr const char *FormatString = "CGFloat(%f)";
+};
+
+template <> struct TypePreservingNSNumber<13> {
+  typedef bool ValueType;
+  static constexpr const char *FormatString = "Bool(%d)";
+};
+
+template <int Key,
+          typename Value = typename TypePreservingNSNumber<Key>::ValueType>
+bool PrintTypePreservingNSNumber(DataBufferSP buffer_sp, Stream &stream) {
+  Value value;
+  memcpy(&value, buffer_sp->GetBytes(), sizeof(value));
+  stream.Printf(TypePreservingNSNumber<Key>::FormatString, value);
+  return true;
+}
+
+template <>
+bool PrintTypePreservingNSNumber<13, void>(DataBufferSP buffer_sp,
+                                           Stream &stream) {
+  typename TypePreservingNSNumber<13>::ValueType value;
+  memcpy(&value, buffer_sp->GetBytes(), sizeof(value));
+  stream.PutCString(value ? "true" : "false");
+  return true;
+}
+
+template <int Key, typename SixtyFour =
+                       typename TypePreservingNSNumber<Key>::SixtyFourValueType,
+          typename ThirtyTwo =
+              typename TypePreservingNSNumber<Key>::ThirtyTwoValueType>
+bool PrintTypePreservingNSNumber(DataBufferSP buffer_sp, ProcessSP process_sp,
+                                 Stream &stream) {
+  switch (process_sp->GetAddressByteSize()) {
+  case 4: {
+    ThirtyTwo value;
+    memcpy(&value, buffer_sp->GetBytes(), sizeof(value));
+    stream.Printf(TypePreservingNSNumber<Key>::FormatString, (SixtyFour)value);
+    return true;
+  }
+  case 8: {
+    SixtyFour value;
+    memcpy(&value, buffer_sp->GetBytes(), sizeof(value));
+    stream.Printf(TypePreservingNSNumber<Key>::FormatString, value);
+    return true;
+  }
+  }
+
+  llvm_unreachable("unknown address byte size");
+}
+
 bool lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   lldb::addr_t ptr_value(valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
@@ -609,16 +729,16 @@ bool lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider(
     return false;
 
   uint32_t ptr_size = process_sp->GetAddressByteSize();
-  const uint32_t size_of_tag = 4;
+  const uint32_t size_of_tag = 1;
   const uint32_t size_of_payload = 8;
 
-  lldb::addr_t addr_of_tag = ptr_value + ptr_size;
-  lldb::addr_t addr_of_payload = addr_of_tag + size_of_tag;
+  lldb::addr_t addr_of_payload = ptr_value + ptr_size;
+  lldb::addr_t addr_of_tag = addr_of_payload + size_of_payload;
 
   Error read_error;
   uint64_t tag = process_sp->ReadUnsignedIntegerFromMemory(
       addr_of_tag, size_of_tag, 0, read_error);
-  if (read_error.Fail() || tag == 0 || tag > 6)
+  if (read_error.Fail())
     return false;
 
   DataBufferSP buffer_sp(new DataBufferHeap(size_of_payload, 0));
@@ -627,53 +747,34 @@ bool lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider(
   if (read_error.Fail())
     return false;
 
+#define PROCESS_DEPENDENT_TAG(Key)                                             \
+  case Key:                                                                    \
+    return PrintTypePreservingNSNumber<Key>(buffer_sp, process_sp, stream);
+#define PROCESS_INDEPENDENT_TAG(Key)                                           \
+  case Key:                                                                    \
+    return PrintTypePreservingNSNumber<Key>(buffer_sp, stream);
+
   switch (tag) {
-  case 1: // Int
-  {
-    uint64_t payload = 0;
-    memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
-    stream.Printf("Int(%" PRId64 ")", payload);
-    return true;
-  }
-  case 2: // UInt
-  {
-    uint64_t payload = 0;
-    memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
-    stream.Printf("UInt(%" PRIu64 ")", payload);
-    return true;
-  }
-  case 3: // Float
-  {
-    float payload = 0;
-    memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
-    stream.Printf("Float(%f)", payload);
-    return true;
-  }
-  case 4: // Double
-  {
-    double payload = 0;
-    memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
-    stream.Printf("Double(%f)", payload);
-    return true;
-  }
-  case 5: // CGFloat
-  {
-    if (ptr_size == 4) {
-      float payload = 0;
-      memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
-      stream.Printf("CGFloat(%f)", payload);
-      return true;
-    } else if (ptr_size == 8) {
-      double payload = 0;
-      memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
-      stream.Printf("CGFloat(%f)", payload);
-      return true;
-    }
-    break;
-  }
+    PROCESS_DEPENDENT_TAG(0);
+    PROCESS_INDEPENDENT_TAG(1);
+    PROCESS_INDEPENDENT_TAG(2);
+    PROCESS_INDEPENDENT_TAG(3);
+    PROCESS_INDEPENDENT_TAG(4);
+    PROCESS_DEPENDENT_TAG(5);
+    PROCESS_INDEPENDENT_TAG(6);
+    PROCESS_INDEPENDENT_TAG(7);
+    PROCESS_INDEPENDENT_TAG(8);
+    PROCESS_INDEPENDENT_TAG(9);
+    PROCESS_INDEPENDENT_TAG(10);
+    PROCESS_INDEPENDENT_TAG(11);
+    PROCESS_DEPENDENT_TAG(12);
+    PROCESS_INDEPENDENT_TAG(13);
   default:
     break;
   }
+
+#undef PROCESS_DEPENDENT_TAG
+#undef PROCESS_INDEPENDENT_TAG
 
   return false;
 }

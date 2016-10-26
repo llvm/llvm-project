@@ -537,12 +537,16 @@ bool SymbolVendor::SymbolContextShouldBeExcluded(const SymbolContext &sc,
   return false;
 }
 
-DataBufferSP SymbolVendor::GetASTData(lldb::LanguageType language) {
+std::vector<DataBufferSP>
+SymbolVendor::GetASTData(lldb::LanguageType language) {
+  std::vector<DataBufferSP> ast_datas;
+
+  if (language != eLanguageTypeSwift)
+    return ast_datas;
+
   // Sometimes the AST Section data is found from the module, so look there
   // first:
   SectionList *section_list = GetModule()->GetSectionList();
-  if (language != eLanguageTypeSwift)
-    return DataBufferSP();
 
   if (section_list) {
     SectionSP section_sp(
@@ -551,20 +555,20 @@ DataBufferSP SymbolVendor::GetASTData(lldb::LanguageType language) {
       DataExtractor section_data;
 
       if (section_sp->GetSectionData(section_data)) {
-        return DataBufferSP(
+        ast_datas.push_back(DataBufferSP(
             new DataBufferHeap((const char *)section_data.GetDataStart(),
-                               section_data.GetByteSize()));
+                               section_data.GetByteSize())));
+        return ast_datas;
       }
     }
   }
 
   // If we couldn't find it in the Module, then look for it in the SymbolFile:
   SymbolFile *sym_file = GetSymbolFile();
-
   if (sym_file)
-    return sym_file->GetASTData(language);
+    ast_datas = sym_file->GetASTData(language);
 
-  return DataBufferSP();
+  return ast_datas;
 }
 
 bool SymbolVendor::ForceInlineSourceFileCheck() {

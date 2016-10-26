@@ -406,6 +406,9 @@ public:
 
   const swift::irgen::TypeInfo *GetSwiftTypeInfo(void *type);
 
+  const swift::irgen::TypeInfo *GetSwiftTypeInfo(swift::Type container_type,
+                                                 swift::VarDecl *item_decl);
+
   const swift::irgen::FixedTypeInfo *GetSwiftFixedTypeInfo(void *type);
 
   DWARFASTParser *GetDWARFParser() override;
@@ -819,6 +822,8 @@ protected:
 
   bool TargetHasNoSDK();
 
+  std::vector<lldb::DataBufferSP> &GetASTVectorForModule(const Module *module);
+
   std::unique_ptr<swift::SourceManager> m_source_manager_ap;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
   std::unique_ptr<swift::ASTContext> m_ast_context_ap;
@@ -847,7 +852,7 @@ protected:
                                     // target's process pointer be filled in
   std::string m_platform_sdk_path;
   std::string m_resource_dir;
-  typedef std::map<Module *, lldb::DataBufferSP> ASTFileDataMap;
+  typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;
   /// FIXME: this vector is needed because the LLDBNameLookup debugger clients
   /// are being put into
