@@ -31,26 +31,37 @@ def merge_raw_profiles(host_llvm_profdata, profile_data_dir, preserve_profiles):
     print('Done!')
     return profdata_path
 
-def prepare_html_report(host_llvm_cov, profile, report_dir, binary,
+def prepare_html_report(host_llvm_cov, profile, report_dir, binaries,
                         restricted_dirs):
-    print(':: Preparing html report for {0}...'.format(binary), end='')
+    print(':: Preparing html report for {0}...'.format(binaries), end='')
     sys.stdout.flush()
-    binary_report_dir = os.path.join(report_dir, os.path.basename(binary))
-    invocation = [host_llvm_cov, 'show', binary, '-format', 'html',
-                  '-instr-profile', profile, '-o', binary_report_dir,
+    objects = []
+    for i, binary in enumerate(binaries):
+        if i == 0:
+            objects.append(binary)
+        else:
+            objects.extend(('-object', binary))
+    invocation = [host_llvm_cov, 'show'] + objects + ['-format', 'html',
+                  '-instr-profile', profile, '-o', report_dir,
                   '-show-line-counts-or-regions', '-Xdemangler', 'c++filt',
                   '-Xdemangler', '-n'] + restricted_dirs
     subprocess.check_call(invocation)
-    with open(os.path.join(binary_report_dir, 'summary.txt'), 'wb') as Summary:
-        subprocess.check_call([host_llvm_cov, 'report', binary,
-                               '-instr-profile', profile], stdout=Summary)
+    with open(os.path.join(report_dir, 'summary.txt'), 'wb') as Summary:
+        subprocess.check_call([host_llvm_cov, 'report'] + objects +
+                               ['-instr-profile', profile], stdout=Summary)
     print('Done!')
 
 def prepare_html_reports(host_llvm_cov, profdata_path, report_dir, binaries,
-                         restricted_dirs):
-    for binary in binaries:
-        prepare_html_report(host_llvm_cov, profdata_path, report_dir, binary,
+                         unified_report, restricted_dirs):
+    if unified_report:
+        prepare_html_report(host_llvm_cov, profdata_path, report_dir, binaries,
                             restricted_dirs)
+    else:
+        for binary in binaries:
+            binary_report_dir = os.path.join(report_dir,
+                                             os.path.basename(binary))
+            prepare_html_report(host_llvm_cov, profdata_path, binary_report_dir,
+                                [binary], restricted_dirs)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -69,6 +80,8 @@ if __name__ == '__main__':
                        help='Do not delete raw profiles', action='store_true')
     parser.add_argument('--use-existing-profdata',
                        help='Specify an existing indexed profile to use')
+    parser.add_argument('--unified-report', action='store_true',
+                       help='Emit a unified report for all binaries')
     parser.add_argument('--restrict', metavar='R', type=str, nargs='*',
                        default=[],
                        help='Restrict the reporting to the given source paths')
@@ -85,6 +98,10 @@ if __name__ == '__main__':
                                            args.profile_data_dir,
                                            args.preserve_profiles)
 
+    if not len(args.binaries):
+        print('No binaries specified, no work to do!')
+        exit(1)
+
     if not args.only_merge:
         prepare_html_reports(args.host_llvm_cov, profdata_path, args.report_dir,
-                            args.binaries, args.restrict)
+                            args.binaries, args.unified_report, args.restrict)
