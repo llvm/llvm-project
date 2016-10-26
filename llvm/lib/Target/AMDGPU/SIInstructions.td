@@ -147,7 +147,6 @@ def SI_MASK_BRANCH : PseudoInstSI <
   let isBranch = 0;
   let isTerminator = 1;
   let isBarrier = 0;
-  let SALU = 1;
   let Uses = [EXEC];
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;

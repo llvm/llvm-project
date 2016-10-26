@@ -2,6 +2,8 @@
 ;
 ; When the induction variable is widened by indvars, check that the debug loc
 ; associated with the loop increment is correctly propagated.
+; Also, when the exit condition of a loop is rewritten to be a canonical !=
+; comparison, check that the debug loc of the orginal comparison is reused.
 ;
 ; Test case obtained from the following source code:
 ;
@@ -19,10 +21,16 @@
 ; Check that the debug location for the loop increment still refers to
 ; line 4, column 26, discriminator 2.
 ;
+; Check that the canonicalized compare instruction for the loop exit
+; condition still refers to line 4, column 21, discriminator 1.
+;
 ; CHECK-LABEL: for.body:
 ; CHECK: [[PHI:%[0-9a-zA-Z.]+]] = phi i64 [
 ; CHECK-LABEL: for.inc:
 ; CHECK: add nuw nsw i64 [[PHI]], 1, !dbg ![[INDVARMD:[0-9]+]]
+; CHECK: icmp ne i64 %{{.+}}, %{{.+}}, !dbg ![[ICMPMD:[0-9]+]]
+; CHECK-DAG: ![[ICMPMD]] = !DILocation(line: 4, column: 21, scope: ![[ICMPSCOPEMD:[0-9]+]]
+; CHECK-DAG: ![[ICMPSCOPEMD]] = !DILexicalBlockFile(scope: !{{[0-9]+}}, file: !{{[0-9]+}}, discriminator: 1)
 ; CHECK-DAG: ![[INDVARMD]] = !DILocation(line: 4, column: 26, scope: ![[INDVARSCOPEMD:[0-9]+]])
 ; CHECK-DAG: ![[INDVARSCOPEMD]] = !DILexicalBlockFile(scope: !{{[0-9]+}}, file: !{{[0-9]+}}, discriminator: 2)
 

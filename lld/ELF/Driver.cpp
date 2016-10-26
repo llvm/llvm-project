@@ -137,7 +137,7 @@ void LinkerDriver::addFile(StringRef Path) {
   case file_magic::archive:
     if (InWholeArchive) {
       for (MemoryBufferRef MB : getArchiveMembers(MBRef))
-        Files.push_back(createObjectFile(MB, Path));
+        Files.push_back(createObjectFile(Alloc, MB, Path));
       return;
     }
     Files.push_back(new ArchiveFile(MBRef));
@@ -147,13 +147,13 @@ void LinkerDriver::addFile(StringRef Path) {
       error("attempted static link of dynamic object " + Path);
       return;
     }
-    Files.push_back(createSharedFile(MBRef));
+    Files.push_back(createSharedFile(Alloc, MBRef));
     return;
   default:
     if (InLib)
       Files.push_back(new LazyObjectFile(MBRef));
     else
-      Files.push_back(createObjectFile(MBRef));
+      Files.push_back(createObjectFile(Alloc, MBRef));
   }
 }
 

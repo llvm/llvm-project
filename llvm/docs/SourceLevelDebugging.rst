@@ -386,7 +386,7 @@ Given an integer global variable declared as follows:
 
 .. code-block:: c
 
-  int MyGlobal = 100;
+  _Alignas(8) int MyGlobal = 100;
 
 a C/C++ front-end would generate the following descriptors:
 
@@ -395,53 +395,58 @@ a C/C++ front-end would generate the following descriptors:
   ;;
   ;; Define the global itself.
   ;;
-  @MyGlobal = global i32 100, align 4
+  @MyGlobal = global i32 100, align 8, !dbg !0
 
   ;;
   ;; List of debug info of globals
   ;;
-  !llvm.dbg.cu = !{!0}
+  !llvm.dbg.cu = !{!1}
 
   ;; Some unrelated metadata.
   !llvm.module.flags = !{!6, !7}
+  !llvm.ident = !{!8}
+
+  ;; Define the global variable itself
+  !0 = distinct !DIGlobalVariable(name: "MyGlobal", scope: !1, file: !2, line: 1, type: !5, isLocal: false, isDefinition: true, align: 64)
 
   ;; Define the compile unit.
-  !0 = !DICompileUnit(language: DW_LANG_C99, file: !1,
-                      producer:
-                      "clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)",
-                      isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug,
-                      enums: !2, retainedTypes: !2, subprograms: !2, globals:
-                      !3, imports: !2)
+  !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2,
+                               producer: "clang version 4.0.0 (http://llvm.org/git/clang.git ae4deadbea242e8ea517eef662c30443f75bd086) (http://llvm.org/git/llvm.git 818b4c1539df3e51dc7e62c89ead4abfd348827d)",
+                               isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug,
+                               enums: !3, globals: !4)
 
   ;;
   ;; Define the file
   ;;
-  !1 = !DIFile(filename: "/dev/stdin",
+  !2 = !DIFile(filename: "/dev/stdin",
                directory: "/Users/dexonsmith/data/llvm/debug-info")
 
   ;; An empty array.
-  !2 = !{}
+  !3 = !{}
 
   ;; The Array of Global Variables
-  !3 = !{!4}
-
-  ;;
-  ;; Define the global variable itself.
-  ;;
-  !4 = !DIGlobalVariable(name: "MyGlobal", scope: !0, file: !1, line: 1,
-                         type: !5, isLocal: false, isDefinition: true,
-                         variable: i32* @MyGlobal)
+  !4 = !{!0}
 
   ;;
   ;; Define the type
   ;;
-  !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
   ;; Dwarf version to output.
-  !6 = !{i32 2, !"Dwarf Version", i32 2}
+  !6 = !{i32 2, !"Dwarf Version", i32 4}
 
   ;; Debug info schema version.
   !7 = !{i32 2, !"Debug Info Version", i32 3}
+
+  ;; Compiler identification
+  !8 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git ae4deadbea242e8ea517eef662c30443f75bd086) (http://llvm.org/git/llvm.git 818b4c1539df3e51dc7e62c89ead4abfd348827d)"}
+
+
+The align value in DIGlobalVariable description specifies variable alignment in
+case it was forced by C11 _Alignas(), C++11 alignas() keywords or compiler
+attribute __attribute__((aligned ())). In other case (when this field is missing)
+alignment is considered default. This is used when producing DWARF output
+for DW_AT_alignment value.
 
 C/C++ function information
 --------------------------

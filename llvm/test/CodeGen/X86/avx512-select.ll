@@ -159,27 +159,23 @@ define i64 @pr30249() {
   ret i64 %v
 }
 
-define double @pr30561_f64(double %a, double %b, i1 %c) {
+define double @pr30561_f64(double %b, double %a, i1 %c) {
 ; CHECK-LABEL: pr30561_f64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne LBB11_2
-; CHECK-NEXT:  ## BB#1:
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK-NEXT:  LBB11_2:
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %cond = select i1 %c, double %a, double %b
   ret double %cond
 }
 
-define float @pr30561_f32(float %a, float %b, i1 %c) {
+define float @pr30561_f32(float %b, float %a, i1 %c) {
 ; CHECK-LABEL: pr30561_f32:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne LBB12_2
-; CHECK-NEXT:  ## BB#1:
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK-NEXT:  LBB12_2:
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %cond = select i1 %c, float %a, float %b
   ret float %cond

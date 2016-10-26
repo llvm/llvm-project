@@ -227,10 +227,10 @@ DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
   this->File = File;
 }
 
-InputFile *Lazy::fetch() {
+InputFile *Lazy::fetch(BumpPtrAllocator &Alloc) {
   if (auto *S = dyn_cast<LazyArchive>(this))
-    return S->fetch();
-  return cast<LazyObject>(this)->fetch();
+    return S->fetch(Alloc);
+  return cast<LazyObject>(this)->fetch(Alloc);
 }
 
 LazyArchive::LazyArchive(ArchiveFile &File,
@@ -244,21 +244,22 @@ LazyObject::LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
   this->File = &File;
 }
 
-InputFile *LazyArchive::fetch() {
+InputFile *LazyArchive::fetch(BumpPtrAllocator &Alloc) {
   std::pair<MemoryBufferRef, uint64_t> MBInfo = file()->getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
   if (MBInfo.first.getBuffer().empty())
     return nullptr;
-  return createObjectFile(MBInfo.first, file()->getName(), MBInfo.second);
+  return createObjectFile(Alloc, MBInfo.first, file()->getName(),
+                          MBInfo.second);
 }
 
-InputFile *LazyObject::fetch() {
+InputFile *LazyObject::fetch(BumpPtrAllocator &Alloc) {
   MemoryBufferRef MBRef = file()->getBuffer();
   if (MBRef.getBuffer().empty())
     return nullptr;
-  return createObjectFile(MBRef);
+  return createObjectFile(Alloc, MBRef);
 }
 
 bool Symbol::includeInDynsym() const {
