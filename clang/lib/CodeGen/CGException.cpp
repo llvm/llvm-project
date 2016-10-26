@@ -1433,7 +1433,8 @@ struct PerformSEHFinally final : EHScopeStack::Cleanup {
     const CGFunctionInfo &FnInfo =
         CGM.getTypes().arrangeBuiltinFunctionCall(Context.VoidTy, Args);
 
-    CGF.EmitCall(FnInfo, OutlinedFinally, ReturnValueSlot(), Args);
+    auto Callee = CGCallee::forDirect(OutlinedFinally);
+    CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args);
   }
 };
 } // end anonymous namespace

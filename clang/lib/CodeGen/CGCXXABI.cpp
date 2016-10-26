@@ -73,7 +73,7 @@ CGCXXABI::ConvertMemberPointerType(const MemberPointerType *MPT) {
   return CGM.getTypes().ConvertType(CGM.getContext().getPointerDiffType());
 }
 
-llvm::Value *CGCXXABI::EmitLoadOfMemberFunctionPointer(
+CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
     CodeGenFunction &CGF, const Expr *E, Address This,
     llvm::Value *&ThisPtrForCall,
     llvm::Value *MemPtr, const MemberPointerType *MPT) {
@@ -86,7 +86,8 @@ llvm::Value *CGCXXABI::EmitLoadOfMemberFunctionPointer(
     cast<CXXRecordDecl>(MPT->getClass()->getAs<RecordType>()->getDecl());
   llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(
       CGM.getTypes().arrangeCXXMethodType(RD, FPT, /*FD=*/nullptr));
-  return llvm::Constant::getNullValue(FTy->getPointerTo());
+  llvm::Constant *FnPtr = llvm::Constant::getNullValue(FTy->getPointerTo());
+  return CGCallee::forDirect(FnPtr, FPT);
 }
 
 llvm::Value *

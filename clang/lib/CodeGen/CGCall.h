@@ -41,6 +41,131 @@ namespace clang {
 namespace CodeGen {
   typedef SmallVector<llvm::AttributeSet, 8> AttributeListType;
 
+  /// Abstract information about a function or function prototype.
+  class CGCalleeInfo {
+    /// \brief The function prototype of the callee.
+    const FunctionProtoType *CalleeProtoTy;
+    /// \brief The function declaration of the callee.
+    const Decl *CalleeDecl;
+
+  public:
+    explicit CGCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl(nullptr) {}
+    CGCalleeInfo(const FunctionProtoType *calleeProtoTy, const Decl *calleeDecl)
+        : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
+    CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
+        : CalleeProtoTy(calleeProtoTy), CalleeDecl(nullptr) {}
+    CGCalleeInfo(const Decl *calleeDecl)
+        : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
+
+    const FunctionProtoType *getCalleeFunctionProtoType() const {
+      return CalleeProtoTy;
+    }
+    const Decl *getCalleeDecl() const { return CalleeDecl; }
+  };
+
+  /// All available information about a concrete callee.
+  class CGCallee {
+    enum class SpecialKind : uintptr_t {
+      Invalid,
+      Builtin,
+      PseudoDestructor,
+
+      Last = PseudoDestructor
+    };
+
+    SpecialKind KindOrFunctionPointer;
+    union {
+      CGCalleeInfo AbstractInfo;
+      struct {
+        const FunctionDecl *Decl;
+        unsigned ID;
+      } BuiltinInfo;
+      struct {
+        const CXXPseudoDestructorExpr *Expr;
+      } PseudoDestructorInfo;
+    };
+
+    explicit CGCallee(SpecialKind kind) : KindOrFunctionPointer(kind) {}
+
+    CGCallee(const FunctionDecl *builtinDecl, unsigned builtinID)
+        : KindOrFunctionPointer(SpecialKind::Builtin) {
+      BuiltinInfo.Decl = builtinDecl;
+      BuiltinInfo.ID = builtinID;
+    }
+
+  public:
+    CGCallee() : KindOrFunctionPointer(SpecialKind::Invalid) {}
+
+    /// Construct a callee.  Call this constructor directly when this
+    /// isn't a direct call.
+    CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr)
+        : KindOrFunctionPointer(SpecialKind(uintptr_t(functionPtr))) {
+      AbstractInfo = abstractInfo;
+      assert(functionPtr && "configuring callee without function pointer");
+      assert(functionPtr->getType()->isPointerTy());
+      assert(functionPtr->getType()->getPointerElementType()->isFunctionTy());
+    }
+
+    static CGCallee forBuiltin(unsigned builtinID,
+                               const FunctionDecl *builtinDecl) {
+      CGCallee result(SpecialKind::Builtin);
+      result.BuiltinInfo.Decl = builtinDecl;
+      result.BuiltinInfo.ID = builtinID;
+      return result;
+    }
+
+    static CGCallee forPseudoDestructor(const CXXPseudoDestructorExpr *E) {
+      CGCallee result(SpecialKind::PseudoDestructor);
+      result.PseudoDestructorInfo.Expr = E;
+      return result;
+    }
+
+    static CGCallee forDirect(llvm::Constant *functionPtr,
+                        const CGCalleeInfo &abstractInfo = CGCalleeInfo()) {
+      return CGCallee(abstractInfo, functionPtr);
+    }
+
+    bool isBuiltin() const {
+      return KindOrFunctionPointer == SpecialKind::Builtin;
+    }
+    const FunctionDecl *getBuiltinDecl() const {
+      assert(isBuiltin());
+      return BuiltinInfo.Decl;
+    }
+    unsigned getBuiltinID() const {
+      assert(isBuiltin());
+      return BuiltinInfo.ID;
+    }
+
+    bool isPseudoDestructor() const {
+      return KindOrFunctionPointer == SpecialKind::PseudoDestructor;
+    }
+    const CXXPseudoDestructorExpr *getPseudoDestructorExpr() const {
+      assert(isPseudoDestructor());
+      return PseudoDestructorInfo.Expr;
+    }
+
+    bool isOrdinary() const {
+      return uintptr_t(KindOrFunctionPointer) > uintptr_t(SpecialKind::Last);
+    }
+    const CGCalleeInfo &getAbstractInfo() const {
+      assert(isOrdinary());
+      return AbstractInfo;
+    }
+    llvm::Value *getFunctionPointer() const {
+      assert(isOrdinary());
+      return reinterpret_cast<llvm::Value*>(uintptr_t(KindOrFunctionPointer));
+    }
+    llvm::FunctionType *getFunctionType() const {
+      return cast<llvm::FunctionType>(
+                    getFunctionPointer()->getType()->getPointerElementType());
+    }
+    void setFunctionPointer(llvm::Value *functionPtr) {
+      assert(isOrdinary());
+      KindOrFunctionPointer = SpecialKind(uintptr_t(functionPtr));
+    }
+  };
+
   struct CallArg {
     RValue RV;
     QualType Ty;

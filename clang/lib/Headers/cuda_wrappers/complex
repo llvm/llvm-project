@@ -21,7 +21,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#pragma once
+#ifndef __CLANG_CUDA_WRAPPERS_COMPLEX
+#define __CLANG_CUDA_WRAPPERS_COMPLEX
 
 // Wrapper around <complex> that forces its functions to be __host__
 // __device__.
@@ -77,3 +78,5 @@
 #pragma pop_macro("_GLIBCXX_USE_C99_COMPLEX")
 
 #pragma clang force_cuda_host_device end
+
+#endif // include guard

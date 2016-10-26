@@ -1937,7 +1937,7 @@ private:
 public:
   void HandlePragmaOnce(Token &OnceTok);
   void HandlePragmaMark();
-  void HandlePragmaPoison(Token &PoisonTok);
+  void HandlePragmaPoison();
   void HandlePragmaSystemHeader(Token &SysHeaderTok);
   void HandlePragmaDependency(Token &DependencyTok);
   void HandlePragmaPushMacro(Token &Tok);
