@@ -250,6 +250,7 @@ kNumDescriptionLevels = _lldb.kNumDescriptionLevels
 eScriptLanguageNone = _lldb.eScriptLanguageNone
 eScriptLanguagePython = _lldb.eScriptLanguagePython
 eScriptLanguageDefault = _lldb.eScriptLanguageDefault
+eScriptLanguageUnknown = _lldb.eScriptLanguageUnknown
 eRegisterKindEHFrame = _lldb.eRegisterKindEHFrame
 eRegisterKindDWARF = _lldb.eRegisterKindDWARF
 eRegisterKindGeneric = _lldb.eRegisterKindGeneric
@@ -398,6 +399,10 @@ eNumInstrumentationRuntimeTypes = _lldb.eNumInstrumentationRuntimeTypes
 eNoDynamicValues = _lldb.eNoDynamicValues
 eDynamicCanRunTarget = _lldb.eDynamicCanRunTarget
 eDynamicDontRunTarget = _lldb.eDynamicDontRunTarget
+eStopShowColumnAnsiOrCaret = _lldb.eStopShowColumnAnsiOrCaret
+eStopShowColumnAnsi = _lldb.eStopShowColumnAnsi
+eStopShowColumnCaret = _lldb.eStopShowColumnCaret
+eStopShowColumnNone = _lldb.eStopShowColumnNone
 eAccessNone = _lldb.eAccessNone
 eAccessPublic = _lldb.eAccessPublic
 eAccessPrivate = _lldb.eAccessPrivate
@@ -1702,6 +1707,14 @@ class SBBreakpoint(_object):
         """
         return _lldb.SBBreakpoint_SetScriptCallbackBody(self, *args)
 
+    def SetCommandLineCommands(self, *args):
+        """SetCommandLineCommands(self, SBStringList commands)"""
+        return _lldb.SBBreakpoint_SetCommandLineCommands(self, *args)
+
+    def GetCommandLineCommands(self, *args):
+        """GetCommandLineCommands(self, SBStringList commands) -> bool"""
+        return _lldb.SBBreakpoint_GetCommandLineCommands(self, *args)
+
     def AddName(self, *args):
         """AddName(self, str new_name) -> bool"""
         return _lldb.SBBreakpoint_AddName(self, *args)
@@ -1727,7 +1740,10 @@ class SBBreakpoint(_object):
         return _lldb.SBBreakpoint_GetNumLocations(self)
 
     def GetDescription(self, *args):
-        """GetDescription(self, SBStream description) -> bool"""
+        """
+        GetDescription(self, SBStream description) -> bool
+        GetDescription(self, SBStream description, bool include_locations) -> bool
+        """
         return _lldb.SBBreakpoint_GetDescription(self, *args)
 
     def __eq__(self, *args):
@@ -1858,6 +1874,58 @@ def SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(*args):
 def SBBreakpoint_GetNumBreakpointLocationsFromEvent(*args):
     """SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"""
     return _lldb.SBBreakpoint_GetNumBreakpointLocationsFromEvent(*args)
+
+
+class SBBreakpointList(_object):
+    """Proxy of C++ lldb::SBBreakpointList class"""
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBBreakpointList, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBBreakpointList, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        """__init__(self, SBTarget target) -> SBBreakpointList"""
+        this = _lldb.new_SBBreakpointList(*args)
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
+    __swig_destroy__ = _lldb.delete_SBBreakpointList
+    __del__ = lambda self: None
+
+    def GetSize(self):
+        """GetSize(self) -> size_t"""
+        return _lldb.SBBreakpointList_GetSize(self)
+
+    def GetBreakpointAtIndex(self, *args):
+        """GetBreakpointAtIndex(self, size_t idx) -> SBBreakpoint"""
+        return _lldb.SBBreakpointList_GetBreakpointAtIndex(self, *args)
+
+    def FindBreakpointByID(self, *args):
+        """FindBreakpointByID(self, break_id_t arg0) -> SBBreakpoint"""
+        return _lldb.SBBreakpointList_FindBreakpointByID(self, *args)
+
+    def Append(self, *args):
+        """Append(self, SBBreakpoint sb_bkpt)"""
+        return _lldb.SBBreakpointList_Append(self, *args)
+
+    def AppendIfUnique(self, *args):
+        """AppendIfUnique(self, SBBreakpoint sb_bkpt) -> bool"""
+        return _lldb.SBBreakpointList_AppendIfUnique(self, *args)
+
+    def AppendByID(self, *args):
+        """AppendByID(self, break_id_t id)"""
+        return _lldb.SBBreakpointList_AppendByID(self, *args)
+
+    def Clear(self):
+        """Clear(self)"""
+        return _lldb.SBBreakpointList_Clear(self)
+
+SBBreakpointList_swigregister = _lldb.SBBreakpointList_swigregister
+SBBreakpointList_swigregister(SBBreakpointList)
 
 
 class SBBreakpointLocation(_object):
@@ -8768,6 +8836,10 @@ class SBSection(_object):
         """GetSectionType(self) -> SectionType"""
         return _lldb.SBSection_GetSectionType(self)
 
+    def GetPermissions(self):
+        """GetPermissions(self) -> uint32_t"""
+        return _lldb.SBSection_GetPermissions(self)
+
     def GetTargetByteSize(self):
         """
         GetTargetByteSize(self) -> uint32_t
@@ -8932,6 +9004,15 @@ class SBSourceManager(_object):
             SBStream s) -> size_t
         """
         return _lldb.SBSourceManager_DisplaySourceLinesWithLineNumbers(
+            self, *args)
+
+    def DisplaySourceLinesWithLineNumbersAndColumn(self, *args):
+        """
+        DisplaySourceLinesWithLineNumbersAndColumn(self, SBFileSpec file, uint32_t line, uint32_t column, uint32_t context_before,
+            uint32_t context_after,
+            str current_line_cstr, SBStream s) -> size_t
+        """
+        return _lldb.SBSourceManager_DisplaySourceLinesWithLineNumbersAndColumn(
             self, *args)
 
 SBSourceManager_swigregister = _lldb.SBSourceManager_swigregister
@@ -10291,6 +10372,8 @@ class SBTarget(_object):
         BreakpointCreateByLocation(self, str file, uint32_t line) -> SBBreakpoint
         BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line) -> SBBreakpoint
         BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line, addr_t offset) -> SBBreakpoint
+        BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line, addr_t offset,
+            SBFileSpecList module_list) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByLocation(self, *args)
 
@@ -10370,6 +10453,10 @@ class SBTarget(_object):
         """FindBreakpointByID(self, break_id_t break_id) -> SBBreakpoint"""
         return _lldb.SBTarget_FindBreakpointByID(self, *args)
 
+    def FindBreakpointsByName(self, *args):
+        """FindBreakpointsByName(self, str name, SBBreakpointList bkpt_list) -> bool"""
+        return _lldb.SBTarget_FindBreakpointsByName(self, *args)
+
     def EnableAllBreakpoints(self):
         """EnableAllBreakpoints(self) -> bool"""
         return _lldb.SBTarget_EnableAllBreakpoints(self)
@@ -10381,6 +10468,38 @@ class SBTarget(_object):
     def DeleteAllBreakpoints(self):
         """DeleteAllBreakpoints(self) -> bool"""
         return _lldb.SBTarget_DeleteAllBreakpoints(self)
+
+    def BreakpointsCreateFromFile(self, *args):
+        """
+        BreakpointsCreateFromFile(self, SBFileSpec source_file, SBBreakpointList bkpt_list) -> SBError
+        BreakpointsCreateFromFile(self, SBFileSpec source_file, SBStringList matching_names,
+            SBBreakpointList new_bps) -> SBError
+
+        Read breakpoints from source_file and return the newly created
+        breakpoints in bkpt_list.
+
+        @param[in] source_file
+           The file from which to read the breakpoints
+
+        @param[in] matching_names
+           Only read in breakpoints whose names match one of the names in this
+           list.
+
+        @param[out] bkpt_list
+           A list of the newly created breakpoints.
+
+        @return
+            An SBError detailing any errors in reading in the breakpoints.
+        """
+        return _lldb.SBTarget_BreakpointsCreateFromFile(self, *args)
+
+    def BreakpointsWriteToFile(self, *args):
+        """
+        BreakpointsWriteToFile(self, SBFileSpec dest_file) -> SBError
+        BreakpointsWriteToFile(self, SBFileSpec dest_file, SBBreakpointList bkpt_list, bool append = False) -> SBError
+        BreakpointsWriteToFile(self, SBFileSpec dest_file, SBBreakpointList bkpt_list) -> SBError
+        """
+        return _lldb.SBTarget_BreakpointsWriteToFile(self, *args)
 
     def GetNumWatchpoints(self):
         """GetNumWatchpoints(self) -> uint32_t"""
