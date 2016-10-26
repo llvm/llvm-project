@@ -58,8 +58,11 @@ if __name__ == '__main__':
                        help='Path to the directory containing the raw profiles')
     parser.add_argument('report_dir',
                        help='Path to the output directory for html reports')
-    parser.add_argument('binaries', metavar='B', type=str, nargs='+',
+    parser.add_argument('binaries', metavar='B', type=str, nargs='*',
                        help='Path to an instrumented binary')
+    parser.add_argument('--only-merge', action='store_true',
+                        help='Only merge raw profiles together, skip report '
+                             'generation')
     parser.add_argument('--preserve-profiles',
                        help='Do not delete raw profiles', action='store_true')
     parser.add_argument('--use-existing-profdata',
@@ -69,6 +72,10 @@ if __name__ == '__main__':
                        help='Restrict the reporting to the given source paths')
     args = parser.parse_args()
 
+    if args.use_existing_profdata and args.only_merge:
+        print '--use-existing-profdata and --only-merge are incompatible'
+        exit(1)
+
     if args.use_existing_profdata:
         profdata_path = args.use_existing_profdata
     else:
@@ -76,5 +83,6 @@ if __name__ == '__main__':
                                            args.profile_data_dir,
                                            args.preserve_profiles)
 
-    prepare_html_reports(args.host_llvm_cov, profdata_path, args.report_dir,
-                         args.binaries, args.restrict)
+    if not args.only_merge:
+        prepare_html_reports(args.host_llvm_cov, profdata_path, args.report_dir,
+                            args.binaries, args.restrict)
