@@ -261,8 +261,9 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Target->NeedsThunks)
     forEachRelSec(createThunks<ELFT>);
 
-  CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
-  CommonInputSection<ELFT>::X = &Common;
+  InputSection<ELFT> Common =
+      InputSection<ELFT>::createCommonInputSection(getCommonSymbols<ELFT>());
+  InputSection<ELFT>::CommonInputSection = &Common;
 
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
@@ -825,8 +826,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // If linker script processor hasn't added common symbol section yet,
   // then add it to .bss now.
-  if (!CommonInputSection<ELFT>::X->OutSec) {
-    Out<ELFT>::Bss->addSection(CommonInputSection<ELFT>::X);
+  if (!InputSection<ELFT>::CommonInputSection->OutSec) {
+    Out<ELFT>::Bss->addSection(InputSection<ELFT>::CommonInputSection);
     Out<ELFT>::Bss->assignOffsets();
   }
 

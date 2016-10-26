@@ -110,8 +110,6 @@ private:
   void InterruptCallback();
   void MutateAndTestOne();
   void ReportNewCoverage(InputInfo *II, const Unit &U);
-  void PrintNewPCs();
-  void PrintOneNewPC(uintptr_t PC);
   size_t RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);

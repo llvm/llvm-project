@@ -1,12 +1,10 @@
 ; RUN: llc -march=sparc < %s | FileCheck %s
 declare void @stack_realign_helper(i32 %a, i32* %b)
 
-@foo = global i32 1
-
 ;; This is a function where we have a local variable of 64-byte
 ;; alignment.  We want to see that the stack is aligned (the initial
-;; andn), that the local var is accessed via stack pointer (to %o0), and that
-;; the argument is accessed via frame pointer not stack pointer (to %o1).
+;; andn), that the local var is accessed via stack pointer (to %o1), and that
+;; the argument is accessed via frame pointer not stack pointer (to %o0).
 
 ;; CHECK-LABEL: stack_realign:
 ;; CHECK:      andn %sp, 63, %sp

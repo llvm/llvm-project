@@ -1,10 +1,11 @@
 // RUN: %clang -no-canonical-prefixes -### -target sparc-myriad-rtems-elf %s \
+// RUN: -ccc-install-dir %S/Inputs/basic_myriad_tree/bin \
 // RUN: --gcc-toolchain=%S/Inputs/basic_myriad_tree 2>&1 | FileCheck %s -check-prefix=LINK_WITH_RTEMS
 // LINK_WITH_RTEMS: Inputs{{.*}}crti.o
 // LINK_WITH_RTEMS: Inputs{{.*}}crtbegin.o
-// LINK_WITH_RTEMS: "-L{{.*}}Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2/../../..{{/|\\\\}}../sparc-myriad-elf/lib"
 // LINK_WITH_RTEMS: "-L{{.*}}Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2"
-// LINK_WITH_RTEMS: "--start-group" "-lc" "-lrtemscpu" "-lrtemsbsp" "--end-group" "-lgcc"
+// LINK_WITH_RTEMS: "-L{{.*}}Inputs/basic_myriad_tree/bin/../sparc-myriad-elf/lib"
+// LINK_WITH_RTEMS: "--start-group" "-lc" "-lgcc" "-lrtemscpu" "-lrtemsbsp" "--end-group"
 // LINK_WITH_RTEMS: Inputs{{.*}}crtend.o
 // LINK_WITH_RTEMS: Inputs{{.*}}crtn.o
 

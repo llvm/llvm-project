@@ -135,6 +135,11 @@ add_executable(LLVMFuzzer-Unittest
   FuzzerFnAdapterUnittest.cpp
   )
 
+add_executable(LLVMFuzzer-StandaloneInitializeTest
+  InitializeTest.cpp
+  ../standalone/StandaloneFuzzTargetMain.c
+  )
+
 target_link_libraries(LLVMFuzzer-Unittest
   gtest
   gtest_main
@@ -150,6 +155,13 @@ set_target_properties(LLVMFuzzer-Unittest
   PROPERTIES RUNTIME_OUTPUT_DIRECTORY
   "${CMAKE_CURRENT_BINARY_DIR}"
 )
+
+set(TestBinaries ${TestBinaries} LLVMFuzzer-StandaloneInitializeTest)
+set_target_properties(LLVMFuzzer-StandaloneInitializeTest
+  PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+  "${CMAKE_CURRENT_BINARY_DIR}"
+)
+
 ###############################################################################
 # Additional tests
 ###############################################################################

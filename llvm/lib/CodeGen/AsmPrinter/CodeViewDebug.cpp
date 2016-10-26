@@ -1786,8 +1786,11 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
       unsigned VBPtrOffset = 0;
       // FIXME: Despite the accessor name, the offset is really in bytes.
       unsigned VBTableIndex = I->getOffsetInBits() / 4;
+      auto RecordKind = (I->getFlags() & DINode::FlagIndirectVirtualBase) == DINode::FlagIndirectVirtualBase
+                            ? TypeRecordKind::IndirectVirtualBaseClass
+                            : TypeRecordKind::VirtualBaseClass;
       Fields.writeMemberType(VirtualBaseClassRecord(
-          translateAccessFlags(Ty->getTag(), I->getFlags()),
+          RecordKind, translateAccessFlags(Ty->getTag(), I->getFlags()),
           getTypeIndex(I->getBaseType()), getVBPTypeIndex(), VBPtrOffset,
           VBTableIndex));
     } else {

@@ -1199,11 +1199,11 @@ private:
 class VirtualBaseClassRecord : public TypeRecord {
 public:
   explicit VirtualBaseClassRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
-  VirtualBaseClassRecord(MemberAccess Access, TypeIndex BaseType,
-                         TypeIndex VBPtrType, uint64_t Offset, uint64_t Index)
-      : TypeRecord(TypeRecordKind::VirtualBaseClass), Access(Access),
-        BaseType(BaseType), VBPtrType(VBPtrType), VBPtrOffset(Offset),
-        VTableIndex(Index) {}
+  VirtualBaseClassRecord(TypeRecordKind Kind, MemberAccess Access,
+                         TypeIndex BaseType, TypeIndex VBPtrType,
+                         uint64_t Offset, uint64_t Index)
+      : TypeRecord(Kind), Access(Access), BaseType(BaseType),
+        VBPtrType(VBPtrType), VBPtrOffset(Offset), VTableIndex(Index) {}
 
   /// Rewrite member type indices with IndexMap. Returns false if a type index
   /// is not in the map.

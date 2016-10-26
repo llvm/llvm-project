@@ -2791,6 +2791,15 @@ bool FunctionProtoType::hasDependentExceptionSpec() const {
   return false;
 }
 
+bool FunctionProtoType::hasInstantiationDependentExceptionSpec() const {
+  if (Expr *NE = getNoexceptExpr())
+    return NE->isInstantiationDependent();
+  for (QualType ET : exceptions())
+    if (ET->isInstantiationDependentType())
+      return true;
+  return false;
+}
+
 FunctionProtoType::NoexceptResult
 FunctionProtoType::getNoexceptSpec(const ASTContext &ctx) const {
   ExceptionSpecificationType est = getExceptionSpecType();
