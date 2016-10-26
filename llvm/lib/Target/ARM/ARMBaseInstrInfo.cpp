@@ -2077,29 +2077,40 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
   int RegListIdx = IsT1PushPop ? 2 : 4;
 
   // Calculate the space we'll need in terms of registers.
-  unsigned FirstReg = MI->getOperand(RegListIdx).getReg();
-  unsigned RD0Reg, RegsNeeded;
+  unsigned RegsNeeded;
+  const TargetRegisterClass *RegClass;
   if (IsVFPPushPop) {
-    RD0Reg = ARM::D0;
     RegsNeeded = NumBytes / 8;
+    RegClass = &ARM::DPRRegClass;
   } else {
-    RD0Reg = ARM::R0;
     RegsNeeded = NumBytes / 4;
+    RegClass = &ARM::GPRRegClass;
   }
 
   // We're going to have to strip all list operands off before
   // re-adding them since the order matters, so save the existing ones
   // for later.
   SmallVector<MachineOperand, 4> RegList;
-  for (int i = MI->getNumOperands() - 1; i >= RegListIdx; --i)
-    RegList.push_back(MI->getOperand(i));
+
+  // We're also going to need the first register transferred by this
+  // instruction, which won't necessarily be the first register in the list.
+  unsigned FirstRegEnc = -1;
 
   const TargetRegisterInfo *TRI = MF.getRegInfo().getTargetRegisterInfo();
+  for (int i = MI->getNumOperands() - 1; i >= RegListIdx; --i) {
+    MachineOperand &MO = MI->getOperand(i);
+    RegList.push_back(MO);
+
+    if (MO.isReg() && TRI->getEncodingValue(MO.getReg()) < FirstRegEnc)
+      FirstRegEnc = TRI->getEncodingValue(MO.getReg());
+  }
+
   const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(&MF);
 
   // Now try to find enough space in the reglist to allocate NumBytes.
-  for (unsigned CurReg = FirstReg - 1; CurReg >= RD0Reg && RegsNeeded;
-       --CurReg) {
+  for (int CurRegEnc = FirstRegEnc - 1; CurRegEnc >= 0 && RegsNeeded;
+       --CurRegEnc) {
+    unsigned CurReg = RegClass->getRegister(CurRegEnc);
     if (!IsPop) {
       // Pushing any register is completely harmless, mark the
       // register involved as undef since we don't care about it in

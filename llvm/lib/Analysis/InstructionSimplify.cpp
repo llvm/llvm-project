@@ -2857,6 +2857,17 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       return getTrue(ITy);
   }
 
+  // x >=u x >> y
+  // x >=u x udiv y.
+  if (RBO && (match(RBO, m_LShr(m_Specific(LHS), m_Value())) ||
+              match(RBO, m_UDiv(m_Specific(LHS), m_Value())))) {
+    // icmp pred X, (X op Y)
+    if (Pred == ICmpInst::ICMP_ULT)
+      return getFalse(ITy);
+    if (Pred == ICmpInst::ICMP_UGE)
+      return getTrue(ITy);
+  }
+
   // handle:
   //   CI2 << X == CI
   //   CI2 << X != CI

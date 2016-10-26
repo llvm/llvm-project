@@ -143,4 +143,28 @@ entry:
   ret void
 }
 
+; Function Attrs: nounwind readnone
+define <4 x float> @testXVIEXPSP(<4 x i32> %a, <4 x i32> %b) {
+entry:
+  %0 = tail call <4 x float> @llvm.ppc.vsx.xviexpsp(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x float> %0
+; CHECK-LABEL: testXVIEXPSP
+; CHECK: xviexpsp 34, 34, 35
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <4 x float> @llvm.ppc.vsx.xviexpsp(<4 x i32>, <4 x i32>)
+
+; Function Attrs: nounwind readnone
+define <2 x double> @testXVIEXPDP(<2 x i64> %a, <2 x i64> %b) {
+entry:
+  %0 = tail call <2 x double> @llvm.ppc.vsx.xviexpdp(<2 x i64> %a, <2 x i64> %b)
+  ret <2 x double> %0
+; CHECK-LABEL: testXVIEXPDP
+; CHECK: xviexpdp 34, 34, 35
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <2 x double> @llvm.ppc.vsx.xviexpdp(<2 x i64>, <2 x i64>)
+
 declare void @sink(...)

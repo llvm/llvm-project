@@ -855,7 +855,7 @@ public:
   }
 
   bool getExactInverse(APFloat *inv) const {
-    return IEEE.getExactInverse(&inv->IEEE);
+    return IEEE.getExactInverse(inv ? &inv->IEEE : nullptr);
   }
 
   friend hash_code hash_value(const APFloat &Arg);
