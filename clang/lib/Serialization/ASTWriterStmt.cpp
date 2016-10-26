@@ -2520,6 +2520,12 @@ void ASTStmtWriter::VisitOMPTeamsDistributeDirective(
   Code = serialization::STMT_OMP_TEAMS_DISTRIBUTE_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPTeamsDistributeSimdDirective(
+    OMPTeamsDistributeSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE;
+}
+
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//

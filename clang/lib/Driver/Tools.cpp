@@ -9748,6 +9748,14 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arch == llvm::Triple::armeb || Arch == llvm::Triple::thumbeb)
     arm::appendEBLinkFlags(Args, CmdArgs, Triple);
 
+  // Most Android ARM64 targets should enable the linker fix for erratum
+  // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.
+  if (Arch == llvm::Triple::aarch64 && isAndroid) {
+    std::string CPU = getCPUName(Args, Triple);
+    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+      CmdArgs.push_back("--fix-cortex-a53-843419");
+  }
+
   for (const auto &Opt : ToolChain.ExtraOpts)
     CmdArgs.push_back(Opt.c_str());
 
@@ -11341,6 +11349,8 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
   bool UseDefaultLibs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs);
+  // Silence warning if the args contain both -nostdlib and -stdlib=.
+  Args.getLastArg(options::OPT_stdlib_EQ);
 
   if (T.getArch() == llvm::Triple::sparc)
     CmdArgs.push_back("-EB");
@@ -11381,19 +11391,25 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (UseDefaultLibs) {
     if (NeedsSanitizerDeps)
       linkSanitizerRuntimeDeps(TC, CmdArgs);
-    if (C.getDriver().CCCIsCXX())
-      CmdArgs.push_back("-lstdc++");
+    if (C.getDriver().CCCIsCXX()) {
+      if (TC.GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) {
+        CmdArgs.push_back("-lc++");
+        CmdArgs.push_back("-lc++abi");
+      } else
+        CmdArgs.push_back("-lstdc++");
+    }
     if (T.getOS() == llvm::Triple::RTEMS) {
       CmdArgs.push_back("--start-group");
       CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lgcc"); // circularly dependent on rtems
       // You must provide your own "-L" option to enable finding these.
       CmdArgs.push_back("-lrtemscpu");
       CmdArgs.push_back("-lrtemsbsp");
       CmdArgs.push_back("--end-group");
     } else {
       CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lgcc");
     }
-    CmdArgs.push_back("-lgcc");
   }
   if (UseStartfiles) {
     CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtend.o")));

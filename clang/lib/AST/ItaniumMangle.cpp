@@ -2245,6 +2245,22 @@ void CXXNameMangler::mangleType(QualType T) {
   //     they aren't written.
   //   - Conversions on non-type template arguments need to be expressed, since
   //     they can affect the mangling of sizeof/alignof.
+  //
+  // FIXME: This is wrong when mapping to the canonical type for a dependent
+  // type discards instantiation-dependent portions of the type, such as for:
+  //
+  //   template<typename T, int N> void f(T (&)[sizeof(N)]);
+  //   template<typename T> void f(T() throw(typename T::type)); (pre-C++17)
+  //
+  // It's also wrong in the opposite direction when instantiation-dependent,
+  // canonically-equivalent types differ in some irrelevant portion of inner
+  // type sugar. In such cases, we fail to form correct substitutions, eg:
+  //
+  //   template<int N> void f(A<sizeof(N)> *, A<sizeof(N)> (*));
+  //
+  // We should instead canonicalize the non-instantiation-dependent parts,
+  // regardless of whether the type as a whole is dependent or instantiation
+  // dependent.
   if (!T->isInstantiationDependentType() || T->isDependentType())
     T = T.getCanonicalType();
   else {
@@ -2546,6 +2562,24 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
   // Mangle CV-qualifiers, if present.  These are 'this' qualifiers,
   // e.g. "const" in "int (A::*)() const".
   mangleQualifiers(Qualifiers::fromCVRMask(T->getTypeQuals()));
+
+  // Mangle instantiation-dependent exception-specification, if present,
+  // per cxx-abi-dev proposal on 2016-10-11.
+  if (T->hasInstantiationDependentExceptionSpec()) {
+    if (T->getExceptionSpecType() == EST_ComputedNoexcept) {
+      Out << "nX";
+      mangleExpression(T->getNoexceptExpr());
+      Out << "E";
+    } else {
+      assert(T->getExceptionSpecType() == EST_Dynamic);
+      Out << "tw";
+      for (auto ExceptTy : T->exceptions())
+        mangleType(ExceptTy);
+      Out << "E";
+    }
+  } else if (T->isNothrow(getASTContext())) {
+    Out << "nx";
+  }
 
   Out << 'F';
 

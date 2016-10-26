@@ -1014,11 +1014,11 @@ void Preprocessor::HandleDirective(Token &Result) {
     case tok::pp_define:
       return HandleDefineDirective(Result, ImmediatelyAfterTopLevelIfndef);
     case tok::pp_undef:
-      return HandleUndefDirective(Result);
+      return HandleUndefDirective();
 
     // C99 6.10.4 - Line Control.
     case tok::pp_line:
-      return HandleLineDirective(Result);
+      return HandleLineDirective();
 
     // C99 6.10.5 - Error Directive.
     case tok::pp_error:
@@ -1055,7 +1055,7 @@ void Preprocessor::HandleDirective(Token &Result) {
 
     case tok::pp___private_macro:
       if (getLangOpts().Modules)
-        return HandleMacroPrivateDirective(Result);
+        return HandleMacroPrivateDirective();
       break;
     }
     break;
@@ -1153,7 +1153,7 @@ static bool GetLineValue(Token &DigitTok, unsigned &Val,
 ///   # line digit-sequence
 ///   # line digit-sequence "s-char-sequence"
 /// \endverbatim
-void Preprocessor::HandleLineDirective(Token &Tok) {
+void Preprocessor::HandleLineDirective() {
   // Read the line # and string argument.  Per C99 6.10.4p5, these tokens are
   // expanded.
   Token DigitTok;
@@ -1458,7 +1458,7 @@ void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
 }
 
 /// \brief Handle a #private directive.
-void Preprocessor::HandleMacroPrivateDirective(Token &Tok) {
+void Preprocessor::HandleMacroPrivateDirective() {
   Token MacroNameTok;
   ReadMacroName(MacroNameTok, MU_Undef);
 
@@ -1847,7 +1847,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
       // If the file is still not found, just go with the vanilla diagnostic
       if (!File)
-        Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
+        Diag(FilenameTok, diag::err_pp_file_not_found) << Filename
+                                                       << FilenameRange;
     }
   }
 
@@ -2556,7 +2557,7 @@ void Preprocessor::HandleDefineDirective(Token &DefineTok,
 
 /// HandleUndefDirective - Implements \#undef.
 ///
-void Preprocessor::HandleUndefDirective(Token &UndefTok) {
+void Preprocessor::HandleUndefDirective() {
   ++NumUndefined;
 
   Token MacroNameTok;

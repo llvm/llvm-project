@@ -1438,6 +1438,43 @@ void Generic_GCC::GCCInstallationDetector::init(
     }
   }
 
+  // Try to respect gcc-config on Gentoo. However, do that only
+  // if --gcc-toolchain is not provided or equal to the Gentoo install
+  // in /usr. This avoids accidentally enforcing the system GCC version
+  // when using a custom toolchain.
+  if (GCCToolchainDir == "" || GCCToolchainDir == D.SysRoot + "/usr") {
+    for (StringRef CandidateTriple : CandidateTripleAliases) {
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
+          D.getVFS().getBufferForFile(D.SysRoot + "/etc/env.d/gcc/config-" +
+                                      CandidateTriple.str());
+      if (File) {
+        SmallVector<StringRef, 2> Lines;
+        File.get()->getBuffer().split(Lines, "\n");
+        for (StringRef Line : Lines) {
+          // CURRENT=triple-version
+          if (Line.consume_front("CURRENT=")) {
+            const std::pair<StringRef, StringRef> ActiveVersion =
+              Line.rsplit('-');
+            // Note: Strictly speaking, we should be reading
+            // /etc/env.d/gcc/${CURRENT} now. However, the file doesn't
+            // contain anything new or especially useful to us.
+            const std::string GentooPath = D.SysRoot + "/usr/lib/gcc/" +
+                                           ActiveVersion.first.str() + "/" +
+                                           ActiveVersion.second.str();
+            if (D.getVFS().exists(GentooPath + "/crtbegin.o")) {
+              Version = GCCVersion::Parse(ActiveVersion.second);
+              GCCInstallPath = GentooPath;
+              GCCParentLibPath = GentooPath + "/../../..";
+              GCCTriple.setTriple(ActiveVersion.first);
+              IsValid = true;
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Loop over the various components which exist and select the best GCC
   // installation available. GCC installs are ranked by version number.
   Version = GCCVersion::Parse("0.0.0");
@@ -3931,8 +3968,25 @@ static Distro DetectDistro(vfs::FileSystem &VFS) {
         .Default(UnknownDistro);
   }
 
-  if (VFS.exists("/etc/SuSE-release"))
-    return OpenSUSE;
+  File = VFS.getBufferForFile("/etc/SuSE-release");
+  if (File) {
+    StringRef Data = File.get()->getBuffer();
+    SmallVector<StringRef, 8> Lines;
+    Data.split(Lines, "\n");
+    for (const StringRef& Line : Lines) {
+      if (!Line.trim().startswith("VERSION"))
+        continue;
+      std::pair<StringRef, StringRef> SplitLine = Line.split('=');
+      int Version;
+      // OpenSUSE/SLES 10 and older are not supported and not compatible
+      // with our rules, so just treat them as UnknownDistro.
+      if (!SplitLine.second.trim().getAsInteger(10, Version) &&
+          Version > 10)
+        return OpenSUSE;
+      return UnknownDistro;
+    }
+    return UnknownDistro;
+  }
 
   if (VFS.exists("/etc/exherbo-release"))
     return Exherbo;
@@ -5115,18 +5169,13 @@ MyriadToolChain::MyriadToolChain(const Driver &D, const llvm::Triple &Triple,
   }
 
   if (GCCInstallation.isValid()) {
-    // The contents of LibDir are independent of the version of gcc.
-    // This contains libc, libg, libm, libstdc++, libssp.
-    // The 'ma1x00' and 'nofpu' variants are irrelevant.
-    SmallString<128> LibDir(GCCInstallation.getParentLibPath());
-    llvm::sys::path::append(LibDir, "../sparc-myriad-elf/lib");
-    addPathIfExists(D, LibDir, getFilePaths());
-
     // This directory contains crt{i,n,begin,end}.o as well as libgcc.
     // These files are tied to a particular version of gcc.
     SmallString<128> CompilerSupportDir(GCCInstallation.getInstallPath());
     addPathIfExists(D, CompilerSupportDir, getFilePaths());
   }
+  // libstd++ and libc++ must both be found in this one place.
+  addPathIfExists(D, D.Dir + "/../sparc-myriad-elf/lib", getFilePaths());
 }
 
 MyriadToolChain::~MyriadToolChain() {}

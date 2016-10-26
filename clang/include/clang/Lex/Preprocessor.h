@@ -1876,12 +1876,12 @@ private:
   /// Handle*Directive - implement the various preprocessor directives.  These
   /// should side-effect the current preprocessor object so that the next call
   /// to Lex() will return the appropriate token next.
-  void HandleLineDirective(Token &Tok);
+  void HandleLineDirective();
   void HandleDigitDirective(Token &Tok);
   void HandleUserDiagnosticDirective(Token &Tok, bool isWarning);
   void HandleIdentSCCSDirective(Token &Tok);
   void HandleMacroPublicDirective(Token &Tok);
-  void HandleMacroPrivateDirective(Token &Tok);
+  void HandleMacroPrivateDirective();
 
   // File inclusion.
   void HandleIncludeDirective(SourceLocation HashLoc,
@@ -1921,7 +1921,7 @@ public:
 private:
   // Macro handling.
   void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterTopLevelIfndef);
-  void HandleUndefDirective(Token &Tok);
+  void HandleUndefDirective();
 
   // Conditional Inclusion.
   void HandleIfdefDirective(Token &Tok, bool isIfndef,

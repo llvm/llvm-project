@@ -3153,10 +3153,14 @@ static bool isCanonicalExceptionSpecification(
   // expansions (so we can't tell whether it's non-throwing) and all its
   // contained types are canonical.
   if (ESI.Type == EST_Dynamic) {
-    for (QualType ET : ESI.Exceptions)
-      if (!ET.isCanonical() || !ET->getAs<PackExpansionType>())
+    bool AnyPackExpansions = false;
+    for (QualType ET : ESI.Exceptions) {
+      if (!ET.isCanonical())
         return false;
-    return true;
+      if (ET->getAs<PackExpansionType>())
+        AnyPackExpansions = true;
+    }
+    return AnyPackExpansions;
   }
 
   // A noexcept(expr) specification is (possibly) canonical if expr is

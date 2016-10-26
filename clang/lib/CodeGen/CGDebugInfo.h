@@ -15,12 +15,14 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGDEBUGINFO_H
 
 #include "CGBuilder.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
@@ -32,7 +34,6 @@ class MDNode;
 }
 
 namespace clang {
-class CXXMethodDecl;
 class ClassTemplateSpecializationDecl;
 class GlobalDecl;
 class ModuleMap;
@@ -217,6 +218,15 @@ class CGDebugInfo {
   void CollectCXXBases(const CXXRecordDecl *Decl, llvm::DIFile *F,
                        SmallVectorImpl<llvm::Metadata *> &EltTys,
                        llvm::DIType *RecordTy);
+
+  /// Helper function for CollectCXXBases.
+  /// Adds debug info entries for types in Bases that are not in SeenTypes.
+  void CollectCXXBasesAux(const CXXRecordDecl *RD, llvm::DIFile *Unit,
+                          SmallVectorImpl<llvm::Metadata *> &EltTys,
+                          llvm::DIType *RecordTy,
+                          const CXXRecordDecl::base_class_const_range &Bases,
+                          llvm::DenseSet<CanonicalDeclPtr<const CXXRecordDecl>> &SeenTypes,
+                          llvm::DINode::DIFlags StartingFlags);
 
   /// A helper function to collect template parameters.
   llvm::DINodeArray CollectTemplateParams(const TemplateParameterList *TPList,
