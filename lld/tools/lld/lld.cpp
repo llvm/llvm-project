@@ -101,7 +101,7 @@ int main(int Argc, const char **Argv) {
   std::vector<const char *> Args(Argv, Argv + Argc);
   switch (parseFlavor(Args)) {
   case Gnu:
-    return !elf::link(Args);
+    return !elf::link(Args, true);
   case WinLink:
     return !coff::link(Args);
   case Darwin:

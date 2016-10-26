@@ -162,7 +162,7 @@ template <class ELFT> class MergeInputSection : public InputSectionBase<ELFT> {
 public:
   MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header,
                     StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
   void splitIntoPieces();
 
   // Mark the piece at a given offset live. Used by GC.
@@ -213,7 +213,7 @@ public:
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::uint uintX_t;
   EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
   void split();
   template <class RelTy> void split(ArrayRef<RelTy> Rels);
 
@@ -254,7 +254,7 @@ public:
   // InputSection that is dependent on us (reverse dependency for GC)
   InputSectionBase<ELFT> *DependentSection = nullptr;
 
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   InputSectionBase<ELFT> *getRelocatedSection();
 
@@ -309,7 +309,7 @@ class MipsReginfoInputSection : public InputSectionBase<ELFT> {
 public:
   MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
                           StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
 };
@@ -321,7 +321,7 @@ class MipsOptionsInputSection : public InputSectionBase<ELFT> {
 public:
   MipsOptionsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
                           StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
 };
@@ -333,7 +333,7 @@ class MipsAbiFlagsInputSection : public InputSectionBase<ELFT> {
 public:
   MipsAbiFlagsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
                            StringRef Name);
-  static bool classof(const InputSectionBase<ELFT> *S);
+  static bool classof(const InputSectionData *S);
 
   const llvm::object::Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;
 };

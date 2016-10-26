@@ -4054,8 +4054,9 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
 
     // Avoid materializing a constant when possible by reusing a known value in
     // a register.  However, don't perform this optimization if the known value
-    // is one, zero or negative one.  We can always materialize these values
-    // using CSINC, CSEL and CSINV with wzr/xzr as the FVal, respectively.
+    // is one, zero or negative one in the case of a CSEL.  We can always
+    // materialize these values using CSINC, CSEL and CSINV with wzr/xzr as the
+    // FVal, respectively.
     ConstantSDNode *RHSVal = dyn_cast<ConstantSDNode>(RHS);
     if (Opcode == AArch64ISD::CSEL && RHSVal && !RHSVal->isOne() &&
         !RHSVal->isNullValue() && !RHSVal->isAllOnesValue()) {
@@ -4066,6 +4067,16 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
         TVal = LHS;
       else if (CFVal && CFVal == RHSVal && AArch64CC == AArch64CC::NE)
         FVal = LHS;
+    } else if (Opcode == AArch64ISD::CSNEG && RHSVal && RHSVal->isOne()) {
+      assert (CTVal && CFVal && "Expected constant operands for CSNEG.");
+      // Use a CSINV to transform "a == C ? 1 : -1" to "a == C ? a : -1" to
+      // avoid materializing C.
+      AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
+      if (CTVal == RHSVal && AArch64CC == AArch64CC::EQ) {
+        Opcode = AArch64ISD::CSINV;
+        TVal = LHS;
+        FVal = DAG.getConstant(0, dl, FVal.getValueType());
+      }
     }
 
     SDValue CCVal;

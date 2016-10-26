@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <set>
 #include <memory>
 
 #if defined(__has_include)
@@ -161,7 +162,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   assert(!F);
   F = this;
   TPC.ResetMaps();
-  TPC.ResetGuards();
   ResetCoverage();
   IsMyThread = true;
   if (Options.DetectLeaks && EF->__sanitizer_install_malloc_and_free_hooks)
@@ -381,9 +381,11 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
 
 void Fuzzer::CheckExitOnSrcPosOrItem() {
   if (!Options.ExitOnSrcPos.empty()) {
+    static auto *PCsSet = new std::set<uintptr_t>;
     for (size_t i = 1, N = TPC.GetNumPCs(); i < N; i++) {
       uintptr_t PC = TPC.GetPC(i);
       if (!PC) continue;
+      if (!PCsSet->insert(PC).second) continue;
       std::string Descr = DescribePC("%L", PC);
       if (Descr.find(Options.ExitOnSrcPos) != std::string::npos) {
         Printf("INFO: found line matching '%s', exiting.\n",
@@ -510,8 +512,6 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
   TPC.ResetMaps();
-  if (Options.UseCounters)
-    TPC.ResetGuards();
   int Res = CB(DataCopy, Size);
   UnitStopTime = system_clock::now();
   (void)Res;
@@ -577,20 +577,17 @@ UnitVector Fuzzer::FindExtraUnits(const UnitVector &Initial,
   for (int Iter = 0; Iter < 10; Iter++) {
     ShuffleCorpus(&Res);
     TPC.ResetMaps();
-    TPC.ResetGuards();
     Corpus.ResetFeatureSet();
     ResetCoverage();
 
     for (auto &U : Initial) {
       TPC.ResetMaps();
-      TPC.ResetGuards();
       RunOne(U);
     }
 
     Tmp.clear();
     for (auto &U : Res) {
       TPC.ResetMaps();
-      TPC.ResetGuards();
       if (RunOne(U))
         Tmp.push_back(U);
     }

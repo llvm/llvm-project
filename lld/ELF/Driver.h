@@ -27,7 +27,7 @@ extern class LinkerDriver *Driver;
 
 class LinkerDriver {
 public:
-  void main(ArrayRef<const char *> Args);
+  void main(ArrayRef<const char *> Args, bool CanExitEarly);
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
   llvm::LLVMContext Context;      // to parse bitcode files

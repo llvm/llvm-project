@@ -1846,11 +1846,11 @@ public:
 /// \brief Base class for variables.
 class DIVariable : public DINode {
   unsigned Line;
-  uint64_t AlignInBits;
+  uint32_t AlignInBits;
 
 protected:
   DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Line,
-             ArrayRef<Metadata *> Ops, uint64_t AlignInBits = 0)
+             ArrayRef<Metadata *> Ops, uint32_t AlignInBits = 0)
       : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
 	      AlignInBits(AlignInBits) {}
   ~DIVariable() = default;
@@ -2050,7 +2050,7 @@ class DIGlobalVariable : public DIVariable {
   bool IsDefinition;
 
   DIGlobalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                   bool IsLocalToUnit, bool IsDefinition, uint64_t AlignInBits,
+                   bool IsLocalToUnit, bool IsDefinition, uint32_t AlignInBits,
                    ArrayRef<Metadata *> Ops)
       : DIVariable(C, DIGlobalVariableKind, Storage, Line, Ops, AlignInBits),
         IsLocalToUnit(IsLocalToUnit), IsDefinition(IsDefinition) {}
@@ -2060,7 +2060,7 @@ class DIGlobalVariable : public DIVariable {
   getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
           StringRef LinkageName, DIFile *File, unsigned Line, DITypeRef Type,
           bool IsLocalToUnit, bool IsDefinition, DIExpression *Expr,
-          DIDerivedType *StaticDataMemberDeclaration, uint64_t AlignInBits,
+          DIDerivedType *StaticDataMemberDeclaration, uint32_t AlignInBits,
           StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
@@ -2072,7 +2072,7 @@ class DIGlobalVariable : public DIVariable {
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
           bool IsLocalToUnit, bool IsDefinition, Metadata *Expr,
-          Metadata *StaticDataMemberDeclaration, uint64_t AlignInBits,
+          Metadata *StaticDataMemberDeclaration, uint32_t AlignInBits,
           StorageType Storage, bool ShouldCreate = true);
 
   TempDIGlobalVariable cloneImpl() const {
@@ -2089,7 +2089,7 @@ public:
                      bool IsLocalToUnit, bool IsDefinition,
                      DIExpression *Expr,
                      DIDerivedType *StaticDataMemberDeclaration,
-                     uint64_t AlignInBits),
+                     uint32_t AlignInBits),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
                      IsDefinition, Expr, StaticDataMemberDeclaration,
                      AlignInBits))
@@ -2098,7 +2098,7 @@ public:
                      Metadata *File, unsigned Line, Metadata *Type,
                      bool IsLocalToUnit, bool IsDefinition,
                      Metadata *Expr, Metadata *StaticDataMemberDeclaration,
-                     uint64_t AlignInBits),
+                     uint32_t AlignInBits),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
                      IsDefinition, Expr, StaticDataMemberDeclaration,
                      AlignInBits))
@@ -2139,7 +2139,7 @@ class DILocalVariable : public DIVariable {
   DIFlags Flags;
 
   DILocalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                  unsigned Arg, DIFlags Flags, uint64_t AlignInBits,
+                  unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
                   ArrayRef<Metadata *> Ops)
       : DIVariable(C, DILocalVariableKind, Storage, Line, Ops, AlignInBits),
         Arg(Arg), Flags(Flags) {
@@ -2150,7 +2150,7 @@ class DILocalVariable : public DIVariable {
   static DILocalVariable *getImpl(LLVMContext &Context, DIScope *Scope,
                                   StringRef Name, DIFile *File, unsigned Line,
                                   DITypeRef Type, unsigned Arg, DIFlags Flags,
-                                  uint64_t AlignInBits, StorageType Storage,
+                                  uint32_t AlignInBits, StorageType Storage,
                                   bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
                    Line, Type, Arg, Flags, AlignInBits, Storage, ShouldCreate);
@@ -2158,7 +2158,7 @@ class DILocalVariable : public DIVariable {
   static DILocalVariable *getImpl(LLVMContext &Context, Metadata *Scope,
                                   MDString *Name, Metadata *File, unsigned Line,
                                   Metadata *Type, unsigned Arg, DIFlags Flags,
-                                  uint64_t AlignInBits, StorageType Storage,
+                                  uint32_t AlignInBits, StorageType Storage,
                                   bool ShouldCreate = true);
 
   TempDILocalVariable cloneImpl() const {
@@ -2171,12 +2171,12 @@ public:
   DEFINE_MDNODE_GET(DILocalVariable,
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
                      unsigned Line, DITypeRef Type, unsigned Arg,
-                     DIFlags Flags, uint64_t AlignInBits),
+                     DIFlags Flags, uint32_t AlignInBits),
                     (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg,
-                     DIFlags Flags, uint64_t AlignInBits),
+                     DIFlags Flags, uint32_t AlignInBits),
                     (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits))
 
   TempDILocalVariable clone() const { return cloneImpl(); }

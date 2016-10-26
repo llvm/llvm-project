@@ -761,13 +761,13 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
   bool IsDefinition;
   Metadata *Expr;
   Metadata *StaticDataMemberDeclaration;
-  uint64_t AlignInBits;
+  uint32_t AlignInBits;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
                 bool IsLocalToUnit, bool IsDefinition,
                 Metadata *Expr, Metadata *StaticDataMemberDeclaration,
-                uint64_t AlignInBits)
+                uint32_t AlignInBits)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
         IsDefinition(IsDefinition), Expr(Expr),
@@ -815,11 +815,11 @@ template <> struct MDNodeKeyImpl<DILocalVariable> {
   Metadata *Type;
   unsigned Arg;
   unsigned Flags;
-  uint64_t AlignInBits;
+  uint32_t AlignInBits;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Type, unsigned Arg, unsigned Flags,
-                uint64_t AlignInBits)
+                uint32_t AlignInBits)
       : Scope(Scope), Name(Name), File(File), Line(Line), Type(Type), Arg(Arg),
         Flags(Flags), AlignInBits(AlignInBits) {}
   MDNodeKeyImpl(const DILocalVariable *N)
