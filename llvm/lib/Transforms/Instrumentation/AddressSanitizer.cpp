@@ -1624,7 +1624,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
     StructType *LivenessTy = StructType::get(IntptrTy, IntptrTy, nullptr);
 
     // Keep the list of "Liveness" GV created to be added to llvm.compiler.used
-    SmallVector<Constant *, 16> LivenessGlobals;
+    SmallVector<GlobalValue *, 16> LivenessGlobals;
     LivenessGlobals.reserve(n);
 
     for (size_t i = 0; i < n; i++) {
@@ -1647,30 +1647,15 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
           M, LivenessTy, false, GlobalVariable::InternalLinkage, LivenessBinder,
           Twine("__asan_binder_") + GVName);
       Liveness->setSection("__DATA,__asan_liveness,regular,live_support");
-      LivenessGlobals.push_back(
-          ConstantExpr::getBitCast(Liveness, IRB.getInt8PtrTy()));
+      LivenessGlobals.push_back(Liveness);
     }
 
-    if (!LivenessGlobals.empty()) {
-      // Update llvm.compiler.used, adding the new liveness globals. This is
-      // needed so that during LTO these variables stay alive. The alternative
-      // would be to have the linker handling the LTO symbols, but libLTO
-      // current
-      // API does not expose access to the section for each symbol.
-      if (GlobalVariable *LLVMUsed =
-              M.getGlobalVariable("llvm.compiler.used")) {
-        ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
-        for (auto &V : Inits->operands())
-          LivenessGlobals.push_back(cast<Constant>(&V));
-        LLVMUsed->eraseFromParent();
-      }
-      llvm::ArrayType *ATy =
-          llvm::ArrayType::get(IRB.getInt8PtrTy(), LivenessGlobals.size());
-      auto *LLVMUsed = new llvm::GlobalVariable(
-          M, ATy, false, llvm::GlobalValue::AppendingLinkage,
-          llvm::ConstantArray::get(ATy, LivenessGlobals), "llvm.compiler.used");
-      LLVMUsed->setSection("llvm.metadata");
-    }
+    // Update llvm.compiler.used, adding the new liveness globals. This is
+    // needed so that during LTO these variables stay alive. The alternative
+    // would be to have the linker handling the LTO symbols, but libLTO
+    // current API does not expose access to the section for each symbol.
+    if (!LivenessGlobals.empty())
+      appendToCompilerUsed(M, LivenessGlobals);
   } else {
     // On all other platfoms, we just emit an array of global metadata
     // structures.

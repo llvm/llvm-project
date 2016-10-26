@@ -35,7 +35,8 @@ multiclass CALL<WebAssemblyRegClass vt, string prefix> {
                               [(set vt:$dst, (WebAssemblycall1 I32:$callee))],
                               "PSEUDO CALL INDIRECT\t$callee">;
   } // isCodeGenOnly = 1
-  def CALL_INDIRECT_#vt : I<(outs vt:$dst), (ins variable_ops),
+
+  def CALL_INDIRECT_#vt : I<(outs vt:$dst), (ins i32imm:$flags, variable_ops),
                             [],
                             !strconcat(prefix, "call_indirect\t$dst"),
                             0x11>;
@@ -54,8 +55,9 @@ multiclass SIMD_CALL<ValueType vt, string prefix> {
                                           (WebAssemblycall1 I32:$callee))],
                                     "PSEUDO CALL INDIRECT\t$callee">;
   } // isCodeGenOnly = 1
+
   def CALL_INDIRECT_#vt : SIMD_I<(outs V128:$dst),
-                                  (ins variable_ops),
+                                  (ins i32imm:$flags, variable_ops),
                                   [],
                                   !strconcat(prefix, "call_indirect\t$dst"),
                                   0x11>;
@@ -79,7 +81,8 @@ let Uses = [SP32, SP64], isCall = 1 in {
                       [(WebAssemblycall0 I32:$callee)],
                       "PSEUDO CALL INDIRECT\t$callee">;
   } // isCodeGenOnly = 1
-  def CALL_INDIRECT_VOID : I<(outs), (ins variable_ops),
+
+  def CALL_INDIRECT_VOID : I<(outs), (ins i32imm:$flags, variable_ops),
                              [],
                              "call_indirect\t", 0x11>;
 } // Uses = [SP32,SP64], isCall = 1

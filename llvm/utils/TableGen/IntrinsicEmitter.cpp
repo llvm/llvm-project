@@ -251,7 +251,7 @@ static void EncodeFixedValueType(MVT::SimpleValueType VT,
 }
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#pragma optimize("",off) // MSVC 2010 optimizer can't deal with this function.
+#pragma optimize("",off) // MSVC 2015 optimizer can't deal with this function.
 #endif
 
 static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,

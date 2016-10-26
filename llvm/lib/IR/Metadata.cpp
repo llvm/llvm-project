@@ -1054,7 +1054,7 @@ void NamedMDNode::setOperand(unsigned I, MDNode *New) {
 
 void NamedMDNode::eraseFromParent() { getParent()->eraseNamedMetadata(this); }
 
-void NamedMDNode::dropAllReferences() { getNMDOps(Operands).clear(); }
+void NamedMDNode::clearOperands() { getNMDOps(Operands).clear(); }
 
 StringRef NamedMDNode::getName() const { return StringRef(Name); }
 

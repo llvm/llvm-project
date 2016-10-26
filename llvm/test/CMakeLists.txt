@@ -59,6 +59,7 @@ set(LLVM_TEST_DEPENDS
           llvm-split
           llvm-symbolizer
           llvm-tblgen
+          llvm-xray
           not
           obj2yaml
           opt

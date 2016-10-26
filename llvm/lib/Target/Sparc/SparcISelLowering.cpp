@@ -2568,17 +2568,57 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
   SDValue Chain = Op.getOperand(0);  // Legalize the chain.
   SDValue Size  = Op.getOperand(1);  // Legalize the size.
+  unsigned Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+  unsigned StackAlign = Subtarget->getFrameLowering()->getStackAlignment();
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
+
+  // TODO: implement over-aligned alloca. (Note: also implies
+  // supporting support for overaligned function frames + dynamic
+  // allocations, at all, which currently isn't supported)
+  if (Align > StackAlign) {
+    const MachineFunction &MF = DAG.getMachineFunction();
+    report_fatal_error("Function \"" + Twine(MF.getName()) + "\": "
+                       "over-aligned dynamic alloca not supported.");
+  }
+
+  // The resultant pointer needs to be above the register spill area
+  // at the bottom of the stack.
+  unsigned regSpillArea;
+  if (Subtarget->is64Bit()) {
+    regSpillArea = 128;
+  } else {
+    // On Sparc32, the size of the spill area is 92. Unfortunately,
+    // that's only 4-byte aligned, not 8-byte aligned (the stack
+    // pointer is 8-byte aligned). So, if the user asked for an 8-byte
+    // aligned dynamic allocation, we actually need to add 96 to the
+    // bottom of the stack, instead of 92, to ensure 8-byte alignment.
+
+    // That also means adding 4 to the size of the allocation --
+    // before applying the 8-byte rounding. Unfortunately, we the
+    // value we get here has already had rounding applied. So, we need
+    // to add 8, instead, wasting a bit more memory.
+
+    // Further, this only actually needs to be done if the required
+    // alignment is > 4, but, we've lost that info by this point, too,
+    // so we always apply it.
+
+    // (An alternative approach would be to always reserve 96 bytes
+    // instead of the required 92, but then we'd waste 4 extra bytes
+    // in every frame, not just those with dynamic stack allocations)
+
+    // TODO: modify code in SelectionDAGBuilder to make this less sad.
+
+    Size = DAG.getNode(ISD::ADD, dl, VT, Size,
+                       DAG.getConstant(8, dl, VT));
+    regSpillArea = 96;
+  }
 
   unsigned SPReg = SP::O6;
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
   Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);    // Output chain
 
-  // The resultant pointer is actually 16 words from the bottom of the stack,
-  // to provide a register spill area.
-  unsigned regSpillArea = Subtarget->is64Bit() ? 128 : 96;
   regSpillArea += Subtarget->getStackPointerBias();
 
   SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,

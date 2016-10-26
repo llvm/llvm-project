@@ -415,7 +415,7 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
 
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
-                                                   ICmpInst *ICI) {
+                                                  ICmpInst *ICI) {
   bool Changed = false;
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *CmpLHS = ICI->getOperand(0);
@@ -454,36 +454,36 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
         // Types do not match. Instead of calculating this with mixed types
         // promote all to the larger type. This enables scalar evolution to
         // analyze this expression.
-        else if (CmpRHS->getType()->getScalarSizeInBits()
-                 < SelectTy->getBitWidth()) {
-          Constant *sextRHS = ConstantExpr::getSExt(AdjustedRHS, SelectTy);
+        else if (CmpRHS->getType()->getScalarSizeInBits() <
+                 SelectTy->getBitWidth()) {
+          Constant *SextRHS = ConstantExpr::getSExt(AdjustedRHS, SelectTy);
 
           // X = sext x; x >s c ? X : C+1 --> X = sext x; X <s C+1 ? C+1 : X
           // X = sext x; x <s c ? X : C-1 --> X = sext x; X >s C-1 ? C-1 : X
           // X = sext x; x >u c ? X : C+1 --> X = sext x; X <u C+1 ? C+1 : X
           // X = sext x; x <u c ? X : C-1 --> X = sext x; X >u C-1 ? C-1 : X
           if (match(TrueVal, m_SExt(m_Specific(CmpLHS))) &&
-                sextRHS == FalseVal) {
+              SextRHS == FalseVal) {
             CmpLHS = TrueVal;
-            AdjustedRHS = sextRHS;
+            AdjustedRHS = SextRHS;
           } else if (match(FalseVal, m_SExt(m_Specific(CmpLHS))) &&
-                     sextRHS == TrueVal) {
+                     SextRHS == TrueVal) {
             CmpLHS = FalseVal;
-            AdjustedRHS = sextRHS;
+            AdjustedRHS = SextRHS;
           } else if (ICI->isUnsigned()) {
-            Constant *zextRHS = ConstantExpr::getZExt(AdjustedRHS, SelectTy);
+            Constant *ZextRHS = ConstantExpr::getZExt(AdjustedRHS, SelectTy);
             // X = zext x; x >u c ? X : C+1 --> X = zext x; X <u C+1 ? C+1 : X
             // X = zext x; x <u c ? X : C-1 --> X = zext x; X >u C-1 ? C-1 : X
             // zext + signed compare cannot be changed:
             //    0xff <s 0x00, but 0x00ff >s 0x0000
             if (match(TrueVal, m_ZExt(m_Specific(CmpLHS))) &&
-                zextRHS == FalseVal) {
+                ZextRHS == FalseVal) {
               CmpLHS = TrueVal;
-              AdjustedRHS = zextRHS;
+              AdjustedRHS = ZextRHS;
             } else if (match(FalseVal, m_ZExt(m_Specific(CmpLHS))) &&
-                       zextRHS == TrueVal) {
+                       ZextRHS == TrueVal) {
               CmpLHS = FalseVal;
-              AdjustedRHS = zextRHS;
+              AdjustedRHS = ZextRHS;
             } else
               break;
           } else

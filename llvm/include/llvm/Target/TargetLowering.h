@@ -1051,9 +1051,7 @@ public:
   }
 
   /// Return lower limit for number of blocks in a jump table.
-  unsigned getMinimumJumpTableEntries() const {
-    return MinimumJumpTableEntries;
-  }
+  unsigned getMinimumJumpTableEntries() const;
 
   /// Return upper limit for number of entries in a jump table.
   /// Zero if no limit.
@@ -1389,9 +1387,7 @@ protected:
   }
 
   /// Indicate the minimum number of blocks to generate jump tables.
-  void setMinimumJumpTableEntries(unsigned Val) {
-    MinimumJumpTableEntries = Val;
-  }
+  void setMinimumJumpTableEntries(unsigned Val);
 
   /// Indicate the maximum number of entries in jump tables.
   /// Set to zero to generate unlimited jump tables.
@@ -1957,9 +1953,6 @@ private:
   ///
   /// Defaults to false.
   bool UseUnderscoreLongJmp;
-
-  /// Number of blocks threshold to use jump tables.
-  int MinimumJumpTableEntries;
 
   /// Information about the contents of the high-bits in boolean values held in
   /// a type wider than i1. See getBooleanContents.

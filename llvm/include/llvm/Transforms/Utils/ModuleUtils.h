@@ -59,6 +59,12 @@ std::pair<Function *, Function *> createSanitizerCtorAndInitFunctions(
 /// the list of public globals in the module.
 bool nameUnamedGlobals(Module &M);
 
+/// \brief Adds global values to the llvm.used list.
+void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
+
+/// \brief Adds global values to the llvm.compiler.used list.
+void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
+
 } // End llvm namespace
 
 #endif //  LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

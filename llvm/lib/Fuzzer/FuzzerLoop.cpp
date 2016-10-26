@@ -160,7 +160,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   InitializeTraceState();
   assert(!F);
   F = this;
-  TPC.ResetTotalPCCoverage();
   TPC.ResetMaps();
   TPC.ResetGuards();
   ResetCoverage();
@@ -169,6 +168,7 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
     EF->__sanitizer_install_malloc_and_free_hooks(MallocHook, FreeHook);
   TPC.SetUseCounters(Options.UseCounters);
   TPC.SetUseValueProfile(Options.UseValueProfile);
+  TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
 
   if (Options.Verbosity)
     TPC.PrintModuleInfo();
@@ -381,15 +381,14 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
 
 void Fuzzer::CheckExitOnSrcPosOrItem() {
   if (!Options.ExitOnSrcPos.empty()) {
-    uintptr_t *PCIDs;
-    if (size_t NumNewPCIDs = TPC.GetNewPCIDs(&PCIDs)) {
-      for (size_t i = 0; i < NumNewPCIDs; i++) {
-        std::string Descr = DescribePC("%L", TPC.GetPCbyPCID(PCIDs[i]));
-        if (Descr.find(Options.ExitOnSrcPos) != std::string::npos) {
-          Printf("INFO: found line matching '%s', exiting.\n",
-                 Options.ExitOnSrcPos.c_str());
-          _Exit(0);
-        }
+    for (size_t i = 1, N = TPC.GetNumPCs(); i < N; i++) {
+      uintptr_t PC = TPC.GetPC(i);
+      if (!PC) continue;
+      std::string Descr = DescribePC("%L", PC);
+      if (Descr.find(Options.ExitOnSrcPos) != std::string::npos) {
+        Printf("INFO: found line matching '%s', exiting.\n",
+               Options.ExitOnSrcPos.c_str());
+        _Exit(0);
       }
     }
   }
@@ -557,26 +556,13 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
   }
 }
 
-void Fuzzer::PrintOneNewPC(uintptr_t PC) {
-  PrintPC("\tNEW_PC: %p %F %L\n",
-          "\tNEW_PC: %p\n", PC);
-}
-
-void Fuzzer::PrintNewPCs() {
-  if (!Options.PrintNewCovPcs) return;
-  uintptr_t *PCIDs;
-  if (size_t NumNewPCIDs = TPC.GetNewPCIDs(&PCIDs))
-    for (size_t i = 0; i < NumNewPCIDs; i++)
-      PrintOneNewPC(TPC.GetPCbyPCID(PCIDs[i]));
-}
-
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   II->NumSuccessfullMutations++;
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
   NumberOfNewUnitsAdded++;
-  PrintNewPCs();
+  TPC.PrintNewPCs();
 }
 
 // Finds minimal number of units in 'Extra' that add coverage to 'Initial'.

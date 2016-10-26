@@ -218,7 +218,35 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 
   File->Ctx.setDiagnosticHandler(nullptr, nullptr);
 
+  for (const auto &C : File->Obj->getModule().getComdatSymbolTable()) {
+    auto P =
+        File->ComdatMap.insert(std::make_pair(&C.second, File->Comdats.size()));
+    assert(P.second);
+    (void)P;
+    File->Comdats.push_back(C.first());
+  }
+
   return std::move(File);
+}
+
+Expected<int> InputFile::Symbol::getComdatIndex() const {
+  if (!GV)
+    return -1;
+  const GlobalObject *GO;
+  if (auto *GA = dyn_cast<GlobalAlias>(GV)) {
+    GO = GA->getBaseObject();
+    if (!GO)
+      return make_error<StringError>("Unable to determine comdat of alias!",
+                                     inconvertibleErrorCode());
+  } else {
+    GO = cast<GlobalObject>(GV);
+  }
+  if (const Comdat *C = GO->getComdat()) {
+    auto I = File->ComdatMap.find(C);
+    assert(I != File->ComdatMap.end());
+    return I->second;
+  }
+  return -1;
 }
 
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
@@ -332,8 +360,8 @@ Error LTO::addRegularLTO(std::unique_ptr<InputFile> Input,
 
   auto ResI = Res.begin();
   for (const InputFile::Symbol &Sym :
-       make_range(InputFile::symbol_iterator(Obj->symbol_begin()),
-                  InputFile::symbol_iterator(Obj->symbol_end()))) {
+       make_range(InputFile::symbol_iterator(Obj->symbol_begin(), nullptr),
+                  InputFile::symbol_iterator(Obj->symbol_end(), nullptr))) {
     assert(ResI != Res.end());
     SymbolResolution Res = *ResI++;
     addSymbolToGlobalRes(Obj.get(), Used, Sym, Res, 0);

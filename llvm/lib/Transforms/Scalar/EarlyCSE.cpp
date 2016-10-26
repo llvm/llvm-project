@@ -496,12 +496,11 @@ private:
   void removeMSSA(Instruction *Inst) {
     if (!MSSA)
       return;
-    // FIXME: Removing a store here can leave MemorySSA in an unoptimized state
-    // by creating MemoryPhis that have identical arguments and by creating
+    // Removing a store here can leave MemorySSA in an unoptimized state by
+    // creating MemoryPhis that have identical arguments and by creating
     // MemoryUses whose defining access is not an actual clobber.  We handle the
-    // phi case here, but the non-optimized MemoryUse case is not handled.  Once
-    // MemorySSA tracks whether uses are optimized this will be taken care of on
-    // the MemorySSA side.
+    // phi case eagerly here.  The non-optimized MemoryUse case is lazily
+    // updated by MemorySSA getClobberingMemoryAccess.
     if (MemoryAccess *MA = MSSA->getMemoryAccess(Inst)) {
       // Optimize MemoryPhi nodes that may become redundant by having all the
       // same input values once MA is removed.
@@ -564,17 +563,8 @@ bool EarlyCSE::isSameMemGeneration(unsigned EarlierGeneration,
   // LaterInst, if LaterDef dominates EarlierInst then it can't occur between
   // EarlierInst and LaterInst and neither can any other write that potentially
   // clobbers LaterInst.
-  // FIXME: Use getClobberingMemoryAccess only for stores since it is currently
-  // fairly expensive to call on MemoryUses since it does an AA check even for
-  // MemoryUses that were already optimized by MemorySSA construction.  Once
-  // MemorySSA optimized use tracking change has been committed we can use
-  // getClobberingMemoryAccess for MemoryUses as well.
-  MemoryAccess *LaterMA = MSSA->getMemoryAccess(LaterInst);
-  MemoryAccess *LaterDef;
-  if (auto *LaterUse = dyn_cast<MemoryUse>(LaterMA))
-    LaterDef = LaterUse->getDefiningAccess();
-  else
-    LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LaterInst);
+  MemoryAccess *LaterDef =
+      MSSA->getWalker()->getClobberingMemoryAccess(LaterInst);
   return MSSA->dominates(LaterDef, MSSA->getMemoryAccess(EarlierInst));
 }
 

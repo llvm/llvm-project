@@ -30,15 +30,10 @@ TracePC TPC;
 void TracePC::HandleTrace(uint32_t *Guard, uintptr_t PC) {
   uint32_t Idx = *Guard;
   if (!Idx) return;
+  if (!PCs[Idx % kNumPCs])
+    PCs[Idx % kNumPCs] = PC;
   uint8_t *CounterPtr = &Counters[Idx % kNumCounters];
   uint8_t Counter = *CounterPtr;
-  if (Counter == 0) {
-    if (!PCs[Idx % kNumPCs]) {
-      AddNewPCID(Idx);
-      TotalPCCoverage++;
-      PCs[Idx % kNumPCs] = PC;
-    }
-  }
   if (UseCounters) {
     if (Counter < 128)
       *CounterPtr = Counter + 1;
@@ -48,6 +43,14 @@ void TracePC::HandleTrace(uint32_t *Guard, uintptr_t PC) {
     *CounterPtr = 1;
     *Guard = 0;
   }
+}
+
+size_t TracePC::GetTotalPCCoverage() {
+  size_t Res = 0;
+  for (size_t i = 1; i < GetNumPCs(); i++)
+    if (PCs[i])
+      Res++;
+  return Res;
 }
 
 void TracePC::HandleInit(uint32_t *Start, uint32_t *Stop) {
@@ -129,6 +132,16 @@ static bool IsInterestingCoverageFile(std::string &File) {
   return true;
 }
 
+void TracePC::PrintNewPCs() {
+  if (DoPrintNewPCs) {
+    if (!PrintedPCs)
+      PrintedPCs = new std::set<uintptr_t>;
+    for (size_t i = 1; i < GetNumPCs(); i++)
+      if (PCs[i] && PrintedPCs->insert(PCs[i]).second)
+        PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PCs[i]);
+  }
+}
+
 void TracePC::PrintCoverage() {
   if (!EF->__sanitizer_symbolize_pc) {
     Printf("INFO: __sanitizer_symbolize_pc is not available,"
@@ -139,7 +152,7 @@ void TracePC::PrintCoverage() {
   std::map<std::string, uintptr_t> ModuleOffsets;
   std::set<std::string> CoveredFiles, CoveredFunctions, CoveredLines;
   Printf("COVERAGE:\n");
-  for (size_t i = 0; i < Min(NumGuards + 1, kNumPCs); i++) {
+  for (size_t i = 1; i < GetNumPCs(); i++) {
     if (!PCs[i]) continue;
     std::string FileStr = DescribePC("%s", PCs[i]);
     if (!IsInterestingCoverageFile(FileStr)) continue;

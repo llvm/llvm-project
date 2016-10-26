@@ -121,9 +121,11 @@ enum lostFraction { // Example of truncated bits:
 ///
 /// New operations: sqrt, IEEE remainder, C90 fmod, nexttoward.
 ///
-class APFloat {
-public:
 
+// This is the common type definitions shared by APFloat and its internal
+// implementation classes. This struct should not define any non-static data
+// members.
+struct APFloatBase {
   /// A signed type to represent a floating point numbers unbiased exponent.
   typedef signed short ExponentType;
 
@@ -142,11 +144,6 @@ public:
   static const fltSemantics Bogus;
 
   /// @}
-
-  static unsigned int semanticsPrecision(const fltSemantics &);
-  static ExponentType semanticsMinExponent(const fltSemantics &);
-  static ExponentType semanticsMaxExponent(const fltSemantics &);
-  static unsigned int semanticsSizeInBits(const fltSemantics &);
 
   /// IEEE-754R 5.11: Floating Point Comparison Relations.
   enum cmpResult {
@@ -190,19 +187,40 @@ public:
     uninitialized
   };
 
+  /// \brief Enumeration of \c ilogb error results.
+  enum IlogbErrorKinds {
+    IEK_Zero = INT_MIN + 1,
+    IEK_NaN = INT_MIN,
+    IEK_Inf = INT_MAX
+  };
+
+  static unsigned int semanticsPrecision(const fltSemantics &);
+  static ExponentType semanticsMinExponent(const fltSemantics &);
+  static ExponentType semanticsMaxExponent(const fltSemantics &);
+  static unsigned int semanticsSizeInBits(const fltSemantics &);
+
+  /// Returns the size of the floating point number (in bits) in the given
+  /// semantics.
+  static unsigned getSizeInBits(const fltSemantics &Sem);
+};
+
+namespace detail {
+
+class IEEEFloat : public APFloatBase {
+public:
   /// \name Constructors
   /// @{
 
-  APFloat(const fltSemantics &); // Default construct to 0.0
-  APFloat(const fltSemantics &, StringRef);
-  APFloat(const fltSemantics &, integerPart);
-  APFloat(const fltSemantics &, uninitializedTag);
-  APFloat(const fltSemantics &, const APInt &);
-  explicit APFloat(double d);
-  explicit APFloat(float f);
-  APFloat(const APFloat &);
-  APFloat(APFloat &&);
-  ~APFloat();
+  IEEEFloat(const fltSemantics &); // Default construct to 0.0
+  IEEEFloat(const fltSemantics &, StringRef);
+  IEEEFloat(const fltSemantics &, integerPart);
+  IEEEFloat(const fltSemantics &, uninitializedTag);
+  IEEEFloat(const fltSemantics &, const APInt &);
+  explicit IEEEFloat(double d);
+  explicit IEEEFloat(float f);
+  IEEEFloat(const IEEEFloat &);
+  IEEEFloat(IEEEFloat &&);
+  ~IEEEFloat();
 
   /// @}
 
@@ -215,8 +233,8 @@ public:
   /// Factory for Positive and Negative Zero.
   ///
   /// \param Negative True iff the number should be negative.
-  static APFloat getZero(const fltSemantics &Sem, bool Negative = false) {
-    APFloat Val(Sem, uninitialized);
+  static IEEEFloat getZero(const fltSemantics &Sem, bool Negative = false) {
+    IEEEFloat Val(Sem, uninitialized);
     Val.makeZero(Negative);
     return Val;
   }
@@ -224,8 +242,8 @@ public:
   /// Factory for Positive and Negative Infinity.
   ///
   /// \param Negative True iff the number should be negative.
-  static APFloat getInf(const fltSemantics &Sem, bool Negative = false) {
-    APFloat Val(Sem, uninitialized);
+  static IEEEFloat getInf(const fltSemantics &Sem, bool Negative = false) {
+    IEEEFloat Val(Sem, uninitialized);
     Val.makeInf(Negative);
     return Val;
   }
@@ -235,8 +253,8 @@ public:
   /// \param Negative - True iff the NaN generated should be negative.
   /// \param type - The unspecified fill bits for creating the NaN, 0 by
   /// default.  The value is truncated as necessary.
-  static APFloat getNaN(const fltSemantics &Sem, bool Negative = false,
-                        unsigned type = 0) {
+  static IEEEFloat getNaN(const fltSemantics &Sem, bool Negative = false,
+                          unsigned type = 0) {
     if (type) {
       APInt fill(64, type);
       return getQNaN(Sem, Negative, &fill);
@@ -246,44 +264,40 @@ public:
   }
 
   /// Factory for QNaN values.
-  static APFloat getQNaN(const fltSemantics &Sem, bool Negative = false,
-                         const APInt *payload = nullptr) {
+  static IEEEFloat getQNaN(const fltSemantics &Sem, bool Negative = false,
+                           const APInt *payload = nullptr) {
     return makeNaN(Sem, false, Negative, payload);
   }
 
   /// Factory for SNaN values.
-  static APFloat getSNaN(const fltSemantics &Sem, bool Negative = false,
-                         const APInt *payload = nullptr) {
+  static IEEEFloat getSNaN(const fltSemantics &Sem, bool Negative = false,
+                           const APInt *payload = nullptr) {
     return makeNaN(Sem, true, Negative, payload);
   }
 
   /// Returns the largest finite number in the given semantics.
   ///
   /// \param Negative - True iff the number should be negative
-  static APFloat getLargest(const fltSemantics &Sem, bool Negative = false);
+  static IEEEFloat getLargest(const fltSemantics &Sem, bool Negative = false);
 
   /// Returns the smallest (by magnitude) finite number in the given semantics.
   /// Might be denormalized, which implies a relative loss of precision.
   ///
   /// \param Negative - True iff the number should be negative
-  static APFloat getSmallest(const fltSemantics &Sem, bool Negative = false);
+  static IEEEFloat getSmallest(const fltSemantics &Sem, bool Negative = false);
 
   /// Returns the smallest (by magnitude) normalized finite number in the given
   /// semantics.
   ///
   /// \param Negative - True iff the number should be negative
-  static APFloat getSmallestNormalized(const fltSemantics &Sem,
-                                       bool Negative = false);
+  static IEEEFloat getSmallestNormalized(const fltSemantics &Sem,
+                                         bool Negative = false);
 
   /// Returns a float which is bitcasted from an all one value int.
   ///
   /// \param BitWidth - Select float type
   /// \param isIEEE   - If 128 bit number, select between PPC and IEEE
-  static APFloat getAllOnesValue(unsigned BitWidth, bool isIEEE = false);
-
-  /// Returns the size of the floating point number (in bits) in the given
-  /// semantics.
-  static unsigned getSizeInBits(const fltSemantics &Sem);
+  static IEEEFloat getAllOnesValue(unsigned BitWidth, bool isIEEE = false);
 
   /// @}
 
@@ -294,47 +308,47 @@ public:
   /// \name Arithmetic
   /// @{
 
-  opStatus add(const APFloat &, roundingMode);
-  opStatus subtract(const APFloat &, roundingMode);
-  opStatus multiply(const APFloat &, roundingMode);
-  opStatus divide(const APFloat &, roundingMode);
+  opStatus add(const IEEEFloat &, roundingMode);
+  opStatus subtract(const IEEEFloat &, roundingMode);
+  opStatus multiply(const IEEEFloat &, roundingMode);
+  opStatus divide(const IEEEFloat &, roundingMode);
   /// IEEE remainder.
-  opStatus remainder(const APFloat &);
+  opStatus remainder(const IEEEFloat &);
   /// C fmod, or llvm frem.
-  opStatus mod(const APFloat &);
-  opStatus fusedMultiplyAdd(const APFloat &, const APFloat &, roundingMode);
+  opStatus mod(const IEEEFloat &);
+  opStatus fusedMultiplyAdd(const IEEEFloat &, const IEEEFloat &, roundingMode);
   opStatus roundToIntegral(roundingMode);
   /// IEEE-754R 5.3.1: nextUp/nextDown.
   opStatus next(bool nextDown);
 
   /// \brief Operator+ overload which provides the default
   /// \c nmNearestTiesToEven rounding mode and *no* error checking.
-  APFloat operator+(const APFloat &RHS) const {
-    APFloat Result = *this;
+  IEEEFloat operator+(const IEEEFloat &RHS) const {
+    IEEEFloat Result = *this;
     Result.add(RHS, rmNearestTiesToEven);
     return Result;
   }
 
   /// \brief Operator- overload which provides the default
   /// \c nmNearestTiesToEven rounding mode and *no* error checking.
-  APFloat operator-(const APFloat &RHS) const {
-    APFloat Result = *this;
+  IEEEFloat operator-(const IEEEFloat &RHS) const {
+    IEEEFloat Result = *this;
     Result.subtract(RHS, rmNearestTiesToEven);
     return Result;
   }
 
   /// \brief Operator* overload which provides the default
   /// \c nmNearestTiesToEven rounding mode and *no* error checking.
-  APFloat operator*(const APFloat &RHS) const {
-    APFloat Result = *this;
+  IEEEFloat operator*(const IEEEFloat &RHS) const {
+    IEEEFloat Result = *this;
     Result.multiply(RHS, rmNearestTiesToEven);
     return Result;
   }
 
   /// \brief Operator/ overload which provides the default
   /// \c nmNearestTiesToEven rounding mode and *no* error checking.
-  APFloat operator/(const APFloat &RHS) const {
-    APFloat Result = *this;
+  IEEEFloat operator/(const IEEEFloat &RHS) const {
+    IEEEFloat Result = *this;
     Result.divide(RHS, rmNearestTiesToEven);
     return Result;
   }
@@ -346,11 +360,11 @@ public:
 
   void changeSign();
   void clearSign();
-  void copySign(const APFloat &);
+  void copySign(const IEEEFloat &);
 
   /// \brief A static helper to produce a copy of an APFloat value with its sign
   /// copied from some other APFloat.
-  static APFloat copySign(APFloat Value, const APFloat &Sign) {
+  static IEEEFloat copySign(IEEEFloat Value, const IEEEFloat &Sign) {
     Value.copySign(Sign);
     return Value;
   }
@@ -379,14 +393,14 @@ public:
   /// The definition of equality is not straightforward for floating point, so
   /// we won't use operator==.  Use one of the following, or write whatever it
   /// is you really mean.
-  bool operator==(const APFloat &) const = delete;
+  bool operator==(const IEEEFloat &) const = delete;
 
   /// IEEE comparison with another floating point number (NaNs compare
   /// unordered, 0==-0).
-  cmpResult compare(const APFloat &) const;
+  cmpResult compare(const IEEEFloat &) const;
 
   /// Bitwise comparison for equality (QNaNs compare equal, 0!=-0).
-  bool bitwiseIsEqual(const APFloat &) const;
+  bool bitwiseIsEqual(const IEEEFloat &) const;
 
   /// Write out a hexadecimal representation of the floating point value to DST,
   /// which must be of sufficient size, in the C99 form [-]0xh.hhhhp[+-]d.
@@ -456,8 +470,8 @@ public:
 
   /// @}
 
-  APFloat &operator=(const APFloat &);
-  APFloat &operator=(APFloat &&);
+  IEEEFloat &operator=(const IEEEFloat &);
+  IEEEFloat &operator=(IEEEFloat &&);
 
   /// \brief Overload to compute a hash code for an APFloat value.
   ///
@@ -468,7 +482,7 @@ public:
   /// emphasizes producing different codes for different inputs in order to
   /// be used in canonicalization and memoization. As such, equality is
   /// bitwiseIsEqual, and 0 != -0.
-  friend hash_code hash_value(const APFloat &Arg);
+  friend hash_code hash_value(const IEEEFloat &Arg);
 
   /// Converts this value into a decimal string.
   ///
@@ -495,14 +509,7 @@ public:
 
   /// If this value has an exact multiplicative inverse, store it in inv and
   /// return true.
-  bool getExactInverse(APFloat *inv) const;
-
-  /// \brief Enumeration of \c ilogb error results.
-  enum IlogbErrorKinds {
-    IEK_Zero = INT_MIN+1,
-    IEK_NaN = INT_MIN,
-    IEK_Inf = INT_MAX
-  };
+  bool getExactInverse(IEEEFloat *inv) const;
 
   /// \brief Returns the exponent of the internal representation of the APFloat.
   ///
@@ -513,15 +520,14 @@ public:
   ///   0   -> \c IEK_Zero
   ///   Inf -> \c IEK_Inf
   ///
-  friend int ilogb(const APFloat &Arg);
+  friend int ilogb(const IEEEFloat &Arg);
 
   /// \brief Returns: X * 2^Exp for integral exponents.
-  friend APFloat scalbn(APFloat X, int Exp, roundingMode);
+  friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
 
-  friend APFloat frexp(const APFloat &X, int &Exp, roundingMode);
+  friend IEEEFloat frexp(const IEEEFloat &X, int &Exp, roundingMode);
 
 private:
-
   /// \name Simple Queries
   /// @{
 
@@ -534,11 +540,11 @@ private:
   /// \name Significand operations.
   /// @{
 
-  integerPart addSignificand(const APFloat &);
-  integerPart subtractSignificand(const APFloat &, integerPart);
-  lostFraction addOrSubtractSignificand(const APFloat &, bool subtract);
-  lostFraction multiplySignificand(const APFloat &, const APFloat *);
-  lostFraction divideSignificand(const APFloat &);
+  integerPart addSignificand(const IEEEFloat &);
+  integerPart subtractSignificand(const IEEEFloat &, integerPart);
+  lostFraction addOrSubtractSignificand(const IEEEFloat &, bool subtract);
+  lostFraction multiplySignificand(const IEEEFloat &, const IEEEFloat *);
+  lostFraction divideSignificand(const IEEEFloat &);
   void incrementSignificand();
   void initialize(const fltSemantics *);
   void shiftSignificandLeft(unsigned int);
@@ -556,10 +562,10 @@ private:
   /// \name Arithmetic on special values.
   /// @{
 
-  opStatus addOrSubtractSpecials(const APFloat &, bool subtract);
-  opStatus divideSpecials(const APFloat &);
-  opStatus multiplySpecials(const APFloat &);
-  opStatus modSpecials(const APFloat &);
+  opStatus addOrSubtractSpecials(const IEEEFloat &, bool subtract);
+  opStatus divideSpecials(const IEEEFloat &);
+  opStatus multiplySpecials(const IEEEFloat &);
+  opStatus modSpecials(const IEEEFloat &);
 
   /// @}
 
@@ -570,8 +576,8 @@ private:
   void makeSmallest(bool Neg = false);
   void makeNaN(bool SNaN = false, bool Neg = false,
                const APInt *fill = nullptr);
-  static APFloat makeNaN(const fltSemantics &Sem, bool SNaN, bool Negative,
-                         const APInt *fill);
+  static IEEEFloat makeNaN(const fltSemantics &Sem, bool SNaN, bool Negative,
+                           const APInt *fill);
   void makeInf(bool Neg = false);
   void makeZero(bool Neg = false);
   void makeQuiet();
@@ -583,8 +589,8 @@ private:
 
   bool convertFromStringSpecials(StringRef str);
   opStatus normalize(roundingMode, lostFraction);
-  opStatus addOrSubtract(const APFloat &, roundingMode, bool subtract);
-  cmpResult compareAbsoluteValue(const APFloat &) const;
+  opStatus addOrSubtract(const IEEEFloat &, roundingMode, bool subtract);
+  cmpResult compareAbsoluteValue(const IEEEFloat &) const;
   opStatus handleOverflow(roundingMode);
   bool roundAwayFromZero(roundingMode, lostFraction, unsigned int) const;
   opStatus convertToSignExtendedInteger(integerPart *, unsigned int, bool,
@@ -614,8 +620,8 @@ private:
   void initFromF80LongDoubleAPInt(const APInt &api);
   void initFromPPCDoubleDoubleAPInt(const APInt &api);
 
-  void assign(const APFloat &);
-  void copySignificand(const APFloat &);
+  void assign(const IEEEFloat &);
+  void copySignificand(const IEEEFloat &);
   void freeSignificand();
 
   /// The semantics that this value obeys.
@@ -642,20 +648,238 @@ private:
   unsigned int sign : 1;
 };
 
+hash_code hash_value(const IEEEFloat &Arg);
+int ilogb(const IEEEFloat &Arg);
+IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode);
+IEEEFloat frexp(const IEEEFloat &Val, int &Exp, IEEEFloat::roundingMode RM);
+
+} // End detail namespace
+
+// This is a interface class that is currently forwarding functionalities from
+// detail::IEEEFloat.
+class APFloat : public APFloatBase {
+  typedef detail::IEEEFloat IEEEFloat;
+
+  static_assert(std::is_standard_layout<IEEEFloat>::value, "");
+
+  union {
+    const fltSemantics *semantics;
+    IEEEFloat IEEE;
+  };
+
+  explicit APFloat(IEEEFloat F) : IEEE(std::move(F)) {}
+
+public:
+  APFloat(const fltSemantics &Semantics) : APFloat(IEEEFloat(Semantics)) {}
+  APFloat(const fltSemantics &Semantics, StringRef S);
+  APFloat(const fltSemantics &Semantics, integerPart I)
+      : APFloat(IEEEFloat(Semantics, I)) {}
+  APFloat(const fltSemantics &Semantics, uninitializedTag U)
+      : APFloat(IEEEFloat(Semantics, U)) {}
+  APFloat(const fltSemantics &Semantics, const APInt &I)
+      : APFloat(IEEEFloat(Semantics, I)) {}
+  explicit APFloat(double d) : APFloat(IEEEFloat(d)) {}
+  explicit APFloat(float f) : APFloat(IEEEFloat(f)) {}
+  APFloat(const APFloat &RHS) : APFloat(IEEEFloat(RHS.IEEE)) {}
+  APFloat(APFloat &&RHS) : APFloat(IEEEFloat(std::move(RHS.IEEE))) {}
+
+  ~APFloat() { IEEE.~IEEEFloat(); }
+
+  bool needsCleanup() const { return IEEE.needsCleanup(); }
+
+  static APFloat getZero(const fltSemantics &Sem, bool Negative = false) {
+    return APFloat(IEEEFloat::getZero(Sem, Negative));
+  }
+
+  static APFloat getInf(const fltSemantics &Sem, bool Negative = false) {
+    return APFloat(IEEEFloat::getInf(Sem, Negative));
+  }
+
+  static APFloat getNaN(const fltSemantics &Sem, bool Negative = false,
+                        unsigned type = 0) {
+    return APFloat(IEEEFloat::getNaN(Sem, Negative, type));
+  }
+
+  static APFloat getQNaN(const fltSemantics &Sem, bool Negative = false,
+                         const APInt *payload = nullptr) {
+    return APFloat(IEEEFloat::getQNaN(Sem, Negative, payload));
+  }
+
+  static APFloat getSNaN(const fltSemantics &Sem, bool Negative = false,
+                         const APInt *payload = nullptr) {
+    return APFloat(IEEEFloat::getSNaN(Sem, Negative, payload));
+  }
+
+  static APFloat getLargest(const fltSemantics &Sem, bool Negative = false) {
+    return APFloat(IEEEFloat::getLargest(Sem, Negative));
+  }
+
+  static APFloat getSmallest(const fltSemantics &Sem, bool Negative = false) {
+    return APFloat(IEEEFloat::getSmallest(Sem, Negative));
+  }
+
+  static APFloat getSmallestNormalized(const fltSemantics &Sem,
+                                       bool Negative = false) {
+    return APFloat(IEEEFloat::getSmallestNormalized(Sem, Negative));
+  }
+
+  static APFloat getAllOnesValue(unsigned BitWidth, bool isIEEE = false) {
+    return APFloat(IEEEFloat::getAllOnesValue(BitWidth, isIEEE));
+  }
+
+  void Profile(FoldingSetNodeID &NID) const { IEEE.Profile(NID); }
+
+  opStatus add(const APFloat &RHS, roundingMode RM) {
+    return IEEE.add(RHS.IEEE, RM);
+  }
+  opStatus subtract(const APFloat &RHS, roundingMode RM) {
+    return IEEE.subtract(RHS.IEEE, RM);
+  }
+  opStatus multiply(const APFloat &RHS, roundingMode RM) {
+    return IEEE.multiply(RHS.IEEE, RM);
+  }
+  opStatus divide(const APFloat &RHS, roundingMode RM) {
+    return IEEE.divide(RHS.IEEE, RM);
+  }
+  opStatus remainder(const APFloat &RHS) { return IEEE.remainder(RHS.IEEE); }
+  opStatus mod(const APFloat &RHS) { return IEEE.mod(RHS.IEEE); }
+  opStatus fusedMultiplyAdd(const APFloat &Multiplicand, const APFloat &Addend,
+                            roundingMode RM) {
+    return IEEE.fusedMultiplyAdd(Multiplicand.IEEE, Addend.IEEE, RM);
+  }
+  opStatus roundToIntegral(roundingMode RM) { return IEEE.roundToIntegral(RM); }
+  opStatus next(bool nextDown) { return IEEE.next(nextDown); }
+
+  APFloat operator+(const APFloat &RHS) const {
+    return APFloat(IEEE + RHS.IEEE);
+  }
+
+  APFloat operator-(const APFloat &RHS) const {
+    return APFloat(IEEE - RHS.IEEE);
+  }
+
+  APFloat operator*(const APFloat &RHS) const {
+    return APFloat(IEEE * RHS.IEEE);
+  }
+
+  APFloat operator/(const APFloat &RHS) const {
+    return APFloat(IEEE / RHS.IEEE);
+  }
+
+  void changeSign() { IEEE.changeSign(); }
+  void clearSign() { IEEE.clearSign(); }
+  void copySign(const APFloat &RHS) { IEEE.copySign(RHS.IEEE); }
+
+  static APFloat copySign(APFloat Value, const APFloat &Sign) {
+    return APFloat(IEEEFloat::copySign(Value.IEEE, Sign.IEEE));
+  }
+
+  opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
+                   bool *losesInfo) {
+    return IEEE.convert(ToSemantics, RM, losesInfo);
+  }
+  opStatus convertToInteger(integerPart *Input, unsigned int Width,
+                            bool IsSigned, roundingMode RM,
+                            bool *IsExact) const {
+    return IEEE.convertToInteger(Input, Width, IsSigned, RM, IsExact);
+  }
+  opStatus convertToInteger(APSInt &Result, roundingMode RM,
+                            bool *IsExact) const {
+    return IEEE.convertToInteger(Result, RM, IsExact);
+  }
+  opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
+                            roundingMode RM) {
+    return IEEE.convertFromAPInt(Input, IsSigned, RM);
+  }
+  opStatus convertFromSignExtendedInteger(const integerPart *Input,
+                                          unsigned int InputSize, bool IsSigned,
+                                          roundingMode RM) {
+    return IEEE.convertFromSignExtendedInteger(Input, InputSize, IsSigned, RM);
+  }
+  opStatus convertFromZeroExtendedInteger(const integerPart *Input,
+                                          unsigned int InputSize, bool IsSigned,
+                                          roundingMode RM) {
+    return IEEE.convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM);
+  }
+  opStatus convertFromString(StringRef, roundingMode);
+  APInt bitcastToAPInt() const { return IEEE.bitcastToAPInt(); }
+  double convertToDouble() const { return IEEE.convertToDouble(); }
+  float convertToFloat() const { return IEEE.convertToFloat(); }
+
+  bool operator==(const APFloat &) const = delete;
+
+  cmpResult compare(const APFloat &RHS) const { return IEEE.compare(RHS.IEEE); }
+
+  bool bitwiseIsEqual(const APFloat &RHS) const {
+    return IEEE.bitwiseIsEqual(RHS.IEEE);
+  }
+
+  unsigned int convertToHexString(char *DST, unsigned int HexDigits,
+                                  bool UpperCase, roundingMode RM) const {
+    return IEEE.convertToHexString(DST, HexDigits, UpperCase, RM);
+  }
+
+  bool isZero() const { return getCategory() == fcZero; }
+  bool isInfinity() const { return getCategory() == fcInfinity; }
+  bool isNaN() const { return getCategory() == fcNaN; }
+
+  bool isNegative() const { return IEEE.isNegative(); }
+  bool isDenormal() const { return IEEE.isDenormal(); }
+  bool isSignaling() const { return IEEE.isSignaling(); }
+
+  bool isNormal() const { return !isDenormal() && isFiniteNonZero(); }
+  bool isFinite() const { return !isNaN() && !isInfinity(); }
+
+  fltCategory getCategory() const { return IEEE.getCategory(); }
+  const fltSemantics &getSemantics() const { return *semantics; }
+  bool isNonZero() const { return !isZero(); }
+  bool isFiniteNonZero() const { return isFinite() && !isZero(); }
+  bool isPosZero() const { return isZero() && !isNegative(); }
+  bool isNegZero() const { return isZero() && isNegative(); }
+  bool isSmallest() const { return IEEE.isSmallest(); }
+  bool isLargest() const { return IEEE.isLargest(); }
+  bool isInteger() const { return IEEE.isInteger(); }
+
+  APFloat &operator=(const APFloat &RHS) {
+    IEEE = RHS.IEEE;
+    return *this;
+  }
+  APFloat &operator=(APFloat &&RHS) {
+    IEEE = std::move(RHS.IEEE);
+    return *this;
+  }
+
+  void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision = 0,
+                unsigned FormatMaxPadding = 3) const {
+    return IEEE.toString(Str, FormatPrecision, FormatMaxPadding);
+  }
+
+  bool getExactInverse(APFloat *inv) const {
+    return IEEE.getExactInverse(&inv->IEEE);
+  }
+
+  friend hash_code hash_value(const APFloat &Arg);
+  friend int ilogb(const APFloat &Arg) { return ilogb(Arg.IEEE); }
+  friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
+  friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
+};
+
 /// See friend declarations above.
 ///
 /// These additional declarations are required in order to compile LLVM with IBM
 /// xlC compiler.
 hash_code hash_value(const APFloat &Arg);
-int ilogb(const APFloat &Arg);
-APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode);
+inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
+  return APFloat(scalbn(X.IEEE, Exp, RM));
+}
 
 /// \brief Equivalent of C standard library function.
 ///
 /// While the C standard says Exp is an unspecified value for infinity and nan,
 /// this returns INT_MAX for infinities, and INT_MIN for NaNs.
-APFloat frexp(const APFloat &Val, int &Exp, APFloat::roundingMode RM);
-
+inline APFloat frexp(const APFloat &X, int &Exp, APFloat::roundingMode RM) {
+  return APFloat(frexp(X.IEEE, Exp, RM));
+}
 /// \brief Returns the absolute value of the argument.
 inline APFloat abs(APFloat X) {
   X.clearSign();
