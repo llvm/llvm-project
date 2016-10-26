@@ -342,6 +342,11 @@ endif()
 # headers
 add_compile_flags_if_supported(-nostdinc++)
 
+# Hide all inline function definitions which have not explicitly been marked
+# visible. This prevents new definitions for inline functions from appearing in
+# the dylib when get ODR used by another function.
+add_compile_flags_if_supported(-fvisibility-inlines-hidden)
+
 # Let the library headers know they are currently being used to build the
 # library.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)

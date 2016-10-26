@@ -71,7 +71,7 @@ static int ProcessGlobalRegionsCallback(struct dl_phdr_info *info, size_t size,
     GetAllocatorGlobalRange(&allocator_begin, &allocator_end);
     if (begin <= allocator_begin && allocator_begin < end) {
       CHECK_LE(allocator_begin, allocator_end);
-      CHECK_LT(allocator_end, end);
+      CHECK_LE(allocator_end, end);
       if (begin < allocator_begin)
         ScanRangeForPointers(begin, allocator_begin, frontier, "GLOBAL",
                              kReachable);

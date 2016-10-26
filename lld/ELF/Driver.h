@@ -42,7 +42,7 @@ private:
   template <class ELFT> void link(llvm::opt::InputArgList &Args);
 
   // True if we are in --whole-archive and --no-whole-archive.
-  bool WholeArchive = false;
+  bool InWholeArchive = false;
 
   // True if we are in --start-lib and --end-lib.
   bool InLib = false;

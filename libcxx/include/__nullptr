@@ -42,10 +42,6 @@ struct _LIBCPP_TYPE_VIS_ONLY nullptr_t
 
     friend _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR bool operator==(nullptr_t, nullptr_t) {return true;}
     friend _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR bool operator!=(nullptr_t, nullptr_t) {return false;}
-    friend _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR bool operator<(nullptr_t, nullptr_t) {return false;}
-    friend _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR bool operator<=(nullptr_t, nullptr_t) {return true;}
-    friend _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR bool operator>(nullptr_t, nullptr_t) {return false;}
-    friend _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR bool operator>=(nullptr_t, nullptr_t) {return true;}
 };
 
 inline _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR nullptr_t __get_nullptr_t() {return nullptr_t(0);}
