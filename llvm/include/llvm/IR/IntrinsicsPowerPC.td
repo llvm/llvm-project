@@ -782,6 +782,12 @@ def int_ppc_vsx_xvcmpgtsp_p : GCCBuiltin<"__builtin_vsx_xvcmpgtsp_p">,
 def int_ppc_vsx_xxleqv :
       PowerPC_VSX_Intrinsic<"xxleqv", [llvm_v4i32_ty],
                             [llvm_v4i32_ty, llvm_v4i32_ty], [IntrNoMem]>;
+def int_ppc_vsx_xviexpdp :
+      PowerPC_VSX_Intrinsic<"xviexpdp",[llvm_v2f64_ty],
+                            [llvm_v2i64_ty, llvm_v2i64_ty],[IntrNoMem]>;
+def int_ppc_vsx_xviexpsp :
+      PowerPC_VSX_Intrinsic<"xviexpsp",[llvm_v4f32_ty],
+                            [llvm_v4i32_ty, llvm_v4i32_ty],[IntrNoMem]>;
 }
 
 //===----------------------------------------------------------------------===//

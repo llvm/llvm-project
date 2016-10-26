@@ -87,6 +87,9 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
   if (Features.test(FeatureISAVersion7_0_1))
     return {7, 0, 1};
 
+  if (Features.test(FeatureISAVersion7_0_2))
+    return {7, 0, 2};
+
   if (Features.test(FeatureISAVersion8_0_0))
     return {8, 0, 0};
 
@@ -98,6 +101,12 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
 
   if (Features.test(FeatureISAVersion8_0_3))
     return {8, 0, 3};
+
+  if (Features.test(FeatureISAVersion8_0_4))
+    return {8, 0, 4};
+
+  if (Features.test(FeatureISAVersion8_1_0))
+    return {8, 1, 0};
 
   return {0, 0, 0};
 }

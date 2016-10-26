@@ -2191,9 +2191,9 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Vector Insert Exponent DP/SP
   def XVIEXPDP : XX3_XT5_XA5_XB5<60, 248, "xviexpdp", vsrc, vsrc, vsrc,
-                                 IIC_VecFP, []>;
+    IIC_VecFP, [(set v2f64: $XT,(int_ppc_vsx_xviexpdp v2i64:$XA, v2i64:$XB))]>;
   def XVIEXPSP : XX3_XT5_XA5_XB5<60, 216, "xviexpsp", vsrc, vsrc, vsrc,
-                                 IIC_VecFP, []>;
+    IIC_VecFP, [(set v4f32: $XT,(int_ppc_vsx_xviexpsp v4i32:$XA, v4i32:$XB))]>;
 
   // Vector Extract Exponent/Significand DP/SP
   def XVXEXPDP : XX2_XT6_XO5_XB6<60,  0, 475, "xvxexpdp", vsrc, []>;

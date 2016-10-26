@@ -218,4 +218,18 @@ exit:                                             ; preds = %if.then, %entry
   ret float %call1
 }
 
+declare void @use_arr(i32*)
+define void @test_fold_reuse() minsize {
+; CHECK-LABEL: test_fold_reuse:
+; CHECK: push.w {r4, r7, r8, lr}
+; CHECK: sub sp, #24
+; [...]
+; CHECK: add sp, #24
+; CHECK: pop.w {r4, r7, r8, pc}
+  %arr = alloca i8, i32 24
+  call void asm sideeffect "", "~{r8},~{r4}"()
+  call void @bar(i8* %arr)
+  ret void
+}
+
 declare void @llvm.va_start(i8*) nounwind

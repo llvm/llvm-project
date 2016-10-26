@@ -140,6 +140,62 @@ def executeShCmd(cmd, shenv, results, timeout=0):
 
     return (finalExitCode, timeoutInfo)
 
+def quote_windows_command(seq):
+    """
+    Reimplement Python's private subprocess.list2cmdline for MSys compatibility
+
+    Based on CPython implementation here:
+      https://hg.python.org/cpython/file/849826a900d2/Lib/subprocess.py#l422
+
+    Some core util distributions (MSys) don't tokenize command line arguments
+    the same way that MSVC CRT does. Lit rolls its own quoting logic similar to
+    the stock CPython logic to paper over these quoting and tokenization rule
+    differences.
+
+    We use the same algorithm from MSDN as CPython
+    (http://msdn.microsoft.com/en-us/library/17w5ykft.aspx), but we treat more
+    characters as needing quoting, such as double quotes themselves.
+    """
+    result = []
+    needquote = False
+    for arg in seq:
+        bs_buf = []
+
+        # Add a space to separate this argument from the others
+        if result:
+            result.append(' ')
+
+        # This logic differs from upstream list2cmdline.
+        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or not arg
+        if needquote:
+            result.append('"')
+
+        for c in arg:
+            if c == '\\':
+                # Don't know if we need to double yet.
+                bs_buf.append(c)
+            elif c == '"':
+                # Double backslashes.
+                result.append('\\' * len(bs_buf)*2)
+                bs_buf = []
+                result.append('\\"')
+            else:
+                # Normal char
+                if bs_buf:
+                    result.extend(bs_buf)
+                    bs_buf = []
+                result.append(c)
+
+        # Add remaining backslashes, if any.
+        if bs_buf:
+            result.extend(bs_buf)
+
+        if needquote:
+            result.extend(bs_buf)
+            result.append('"')
+
+    return ''.join(result)
+
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
@@ -314,6 +370,11 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     f.close()
                     named_temp_files.append(f.name)
                     args[i] = f.name
+
+        # On Windows, do our own command line quoting for better compatibility
+        # with some core utility distributions.
+        if kIsWindows:
+            args = quote_windows_command(args)
 
         try:
             procs.append(subprocess.Popen(args, cwd=cmd_shenv.cwd,

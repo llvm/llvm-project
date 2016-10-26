@@ -515,7 +515,7 @@ DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
                           Metadata *Variable,
                           Metadata *StaticDataMemberDeclaration,
-                          uint64_t AlignInBits,
+                          uint32_t AlignInBits,
                           StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
@@ -534,7 +534,7 @@ DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
                                           MDString *Name, Metadata *File,
                                           unsigned Line, Metadata *Type,
                                           unsigned Arg, DIFlags Flags,
-                                          uint64_t AlignInBits,
+                                          uint32_t AlignInBits,
                                           StorageType Storage,
                                           bool ShouldCreate) {
   // 64K ought to be enough for any frontend.

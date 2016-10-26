@@ -409,6 +409,22 @@ define i1 @lshr5(i32 %X, i32 %Y) {
 ; CHECK: ret i1 false
 }
 
+define i1 @lshr6(i32 %X, i32 %Y) {
+; CHECK-LABEL: @lshr6(
+  %A = lshr i32 %X, %Y
+  %C = icmp ult i32 %X, %A
+  ret i1 %C
+; CHECK: ret i1 false
+}
+
+define i1 @lshr7(i32 %X, i32 %Y) {
+; CHECK-LABEL: @lshr7(
+  %A = lshr i32 %X, %Y
+  %C = icmp uge i32 %X, %A
+  ret i1 %C
+; CHECK: ret i1 true
+}
+
 define i1 @ashr1(i32 %x) {
 ; CHECK-LABEL: @ashr1(
   %s = ashr i32 -1, %x
@@ -581,6 +597,22 @@ define i1 @udiv6(i32 %X) nounwind {
   %C = icmp eq i32 %A, 0
   ret i1 %C
 ; CHECK: ret i1 %C
+}
+
+define i1 @udiv7(i32 %X, i32 %Y) {
+; CHECK-LABEL: @udiv7(
+  %A = udiv i32 %X, %Y
+  %C = icmp ult i32 %X, %A
+  ret i1 %C
+; CHECK: ret i1 false
+}
+
+define i1 @udiv8(i32 %X, i32 %Y) {
+; CHECK-LABEL: @udiv8(
+  %A = udiv i32 %X, %Y
+  %C = icmp uge i32 %X, %A
+  ret i1 %C
+; CHECK: ret i1 true
 }
 
 define i1 @mul1(i32 %X) {

@@ -1,22 +1,30 @@
 //===-- README.txt - Notes for WebAssembly code gen -----------------------===//
 
-This WebAssembly backend is presently in a very early stage of development.
-The code should build and not break anything else, but don't expect a lot more
-at this point.
+This WebAssembly backend is presently under development.
 
-For more information on WebAssembly itself, see the design documents:
-  * https://github.com/WebAssembly/design/blob/master/README.md
+Currently the easiest way to use it is through Emscripten, which provides a
+compilation environment that includes standard libraries, tools, and packaging
+for producing WebAssembly applications that can run in browsers and other
+environments. For more information, see the Emscripten documentation in
+general, and this page in particular:
+  * https://github.com/kripken/emscripten/wiki/New-WebAssembly-Backend
 
-The following documents contain some information on the planned semantics and
-binary encoding of WebAssembly itself:
+Other ways of using this backend, such as via a standalone "clang", are also
+under development, though they are not generally usable yet.
+
+For more information on WebAssembly itself, see the home page:
+  * https://webassembly.github.io/
+
+The following documents contain some information on the semantics and binary
+encoding of WebAssembly itself:
   * https://github.com/WebAssembly/design/blob/master/Semantics.md
   * https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md
 
 The backend is built, tested and archived on the following waterfall:
   https://wasm-stat.us
 
-The backend's bringup is done using the GCC torture test suite first since it
-doesn't require C library support. Current known failures are in
+The backend's bringup is done in part by using the GCC torture test suite, since
+it doesn't require C library support. Current known failures are in
 known_gcc_test_failures.txt, all other tests should pass. The waterfall will
 turn red if not. Once most of these pass, further testing will use LLVM's own
 test suite. The tests can be run locally using:

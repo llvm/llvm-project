@@ -101,55 +101,89 @@ def : ProcessorModel<"hainan",   SIQuarterSpeedModel, [FeatureSouthernIslands]>;
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"bonaire",    SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount32, FeatureISAVersion7_0_0]
+  [FeatureISAVersion7_0_0]
 >;
 
 def : ProcessorModel<"kabini",     SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount16]
+  [FeatureISAVersion7_0_2]
 >;
 
 def : ProcessorModel<"kaveri",     SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount32, FeatureISAVersion7_0_0]
+  [FeatureISAVersion7_0_0]
 >;
 
-def : ProcessorModel<"hawaii", SIFullSpeedModel,
-  [FeatureSeaIslands, FeatureFastFMAF32, HalfRate64Ops,
-   FeatureLDSBankCount32, FeatureISAVersion7_0_1]
+def : ProcessorModel<"hawaii",     SIFullSpeedModel,
+  [FeatureISAVersion7_0_1]
 >;
 
 def : ProcessorModel<"mullins",    SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount16]>;
+  [FeatureISAVersion7_0_2]>;
+
+def : ProcessorModel<"gfx700",     SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_0]
+>;
+
+def : ProcessorModel<"gfx701",     SIFullSpeedModel,
+  [FeatureISAVersion7_0_1]
+>;
+
+def : ProcessorModel<"gfx702",     SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_2]
+>;
 
 //===----------------------------------------------------------------------===//
 // Volcanic Islands
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"tonga",   SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_2,
-   FeatureLDSBankCount32]
+  [FeatureISAVersion8_0_2]
 >;
 
 def : ProcessorModel<"iceland", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0,
-   FeatureLDSBankCount32]
+  [FeatureISAVersion8_0_0]
 >;
 
 def : ProcessorModel<"carrizo", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount32, FeatureXNACK]
+  [FeatureISAVersion8_0_1]
 >;
 
-def : ProcessorModel<"fiji", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_3, FeatureLDSBankCount32]
+def : ProcessorModel<"fiji",    SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_3]
 >;
 
-def : ProcessorModel<"stoney", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount16, FeatureXNACK]
+def : ProcessorModel<"stoney",  SIQuarterSpeedModel,
+  [FeatureISAVersion8_1_0]
 >;
 
 def : ProcessorModel<"polaris10", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_3, FeatureLDSBankCount32]
+  [FeatureISAVersion8_0_3]
 >;
 
 def : ProcessorModel<"polaris11", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_3, FeatureLDSBankCount32]
+  [FeatureISAVersion8_0_3]
 >;
+
+def : ProcessorModel<"gfx800", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_0]
+>;
+
+def : ProcessorModel<"gfx801", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_1]
+>;
+
+def : ProcessorModel<"gfx802", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_2]
+>;
+
+def : ProcessorModel<"gfx803", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_3]
+>;
+
+def : ProcessorModel<"gfx804", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_4]
+>;
+
+def : ProcessorModel<"gfx810", SIQuarterSpeedModel,
+  [FeatureISAVersion8_1_0]
+>;
+
