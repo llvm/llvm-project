@@ -186,15 +186,30 @@ template <class ELFT> class DefinedRegular : public Defined {
   typedef typename ELFT::uint uintX_t;
 
 public:
+  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, uintX_t Value,
+                 uintX_t Size, InputSectionBase<ELFT> *Section, InputFile *File)
+      : Defined(SymbolBody::DefinedRegularKind, Name, StOther, Type),
+        Value(Value), Size(Size),
+        Section(Section ? Section->Repl : NullInputSection) {
+    this->File = File;
+  }
+
+  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, uintX_t Value,
+                 uintX_t Size, InputSectionBase<ELFT> *Section)
+      : DefinedRegular(Name, StOther, Type, Value, Size, Section,
+                       Section ? Section->getFile() : nullptr) {}
+
   DefinedRegular(StringRef Name, const Elf_Sym &Sym,
                  InputSectionBase<ELFT> *Section)
-      : Defined(SymbolBody::DefinedRegularKind, Name, Sym.st_other,
-                Sym.getType()),
-        Value(Sym.st_value), Size(Sym.st_size),
-        Section(Section ? Section->Repl : NullInputSection) {
-    if (Section)
-      this->File = Section->getFile();
-  }
+      : DefinedRegular(Name, Sym.st_other, Sym.getType(), Sym.st_value,
+                       Sym.st_size, Section) {}
+
+  DefinedRegular(StringRef Name, uint8_t StOther)
+      : DefinedRegular(Name, StOther, llvm::ELF::STT_NOTYPE, 0, 0,
+                       NullInputSection) {}
+
+  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F)
+      : DefinedRegular(Name, StOther, Type, 0, 0, NullInputSection, F) {}
 
   DefinedRegular(const Elf_Sym &Sym, InputSectionBase<ELFT> *Section)
       : Defined(SymbolBody::DefinedRegularKind, Sym.st_name, Sym.st_other,
@@ -204,17 +219,6 @@ public:
     assert(isLocal());
     if (Section)
       this->File = Section->getFile();
-  }
-
-  DefinedRegular(StringRef Name, uint8_t StOther)
-      : Defined(SymbolBody::DefinedRegularKind, Name, StOther,
-                llvm::ELF::STT_NOTYPE),
-        Value(0), Size(0), Section(NullInputSection) {}
-
-  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F)
-      : Defined(SymbolBody::DefinedRegularKind, Name, StOther, Type), Value(0),
-        Size(0), Section(NullInputSection) {
-    this->File = F;
   }
 
   // Return true if the symbol is a PIC function.

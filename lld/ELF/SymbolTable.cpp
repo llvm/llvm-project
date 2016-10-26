@@ -227,6 +227,13 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
   return {Sym, IsNew};
 }
 
+// Construct a string in the form of "Sym in File1 and File2".
+// Used to construct an error message.
+static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
+  return maybeDemangle(Existing->getName()) + " in " +
+         getFilename(Existing->File) + " and " + getFilename(NewFile);
+}
+
 // Find an existing symbol or create and insert a new one, then apply the given
 // attributes.
 template <class ELFT>
@@ -249,18 +256,6 @@ SymbolTable<ELFT>::insert(StringRef &Name, uint8_t Type, uint8_t Visibility,
     error("TLS attribute mismatch for symbol: " + conflictMsg(S->body(), File));
 
   return {S, WasInserted};
-}
-
-// Construct a string in the form of "Sym in File1 and File2".
-// Used to construct an error message.
-template <typename ELFT>
-std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
-                                           InputFile *NewFile) {
-  std::string Sym = Existing->getName();
-  if (Config->Demangle)
-    Sym = demangle(Sym);
-  return Sym + " in " + getFilename(Existing->File) + " and " +
-         getFilename(NewFile);
 }
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name) {

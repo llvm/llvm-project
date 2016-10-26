@@ -336,7 +336,8 @@ void DAGTypeLegalizer::IntegerToVector(SDValue Op, unsigned NumElements,
 
 SDValue DAGTypeLegalizer::ExpandOp_BITCAST(SDNode *N) {
   SDLoc dl(N);
-  if (N->getValueType(0).isVector()) {
+  if (N->getValueType(0).isVector() &&
+      N->getOperand(0).getValueType().isInteger()) {
     // An illegal expanding type is being converted to a legal vector type.
     // Make a two element vector out of the expanded parts and convert that
     // instead, but only if the new vector type is legal (otherwise there

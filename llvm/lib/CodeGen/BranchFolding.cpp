@@ -720,8 +720,6 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
     SameTails[commonTailIndex].getTailStartPos();
   MachineBasicBlock *MBB = SameTails[commonTailIndex].getBlock();
 
-  // If the common tail includes any debug info we will take it pretty
-  // randomly from one of the inputs.  Might be better to remove it?
   DEBUG(dbgs() << "\nSplitting BB#" << MBB->getNumber() << ", size "
                << maxCommonTailLength);
 
@@ -897,6 +895,11 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
     // Recompute common tail MBB's edge weights and block frequency.
     setCommonTailEdgeWeights(*MBB);
+
+    // Remove the original debug location from the common tail.
+    for (auto &MI : *MBB)
+      if (!MI.isDebugValue())
+        MI.setDebugLoc(DebugLoc());
 
     // MBB is common tail.  Adjust all other BB's to jump to this one.
     // Traversal must be forwards so erases work.

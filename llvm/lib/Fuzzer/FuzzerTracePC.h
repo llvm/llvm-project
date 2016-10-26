@@ -69,8 +69,6 @@ class TracePC {
   void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
   void PrintFeatureSet();
 
-  void ResetGuards();
-
   void PrintModuleInfo();
 
   void PrintCoverage();
