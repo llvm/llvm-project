@@ -104,7 +104,7 @@ void test_self_swap() {
         assertContains<T>(a, 42);
         assert(T::count == 1);
         assert(T::copied == 0);
-        assert(T::moved == 0);
+        LIBCPP_ASSERT(T::moved == 0);
     }
     assert(small::count == 0);
     { // large
@@ -113,9 +113,9 @@ void test_self_swap() {
         T::reset();
         a.swap(a);
         assertContains<T>(a, 42);
-        assert(T::copied == 0);
-        assert(T::moved == 0);
         assert(T::count == 1);
+        assert(T::copied == 0);
+        LIBCPP_ASSERT(T::moved == 0);
     }
     assert(large::count == 0);
 }

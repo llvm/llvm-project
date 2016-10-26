@@ -16,7 +16,6 @@
 
 #include "scudo_allocator.h"
 #include "scudo_utils.h"
-#include "scudo_allocator_secondary.h"
 
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
@@ -25,13 +24,9 @@
 #include <pthread.h>
 #include <smmintrin.h>
 
-#include <atomic>
 #include <cstring>
 
 namespace __scudo {
-
-const uptr MinAlignmentLog = 4; // 16 bytes for x64
-const uptr MaxAlignmentLog = 24;
 
 struct AP {
   static const uptr kSpaceBeg = ~0ULL;
@@ -55,55 +50,18 @@ static thread_local Xorshift128Plus Prng;
 // Global static cookie, initialized at start-up.
 static u64 Cookie;
 
-enum ChunkState : u8 {
-  ChunkAvailable  = 0,
-  ChunkAllocated  = 1,
-  ChunkQuarantine = 2
-};
-
-typedef unsigned __int128 PackedHeader;
-typedef std::atomic<PackedHeader> AtomicPackedHeader;
-
-// Our header requires 128-bit of storage on x64 (the only platform supported
-// as of now), which fits nicely with the alignment requirements.
-// Having the offset saves us from using functions such as GetBlockBegin, that
-// is fairly costly. Our first implementation used the MetaData as well, which
-// offers the advantage of being stored away from the chunk itself, but
-// accessing it was costly as well.
-// The header will be atomically loaded and stored using the 16-byte primitives
-// offered by the platform (likely requires cmpxchg16b support).
-struct UnpackedHeader {
-  // 1st 8 bytes
-  u16 Checksum      : 16;
-  u64 RequestedSize : 40; // Needed for reallocation purposes.
-  u8  State         : 2;  // available, allocated, or quarantined
-  u8  AllocType     : 2;  // malloc, new, new[], or memalign
-  u8  Unused_0_     : 4;
-  // 2nd 8 bytes
-  u64 Offset        : 20; // Offset from the beginning of the backend
-                          // allocation to the beginning of the chunk itself,
-                          // in multiples of MinAlignment. See comment about
-                          // its maximum value and test in init().
-  u64 Unused_1_     : 28;
-  u16 Salt          : 16;
-};
-
-COMPILER_CHECK(sizeof(UnpackedHeader) == sizeof(PackedHeader));
-
-const uptr ChunkHeaderSize = sizeof(PackedHeader);
-
 struct ScudoChunk : UnpackedHeader {
   // We can't use the offset member of the chunk itself, as we would double
   // fetch it without any warranty that it wouldn't have been tampered. To
   // prevent this, we work with a local copy of the header.
-  void *AllocBeg(UnpackedHeader *Header) {
+  void *getAllocBeg(UnpackedHeader *Header) {
     return reinterpret_cast<void *>(
         reinterpret_cast<uptr>(this) - (Header->Offset << MinAlignmentLog));
   }
 
   // CRC32 checksum of the Chunk pointer and its ChunkHeader.
   // It currently uses the Intel Nehalem SSE4.2 crc32 64-bit instruction.
-  u16 Checksum(UnpackedHeader *Header) const {
+  u16 computeChecksum(UnpackedHeader *Header) const {
     u64 HeaderHolder[2];
     memcpy(HeaderHolder, Header, sizeof(HeaderHolder));
     u64 Crc = _mm_crc32_u64(Cookie, reinterpret_cast<uptr>(this));
@@ -125,14 +83,14 @@ struct ScudoChunk : UnpackedHeader {
     *NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
     if ((NewUnpackedHeader->Unused_0_ != 0) ||
         (NewUnpackedHeader->Unused_1_ != 0) ||
-        (NewUnpackedHeader->Checksum != Checksum(NewUnpackedHeader))) {
+        (NewUnpackedHeader->Checksum != computeChecksum(NewUnpackedHeader))) {
       dieWithMessage("ERROR: corrupted chunk header at address %p\n", this);
     }
   }
 
   // Packs and stores the header, computing the checksum in the process.
   void storeHeader(UnpackedHeader *NewUnpackedHeader) {
-    NewUnpackedHeader->Checksum = Checksum(NewUnpackedHeader);
+    NewUnpackedHeader->Checksum = computeChecksum(NewUnpackedHeader);
     PackedHeader NewPackedHeader = bit_cast<PackedHeader>(*NewUnpackedHeader);
     AtomicPackedHeader *AtomicHeader =
         reinterpret_cast<AtomicPackedHeader *>(this);
@@ -144,7 +102,7 @@ struct ScudoChunk : UnpackedHeader {
   // we are not being raced by a corruption occurring in another thread.
   void compareExchangeHeader(UnpackedHeader *NewUnpackedHeader,
                              UnpackedHeader *OldUnpackedHeader) {
-    NewUnpackedHeader->Checksum = Checksum(NewUnpackedHeader);
+    NewUnpackedHeader->Checksum = computeChecksum(NewUnpackedHeader);
     PackedHeader NewPackedHeader = bit_cast<PackedHeader>(*NewUnpackedHeader);
     PackedHeader OldPackedHeader = bit_cast<PackedHeader>(*OldUnpackedHeader);
     AtomicPackedHeader *AtomicHeader =
@@ -194,6 +152,8 @@ static void initInternal() {
   Options.setFrom(getFlags(), common_flags());
   initAllocator(Options);
 
+  MaybeStartBackgroudThread();
+
   ScudoInitIsRunning = false;
 }
 
@@ -221,7 +181,7 @@ struct QuarantineCallback {
       dieWithMessage("ERROR: invalid chunk state when recycling address %p\n",
                      Chunk);
     }
-    void *Ptr = Chunk->AllocBeg(&Header);
+    void *Ptr = Chunk->getAllocBeg(&Header);
     getAllocator().Deallocate(Cache_, Ptr);
   }
 
@@ -269,9 +229,8 @@ void AllocatorOptions::copyTo(Flags *f, CommonFlags *cf) const {
 }
 
 struct Allocator {
-  static const uptr MaxAllowedMallocSize = 1ULL << 40;
-  static const uptr MinAlignment = 1 << MinAlignmentLog;
-  static const uptr MaxAlignment = 1 << MaxAlignmentLog; // 16 MB
+  static const uptr MaxAllowedMallocSize =
+      FIRST_32_SECOND_64(2UL << 30, 1ULL << 40);
 
   ScudoAllocator BackendAllocator;
   ScudoQuarantine AllocatorQuarantine;
@@ -296,13 +255,18 @@ struct Allocator {
     CHECK(testCPUFeature(SSE4_2)); // for crc32
 
     // Verify that the header offset field can hold the maximum offset. In the
-    // worst case scenario, the backend allocation is already aligned on
-    // MaxAlignment, so in order to store the header and still be aligned, we
-    // add an extra MaxAlignment. As a result, the offset from the beginning of
-    // the backend allocation to the chunk will be MaxAlignment -
-    // ChunkHeaderSize.
+    // case of the Secondary allocator, it takes care of alignment and the
+    // offset will always be 0. In the case of the Primary, the worst case
+    // scenario happens in the last size class, when the backend allocation
+    // would already be aligned on the requested alignment, which would happen
+    // to be the maximum alignment that would fit in that size class. As a
+    // result, the maximum offset will be at most the maximum alignment for the
+    // last size class minus the header size, in multiples of MinAlignment.
     UnpackedHeader Header = {};
-    uptr MaximumOffset = (MaxAlignment - ChunkHeaderSize) >> MinAlignmentLog;
+    uptr MaxPrimaryAlignment = 1 << MostSignificantSetBitIndex(
+        PrimaryAllocator::SizeClassMap::kMaxSize - MinAlignment);
+    uptr MaximumOffset = (MaxPrimaryAlignment - ChunkHeaderSize) >>
+        MinAlignmentLog;
     Header.Offset = MaximumOffset;
     if (Header.Offset != MaximumOffset) {
       dieWithMessage("ERROR: the maximum possible offset doesn't fit in the "
@@ -313,9 +277,9 @@ struct Allocator {
     DeleteSizeMismatch = Options.DeleteSizeMismatch;
     ZeroContents = Options.ZeroContents;
     BackendAllocator.Init(Options.MayReturnNull);
-    AllocatorQuarantine.Init(static_cast<uptr>(Options.QuarantineSizeMb) << 20,
-                             static_cast<uptr>(
-                                 Options.ThreadLocalQuarantineSizeKb) << 10);
+    AllocatorQuarantine.Init(
+        static_cast<uptr>(Options.QuarantineSizeMb) << 20,
+        static_cast<uptr>(Options.ThreadLocalQuarantineSizeKb) << 10);
     BackendAllocator.InitCache(&FallbackAllocatorCache);
     Cookie = Prng.Next();
   }
@@ -325,7 +289,7 @@ struct Allocator {
     if (UNLIKELY(!ThreadInited))
       initThread();
     if (!IsPowerOfTwo(Alignment)) {
-      dieWithMessage("ERROR: malloc alignment is not a power of 2\n");
+      dieWithMessage("ERROR: alignment is not a power of 2\n");
     }
     if (Alignment > MaxAlignment)
       return BackendAllocator.ReturnNullOrDieOnBadRequest();
@@ -336,20 +300,21 @@ struct Allocator {
     if (Size >= MaxAllowedMallocSize)
       return BackendAllocator.ReturnNullOrDieOnBadRequest();
     uptr RoundedSize = RoundUpTo(Size, MinAlignment);
-    uptr ExtraBytes = ChunkHeaderSize;
+    uptr NeededSize = RoundedSize + ChunkHeaderSize;
     if (Alignment > MinAlignment)
-      ExtraBytes += Alignment;
-    uptr NeededSize = RoundedSize + ExtraBytes;
+      NeededSize += Alignment;
     if (NeededSize >= MaxAllowedMallocSize)
       return BackendAllocator.ReturnNullOrDieOnBadRequest();
+    bool FromPrimary = PrimaryAllocator::CanAllocate(NeededSize, MinAlignment);
 
     void *Ptr;
     if (LIKELY(!ThreadTornDown)) {
-      Ptr = BackendAllocator.Allocate(&Cache, NeededSize, MinAlignment);
+      Ptr = BackendAllocator.Allocate(&Cache, NeededSize,
+                                      FromPrimary ? MinAlignment : Alignment);
     } else {
       SpinMutexLock l(&FallbackMutex);
       Ptr = BackendAllocator.Allocate(&FallbackAllocatorCache, NeededSize,
-                                      MinAlignment);
+                                      FromPrimary ? MinAlignment : Alignment);
     }
     if (!Ptr)
       return BackendAllocator.ReturnNullOrDieOnOOM();
@@ -359,6 +324,11 @@ struct Allocator {
        memset(Ptr, 0, BackendAllocator.GetActuallyAllocatedSize(Ptr));
 
     uptr AllocBeg = reinterpret_cast<uptr>(Ptr);
+    // If the allocation was serviced by the secondary, the returned pointer
+    // accounts for ChunkHeaderSize to pass the alignment check of the combined
+    // allocator. Adjust it here.
+    if (!FromPrimary)
+      AllocBeg -= ChunkHeaderSize;
     uptr ChunkBeg = AllocBeg + ChunkHeaderSize;
     if (!IsAligned(ChunkBeg, Alignment))
       ChunkBeg = RoundUpTo(ChunkBeg, Alignment);
@@ -450,7 +420,7 @@ struct Allocator {
                      "address %p\n", Chunk);
     }
     uptr Size =
-        BackendAllocator.GetActuallyAllocatedSize(Chunk->AllocBeg(Header));
+        BackendAllocator.GetActuallyAllocatedSize(Chunk->getAllocBeg(Header));
     // UsableSize works as malloc_usable_size, which is also what (AFAIU)
     // tcmalloc's MallocExtension::GetAllocatedSize aims at providing. This
     // means we will return the size of the chunk from the user beginning to
@@ -543,7 +513,7 @@ void drainQuarantine() {
 }
 
 void *scudoMalloc(uptr Size, AllocType Type) {
-  return Instance.allocate(Size, Allocator::MinAlignment, Type);
+  return Instance.allocate(Size, MinAlignment, Type);
 }
 
 void scudoFree(void *Ptr, AllocType Type) {
@@ -556,7 +526,7 @@ void scudoSizedFree(void *Ptr, uptr Size, AllocType Type) {
 
 void *scudoRealloc(void *Ptr, uptr Size) {
   if (!Ptr)
-    return Instance.allocate(Size, Allocator::MinAlignment, FromMalloc);
+    return Instance.allocate(Size, MinAlignment, FromMalloc);
   if (Size == 0) {
     Instance.deallocate(Ptr, 0, FromMalloc);
     return nullptr;

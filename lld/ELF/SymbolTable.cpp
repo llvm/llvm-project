@@ -227,6 +227,13 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
   return {Sym, IsNew};
 }
 
+// Construct a string in the form of "Sym in File1 and File2".
+// Used to construct an error message.
+static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
+  return maybeDemangle(Existing->getName()) + " in " +
+         getFilename(Existing->File) + " and " + getFilename(NewFile);
+}
+
 // Find an existing symbol or create and insert a new one, then apply the given
 // attributes.
 template <class ELFT>
@@ -249,18 +256,6 @@ SymbolTable<ELFT>::insert(StringRef &Name, uint8_t Type, uint8_t Visibility,
     error("TLS attribute mismatch for symbol: " + conflictMsg(S->body(), File));
 
   return {S, WasInserted};
-}
-
-// Construct a string in the form of "Sym in File1 and File2".
-// Used to construct an error message.
-template <typename ELFT>
-std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
-                                           InputFile *NewFile) {
-  std::string Sym = Existing->getName();
-  if (Config->Demangle)
-    Sym = demangle(Sym);
-  return Sym + " in " + getFilename(Existing->File) + " and " +
-         getFilename(NewFile);
 }
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name) {
@@ -379,14 +374,24 @@ void SymbolTable<ELFT>::reportDuplicate(SymbolBody *Existing,
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, const Elf_Sym &Sym,
                                       InputSectionBase<ELFT> *Section) {
+  return addRegular(Name, Sym.st_other, Sym.getType(), Sym.st_value,
+                    Sym.st_size, Sym.getBinding(), Section);
+}
+
+template <typename ELFT>
+Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
+                                      uint8_t Type, uintX_t Value, uintX_t Size,
+                                      uint8_t Binding,
+                                      InputSectionBase<ELFT> *Section) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, Sym.getType(), Sym.getVisibility(),
+  std::tie(S, WasInserted) = insert(Name, Type, StOther & 3,
                                     /*CanOmitFromDynSym*/ false,
                                     Section ? Section->getFile() : nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Sym.getBinding());
+  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
   if (Cmp > 0)
-    replaceBody<DefinedRegular<ELFT>>(S, Name, Sym, Section);
+    replaceBody<DefinedRegular<ELFT>>(S, Name, StOther, Type, Value, Size,
+                                      Section);
   else if (Cmp == 0)
     reportDuplicate(S->body(), Section->getFile());
   return S;
@@ -395,16 +400,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, const Elf_Sym &Sym,
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
                                       uint8_t StOther) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, STT_NOTYPE, StOther & 3,
-                                    /*CanOmitFromDynSym*/ false, nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
-  if (Cmp > 0)
-    replaceBody<DefinedRegular<ELFT>>(S, Name, StOther);
-  else if (Cmp == 0)
-    reportDuplicate(S->body(), nullptr);
-  return S;
+  return addRegular(Name, StOther, STT_NOTYPE, 0, 0, Binding, nullptr);
 }
 
 template <typename ELFT>
