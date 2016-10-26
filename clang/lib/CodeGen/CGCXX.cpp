@@ -258,10 +258,10 @@ llvm::Constant *CodeGenModule::getAddrOfCXXStructor(
       /*isThunk=*/false, /*ExtraAttrs=*/llvm::AttributeSet(), IsForDefinition);
 }
 
-static llvm::Value *BuildAppleKextVirtualCall(CodeGenFunction &CGF,
-                                              GlobalDecl GD,
-                                              llvm::Type *Ty,
-                                              const CXXRecordDecl *RD) {
+static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
+                                          GlobalDecl GD,
+                                          llvm::Type *Ty,
+                                          const CXXRecordDecl *RD) {
   assert(!CGF.CGM.getTarget().getCXXABI().isMicrosoft() &&
          "No kext in Microsoft ABI");
   GD = GD.getCanonicalDecl();
@@ -277,16 +277,19 @@ static llvm::Value *BuildAppleKextVirtualCall(CodeGenFunction &CGF,
   VTableIndex += AddressPoint;
   llvm::Value *VFuncPtr =
     CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfnkxt");
-  return CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.PointerAlignInBytes);
+  llvm::Value *VFunc =
+    CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.PointerAlignInBytes);
+  CGCallee Callee(GD.getDecl(), VFunc);
+  return Callee;
 }
 
 /// BuildAppleKextVirtualCall - This routine is to support gcc's kext ABI making
 /// indirect call to virtual functions. It makes the call through indexing
 /// into the vtable.
-llvm::Value *
+CGCallee
 CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD, 
-                                  NestedNameSpecifier *Qual,
-                                  llvm::Type *Ty) {
+                                           NestedNameSpecifier *Qual,
+                                           llvm::Type *Ty) {
   assert((Qual->getKind() == NestedNameSpecifier::TypeSpec) &&
          "BuildAppleKextVirtualCall - bad Qual kind");
   
@@ -304,21 +307,15 @@ CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
 
 /// BuildVirtualCall - This routine makes indirect vtable call for
 /// call to virtual destructors. It returns 0 if it could not do it.
-llvm::Value *
+CGCallee
 CodeGenFunction::BuildAppleKextVirtualDestructorCall(
                                             const CXXDestructorDecl *DD,
                                             CXXDtorType Type,
                                             const CXXRecordDecl *RD) {
-  const auto *MD = cast<CXXMethodDecl>(DD);
-  // FIXME. Dtor_Base dtor is always direct!!
-  // It need be somehow inline expanded into the caller.
-  // -O does that. But need to support -O0 as well.
-  if (MD->isVirtual() && Type != Dtor_Base) {
-    // Compute the function type we're calling.
-    const CGFunctionInfo &FInfo = CGM.getTypes().arrangeCXXStructorDeclaration(
-        DD, StructorType::Complete);
-    llvm::Type *Ty = CGM.getTypes().GetFunctionType(FInfo);
-    return ::BuildAppleKextVirtualCall(*this, GlobalDecl(DD, Type), Ty, RD);
-  }
-  return nullptr;
+  assert(DD->isVirtual() && Type != Dtor_Base);
+  // Compute the function type we're calling.
+  const CGFunctionInfo &FInfo = CGM.getTypes().arrangeCXXStructorDeclaration(
+      DD, StructorType::Complete);
+  llvm::Type *Ty = CGM.getTypes().GetFunctionType(FInfo);
+  return ::BuildAppleKextVirtualCall(*this, GlobalDecl(DD, Type), Ty, RD);
 }

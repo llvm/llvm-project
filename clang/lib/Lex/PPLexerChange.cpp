@@ -40,10 +40,10 @@ bool Preprocessor::isInPrimaryFile() const {
   // If there are any stacked lexers, we're in a #include.
   assert(IsFileLexer(IncludeMacroStack[0]) &&
          "Top level include stack isn't our primary lexer?");
-  for (unsigned i = 1, e = IncludeMacroStack.size(); i != e; ++i)
-    if (IsFileLexer(IncludeMacroStack[i]))
-      return false;
-  return true;
+  return std::none_of(IncludeMacroStack.begin() + 1, IncludeMacroStack.end(),
+                      [](const IncludeStackInfo &ISI) -> bool {
+    return IsFileLexer(ISI);
+  });
 }
 
 /// getCurrentLexer - Return the current file lexer being lexed from.  Note
@@ -54,8 +54,7 @@ PreprocessorLexer *Preprocessor::getCurrentFileLexer() const {
     return CurPPLexer;
 
   // Look for a stacked lexer.
-  for (unsigned i = IncludeMacroStack.size(); i != 0; --i) {
-    const IncludeStackInfo& ISI = IncludeMacroStack[i-1];
+  for (const IncludeStackInfo &ISI : llvm::reverse(IncludeMacroStack)) {
     if (IsFileLexer(ISI))
       return ISI.ThePPLexer;
   }
@@ -566,8 +565,7 @@ void Preprocessor::HandleMicrosoftCommentPaste(Token &Tok) {
   // explicit EOD token.
   PreprocessorLexer *FoundLexer = nullptr;
   bool LexerWasInPPMode = false;
-  for (unsigned i = 0, e = IncludeMacroStack.size(); i != e; ++i) {
-    IncludeStackInfo &ISI = *(IncludeMacroStack.end()-i-1);
+  for (const IncludeStackInfo &ISI : llvm::reverse(IncludeMacroStack)) {
     if (ISI.ThePPLexer == nullptr) continue;  // Scan for a real lexer.
 
     // Once we find a real lexer, mark it as raw mode (disabling macro

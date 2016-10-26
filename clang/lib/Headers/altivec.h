@@ -2497,6 +2497,26 @@ vec_first_mismatch_or_eos_index(vector unsigned int __a,
   return __res[0] >> 5;
 }
 
+static __inline__ vector double  __ATTRS_o_ai
+vec_insert_exp(vector double __a, vector unsigned long long __b) {
+  return __builtin_vsx_xviexpdp((vector unsigned long long)__a,__b);
+}
+
+static __inline__ vector double  __ATTRS_o_ai
+vec_insert_exp(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_vsx_xviexpdp(__a,__b);
+}
+
+static __inline__ vector float  __ATTRS_o_ai
+vec_insert_exp(vector float __a, vector unsigned int __b) {
+  return __builtin_vsx_xviexpsp((vector unsigned int)__a,__b);
+}
+
+static __inline__ vector float  __ATTRS_o_ai
+vec_insert_exp(vector unsigned int __a, vector unsigned int __b) {
+  return __builtin_vsx_xviexpsp(__a,__b);
+}
+
 #endif
 
 /* vec_cpsgn */
@@ -15032,6 +15052,77 @@ vec_bperm(vector unsigned __int128 __a, vector unsigned char __b) {
                                    (vector unsigned char)__b);
 }
 #endif
+#endif
+
+
+/* vec_reve */
+
+static inline __ATTRS_o_ai vector bool char vec_reve(vector bool char __a) {
+  return __builtin_shufflevector(__a, __a, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+                                 5, 4, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector signed char vec_reve(vector signed char __a) {
+  return __builtin_shufflevector(__a, __a, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+                                 5, 4, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector unsigned char
+vec_reve(vector unsigned char __a) {
+  return __builtin_shufflevector(__a, __a, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+                                 5, 4, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector bool int vec_reve(vector bool int __a) {
+  return __builtin_shufflevector(__a, __a, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector signed int vec_reve(vector signed int __a) {
+  return __builtin_shufflevector(__a, __a, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector unsigned int
+vec_reve(vector unsigned int __a) {
+  return __builtin_shufflevector(__a, __a, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector bool short vec_reve(vector bool short __a) {
+  return __builtin_shufflevector(__a, __a, 7, 6, 5, 4, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector signed short
+vec_reve(vector signed short __a) {
+  return __builtin_shufflevector(__a, __a, 7, 6, 5, 4, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector unsigned short
+vec_reve(vector unsigned short __a) {
+  return __builtin_shufflevector(__a, __a, 7, 6, 5, 4, 3, 2, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector float vec_reve(vector float __a) {
+  return __builtin_shufflevector(__a, __a, 3, 2, 1, 0);
+}
+
+#ifdef __VSX__
+static inline __ATTRS_o_ai vector bool long long
+vec_reve(vector bool long long __a) {
+  return __builtin_shufflevector(__a, __a, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector signed long long
+vec_reve(vector signed long long __a) {
+  return __builtin_shufflevector(__a, __a, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector unsigned long long
+vec_reve(vector unsigned long long __a) {
+  return __builtin_shufflevector(__a, __a, 1, 0);
+}
+
+static inline __ATTRS_o_ai vector double vec_reve(vector double __a) {
+  return __builtin_shufflevector(__a, __a, 1, 0);
+}
 #endif
 
 #undef __ATTRS_o_ai

@@ -3230,13 +3230,13 @@ QualType ASTContext::getFunctionTypeInternal(
     for (unsigned i = 0; i != NumArgs; ++i)
       CanonicalArgs.push_back(getCanonicalParamType(ArgArray[i]));
 
+    llvm::SmallVector<QualType, 8> ExceptionTypeStorage;
     FunctionProtoType::ExtProtoInfo CanonicalEPI = EPI;
     CanonicalEPI.HasTrailingReturn = false;
 
     if (IsCanonicalExceptionSpec) {
       // Exception spec is already OK.
     } else if (NoexceptInType) {
-      llvm::SmallVector<QualType, 8> ExceptionTypeStorage;
       switch (EPI.ExceptionSpec.Type) {
       case EST_Unparsed: case EST_Unevaluated: case EST_Uninstantiated:
         // We don't know yet. It shouldn't matter what we pick here; no-one

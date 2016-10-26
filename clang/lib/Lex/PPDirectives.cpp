@@ -471,7 +471,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation IfTokenLoc,
       Directive = RI;
     } else {
       std::string DirectiveStr = getSpelling(Tok);
-      unsigned IdLen = DirectiveStr.size();
+      size_t IdLen = DirectiveStr.size();
       if (IdLen >= 20) {
         CurPPLexer->ParsingPreprocessorDirective = false;
         // Restore comment saving mode.
@@ -801,8 +801,7 @@ const FileEntry *Preprocessor::LookupFile(
     // headers included by quoted include directives.
     // See: http://msdn.microsoft.com/en-us/library/36k2cdd4.aspx
     if (LangOpts.MSVCCompat && !isAngled) {
-      for (unsigned i = 0, e = IncludeMacroStack.size(); i != e; ++i) {
-        IncludeStackInfo &ISEntry = IncludeMacroStack[e - i - 1];
+      for (IncludeStackInfo &ISEntry : llvm::reverse(IncludeMacroStack)) {
         if (IsFileLexer(ISEntry))
           if ((FileEnt = ISEntry.ThePPLexer->getFileEntry()))
             Includers.push_back(std::make_pair(FileEnt, FileEnt->getDir()));
@@ -865,8 +864,7 @@ const FileEntry *Preprocessor::LookupFile(
     }
   }
 
-  for (unsigned i = 0, e = IncludeMacroStack.size(); i != e; ++i) {
-    IncludeStackInfo &ISEntry = IncludeMacroStack[e-i-1];
+  for (IncludeStackInfo &ISEntry : llvm::reverse(IncludeMacroStack)) {
     if (IsFileLexer(ISEntry)) {
       if ((CurFileEnt = ISEntry.ThePPLexer->getFileEntry())) {
         if ((FE = HeaderInfo.LookupSubframeworkHeader(
@@ -1567,7 +1565,7 @@ bool Preprocessor::ConcatenateIncludeName(SmallString<128> &FilenameBuffer,
       FilenameBuffer.push_back(' ');
 
     // Get the spelling of the token, directly into FilenameBuffer if possible.
-    unsigned PreAppendSize = FilenameBuffer.size();
+    size_t PreAppendSize = FilenameBuffer.size();
     FilenameBuffer.resize(PreAppendSize+CurTok.getLength());
 
     const char *BufPtr = &FilenameBuffer[PreAppendSize];
@@ -1618,7 +1616,7 @@ static void diagnoseAutoModuleImport(
   assert(PP.getLangOpts().ObjC2 && "no import syntax available");
 
   SmallString<128> PathString;
-  for (unsigned I = 0, N = Path.size(); I != N; ++I) {
+  for (size_t I = 0, N = Path.size(); I != N; ++I) {
     if (I)
       PathString += '.';
     PathString += Path[I].first->getName();

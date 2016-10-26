@@ -275,7 +275,7 @@ void TokenLexer::ExpandFunctionArguments() {
 
       // If the arg token expanded into anything, append it.
       if (ResultArgToks->isNot(tok::eof)) {
-        unsigned FirstResult = ResultToks.size();
+        size_t FirstResult = ResultToks.size();
         unsigned NumToks = MacroArgs::getArgLength(ResultArgToks);
         ResultToks.append(ResultArgToks, ResultArgToks+NumToks);
 
@@ -289,8 +289,8 @@ void TokenLexer::ExpandFunctionArguments() {
 
         // If the '##' came from expanding an argument, turn it into 'unknown'
         // to avoid pasting.
-        for (unsigned i = FirstResult, e = ResultToks.size(); i != e; ++i) {
-          Token &Tok = ResultToks[i];
+        for (Token &Tok : llvm::make_range(ResultToks.begin() + FirstResult,
+                                           ResultToks.end())) {
           if (Tok.is(tok::hashhash))
             Tok.setKind(tok::unknown);
         }
@@ -333,9 +333,8 @@ void TokenLexer::ExpandFunctionArguments() {
 
       // If the '##' came from expanding an argument, turn it into 'unknown'
       // to avoid pasting.
-      for (unsigned i = ResultToks.size() - NumToks, e = ResultToks.size();
-             i != e; ++i) {
-        Token &Tok = ResultToks[i];
+      for (Token &Tok : llvm::make_range(ResultToks.end() - NumToks,
+                                         ResultToks.end())) {
         if (Tok.is(tok::hashhash))
           Tok.setKind(tok::unknown);
       }

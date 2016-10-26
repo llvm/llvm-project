@@ -232,7 +232,7 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
     // it as an identifier.
     if (!PrevTok.hasUDSuffix())
       return false;
-    // FALL THROUGH.
+    LLVM_FALLTHROUGH;
   case tok::identifier:   // id+id or id+number or id+L"foo".
     // id+'.'... will not append.
     if (Tok.is(tok::numeric_constant))

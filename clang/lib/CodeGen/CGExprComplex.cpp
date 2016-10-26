@@ -598,10 +598,10 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
 
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
   llvm::Constant *Func = CGF.CGM.CreateBuiltinFunction(FTy, LibCallName);
-  llvm::Instruction *Call;
+  CGCallee Callee = CGCallee::forDirect(Func, FQTy->getAs<FunctionProtoType>());
 
-  RValue Res = CGF.EmitCall(FuncInfo, Func, ReturnValueSlot(), Args,
-                            FQTy->getAs<FunctionProtoType>(), &Call);
+  llvm::Instruction *Call;
+  RValue Res = CGF.EmitCall(FuncInfo, Callee, ReturnValueSlot(), Args, &Call);
   cast<llvm::CallInst>(Call)->setCallingConv(CGF.CGM.getBuiltinCC());
   return Res.getComplexVal();
 }
