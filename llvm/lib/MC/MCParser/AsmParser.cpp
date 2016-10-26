@@ -3228,7 +3228,7 @@ bool AsmParser::parseDirectiveLoc() {
     return false;
   };
 
-  if (parseMany(parseLocOp))
+  if (parseMany(parseLocOp, false /*hasComma*/))
     return true;
 
   getStreamer().EmitDwarfLocDirective(FileNumber, LineNumber, ColumnPos, Flags,

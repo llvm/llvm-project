@@ -1,4 +1,4 @@
-// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -g %s -O3 -o %t
+// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -g %s -O3 -o %t -mllvm -enable-tail-merge=false
 // RUN: %run %t rT && %run %t mT && %run %t fT && %run %t cT
 // RUN: %run %t rU && %run %t mU && %run %t fU && %run %t cU
 // RUN: %run %t rS && %run %t rV && %run %t oV

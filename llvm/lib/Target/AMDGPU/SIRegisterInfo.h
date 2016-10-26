@@ -246,11 +246,11 @@ public:
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
 private:
-  void buildScratchLoadStore(MachineBasicBlock::iterator MI,
-                             unsigned LoadStoreOp, const MachineOperand *SrcDst,
-                             unsigned ScratchRsrcReg, unsigned ScratchOffset,
-                             int64_t Offset,
-                             RegScavenger *RS) const;
+  void buildSpillLoadStore(MachineBasicBlock::iterator MI,
+                           unsigned LoadStoreOp, const MachineOperand *SrcDst,
+                           unsigned ScratchRsrcReg, unsigned ScratchOffset,
+                           int64_t Offset,
+                           RegScavenger *RS) const;
 };
 
 } // End namespace llvm

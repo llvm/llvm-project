@@ -411,8 +411,7 @@ bool Preprocessor::isNextPPTokenLParen() {
     // macro stack.
     if (CurPPLexer)
       return false;
-    for (unsigned i = IncludeMacroStack.size(); i != 0; --i) {
-      IncludeStackInfo &Entry = IncludeMacroStack[i-1];
+    for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
       if (Entry.TheLexer)
         Val = Entry.TheLexer->isNextPPTokenLParen();
       else if (Entry.ThePTHLexer)
@@ -501,9 +500,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
     } else {
       Callbacks->MacroExpands(Identifier, M, ExpansionRange, Args);
       if (!DelayedMacroExpandsCallbacks.empty()) {
-        for (unsigned i = 0, e = DelayedMacroExpandsCallbacks.size(); i != e;
-             ++i) {
-          MacroExpandsInfo &Info = DelayedMacroExpandsCallbacks[i];
+        for (const MacroExpandsInfo &Info : DelayedMacroExpandsCallbacks) {
           // FIXME: We lose macro args info with delayed callback.
           Callbacks->MacroExpands(Info.Tok, Info.MD, Info.Range,
                                   /*Args=*/nullptr);
@@ -757,7 +754,7 @@ MacroArgs *Preprocessor::ReadFunctionLikeMacroArgs(Token &MacroName,
     assert(Tok.isOneOf(tok::l_paren, tok::comma) &&
            "only expect argument separators here");
 
-    unsigned ArgTokenStart = ArgTokens.size();
+    size_t ArgTokenStart = ArgTokens.size();
     SourceLocation ArgStartLoc = Tok.getLocation();
 
     // C99 6.10.3p11: Keep track of the number of l_parens we have seen.  Note
@@ -1009,10 +1006,10 @@ Token *Preprocessor::cacheMacroExpandedTokens(TokenLexer *tokLexer,
   if (cacheNeedsToGrow) {
     // Go through all the TokenLexers whose 'Tokens' pointer points in the
     // buffer and update the pointers to the (potential) new buffer array.
-    for (unsigned i = 0, e = MacroExpandingLexersStack.size(); i != e; ++i) {
+    for (const auto &Lexer : MacroExpandingLexersStack) {
       TokenLexer *prevLexer;
       size_t tokIndex;
-      std::tie(prevLexer, tokIndex) = MacroExpandingLexersStack[i];
+      std::tie(prevLexer, tokIndex) = Lexer;
       prevLexer->Tokens = MacroExpandedTokens.data() + tokIndex;
     }
   }

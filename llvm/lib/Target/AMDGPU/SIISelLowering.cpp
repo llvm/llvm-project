@@ -2591,6 +2591,14 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues(Ops, DL);
   }
 
+  MachineFunction &MF = DAG.getMachineFunction();
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  // If there is a possibilty that flat instruction access scratch memory
+  // then we need to use the same legalization rules we use for private.
+  if (AS == AMDGPUAS::FLAT_ADDRESS)
+    AS = MFI->hasFlatScratchInit() ?
+         AMDGPUAS::PRIVATE_ADDRESS : AMDGPUAS::GLOBAL_ADDRESS;
+
   unsigned NumElements = MemVT.getVectorNumElements();
   switch (AS) {
   case AMDGPUAS::CONSTANT_ADDRESS:
@@ -2889,6 +2897,14 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
                           AS, Store->getAlignment())) {
     return expandUnalignedStore(Store, DAG);
   }
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  // If there is a possibilty that flat instruction access scratch memory
+  // then we need to use the same legalization rules we use for private.
+  if (AS == AMDGPUAS::FLAT_ADDRESS)
+    AS = MFI->hasFlatScratchInit() ?
+         AMDGPUAS::PRIVATE_ADDRESS : AMDGPUAS::GLOBAL_ADDRESS;
 
   unsigned NumElements = VT.getVectorNumElements();
   switch (AS) {

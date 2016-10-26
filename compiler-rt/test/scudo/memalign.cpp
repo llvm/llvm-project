@@ -51,4 +51,4 @@ int main(int argc, char **argv)
   return 0;
 }
 
-// CHECK: ERROR: malloc alignment is not a power of 2
+// CHECK: ERROR: alignment is not a power of 2

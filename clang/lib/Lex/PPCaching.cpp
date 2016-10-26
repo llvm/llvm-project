@@ -86,7 +86,7 @@ void Preprocessor::EnterCachingLexMode() {
 const Token &Preprocessor::PeekAhead(unsigned N) {
   assert(CachedLexPos + N > CachedTokens.size() && "Confused caching.");
   ExitCachingLexMode();
-  for (unsigned C = CachedLexPos + N - CachedTokens.size(); C > 0; --C) {
+  for (size_t C = CachedLexPos + N - CachedTokens.size(); C > 0; --C) {
     CachedTokens.push_back(Token());
     Lex(CachedTokens.back());
   }

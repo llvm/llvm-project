@@ -51,13 +51,21 @@ namespace {
     MachineBasicBlock::iterator MI; // Instr referencing the frame
     int64_t LocalOffset;            // Local offset of the frame idx referenced
     int FrameIdx;                   // The frame index
+
+    // Order reference instruction appears in program. Used to ensure
+    // deterministic order when multiple instructions may reference the same
+    // location.
+    unsigned Order;
+
   public:
-    FrameRef(MachineBasicBlock::iterator I, int64_t Offset, int Idx) :
-      MI(I), LocalOffset(Offset), FrameIdx(Idx) {}
+    FrameRef(MachineInstr *I, int64_t Offset, int Idx, unsigned Ord) :
+      MI(I), LocalOffset(Offset), FrameIdx(Idx), Order(Ord) {}
+
     bool operator<(const FrameRef &RHS) const {
-      return std::tie(LocalOffset, FrameIdx) <
-             std::tie(RHS.LocalOffset, RHS.FrameIdx);
+      return std::tie(LocalOffset, FrameIdx, Order) <
+             std::tie(RHS.LocalOffset, RHS.FrameIdx, RHS.Order);
     }
+
     MachineBasicBlock::iterator getMachineInstr() const { return MI; }
     int64_t getLocalOffset() const { return LocalOffset; }
     int getFrameIndex() const { return FrameIdx; }
@@ -78,7 +86,7 @@ namespace {
     bool insertFrameReferenceRegisters(MachineFunction &Fn);
   public:
     static char ID; // Pass identification, replacement for typeid
-    explicit LocalStackSlotPass() : MachineFunctionPass(ID) { 
+    explicit LocalStackSlotPass() : MachineFunctionPass(ID) {
       initializeLocalStackSlotPassPass(*PassRegistry::getPassRegistry());
     }
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -286,6 +294,8 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
   // choose the first one).
   SmallVector<FrameRef, 64> FrameReferenceInsns;
 
+  unsigned Order = 0;
+
   for (MachineBasicBlock &BB : Fn) {
     for (MachineInstr &MI : BB) {
       // Debug value, stackmap and patchpoint instructions can't be out of
@@ -312,7 +322,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
           int64_t LocalOffset = LocalOffsets[Idx];
           if (!TRI->needsFrameBaseReg(&MI, LocalOffset))
             break;
-          FrameReferenceInsns.push_back(FrameRef(&MI, LocalOffset, Idx));
+          FrameReferenceInsns.push_back(FrameRef(&MI, LocalOffset, Idx, Order++));
           break;
         }
       }

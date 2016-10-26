@@ -259,26 +259,24 @@ Instruction::CastOps InstCombiner::isEliminableCastPair(const CastInst *CI1,
 Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
   Value *Src = CI.getOperand(0);
 
-  // Many cases of "cast of a cast" are eliminable. If it's eliminable we just
-  // eliminate it now.
-  if (CastInst *CSrc = dyn_cast<CastInst>(Src)) {   // A->B->C cast
-    if (Instruction::CastOps opc =
-            isEliminableCastPair(CSrc, &CI)) {
+  // Try to eliminate a cast of a cast.
+  if (auto *CSrc = dyn_cast<CastInst>(Src)) {   // A->B->C cast
+    if (Instruction::CastOps NewOpc = isEliminableCastPair(CSrc, &CI)) {
       // The first cast (CSrc) is eliminable so we need to fix up or replace
       // the second cast (CI). CSrc will then have a good chance of being dead.
-      return CastInst::Create(opc, CSrc->getOperand(0), CI.getType());
+      return CastInst::Create(NewOpc, CSrc->getOperand(0), CI.getType());
     }
   }
 
-  // If we are casting a select then fold the cast into the select
-  if (SelectInst *SI = dyn_cast<SelectInst>(Src))
+  // If we are casting a select, then fold the cast into the select.
+  if (auto *SI = dyn_cast<SelectInst>(Src))
     if (Instruction *NV = FoldOpIntoSelect(CI, SI))
       return NV;
 
-  // If we are casting a PHI then fold the cast into the PHI
+  // If we are casting a PHI, then fold the cast into the PHI.
   if (isa<PHINode>(Src)) {
-    // We don't do this if this would create a PHI node with an illegal type if
-    // it is currently legal.
+    // Don't do this if it would create a PHI node with an illegal type from a
+    // legal type.
     if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
         ShouldChangeType(CI.getType(), Src->getType()))
       if (Instruction *NV = FoldOpIntoPhi(CI))

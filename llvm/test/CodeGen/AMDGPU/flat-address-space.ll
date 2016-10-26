@@ -1,7 +1,6 @@
-; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NO-PROMOTE %s
-; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire -mattr=+promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-PROMOTE %s
-; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=-promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NO-PROMOTE %s
-; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=+promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-PROMOTE %s
+; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire < %s | FileCheck  %s
+; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga < %s | FileCheck  %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=CHECK,HSA %s
 
 ; Disable optimizations in case there are optimizations added that
 ; specialize away generic pointer accesses.
@@ -148,6 +147,28 @@ define void @flat_scratch_unaligned_store() {
   %scratch = alloca i32
   %fptr = addrspacecast i32* %scratch to i32 addrspace(4)*
   store volatile i32 0, i32 addrspace(4)* %fptr, align 1
+  ret void
+}
+
+; CHECK-LABEL: flat_scratch_multidword_load:
+; HSA: flat_load_dword
+; HSA: flat_load_dword
+; FIXME: These tests are broken for os = mesa3d, becasue it doesn't initialize flat_scr
+define void @flat_scratch_multidword_load() {
+  %scratch = alloca <2 x i32>
+  %fptr = addrspacecast <2 x i32>* %scratch to <2 x i32> addrspace(4)*
+  %ld = load volatile <2 x i32>, <2 x i32> addrspace(4)* %fptr
+  ret void
+}
+
+; CHECK-LABEL: flat_scratch_multidword_store:
+; HSA: flat_store_dword
+; HSA: flat_store_dword
+; FIXME: These tests are broken for os = mesa3d, becasue it doesn't initialize flat_scr
+define void @flat_scratch_multidword_store() {
+  %scratch = alloca <2 x i32>
+  %fptr = addrspacecast <2 x i32>* %scratch to <2 x i32> addrspace(4)*
+  store volatile <2 x i32> zeroinitializer, <2 x i32> addrspace(4)* %fptr
   ret void
 }
 
