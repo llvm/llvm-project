@@ -26,7 +26,6 @@ class TestSwiftBridgedArray(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(oslist=["macosx"], bugnumber="*FIXME*")
     def test_swift_bridged_array(self):
         """Check formatting for Swift.Array<T> that are bridged from ObjC"""
         self.build()
