@@ -467,6 +467,17 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// All loop passes should call this as part of implementing their \c
 /// getAnalysisUsage.
 void getLoopAnalysisUsage(AnalysisUsage &AU);
+
+/// Returns true if the hoister and sinker can handle this instruction.
+/// If SafetyInfo is null, we are checking for sinking instructions from
+/// preheader to loop body (no speculation).
+/// If SafetyInfo is not null, we are checking for hoisting/sinking
+/// instructions from loop body to preheader/exit. Check if the instruction
+/// can execute specultatively.
+///
+bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
+                        Loop *CurLoop, AliasSetTracker *CurAST,
+                        LoopSafetyInfo *SafetyInfo);
 }
 
 #endif

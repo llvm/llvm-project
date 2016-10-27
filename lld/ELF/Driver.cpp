@@ -58,10 +58,13 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 }
 
 // Parses a linker -m option.
-static std::pair<ELFKind, uint16_t> parseEmulation(StringRef Emul) {
+static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
+  uint8_t OSABI = 0;
   StringRef S = Emul;
-  if (S.endswith("_fbsd"))
+  if (S.endswith("_fbsd")) {
     S = S.drop_back(5);
+    OSABI = ELFOSABI_FREEBSD;
+  }
 
   std::pair<ELFKind, uint16_t> Ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(S)
@@ -85,7 +88,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef Emul) {
     else
       error("unknown emulation: " + Emul);
   }
-  return Ret;
+  return std::make_tuple(Ret.first, Ret.second, OSABI);
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -455,7 +458,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_m)) {
     // Parse ELF{32,64}{LE,BE} and CPU type.
     StringRef S = Arg->getValue();
-    std::tie(Config->EKind, Config->EMachine) = parseEmulation(S);
+    std::tie(Config->EKind, Config->EMachine, Config->OSABI) =
+        parseEmulation(S);
     Config->Emulation = S;
   }
 
@@ -649,6 +653,7 @@ void LinkerDriver::inferMachineType() {
       continue;
     Config->EKind = F->EKind;
     Config->EMachine = F->EMachine;
+    Config->OSABI = F->OSABI;
     return;
   }
   error("target emulation unknown: -m or at least one .o file required");

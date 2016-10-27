@@ -39,7 +39,7 @@ bool DWARFAcceleratorTable::extract() {
 
   for (unsigned i = 0; i < NumAtoms; ++i) {
     uint16_t AtomType = AccelSection.getU16(&Offset);
-    uint16_t AtomForm = AccelSection.getU16(&Offset);
+    auto AtomForm = static_cast<dwarf::Form>(AccelSection.getU16(&Offset));
     HdrData.Atoms.push_back(std::make_pair(AtomType, AtomForm));
   }
 

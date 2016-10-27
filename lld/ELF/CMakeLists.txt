@@ -6,7 +6,6 @@ add_lld_library(lldELF
   Driver.cpp
   DriverUtils.cpp
   EhFrame.cpp
-  ELFCreator.cpp
   Error.cpp
   GdbIndex.cpp
   ICF.cpp

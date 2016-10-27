@@ -912,6 +912,23 @@ static Error checkTwoLevelHintsCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+// Returns true if the libObject code does not support the load command and its
+// contents.  The cmd value it is treated as an unknown load command but with
+// an error message that says the cmd value is obsolete.
+static bool isLoadCommandObsolete(uint32_t cmd) {
+  if (cmd == MachO::LC_SYMSEG ||
+      cmd == MachO::LC_LOADFVMLIB ||
+      cmd == MachO::LC_IDFVMLIB ||
+      cmd == MachO::LC_IDENT ||
+      cmd == MachO::LC_FVMFILE ||
+      cmd == MachO::LC_PREPAGE ||
+      cmd == MachO::LC_PREBOUND_DYLIB ||
+      cmd == MachO::LC_TWOLEVEL_HINTS ||
+      cmd == MachO::LC_PREBIND_CKSUM)
+    return true;
+  return false;
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits, uint32_t UniversalCputype,
@@ -1250,11 +1267,20 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
     } else if (Load.C.cmd == MachO::LC_THREAD) {
       if ((Err = checkThreadCommand(this, Load, I, "LC_THREAD")))
         return;
+    // Note: LC_TWOLEVEL_HINTS is really obsolete and is not supported.
     } else if (Load.C.cmd == MachO::LC_TWOLEVEL_HINTS) {
        if ((Err = checkTwoLevelHintsCommand(this, Load, I,
                                             &TwoLevelHintsLoadCmd)))
          return;
+    } else if (isLoadCommandObsolete(Load.C.cmd)) {
+      Err = malformedError("load command " + Twine(I) + " for cmd value of: " +
+                           Twine(Load.C.cmd) + " is obsolete and not "
+                           "supported");
+      return;
     }
+    // TODO: generate a error for unknown load commands by default.  But still
+    // need work out an approach to allow or not allow unknown values like this
+    // as an option for some uses like lldb.
     if (I < LoadCommandCount - 1) {
       if (auto LoadOrErr = getNextLoadCommandInfo(this, I, Load))
         Load = *LoadOrErr;

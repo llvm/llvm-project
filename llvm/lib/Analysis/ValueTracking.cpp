@@ -3951,27 +3951,29 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     }
   }
 
-  if (ConstantInt *C1 = dyn_cast<ConstantInt>(CmpRHS)) {
+  const APInt *C1;
+  if (match(CmpRHS, m_APInt(C1))) {
     if ((CmpLHS == TrueVal && match(FalseVal, m_Neg(m_Specific(CmpLHS)))) ||
         (CmpLHS == FalseVal && match(TrueVal, m_Neg(m_Specific(CmpLHS))))) {
 
       // ABS(X) ==> (X >s 0) ? X : -X and (X >s -1) ? X : -X
       // NABS(X) ==> (X >s 0) ? -X : X and (X >s -1) ? -X : X
-      if (Pred == ICmpInst::ICMP_SGT && (C1->isZero() || C1->isMinusOne())) {
+      if (Pred == ICmpInst::ICMP_SGT && (*C1 == 0 || C1->isAllOnesValue())) {
         return {(CmpLHS == TrueVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
       }
 
       // ABS(X) ==> (X <s 0) ? -X : X and (X <s 1) ? -X : X
       // NABS(X) ==> (X <s 0) ? X : -X and (X <s 1) ? X : -X
-      if (Pred == ICmpInst::ICMP_SLT && (C1->isZero() || C1->isOne())) {
+      if (Pred == ICmpInst::ICMP_SLT && (*C1 == 0 || *C1 == 1)) {
         return {(CmpLHS == FalseVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
       }
     }
 
     // Y >s C ? ~Y : ~C == ~Y <s ~C ? ~Y : ~C = SMIN(~Y, ~C)
-    if (const auto *C2 = dyn_cast<ConstantInt>(FalseVal)) {
-      if (Pred == ICmpInst::ICMP_SGT && C1->getType() == C2->getType() &&
-          ~C1->getValue() == C2->getValue() &&
+    const APInt *C2;
+    if (match(FalseVal, m_APInt(C2))) {
+      if (Pred == ICmpInst::ICMP_SGT &&
+          CmpRHS->getType() == FalseVal->getType() && ~(*C1) == *C2 &&
           (match(TrueVal, m_Not(m_Specific(CmpLHS))) ||
            match(CmpLHS, m_Not(m_Specific(TrueVal))))) {
         LHS = TrueVal;

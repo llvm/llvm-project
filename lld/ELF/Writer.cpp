@@ -23,10 +23,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
-
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
@@ -324,9 +320,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     // Flush the output streams and exit immediately.  A full shutdown is a good
     // test that we are keeping track of all allocated memory, but actually
     // freeing it is a waste of time in a regular linker run.
-    outs().flush();
-    errs().flush();
-    _exit(0);
+    exitLld(0);
   }
 }
 
@@ -704,21 +698,27 @@ void Writer<ELFT>::forEachRelSec(
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
-  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-    for (InputSectionBase<ELFT> *IS : F->getSections()) {
-      if (isDiscarded(IS)) {
-        reportDiscarded(IS);
-        continue;
-      }
-      OutputSectionBase<ELFT> *Sec;
-      bool IsNew;
-      StringRef OutsecName = getOutputSectionName(IS->Name, Alloc);
-      std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
-      if (IsNew)
-        OutputSections.push_back(Sec);
-      Sec->addSection(IS);
+  auto Add = [&](InputSectionBase<ELFT> *IS) {
+    if (isDiscarded(IS)) {
+      reportDiscarded(IS);
+      return;
     }
-  }
+    OutputSectionBase<ELFT> *Sec;
+    bool IsNew;
+    StringRef OutsecName = getOutputSectionName(IS->Name, Alloc);
+    std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
+    if (IsNew)
+      OutputSections.push_back(Sec);
+    Sec->addSection(IS);
+  };
+
+  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
+    for (InputSectionBase<ELFT> *IS : F->getSections())
+      Add(IS);
+
+  for (BinaryFile *F : Symtab<ELFT>::X->getBinaryFiles())
+    for (InputSectionData *ID : F->getSections())
+      Add(cast<InputSection<ELFT>>(ID));
 
   sortInitFini(findSection(".init_array"));
   sortInitFini(findSection(".fini_array"));
@@ -1345,16 +1345,14 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   uint8_t *Buf = Buffer->getBufferStart();
   memcpy(Buf, "\177ELF", 4);
 
-  auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
-
   // Write the ELF header.
   auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Buf);
   EHdr->e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
   EHdr->e_ident[EI_DATA] = getELFEncoding<ELFT>();
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
-  EHdr->e_ident[EI_OSABI] = FirstObj.getOSABI();
+  EHdr->e_ident[EI_OSABI] = Config->OSABI;
   EHdr->e_type = getELFType();
-  EHdr->e_machine = FirstObj.EMachine;
+  EHdr->e_machine = Config->EMachine;
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr<ELFT>();
   EHdr->e_shoff = SectionHeaderOff;

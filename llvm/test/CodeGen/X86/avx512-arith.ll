@@ -182,15 +182,10 @@ define <4 x i64> @imulq256(<4 x i64> %y, <4 x i64> %x) {
 ;
 ; AVX512DQ-LABEL: imulq256:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vpmuludq %ymm0, %ymm1, %ymm2
-; AVX512DQ-NEXT:    vpsrlq $32, %ymm0, %ymm3
-; AVX512DQ-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
-; AVX512DQ-NEXT:    vpsllq $32, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpsrlq $32, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpmuludq %ymm0, %ymm1, %ymm0
-; AVX512DQ-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
-; AVX512DQ-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512DQ-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
+; AVX512DQ-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512DQ-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512DQ-NEXT:    retq
 ;
 ; SKX-LABEL: imulq256:
@@ -243,15 +238,10 @@ define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 ;
 ; AVX512DQ-LABEL: imulq128:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vpmuludq %xmm0, %xmm1, %xmm2
-; AVX512DQ-NEXT:    vpsrlq $32, %xmm0, %xmm3
-; AVX512DQ-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3
-; AVX512DQ-NEXT:    vpsllq $32, %xmm3, %xmm3
-; AVX512DQ-NEXT:    vpsrlq $32, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0
-; AVX512DQ-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpaddq %xmm0, %xmm3, %xmm0
-; AVX512DQ-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512DQ-NEXT:    ## kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
+; AVX512DQ-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; AVX512DQ-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512DQ-NEXT:    retq
 ;
 ; SKX-LABEL: imulq128:

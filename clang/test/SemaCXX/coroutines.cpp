@@ -178,7 +178,19 @@ struct CtorDtor {
   }
   // FIXME: The spec says this is ill-formed.
   void operator=(CtorDtor&) {
-    co_yield 0;
+    co_yield 0; // expected-error {{'co_yield' cannot be used in a copy assignment operator}}
+  }
+  void operator=(CtorDtor const &) {
+    co_yield 0; // expected-error {{'co_yield' cannot be used in a copy assignment operator}}
+  }
+  void operator=(CtorDtor &&) {
+    co_await a; // expected-error {{'co_await' cannot be used in a move assignment operator}}
+  }
+  void operator=(CtorDtor const &&) {
+    co_await a; // expected-error {{'co_await' cannot be used in a move assignment operator}}
+  }
+  void operator=(int) {
+    co_await a; // OK. Not a special member
   }
 };
 
@@ -191,12 +203,17 @@ void unevaluated() {
   typeid(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
 }
 
-constexpr void constexpr_coroutine() {
+constexpr auto constexpr_deduced_return_coroutine() {
   co_yield 0; // expected-error {{'co_yield' cannot be used in a constexpr function}}
+  // expected-error@-1 {{'co_yield' cannot be used in a function with a deduced return type}}
 }
 
 void varargs_coroutine(const char *, ...) {
   co_await a; // expected-error {{'co_await' cannot be used in a varargs function}}
+}
+
+auto deduced_return_coroutine() {
+  co_await a; // expected-error {{'co_await' cannot be used in a function with a deduced return type}}
 }
 
 struct outer {};
@@ -355,6 +372,6 @@ coro<bad_promise_8> calls_set_exception() {
 template<> struct std::experimental::coroutine_traits<int, int, const char**>
 { using promise_type = promise; };
 
-int main(int, const char**) { // expected-error {{'main' cannot be a coroutine}}
-  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+int main(int, const char**) {
+  co_await a; // expected-error {{'co_await' cannot be used in the 'main' function}}
 }

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Dwarf.h"
 
 namespace llvm {
 
@@ -20,16 +21,16 @@ class raw_ostream;
 class DWARFAbbreviationDeclaration {
 public:
   struct AttributeSpec {
-    AttributeSpec(uint16_t Attr, uint16_t Form) : Attr(Attr), Form(Form) {}
-    uint16_t Attr;
-    uint16_t Form;
+    AttributeSpec(dwarf::Attribute A, dwarf::Form F) : Attr(A), Form(F) {}
+    dwarf::Attribute Attr;
+    dwarf::Form Form;
   };
   typedef SmallVector<AttributeSpec, 8> AttributeSpecVector;
 
   DWARFAbbreviationDeclaration();
 
   uint32_t getCode() const { return Code; }
-  uint32_t getTag() const { return Tag; }
+  dwarf::Tag getTag() const { return Tag; }
   bool hasChildren() const { return HasChildren; }
 
   typedef iterator_range<AttributeSpecVector::const_iterator>
@@ -39,11 +40,13 @@ public:
     return attr_iterator_range(AttributeSpecs.begin(), AttributeSpecs.end());
   }
 
-  uint16_t getFormByIndex(uint32_t idx) const {
-    return idx < AttributeSpecs.size() ? AttributeSpecs[idx].Form : 0;
+  dwarf::Form getFormByIndex(uint32_t idx) const {
+    if (idx < AttributeSpecs.size())
+      return AttributeSpecs[idx].Form;
+    return dwarf::Form(0);
   }
 
-  uint32_t findAttributeIndex(uint16_t attr) const;
+  uint32_t findAttributeIndex(dwarf::Attribute attr) const;
   bool extract(DataExtractor Data, uint32_t* OffsetPtr);
   void dump(raw_ostream &OS) const;
 
@@ -51,7 +54,7 @@ private:
   void clear();
 
   uint32_t Code;
-  uint32_t Tag;
+  dwarf::Tag Tag;
   bool HasChildren;
 
   AttributeSpecVector AttributeSpecs;

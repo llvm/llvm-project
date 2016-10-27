@@ -312,7 +312,8 @@ enum Form : uint16_t {
   DW_FORM_exprloc = 0x18,
   DW_FORM_flag_present = 0x19,
   DW_FORM_ref_sig8 = 0x20,
-
+  
+  DW_FORM_lo_user = 0x1f00,
   // Extensions for Fission proposal
   DW_FORM_GNU_addr_index = 0x1f01,
   DW_FORM_GNU_str_index = 0x1f02,

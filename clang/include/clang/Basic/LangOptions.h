@@ -132,6 +132,10 @@ public:
   /// host code generation.
   std::string OMPHostIRFile;
 
+  /// \brief Indicates whether the front-end is explicitly told that the
+  /// input is a header file (i.e. -x c-header).
+  bool IsHeaderFile;
+
   LangOptions();
 
   // Define accessors/mutators for language options of enumeration type.

@@ -174,9 +174,6 @@ void MBBInfo::postVisit() {
 
 // OptimizePICCall methods.
 bool OptimizePICCall::runOnMachineFunction(MachineFunction &F) {
-  if (skipFunction(*F.getFunction()))
-    return false;
-
   if (static_cast<const MipsSubtarget &>(F.getSubtarget()).inMips16Mode())
     return false;
 

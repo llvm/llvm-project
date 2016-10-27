@@ -189,10 +189,11 @@ InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
 
 template <class ELFT>
 InputSection<ELFT>::InputSection(uintX_t Flags, uint32_t Type,
-                                 uintX_t Addralign, ArrayRef<uint8_t> Data)
+                                 uintX_t Addralign, ArrayRef<uint8_t> Data,
+                                 StringRef Name)
     : InputSectionBase<ELFT>(nullptr, Flags, Type,
                              /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Addralign,
-                             Data, "", Base::Regular) {}
+                             Data, Name, Base::Regular) {}
 
 template <class ELFT>
 InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
@@ -840,7 +841,7 @@ InputSection<ELFT> InputSection<ELFT>::createCommonInputSection(
     Size += Sym->Size;
   }
   ArrayRef<uint8_t> Data = makeArrayRef<uint8_t>(nullptr, Size);
-  InputSection Ret(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Data);
+  InputSection Ret(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Data, "");
   Ret.Live = true;
   return Ret;
 }

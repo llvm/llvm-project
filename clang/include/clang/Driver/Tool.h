@@ -129,6 +129,20 @@ public:
                             const InputInfoList &Inputs,
                             const llvm::opt::ArgList &TCArgs,
                             const char *LinkingOutput) const = 0;
+  /// Construct jobs to perform the action \p JA, writing to the \p Outputs and
+  /// with \p Inputs, and add the jobs to \p C. The default implementation
+  /// assumes a single output and is expected to be overloaded for the tools
+  /// that support multiple inputs.
+  ///
+  /// \param TCArgs The argument list for this toolchain, with any
+  /// tool chain specific translations applied.
+  /// \param LinkingOutput If this output will eventually feed the
+  /// linker, then this is the final output name of the linked image.
+  virtual void ConstructJob(Compilation &C, const JobAction &JA,
+                            const InputInfoList &Outputs,
+                            const InputInfoList &Inputs,
+                            const llvm::opt::ArgList &TCArgs,
+                            const char *LinkingOutput) const;
 };
 
 } // end namespace driver

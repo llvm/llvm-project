@@ -76,6 +76,9 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (isSGetReg(MI->getOpcode()) && checkGetRegHazards(MI) > 0)
     return NoopHazard;
 
+  if (isSSetReg(MI->getOpcode()) && checkSetRegHazards(MI) > 0)
+    return NoopHazard;
+
   return NoHazard;
 }
 
@@ -98,6 +101,9 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
 
   if (isSGetReg(MI->getOpcode()))
     return std::max(0, checkGetRegHazards(MI));
+
+  if (isSSetReg(MI->getOpcode()))
+    return std::max(0, checkSetRegHazards(MI));
 
   return 0;
 }
@@ -330,4 +336,17 @@ int GCNHazardRecognizer::checkGetRegHazards(MachineInstr *GetRegInstr) {
   int WaitStatesNeeded = getWaitStatesSinceSetReg(IsHazardFn);
 
   return GetRegWaitStates - WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkSetRegHazards(MachineInstr *SetRegInstr) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  unsigned HWReg = getHWReg(TII, *SetRegInstr);
+
+  const int SetRegWaitStates =
+      ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ? 1 : 2;
+  auto IsHazardFn = [TII, HWReg] (MachineInstr *MI) {
+    return HWReg == getHWReg(TII, *MI);
+  };
+  int WaitStatesNeeded = getWaitStatesSinceSetReg(IsHazardFn);
+  return SetRegWaitStates - WaitStatesNeeded;
 }

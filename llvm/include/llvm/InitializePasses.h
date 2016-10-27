@@ -168,6 +168,7 @@ void initializeIntervalPartitionPass(PassRegistry&);
 void initializeJumpThreadingPass(PassRegistry&);
 void initializeLCSSAWrapperPassPass(PassRegistry &);
 void initializeLegacyLICMPassPass(PassRegistry&);
+void initializeLegacyLoopSinkPassPass(PassRegistry&);
 void initializeLazyBranchProbabilityInfoPassPass(PassRegistry&);
 void initializeLazyBlockFrequencyInfoPassPass(PassRegistry&);
 void initializeLazyValueInfoWrapperPassPass(PassRegistry&);

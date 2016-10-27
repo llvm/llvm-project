@@ -16,7 +16,7 @@ using namespace dwarf;
 
 void DWARFAbbreviationDeclaration::clear() {
   Code = 0;
-  Tag = 0;
+  Tag = DW_TAG_null;
   HasChildren = false;
   AttributeSpecs.clear();
 }
@@ -26,37 +26,38 @@ DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() {
 }
 
 bool
-DWARFAbbreviationDeclaration::extract(DataExtractor Data, uint32_t* OffsetPtr) {
+DWARFAbbreviationDeclaration::extract(DataExtractor Data, 
+                                      uint32_t* OffsetPtr) {
   clear();
   Code = Data.getULEB128(OffsetPtr);
   if (Code == 0) {
     return false;
   }
-  Tag = Data.getULEB128(OffsetPtr);
+  Tag = static_cast<llvm::dwarf::Tag>(Data.getULEB128(OffsetPtr));
+  if (Tag == DW_TAG_null) {
+    clear();
+    return false;
+  }
   uint8_t ChildrenByte = Data.getU8(OffsetPtr);
   HasChildren = (ChildrenByte == DW_CHILDREN_yes);
 
   while (true) {
-    uint32_t CurOffset = *OffsetPtr;
-    uint16_t Attr = Data.getULEB128(OffsetPtr);
-    if (CurOffset == *OffsetPtr) {
-      clear();
-      return false;
-    }
-    CurOffset = *OffsetPtr;
-    uint16_t Form = Data.getULEB128(OffsetPtr);
-    if (CurOffset == *OffsetPtr) {
-      clear();
-      return false;
-    }
-    if (Attr == 0 && Form == 0)
+    auto A = static_cast<Attribute>(Data.getULEB128(OffsetPtr));
+    auto F = static_cast<Form>(Data.getULEB128(OffsetPtr));
+    if (A && F) {
+        AttributeSpecs.push_back(AttributeSpec(A, F));
+    } else if (A == 0 && F == 0) {
+      // We successfully reached the end of this abbreviation declaration
+      // since both attribute and form are zero.
       break;
-    AttributeSpecs.push_back(AttributeSpec(Attr, Form));
-  }
-
-  if (Tag == 0) {
-    clear();
-    return false;
+    } else {
+      // Attribute and form pairs must either both be non-zero, in which case
+      // they are added to the abbreviation declaration, or both be zero to
+      // terminate the abbrevation declaration. In this case only one was
+      // zero which is an error.
+      clear();
+      return false;
+    }
   }
   return true;
 }
@@ -88,7 +89,7 @@ void DWARFAbbreviationDeclaration::dump(raw_ostream &OS) const {
 }
 
 uint32_t
-DWARFAbbreviationDeclaration::findAttributeIndex(uint16_t attr) const {
+DWARFAbbreviationDeclaration::findAttributeIndex(dwarf::Attribute attr) const {
   for (uint32_t i = 0, e = AttributeSpecs.size(); i != e; ++i) {
     if (AttributeSpecs[i].Attr == attr)
       return i;

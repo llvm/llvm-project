@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Dwarf.h"
 
 namespace llvm {
 
@@ -48,12 +49,12 @@ private:
     const uint8_t* data;
   };
 
-  uint16_t Form;   // Form for this value.
+  dwarf::Form Form;   // Form for this value.
   ValueType Value; // Contains all data for the form.
 
 public:
-  DWARFFormValue(uint16_t Form = 0) : Form(Form) {}
-  uint16_t getForm() const { return Form; }
+  DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}
+  dwarf::Form getForm() const { return Form; }
   bool isFormClass(FormClass FC) const;
 
   void dump(raw_ostream &OS, const DWARFUnit *U) const;
@@ -82,9 +83,9 @@ public:
 
   bool skipValue(DataExtractor debug_info_data, uint32_t *offset_ptr,
                  const DWARFUnit *u) const;
-  static bool skipValue(uint16_t form, DataExtractor debug_info_data,
+  static bool skipValue(dwarf::Form form, DataExtractor debug_info_data,
                         uint32_t *offset_ptr, const DWARFUnit *u);
-  static bool skipValue(uint16_t form, DataExtractor debug_info_data,
+  static bool skipValue(dwarf::Form form, DataExtractor debug_info_data,
                         uint32_t *offset_ptr, uint16_t Version,
                         uint8_t AddrSize);
 

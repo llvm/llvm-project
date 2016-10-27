@@ -176,19 +176,8 @@ private:
   DebugMapObject() = default;
 
 public:
-  DebugMapObject &operator=(DebugMapObject RHS) {
-    std::swap(Filename, RHS.Filename);
-    std::swap(Timestamp, RHS.Timestamp);
-    std::swap(Symbols, RHS.Symbols);
-    std::swap(AddressToMapping, RHS.AddressToMapping);
-    return *this;
-  }
-  DebugMapObject(DebugMapObject &&RHS) {
-    Filename = std::move(RHS.Filename);
-    Timestamp = std::move(RHS.Timestamp);
-    Symbols = std::move(RHS.Symbols);
-    AddressToMapping = std::move(RHS.AddressToMapping);
-  }
+  DebugMapObject(DebugMapObject &&) = default;
+  DebugMapObject &operator=(DebugMapObject &&) = default;
   ///@}
 };
 }
