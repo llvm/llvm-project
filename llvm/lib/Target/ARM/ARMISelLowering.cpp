@@ -9354,7 +9354,7 @@ static SDValue AddCombineTo64bitUMAAL(SDNode *AddcNode,
   // be combined into a UMLAL. The other pattern is AddcNode being combined
   // into an UMLAL and then using another addc is handled in ISelDAGToDAG.
 
-  if (!Subtarget->hasV6Ops() ||
+  if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP() ||
       (Subtarget->isThumb() && !Subtarget->hasThumb2()))
     return AddCombineTo64bitMLAL(AddcNode, DCI, Subtarget);
 
