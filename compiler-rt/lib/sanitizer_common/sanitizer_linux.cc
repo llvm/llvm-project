@@ -1389,6 +1389,11 @@ void MaybeReexec() {
   // No need to re-exec on Linux.
 }
 
+uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
+  UNREACHABLE("FindAvailableMemoryRange is not available");
+  return 0;
+}
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_FREEBSD || SANITIZER_LINUX
