@@ -1009,7 +1009,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
               RLang);
 
     // Add align info if available.
-    if (uint64_t AlignInBytes = CTy->getAlignInBytes())
+    if (uint32_t AlignInBytes = CTy->getAlignInBytes())
       addUInt(Buffer, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);
   }
@@ -1399,7 +1399,7 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   } else {
     uint64_t Size = DT->getSizeInBits();
     uint64_t FieldSize = DD->getBaseTypeSize(DT);
-    uint64_t AlignInBytes = DT->getAlignInBytes();
+    uint32_t AlignInBytes = DT->getAlignInBytes();
     uint64_t OffsetInBytes;
 
     bool IsBitfield = FieldSize && Size != FieldSize;
@@ -1516,7 +1516,7 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   if (const ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(DT->getConstant()))
     addConstantFPValue(StaticMemberDIE, CFP);
 
-  if (uint64_t AlignInBytes = DT->getAlignInBytes())
+  if (uint32_t AlignInBytes = DT->getAlignInBytes())
     addUInt(StaticMemberDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
             AlignInBytes);
 

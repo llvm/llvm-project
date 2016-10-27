@@ -1719,13 +1719,8 @@ void *
 __kmp_ft_page_allocate(size_t size)
 {
   void *adr, *aadr;
-#if KMP_OS_LINUX
-  /* TODO: Use this function to get page size everywhere */
-  int page_size = getpagesize();
-#else
-  /* TODO: Find windows function to get page size and use it everywhere */
-  int page_size = PAGE_SIZE;
-#endif /* KMP_OS_LINUX */
+
+  const int page_size = KMP_GET_PAGE_SIZE();
 
   adr = (void *) __kmp_thread_malloc( __kmp_get_thread(),
                                     size + page_size + KMP_PTR_SKIP);

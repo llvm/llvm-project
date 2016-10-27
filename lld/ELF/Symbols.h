@@ -199,15 +199,6 @@ public:
       : DefinedRegular(Name, StOther, Type, Value, Size, Section,
                        Section ? Section->getFile() : nullptr) {}
 
-  DefinedRegular(StringRef Name, const Elf_Sym &Sym,
-                 InputSectionBase<ELFT> *Section)
-      : DefinedRegular(Name, Sym.st_other, Sym.getType(), Sym.st_value,
-                       Sym.st_size, Section) {}
-
-  DefinedRegular(StringRef Name, uint8_t StOther)
-      : DefinedRegular(Name, StOther, llvm::ELF::STT_NOTYPE, 0, 0,
-                       NullInputSection) {}
-
   DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F)
       : DefinedRegular(Name, StOther, Type, 0, 0, NullInputSection, F) {}
 

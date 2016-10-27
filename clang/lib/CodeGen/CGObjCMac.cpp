@@ -1978,8 +1978,9 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
   
   llvm::Instruction *CallSite;
   Fn = llvm::ConstantExpr::getBitCast(Fn, MSI.MessengerType);
-  RValue rvalue = CGF.EmitCall(MSI.CallInfo, Fn, Return, ActualArgs,
-                               CGCalleeInfo(), &CallSite);
+  CGCallee Callee = CGCallee::forDirect(Fn);
+  RValue rvalue = CGF.EmitCall(MSI.CallInfo, Callee, Return, ActualArgs,
+                               &CallSite);
 
   // Mark the call as noreturn if the method is marked noreturn and the
   // receiver cannot be null.
@@ -6986,9 +6987,10 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
   // Load the function to call from the message ref table.
   Address calleeAddr =
       CGF.Builder.CreateStructGEP(mref, 0, CharUnits::Zero());
-  llvm::Value *callee = CGF.Builder.CreateLoad(calleeAddr, "msgSend_fn");
+  llvm::Value *calleePtr = CGF.Builder.CreateLoad(calleeAddr, "msgSend_fn");
 
-  callee = CGF.Builder.CreateBitCast(callee, MSI.MessengerType);
+  calleePtr = CGF.Builder.CreateBitCast(calleePtr, MSI.MessengerType);
+  CGCallee callee(CGCalleeInfo(), calleePtr);
 
   RValue result = CGF.EmitCall(MSI.CallInfo, callee, returnSlot, args);
   return nullReturn.complete(CGF, result, resultType, formalArgs,

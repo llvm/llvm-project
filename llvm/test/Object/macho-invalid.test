@@ -61,14 +61,14 @@ NAME-PAST-EOF-nm-pax: 0000000000000000 64 00 0000 fe000002 bad string index
 
 RUN: not llvm-objdump -t %p/Inputs/macho-bad-archive1.a 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF-ARCHIVE %s
-NAME-PAST-EOF-ARCHIVE: macho-bad-archive1.a(macho-invalid-symbol-name-past-eof) truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
+NAME-PAST-EOF-ARCHIVE: macho-bad-archive1.a(macho-invalid-symbol-name-past-eof): truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
 
 RUN: not llvm-objdump -macho -arch all -t %p/Inputs/macho-universal-bad1.x86_64.i386 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF-FAT %s
-NAME-PAST-EOF-FAT: macho-universal-bad1.x86_64.i386 (for architecture x86_64)  truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
+NAME-PAST-EOF-FAT: macho-universal-bad1.x86_64.i386' (for architecture x86_64): truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
 RUN: not llvm-objdump -macho -arch all -t %p/Inputs/macho-universal-archive-bad1.x86_64.i386 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF-FAT-ARCHIVE %s
-NAME-PAST-EOF-FAT-ARCHIVE: macho-universal-archive-bad1.x86_64.i386(macho-invalid-symbol-name-past-eof) (for architecture x86_64)  truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
+NAME-PAST-EOF-FAT-ARCHIVE: macho-universal-archive-bad1.x86_64.i386(macho-invalid-symbol-name-past-eof) (for architecture x86_64): truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
 
 RUN: llvm-nm %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC %s
@@ -90,13 +90,13 @@ RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomple
 INCOMPLETE-SEGMENT-LOADC: truncated or malformed object (load commands extend past the end of the file)
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-bad-archive2.a 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-ARCHIVE %s
-INCOMPLETE-SEGMENT-LOADC-ARCHIVE: macho-bad-archive2.a(macho64-invalid-incomplete-segment-load-command) truncated or malformed object (load commands extend past the end of the file)
+INCOMPLETE-SEGMENT-LOADC-ARCHIVE: macho-bad-archive2.a(macho64-invalid-incomplete-segment-load-command): truncated or malformed object (load commands extend past the end of the file)
 
 RUN: not llvm-objdump -macho -private-headers -arch all %p/Inputs/macho-universal-bad2.x86_64.i386 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-FAT %s
-INCOMPLETE-SEGMENT-LOADC-FAT: macho-universal-bad2.x86_64.i386 (for architecture x86_64) truncated or malformed object (load commands extend past the end of the file)
+INCOMPLETE-SEGMENT-LOADC-FAT: macho-universal-bad2.x86_64.i386' (for architecture x86_64): truncated or malformed object (load commands extend past the end of the file)
 
 RUN: not llvm-objdump -macho -private-headers -arch all %p/Inputs/macho-universal-archive-bad2.x86_64.i386 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-FAT-ARCHIVE %s
-INCOMPLETE-SEGMENT-LOADC-FAT-ARCHIVE: macho-universal-archive-bad2.x86_64.i386(macho64-invalid-incomplete-segment-load-command) (for architecture x86_64) truncated or malformed object (load commands extend past the end of the file)
+INCOMPLETE-SEGMENT-LOADC-FAT-ARCHIVE: macho-universal-archive-bad2.x86_64.i386(macho64-invalid-incomplete-segment-load-command) (for architecture x86_64): truncated or malformed object (load commands extend past the end of the file)
 
 RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat 2>&1 | FileCheck -check-prefix INVALID-FAT %s
 INVALID-FAT: truncated or malformed fat file (fat_arch_64 structs would extend past the end of the file)
@@ -408,4 +408,4 @@ RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-twolevelhi
 INVALID-TWOLEVELHINTS-OFFSET-HNINTS: macho-invalid-twolevelhints-offset-nhints': truncated or malformed object (offset field plus nhints times sizeof(struct twolevel_hint) field of LC_TWOLEVEL_HINTS command 0 extends past the end of the file)
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-fat_cputype 2>&1 | FileCheck -check-prefix INVALID-FAT-CPUTYPE %s
-INVALID-FAT-CPUTYPE: macho-invalid-fat_cputype truncated or malformed object (universal header architecture: 0's cputype does not match object file's mach header)
+INVALID-FAT-CPUTYPE: macho-invalid-fat_cputype': truncated or malformed object (universal header architecture: 0's cputype does not match object file's mach header)

@@ -336,15 +336,15 @@ void NilArgChecker::checkPostStmt(const ObjCDictionaryLiteral *DL,
 }
 
 //===----------------------------------------------------------------------===//
-// Error reporting.
+// Checking for mismatched types passed to CFNumberCreate/CFNumberGetValue.
 //===----------------------------------------------------------------------===//
 
 namespace {
-class CFNumberCreateChecker : public Checker< check::PreStmt<CallExpr> > {
+class CFNumberChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable std::unique_ptr<APIMisuse> BT;
-  mutable IdentifierInfo* II;
+  mutable IdentifierInfo *ICreate, *IGetValue;
 public:
-  CFNumberCreateChecker() : II(nullptr) {}
+  CFNumberChecker() : ICreate(nullptr), IGetValue(nullptr) {}
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
@@ -425,7 +425,7 @@ static const char* GetCFNumberTypeStr(uint64_t i) {
 }
 #endif
 
-void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
+void CFNumberChecker::checkPreStmt(const CallExpr *CE,
                                          CheckerContext &C) const {
   ProgramStateRef state = C.getState();
   const FunctionDecl *FD = C.getCalleeDecl(CE);
@@ -433,10 +433,12 @@ void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   ASTContext &Ctx = C.getASTContext();
-  if (!II)
-    II = &Ctx.Idents.get("CFNumberCreate");
-
-  if (FD->getIdentifier() != II || CE->getNumArgs() != 3)
+  if (!ICreate) {
+    ICreate = &Ctx.Idents.get("CFNumberCreate");
+    IGetValue = &Ctx.Idents.get("CFNumberGetValue");
+  }
+  if (!(FD->getIdentifier() == ICreate || FD->getIdentifier() == IGetValue) ||
+      CE->getNumArgs() != 3)
     return;
 
   // Get the value of the "theType" argument.
@@ -450,13 +452,13 @@ void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   uint64_t NumberKind = V->getValue().getLimitedValue();
-  Optional<uint64_t> OptTargetSize = GetCFNumberSize(Ctx, NumberKind);
+  Optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
 
   // FIXME: In some cases we can emit an error.
-  if (!OptTargetSize)
+  if (!OptCFNumberSize)
     return;
 
-  uint64_t TargetSize = *OptTargetSize;
+  uint64_t CFNumberSize = *OptCFNumberSize;
 
   // Look at the value of the integer being passed by reference.  Essentially
   // we want to catch cases where the value passed in is not equal to the
@@ -481,39 +483,44 @@ void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
   if (!T->isIntegralOrEnumerationType())
     return;
 
-  uint64_t SourceSize = Ctx.getTypeSize(T);
+  uint64_t PrimitiveTypeSize = Ctx.getTypeSize(T);
 
-  // CHECK: is SourceSize == TargetSize
-  if (SourceSize == TargetSize)
+  if (PrimitiveTypeSize == CFNumberSize)
     return;
 
-  // Generate an error.  Only generate a sink error node
-  // if 'SourceSize < TargetSize'; otherwise generate a non-fatal error node.
-  //
   // FIXME: We can actually create an abstract "CFNumber" object that has
   //  the bits initialized to the provided values.
-  //
-  ExplodedNode *N = SourceSize < TargetSize ? C.generateErrorNode()
-                                            : C.generateNonFatalErrorNode();
+  ExplodedNode *N = C.generateNonFatalErrorNode();
   if (N) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
+    bool isCreate = (FD->getIdentifier() == ICreate);
 
-    os << (SourceSize == 8 ? "An " : "A ")
-       << SourceSize << " bit integer is used to initialize a CFNumber "
-                        "object that represents "
-       << (TargetSize == 8 ? "an " : "a ")
-       << TargetSize << " bit integer. ";
+    if (isCreate) {
+      os << (PrimitiveTypeSize == 8 ? "An " : "A ")
+         << PrimitiveTypeSize << "-bit integer is used to initialize a "
+         << "CFNumber object that represents "
+         << (CFNumberSize == 8 ? "an " : "a ")
+         << CFNumberSize << "-bit integer; ";
+    } else {
+      os << "A CFNumber object that represents "
+         << (CFNumberSize == 8 ? "an " : "a ")
+         << CFNumberSize << "-bit integer is used to initialize "
+         << (PrimitiveTypeSize == 8 ? "an " : "a ")
+         << PrimitiveTypeSize << "-bit integer; ";
+    }
 
-    if (SourceSize < TargetSize)
-      os << (TargetSize - SourceSize)
-      << " bits of the CFNumber value will be garbage." ;
+    if (PrimitiveTypeSize < CFNumberSize)
+      os << (CFNumberSize - PrimitiveTypeSize)
+      << " bits of the CFNumber value will "
+      << (isCreate ? "be garbage." : "overwrite adjacent storage.");
     else
-      os << (SourceSize - TargetSize)
-      << " bits of the input integer will be lost.";
+      os << (PrimitiveTypeSize - CFNumberSize)
+      << " bits of the integer value will be "
+      << (isCreate ? "lost." : "garbage.");
 
     if (!BT)
-      BT.reset(new APIMisuse(this, "Bad use of CFNumberCreate"));
+      BT.reset(new APIMisuse(this, "Bad use of CFNumber APIs"));
 
     auto report = llvm::make_unique<BugReport>(*BT, os.str(), N);
     report->addRange(CE->getArg(2)->getSourceRange());
@@ -1272,8 +1279,8 @@ void ento::registerNilArgChecker(CheckerManager &mgr) {
   mgr.registerChecker<NilArgChecker>();
 }
 
-void ento::registerCFNumberCreateChecker(CheckerManager &mgr) {
-  mgr.registerChecker<CFNumberCreateChecker>();
+void ento::registerCFNumberChecker(CheckerManager &mgr) {
+  mgr.registerChecker<CFNumberChecker>();
 }
 
 void ento::registerCFRetainReleaseChecker(CheckerManager &mgr) {

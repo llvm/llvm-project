@@ -368,13 +368,13 @@ __kmp_release_deps ( kmp_int32 gtid, kmp_taskdata_t *task )
     kmp_depnode_t *node = task->td_depnode;
 
     if ( task->td_dephash ) {
-        KA_TRACE(40, ("__kmp_realease_deps: T#%d freeing dependencies hash of task %p.\n", gtid, task ) );
+        KA_TRACE(40, ("__kmp_release_deps: T#%d freeing dependencies hash of task %p.\n", gtid, task ) );
         __kmp_dephash_free(thread,task->td_dephash);
     }
 
     if ( !node ) return;
 
-    KA_TRACE(20, ("__kmp_realease_deps: T#%d notifying succesors of task %p.\n", gtid, task ) );
+    KA_TRACE(20, ("__kmp_release_deps: T#%d notifying successors of task %p.\n", gtid, task ) );
 
     KMP_ACQUIRE_DEPNODE(gtid,node);
     node->dn.task = NULL; // mark this task as finished, so no new dependencies are generated
@@ -389,7 +389,7 @@ __kmp_release_deps ( kmp_int32 gtid, kmp_taskdata_t *task )
         if ( npredecessors == 0 ) {
             KMP_MB();
             if ( successor->dn.task ) {
-                KA_TRACE(20, ("__kmp_realease_deps: T#%d successor %p of %p scheduled for execution.\n", gtid, successor->dn.task, task ) );
+                KA_TRACE(20, ("__kmp_release_deps: T#%d successor %p of %p scheduled for execution.\n", gtid, successor->dn.task, task ) );
                 __kmp_omp_task(gtid,successor->dn.task,false);
             }
         }
@@ -405,7 +405,7 @@ __kmp_release_deps ( kmp_int32 gtid, kmp_taskdata_t *task )
 
     __kmp_node_deref(thread,node);
 
-    KA_TRACE(20, ("__kmp_realease_deps: T#%d all successors of %p notified of completation\n", gtid, task ) );
+    KA_TRACE(20, ("__kmp_release_deps: T#%d all successors of %p notified of completion\n", gtid, task ) );
 }
 
 /*!

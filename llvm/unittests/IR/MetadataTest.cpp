@@ -1824,7 +1824,7 @@ TEST_F(DIGlobalVariableTest, get) {
   auto *Expr2 = DIExpression::get(Context, {1, 2, 3});
   DIDerivedType *StaticDataMemberDeclaration =
       cast<DIDerivedType>(getDerivedType());
-  uint64_t AlignInBits = 8;
+  uint32_t AlignInBits = 8;
 
   auto *N = DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
                                   Type, IsLocalToUnit, IsDefinition,
@@ -1911,7 +1911,7 @@ TEST_F(DILocalVariableTest, get) {
   DIType *Type = getDerivedType();
   unsigned Arg = 6;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
-  uint64_t AlignInBits = 8;
+  uint32_t AlignInBits = 8;
 
   auto *N =
       DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg, Flags,

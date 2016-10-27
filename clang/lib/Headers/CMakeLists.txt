@@ -93,6 +93,7 @@ set(files
 set(cuda_wrapper_files
   cuda_wrappers/algorithm
   cuda_wrappers/complex
+  cuda_wrappers/new
 )
 
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)

@@ -107,19 +107,6 @@ private:
   static const size_t kNumCounters = 1 << 14;
   alignas(8) uint8_t Counters[kNumCounters];
 
-  void TORCInsert(size_t Idx, uint8_t Arg1, uint8_t Arg2) {
-    // Do nothing, too small to be interesting.
-  }
-  void TORCInsert(size_t Idx, uint16_t Arg1, uint16_t Arg2) {
-    // Do nothing, these don't usually hapen.
-  }
-  void TORCInsert(size_t Idx, uint32_t Arg1, uint32_t Arg2) {
-    TORC4.Insert(Idx, Arg1, Arg2);
-  }
-  void TORCInsert(size_t Idx, uint64_t Arg1, uint64_t Arg2) {
-    TORC8.Insert(Idx, Arg1, Arg2);
-  }
-
   static const size_t kNumPCs = 1 << 24;
   uintptr_t PCs[kNumPCs];
 
