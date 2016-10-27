@@ -365,7 +365,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
 
     CFGStmt CS = ri->castAs<CFGStmt>();
     const Stmt *S = CS.getStmt();
-    if (isa<ReturnStmt>(S)) {
+    if (isa<ReturnStmt>(S) || isa<CoreturnStmt>(S)) {
       HasLiveReturn = true;
       continue;
     }
@@ -416,7 +416,7 @@ struct CheckFallThroughDiagnostics {
   unsigned diag_AlwaysFallThrough_HasNoReturn;
   unsigned diag_AlwaysFallThrough_ReturnsNonVoid;
   unsigned diag_NeverFallThroughOrReturn;
-  enum { Function, Block, Lambda } funMode;
+  enum { Function, Block, Lambda, Coroutine } funMode;
   SourceLocation FuncLoc;
 
   static CheckFallThroughDiagnostics MakeForFunction(const Decl *Func) {
@@ -449,6 +449,19 @@ struct CheckFallThroughDiagnostics {
       D.diag_NeverFallThroughOrReturn = 0;
     
     D.funMode = Function;
+    return D;
+  }
+
+  static CheckFallThroughDiagnostics MakeForCoroutine(const Decl *Func) {
+    CheckFallThroughDiagnostics D;
+    D.FuncLoc = Func->getLocation();
+    D.diag_MaybeFallThrough_HasNoReturn = 0;
+    D.diag_MaybeFallThrough_ReturnsNonVoid =
+        diag::warn_maybe_falloff_nonvoid_coroutine;
+    D.diag_AlwaysFallThrough_HasNoReturn = 0;
+    D.diag_AlwaysFallThrough_ReturnsNonVoid =
+        diag::warn_falloff_nonvoid_coroutine;
+    D.funMode = Coroutine;
     return D;
   }
 
@@ -494,7 +507,13 @@ struct CheckFallThroughDiagnostics {
              (!ReturnsVoid ||
               D.isIgnored(diag::warn_suggest_noreturn_block, FuncLoc));
     }
-
+    if (funMode == Coroutine) {
+      return (ReturnsVoid ||
+              D.isIgnored(diag::warn_maybe_falloff_nonvoid_function, FuncLoc) ||
+              D.isIgnored(diag::warn_maybe_falloff_nonvoid_coroutine,
+                          FuncLoc)) &&
+             (!HasNoReturn);
+    }
     // For blocks / lambdas.
     return ReturnsVoid && !HasNoReturn;
   }
@@ -514,11 +533,14 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
   bool ReturnsVoid = false;
   bool HasNoReturn = false;
 
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    ReturnsVoid = FD->getReturnType()->isVoidType();
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const auto *CBody = dyn_cast<CoroutineBodyStmt>(Body))
+      ReturnsVoid = CBody->getFallthroughHandler() != nullptr;
+    else
+      ReturnsVoid = FD->getReturnType()->isVoidType();
     HasNoReturn = FD->isNoReturn();
   }
-  else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     ReturnsVoid = MD->getReturnType()->isVoidType();
     HasNoReturn = MD->hasAttr<NoReturnAttr>();
   }
@@ -1986,13 +2008,22 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
   
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {
+    auto IsCoro = [&]() {
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        if (FD->getBody() && isa<CoroutineBodyStmt>(FD->getBody()))
+          return true;
+      return false;
+    };
     const CheckFallThroughDiagnostics &CD =
-      (isa<BlockDecl>(D) ? CheckFallThroughDiagnostics::MakeForBlock()
-       : (isa<CXXMethodDecl>(D) &&
-          cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
-          cast<CXXMethodDecl>(D)->getParent()->isLambda())
-            ? CheckFallThroughDiagnostics::MakeForLambda()
-            : CheckFallThroughDiagnostics::MakeForFunction(D));
+        (isa<BlockDecl>(D)
+             ? CheckFallThroughDiagnostics::MakeForBlock()
+             : (isa<CXXMethodDecl>(D) &&
+                cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
+                cast<CXXMethodDecl>(D)->getParent()->isLambda())
+                   ? CheckFallThroughDiagnostics::MakeForLambda()
+                   : (IsCoro()
+                          ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
+                          : CheckFallThroughDiagnostics::MakeForFunction(D)));
     CheckFallThroughForBody(S, D, Body, blkExpr, CD, AC);
   }
 

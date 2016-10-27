@@ -512,6 +512,12 @@ def err_maybe_falloff_nonvoid_block : Error<
   "control may reach end of non-void block">;
 def err_falloff_nonvoid_block : Error<
   "control reaches end of non-void block">;
+def warn_maybe_falloff_nonvoid_coroutine : Warning<
+  "control may reach end of non-void coroutine">,
+  InGroup<ReturnType>;
+def warn_falloff_nonvoid_coroutine : Warning<
+  "control reaches end of non-void coroutine">,
+  InGroup<ReturnType>;
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
   InGroup<MissingNoreturn>, DefaultIgnore;
@@ -8643,6 +8649,13 @@ def err_implied_std_coroutine_traits_promise_type_not_class : Error<
 def err_coroutine_traits_missing_specialization : Error<
   "this function cannot be a coroutine: missing definition of "
   "specialization %q0">;
+def err_implied_std_current_exception_not_found : Error<
+  "you need to include <exception> before defining a coroutine that implicitly "
+  "uses 'set_exception'">;
+def err_malformed_std_current_exception : Error<
+  "'std::current_exception' must be a function">;
+def err_coroutine_promise_return_ill_formed : Error<
+  "%0 declares both 'return_value' and 'return_void'">;
 }
 
 let CategoryName = "Documentation Issue" in {

@@ -721,7 +721,7 @@ void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority) {
   GlobalDtors.push_back(Structor(Priority, Dtor, nullptr));
 }
 
-void CodeGenModule::EmitCtorList(const CtorList &Fns, const char *GlobalName) {
+void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   // Ctor function type is void()*.
   llvm::FunctionType* CtorFTy = llvm::FunctionType::get(VoidTy, false);
   llvm::Type *CtorPFTy = llvm::PointerType::getUnqual(CtorFTy);
@@ -749,6 +749,7 @@ void CodeGenModule::EmitCtorList(const CtorList &Fns, const char *GlobalName) {
                              llvm::ConstantArray::get(AT, Ctors),
                              GlobalName);
   }
+  Fns.clear();
 }
 
 llvm::GlobalValue::LinkageTypes

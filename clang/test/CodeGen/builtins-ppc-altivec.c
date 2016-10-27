@@ -8997,9 +8997,10 @@ void test7() {
 // CHECK-LE: @llvm.ppc.altivec.vcmpgefp.p(i32 2
 }
 
+/* ------------------------------ optional ---------------------------------- */
 void test8() {
-  // CHECK-LABEL: define void @test8
-  // CHECK-LE-LABEL: define void @test8
+// CHECK-LABEL: define void @test8
+// CHECK-LE-LABEL: define void @test8
   res_vbc = vec_reve(vbc);
   // CHECK: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   // CHECK-LE: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -9040,4 +9041,89 @@ void test8() {
   // CHECK: shufflevector <4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}}, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   // CHECK-LE: shufflevector <4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}}, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 
+  res_vbc = vec_revb(vbc);
+// CHECK: [[T1:%.+]] = load <16 x i8>, <16 x i8>* @vbc, align 16
+// CHECK: store <16 x i8> [[T1]], <16 x i8>* [[T2:%.+]], align 16
+// CHECK: [[T3:%.+]] = load <16 x i8>, <16 x i8>* [[T2]], align 16
+// CHECK: store <16 x i8> [[T3]], <16 x i8>* @res_vbc, align 16
+// CHECK-LE: [[T1:%.+]] = load <16 x i8>, <16 x i8>* @vbc, align 16
+// CHECK-LE: store <16 x i8> [[T1]], <16 x i8>* [[T2:%.+]], align 16
+// CHECK-LE: [[T3:%.+]] = load <16 x i8>, <16 x i8>* [[T2]], align 16
+// CHECK-LE: store <16 x i8> [[T3]], <16 x i8>* @res_vbc, align 16
+
+  res_vsc = vec_revb(vsc);
+// CHECK: [[T1:%.+]] = load <16 x i8>, <16 x i8>* @vsc, align 16
+// CHECK: store <16 x i8> [[T1]], <16 x i8>* [[T2:%.+]], align 16
+// CHECK: [[T3:%.+]] = load <16 x i8>, <16 x i8>* [[T2]], align 16
+// CHECK: store <16 x i8> [[T3]], <16 x i8>* @res_vsc, align 16
+// CHECK-LE: [[T1:%.+]] = load <16 x i8>, <16 x i8>* @vsc, align 16
+// CHECK-LE: store <16 x i8> [[T1]], <16 x i8>* [[T2:%.+]], align 16
+// CHECK-LE: [[T3:%.+]] = load <16 x i8>, <16 x i8>* [[T2]], align 16
+// CHECK-LE: store <16 x i8> [[T3]], <16 x i8>* @res_vsc, align 16
+
+  res_vuc = vec_revb(vuc);
+// CHECK: [[T1:%.+]] = load <16 x i8>, <16 x i8>* @vuc, align 16
+// CHECK: store <16 x i8> [[T1]], <16 x i8>* [[T2:%.+]], align 16
+// CHECK: [[T3:%.+]] = load <16 x i8>, <16 x i8>* [[T2]], align 16
+// CHECK: store <16 x i8> [[T3]], <16 x i8>* @res_vuc, align 16
+// CHECK-LE: [[T1:%.+]] = load <16 x i8>, <16 x i8>* @vuc, align 16
+// CHECK-LE: store <16 x i8> [[T1]], <16 x i8>* [[T2:%.+]], align 16
+// CHECK-LE: [[T3:%.+]] = load <16 x i8>, <16 x i8>* [[T2]], align 16
+// CHECK-LE: store <16 x i8> [[T3]], <16 x i8>* @res_vuc, align 16
+
+  res_vbs = vec_revb(vbs);
+// CHECK: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, <16 x i8>* {{%.+}}, align 16
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+// CHECK-LE: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: xor <16 x i8>
+// CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+
+  res_vs = vec_revb(vs);
+// CHECK: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, <16 x i8>* {{%.+}}, align 16
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+// CHECK-LE: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: xor <16 x i8>
+// CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+
+  res_vus = vec_revb(vus);
+// CHECK: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, <16 x i8>* {{%.+}}, align 16
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+// CHECK-LE: store <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: xor <16 x i8>
+// CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+
+  res_vbi = vec_revb(vbi);
+// CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+// CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: xor <16 x i8>
+// CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+
+  res_vi = vec_revb(vi);
+// CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+// CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: xor <16 x i8>
+// CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+
+  res_vui = vec_revb(vui);
+// CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+// CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: xor <16 x i8>
+// CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+
+  res_vf = vec_revb(vf);
+// CHECK: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+// CHECK-LE: store <16 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
+// CHECK-LE: xor <16 x i8>
+// CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 }
