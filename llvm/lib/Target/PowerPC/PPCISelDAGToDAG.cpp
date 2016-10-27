@@ -4041,8 +4041,9 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     return true;
   }
 
-  // CNTLZW always produces a 64-bit value in [0,32], and so is zero extended.
-  if (Op32.getMachineOpcode() == PPC::CNTLZW) {
+  // CNT[LT]ZW always produce a 64-bit value in [0,32], and so is zero extended.
+  if (Op32.getMachineOpcode() == PPC::CNTLZW ||
+      Op32.getMachineOpcode() == PPC::CNTTZW) {
     ToPromote.insert(Op32.getNode());
     return true;
   }
@@ -4237,6 +4238,7 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
       case PPC::LHBRX:     NewOpcode = PPC::LHBRX8; break;
       case PPC::LWBRX:     NewOpcode = PPC::LWBRX8; break;
       case PPC::CNTLZW:    NewOpcode = PPC::CNTLZW8; break;
+      case PPC::CNTTZW:    NewOpcode = PPC::CNTTZW8; break;
       case PPC::RLWIMI:    NewOpcode = PPC::RLWIMI8; break;
       case PPC::OR:        NewOpcode = PPC::OR8; break;
       case PPC::SELECT_I4: NewOpcode = PPC::SELECT_I8; break;
