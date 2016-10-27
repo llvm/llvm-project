@@ -43,6 +43,12 @@ int __asan_should_detect_stack_use_after_scope() {
   return __asan_option_detect_stack_use_after_scope;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
+uptr __asan_get_shadow_memory_dynamic_address() {
+  __asan_init();
+  return __asan_shadow_memory_dynamic_address;
+}
+
 // -------------------- A workaround for the absence of weak symbols ----- {{{
 // We don't have a direct equivalent of weak symbols when using MSVC, but we can
 // use the /alternatename directive to tell the linker to default a specific
