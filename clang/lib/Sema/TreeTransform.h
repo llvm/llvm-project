@@ -6654,6 +6654,7 @@ template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
   // The coroutine body should be re-formed by the caller if necessary.
+  // FIXME: The coroutine body is always rebuilt by ActOnFinishFunctionBody
   return getDerived().TransformStmt(S->getBody());
 }
 
