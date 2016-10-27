@@ -32,7 +32,7 @@ upstreamed.
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
-        -DLLVM_TARGET_TO_BUILD="AMDGPU;X86" \
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
         ..
 
 Testing also requires amdhsacod utility from ROCm Runtime.
