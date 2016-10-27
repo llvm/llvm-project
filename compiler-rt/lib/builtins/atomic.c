@@ -229,13 +229,20 @@ void __atomic_exchange_c(int size, void *ptr, void *val, void *old, int model) {
 // Where the size is known at compile time, the compiler may emit calls to
 // specialised versions of the above functions.
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef __SIZEOF_INT128__
 #define OPTIMISED_CASES\
   OPTIMISED_CASE(1, IS_LOCK_FREE_1, uint8_t)\
   OPTIMISED_CASE(2, IS_LOCK_FREE_2, uint16_t)\
   OPTIMISED_CASE(4, IS_LOCK_FREE_4, uint32_t)\
   OPTIMISED_CASE(8, IS_LOCK_FREE_8, uint64_t)\
-  /* FIXME: __uint128_t isn't available on 32 bit platforms.
-  OPTIMISED_CASE(16, IS_LOCK_FREE_16, __uint128_t)*/\
+  OPTIMISED_CASE(16, IS_LOCK_FREE_16, __uint128_t)
+#else
+#define OPTIMISED_CASES\
+  OPTIMISED_CASE(1, IS_LOCK_FREE_1, uint8_t)\
+  OPTIMISED_CASE(2, IS_LOCK_FREE_2, uint16_t)\
+  OPTIMISED_CASE(4, IS_LOCK_FREE_4, uint32_t)\
+  OPTIMISED_CASE(8, IS_LOCK_FREE_8, uint64_t)
+#endif
 
 #define OPTIMISED_CASE(n, lockfree, type)\
 type __atomic_load_##n(type *src, int model) {\
