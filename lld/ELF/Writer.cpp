@@ -632,10 +632,11 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // __tls_get_addr is defined by the dynamic linker for dynamic ELFs. For
   // static linking the linker is required to optimize away any references to
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
-  // to avoid the undefined symbol error. As usual as special case is MIPS -
-  // MIPS libc defines __tls_get_addr itself because there are no TLS
-  // optimizations for this target.
-  if (!Out<ELFT>::DynSymTab && Config->EMachine != EM_MIPS)
+  // to avoid the undefined symbol error. As usual special cases are ARM and
+  // MIPS - the libc for these targets defines __tls_get_addr itself because
+  // there are no TLS optimizations for these targets.
+  if (!Out<ELFT>::DynSymTab &&
+      (Config->EMachine != EM_MIPS && Config->EMachine != EM_ARM))
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // If linker script do layout we do not need to create any standart symbols.
@@ -967,6 +968,9 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
          Out<ELFT>::PreinitArray);
   Define("__init_array_start", "__init_array_end", Out<ELFT>::InitArray);
   Define("__fini_array_start", "__fini_array_end", Out<ELFT>::FiniArray);
+
+  if (OutputSectionBase<ELFT> *Sec = findSection(".ARM.exidx"))
+    Define("__exidx_start", "__exidx_end", Sec);
 }
 
 // If a section name is valid as a C identifier (which is rare because of

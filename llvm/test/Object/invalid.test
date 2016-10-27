@@ -1,6 +1,7 @@
 RUN: not llvm-dwarfdump %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck %s
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-type.elf 2>&1 | FileCheck %s
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 | FileCheck %s
+RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-zero-size.elf 2>&1 | FileCheck %s
 CHECK: Invalid data was encountered while parsing the file
 
 RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-non-null.elf 2>&1 | FileCheck --check-prefix=NON-NULL %s
@@ -71,3 +72,7 @@ INVALID-RELOC-SH-OFFSET: Invalid data was encountered while parsing the file
 RUN: not llvm-readobj -t %p/Inputs/invalid-sections-address-alignment.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-SEC-ADDRESS-ALIGNMENT %s
 INVALID-SEC-ADDRESS-ALIGNMENT: Invalid data was encountered while parsing the file
+
+RUN: not llvm-readobj -t %p/Inputs/invalid-section-size2.elf 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
+INVALID-SECTION-SIZE2: Invalid data was encountered while parsing the file.

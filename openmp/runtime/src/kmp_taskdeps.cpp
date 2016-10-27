@@ -97,7 +97,8 @@ __kmp_dephash_create ( kmp_info_t *thread, kmp_taskdata_t *current_task )
     else
         h_size = KMP_DEPHASH_OTHER_SIZE;
 
-    kmp_int32 size = h_size * sizeof(kmp_dephash_entry_t) + sizeof(kmp_dephash_t);
+    kmp_int32 size =
+        h_size * sizeof(kmp_dephash_entry_t *) + sizeof(kmp_dephash_t);
 
 #if USE_FAST_MEMORY
     h = (kmp_dephash_t *) __kmp_fast_allocate( thread, size );
@@ -118,13 +119,13 @@ __kmp_dephash_create ( kmp_info_t *thread, kmp_taskdata_t *current_task )
     return h;
 }
 
-static void
-__kmp_dephash_free ( kmp_info_t *thread, kmp_dephash_t *h )
+void
+__kmp_dephash_free_entries(kmp_info_t *thread, kmp_dephash_t *h)
 {
-    for ( size_t i=0; i < h->size; i++ ) {
-        if ( h->buckets[i] ) {
+    for (size_t i = 0; i < h->size; i++) {
+        if (h->buckets[i]) {
             kmp_dephash_entry_t *next;
-            for ( kmp_dephash_entry_t *entry = h->buckets[i]; entry; entry = next ) {
+            for (kmp_dephash_entry_t *entry = h->buckets[i]; entry; entry = next) {
                 next = entry->next_in_bucket;
                 __kmp_depnode_list_free(thread,entry->last_ins);
                 __kmp_node_deref(thread,entry->last_out);
@@ -134,8 +135,15 @@ __kmp_dephash_free ( kmp_info_t *thread, kmp_dephash_t *h )
                 __kmp_thread_free(thread,entry);
 #endif
             }
+            h->buckets[i] = 0;
         }
     }
+}
+
+void
+__kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h)
+{
+    __kmp_dephash_free_entries(thread, h);
 #if USE_FAST_MEMORY
     __kmp_fast_free(thread,h);
 #else
