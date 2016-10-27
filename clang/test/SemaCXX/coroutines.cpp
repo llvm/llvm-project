@@ -118,9 +118,6 @@ struct promise_void {
   void get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
-  awaitable yield_value(int);
-  awaitable yield_value(yielded_thing);
-  not_awaitable yield_value(void());
   void return_void();
 };
 
@@ -313,6 +310,47 @@ coro<bad_promise_5> bad_final_suspend() { // expected-error {{no member named 'a
   co_await a;
 }
 
+struct bad_promise_6 {
+  coro<bad_promise_6> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void return_value(int) const;
+  void return_value(int);
+};
+coro<bad_promise_6> bad_implicit_return() { // expected-error {{'bad_promise_6' declares both 'return_value' and 'return_void'}}
+  co_await a;
+}
+
+struct bad_promise_7 {
+  coro<bad_promise_7> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void set_exception(int *);
+};
+coro<bad_promise_7> no_std_current_exc() {
+  // expected-error@-1 {{you need to include <exception> before defining a coroutine that implicitly uses 'set_exception'}}
+  co_await a;
+}
+
+namespace std {
+int *current_exception();
+}
+
+struct bad_promise_8 {
+  coro<bad_promise_8> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void set_exception();                                   // expected-note {{function not viable}}
+  void set_exception(int *) __attribute__((unavailable)); // expected-note {{explicitly made unavailable}}
+  void set_exception(void *);                             // expected-note {{candidate function}}
+};
+coro<bad_promise_8> calls_set_exception() {
+  // expected-error@-1 {{call to unavailable member function 'set_exception'}}
+  co_await a;
+}
 
 template<> struct std::experimental::coroutine_traits<int, int, const char**>
 { using promise_type = promise; };
