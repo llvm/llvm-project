@@ -8,7 +8,7 @@
 #include <string>
 #include <thread>
 
-#include "lldb-headers.h"
+%include_SB_APIs%
 
 #include "common.h"
 
