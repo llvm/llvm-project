@@ -14,6 +14,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
+#include <unistd.h>
+#endif
+
 using namespace llvm;
 
 namespace lld {
@@ -43,9 +47,15 @@ void elf::error(std::error_code EC, const Twine &Prefix) {
   error(Prefix + ": " + EC.message());
 }
 
+void elf::exitLld(int Val) {
+  outs().flush();
+  errs().flush();
+  _exit(Val);
+}
+
 void elf::fatal(const Twine &Msg) {
   *ErrorOS << Argv0 << ": error: " << Msg << "\n";
-  exit(1);
+  exitLld(1);
 }
 
 void elf::fatal(std::error_code EC, const Twine &Prefix) {

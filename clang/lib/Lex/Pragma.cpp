@@ -372,8 +372,10 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
 ///
 void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
   // Don't honor the 'once' when handling the primary source file, unless
-  // this is a prefix to a TU, which indicates we're generating a PCH file.
-  if (isInPrimaryFile() && TUKind != TU_Prefix) {
+  // this is a prefix to a TU, which indicates we're generating a PCH file, or
+  // when the main file is a header (e.g. when -xc-header is provided on the
+  // commandline).
+  if (isInPrimaryFile() && TUKind != TU_Prefix && !getLangOpts().IsHeaderFile) {
     Diag(OnceTok, diag::pp_pragma_once_in_main_file);
     return;
   }

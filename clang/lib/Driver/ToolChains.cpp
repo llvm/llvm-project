@@ -809,7 +809,8 @@ void DarwinClang::AddCCKextLibArgs(const ArgList &Args,
 }
 
 DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
-                                     StringRef BoundArch) const {
+                                     StringRef BoundArch,
+                                     Action::OffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
 
@@ -1038,10 +1039,12 @@ void MachO::AddLinkRuntimeLibArgs(const ArgList &Args,
   AddLinkRuntimeLib(Args, CmdArgs, CompilerRT, false, true);
 }
 
-DerivedArgList *Darwin::TranslateArgs(const DerivedArgList &Args,
-                                      StringRef BoundArch) const {
+DerivedArgList *
+Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
+                      Action::OffloadKind DeviceOffloadKind) const {
   // First get the generic Apple args, before moving onto Darwin-specific ones.
-  DerivedArgList *DAL = MachO::TranslateArgs(Args, BoundArch);
+  DerivedArgList *DAL =
+      MachO::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
   const OptTable &Opts = getDriver().getOpts();
 
   // If no architecture is bound, none of the translations here are relevant.
@@ -2864,6 +2867,49 @@ bool Generic_GCC::addLibStdCXXIncludePaths(
 
   addSystemInclude(DriverArgs, CC1Args, Base + Suffix + "/backward");
   return true;
+}
+
+llvm::opt::DerivedArgList *
+Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef,
+                           Action::OffloadKind DeviceOffloadKind) const {
+
+  // If this tool chain is used for an OpenMP offloading device we have to make
+  // sure we always generate a shared library regardless of the commands the
+  // user passed to the host. This is required because the runtime library
+  // is required to load the device image dynamically at run time.
+  if (DeviceOffloadKind == Action::OFK_OpenMP) {
+    DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
+    const OptTable &Opts = getDriver().getOpts();
+
+    // Request the shared library. Given that these options are decided
+    // implicitly, they do not refer to any base argument.
+    DAL->AddFlagArg(/*BaseArg=*/nullptr, Opts.getOption(options::OPT_shared));
+    DAL->AddFlagArg(/*BaseArg=*/nullptr, Opts.getOption(options::OPT_fPIC));
+
+    // Filter all the arguments we don't care passing to the offloading
+    // toolchain as they can mess up with the creation of a shared library.
+    for (auto *A : Args) {
+      switch ((options::ID)A->getOption().getID()) {
+      default:
+        DAL->append(A);
+        break;
+      case options::OPT_shared:
+      case options::OPT_dynamic:
+      case options::OPT_static:
+      case options::OPT_fPIC:
+      case options::OPT_fno_PIC:
+      case options::OPT_fpic:
+      case options::OPT_fno_pic:
+      case options::OPT_fPIE:
+      case options::OPT_fno_PIE:
+      case options::OPT_fpie:
+      case options::OPT_fno_pie:
+        break;
+      }
+    }
+    return DAL;
+  }
+  return nullptr;
 }
 
 void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
@@ -5032,7 +5078,7 @@ void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 
 llvm::opt::DerivedArgList *
 CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch) const {
+                             StringRef BoundArch, Action::OffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
 

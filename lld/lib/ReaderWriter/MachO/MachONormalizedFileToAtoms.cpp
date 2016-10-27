@@ -853,7 +853,7 @@ static uint32_t getCUAbbrevOffset(llvm::DataExtractor abbrevData,
 //        inspection" code if possible.
 static Expected<const char *>
 getIndexedString(const NormalizedFile &normalizedFile,
-                 uint32_t form, llvm::DataExtractor infoData,
+                 llvm::dwarf::Form form, llvm::DataExtractor infoData,
                  uint32_t &infoOffset, const Section &stringsSection) {
   if (form == llvm::dwarf::DW_FORM_string)
    return infoData.getCStr(&infoOffset);
@@ -902,10 +902,11 @@ readCompUnit(const NormalizedFile &normalizedFile,
   // DW_CHILDREN
   abbrevData.getU8(&abbrevOffset);
   uint32_t name;
-  uint32_t form;
+  llvm::dwarf::Form form;
   TranslationUnitSource tu;
   while ((name = abbrevData.getULEB128(&abbrevOffset)) |
-             (form = abbrevData.getULEB128(&abbrevOffset)) &&
+         (form = static_cast<llvm::dwarf::Form>(
+             abbrevData.getULEB128(&abbrevOffset))) &&
          (name != 0 || form != 0)) {
     switch (name) {
     case llvm::dwarf::DW_AT_name: {

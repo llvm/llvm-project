@@ -237,7 +237,7 @@ template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
 
 public:
   InputSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
-               ArrayRef<uint8_t> Data);
+               ArrayRef<uint8_t> Data, StringRef Name);
   InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to

@@ -66,9 +66,11 @@ public:
     DsymutilJobClass,
     VerifyDebugInfoJobClass,
     VerifyPCHJobClass,
+    OffloadBundlingJobClass,
+    OffloadUnbundlingJobClass,
 
     JobClassFirst = PreprocessJobClass,
-    JobClassLast = VerifyPCHJobClass
+    JobClassLast = OffloadUnbundlingJobClass
   };
 
   // The offloading kind determines if this action is binded to a particular
@@ -80,6 +82,7 @@ public:
     OFK_Host = 0x01,
     // The device offloading tool chains - one bit for each programming model.
     OFK_Cuda = 0x02,
+    OFK_OpenMP = 0x04,
   };
 
   static const char *getClassName(ActionClass AC);
@@ -91,6 +94,12 @@ private:
   types::ID Type;
 
   ActionList Inputs;
+
+  /// Flag that is set to true if this action can be collapsed with others
+  /// actions that depend on it. This is true by default and set to false when
+  /// the action is used by two different tool chains, which is enabled by the
+  /// offloading support implementation.
+  bool CanBeCollapsedWithNextDependentAction = true;
 
 protected:
   ///
@@ -136,12 +145,26 @@ public:
     return input_const_range(input_begin(), input_end());
   }
 
+  /// Mark this action as not legal to collapse.
+  void setCannotBeCollapsedWithNextDependentAction() {
+    CanBeCollapsedWithNextDependentAction = false;
+  }
+  /// Return true if this function can be collapsed with others.
+  bool isCollapsingWithNextDependentActionLegal() const {
+    return CanBeCollapsedWithNextDependentAction;
+  }
+
   /// Return a string containing the offload kind of the action.
   std::string getOffloadingKindPrefix() const;
   /// Return a string that can be used as prefix in order to generate unique
-  /// files for each offloading kind.
-  std::string
-  getOffloadingFileNamePrefix(llvm::StringRef NormalizedTriple) const;
+  /// files for each offloading kind. By default, no prefix is used for
+  /// non-device kinds, except if \a CreatePrefixForHost is set.
+  static std::string
+  GetOffloadingFileNamePrefix(OffloadKind Kind,
+                              llvm::StringRef NormalizedTriple,
+                              bool CreatePrefixForHost = false);
+  /// Return a string containing a offload kind name.
+  static StringRef GetOffloadKindName(OffloadKind Kind);
 
   /// Set the device offload info of this action and propagate it to its
   /// dependences.
@@ -462,6 +485,64 @@ public:
   VerifyPCHJobAction(Action *Input, types::ID Type);
   static bool classof(const Action *A) {
     return A->getKind() == VerifyPCHJobClass;
+  }
+};
+
+class OffloadBundlingJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  // Offloading bundling doesn't change the type of output.
+  OffloadBundlingJobAction(ActionList &Inputs);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == OffloadBundlingJobClass;
+  }
+};
+
+class OffloadUnbundlingJobAction final : public JobAction {
+  void anchor() override;
+
+public:
+  /// Type that provides information about the actions that depend on this
+  /// unbundling action.
+  struct DependentActionInfo final {
+    /// \brief The tool chain of the dependent action.
+    const ToolChain *DependentToolChain = nullptr;
+    /// \brief The bound architecture of the dependent action.
+    StringRef DependentBoundArch;
+    /// \brief The offload kind of the dependent action.
+    const OffloadKind DependentOffloadKind = OFK_None;
+    DependentActionInfo(const ToolChain *DependentToolChain,
+                        StringRef DependentBoundArch,
+                        const OffloadKind DependentOffloadKind)
+        : DependentToolChain(DependentToolChain),
+          DependentBoundArch(DependentBoundArch),
+          DependentOffloadKind(DependentOffloadKind){};
+  };
+
+private:
+  /// Container that keeps information about each dependence of this unbundling
+  /// action.
+  SmallVector<DependentActionInfo, 6> DependentActionInfoArray;
+
+public:
+  // Offloading unbundling doesn't change the type of output.
+  OffloadUnbundlingJobAction(Action *Input);
+
+  /// Register information about a dependent action.
+  void registerDependentActionInfo(const ToolChain *TC, StringRef BoundArch,
+                                   OffloadKind Kind) {
+    DependentActionInfoArray.push_back({TC, BoundArch, Kind});
+  }
+
+  /// Return the information about all depending actions.
+  ArrayRef<DependentActionInfo> getDependentActionsInfo() const {
+    return DependentActionInfoArray;
+  }
+
+  static bool classof(const Action *A) {
+    return A->getKind() == OffloadUnbundlingJobClass;
   }
 };
 

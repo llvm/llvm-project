@@ -22,7 +22,7 @@ class TypeLookupTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break at.
-        self.line = line_number('main.m', '// break here')
+        self.line = line_number('main.mm', '// break here')
 
     @skipUnlessDarwin
     @skipIf(archs=['i386'])
@@ -32,7 +32,7 @@ class TypeLookupTestCase(TestBase):
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
+            self, "main.mm", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -50,3 +50,5 @@ class TypeLookupTestCase(TestBase):
         self.expect('type lookup NSObject', substrs=['NSObject', 'isa'])
         self.expect('type lookup PleaseDontBeARealTypeThatExists', substrs=[
                     "no type was found matching 'PleaseDontBeARealTypeThatExists'"])
+        self.expect('type lookup MyCPPClass', substrs=['setF', 'float getF'])
+        self.expect('type lookup MyClass', substrs=['setF', 'float getF'])

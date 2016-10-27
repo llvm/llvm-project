@@ -4,6 +4,7 @@
 ; RUN: opt < %s  -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx2 | FileCheck %s --check-prefix=CHECK --check-prefix=AVX2
 ; RUN: opt < %s  -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: opt < %s  -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512BW
+; RUN: opt < %s  -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512DQ
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
@@ -429,19 +430,25 @@ define i32 @mul(i32 %arg) {
   ; SSE42: cost of 9 {{.*}} %A = mul
   ; AVX: cost of 9 {{.*}} %A = mul
   ; AVX2: cost of 9 {{.*}} %A = mul
-  ; AVX512: cost of 9 {{.*}} %A = mul
+  ; AVX512F: cost of 9 {{.*}} %A = mul
+  ; AVX512BW: cost of 9 {{.*}} %A = mul
+  ; AVX512DQ: cost of 1 {{.*}} %A = mul
   %A = mul <2 x i64> undef, undef
   ; SSSE3: cost of 18 {{.*}} %B = mul
   ; SSE42: cost of 18 {{.*}} %B = mul
   ; AVX: cost of 18 {{.*}} %B = mul
   ; AVX2: cost of 9 {{.*}} %B = mul
-  ; AVX512: cost of 9 {{.*}} %B = mul
+  ; AVX512F: cost of 9 {{.*}} %B = mul
+  ; AVX512BW: cost of 9 {{.*}} %B = mul
+  ; AVX512DQ: cost of 1 {{.*}} %B = mul
   %B = mul <4 x i64> undef, undef
   ; SSSE3: cost of 36 {{.*}} %C = mul
   ; SSE42: cost of 36 {{.*}} %C = mul
   ; AVX: cost of 36 {{.*}} %C = mul
   ; AVX2: cost of 18 {{.*}} %C = mul
-  ; AVX512: cost of 2 {{.*}} %C = mul
+  ; AVX512F: cost of 9 {{.*}} %C = mul
+  ; AVX512BW: cost of 9 {{.*}} %C = mul
+  ; AVX512DQ: cost of 1 {{.*}} %C = mul
   %C = mul <8 x i64> undef, undef
 
   ; SSSE3: cost of 6 {{.*}} %D = mul
@@ -515,7 +522,9 @@ define void @mul_2i32() {
   ; SSE42: cost of 9 {{.*}} %A0 = mul
   ; AVX: cost of 9 {{.*}} %A0 = mul
   ; AVX2: cost of 9 {{.*}} %A0 = mul
-  ; AVX512: cost of 9 {{.*}} %A0 = mul
+  ; AVX512F: cost of 9 {{.*}} %A0 = mul
+  ; AVX512BW: cost of 9 {{.*}} %A0 = mul
+  ; AVX512DQ: cost of 1 {{.*}} %A0 = mul
   %A0 = mul <2 x i32> undef, undef
 
   ret void

@@ -42,7 +42,7 @@
 #define HANDLE_DW_CC(ID, NAME)
 #endif
 
-
+HANDLE_DW_TAG(0x0000, null)
 HANDLE_DW_TAG(0x0001, array_type)
 HANDLE_DW_TAG(0x0002, class_type)
 HANDLE_DW_TAG(0x0003, entry_point)

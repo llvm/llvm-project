@@ -337,6 +337,7 @@ Failure values are constructed using ``make_error<T>``, where ``T`` is any class
 that inherits from the ErrorInfo utility, E.g.:
 
 .. code-block:: c++
+
   class BadFileFormat : public ErrorInfo<BadFileFormat> {
   public:
     static char ID;

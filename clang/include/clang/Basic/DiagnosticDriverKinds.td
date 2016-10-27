@@ -159,6 +159,11 @@ def err_drv_omp_host_ir_file_not_found : Error<
   "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
 def err_drv_omp_host_target_not_supported : Error<
   "The target '%0' is not a supported OpenMP host target.">;
+def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
+  "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
+def warn_drv_omp_offload_target_duplicate : Warning<
+  "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">, 
+  InGroup<OpenMPTarget>;
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
 

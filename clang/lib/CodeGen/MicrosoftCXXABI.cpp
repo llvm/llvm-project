@@ -1762,42 +1762,6 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   return VTable;
 }
 
-// Compute the identity of the most derived class whose virtual table is located
-// at the given offset into RD.
-static const CXXRecordDecl *getClassAtVTableLocation(ASTContext &Ctx,
-                                                     const CXXRecordDecl *RD,
-                                                     CharUnits Offset) {
-  if (Offset.isZero())
-    return RD;
-
-  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
-  const CXXRecordDecl *MaxBase = nullptr;
-  CharUnits MaxBaseOffset;
-  for (auto &&B : RD->bases()) {
-    const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
-    CharUnits BaseOffset = B.isVirtual() ? Layout.getVBaseClassOffset(Base)
-                                         : Layout.getBaseClassOffset(Base);
-    if (BaseOffset <= Offset && BaseOffset >= MaxBaseOffset) {
-      MaxBase = Base;
-      MaxBaseOffset = BaseOffset;
-    }
-  }
-  assert(MaxBase);
-  return getClassAtVTableLocation(Ctx, MaxBase, Offset - MaxBaseOffset);
-}
-
-// Compute the identity of the most derived class whose virtual table is located
-// at the MethodVFTableLocation ML.
-static const CXXRecordDecl *
-getClassAtVTableLocation(ASTContext &Ctx, GlobalDecl GD,
-                         MicrosoftVTableContext::MethodVFTableLocation &ML) {
-  const CXXRecordDecl *RD = ML.VBase;
-  if (!RD)
-    RD = cast<CXXMethodDecl>(GD.getDecl())->getParent();
-
-  return getClassAtVTableLocation(Ctx, RD, ML.VFPtrOffset);
-}
-
 CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
                                                     GlobalDecl GD,
                                                     Address This,
@@ -1813,18 +1777,30 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   llvm::Value *VTable = CGF.GetVTablePtr(VPtr, Ty, MethodDecl->getParent());
 
+  MicrosoftVTableContext &VFTContext = CGM.getMicrosoftVTableContext();
   MicrosoftVTableContext::MethodVFTableLocation ML =
-      CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
+      VFTContext.getMethodVFTableLocation(GD);
+
+  // Compute the identity of the most derived class whose virtual table is
+  // located at the MethodVFTableLocation ML.
+  auto getObjectWithVPtr = [&] {
+    return llvm::find_if(VFTContext.getVFPtrOffsets(
+                             ML.VBase ? ML.VBase : MethodDecl->getParent()),
+                         [&](const std::unique_ptr<VPtrInfo> &Info) {
+                           return Info->FullOffsetInMDC == ML.VFPtrOffset;
+                         })
+        ->get()
+        ->ObjectWithVPtr;
+  };
 
   llvm::Value *VFunc;
   if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
     VFunc = CGF.EmitVTableTypeCheckedLoad(
-        getClassAtVTableLocation(getContext(), GD, ML), VTable,
+        getObjectWithVPtr(), VTable,
         ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
   } else {
     if (CGM.getCodeGenOpts().PrepareForLTO)
-      CGF.EmitTypeMetadataCodeForVCall(
-          getClassAtVTableLocation(getContext(), GD, ML), VTable, Loc);
+      CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
 
     llvm::Value *VFuncPtr =
         Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");

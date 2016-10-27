@@ -85,10 +85,12 @@ private:
   mutable std::unique_ptr<Tool> Clang;
   mutable std::unique_ptr<Tool> Assemble;
   mutable std::unique_ptr<Tool> Link;
+  mutable std::unique_ptr<Tool> OffloadBundler;
   Tool *getClang() const;
   Tool *getAssemble() const;
   Tool *getLink() const;
   Tool *getClangAs() const;
+  Tool *getOffloadBundler() const;
 
   mutable std::unique_ptr<SanitizerArgs> SanitizerArguments;
 
@@ -190,12 +192,15 @@ public:
 
   /// TranslateArgs - Create a new derived argument list for any argument
   /// translations this ToolChain may wish to perform, or 0 if no tool chain
-  /// specific translations are needed.
+  /// specific translations are needed. If \p DeviceOffloadKind is specified
+  /// the translation specific for that offload kind is performed.
   ///
   /// \param BoundArch - The bound architecture name, or 0.
+  /// \param DeviceOffloadKind - The device offload kind used for the
+  /// translation.
   virtual llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                StringRef BoundArch) const {
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+                Action::OffloadKind DeviceOffloadKind) const {
     return nullptr;
   }
 

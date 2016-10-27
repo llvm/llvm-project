@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenFunction.h"
+#include "clang/AST/StmtCXX.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -36,9 +37,10 @@ struct CGCoroData {
 clang::CodeGen::CodeGenFunction::CGCoroInfo::CGCoroInfo() {}
 CodeGenFunction::CGCoroInfo::~CGCoroInfo() {}
 
-static bool createCoroData(CodeGenFunction &CGF,
+static void createCoroData(CodeGenFunction &CGF,
                            CodeGenFunction::CGCoroInfo &CurCoro,
-                           llvm::CallInst *CoroId, CallExpr const *CoroIdExpr) {
+                           llvm::CallInst *CoroId,
+                           CallExpr const *CoroIdExpr = nullptr) {
   if (CurCoro.Data) {
     if (CurCoro.Data->CoroIdExpr)
       CGF.CGM.Error(CoroIdExpr->getLocStart(),
@@ -49,13 +51,27 @@ static bool createCoroData(CodeGenFunction &CGF,
     else
       llvm_unreachable("EmitCoroutineBodyStatement called twice?");
 
-    return false;
+    return;
   }
 
   CurCoro.Data = std::unique_ptr<CGCoroData>(new CGCoroData);
   CurCoro.Data->CoroId = CoroId;
   CurCoro.Data->CoroIdExpr = CoroIdExpr;
-  return true;
+}
+
+void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
+  auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
+  auto &TI = CGM.getContext().getTargetInfo();
+  unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
+
+  auto *CoroId = Builder.CreateCall(
+      CGM.getIntrinsic(llvm::Intrinsic::coro_id),
+      {Builder.getInt32(NewAlign), NullPtr, NullPtr, NullPtr});
+  createCoroData(*this, CurCoro, CoroId);
+
+  EmitScalarExpr(S.getAllocate());
+  // FIXME: Emit the rest of the coroutine.
+  EmitStmt(S.getDeallocate());
 }
 
 // Emit coroutine intrinsic and patch up arguments of the token type.

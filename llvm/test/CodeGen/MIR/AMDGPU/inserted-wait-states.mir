@@ -1,40 +1,43 @@
-# RUN: llc -march=amdgcn -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,VI
 
 --- |
   define void @div_fmas() { ret void }
   define void @s_getreg() { ret void }
+  define void @s_setreg() { ret void }
 ...
 ---
-# CHECK-LABEL: name: div_fmas
+# GCN-LABEL: name: div_fmas
 
-# CHECK-LABEL: bb.0:
-# CHECK: S_MOV_B64
-# CHECK-NOT: S_NOP
-# CHECK: V_DIV_FMAS
+# GCN-LABEL: bb.0:
+# GCN: S_MOV_B64
+# GCN-NOT: S_NOP
+# GCN: V_DIV_FMAS
 
-# CHECK-LABEL: bb.1:
-# CHECK: V_CMP_EQ_I32
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: V_DIV_FMAS_F32
+# GCN-LABEL: bb.1:
+# GCN: V_CMP_EQ_I32
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: V_DIV_FMAS_F32
 
-# CHECK-LABEL: bb.2:
-# CHECK: V_CMP_EQ_I32
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: V_DIV_FMAS_F32
+# GCN-LABEL: bb.2:
+# GCN: V_CMP_EQ_I32
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: V_DIV_FMAS_F32
 
-# CHECK-LABEL: bb.3:
-# CHECK: V_DIV_SCALE_F32
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: S_NOP
-# CHECK: V_DIV_FMAS_F32
+# GCN-LABEL: bb.3:
+# GCN: V_DIV_SCALE_F32
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: S_NOP
+# GCN: V_DIV_FMAS_F32
 name: div_fmas
 
 body: |
@@ -65,28 +68,28 @@ body: |
 
 ...
 ---
-# CHECK-LABEL: name: s_getreg
+# GCN-LABEL: name: s_getreg
 
-# CHECK-LABEL: bb.0:
-# CHECK: S_SETREG
-# CHECK: S_NOP 0
-# CHECK: S_NOP 0
-# CHECK: S_GETREG
+# GCN-LABEL: bb.0:
+# GCN: S_SETREG
+# GCN: S_NOP 0
+# GCN: S_NOP 0
+# GCN: S_GETREG
 
-# CHECK-LABEL: bb.1:
-# CHECK: S_SETREG_IMM32
-# CHECK: S_NOP 0
-# CHECK: S_NOP 0
-# CHECK: S_GETREG
+# GCN-LABEL: bb.1:
+# GCN: S_SETREG_IMM32
+# GCN: S_NOP 0
+# GCN: S_NOP 0
+# GCN: S_GETREG
 
-# CHECK-LABEL: bb.2:
-# CHECK: S_SETREG
-# CHECK: S_NOP 0
-# CHECK: S_GETREG
+# GCN-LABEL: bb.2:
+# GCN: S_SETREG
+# GCN: S_NOP 0
+# GCN: S_GETREG
 
-# CHECK-LABEL: bb.3:
-# CHECK: S_SETREG
-# CHECK-NEXT: S_GETREG
+# GCN-LABEL: bb.3:
+# GCN: S_SETREG
+# GCN-NEXT: S_GETREG
 
 name: s_getreg
 
@@ -113,5 +116,46 @@ body: |
   bb.3:
     S_SETREG_B32 %sgpr0, 0
     %sgpr1 = S_GETREG_B32 1
+    S_ENDPGM
+...
+
+...
+---
+# GCN-LABEL: name: s_setreg
+
+# GCN-LABEL: bb.0:
+# GCN: S_SETREG
+# GCN: S_NOP 0
+# VI: S_NOP 0
+# GCN-NEXT: S_SETREG
+
+# GCN-LABEL: bb.1:
+# GCN: S_SETREG
+# GCN: S_NOP 0
+# VI: S_NOP 0
+# GCN-NEXT: S_SETREG
+
+# GCN-LABEL: bb.2:
+# GCN: S_SETREG
+# GCN-NEXT: S_SETREG
+
+name: s_setreg
+
+body: |
+  bb.0:
+    successors: %bb.1
+    S_SETREG_B32 %sgpr0, 1
+    S_SETREG_B32 %sgpr1, 1
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    S_SETREG_B32 %sgpr0, 64
+    S_SETREG_B32 %sgpr1, 128
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_SETREG_B32 %sgpr0, 1
+    S_SETREG_B32 %sgpr1, 0
     S_ENDPGM
 ...

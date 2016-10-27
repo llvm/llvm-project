@@ -41,7 +41,8 @@ public:
   void dump(raw_ostream &OS, DWARFUnit *u, unsigned recurseDepth,
             unsigned indent = 0) const;
   void dumpAttribute(raw_ostream &OS, DWARFUnit *u, uint32_t *offset_ptr,
-                     uint16_t attr, uint16_t form, unsigned indent = 0) const;
+                     dwarf::Attribute attr, dwarf::Form form, 
+                     unsigned indent = 0) const;
 
   /// Extracts a debug info entry, which is a child of a given unit,
   /// starting at a given offset. If DIE can't be extracted, returns false and
@@ -86,24 +87,27 @@ public:
     return AbbrevDecl;
   }
 
-  bool getAttributeValue(const DWARFUnit *U, const uint16_t Attr,
+  bool getAttributeValue(const DWARFUnit *U, dwarf::Attribute Attr,
                          DWARFFormValue &FormValue) const;
 
-  const char *getAttributeValueAsString(const DWARFUnit *U, const uint16_t Attr,
+  const char *getAttributeValueAsString(const DWARFUnit *U, 
+                                        dwarf::Attribute Attr,
                                         const char *FailValue) const;
 
-  uint64_t getAttributeValueAsAddress(const DWARFUnit *U, const uint16_t Attr,
+  uint64_t getAttributeValueAsAddress(const DWARFUnit *U, 
+                                      dwarf::Attribute Attr,
                                       uint64_t FailValue) const;
 
   uint64_t getAttributeValueAsUnsignedConstant(const DWARFUnit *U,
-                                               const uint16_t Attr,
+                                               dwarf::Attribute Attr,
                                                uint64_t FailValue) const;
 
-  uint64_t getAttributeValueAsReference(const DWARFUnit *U, const uint16_t Attr,
+  uint64_t getAttributeValueAsReference(const DWARFUnit *U, 
+                                        dwarf::Attribute Attr,
                                         uint64_t FailValue) const;
 
   uint64_t getAttributeValueAsSectionOffset(const DWARFUnit *U,
-                                            const uint16_t Attr,
+                                            dwarf::Attribute Attr,
                                             uint64_t FailValue) const;
 
   uint64_t getRangesBaseAttribute(const DWARFUnit *U, uint64_t FailValue) const;
