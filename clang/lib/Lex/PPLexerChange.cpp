@@ -41,7 +41,7 @@ bool Preprocessor::isInPrimaryFile() const {
   assert(IsFileLexer(IncludeMacroStack[0]) &&
          "Top level include stack isn't our primary lexer?");
   return std::none_of(IncludeMacroStack.begin() + 1, IncludeMacroStack.end(),
-                      [](const IncludeStackInfo &ISI) -> bool {
+                      [this](const IncludeStackInfo &ISI) -> bool {
     return IsFileLexer(ISI);
   });
 }

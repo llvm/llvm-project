@@ -5756,6 +5756,7 @@ __kmp_reap_thread(
     }; // if
 #endif /* KMP_AFFINITY_SUPPORTED */
 
+    __kmp_free_implicit_task(thread);
     __kmp_reap_team( thread->th.th_serial_team );
     thread->th.th_serial_team = NULL;
     __kmp_free( thread );
@@ -6804,6 +6805,8 @@ __kmp_run_after_invoked_task( int gtid, int tid, kmp_info_t *this_thr,
 {
     if( __kmp_env_consistency_check )
         __kmp_pop_parallel( gtid, team->t.t_ident );
+
+    __kmp_finish_implicit_task(this_thr);
 }
 
 int

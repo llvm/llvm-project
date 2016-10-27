@@ -150,3 +150,54 @@ namespace ctor_with_cleanups {
 }
 
 #include "Inputs/warn-unused-variables.h"
+
+namespace arrayRecords {
+
+int total = 0;
+
+class Adder {
+public:
+  Adder(int x); // out of line below
+  ~Adder() {}
+};
+
+Adder::Adder(int x) {
+  total += x;
+}
+
+struct Foo {
+  int x;
+  Foo(int x) : x(x) {}
+};
+
+struct S1 {
+  S1();
+};
+
+void foo(int size) {
+  S1 y; // no warning
+  S1 yarray[2]; // no warning
+  S1 dynArray[size]; // no warning
+  S1 nestedArray[1][2][3]; // no warning
+
+  Adder scalerInFuncScope = 134; // no warning
+  Adder arrayInFuncScope[] = { 135, 136 };  // no warning
+  Adder nestedArrayInFuncScope[2][2] = { {1,2}, {3,4} }; // no warning
+
+  Foo fooScalar = 1; // expected-warning {{unused variable 'fooScalar'}}
+  Foo fooArray[] = {1,2}; // expected-warning {{unused variable 'fooArray'}}
+  Foo fooNested[2][2] = { {1,2}, {3,4} }; // expected-warning {{unused variable 'fooNested'}}
+}
+
+template<int N>
+void bar() {
+  Adder scaler = 123; // no warning
+  Adder array[N] = {1,2}; // no warning
+}
+
+void test() {
+  foo(10);
+  bar<2>();
+}
+
+}
