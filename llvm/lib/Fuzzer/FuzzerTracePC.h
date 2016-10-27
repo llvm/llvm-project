@@ -111,12 +111,15 @@ private:
     // Do nothing, too small to be interesting.
   }
   void TORCInsert(size_t Idx, uint16_t Arg1, uint16_t Arg2) {
-    // Do nothing, these don't usually hapen.
+    // Do nothing, these don't usually happen.
   }
   void TORCInsert(size_t Idx, uint32_t Arg1, uint32_t Arg2) {
     TORC4.Insert(Idx, Arg1, Arg2);
   }
   void TORCInsert(size_t Idx, uint64_t Arg1, uint64_t Arg2) {
+    TORC8.Insert(Idx, Arg1, Arg2);
+  }
+  void TORCInsert(size_t Idx, uintptr_t Arg1, uintptr_t Arg2) {
     TORC8.Insert(Idx, Arg1, Arg2);
   }
 
