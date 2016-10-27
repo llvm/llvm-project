@@ -141,6 +141,27 @@ static void addDefsToList(const MachineInstr &MI,
   }
 }
 
+// Add MI and its defs to the lists if MI reads one of the defs that are
+// already in the list. Returns true in that case.
+static bool
+addToListsIfDependent(MachineInstr &MI,
+                      SmallVectorImpl<const MachineOperand *> &Defs,
+                      SmallVectorImpl<MachineInstr*> &Insts) {
+  for (const MachineOperand *Def : Defs) {
+    bool ReadDef = MI.readsVirtualRegister(Def->getReg());
+    // If ReadDef is true, then there is a use of Def between I
+    // and the instruction that I will potentially be merged with. We
+    // will need to move this instruction after the merged instructions.
+    if (ReadDef) {
+      Insts.push_back(&MI);
+      addDefsToList(MI, Defs);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 static bool
 canMoveInstsAcrossMemOp(MachineInstr &MemOp,
                         ArrayRef<MachineInstr*> InstsToMove,
@@ -224,23 +245,22 @@ SILoadStoreOptimizer::findMatchingDSInst(MachineBasicBlock::iterator I,
       // When we match I with another DS instruction we will be moving I down
       // to the location of the matched instruction any uses of I will need to
       // be moved down as well.
-      for (const MachineOperand *Def : DefsToMove) {
-        bool ReadDef = MBBI->readsVirtualRegister(Def->getReg());
-        // If ReadDef is true, then there is a use of Def between I
-        // and the instruction that I will potentially be merged with. We
-        // will need to move this instruction after the merged instructions.
-        if (ReadDef) {
-          InstsToMove.push_back(&*MBBI);
-          addDefsToList(*MBBI, DefsToMove);
-          break;
-        }
-      }
+      addToListsIfDependent(*MBBI, DefsToMove, InstsToMove);
       continue;
     }
 
     // Don't merge volatiles.
     if (MBBI->hasOrderedMemoryRef())
       return E;
+
+    // Handle a case like
+    //   DS_WRITE_B32 addr, v, idx0
+    //   w = DS_READ_B32 addr, idx0
+    //   DS_WRITE_B32 addr, f(w), idx1
+    // where the DS_READ_B32 ends up in InstsToMove and therefore prevents
+    // merging of the two writes.
+    if (addToListsIfDependent(*MBBI, DefsToMove, InstsToMove))
+      continue;
 
     int AddrIdx = AMDGPU::getNamedOperandIdx(I->getOpcode(), AMDGPU::OpName::addr);
     const MachineOperand &AddrReg0 = I->getOperand(AddrIdx);

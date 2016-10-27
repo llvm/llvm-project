@@ -45,10 +45,6 @@ public:
 };
 }
 
-namespace llvm {
-extern Target TheAVRTarget;
-}
-
 static MCDisassembler *createAVRDisassembler(const Target &T,
                                              const MCSubtargetInfo &STI,
                                              MCContext &Ctx) {
@@ -58,7 +54,7 @@ static MCDisassembler *createAVRDisassembler(const Target &T,
 
 extern "C" void LLVMInitializeAVRDisassembler() {
   // Register the disassembler.
-  TargetRegistry::RegisterMCDisassembler(TheAVRTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheAVRTarget(),
                                          createAVRDisassembler);
 }
 

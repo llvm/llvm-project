@@ -262,7 +262,10 @@ void TracePC::HandleCmp(void *PC, T Arg1, T Arg2) {
   uint64_t ArgXor = Arg1 ^ Arg2;
   uint64_t ArgDistance = __builtin_popcountl(ArgXor) + 1; // [1,65]
   uintptr_t Idx = ((PCuint & 4095) + 1) * ArgDistance;
-  TORCInsert(ArgXor, Arg1, Arg2);
+  if (sizeof(T) == 4)
+      TORC4.Insert(ArgXor, Arg1, Arg2);
+  else if (sizeof(T) == 8)
+      TORC8.Insert(ArgXor, Arg1, Arg2);
   HandleValueProfile(Idx);
 }
 

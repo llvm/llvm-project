@@ -2992,7 +2992,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ARMISD::UMLAL:{
     // UMAAL is similar to UMLAL but it adds two 32-bit values to the
     // 64-bit multiplication result.
-    if (Subtarget->hasV6Ops() && N->getOperand(2).getOpcode() == ARMISD::ADDC &&
+    if (Subtarget->hasV6Ops() && Subtarget->hasDSP() &&
+        N->getOperand(2).getOpcode() == ARMISD::ADDC &&
         N->getOperand(3).getOpcode() == ARMISD::ADDE) {
 
       SDValue Addc = N->getOperand(2);

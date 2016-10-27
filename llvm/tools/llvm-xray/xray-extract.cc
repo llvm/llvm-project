@@ -160,7 +160,7 @@ llvm::Error LoadBinaryInstrELF(
       return make_error<StringError>(
           Twine("Encountered unknown sled type ") + "'" + Twine(int32_t{Kind}) +
               "'.",
-          std::make_error_code(std::errc::protocol_error));
+          std::make_error_code(std::errc::executable_format_error));
     }
     auto AlwaysInstrument = Extractor.getU8(&OffsetPtr);
     Entry.AlwaysInstrument = AlwaysInstrument != 0;
@@ -200,7 +200,7 @@ InstrumentationMapExtractor::InstrumentationMapExtractor(std::string Filename,
               make_error<StringError>(
                   Twine("Cannot extract instrumentation map from '") +
                       ExtractInput + "'.",
-                  std::make_error_code(std::errc::protocol_error)),
+                  std::make_error_code(std::errc::executable_format_error)),
               std::move(E));
         });
     break;
