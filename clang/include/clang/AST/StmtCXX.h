@@ -405,10 +405,13 @@ public:
 
   SourceLocation getLocStart() const LLVM_READONLY { return CoreturnLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY {
-    return getOperand()->getLocEnd();
+    return getOperand() ? getOperand()->getLocEnd() : getLocStart();
   }
 
   child_range children() {
+    if (!getOperand())
+      return child_range(SubStmts + SubStmt::PromiseCall,
+                         SubStmts + SubStmt::Count);
     return child_range(SubStmts, SubStmts + SubStmt::Count);
   }
 

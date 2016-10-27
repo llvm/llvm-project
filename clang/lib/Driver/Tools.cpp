@@ -4810,7 +4810,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasFlag(options::OPT_fxray_instrument,
                    options::OPT_fnoxray_instrument, false)) {
-    CmdArgs.push_back("-fxray-instrument");
+    const char *const XRayInstrumentOption = "-fxray-instrument";
+    if (Triple.getOS() == llvm::Triple::Linux &&
+        (Triple.getArch() == llvm::Triple::arm ||
+         Triple.getArch() == llvm::Triple::x86_64)) {
+      // Supported.
+    } else {
+      D.Diag(diag::err_drv_clang_unsupported)
+          << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+    }
+    CmdArgs.push_back(XRayInstrumentOption);
     if (const Arg *A =
             Args.getLastArg(options::OPT_fxray_instruction_threshold_,
                             options::OPT_fxray_instruction_threshold_EQ)) {

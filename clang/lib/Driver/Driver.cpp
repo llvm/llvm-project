@@ -1418,9 +1418,6 @@ class OffloadingActionBuilder final {
   /// The compilation that is using this builder.
   Compilation &C;
 
-  /// The derived arguments associated with this builder.
-  DerivedArgList &Args;
-
   /// Map between an input argument and the offload kinds used to process it.
   std::map<const Arg *, unsigned> InputArgToOffloadKindMap;
 
@@ -1611,6 +1608,11 @@ class OffloadingActionBuilder final {
 
         // We avoid creating host action in device-only mode.
         return CompileDeviceOnly ? ABRT_Ignore_Host : ABRT_Success;
+      } else if (CurPhase > phases::Backend) {
+        // If we are past the backend phase and still have a device action, we
+        // don't have to do anything as this action is already a device
+        // top-level action.
+        return ABRT_Success;
       }
 
       assert(CurPhase < phases::Backend && "Generating single CUDA "
@@ -1755,7 +1757,7 @@ class OffloadingActionBuilder final {
 public:
   OffloadingActionBuilder(Compilation &C, DerivedArgList &Args,
                           const Driver::InputList &Inputs)
-      : C(C), Args(Args) {
+      : C(C) {
     // Create a specialized builder for each device toolchain.
 
     IsValid = true;
@@ -1871,31 +1873,17 @@ public:
   /// Add the offloading top level actions to the provided action list.
   bool appendTopLevelActions(ActionList &AL, Action *HostAction,
                              const Arg *InputArg) {
-    auto NumActions = AL.size();
-
     for (auto *SB : SpecializedBuilders) {
       if (!SB->isValid())
         continue;
       SB->appendTopLevelActions(AL);
     }
 
-    assert(NumActions <= AL.size() && "Expecting more actions, not less!");
-
     // Propagate to the current host action (if any) the offload information
     // associated with the current input.
     if (HostAction)
       HostAction->propagateHostOffloadInfo(InputArgToOffloadKindMap[InputArg],
                                            /*BoundArch=*/nullptr);
-
-    // If any action is added by the builders, -o is ambiguous if we have more
-    // than one top-level action.
-    if (NumActions < AL.size() && Args.hasArg(options::OPT_o) &&
-        AL.size() > 1) {
-      C.getDriver().Diag(
-          clang::diag::err_drv_output_argument_with_multiple_files);
-      return true;
-    }
-
     return false;
   }
 
