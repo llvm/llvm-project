@@ -7,7 +7,7 @@
 #include <vector>
 #include <string>
 
-%include_SB_APIs%
+#include "lldb-headers.h"
 
 #include "common.h"
 

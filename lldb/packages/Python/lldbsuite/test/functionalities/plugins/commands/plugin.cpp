@@ -13,7 +13,15 @@ Compile this into a dylib foo.dylib and load by placing in appropriate locations
 by typing plugin load foo.dylib at the LLDB command line
 */
 
-%include_SB_APIs%
+#if defined (__APPLE__)
+#include <LLDB/SBCommandInterpreter.h>
+#include <LLDB/SBCommandReturnObject.h>
+#include <LLDB/SBDebugger.h>
+#else
+#include <lldb/API/SBCommandInterpreter.h>
+#include <lldb/API/SBCommandReturnObject.h>
+#include <lldb/API/SBDebugger.h>
+#endif
 
 namespace lldb {
     bool

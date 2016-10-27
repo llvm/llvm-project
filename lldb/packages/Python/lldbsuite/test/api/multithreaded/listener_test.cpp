@@ -7,7 +7,7 @@
 #include <thread>
 #include <vector>
 
-%include_SB_APIs%
+#include "lldb-headers.h"
 #include "common.h"
 
 using namespace lldb;
