@@ -586,8 +586,8 @@ def DirectIvarAssignmentForAnnotatedFunctions : Checker<"DirectIvarAssignmentFor
 
 let ParentPackage = CoreFoundation in {
 
-def CFNumberCreateChecker : Checker<"CFNumber">,
-  HelpText<"Check for proper uses of CFNumberCreate">,
+def CFNumberChecker : Checker<"CFNumber">,
+  HelpText<"Check for proper uses of CFNumber APIs">,
   DescFile<"BasicObjCFoundationChecks.cpp">;
 
 def CFRetainReleaseChecker : Checker<"CFRetainRelease">,

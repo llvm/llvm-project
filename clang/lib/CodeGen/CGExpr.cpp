@@ -2025,9 +2025,14 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF,
-                                     const Expr *E, const FunctionDecl *FD) {
-  llvm::Value *V = CGF.CGM.GetAddrOfFunction(FD);
+static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
+                                               const FunctionDecl *FD) {
+  if (FD->hasAttr<WeakRefAttr>()) {
+    ConstantAddress aliasee = CGM.GetWeakRefReference(FD);
+    return aliasee.getPointer();
+  }
+
+  llvm::Constant *V = CGM.GetAddrOfFunction(FD);
   if (!FD->hasPrototype()) {
     if (const FunctionProtoType *Proto =
             FD->getType()->getAs<FunctionProtoType>()) {
@@ -2035,11 +2040,18 @@ static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF,
       // isn't the same as the type of a use.  Correct for this with a
       // bitcast.
       QualType NoProtoType =
-          CGF.getContext().getFunctionNoProtoType(Proto->getReturnType());
-      NoProtoType = CGF.getContext().getPointerType(NoProtoType);
-      V = CGF.Builder.CreateBitCast(V, CGF.ConvertType(NoProtoType));
+          CGM.getContext().getFunctionNoProtoType(Proto->getReturnType());
+      NoProtoType = CGM.getContext().getPointerType(NoProtoType);
+      V = llvm::ConstantExpr::getBitCast(V,
+                                      CGM.getTypes().ConvertType(NoProtoType));
     }
   }
+  return V;
+}
+
+static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF,
+                                     const Expr *E, const FunctionDecl *FD) {
+  llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, FD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment, AlignmentSource::Decl);
 }
@@ -3780,70 +3792,86 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
   if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E))
     return EmitCUDAKernelCallExpr(CE, ReturnValue);
 
-  const Decl *TargetDecl = E->getCalleeDecl();
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    if (unsigned builtinID = FD->getBuiltinID())
-      return EmitBuiltinExpr(FD, builtinID, E, ReturnValue);
-  }
-
   if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
-    if (const CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(TargetDecl))
+    if (const CXXMethodDecl *MD =
+          dyn_cast_or_null<CXXMethodDecl>(CE->getCalleeDecl()))
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
-  if (const auto *PseudoDtor =
-          dyn_cast<CXXPseudoDestructorExpr>(E->getCallee()->IgnoreParens())) {
-    QualType DestroyedType = PseudoDtor->getDestroyedType();
-    if (DestroyedType.hasStrongOrWeakObjCLifetime()) {
-      // Automatic Reference Counting:
-      //   If the pseudo-expression names a retainable object with weak or
-      //   strong lifetime, the object shall be released.
-      Expr *BaseExpr = PseudoDtor->getBase();
-      Address BaseValue = Address::invalid();
-      Qualifiers BaseQuals;
+  CGCallee callee = EmitCallee(E->getCallee());
 
-      // If this is s.x, emit s as an lvalue. If it is s->x, emit s as a scalar.
-      if (PseudoDtor->isArrow()) {
-        BaseValue = EmitPointerWithAlignment(BaseExpr);
-        const PointerType *PTy = BaseExpr->getType()->getAs<PointerType>();
-        BaseQuals = PTy->getPointeeType().getQualifiers();
-      } else {
-        LValue BaseLV = EmitLValue(BaseExpr);
-        BaseValue = BaseLV.getAddress();
-        QualType BaseTy = BaseExpr->getType();
-        BaseQuals = BaseTy.getQualifiers();
-      }
-
-      switch (DestroyedType.getObjCLifetime()) {
-      case Qualifiers::OCL_None:
-      case Qualifiers::OCL_ExplicitNone:
-      case Qualifiers::OCL_Autoreleasing:
-        break;
-
-      case Qualifiers::OCL_Strong:
-        EmitARCRelease(Builder.CreateLoad(BaseValue,
-                          PseudoDtor->getDestroyedType().isVolatileQualified()),
-                       ARCPreciseLifetime);
-        break;
-
-      case Qualifiers::OCL_Weak:
-        EmitARCDestroyWeak(BaseValue);
-        break;
-      }
-    } else {
-      // C++ [expr.pseudo]p1:
-      //   The result shall only be used as the operand for the function call
-      //   operator (), and the result of such a call has type void. The only
-      //   effect is the evaluation of the postfix-expression before the dot or
-      //   arrow.
-      EmitScalarExpr(E->getCallee());
-    }
-
-    return RValue::get(nullptr);
+  if (callee.isBuiltin()) {
+    return EmitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(),
+                           E, ReturnValue);
   }
 
-  llvm::Value *Callee = EmitScalarExpr(E->getCallee());
-  return EmitCall(E->getCallee()->getType(), Callee, E, ReturnValue,
-                  TargetDecl);
+  if (callee.isPseudoDestructor()) {
+    return EmitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
+  }
+
+  return EmitCall(E->getCallee()->getType(), callee, E, ReturnValue);
+}
+
+/// Emit a CallExpr without considering whether it might be a subclass.
+RValue CodeGenFunction::EmitSimpleCallExpr(const CallExpr *E,
+                                           ReturnValueSlot ReturnValue) {
+  CGCallee Callee = EmitCallee(E->getCallee());
+  return EmitCall(E->getCallee()->getType(), Callee, E, ReturnValue);
+}
+
+static CGCallee EmitDirectCallee(CodeGenFunction &CGF, const FunctionDecl *FD) {
+  if (auto builtinID = FD->getBuiltinID()) {
+    return CGCallee::forBuiltin(builtinID, FD);
+  }
+
+  llvm::Constant *calleePtr = EmitFunctionDeclPointer(CGF.CGM, FD);
+  return CGCallee::forDirect(calleePtr, FD);
+}
+
+CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
+  E = E->IgnoreParens();
+
+  // Look through function-to-pointer decay.
+  if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    if (ICE->getCastKind() == CK_FunctionToPointerDecay ||
+        ICE->getCastKind() == CK_BuiltinFnToFnPtr) {
+      return EmitCallee(ICE->getSubExpr());
+    }
+
+  // Resolve direct calls.
+  } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
+      return EmitDirectCallee(*this, FD);
+    }
+  } else if (auto ME = dyn_cast<MemberExpr>(E)) {
+    if (auto FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {
+      EmitIgnoredExpr(ME->getBase());
+      return EmitDirectCallee(*this, FD);
+    }
+
+  // Look through template substitutions.
+  } else if (auto NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
+    return EmitCallee(NTTP->getReplacement());
+
+  // Treat pseudo-destructor calls differently.
+  } else if (auto PDE = dyn_cast<CXXPseudoDestructorExpr>(E)) {
+    return CGCallee::forPseudoDestructor(PDE);
+  }
+
+  // Otherwise, we have an indirect reference.
+  llvm::Value *calleePtr;
+  QualType functionType;
+  if (auto ptrType = E->getType()->getAs<PointerType>()) {
+    calleePtr = EmitScalarExpr(E);
+    functionType = ptrType->getPointeeType();
+  } else {
+    functionType = E->getType();
+    calleePtr = EmitLValue(E).getPointer();
+  }
+  assert(functionType->isFunctionType());
+  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(),
+                          E->getReferencedDeclOfCallee());
+  CGCallee callee(calleeInfo, calleePtr);
+  return callee;
 }
 
 LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
@@ -4019,22 +4047,15 @@ LValue CodeGenFunction::EmitStmtExprLValue(const StmtExpr *E) {
                         AlignmentSource::Decl);
 }
 
-RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
+RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee,
                                  const CallExpr *E, ReturnValueSlot ReturnValue,
-                                 CGCalleeInfo CalleeInfo, llvm::Value *Chain) {
+                                 llvm::Value *Chain) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   assert(CalleeType->isFunctionPointerType() &&
          "Call must have function pointer type!");
 
-  // Preserve the non-canonical function type because things like exception
-  // specifications disappear in the canonical type. That information is useful
-  // to drive the generation of more accurate code for this call later on.
-  const FunctionProtoType *NonCanonicalFTP = CalleeType->getAs<PointerType>()
-                                                 ->getPointeeType()
-                                                 ->getAs<FunctionProtoType>();
-
-  const Decl *TargetDecl = CalleeInfo.getCalleeDecl();
+  const Decl *TargetDecl = OrigCallee.getAbstractInfo().getCalleeDecl();
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
     // We can only guarantee that a function is called from the correct
@@ -4052,6 +4073,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
   const auto *FnType =
       cast<FunctionType>(cast<PointerType>(CalleeType)->getPointeeType());
 
+  CGCallee Callee = OrigCallee;
+
   if (getLangOpts().CPlusPlus && SanOpts.has(SanitizerKind::Function) &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     if (llvm::Constant *PrefixSig =
@@ -4066,8 +4089,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
       llvm::StructType *PrefixStructTy = llvm::StructType::get(
           CGM.getLLVMContext(), PrefixStructTyElems, /*isPacked=*/true);
 
+      llvm::Value *CalleePtr = Callee.getFunctionPointer();
+
       llvm::Value *CalleePrefixStruct = Builder.CreateBitCast(
-          Callee, llvm::PointerType::getUnqual(PrefixStructTy));
+          CalleePtr, llvm::PointerType::getUnqual(PrefixStructTy));
       llvm::Value *CalleeSigPtr =
           Builder.CreateConstGEP2_32(PrefixStructTy, CalleePrefixStruct, 0, 0);
       llvm::Value *CalleeSig =
@@ -4090,7 +4115,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
         EmitCheckTypeDescriptor(CalleeType)
       };
       EmitCheck(std::make_pair(CalleeRTTIMatch, SanitizerKind::Function),
-                "function_type_mismatch", StaticData, Callee);
+                "function_type_mismatch", StaticData, CalleePtr);
 
       Builder.CreateBr(Cont);
       EmitBlock(Cont);
@@ -4107,7 +4132,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
     llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(QualType(FnType, 0));
     llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
-    llvm::Value *CastedCallee = Builder.CreateBitCast(Callee, Int8PtrTy);
+    llvm::Value *CalleePtr = Callee.getFunctionPointer();
+    llvm::Value *CastedCallee = Builder.CreateBitCast(CalleePtr, Int8PtrTy);
     llvm::Value *TypeTest = Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::type_test), {CastedCallee, TypeId});
 
@@ -4187,11 +4213,13 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
   if (isa<FunctionNoProtoType>(FnType) || Chain) {
     llvm::Type *CalleeTy = getTypes().GetFunctionType(FnInfo);
     CalleeTy = CalleeTy->getPointerTo();
-    Callee = Builder.CreateBitCast(Callee, CalleeTy, "callee.knr.cast");
+
+    llvm::Value *CalleePtr = Callee.getFunctionPointer();
+    CalleePtr = Builder.CreateBitCast(CalleePtr, CalleeTy, "callee.knr.cast");
+    Callee.setFunctionPointer(CalleePtr);
   }
 
-  return EmitCall(FnInfo, Callee, ReturnValue, Args,
-                  CGCalleeInfo(NonCanonicalFTP, TargetDecl));
+  return EmitCall(FnInfo, Callee, ReturnValue, Args);
 }
 
 LValue CodeGenFunction::

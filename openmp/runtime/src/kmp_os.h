@@ -236,9 +236,18 @@ typedef double  kmp_real64;
 #endif
 
 #define PAGE_SIZE                       (0x4000)
+
+#if KMP_OS_LINUX
+#define KMP_GET_PAGE_SIZE() getpagesize()
+#else
+// TODO: find the corresponding function to getpagesize() in Windows
+// and use it whenever possible.
+#define KMP_GET_PAGE_SIZE() PAGE_SIZE
+#endif
+
 #define PAGE_ALIGNED(_addr)     ( ! ((size_t) _addr & \
-                                     (size_t)(PAGE_SIZE - 1)))
-#define ALIGN_TO_PAGE(x)   (void *)(((size_t)(x)) & ~((size_t)(PAGE_SIZE - 1)))
+                                     (size_t)(KMP_GET_PAGE_SIZE() - 1)))
+#define ALIGN_TO_PAGE(x)   (void *)(((size_t)(x)) & ~((size_t)(KMP_GET_PAGE_SIZE() - 1)))
 
 /* ---------------------- Support for cache alignment, padding, etc. -----------------*/
 

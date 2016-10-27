@@ -535,7 +535,8 @@ namespace {
       CallArgList Args;
       Args.add(RValue::get(Arg),
                CGF.getContext().getPointerType(Var.getType()));
-      CGF.EmitCall(FnInfo, CleanupFn, ReturnValueSlot(), Args);
+      auto Callee = CGCallee::forDirect(CleanupFn);
+      CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args);
     }
   };
 } // end anonymous namespace

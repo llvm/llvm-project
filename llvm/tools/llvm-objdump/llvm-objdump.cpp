@@ -319,14 +319,14 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef ArchiveName,
   if (ArchiveName != "")
     errs() << ArchiveName << "(" << FileName << ")";
   else
-    errs() << FileName;
+    errs() << "'" << FileName << "'";
   if (!ArchitectureName.empty())
     errs() << " (for architecture " << ArchitectureName << ")";
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS, "");
   OS.flush();
-  errs() << " " << Buf;
+  errs() << ": " << Buf;
   exit(1);
 }
 

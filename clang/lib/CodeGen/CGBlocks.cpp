@@ -975,25 +975,24 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
   const BlockPointerType *BPT =
     E->getCallee()->getType()->getAs<BlockPointerType>();
 
-  llvm::Value *Callee = EmitScalarExpr(E->getCallee());
+  llvm::Value *BlockPtr = EmitScalarExpr(E->getCallee());
 
   // Get a pointer to the generic block literal.
   llvm::Type *BlockLiteralTy =
     llvm::PointerType::getUnqual(CGM.getGenericBlockLiteralType());
 
   // Bitcast the callee to a block literal.
-  llvm::Value *BlockLiteral =
-    Builder.CreateBitCast(Callee, BlockLiteralTy, "block.literal");
+  BlockPtr = Builder.CreateBitCast(BlockPtr, BlockLiteralTy, "block.literal");
 
   // Get the function pointer from the literal.
   llvm::Value *FuncPtr =
-    Builder.CreateStructGEP(CGM.getGenericBlockLiteralType(), BlockLiteral, 3);
+    Builder.CreateStructGEP(CGM.getGenericBlockLiteralType(), BlockPtr, 3);
 
-  BlockLiteral = Builder.CreateBitCast(BlockLiteral, VoidPtrTy);
+  BlockPtr = Builder.CreateBitCast(BlockPtr, VoidPtrTy);
 
   // Add the block literal.
   CallArgList Args;
-  Args.add(RValue::get(BlockLiteral), getContext().VoidPtrTy);
+  Args.add(RValue::get(BlockPtr), getContext().VoidPtrTy);
 
   QualType FnType = BPT->getPointeeType();
 
@@ -1013,8 +1012,11 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
   llvm::Type *BlockFTyPtr = llvm::PointerType::getUnqual(BlockFTy);
   Func = Builder.CreateBitCast(Func, BlockFTyPtr);
 
+  // Prepare the callee.
+  CGCallee Callee(CGCalleeInfo(), Func);
+
   // And call the block.
-  return EmitCall(FnInfo, Func, ReturnValue, Args);
+  return EmitCall(FnInfo, Callee, ReturnValue, Args);
 }
 
 Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,

@@ -35,6 +35,7 @@ class FieldDecl;
 class MangleContext;
 
 namespace CodeGen {
+class CGCallee;
 class CodeGenFunction;
 class CodeGenModule;
 struct CatchTypeInfo;
@@ -154,7 +155,7 @@ public:
   /// Load a member function from an object and a member function
   /// pointer.  Apply the this-adjustment and set 'This' to the
   /// adjusted value.
-  virtual llvm::Value *EmitLoadOfMemberFunctionPointer(
+  virtual CGCallee EmitLoadOfMemberFunctionPointer(
       CodeGenFunction &CGF, const Expr *E, Address This,
       llvm::Value *&ThisPtrForCall, llvm::Value *MemPtr,
       const MemberPointerType *MPT);
@@ -403,11 +404,11 @@ public:
                                                 CharUnits VPtrOffset) = 0;
 
   /// Build a virtual function pointer in the ABI-specific way.
-  virtual llvm::Value *getVirtualFunctionPointer(CodeGenFunction &CGF,
-                                                 GlobalDecl GD,
-                                                 Address This,
-                                                 llvm::Type *Ty,
-                                                 SourceLocation Loc) = 0;
+  virtual CGCallee getVirtualFunctionPointer(CodeGenFunction &CGF,
+                                             GlobalDecl GD,
+                                             Address This,
+                                             llvm::Type *Ty,
+                                             SourceLocation Loc) = 0;
 
   /// Emit the ABI-specific virtual destructor call.
   virtual llvm::Value *
