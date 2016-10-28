@@ -179,7 +179,6 @@ then
             echo "Creating symlink for darwin-debug"
         fi
         cd "${framework_python_dir}"
-        ln -s "../../../../bin/lldb-launcher" darwin-debug
     else
         if [ $Debug -eq 1 ]
         then

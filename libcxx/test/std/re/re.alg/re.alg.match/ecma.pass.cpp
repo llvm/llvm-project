@@ -371,16 +371,37 @@ int main()
     }
     {
         std::cmatch m;
+        // http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#2273
         const char s[] = "tournament";
-        assert(!std::regex_match(s, m, std::regex("tour|to|tournament")));
-        assert(m.size() == 0);
+        assert(std::regex_match(s, m, std::regex("tour|to|tournament")));
+        assert(m.size() == 1);
+        assert(!m.prefix().matched);
+        assert(m.prefix().first == s);
+        assert(m.prefix().second == m[0].first);
+        assert(!m.suffix().matched);
+        assert(m.suffix().first == m[0].second);
+        assert(m.suffix().second == m[0].second);
+        assert(m.length(0) == std::char_traits<char>::length(s));
+        assert(m.position(0) == 0);
+        assert(m.str(0) == s);
     }
     {
         std::cmatch m;
+        // http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#2273
         const char s[] = "tournamenttotour";
-        assert(!std::regex_match(s, m, std::regex("(tour|to|tournament)+",
-               std::regex_constants::nosubs)));
-        assert(m.size() == 0);
+        assert(
+            std::regex_match(s, m, std::regex("(tour|to|tournament)+",
+                                              std::regex_constants::nosubs)));
+        assert(m.size() == 1);
+        assert(!m.prefix().matched);
+        assert(m.prefix().first == s);
+        assert(m.prefix().second == m[0].first);
+        assert(!m.suffix().matched);
+        assert(m.suffix().first == m[0].second);
+        assert(m.suffix().second == m[0].second);
+        assert(m.length(0) == std::char_traits<char>::length(s));
+        assert(m.position(0) == 0);
+        assert(m.str(0) == s);
     }
     {
         std::cmatch m;
@@ -1036,16 +1057,37 @@ int main()
     }
     {
         std::wcmatch m;
+        // http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#2273
         const wchar_t s[] = L"tournament";
-        assert(!std::regex_match(s, m, std::wregex(L"tour|to|tournament")));
-        assert(m.size() == 0);
+        assert(std::regex_match(s, m, std::wregex(L"tour|to|tournament")));
+        assert(m.size() == 1);
+        assert(!m.prefix().matched);
+        assert(m.prefix().first == s);
+        assert(m.prefix().second == m[0].first);
+        assert(!m.suffix().matched);
+        assert(m.suffix().first == m[0].second);
+        assert(m.suffix().second == m[0].second);
+        assert(m.length(0) == std::char_traits<wchar_t>::length(s));
+        assert(m.position(0) == 0);
+        assert(m.str(0) == s);
     }
     {
         std::wcmatch m;
+        // http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#2273
         const wchar_t s[] = L"tournamenttotour";
-        assert(!std::regex_match(s, m, std::wregex(L"(tour|to|tournament)+",
-               std::regex_constants::nosubs)));
-        assert(m.size() == 0);
+        assert(
+            std::regex_match(s, m, std::wregex(L"(tour|to|tournament)+",
+                                               std::regex_constants::nosubs)));
+        assert(m.size() == 1);
+        assert(!m.prefix().matched);
+        assert(m.prefix().first == s);
+        assert(m.prefix().second == m[0].first);
+        assert(!m.suffix().matched);
+        assert(m.suffix().first == m[0].second);
+        assert(m.suffix().second == m[0].second);
+        assert(m.length(0) == std::char_traits<wchar_t>::length(s));
+        assert(m.position(0) == 0);
+        assert(m.str(0) == s);
     }
     {
         std::wcmatch m;

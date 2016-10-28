@@ -48,7 +48,8 @@ int main()
         assert(*i == 0);
     }
     {
-        std::list<int, limited_allocator<int, 3> > l(3);
+        // Add 2 for implementations that dynamically allocate a sentinel node and container proxy.
+        std::list<int, limited_allocator<int, 3 + 2> > l(3);
         assert(l.size() == 3);
         assert(std::distance(l.begin(), l.end()) == 3);
         std::list<int>::const_iterator i = l.begin();

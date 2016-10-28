@@ -37,7 +37,8 @@ int main()
         assert(is_contiguous_container_asan_correct(v));
     }
     {
-        std::vector<int, limited_allocator<int, 250> > v(100);
+        // Add 1 for implementations that dynamically allocate a container proxy.
+        std::vector<int, limited_allocator<int, 250 + 1> > v(100);
         assert(v.capacity() == 100);
         v.reserve(50);
         assert(v.size() == 100);

@@ -33,7 +33,8 @@ int main()
         assert(is_contiguous_container_asan_correct(v));
     }
     {
-        std::vector<MoveOnly, limited_allocator<MoveOnly, 300> > v(100);
+        // Add 1 for implementations that dynamically allocate a container proxy.
+        std::vector<MoveOnly, limited_allocator<MoveOnly, 300 + 1> > v(100);
         v.resize(50);
         assert(v.size() == 50);
         assert(v.capacity() == 100);
@@ -56,7 +57,8 @@ int main()
         assert(is_contiguous_container_asan_correct(v));
     }
     {
-        std::vector<int, limited_allocator<int, 300> > v(100);
+        // Add 1 for implementations that dynamically allocate a container proxy.
+        std::vector<int, limited_allocator<int, 300 + 1> > v(100);
         v.resize(50);
         assert(v.size() == 50);
         assert(v.capacity() == 100);

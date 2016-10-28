@@ -286,6 +286,10 @@ template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
   return false;
 }
 
+template <class ELFT> static bool isAbsoluteValue(const SymbolBody &Body) {
+  return isAbsolute<ELFT>(Body) || Body.isTls();
+}
+
 static bool needsPlt(RelExpr Expr) {
   return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT ||
          Expr == R_PLT_PAGE_PC || Expr == R_THUNK_PLT_PC;
@@ -322,7 +326,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (!Config->Pic)
     return true;
 
-  bool AbsVal = isAbsolute<ELFT>(Body) || Body.isTls();
+  bool AbsVal = isAbsoluteValue<ELFT>(Body);
   bool RelE = isRelExpr(E);
   if (AbsVal && !RelE)
     return true;
@@ -433,7 +437,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   } else if (!Preemptible) {
     if (needsPlt(Expr))
       Expr = fromPlt(Expr);
-    if (Expr == R_GOT_PC)
+    if (Expr == R_GOT_PC && !isAbsoluteValue<ELFT>(Body))
       Expr = Target->adjustRelaxExpr(Type, Data, Expr);
   }
   Expr = Target->getThunkExpr(Expr, Type, File, Body);
@@ -550,12 +554,14 @@ static std::string getLocation(SymbolBody &Sym, InputSectionBase<ELFT> &S,
   if (SrcFile.empty())
     SrcFile = Sym.File ? getFilename(Sym.File) : getFilename(File);
 
+  // Find a symbol at a given location.
   DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
   if (Encl && Encl->Type == STT_FUNC) {
     StringRef Func = getSymbolName(*File, *Encl);
     return SrcFile + " (function " + maybeDemangle(Func) + ")";
   }
 
+  // If there's no symbol, print out the offset instead of a symbol name.
   return (SrcFile + " (" + S.Name + "+0x" + Twine::utohexstr(Offset) + ")")
       .str();
 }

@@ -53,7 +53,8 @@ template <class ELFT> void SymbolTable<ELFT>::addFile(InputFile *File) {
 
   // Binary file
   if (auto *F = dyn_cast<BinaryFile>(File)) {
-    addFile(F->createELF<ELFT>());
+    BinaryFiles.push_back(F);
+    F->parse<ELFT>();
     return;
   }
 
@@ -124,7 +125,7 @@ template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addAbsolute(StringRef Name,
                                                      uint8_t Visibility) {
   return cast<DefinedRegular<ELFT>>(
-      addRegular(Name, STB_GLOBAL, Visibility)->body());
+      addRegular(Name, Visibility, nullptr, STB_GLOBAL, STT_NOTYPE, 0)->body());
 }
 
 // Add Name as an "ignored" symbol. An ignored symbol is a regular
@@ -374,32 +375,35 @@ void SymbolTable<ELFT>::reportDuplicate(SymbolBody *Existing,
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, const Elf_Sym &Sym,
                                       InputSectionBase<ELFT> *Section) {
+  return addRegular(Name, Sym.st_other, Sym.getType(), Sym.st_value,
+                    Sym.st_size, Sym.getBinding(), Section);
+}
+
+template <typename ELFT>
+Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
+                                      uint8_t Type, uintX_t Value, uintX_t Size,
+                                      uint8_t Binding,
+                                      InputSectionBase<ELFT> *Section) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, Sym.getType(), Sym.getVisibility(),
+  std::tie(S, WasInserted) = insert(Name, Type, StOther & 3,
                                     /*CanOmitFromDynSym*/ false,
                                     Section ? Section->getFile() : nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Sym.getBinding());
+  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
   if (Cmp > 0)
-    replaceBody<DefinedRegular<ELFT>>(S, Name, Sym, Section);
+    replaceBody<DefinedRegular<ELFT>>(S, Name, StOther, Type, Value, Size,
+                                      Section);
   else if (Cmp == 0)
     reportDuplicate(S->body(), Section->getFile());
   return S;
 }
 
 template <typename ELFT>
-Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
-                                      uint8_t StOther) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, STT_NOTYPE, StOther & 3,
-                                    /*CanOmitFromDynSym*/ false, nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
-  if (Cmp > 0)
-    replaceBody<DefinedRegular<ELFT>>(S, Name, StOther);
-  else if (Cmp == 0)
-    reportDuplicate(S->body(), nullptr);
-  return S;
+Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
+                                      InputSectionBase<ELFT> *Section,
+                                      uint8_t Binding, uint8_t Type,
+                                      uintX_t Value) {
+  return addRegular(Name, StOther, Type, Value, 0, Binding, Section);
 }
 
 template <typename ELFT>

@@ -347,8 +347,10 @@ __kmp_print_storage_map_gtid( int gtid, void *p1, void *p2, size_t size, char co
                     int lastNode;
                     int localProc = __kmp_get_cpu_from_gtid(gtid);
 
-                    p1 = (void *)( (size_t)p1 & ~((size_t)PAGE_SIZE - 1) );
-                    p2 = (void *)( ((size_t) p2 - 1) & ~((size_t)PAGE_SIZE - 1) );
+                    const int page_size = KMP_GET_PAGE_SIZE();
+
+                    p1 = (void *)( (size_t)p1 & ~((size_t)page_size - 1) );
+                    p2 = (void *)( ((size_t) p2 - 1) & ~((size_t)page_size - 1) );
                     if(localProc >= 0)
                         __kmp_printf_no_lock("  GTID %d localNode %d\n", gtid, localProc>>1);
                     else
@@ -360,17 +362,17 @@ __kmp_print_storage_map_gtid( int gtid, void *p1, void *p2, size_t size, char co
                         lastNode = node;
                         /* This loop collates adjacent pages with the same host node. */
                         do {
-                            (char*)p1 += PAGE_SIZE;
+                            (char*)p1 += page_size;
                         } while(p1 <= p2 && (node = __kmp_get_host_node(p1)) == lastNode);
                         __kmp_printf_no_lock("    %p-%p memNode %d\n", last,
                                              (char*)p1 - 1, lastNode);
                     } while(p1 <= p2);
 # else
                     __kmp_printf_no_lock("    %p-%p memNode %d\n", p1,
-                                         (char*)p1 + (PAGE_SIZE - 1), __kmp_get_host_node(p1));
+                                         (char*)p1 + (page_size - 1), __kmp_get_host_node(p1));
                     if(p1 < p2)  {
                         __kmp_printf_no_lock("    %p-%p memNode %d\n", p2,
-                                             (char*)p2 + (PAGE_SIZE - 1), __kmp_get_host_node(p2));
+                                             (char*)p2 + (page_size - 1), __kmp_get_host_node(p2));
                     }
 # endif
                 }
@@ -5754,6 +5756,7 @@ __kmp_reap_thread(
     }; // if
 #endif /* KMP_AFFINITY_SUPPORTED */
 
+    __kmp_free_implicit_task(thread);
     __kmp_reap_team( thread->th.th_serial_team );
     thread->th.th_serial_team = NULL;
     __kmp_free( thread );
@@ -6802,6 +6805,8 @@ __kmp_run_after_invoked_task( int gtid, int tid, kmp_info_t *this_thr,
 {
     if( __kmp_env_consistency_check )
         __kmp_pop_parallel( gtid, team->t.t_ident );
+
+    __kmp_finish_implicit_task(this_thr);
 }
 
 int

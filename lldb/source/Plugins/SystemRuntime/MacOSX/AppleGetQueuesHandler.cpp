@@ -205,7 +205,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
     Error error;
     get_queues_caller = m_get_queues_impl_code_up->MakeFunctionCaller(
         get_queues_return_type, get_queues_arglist, thread_sp, error);
-    if (error.Fail()) {
+    if (error.Fail() || get_queues_caller == nullptr) {
       if (log)
         log->Printf(
             "Could not get function caller for get-queues function: %s.",

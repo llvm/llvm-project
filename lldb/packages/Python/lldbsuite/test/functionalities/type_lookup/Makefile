@@ -1,6 +1,6 @@
 LEVEL = ../../make
 
-OBJC_SOURCES := main.m
+OBJCXX_SOURCES := main.mm
 
 CFLAGS_EXTRAS += -w
 

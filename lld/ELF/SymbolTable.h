@@ -50,6 +50,10 @@ public:
     return ObjectFiles;
   }
 
+  const std::vector<BinaryFile *> &getBinaryFiles() const {
+    return BinaryFiles;
+  }
+
   const std::vector<SharedFile<ELFT> *> &getSharedFiles() const {
     return SharedFiles;
   }
@@ -63,9 +67,15 @@ public:
   Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
                        uint8_t Type, bool CanOmitFromDynSym, InputFile *File);
 
+  Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
+                     uintX_t Value, uintX_t Size, uint8_t Binding,
+                     InputSectionBase<ELFT> *Section);
+
   Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
                      InputSectionBase<ELFT> *Section);
-  Symbol *addRegular(StringRef Name, uint8_t Binding, uint8_t StOther);
+  Symbol *addRegular(StringRef Name, uint8_t StOther,
+                     InputSectionBase<ELFT> *Section, uint8_t Binding,
+                     uint8_t Type, uintX_t Value);
   Symbol *addSynthetic(StringRef N, OutputSectionBase<ELFT> *Section,
                        uintX_t Value, uint8_t StOther);
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
@@ -127,6 +137,7 @@ private:
   std::vector<ObjectFile<ELFT> *> ObjectFiles;
   std::vector<SharedFile<ELFT> *> SharedFiles;
   std::vector<BitcodeFile *> BitcodeFiles;
+  std::vector<BinaryFile *> BinaryFiles;
 
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseSet<StringRef> SoNames;
