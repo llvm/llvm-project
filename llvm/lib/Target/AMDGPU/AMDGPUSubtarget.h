@@ -556,6 +556,10 @@ public:
     return SGPRInitBug;
   }
 
+  bool has12DWordStoreHazard() const {
+    return getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS;
+  }
+
   unsigned getKernArgSegmentSize(unsigned ExplictArgBytes) const;
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs SGPRs

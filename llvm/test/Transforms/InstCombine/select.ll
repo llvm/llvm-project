@@ -1300,14 +1300,11 @@ define i32 @test68(i32 %x) {
   ret i32 %retval
 }
 
-; FIXME - vector neglect
 define <2 x i32> @test68vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test68vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> %x, <i32 11, i32 11>
 ; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> <i32 11, i32 11>, <2 x i32> %x
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[COND]], <i32 92, i32 92>
-; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[CMP3]], <2 x i32> <i32 92, i32 92>, <2 x i32> [[COND]]
-; CHECK-NEXT:    ret <2 x i32> [[RETVAL]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %cmp = icmp slt <2 x i32> <i32 11, i32 11>, %x
   %cond = select <2 x i1> %cmp, <2 x i32> <i32 11, i32 11>, <2 x i32> %x
@@ -1372,13 +1369,14 @@ define i32 @test72(i32 %x) {
   ret i32 %retval
 }
 
-; FIXME - vector neglect
+; FIXME - vector neglect: FoldOrOfICmps()
+
 define <2 x i32> @test72vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test72vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> %x, <i32 92, i32 92>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> <i32 92, i32 92>, <2 x i32> %x
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[COND]], <i32 11, i32 11>
-; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[CMP3]], <2 x i32> <i32 11, i32 11>, <2 x i32> [[COND]]
+; CHECK-NEXT:    [[CMP31:%.*]] = icmp sgt <2 x i32> %x, <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP3:%.*]] = or <2 x i1> [[CMP]], [[CMP31:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[CMP3]], <2 x i32> <i32 11, i32 11>, <2 x i32> %x
 ; CHECK-NEXT:    ret <2 x i32> [[RETVAL]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 92, i32 92>

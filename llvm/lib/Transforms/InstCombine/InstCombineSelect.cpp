@@ -678,28 +678,24 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
   }
 
   if (SPF1 == SPF2) {
-    if (ConstantInt *CB = dyn_cast<ConstantInt>(B)) {
-      if (ConstantInt *CC = dyn_cast<ConstantInt>(C)) {
-        const APInt &ACB = CB->getValue();
-        const APInt &ACC = CC->getValue();
+    const APInt *CB, *CC;
+    if (match(B, m_APInt(CB)) && match(C, m_APInt(CC))) {
+      // MIN(MIN(A, 23), 97) -> MIN(A, 23)
+      // MAX(MAX(A, 97), 23) -> MAX(A, 97)
+      if ((SPF1 == SPF_UMIN && CB->ule(*CC)) ||
+          (SPF1 == SPF_SMIN && CB->sle(*CC)) ||
+          (SPF1 == SPF_UMAX && CB->uge(*CC)) ||
+          (SPF1 == SPF_SMAX && CB->sge(*CC)))
+        return replaceInstUsesWith(Outer, Inner);
 
-        // MIN(MIN(A, 23), 97) -> MIN(A, 23)
-        // MAX(MAX(A, 97), 23) -> MAX(A, 97)
-        if ((SPF1 == SPF_UMIN && ACB.ule(ACC)) ||
-            (SPF1 == SPF_SMIN && ACB.sle(ACC)) ||
-            (SPF1 == SPF_UMAX && ACB.uge(ACC)) ||
-            (SPF1 == SPF_SMAX && ACB.sge(ACC)))
-          return replaceInstUsesWith(Outer, Inner);
-
-        // MIN(MIN(A, 97), 23) -> MIN(A, 23)
-        // MAX(MAX(A, 23), 97) -> MAX(A, 97)
-        if ((SPF1 == SPF_UMIN && ACB.ugt(ACC)) ||
-            (SPF1 == SPF_SMIN && ACB.sgt(ACC)) ||
-            (SPF1 == SPF_UMAX && ACB.ult(ACC)) ||
-            (SPF1 == SPF_SMAX && ACB.slt(ACC))) {
-          Outer.replaceUsesOfWith(Inner, A);
-          return &Outer;
-        }
+      // MIN(MIN(A, 97), 23) -> MIN(A, 23)
+      // MAX(MAX(A, 23), 97) -> MAX(A, 97)
+      if ((SPF1 == SPF_UMIN && CB->ugt(*CC)) ||
+          (SPF1 == SPF_SMIN && CB->sgt(*CC)) ||
+          (SPF1 == SPF_UMAX && CB->ult(*CC)) ||
+          (SPF1 == SPF_SMAX && CB->slt(*CC))) {
+        Outer.replaceUsesOfWith(Inner, A);
+        return &Outer;
       }
     }
   }

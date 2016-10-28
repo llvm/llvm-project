@@ -92,9 +92,7 @@ options. Note that the libFuzzer library contains the ``main()`` function:
 
 .. code-block:: console
 
-  svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer
-  # Alternative: get libFuzzer from a dedicated git mirror:
-  # git clone https://chromium.googlesource.com/chromium/llvm-project/llvm/lib/Fuzzer
+  svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer  # or git clone https://chromium.googlesource.com/chromium/llvm-project/llvm/lib/Fuzzer
   ./Fuzzer/build.sh  # Produces libFuzzer.a
 
 Then build the fuzzing target function and the library under test using
@@ -116,7 +114,7 @@ latent bugs by making incorrect behavior generate errors at runtime:
 
 Finally, link with ``libFuzzer.a``::
 
-  clang -fsanitize-coverage=edge -fsanitize=address your_lib.cc fuzz_target.cc libFuzzer.a -o my_fuzzer
+  clang -fsanitize-coverage=trace-pc-guard -fsanitize=address your_lib.cc fuzz_target.cc libFuzzer.a -o my_fuzzer
 
 Corpus
 ------
@@ -305,14 +303,16 @@ Output
 
 During operation the fuzzer prints information to ``stderr``, for example::
 
-  INFO: Seed: 3338750330
-  Loaded 1024/1211 files from corpus/
+  INFO: Seed: 1523017872
+  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0), 
   INFO: -max_len is not provided, using 64
-  #0	READ   units: 1211 exec/s: 0
-  #1211	INITED cov: 2575 bits: 8855 indir: 5 units: 830 exec/s: 1211
-  #1422	NEW    cov: 2580 bits: 8860 indir: 5 units: 831 exec/s: 1422 L: 21 MS: 1 ShuffleBytes-
-  #1688	NEW    cov: 2581 bits: 8865 indir: 5 units: 832 exec/s: 1688 L: 19 MS: 2 EraseByte-CrossOver-
-  #1734	NEW    cov: 2583 bits: 8879 indir: 5 units: 833 exec/s: 1734 L: 27 MS: 3 ChangeBit-EraseByte-ShuffleBytes-
+  INFO: A corpus is not provided, starting from an empty corpus
+  #0	READ units: 1
+  #1	INITED cov: 3 ft: 2 corp: 1/1b exec/s: 0 rss: 24Mb
+  #3811	NEW    cov: 4 ft: 3 corp: 2/2b exec/s: 0 rss: 25Mb L: 1 MS: 5 ChangeBit-ChangeByte-ChangeBit-ShuffleBytes-ChangeByte-
+  #3827	NEW    cov: 5 ft: 4 corp: 3/4b exec/s: 0 rss: 25Mb L: 2 MS: 1 CopyPart-
+  #3963	NEW    cov: 6 ft: 5 corp: 4/6b exec/s: 0 rss: 25Mb L: 2 MS: 2 ShuffleBytes-ChangeBit-
+  #4167	NEW    cov: 7 ft: 6 corp: 5/9b exec/s: 0 rss: 25Mb L: 3 MS: 1 InsertByte-
   ...
 
 The early parts of the output include information about the fuzzer options and
@@ -350,19 +350,16 @@ Each output line also reports the following statistics (when non-zero):
 ``cov:``
   Total number of code blocks or edges covered by the executing the current
   corpus.
-``vp:``
-  Size of the `value profile`_.
-``bits:``
-  Rough measure of the number of code blocks or edges covered, and how often;
-  only valid if the fuzzer is run with ``-use_counters=1``.
-``indir:``
-  Number of distinct function `caller-callee pairs`_ executed with the
-  current corpus; only valid if the code under test was built with
-  ``-fsanitize-coverage=indirect-calls``.
-``units:``
-  Number of entries in the current input corpus.
+``ft:``
+  libFuzzer uses different signals to evaluate the code coverage:
+  edge coverage, edge counters, value profiles, indirect caller/callee pairs, etc.
+  These signals combined are called *features* (`ft:`).
+``corp:``
+  Number of entries in the current in-memory test corpus and its size in bytes.
 ``exec/s:``
   Number of fuzzer iterations per second.
+``rss:``
+  Current memory consumption.
 
 For ``NEW`` events, the output line also includes information about the mutation
 operation that produced the new input:
@@ -397,19 +394,22 @@ A simple function that does something interesting if it receives the input
   }
   EOF
   # Build test_fuzzer.cc with asan and link against libFuzzer.a
-  clang++ -fsanitize=address -fsanitize-coverage=edge test_fuzzer.cc libFuzzer.a
+  clang++ -fsanitize=address -fsanitize-coverage=trace-pc-guard test_fuzzer.cc libFuzzer.a
   # Run the fuzzer with no corpus.
   ./a.out
 
 You should get an error pretty quickly::
 
-  #0  READ   units: 1 exec/s: 0
-  #1  INITED cov: 3 units: 1 exec/s: 0
-  #2  NEW    cov: 5 units: 2 exec/s: 0 L: 64 MS: 0
-  #19237  NEW    cov: 9 units: 3 exec/s: 0 L: 64 MS: 0
-  #20595  NEW    cov: 10 units: 4 exec/s: 0 L: 1 MS: 4 ChangeASCIIInt-ShuffleBytes-ChangeByte-CrossOver-
-  #34574  NEW    cov: 13 units: 5 exec/s: 0 L: 2 MS: 3 ShuffleBytes-CrossOver-ChangeBit-
-  #34807  NEW    cov: 15 units: 6 exec/s: 0 L: 3 MS: 1 CrossOver-
+  INFO: Seed: 1523017872
+  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0), 
+  INFO: -max_len is not provided, using 64
+  INFO: A corpus is not provided, starting from an empty corpus
+  #0	READ units: 1
+  #1	INITED cov: 3 ft: 2 corp: 1/1b exec/s: 0 rss: 24Mb
+  #3811	NEW    cov: 4 ft: 3 corp: 2/2b exec/s: 0 rss: 25Mb L: 1 MS: 5 ChangeBit-ChangeByte-ChangeBit-ShuffleBytes-ChangeByte-
+  #3827	NEW    cov: 5 ft: 4 corp: 3/4b exec/s: 0 rss: 25Mb L: 2 MS: 1 CopyPart-
+  #3963	NEW    cov: 6 ft: 5 corp: 4/6b exec/s: 0 rss: 25Mb L: 2 MS: 2 ShuffleBytes-ChangeBit-
+  #4167	NEW    cov: 7 ft: 6 corp: 5/9b exec/s: 0 rss: 25Mb L: 3 MS: 1 InsertByte-
   ==31511== ERROR: libFuzzer: deadly signal
   ...
   artifact_prefix='./'; Test unit written to ./crash-b13e8756b13a00cf168300179061fb4b91fefbed

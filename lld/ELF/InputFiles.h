@@ -65,11 +65,13 @@ class SymbolBody;
 // we cache debugging information in order to parse it only once
 // for each object file we link.
 template <class ELFT> class DIHelper {
-public:
   typedef typename ELFT::uint uintX_t;
 
+public:
   DIHelper(InputFile *F);
+  ~DIHelper();
   std::string getLineInfo(uintX_t Offset);
+
 private:
   std::unique_ptr<llvm::DWARFDebugLine> DwarfLine;
 };

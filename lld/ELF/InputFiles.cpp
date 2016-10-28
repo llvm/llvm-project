@@ -52,6 +52,8 @@ template <class ELFT> DIHelper<ELFT>::DIHelper(elf::InputFile *F) {
   DwarfLine->getOrParseLineTable(LineData, 0);
 }
 
+template <class ELFT> DIHelper<ELFT>::~DIHelper() {}
+
 template <class ELFT> std::string DIHelper<ELFT>::getLineInfo(uintX_t Offset) {
   if (!DwarfLine)
     return "";

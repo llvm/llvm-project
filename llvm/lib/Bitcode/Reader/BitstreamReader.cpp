@@ -319,9 +319,9 @@ void BitstreamCursor::ReadAbbrevRecord() {
 }
 
 bool BitstreamCursor::ReadBlockInfoBlock() {
-  // If this is the second stream to get to the block info block, skip it.
+  // We expect the client to read the block info block at most once.
   if (getBitStreamReader()->hasBlockInfoRecords())
-    return SkipBlock();
+    report_fatal_error("Duplicate read of block info block");
 
   if (EnterSubBlock(bitc::BLOCKINFO_BLOCK_ID)) return true;
 

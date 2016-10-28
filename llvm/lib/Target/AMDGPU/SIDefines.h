@@ -207,6 +207,13 @@ namespace Hwreg { // Encoding of SIMM16 used in s_setreg/getreg* insns.
 enum Id { // HwRegCode, (6) [5:0]
   ID_UNKNOWN_ = -1,
   ID_SYMBOLIC_FIRST_ = 1, // There are corresponding symbolic names defined.
+  ID_MODE = 1,
+  ID_STATUS = 2,
+  ID_TRAPSTS = 3,
+  ID_HW_ID = 4,
+  ID_GPR_ALLOC = 5,
+  ID_LDS_ALLOC = 6,
+  ID_IB_STS = 7,
   ID_SYMBOLIC_LAST_ = 8,
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
