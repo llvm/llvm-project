@@ -6888,17 +6888,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
         NewVD->setInvalidDecl();
         return;
       }
-      // OpenCL v2.0 s6.12.5 - Blocks with variadic arguments are not supported.
-      // TODO: this check is not enough as it doesn't diagnose the typedef
-      const BlockPointerType *BlkTy = T->getAs<BlockPointerType>();
-      const FunctionProtoType *FTy =
-          BlkTy->getPointeeType()->getAs<FunctionProtoType>();
-      if (FTy && FTy->isVariadic()) {
-        Diag(NewVD->getLocation(), diag::err_opencl_block_proto_variadic)
-            << T << NewVD->getSourceRange();
-        NewVD->setInvalidDecl();
-        return;
-      }
     }
     // OpenCL v1.2 s6.5 - All program scope variables must be declared in the
     // __constant address space.

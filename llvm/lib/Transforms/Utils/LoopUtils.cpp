@@ -17,6 +17,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
@@ -946,6 +947,10 @@ void llvm::getLoopAnalysisUsage(AnalysisUsage &AU) {
   AU.addPreservedID(LoopSimplifyID);
   AU.addRequiredID(LCSSAID);
   AU.addPreservedID(LCSSAID);
+  // This is used in the LPPassManager to perform LCSSA verification on passes
+  // which preserve lcssa form
+  AU.addRequired<LCSSAVerificationPass>();
+  AU.addPreserved<LCSSAVerificationPass>();
 
   // Loop passes are designed to run inside of a loop pass manager which means
   // that any function analyses they require must be required by the first loop
