@@ -100,10 +100,6 @@ static Instruction *
 CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
                             const LoopSafetyInfo *SafetyInfo);
-static bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA,
-                               DominatorTree *DT,
-                               Loop *CurLoop, AliasSetTracker *CurAST,
-                               LoopSafetyInfo *SafetyInfo);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -436,16 +432,9 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
         SafetyInfo->BlockColors = colorEHFunclets(*Fn);
 }
 
-/// Returns true if the hoister and sinker can handle this instruction.
-/// If SafetyInfo is nullptr, we are checking for sinking instructions from
-/// preheader to loop body (no speculation).
-/// If SafetyInfo is not nullptr, we are checking for hoisting/sinking
-/// instructions from loop body to preheader/exit. Check if the instruction
-/// can execute specultatively.
-///
-bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
-                        Loop *CurLoop, AliasSetTracker *CurAST,
-                        LoopSafetyInfo *SafetyInfo) {
+bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
+                              Loop *CurLoop, AliasSetTracker *CurAST,
+                              LoopSafetyInfo *SafetyInfo) {
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (!LI->isUnordered())

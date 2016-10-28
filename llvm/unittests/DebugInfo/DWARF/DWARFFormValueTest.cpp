@@ -33,7 +33,7 @@ TEST(DWARFFormValue, FixedFormSizes) {
   EXPECT_EQ(0U, DWARFFormValue::getFixedFormSizes(16, 2).size());
 }
 
-bool isFormClass(uint16_t Form, DWARFFormValue::FormClass FC) {
+bool isFormClass(dwarf::Form Form, DWARFFormValue::FormClass FC) {
   return DWARFFormValue(Form).isFormClass(FC);
 }
 
@@ -52,7 +52,7 @@ TEST(DWARFFormValue, FormClass) {
 }
 
 template<typename RawTypeT>
-DWARFFormValue createDataXFormValue(uint16_t Form, RawTypeT Value) {
+DWARFFormValue createDataXFormValue(dwarf::Form Form, RawTypeT Value) {
   char Raw[sizeof(RawTypeT)];
   memcpy(Raw, &Value, sizeof(RawTypeT));
   uint32_t Offset = 0;

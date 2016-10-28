@@ -977,18 +977,18 @@ let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
         "", []>, Requires<[HasV60T,UseHVXDbl]>;
 }
 
-class VSelPat<ValueType VT, RegisterClass RC, InstHexagon MI>
-  : Pat<(selectcc I32:$lhs, I32:$rhs, (VT RC:$tval), (VT RC:$fval), SETEQ),
-        (MI (C2_cmpeq I32:$lhs, I32:$rhs), RC:$tval, RC:$fval)>;
-
-def: VSelPat<v16i32, VectorRegs, PS_vselect>,
-      Requires<[HasV60T,UseHVXSgl]>;
-def: VSelPat<v32i32, VecDblRegs, PS_wselect>,
-      Requires<[HasV60T,UseHVXSgl]>;
-def: VSelPat<v32i32, VectorRegs128B, PS_vselect_128B>,
-      Requires<[HasV60T,UseHVXDbl]>;
-def: VSelPat<v64i32, VecDblRegs128B, PS_wselect_128B>,
-      Requires<[HasV60T,UseHVXDbl]>;
+let Predicates = [HasV60T,UseHVXSgl] in {
+  def: Pat<(select I1:$Pu, (v16i32 VectorRegs:$Vs), VectorRegs:$Vt),
+           (PS_vselect I1:$Pu, VectorRegs:$Vs, VectorRegs:$Vt)>;
+  def: Pat<(select I1:$Pu, (v32i32 VecDblRegs:$Vs), VecDblRegs:$Vt),
+           (PS_wselect I1:$Pu, VecDblRegs:$Vs, VecDblRegs:$Vt)>;
+}
+let Predicates = [HasV60T,UseHVXDbl] in {
+  def: Pat<(select I1:$Pu, (v32i32 VectorRegs128B:$Vs), VectorRegs128B:$Vt),
+           (PS_vselect_128B I1:$Pu, VectorRegs128B:$Vs, VectorRegs128B:$Vt)>;
+  def: Pat<(select I1:$Pu, (v64i32 VecDblRegs128B:$Vs), VecDblRegs128B:$Vt),
+           (PS_wselect_128B I1:$Pu, VecDblRegs128B:$Vs, VecDblRegs128B:$Vt)>;
+}
 
 
 let hasNewValue = 1 in

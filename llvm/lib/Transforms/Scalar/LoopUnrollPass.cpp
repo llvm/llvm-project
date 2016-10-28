@@ -803,8 +803,6 @@ static bool computeUnrollCount(
   // 4rd priority is partial unrolling.
   // Try partial unroll only when TripCount could be staticaly calculated.
   if (TripCount) {
-    if (UP.Count == 0)
-      UP.Count = TripCount;
     UP.Partial |= ExplicitUnroll;
     if (!UP.Partial) {
       DEBUG(dbgs() << "  will not try to unroll partially because "
@@ -812,6 +810,8 @@ static bool computeUnrollCount(
       UP.Count = 0;
       return false;
     }
+    if (UP.Count == 0)
+      UP.Count = TripCount;
     if (UP.PartialThreshold != NoThreshold) {
       // Reduce unroll count to be modulo of TripCount for partial unrolling.
       UnrolledSize = (uint64_t)(LoopSize - BEInsns) * UP.Count + BEInsns;

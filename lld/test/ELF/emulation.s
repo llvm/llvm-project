@@ -3,6 +3,9 @@
 # RUN: llvm-readobj -file-headers %t2x64 | FileCheck --check-prefix=AMD64 %s
 # RUN: ld.lld %tx64 -o %t3x64
 # RUN: llvm-readobj -file-headers %t3x64 | FileCheck --check-prefix=AMD64 %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.sysv
+# RUN: ld.lld -m elf_amd64_fbsd %t.sysv -o %t.freebsd
+# RUN: llvm-readobj -file-headers %t.freebsd | FileCheck --check-prefix=AMD64 %s
 # AMD64:      ElfHeader {
 # AMD64-NEXT:   Ident {
 # AMD64-NEXT:     Magic: (7F 45 4C 46)

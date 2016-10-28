@@ -55,11 +55,13 @@ Getting Started
    :local:
    :depth: 1
 
-Building
---------
+Fuzz Target
+-----------
 
-The first step for using libFuzzer on a library is to implement a fuzzing
-target function that accepts a sequence of bytes, like this:
+The first step in using libFuzzer on a library is to implement a
+*fuzz target* -- a function that accepts an array of bytes and
+does something interesting with these bytes using the API under test.
+Like this:
 
 .. code-block:: c++
 
@@ -69,14 +71,28 @@ target function that accepts a sequence of bytes, like this:
     return 0;  // Non-zero return values are reserved for future use.
   }
 
+Note that this fuzz target does not depend on libFuzzer in any way
+ans so it is possible and even desirable to use it with other fuzzing engines
+e.g. AFL_ and/or Radamsa_.
+
+Some important things to remember about fuzz targets:
+
+* The fuzzing engine will execute the fuzz target many times with different inputs in the same process.
+* It must tolerate any kind of input (empty, huge, malformed, etc).
+* It must not `exit()` on any input.
+* It may use multiple threads but ideally all threads should be joined at the end of the function.
+* Ideally, it should not modify any global state (although that's not strict).
+
+
+Building
+--------
+
 Next, build the libFuzzer library as a static archive, without any sanitizer
 options. Note that the libFuzzer library contains the ``main()`` function:
 
 .. code-block:: console
 
-  svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer
-  # Alternative: get libFuzzer from a dedicated git mirror:
-  # git clone https://chromium.googlesource.com/chromium/llvm-project/llvm/lib/Fuzzer
+  svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer  # or git clone https://chromium.googlesource.com/chromium/llvm-project/llvm/lib/Fuzzer
   ./Fuzzer/build.sh  # Produces libFuzzer.a
 
 Then build the fuzzing target function and the library under test using
@@ -98,7 +114,7 @@ latent bugs by making incorrect behavior generate errors at runtime:
 
 Finally, link with ``libFuzzer.a``::
 
-  clang -fsanitize-coverage=edge -fsanitize=address your_lib.cc fuzz_target.cc libFuzzer.a -o my_fuzzer
+  clang -fsanitize-coverage=trace-pc-guard -fsanitize=address your_lib.cc fuzz_target.cc libFuzzer.a -o my_fuzzer
 
 Corpus
 ------
@@ -287,14 +303,16 @@ Output
 
 During operation the fuzzer prints information to ``stderr``, for example::
 
-  INFO: Seed: 3338750330
-  Loaded 1024/1211 files from corpus/
+  INFO: Seed: 1523017872
+  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0), 
   INFO: -max_len is not provided, using 64
-  #0	READ   units: 1211 exec/s: 0
-  #1211	INITED cov: 2575 bits: 8855 indir: 5 units: 830 exec/s: 1211
-  #1422	NEW    cov: 2580 bits: 8860 indir: 5 units: 831 exec/s: 1422 L: 21 MS: 1 ShuffleBytes-
-  #1688	NEW    cov: 2581 bits: 8865 indir: 5 units: 832 exec/s: 1688 L: 19 MS: 2 EraseByte-CrossOver-
-  #1734	NEW    cov: 2583 bits: 8879 indir: 5 units: 833 exec/s: 1734 L: 27 MS: 3 ChangeBit-EraseByte-ShuffleBytes-
+  INFO: A corpus is not provided, starting from an empty corpus
+  #0	READ units: 1
+  #1	INITED cov: 3 ft: 2 corp: 1/1b exec/s: 0 rss: 24Mb
+  #3811	NEW    cov: 4 ft: 3 corp: 2/2b exec/s: 0 rss: 25Mb L: 1 MS: 5 ChangeBit-ChangeByte-ChangeBit-ShuffleBytes-ChangeByte-
+  #3827	NEW    cov: 5 ft: 4 corp: 3/4b exec/s: 0 rss: 25Mb L: 2 MS: 1 CopyPart-
+  #3963	NEW    cov: 6 ft: 5 corp: 4/6b exec/s: 0 rss: 25Mb L: 2 MS: 2 ShuffleBytes-ChangeBit-
+  #4167	NEW    cov: 7 ft: 6 corp: 5/9b exec/s: 0 rss: 25Mb L: 3 MS: 1 InsertByte-
   ...
 
 The early parts of the output include information about the fuzzer options and
@@ -332,19 +350,16 @@ Each output line also reports the following statistics (when non-zero):
 ``cov:``
   Total number of code blocks or edges covered by the executing the current
   corpus.
-``vp:``
-  Size of the `value profile`_.
-``bits:``
-  Rough measure of the number of code blocks or edges covered, and how often;
-  only valid if the fuzzer is run with ``-use_counters=1``.
-``indir:``
-  Number of distinct function `caller-callee pairs`_ executed with the
-  current corpus; only valid if the code under test was built with
-  ``-fsanitize-coverage=indirect-calls``.
-``units:``
-  Number of entries in the current input corpus.
+``ft:``
+  libFuzzer uses different signals to evaluate the code coverage:
+  edge coverage, edge counters, value profiles, indirect caller/callee pairs, etc.
+  These signals combined are called *features* (`ft:`).
+``corp:``
+  Number of entries in the current in-memory test corpus and its size in bytes.
 ``exec/s:``
   Number of fuzzer iterations per second.
+``rss:``
+  Current memory consumption.
 
 For ``NEW`` events, the output line also includes information about the mutation
 operation that produced the new input:
@@ -379,189 +394,34 @@ A simple function that does something interesting if it receives the input
   }
   EOF
   # Build test_fuzzer.cc with asan and link against libFuzzer.a
-  clang++ -fsanitize=address -fsanitize-coverage=edge test_fuzzer.cc libFuzzer.a
+  clang++ -fsanitize=address -fsanitize-coverage=trace-pc-guard test_fuzzer.cc libFuzzer.a
   # Run the fuzzer with no corpus.
   ./a.out
 
 You should get an error pretty quickly::
 
-  #0  READ   units: 1 exec/s: 0
-  #1  INITED cov: 3 units: 1 exec/s: 0
-  #2  NEW    cov: 5 units: 2 exec/s: 0 L: 64 MS: 0
-  #19237  NEW    cov: 9 units: 3 exec/s: 0 L: 64 MS: 0
-  #20595  NEW    cov: 10 units: 4 exec/s: 0 L: 1 MS: 4 ChangeASCIIInt-ShuffleBytes-ChangeByte-CrossOver-
-  #34574  NEW    cov: 13 units: 5 exec/s: 0 L: 2 MS: 3 ShuffleBytes-CrossOver-ChangeBit-
-  #34807  NEW    cov: 15 units: 6 exec/s: 0 L: 3 MS: 1 CrossOver-
+  INFO: Seed: 1523017872
+  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0), 
+  INFO: -max_len is not provided, using 64
+  INFO: A corpus is not provided, starting from an empty corpus
+  #0	READ units: 1
+  #1	INITED cov: 3 ft: 2 corp: 1/1b exec/s: 0 rss: 24Mb
+  #3811	NEW    cov: 4 ft: 3 corp: 2/2b exec/s: 0 rss: 25Mb L: 1 MS: 5 ChangeBit-ChangeByte-ChangeBit-ShuffleBytes-ChangeByte-
+  #3827	NEW    cov: 5 ft: 4 corp: 3/4b exec/s: 0 rss: 25Mb L: 2 MS: 1 CopyPart-
+  #3963	NEW    cov: 6 ft: 5 corp: 4/6b exec/s: 0 rss: 25Mb L: 2 MS: 2 ShuffleBytes-ChangeBit-
+  #4167	NEW    cov: 7 ft: 6 corp: 5/9b exec/s: 0 rss: 25Mb L: 3 MS: 1 InsertByte-
   ==31511== ERROR: libFuzzer: deadly signal
   ...
   artifact_prefix='./'; Test unit written to ./crash-b13e8756b13a00cf168300179061fb4b91fefbed
 
 
-PCRE2
------
+More examples
+-------------
 
-Here we show how to use libFuzzer on something real, yet simple: pcre2_::
+Examples of real-life fuzz targets and the bugs they find can be found
+at http://tutorial.libfuzzer.info. Among other things you can learn how
+to detect Heartbleed_ in one second.
 
-  COV_FLAGS=" -fsanitize-coverage=edge,indirect-calls,8bit-counters"
-  # Get PCRE2
-  wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre2-10.20.tar.gz
-  tar xf pcre2-10.20.tar.gz
-  # Build PCRE2 with AddressSanitizer and coverage; requires autotools.
-  (cd pcre2-10.20; ./autogen.sh; CC="clang -fsanitize=address $COV_FLAGS" ./configure --prefix=`pwd`/../inst && make -j && make install)
-  # Build the fuzzing target function that does something interesting with PCRE2.
-  cat << EOF > pcre_fuzzer.cc
-  #include <string.h>
-  #include <stdint.h>
-  #include "pcre2posix.h"
-  extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-    if (size < 1) return 0;
-    char *str = new char[size+1];
-    memcpy(str, data, size);
-    str[size] = 0;
-    regex_t preg;
-    if (0 == regcomp(&preg, str, 0)) {
-      regexec(&preg, str, 0, 0, 0);
-      regfree(&preg);
-    }
-    delete [] str;
-    return 0;
-  }
-  EOF
-  clang++ -g -fsanitize=address $COV_FLAGS -c -std=c++11  -I inst/include/ pcre_fuzzer.cc
-  # Link.
-  clang++ -g -fsanitize=address -Wl,--whole-archive inst/lib/*.a -Wl,-no-whole-archive libFuzzer.a pcre_fuzzer.o -o pcre_fuzzer
-
-This will give you a binary of the fuzzer, called ``pcre_fuzzer``.
-Now, create a directory that will hold the test corpus:
-
-.. code-block:: console
-
-  mkdir -p CORPUS
-
-For simple input languages like regular expressions this is all you need.
-For more complicated/structured inputs, the fuzzer works much more efficiently
-if you can populate the corpus directory with a variety of valid and invalid
-inputs for the code under test.
-Now run the fuzzer with the corpus directory as the only parameter:
-
-.. code-block:: console
-
-  ./pcre_fuzzer ./CORPUS
-
-Initially, you will see Output_ like this::
-
-  INFO: Seed: 2938818941
-  INFO: -max_len is not provided, using 64
-  INFO: A corpus is not provided, starting from an empty corpus
-  #0	READ   units: 1 exec/s: 0
-  #1	INITED cov: 3 bits: 3 units: 1 exec/s: 0
-  #2	NEW    cov: 176 bits: 176 indir: 3 units: 2 exec/s: 0 L: 64 MS: 0
-  #8	NEW    cov: 176 bits: 179 indir: 3 units: 3 exec/s: 0 L: 63 MS: 2 ChangeByte-EraseByte-
-  ...
-  #14004	NEW    cov: 1500 bits: 4536 indir: 5 units: 406 exec/s: 0 L: 54 MS: 3 ChangeBit-ChangeBit-CrossOver-
-
-Now, interrupt the fuzzer and run it again the same way. You will see::
-
-  INFO: Seed: 3398349082
-  INFO: -max_len is not provided, using 64
-  #0	READ   units: 405 exec/s: 0
-  #405	INITED cov: 1499 bits: 4535 indir: 5 units: 286 exec/s: 0
-  #587	NEW    cov: 1499 bits: 4540 indir: 5 units: 287 exec/s: 0 L: 52 MS: 2 InsertByte-EraseByte-
-  #667	NEW    cov: 1501 bits: 4542 indir: 5 units: 288 exec/s: 0 L: 39 MS: 2 ChangeBit-InsertByte-
-  #672	NEW    cov: 1501 bits: 4543 indir: 5 units: 289 exec/s: 0 L: 15 MS: 2 ChangeASCIIInt-ChangeBit-
-  #739	NEW    cov: 1501 bits: 4544 indir: 5 units: 290 exec/s: 0 L: 64 MS: 4 ShuffleBytes-ChangeASCIIInt-InsertByte-ChangeBit-
-  ...
-
-On the second execution the fuzzer has a non-empty input corpus (405 items).  As
-the first step, the fuzzer minimized this corpus (the ``INITED`` line) to
-produce 286 interesting items, omitting inputs that do not hit any additional
-code.
-
-(Aside: although the fuzzer only saves new inputs that hit additional code, this
-does not mean that the corpus as a whole is kept minimized.  For example, if
-an input hitting A-B-C then an input that hits A-B-C-D are generated,
-they will both be saved, even though the latter subsumes the former.)
-
-
-You may run ``N`` independent fuzzer jobs in parallel on ``M`` CPUs:
-
-.. code-block:: console
-
-  N=100; M=4; ./pcre_fuzzer ./CORPUS -jobs=$N -workers=$M
-
-By default (``-reload=1``) the fuzzer processes will periodically scan the corpus directory
-and reload any new tests. This way the test inputs found by one process will be picked up
-by all others.
-
-If ``-workers=$M`` is not supplied, ``min($N,NumberOfCpuCore/2)`` will be used.
-
-Heartbleed
-----------
-Remember Heartbleed_?
-As it was recently `shown <https://blog.hboeck.de/archives/868-How-Heartbleed-couldve-been-found.html>`_,
-fuzzing with AddressSanitizer_ can find Heartbleed. Indeed, here are the step-by-step instructions
-to find Heartbleed with libFuzzer::
-
-  wget https://www.openssl.org/source/openssl-1.0.1f.tar.gz
-  tar xf openssl-1.0.1f.tar.gz
-  COV_FLAGS="-fsanitize-coverage=edge,indirect-calls" # -fsanitize-coverage=8bit-counters
-  (cd openssl-1.0.1f/ && ./config &&
-    make -j 32 CC="clang -g -fsanitize=address $COV_FLAGS")
-  # Get and build libFuzzer
-  svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer
-  clang -c -g -O2 -std=c++11 Fuzzer/*.cpp -IFuzzer
-  # Get examples of key/pem files.
-  git clone   https://github.com/hannob/selftls
-  cp selftls/server* . -v
-  cat << EOF > handshake-fuzz.cc
-  #include <openssl/ssl.h>
-  #include <openssl/err.h>
-  #include <assert.h>
-  #include <stdint.h>
-  #include <stddef.h>
-
-  SSL_CTX *sctx;
-  int Init() {
-    SSL_library_init();
-    SSL_load_error_strings();
-    ERR_load_BIO_strings();
-    OpenSSL_add_all_algorithms();
-    assert (sctx = SSL_CTX_new(TLSv1_method()));
-    assert (SSL_CTX_use_certificate_file(sctx, "server.pem", SSL_FILETYPE_PEM));
-    assert (SSL_CTX_use_PrivateKey_file(sctx, "server.key", SSL_FILETYPE_PEM));
-    return 0;
-  }
-  extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-    static int unused = Init();
-    SSL *server = SSL_new(sctx);
-    BIO *sinbio = BIO_new(BIO_s_mem());
-    BIO *soutbio = BIO_new(BIO_s_mem());
-    SSL_set_bio(server, sinbio, soutbio);
-    SSL_set_accept_state(server);
-    BIO_write(sinbio, Data, Size);
-    SSL_do_handshake(server);
-    SSL_free(server);
-    return 0;
-  }
-  EOF
-  # Build the fuzzer.
-  clang++ -g handshake-fuzz.cc  -fsanitize=address \
-    openssl-1.0.1f/libssl.a openssl-1.0.1f/libcrypto.a Fuzzer*.o
-  # Run 20 independent fuzzer jobs.
-  ./a.out  -jobs=20 -workers=20
-
-Voila::
-
-  #1048576        pulse  cov 3424 bits 0 units 9 exec/s 24385
-  =================================================================
-  ==17488==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x629000004748 at pc 0x00000048c979 bp 0x7fffe3e864f0 sp 0x7fffe3e85ca8
-  READ of size 60731 at 0x629000004748 thread T0
-      #0 0x48c978 in __asan_memcpy
-      #1 0x4db504 in tls1_process_heartbeat openssl-1.0.1f/ssl/t1_lib.c:2586:3
-      #2 0x580be3 in ssl3_read_bytes openssl-1.0.1f/ssl/s3_pkt.c:1092:4
-
-Note: a `similar fuzzer <https://boringssl.googlesource.com/boringssl/+/HEAD/FUZZING.md>`_
-is now a part of the BoringSSL_ source tree.
 
 Advanced features
 =================
@@ -901,6 +761,7 @@ Trophies
 
 .. _pcre2: http://www.pcre.org/
 .. _AFL: http://lcamtuf.coredump.cx/afl/
+.. _Radamsa: https://github.com/aoh/radamsa
 .. _SanitizerCoverage: http://clang.llvm.org/docs/SanitizerCoverage.html
 .. _SanitizerCoverageTraceDataFlow: http://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
 .. _AddressSanitizer: http://clang.llvm.org/docs/AddressSanitizer.html

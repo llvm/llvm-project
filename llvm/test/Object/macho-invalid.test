@@ -409,3 +409,27 @@ INVALID-TWOLEVELHINTS-OFFSET-HNINTS: macho-invalid-twolevelhints-offset-nhints':
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-fat_cputype 2>&1 | FileCheck -check-prefix INVALID-FAT-CPUTYPE %s
 INVALID-FAT-CPUTYPE: macho-invalid-fat_cputype': truncated or malformed object (universal header architecture: 0's cputype does not match object file's mach header)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-prebind_cksum-obsolete 2>&1 | FileCheck -check-prefix INVALID-PREBIND_CKSUM-OBSOLETE %s
+INVALID-PREBIND_CKSUM-OBSOLETE: macho-invalid-prebind_cksum-obsolete': truncated or malformed object (load command 0 for cmd value of: 23 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symseg-obsolete 2>&1 | FileCheck -check-prefix INVALID-SYMSEG-OBSOLETE %s
+INVALID-SYMSEG-OBSOLETE: macho-invalid-symseg-obsolete': truncated or malformed object (load command 0 for cmd value of: 3 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-idfvmlib-obsolete 2>&1 | FileCheck -check-prefix INVALID-IDFVMLIB-OBSOLETE %s
+INVALID-IDFVMLIB-OBSOLETE: macho-invalid-idfvmlib-obsolete': truncated or malformed object (load command 0 for cmd value of: 7 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-loadfvmlib-obsolete 2>&1 | FileCheck -check-prefix INVALID-LOADFVMLIB-OBSOLETE %s
+INVALID-LOADFVMLIB-OBSOLETE: macho-invalid-loadfvmlib-obsolete': truncated or malformed object (load command 0 for cmd value of: 6 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-prebound_dylib-obsolete 2>&1 | FileCheck -check-prefix INVALID-PREBOUND_DYLIB-OBSOLETE %s
+INVALID-PREBOUND_DYLIB-OBSOLETE: macho-invalid-prebound_dylib-obsolete': truncated or malformed object (load command 0 for cmd value of: 16 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-ident-obsolete 2>&1 | FileCheck -check-prefix INVALID-IDENT-OBSOLETE %s
+INVALID-IDENT-OBSOLETE: macho-invalid-ident-obsolete': truncated or malformed object (load command 0 for cmd value of: 8 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-fvmfile-obsolete 2>&1 | FileCheck -check-prefix INVALID-FVMFILE-OBSOLETE %s
+INVALID-FVMFILE-OBSOLETE: macho-invalid-fvmfile-obsolete': truncated or malformed object (load command 0 for cmd value of: 9 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-prepage-obsolete 2>&1 | FileCheck -check-prefix INVALID-PREPAGE-OBSOLETE %s
+INVALID-PREPAGE-OBSOLETE: macho-invalid-prepage-obsolete': truncated or malformed object (load command 0 for cmd value of: 10 is obsolete and not supported)

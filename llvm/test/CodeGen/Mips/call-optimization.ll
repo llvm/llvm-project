@@ -89,3 +89,17 @@ entry:
 }
 
 declare double @ceil(double)
+
+; Make sure that the MipsOptimizePICCall pass is run even for optnone functions,
+; as we have to make sure that jalr uses $t9 for PIC code in order to adhere to
+; the MIPS o32 ABI.
+define hidden double @foo(double %dbl) #0 {
+entry:
+  ; O32:      jalr $25
+  %res = call double @sqrt(double %dbl)
+  ret double %res
+}
+
+declare double @sqrt(double)
+
+attributes #0 = { noinline optnone }

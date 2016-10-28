@@ -224,7 +224,8 @@ define i64 @MACLongTest10(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 ;CHECK-V7M-THUMB-NOT: umaal
   %conv = zext i32 %lhs to i64
   %conv1 = zext i32 %rhs to i64
-  %mul = mul nuw i64 %conv1, %conv  %conv2 = zext i32 %lo to i64
+  %mul = mul nuw i64 %conv1, %conv
+  %conv2 = zext i32 %lo to i64
   %conv3 = zext i32 %hi to i64
   %add = add i64 %conv2, %conv3
   %add2 = add i64 %add, %mul
