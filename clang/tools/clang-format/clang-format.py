@@ -51,8 +51,8 @@ if vim.eval('exists("g:clang_format_fallback_style")') == "1":
 def main():
   # Get the current text.
   encoding = vim.eval("&encoding")
-  buf = vim.current.buffer
-  text = unicode('\n'.join(buf), encoding)
+  buf = [ line.decode(encoding) for line in vim.current.buffer ]
+  text = '\n'.join(buf)
 
   # Determine range to format.
   if vim.eval('exists("l:lines")') == '1':
@@ -99,7 +99,7 @@ def main():
     lines = stdout.decode(encoding).split('\n')
     output = json.loads(lines[0])
     lines = lines[1:]
-    sequence = difflib.SequenceMatcher(None, vim.current.buffer, lines)
+    sequence = difflib.SequenceMatcher(None, buf, lines)
     for op in reversed(sequence.get_opcodes()):
       if op[0] is not 'equal':
         vim.current.buffer[op[1]:op[2]] = lines[op[3]:op[4]]

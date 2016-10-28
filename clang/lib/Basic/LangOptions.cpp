@@ -15,7 +15,8 @@
 
 using namespace clang;
 
-LangOptions::LangOptions() {
+LangOptions::LangOptions()
+  : IsHeaderFile(false) {
 #define LANGOPT(Name, Bits, Default, Description) Name = Default;
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description) set##Name(Default);
 #include "clang/Basic/LangOptions.def"
@@ -34,6 +35,7 @@ void LangOptions::resetNonModularOptions() {
   SanitizerBlacklistFiles.clear();
 
   CurrentModule.clear();
+  IsHeaderFile = false;
 }
 
 bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {

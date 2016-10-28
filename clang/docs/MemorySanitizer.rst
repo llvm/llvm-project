@@ -76,14 +76,14 @@ whether MemorySanitizer is enabled. :ref:`\_\_has\_feature
     #  endif
     #endif
 
-``__attribute__((no_sanitize_memory))``
+``__attribute__((no_sanitize("memory")))``
 -----------------------------------------------
 
 Some code should not be checked by MemorySanitizer.  One may use the function
-attribute `no_sanitize_memory` to disable uninitialized checks in a particular
-function.  MemorySanitizer may still instrument such functions to avoid false
-positives.  This attribute may not be supported by other compilers, so we
-suggest to use it together with ``__has_feature(memory_sanitizer)``.
+attribute ``no_sanitize("memory")`` to disable uninitialized checks in a
+particular function.  MemorySanitizer may still instrument such functions to
+avoid false positives.  This attribute may not be supported by other compilers,
+so we suggest to use it together with ``__has_feature(memory_sanitizer)``.
 
 Blacklist
 ---------
