@@ -49,7 +49,7 @@ FUZZER_FLAG_INT(use_memmem, 1,
                 "Use hints from intercepting memmem, strstr, etc")
 FUZZER_FLAG_INT(use_value_profile, 0,
                 "Experimental. Use value profile to guide fuzzing.")
-FUZZER_FLAG_INT(use_cmp, 0, "Experimenta. Use CMP traces to guide mutations")
+FUZZER_FLAG_INT(use_cmp, 1, "Use CMP traces to guide mutations")
 FUZZER_FLAG_INT(shrink, 0, "Experimental. Try to shrink corpus elements.")
 FUZZER_FLAG_INT(jobs, 0, "Number of jobs to run. If jobs >= 1 we spawn"
                           " this number of jobs in separate worker processes"

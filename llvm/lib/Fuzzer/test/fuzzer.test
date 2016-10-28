@@ -7,7 +7,7 @@ RUN: LLVMFuzzer-SimpleTest-TracePC 2>&1 | FileCheck %s
 # only_ascii mode. Will perform some minimal self-validation.
 RUN: LLVMFuzzer-SimpleTest -only_ascii=1 2>&1
 
-RUN: LLVMFuzzer-SimpleCmpTest -max_total_time=1 2>&1 | FileCheck %s --check-prefix=MaxTotalTime
+RUN: LLVMFuzzer-SimpleCmpTest -max_total_time=1 -use_cmp=0 2>&1 | FileCheck %s --check-prefix=MaxTotalTime
 MaxTotalTime: Done {{.*}} runs in {{.}} second(s)
 
 RUN: not LLVMFuzzer-NullDerefTest                  2>&1 | FileCheck %s --check-prefix=NullDerefTest

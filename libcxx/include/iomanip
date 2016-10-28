@@ -654,6 +654,15 @@ quoted ( basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _Char
 {
     return __quoted(__s, __delim, __escape);
 }
+
+template <class _CharT, class _Traits>
+__quoted_output_proxy<_CharT, const _CharT *, _Traits>
+quoted (basic_string_view <_CharT, _Traits> __sv,
+             _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+{
+    return __quoted_output_proxy<_CharT, const _CharT *, _Traits> 
+         ( __sv.data(), __sv.data() + __sv.size(), __delim, __escape );
+}
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

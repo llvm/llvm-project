@@ -38,6 +38,21 @@ class InputFile;
 namespace lld {
 namespace elf {
 
+template <class ELFT> struct GAlloc {
+  static llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
+  static llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
+  static llvm::SpecificBumpPtrAllocator<EhInputSection<ELFT>> EHAlloc;
+};
+
+template <class ELFT>
+llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> GAlloc<ELFT>::IAlloc;
+
+template <class ELFT>
+llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> GAlloc<ELFT>::MAlloc;
+
+template <class ELFT>
+llvm::SpecificBumpPtrAllocator<EhInputSection<ELFT>> GAlloc<ELFT>::EHAlloc;
+
 using llvm::object::Archive;
 
 class InputFile;
@@ -50,11 +65,13 @@ class SymbolBody;
 // we cache debugging information in order to parse it only once
 // for each object file we link.
 template <class ELFT> class DIHelper {
-public:
   typedef typename ELFT::uint uintX_t;
 
+public:
   DIHelper(InputFile *F);
+  ~DIHelper();
   std::string getLineInfo(uintX_t Offset);
+
 private:
   std::unique_ptr<llvm::DWARFDebugLine> DwarfLine;
 };
@@ -93,6 +110,7 @@ public:
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
+  uint8_t OSABI = 0;
 
   static void freePool();
 
@@ -127,10 +145,6 @@ public:
 
   const llvm::object::ELFFile<ELFT> &getObj() const { return ELFObj; }
   llvm::object::ELFFile<ELFT> &getObj() { return ELFObj; }
-
-  uint8_t getOSABI() const {
-    return getObj().getHeader()->e_ident[llvm::ELF::EI_OSABI];
-  }
 
   StringRef getStringTable() const { return StringTable; }
 
@@ -233,9 +247,6 @@ private:
   // MIPS .MIPS.abiflags section defined by this file.
   std::unique_ptr<MipsAbiFlagsInputSection<ELFT>> MipsAbiFlags;
 
-  llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
-  llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
-  llvm::SpecificBumpPtrAllocator<EhInputSection<ELFT>> EHAlloc;
   std::unique_ptr<DIHelper<ELFT>> DIH;
 };
 
@@ -352,11 +363,13 @@ class BinaryFile : public InputFile {
 public:
   explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
-  template <class ELFT> InputFile *createELF();
+  template <class ELFT> void parse();
+  ArrayRef<InputSectionData *> getSections() const { return Sections; }
 
 private:
-  std::vector<uint8_t> Buffer;
   llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver{Alloc};
+  std::vector<InputSectionData *> Sections;
 };
 
 InputFile *createObjectFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef MB,

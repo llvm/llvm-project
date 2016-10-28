@@ -990,7 +990,7 @@ static unsigned getEncodedLinkage(const GlobalValue &GV) {
 static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
   uint64_t RawFlags = 0;
 
-  RawFlags |= Flags.HasSection; // bool
+  RawFlags |= Flags.NoRename; // bool
   RawFlags |= (Flags.IsNotViableToInline << 1);
   // Linkage don't need to be remapped at that time for the summary. Any future
   // change to the getEncodedLinkage() function will need to be taken into
@@ -3434,7 +3434,9 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
     auto AliasId = VE.getValueID(&A);
     auto AliaseeId = VE.getValueID(Aliasee);
     NameVals.push_back(AliasId);
-    NameVals.push_back(getEncodedGVSummaryFlags(A));
+    auto *Summary = Index->getGlobalValueSummary(A);
+    AliasSummary *AS = cast<AliasSummary>(Summary);
+    NameVals.push_back(getEncodedGVSummaryFlags(AS->flags()));
     NameVals.push_back(AliaseeId);
     Stream.EmitRecord(bitc::FS_ALIAS, NameVals, FSAliasAbbrev);
     NameVals.clear();

@@ -23,10 +23,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
-
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
@@ -324,9 +320,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     // Flush the output streams and exit immediately.  A full shutdown is a good
     // test that we are keeping track of all allocated memory, but actually
     // freeing it is a waste of time in a regular linker run.
-    outs().flush();
-    errs().flush();
-    _exit(0);
+    exitLld(0);
   }
 }
 
@@ -632,10 +626,11 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // __tls_get_addr is defined by the dynamic linker for dynamic ELFs. For
   // static linking the linker is required to optimize away any references to
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
-  // to avoid the undefined symbol error. As usual as special case is MIPS -
-  // MIPS libc defines __tls_get_addr itself because there are no TLS
-  // optimizations for this target.
-  if (!Out<ELFT>::DynSymTab && Config->EMachine != EM_MIPS)
+  // to avoid the undefined symbol error. As usual special cases are ARM and
+  // MIPS - the libc for these targets defines __tls_get_addr itself because
+  // there are no TLS optimizations for these targets.
+  if (!Out<ELFT>::DynSymTab &&
+      (Config->EMachine != EM_MIPS && Config->EMachine != EM_ARM))
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // If linker script do layout we do not need to create any standart symbols.
@@ -703,21 +698,27 @@ void Writer<ELFT>::forEachRelSec(
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
-  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-    for (InputSectionBase<ELFT> *IS : F->getSections()) {
-      if (isDiscarded(IS)) {
-        reportDiscarded(IS);
-        continue;
-      }
-      OutputSectionBase<ELFT> *Sec;
-      bool IsNew;
-      StringRef OutsecName = getOutputSectionName(IS->Name, Alloc);
-      std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
-      if (IsNew)
-        OutputSections.push_back(Sec);
-      Sec->addSection(IS);
+  auto Add = [&](InputSectionBase<ELFT> *IS) {
+    if (isDiscarded(IS)) {
+      reportDiscarded(IS);
+      return;
     }
-  }
+    OutputSectionBase<ELFT> *Sec;
+    bool IsNew;
+    StringRef OutsecName = getOutputSectionName(IS->Name, Alloc);
+    std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
+    if (IsNew)
+      OutputSections.push_back(Sec);
+    Sec->addSection(IS);
+  };
+
+  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
+    for (InputSectionBase<ELFT> *IS : F->getSections())
+      Add(IS);
+
+  for (BinaryFile *F : Symtab<ELFT>::X->getBinaryFiles())
+    for (InputSectionData *ID : F->getSections())
+      Add(cast<InputSection<ELFT>>(ID));
 
   sortInitFini(findSection(".init_array"));
   sortInitFini(findSection(".fini_array"));
@@ -967,6 +968,9 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
          Out<ELFT>::PreinitArray);
   Define("__init_array_start", "__init_array_end", Out<ELFT>::InitArray);
   Define("__fini_array_start", "__fini_array_end", Out<ELFT>::FiniArray);
+
+  if (OutputSectionBase<ELFT> *Sec = findSection(".ARM.exidx"))
+    Define("__exidx_start", "__exidx_end", Sec);
 }
 
 // If a section name is valid as a C identifier (which is rare because of
@@ -1341,16 +1345,14 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   uint8_t *Buf = Buffer->getBufferStart();
   memcpy(Buf, "\177ELF", 4);
 
-  auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
-
   // Write the ELF header.
   auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Buf);
   EHdr->e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
   EHdr->e_ident[EI_DATA] = getELFEncoding<ELFT>();
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
-  EHdr->e_ident[EI_OSABI] = FirstObj.getOSABI();
+  EHdr->e_ident[EI_OSABI] = Config->OSABI;
   EHdr->e_type = getELFType();
-  EHdr->e_machine = FirstObj.EMachine;
+  EHdr->e_machine = Config->EMachine;
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr<ELFT>();
   EHdr->e_shoff = SectionHeaderOff;

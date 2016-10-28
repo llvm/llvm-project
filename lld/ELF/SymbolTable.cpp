@@ -53,7 +53,8 @@ template <class ELFT> void SymbolTable<ELFT>::addFile(InputFile *File) {
 
   // Binary file
   if (auto *F = dyn_cast<BinaryFile>(File)) {
-    addFile(F->createELF<ELFT>());
+    BinaryFiles.push_back(F);
+    F->parse<ELFT>();
     return;
   }
 
@@ -124,7 +125,7 @@ template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addAbsolute(StringRef Name,
                                                      uint8_t Visibility) {
   return cast<DefinedRegular<ELFT>>(
-      addRegular(Name, STB_GLOBAL, Visibility)->body());
+      addRegular(Name, Visibility, nullptr, STB_GLOBAL, STT_NOTYPE, 0)->body());
 }
 
 // Add Name as an "ignored" symbol. An ignored symbol is a regular
@@ -398,9 +399,11 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
 }
 
 template <typename ELFT>
-Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
-                                      uint8_t StOther) {
-  return addRegular(Name, StOther, STT_NOTYPE, 0, 0, Binding, nullptr);
+Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
+                                      InputSectionBase<ELFT> *Section,
+                                      uint8_t Binding, uint8_t Type,
+                                      uintX_t Value) {
+  return addRegular(Name, StOther, Type, Value, 0, Binding, Section);
 }
 
 template <typename ELFT>

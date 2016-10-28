@@ -578,6 +578,7 @@ namespace llvm {
       uint32_t header_addr;
     };
 
+    // The fvmlib_command is obsolete and no longer supported.
     struct fvmlib_command {
       uint32_t  cmd;
       uint32_t cmdsize;
@@ -621,6 +622,7 @@ namespace llvm {
       uint32_t sub_library;
     };
 
+    // The prebound_dylib_command is obsolete and no longer supported.
     struct prebound_dylib_command {
       uint32_t cmd;
       uint32_t cmdsize;
@@ -740,6 +742,7 @@ namespace llvm {
                flags:8;
     };
 
+    // The twolevel_hints_command is obsolete and no longer supported.
     struct twolevel_hints_command {
       uint32_t cmd;
       uint32_t cmdsize;
@@ -747,11 +750,13 @@ namespace llvm {
       uint32_t nhints;
     };
 
+    // The twolevel_hints_command is obsolete and no longer supported.
     struct twolevel_hint {
       uint32_t isub_image:8,
                itoc:24;
     };
 
+    // The prebind_cksum_command is obsolete and no longer supported.
     struct prebind_cksum_command {
       uint32_t cmd;
       uint32_t cmdsize;
@@ -835,6 +840,7 @@ namespace llvm {
       uint32_t count;
     };
 
+    // The symseg_command is obsolete and no longer supported.
     struct symseg_command {
       uint32_t cmd;
       uint32_t cmdsize;
@@ -842,11 +848,13 @@ namespace llvm {
       uint32_t size;
     };
 
+    // The ident_command is obsolete and no longer supported.
     struct ident_command {
       uint32_t cmd;
       uint32_t cmdsize;
     };
 
+    // The fvmfile_command is obsolete and no longer supported.
     struct fvmfile_command {
       uint32_t cmd;
       uint32_t cmdsize;
@@ -1268,12 +1276,14 @@ namespace llvm {
       sys::swapByteOrder(C);
     }
 
+    // The prebind_cksum_command is obsolete and no longer supported.
     inline void swapStruct(prebind_cksum_command &C) {
       sys::swapByteOrder(C.cmd);
       sys::swapByteOrder(C.cmdsize);
       sys::swapByteOrder(C.cksum);
     }
 
+    // The twolevel_hints_command is obsolete and no longer supported.
     inline void swapStruct(twolevel_hints_command &C) {
       sys::swapByteOrder(C.cmd);
       sys::swapByteOrder(C.cmdsize);
@@ -1281,6 +1291,7 @@ namespace llvm {
       sys::swapByteOrder(C.nhints);
     }
 
+    // The prebound_dylib_command is obsolete and no longer supported.
     inline void swapStruct(prebound_dylib_command &C) {
       sys::swapByteOrder(C.cmd);
       sys::swapByteOrder(C.cmdsize);
@@ -1289,6 +1300,7 @@ namespace llvm {
       sys::swapByteOrder(C.linked_modules);
     }
 
+    // The fvmfile_command is obsolete and no longer supported.
     inline void swapStruct(fvmfile_command &C) {
       sys::swapByteOrder(C.cmd);
       sys::swapByteOrder(C.cmdsize);
@@ -1296,6 +1308,7 @@ namespace llvm {
       sys::swapByteOrder(C.header_addr);
     }
 
+    // The symseg_command is obsolete and no longer supported.
     inline void swapStruct(symseg_command &C) {
       sys::swapByteOrder(C.cmd);
       sys::swapByteOrder(C.cmdsize);
@@ -1303,6 +1316,7 @@ namespace llvm {
       sys::swapByteOrder(C.size);
     }
 
+    // The ident_command is obsolete and no longer supported.
     inline void swapStruct(ident_command &C) {
       sys::swapByteOrder(C.cmd);
       sys::swapByteOrder(C.cmdsize);
@@ -1314,6 +1328,7 @@ namespace llvm {
       sys::swapByteOrder(C.header_addr);
     }
 
+    // The fvmlib_command is obsolete and no longer supported.
     inline void swapStruct(fvmlib_command &C) {
       sys::swapByteOrder(C.cmd);
       sys::swapByteOrder(C.cmdsize);

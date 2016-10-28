@@ -112,8 +112,8 @@ struct CompileUnitIdentifiers {
 };
 
 static Expected<const char *>
-getIndexedString(uint32_t Form, DataExtractor InfoData, uint32_t &InfoOffset,
-                 StringRef StrOffsets, StringRef Str) {
+getIndexedString(dwarf::Form Form, DataExtractor InfoData, 
+                 uint32_t &InfoOffset, StringRef StrOffsets, StringRef Str) {
   if (Form == dwarf::DW_FORM_string)
     return InfoData.getCStr(&InfoOffset);
   if (Form != dwarf::DW_FORM_GNU_str_index)
@@ -142,16 +142,16 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
 
   DataExtractor AbbrevData(Abbrev, true, 0);
   uint32_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
-  uint64_t Tag = AbbrevData.getULEB128(&AbbrevOffset);
+  auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
   if (Tag != dwarf::DW_TAG_compile_unit)
     return make_error<DWPError>("top level DIE is not a compile unit");
   // DW_CHILDREN
   AbbrevData.getU8(&AbbrevOffset);
   uint32_t Name;
-  uint32_t Form;
+  dwarf::Form Form;
   CompileUnitIdentifiers ID;
   while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
-             (Form = AbbrevData.getULEB128(&AbbrevOffset)) &&
+         (Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(&AbbrevOffset))) &&
          (Name != 0 || Form != 0)) {
     switch (Name) {
     case dwarf::DW_AT_name: {

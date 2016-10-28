@@ -865,7 +865,8 @@ enum match_flag_type
     format_sed        = 1 << 8,
     format_no_copy    = 1 << 9,
     format_first_only = 1 << 10,
-    __no_update_pos   = 1 << 11
+    __no_update_pos   = 1 << 11,
+    __full_match      = 1 << 12
 };
 
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2984,10 +2985,12 @@ __lookahead<_CharT, _Traits>::__exec(__state& __s) const
 {
     match_results<const _CharT*> __m;
     __m.__init(1 + __exp_.mark_count(), __s.__current_, __s.__last_);
-    bool __matched = __exp_.__match_at_start_ecma(__s.__current_, __s.__last_,
-                                                  __m,
-                                                  __s.__flags_ | regex_constants::match_continuous,
-                                                  __s.__at_first_ && __s.__current_ == __s.__first_);
+    bool __matched = __exp_.__match_at_start_ecma(
+        __s.__current_, __s.__last_,
+        __m,
+        (__s.__flags_ | regex_constants::match_continuous) &
+        ~regex_constants::__full_match,
+        __s.__at_first_ && __s.__current_ == __s.__first_);
     if (__matched != __invert_)
     {
         __s.__do_ = __state::__accept_but_not_consume;
@@ -5555,8 +5558,14 @@ basic_regex<_CharT, _Traits>::__match_at_start_ecma(
             switch (__s.__do_)
             {
             case __state::__end_state:
-                if (__flags & regex_constants::match_not_null &&
+                if ((__flags & regex_constants::match_not_null) &&
                     __s.__current_ == __first)
+                {
+                  __states.pop_back();
+                  break;
+                }
+                if ((__flags & regex_constants::__full_match) &&
+                    __s.__current_ != __last)
                 {
                   __states.pop_back();
                   break;
@@ -5624,8 +5633,14 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
             switch (__s.__do_)
             {
             case __state::__end_state:
-                if (__flags & regex_constants::match_not_null &&
+                if ((__flags & regex_constants::match_not_null) &&
                     __s.__current_ == __first)
+                {
+                  __states.pop_back();
+                  break;
+                }
+                if ((__flags & regex_constants::__full_match) &&
+                    __s.__current_ != __last)
                 {
                   __states.pop_back();
                   break;
@@ -5715,8 +5730,14 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
             switch (__s.__do_)
             {
             case __state::__end_state:
-                if (__flags & regex_constants::match_not_null &&
+                if ((__flags & regex_constants::match_not_null) &&
                     __s.__current_ == __first)
+                {
+                  __states.pop_back();
+                  break;
+                }
+                if ((__flags & regex_constants::__full_match) &&
+                    __s.__current_ != __last)
                 {
                   __states.pop_back();
                   break;
@@ -5951,8 +5972,10 @@ regex_match(_BidirectionalIterator __first, _BidirectionalIterator __last,
             const basic_regex<_CharT, _Traits>& __e,
             regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    bool __r = _VSTD::regex_search(__first, __last, __m, __e,
-                            __flags | regex_constants::match_continuous);
+    bool __r = _VSTD::regex_search(
+        __first, __last, __m, __e,
+        __flags | regex_constants::match_continuous |
+        regex_constants::__full_match);
     if (__r)
     {
         __r = !__m.suffix().matched;

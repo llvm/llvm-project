@@ -123,6 +123,8 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   case DW_FORM_GNU_str_index:
   case DW_FORM_GNU_strp_alt:
     return (FC == FC_String);
+  default:
+    break;
   }
   // In DWARF3 DW_FORM_data4 and DW_FORM_data8 served also as a section offset.
   // Don't check for DWARF version here, as some producers may still do this
@@ -208,7 +210,7 @@ bool DWARFFormValue::extractValue(DataExtractor data, uint32_t *offset_ptr,
       Value.cstr = data.getCStr(offset_ptr);
       break;
     case DW_FORM_indirect:
-      Form = data.getULEB128(offset_ptr);
+      Form = static_cast<dwarf::Form>(data.getULEB128(offset_ptr));
       indirect = true;
       break;
     case DW_FORM_sec_offset:
@@ -259,14 +261,15 @@ DWARFFormValue::skipValue(DataExtractor debug_info_data, uint32_t* offset_ptr,
 }
 
 bool
-DWARFFormValue::skipValue(uint16_t form, DataExtractor debug_info_data,
+DWARFFormValue::skipValue(dwarf::Form form, DataExtractor debug_info_data,
                           uint32_t *offset_ptr, const DWARFUnit *cu) {
   return skipValue(form, debug_info_data, offset_ptr, cu->getVersion(),
                    cu->getAddressByteSize());
 }
-bool DWARFFormValue::skipValue(uint16_t form, DataExtractor debug_info_data,
-                               uint32_t *offset_ptr, uint16_t Version,
-                               uint8_t AddrSize) {
+bool 
+DWARFFormValue::skipValue(dwarf::Form form, DataExtractor debug_info_data,
+                          uint32_t *offset_ptr, uint16_t Version,
+                          uint8_t AddrSize) {
   bool indirect = false;
   do {
     switch (form) {
@@ -349,7 +352,7 @@ bool DWARFFormValue::skipValue(uint16_t form, DataExtractor debug_info_data,
 
     case DW_FORM_indirect:
       indirect = true;
-      form = debug_info_data.getULEB128(offset_ptr);
+      form = static_cast<dwarf::Form>(debug_info_data.getULEB128(offset_ptr));
       break;
 
     // FIXME: 4 for DWARF32, 8 for DWARF64.

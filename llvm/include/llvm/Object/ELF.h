@@ -229,7 +229,8 @@ ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr *Sec) const {
 
   if (Size % sizeof(T))
     return object_error::parse_failed;
-  if (Offset + Size > Buf.size())
+  if ((std::numeric_limits<uintX_t>::max() - Offset < Size) ||
+      Offset + Size > Buf.size())
     return object_error::parse_failed;
 
   const T *Start = reinterpret_cast<const T *>(base() + Offset);
@@ -428,6 +429,8 @@ ELFFile<ELFT>::getStringTable(const Elf_Shdr *Section) const {
   if (std::error_code EC = V.getError())
     return EC;
   ArrayRef<char> Data = *V;
+  if (Data.empty())
+    return object_error::parse_failed;
   if (Data.back() != '\0')
     return object_error::string_table_non_null_end;
   return StringRef(Data.begin(), Data.size());

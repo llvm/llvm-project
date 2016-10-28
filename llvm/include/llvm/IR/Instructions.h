@@ -959,6 +959,11 @@ public:
 
   /// Returns the pointer type returned by the GEP
   /// instruction, which may be a vector of pointers.
+  static Type *getGEPReturnType(Value *Ptr, ArrayRef<Value *> IdxList) {
+    return getGEPReturnType(
+      cast<PointerType>(Ptr->getType()->getScalarType())->getElementType(),
+      Ptr, IdxList);
+  }
   static Type *getGEPReturnType(Type *ElTy, Value *Ptr,
                                 ArrayRef<Value *> IdxList) {
     Type *PtrTy = PointerType::get(checkGEPType(getIndexedType(ElTy, IdxList)),

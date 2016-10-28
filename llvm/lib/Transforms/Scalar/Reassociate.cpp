@@ -2198,8 +2198,10 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
     // trivially dead instructions have been removed.
     while (!ToRedo.empty()) {
       Instruction *I = ToRedo.pop_back_val();
-      if (isInstructionTriviallyDead(I))
+      if (isInstructionTriviallyDead(I)) {
         RecursivelyEraseDeadInsts(I, ToRedo);
+        MadeChange = true;
+      }
     }
 
     // Now that we have removed dead instructions, we can reoptimize the
