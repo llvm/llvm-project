@@ -53,6 +53,11 @@ int main()
 
     }
     {
+        const int x = 42;
+        optional<const int> o(x);
+        assert(*o == x);
+    }
+    {
         typedef TestTypes::TestType T;
         T::reset();
         const T t(3);
