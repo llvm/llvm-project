@@ -464,10 +464,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   QualType SSizeTy = ACtx.getIntTypeForBitwidth(ACtx.getTypeSize(SizeTy), true);
 
   // Don't worry about truncation here, it'd be cast back to SIZE_MAX when used.
-  LLVM_ATTRIBUTE_UNUSED int64_t SizeMax =
+  int64_t SizeMax =
       BVF.getMaxValue(SizeTy).getLimitedValue();
   int64_t SSizeMax =
     BVF.getMaxValue(SSizeTy).getLimitedValue();
+  (void)SizeMax;
 
   // We are finally ready to define specifications for all supported functions.
   //
