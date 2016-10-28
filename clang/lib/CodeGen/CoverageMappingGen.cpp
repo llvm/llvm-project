@@ -813,6 +813,8 @@ struct CounterCoverageMappingBuilder
 
   void VisitSwitchStmt(const SwitchStmt *S) {
     extendRegion(S);
+    if (S->getInit())
+      Visit(S->getInit());
     Visit(S->getCond());
 
     BreakContinueStack.push_back(BreakContinue());
