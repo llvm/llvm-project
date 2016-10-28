@@ -82,15 +82,15 @@ void DWARFDebugMacroEntry::ReadMacroEntries(
         debug_macros_sp->AddMacroEntry(
             DebugMacroEntry::CreateUndefEntry(line, macro_str));
       break;
-    case DW_MACRO_define_indirect:
-    case DW_MACRO_undef_indirect:
+    case DW_MACRO_define_strp:
+    case DW_MACRO_undef_strp:
       line = debug_macro_data.GetULEB128(offset);
       if (offset_is_64_bit)
         str_offset = debug_macro_data.GetU64(offset);
       else
         str_offset = debug_macro_data.GetU32(offset);
       macro_str = debug_str_data.GetCStr(&str_offset);
-      if (type == DW_MACRO_define_indirect)
+      if (type == DW_MACRO_define_strp)
         debug_macros_sp->AddMacroEntry(
             DebugMacroEntry::CreateDefineEntry(line, macro_str));
       else
@@ -107,7 +107,7 @@ void DWARFDebugMacroEntry::ReadMacroEntries(
       // This operation has no operands.
       debug_macros_sp->AddMacroEntry(DebugMacroEntry::CreateEndFileEntry());
       break;
-    case DW_MACRO_transparent_include:
+    case DW_MACRO_import:
       if (offset_is_64_bit)
         new_offset = debug_macro_data.GetU64(offset);
       else

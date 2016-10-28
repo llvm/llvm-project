@@ -10,6 +10,7 @@
 #include "Writer.h"
 #include "Config.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Relocations.h"
 #include "Strings.h"
@@ -19,7 +20,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 
@@ -74,7 +74,6 @@ private:
 
   std::unique_ptr<FileOutputBuffer> Buffer;
 
-  BumpPtrAllocator Alloc;
   std::vector<OutputSectionBase<ELFT> *> OutputSections;
   OutputSectionFactory<ELFT> Factory;
 
@@ -90,7 +89,7 @@ private:
 };
 } // anonymous namespace
 
-StringRef elf::getOutputSectionName(StringRef Name, BumpPtrAllocator &Alloc) {
+StringRef elf::getOutputSectionName(StringRef Name) {
   if (Config->Relocatable)
     return Name;
 
@@ -106,7 +105,7 @@ StringRef elf::getOutputSectionName(StringRef Name, BumpPtrAllocator &Alloc) {
   // ".zdebug_" is a prefix for ZLIB-compressed sections.
   // Because we decompressed input sections, we want to remove 'z'.
   if (Name.startswith(".zdebug_"))
-    return StringSaver(Alloc).save(Twine(".") + Name.substr(2));
+    return Saver.save(Twine(".") + Name.substr(2));
   return Name;
 }
 
@@ -705,7 +704,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     }
     OutputSectionBase<ELFT> *Sec;
     bool IsNew;
-    StringRef OutsecName = getOutputSectionName(IS->Name, Alloc);
+    StringRef OutsecName = getOutputSectionName(IS->Name);
     std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
     if (IsNew)
       OutputSections.push_back(Sec);
@@ -983,7 +982,6 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
   StringRef S = Sec->getName();
   if (!isValidCIdentifier(S))
     return;
-  StringSaver Saver(Alloc);
   addOptionalSynthetic(Saver.save("__start_" + S), Sec, 0, STV_DEFAULT);
   addOptionalSynthetic(Saver.save("__stop_" + S), Sec,
                        DefinedSynthetic<ELFT>::SectionEnd, STV_DEFAULT);

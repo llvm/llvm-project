@@ -25,6 +25,7 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Symbols.h"
 #include "Target.h"
@@ -190,19 +191,18 @@ static Thunk<ELFT> *createThunkArm(uint32_t Reloc, SymbolBody &S,
   // ARM relocations need ARM to Thumb interworking Thunks.
   // Thumb relocations need Thumb to ARM relocations.
   // Use position independent Thunks if we require position independent code.
-  BumpPtrAllocator &Alloc = IS.getFile()->Alloc;
   switch (Reloc) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
     if (Config->Pic)
-      return new (Alloc) ARMToThumbV7PILongThunk<ELFT>(S, IS);
-    return new (Alloc) ARMToThumbV7ABSLongThunk<ELFT>(S, IS);
+      return new (BAlloc) ARMToThumbV7PILongThunk<ELFT>(S, IS);
+    return new (BAlloc) ARMToThumbV7ABSLongThunk<ELFT>(S, IS);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
     if (Config->Pic)
-      return new (Alloc) ThumbToARMV7PILongThunk<ELFT>(S, IS);
-    return new (Alloc) ThumbToARMV7ABSLongThunk<ELFT>(S, IS);
+      return new (BAlloc) ThumbToARMV7PILongThunk<ELFT>(S, IS);
+    return new (BAlloc) ThumbToARMV7ABSLongThunk<ELFT>(S, IS);
   }
   fatal("unrecognized relocation type");
 }
@@ -236,7 +236,7 @@ static void addThunkMips(uint32_t RelocType, SymbolBody &S,
   // Mips Thunks are added to the InputSection defining S.
   auto *R = cast<DefinedRegular<ELFT>>(&S);
   auto *Sec = cast<InputSection<ELFT>>(R->Section);
-  auto *T = new (IS.getFile()->Alloc) MipsThunk<ELFT>(S, *Sec);
+  auto *T = new (BAlloc) MipsThunk<ELFT>(S, *Sec);
   Sec->addThunk(T);
   R->ThunkData = T;
 }

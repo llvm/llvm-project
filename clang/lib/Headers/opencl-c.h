@@ -15459,9 +15459,11 @@ half16 __ovld __cnfn shuffle2(half8 x, half8 y, ushort16 mask);
 half16 __ovld __cnfn shuffle2(half16 x, half16 y, ushort16 mask);
 #endif //cl_khr_fp16
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 // OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
 
 int printf(__constant const char* st, ...);
+#endif
 
 // OpenCL v1.1 s6.11.3, v1.2 s6.12.14, v2.0 s6.13.14 - Image Read and Write Functions
 

@@ -283,7 +283,7 @@ string_view_t path::__root_path_raw() const
     if (!parser::good(e))
       e = parser::root_name_end(__pn_);
     if (parser::good(e))
-      return string_view_t{__pn_}.substr(0, e + 1);
+      return string_view_t(__pn_).substr(0, e + 1);
     return {};
 }
 

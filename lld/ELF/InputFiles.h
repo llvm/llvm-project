@@ -24,7 +24,6 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/IRObjectFile.h"
-#include "llvm/Support/StringSaver.h"
 
 #include <map>
 
@@ -181,7 +180,7 @@ public:
   ArrayRef<SymbolBody *> getLocalSymbols();
   ArrayRef<SymbolBody *> getNonLocalSymbols();
 
-  explicit ObjectFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef M);
+  explicit ObjectFile(MemoryBufferRef M);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
   ArrayRef<InputSectionBase<ELFT> *> getSections() const { return Sections; }
@@ -213,10 +212,6 @@ public:
   // The number is the offset in the string table. It will be used as the
   // st_name of the symbol.
   std::vector<std::pair<const DefinedRegular<ELFT> *, unsigned>> KeptLocalSyms;
-
-  // SymbolBodies and Thunks for sections in this file are allocated
-  // using this buffer.
-  llvm::BumpPtrAllocator &Alloc;
 
   // Name of source file obtained from STT_FILE symbol value,
   // or empty string if there is no such symbol in object file
@@ -273,8 +268,6 @@ private:
   template <class ELFT> std::vector<StringRef> getElfSymbols();
   std::vector<StringRef> getBitcodeSymbols();
 
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver{Alloc};
   bool Seen = false;
 };
 
@@ -307,8 +300,6 @@ public:
 
 private:
   std::vector<Symbol *> Symbols;
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver{Alloc};
 };
 
 // .so file.
@@ -335,7 +326,7 @@ public:
     return F->kind() == Base::SharedKind;
   }
 
-  explicit SharedFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef M);
+  explicit SharedFile(MemoryBufferRef M);
 
   void parseSoName();
   void parseRest();
@@ -367,15 +358,12 @@ public:
   ArrayRef<InputSectionData *> getSections() const { return Sections; }
 
 private:
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver{Alloc};
   std::vector<InputSectionData *> Sections;
 };
 
-InputFile *createObjectFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef MB,
-                            StringRef ArchiveName = "",
+InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
                             uint64_t OffsetInArchive = 0);
-InputFile *createSharedFile(llvm::BumpPtrAllocator &Alloc, MemoryBufferRef MB);
+InputFile *createSharedFile(MemoryBufferRef MB);
 
 } // namespace elf
 } // namespace lld

@@ -87,6 +87,13 @@ namespace vbase {
   D d2(0, 0); // expected-error {{deleted}}
 }
 
+namespace vbase_of_vbase {
+  struct V { V(int); };
+  struct W : virtual V { using V::V; };
+  struct X : virtual W, virtual V { using W::W; };
+  X x(0);
+}
+
 namespace constexpr_init_order {
   struct Param;
   struct A {

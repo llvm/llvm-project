@@ -391,7 +391,7 @@ double test_mm512_mask_reduce_add_pd(__mmask8 __M, __m512d __W){
 
 double test_mm512_mask_reduce_mul_pd(__mmask8 __M, __m512d __W){
   // CHECK: {{.*}} = bitcast i8 %__M to <8 x i1>
-  // CHECK: {{.*}} = select <8 x i1> {{.*}}, <8 x double> %__W, <8 x double> <double 4.940656e-324, double 4.940656e-324, double 4.940656e-324, double 4.940656e-324, double 4.940656e-324, double 4.940656e-324, double 4.940656e-324, double 4.940656e-324>
+  // CHECK: {{.*}} = select <8 x i1> {{.*}}, <8 x double> %__W, <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
   // CHECK: %shuffle.i = shufflevector <8 x double> {{.*}}, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: %shuffle1.i = shufflevector <8 x double> {{.*}}, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK: %mul.i = fmul <4 x double> %shuffle.i, %shuffle1.i
@@ -425,7 +425,7 @@ float test_mm512_mask_reduce_add_ps(__mmask16 __M, __m512 __W){
 
 float test_mm512_mask_reduce_mul_ps(__mmask16 __M, __m512 __W){
   // CHECK: {{.*}} = bitcast i16 %__M to <16 x i1>
-  // CHECK: {{.*}} = select <16 x i1> {{.*}}, <16 x float> %__W, <16 x float> <float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float                 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float      0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000>
+  // CHECK: {{.*}} = select <16 x i1> {{.*}}, <16 x float> %__W, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
   // CHECK: %shuffle.i = shufflevector <16 x float> {{.*}}, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   // CHECK: %shuffle1.i = shufflevector <16 x float> {{.*}}, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   // CHECK: %mul.i = fmul <8 x float> %shuffle.i, %shuffle1.i

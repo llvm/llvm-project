@@ -8,6 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: with_system_cxx_lib
+
 // Test the _LIBCPP_VERSION and _LIBCPP_LIBRARY_VERSION macros
 
 #include <__config>

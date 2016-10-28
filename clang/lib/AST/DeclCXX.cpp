@@ -739,7 +739,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     }
 
     if (!Field->hasInClassInitializer() && !Field->isMutable()) {
-      if (CXXRecordDecl *FieldType = Field->getType()->getAsCXXRecordDecl()) {
+      if (CXXRecordDecl *FieldType = T->getAsCXXRecordDecl()) {
         if (FieldType->hasDefinition() && !FieldType->allowConstDefaultInit())
           data().HasUninitializedFields = true;
       } else {

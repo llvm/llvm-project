@@ -1,5 +1,12 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only
 
+// Variadic functions
+void vararg_f(int, ...);                    // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+void __vararg_f(int, ...);
+typedef void (*vararg_fptr_t)(int, ...);    // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+int printf(__constant const char *st, ...); // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+
+//Function pointer
 void foo(void*);
 
 void bar()

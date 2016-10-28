@@ -323,7 +323,7 @@ public:
 
   // Returns an object file for this symbol, or a nullptr if the file
   // was already returned.
-  InputFile *fetch(llvm::BumpPtrAllocator &Alloc);
+  InputFile *fetch();
 
 protected:
   Lazy(SymbolBody::Kind K, StringRef Name, uint8_t Type)
@@ -341,7 +341,7 @@ public:
   }
 
   ArchiveFile *file() { return (ArchiveFile *)this->File; }
-  InputFile *fetch(llvm::BumpPtrAllocator &Alloc);
+  InputFile *fetch();
 
 private:
   const llvm::object::Archive::Symbol Sym;
@@ -358,7 +358,7 @@ public:
   }
 
   LazyObjectFile *file() { return (LazyObjectFile *)this->File; }
-  InputFile *fetch(llvm::BumpPtrAllocator &Alloc);
+  InputFile *fetch();
 };
 
 // Some linker-generated symbols need to be created as

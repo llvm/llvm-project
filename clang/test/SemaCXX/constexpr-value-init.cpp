@@ -35,3 +35,12 @@ template<typename T> struct Z : T {
   constexpr Z() : V() {}
 };
 constexpr int n = Z<V>().c; // expected-error {{constant expression}} expected-note {{virtual base class}}
+
+struct E {
+  A a[2];
+};
+constexpr E e; // ok
+static_assert(e.a[0].a == 1, "");
+static_assert(e.a[0].b == 2, "");
+static_assert(e.a[1].a == 1, "");
+static_assert(e.a[1].b == 2, "");
