@@ -509,12 +509,15 @@ void ExeDepsFix::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   // max clearance or clearance higher than Pref.
   unsigned MaxClearance = 0;
   unsigned MaxClearanceReg = OriginalReg;
-  for (unsigned rx = 0; rx < OpRC->getNumRegs(); ++rx) {
-    unsigned Clearance = CurInstr - LiveRegs[rx].Def;
+  for (auto Reg : OpRC->getRegisters()) {
+    assert(AliasMap[Reg].size() == 1 &&
+           "Reg is expected to be mapped to a single index");
+    int RCrx = *regIndices(Reg).begin();
+    unsigned Clearance = CurInstr - LiveRegs[RCrx].Def;
     if (Clearance <= MaxClearance)
       continue;
     MaxClearance = Clearance;
-    MaxClearanceReg = OpRC->getRegister(rx);
+    MaxClearanceReg = Reg;
 
     if (MaxClearance > Pref)
       break;

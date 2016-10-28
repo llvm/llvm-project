@@ -17,6 +17,7 @@
 #define LLVM_TARGET_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
@@ -86,6 +87,11 @@ public:
 
   /// Return the number of registers in this class.
   unsigned getNumRegs() const { return MC->getNumRegs(); }
+  
+  iterator_range<SmallVectorImpl<MCPhysReg>::const_iterator>
+  getRegisters() const {
+    return make_range(MC->begin(), MC->end());
+  }
 
   /// Return the specified register in the class.
   unsigned getRegister(unsigned i) const {
