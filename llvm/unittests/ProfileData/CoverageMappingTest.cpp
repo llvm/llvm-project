@@ -164,7 +164,7 @@ struct CoverageMappingTest : ::testing::Test {
     return OS.str();
   }
 
-  void readCoverageRegions(std::string Coverage,
+  void readCoverageRegions(const std::string &Coverage,
                            OutputFunctionCoverageData &Data) {
     SmallVector<StringRef, 8> Filenames(Files.size());
     for (const auto &E : Files)
