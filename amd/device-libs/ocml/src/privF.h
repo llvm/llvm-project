@@ -32,7 +32,7 @@
     bool _sqrt_b = _sqrt_x < 0x1.0p-96f; \
     _sqrt_x *= _sqrt_b ? 0x1.0p+32f : 1.0f; \
     float _sqrt_s; \
-    if (!DAZ_OPT() & AMD_OPT()) { \
+    if ((!DAZ_OPT()) & AMD_OPT()) { \
         _sqrt_s = BUILTIN_SQRT_F32(_sqrt_x); \
         float _sqrt_sp = AS_FLOAT(AS_INT(_sqrt_s) - 1); \
         float _sqrt_ss = AS_FLOAT(AS_INT(_sqrt_s) + 1); \
