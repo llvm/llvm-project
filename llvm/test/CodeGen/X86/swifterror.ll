@@ -519,3 +519,154 @@ cont:
   tail call swiftcc void undef(%swift_error** nocapture swifterror %0)
   ret void
 }
+
+; CHECK-APPLE-LABEL: swifterror_clobber
+; CHECK-APPLE: movq %r12, [[REG:%.*]]
+; CHECK-APPLE: nop
+; CHECK-APPLE: movq [[REG]], %r12
+define swiftcc void @swifterror_clobber(%swift_error** nocapture swifterror %err) {
+  call void asm sideeffect "nop", "~{r12}"()
+  ret void
+}
+
+; CHECK-APPLE-LABEL: swifterror_reg_clobber
+; CHECK-APPLE: pushq %r12
+; CHECK-APPLE: nop
+; CHECK-APPLE: popq  %r12
+define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
+  call void asm sideeffect "nop", "~{r12}"()
+  ret void
+}
+
+; CHECK-APPLE-LABEL: params_in_reg
+; Save callee save registers to store clobbered arugments.
+; CHECK-APPLE:  pushq   %rbp
+; CHECK-APPLE:  pushq   %r15
+; CHECK-APPLE:  pushq   %r14
+; Clobbered swiftself register.
+; CHECK-APPLE:  pushq   %r13
+; CHECK-APPLE:  pushq   %rbx
+; CHECK-APPLE:  subq    $48, %rsp
+; Save arguments.
+; CHECK-APPLE:  movq    %r12, 32(%rsp)
+; CHECK-APPLE:  movq    %r13, 24(%rsp)
+; CHECK-APPLE:  movq    %r9, 16(%rsp)
+; CHECK-APPLE:  movq    %r8, 8(%rsp)
+; CHECK-APPLE:  movq    %rcx, %r14
+; CHECK-APPLE:  movq    %rdx, %r15
+; CHECK-APPLE:  movq    %rsi, %rbx
+; CHECK-APPLE:  movq    %rdi, %rbp
+; Setup call.
+; CHECK-APPLE:  movl    $1, %edi
+; CHECK-APPLE:  movl    $2, %esi
+; CHECK-APPLE:  movl    $3, %edx
+; CHECK-APPLE:  movl    $4, %ecx
+; CHECK-APPLE:  movl    $5, %r8d
+; CHECK-APPLE:  movl    $6, %r9d
+; CHECK-APPLE:  xorl    %r13d, %r13d
+; CHECK-APPLE:  xorl    %r12d, %r12d
+; CHECK-APPLE:  callq   _params_in_reg2
+; Setup second call with stored arguments.
+; CHECK-APPLE:  movq    %rbp, %rdi
+; CHECK-APPLE:  movq    %rbx, %rsi
+; CHECK-APPLE:  movq    %r15, %rdx
+; CHECK-APPLE:  movq    %r14, %rcx
+; CHECK-APPLE:  movq    8(%rsp), %r8
+; CHECK-APPLE:  movq    16(%rsp), %r9
+; CHECK-APPLE:  movq    24(%rsp), %r13
+; CHECK-APPLE:  movq    32(%rsp), %r12
+; CHECK-APPLE:  callq   _params_in_reg2
+; CHECK-APPLE:  addq    $48, %rsp
+; CHECK-APPLE:  popq    %rbx
+; CHECK-APPLE:  popq    %r13
+; CHECK-APPLE:  popq    %r14
+; CHECK-APPLE:  popq    %r15
+; CHECK-APPLE:  popq    %rbp
+define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err) {
+  %error_ptr_ref = alloca swifterror %swift_error*, align 8
+  store %swift_error* null, %swift_error** %error_ptr_ref
+  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
+  call swiftcc void @params_in_reg2(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i8* swiftself %6, %swift_error** nocapture swifterror %err)
+  ret void
+}
+declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err)
+
+; CHECK-APPLE-LABEL: params_and_return_in_reg
+; CHECK-APPLE:  pushq   %rbp
+; CHECK-APPLE:  pushq   %r15
+; CHECK-APPLE:  pushq   %r14
+; CHECK-APPLE:  pushq   %r13
+; CHECK-APPLE:  pushq   %rbx
+; CHECK-APPLE:  subq    $48, %rsp
+; Store arguments.
+; CHECK-APPLE:  movq    %r12, %r14
+; CHECK-APPLE:  movq    %r13, (%rsp)
+; CHECK-APPLE:  movq    %r9, 32(%rsp)
+; CHECK-APPLE:  movq    %r8, 24(%rsp)
+; CHECK-APPLE:  movq    %rcx, 16(%rsp)
+; CHECK-APPLE:  movq    %rdx, %r15
+; CHECK-APPLE:  movq    %rsi, %rbx
+; CHECK-APPLE:  movq    %rdi, %rbp
+; Setup call that clobbers all argument registers.
+; CHECK-APPLE:  movl    $1, %edi
+; CHECK-APPLE:  movl    $2, %esi
+; CHECK-APPLE:  movl    $3, %edx
+; CHECK-APPLE:  movl    $4, %ecx
+; CHECK-APPLE:  movl    $5, %r8d
+; CHECK-APPLE:  movl    $6, %r9d
+; CHECK-APPLE:  xorl    %r13d, %r13d
+; CHECK-APPLE:  xorl    %r12d, %r12d
+; CHECK-APPLE:  callq   _params_in_reg2
+; Store error_ptr_ref for later use.
+; CHECK-APPLE:  movq    %r12, 8(%rsp)
+; Restore original arguments.
+; CHECK-APPLE:  movq    %rbp, %rdi
+; CHECK-APPLE:  movq    %rbx, %rsi
+; CHECK-APPLE:  movq    %r15, %rdx
+; CHECK-APPLE:  movq    16(%rsp), %rcx
+; CHECK-APPLE:  movq    24(%rsp), %r8
+; CHECK-APPLE:  movq    32(%rsp), %r9
+; CHECK-APPLE:  movq    (%rsp), %r13
+; CHECK-APPLE:  movq    %r14, %r12
+; CHECK-APPLE:  callq   _params_and_return_in_reg2
+; Store return values in callee saved registers.
+; CHECK-APPLE:  movq    %rax, %rbx
+; CHECK-APPLE:  movq    %rdx, %rbp
+; CHECK-APPLE:  movq    %rcx, %r15
+; CHECK-APPLE:  movq    %r8, %r14
+; Store the swifterror return value (%err).
+; CHECK-APPLE:  movq    %r12, (%rsp)
+; Setup call.
+; CHECK-APPLE:  movl    $1, %edi
+; CHECK-APPLE:  movl    $2, %esi
+; CHECK-APPLE:  movl    $3, %edx
+; CHECK-APPLE:  movl    $4, %ecx
+; CHECK-APPLE:  movl    $5, %r8d
+; CHECK-APPLE:  movl    $6, %r9d
+; CHECK-APPLE:  xorl    %r13d, %r13d
+; Restore the swifterror value of error_ptr_ref.
+; CHECK-APPLE:  movq    8(%rsp), %r12
+; CHECK-APPLE:  callq   _params_in_reg2
+; Restore the return values of _params_and_return_in_reg2.
+; CHECK-APPLE:  movq    %rbx, %rax
+; CHECK-APPLE:  movq    %rbp, %rdx
+; CHECK-APPLE:  movq    %r15, %rcx
+; CHECK-APPLE:  movq    %r14, %r8
+; Restore the swiferror value of err.
+; CHECK-APPLE:  movq    (%rsp), %r12
+; CHECK-APPLE:  addq    $48, %rsp
+; CHECK-APPLE:  popq    %rbx
+; CHECK-APPLE:  popq    %r13
+; CHECK-APPLE:  popq    %r14
+; CHECK-APPLE:  popq    %r15
+; CHECK-APPLE:  popq    %rbp
+define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err) {
+  %error_ptr_ref = alloca swifterror %swift_error*, align 8
+  store %swift_error* null, %swift_error** %error_ptr_ref
+  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
+  %val = call swiftcc  { i64, i64, i64, i64 } @params_and_return_in_reg2(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i8* swiftself %6, %swift_error** nocapture swifterror %err)
+  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
+  ret { i64, i64, i64, i64 }%val
+}
+
+declare swiftcc { i64, i64, i64, i64 } @params_and_return_in_reg2(i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err)
