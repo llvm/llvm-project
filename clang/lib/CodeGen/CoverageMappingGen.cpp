@@ -875,6 +875,9 @@ struct CounterCoverageMappingBuilder
 
   void VisitIfStmt(const IfStmt *S) {
     extendRegion(S);
+    if (S->getInit())
+      Visit(S->getInit());
+
     // Extend into the condition before we propagate through it below - this is
     // needed to handle macros that generate the "if" but not the condition.
     extendRegion(S->getCond());
