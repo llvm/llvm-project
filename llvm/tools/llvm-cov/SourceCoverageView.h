@@ -277,10 +277,6 @@ public:
   /// \brief Return the source name formatted for the host OS.
   std::string getSourceName() const;
 
-  /// \brief Return a verbose description of the source name and the binary it
-  /// corresponds to.
-  std::string getVerboseSourceName() const;
-
   const CoverageViewOptions &getOptions() const { return Options; }
 
   /// \brief Add an expansion subview to this view.

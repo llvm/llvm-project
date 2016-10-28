@@ -406,11 +406,8 @@ void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
 }
 
 void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
-  OS << BeginSourceNameDiv;
-  std::string ViewInfo = escape(
-      WholeFile ? getVerboseSourceName() : getSourceName(), getOptions());
-  OS << tag("pre", ViewInfo);
-  OS << EndSourceNameDiv;
+  OS << BeginSourceNameDiv << tag("pre", escape(getSourceName(), getOptions()))
+     << EndSourceNameDiv;
 }
 
 void SourceCoverageViewHTML::renderLinePrefix(raw_ostream &OS, unsigned) {

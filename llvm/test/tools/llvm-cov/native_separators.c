@@ -15,6 +15,6 @@
 
 // TEXT-INDEX: \tmp\native_separators.c
 // HTML-INDEX: >tmp\native_separators.c</a>
-// HTML: <pre>\tmp\native_separators.c (Binary: native_separators.covmapping)</pre>
+// HTML: <pre>\tmp\native_separators.c</pre>
 
 int main() {}
