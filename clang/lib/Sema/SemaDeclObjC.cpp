@@ -3891,8 +3891,7 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
         ImplMethodsVsClassMethods(S, CatImplClass, Cat);
       }
     }
-  } else if (const ObjCInterfaceDecl *IntfDecl =
-             dyn_cast<ObjCInterfaceDecl>(ClassDecl)) {
+  } else if (const auto *IntfDecl = dyn_cast<ObjCInterfaceDecl>(ClassDecl)) {
     if (const ObjCInterfaceDecl *Super = IntfDecl->getSuperClass()) {
       if (!IntfDecl->hasAttr<ObjCSubclassingRestrictedAttr>() &&
           Super->hasAttr<ObjCSubclassingRestrictedAttr>()) {

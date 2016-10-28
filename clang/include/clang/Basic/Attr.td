@@ -1304,7 +1304,7 @@ def ObjCRootClass : InheritableAttr {
 def ObjCSubclassingRestricted : InheritableAttr {
   let Spellings = [GNU<"objc_subclassing_restricted">];
   let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
-  let Documentation = [Undocumented];
+  let Documentation = [ObjCSubclassingRestrictedDocs];
 }
 
 def ObjCCompleteDefinition : InheritableAttr {
