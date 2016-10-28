@@ -1256,21 +1256,11 @@ public:
     const;
 
   /// Determine which bits of Op are known to be either zero or one and return
-  /// them in the KnownZero/KnownOne bitsets. For vectors, the known bits are
-  /// those that are shared by every vector element.
-  /// Targets can implement the computeKnownBitsForTargetNode method in the
-  /// TargetLowering class to allow target nodes to be understood.
+  /// them in the KnownZero/KnownOne bitsets.  Targets can implement the
+  /// computeKnownBitsForTargetNode method in the TargetLowering class to allow
+  /// target nodes to be understood.
   void computeKnownBits(SDValue Op, APInt &KnownZero, APInt &KnownOne,
                         unsigned Depth = 0) const;
-
-  /// Determine which bits of Op are known to be either zero or one and return
-  /// them in the KnownZero/KnownOne bitsets. The DemandedElts argument allows
-  /// us to only collect the known bits that are shared by the requested vector
-  /// elements.
-  /// Targets can implement the computeKnownBitsForTargetNode method in the
-  /// TargetLowering class to allow target nodes to be understood.
-  void computeKnownBits(SDValue Op, APInt &KnownZero, APInt &KnownOne,
-                        const APInt &DemandedElts, unsigned Depth = 0) const;
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit

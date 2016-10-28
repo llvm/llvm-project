@@ -137,6 +137,11 @@ int main()
     test<int>();
     test<int>(3);
     {
+        optional<const int> o(42);
+        optional<const int> o2(std::move(o));
+        assert(*o2 == 42);
+    }
+    {
         using T = TestTypes::TestType;
         T::reset();
         optional<T> rhs;

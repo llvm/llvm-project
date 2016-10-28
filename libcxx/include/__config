@@ -908,6 +908,13 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 #endif
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_FUNC_VIS _LIBCPP_WEAK int __libcpp_library_version();
+_LIBCPP_END_NAMESPACE_STD
+
+#define _LIBCPP_LIBRARY_VERSION \
+ (_VSTD::__libcpp_library_version ? _VSTD::__libcpp_library_version() : -1)
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG

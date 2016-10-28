@@ -75,6 +75,10 @@ int main()
 
     }
     {
+        optional<const int> opt(in_place, 5);
+        assert(*opt == 5);
+    }
+    {
         const optional<X> opt(in_place);
         assert(static_cast<bool>(opt) == true);
         assert(*opt == X());

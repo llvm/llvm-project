@@ -59,6 +59,11 @@ int main()
         };
     }
     {
+        const int x = 42;
+        optional<const int> o(std::move(x));
+        assert(*o == 42);
+    }
+    {
         typedef TestTypes::TestType T;
         T::reset();
         optional<T> opt = T{3};
