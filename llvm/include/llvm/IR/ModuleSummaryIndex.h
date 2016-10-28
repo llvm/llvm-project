@@ -86,7 +86,7 @@ public:
   /// \brief Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind { AliasKind, FunctionKind, GlobalVarKind };
 
-  /// Group flags (Linkage, hasSection, isOptSize, etc.) as a bitfield.
+  /// Group flags (Linkage, noRename, isOptSize, etc.) as a bitfield.
   struct GVFlags {
     /// \brief The linkage type of the associated global value.
     ///
@@ -97,20 +97,21 @@ public:
     /// types based on global summary-based analysis.
     unsigned Linkage : 4;
 
-    /// Indicate if the global value is located in a specific section.
-    unsigned HasSection : 1;
+    /// Indicate if the global value cannot be renamed (in a specific section,
+    /// possibly referenced from inline assembly, etc).
+    unsigned NoRename : 1;
 
     /// Indicate if the function is not viable to inline.
     unsigned IsNotViableToInline : 1;
 
     /// Convenience Constructors
-    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool HasSection,
+    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool NoRename,
                      bool IsNotViableToInline)
-        : Linkage(Linkage), HasSection(HasSection),
+        : Linkage(Linkage), NoRename(NoRename),
           IsNotViableToInline(IsNotViableToInline) {}
 
     GVFlags(const GlobalValue &GV)
-        : Linkage(GV.getLinkage()), HasSection(GV.hasSection()) {
+        : Linkage(GV.getLinkage()), NoRename(GV.hasSection()) {
       IsNotViableToInline = false;
       if (const auto *F = dyn_cast<Function>(&GV))
         // Inliner doesn't handle variadic functions.
@@ -189,8 +190,9 @@ public:
   /// to be referenced from another module.
   bool needsRenaming() const { return GlobalValue::isLocalLinkage(linkage()); }
 
-  /// Return true if this global value is located in a specific section.
-  bool hasSection() const { return Flags.HasSection; }
+  /// Return true if this global value cannot be renamed (in a specific section,
+  /// possibly referenced from inline assembly, etc).
+  bool noRename() const { return Flags.NoRename; }
 
   /// Record a reference from this global value to the global value identified
   /// by \p RefGUID.

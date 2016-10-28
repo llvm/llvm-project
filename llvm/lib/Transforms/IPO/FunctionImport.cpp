@@ -111,8 +111,9 @@ static bool canBeExternallyReferenced(const GlobalValueSummary &Summary) {
   if (!Summary.needsRenaming())
     return true;
 
-  if (Summary.hasSection())
-    // Can't rename a global that needs renaming if has a section.
+  if (Summary.noRename())
+    // Can't externally reference a global that needs renaming if has a section
+    // or is referenced from inline assembly, for example.
     return false;
 
   return true;
