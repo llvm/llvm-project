@@ -70,6 +70,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ReturnUndefChecker.cpp
   SimpleStreamChecker.cpp
   StackAddrEscapeChecker.cpp
+  StdLibraryFunctionsChecker.cpp
   StreamChecker.cpp
   TaintTesterChecker.cpp
   TestAfterDivZeroChecker.cpp
