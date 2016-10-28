@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-APPLE --check-prefix=CHECK-ARMV7 %s
 ; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-O0 %s
 
 declare i8* @malloc(i64)
@@ -394,3 +394,126 @@ entry:
   %0 = tail call swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %error_ptr_ref)
   ret float %0
 }
+
+; CHECK-APPLE-LABEL: swifterror_clobber
+; CHECK-APPLE: mov [[REG:r[0-9]+]], r6
+; CHECK-APPLE: nop
+; CHECK-APPLE: mov r6, [[REG]]
+define swiftcc void @swifterror_clobber(%swift_error** nocapture swifterror %err) {
+  call void asm sideeffect "nop", "~{r6}"()
+  ret void
+}
+
+; CHECK-APPLE-LABEL: swifterror_reg_clobber
+; CHECK-APPLE: push {{.*}}r6
+; CHECK-APPLE: nop
+; CHECK-APPLE: pop  {{.*}}r6
+define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
+  call void asm sideeffect "nop", "~{r6}"()
+  ret void
+}
+
+; CHECK-ARMV7-LABEL: _params_in_reg
+; Store callee saved registers excluding swifterror.
+; CHECK-ARMV7:  push    {r4, r5, r7, lr}
+; CHECK-ARMV7:  push    {r8, r10, r11}
+; Store swiftself (r10) and swifterror (r6).
+; CHECK-ARMV7-DAG:  str     r6, [s[[STK1:.*]]]
+; CHECK-ARMV7-DAG:  str     r10, [s[[STK2:.*]]]
+; Store arguments.
+; CHECK-ARMV7:  mov     r4, r3
+; CHECK-ARMV7:  mov     r5, r2
+; CHECK-ARMV7:  mov     r8, r1
+; CHECK-ARMV7:  mov     r11, r0
+; Setup call.
+; CHECK-ARMV7:  mov     r0, #1
+; CHECK-ARMV7:  mov     r1, #2
+; CHECK-ARMV7:  mov     r2, #3
+; CHECK-ARMV7:  mov     r3, #4
+; CHECK-ARMV7:  mov     r10, #0
+; CHECK-ARMV7:  mov     r6, #0
+; CHECK-ARMV7:  bl      _params_in_reg2
+; Restore original arguments.
+; CHECK-ARMV7-DAG:  ldr     r10, [s[[STK2]]]
+; CHECK-ARMV7-DAG:  ldr     r6, [s[[STK1]]]
+; CHECK-ARMV7:  mov     r0, r11
+; CHECK-ARMV7:  mov     r1, r8
+; CHECK-ARMV7:  mov     r2, r5
+; CHECK-ARMV7:  mov     r3, r4
+; CHECK-ARMV7:  bl      _params_in_reg2
+; CHECK-ARMV7:  pop     {r8, r10, r11}
+; CHECK-ARMV7:  pop     {r4, r5, r7, pc}
+define swiftcc void @params_in_reg(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err) {
+  %error_ptr_ref = alloca swifterror %swift_error*, align 8
+  store %swift_error* null, %swift_error** %error_ptr_ref
+  call swiftcc void @params_in_reg2(i32 1, i32 2, i32 3, i32 4, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
+  call swiftcc void @params_in_reg2(i32 %0, i32 %1, i32 %2, i32 %3, i8* swiftself %4, %swift_error** nocapture swifterror %err)
+  ret void
+}
+declare swiftcc void @params_in_reg2(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err)
+
+; CHECK-ARMV7-LABEL: params_and_return_in_reg
+; CHECK-ARMV7:  push    {r4, r5, r7, lr}
+; CHECK-ARMV7:  push    {r8, r10, r11}
+; Store swifterror and swiftself
+; CHECK-ARMV7:  mov     r4, r6
+; CHECK-ARMV7:  str     r10, [s[[STK1:.*]]]
+; Store arguments.
+; CHECK-ARMV7:  str     r3, [s[[STK2:.*]]]
+; CHECK-ARMV7:  mov     r5, r2
+; CHECK-ARMV7:  mov     r8, r1
+; CHECK-ARMV7:  mov     r11, r0
+; Setup call.
+; CHECK-ARMV7:  mov     r0, #1
+; CHECK-ARMV7:  mov     r1, #2
+; CHECK-ARMV7:  mov     r2, #3
+; CHECK-ARMV7:  mov     r3, #4
+; CHECK-ARMV7:  mov     r10, #0
+; CHECK-ARMV7:  mov     r6, #0
+; CHECK-ARMV7:  bl      _params_in_reg2
+; Restore original arguments.
+; CHECK-ARMV7:  ldr     r3, [s[[STK2]]]
+; CHECK-ARMV7:  ldr     r10, [s[[STK1]]]
+; Store %error_ptr_ref;
+; CHECK-ARMV7:  str     r6, [s[[STK3:.*]]]
+; Restore original arguments.
+; CHECK-ARMV7:  mov     r0, r11
+; CHECK-ARMV7:  mov     r1, r8
+; CHECK-ARMV7:  mov     r2, r5
+; CHECK-ARMV7:  mov     r6, r4
+; CHECK-ARMV7:  bl      _params_and_return_in_reg2
+; Store swifterror return %err;
+; CHECK-ARMV7:  str     r6, [s[[STK1]]]
+; Load swifterror value %error_ptr_ref.
+; CHECK-ARMV7:  ldr     r6, [s[[STK3]]]
+; Save return values.
+; CHECK-ARMV7:  mov     r5, r0
+; CHECK-ARMV7:  mov     r4, r1
+; CHECK-ARMV7:  mov     r8, r2
+; CHECK-ARMV7:  mov     r11, r3
+; Setup call.
+; CHECK-ARMV7:  mov     r0, #1
+; CHECK-ARMV7:  mov     r1, #2
+; CHECK-ARMV7:  mov     r2, #3
+; CHECK-ARMV7:  mov     r3, #4
+; CHECK-ARMV7:  mov     r10, #0
+; CHECK-ARMV7:  bl      _params_in_reg2
+; Load swifterror %err;
+; CHECK-ARMV7:  ldr     r6, [s[[STK1]]]
+; Restore return values for returning.
+; CHECK-ARMV7:  mov     r0, r5
+; CHECK-ARMV7:  mov     r1, r4
+; CHECK-ARMV7:  mov     r2, r8
+; CHECK-ARMV7:  mov     r3, r11
+; CHECK-ARMV7:  pop     {r8, r10, r11}
+; CHECK-ARMV7:  pop     {r4, r5, r7, pc}
+define swiftcc { i32, i32, i32, i32} @params_and_return_in_reg(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err) {
+  %error_ptr_ref = alloca swifterror %swift_error*, align 8
+  store %swift_error* null, %swift_error** %error_ptr_ref
+  call swiftcc void @params_in_reg2(i32 1, i32 2, i32 3, i32 4, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
+  %val = call swiftcc  { i32, i32, i32, i32 } @params_and_return_in_reg2(i32 %0, i32 %1, i32 %2, i32 %3, i8* swiftself %4, %swift_error** nocapture swifterror %err)
+  call swiftcc void @params_in_reg2(i32 1, i32 2, i32 3, i32 4, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
+  ret { i32, i32, i32, i32 }%val
+}
+
+declare swiftcc { i32, i32, i32, i32 } @params_and_return_in_reg2(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err)
