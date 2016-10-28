@@ -11,7 +11,7 @@ __attribute__((objc_subclassing_restricted))
 @end
 
 
-@interface SubClass : SubClassOfLeaf // expected-error {{cannot subclass a class with objc_subclassing_restricted attribute}}
+@interface SubClass : SubClassOfLeaf // expected-error {{cannot subclass a class that was declared with the 'objc_subclassing_restricted' attribute}}
 @end
 
 __attribute__((objc_root_class))
@@ -32,5 +32,5 @@ __attribute__((objc_subclassing_restricted))
 __attribute__((objc_subclassing_restricted))
 @interface SubImplClass : SuperImplClass
 @end
-@implementation SubImplClass // expected-error {{cannot subclass a class with objc_subclassing_restricted attribute}}
+@implementation SubImplClass // expected-error {{cannot subclass a class that was declared with the 'objc_subclassing_restricted' attribute}}
 @end
