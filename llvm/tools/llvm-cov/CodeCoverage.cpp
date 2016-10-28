@@ -578,7 +578,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     for (const std::string &Filename : CovFilenames)
       ObjectFilenames.emplace_back(Filename);
     if (ObjectFilenames.empty()) {
-      error("No filenames specified!");
+      errs() << "No filenames specified!\n";
       ::exit(1);
     }
 
@@ -591,7 +591,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       break;
     case CoverageViewOptions::OutputFormat::HTML:
       if (UseColor == cl::BOU_FALSE)
-        error("Color output cannot be disabled when generating html.");
+        errs() << "Color output cannot be disabled when generating html.\n";
       ViewOpts.Colors = true;
       break;
     }
