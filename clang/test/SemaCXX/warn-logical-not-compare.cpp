@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlogical-not-parentheses -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wlogical-not-parentheses -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only -Wlogical-not-parentheses -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 bool getBool();
 int getInt();
@@ -185,6 +185,45 @@ bool test2 (E e) {
   ret = (!e) == getE();
   ret = (!getE()) == e1;
   ret = (!getE()) == getE();
+
+  return ret;
+}
+
+bool test_bitwise_op(int x) {
+  bool ret;
+
+  ret = !x & 1;
+  // expected-warning@-1 {{logical not is only applied to the left hand side of this bitwise operator}}
+  // expected-note@-2 {{add parentheses after the '!' to evaluate the bitwise operator first}}
+  // expected-note@-3 {{add parentheses around left hand side expression to silence this warning}}
+  // CHECK: warn-logical-not-compare.cpp:[[line:[0-9]*]]:9: warning
+  // CHECK: to evaluate the bitwise operator first
+  // CHECK: fix-it:"{{.*}}":{[[line]]:10-[[line]]:10}:"("
+  // CHECK: fix-it:"{{.*}}":{[[line]]:15-[[line]]:15}:")"
+  // CHECK: to silence this warning
+  // CHECK: fix-it:"{{.*}}":{[[line]]:9-[[line]]:9}:"("
+  // CHECK: fix-it:"{{.*}}":{[[line]]:11-[[line]]:11}:")"
+  ret = !(x & 1);
+  ret = (!x) & 1;
+
+  // This warning is really about !x & FOO since that's a common misspelling
+  // of the negated bit test !(x & FOO).  Don't warn for | and ^, since
+  // it's at least conceivable that the user wants to use | as an
+  // alternative to || that evaluates both branches.  (The warning above is
+  // only emitted if the operand to ! is not a bool, but in C that's common.)
+  // And there's no logical ^.
+  ret = !x | 1;
+  ret = !(x | 1);
+  ret = (!x) | 1;
+
+  ret = !x ^ 1;
+  ret = !(x ^ 1);
+  ret = (!x) ^ 1;
+
+  // These already err, don't also warn.
+  !x &= 1; // expected-error{{expression is not assignable}}
+  !x |= 1; // expected-error{{expression is not assignable}}
+  !x ^= 1; // expected-error{{expression is not assignable}}
 
   return ret;
 }

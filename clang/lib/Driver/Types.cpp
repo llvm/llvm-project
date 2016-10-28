@@ -170,6 +170,10 @@ bool types::isCuda(ID Id) {
   }
 }
 
+bool types::isSrcFile(ID Id) {
+  return Id != TY_Object && getPreprocessedType(Id) != TY_INVALID;
+}
+
 types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
   return llvm::StringSwitch<types::ID>(Ext)
            .Case("c", TY_C)

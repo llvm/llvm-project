@@ -25,6 +25,10 @@ processes code, please see :doc:`InternalsManual`. If you are interested in the
 `Clang Static Analyzer <http://clang-analyzer.llvm.org>`_, please see its web
 page.
 
+Clang is one component in a complete toolchain for C family languages.
+A separate document describes the other pieces necessary to
+:doc:`assemble a complete toolchain <Toolchain>`.
+
 Clang is designed to support the C family of programming languages,
 which includes :ref:`C <c>`, :ref:`Objective-C <objc>`, :ref:`C++ <cxx>`, and
 :ref:`Objective-C++ <objcxx>` as well as many dialects of those. For

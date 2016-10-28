@@ -50,14 +50,15 @@ Compilation::~Compilation() {
   }
 }
 
-const DerivedArgList &Compilation::getArgsForToolChain(const ToolChain *TC,
-                                                       StringRef BoundArch) {
+const DerivedArgList &
+Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
+                                 Action::OffloadKind DeviceOffloadKind) {
   if (!TC)
     TC = &DefaultToolChain;
 
-  DerivedArgList *&Entry = TCArgs[std::make_pair(TC, BoundArch)];
+  DerivedArgList *&Entry = TCArgs[{TC, BoundArch, DeviceOffloadKind}];
   if (!Entry) {
-    Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch);
+    Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind);
     if (!Entry)
       Entry = TranslatedArgs;
   }
