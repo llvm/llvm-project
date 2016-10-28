@@ -109,6 +109,11 @@ int main()
     test<int>();
     test<int>(3);
     {
+        const optional<const int> o(42);
+        optional<const int> o2(o);
+        assert(*o2 == 42);
+    }
+    {
         using T = TestTypes::TestType;
         T::reset();
         const optional<T> rhs;
