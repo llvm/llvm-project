@@ -229,12 +229,7 @@ private:
 /// All operations enqueued on a Stream are serialized, but operations enqueued
 /// on different Streams may run concurrently.
 ///
-/// Each Platform has a notion of the currently active device on a particular
-/// thread (see Platform::getActiveDeviceForThread and
-/// Platform::setActiveDeviceForThread). Each Stream is associated with a
-/// specific, fixed device, set to the current thread's active device when the
-/// Stream is created. Whenver a thread enqueues commands onto a Stream, its
-/// active device must match the Stream's device.
+/// Each Stream is associated with a specific, fixed device.
 class Stream {
 public:
   Stream(const Stream &) = delete;
@@ -447,10 +442,16 @@ public:
 private:
   // Only a platform can make an event.
   friend class Platform;
-  Event(Platform *APlatform, void *AHandle, HandleDestructor Destructor)
-      : ThePlatform(APlatform), TheHandle(AHandle, Destructor) {}
+  Event(Platform *APlatform, int DeviceIndex, void *AHandle,
+        HandleDestructor Destructor)
+      : ThePlatform(APlatform), TheDeviceIndex(DeviceIndex),
+        TheHandle(AHandle, Destructor) {}
 
   Platform *ThePlatform;
+
+  // The index of the device on which the event can be enqueued.
+  int TheDeviceIndex;
+
   std::unique_ptr<void, HandleDestructor> TheHandle;
 };
 
@@ -470,29 +471,21 @@ public:
   /// Gets the number of devices for this platform in this system.
   virtual Expected<int> getDeviceCount() = 0;
 
-  /// Sets the active device for this platform in this thread.
-  virtual Status setActiveDeviceForThread(int DeviceIndex) = 0;
+  /// Creates a stream on the given device for the platform.
+  virtual Expected<Stream> createStream(int DeviceIndex = 0) = 0;
 
-  /// Gets the currently active device for this platform in this thread.
-  virtual int getActiveDeviceForThread() = 0;
-
-  /// Creates a stream for the platform.
-  ///
-  /// The created Stream is associated with the active device for this thread.
-  virtual Expected<Stream> createStream() = 0;
-
-  /// Creates an event for the platform.
-  ///
-  /// The created Event is associated with the active device for this thread.
-  virtual Expected<Event> createEvent() = 0;
+  /// Creates an event on the given device for the platform.
+  virtual Expected<Event> createEvent(int DeviceIndex = 0) = 0;
 
   /// Allocates owned device memory.
   ///
   /// \warning This function only allocates space in device memory, it does not
   /// call the constructor of T.
   template <typename T>
-  Expected<DeviceMemory<T>> mallocD(ptrdiff_t ElementCount) {
-    Expected<void *> MaybePointer = rawMallocD(ElementCount * sizeof(T));
+  Expected<DeviceMemory<T>> mallocD(ptrdiff_t ElementCount,
+                                    int DeviceIndex = 0) {
+    Expected<void *> MaybePointer =
+        rawMallocD(ElementCount * sizeof(T), DeviceIndex);
     if (MaybePointer.isError())
       return MaybePointer.getError();
     return DeviceMemory<T>(this, MaybePointer.getValue(), ElementCount,
@@ -505,12 +498,14 @@ public:
   /// pointer to a __device__ variable, this function returns a DeviceMemorySpan
   /// referencing the device memory that stores that __device__ variable.
   template <typename ElementType>
-  Expected<DeviceMemorySpan<ElementType>> getSymbolMemory(ElementType *Symbol) {
-    Expected<void *> MaybeAddress = rawGetDeviceSymbolAddress(Symbol);
+  Expected<DeviceMemorySpan<ElementType>> getSymbolMemory(ElementType *Symbol,
+                                                          int DeviceIndex = 0) {
+    Expected<void *> MaybeAddress =
+        rawGetDeviceSymbolAddress(Symbol, DeviceIndex);
     if (MaybeAddress.isError())
       return MaybeAddress.getError();
     ElementType *Address = static_cast<ElementType *>(MaybeAddress.getValue());
-    Expected<ptrdiff_t> MaybeSize = rawGetDeviceSymbolSize(Symbol);
+    Expected<ptrdiff_t> MaybeSize = rawGetDeviceSymbolSize(Symbol, DeviceIndex);
     if (MaybeSize.isError())
       return MaybeSize.getError();
     ptrdiff_t Size = MaybeSize.getValue();
@@ -584,8 +579,8 @@ public:
 
   /// \}
 
-  virtual Expected<Program>
-  createProgramFromSource(Span<const char> Source) = 0;
+  virtual Expected<Program> createProgramFromSource(Span<const char> Source,
+                                                    int DeviceIndex = 0) = 0;
 
 protected:
   friend class Stream;
@@ -597,15 +592,15 @@ protected:
   void *getEventHandle(Event &Event) { return Event.TheHandle.get(); }
 
   // Pass along access to Stream constructor to subclasses.
-  Stream constructStream(Platform *APlatform, void *AHandle,
+  Stream constructStream(Platform *APlatform, int DeviceIndex, void *AHandle,
                          HandleDestructor Destructor) {
-    return Stream(APlatform, getActiveDeviceForThread(), AHandle, Destructor);
+    return Stream(APlatform, DeviceIndex, AHandle, Destructor);
   }
 
   // Pass along access to Event constructor to subclasses.
-  Event constructEvent(Platform *APlatform, void *AHandle,
+  Event constructEvent(Platform *APlatform, int DeviceIndex, void *AHandle,
                        HandleDestructor Destructor) {
-    return Event(APlatform, AHandle, Destructor);
+    return Event(APlatform, DeviceIndex, AHandle, Destructor);
   }
 
   // Pass along access to Program constructor to subclasses.
@@ -623,28 +618,16 @@ protected:
   virtual Expected<float> getSecondsBetweenEvents(void *StartEvent,
                                                   void *EndEvent) = 0;
 
-  virtual Expected<void *> rawMallocD(ptrdiff_t ByteCount) = 0;
+  virtual Expected<void *> rawMallocD(ptrdiff_t ByteCount, int DeviceIndex) = 0;
   virtual HandleDestructor getDeviceMemoryHandleDestructor() = 0;
   virtual void *getDeviceMemorySpanHandle(void *BaseHandle, size_t ByteSize,
                                           size_t ByteOffset) = 0;
   virtual void rawDestroyDeviceMemorySpanHandle(void *Handle) = 0;
 
-  virtual Expected<void *> rawGetDeviceSymbolAddress(const void *Symbol) = 0;
-  virtual Expected<ptrdiff_t> rawGetDeviceSymbolSize(const void *Symbol) = 0;
-
-  virtual Status rawCopyDToD(const void *DeviceSrc,
-                             ptrdiff_t DeviceSrcByteOffset, void *DeviceDst,
-                             ptrdiff_t DeviceDstByteOffset,
-                             ptrdiff_t ByteCount) = 0;
-  virtual Status rawCopyDToH(const void *DeviceSrc,
-                             ptrdiff_t DeviceSrcByteOffset, void *HostDst,
-                             ptrdiff_t ByteCount) = 0;
-  virtual Status rawCopyHToD(const void *HostSrc, void *DeviceDst,
-                             ptrdiff_t DeviceDstByteOffset,
-                             ptrdiff_t ByteCount) = 0;
-
-  virtual Status rawMemsetD(void *DeviceDst, ptrdiff_t ByteOffset,
-                            ptrdiff_t ByteCount, char ByteValue) = 0;
+  virtual Expected<void *> rawGetDeviceSymbolAddress(const void *Symbol,
+                                                     int DeviceIndex) = 0;
+  virtual Expected<ptrdiff_t> rawGetDeviceSymbolSize(const void *Symbol,
+                                                     int DeviceIndex) = 0;
 
   virtual Status rawRegisterHostMem(const void *Memory,
                                     ptrdiff_t ByteCount) = 0;

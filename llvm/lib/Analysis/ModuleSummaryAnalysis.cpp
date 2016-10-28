@@ -78,10 +78,9 @@ static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
 static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
                                    const Function &F, BlockFrequencyInfo *BFI,
                                    ProfileSummaryInfo *PSI) {
-  // Summary not currently supported for anonymous functions, they must
-  // be renamed.
-  if (!F.hasName())
-    return;
+  // Summary not currently supported for anonymous functions, they should
+  // have been named.
+  assert(F.hasName());
 
   unsigned NumInsts = 0;
   // Map from callee ValueId to profile count. Used to accumulate profile
@@ -111,9 +110,11 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       }
       // Check if this is a direct call to a known function.
       if (CalledFunction) {
-        // Skip nameless and intrinsics.
-        if (!CalledFunction->hasName() || CalledFunction->isIntrinsic())
+        // Skip intrinsics.
+        if (CalledFunction->isIntrinsic())
           continue;
+        // We should have named any anonymous globals
+        assert(CalledFunction->hasName());
         auto ScaledCount = BFI ? BFI->getBlockProfileCount(&BB) : None;
         // Use the original CalledValue, in case it was an alias. We want
         // to record the call edge to the alias in that case. Eventually
@@ -166,6 +167,17 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   Index.addGlobalValueSummary(V.getName(), std::move(GVarSummary));
 }
 
+static void computeAliasSummary(ModuleSummaryIndex &Index,
+                                const GlobalAlias &A) {
+  GlobalValueSummary::GVFlags Flags(A);
+  std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
+  auto *Aliasee = A.getBaseObject();
+  auto *AliaseeSummary = Index.getGlobalValueSummary(*Aliasee);
+  assert(AliaseeSummary && "Alias expects aliasee summary to be parsed");
+  AS->setAliasee(AliaseeSummary);
+  Index.addGlobalValueSummary(A.getName(), std::move(AS));
+}
+
 ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
@@ -204,6 +216,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
       continue;
     computeVariableSummary(Index, G);
   }
+
+  // Compute summaries for all aliases defined in module, and save in the
+  // index.
+  for (const GlobalAlias &A : M.aliases())
+    computeAliasSummary(Index, A);
+
   return Index;
 }
 

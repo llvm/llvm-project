@@ -2056,8 +2056,8 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
     return C;
 
   if (isa<UndefValue>(C)) {
-    Type *GEPTy = GetElementPtrInst::getGEPReturnType(C,
-        makeArrayRef((Value * const *)Idxs.data(), Idxs.size()));
+    Type *GEPTy = GetElementPtrInst::getGEPReturnType(
+        C, makeArrayRef((Value * const *)Idxs.data(), Idxs.size()));
     return UndefValue::get(GEPTy);
   }
 
