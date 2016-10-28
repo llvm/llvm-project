@@ -55,6 +55,17 @@ struct OutputFunctionCoverageData {
   std::vector<StringRef> Filenames;
   std::vector<CounterMappingRegion> Regions;
 
+  OutputFunctionCoverageData() : Hash(0) {}
+
+  OutputFunctionCoverageData(OutputFunctionCoverageData &&OFCD)
+      : Name(OFCD.Name), Hash(OFCD.Hash), Filenames(std::move(OFCD.Filenames)),
+        Regions(std::move(OFCD.Regions)) {}
+
+  OutputFunctionCoverageData(const OutputFunctionCoverageData &) = delete;
+  OutputFunctionCoverageData &
+  operator=(const OutputFunctionCoverageData &) = delete;
+  OutputFunctionCoverageData &operator=(OutputFunctionCoverageData &&) = delete;
+
   void fillCoverageMappingRecord(CoverageMappingRecord &Record) const {
     Record.FunctionName = Name;
     Record.FunctionHash = Hash;
