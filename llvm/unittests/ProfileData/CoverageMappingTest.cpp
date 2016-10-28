@@ -106,6 +106,16 @@ struct InputFunctionCoverageData {
 
   InputFunctionCoverageData(std::string Name, uint64_t Hash)
       : Name(std::move(Name)), Hash(Hash) {}
+
+  InputFunctionCoverageData(InputFunctionCoverageData &&IFCD)
+      : ReverseVirtualFileMapping(std::move(IFCD.ReverseVirtualFileMapping)),
+        Name(std::move(IFCD.Name)), Hash(IFCD.Hash),
+        Regions(std::move(IFCD.Regions)) {}
+
+  InputFunctionCoverageData(const InputFunctionCoverageData &) = delete;
+  InputFunctionCoverageData &
+  operator=(const InputFunctionCoverageData &) = delete;
+  InputFunctionCoverageData &operator=(InputFunctionCoverageData &&) = delete;
 };
 
 struct CoverageMappingTest : ::testing::Test {
