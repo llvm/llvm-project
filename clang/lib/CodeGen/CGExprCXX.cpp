@@ -217,6 +217,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   llvm::FunctionType *Ty = CGM.getTypes().GetFunctionType(*FInfo);
 
+  // FIXME: Uses of 'MD' past this point need to be audited. We may need to use
+  // 'CalleeDecl' instead.
+
   // C++ [class.virtual]p12:
   //   Explicit qualification with the scope operator (5.1) suppresses the
   //   virtual call mechanism.
@@ -244,8 +247,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           cast<CXXDestructorDecl>(DevirtualizedMethod);
         Callee = CGM.GetAddrOfFunction(GlobalDecl(DDtor, Dtor_Complete), Ty);
       }
-      EmitCXXMemberOrOperatorCall(MD, Callee, ReturnValue, This.getPointer(),
-                                  /*ImplicitParam=*/nullptr, QualType(), CE);
+      EmitCXXMemberOrOperatorCall(
+          CalleeDecl, Callee, ReturnValue, This.getPointer(),
+          /*ImplicitParam=*/nullptr, QualType(), CE);
     }
     return RValue::get(nullptr);
   }
@@ -277,8 +281,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
         *this, CalleeDecl, This, UseVirtualCall);
   }
 
-  return EmitCXXMemberOrOperatorCall(MD, Callee, ReturnValue, This.getPointer(),
-                                     /*ImplicitParam=*/nullptr, QualType(), CE);
+  return EmitCXXMemberOrOperatorCall(
+      CalleeDecl, Callee, ReturnValue, This.getPointer(),
+      /*ImplicitParam=*/nullptr, QualType(), CE);
 }
 
 RValue
