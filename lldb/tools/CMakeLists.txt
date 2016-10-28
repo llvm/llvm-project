@@ -5,7 +5,11 @@ endif()
   add_subdirectory(argdumper)
   add_subdirectory(driver)
 if (NOT __ANDROID_NDK__)
-  add_subdirectory(lldb-mi)
+  # Skip building lldb-mi on Linux until the following bug is resolved upstream:
+  # https://llvm.org/bugs/show_bug.cgi?id=30822
+  if (NOT CMAKE_SYSTEM_NAME MATCHES "Linux")
+    add_subdirectory(lldb-mi)
+  endif()
 endif()
 if (LLDB_CAN_USE_LLDB_SERVER)
   add_subdirectory(lldb-server)
