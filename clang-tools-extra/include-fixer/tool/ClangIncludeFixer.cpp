@@ -351,8 +351,12 @@ int includeFixerMain(int argc, const char **argv) {
                                                    Style, MinimizeIncludePaths);
 
   if (tool.run(&Factory) != 0) {
-    llvm::errs()
-        << "Clang died with a fatal error! (incorrect include paths?)\n";
+    // We suppress all Clang diagnostics (because they would be wrong,
+    // include-fixer does custom recovery) but still want to give some feedback
+    // in case there was a compiler error we couldn't recover from. The most
+    // common case for this is a #include in the file that couldn't be found.
+    llvm::errs() << "Fatal compiler error occurred while parsing file!"
+                    " (incorrect include paths?)\n";
     return 1;
   }
 

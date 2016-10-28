@@ -9668,7 +9668,7 @@ _mm512_mask_abs_pd(__m512d __W, __mmask8 __K, __m512d __A)
 // This takes log2(n) steps where n is the number of elements in the vector.
 
 // Vec512 - Vector with size 512.
-// Operator - Can be one of following: +,*,&&,||
+// Operator - Can be one of following: +,*,&,|
 // T2  - Can get 'i' for int and 'f' for float.
 // T1 - Can get 'i' for int and 'd' for double.
 
@@ -9725,54 +9725,60 @@ static __inline__ double __DEFAULT_FN_ATTRS _mm512_reduce_mul_pd(__m512d __W) {
 }
 
 // Vec512 - Vector with size 512.
-// Operator - Can be one of following: +,*,&&,||
+// Vec512Neutral - All vector elements set to the identity element. 
+// Identity element: {+,0},{*,1},{&,0xFFFFFFFFFFFFFFFF},{|,0}
+// Operator - Can be one of following: +,*,&,|
 // Mask - Intrinsic Mask
-// Neutral - Identity element: {+,0},{*,1},{&&,0xFFFFFFFFFFFFFFFF},{||,0}
 // T2  - Can get 'i' for int and 'f' for float.
 // T1 - Can get 'i' for int and 'd' for packed double-precision.
 // T3 - Can be Pd for packed double or q for q-word.
 
-#define _mm512_mask_reduce_operator_64bit(Vec512, Operator, Mask, Neutral,     \
-                                          T2, T1, T3)                          \
+#define _mm512_mask_reduce_operator_64bit(Vec512, Vec512Neutral, Operator,     \
+                                          Mask, T2, T1, T3)                    \
   __extension__({                                                              \
     Vec512 = __builtin_ia32_select##T3##_512(                                  \
-                 (__mmask8)Mask, (__v8d##T2)Vec512,                            \
-                 (__v8d##T2)_mm512_set1_epi64(Neutral));                       \
+                 (__mmask8)Mask,                                               \
+                 (__v8d##T2)Vec512,                                            \
+                 (__v8d##T2)Vec512Neutral);                                    \
     _mm512_reduce_operator_64bit(Vec512, Operator, T2, T1);                    \
   })
 
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_add_epi64(__mmask8 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_64bit(__W, +, __M, 0, i, i, q);
+  _mm512_mask_reduce_operator_64bit(__W, _mm512_set1_epi64(0), +, __M, i, i, q);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_mul_epi64(__mmask8 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_64bit(__W, *, __M, 1, i, i, q);
+  _mm512_mask_reduce_operator_64bit(__W, _mm512_set1_epi64(1), *, __M, i, i, q);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_and_epi64(__mmask8 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_64bit(__W, &, __M, 0xFFFFFFFFFFFFFFFF, i, i, q);
+  _mm512_mask_reduce_operator_64bit(__W, _mm512_set1_epi64(0xFFFFFFFFFFFFFFFF), 
+                                    &, __M,  i, i, q);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_or_epi64(__mmask8 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_64bit(__W, |, __M, 0, i, i, q);
+  _mm512_mask_reduce_operator_64bit(__W, _mm512_set1_epi64(0), |, __M, 
+                                    i, i, q);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_add_pd(__mmask8 __M, __m512d __W) {
-  _mm512_mask_reduce_operator_64bit(__W, +, __M, 0, f, d, pd);
+  _mm512_mask_reduce_operator_64bit(__W, _mm512_set1_pd(0), +, __M, 
+                                    f, d, pd);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_mul_pd(__mmask8 __M, __m512d __W) {
-  _mm512_mask_reduce_operator_64bit(__W, *, __M, 1, f, d, pd);
+  _mm512_mask_reduce_operator_64bit(__W, _mm512_set1_pd(1), *, __M,
+                                    f, d, pd);
 }
 
 // Vec512 - Vector with size 512.
-// Operator - Can be one of following: +,*,&&,||
+// Operator - Can be one of following: +,*,&,|
 // T2 - Can get 'i' for int and ' ' for packed single.
 // T1 - Can get 'i' for int and 'f' for float.
 
@@ -9849,50 +9855,53 @@ _mm512_reduce_mul_ps(__m512 __W) {
 }
 
 // Vec512 - Vector with size 512.
-// Operator - Can be one of following: +,*,&&,||
+// Vec512Neutral - All vector elements set to the identity element. 
+// Identity element: {+,0},{*,1},{&,0xFFFFFFFF},{|,0}
+// Operator - Can be one of following: +,*,&,|
 // Mask - Intrinsic Mask
-// Neutral - Identity element: {+,0},{*,1},{&&,0xFFFFFFFF},{||,0}
 // T2  - Can get 'i' for int and 'f' for float.
 // T1 - Can get 'i' for int and 'd' for double.
 // T3 - Can be Ps for packed single or d for d-word.
 
-#define _mm512_mask_reduce_operator_32bit(Vec512, Operator, Mask, Neutral,     \
-                                          T2, T1, T3)                          \
+#define _mm512_mask_reduce_operator_32bit(Vec512, Vec512Neutral, Operator,     \
+                                          Mask, T2, T1, T3)                    \
   __extension__({                                                              \
     Vec512 = (__m512##T1)__builtin_ia32_select##T3##_512(                      \
-        (__mmask16)Mask, (__v16s##T2)Vec512,                                   \
-        (__v16s##T2)_mm512_set1_epi32(Neutral));                               \
+                             (__mmask16)Mask,                                  \
+                             (__v16s##T2)Vec512,                               \
+                             (__v16s##T2)Vec512Neutral);                       \
     _mm512_reduce_operator_32bit(Vec512, Operator, T2, T1);                    \
   })
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_add_epi32( __mmask16 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_32bit(__W, +, __M, 0, i, i, d);
+  _mm512_mask_reduce_operator_32bit(__W, _mm512_set1_epi32(0), +, __M, i, i, d);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_mul_epi32( __mmask16 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_32bit(__W, *, __M, 1, i, i, d);
+  _mm512_mask_reduce_operator_32bit(__W, _mm512_set1_epi32(1), *, __M, i, i, d);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_and_epi32( __mmask16 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_32bit(__W, &, __M, 0xFFFFFFFF, i, i, d);
+  _mm512_mask_reduce_operator_32bit(__W, _mm512_set1_epi32(0xFFFFFFFF), &, __M, 
+                                    i, i, d);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_or_epi32(__mmask16 __M, __m512i __W) {
-  _mm512_mask_reduce_operator_32bit(__W, |, __M, 0, i, i, d);
+  _mm512_mask_reduce_operator_32bit(__W, _mm512_set1_epi32(0), |, __M, i, i, d);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_add_ps(__mmask16 __M, __m512 __W) {
-  _mm512_mask_reduce_operator_32bit(__W, +, __M, 0, f, , ps);
+  _mm512_mask_reduce_operator_32bit(__W, _mm512_set1_ps(0), +, __M, f, , ps);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_mul_ps(__mmask16 __M, __m512 __W) {
-  _mm512_mask_reduce_operator_32bit(__W, *, __M, 1, f, , ps);
+  _mm512_mask_reduce_operator_32bit(__W, _mm512_set1_ps(1), *, __M, f, , ps);
 }
 
 #undef __DEFAULT_FN_ATTRS

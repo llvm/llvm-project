@@ -290,6 +290,7 @@ class Configuration(object):
         # XFAIL markers for tests that are known to fail with versions of
         # libc++ as were shipped with a particular triple.
         if self.use_system_cxx_lib:
+            self.config.available_features.add('with_system_cxx_lib')
             self.config.available_features.add(
                 'with_system_cxx_lib=%s' % self.config.target_triple)
 

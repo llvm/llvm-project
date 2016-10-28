@@ -12,6 +12,7 @@
 #include "Error.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
@@ -142,8 +143,8 @@ template <class ELFT> void ELFFileBase<ELFT>::initStringTable() {
 }
 
 template <class ELFT>
-elf::ObjectFile<ELFT>::ObjectFile(BumpPtrAllocator &Alloc, MemoryBufferRef M)
-    : ELFFileBase<ELFT>(Base::ObjectKind, M), Alloc(Alloc) {}
+elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
+    : ELFFileBase<ELFT>(Base::ObjectKind, M) {}
 
 template <class ELFT>
 ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getNonLocalSymbols() {
@@ -482,9 +483,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
     if (Sym->getType() == STT_FILE)
       SourceFile = check(Sym->getName(this->StringTable));
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (this->Alloc)
+      return new (BAlloc)
           Undefined(Sym->st_name, Sym->st_other, Sym->getType(), this);
-    return new (this->Alloc) DefinedRegular<ELFT>(*Sym, Sec);
+    return new (BAlloc) DefinedRegular<ELFT>(*Sym, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
@@ -553,7 +554,7 @@ ArchiveFile::getMember(const Archive::Symbol *Sym) {
 }
 
 template <class ELFT>
-SharedFile<ELFT>::SharedFile(BumpPtrAllocator &Alloc, MemoryBufferRef M)
+SharedFile<ELFT>::SharedFile(MemoryBufferRef M)
     : ELFFileBase<ELFT>(Base::SharedKind, M), AsNeeded(Config->AsNeeded) {}
 
 template <class ELFT>
@@ -745,7 +746,7 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
 template <class ELFT>
 static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
                                    const lto::InputFile::Symbol &ObjSym,
-                                   StringSaver &Saver, BitcodeFile *F) {
+                                   BitcodeFile *F) {
   StringRef NameRef = Saver.save(ObjSym.getName());
   uint32_t Flags = ObjSym.getFlags();
   uint32_t Binding = (Flags & BasicSymbolRef::SF_Weak) ? STB_WEAK : STB_GLOBAL;
@@ -794,12 +795,11 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   }
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
-    Symbols.push_back(
-        createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, Saver, this));
+    Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this));
 }
 
 template <template <class> class T>
-static InputFile *createELFFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB) {
+static InputFile *createELFFile(MemoryBufferRef MB) {
   unsigned char Size;
   unsigned char Endian;
   std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
@@ -808,13 +808,13 @@ static InputFile *createELFFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB) {
 
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF32LE>(Alloc, MB);
+    Obj = new T<ELF32LE>(MB);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF32BE>(Alloc, MB);
+    Obj = new T<ELF32BE>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF64LE>(Alloc, MB);
+    Obj = new T<ELF64LE>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF64BE>(Alloc, MB);
+    Obj = new T<ELF64BE>(MB);
   else
     fatal("invalid file class: " + MB.getBufferIdentifier());
 
@@ -853,18 +853,17 @@ static bool isBitcode(MemoryBufferRef MB) {
   return identify_magic(MB.getBuffer()) == file_magic::bitcode;
 }
 
-InputFile *elf::createObjectFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB,
-                                 StringRef ArchiveName,
+InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
-  InputFile *F = isBitcode(MB) ? new BitcodeFile(MB)
-                               : createELFFile<ObjectFile>(Alloc, MB);
+  InputFile *F =
+      isBitcode(MB) ? new BitcodeFile(MB) : createELFFile<ObjectFile>(MB);
   F->ArchiveName = ArchiveName;
   F->OffsetInArchive = OffsetInArchive;
   return F;
 }
 
-InputFile *elf::createSharedFile(BumpPtrAllocator &Alloc, MemoryBufferRef MB) {
-  return createELFFile<SharedFile>(Alloc, MB);
+InputFile *elf::createSharedFile(MemoryBufferRef MB) {
+  return createELFFile<SharedFile>(MB);
 }
 
 MemoryBufferRef LazyObjectFile::getBuffer() {
