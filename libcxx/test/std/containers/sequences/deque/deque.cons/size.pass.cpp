@@ -98,7 +98,7 @@ int main()
     test<DefaultOnly, std::allocator<DefaultOnly> >(4096);
     test<DefaultOnly, std::allocator<DefaultOnly> >(4097);
 
-    test1<DefaultOnly, limited_allocator<DefaultOnly, 4096> >(4095);
+    LIBCPP_ONLY(test1<DefaultOnly, limited_allocator<DefaultOnly, 4096> >(4095));
 
 #if TEST_STD_VER >= 11
     test<DefaultOnly, min_allocator<DefaultOnly> >(4095);

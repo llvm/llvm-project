@@ -48,7 +48,10 @@ int main()
             assert(c[j] == j);
     }
     {
-        std::vector<int, limited_allocator<int, 15> > c;
+        // libc++ needs 15 because it grows by 2x (1 + 2 + 4 + 8).
+        // Use 17 for implementations that dynamically allocate a container proxy
+        // and grow by 1.5x (1 for proxy + 1 + 2 + 3 + 4 + 6).
+        std::vector<int, limited_allocator<int, 17> > c;
         c.push_back(0);
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));

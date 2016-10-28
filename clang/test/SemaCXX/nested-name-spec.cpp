@@ -435,3 +435,21 @@ namespace PR16951 {
                              // expected-error{{no member named 'X2' in 'PR16951::enumerator_2'}}
 
 }
+
+namespace PR30619 {
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+namespace A {
+class B {
+  typedef C D; // expected-error{{unknown type name 'C'}}
+  A::D::F;
+  // expected-error@-1{{'D' (aka 'int') is not a class, namespace, or enumeration}}
+};
+}
+}

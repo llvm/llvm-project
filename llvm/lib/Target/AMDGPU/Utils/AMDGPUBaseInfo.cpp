@@ -352,8 +352,8 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 
 // Avoid using MCRegisterClass::getSize, since that function will go away
 // (move from MC* level to Target* level). Return size in bits.
-unsigned getRegBitWidth(const MCRegisterClass &RC) {
-  switch (RC.getID()) {
+unsigned getRegBitWidth(unsigned RCID) {
+  switch (RCID) {
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::VGPR_32RegClassID:
   case AMDGPU::VS_32RegClassID:
@@ -380,6 +380,10 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
   default:
     llvm_unreachable("Unexpected register class");
   }
+}
+
+unsigned getRegBitWidth(const MCRegisterClass &RC) {
+  return getRegBitWidth(RC.getID());
 }
 
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
