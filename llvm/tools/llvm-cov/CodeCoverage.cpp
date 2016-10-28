@@ -115,7 +115,7 @@ private:
   int export_(int argc, const char **argv,
               CommandLineParserType commandLineParser);
 
-  std::string ObjectFilename;
+  std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
 
@@ -324,13 +324,15 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
 }
 
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
-  if (modifiedTimeGT(ObjectFilename, PGOFilename))
-    warning("profile data may be out of date - object is newer",
-            ObjectFilename);
+  for (StringRef ObjectFilename : ObjectFilenames)
+    if (modifiedTimeGT(ObjectFilename, PGOFilename))
+      warning("profile data may be out of date - object is newer",
+              ObjectFilename);
   auto CoverageOrErr =
-      CoverageMapping::load(ObjectFilename, PGOFilename, CoverageArch);
+      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArch);
   if (Error E = CoverageOrErr.takeError()) {
-    error("Failed to load coverage: " + toString(std::move(E)), ObjectFilename);
+    error("Failed to load coverage: " + toString(std::move(E)),
+          join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "));
     return nullptr;
   }
   auto Coverage = std::move(CoverageOrErr.get());
@@ -483,9 +485,12 @@ void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
 }
 
 int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
-  cl::opt<std::string, true> ObjectFilename(
-      cl::Positional, cl::Required, cl::location(this->ObjectFilename),
-      cl::desc("Covered executable or object file."));
+  cl::opt<std::string> CovFilename(
+      cl::Positional, cl::desc("Covered executable or object file."));
+
+  cl::list<std::string> CovFilenames(
+      "object", cl::desc("Coverage executable or object file"), cl::ZeroOrMore,
+      cl::CommaSeparated);
 
   cl::list<std::string> InputSourceFiles(
       cl::Positional, cl::desc("<Source files>"), cl::ZeroOrMore);
@@ -567,6 +572,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
     CompareFilenamesOnly = FilenameEquivalence;
+
+    if (!CovFilename.empty())
+      ObjectFilenames.emplace_back(CovFilename);
+    for (const std::string &Filename : CovFilenames)
+      ObjectFilenames.emplace_back(Filename);
+    if (ObjectFilenames.empty()) {
+      error("No filenames specified!");
+      ::exit(1);
+    }
 
     ViewOpts.Format = Format;
     switch (ViewOpts.Format) {
