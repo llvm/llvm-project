@@ -146,6 +146,8 @@ llvm::StringRef Action::GetOffloadKindName(OffloadKind Kind) {
 
     // TODO: Add other programming models here.
   }
+
+  llvm_unreachable("invalid offload kind");
 }
 
 void InputAction::anchor() {}

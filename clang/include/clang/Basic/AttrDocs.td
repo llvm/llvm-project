@@ -2667,3 +2667,11 @@ transparent union should have the same calling convention as its first member.
 Transparent unions are not supported in C++.
   }];
 }
+
+def ObjCSubclassingRestrictedDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+This attribute can be added to an Objective-C ``@interface`` declaration to
+ensure that this class cannot be subclassed.
+  }];
+}

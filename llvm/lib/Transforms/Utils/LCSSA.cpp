@@ -51,6 +51,15 @@ using namespace llvm;
 
 STATISTIC(NumLCSSA, "Number of live out of a loop variables");
 
+#ifdef EXPENSIVE_CHECKS
+static bool VerifyLoopLCSSA = true;
+#else
+static bool VerifyLoopLCSSA = false;
+#endif
+static cl::opt<bool,true>
+VerifyLoopLCSSAFlag("verify-loop-lcssa", cl::location(VerifyLoopLCSSA),
+                    cl::desc("Verify loop lcssa form (time consuming)"));
+
 /// Return true if the specified block is in the list.
 static bool isExitBlock(BasicBlock *BB,
                         const SmallVectorImpl<BasicBlock *> &ExitBlocks) {
@@ -322,10 +331,17 @@ struct LCSSAWrapperPass : public FunctionPass {
 
   bool runOnFunction(Function &F) override;
   void verifyAnalysis() const override {
-    assert(
-        all_of(*LI,
-               [&](Loop *L) { return L->isRecursivelyLCSSAForm(*DT, *LI); }) &&
-        "LCSSA form is broken!");
+    // This check is very expensive. On the loop intensive compiles it may cause
+    // up to 10x slowdown. Currently it's disabled by default. LPPassManager
+    // always does limited form of the LCSSA verification. Similar reasoning
+    // was used for the LoopInfo verifier.
+    if (VerifyLoopLCSSA) {
+      assert(all_of(*LI,
+                    [&](Loop *L) {
+                      return L->isRecursivelyLCSSAForm(*DT, *LI);
+                    }) &&
+             "LCSSA form is broken!");
+    }
   };
 
   /// This transformation requires natural loop information & requires that
@@ -342,6 +358,10 @@ struct LCSSAWrapperPass : public FunctionPass {
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<ScalarEvolutionWrapperPass>();
     AU.addPreserved<SCEVAAWrapperPass>();
+
+    // This is needed to perform LCSSA verification inside LPPassManager
+    AU.addRequired<LCSSAVerificationPass>();
+    AU.addPreserved<LCSSAVerificationPass>();
   }
 };
 }
@@ -351,6 +371,7 @@ INITIALIZE_PASS_BEGIN(LCSSAWrapperPass, "lcssa", "Loop-Closed SSA Form Pass",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LCSSAVerificationPass)
 INITIALIZE_PASS_END(LCSSAWrapperPass, "lcssa", "Loop-Closed SSA Form Pass",
                     false, false)
 

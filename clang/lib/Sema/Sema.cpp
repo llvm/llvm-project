@@ -865,8 +865,11 @@ void Sema::ActOnEndOfTranslationUnit() {
           Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
                 << /*variable*/1 << DiagD->getDeclName();
         } else if (DiagD->getType().isConstQualified()) {
-          Diag(DiagD->getLocation(), diag::warn_unused_const_variable)
-              << DiagD->getDeclName();
+          const SourceManager &SM = SourceMgr;
+          if (SM.getMainFileID() != SM.getFileID(DiagD->getLocation()) ||
+              !PP.getLangOpts().IsHeaderFile)
+            Diag(DiagD->getLocation(), diag::warn_unused_const_variable)
+                << DiagD->getDeclName();
         } else {
           Diag(DiagD->getLocation(), diag::warn_unused_variable)
               << DiagD->getDeclName();

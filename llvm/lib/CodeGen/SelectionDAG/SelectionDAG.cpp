@@ -2467,8 +2467,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   case ISD::UMAX: {
     APInt Op0Zero, Op0One;
     APInt Op1Zero, Op1One;
-    computeKnownBits(Op.getOperand(0), Op0Zero, Op0One, Depth);
-    computeKnownBits(Op.getOperand(1), Op1Zero, Op1One, Depth);
+    computeKnownBits(Op.getOperand(0), Op0Zero, Op0One, Depth+1);
+    computeKnownBits(Op.getOperand(1), Op1Zero, Op1One, Depth+1);
 
     KnownZero = Op0Zero & Op1Zero;
     KnownOne = Op0One & Op1One;
