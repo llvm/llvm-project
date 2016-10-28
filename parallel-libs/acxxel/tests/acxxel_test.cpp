@@ -18,7 +18,9 @@
 
 namespace {
 
-template <typename T, size_t N> constexpr size_t size(T (&)[N]) { return N; }
+template <typename T, size_t N> constexpr size_t arraySize(T (&)[N]) {
+  return N;
+}
 
 using PlatformGetter = acxxel::Expected<acxxel::Platform *> (*)();
 class AcxxelTest : public ::testing::TestWithParam<PlatformGetter> {};
@@ -167,11 +169,12 @@ TEST_P(AcxxelTest, CopyHostAndDevice) {
   acxxel::Platform *Platform = GetParam()().takeValue();
   acxxel::Stream Stream = Platform->createStream().takeValue();
   int A[] = {0, 1, 2};
-  std::array<int, size(A)> B;
-  acxxel::DeviceMemory<int> X = Platform->mallocD<int>(size(A)).takeValue();
+  std::array<int, arraySize(A)> B;
+  acxxel::DeviceMemory<int> X =
+      Platform->mallocD<int>(arraySize(A)).takeValue();
   Stream.syncCopyHToD(A, X);
   Stream.syncCopyDToH(X, B);
-  for (size_t I = 0; I < size(A); ++I)
+  for (size_t I = 0; I < arraySize(A); ++I)
     EXPECT_EQ(A[I], B[I]);
   EXPECT_FALSE(Stream.takeStatus().isError());
 }
@@ -180,13 +183,15 @@ TEST_P(AcxxelTest, CopyDToD) {
   acxxel::Platform *Platform = GetParam()().takeValue();
   acxxel::Stream Stream = Platform->createStream().takeValue();
   int A[] = {0, 1, 2};
-  std::array<int, size(A)> B;
-  acxxel::DeviceMemory<int> X = Platform->mallocD<int>(size(A)).takeValue();
-  acxxel::DeviceMemory<int> Y = Platform->mallocD<int>(size(A)).takeValue();
+  std::array<int, arraySize(A)> B;
+  acxxel::DeviceMemory<int> X =
+      Platform->mallocD<int>(arraySize(A)).takeValue();
+  acxxel::DeviceMemory<int> Y =
+      Platform->mallocD<int>(arraySize(A)).takeValue();
   Stream.syncCopyHToD(A, X);
   Stream.syncCopyDToD(X, Y);
   Stream.syncCopyDToH(Y, B);
-  for (size_t I = 0; I < size(A); ++I)
+  for (size_t I = 0; I < arraySize(A); ++I)
     EXPECT_EQ(A[I], B[I]);
   EXPECT_FALSE(Stream.takeStatus().isError());
 }
@@ -194,8 +199,9 @@ TEST_P(AcxxelTest, CopyDToD) {
 TEST_P(AcxxelTest, AsyncCopyHostAndDevice) {
   acxxel::Platform *Platform = GetParam()().takeValue();
   int A[] = {0, 1, 2};
-  std::array<int, size(A)> B;
-  acxxel::DeviceMemory<int> X = Platform->mallocD<int>(size(A)).takeValue();
+  std::array<int, arraySize(A)> B;
+  acxxel::DeviceMemory<int> X =
+      Platform->mallocD<int>(arraySize(A)).takeValue();
   acxxel::Stream Stream = Platform->createStream().takeValue();
   acxxel::AsyncHostMemory<int> AsyncA =
       Platform->registerHostMem(A).takeValue();
@@ -204,7 +210,7 @@ TEST_P(AcxxelTest, AsyncCopyHostAndDevice) {
   EXPECT_FALSE(Stream.asyncCopyHToD(AsyncA, X).takeStatus().isError());
   EXPECT_FALSE(Stream.asyncCopyDToH(X, AsyncB).takeStatus().isError());
   EXPECT_FALSE(Stream.sync().isError());
-  for (size_t I = 0; I < size(A); ++I)
+  for (size_t I = 0; I < arraySize(A); ++I)
     EXPECT_EQ(A[I], B[I]);
 }
 
@@ -280,9 +286,11 @@ TEST_P(AcxxelTest, OwnedAsyncCopyHostAndDevice) {
 TEST_P(AcxxelTest, AsyncCopyDToD) {
   acxxel::Platform *Platform = GetParam()().takeValue();
   int A[] = {0, 1, 2};
-  std::array<int, size(A)> B;
-  acxxel::DeviceMemory<int> X = Platform->mallocD<int>(size(A)).takeValue();
-  acxxel::DeviceMemory<int> Y = Platform->mallocD<int>(size(A)).takeValue();
+  std::array<int, arraySize(A)> B;
+  acxxel::DeviceMemory<int> X =
+      Platform->mallocD<int>(arraySize(A)).takeValue();
+  acxxel::DeviceMemory<int> Y =
+      Platform->mallocD<int>(arraySize(A)).takeValue();
   acxxel::Stream Stream = Platform->createStream().takeValue();
   acxxel::AsyncHostMemory<int> AsyncA =
       Platform->registerHostMem(A).takeValue();
@@ -292,7 +300,7 @@ TEST_P(AcxxelTest, AsyncCopyDToD) {
   EXPECT_FALSE(Stream.asyncCopyDToD(X, Y).takeStatus().isError());
   EXPECT_FALSE(Stream.asyncCopyDToH(Y, AsyncB).takeStatus().isError());
   EXPECT_FALSE(Stream.sync().isError());
-  for (size_t I = 0; I < size(A); ++I)
+  for (size_t I = 0; I < arraySize(A); ++I)
     EXPECT_EQ(A[I], B[I]);
 }
 

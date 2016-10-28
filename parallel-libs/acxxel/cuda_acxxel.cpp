@@ -25,9 +25,6 @@ namespace acxxel {
 
 namespace {
 
-/// Index of active device for this thread.
-thread_local int ActiveDeviceIndex = 0;
-
 static std::string getCUErrorMessage(CUresult Result) {
   if (!Result)
     return "success";
@@ -85,39 +82,25 @@ public:
 
   Expected<int> getDeviceCount() override;
 
-  Status setActiveDeviceForThread(int DeviceIndex) override;
-
-  int getActiveDeviceForThread() override;
-
-  Expected<Stream> createStream() override;
+  Expected<Stream> createStream(int DeviceIndex) override;
 
   Status streamSync(void *Stream) override;
 
   Status streamWaitOnEvent(void *Stream, void *Event) override;
 
-  Expected<Event> createEvent() override;
+  Expected<Event> createEvent(int DeviceIndex) override;
 
 protected:
-  Expected<void *> rawMallocD(ptrdiff_t ByteCount) override;
+  Expected<void *> rawMallocD(ptrdiff_t ByteCount, int DeviceIndex) override;
   HandleDestructor getDeviceMemoryHandleDestructor() override;
   void *getDeviceMemorySpanHandle(void *BaseHandle, size_t ByteSize,
                                   size_t ByteOffset) override;
   virtual void rawDestroyDeviceMemorySpanHandle(void *Handle) override;
 
-  Expected<void *> rawGetDeviceSymbolAddress(const void *Symbol) override;
-  Expected<ptrdiff_t> rawGetDeviceSymbolSize(const void *Symbol) override;
-
-  Status rawCopyDToD(const void *DeviceSrc, ptrdiff_t DeviceSrcByteOffset,
-                     void *DeviceDst, ptrdiff_t DeviceDstByteOffset,
-                     ptrdiff_t ByteCount) override;
-  Status rawCopyDToH(const void *DeviceSrc, ptrdiff_t DeviceSrcByteOffset,
-                     void *HostDst, ptrdiff_t ByteCount) override;
-  Status rawCopyHToD(const void *HostSrc, void *DeviceDst,
-                     ptrdiff_t DeviceDstByteOffset,
-                     ptrdiff_t ByteCount) override;
-
-  Status rawMemsetD(void *DeviceDst, ptrdiff_t ByteOffset, ptrdiff_t ByteCount,
-                    char ByteValue) override;
+  Expected<void *> rawGetDeviceSymbolAddress(const void *Symbol,
+                                             int DeviceIndex) override;
+  Expected<ptrdiff_t> rawGetDeviceSymbolSize(const void *Symbol,
+                                             int DeviceIndex) override;
 
   Status rawRegisterHostMem(const void *Memory, ptrdiff_t ByteCount) override;
   HandleDestructor getUnregisterHostMemoryHandleDestructor() override;
@@ -141,7 +124,8 @@ protected:
 
   Status addStreamCallback(Stream &Stream, StreamCallback Callback) override;
 
-  Expected<Program> createProgramFromSource(Span<const char> Source) override;
+  Expected<Program> createProgramFromSource(Span<const char> Source,
+                                            int DeviceIndex) override;
 
   Status enqueueEvent(void *Event, void *Stream) override;
   bool eventIsDone(void *Event) override;
@@ -162,6 +146,14 @@ protected:
 private:
   explicit CUDAPlatform(const std::vector<CUcontext> &Contexts)
       : TheContexts(Contexts) {}
+
+  Status setContext(int DeviceIndex) {
+    if (DeviceIndex < 0 ||
+        static_cast<size_t>(DeviceIndex) >= TheContexts.size())
+      return Status("invalid deivce index " + std::to_string(DeviceIndex));
+    return getCUError(cuCtxSetCurrent(TheContexts[DeviceIndex]),
+                      "cuCtxSetCurrent");
+  }
 
   // Vector of contexts for each device.
   std::vector<CUcontext> TheContexts;
@@ -191,17 +183,6 @@ Expected<CUDAPlatform> CUDAPlatform::create() {
   return CUDAPlatform(Contexts);
 }
 
-Status CUDAPlatform::setActiveDeviceForThread(int DeviceIndex) {
-  if (static_cast<size_t>(DeviceIndex) >= TheContexts.size())
-    return Status("invalid device index for SetActiveDevice: " +
-                  std::to_string(DeviceIndex));
-  ActiveDeviceIndex = DeviceIndex;
-  return getCUError(cuCtxSetCurrent(TheContexts[DeviceIndex]),
-                    "setActiveDeviceForThread cuCtxSetCurrent");
-}
-
-int CUDAPlatform::getActiveDeviceForThread() { return ActiveDeviceIndex; }
-
 Expected<int> CUDAPlatform::getDeviceCount() {
   int Count = 0;
   if (CUresult Result = cuDeviceGetCount(&Count))
@@ -214,12 +195,15 @@ static void cudaDestroyStream(void *H) {
                "cuStreamDestroy");
 }
 
-Expected<Stream> CUDAPlatform::createStream() {
+Expected<Stream> CUDAPlatform::createStream(int DeviceIndex) {
+  Status S = setContext(DeviceIndex);
+  if (S.isError())
+    return S;
   unsigned int Flags = CU_STREAM_DEFAULT;
   CUstream Handle;
   if (CUresult Result = cuStreamCreate(&Handle, Flags))
     return getCUError(Result, "cuStreamCreate");
-  return constructStream(this, Handle, cudaDestroyStream);
+  return constructStream(this, DeviceIndex, Handle, cudaDestroyStream);
 }
 
 Status CUDAPlatform::streamSync(void *Stream) {
@@ -239,12 +223,15 @@ static void cudaDestroyEvent(void *H) {
   logCUWarning(cuEventDestroy(static_cast<CUevent_st *>(H)), "cuEventDestroy");
 }
 
-Expected<Event> CUDAPlatform::createEvent() {
+Expected<Event> CUDAPlatform::createEvent(int DeviceIndex) {
+  Status S = setContext(DeviceIndex);
+  if (S.isError())
+    return S;
   unsigned int Flags = CU_EVENT_DEFAULT;
   CUevent Handle;
   if (CUresult Result = cuEventCreate(&Handle, Flags))
     return getCUError(Result, "cuEventCreate");
-  return constructEvent(this, Handle, cudaDestroyEvent);
+  return constructEvent(this, DeviceIndex, Handle, cudaDestroyEvent);
 }
 
 Status CUDAPlatform::enqueueEvent(void *Event, void *Stream) {
@@ -272,7 +259,11 @@ Expected<float> CUDAPlatform::getSecondsBetweenEvents(void *StartEvent,
   return Milliseconds * 1e-6;
 }
 
-Expected<void *> CUDAPlatform::rawMallocD(ptrdiff_t ByteCount) {
+Expected<void *> CUDAPlatform::rawMallocD(ptrdiff_t ByteCount,
+                                          int DeviceIndex) {
+  Status S = setContext(DeviceIndex);
+  if (S.isError())
+    return S;
   if (!ByteCount)
     return nullptr;
   CUdeviceptr Pointer;
@@ -298,14 +289,22 @@ void CUDAPlatform::rawDestroyDeviceMemorySpanHandle(void *) {
   // Do nothing for this platform.
 }
 
-Expected<void *> CUDAPlatform::rawGetDeviceSymbolAddress(const void *Symbol) {
+Expected<void *> CUDAPlatform::rawGetDeviceSymbolAddress(const void *Symbol,
+                                                         int DeviceIndex) {
+  Status S = setContext(DeviceIndex);
+  if (S.isError())
+    return S;
   void *Address;
   if (cudaError_t Status = cudaGetSymbolAddress(&Address, Symbol))
     return getCUDAError(Status, "cudaGetSymbolAddress");
   return Address;
 }
 
-Expected<ptrdiff_t> CUDAPlatform::rawGetDeviceSymbolSize(const void *Symbol) {
+Expected<ptrdiff_t> CUDAPlatform::rawGetDeviceSymbolSize(const void *Symbol,
+                                                         int DeviceIndex) {
+  Status S = setContext(DeviceIndex);
+  if (S.isError())
+    return S;
   size_t Size;
   if (cudaError_t Status = cudaGetSymbolSize(&Size, Symbol))
     return getCUDAError(Status, "cudaGetSymbolSize");
@@ -318,45 +317,6 @@ static const void *offsetVoidPtr(const void *Ptr, ptrdiff_t ByteOffset) {
 
 static void *offsetVoidPtr(void *Ptr, ptrdiff_t ByteOffset) {
   return static_cast<void *>(static_cast<char *>(Ptr) + ByteOffset);
-}
-
-Status CUDAPlatform::rawCopyDToD(const void *DeviceSrc,
-                                 ptrdiff_t DeviceSrcByteOffset, void *DeviceDst,
-                                 ptrdiff_t DeviceDstByteOffset,
-                                 ptrdiff_t ByteCount) {
-  return getCUError(cuMemcpyDtoD(reinterpret_cast<CUdeviceptr>(offsetVoidPtr(
-                                     DeviceDst, DeviceDstByteOffset)),
-                                 reinterpret_cast<CUdeviceptr>(offsetVoidPtr(
-                                     DeviceSrc, DeviceSrcByteOffset)),
-                                 ByteCount),
-                    "cuMemcpyDtoD");
-}
-
-Status CUDAPlatform::rawCopyDToH(const void *DeviceSrc,
-                                 ptrdiff_t DeviceSrcByteOffset, void *HostDst,
-                                 ptrdiff_t ByteCount) {
-  return getCUError(
-      cuMemcpyDtoH(HostDst, reinterpret_cast<CUdeviceptr>(
-                                offsetVoidPtr(DeviceSrc, DeviceSrcByteOffset)),
-                   ByteCount),
-      "cuMemcpyDtoH");
-}
-
-Status CUDAPlatform::rawCopyHToD(const void *HostSrc, void *DeviceDst,
-                                 ptrdiff_t DeviceDstByteOffset,
-                                 ptrdiff_t ByteCount) {
-  return getCUError(cuMemcpyHtoD(reinterpret_cast<CUdeviceptr>(offsetVoidPtr(
-                                     DeviceDst, DeviceDstByteOffset)),
-                                 HostSrc, ByteCount),
-                    "cuMemcpyHtoD");
-}
-
-Status CUDAPlatform::rawMemsetD(void *DeviceDst, ptrdiff_t ByteOffset,
-                                ptrdiff_t ByteCount, char ByteValue) {
-  return getCUError(cuMemsetD8(reinterpret_cast<CUdeviceptr>(
-                                   offsetVoidPtr(DeviceDst, ByteOffset)),
-                               ByteValue, ByteCount),
-                    "cuMemsetD8");
 }
 
 Status CUDAPlatform::rawRegisterHostMem(const void *Memory,
@@ -468,8 +428,11 @@ static void cudaDestroyProgram(void *H) {
   logCUWarning(cuModuleUnload(static_cast<CUmod_st *>(H)), "cuModuleUnload");
 }
 
-Expected<Program>
-CUDAPlatform::createProgramFromSource(Span<const char> Source) {
+Expected<Program> CUDAPlatform::createProgramFromSource(Span<const char> Source,
+                                                        int DeviceIndex) {
+  Status S = setContext(DeviceIndex);
+  if (S.isError())
+    return S;
   CUmodule Module;
   constexpr int LogBufferSizeBytes = 1024;
   char InfoLogBuffer[LogBufferSizeBytes];

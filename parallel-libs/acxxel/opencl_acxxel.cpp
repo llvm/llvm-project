@@ -33,8 +33,6 @@ struct FullDeviceID {
       : PlatformID(PlatformID), DeviceID(DeviceID) {}
 };
 
-thread_local int ActiveDeviceIndex = 0;
-
 static std::string getOpenCLErrorMessage(cl_int Result) {
   if (!Result)
     return "success";
@@ -67,41 +65,28 @@ public:
 
   Expected<int> getDeviceCount() override;
 
-  Status setActiveDeviceForThread(int DeviceIndex) override;
+  Expected<Stream> createStream(int DeviceIndex) override;
 
-  int getActiveDeviceForThread() override;
+  Expected<Event> createEvent(int DeviceIndex) override;
 
-  Expected<Stream> createStream() override;
-
-  Expected<Event> createEvent() override;
-
-  Expected<Program> createProgramFromSource(Span<const char> Source) override;
+  Expected<Program> createProgramFromSource(Span<const char> Source,
+                                            int DeviceIndex) override;
 
 protected:
   Status streamSync(void *Stream) override;
 
   Status streamWaitOnEvent(void *Stream, void *Event) override;
 
-  Expected<void *> rawMallocD(ptrdiff_t ByteCount) override;
+  Expected<void *> rawMallocD(ptrdiff_t ByteCount, int DeviceIndex) override;
   HandleDestructor getDeviceMemoryHandleDestructor() override;
   void *getDeviceMemorySpanHandle(void *BaseHandle, size_t ByteSize,
                                   size_t ByteOffset) override;
   void rawDestroyDeviceMemorySpanHandle(void *Handle) override;
 
-  Expected<void *> rawGetDeviceSymbolAddress(const void *Symbol) override;
-  Expected<ptrdiff_t> rawGetDeviceSymbolSize(const void *Symbol) override;
-
-  Status rawCopyDToD(const void *DeviceSrc, ptrdiff_t DeviceSrcByteOffset,
-                     void *DeviceDst, ptrdiff_t DeviceDstByteOffset,
-                     ptrdiff_t ByteCount) override;
-  Status rawCopyDToH(const void *DeviceSrc, ptrdiff_t DeviceSrcByteOffset,
-                     void *HostDst, ptrdiff_t ByteCount) override;
-  Status rawCopyHToD(const void *HostSrc, void *DeviceDst,
-                     ptrdiff_t DeviceDstByteOffset,
-                     ptrdiff_t ByteCount) override;
-
-  Status rawMemsetD(void *DeviceDst, ptrdiff_t ByteOffset, ptrdiff_t ByteCount,
-                    char ByteValue) override;
+  Expected<void *> rawGetDeviceSymbolAddress(const void *Symbol,
+                                             int DeviceIndex) override;
+  Expected<ptrdiff_t> rawGetDeviceSymbolSize(const void *Symbol,
+                                             int DeviceIndex) override;
 
   Status rawRegisterHostMem(const void *Memory, ptrdiff_t ByteCount) override;
   HandleDestructor getUnregisterHostMemoryHandleDestructor() override;
@@ -200,31 +185,19 @@ Expected<OpenCLPlatform> OpenCLPlatform::create() {
 
 Expected<int> OpenCLPlatform::getDeviceCount() { return FullDeviceIDs.size(); }
 
-Status OpenCLPlatform::setActiveDeviceForThread(int DeviceIndex) {
-  if (static_cast<size_t>(DeviceIndex) >= FullDeviceIDs.size())
-    return Status("Could not set active device index to " +
-                  std::to_string(DeviceIndex) + " because there are only " +
-                  std::to_string(FullDeviceIDs.size()) +
-                  " devices in the system");
-  ActiveDeviceIndex = DeviceIndex;
-  return Status();
-}
-
-int OpenCLPlatform::getActiveDeviceForThread() { return ActiveDeviceIndex; }
-
 static void openCLDestroyStream(void *H) {
   logOpenCLWarning(clReleaseCommandQueue(static_cast<cl_command_queue>(H)),
                    "clReleaseCommandQueue");
 }
 
-Expected<Stream> OpenCLPlatform::createStream() {
+Expected<Stream> OpenCLPlatform::createStream(int DeviceIndex) {
   cl_int Result;
   cl_command_queue Queue = clCreateCommandQueue(
-      Contexts[ActiveDeviceIndex], FullDeviceIDs[ActiveDeviceIndex].DeviceID,
+      Contexts[DeviceIndex], FullDeviceIDs[DeviceIndex].DeviceID,
       CL_QUEUE_PROFILING_ENABLE, &Result);
   if (Result)
     return getOpenCLError(Result, "clCreateCommandQueue");
-  return constructStream(this, Queue, openCLDestroyStream);
+  return constructStream(this, DeviceIndex, Queue, openCLDestroyStream);
 }
 
 static void openCLEventDestroy(void *H) {
@@ -246,14 +219,15 @@ Status OpenCLPlatform::streamWaitOnEvent(void *Stream, void *Event) {
       "clEnqueueMarkerWithWaitList");
 }
 
-Expected<Event> OpenCLPlatform::createEvent() {
+Expected<Event> OpenCLPlatform::createEvent(int DeviceIndex) {
   cl_int Result;
-  cl_event Event = clCreateUserEvent(Contexts[ActiveDeviceIndex], &Result);
+  cl_event Event = clCreateUserEvent(Contexts[DeviceIndex], &Result);
   if (Result)
     return getOpenCLError(Result, "clCreateUserEvent");
   if (cl_int Result = clSetUserEventStatus(Event, CL_COMPLETE))
     return getOpenCLError(Result, "clSetUserEventStatus");
-  return constructEvent(this, new cl_event(Event), openCLEventDestroy);
+  return constructEvent(this, DeviceIndex, new cl_event(Event),
+                        openCLEventDestroy);
 }
 
 static void openCLDestroyProgram(void *H) {
@@ -262,24 +236,26 @@ static void openCLDestroyProgram(void *H) {
 }
 
 Expected<Program>
-OpenCLPlatform::createProgramFromSource(Span<const char> Source) {
+OpenCLPlatform::createProgramFromSource(Span<const char> Source,
+                                        int DeviceIndex) {
   cl_int Error;
   const char *CSource = Source.data();
   size_t SourceSize = Source.size();
-  cl_program Program = clCreateProgramWithSource(Contexts[ActiveDeviceIndex], 1,
+  cl_program Program = clCreateProgramWithSource(Contexts[DeviceIndex], 1,
                                                  &CSource, &SourceSize, &Error);
   if (Error)
     return getOpenCLError(Error, "clCreateProgramWithSource");
-  cl_device_id DeviceID = FullDeviceIDs[ActiveDeviceIndex].DeviceID;
+  cl_device_id DeviceID = FullDeviceIDs[DeviceIndex].DeviceID;
   if (cl_int Error =
           clBuildProgram(Program, 1, &DeviceID, nullptr, nullptr, nullptr))
     return getOpenCLError(Error, "clBuildProgram");
   return constructProgram(this, Program, openCLDestroyProgram);
 }
 
-Expected<void *> OpenCLPlatform::rawMallocD(ptrdiff_t ByteCount) {
+Expected<void *> OpenCLPlatform::rawMallocD(ptrdiff_t ByteCount,
+                                            int DeviceIndex) {
   cl_int Result;
-  cl_mem Memory = clCreateBuffer(Contexts[ActiveDeviceIndex], CL_MEM_READ_WRITE,
+  cl_mem Memory = clCreateBuffer(Contexts[DeviceIndex], CL_MEM_READ_WRITE,
                                  ByteCount, nullptr, &Result);
   if (Result)
     return getOpenCLError(Result, "clCreateBuffer");
@@ -316,64 +292,17 @@ void OpenCLPlatform::rawDestroyDeviceMemorySpanHandle(void *Handle) {
 }
 
 Expected<void *>
-OpenCLPlatform::rawGetDeviceSymbolAddress(const void * /*Symbol*/) {
+OpenCLPlatform::rawGetDeviceSymbolAddress(const void * /*Symbol*/,
+                                          int /*DeviceIndex*/) {
   // This doesn't seem to have any equivalent in OpenCL.
   return Status("not implemented");
 }
 
 Expected<ptrdiff_t>
-OpenCLPlatform::rawGetDeviceSymbolSize(const void * /*Symbol*/) {
+OpenCLPlatform::rawGetDeviceSymbolSize(const void * /*Symbol*/,
+                                       int /*DeviceIndex*/) {
   // This doesn't seem to have any equivalent in OpenCL.
   return Status("not implemented");
-}
-
-Status OpenCLPlatform::rawCopyDToD(const void *DeviceSrc,
-                                   ptrdiff_t DeviceSrcByteOffset,
-                                   void *DeviceDst,
-                                   ptrdiff_t DeviceDstByteOffset,
-                                   ptrdiff_t ByteCount) {
-  cl_event DoneEvent;
-  if (cl_int Result = clEnqueueCopyBuffer(
-          CommandQueues[ActiveDeviceIndex],
-          static_cast<cl_mem>(const_cast<void *>(DeviceSrc)),
-          static_cast<cl_mem>(DeviceDst), DeviceSrcByteOffset,
-          DeviceDstByteOffset, ByteCount, 0, nullptr, &DoneEvent))
-    return getOpenCLError(Result, "clEnqueueCopyBuffer");
-  return getOpenCLError(clWaitForEvents(1, &DoneEvent), "clWaitForEvents");
-}
-
-Status OpenCLPlatform::rawCopyDToH(const void *DeviceSrc,
-                                   ptrdiff_t DeviceSrcByteOffset, void *HostDst,
-                                   ptrdiff_t ByteCount) {
-  cl_event DoneEvent;
-  if (cl_int Result = clEnqueueReadBuffer(
-          CommandQueues[ActiveDeviceIndex],
-          static_cast<cl_mem>(const_cast<void *>(DeviceSrc)), CL_TRUE,
-          DeviceSrcByteOffset, ByteCount, HostDst, 0, nullptr, &DoneEvent))
-    return getOpenCLError(Result, "clEnqueueReadBuffer");
-  return getOpenCLError(clWaitForEvents(1, &DoneEvent), "clWaitForEvents");
-}
-
-Status OpenCLPlatform::rawCopyHToD(const void *HostSrc, void *DeviceDst,
-                                   ptrdiff_t DeviceDstByteOffset,
-                                   ptrdiff_t ByteCount) {
-  cl_event DoneEvent;
-  if (cl_int Result = clEnqueueWriteBuffer(
-          CommandQueues[ActiveDeviceIndex], static_cast<cl_mem>(DeviceDst),
-          CL_TRUE, DeviceDstByteOffset, ByteCount, HostSrc, 0, nullptr,
-          &DoneEvent))
-    return getOpenCLError(Result, "clEnqueueWriteBuffer");
-  return getOpenCLError(clWaitForEvents(1, &DoneEvent), "clWaitForEvents");
-}
-
-Status OpenCLPlatform::rawMemsetD(void *DeviceDst, ptrdiff_t ByteOffset,
-                                  ptrdiff_t ByteCount, char ByteValue) {
-  cl_event DoneEvent;
-  if (cl_int Result = clEnqueueFillBuffer(
-          CommandQueues[ActiveDeviceIndex], static_cast<cl_mem>(DeviceDst),
-          &ByteValue, 1, ByteOffset, ByteCount, 0, nullptr, &DoneEvent))
-    return getOpenCLError(Result, "clEnqueueFillBuffer");
-  return getOpenCLError(clWaitForEvents(1, &DoneEvent), "clWaitForEvents");
 }
 
 static void noOpHandleDestructor(void *) {}
@@ -478,10 +407,12 @@ void CL_CALLBACK openCLStreamCallbackShim(cl_event,
 Status OpenCLPlatform::addStreamCallback(Stream &TheStream,
                                          StreamCallback Callback) {
   cl_int Result;
-  cl_event StartEvent = clCreateUserEvent(Contexts[ActiveDeviceIndex], &Result);
+  cl_event StartEvent =
+      clCreateUserEvent(Contexts[TheStream.getDeviceIndex()], &Result);
   if (Result)
     return getOpenCLError(Result, "clCreateUserEvent");
-  cl_event EndEvent = clCreateUserEvent(Contexts[ActiveDeviceIndex], &Result);
+  cl_event EndEvent =
+      clCreateUserEvent(Contexts[TheStream.getDeviceIndex()], &Result);
   if (Result)
     return getOpenCLError(Result, "clCreateUserEvent");
   cl_event StartBarrierEvent;

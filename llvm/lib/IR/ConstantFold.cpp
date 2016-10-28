@@ -2056,12 +2056,8 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
     return C;
 
   if (isa<UndefValue>(C)) {
-    PointerType *PtrTy = cast<PointerType>(C->getType()->getScalarType());
-    Type *Ty = GetElementPtrInst::getIndexedType(PointeeTy, Idxs);
-    assert(Ty && "Invalid indices for GEP!");
-    Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
-    if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
-      GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+    Type *GEPTy = GetElementPtrInst::getGEPReturnType(
+        C, makeArrayRef((Value * const *)Idxs.data(), Idxs.size()));
     return UndefValue::get(GEPTy);
   }
 
