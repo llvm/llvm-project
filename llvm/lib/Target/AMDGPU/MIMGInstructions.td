@@ -33,7 +33,7 @@ class MIMG_NoSampler_Helper <bits<7> op, string asm,
                              string dns=""> : MIMG_Helper <
   (outs dst_rc:$vdata),
   (ins addr_rc:$vaddr, SReg_256:$srsrc,
-       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da",
   dns>, MIMGe<op> {
@@ -64,7 +64,7 @@ class MIMG_Store_Helper <bits<7> op, string asm,
                          RegisterClass addr_rc> : MIMG_Helper <
   (outs),
   (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
-       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
      >, MIMGe<op> {
@@ -98,7 +98,7 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
                           RegisterClass addr_rc> : MIMG_Helper <
     (outs data_rc:$vdst),
     (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
-         dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+         dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
          r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
     asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
   > {
@@ -159,7 +159,7 @@ class MIMG_Sampler_Helper <bits<7> op, string asm,
                            string dns=""> : MIMG_Helper <
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
-       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da",
   dns>, MIMGe<op> {
@@ -196,7 +196,7 @@ class MIMG_Gather_Helper <bits<7> op, string asm,
                           RegisterClass src_rc, int wqm> : MIMG <
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
-       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da",
   []>, MIMGe<op> {

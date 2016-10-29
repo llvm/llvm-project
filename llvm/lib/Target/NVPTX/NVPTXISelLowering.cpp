@@ -278,6 +278,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setTargetDAGCombine(ISD::MUL);
   setTargetDAGCombine(ISD::SHL);
   setTargetDAGCombine(ISD::SELECT);
+  setTargetDAGCombine(ISD::SREM);
+  setTargetDAGCombine(ISD::UREM);
 
   // Library functions.  These default to Expand, but we have instructions
   // for them.
@@ -4132,6 +4134,37 @@ static SDValue PerformSELECTCombine(SDNode *N,
                          DCI.DAG.getConstant(IntrinsicId, DL, VT), LHS, RHS);
 }
 
+static SDValue PerformREMCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 CodeGenOpt::Level OptLevel) {
+  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
+
+  // Don't do anything at less than -O2.
+  if (OptLevel < CodeGenOpt::Default)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  bool IsSigned = N->getOpcode() == ISD::SREM;
+  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
+
+  const SDValue &Num = N->getOperand(0);
+  const SDValue &Den = N->getOperand(1);
+
+  for (const SDNode *U : Num->uses()) {
+    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
+        U->getOperand(1) == Den) {
+      // Num % Den -> Num - (Num / Den) * Den
+      return DAG.getNode(ISD::SUB, DL, VT, Num,
+                         DAG.getNode(ISD::MUL, DL, VT,
+                                     DAG.getNode(DivOpc, DL, VT, Num, Den),
+                                     Den));
+    }
+  }
+  return SDValue();
+}
+
 enum OperandSignedness {
   Signed = 0,
   Unsigned,
@@ -4313,6 +4346,9 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformANDCombine(N, DCI);
     case ISD::SELECT:
       return PerformSELECTCombine(N, DCI);
+    case ISD::UREM:
+    case ISD::SREM:
+      return PerformREMCombine(N, DCI, OptLevel);
   }
   return SDValue();
 }

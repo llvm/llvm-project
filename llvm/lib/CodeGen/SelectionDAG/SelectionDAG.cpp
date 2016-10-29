@@ -2042,6 +2042,10 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       // TODO: support per-element known bits.
       KnownOne &= KnownOne2;
       KnownZero &= KnownZero2;
+
+      // If we don't know any bits, early out.
+      if (!KnownOne && !KnownZero)
+        break;
     }
     break;
   case ISD::AND:
@@ -2102,8 +2106,6 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, Depth+1);
     unsigned LeadZ = KnownZero2.countLeadingOnes();
 
-    KnownOne2.clearAllBits();
-    KnownZero2.clearAllBits();
     computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, Depth+1);
     unsigned RHSUnknownLeadingOnes = KnownOne2.countLeadingZeros();
     if (RHSUnknownLeadingOnes != BitWidth)
@@ -2467,8 +2469,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   case ISD::UMAX: {
     APInt Op0Zero, Op0One;
     APInt Op1Zero, Op1One;
-    computeKnownBits(Op.getOperand(0), Op0Zero, Op0One, Depth);
-    computeKnownBits(Op.getOperand(1), Op1Zero, Op1One, Depth);
+    computeKnownBits(Op.getOperand(0), Op0Zero, Op0One, Depth+1);
+    computeKnownBits(Op.getOperand(1), Op1Zero, Op1One, Depth+1);
 
     KnownZero = Op0Zero & Op1Zero;
     KnownOne = Op0One & Op1One;

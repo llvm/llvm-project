@@ -82,9 +82,9 @@ void DWARFDebugLocDWO::parse(DataExtractor data) {
     Loc.Offset = Offset;
     dwarf::LocationListEntry Kind;
     while ((Kind = static_cast<dwarf::LocationListEntry>(
-                data.getU8(&Offset))) != dwarf::DW_LLE_end_of_list_entry) {
+                data.getU8(&Offset))) != dwarf::DW_LLE_end_of_list) {
 
-      if (Kind != dwarf::DW_LLE_start_length_entry) {
+      if (Kind != dwarf::DW_LLE_startx_length) {
         llvm::errs() << "error: dumping support for LLE of kind " << (int)Kind
                      << " not implemented\n";
         return;

@@ -9,6 +9,7 @@
 
 #include "llvm/Support/NativeFormatting.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
@@ -20,96 +21,121 @@ static int format_to_buffer(T Value, char (&Buffer)[N]) {
   char *EndPtr = std::end(Buffer);
   char *CurPtr = EndPtr;
 
-  while (Value) {
+  do {
     *--CurPtr = '0' + char(Value % 10);
     Value /= 10;
-  }
+  } while (Value);
   return EndPtr - CurPtr;
 }
 
-void llvm::write_ulong(raw_ostream &S, unsigned long N, std::size_t MinWidth) {
-  // Zero is a special case.
-  if (N == 0) {
-    if (MinWidth > 0)
-      S.indent(MinWidth - 1);
-    S << '0';
-    return;
-  }
+static void writeWithCommas(raw_ostream &S, ArrayRef<char> Buffer) {
+  assert(!Buffer.empty());
 
-  char NumberBuffer[20];
-  int Len = format_to_buffer(N, NumberBuffer);
-  int Pad = (MinWidth == 0) ? 0 : MinWidth - Len;
-  if (Pad > 0)
-    S.indent(Pad);
-  S.write(std::end(NumberBuffer) - Len, Len);
+  ArrayRef<char> ThisGroup;
+  int InitialDigits = ((Buffer.size() - 1) % 3) + 1;
+  ThisGroup = Buffer.take_front(InitialDigits);
+  S.write(ThisGroup.data(), ThisGroup.size());
+
+  Buffer = Buffer.drop_front(InitialDigits);
+  assert(Buffer.size() % 3 == 0);
+  while (!Buffer.empty()) {
+    S << ',';
+    ThisGroup = Buffer.take_front(3);
+    S.write(ThisGroup.data(), 3);
+    Buffer = Buffer.drop_front(3);
+  }
 }
 
-void llvm::write_long(raw_ostream &S, long N, std::size_t MinWidth) {
+template <typename T>
+static void write_unsigned_impl(raw_ostream &S, T N, IntegerStyle Style,
+                                bool IsNegative) {
+  static_assert(std::is_unsigned<T>::value, "Value is not unsigned!");
+
+  char NumberBuffer[128];
+  std::memset(NumberBuffer, '0', sizeof(NumberBuffer));
+
+  size_t Len = 0;
+  Len = format_to_buffer(N, NumberBuffer);
+
+  if (IsNegative)
+    S << '-';
+  if (Style == IntegerStyle::Number) {
+    writeWithCommas(S, ArrayRef<char>(std::end(NumberBuffer) - Len, Len));
+  } else {
+    S.write(std::end(NumberBuffer) - Len, Len);
+  }
+}
+
+template <typename T>
+static void write_unsigned(raw_ostream &S, T N, IntegerStyle Style,
+                           bool IsNegative = false) {
+  // Output using 32-bit div/mod if possible.
+  if (N == static_cast<uint32_t>(N))
+    write_unsigned_impl(S, static_cast<uint32_t>(N), Style, IsNegative);
+  else
+    write_unsigned_impl(S, N, Style, IsNegative);
+}
+
+template <typename T>
+static void write_signed(raw_ostream &S, T N, IntegerStyle Style) {
+  static_assert(std::is_signed<T>::value, "Value is not signed!");
+
+  using UnsignedT = typename std::make_unsigned<T>::type;
+
   if (N >= 0) {
-    write_ulong(S, static_cast<unsigned long>(N), MinWidth);
+    write_unsigned(S, static_cast<UnsignedT>(N), Style);
     return;
   }
 
-  unsigned long UN = -(unsigned long)N;
-  if (MinWidth > 0)
-    --MinWidth;
-
-  char NumberBuffer[20];
-  int Len = format_to_buffer(UN, NumberBuffer);
-  int Pad = (MinWidth == 0) ? 0 : MinWidth - Len;
-  if (Pad > 0)
-    S.indent(Pad);
-  S.write('-');
-  S.write(std::end(NumberBuffer) - Len, Len);
+  UnsignedT UN = -(UnsignedT)N;
+  write_unsigned(S, UN, Style, true);
 }
 
-void llvm::write_ulonglong(raw_ostream &S, unsigned long long N,
-                           std::size_t MinWidth) {
-  // Output using 32-bit div/mod when possible.
-  if (N == static_cast<unsigned long>(N)) {
-    write_ulong(S, static_cast<unsigned long>(N), MinWidth);
-    return;
-  }
-
-  char NumberBuffer[32];
-  int Len = format_to_buffer(N, NumberBuffer);
-  int Pad = (MinWidth == 0) ? 0 : MinWidth - Len;
-  if (Pad > 0)
-    S.indent(Pad);
-  S.write(std::end(NumberBuffer) - Len, Len);
+void llvm::write_integer(raw_ostream &S, unsigned int N, IntegerStyle Style) {
+  write_unsigned(S, N, Style);
 }
 
-void llvm::write_longlong(raw_ostream &S, long long N, std::size_t MinWidth) {
-  if (N >= 0) {
-    write_ulonglong(S, static_cast<unsigned long long>(N), MinWidth);
-    return;
-  }
-
-  // Avoid undefined behavior on INT64_MIN with a cast.
-  unsigned long long UN = -(unsigned long long)N;
-  if (MinWidth > 0)
-    --MinWidth;
-
-  char NumberBuffer[32];
-  int Len = format_to_buffer(UN, NumberBuffer);
-  int Pad = (MinWidth == 0) ? 0 : MinWidth - Len;
-  if (Pad > 0)
-    S.indent(Pad);
-  S.write('-');
-  S.write(std::end(NumberBuffer) - Len, Len);
+void llvm::write_integer(raw_ostream &S, int N, IntegerStyle Style) {
+  write_signed(S, N, Style);
 }
 
-void llvm::write_hex(raw_ostream &S, unsigned long long N, std::size_t MinWidth,
-                     bool Upper, bool Prefix) {
+void llvm::write_integer(raw_ostream &S, unsigned long N, IntegerStyle Style) {
+  write_unsigned(S, N, Style);
+}
+
+void llvm::write_integer(raw_ostream &S, long N, IntegerStyle Style) {
+  write_signed(S, N, Style);
+}
+
+void llvm::write_integer(raw_ostream &S, unsigned long long N,
+                         IntegerStyle Style) {
+  write_unsigned(S, N, Style);
+}
+
+void llvm::write_integer(raw_ostream &S, long long N, IntegerStyle Style) {
+  write_signed(S, N, Style);
+}
+
+void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
+                     Optional<size_t> Width) {
+  const size_t kMaxWidth = 128u;
+
+  size_t W = std::min(kMaxWidth, Width.getValueOr(0u));
+
   unsigned Nibbles = (64 - countLeadingZeros(N) + 3) / 4;
+  bool Prefix = (Style == HexPrintStyle::PrefixLower ||
+                 Style == HexPrintStyle::PrefixUpper);
+  bool Upper =
+      (Style == HexPrintStyle::Upper || Style == HexPrintStyle::PrefixUpper);
   unsigned PrefixChars = Prefix ? 2 : 0;
-  unsigned Width = std::max(static_cast<unsigned>(MinWidth),
-                            std::max(1u, Nibbles) + PrefixChars);
+  unsigned NumChars =
+      std::max(static_cast<unsigned>(W), std::max(1u, Nibbles) + PrefixChars);
 
-  char NumberBuffer[20] = "0x0000000000000000";
-  if (!Prefix)
-    NumberBuffer[1] = '0';
-  char *EndPtr = NumberBuffer + Width;
+  char NumberBuffer[kMaxWidth];
+  ::memset(NumberBuffer, '0', llvm::array_lengthof(NumberBuffer));
+  if (Prefix)
+    NumberBuffer[1] = 'x';
+  char *EndPtr = NumberBuffer + NumChars;
   char *CurPtr = EndPtr;
   while (N) {
     unsigned char x = static_cast<unsigned char>(N) % 16;
@@ -117,22 +143,34 @@ void llvm::write_hex(raw_ostream &S, unsigned long long N, std::size_t MinWidth,
     N /= 16;
   }
 
-  S.write(NumberBuffer, Width);
+  S.write(NumberBuffer, NumChars);
 }
 
-void llvm::write_double(raw_ostream &S, double N, std::size_t MinWidth,
-                        std::size_t MinDecimals, FloatStyle Style) {
-  char Letter = (Style == FloatStyle::Exponent) ? 'e' : 'f';
+void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
+                        Optional<size_t> Precision) {
+  size_t Prec = Precision.getValueOr(getDefaultPrecision(Style));
+
+  if (std::isnan(N)) {
+    S << "nan";
+    return;
+  } else if (std::isinf(N)) {
+    S << "INF";
+    return;
+  }
+
+  char Letter;
+  if (Style == FloatStyle::Exponent)
+    Letter = 'e';
+  else if (Style == FloatStyle::ExponentUpper)
+    Letter = 'E';
+  else
+    Letter = 'f';
+
   SmallString<8> Spec;
   llvm::raw_svector_ostream Out(Spec);
-  Out << '%';
-  if (MinWidth > 0)
-    Out << MinWidth;
-  if (MinDecimals > 0)
-    Out << '.' << MinDecimals;
-  Out << Letter;
+  Out << "%." << Prec << Letter;
 
-  if (Style == FloatStyle::Exponent) {
+  if (Style == FloatStyle::Exponent || Style == FloatStyle::ExponentUpper) {
 #ifdef _WIN32
 // On MSVCRT and compatible, output of %e is incompatible to Posix
 // by default. Number of exponent digits should be at least 2. "%+03d"
@@ -140,7 +178,9 @@ void llvm::write_double(raw_ostream &S, double N, std::size_t MinWidth,
 #if defined(__MINGW32__)
     // FIXME: It should be generic to C++11.
     if (N == 0.0 && std::signbit(N)) {
-      S << "-0.000000e+00";
+      const char *NegativeZero = "-0.000000e+00";
+      writePadding(S, Width, strlen(NegativeZero));
+      S << NegativeZero;
       return;
     }
 #else
@@ -148,16 +188,18 @@ void llvm::write_double(raw_ostream &S, double N, std::size_t MinWidth,
 
     // negative zero
     if (fpcl == _FPCLASS_NZ) {
-      S << "-0.000000e+00";
+      const char *NegativeZero = "-0.000000e+00";
+      S << NegativeZero;
       return;
     }
 #endif
 
-    char buf[16];
+    char buf[32];
     unsigned len;
     len = format(Spec.c_str(), N).snprint(buf, sizeof(buf));
     if (len <= sizeof(buf) - 2) {
-      if (len >= 5 && buf[len - 5] == 'e' && buf[len - 3] == '0') {
+      if (len >= 5 && (buf[len - 5] == 'e' || buf[len - 5] == 'E') &&
+          buf[len - 3] == '0') {
         int cs = buf[len - 4];
         if (cs == '+' || cs == '-') {
           int c1 = buf[len - 2];
@@ -177,5 +219,27 @@ void llvm::write_double(raw_ostream &S, double N, std::size_t MinWidth,
 #endif
   }
 
-  S << format(Spec.c_str(), N);
+  if (Style == FloatStyle::Percent)
+    N *= 100.0;
+
+  char Buf[32];
+  unsigned Len;
+  Len = format(Spec.c_str(), N).snprint(Buf, sizeof(Buf));
+  if (Style == FloatStyle::Percent)
+    ++Len;
+  S << Buf;
+  if (Style == FloatStyle::Percent)
+    S << '%';
+}
+
+size_t llvm::getDefaultPrecision(FloatStyle Style) {
+  switch (Style) {
+  case FloatStyle::Exponent:
+  case FloatStyle::ExponentUpper:
+    return 6; // Number of decimal places.
+  case FloatStyle::Fixed:
+  case FloatStyle::Percent:
+    return 2; // Number of decimal places.
+  }
+  LLVM_BUILTIN_UNREACHABLE;
 }

@@ -155,6 +155,22 @@ private:
   Loop *CurrentLoop;
 };
 
+// This pass is required by the LCSSA transformation. It is used inside
+// LPPassManager to check if current pass preserves LCSSA form, and if it does
+// pass manager calls lcssa verification for the current loop.
+struct LCSSAVerificationPass : public FunctionPass {
+  static char ID;
+  LCSSAVerificationPass() : FunctionPass(ID) {
+    initializeLCSSAVerificationPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override { return false; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
+
 } // End llvm namespace
 
 #endif

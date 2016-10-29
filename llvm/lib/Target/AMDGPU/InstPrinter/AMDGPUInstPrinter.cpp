@@ -316,7 +316,9 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo, STI, O);
 }
 
-void AMDGPUInstPrinter::printImmediate32(uint32_t Imm, raw_ostream &O) {
+void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
   int32_t SImm = static_cast<int32_t>(Imm);
   if (SImm >= -16 && SImm <= 64) {
     O << SImm;
@@ -341,11 +343,16 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm, raw_ostream &O) {
     O << "4.0";
   else if (Imm == FloatToBits(-4.0f))
     O << "-4.0";
+  else if (Imm == 0x3e22f983 &&
+           STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+    O << "1/2pi";
   else
     O << formatHex(static_cast<uint64_t>(Imm));
 }
 
-void AMDGPUInstPrinter::printImmediate64(uint64_t Imm, raw_ostream &O) {
+void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
   int64_t SImm = static_cast<int64_t>(Imm);
   if (SImm >= -16 && SImm <= 64) {
     O << SImm;
@@ -370,6 +377,9 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm, raw_ostream &O) {
     O << "4.0";
   else if (Imm == DoubleToBits(-4.0))
     O << "-4.0";
+  else if (Imm == 0x3fc45f306dc9c882 &&
+           STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+    O << "1/2pi";
   else {
     assert(isUInt<32>(Imm) || Imm == 0x3fc45f306dc9c882);
 
@@ -405,13 +415,13 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (RCID != -1) {
       unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
       if (RCBits == 32)
-        printImmediate32(Op.getImm(), O);
+        printImmediate32(Op.getImm(), STI, O);
       else if (RCBits == 64)
-        printImmediate64(Op.getImm(), O);
+        printImmediate64(Op.getImm(), STI, O);
       else
         llvm_unreachable("Invalid register class size");
     } else if (Desc.OpInfo[OpNo].OperandType == MCOI::OPERAND_IMMEDIATE) {
-      printImmediate32(Op.getImm(), O);
+      printImmediate32(Op.getImm(), STI, O);
     } else {
       // We hit this for the immediate instruction bits that don't yet have a
       // custom printer.
@@ -427,9 +437,9 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       int RCID = Desc.OpInfo[OpNo].RegClass;
       unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
       if (RCBits == 32)
-        printImmediate32(FloatToBits(Op.getFPImm()), O);
+        printImmediate32(FloatToBits(Op.getFPImm()), STI, O);
       else if (RCBits == 64)
-        printImmediate64(DoubleToBits(Op.getFPImm()), O);
+        printImmediate64(DoubleToBits(Op.getFPImm()), STI, O);
       else
         llvm_unreachable("Invalid register class size");
     }

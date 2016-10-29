@@ -15,10 +15,8 @@ target triple = "aarch64--linux-gnu"
 ; instruction. If we assume the block probability is 50%, we compute the cost
 ; as:
 ;
-; Cost for vector lane zero:
-;   (udiv(1) + 2 * extractelement(0) + insertelement(0)) / 2 = 0
-; Cost for vector lane one:
-;   (udiv(1) + 2 * extractelement(3) + insertelement(3)) / 2 = 5
+; Cost of udiv:
+;   (udiv(2) + extractelement(6) + insertelement(3)) / 2 = 5
 ;
 ; CHECK: Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
@@ -58,10 +56,8 @@ for.end:
 ; instruction. If we assume the block probability is 50%, we compute the cost
 ; as:
 ;
-; Cost for vector lane zero:
-;   (store(2) + 2 * extractelement(0)) / 2 = 1
-; Cost for vector lane one:
-;   (store(2) + 2 * extractelement(3)) / 2 = 4
+; Cost of store:
+;   (store(4) + extractelement(6)) / 2 = 5
 ;
 ; CHECK: Found an estimated cost of 5 for VF 2 For instruction: store i32 %tmp2, i32* %tmp0, align 4
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, i32* %tmp0, align 4
@@ -74,10 +70,10 @@ for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
   %tmp0 = getelementptr inbounds i32, i32* %a, i64 %i
   %tmp1 = load i32, i32* %tmp0, align 4
+  %tmp2 = add nsw i32 %tmp1, %x
   br i1 %c, label %if.then, label %for.inc
 
 if.then:
-  %tmp2 = add nsw i32 %tmp1, %x
   store i32 %tmp2, i32* %tmp0, align 4
   br label %for.inc
 

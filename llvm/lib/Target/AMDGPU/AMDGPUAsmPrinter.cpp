@@ -507,15 +507,22 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.NumVGPRsForWavesPerEU = std::max(
     ProgInfo.NumVGPR, RI->getMinNumVGPRs(MFI->getMaxWavesPerEU()));
 
-  if (STM.hasSGPRInitBug()) {
-    if (ProgInfo.NumSGPR > SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG) {
-      LLVMContext &Ctx = MF.getFunction()->getContext();
-      DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
-                                       "SGPRs with SGPR init bug",
-                                       ProgInfo.NumSGPR, DS_Error);
-      Ctx.diagnose(Diag);
-    }
+  unsigned MaxNumSGPRs = STM.getMaxNumSGPRs();
+  if (ProgInfo.NumSGPR > MaxNumSGPRs) {
+    // This can happen due to a compiler bug or when using inline asm to use the
+    // registers which are usually reserved for vcc etc.
 
+    LLVMContext &Ctx = MF.getFunction()->getContext();
+    DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
+                                     "scalar registers",
+                                     ProgInfo.NumSGPR, DS_Error,
+                                     DK_ResourceLimit, MaxNumSGPRs);
+    Ctx.diagnose(Diag);
+    ProgInfo.NumSGPR = MaxNumSGPRs;
+    ProgInfo.NumSGPRsForWavesPerEU = MaxNumSGPRs;
+  }
+
+  if (STM.hasSGPRInitBug()) {
     ProgInfo.NumSGPR = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
     ProgInfo.NumSGPRsForWavesPerEU = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
   }

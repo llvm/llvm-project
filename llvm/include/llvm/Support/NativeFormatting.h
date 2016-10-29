@@ -10,22 +10,32 @@
 #ifndef LLVM_SUPPORT_NATIVE_FORMATTING_H
 #define LLVM_SUPPORT_NATIVE_FORMATTING_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
 
 namespace llvm {
-enum class FloatStyle { Exponent, Decimal };
+enum class FloatStyle { Exponent, ExponentUpper, Fixed, Percent };
+enum class IntegerStyle {
+  Integer,
+  Number,
+};
+enum class HexPrintStyle { Upper, Lower, PrefixUpper, PrefixLower };
 
-void write_ulong(raw_ostream &S, unsigned long N, std::size_t MinWidth);
-void write_long(raw_ostream &S, long N, std::size_t MinWidth);
-void write_ulonglong(raw_ostream &S, unsigned long long N,
-                     std::size_t MinWidth);
-void write_longlong(raw_ostream &S, long long N, std::size_t MinWidth);
-void write_hex(raw_ostream &S, unsigned long long N, std::size_t MinWidth,
-               bool Upper, bool Prefix);
-void write_double(raw_ostream &S, double D, std::size_t MinWidth,
-                  std::size_t MinDecimals, FloatStyle Style);
+size_t getDefaultPrecision(FloatStyle Style);
+
+void write_integer(raw_ostream &S, unsigned int N, IntegerStyle Style);
+void write_integer(raw_ostream &S, int N, IntegerStyle Style);
+void write_integer(raw_ostream &S, unsigned long N, IntegerStyle Style);
+void write_integer(raw_ostream &S, long N, IntegerStyle Style);
+void write_integer(raw_ostream &S, unsigned long long N, IntegerStyle Style);
+void write_integer(raw_ostream &S, long long N, IntegerStyle Style);
+
+void write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
+               Optional<size_t> Width = None);
+void write_double(raw_ostream &S, double D, FloatStyle Style,
+                  Optional<size_t> Precision = None);
 }
 
 #endif

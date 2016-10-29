@@ -12,14 +12,27 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Add other DW-based macros.
-#if !(defined HANDLE_DW_TAG || defined HANDLE_DW_OP ||                         \
+#if !(defined HANDLE_DW_TAG || defined HANDLE_DW_AT ||                         \
+      defined HANDLE_DW_FORM || defined HANDLE_DW_OP ||                        \
       defined HANDLE_DW_LANG || defined HANDLE_DW_ATE ||                       \
-      defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_CC)
+      defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||           \
+      defined HANDLE_DW_CC || defined HANDLE_DW_LNS ||                         \
+      defined HANDLE_DW_LNE || defined HANDLE_DW_LNCT ||                       \
+      defined HANDLE_DW_MACRO || defined HANDLE_DW_RLE ||                      \
+      defined HANDLE_DW_CFA || defined HANDLE_DW_APPLE_PROPERTY)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
 #ifndef HANDLE_DW_TAG
 #define HANDLE_DW_TAG(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_AT
+#define HANDLE_DW_AT(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_FORM
+#define HANDLE_DW_FORM(ID, NAME)
 #endif
 
 #ifndef HANDLE_DW_OP
@@ -38,8 +51,40 @@
 #define HANDLE_DW_VIRTUALITY(ID, NAME)
 #endif
 
+#ifndef HANDLE_DW_DEFAULTED
+#define HANDLE_DW_DEFAULTED(ID, NAME)
+#endif
+
 #ifndef HANDLE_DW_CC
 #define HANDLE_DW_CC(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_LNS
+#define HANDLE_DW_LNS(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_LNE
+#define HANDLE_DW_LNE(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_LNCT
+#define HANDLE_DW_LNCT(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_MACRO
+#define HANDLE_DW_MACRO(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_RLE
+#define HANDLE_DW_RLE(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_CFA
+#define HANDLE_DW_CFA(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_APPLE_PROPERTY
+#define HANDLE_DW_APPLE_PROPERTY(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null)
@@ -108,6 +153,11 @@ HANDLE_DW_TAG(0x0043, template_alias)
 HANDLE_DW_TAG(0x0044, coarray_type)
 HANDLE_DW_TAG(0x0045, generic_subrange)
 HANDLE_DW_TAG(0x0046, dynamic_type)
+HANDLE_DW_TAG(0x0047, atomic_type)
+HANDLE_DW_TAG(0x0048, call_site)
+HANDLE_DW_TAG(0x0049, call_site_parameter)
+HANDLE_DW_TAG(0x004a, skeleton_unit)
+HANDLE_DW_TAG(0x004b, immutable_type)
 
 // User-defined tags.
 HANDLE_DW_TAG(0x4081, MIPS_loop)
@@ -124,6 +174,260 @@ HANDLE_DW_TAG(0xb002, BORLAND_Delphi_dynamic_array)
 HANDLE_DW_TAG(0xb003, BORLAND_Delphi_set)
 HANDLE_DW_TAG(0xb004, BORLAND_Delphi_variant)
 
+// Attributes.
+HANDLE_DW_AT(0x01, sibling)
+HANDLE_DW_AT(0x02, location)
+HANDLE_DW_AT(0x03, name)
+HANDLE_DW_AT(0x09, ordering)
+HANDLE_DW_AT(0x0b, byte_size)
+HANDLE_DW_AT(0x0c, bit_offset)
+HANDLE_DW_AT(0x0d, bit_size)
+HANDLE_DW_AT(0x10, stmt_list)
+HANDLE_DW_AT(0x11, low_pc)
+HANDLE_DW_AT(0x12, high_pc)
+HANDLE_DW_AT(0x13, language)
+HANDLE_DW_AT(0x15, discr)
+HANDLE_DW_AT(0x16, discr_value)
+HANDLE_DW_AT(0x17, visibility)
+HANDLE_DW_AT(0x18, import)
+HANDLE_DW_AT(0x19, string_length)
+HANDLE_DW_AT(0x1a, common_reference)
+HANDLE_DW_AT(0x1b, comp_dir)
+HANDLE_DW_AT(0x1c, const_value)
+HANDLE_DW_AT(0x1d, containing_type)
+HANDLE_DW_AT(0x1e, default_value)
+HANDLE_DW_AT(0x20, inline)
+HANDLE_DW_AT(0x21, is_optional)
+HANDLE_DW_AT(0x22, lower_bound)
+HANDLE_DW_AT(0x25, producer)
+HANDLE_DW_AT(0x27, prototyped)
+HANDLE_DW_AT(0x2a, return_addr)
+HANDLE_DW_AT(0x2c, start_scope)
+HANDLE_DW_AT(0x2e, bit_stride)
+HANDLE_DW_AT(0x2f, upper_bound)
+HANDLE_DW_AT(0x31, abstract_origin)
+HANDLE_DW_AT(0x32, accessibility)
+HANDLE_DW_AT(0x33, address_class)
+HANDLE_DW_AT(0x34, artificial)
+HANDLE_DW_AT(0x35, base_types)
+HANDLE_DW_AT(0x36, calling_convention)
+HANDLE_DW_AT(0x37, count)
+HANDLE_DW_AT(0x38, data_member_location)
+HANDLE_DW_AT(0x39, decl_column)
+HANDLE_DW_AT(0x3a, decl_file)
+HANDLE_DW_AT(0x3b, decl_line)
+HANDLE_DW_AT(0x3c, declaration)
+HANDLE_DW_AT(0x3d, discr_list)
+HANDLE_DW_AT(0x3e, encoding)
+HANDLE_DW_AT(0x3f, external)
+HANDLE_DW_AT(0x40, frame_base)
+HANDLE_DW_AT(0x41, friend)
+HANDLE_DW_AT(0x42, identifier_case)
+HANDLE_DW_AT(0x43, macro_info)
+HANDLE_DW_AT(0x44, namelist_item)
+HANDLE_DW_AT(0x45, priority)
+HANDLE_DW_AT(0x46, segment)
+HANDLE_DW_AT(0x47, specification)
+HANDLE_DW_AT(0x48, static_link)
+HANDLE_DW_AT(0x49, type)
+HANDLE_DW_AT(0x4a, use_location)
+HANDLE_DW_AT(0x4b, variable_parameter)
+HANDLE_DW_AT(0x4c, virtuality)
+HANDLE_DW_AT(0x4d, vtable_elem_location)
+HANDLE_DW_AT(0x4e, allocated)
+HANDLE_DW_AT(0x4f, associated)
+HANDLE_DW_AT(0x50, data_location)
+HANDLE_DW_AT(0x51, byte_stride)
+HANDLE_DW_AT(0x52, entry_pc)
+HANDLE_DW_AT(0x53, use_UTF8)
+HANDLE_DW_AT(0x54, extension)
+HANDLE_DW_AT(0x55, ranges)
+HANDLE_DW_AT(0x56, trampoline)
+HANDLE_DW_AT(0x57, call_column)
+HANDLE_DW_AT(0x58, call_file)
+HANDLE_DW_AT(0x59, call_line)
+HANDLE_DW_AT(0x5a, description)
+HANDLE_DW_AT(0x5b, binary_scale)
+HANDLE_DW_AT(0x5c, decimal_scale)
+HANDLE_DW_AT(0x5d, small)
+HANDLE_DW_AT(0x5e, decimal_sign)
+HANDLE_DW_AT(0x5f, digit_count)
+HANDLE_DW_AT(0x60, picture_string)
+HANDLE_DW_AT(0x61, mutable)
+HANDLE_DW_AT(0x62, threads_scaled)
+HANDLE_DW_AT(0x63, explicit)
+HANDLE_DW_AT(0x64, object_pointer)
+HANDLE_DW_AT(0x65, endianity)
+HANDLE_DW_AT(0x66, elemental)
+HANDLE_DW_AT(0x67, pure)
+HANDLE_DW_AT(0x68, recursive)
+HANDLE_DW_AT(0x69, signature)
+HANDLE_DW_AT(0x6a, main_subprogram)
+HANDLE_DW_AT(0x6b, data_bit_offset)
+HANDLE_DW_AT(0x6c, const_expr)
+HANDLE_DW_AT(0x6d, enum_class)
+HANDLE_DW_AT(0x6e, linkage_name)
+
+// New in DWARF 5:
+HANDLE_DW_AT(0x6f, string_length_bit_size)
+HANDLE_DW_AT(0x70, string_length_byte_size)
+HANDLE_DW_AT(0x71, rank)
+HANDLE_DW_AT(0x72, str_offsets_base)
+HANDLE_DW_AT(0x73, addr_base)
+HANDLE_DW_AT(0x74, rnglists_base)
+HANDLE_DW_AT(0x75, dwo_id) ///< Retracted from DWARF 5.
+HANDLE_DW_AT(0x76, dwo_name)
+HANDLE_DW_AT(0x77, reference)
+HANDLE_DW_AT(0x78, rvalue_reference)
+HANDLE_DW_AT(0x79, macros)
+HANDLE_DW_AT(0x7a, call_all_calls)
+HANDLE_DW_AT(0x7b, call_all_source_calls)
+HANDLE_DW_AT(0x7c, call_all_tail_calls)
+HANDLE_DW_AT(0x7d, call_return_pc)
+HANDLE_DW_AT(0x7e, call_value)
+HANDLE_DW_AT(0x7f, call_origin)
+HANDLE_DW_AT(0x80, call_parameter)
+HANDLE_DW_AT(0x81, call_pc)
+HANDLE_DW_AT(0x82, call_tail_call)
+HANDLE_DW_AT(0x83, call_target)
+HANDLE_DW_AT(0x84, call_target_clobbered)
+HANDLE_DW_AT(0x85, call_data_location)
+HANDLE_DW_AT(0x86, call_data_value)
+HANDLE_DW_AT(0x87, noreturn)
+HANDLE_DW_AT(0x88, alignment)
+HANDLE_DW_AT(0x89, export_symbols)
+HANDLE_DW_AT(0x8a, deleted)
+HANDLE_DW_AT(0x8b, defaulted)
+HANDLE_DW_AT(0x8c, loclists_base)
+
+HANDLE_DW_AT(0x2002, MIPS_loop_begin)
+HANDLE_DW_AT(0x2003, MIPS_tail_loop_begin)
+HANDLE_DW_AT(0x2004, MIPS_epilog_begin)
+HANDLE_DW_AT(0x2005, MIPS_loop_unroll_factor)
+HANDLE_DW_AT(0x2006, MIPS_software_pipeline_depth)
+HANDLE_DW_AT(0x2007, MIPS_linkage_name)
+HANDLE_DW_AT(0x2008, MIPS_stride)
+HANDLE_DW_AT(0x2009, MIPS_abstract_name)
+HANDLE_DW_AT(0x200a, MIPS_clone_origin)
+HANDLE_DW_AT(0x200b, MIPS_has_inlines)
+HANDLE_DW_AT(0x200c, MIPS_stride_byte)
+HANDLE_DW_AT(0x200d, MIPS_stride_elem)
+HANDLE_DW_AT(0x200e, MIPS_ptr_dopetype)
+HANDLE_DW_AT(0x200f, MIPS_allocatable_dopetype)
+HANDLE_DW_AT(0x2010, MIPS_assumed_shape_dopetype)
+
+// This one appears to have only been implemented by Open64 for
+// fortran and may conflict with other extensions.
+HANDLE_DW_AT(0x2011, MIPS_assumed_size)
+
+// GNU extensions
+HANDLE_DW_AT(0x2101, sf_names)
+HANDLE_DW_AT(0x2102, src_info)
+HANDLE_DW_AT(0x2103, mac_info)
+HANDLE_DW_AT(0x2104, src_coords)
+HANDLE_DW_AT(0x2105, body_begin)
+HANDLE_DW_AT(0x2106, body_end)
+HANDLE_DW_AT(0x2107, GNU_vector)
+HANDLE_DW_AT(0x2110, GNU_template_name)
+
+HANDLE_DW_AT(0x210f, GNU_odr_signature)
+HANDLE_DW_AT(0x2119, GNU_macros)
+
+// Extensions for Fission proposal.
+HANDLE_DW_AT(0x2130, GNU_dwo_name)
+HANDLE_DW_AT(0x2131, GNU_dwo_id)
+HANDLE_DW_AT(0x2132, GNU_ranges_base)
+HANDLE_DW_AT(0x2133, GNU_addr_base)
+HANDLE_DW_AT(0x2134, GNU_pubnames)
+HANDLE_DW_AT(0x2135, GNU_pubtypes)
+HANDLE_DW_AT(0x2136, GNU_discriminator)
+
+// Borland extensions.
+HANDLE_DW_AT(0x3b11, BORLAND_property_read)
+HANDLE_DW_AT(0x3b12, BORLAND_property_write)
+HANDLE_DW_AT(0x3b13, BORLAND_property_implements)
+HANDLE_DW_AT(0x3b14, BORLAND_property_index)
+HANDLE_DW_AT(0x3b15, BORLAND_property_default)
+HANDLE_DW_AT(0x3b20, BORLAND_Delphi_unit)
+HANDLE_DW_AT(0x3b21, BORLAND_Delphi_class)
+HANDLE_DW_AT(0x3b22, BORLAND_Delphi_record)
+HANDLE_DW_AT(0x3b23, BORLAND_Delphi_metaclass)
+HANDLE_DW_AT(0x3b24, BORLAND_Delphi_constructor)
+HANDLE_DW_AT(0x3b25, BORLAND_Delphi_destructor)
+HANDLE_DW_AT(0x3b26, BORLAND_Delphi_anonymous_method)
+HANDLE_DW_AT(0x3b27, BORLAND_Delphi_interface)
+HANDLE_DW_AT(0x3b28, BORLAND_Delphi_ABI)
+HANDLE_DW_AT(0x3b29, BORLAND_Delphi_return)
+HANDLE_DW_AT(0x3b30, BORLAND_Delphi_frameptr)
+HANDLE_DW_AT(0x3b31, BORLAND_closure)
+
+// LLVM project extensions.
+HANDLE_DW_AT(0x3e00, LLVM_include_path)
+HANDLE_DW_AT(0x3e01, LLVM_config_macros)
+HANDLE_DW_AT(0x3e02, LLVM_isysroot)
+
+// Apple extensions.
+HANDLE_DW_AT(0x3fe1, APPLE_optimized)
+HANDLE_DW_AT(0x3fe2, APPLE_flags)
+HANDLE_DW_AT(0x3fe3, APPLE_isa)
+HANDLE_DW_AT(0x3fe4, APPLE_block)
+HANDLE_DW_AT(0x3fe5, APPLE_major_runtime_vers)
+HANDLE_DW_AT(0x3fe6, APPLE_runtime_class)
+HANDLE_DW_AT(0x3fe7, APPLE_omit_frame_ptr)
+HANDLE_DW_AT(0x3fe8, APPLE_property_name)
+HANDLE_DW_AT(0x3fe9, APPLE_property_getter)
+HANDLE_DW_AT(0x3fea, APPLE_property_setter)
+HANDLE_DW_AT(0x3feb, APPLE_property_attribute)
+HANDLE_DW_AT(0x3fec, APPLE_objc_complete_type)
+HANDLE_DW_AT(0x3fed, APPLE_property)
+
+// Attribute form encodings.
+HANDLE_DW_FORM(0x01, addr)
+HANDLE_DW_FORM(0x03, block2)
+HANDLE_DW_FORM(0x04, block4)
+HANDLE_DW_FORM(0x05, data2)
+HANDLE_DW_FORM(0x06, data4)
+HANDLE_DW_FORM(0x07, data8)
+HANDLE_DW_FORM(0x08, string)
+HANDLE_DW_FORM(0x09, block)
+HANDLE_DW_FORM(0x0a, block1)
+HANDLE_DW_FORM(0x0b, data1)
+HANDLE_DW_FORM(0x0c, flag)
+HANDLE_DW_FORM(0x0d, sdata)
+HANDLE_DW_FORM(0x0e, strp)
+HANDLE_DW_FORM(0x0f, udata)
+HANDLE_DW_FORM(0x10, ref_addr)
+HANDLE_DW_FORM(0x11, ref1)
+HANDLE_DW_FORM(0x12, ref2)
+HANDLE_DW_FORM(0x13, ref4)
+HANDLE_DW_FORM(0x14, ref8)
+HANDLE_DW_FORM(0x15, ref_udata)
+HANDLE_DW_FORM(0x16, indirect)
+HANDLE_DW_FORM(0x17, sec_offset)
+HANDLE_DW_FORM(0x18, exprloc)
+HANDLE_DW_FORM(0x19, flag_present)
+
+// New in DWARF v5.
+HANDLE_DW_FORM(0x1a, strx)
+HANDLE_DW_FORM(0x1b, addrx)
+HANDLE_DW_FORM(0x1c, ref_sup)
+HANDLE_DW_FORM(0x1d, strp_sup)
+HANDLE_DW_FORM(0x1e, data16)
+HANDLE_DW_FORM(0x1f, line_strp)
+HANDLE_DW_FORM(0x20, ref_sig8)
+HANDLE_DW_FORM(0x21, implicit_const)
+HANDLE_DW_FORM(0x22, loclistx)
+HANDLE_DW_FORM(0x23, rnglistx)
+
+// Extensions for Fission proposal
+HANDLE_DW_FORM(0x1f01, GNU_addr_index)
+HANDLE_DW_FORM(0x1f02, GNU_str_index)
+
+// Alternate debug sections proposal (output of "dwz" tool).
+HANDLE_DW_FORM(0x1f20, GNU_ref_alt)
+HANDLE_DW_FORM(0x1f21, GNU_strp_alt)
+
+// DWARF Expression operators.
 HANDLE_DW_OP(0x03, addr)
 HANDLE_DW_OP(0x06, deref)
 HANDLE_DW_OP(0x08, const1u)
@@ -151,7 +455,7 @@ HANDLE_DW_OP(0x1d, mod)
 HANDLE_DW_OP(0x1e, mul)
 HANDLE_DW_OP(0x1f, neg)
 HANDLE_DW_OP(0x20, not)
-HANDLE_DW_OP(0x21, or )
+HANDLE_DW_OP(0x21, or)
 HANDLE_DW_OP(0x22, plus)
 HANDLE_DW_OP(0x23, plus_uconst)
 HANDLE_DW_OP(0x24, shl)
@@ -278,7 +582,18 @@ HANDLE_DW_OP(0x9c, call_frame_cfa)
 HANDLE_DW_OP(0x9d, bit_piece)
 HANDLE_DW_OP(0x9e, implicit_value)
 HANDLE_DW_OP(0x9f, stack_value)
+HANDLE_DW_OP(0xa0, implicit_pointer)
+HANDLE_DW_OP(0xa1, addrx)
+HANDLE_DW_OP(0xa2, constx)
+HANDLE_DW_OP(0xa3, entry_value)
+HANDLE_DW_OP(0xa4, const_type)
+HANDLE_DW_OP(0xa5, regval_type)
+HANDLE_DW_OP(0xa6, deref_type)
+HANDLE_DW_OP(0xa7, xderef_type)
+HANDLE_DW_OP(0xa8, convert)
+HANDLE_DW_OP(0xa9, reinterpret)
 
+// Vendor extensions.
 // Extensions for GNU-style thread-local storage.
 HANDLE_DW_OP(0xe0, GNU_push_tls_address)
 
@@ -324,6 +639,9 @@ HANDLE_DW_LANG(0x0020, Dylan)
 HANDLE_DW_LANG(0x0021, C_plus_plus_14)
 HANDLE_DW_LANG(0x0022, Fortran03)
 HANDLE_DW_LANG(0x0023, Fortran08)
+HANDLE_DW_LANG(0x0024, RenderScript)
+
+// Vendor extensions.
 HANDLE_DW_LANG(0x8001, Mips_Assembler)
 HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript)
 HANDLE_DW_LANG(0xb000, BORLAND_Delphi)
@@ -345,16 +663,25 @@ HANDLE_DW_ATE(0x0d, signed_fixed)
 HANDLE_DW_ATE(0x0e, unsigned_fixed)
 HANDLE_DW_ATE(0x0f, decimal_float)
 HANDLE_DW_ATE(0x10, UTF)
+HANDLE_DW_ATE(0x11, UCS)
+HANDLE_DW_ATE(0x12, ASCII)
 
 // DWARF virtuality codes.
 HANDLE_DW_VIRTUALITY(0x00, none)
 HANDLE_DW_VIRTUALITY(0x01, virtual)
 HANDLE_DW_VIRTUALITY(0x02, pure_virtual)
 
+// DWARF v5 Defaulted Member Encodings.
+HANDLE_DW_DEFAULTED(0x00, no)
+HANDLE_DW_DEFAULTED(0x01, in_class)
+HANDLE_DW_DEFAULTED(0x02, out_of_class)
+
 // DWARF calling convention codes.
 HANDLE_DW_CC(0x01, normal)
 HANDLE_DW_CC(0x02, program)
 HANDLE_DW_CC(0x03, nocall)
+HANDLE_DW_CC(0x04, pass_by_reference)
+HANDLE_DW_CC(0x05, pass_by_value)
 HANDLE_DW_CC(0x41, GNU_borland_fastcall_i386)
 HANDLE_DW_CC(0xb0, BORLAND_safecall)
 HANDLE_DW_CC(0xb1, BORLAND_stdcall)
@@ -365,9 +692,120 @@ HANDLE_DW_CC(0xb5, BORLAND_thiscall)
 HANDLE_DW_CC(0xb6, BORLAND_fastcall)
 HANDLE_DW_CC(0xc0, LLVM_vectorcall)
 
+// Line Number Extended Opcode Encodings
+HANDLE_DW_LNE(0x01, end_sequence)
+HANDLE_DW_LNE(0x02, set_address)
+HANDLE_DW_LNE(0x03, define_file)
+HANDLE_DW_LNE(0x04, set_discriminator)
+
+// Line Number Standard Opcode Encodings.
+HANDLE_DW_LNS(0x00, extended_op)
+HANDLE_DW_LNS(0x01, copy)
+HANDLE_DW_LNS(0x02, advance_pc)
+HANDLE_DW_LNS(0x03, advance_line)
+HANDLE_DW_LNS(0x04, set_file)
+HANDLE_DW_LNS(0x05, set_column)
+HANDLE_DW_LNS(0x06, negate_stmt)
+HANDLE_DW_LNS(0x07, set_basic_block)
+HANDLE_DW_LNS(0x08, const_add_pc)
+HANDLE_DW_LNS(0x09, fixed_advance_pc)
+HANDLE_DW_LNS(0x0a, set_prologue_end)
+HANDLE_DW_LNS(0x0b, set_epilogue_begin)
+HANDLE_DW_LNS(0x0c, set_isa)
+
+// DWARF v5 Line number header entry format.
+HANDLE_DW_LNCT(0x01, path)
+HANDLE_DW_LNCT(0x02, directory_index)
+HANDLE_DW_LNCT(0x03, timestamp)
+HANDLE_DW_LNCT(0x04, size)
+HANDLE_DW_LNCT(0x05, MD5)
+
+HANDLE_DW_MACRO(0x01, define)
+HANDLE_DW_MACRO(0x02, undef)
+HANDLE_DW_MACRO(0x03, start_file)
+HANDLE_DW_MACRO(0x04, end_file)
+HANDLE_DW_MACRO(0x05, define_strp)
+HANDLE_DW_MACRO(0x06, undef_strp)
+HANDLE_DW_MACRO(0x07, import)
+HANDLE_DW_MACRO(0x08, define_sup)
+HANDLE_DW_MACRO(0x09, undef_sup)
+HANDLE_DW_MACRO(0x0a, import_sup)
+HANDLE_DW_MACRO(0x0b, define_strx)
+HANDLE_DW_MACRO(0x0c, undef_strx)
+
+// Range list entry encoding values.
+HANDLE_DW_RLE(0x00, end_of_list)
+HANDLE_DW_RLE(0x01, base_addressx)
+HANDLE_DW_RLE(0x02, startx_endx)
+HANDLE_DW_RLE(0x03, startx_length)
+HANDLE_DW_RLE(0x04, offset_pair)
+HANDLE_DW_RLE(0x05, base_address)
+HANDLE_DW_RLE(0x06, start_end)
+HANDLE_DW_RLE(0x07, start_length)
+
+// Call frame instruction encodings.
+HANDLE_DW_CFA(0x00, nop)
+HANDLE_DW_CFA(0x40, advance_loc)
+HANDLE_DW_CFA(0x80, offset)
+HANDLE_DW_CFA(0xc0, restore)
+HANDLE_DW_CFA(0x01, set_loc)
+HANDLE_DW_CFA(0x02, advance_loc1)
+HANDLE_DW_CFA(0x03, advance_loc2)
+HANDLE_DW_CFA(0x04, advance_loc4)
+HANDLE_DW_CFA(0x05, offset_extended)
+HANDLE_DW_CFA(0x06, restore_extended)
+HANDLE_DW_CFA(0x07, undefined)
+HANDLE_DW_CFA(0x08, same_value)
+HANDLE_DW_CFA(0x09, register)
+HANDLE_DW_CFA(0x0a, remember_state)
+HANDLE_DW_CFA(0x0b, restore_state)
+HANDLE_DW_CFA(0x0c, def_cfa)
+HANDLE_DW_CFA(0x0d, def_cfa_register)
+HANDLE_DW_CFA(0x0e, def_cfa_offset)
+HANDLE_DW_CFA(0x0f, def_cfa_expression)
+HANDLE_DW_CFA(0x10, expression)
+HANDLE_DW_CFA(0x11, offset_extended_sf)
+HANDLE_DW_CFA(0x12, def_cfa_sf)
+HANDLE_DW_CFA(0x13, def_cfa_offset_sf)
+HANDLE_DW_CFA(0x14, val_offset)
+HANDLE_DW_CFA(0x15, val_offset_sf)
+HANDLE_DW_CFA(0x16, val_expression)
+HANDLE_DW_CFA(0x1d, MIPS_advance_loc8)
+HANDLE_DW_CFA(0x2d, GNU_window_save)
+HANDLE_DW_CFA(0x2e, GNU_args_size)
+
+// Apple Objective-C Property Attributes.
+// Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind!
+HANDLE_DW_APPLE_PROPERTY(0x01, readonly)
+HANDLE_DW_APPLE_PROPERTY(0x02, getter)
+HANDLE_DW_APPLE_PROPERTY(0x04, assign)
+HANDLE_DW_APPLE_PROPERTY(0x08, readwrite)
+HANDLE_DW_APPLE_PROPERTY(0x10, retain)
+HANDLE_DW_APPLE_PROPERTY(0x20, copy)
+HANDLE_DW_APPLE_PROPERTY(0x40, nonatomic)
+HANDLE_DW_APPLE_PROPERTY(0x80, setter)
+HANDLE_DW_APPLE_PROPERTY(0x100, atomic)
+HANDLE_DW_APPLE_PROPERTY(0x200, weak)
+HANDLE_DW_APPLE_PROPERTY(0x400, strong)
+HANDLE_DW_APPLE_PROPERTY(0x800, unsafe_unretained)
+HANDLE_DW_APPLE_PROPERTY(0x1000, nullability)
+HANDLE_DW_APPLE_PROPERTY(0x2000, null_resettable)
+HANDLE_DW_APPLE_PROPERTY(0x4000, class)
+
+
 #undef HANDLE_DW_TAG
+#undef HANDLE_DW_AT
+#undef HANDLE_DW_FORM
 #undef HANDLE_DW_OP
 #undef HANDLE_DW_LANG
 #undef HANDLE_DW_ATE
 #undef HANDLE_DW_VIRTUALITY
+#undef HANDLE_DW_DEFAULTED
 #undef HANDLE_DW_CC
+#undef HANDLE_DW_LNS
+#undef HANDLE_DW_LNE
+#undef HANDLE_DW_LNCT
+#undef HANDLE_DW_MACRO
+#undef HANDLE_DW_RLE
+#undef HANDLE_DW_CFA
+#undef HANDLE_DW_APPLE_PROPERTY
