@@ -1858,13 +1858,16 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
   if (F.getName().startswith("__asan_")) return false;
 
+  bool FunctionModified = false;
+
   // If needed, insert __asan_init before checking for SanitizeAddress attr.
   // This function needs to be called even if the function body is not
   // instrumented.  
-  maybeInsertAsanInitAtFunctionEntry(F);
+  if (maybeInsertAsanInitAtFunctionEntry(F))
+    FunctionModified = true;
   
   // Leave if the function doesn't need instrumentation.
-  if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return false;
+  if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return FunctionModified;
 
   DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
 
@@ -1967,11 +1970,13 @@ bool AddressSanitizer::runOnFunction(Function &F) {
     NumInstrumented++;
   }
 
-  bool res = NumInstrumented > 0 || ChangedStack || !NoReturnCalls.empty();
+  if (NumInstrumented > 0 || ChangedStack || !NoReturnCalls.empty())
+    FunctionModified = true;
 
-  DEBUG(dbgs() << "ASAN done instrumenting: " << res << " " << F << "\n");
+  DEBUG(dbgs() << "ASAN done instrumenting: " << FunctionModified << " "
+               << F << "\n");
 
-  return res;
+  return FunctionModified;
 }
 
 // Workaround for bug 11395: we don't want to instrument stack in functions
