@@ -41,7 +41,7 @@ class FunctionImportGlobalProcessing {
   bool HasExportedFunctions = false;
 
   /// Check if we should promote the given local value to global scope.
-  bool doPromoteLocalToGlobal(const GlobalValue *SGV);
+  bool shouldPromoteLocalToGlobal(const GlobalValue *SGV);
 
   /// Helper methods to check if we are importing from or potentially
   /// exporting from the current source module.
