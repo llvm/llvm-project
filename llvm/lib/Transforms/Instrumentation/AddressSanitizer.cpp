@@ -1855,17 +1855,21 @@ void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
 bool AddressSanitizer::runOnFunction(Function &F) {
   if (&F == AsanCtorFunction) return false;
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
-  DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
-  initializeCallbacks(*F.getParent());
-
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
+  if (F.getName().find("__asan_") != std::string::npos) return false;
 
   // If needed, insert __asan_init before checking for SanitizeAddress attr.
+  // This function needs to be called even if the function body is not
+  // instrumented.  
   maybeInsertAsanInitAtFunctionEntry(F);
-
+  
+  // Leave if the function doesn't need instrumentation.
   if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return false;
 
-  if (!ClDebugFunc.empty() && ClDebugFunc != F.getName()) return false;
+  DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
+
+  initializeCallbacks(*F.getParent());
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   FunctionStateRAII CleanupObj(this);
 
