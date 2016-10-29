@@ -12,6 +12,10 @@ set(TSAN_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/tsan/rtl
   -DGTEST_HAS_RTTI=0)
 
+if(APPLE)
+  list(APPEND TSAN_UNITTEST_CFLAGS ${DARWIN_osx_CFLAGS})
+endif()
+
 set(TSAN_RTL_HEADERS)
 foreach (header ${TSAN_HEADERS})
   list(APPEND TSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
@@ -78,7 +82,7 @@ macro(add_tsan_unittest testname)
         add_compiler_rt_test(TsanUnitTests "${testname}-${arch}-Test"
                 OBJECTS ${TEST_OBJECTS}
                 DEPS ${TEST_DEPS}
-                LINK_FLAGS ${TARGET_LINK_FLAGS}
+                LINK_FLAGS ${TARGET_LINK_FLAGS} ${DARWIN_osx_LINKFLAGS}
                            -lc++)
       endif()
     endforeach()
