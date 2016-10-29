@@ -29,3 +29,13 @@ target_link_libraries(
     ${CMAKE_THREAD_LIBS_INIT})
 add_test(OpenCLTest opencl_test)
 endif()
+
+if(ACXXEL_ENABLE_MULTI_DEVICE_UNIT_TESTS)
+add_executable(multi_device_test multi_device_test.cpp)
+target_link_libraries(
+    multi_device_test
+    acxxel
+    ${GTEST_BOTH_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT})
+add_test(MultiDeviceTest multi_device_test)
+endif()

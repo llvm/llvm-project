@@ -18,10 +18,10 @@
 #include "Config.h"
 #include "Error.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "SymbolListFile.h"
 #include "Symbols.h"
 #include "llvm/Bitcode/ReaderWriter.h"
-#include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -150,7 +150,6 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
   SymbolBody *B = find(Name);
   if (!B)
     return;
-  StringSaver Saver(Alloc);
   Symbol *Sym = B->symbol();
   Symbol *Real = addUndefined(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined(Saver.save("__wrap_" + Name));
@@ -214,7 +213,7 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
 
   Symbol *Sym;
   if (IsNew) {
-    Sym = new (Alloc) Symbol;
+    Sym = new (BAlloc) Symbol;
     Sym->Binding = STB_WEAK;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
@@ -289,7 +288,7 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, uint8_t Binding,
     // its type. See also comment in addLazyArchive.
     if (S->isWeak())
       L->Type = Type;
-    else if (InputFile *F = L->fetch(Alloc))
+    else if (InputFile *F = L->fetch())
       addFile(F);
   }
   return S;
@@ -509,7 +508,7 @@ void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
-    addFile(createObjectFile(Alloc, MBInfo.first, F->getName(), MBInfo.second));
+    addFile(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
 }
 
 template <class ELFT>
@@ -530,7 +529,7 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
   } else {
     MemoryBufferRef MBRef = Obj.getBuffer();
     if (!MBRef.getBuffer().empty())
-      addFile(createObjectFile(Alloc, MBRef));
+      addFile(createObjectFile(MBRef));
   }
 }
 
@@ -538,7 +537,7 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
 template <class ELFT> void SymbolTable<ELFT>::scanUndefinedFlags() {
   for (StringRef S : Config->Undefined)
     if (auto *L = dyn_cast_or_null<Lazy>(find(S)))
-      if (InputFile *File = L->fetch(Alloc))
+      if (InputFile *File = L->fetch())
         addFile(File);
 }
 

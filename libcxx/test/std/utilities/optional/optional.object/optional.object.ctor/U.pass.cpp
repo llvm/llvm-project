@@ -69,6 +69,11 @@ void test_implicit()
         static_assert(implicit_conversion<long double>(3.14, 3.14), "");
     }
     {
+        int x = 42;
+        optional<void* const> o(&x);
+        assert(*o == &x);
+    }
+    {
         using T = TrivialTestTypes::TestType;
         static_assert(implicit_conversion<T>(42, 42), "");
     }

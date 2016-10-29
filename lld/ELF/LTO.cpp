@@ -137,8 +137,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       else
         saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.o");
     }
-    InputFile *Obj =
-        createObjectFile(Alloc, MemoryBufferRef(Buff[I], "lto.tmp"));
+    InputFile *Obj = createObjectFile(MemoryBufferRef(Buff[I], "lto.tmp"));
     Ret.push_back(Obj);
   }
   return Ret;
