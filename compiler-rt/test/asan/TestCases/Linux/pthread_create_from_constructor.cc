@@ -10,7 +10,7 @@
 
 // dlopen() can not be intercepted on Android
 // UNSUPPORTED: android
-// UNSUPPORTED: powerpc64
+// REQUIRES: x86-target-arch
 
 #ifdef BUILD_SO
 

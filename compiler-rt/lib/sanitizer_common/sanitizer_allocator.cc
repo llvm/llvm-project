@@ -21,10 +21,10 @@
 namespace __sanitizer {
 
 // ThreadSanitizer for Go uses libc malloc/free.
-#if defined(SANITIZER_GO) || defined(SANITIZER_USE_MALLOC)
+#if SANITIZER_GO || defined(SANITIZER_USE_MALLOC)
 # if SANITIZER_LINUX && !SANITIZER_ANDROID
 extern "C" void *__libc_malloc(uptr size);
-#  ifndef SANITIZER_GO
+#  if !SANITIZER_GO
 extern "C" void *__libc_memalign(uptr alignment, uptr size);
 #  endif
 extern "C" void *__libc_realloc(void *ptr, uptr size);
@@ -32,7 +32,7 @@ extern "C" void __libc_free(void *ptr);
 # else
 #  include <stdlib.h>
 #  define __libc_malloc malloc
-#  ifndef SANITIZER_GO
+#  if !SANITIZER_GO
 static void *__libc_memalign(uptr alignment, uptr size) {
   void *p;
   uptr error = posix_memalign(&p, alignment, size);
@@ -47,7 +47,7 @@ static void *__libc_memalign(uptr alignment, uptr size) {
 static void *RawInternalAlloc(uptr size, InternalAllocatorCache *cache,
                               uptr alignment) {
   (void)cache;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   if (alignment == 0)
     return __libc_malloc(size);
   else
@@ -78,7 +78,7 @@ InternalAllocator *internal_allocator() {
   return 0;
 }
 
-#else  // defined(SANITIZER_GO) || defined(SANITIZER_USE_MALLOC)
+#else  // SANITIZER_GO || defined(SANITIZER_USE_MALLOC)
 
 static ALIGNED(64) char internal_alloc_placeholder[sizeof(InternalAllocator)];
 static atomic_uint8_t internal_allocator_initialized;
@@ -131,7 +131,7 @@ static void RawInternalFree(void *ptr, InternalAllocatorCache *cache) {
   internal_allocator()->Deallocate(cache, ptr);
 }
 
-#endif  // defined(SANITIZER_GO) || defined(SANITIZER_USE_MALLOC)
+#endif  // SANITIZER_GO || defined(SANITIZER_USE_MALLOC)
 
 const u64 kBlockMagic = 0x6A6CB03ABCEBC041ull;
 

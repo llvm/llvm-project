@@ -249,4 +249,8 @@
 #define SANITIZER_NLDBL_VERSION "GLIBC_2.4"
 #endif
 
+#if SANITIZER_GO == 0
+# define SANITIZER_GO 0
+#endif
+
 #endif // SANITIZER_PLATFORM_H

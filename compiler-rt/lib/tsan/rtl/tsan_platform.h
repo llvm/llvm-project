@@ -24,7 +24,7 @@
 
 namespace __tsan {
 
-#if !defined(SANITIZER_GO)
+#if !SANITIZER_GO
 
 #if defined(__x86_64__)
 /*
@@ -276,7 +276,7 @@ struct Mapping46 {
 #define TSAN_RUNTIME_VMA 1
 #endif
 
-#elif defined(SANITIZER_GO) && !SANITIZER_WINDOWS
+#elif SANITIZER_GO && !SANITIZER_WINDOWS
 
 /* Go on linux, darwin and freebsd
 0000 0000 1000 - 0000 1000 0000: executable
@@ -302,7 +302,7 @@ struct Mapping {
   static const uptr kAppMemEnd     = 0x00e000000000ull;
 };
 
-#elif defined(SANITIZER_GO) && SANITIZER_WINDOWS
+#elif SANITIZER_GO && SANITIZER_WINDOWS
 
 /* Go on windows
 0000 0000 1000 - 0000 1000 0000: executable
@@ -362,7 +362,7 @@ enum MappingType {
 template<typename Mapping, int Type>
 uptr MappingImpl(void) {
   switch (Type) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
     case MAPPING_LO_APP_BEG: return Mapping::kLoAppMemBeg;
     case MAPPING_LO_APP_END: return Mapping::kLoAppMemEnd;
 # ifdef TSAN_MID_APP_RANGE
@@ -408,7 +408,7 @@ uptr MappingArchImpl(void) {
 #endif
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 ALWAYS_INLINE
 uptr LoAppMemBeg(void) {
   return MappingArchImpl<MAPPING_LO_APP_BEG>();
@@ -470,7 +470,7 @@ bool GetUserRegion(int i, uptr *start, uptr *end) {
   switch (i) {
   default:
     return false;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   case 0:
     *start = LoAppMemBeg();
     *end = LoAppMemEnd();
@@ -528,7 +528,7 @@ uptr TraceMemEnd(void) {
 
 template<typename Mapping>
 bool IsAppMemImpl(uptr mem) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   return (mem >= Mapping::kHeapMemBeg && mem < Mapping::kHeapMemEnd) ||
 # ifdef TSAN_MID_APP_RANGE
          (mem >= Mapping::kMidAppMemBeg && mem < Mapping::kMidAppMemEnd) ||
@@ -619,7 +619,7 @@ bool IsMetaMem(uptr mem) {
 template<typename Mapping>
 uptr MemToShadowImpl(uptr x) {
   DCHECK(IsAppMem(x));
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   return (((x) & ~(Mapping::kAppMemMsk | (kShadowCell - 1)))
       ^ Mapping::kAppMemXor) * kShadowCnt;
 #else
@@ -656,12 +656,17 @@ uptr MemToShadow(uptr x) {
 template<typename Mapping>
 u32 *MemToMetaImpl(uptr x) {
   DCHECK(IsAppMem(x));
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   return (u32*)(((((x) & ~(Mapping::kAppMemMsk | (kMetaShadowCell - 1)))) /
       kMetaShadowCell * kMetaShadowSize) | Mapping::kMetaShadowBeg);
 #else
+# ifndef SANITIZER_WINDOWS
   return (u32*)(((x & ~(kMetaShadowCell - 1)) / \
       kMetaShadowCell * kMetaShadowSize) | Mapping::kMetaShadowBeg);
+# else
+  return (u32*)(((x & ~(kMetaShadowCell - 1)) / \
+      kMetaShadowCell * kMetaShadowSize) + Mapping::kMetaShadowBeg);
+# endif
 #endif
 }
 
@@ -690,7 +695,7 @@ u32 *MemToMeta(uptr x) {
 template<typename Mapping>
 uptr ShadowToMemImpl(uptr s) {
   DCHECK(IsShadowMem(s));
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   // The shadow mapping is non-linear and we've lost some bits, so we don't have
   // an easy way to restore the original app address. But the mapping is a
   // bijection, so we try to restore the address as belonging to low/mid/high
@@ -708,7 +713,7 @@ uptr ShadowToMemImpl(uptr s) {
     return p;
 # endif
   return ((s / kShadowCnt) ^ Mapping::kAppMemXor) | Mapping::kAppMemMsk;
-#else  // #ifndef SANITIZER_GO
+#else  // #if !SANITIZER_GO
 # ifndef SANITIZER_WINDOWS
   return (s & ~Mapping::kShadowBeg) / kShadowCnt;
 # else

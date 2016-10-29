@@ -44,7 +44,7 @@ extern "C" void __tsan_resume() {
 
 namespace __tsan {
 
-#if !defined(SANITIZER_GO) && !SANITIZER_MAC
+#if !SANITIZER_GO && !SANITIZER_MAC
 THREADLOCAL char cur_thread_placeholder[sizeof(ThreadState)] ALIGNED(64);
 #endif
 static char ctx_placeholder[sizeof(Context)] ALIGNED(64);
@@ -86,7 +86,7 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
   return new(mem) ThreadContext(tid);
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static const u32 kThreadQuarantineSize = 16;
 #else
 static const u32 kThreadQuarantineSize = 64;
@@ -117,7 +117,7 @@ ThreadState::ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
   // , ignore_reads_and_writes()
   // , ignore_interceptors()
   , clock(tid, reuse_count)
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   , jmp_bufs(MBlockJmpBuf)
 #endif
   , tid(tid)
@@ -126,13 +126,13 @@ ThreadState::ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
   , stk_size(stk_size)
   , tls_addr(tls_addr)
   , tls_size(tls_size)
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   , last_sleep_clock(tid)
 #endif
 {
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static void MemoryProfiler(Context *ctx, fd_t fd, int i) {
   uptr n_threads;
   uptr n_running_threads;
@@ -242,7 +242,10 @@ void MapShadow(uptr addr, uptr size) {
   // Global data is not 64K aligned, but there are no adjacent mappings,
   // so we can get away with unaligned mapping.
   // CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
-  MmapFixedNoReserve(MemToShadow(addr), size * kShadowMultiplier, "shadow");
+  const uptr kPageSize = GetPageSizeCached();
+  uptr shadow_begin = RoundDownTo((uptr)MemToShadow(addr), kPageSize);
+  uptr shadow_end = RoundUpTo((uptr)MemToShadow(addr + size), kPageSize);
+  MmapFixedNoReserve(shadow_begin, shadow_end - shadow_begin, "shadow");
 
   // Meta shadow is 2:1, so tread carefully.
   static bool data_mapped = false;
@@ -289,7 +292,7 @@ static void CheckShadowMapping() {
   for (int i = 0; GetUserRegion(i, &beg, &end); i++) {
     // Skip cases for empty regions (heap definition for architectures that
     // do not use 64-bit allocator).
-    if (beg ==end)
+    if (beg == end)
       continue;
     VPrintf(3, "checking shadow region %p-%p\n", beg, end);
     uptr prev = 0;
@@ -333,12 +336,12 @@ void Initialize(ThreadState *thr) {
   SetCheckFailedCallback(TsanCheckFailed);
 
   ctx = new(ctx_placeholder) Context;
-  const char *options = GetEnv(kTsanOptionsEnv);
+  const char *options = GetEnv(SANITIZER_GO ? "GORACE" : "TSAN_OPTIONS");
   CacheBinaryName();
   InitializeFlags(&ctx->flags, options);
   AvoidCVE_2016_2143();
   InitializePlatformEarly();
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   // Re-exec ourselves if we need to set additional env or command line args.
   MaybeReexec();
 
@@ -354,14 +357,14 @@ void Initialize(ThreadState *thr) {
   InitializePlatform();
   InitializeMutex();
   InitializeDynamicAnnotations();
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   InitializeShadowMemory();
   InitializeAllocatorLate();
 #endif
   // Setup correct file descriptor for error reports.
   __sanitizer_set_report_path(common_flags()->log_path);
   InitializeSuppressions();
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   InitializeLibIgnore();
   Symbolizer::GetOrInit()->AddHooks(EnterSymbolizer, ExitSymbolizer);
   // On MIPS, TSan initialization is run before
@@ -385,7 +388,7 @@ void Initialize(ThreadState *thr) {
 #endif
   ctx->initialized = true;
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   Symbolizer::LateInitialize();
 #endif
 
@@ -411,7 +414,7 @@ int Finalize(ThreadState *thr) {
   CommonSanitizerReportMutex.Unlock();
   ctx->report_mtx.Unlock();
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   if (Verbosity()) AllocatorPrintStats();
 #endif
 
@@ -419,7 +422,7 @@ int Finalize(ThreadState *thr) {
 
   if (ctx->nreported) {
     failed = true;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
     Printf("ThreadSanitizer: reported %d warnings\n", ctx->nreported);
 #else
     Printf("Found %d data race(s)\n", ctx->nreported);
@@ -434,7 +437,7 @@ int Finalize(ThreadState *thr) {
 
   if (common_flags()->print_suppressions)
     PrintMatchedSuppressions();
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   if (flags()->print_benign)
     PrintMatchedBenignRaces();
 #endif
@@ -449,7 +452,7 @@ int Finalize(ThreadState *thr) {
   return failed ? common_flags()->exitcode : 0;
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 void ForkBefore(ThreadState *thr, uptr pc) {
   ctx->thread_registry->Lock();
   ctx->report_mtx.Lock();
@@ -482,7 +485,7 @@ void ForkChildAfter(ThreadState *thr, uptr pc) {
 }
 #endif
 
-#ifdef SANITIZER_GO
+#if SANITIZER_GO
 NOINLINE
 void GrowShadowStack(ThreadState *thr) {
   const int sz = thr->shadow_stack_end - thr->shadow_stack;
@@ -501,7 +504,7 @@ u32 CurrentStackId(ThreadState *thr, uptr pc) {
   if (!thr->is_inited)  // May happen during bootstrap.
     return 0;
   if (pc != 0) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
     DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
 #else
     if (thr->shadow_stack_pos == thr->shadow_stack_end)
@@ -547,7 +550,7 @@ uptr TraceParts() {
   return TraceSize() / kTracePartSize;
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 extern "C" void __tsan_trace_switch() {
   TraceSwitch(cur_thread());
 }
@@ -580,7 +583,7 @@ void HandleRace(ThreadState *thr, u64 *shadow_mem,
   thr->racy_state[0] = cur.raw();
   thr->racy_state[1] = old.raw();
   thr->racy_shadow_addr = shadow_mem;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   HACKY_CALL(__tsan_report_race);
 #else
   ReportRace(thr);
@@ -777,7 +780,7 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
   }
 #endif
 
-  if (kCppMode && *shadow_mem == kShadowRodata) {
+  if (!SANITIZER_GO && *shadow_mem == kShadowRodata) {
     // Access to .rodata section, no races here.
     // Measurements show that it can be 10-20% of all memory accesses.
     StatInc(thr, StatMop);
@@ -864,7 +867,7 @@ static void MemoryRangeSet(ThreadState *thr, uptr pc, uptr addr, uptr size,
   size = (size + (kShadowCell - 1)) & ~(kShadowCell - 1);
   // UnmapOrDie/MmapFixedNoReserve does not work on Windows,
   // so we do it only for C/C++.
-  if (kGoMode || size < common_flags()->clear_shadow_mmap_threshold) {
+  if (SANITIZER_GO || size < common_flags()->clear_shadow_mmap_threshold) {
     u64 *p = (u64*)MemToShadow(addr);
     CHECK(IsShadowMem((uptr)p));
     CHECK(IsShadowMem((uptr)(p + size * kShadowCnt / kShadowCell - 1)));
@@ -950,7 +953,7 @@ void FuncEntry(ThreadState *thr, uptr pc) {
   // Shadow stack maintenance can be replaced with
   // stack unwinding during trace switch (which presumably must be faster).
   DCHECK_GE(thr->shadow_stack_pos, thr->shadow_stack);
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
 #else
   if (thr->shadow_stack_pos == thr->shadow_stack_end)
@@ -970,7 +973,7 @@ void FuncExit(ThreadState *thr) {
   }
 
   DCHECK_GT(thr->shadow_stack_pos, thr->shadow_stack);
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
 #endif
   thr->shadow_stack_pos--;
@@ -981,7 +984,7 @@ void ThreadIgnoreBegin(ThreadState *thr, uptr pc) {
   thr->ignore_reads_and_writes++;
   CHECK_GT(thr->ignore_reads_and_writes, 0);
   thr->fast_state.SetIgnoreBit();
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   if (!ctx->after_multithreaded_fork)
     thr->mop_ignore_set.Add(CurrentStackId(thr, pc));
 #endif
@@ -993,7 +996,7 @@ void ThreadIgnoreEnd(ThreadState *thr, uptr pc) {
   CHECK_GE(thr->ignore_reads_and_writes, 0);
   if (thr->ignore_reads_and_writes == 0) {
     thr->fast_state.ClearIgnoreBit();
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
     thr->mop_ignore_set.Reset();
 #endif
   }
@@ -1003,7 +1006,7 @@ void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreSyncBegin\n", thr->tid);
   thr->ignore_sync++;
   CHECK_GT(thr->ignore_sync, 0);
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   if (!ctx->after_multithreaded_fork)
     thr->sync_ignore_set.Add(CurrentStackId(thr, pc));
 #endif
@@ -1013,7 +1016,7 @@ void ThreadIgnoreSyncEnd(ThreadState *thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreSyncEnd\n", thr->tid);
   thr->ignore_sync--;
   CHECK_GE(thr->ignore_sync, 0);
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   if (thr->ignore_sync == 0)
     thr->sync_ignore_set.Reset();
 #endif
@@ -1037,7 +1040,7 @@ void build_consistency_nostats() {}
 
 }  // namespace __tsan
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 // Must be included in this file to make sure everything is inlined.
 #include "tsan_interface_inl.h"
 #endif
