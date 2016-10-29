@@ -1855,17 +1855,24 @@ void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
 bool AddressSanitizer::runOnFunction(Function &F) {
   if (&F == AsanCtorFunction) return false;
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
-  DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
-  initializeCallbacks(*F.getParent());
+  if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
+  if (F.getName().startswith("__asan_")) return false;
 
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  bool FunctionModified = false;
 
   // If needed, insert __asan_init before checking for SanitizeAddress attr.
-  maybeInsertAsanInitAtFunctionEntry(F);
+  // This function needs to be called even if the function body is not
+  // instrumented.  
+  if (maybeInsertAsanInitAtFunctionEntry(F))
+    FunctionModified = true;
+  
+  // Leave if the function doesn't need instrumentation.
+  if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return FunctionModified;
 
-  if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return false;
+  DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
 
-  if (!ClDebugFunc.empty() && ClDebugFunc != F.getName()) return false;
+  initializeCallbacks(*F.getParent());
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   FunctionStateRAII CleanupObj(this);
 
@@ -1963,11 +1970,13 @@ bool AddressSanitizer::runOnFunction(Function &F) {
     NumInstrumented++;
   }
 
-  bool res = NumInstrumented > 0 || ChangedStack || !NoReturnCalls.empty();
+  if (NumInstrumented > 0 || ChangedStack || !NoReturnCalls.empty())
+    FunctionModified = true;
 
-  DEBUG(dbgs() << "ASAN done instrumenting: " << res << " " << F << "\n");
+  DEBUG(dbgs() << "ASAN done instrumenting: " << FunctionModified << " "
+               << F << "\n");
 
-  return res;
+  return FunctionModified;
 }
 
 // Workaround for bug 11395: we don't want to instrument stack in functions
