@@ -16,11 +16,6 @@ New entries should be added directly below the "Version" header.
 Version 4.0
 -----------
 
-* r285382 - Add __libcpp_library_version
-
-  all platforms
-  -------------
-  Symbol added: _ZNSt3__124__libcpp_library_versionEv
 
 * r285101 - Add -fvisibility-inlines-hidden when building libc++.
 

@@ -38,7 +38,7 @@ void TsanCheckFailed(const char *file, int line, const char *cond,
   // on the other hand there is no sense in processing interceptors
   // since we are going to die soon.
   ScopedIgnoreInterceptors ignore;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   cur_thread()->ignore_sync++;
   cur_thread()->ignore_reads_and_writes++;
 #endif
@@ -75,7 +75,7 @@ static void StackStripMain(SymbolizedStack *frames) {
 
   if (last_frame2 == 0)
     return;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   const char *last = last_frame->info.function;
   const char *last2 = last_frame2->info.function;
   // Strip frame above 'main'
@@ -208,7 +208,7 @@ void ScopedReport::AddThread(const ThreadContext *tctx, bool suppressable) {
     rt->stack->suppressable = suppressable;
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static bool FindThreadByUidLockedCallback(ThreadContextBase *tctx, void *arg) {
   int unique_id = *(int *)arg;
   return tctx->unique_id == (u32)unique_id;
@@ -253,7 +253,7 @@ ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
 #endif
 
 void ScopedReport::AddThread(int unique_tid, bool suppressable) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   if (const ThreadContext *tctx = FindThreadByUidLocked(unique_tid))
     AddThread(tctx, suppressable);
 #endif
@@ -309,7 +309,7 @@ void ScopedReport::AddDeadMutex(u64 id) {
 void ScopedReport::AddLocation(uptr addr, uptr size) {
   if (addr == 0)
     return;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   int fd = -1;
   int creat_tid = -1;
   u32 creat_stack = 0;
@@ -359,7 +359,7 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
   }
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 void ScopedReport::AddSleep(u32 stack_id) {
   rep_->sleep = SymbolizeStackId(stack_id);
 }
@@ -664,7 +664,7 @@ void ReportRace(ThreadState *thr) {
 
   rep.AddLocation(addr_min, addr_max - addr_min);
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   {  // NOLINT
     Shadow s(thr->racy_state[1]);
     if (s.epoch() <= thr->last_sleep_clock.get(s.tid()))
@@ -693,7 +693,7 @@ void PrintCurrentStack(ThreadState *thr, uptr pc) {
 // Also see PR27280 comment 2 and 3 for breaking examples and analysis.
 ALWAYS_INLINE
 void PrintCurrentStackSlow(uptr pc) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   BufferedStackTrace *ptrace =
       new(internal_alloc(MBlockStackTrace, sizeof(BufferedStackTrace)))
           BufferedStackTrace();

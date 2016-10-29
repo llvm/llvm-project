@@ -23,7 +23,7 @@
 
 namespace __tsan {
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 void InitializeShadowMemory() {
   // Map memory shadow.
   uptr shadow =

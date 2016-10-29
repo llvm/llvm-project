@@ -43,7 +43,7 @@ class MutexSet {
   }
 
  private:
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   uptr size_;
   Desc descs_[kMaxSize];
 #endif
@@ -55,7 +55,7 @@ class MutexSet {
 // Go does not have mutexes, so do not spend memory and time.
 // (Go sync.Mutex is actually a semaphore -- can be unlocked
 // in different goroutine).
-#ifdef SANITIZER_GO
+#if SANITIZER_GO
 MutexSet::MutexSet() {}
 void MutexSet::Add(u64 id, bool write, u64 epoch) {}
 void MutexSet::Del(u64 id, bool write) {}

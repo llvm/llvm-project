@@ -154,10 +154,10 @@ COMMON_FLAG(bool, full_address_space, false,
 COMMON_FLAG(bool, print_suppressions, true,
             "Print matched suppressions at exit.")
 COMMON_FLAG(
-    bool, disable_coredump, (SANITIZER_WORDSIZE == 64),
-    "Disable core dumping. By default, disable_core=1 on 64-bit to avoid "
-    "dumping a 16T+ core file. Ignored on OSes that don't dump core by"
-    "default and for sanitizers that don't reserve lots of virtual memory.")
+    bool, disable_coredump, (SANITIZER_WORDSIZE == 64) && !SANITIZER_GO,
+    "Disable core dumping. By default, disable_coredump=1 on 64-bit to avoid"
+    " dumping a 16T+ core file. Ignored on OSes that don't dump core by"
+    " default and for sanitizers that don't reserve lots of virtual memory.")
 COMMON_FLAG(bool, use_madv_dontdump, true,
           "If set, instructs kernel to not store the (huge) shadow "
           "in core file.")

@@ -1141,7 +1141,6 @@
 {'type': 'FUNC', 'name': '_ZNSt3__121recursive_timed_mutexD1Ev'}
 {'type': 'FUNC', 'name': '_ZNSt3__121recursive_timed_mutexD2Ev'}
 {'type': 'FUNC', 'name': '_ZNSt3__121undeclare_no_pointersEPcm'}
-{'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_library_versionEv'}
 {'type': 'FUNC', 'name': '_ZNSt3__125__num_get_signed_integralIlEET_PKcS3_Rji'}
 {'type': 'FUNC', 'name': '_ZNSt3__125__num_get_signed_integralIxEET_PKcS3_Rji'}
 {'type': 'FUNC', 'name': '_ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE'}

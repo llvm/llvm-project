@@ -30,7 +30,7 @@ void SyncVar::Init(ThreadState *thr, uptr pc, uptr addr, u64 uid) {
   this->next = 0;
 
   creation_stack_id = 0;
-  if (kCppMode)  // Go does not use them
+  if (!SANITIZER_GO)  // Go does not use them
     creation_stack_id = CurrentStackId(thr, pc);
   if (common_flags()->detect_deadlocks)
     DDMutexInit(thr, pc, this);
@@ -120,7 +120,7 @@ bool MetaMap::FreeRange(Processor *proc, uptr p, uptr sz) {
 // without meta objects, at this point it stops freeing meta objects. Because
 // thread stacks grow top-down, we do the same starting from end as well.
 void MetaMap::ResetRange(Processor *proc, uptr p, uptr sz) {
-  if (kGoMode) {
+  if (SANITIZER_GO) {
     // UnmapOrDie/MmapFixedNoReserve does not work on Windows,
     // so we do the optimization only for C/C++.
     FreeRange(proc, p, sz);

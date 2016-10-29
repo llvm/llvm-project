@@ -21,7 +21,7 @@
 #include "tsan_mman.h"
 #include "tsan_platform.h"
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 // Suppressions for true/false positives in standard libraries.
 static const char *const std_suppressions =
 // Libstdc++ 4.4 has data races in std::string.
@@ -54,7 +54,7 @@ void InitializeSuppressions() {
   suppression_ctx = new (suppression_placeholder) // NOLINT
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   suppression_ctx->Parse(__tsan_default_suppressions());
   suppression_ctx->Parse(std_suppressions);
 #endif
