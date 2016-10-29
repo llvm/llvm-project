@@ -6,6 +6,8 @@
 ; XXX - Why does it like to use vcc?
 
 ; GCN-LABEL: {{^}}spill_m0:
+; TOSMEM: s_mov_b32 s88, SCRATCH_RSRC_DWORD0
+
 ; GCN: s_cmp_lg_u32
 
 ; TOVGPR: s_mov_b32 vcc_hi, m0

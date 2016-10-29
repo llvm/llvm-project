@@ -46,224 +46,24 @@ StringRef llvm::dwarf::ChildrenString(unsigned Children) {
 
 StringRef llvm::dwarf::AttributeString(unsigned Attribute) {
   switch (Attribute) {
-  case DW_AT_sibling:                    return "DW_AT_sibling";
-  case DW_AT_location:                   return "DW_AT_location";
-  case DW_AT_name:                       return "DW_AT_name";
-  case DW_AT_ordering:                   return "DW_AT_ordering";
-  case DW_AT_byte_size:                  return "DW_AT_byte_size";
-  case DW_AT_bit_offset:                 return "DW_AT_bit_offset";
-  case DW_AT_bit_size:                   return "DW_AT_bit_size";
-  case DW_AT_stmt_list:                  return "DW_AT_stmt_list";
-  case DW_AT_low_pc:                     return "DW_AT_low_pc";
-  case DW_AT_high_pc:                    return "DW_AT_high_pc";
-  case DW_AT_language:                   return "DW_AT_language";
-  case DW_AT_discr:                      return "DW_AT_discr";
-  case DW_AT_discr_value:                return "DW_AT_discr_value";
-  case DW_AT_visibility:                 return "DW_AT_visibility";
-  case DW_AT_import:                     return "DW_AT_import";
-  case DW_AT_string_length:              return "DW_AT_string_length";
-  case DW_AT_common_reference:           return "DW_AT_common_reference";
-  case DW_AT_comp_dir:                   return "DW_AT_comp_dir";
-  case DW_AT_const_value:                return "DW_AT_const_value";
-  case DW_AT_containing_type:            return "DW_AT_containing_type";
-  case DW_AT_default_value:              return "DW_AT_default_value";
-  case DW_AT_inline:                     return "DW_AT_inline";
-  case DW_AT_is_optional:                return "DW_AT_is_optional";
-  case DW_AT_lower_bound:                return "DW_AT_lower_bound";
-  case DW_AT_producer:                   return "DW_AT_producer";
-  case DW_AT_prototyped:                 return "DW_AT_prototyped";
-  case DW_AT_return_addr:                return "DW_AT_return_addr";
-  case DW_AT_start_scope:                return "DW_AT_start_scope";
-  case DW_AT_bit_stride:                 return "DW_AT_bit_stride";
-  case DW_AT_upper_bound:                return "DW_AT_upper_bound";
-  case DW_AT_abstract_origin:            return "DW_AT_abstract_origin";
-  case DW_AT_accessibility:              return "DW_AT_accessibility";
-  case DW_AT_address_class:              return "DW_AT_address_class";
-  case DW_AT_artificial:                 return "DW_AT_artificial";
-  case DW_AT_base_types:                 return "DW_AT_base_types";
-  case DW_AT_calling_convention:         return "DW_AT_calling_convention";
-  case DW_AT_count:                      return "DW_AT_count";
-  case DW_AT_data_member_location:       return "DW_AT_data_member_location";
-  case DW_AT_decl_column:                return "DW_AT_decl_column";
-  case DW_AT_decl_file:                  return "DW_AT_decl_file";
-  case DW_AT_decl_line:                  return "DW_AT_decl_line";
-  case DW_AT_declaration:                return "DW_AT_declaration";
-  case DW_AT_discr_list:                 return "DW_AT_discr_list";
-  case DW_AT_encoding:                   return "DW_AT_encoding";
-  case DW_AT_external:                   return "DW_AT_external";
-  case DW_AT_frame_base:                 return "DW_AT_frame_base";
-  case DW_AT_friend:                     return "DW_AT_friend";
-  case DW_AT_identifier_case:            return "DW_AT_identifier_case";
-  case DW_AT_macro_info:                 return "DW_AT_macro_info";
-  case DW_AT_namelist_item:              return "DW_AT_namelist_item";
-  case DW_AT_priority:                   return "DW_AT_priority";
-  case DW_AT_segment:                    return "DW_AT_segment";
-  case DW_AT_specification:              return "DW_AT_specification";
-  case DW_AT_static_link:                return "DW_AT_static_link";
-  case DW_AT_type:                       return "DW_AT_type";
-  case DW_AT_use_location:               return "DW_AT_use_location";
-  case DW_AT_variable_parameter:         return "DW_AT_variable_parameter";
-  case DW_AT_virtuality:                 return "DW_AT_virtuality";
-  case DW_AT_vtable_elem_location:       return "DW_AT_vtable_elem_location";
-  case DW_AT_allocated:                  return "DW_AT_allocated";
-  case DW_AT_associated:                 return "DW_AT_associated";
-  case DW_AT_data_location:              return "DW_AT_data_location";
-  case DW_AT_byte_stride:                return "DW_AT_byte_stride";
-  case DW_AT_entry_pc:                   return "DW_AT_entry_pc";
-  case DW_AT_use_UTF8:                   return "DW_AT_use_UTF8";
-  case DW_AT_extension:                  return "DW_AT_extension";
-  case DW_AT_ranges:                     return "DW_AT_ranges";
-  case DW_AT_trampoline:                 return "DW_AT_trampoline";
-  case DW_AT_call_column:                return "DW_AT_call_column";
-  case DW_AT_call_file:                  return "DW_AT_call_file";
-  case DW_AT_call_line:                  return "DW_AT_call_line";
-  case DW_AT_description:                return "DW_AT_description";
-  case DW_AT_binary_scale:               return "DW_AT_binary_scale";
-  case DW_AT_decimal_scale:              return "DW_AT_decimal_scale";
-  case DW_AT_small:                      return "DW_AT_small";
-  case DW_AT_decimal_sign:               return "DW_AT_decimal_sign";
-  case DW_AT_digit_count:                return "DW_AT_digit_count";
-  case DW_AT_picture_string:             return "DW_AT_picture_string";
-  case DW_AT_mutable:                    return "DW_AT_mutable";
-  case DW_AT_threads_scaled:             return "DW_AT_threads_scaled";
-  case DW_AT_explicit:                   return "DW_AT_explicit";
-  case DW_AT_object_pointer:             return "DW_AT_object_pointer";
-  case DW_AT_endianity:                  return "DW_AT_endianity";
-  case DW_AT_elemental:                  return "DW_AT_elemental";
-  case DW_AT_pure:                       return "DW_AT_pure";
-  case DW_AT_recursive:                  return "DW_AT_recursive";
-  case DW_AT_signature:                  return "DW_AT_signature";
-  case DW_AT_main_subprogram:            return "DW_AT_main_subprogram";
-  case DW_AT_data_bit_offset:            return "DW_AT_data_bit_offset";
-  case DW_AT_const_expr:                 return "DW_AT_const_expr";
-  case DW_AT_enum_class:                 return "DW_AT_enum_class";
-  case DW_AT_linkage_name:               return "DW_AT_linkage_name";
-  case DW_AT_string_length_bit_size:     return "DW_AT_string_length_bit_size";
-  case DW_AT_string_length_byte_size:    return "DW_AT_string_length_byte_size";
-  case DW_AT_rank:                       return "DW_AT_rank";
-  case DW_AT_str_offsets_base:           return "DW_AT_str_offsets_base";
-  case DW_AT_addr_base:                  return "DW_AT_addr_base";
-  case DW_AT_ranges_base:                return "DW_AT_ranges_base";
-  case DW_AT_dwo_id:                     return "DW_AT_dwo_id";
-  case DW_AT_dwo_name:                   return "DW_AT_dwo_name";
-  case DW_AT_reference:                  return "DW_AT_reference";
-  case DW_AT_rvalue_reference:           return "DW_AT_rvalue_reference";
-  case DW_AT_noreturn:                   return "DW_AT_noreturn";
-  case DW_AT_alignment:
-    return "DW_AT_alignment";
-  case DW_AT_MIPS_loop_begin:            return "DW_AT_MIPS_loop_begin";
-  case DW_AT_MIPS_tail_loop_begin:       return "DW_AT_MIPS_tail_loop_begin";
-  case DW_AT_MIPS_epilog_begin:          return "DW_AT_MIPS_epilog_begin";
-  case DW_AT_MIPS_loop_unroll_factor:    return "DW_AT_MIPS_loop_unroll_factor";
-  case DW_AT_MIPS_software_pipeline_depth:
-    return "DW_AT_MIPS_software_pipeline_depth";
-  case DW_AT_MIPS_linkage_name:          return "DW_AT_MIPS_linkage_name";
-  case DW_AT_MIPS_stride:                return "DW_AT_MIPS_stride";
-  case DW_AT_MIPS_abstract_name:         return "DW_AT_MIPS_abstract_name";
-  case DW_AT_MIPS_clone_origin:          return "DW_AT_MIPS_clone_origin";
-  case DW_AT_MIPS_has_inlines:           return "DW_AT_MIPS_has_inlines";
-  case DW_AT_MIPS_stride_byte:           return "DW_AT_MIPS_stride_byte";
-  case DW_AT_MIPS_stride_elem:           return "DW_AT_MIPS_stride_elem";
-  case DW_AT_MIPS_ptr_dopetype:          return "DW_AT_MIPS_ptr_dopetype";
-  case DW_AT_MIPS_allocatable_dopetype:
-    return "DW_AT_MIPS_allocatable_dopetype";
-  case DW_AT_MIPS_assumed_shape_dopetype:
-    return "DW_AT_MIPS_assumed_shape_dopetype";
-  case DW_AT_sf_names:                   return "DW_AT_sf_names";
-  case DW_AT_src_info:                   return "DW_AT_src_info";
-  case DW_AT_mac_info:                   return "DW_AT_mac_info";
-  case DW_AT_src_coords:                 return "DW_AT_src_coords";
-  case DW_AT_body_begin:                 return "DW_AT_body_begin";
-  case DW_AT_body_end:                   return "DW_AT_body_end";
-  case DW_AT_GNU_vector:                 return "DW_AT_GNU_vector";
-  case DW_AT_GNU_template_name:          return "DW_AT_GNU_template_name";
-  case DW_AT_GNU_odr_signature:          return "DW_AT_GNU_odr_signature";
-  case DW_AT_MIPS_assumed_size:          return "DW_AT_MIPS_assumed_size";
-  case DW_AT_lo_user:                    return "DW_AT_lo_user";
-  case DW_AT_hi_user:                    return "DW_AT_hi_user";
-  case DW_AT_BORLAND_property_read:      return "DW_AT_BORLAND_property_read";
-  case DW_AT_BORLAND_property_write:     return "DW_AT_BORLAND_property_write";
-  case DW_AT_BORLAND_property_implements: return "DW_AT_BORLAND_property_implements";
-  case DW_AT_BORLAND_property_index:     return "DW_AT_BORLAND_property_index";
-  case DW_AT_BORLAND_property_default:   return "DW_AT_BORLAND_property_default";
-  case DW_AT_BORLAND_Delphi_unit:        return "DW_AT_BORLAND_Delphi_unit";
-  case DW_AT_BORLAND_Delphi_class:       return "DW_AT_BORLAND_Delphi_class";
-  case DW_AT_BORLAND_Delphi_record:      return "DW_AT_BORLAND_Delphi_record";
-  case DW_AT_BORLAND_Delphi_metaclass:   return "DW_AT_BORLAND_Delphi_metaclass";
-  case DW_AT_BORLAND_Delphi_constructor: return "DW_AT_BORLAND_Delphi_constructor";
-  case DW_AT_BORLAND_Delphi_destructor:  return "DW_AT_BORLAND_Delphi_destructor";
-  case DW_AT_BORLAND_Delphi_anonymous_method: return "DW_AT_BORLAND_Delphi_anonymous_method";
-  case DW_AT_BORLAND_Delphi_interface:   return "DW_AT_BORLAND_Delphi_interface";
-  case DW_AT_BORLAND_Delphi_ABI:         return "DW_AT_BORLAND_Delphi_ABI";
-  case DW_AT_BORLAND_Delphi_return:      return "DW_AT_BORLAND_Delphi_return";
-  case DW_AT_BORLAND_Delphi_frameptr:    return "DW_AT_BORLAND_Delphi_frameptr";
-  case DW_AT_BORLAND_closure:            return "DW_AT_BORLAND_closure";
-  case DW_AT_APPLE_optimized:            return "DW_AT_APPLE_optimized";
-  case DW_AT_APPLE_flags:                return "DW_AT_APPLE_flags";
-  case DW_AT_APPLE_isa:                  return "DW_AT_APPLE_isa";
-  case DW_AT_APPLE_block:                return "DW_AT_APPLE_block";
-  case DW_AT_APPLE_major_runtime_vers:   return "DW_AT_APPLE_major_runtime_vers";
-  case DW_AT_APPLE_runtime_class:        return "DW_AT_APPLE_runtime_class";
-  case DW_AT_APPLE_omit_frame_ptr:       return "DW_AT_APPLE_omit_frame_ptr";
-  case DW_AT_APPLE_property_name:        return "DW_AT_APPLE_property_name";
-  case DW_AT_APPLE_property_getter:      return "DW_AT_APPLE_property_getter";
-  case DW_AT_APPLE_property_setter:      return "DW_AT_APPLE_property_setter";
-  case DW_AT_APPLE_property_attribute:   return "DW_AT_APPLE_property_attribute";
-  case DW_AT_APPLE_property:             return "DW_AT_APPLE_property";
-  case DW_AT_APPLE_objc_complete_type:   return "DW_AT_APPLE_objc_complete_type";
-  case DW_AT_LLVM_include_path:          return "DW_AT_LLVM_include_path";
-  case DW_AT_LLVM_config_macros:         return "DW_AT_LLVM_config_macros";
-  case DW_AT_LLVM_isysroot:              return "DW_AT_LLVM_isysroot";
-
-    // DWARF5 Fission Extension Attribute
-  case DW_AT_GNU_dwo_name:               return "DW_AT_GNU_dwo_name";
-  case DW_AT_GNU_dwo_id:                 return "DW_AT_GNU_dwo_id";
-  case DW_AT_GNU_ranges_base:            return "DW_AT_GNU_ranges_base";
-  case DW_AT_GNU_addr_base:              return "DW_AT_GNU_addr_base";
-  case DW_AT_GNU_pubnames:               return "DW_AT_GNU_pubnames";
-  case DW_AT_GNU_pubtypes:               return "DW_AT_GNU_pubtypes";
-  case DW_AT_GNU_discriminator:          return "DW_AT_GNU_discriminator";
+  default:
+    return StringRef();
+#define HANDLE_DW_AT(ID, NAME)                                                \
+  case DW_AT_##NAME:                                                          \
+    return "DW_AT_" #NAME;
+#include "llvm/Support/Dwarf.def"
   }
-  return StringRef();
 }
 
 StringRef llvm::dwarf::FormEncodingString(unsigned Encoding) {
   switch (Encoding) {
-  case DW_FORM_addr:                     return "DW_FORM_addr";
-  case DW_FORM_block2:                   return "DW_FORM_block2";
-  case DW_FORM_block4:                   return "DW_FORM_block4";
-  case DW_FORM_data2:                    return "DW_FORM_data2";
-  case DW_FORM_data4:                    return "DW_FORM_data4";
-  case DW_FORM_data8:                    return "DW_FORM_data8";
-  case DW_FORM_string:                   return "DW_FORM_string";
-  case DW_FORM_block:                    return "DW_FORM_block";
-  case DW_FORM_block1:                   return "DW_FORM_block1";
-  case DW_FORM_data1:                    return "DW_FORM_data1";
-  case DW_FORM_flag:                     return "DW_FORM_flag";
-  case DW_FORM_sdata:                    return "DW_FORM_sdata";
-  case DW_FORM_strp:                     return "DW_FORM_strp";
-  case DW_FORM_udata:                    return "DW_FORM_udata";
-  case DW_FORM_ref_addr:                 return "DW_FORM_ref_addr";
-  case DW_FORM_ref1:                     return "DW_FORM_ref1";
-  case DW_FORM_ref2:                     return "DW_FORM_ref2";
-  case DW_FORM_ref4:                     return "DW_FORM_ref4";
-  case DW_FORM_ref8:                     return "DW_FORM_ref8";
-  case DW_FORM_ref_udata:                return "DW_FORM_ref_udata";
-  case DW_FORM_indirect:                 return "DW_FORM_indirect";
-  case DW_FORM_sec_offset:               return "DW_FORM_sec_offset";
-  case DW_FORM_exprloc:                  return "DW_FORM_exprloc";
-  case DW_FORM_flag_present:             return "DW_FORM_flag_present";
-  case DW_FORM_ref_sig8:                 return "DW_FORM_ref_sig8";
-
-    // DWARF5 Fission Extension Forms
-  case DW_FORM_GNU_addr_index:           return "DW_FORM_GNU_addr_index";
-  case DW_FORM_GNU_str_index:            return "DW_FORM_GNU_str_index";
-
-  // Alternate debug sections proposal (output of "dwz" tool).
-  case DW_FORM_GNU_ref_alt:              return "DW_FORM_GNU_ref_alt";
-  case DW_FORM_GNU_strp_alt:             return "DW_FORM_GNU_strp_alt";
+  default:
+    return StringRef();
+#define HANDLE_DW_FORM(ID, NAME)                                                \
+  case DW_FORM_##NAME:                                                          \
+    return "DW_FORM_" #NAME;
+#include "llvm/Support/Dwarf.def"
   }
-  return StringRef();
 }
 
 StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
@@ -436,33 +236,24 @@ StringRef llvm::dwarf::DiscriminantString(unsigned Discriminant) {
 
 StringRef llvm::dwarf::LNStandardString(unsigned Standard) {
   switch (Standard) {
-  case DW_LNS_copy:                      return "DW_LNS_copy";
-  case DW_LNS_advance_pc:                return "DW_LNS_advance_pc";
-  case DW_LNS_advance_line:              return "DW_LNS_advance_line";
-  case DW_LNS_set_file:                  return "DW_LNS_set_file";
-  case DW_LNS_set_column:                return "DW_LNS_set_column";
-  case DW_LNS_negate_stmt:               return "DW_LNS_negate_stmt";
-  case DW_LNS_set_basic_block:           return "DW_LNS_set_basic_block";
-  case DW_LNS_const_add_pc:              return "DW_LNS_const_add_pc";
-  case DW_LNS_fixed_advance_pc:          return "DW_LNS_fixed_advance_pc";
-  case DW_LNS_set_prologue_end:          return "DW_LNS_set_prologue_end";
-  case DW_LNS_set_epilogue_begin:        return "DW_LNS_set_epilogue_begin";
-  case DW_LNS_set_isa:                   return "DW_LNS_set_isa";
+  default:
+    return StringRef();
+#define HANDLE_DW_LNS(ID, NAME)                                               \
+  case DW_LNS_##NAME:                                                         \
+    return "DW_LNS_" #NAME;
+#include "llvm/Support/Dwarf.def"
   }
-  return StringRef();
 }
 
 StringRef llvm::dwarf::LNExtendedString(unsigned Encoding) {
   switch (Encoding) {
-  // Line Number Extended Opcode Encodings
-  case DW_LNE_end_sequence:              return "DW_LNE_end_sequence";
-  case DW_LNE_set_address:               return "DW_LNE_set_address";
-  case DW_LNE_define_file:               return "DW_LNE_define_file";
-  case DW_LNE_set_discriminator:         return "DW_LNE_set_discriminator";
-  case DW_LNE_lo_user:                   return "DW_LNE_lo_user";
-  case DW_LNE_hi_user:                   return "DW_LNE_hi_user";
+  default:
+    return StringRef();
+#define HANDLE_DW_LNE(ID, NAME)                                               \
+  case DW_LNE_##NAME:                                                         \
+    return "DW_LNE_" #NAME;
+#include "llvm/Support/Dwarf.def"
   }
-  return StringRef();
 }
 
 StringRef llvm::dwarf::MacinfoString(unsigned Encoding) {
@@ -490,75 +281,24 @@ unsigned llvm::dwarf::getMacinfo(StringRef MacinfoString) {
 
 StringRef llvm::dwarf::CallFrameString(unsigned Encoding) {
   switch (Encoding) {
-  case DW_CFA_nop:                       return "DW_CFA_nop";
-  case DW_CFA_advance_loc:               return "DW_CFA_advance_loc";
-  case DW_CFA_offset:                    return "DW_CFA_offset";
-  case DW_CFA_restore:                   return "DW_CFA_restore";
-  case DW_CFA_set_loc:                   return "DW_CFA_set_loc";
-  case DW_CFA_advance_loc1:              return "DW_CFA_advance_loc1";
-  case DW_CFA_advance_loc2:              return "DW_CFA_advance_loc2";
-  case DW_CFA_advance_loc4:              return "DW_CFA_advance_loc4";
-  case DW_CFA_offset_extended:           return "DW_CFA_offset_extended";
-  case DW_CFA_restore_extended:          return "DW_CFA_restore_extended";
-  case DW_CFA_undefined:                 return "DW_CFA_undefined";
-  case DW_CFA_same_value:                return "DW_CFA_same_value";
-  case DW_CFA_register:                  return "DW_CFA_register";
-  case DW_CFA_remember_state:            return "DW_CFA_remember_state";
-  case DW_CFA_restore_state:             return "DW_CFA_restore_state";
-  case DW_CFA_def_cfa:                   return "DW_CFA_def_cfa";
-  case DW_CFA_def_cfa_register:          return "DW_CFA_def_cfa_register";
-  case DW_CFA_def_cfa_offset:            return "DW_CFA_def_cfa_offset";
-  case DW_CFA_def_cfa_expression:        return "DW_CFA_def_cfa_expression";
-  case DW_CFA_expression:                return "DW_CFA_expression";
-  case DW_CFA_offset_extended_sf:        return "DW_CFA_offset_extended_sf";
-  case DW_CFA_def_cfa_sf:                return "DW_CFA_def_cfa_sf";
-  case DW_CFA_def_cfa_offset_sf:         return "DW_CFA_def_cfa_offset_sf";
-  case DW_CFA_val_offset:                return "DW_CFA_val_offset";
-  case DW_CFA_val_offset_sf:             return "DW_CFA_val_offset_sf";
-  case DW_CFA_val_expression:            return "DW_CFA_val_expression";
-  case DW_CFA_MIPS_advance_loc8:         return "DW_CFA_MIPS_advance_loc8";
-  case DW_CFA_GNU_window_save:           return "DW_CFA_GNU_window_save";
-  case DW_CFA_GNU_args_size:             return "DW_CFA_GNU_args_size";
-  case DW_CFA_lo_user:                   return "DW_CFA_lo_user";
-  case DW_CFA_hi_user:                   return "DW_CFA_hi_user";
+  default:
+    return StringRef();
+#define HANDLE_DW_CFA(ID, NAME)                                               \
+  case DW_CFA_##NAME:                                                         \
+    return "DW_CFA_" #NAME;
+#include "llvm/Support/Dwarf.def"
   }
-  return StringRef();
 }
 
 StringRef llvm::dwarf::ApplePropertyString(unsigned Prop) {
   switch (Prop) {
-  case DW_APPLE_PROPERTY_readonly:
-    return "DW_APPLE_PROPERTY_readonly";
-  case DW_APPLE_PROPERTY_getter:
-    return "DW_APPLE_PROPERTY_getter";
-  case DW_APPLE_PROPERTY_assign:
-    return "DW_APPLE_PROPERTY_assign";
-  case DW_APPLE_PROPERTY_readwrite:
-    return "DW_APPLE_PROPERTY_readwrite";
-  case DW_APPLE_PROPERTY_retain:
-    return "DW_APPLE_PROPERTY_retain";
-  case DW_APPLE_PROPERTY_copy:
-    return "DW_APPLE_PROPERTY_copy";
-  case DW_APPLE_PROPERTY_nonatomic:
-    return "DW_APPLE_PROPERTY_nonatomic";
-  case DW_APPLE_PROPERTY_setter:
-    return "DW_APPLE_PROPERTY_setter";
-  case DW_APPLE_PROPERTY_atomic:
-    return "DW_APPLE_PROPERTY_atomic";
-  case DW_APPLE_PROPERTY_weak:
-    return "DW_APPLE_PROPERTY_weak";
-  case DW_APPLE_PROPERTY_strong:
-    return "DW_APPLE_PROPERTY_strong";
-  case DW_APPLE_PROPERTY_unsafe_unretained:
-    return "DW_APPLE_PROPERTY_unsafe_unretained";
-  case DW_APPLE_PROPERTY_nullability:
-    return "DW_APPLE_PROPERTY_nullability";
-  case DW_APPLE_PROPERTY_null_resettable:
-    return "DW_APPLE_PROPERTY_null_resettable";
-  case DW_APPLE_PROPERTY_class:
-    return "DW_APPLE_PROPERTY_class";
+  default:
+    return StringRef();
+#define HANDLE_DW_APPLE_PROPERTY(ID, NAME)                                               \
+  case DW_APPLE_PROPERTY_##NAME:                                                         \
+    return "DW_APPLE_PROPERTY_" #NAME;
+#include "llvm/Support/Dwarf.def"
   }
-  return StringRef();
 }
 
 StringRef llvm::dwarf::AtomTypeString(unsigned AT) {

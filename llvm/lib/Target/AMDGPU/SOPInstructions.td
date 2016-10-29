@@ -743,8 +743,7 @@ def S_ENDPGM : SOPP <0x00000001, (ins), "s_endpgm",
   [(AMDGPUendpgm)]> {
   let simm16 = 0;
   let isBarrier = 1;
-  let hasCtrlDep = 1;
-  let hasSideEffects = 1;
+  let isReturn = 1;
 }
 
 let isBranch = 1, SchedRW = [WriteBranch] in {

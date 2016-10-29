@@ -216,7 +216,8 @@ namespace {
     bool isIntReg(RegisterRef RR, unsigned &BW);
     bool isIntraBlocks(LiveInterval &LI);
     bool coalesceRegisters(RegisterRef R1, RegisterRef R2);
-    bool coalesceSegments(MachineFunction &MF);
+    bool coalesceSegments(const SmallVectorImpl<MachineInstr*> &Condsets,
+                          std::set<unsigned> &UpdRegs);
   };
 }
 
@@ -364,7 +365,6 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
   // We need to identify predicated defs that need implicit uses, and
   // dead defs that are not really dead, and correct both problems.
 
-  SetVector<MachineBasicBlock*> Defs;
   auto Dominate = [this] (SetVector<MachineBasicBlock*> &Defs,
                           MachineBasicBlock *Dest) -> bool {
     for (MachineBasicBlock *D : Defs)
@@ -388,6 +388,7 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
   // First, try to extend live range within individual basic blocks. This
   // will leave us only with dead defs that do not reach any predicated
   // defs in the same block.
+  SetVector<MachineBasicBlock*> Defs;
   SmallVector<SlotIndex,4> PredDefs;
   for (auto &Seg : Range) {
     if (!Seg.start.isRegister())
@@ -419,10 +420,21 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     if (BB->pred_empty())
       continue;
     // If the defs from this range reach SI via all predecessors, it is live.
+    // It can happen that SI is reached by the defs through some paths, but
+    // not all. In the IR coming into this optimization, SI would not be
+    // considered live, since the defs would then not jointly dominate SI.
+    // That means that SI is an overwriting def, and no implicit use is
+    // needed at this point. Do not add SI to the extension points, since
+    // extendToIndices will abort if there is no joint dominance.
+    // If the abort was avoided by adding extra undefs added to Undefs,
+    // extendToIndices could actually indicate that SI is live, contrary
+    // to the original IR.
     if (Dominate(Defs, BB))
       ExtTo.push_back(SI);
   }
-  LIS->extendToIndices(Range, ExtTo, Undefs);
+
+  if (!ExtTo.empty())
+    LIS->extendToIndices(Range, ExtTo, Undefs);
 
   // Remove <dead> flags from all defs that are not dead after live range
   // extension, and collect all def operands. They will be used to generate
@@ -448,13 +460,15 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     MachineInstr *DefI = LIS->getInstructionFromIndex(Seg.start);
     if (!HII->isPredicated(*DefI))
       continue;
-    MachineFunction &MF = *DefI->getParent()->getParent();
     // Construct the set of all necessary implicit uses, based on the def
     // operands in the instruction.
     std::set<RegisterRef> ImpUses;
     for (auto &Op : DefI->operands())
       if (Op.isReg() && Op.isDef() && DefRegs.count(Op))
         ImpUses.insert(Op);
+    if (ImpUses.empty())
+      continue;
+    MachineFunction &MF = *DefI->getParent()->getParent();
     for (RegisterRef R : ImpUses)
       MachineInstrBuilder(MF, DefI).addReg(R.Reg, RegState::Implicit, R.Sub);
   }
@@ -480,6 +494,7 @@ void HexagonExpandCondsets::recalculateLiveInterval(unsigned Reg) {
   LIS->removeInterval(Reg);
   LIS->createAndComputeVirtRegInterval(Reg);
 }
+
 
 void HexagonExpandCondsets::removeInstr(MachineInstr &MI) {
   LIS->RemoveMachineInstrFromMaps(MI);
@@ -557,14 +572,25 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
   /// predicate.
 
   unsigned Opc = getCondTfrOpcode(SrcOp, PredSense);
-  unsigned State = RegState::Define | (ReadUndef ? RegState::Undef : 0);
-  MachineInstrBuilder MIB = BuildMI(B, At, DL, HII->get(Opc))
-        .addReg(DstR, State, DstSR)
-        .addOperand(PredOp)
-        .addOperand(SrcOp);
+  unsigned DstState = RegState::Define | (ReadUndef ? RegState::Undef : 0);
+  unsigned PredState = getRegState(PredOp) & ~RegState::Kill;
+  MachineInstrBuilder MIB;
 
-  // We don't want any kills yet.
-  MIB->clearKillInfo();
+  if (SrcOp.isReg()) {
+    unsigned SrcState = getRegState(SrcOp);
+    if (RegisterRef(SrcOp) == RegisterRef(DstR, DstSR))
+      SrcState &= ~RegState::Kill;
+    MIB = BuildMI(B, At, DL, HII->get(Opc))
+          .addReg(DstR, DstState, DstSR)
+          .addReg(PredOp.getReg(), PredState, PredOp.getSubReg())
+          .addReg(SrcOp.getReg(), SrcState, SrcOp.getSubReg());
+  } else {
+    MIB = BuildMI(B, At, DL, HII->get(Opc))
+          .addReg(DstR, DstState, DstSR)
+          .addReg(PredOp.getReg(), PredState, PredOp.getSubReg())
+          .addOperand(SrcOp);
+  }
+
   DEBUG(dbgs() << "created an initial copy: " << *MIB);
   return &*MIB;
 }
@@ -1098,24 +1124,19 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
 /// Attempt to coalesce one of the source registers to a MUX intruction with
 /// the destination register. This could lead to having only one predicated
 /// instruction in the end instead of two.
-bool HexagonExpandCondsets::coalesceSegments(MachineFunction &MF) {
-  SmallVector<MachineInstr*,16> Condsets;
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &B = *I;
-    for (MachineBasicBlock::iterator J = B.begin(), F = B.end(); J != F; ++J) {
-      MachineInstr *MI = &*J;
-      if (!isCondset(*MI))
-        continue;
-      MachineOperand &S1 = MI->getOperand(2), &S2 = MI->getOperand(3);
-      if (!S1.isReg() && !S2.isReg())
-        continue;
-      Condsets.push_back(MI);
-    }
+bool HexagonExpandCondsets::coalesceSegments(
+      const SmallVectorImpl<MachineInstr*> &Condsets,
+      std::set<unsigned> &UpdRegs) {
+  SmallVector<MachineInstr*,16> TwoRegs;
+  for (MachineInstr *MI : Condsets) {
+    MachineOperand &S1 = MI->getOperand(2), &S2 = MI->getOperand(3);
+    if (!S1.isReg() && !S2.isReg())
+      continue;
+    TwoRegs.push_back(MI);
   }
 
   bool Changed = false;
-  for (unsigned i = 0, n = Condsets.size(); i < n; ++i) {
-    MachineInstr *CI = Condsets[i];
+  for (MachineInstr *CI : TwoRegs) {
     RegisterRef RD = CI->getOperand(0);
     RegisterRef RP = CI->getOperand(1);
     MachineOperand &S1 = CI->getOperand(2), &S2 = CI->getOperand(3);
@@ -1141,14 +1162,23 @@ bool HexagonExpandCondsets::coalesceSegments(MachineFunction &MF) {
     if (S1.isReg()) {
       RegisterRef RS = S1;
       MachineInstr *RDef = getReachingDefForPred(RS, CI, RP.Reg, true);
-      if (!RDef || !HII->isPredicable(*RDef))
+      if (!RDef || !HII->isPredicable(*RDef)) {
         Done = coalesceRegisters(RD, RegisterRef(S1));
+        if (Done) {
+          UpdRegs.insert(RD.Reg);
+          UpdRegs.insert(S1.getReg());
+        }
+      }
     }
     if (!Done && S2.isReg()) {
       RegisterRef RS = S2;
       MachineInstr *RDef = getReachingDefForPred(RS, CI, RP.Reg, false);
       if (!RDef || !HII->isPredicable(*RDef))
         Done = coalesceRegisters(RD, RegisterRef(S2));
+        if (Done) {
+          UpdRegs.insert(RD.Reg);
+          UpdRegs.insert(S2.getReg());
+        }
     }
     Changed |= Done;
   }
@@ -1170,19 +1200,49 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
                    MF.getFunction()->getParent()));
 
   bool Changed = false;
-  std::set<unsigned> SplitUpd, PredUpd;
+  std::set<unsigned> CoalUpd, PredUpd;
+
+  SmallVector<MachineInstr*,16> Condsets;
+  for (auto &B : MF)
+    for (auto &I : B)
+      if (isCondset(I))
+        Condsets.push_back(&I);
 
   // Try to coalesce the target of a mux with one of its sources.
   // This could eliminate a register copy in some circumstances.
-  Changed |= coalesceSegments(MF);
+  Changed |= coalesceSegments(Condsets, CoalUpd);
+
+  // Update kill flags on all source operands. This is done here because
+  // at this moment (when expand-condsets runs), there are no kill flags
+  // in the IR (they have been removed by live range analysis).
+  // Updating them right before we split is the easiest, because splitting
+  // adds definitions which would interfere with updating kills afterwards.
+  std::set<unsigned> KillUpd;
+  for (MachineInstr *MI : Condsets)
+    for (MachineOperand &Op : MI->operands())
+      if (Op.isReg() && Op.isUse())
+        if (!CoalUpd.count(Op.getReg()))
+          KillUpd.insert(Op.getReg());
+  updateLiveness(KillUpd, false, true, false);
+  DEBUG(LIS->print(dbgs() << "After coalescing\n",
+                   MF.getFunction()->getParent()));
 
   // First, simply split all muxes into a pair of conditional transfers
   // and update the live intervals to reflect the new arrangement. The
   // goal is to update the kill flags, since predication will rely on
   // them.
-  for (auto &B : MF)
-    Changed |= splitInBlock(B, SplitUpd);
-  updateLiveness(SplitUpd, true, true, false);
+  for (MachineInstr *MI : Condsets)
+    Changed |= split(*MI, PredUpd);
+  Condsets.clear(); // The contents of Condsets are invalid here anyway.
+
+  // Do not update live ranges after splitting. Recalculation of live
+  // intervals removes kill flags, which were preserved by splitting on
+  // the source operands of condsets. These kill flags are needed by
+  // predication, and after splitting they are difficult to recalculate
+  // (because of predicated defs), so make sure they are left untouched.
+  // Predication does not use live intervals.
+  DEBUG(LIS->print(dbgs() << "After splitting\n",
+                   MF.getFunction()->getParent()));
 
   // Traverse all blocks and collapse predicable instructions feeding
   // conditional transfers into predicated instructions.
@@ -1190,15 +1250,11 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   // cases that were not created in the previous step.
   for (auto &B : MF)
     Changed |= predicateInBlock(B, PredUpd);
+  DEBUG(LIS->print(dbgs() << "After predicating\n",
+                   MF.getFunction()->getParent()));
 
+  PredUpd.insert(CoalUpd.begin(), CoalUpd.end());
   updateLiveness(PredUpd, true, true, true);
-  // Remove from SplitUpd all registers contained in PredUpd to avoid
-  // unnecessary liveness recalculation.
-  std::set<unsigned> Diff;
-  std::set_difference(SplitUpd.begin(), SplitUpd.end(),
-                      PredUpd.begin(), PredUpd.end(),
-                      std::inserter(Diff, Diff.begin()));
-  updateLiveness(Diff, false, false, true);
 
   DEBUG({
     if (Changed)

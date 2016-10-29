@@ -428,6 +428,16 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SOPK_ZEXT;
   }
 
+  /// \returns true if this is an s_store_dword* instruction. This is more
+  /// specific than than isSMEM && mayStore.
+  static bool isScalarStore(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::SCALAR_STORE;
+  }
+
+  bool isScalarStore(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::SCALAR_STORE;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     unsigned Dest = MI.getOperand(0).getReg();
@@ -606,6 +616,8 @@ public:
                               int &FrameIndex) const override;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
   ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const override;

@@ -61,7 +61,7 @@ Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
 uint32_t DbiStreamBuilder::calculateSerializedLength() const {
   // For now we only support serializing the header.
   return sizeof(DbiStreamHeader) + calculateFileInfoSubstreamSize() +
-         calculateModiSubstreamSize() + DbgStreams.size() * sizeof(uint16_t);
+         calculateModiSubstreamSize() + calculateDbgStreamsSize();
 }
 
 Error DbiStreamBuilder::addModuleInfo(StringRef ObjFile, StringRef Module) {
@@ -119,6 +119,10 @@ uint32_t DbiStreamBuilder::calculateNamesBufferSize() const {
     Size += F.getKeyLength() + 1; // Names[I];
   }
   return Size;
+}
+
+uint32_t DbiStreamBuilder::calculateDbgStreamsSize() const {
+  return DbgStreams.size() * sizeof(uint16_t);
 }
 
 Error DbiStreamBuilder::generateModiSubstream() {

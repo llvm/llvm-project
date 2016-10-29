@@ -614,7 +614,12 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     BuildMI(MBB, MI, DL, OpDesc)
       .addReg(SrcReg, getKillRegState(isKill)) // data
       .addFrameIndex(FrameIndex)               // addr
-      .addMemOperand(MMO);
+      .addMemOperand(MMO)
+      .addReg(MFI->getScratchRSrcReg(), RegState::Implicit)
+      .addReg(MFI->getScratchWaveOffsetReg(), RegState::Implicit);
+    // Add the scratch resource registers as implicit uses because we may end up
+    // needing them, and need to ensure that the reserved registers are
+    // correctly handled.
 
     return;
   }
@@ -707,7 +712,9 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
       .addFrameIndex(FrameIndex) // addr
-      .addMemOperand(MMO);
+      .addMemOperand(MMO)
+      .addReg(MFI->getScratchRSrcReg(), RegState::Implicit)
+      .addReg(MFI->getScratchWaveOffsetReg(), RegState::Implicit);
 
     return;
   }
@@ -1718,7 +1725,8 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
            (DoubleToBits(2.0) == Val) ||
            (DoubleToBits(-2.0) == Val) ||
            (DoubleToBits(4.0) == Val) ||
-           (DoubleToBits(-4.0) == Val);
+           (DoubleToBits(-4.0) == Val) ||
+           (ST.hasInv2PiInlineImm() && Val == 0x3fc45f306dc9c882);
   }
 
   // The actual type of the operand does not seem to matter as long
@@ -1739,7 +1747,8 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
          (FloatToBits(2.0f) == Val) ||
          (FloatToBits(-2.0f) == Val) ||
          (FloatToBits(4.0f) == Val) ||
-         (FloatToBits(-4.0f) == Val);
+         (FloatToBits(-4.0f) == Val) ||
+         (ST.hasInv2PiInlineImm() && Val == 0x3e22f983);
 }
 
 bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
@@ -2106,6 +2115,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (!MI.hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
       ErrInfo = "VALU instruction does not implicitly read exec mask";
       return false;
+    }
+  }
+
+  if (isSMRD(MI)) {
+    if (MI.mayStore()) {
+      // The register offset form of scalar stores may only use m0 as the
+      // soffset register.
+      const MachineOperand *Soff = getNamedOperand(MI, AMDGPU::OpName::soff);
+      if (Soff && Soff->getReg() != AMDGPU::M0) {
+        ErrInfo = "scalar stores must use m0 as offset register";
+        return false;
+      }
     }
   }
 
@@ -3519,6 +3540,20 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     llvm_unreachable("unable to find instruction size");
   }
+}
+
+bool SIInstrInfo::mayAccessFlatAddressSpace(const MachineInstr &MI) const {
+  if (!isFLAT(MI))
+    return false;
+
+  if (MI.memoperands_empty())
+    return true;
+
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    if (MMO->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS)
+      return true;
+  }
+  return false;
 }
 
 ArrayRef<std::pair<int, const char *>>

@@ -110,6 +110,8 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     Has16BitInsts(false),
     HasMovrel(false),
     HasVGPRIndexMode(false),
+    HasScalarStores(false),
+    HasInv2PiInlineImm(false),
     FlatAddressSpace(false),
 
     R600ALUInst(false),
@@ -352,4 +354,14 @@ unsigned SISubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
   if (VGPRs <= 128)
     return 2;
   return 1;
+}
+
+unsigned SISubtarget::getMaxNumSGPRs() const {
+  if (hasSGPRInitBug())
+    return SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+
+  if (getGeneration() >= VOLCANIC_ISLANDS)
+    return 102;
+
+  return 104;
 }

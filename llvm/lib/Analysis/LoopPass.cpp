@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/LoopPassManager.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OptBisect.h"
@@ -140,6 +141,7 @@ void LPPassManager::getAnalysisUsage(AnalysisUsage &Info) const {
   // LPPassManager needs LoopInfo. In the long term LoopInfo class will
   // become part of LPPassManager.
   Info.addRequired<LoopInfoWrapperPass>();
+  Info.addRequired<DominatorTreeWrapperPass>();
   Info.setPreservesAll();
 }
 
@@ -148,6 +150,7 @@ void LPPassManager::getAnalysisUsage(AnalysisUsage &Info) const {
 bool LPPassManager::runOnFunction(Function &F) {
   auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
   LI = &LIWP.getLoopInfo();
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   bool Changed = false;
 
   // Collect inherited analysis from Module level pass manager.
@@ -218,6 +221,12 @@ bool LPPassManager::runOnFunction(Function &F) {
           TimeRegion PassTimer(getPassTimer(&LIWP));
           CurrentLoop->verifyLoop();
         }
+        // Here we apply same reasoning as in the above case. Only difference
+        // is that LPPassManager might run passes which do not require LCSSA
+        // form (LoopPassPrinter for example). We should skip verification for
+        // such passes.
+        if (mustPreserveAnalysisID(LCSSAVerificationPass::ID))
+          CurrentLoop->isRecursivelyLCSSAForm(*DT, *LI);
 
         // Then call the regular verifyAnalysis functions.
         verifyPreservedAnalysis(P);
@@ -353,3 +362,8 @@ bool LoopPass::skipLoop(const Loop *L) const {
   }
   return false;
 }
+
+char LCSSAVerificationPass::ID = 0;
+INITIALIZE_PASS(LCSSAVerificationPass, "lcssa-verification", "LCSSA Verifier",
+                false, false)
+

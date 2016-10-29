@@ -3331,9 +3331,9 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
   if (V.isDeclaration())
     return;
   NameVals.push_back(VE.getValueID(&V));
-  NameVals.push_back(getEncodedGVSummaryFlags(V));
   auto *Summary = Index->getGlobalValueSummary(V);
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
+  NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
 
   unsigned SizeBeforeRefs = NameVals.size();
   for (auto &RI : VS->refs())

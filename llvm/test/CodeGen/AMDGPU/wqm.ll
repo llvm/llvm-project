@@ -459,7 +459,7 @@ entry:
   br i1 %cc, label %if, label %else
 
 if:
-  store volatile <4 x float> %dtex, <4 x float>* undef
+  store volatile <4 x float> %dtex, <4 x float> addrspace(1)* undef
   unreachable
 
 else:
