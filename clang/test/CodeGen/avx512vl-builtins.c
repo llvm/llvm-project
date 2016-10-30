@@ -727,13 +727,15 @@ __m128i test_mm_maskz_sub_epi64 (__mmask8 __U, __m128i __A, __m128i __B) {
 __m256i test_mm256_mask_mul_epi32 (__m256i __W, __mmask8 __M, __m256i __X,
            __m256i __Y) {
   //CHECK-LABEL: @test_mm256_mask_mul_epi32
-  //CHECK: @llvm.x86.avx512.mask.pmul.dq.256
+  //CHECK: @llvm.x86.avx2.pmul.dq
+  //CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_mul_epi32(__W, __M, __X, __Y);
 }
 
 __m256i test_mm256_maskz_mul_epi32 (__mmask8 __M, __m256i __X, __m256i __Y) {
   //CHECK-LABEL: @test_mm256_maskz_mul_epi32
-  //CHECK: @llvm.x86.avx512.mask.pmul.dq.256
+  //CHECK: @llvm.x86.avx2.pmul.dq
+  //CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_mul_epi32(__M, __X, __Y);
 }
 
@@ -741,39 +743,45 @@ __m256i test_mm256_maskz_mul_epi32 (__mmask8 __M, __m256i __X, __m256i __Y) {
 __m128i test_mm_mask_mul_epi32 (__m128i __W, __mmask8 __M, __m128i __X,
         __m128i __Y) {
   //CHECK-LABEL: @test_mm_mask_mul_epi32
-  //CHECK: @llvm.x86.avx512.mask.pmul.dq.128
+  //CHECK: @llvm.x86.sse41.pmuldq
+  //CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_mul_epi32(__W, __M, __X, __Y);
 }
 
 __m128i test_mm_maskz_mul_epi32 (__mmask8 __M, __m128i __X, __m128i __Y) {
   //CHECK-LABEL: @test_mm_maskz_mul_epi32
-  //CHECK: @llvm.x86.avx512.mask.pmul.dq.128
+  //CHECK: @llvm.x86.sse41.pmuldq
+  //CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_mul_epi32(__M, __X, __Y);
 }
 
 __m256i test_mm256_mask_mul_epu32 (__m256i __W, __mmask8 __M, __m256i __X,
            __m256i __Y) {
   //CHECK-LABEL: @test_mm256_mask_mul_epu32
-  //CHECK: @llvm.x86.avx512.mask.pmulu.dq.256
+  //CHECK: @llvm.x86.avx2.pmulu.dq
+  //CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_mul_epu32(__W, __M, __X, __Y);
 }
 
 __m256i test_mm256_maskz_mul_epu32 (__mmask8 __M, __m256i __X, __m256i __Y) {
   //CHECK-LABEL: @test_mm256_maskz_mul_epu32
-  //CHECK: @llvm.x86.avx512.mask.pmulu.dq.256
+  //CHECK: @llvm.x86.avx2.pmulu.dq
+  //CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_mul_epu32(__M, __X, __Y);
 }
 
 __m128i test_mm_mask_mul_epu32 (__m128i __W, __mmask8 __M, __m128i __X,
         __m128i __Y) {
   //CHECK-LABEL: @test_mm_mask_mul_epu32
-  //CHECK: @llvm.x86.avx512.mask.pmulu.dq.128
+  //CHECK: @llvm.x86.sse2.pmulu.dq
+  //CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_mul_epu32(__W, __M, __X, __Y);
 }
 
 __m128i test_mm_maskz_mul_epu32 (__mmask8 __M, __m128i __X, __m128i __Y) {
   //CHECK-LABEL: @test_mm_maskz_mul_epu32
-  //CHECK: @llvm.x86.avx512.mask.pmulu.dq.128
+  //CHECK: @llvm.x86.sse2.pmulu.dq
+  //CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_mul_epu32(__M, __X, __Y);
 }
 
@@ -2337,82 +2345,98 @@ __m256 test_mm256_maskz_getexp_ps(__mmask8 __U, __m256 __A) {
 }
 __m128d test_mm_mask_max_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_mask_max_pd
-  // CHECK: @llvm.x86.avx512.mask.max.pd
+  // CHECK: @llvm.x86.sse2.max.pd
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_mask_max_pd(__W,__U,__A,__B); 
 }
 __m128d test_mm_maskz_max_pd(__mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_maskz_max_pd
-  // CHECK: @llvm.x86.avx512.mask.max.pd
+  // CHECK: @llvm.x86.sse2.max.pd
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_maskz_max_pd(__U,__A,__B); 
 }
 __m256d test_mm256_mask_max_pd(__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_mask_max_pd
-  // CHECK: @llvm.x86.avx512.mask.max.pd.256
+  // CHECK: @llvm.x86.avx.max.pd.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_max_pd(__W,__U,__A,__B); 
 }
 __m256d test_mm256_maskz_max_pd(__mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_maskz_max_pd
-  // CHECK: @llvm.x86.avx512.mask.max.pd.256
+  // CHECK: @llvm.x86.avx.max.pd.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_max_pd(__U,__A,__B); 
 }
 __m128 test_mm_mask_max_ps(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_mask_max_ps
-  // CHECK: @llvm.x86.avx512.mask.max.ps
+  // CHECK: @llvm.x86.sse.max.ps
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_max_ps(__W,__U,__A,__B); 
 }
 __m128 test_mm_maskz_max_ps(__mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_max_ps
-  // CHECK: @llvm.x86.avx512.mask.max.ps
+  // CHECK: @llvm.x86.sse.max.ps
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_max_ps(__U,__A,__B); 
 }
 __m256 test_mm256_mask_max_ps(__m256 __W, __mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_mask_max_ps
-  // CHECK: @llvm.x86.avx512.mask.max.ps.256
+  // CHECK: @llvm.x86.avx.max.ps.256
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_max_ps(__W,__U,__A,__B); 
 }
 __m256 test_mm256_maskz_max_ps(__mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_max_ps
-  // CHECK: @llvm.x86.avx512.mask.max.ps.256
+  // CHECK: @llvm.x86.avx.max.ps.256
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_max_ps(__U,__A,__B); 
 }
 __m128d test_mm_mask_min_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_mask_min_pd
-  // CHECK: @llvm.x86.avx512.mask.min.pd
+  // CHECK: @llvm.x86.sse2.min.pd
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_mask_min_pd(__W,__U,__A,__B); 
 }
 __m128d test_mm_maskz_min_pd(__mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_maskz_min_pd
-  // CHECK: @llvm.x86.avx512.mask.min.pd
+  // CHECK: @llvm.x86.sse2.min.pd
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_maskz_min_pd(__U,__A,__B); 
 }
 __m256d test_mm256_mask_min_pd(__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_mask_min_pd
-  // CHECK: @llvm.x86.avx512.mask.min.pd.256
+  // CHECK: @llvm.x86.avx.min.pd.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_min_pd(__W,__U,__A,__B); 
 }
 __m256d test_mm256_maskz_min_pd(__mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_maskz_min_pd
-  // CHECK: @llvm.x86.avx512.mask.min.pd.256
+  // CHECK: @llvm.x86.avx.min.pd.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_min_pd(__U,__A,__B); 
 }
 __m128 test_mm_mask_min_ps(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_mask_min_ps
-  // CHECK: @llvm.x86.avx512.mask.min.ps
+  // CHECK: @llvm.x86.sse.min.ps
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_min_ps(__W,__U,__A,__B); 
 }
 __m128 test_mm_maskz_min_ps(__mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_min_ps
-  // CHECK: @llvm.x86.avx512.mask.min.ps
+  // CHECK: @llvm.x86.sse.min.ps
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_min_ps(__U,__A,__B); 
 }
 __m256 test_mm256_mask_min_ps(__m256 __W, __mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_mask_min_ps
-  // CHECK: @llvm.x86.avx512.mask.min.ps.256
+  // CHECK: @llvm.x86.avx.min.ps.256
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_min_ps(__W,__U,__A,__B); 
 }
 __m256 test_mm256_maskz_min_ps(__mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_min_ps
-  // CHECK: @llvm.x86.avx512.mask.min.ps.256
+  // CHECK: @llvm.x86.avx.min.ps.256
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_min_ps(__U,__A,__B); 
 }
 __m128d test_mm_mask_mul_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
@@ -3071,42 +3095,50 @@ void test_mm256_mask_i32scatter_epi32(int *__addr, __mmask8 __mask,  __m256i __i
 }
 __m128d test_mm_mask_sqrt_pd(__m128d __W, __mmask8 __U, __m128d __A) {
   // CHECK-LABEL: @test_mm_mask_sqrt_pd
-  // CHECK: @llvm.x86.avx512.mask.sqrt.pd.128
+  // CHECK: @llvm.x86.sse2.sqrt.pd
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_mask_sqrt_pd(__W,__U,__A); 
 }
 __m128d test_mm_maskz_sqrt_pd(__mmask8 __U, __m128d __A) {
   // CHECK-LABEL: @test_mm_maskz_sqrt_pd
-  // CHECK: @llvm.x86.avx512.mask.sqrt.pd.128
+  // CHECK: @llvm.x86.sse2.sqrt.pd
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_maskz_sqrt_pd(__U,__A); 
 }
 __m256d test_mm256_mask_sqrt_pd(__m256d __W, __mmask8 __U, __m256d __A) {
   // CHECK-LABEL: @test_mm256_mask_sqrt_pd
-  // CHECK: @llvm.x86.avx512.mask.sqrt.pd.256
+  // CHECK: @llvm.x86.avx.sqrt.pd.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_sqrt_pd(__W,__U,__A); 
 }
 __m256d test_mm256_maskz_sqrt_pd(__mmask8 __U, __m256d __A) {
   // CHECK-LABEL: @test_mm256_maskz_sqrt_pd
-  // CHECK: @llvm.x86.avx512.mask.sqrt.pd.256
+  // CHECK: @llvm.x86.avx.sqrt.pd.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_sqrt_pd(__U,__A); 
 }
 __m128 test_mm_mask_sqrt_ps(__m128 __W, __mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_mask_sqrt_ps
-  // CHECK: @llvm.x86.avx512.mask.sqrt.ps.128
+  // CHECK: @llvm.x86.sse.sqrt.ps
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_sqrt_ps(__W,__U,__A); 
 }
 __m128 test_mm_maskz_sqrt_ps(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_sqrt_ps
-  // CHECK: @llvm.x86.avx512.mask.sqrt.ps.128
+  // CHECK: @llvm.x86.sse.sqrt.ps
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_sqrt_ps(__U,__A); 
 }
 __m256 test_mm256_mask_sqrt_ps(__m256 __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_mask_sqrt_ps
-  // CHECK: @llvm.x86.avx512.mask.sqrt.ps.256
+  // CHECK: @llvm.x86.avx.sqrt.ps.256
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_sqrt_ps(__W,__U,__A); 
 }
 __m256 test_mm256_maskz_sqrt_ps(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_sqrt_ps
-  // CHECK: @llvm.x86.avx512.mask.sqrt.ps.256
+  // CHECK: @llvm.x86.avx.sqrt.ps.256
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_sqrt_ps(__U,__A); 
 }
 __m128d test_mm_mask_sub_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
