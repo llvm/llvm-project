@@ -250,7 +250,7 @@
 //
 // CHK-COMMANDS: clang{{.*}}" "-cc1" "-triple" "powerpc64le-ibm-linux-gnu" "-emit-obj" {{.*}}"-pic-level" "2" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[T1OBJ:[^\\/]+\.o]]" "-x" "c" "{{.*}}[[INPUT]]" "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]"
-// CHK-COMMANDS: ld" {{.*}}"-o" "
+// CHK-COMMANDS: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[T1BIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[T1OBJ]]"
 // CHK-COMMANDS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le-ibm-linux-gnu" "-E" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T1PP:[^\\/]+\.i]]" "-x" "c" "{{.*}}[[INPUT]]"
@@ -260,14 +260,14 @@
 // CHK-COMMANDS-ST-SAME: [[T1ASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[T1BC]]"
 // CHK-COMMANDS-ST: clang{{.*}}" "-cc1as" "-triple" "powerpc64le-ibm-linux-gnu" "-filetype" "obj" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T1OBJ:[^\\/]+\.o]]" "{{.*}}[[T1ASM]]"
-// CHK-COMMANDS-ST: ld" {{.*}}"-shared" {{.*}}"-o" "
+// CHK-COMMANDS-ST: ld{{(\.exe)?}}" {{.*}}"-shared" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T1BIN:[^\\/]+\.out-openmp-powerpc64le-ibm-linux-gnu]]" {{.*}}"{{.*}}[[T1OBJ]]"
 //
 // Compile for the x86 device.
 //
 // CHK-COMMANDS: clang{{.*}}" "-cc1" "-triple" "x86_64-pc-linux-gnu" "-emit-obj" {{.*}}"-pic-level" "2" {{.*}}"-fopenmp"  {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[T2OBJ:[^\\/]+\.o]]" "-x" "c" "{{.*}}[[INPUT]]" "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]"
-// CHK-COMMANDS: ld" {{.*}}"-o" "
+// CHK-COMMANDS: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[T2BIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[T2OBJ]]"
 // CHK-COMMANDS-ST: clang{{.*}}" "-cc1" "-triple" "x86_64-pc-linux-gnu" "-E" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T2PP:[^\\/]+\.i]]" "-x" "c" "{{.*}}[[INPUT]]"
@@ -277,7 +277,7 @@
 // CHK-COMMANDS-ST-SAME: [[T2ASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[T2BC]]"
 // CHK-COMMANDS-ST: clang{{.*}}" "-cc1as" "-triple" "x86_64-pc-linux-gnu" "-filetype" "obj" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T2OBJ:[^\\/]+\.o]]" "{{.*}}[[T2ASM]]"
-// CHK-COMMANDS-ST: ld" {{.*}}"-shared" {{.*}}"-o" "
+// CHK-COMMANDS-ST: ld{{(\.exe)?}}" {{.*}}"-shared" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T2BIN:[^\\/]+\.out-openmp-x86_64-pc-linux-gnu]]" {{.*}}"{{.*}}[[T2OBJ]]"
 
 //
@@ -285,14 +285,14 @@
 //
 // CHK-COMMANDS: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
-// CHK-COMMANDS: ld" {{.*}}"-o" "
+// CHK-COMMANDS: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[HOSTBIN:[^\\/]+\.out]]"  {{.*}}"-lomptarget" {{.*}}"-T" "
 // CHK-COMMANDS-SAME: [[HOSTLK:[^\\/]+\.lk]]"
 // CHK-COMMANDS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-S" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[HOSTASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
 // CHK-COMMANDS-ST: clang{{.*}}" "-cc1as" "-triple" "powerpc64le--linux" "-filetype" "obj" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "{{.*}}[[HOSTASM]]"
-// CHK-COMMANDS-ST: ld" {{.*}}"-o" "
+// CHK-COMMANDS-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[HOSTBIN:[^\\/]+\.out]]"  {{.*}}"-lomptarget" {{.*}}"-T" "
 // CHK-COMMANDS-ST-SAME: [[HOSTLK:[^\\/]+\.lk]]"
 
@@ -464,7 +464,7 @@
 // Create target 1 object.
 // CHK-UBJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le-ibm-linux-gnu" "-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[T1OBJ:[^\\/]+\.o]]" "-x" "cpp-output" "{{.*}}[[T1PP]]" "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]"
-// CHK-UBJOBS: ld" {{.*}}"-o" "
+// CHK-UBJOBS: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[T1BIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[T1OBJ]]"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le-ibm-linux-gnu" "-emit-llvm-bc" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[T1BC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[T1PP]]" "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]"
@@ -472,13 +472,13 @@
 // CHK-UBJOBS-ST-SAME: [[T1ASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[T1BC]]"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1as" "-triple" "powerpc64le-ibm-linux-gnu" "-filetype" "obj" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[T1OBJ:[^\\/]+\.o]]" "{{.*}}[[T1ASM]]"
-// CHK-UBJOBS-ST: ld" {{.*}}"-o" "
+// CHK-UBJOBS-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[T1BIN:[^\\/]+\.out-openmp-powerpc64le-ibm-linux-gnu]]" {{.*}}"{{.*}}[[T1OBJ]]"
 
 // Create target 2 object.
 // CHK-UBJOBS: clang{{.*}}" "-cc1" "-triple" "x86_64-pc-linux-gnu" "-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[T2OBJ:[^\\/]+\.o]]" "-x" "cpp-output" "{{.*}}[[T2PP]]" "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]"
-// CHK-UBJOBS: ld" {{.*}}"-o" "
+// CHK-UBJOBS: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[T2BIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[T2OBJ]]"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1" "-triple" "x86_64-pc-linux-gnu" "-emit-llvm-bc" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[T2BC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[T2PP]]" "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]"
@@ -486,20 +486,20 @@
 // CHK-UBJOBS-ST-SAME: [[T2ASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[T2BC]]"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1as" "-triple" "x86_64-pc-linux-gnu" "-filetype" "obj" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[T2OBJ:[^\\/]+\.o]]" "{{.*}}[[T2ASM]]"
-// CHK-UBJOBS-ST: ld" {{.*}}"-o" "
+// CHK-UBJOBS-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[T2BIN:[^\\/]+\.out-openmp-x86_64-pc-linux-gnu]]" {{.*}}"{{.*}}[[T2OBJ]]"
 
 // Create binary.
 // CHK-UBJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
-// CHK-UBJOBS: ld" {{.*}}"-o" "
+// CHK-UBJOBS: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[HOSTBIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[HOSTOBJ]]" {{.*}}"-T" "
 // CHK-UBJOBS-SAME: [[LKS:[^\\/]+\.lk]]"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-S" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[HOSTASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1as" "-triple" "powerpc64le--linux" "-filetype" "obj" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "{{.*}}[[HOSTASM]]"
-// CHK-UBJOBS-ST: ld" {{.*}}"-o" "
+// CHK-UBJOBS-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[HOSTBIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[HOSTOBJ]]" {{.*}}"-T" "
 // CHK-UBJOBS-ST-SAME: [[LKS:[^\\/]+\.lk]]"
 
@@ -509,11 +509,11 @@
 // CHK-UBJOBS2-SAME: [[HOSTOBJ:[^\\/]+\.o]],
 // CHK-UBJOBS2-SAME: [[T1OBJ:[^\\/]+\.o]],
 // CHK-UBJOBS2-SAME: [[T2OBJ:[^\\/]+\.o]]" "-unbundle"
-// CHK-UBJOBS2: ld" {{.*}}"-o" "
+// CHK-UBJOBS2: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-SAME: [[T1BIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[T1OBJ]]"
-// CHK-UBJOBS2: ld" {{.*}}"-o" "
+// CHK-UBJOBS2: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-SAME: [[T2BIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[T2OBJ]]"
-// CHK-UBJOBS2: ld" {{.*}}"-o" "
+// CHK-UBJOBS2: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-SAME: [[HOSTBIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[HOSTOBJ]]" {{.*}}"-T" "
 // CHK-UBJOBS2-SAME: [[LKS:[^\\/]+\.lk]]"
 // CHK-UBJOBS2-ST: clang-offload-bundler" "-type=o" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
@@ -521,11 +521,11 @@
 // CHK-UBJOBS2-ST-SAME: [[HOSTOBJ:[^\\/,]+\.o]],
 // CHK-UBJOBS2-ST-SAME: [[T1OBJ:[^\\/,]+\.o]],
 // CHK-UBJOBS2-ST-SAME: [[T2OBJ:[^\\/,]+\.o]]" "-unbundle"
-// CHK-UBJOBS2-ST: ld" {{.*}}"-o" "
+// CHK-UBJOBS2-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-ST-SAME: [[T1BIN:[^\\/]+\.out-openmp-powerpc64le-ibm-linux-gnu]]" {{.*}}"{{.*}}[[T1OBJ]]"
-// CHK-UBJOBS2-ST: ld" {{.*}}"-o" "
+// CHK-UBJOBS2-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-ST-SAME: [[T2BIN:[^\\/]+\.out-openmp-x86_64-pc-linux-gnu]]" {{.*}}"{{.*}}[[T2OBJ]]"
-// CHK-UBJOBS2-ST: ld" {{.*}}"-o" "
+// CHK-UBJOBS2-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-ST-SAME: [[HOSTBIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[HOSTOBJ]]" {{.*}}"-T" "
 // CHK-UBJOBS2-ST-SAME: [[LKS:[^\\/]+\.lk]]"
 
