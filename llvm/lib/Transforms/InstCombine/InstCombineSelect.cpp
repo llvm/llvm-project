@@ -1009,6 +1009,53 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
                                ConstantVector::get(Mask));
 }
 
+/// Reuse bitcasted operands between a compare and select:
+/// select (cmp (bitcast C), (bitcast D)), (bitcast' C), (bitcast' D) -->
+/// bitcast (select (cmp (bitcast C), (bitcast D)), (bitcast C), (bitcast D))
+static Instruction *foldSelectCmpBitcasts(SelectInst &Sel,
+                                          InstCombiner::BuilderTy &Builder) {
+  Value *Cond = Sel.getCondition();
+  Value *TVal = Sel.getTrueValue();
+  Value *FVal = Sel.getFalseValue();
+
+  CmpInst::Predicate Pred;
+  Value *A, *B;
+  if (!match(Cond, m_Cmp(Pred, m_Value(A), m_Value(B))))
+    return nullptr;
+
+  // The select condition is a compare instruction. If the select's true/false
+  // values are already the same as the compare operands, there's nothing to do.
+  if (TVal == A || TVal == B || FVal == A || FVal == B)
+    return nullptr;
+
+  Value *C, *D;
+  if (!match(A, m_BitCast(m_Value(C))) || !match(B, m_BitCast(m_Value(D))))
+    return nullptr;
+
+  // select (cmp (bitcast C), (bitcast D)), (bitcast TSrc), (bitcast FSrc)
+  Value *TSrc, *FSrc;
+  if (!match(TVal, m_BitCast(m_Value(TSrc))) ||
+      !match(FVal, m_BitCast(m_Value(FSrc))))
+    return nullptr;
+
+  // If the select true/false values are *different bitcasts* of the same source
+  // operands, make the select operands the same as the compare operands and
+  // cast the result. This is the canonical select form for min/max.
+  Value *NewSel;
+  if (TSrc == C && FSrc == D) {
+    // select (cmp (bitcast C), (bitcast D)), (bitcast' C), (bitcast' D) -->
+    // bitcast (select (cmp A, B), A, B)
+    NewSel = Builder.CreateSelect(Cond, A, B, "", &Sel);
+  } else if (TSrc == D && FSrc == C) {
+    // select (cmp (bitcast C), (bitcast D)), (bitcast' D), (bitcast' C) -->
+    // bitcast (select (cmp A, B), B, A)
+    NewSel = Builder.CreateSelect(Cond, B, A, "", &Sel);
+  } else {
+    return nullptr;
+  }
+  return CastInst::CreateBitOrPointerCast(NewSel, Sel.getType());
+}
+
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -1368,6 +1415,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       }
     }
   }
+
+  if (Instruction *BitCastSel = foldSelectCmpBitcasts(SI, *Builder))
+    return BitCastSel;
 
   return nullptr;
 }

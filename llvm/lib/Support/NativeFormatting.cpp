@@ -179,7 +179,6 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
     // FIXME: It should be generic to C++11.
     if (N == 0.0 && std::signbit(N)) {
       const char *NegativeZero = "-0.000000e+00";
-      writePadding(S, Width, strlen(NegativeZero));
       S << NegativeZero;
       return;
     }
