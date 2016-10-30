@@ -140,12 +140,7 @@ define i32 @max_of_min(i32 %a) {
 ; max(min(%a, -1), -1) == -1 (swap predicate and select ops)
 define i32 @max_of_min_swap(i32 %a) {
 ; CHECK-LABEL: @max_of_min_swap(
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 %a, -1
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 %a, 0
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 -1, i32 [[NOT_A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[S0]], -1
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[S0]], i32 -1
-; CHECK-NEXT:    ret i32 [[S1]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %not_a = xor i32 %a, -1
   %c0 = icmp slt i32 %a, 0
@@ -158,12 +153,7 @@ define i32 @max_of_min_swap(i32 %a) {
 ; min(max(%a, -1), -1) == -1
 define i32 @min_of_max(i32 %a) {
 ; CHECK-LABEL: @min_of_max(
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 %a, -1
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 %a, 0
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[NOT_A]], i32 -1
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[S0]], -1
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[S0]], i32 -1
-; CHECK-NEXT:    ret i32 [[S1]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %not_a = xor i32 %a, -1
   %c0 = icmp slt i32 %a, 0
@@ -176,12 +166,7 @@ define i32 @min_of_max(i32 %a) {
 ; min(max(%a, -1), -1) == -1 (swap predicate and select ops)
 define i32 @min_of_max_swap(i32 %a) {
 ; CHECK-LABEL: @min_of_max_swap(
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 %a, -1
-; CHECK-NEXT:    [[C0:%.*]] = icmp sgt i32 %a, 0
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 -1, i32 [[NOT_A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[S0]], -1
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[S0]], i32 -1
-; CHECK-NEXT:    ret i32 [[S1]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %not_a = xor i32 %a, -1
   %c0 = icmp sgt i32 %a, 0
