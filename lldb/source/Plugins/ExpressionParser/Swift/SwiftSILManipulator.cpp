@@ -98,7 +98,8 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
                                        raw_pointer_type.getAddressType(),
                                        /*isStrict*/ true);
   swift::LoadInst *pointer_to_variable =
-      m_builder.createLoad(null_loc, pointer_to_return_slot);
+      m_builder.createLoad(null_loc, pointer_to_return_slot,
+                           swift::LoadOwnershipQualifier::Unqualified);
   swift::PointerToAddressInst *address_of_variable =
       m_builder.createPointerToAddress(
           null_loc, pointer_to_variable,
