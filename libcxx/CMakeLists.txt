@@ -58,8 +58,24 @@ option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
 option(LIBCXX_ENABLE_FILESYSTEM
         "Build filesystem as part of libc++experimental.a" ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
+
+
+# Benchmark options -----------------------------------------------------------
 option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependancies" ON)
-option(LIBCXX_BUILD_BENCHMARK_NATIVE_STDLIB "Build the benchmarks against the native STL" OFF)
+set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
+        "Build the benchmarks against the specified native STL.
+         The value must be one of libc++/libstdc++")
+set(LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN "" CACHE STRING
+    "Use alternate GCC toolchain when building the native benchmarks")
+
+if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
+  if (NOT (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++"
+        OR LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++"))
+    message(FATAL_ERROR "Invalid value for LIBCXX_BENCHMARK_NATIVE_STDLIB: "
+            "'${LIBCXX_BENCHMARK_NATIVE_STDLIB}'")
+  endif()
+endif()
+
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")

@@ -590,8 +590,9 @@ def VINSERTPSZrm: AVX512AIi8<0x21, MRMSrcMem, (outs VR128X:$dst),
 //---
 
 multiclass vextract_for_size<int Opcode,
-                                    X86VectorVTInfo From, X86VectorVTInfo To,
-                                    PatFrag vextract_extract> {
+                             X86VectorVTInfo From, X86VectorVTInfo To,
+                             PatFrag vextract_extract,
+                             SDNodeXForm EXTRACT_get_vextract_imm> {
 
   let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
     // use AVX512_maskable_in_asm (AVX512_maskable can't be used due to
@@ -621,6 +622,24 @@ multiclass vextract_for_size<int Opcode,
                           "$dst {${mask}}, $src1, $idx}",
                     []>, EVEX_K, EVEX;
   }
+
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (vextract_extract:$ext (From.VT From.RC:$src1),
+                                                   (iPTR imm)),
+                            To.RC:$src0)),
+            (!cast<Instruction>(NAME # To.EltSize # "x" # To.NumElts #
+                                From.ZSuffix # "rrk")
+                To.RC:$src0, To.KRCWM:$mask, From.RC:$src1,
+                (EXTRACT_get_vextract_imm To.RC:$ext))>;
+
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (vextract_extract:$ext (From.VT From.RC:$src1),
+                                                   (iPTR imm)),
+                            To.ImmAllZerosV)),
+            (!cast<Instruction>(NAME # To.EltSize # "x" # To.NumElts #
+                                From.ZSuffix # "rrkz")
+                To.KRCWM:$mask, From.RC:$src1,
+                (EXTRACT_get_vextract_imm To.RC:$ext))>;
 
   // Intrinsic call with masking.
   def : Pat<(!cast<Intrinsic>("int_x86_avx512_mask_vextract" # To.EltTypeName #
@@ -667,39 +686,45 @@ multiclass vextract_for_size_lowering<string InstrStr, X86VectorVTInfo From,
 }
 
 multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
-                                             ValueType EltVT64, int Opcode256> {
+                             ValueType EltVT64, int Opcode256> {
   defm NAME # "32x4Z" : vextract_for_size<Opcode128,
                                  X86VectorVTInfo<16, EltVT32, VR512>,
                                  X86VectorVTInfo< 4, EltVT32, VR128X>,
-                                 vextract128_extract>,
+                                 vextract128_extract,
+                                 EXTRACT_get_vextract128_imm>,
                                      EVEX_V512, EVEX_CD8<32, CD8VT4>;
   defm NAME # "64x4Z" : vextract_for_size<Opcode256,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
                                  X86VectorVTInfo< 4, EltVT64, VR256X>,
-                                 vextract256_extract>,
+                                 vextract256_extract,
+                                 EXTRACT_get_vextract256_imm>,
                                      VEX_W, EVEX_V512, EVEX_CD8<64, CD8VT4>;
   let Predicates = [HasVLX] in
     defm NAME # "32x4Z256" : vextract_for_size<Opcode128,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
                                  X86VectorVTInfo< 4, EltVT32, VR128X>,
-                                 vextract128_extract>,
+                                 vextract128_extract,
+                                 EXTRACT_get_vextract128_imm>,
                                      EVEX_V256, EVEX_CD8<32, CD8VT4>;
   let Predicates = [HasVLX, HasDQI] in
     defm NAME # "64x2Z256" : vextract_for_size<Opcode128,
                                  X86VectorVTInfo< 4, EltVT64, VR256X>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 vextract128_extract>,
+                                 vextract128_extract,
+                                 EXTRACT_get_vextract128_imm>,
                                      VEX_W, EVEX_V256, EVEX_CD8<64, CD8VT2>;
   let Predicates = [HasDQI] in {
     defm NAME # "64x2Z" : vextract_for_size<Opcode128,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 vextract128_extract>,
+                                 vextract128_extract,
+                                 EXTRACT_get_vextract128_imm>,
                                      VEX_W, EVEX_V512, EVEX_CD8<64, CD8VT2>;
     defm NAME # "32x8Z" : vextract_for_size<Opcode256,
                                  X86VectorVTInfo<16, EltVT32, VR512>,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
-                                 vextract256_extract>,
+                                 vextract256_extract,
+                                 EXTRACT_get_vextract256_imm>,
                                      EVEX_V512, EVEX_CD8<32, CD8VT8>;
   }
 }

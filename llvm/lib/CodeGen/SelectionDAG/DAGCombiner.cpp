@@ -3134,6 +3134,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
 
+  // x & x --> x
+  if (N0 == N1)
+    return N0;
+
   // fold vector ops
   if (VT.isVector()) {
     if (SDValue FoldedVOp = SimplifyVBinOp(N))
@@ -3810,6 +3814,10 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
+
+  // x | x --> x
+  if (N0 == N1)
+    return N0;
 
   // fold vector ops
   if (VT.isVector()) {
