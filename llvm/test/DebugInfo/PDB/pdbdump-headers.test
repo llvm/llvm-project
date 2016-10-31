@@ -724,7 +724,6 @@
 ; EMPTY-NEXT:       IsSelector (0x100)
 ; EMPTY-NEXT:       Read (0x1)
 ; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Flags: 269
 ; EMPTY-NEXT:     Ovl: 0
 ; EMPTY-NEXT:     Group: 0
 ; EMPTY-NEXT:     Frame: 1
@@ -739,7 +738,6 @@
 ; EMPTY-NEXT:       IsSelector (0x100)
 ; EMPTY-NEXT:       Read (0x1)
 ; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Flags: 265
 ; EMPTY-NEXT:     Ovl: 0
 ; EMPTY-NEXT:     Group: 0
 ; EMPTY-NEXT:     Frame: 2
@@ -755,7 +753,6 @@
 ; EMPTY-NEXT:       Read (0x1)
 ; EMPTY-NEXT:       Write (0x2)
 ; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Flags: 267
 ; EMPTY-NEXT:     Ovl: 0
 ; EMPTY-NEXT:     Group: 0
 ; EMPTY-NEXT:     Frame: 3
@@ -770,7 +767,6 @@
 ; EMPTY-NEXT:       IsSelector (0x100)
 ; EMPTY-NEXT:       Read (0x1)
 ; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Flags: 265
 ; EMPTY-NEXT:     Ovl: 0
 ; EMPTY-NEXT:     Group: 0
 ; EMPTY-NEXT:     Frame: 4
@@ -784,7 +780,6 @@
 ; EMPTY-NEXT:       AddressIs32Bit (0x8)
 ; EMPTY-NEXT:       IsAbsoluteAddress (0x200)
 ; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Flags: 520
 ; EMPTY-NEXT:     Ovl: 0
 ; EMPTY-NEXT:     Group: 0
 ; EMPTY-NEXT:     Frame: 0
@@ -1507,7 +1502,12 @@
 ; ALL: ]
 ; ALL: Section Map [
 ; ALL:   Entry {
-; ALL:     Flags: 269
+; ALL:     Flags [ (0x10D)
+; ALL:       AddressIs32Bit (0x8)
+; ALL:       Execute (0x4)
+; ALL:       IsSelector (0x100)
+; ALL:       Read (0x1)
+; ALL:     ]
 ; ALL:     Ovl: 0
 ; ALL:     Group: 0
 ; ALL:     Frame: 1
@@ -1517,7 +1517,11 @@
 ; ALL:     SecByteLength: 4122
 ; ALL:   }
 ; ALL:   Entry {
-; ALL:     Flags: 265
+; ALL:     Flags [ (0x109)
+; ALL:       AddressIs32Bit (0x8)
+; ALL:       IsSelector (0x100)
+; ALL:       Read (0x1)
+; ALL:     ]
 ; ALL:     Ovl: 0
 ; ALL:     Group: 0
 ; ALL:     Frame: 2
@@ -1527,7 +1531,12 @@
 ; ALL:     SecByteLength: 690
 ; ALL:   }
 ; ALL:   Entry {
-; ALL:     Flags: 267
+; ALL:     Flags [ (0x10B)
+; ALL:       AddressIs32Bit (0x8)
+; ALL:       IsSelector (0x100)
+; ALL:       Read (0x1)
+; ALL:       Write (0x2)
+; ALL:     ]
 ; ALL:     Ovl: 0
 ; ALL:     Group: 0
 ; ALL:     Frame: 3
@@ -1537,7 +1546,11 @@
 ; ALL:     SecByteLength: 4
 ; ALL:   }
 ; ALL:   Entry {
-; ALL:     Flags: 265
+; ALL:     Flags [ (0x109)
+; ALL:       AddressIs32Bit (0x8)
+; ALL:       IsSelector (0x100)
+; ALL:       Read (0x1)
+; ALL:     ]
 ; ALL:     Ovl: 0
 ; ALL:     Group: 0
 ; ALL:     Frame: 4
@@ -1547,7 +1560,10 @@
 ; ALL:     SecByteLength: 8
 ; ALL:   }
 ; ALL:   Entry {
-; ALL:     Flags: 520
+; ALL:     Flags [ (0x208)
+; ALL:       AddressIs32Bit (0x8)
+; ALL:       IsAbsoluteAddress (0x200)
+; ALL:     ]
 ; ALL:     Ovl: 0
 ; ALL:     Group: 0
 ; ALL:     Frame: 0

@@ -103,16 +103,13 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     # If we're not exporting all symbols, we'll want to explicitly set
     # the exported symbols here.  This prevents 'log enable --stack ...'
     # from working on some systems but limits the liblldb size.
-    MESSAGE("-- Symbols (liblldb): only exporting liblldb.exports symbols")
+    MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
   else()
     # Don't use an explicit export.  Instead, tell the linker to
     # export all symbols.
-    MESSAGE("-- Symbols (liblldb): exporting all symbols")
-    # Darwin linker doesn't need this extra step.
-    if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
-      lldb_append_link_flags(liblldb "-Wl,--export-dynamic")
-    endif()
+    MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+    add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
   endif()
 endif()
 

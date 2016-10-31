@@ -783,7 +783,7 @@ public:
   /// will return that MemoryDef, whereas the above would return the clobber
   /// starting from the use side of  the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                                  MemoryLocation &) = 0;
+                                                  const MemoryLocation &) = 0;
 
   /// \brief Given a memory access, invalidate anything this walker knows about
   /// that access.
@@ -809,7 +809,7 @@ public:
   using MemorySSAWalker::getClobberingMemoryAccess;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) override;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                          MemoryLocation &) override;
+                                          const MemoryLocation &) override;
 };
 
 using MemoryAccessPair = std::pair<MemoryAccess *, MemoryLocation>;

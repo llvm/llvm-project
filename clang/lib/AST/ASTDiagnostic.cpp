@@ -936,6 +936,9 @@ class TemplateDiff {
         ++(*this);
       }
 
+      /// Return true if the iterator is non-singular.
+      bool isValid() const { return TST; }
+
       /// isEnd - Returns true if the iterator is one past the end.
       bool isEnd() const {
         assert(TST && "InternalIterator is invalid with a null TST.");
@@ -995,21 +998,21 @@ class TemplateDiff {
       }
     };
 
-    bool UseDesugaredIterator;
     InternalIterator SugaredIterator;
     InternalIterator DesugaredIterator;
 
   public:
     TSTiterator(ASTContext &Context, const TemplateSpecializationType *TST)
-        : UseDesugaredIterator(TST->isSugared() && !TST->isTypeAlias()),
-          SugaredIterator(TST),
+        : SugaredIterator(TST),
           DesugaredIterator(
-              GetTemplateSpecializationType(Context, TST->desugar())) {}
+              (TST->isSugared() && !TST->isTypeAlias())
+                  ? GetTemplateSpecializationType(Context, TST->desugar())
+                  : nullptr) {}
 
     /// &operator++ - Increment the iterator to the next template argument.
     TSTiterator &operator++() {
       ++SugaredIterator;
-      if (UseDesugaredIterator)
+      if (DesugaredIterator.isValid())
         ++DesugaredIterator;
       return *this;
     }
@@ -1032,12 +1035,12 @@ class TemplateDiff {
     /// hasDesugaredTA - Returns true if there is another TemplateArgument
     /// available.
     bool hasDesugaredTA() const {
-      return UseDesugaredIterator && !DesugaredIterator.isEnd();
+      return DesugaredIterator.isValid() && !DesugaredIterator.isEnd();
     }
 
     /// getDesugaredTA - Returns the desugared TemplateArgument.
     reference getDesugaredTA() const {
-      assert(UseDesugaredIterator &&
+      assert(DesugaredIterator.isValid() &&
              "Desugared TemplateArgument should not be used.");
       return *DesugaredIterator;
     }

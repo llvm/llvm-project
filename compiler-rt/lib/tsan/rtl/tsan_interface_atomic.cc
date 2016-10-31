@@ -28,7 +28,7 @@
 
 using namespace __tsan;  // NOLINT
 
-#if !defined(SANITIZER_GO) && __TSAN_HAS_INT128
+#if !SANITIZER_GO && __TSAN_HAS_INT128
 // Protects emulation of 128-bit atomic operations.
 static StaticSpinMutex mutex128;
 #endif
@@ -102,7 +102,7 @@ template<typename T> T func_cas(volatile T *v, T cmp, T xch) {
 // Atomic ops are executed under tsan internal mutex,
 // here we assume that the atomic variables are not accessed
 // from non-instrumented code.
-#if !defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16) && !defined(SANITIZER_GO) \
+#if !defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16) && !SANITIZER_GO \
     && __TSAN_HAS_INT128
 a128 func_xchg(volatile a128 *v, a128 op) {
   SpinMutexLock lock(&mutex128);
@@ -176,7 +176,7 @@ static int SizeLog() {
   // this leads to false negatives only in very obscure cases.
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static atomic_uint8_t *to_atomic(const volatile a8 *a) {
   return reinterpret_cast<atomic_uint8_t *>(const_cast<a8 *>(a));
 }
@@ -212,7 +212,7 @@ static T NoTsanAtomicLoad(const volatile T *a, morder mo) {
   return atomic_load(to_atomic(a), to_mo(mo));
 }
 
-#if __TSAN_HAS_INT128 && !defined(SANITIZER_GO)
+#if __TSAN_HAS_INT128 && !SANITIZER_GO
 static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
   SpinMutexLock lock(&mutex128);
   return *a;
@@ -242,7 +242,7 @@ static void NoTsanAtomicStore(volatile T *a, T v, morder mo) {
   atomic_store(to_atomic(a), v, to_mo(mo));
 }
 
-#if __TSAN_HAS_INT128 && !defined(SANITIZER_GO)
+#if __TSAN_HAS_INT128 && !SANITIZER_GO
 static void NoTsanAtomicStore(volatile a128 *a, a128 v, morder mo) {
   SpinMutexLock lock(&mutex128);
   *a = v;
@@ -434,7 +434,7 @@ static T AtomicCAS(ThreadState *thr, uptr pc,
   return c;
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static void NoTsanAtomicFence(morder mo) {
   __sync_synchronize();
 }
@@ -446,7 +446,7 @@ static void AtomicFence(ThreadState *thr, uptr pc, morder mo) {
 #endif
 
 // Interface functions follow.
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 
 // C/C++
 
@@ -845,7 +845,7 @@ void __tsan_atomic_signal_fence(morder mo) {
 }
 }  // extern "C"
 
-#else  // #ifndef SANITIZER_GO
+#else  // #if !SANITIZER_GO
 
 // Go
 
@@ -928,4 +928,4 @@ void __tsan_go_atomic64_compare_exchange(
   *(bool*)(a+24) = (cur == cmp);
 }
 }  // extern "C"
-#endif  // #ifndef SANITIZER_GO
+#endif  // #if !SANITIZER_GO

@@ -1492,3 +1492,8 @@ void run(A_reg<float> reg, A_ptr<float> ptr, A_ref<float> ref) {
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-TREE: {{[0-9]*}} errors generated.
+
+namespace pr30831 {
+  template <typename T> struct A { static A<T> const a; };
+  template <typename T> A<T> A<T>::a = A<T>();
+}

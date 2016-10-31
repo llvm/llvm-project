@@ -18,6 +18,10 @@ class PluginCommandTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    def setUp(self):
+        TestBase.setUp(self)
+        self.generateSource('plugin.cpp')
+
     @skipIfNoSBHeaders
     # Requires a compatible arch and platform to link against the host's built
     # lldb lib.

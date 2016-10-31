@@ -31277,6 +31277,15 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   SDValue B = N->getOperand(1);
   SDValue C = N->getOperand(2);
 
+  auto isScalarMaskedNode = [&](SDValue &V) {
+    if (V.hasOneUse())
+      return false;
+    for (auto User : V.getNode()->uses())
+      if (User->getOpcode() == X86ISD::SELECTS && N->isOperandOf(User))
+        return true;
+    return false;
+  };
+
   auto invertIfNegative = [](SDValue &V) {
     if (SDValue NegVal = isFNEG(V.getNode())) {
       V = NegVal;
@@ -31285,9 +31294,10 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
-  bool NegA = invertIfNegative(A);
-  bool NegB = invertIfNegative(B);
-  bool NegC = invertIfNegative(C);
+  // Do not convert scalar masked operations.
+  bool NegA = !isScalarMaskedNode(A) && invertIfNegative(A);
+  bool NegB = !isScalarMaskedNode(B) && invertIfNegative(B);
+  bool NegC = !isScalarMaskedNode(C) && invertIfNegative(C);
 
   // Negative multiplication when NegA xor NegB
   bool NegMul = (NegA != NegB);

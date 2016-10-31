@@ -26,7 +26,7 @@ using __sanitizer::uptr;
 extern "C" {
 #endif
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 
 // This function should be called at the very beginning of the process,
 // before any instrumented code is executed and before any call to malloc.
@@ -146,7 +146,7 @@ typedef unsigned char      a8;
 typedef unsigned short     a16;  // NOLINT
 typedef unsigned int       a32;
 typedef unsigned long long a64;  // NOLINT
-#if !defined(SANITIZER_GO) && (defined(__SIZEOF_INT128__) \
+#if !SANITIZER_GO && (defined(__SIZEOF_INT128__) \
     || (__clang_major__ * 100 + __clang_minor__ >= 302)) && !defined(__mips64)
 __extension__ typedef __int128 a128;
 # define __TSAN_HAS_INT128 1

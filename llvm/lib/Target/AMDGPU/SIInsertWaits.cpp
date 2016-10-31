@@ -93,6 +93,9 @@ private:
 
   bool LastInstWritesM0;
 
+  /// Whether or not we have flat operations outstanding.
+  bool IsFlatOutstanding;
+
   /// \brief Whether the machine function returns void
   bool ReturnsVoid;
 
@@ -294,6 +297,9 @@ void SIInsertWaits::pushInstruction(MachineBasicBlock &MBB,
   Counters Limit = ZeroCounts;
   unsigned Sum = 0;
 
+  if (TII->mayAccessFlatAddressSpace(*I))
+    IsFlatOutstanding = true;
+
   for (unsigned i = 0; i < 3; ++i) {
     LastIssued.Array[i] += Increment.Array[i];
     if (Increment.Array[i])
@@ -368,8 +374,9 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
   // Figure out if the async instructions execute in order
   bool Ordered[3];
 
-  // VM_CNT is always ordered
-  Ordered[0] = true;
+  // VM_CNT is always ordered except when there are flat instructions, which
+  // can return out of order.
+  Ordered[0] = !IsFlatOutstanding;
 
   // EXP_CNT is unordered if we have both EXP & VM-writes
   Ordered[1] = ExpInstrTypesSeen == 3;
@@ -419,6 +426,7 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
 
   LastOpcodeType = OTHER;
   LastInstWritesM0 = false;
+  IsFlatOutstanding = false;
   return true;
 }
 
@@ -532,6 +540,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   LastIssued = ZeroCounts;
   LastOpcodeType = OTHER;
   LastInstWritesM0 = false;
+  IsFlatOutstanding = false;
   ReturnsVoid = MF.getInfo<SIMachineFunctionInfo>()->returnsVoid();
 
   memset(&UsedRegs, 0, sizeof(UsedRegs));

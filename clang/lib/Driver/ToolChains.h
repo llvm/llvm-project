@@ -240,6 +240,17 @@ protected:
   /// \brief Check whether the target triple's architecture is 32-bits.
   bool isTarget32Bit() const { return getTriple().isArch32Bit(); }
 
+  // FIXME: This should be final, but the Solaris tool chain does weird
+  // things we can't easily represent.
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
+  virtual std::string findLibCxxIncludePath() const;
+  virtual void
+  addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                           llvm::opt::ArgStringList &CC1Args) const;
+
   bool addLibStdCXXIncludePaths(Twine Base, Twine Suffix, StringRef GCCTriple,
                                 StringRef GCCMultiarchTriple,
                                 StringRef TargetMultiarchTriple,
@@ -629,9 +640,7 @@ public:
   GetCXXStdlibType(const llvm::opt::ArgList &Args) const override {
     return ToolChain::CST_Libcxx;
   }
-  void AddClangCXXStdlibIncludeArgs(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
+  std::string findLibCxxIncludePath() const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
@@ -700,11 +709,14 @@ public:
   Haiku(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);
 
-  bool isPIEDefault() const override { return getTriple().getArch() == llvm::Triple::x86_64; }
+  bool isPIEDefault() const override {
+    return getTriple().getArch() == llvm::Triple::x86_64;
+  }
 
-  void
-  AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                              llvm::opt::ArgStringList &CC1Args) const override;
+  std::string findLibCxxIncludePath() const override;
+  void addLibStdCxxIncludePaths(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY OpenBSD : public Generic_ELF {
@@ -735,7 +747,7 @@ public:
   bool IsObjCNonFragileABIDefault() const override { return true; }
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
-  void AddClangCXXStdlibIncludeArgs(
+  void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
@@ -759,7 +771,7 @@ public:
   bool IsObjCNonFragileABIDefault() const override { return true; }
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
-  void AddClangCXXStdlibIncludeArgs(
+  void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
@@ -788,9 +800,11 @@ public:
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
 
-  void AddClangCXXStdlibIncludeArgs(
+  std::string findLibCxxIncludePath() const override;
+  void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
+
   bool IsUnwindTablesDefault() const override { return true; }
 
 protected:
@@ -830,7 +844,8 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void AddClangCXXStdlibIncludeArgs(
+  std::string findLibCxxIncludePath() const override;
+  void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -896,9 +911,7 @@ public:
 
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
 
-  void AddClangCXXStdlibIncludeArgs(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
+  std::string findLibCxxIncludePath() const override;
 
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
@@ -923,6 +936,13 @@ public:
   LanaiToolChain(const Driver &D, const llvm::Triple &Triple,
                  const llvm::opt::ArgList &Args)
       : Generic_ELF(D, Triple, Args) {}
+
+  // No support for finding a C++ standard library yet.
+  std::string findLibCxxIncludePath() const override { return ""; }
+  void addLibStdCxxIncludePaths(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override {}
+
   bool IsIntegratedAssemblerDefault() const override { return true; }
 };
 
@@ -940,7 +960,7 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void AddClangCXXStdlibIncludeArgs(
+  void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
@@ -982,9 +1002,7 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void AddClangCXXStdlibIncludeArgs(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
+  std::string findLibCxxIncludePath() const override;
 
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
 
@@ -1033,9 +1051,7 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void AddClangCXXStdlibIncludeArgs(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
+  std::string findLibCxxIncludePath() const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
@@ -1178,7 +1194,8 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void AddClangCXXStdlibIncludeArgs(
+  std::string findLibCxxIncludePath() const override;
+  void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
   Tool *SelectTool(const JobAction &JA) const override;
@@ -1232,6 +1249,12 @@ public:
   PS4CPU(const Driver &D, const llvm::Triple &Triple,
          const llvm::opt::ArgList &Args);
 
+  // No support for finding a C++ standard library yet.
+  std::string findLibCxxIncludePath() const override { return ""; }
+  void addLibStdCxxIncludePaths(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override {}
+
   bool IsMathErrnoDefault() const override { return false; }
   bool IsObjCNonFragileABIDefault() const override { return true; }
   bool HasNativeLLVMSupport() const override;
@@ -1256,6 +1279,12 @@ class LLVM_LIBRARY_VISIBILITY Contiki : public Generic_ELF {
 public:
   Contiki(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);
+
+  // No support for finding a C++ standard library yet.
+  std::string findLibCxxIncludePath() const override { return ""; }
+  void addLibStdCxxIncludePaths(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override {}
 
   SanitizerMask getSupportedSanitizers() const override;
 };

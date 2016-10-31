@@ -7179,6 +7179,30 @@ TEST_F(FormatTest, SpecialTokensAtEndOfLine) {
   verifyFormat("operator");
 }
 
+TEST_F(FormatTest, SkipsDeeplyNestedLines) {
+  // This code would be painfully slow to format if we didn't skip it.
+  std::string Code("A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(\n" // 20x
+                   "A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(\n"
+                   "A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(\n"
+                   "A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(\n"
+                   "A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(A(\n"
+                   "A(1, 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n" // 10x
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)\n"
+                   ", 1), 1), 1), 1), 1), 1), 1), 1), 1), 1);\n");
+  // Deeply nested part is untouched, rest is formatted.
+  EXPECT_EQ(std::string("int i;\n") + Code + "int j;\n",
+            format(std::string("int    i;\n") + Code + "int    j;\n",
+                   getLLVMStyle(), IC_ExpectIncomplete));
+}
+
 //===----------------------------------------------------------------------===//
 // Objective-C tests.
 //===----------------------------------------------------------------------===//

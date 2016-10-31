@@ -124,3 +124,67 @@ define <2 x i37> @max_of_nots_weird_type_vec(<2 x i37> %x, <2 x i37> %y) {
   ret <2 x i37> %smax96
 }
 
+; max(min(%a, -1), -1) == -1
+define i32 @max_of_min(i32 %a) {
+; CHECK-LABEL: @max_of_min(
+; CHECK-NEXT:    ret i32 -1
+;
+  %not_a = xor i32 %a, -1
+  %c0 = icmp sgt i32 %a, 0
+  %s0 = select i1 %c0, i32 %not_a, i32 -1
+  %c1 = icmp sgt i32 %s0, -1
+  %s1 = select i1 %c1, i32 %s0, i32 -1
+  ret i32 %s1
+}
+
+; max(min(%a, -1), -1) == -1 (swap predicate and select ops)
+define i32 @max_of_min_swap(i32 %a) {
+; CHECK-LABEL: @max_of_min_swap(
+; CHECK-NEXT:    ret i32 -1
+;
+  %not_a = xor i32 %a, -1
+  %c0 = icmp slt i32 %a, 0
+  %s0 = select i1 %c0, i32 -1, i32 %not_a
+  %c1 = icmp sgt i32 %s0, -1
+  %s1 = select i1 %c1, i32 %s0, i32 -1
+  ret i32 %s1
+}
+
+; min(max(%a, -1), -1) == -1
+define i32 @min_of_max(i32 %a) {
+; CHECK-LABEL: @min_of_max(
+; CHECK-NEXT:    ret i32 -1
+;
+  %not_a = xor i32 %a, -1
+  %c0 = icmp slt i32 %a, 0
+  %s0 = select i1 %c0, i32 %not_a, i32 -1
+  %c1 = icmp slt i32 %s0, -1
+  %s1 = select i1 %c1, i32 %s0, i32 -1
+  ret i32 %s1
+}
+
+; min(max(%a, -1), -1) == -1 (swap predicate and select ops)
+define i32 @min_of_max_swap(i32 %a) {
+; CHECK-LABEL: @min_of_max_swap(
+; CHECK-NEXT:    ret i32 -1
+;
+  %not_a = xor i32 %a, -1
+  %c0 = icmp sgt i32 %a, 0
+  %s0 = select i1 %c0, i32 -1, i32 %not_a
+  %c1 = icmp slt i32 %s0, -1
+  %s1 = select i1 %c1, i32 %s0, i32 -1
+  ret i32 %s1
+}
+
+define <2 x i32> @max_of_min_vec(<2 x i32> %a) {
+; CHECK-LABEL: @max_of_min_vec(
+; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 -1>
+;
+  %not_a = xor <2 x i32> %a, <i32 -1, i32 -1>
+  %c0 = icmp sgt <2 x i32> %a, zeroinitializer
+  %s0 = select <2 x i1> %c0, <2 x i32> %not_a, <2 x i32> <i32 -1, i32 -1>
+  %c1 = icmp sgt <2 x i32> %s0, <i32 -1, i32 -1>
+  %s1 = select <2 x i1> %c1, <2 x i32> %s0, <2 x i32> <i32 -1, i32 -1>
+  ret <2 x i32> %s1
+}
+

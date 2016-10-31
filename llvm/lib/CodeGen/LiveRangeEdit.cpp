@@ -103,7 +103,7 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
 
     // We can't remat physreg uses, unless it is a constant.
     if (TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
-      if (MRI.isConstantPhysReg(MO.getReg(), *OrigMI->getParent()->getParent()))
+      if (MRI.isConstantPhysReg(MO.getReg()))
         continue;
       return false;
     }

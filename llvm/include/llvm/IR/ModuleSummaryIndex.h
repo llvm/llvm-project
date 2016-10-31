@@ -194,6 +194,10 @@ public:
   /// possibly referenced from inline assembly, etc).
   bool noRename() const { return Flags.NoRename; }
 
+  /// Flag that this global value cannot be renamed (in a specific section,
+  /// possibly referenced from inline assembly, etc).
+  void setNoRename() { Flags.NoRename = true; }
+
   /// Record a reference from this global value to the global value identified
   /// by \p RefGUID.
   void addRefEdge(GlobalValue::GUID RefGUID) { RefEdgeList.push_back(RefGUID); }

@@ -23,6 +23,8 @@ vector unsigned long long vula, vulb;
 vector bool long long vbla, vblb;
 vector float vfa, vfb;
 vector double vda, vdb;
+vector unsigned __int128 vui128a, vui128b;
+vector signed __int128 vsi128a, vsi128b;
 
 unsigned test1(void) {
 // CHECK-BE: @llvm.ppc.altivec.vcmpequb(<16 x i8>
@@ -697,6 +699,81 @@ vector unsigned short test54(void) {
 // CHECK: @llvm.ctpop.v8i16(<8 x i16>
 // CHECK-NEXT: ret <8 x i16>
   return vec_popcnt (vusa);
+}
+signed int test59(void) {
+// CHECK-BE: @llvm.ppc.altivec.vclzlsbb(<16 x i8>
+// CHECK-BE-NEXT: ret i32
+// CHECK-LE: @llvm.ppc.altivec.vctzlsbb(<16 x i8>
+// CHECK-LE-NEXT: ret i32
+  return vec_cntlz_lsbb (vuca);
+}
+signed int test60(void) {
+// CHECK-BE: @llvm.ppc.altivec.vclzlsbb(<16 x i8>
+// CHECK-BE-NEXT: ret i32
+// CHECK-LE: @llvm.ppc.altivec.vctzlsbb(<16 x i8>
+// CHECK-LE-NEXT: ret i32
+  return vec_cntlz_lsbb (vsca);
+}
+signed int test61(void) {
+// CHECK-BE: @llvm.ppc.altivec.vctzlsbb(<16 x i8>
+// CHECK-BE-NEXT: ret i32
+// CHECK-LE: @llvm.ppc.altivec.vclzlsbb(<16 x i8>
+// CHECK-LE-NEXT: ret i32
+  return vec_cnttz_lsbb (vsca);
+}
+signed int test62(void) {
+// CHECK-BE: @llvm.ppc.altivec.vctzlsbb(<16 x i8>
+// CHECK-BE-NEXT: ret i32
+// CHECK-LE: @llvm.ppc.altivec.vclzlsbb(<16 x i8>
+// CHECK-LE-NEXT: ret i32
+  return vec_cnttz_lsbb (vuca);
+}
+
+vector unsigned int test63(void) {
+// CHECK-BE: @llvm.ppc.altivec.vprtybw(<4 x i32>
+// CHECK-BE-NEXT: ret <4 x i32>
+// CHECK: @llvm.ppc.altivec.vprtybw(<4 x i32>
+// CHECK-NEXT: ret <4 x i32>
+  return vec_parity_lsbb (vuia);
+}
+
+vector unsigned int test64(void) {
+// CHECK-BE: @llvm.ppc.altivec.vprtybw(<4 x i32>
+// CHECK-BE-NEXT: ret <4 x i32>
+// CHECK: @llvm.ppc.altivec.vprtybw(<4 x i32>
+// CHECK-NEXT: ret <4 x i32>
+  return vec_parity_lsbb (vsia);
+}
+
+vector unsigned long long test65(void) {
+// CHECK-BE: @llvm.ppc.altivec.vprtybd(<2 x i64>
+// CHECK-BE-NEXT: ret <2 x i64>
+// CHECK: @llvm.ppc.altivec.vprtybd(<2 x i64>
+// CHECK-NEXT: ret <2 x i64>
+  return vec_parity_lsbb (vula);
+}
+
+vector unsigned long long test66(void) {
+// CHECK-BE: @llvm.ppc.altivec.vprtybd(<2 x i64>
+// CHECK-BE-NEXT: ret <2 x i64>
+// CHECK: @llvm.ppc.altivec.vprtybd(<2 x i64>
+// CHECK-NEXT: ret <2 x i64>
+  return vec_parity_lsbb (vsla);
+}
+vector unsigned __int128 test67(void) {
+// CHECK-BE: @llvm.ppc.altivec.vprtybq(<1 x i128>
+// CHECK-BE-NEXT: ret <1 x i128>
+// CHECK: @llvm.ppc.altivec.vprtybq(<1 x i128>
+// CHECK-NEXT: ret <1 x i128>
+  return vec_parity_lsbb (vui128a);
+}
+
+vector unsigned __int128 test68(void) {
+// CHECK-BE: @llvm.ppc.altivec.vprtybq(<1 x i128>
+// CHECK-BE-NEXT: ret <1 x i128>
+// CHECK: @llvm.ppc.altivec.vprtybq(<1 x i128>
+// CHECK-NEXT: ret <1 x i128>
+  return vec_parity_lsbb (vsi128a);
 }
 vector double test55(void) {
 // CHECK-BE: @llvm.ppc.vsx.xviexpdp(<2 x i64> %{{.+}}, <2 x i64>

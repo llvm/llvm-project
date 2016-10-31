@@ -360,6 +360,17 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vcmpnezb_p : GCCBuiltin<"__builtin_altivec_vcmpnezb_p">,
               Intrinsic<[llvm_i32_ty],[llvm_i32_ty,llvm_v16i8_ty,llvm_v16i8_ty],
                         [IntrNoMem]>;
+  def int_ppc_altivec_vclzlsbb : GCCBuiltin<"__builtin_altivec_vclzlsbb">,
+              Intrinsic<[llvm_i32_ty],[llvm_v16i8_ty],[IntrNoMem]>;
+  def int_ppc_altivec_vctzlsbb : GCCBuiltin<"__builtin_altivec_vctzlsbb">,
+              Intrinsic<[llvm_i32_ty],[llvm_v16i8_ty],[IntrNoMem]>;
+  def int_ppc_altivec_vprtybw : GCCBuiltin<"__builtin_altivec_vprtybw">,
+              Intrinsic<[llvm_v4i32_ty],[llvm_v4i32_ty],[IntrNoMem]>;
+  def int_ppc_altivec_vprtybd : GCCBuiltin<"__builtin_altivec_vprtybd">,
+              Intrinsic<[llvm_v2i64_ty],[llvm_v2i64_ty],[IntrNoMem]>;
+  def int_ppc_altivec_vprtybq : GCCBuiltin<"__builtin_altivec_vprtybq">,
+              Intrinsic<[llvm_v1i128_ty],[llvm_v1i128_ty],[IntrNoMem]>;
+
 }
 
 // Vector average.

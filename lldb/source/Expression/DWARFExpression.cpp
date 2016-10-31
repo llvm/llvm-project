@@ -3029,16 +3029,16 @@ bool DWARFExpression::AddressRangeForLocationListEntry(
     return true;
   case SplitDwarfLocationList:
     switch (debug_loc_data.GetU8(offset_ptr)) {
-    case DW_LLE_end_of_list_entry:
+    case DW_LLE_end_of_list:
       return false;
-    case DW_LLE_start_end_entry: {
+    case DW_LLE_startx_endx: {
       uint64_t index = debug_loc_data.GetULEB128(offset_ptr);
       low_pc = ReadAddressFromDebugAddrSection(dwarf_cu, index);
       index = debug_loc_data.GetULEB128(offset_ptr);
       high_pc = ReadAddressFromDebugAddrSection(dwarf_cu, index);
       return true;
     }
-    case DW_LLE_start_length_entry: {
+    case DW_LLE_startx_length: {
       uint64_t index = debug_loc_data.GetULEB128(offset_ptr);
       low_pc = ReadAddressFromDebugAddrSection(dwarf_cu, index);
       uint32_t length = debug_loc_data.GetU32(offset_ptr);

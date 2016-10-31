@@ -3969,17 +3969,25 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       }
     }
 
-    // Y >s C ? ~Y : ~C == ~Y <s ~C ? ~Y : ~C = SMIN(~Y, ~C)
+    // (X >s C) ? ~X : ~C ==> (~X <s ~C) ? ~X : ~C ==> SMIN(~X, ~C)
+    // (X <s C) ? ~X : ~C ==> (~X >s ~C) ? ~X : ~C ==> SMAX(~X, ~C)
     const APInt *C2;
-    if (match(FalseVal, m_APInt(C2))) {
-      if (Pred == ICmpInst::ICMP_SGT &&
-          CmpRHS->getType() == FalseVal->getType() && ~(*C1) == *C2 &&
-          (match(TrueVal, m_Not(m_Specific(CmpLHS))) ||
-           match(CmpLHS, m_Not(m_Specific(TrueVal))))) {
-        LHS = TrueVal;
-        RHS = FalseVal;
-        return {SPF_SMIN, SPNB_NA, false};
-      }
+    if (match(TrueVal, m_Not(m_Specific(CmpLHS))) &&
+        match(FalseVal, m_APInt(C2)) && ~(*C1) == *C2 &&
+        (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SLT)) {
+      LHS = TrueVal;
+      RHS = FalseVal;
+      return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
+    }
+
+    // (X >s C) ? ~C : ~X ==> (~X <s ~C) ? ~C : ~X ==> SMAX(~C, ~X)
+    // (X <s C) ? ~C : ~X ==> (~X >s ~C) ? ~C : ~X ==> SMIN(~C, ~X)
+    if (match(FalseVal, m_Not(m_Specific(CmpLHS))) &&
+        match(TrueVal, m_APInt(C2)) && ~(*C1) == *C2 &&
+        (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SLT)) {
+      LHS = TrueVal;
+      RHS = FalseVal;
+      return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
     }
   }
 

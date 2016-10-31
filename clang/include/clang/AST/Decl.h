@@ -1632,6 +1632,11 @@ private:
   /// skipped.
   unsigned HasSkippedBody : 1;
 
+  /// Indicates if the function declaration will have a body, once we're done
+  /// parsing it.  (We don't set it to false when we're done parsing, in the
+  /// hopes this is simpler.)
+  unsigned WillHaveBody : 1;
+
   /// \brief End part of this FunctionDecl's source range.
   ///
   /// We could compute the full range in getSourceRange(). However, when we're
@@ -1701,25 +1706,21 @@ private:
 
 protected:
   FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-               const DeclarationNameInfo &NameInfo,
-               QualType T, TypeSourceInfo *TInfo,
-               StorageClass S, bool isInlineSpecified,
+               const DeclarationNameInfo &NameInfo, QualType T,
+               TypeSourceInfo *TInfo, StorageClass S, bool isInlineSpecified,
                bool isConstexprSpecified)
-    : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
-                     StartLoc),
-      DeclContext(DK),
-      redeclarable_base(C),
-      ParamInfo(nullptr), Body(),
-      SClass(S),
-      IsInline(isInlineSpecified), IsInlineSpecified(isInlineSpecified),
-      IsVirtualAsWritten(false), IsPure(false), HasInheritedPrototype(false),
-      HasWrittenPrototype(true), IsDeleted(false), IsTrivial(false),
-      IsDefaulted(false), IsExplicitlyDefaulted(false),
-      HasImplicitReturnZero(false), IsLateTemplateParsed(false),
-      IsConstexpr(isConstexprSpecified), UsesSEHTry(false),
-      HasSkippedBody(false), EndRangeLoc(NameInfo.getEndLoc()),
-      TemplateOrSpecialization(),
-      DNLoc(NameInfo.getInfo()) {}
+      : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
+                       StartLoc),
+        DeclContext(DK), redeclarable_base(C), ParamInfo(nullptr), Body(),
+        SClass(S), IsInline(isInlineSpecified),
+        IsInlineSpecified(isInlineSpecified), IsVirtualAsWritten(false),
+        IsPure(false), HasInheritedPrototype(false), HasWrittenPrototype(true),
+        IsDeleted(false), IsTrivial(false), IsDefaulted(false),
+        IsExplicitlyDefaulted(false), HasImplicitReturnZero(false),
+        IsLateTemplateParsed(false), IsConstexpr(isConstexprSpecified),
+        UsesSEHTry(false), HasSkippedBody(false), WillHaveBody(false),
+        EndRangeLoc(NameInfo.getEndLoc()), TemplateOrSpecialization(),
+        DNLoc(NameInfo.getInfo()) {}
 
   typedef Redeclarable<FunctionDecl> redeclarable_base;
   FunctionDecl *getNextRedeclarationImpl() override {
@@ -2000,6 +2001,10 @@ public:
   /// \brief True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return HasSkippedBody; }
   void setHasSkippedBody(bool Skipped = true) { HasSkippedBody = Skipped; }
+
+  /// True if this function will eventually have a body, once it's fully parsed.
+  bool willHaveBody() const { return WillHaveBody; }
+  void setWillHaveBody(bool V = true) { WillHaveBody = V; }
 
   void setPreviousDeclaration(FunctionDecl * PrevDecl);
 

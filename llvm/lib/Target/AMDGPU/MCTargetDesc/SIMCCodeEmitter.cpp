@@ -117,7 +117,8 @@ static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
   if (Val == FloatToBits(-4.0f))
     return 247;
 
-  if (AMDGPU::isVI(STI) && Val == 0x3e22f983) // 1/(2*pi)
+  if (Val == 0x3e22f983 && // 1.0 / (2.0 * pi)
+      STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
     return 248;
 
   return 255;
@@ -152,7 +153,8 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
   if (Val == DoubleToBits(-4.0))
     return 247;
 
-  if (AMDGPU::isVI(STI) && Val == 0x3fc45f306dc9c882) // 1/(2*pi)
+  if (Val == 0x3fc45f306dc9c882 && // 1.0 / (2.0 * pi)
+      STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
     return 248;
 
   return 255;

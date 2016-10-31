@@ -167,8 +167,8 @@ private:
   std::vector<orc::CtorDtorRunner<CODLayerT>> IRStaticDestructorRunners;
 };
 
-int runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms, int ArgC,
-                  char* ArgV[]);
+int runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
+                  const std::vector<std::string> &Args);
 
 } // end namespace llvm
 

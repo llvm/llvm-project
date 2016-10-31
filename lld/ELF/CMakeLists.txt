@@ -14,6 +14,7 @@ add_lld_library(lldELF
   LTO.cpp
   LinkerScript.cpp
   MarkLive.cpp
+  Memory.cpp
   Mips.cpp
   OutputSections.cpp
   Relocations.cpp

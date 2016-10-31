@@ -798,7 +798,6 @@ Error LLVMOutputStyle::dumpSectionMap() {
   for (auto &M : Dbi->getSectionMap()) {
     DictScope D(P, "Entry");
     P.printFlags("Flags", M.Flags, getOMFSegMapDescFlagNames());
-    P.printNumber("Flags", M.Flags);
     P.printNumber("Ovl", M.Ovl);
     P.printNumber("Group", M.Group);
     P.printNumber("Frame", M.Frame);

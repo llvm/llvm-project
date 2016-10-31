@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 // <memory>
 
 // template<class Y, class D, class A> shared_ptr(Y* p, D d, A a);

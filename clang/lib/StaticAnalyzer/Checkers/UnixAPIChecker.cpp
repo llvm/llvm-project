@@ -43,6 +43,7 @@ public:
   void CheckReallocZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckReallocfZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckAllocaZero(CheckerContext &C, const CallExpr *CE) const;
+  void CheckAllocaWithAlignZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckVallocZero(CheckerContext &C, const CallExpr *CE) const;
 
   typedef void (UnixAPIChecker::*SubChecker)(CheckerContext &,
@@ -337,6 +338,11 @@ void UnixAPIChecker::CheckAllocaZero(CheckerContext &C,
   BasicAllocationCheck(C, CE, 1, 0, "alloca");
 }
 
+void UnixAPIChecker::CheckAllocaWithAlignZero(CheckerContext &C,
+                                              const CallExpr *CE) const {
+  BasicAllocationCheck(C, CE, 2, 0, "__builtin_alloca_with_align");
+}
+
 void UnixAPIChecker::CheckVallocZero(CheckerContext &C,
                                      const CallExpr *CE) const {
   BasicAllocationCheck(C, CE, 1, 0, "valloc");
@@ -366,6 +372,8 @@ void UnixAPIChecker::checkPreStmt(const CallExpr *CE,
       .Case("realloc", &UnixAPIChecker::CheckReallocZero)
       .Case("reallocf", &UnixAPIChecker::CheckReallocfZero)
       .Cases("alloca", "__builtin_alloca", &UnixAPIChecker::CheckAllocaZero)
+      .Case("__builtin_alloca_with_align",
+            &UnixAPIChecker::CheckAllocaWithAlignZero)
       .Case("valloc", &UnixAPIChecker::CheckVallocZero)
       .Default(nullptr);
 

@@ -1230,7 +1230,7 @@ bool IsHandledDeadlySignal(int signum) {
   return (signum == SIGSEGV || signum == SIGBUS) && common_flags()->handle_segv;
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 void *internal_start_thread(void(*func)(void *arg), void *arg) {
   // Start the thread with signals blocked, otherwise it can steal user signals.
   __sanitizer_sigset_t set, old;

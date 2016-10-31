@@ -19,9 +19,9 @@ class SBDirCheckerCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.template = 'main.cpp.template'
         self.source = 'main.cpp'
         self.exe_name = 'a.out'
+        self.generateSource(self.source)
 
     @skipIfNoSBHeaders
     def test_sb_api_directory(self):
@@ -34,39 +34,8 @@ class SBDirCheckerCase(TestBase):
             self.skipTest(
                 "LLDB is 64-bit and cannot be linked to 32-bit test program.")
 
-        # Generate main.cpp, build it, and execute.
-        self.generate_main_cpp()
         self.buildDriver(self.source, self.exe_name)
         self.sanity_check_executable(self.exe_name)
-
-    def generate_main_cpp(self):
-        """Generate main.cpp from main.cpp.template."""
-        temp = os.path.join(os.getcwd(), self.template)
-        with open(temp, 'r') as f:
-            content = f.read()
-
-        public_api_dir = os.path.join(
-            os.environ["LLDB_SRC"], "include", "lldb", "API")
-
-        # Look under the include/lldb/API directory and add #include statements
-        # for all the SB API headers.
-        public_headers = os.listdir(public_api_dir)
-        # For different platforms, the include statement can vary.
-        if self.platformIsDarwin():
-            include_stmt = "'#include <%s>' % os.path.join('LLDB', header)"
-        if self.getPlatform() == "freebsd" or self.getPlatform(
-        ) == "linux" or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
-            include_stmt = "'#include <%s>' % os.path.join(public_api_dir, header)"
-        list = [eval(include_stmt) for header in public_headers if (
-            header.startswith("SB") and header.endswith(".h"))]
-        includes = '\n'.join(list)
-        new_content = content.replace('%include_SB_APIs%', includes)
-        src = os.path.join(os.getcwd(), self.source)
-        with open(src, 'w') as f:
-            f.write(new_content)
-
-        # The main.cpp has been generated, add a teardown hook to remove it.
-        self.addTearDownHook(lambda: os.remove(src))
 
     def sanity_check_executable(self, exe_name):
         """Sanity check executable compiled from the auto-generated program."""

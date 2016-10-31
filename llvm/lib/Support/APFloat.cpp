@@ -818,10 +818,10 @@ IEEEFloat::IEEEFloat(const fltSemantics &ourSemantics) {
   sign = false;
 }
 
-IEEEFloat::IEEEFloat(const fltSemantics &ourSemantics, uninitializedTag tag) {
-  // Allocates storage if necessary but does not initialize it.
-  initialize(&ourSemantics);
-}
+// Delegate to the previous constructor, because later copy constructor may
+// actually inspects category, which can't be garbage.
+IEEEFloat::IEEEFloat(const fltSemantics &ourSemantics, uninitializedTag tag)
+    : IEEEFloat(ourSemantics) {}
 
 IEEEFloat::IEEEFloat(const IEEEFloat &rhs) {
   initialize(rhs.semantics);
@@ -3877,7 +3877,9 @@ DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, APFloat &&First,
 
 DoubleAPFloat::DoubleAPFloat(const DoubleAPFloat &RHS)
     : Semantics(RHS.Semantics),
-      Floats(new APFloat[2]{APFloat(RHS.Floats[0]), APFloat(RHS.Floats[1])}) {
+      Floats(RHS.Floats ? new APFloat[2]{APFloat(RHS.Floats[0]),
+                                         APFloat(RHS.Floats[1])}
+                        : nullptr) {
   assert(Semantics == &PPCDoubleDouble);
 }
 
@@ -3888,7 +3890,7 @@ DoubleAPFloat::DoubleAPFloat(DoubleAPFloat &&RHS)
 }
 
 DoubleAPFloat &DoubleAPFloat::operator=(const DoubleAPFloat &RHS) {
-  if (Semantics == RHS.Semantics) {
+  if (Semantics == RHS.Semantics && RHS.Floats) {
     Floats[0] = RHS.Floats[0];
     Floats[1] = RHS.Floats[1];
   } else if (this != &RHS) {

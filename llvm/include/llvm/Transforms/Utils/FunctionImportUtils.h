@@ -41,7 +41,7 @@ class FunctionImportGlobalProcessing {
   bool HasExportedFunctions = false;
 
   /// Check if we should promote the given local value to global scope.
-  bool doPromoteLocalToGlobal(const GlobalValue *SGV);
+  bool shouldPromoteLocalToGlobal(const GlobalValue *SGV);
 
   /// Helper methods to check if we are importing from or potentially
   /// exporting from the current source module.
@@ -54,8 +54,9 @@ class FunctionImportGlobalProcessing {
 
   /// Get the name for SGV that should be used in the linked destination
   /// module. Specifically, this handles the case where we need to rename
-  /// a local that is being promoted to global scope.
-  std::string getName(const GlobalValue *SGV);
+  /// a local that is being promoted to global scope, which it will always
+  /// do when \p DoPromote is true (or when importing a local).
+  std::string getName(const GlobalValue *SGV, bool DoPromote);
 
   /// Process globals so that they can be used in ThinLTO. This includes
   /// promoting local variables so that they can be reference externally by
@@ -66,8 +67,9 @@ class FunctionImportGlobalProcessing {
 
   /// Get the new linkage for SGV that should be used in the linked destination
   /// module. Specifically, for ThinLTO importing or exporting it may need
-  /// to be adjusted.
-  GlobalValue::LinkageTypes getLinkage(const GlobalValue *SGV);
+  /// to be adjusted. When \p DoPromote is true then we must adjust the
+  /// linkage for a required promotion of a local to global scope.
+  GlobalValue::LinkageTypes getLinkage(const GlobalValue *SGV, bool DoPromote);
 
 public:
   FunctionImportGlobalProcessing(

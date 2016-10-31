@@ -50,7 +50,6 @@ private:
   // True if we are in -format=binary and -format=elf.
   bool InBinary = false;
 
-  llvm::BumpPtrAllocator Alloc;
   std::vector<InputFile *> Files;
   std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
@@ -60,9 +59,6 @@ class ELFOptTable : public llvm::opt::OptTable {
 public:
   ELFOptTable();
   llvm::opt::InputArgList parse(ArrayRef<const char *> Argv);
-
-private:
-  llvm::BumpPtrAllocator Alloc;
 };
 
 // Create enum with OPT_xxx values for each option in Options.td
