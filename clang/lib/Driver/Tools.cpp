@@ -5672,6 +5672,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // definitions.
   Args.AddAllArgs(CmdArgs, options::OPT_fmodule_map_file);
 
+  // -fbuiltin-module-map can be used to load the clang
+  // builtin headers modulemap file.
+  if (Args.hasArg(options::OPT_fbuiltin_module_map)) {
+    SmallString<128> BuiltinModuleMap(getToolChain().getDriver().ResourceDir);
+    llvm::sys::path::append(BuiltinModuleMap, "include");
+    llvm::sys::path::append(BuiltinModuleMap, "module.modulemap");
+    if (llvm::sys::fs::exists(BuiltinModuleMap)) {
+      CmdArgs.push_back(Args.MakeArgString("-fmodule-map-file=" +
+                                           BuiltinModuleMap));
+    }
+  }
+
   // -fmodule-file can be used to specify files containing precompiled modules.
   if (HaveAnyModules)
     Args.AddAllArgs(CmdArgs, options::OPT_fmodule_file);
@@ -8244,7 +8256,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   // and 'ld' will use its default mechanism to search for libLTO.dylib.
   if (Version[0] >= 133) {
     // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
-    StringRef P = llvm::sys::path::parent_path(D.getInstalledDir());
+    StringRef P = llvm::sys::path::parent_path(D.Dir);
     SmallString<128> LibLTOPath(P);
     llvm::sys::path::append(LibLTOPath, "lib");
     llvm::sys::path::append(LibLTOPath, "libLTO.dylib");

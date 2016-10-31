@@ -337,10 +337,9 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     const char *Terminator = nullptr;
     if (isa<OMPThreadPrivateDecl>(*D) || isa<OMPDeclareReductionDecl>(*D))
       Terminator = nullptr;
-    else if (isa<FunctionDecl>(*D) &&
-             cast<FunctionDecl>(*D)->isThisDeclarationADefinition())
+    else if (isa<FunctionDecl>(*D) && cast<FunctionDecl>(*D)->hasBody())
       Terminator = nullptr;
-    else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->getBody())
+    else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
     else if (isa<NamespaceDecl>(*D) || isa<LinkageSpecDecl>(*D) ||
              isa<ObjCImplementationDecl>(*D) ||
@@ -984,7 +983,7 @@ void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     for (auto *I : D->specializations()) {
       PrintTemplateParameters(Params, &I->getTemplateArgs());
       Visit(I);
-      Out << '\n';
+      Out << ";\n";
     }
   }
 

@@ -1147,6 +1147,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     AI->setAlignment(SuitableAlignmentInBytes);
     return RValue::get(AI);
   }
+
+  case Builtin::BI__builtin_alloca_with_align: {
+    Value *Size = EmitScalarExpr(E->getArg(0));
+    Value *AlignmentValue = EmitScalarExpr(E->getArg(1));
+    auto *AlignmentCI = cast<ConstantInt>(AlignmentValue);
+    unsigned Alignment = AlignmentCI->getZExtValue();
+    const TargetInfo &TI = getContext().getTargetInfo();
+    unsigned AlignmentInBytes = Alignment / TI.getCharWidth();
+    AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
+    AI->setAlignment(AlignmentInBytes);
+    return RValue::get(AI);
+  }
+
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero: {
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
