@@ -28,7 +28,6 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "llvm/ADT/SmallString.h"
@@ -262,8 +261,11 @@ GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
 
 GDBRemoteCommunication::PacketResult GDBRemoteCommunication::GetAck() {
   StringExtractorGDBRemote packet;
-  PacketResult result =
-      ReadPacket(packet, GetPacketTimeoutInMicroSeconds(), false);
+  PacketResult result = ReadPacket(
+      packet,
+      std::chrono::duration_cast<std::chrono::microseconds>(GetPacketTimeout())
+          .count(),
+      false);
   if (result == PacketResult::Success) {
     if (packet.GetResponseType() ==
         StringExtractorGDBRemote::ResponseType::eAck)
@@ -1320,7 +1322,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
 void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
 
 GDBRemoteCommunication::ScopedTimeout::ScopedTimeout(
-    GDBRemoteCommunication &gdb_comm, uint32_t timeout)
+    GDBRemoteCommunication &gdb_comm, std::chrono::seconds timeout)
     : m_gdb_comm(gdb_comm) {
   m_saved_timeout = m_gdb_comm.SetPacketTimeout(timeout);
 }

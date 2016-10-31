@@ -37,7 +37,21 @@ class InputSectionData;
 // ScriptParser::readExpr reads an expression and returns an Expr.
 // Later, we evaluate the expression by calling the function
 // with the value of special context variable ".".
-typedef std::function<uint64_t(uint64_t)> Expr;
+struct Expr {
+  std::function<uint64_t(uint64_t)> Val;
+  std::function<bool()> IsAbsolute;
+  uint64_t operator()(uint64_t Dot) const { return Val(Dot); }
+  operator bool() const { return (bool)Val; }
+
+  template <typename T>
+  Expr(T Val, std::function<bool()> IsAbsolute)
+      : Val(Val), IsAbsolute(IsAbsolute) {}
+  template <typename T> Expr(T Val, bool IsAbsolute) : Val(Val) {
+    this->IsAbsolute = [=]() { return IsAbsolute; };
+  }
+  template <typename T> Expr(T V) : Expr(V, false) {}
+  Expr() : Expr(nullptr) {}
+};
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
@@ -64,9 +78,8 @@ struct BaseCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, Expr E, bool IsAbsolute)
-      : BaseCommand(AssignmentKind), Name(Name), Expression(E),
-        IsAbsolute(IsAbsolute) {}
+  SymbolAssignment(StringRef Name, Expr E)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
   static bool classof(const BaseCommand *C);
 
   // The LHS of an expression. Name is either a symbol name or ".".
@@ -79,7 +92,6 @@ struct SymbolAssignment : BaseCommand {
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
   bool Hidden = false;
-  bool IsAbsolute;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -176,6 +188,7 @@ public:
   virtual uint64_t getHeaderSize() = 0;
   virtual uint64_t getSymbolValue(StringRef S) = 0;
   virtual bool isDefined(StringRef S) = 0;
+  virtual bool isAbsolute(StringRef S) = 0;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -223,6 +236,7 @@ public:
   uint64_t getHeaderSize() override;
   uint64_t getSymbolValue(StringRef S) override;
   bool isDefined(StringRef S) override;
+  bool isAbsolute(StringRef S) override;
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 

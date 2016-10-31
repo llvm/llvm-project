@@ -158,13 +158,13 @@ void DWARFDebugInfoEntryMinimal::dumpAttribute(raw_ostream &OS,
   else if (attr == DW_AT_decl_line || attr == DW_AT_call_line)
     OS << *formValue.getAsUnsignedConstant();
   else
-    formValue.dump(OS, u);
+    formValue.dump(OS);
 
   // We have dumped the attribute raw value. For some attributes
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (attr == DW_AT_specification || attr == DW_AT_abstract_origin) {
-    Optional<uint64_t> Ref = formValue.getAsReference(u);
+    Optional<uint64_t> Ref = formValue.getAsReference();
     if (Ref.hasValue()) {
       uint32_t RefOffset = Ref.getValue();
       DWARFDebugInfoEntryMinimal DIE;
@@ -264,7 +264,7 @@ const char *DWARFDebugInfoEntryMinimal::getAttributeValueAsString(
   DWARFFormValue FormValue;
   if (!getAttributeValue(U, Attr, FormValue))
     return FailValue;
-  Optional<const char *> Result = FormValue.getAsCString(U);
+  Optional<const char *> Result = FormValue.getAsCString();
   return Result.hasValue() ? Result.getValue() : FailValue;
 }
 
@@ -274,7 +274,7 @@ uint64_t DWARFDebugInfoEntryMinimal::getAttributeValueAsAddress(
   DWARFFormValue FormValue;
   if (!getAttributeValue(U, Attr, FormValue))
     return FailValue;
-  Optional<uint64_t> Result = FormValue.getAsAddress(U);
+  Optional<uint64_t> Result = FormValue.getAsAddress();
   return Result.hasValue() ? Result.getValue() : FailValue;
 }
 
@@ -294,7 +294,7 @@ uint64_t DWARFDebugInfoEntryMinimal::getAttributeValueAsReference(
   DWARFFormValue FormValue;
   if (!getAttributeValue(U, Attr, FormValue))
     return FailValue;
-  Optional<uint64_t> Result = FormValue.getAsReference(U);
+  Optional<uint64_t> Result = FormValue.getAsReference();
   return Result.hasValue() ? Result.getValue() : FailValue;
 }
 

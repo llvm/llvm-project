@@ -347,6 +347,12 @@ ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
   // The getNumSections() call below depends on SectionHeaderTable being set.
   SectionHeaderTable =
     reinterpret_cast<const Elf_Shdr *>(base() + SectionTableOffset);
+  if (getNumSections() > UINT64_MAX / Header->e_shentsize) {
+    // Section table goes past end of file!
+    EC = object_error::parse_failed;
+    return;
+  }
+
   const uint64_t SectionTableSize = getNumSections() * Header->e_shentsize;
 
   if (SectionTableOffset + SectionTableSize > FileSize) {

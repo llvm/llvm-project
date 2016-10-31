@@ -276,6 +276,7 @@ enum class MethodOptions : uint16_t {
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(MethodOptions)
 
 /// Equivalent to CV_modifier_t.
+/// TODO: Add flag for _Atomic modifier
 enum class ModifierOptions : uint16_t {
   None = 0x0000,
   Const = 0x0001,

@@ -195,6 +195,10 @@ public:
     return Abbrevs;
   }
   uint8_t getAddressByteSize() const { return AddrSize; }
+  uint8_t getRefAddrByteSize() const {
+    // FIXME: Support DWARF64.
+    return (Version == 2) ? AddrSize : 4;
+  }
   uint64_t getBaseAddress() const { return BaseAddr; }
 
   void setBaseAddress(uint64_t base_addr) {

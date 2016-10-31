@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 def Z13Model : SchedMachineModel {
+
+    let UnsupportedFeatures = Arch11UnsupportedFeatures.List;
     
     let IssueWidth = 6;             // 2 * 3 instructions decoded per cycle.
     let MicroOpBufferSize = 60;     // Issue queues

@@ -76,3 +76,6 @@ INVALID-SEC-ADDRESS-ALIGNMENT: Invalid data was encountered while parsing the fi
 RUN: not llvm-readobj -t %p/Inputs/invalid-section-size2.elf 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
 INVALID-SECTION-SIZE2: Invalid data was encountered while parsing the file.
+
+RUN: not llvm-readobj -t %p/Inputs/invalid-sections-num.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
+INVALID-SECTION-NUM: Invalid data was encountered while parsing the file.

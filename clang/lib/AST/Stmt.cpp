@@ -533,15 +533,17 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       DiagOffs = CurPtr-StrStart-1;
       return diag::err_asm_invalid_escape;
     }
-
+    // Handle escaped char and continue looping over the asm string.
     char EscapedChar = *CurPtr++;
-    if (EscapedChar == '%') {  // %% -> %
-      // Escaped percentage sign.
-      CurStringPiece += '%';
+    switch (EscapedChar) {
+    default:
+      break;
+    case '%': // %% -> %
+    case '{': // %{ -> {
+    case '}': // %} -> }
+      CurStringPiece += EscapedChar;
       continue;
-    }
-
-    if (EscapedChar == '=') {  // %= -> Generate an unique ID.
+    case '=': // %= -> Generate a unique ID.
       CurStringPiece += "${:uid}";
       continue;
     }

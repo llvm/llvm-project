@@ -35,8 +35,8 @@ namespace minidump {
 // specified in the RegisterInfoInterface argument
 // This way we can reuse the already existing register contexts
 lldb::DataBufferSP
-ConvertMinidumpContextToRegIface(llvm::ArrayRef<uint8_t> source_data,
-                                 RegisterInfoInterface *target_reg_interface);
+ConvertMinidumpContext_x86_64(llvm::ArrayRef<uint8_t> source_data,
+                              RegisterInfoInterface *target_reg_interface);
 
 struct Uint128 {
   llvm::support::ulittle64_t high;
@@ -72,7 +72,7 @@ struct MinidumpContext_x86_64 {
   llvm::support::ulittle64_t p5_home;
   llvm::support::ulittle64_t p6_home;
 
-  // The context_flags field determines and which parts
+  // The context_flags field determines which parts
   // of the structure are populated (have valid values)
   llvm::support::ulittle32_t context_flags;
   llvm::support::ulittle32_t mx_csr;

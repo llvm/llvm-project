@@ -133,8 +133,10 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
          FC == FC_SectionOffset;
 }
 
-bool DWARFFormValue::extractValue(DataExtractor data, uint32_t *offset_ptr,
+bool DWARFFormValue::extractValue(const DataExtractor &data, 
+                                  uint32_t *offset_ptr,
                                   const DWARFUnit *cu) {
+  U = cu;
   bool indirect = false;
   bool is_block = false;
   Value.data = nullptr;
@@ -145,14 +147,14 @@ bool DWARFFormValue::extractValue(DataExtractor data, uint32_t *offset_ptr,
     switch (Form) {
     case DW_FORM_addr:
     case DW_FORM_ref_addr: {
-      if (!cu)
+      if (!U)
         return false;
       uint16_t AddrSize =
           (Form == DW_FORM_addr)
-              ? cu->getAddressByteSize()
-              : getRefAddrSize(cu->getAddressByteSize(), cu->getVersion());
-      RelocAddrMap::const_iterator AI = cu->getRelocMap()->find(*offset_ptr);
-      if (AI != cu->getRelocMap()->end()) {
+              ? U->getAddressByteSize()
+              : U->getRefAddrByteSize();
+      RelocAddrMap::const_iterator AI = U->getRelocMap()->find(*offset_ptr);
+      if (AI != U->getRelocMap()->end()) {
         const std::pair<uint8_t, int64_t> &R = AI->second;
         Value.uval = data.getUnsigned(offset_ptr, AddrSize) + R.second;
       } else
@@ -188,10 +190,10 @@ bool DWARFFormValue::extractValue(DataExtractor data, uint32_t *offset_ptr,
     case DW_FORM_data4:
     case DW_FORM_ref4: {
       Value.uval = data.getU32(offset_ptr);
-      if (!cu)
+      if (!U)
         break;
-      RelocAddrMap::const_iterator AI = cu->getRelocMap()->find(*offset_ptr-4);
-      if (AI != cu->getRelocMap()->end())
+      RelocAddrMap::const_iterator AI = U->getRelocMap()->find(*offset_ptr-4);
+      if (AI != U->getRelocMap()->end())
         Value.uval += AI->second.second;
       break;
     }
@@ -219,11 +221,11 @@ bool DWARFFormValue::extractValue(DataExtractor data, uint32_t *offset_ptr,
     case DW_FORM_GNU_strp_alt: {
       // FIXME: This is 64-bit for DWARF64.
       Value.uval = data.getU32(offset_ptr);
-      if (!cu)
+      if (!U)
         break;
       RelocAddrMap::const_iterator AI =
-          cu->getRelocMap()->find(*offset_ptr - 4);
-      if (AI != cu->getRelocMap()->end())
+          U->getRelocMap()->find(*offset_ptr - 4);
+      if (AI != U->getRelocMap()->end())
         Value.uval += AI->second.second;
       break;
     }
@@ -256,8 +258,8 @@ bool DWARFFormValue::extractValue(DataExtractor data, uint32_t *offset_ptr,
 
 bool
 DWARFFormValue::skipValue(DataExtractor debug_info_data, uint32_t* offset_ptr,
-                          const DWARFUnit *cu) const {
-  return DWARFFormValue::skipValue(Form, debug_info_data, offset_ptr, cu);
+                          const DWARFUnit *U) const {
+  return DWARFFormValue::skipValue(Form, debug_info_data, offset_ptr, U);
 }
 
 bool
@@ -371,7 +373,7 @@ DWARFFormValue::skipValue(dwarf::Form form, DataExtractor debug_info_data,
 }
 
 void
-DWARFFormValue::dump(raw_ostream &OS, const DWARFUnit *cu) const {
+DWARFFormValue::dump(raw_ostream &OS) const {
   uint64_t uvalue = Value.uval;
   bool cu_relative_offset = false;
 
@@ -380,7 +382,9 @@ DWARFFormValue::dump(raw_ostream &OS, const DWARFUnit *cu) const {
   case DW_FORM_GNU_addr_index: {
     OS << format(" indexed (%8.8x) address = ", (uint32_t)uvalue);
     uint64_t Address;
-    if (cu->getAddrOffsetSectionItem(uvalue, Address))
+    if (U == nullptr)
+      OS << "<invalid dwarf unit>";
+    else if (U->getAddrOffsetSectionItem(uvalue, Address))
       OS << format("0x%016" PRIx64, Address);
     else
       OS << "<no .debug_addr section>";
@@ -431,17 +435,17 @@ DWARFFormValue::dump(raw_ostream &OS, const DWARFUnit *cu) const {
   case DW_FORM_udata:     OS << Value.uval; break;
   case DW_FORM_strp: {
     OS << format(" .debug_str[0x%8.8x] = ", (uint32_t)uvalue);
-    dumpString(OS, cu);
+    dumpString(OS);
     break;
   }
   case DW_FORM_GNU_str_index: {
     OS << format(" indexed (%8.8x) string = ", (uint32_t)uvalue);
-    dumpString(OS, cu);
+    dumpString(OS);
     break;
   }
   case DW_FORM_GNU_strp_alt: {
     OS << format("alt indirect string, offset: 0x%" PRIx64 "", uvalue);
-    dumpString(OS, cu);
+    dumpString(OS);
     break;
   }
   case DW_FORM_ref_addr:
@@ -490,13 +494,13 @@ DWARFFormValue::dump(raw_ostream &OS, const DWARFUnit *cu) const {
   if (cu_relative_offset) {
     OS << " => {";
     WithColor(OS, syntax::Address).get()
-      << format("0x%8.8" PRIx64, uvalue + (cu ? cu->getOffset() : 0));
+      << format("0x%8.8" PRIx64, uvalue + (U ? U->getOffset() : 0));
     OS << "}";
   }
 }
 
-void DWARFFormValue::dumpString(raw_ostream &OS, const DWARFUnit *U) const {
-  Optional<const char *> DbgStr = getAsCString(U);
+void DWARFFormValue::dumpString(raw_ostream &OS) const {
+  Optional<const char *> DbgStr = getAsCString();
   if (DbgStr.hasValue()) {
     raw_ostream &COS = WithColor(OS, syntax::String);
     COS << '"';
@@ -505,7 +509,7 @@ void DWARFFormValue::dumpString(raw_ostream &OS, const DWARFUnit *U) const {
   }
 }
 
-Optional<const char *> DWARFFormValue::getAsCString(const DWARFUnit *U) const {
+Optional<const char *> DWARFFormValue::getAsCString() const {
   if (!isFormClass(FC_String))
     return None;
   if (Form == DW_FORM_string)
@@ -526,7 +530,7 @@ Optional<const char *> DWARFFormValue::getAsCString(const DWARFUnit *U) const {
   return None;
 }
 
-Optional<uint64_t> DWARFFormValue::getAsAddress(const DWARFUnit *U) const {
+Optional<uint64_t> DWARFFormValue::getAsAddress() const {
   if (!isFormClass(FC_Address))
     return None;
   if (Form == DW_FORM_GNU_addr_index) {
@@ -539,7 +543,7 @@ Optional<uint64_t> DWARFFormValue::getAsAddress(const DWARFUnit *U) const {
   return Value.uval;
 }
 
-Optional<uint64_t> DWARFFormValue::getAsReference(const DWARFUnit *U) const {
+Optional<uint64_t> DWARFFormValue::getAsReference() const {
   if (!isFormClass(FC_Reference))
     return None;
   switch (Form) {

@@ -15,6 +15,10 @@ void auto_new() {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use auto when initializing with new
   // CHECK-FIXES: static auto *a_static = new MyType();
 
+  long long *ll = new long long();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing with new
+  // CHECK-FIXES: auto *ll = new long long();
+
   MyType *derived = new MyDerivedType();
 
   void *vd = new MyType();

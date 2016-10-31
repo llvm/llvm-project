@@ -341,7 +341,8 @@ public:
   bool isSWaitCnt() const;
   bool isHwreg() const;
   bool isSendMsg() const;
-  bool isSMRDOffset() const;
+  bool isSMRDOffset8() const;
+  bool isSMRDOffset20() const;
   bool isSMRDLiteralOffset() const;
   bool isDPPCtrl() const;
   bool isGPRIdxMode() const;
@@ -741,7 +742,8 @@ public:
   AMDGPUOperand::Ptr defaultDA() const;
   AMDGPUOperand::Ptr defaultR128() const;
   AMDGPUOperand::Ptr defaultLWE() const;
-  AMDGPUOperand::Ptr defaultSMRDOffset() const;
+  AMDGPUOperand::Ptr defaultSMRDOffset8() const;
+  AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
@@ -2533,11 +2535,12 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultLWE() const {
 // smrd
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isSMRDOffset() const {
-
-  // FIXME: Support 20-bit offsets on VI.  We need to to pass subtarget
-  // information here.
+bool AMDGPUOperand::isSMRDOffset8() const {
   return isImm() && isUInt<8>(getImm());
+}
+
+bool AMDGPUOperand::isSMRDOffset20() const {
+  return isImm() && isUInt<20>(getImm());
 }
 
 bool AMDGPUOperand::isSMRDLiteralOffset() const {
@@ -2546,7 +2549,11 @@ bool AMDGPUOperand::isSMRDLiteralOffset() const {
   return isImm() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset() const {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset8() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset20() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 

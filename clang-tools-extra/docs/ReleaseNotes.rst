@@ -81,6 +81,16 @@ Improvements to clang-tidy
   Warns if an object is used after it has been moved, without an intervening
   reinitialization.
 
+- `modernize-make-unique
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-unique.html>`_
+  and `modernize-make-shared
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_
+  now handle calls to the smart pointer's reset method.
+
+- The `modernize-use-auto
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-auto.html>`_ check
+  now warns about variable declarations that are initialized with a cast.
+
 - New `mpi-buffer-deref
   <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
 

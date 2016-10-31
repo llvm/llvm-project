@@ -1,5 +1,6 @@
 # For zEC12 and above.
 # RUN: llvm-mc -triple s390x-linux-gnu -mcpu=zEC12 -show-encoding %s | FileCheck %s
+# RUN: llvm-mc -triple s390x-linux-gnu -mcpu=arch10 -show-encoding %s | FileCheck %s
 
 #CHECK: etnd	%r0                     # encoding: [0xb2,0xec,0x00,0x00]
 #CHECK: etnd	%r15                    # encoding: [0xb2,0xec,0x00,0xf0]

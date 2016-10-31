@@ -1412,4 +1412,15 @@ def BCDSRo : VX_VT5_VA5_VB5_PS1_XO9_o<449, "bcdsr.", []>;
 // Decimal (Unsigned) Truncate
 def BCDTRUNCo :  VX_VT5_VA5_VB5_PS1_XO9_o<257, "bcdtrunc." , []>;
 def BCDUTRUNCo : VX_VT5_VA5_VB5_XO9_o    <321, "bcdutrunc.", []>;
+
+// Absolute Difference
+def VABSDUB : VXForm_1<1027, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                       "vabsdub $vD, $vA, $vB", IIC_VecGeneral,
+                       [(set v16i8:$vD, (int_ppc_altivec_vabsdub v16i8:$vA, v16i8:$vB))]>;
+def VABSDUH : VXForm_1<1091, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                       "vabsduh $vD, $vA, $vB", IIC_VecGeneral,
+                       [(set v8i16:$vD, (int_ppc_altivec_vabsduh v8i16:$vA, v8i16:$vB))]>;
+def VABSDUW : VXForm_1<1155, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                       "vabsduw $vD, $vA, $vB", IIC_VecGeneral,
+                       [(set v4i32:$vD, (int_ppc_altivec_vabsduw v4i32:$vA, v4i32:$vB))]>;
 } // end HasP9Altivec
