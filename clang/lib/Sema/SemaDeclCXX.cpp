@@ -13855,6 +13855,9 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
   if (Fn->isMain())
     Diag(DelLoc, diag::err_deleted_main);
 
+  // C++11 [dcl.fct.def.delete]p4:
+  //  A deleted function is implicitly inline.
+  Fn->setImplicitlyInline();
   Fn->setDeletedAsWritten();
 }
 
