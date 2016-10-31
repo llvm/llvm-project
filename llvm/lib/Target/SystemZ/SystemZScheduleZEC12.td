@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 def ZEC12Model : SchedMachineModel {
+
+    let UnsupportedFeatures = Arch10UnsupportedFeatures.List;
     
     let IssueWidth = 3;             // 3 instructions decoded per cycle.
     let MicroOpBufferSize = 40;     // Issue queues

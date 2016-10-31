@@ -563,6 +563,14 @@ int main(int argc, char **argv) {
     IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
                                         *MAI, *MCII, *MRI);
 
+    if (!IP) {
+      errs()
+          << "error: unable to create instruction printer for target triple '"
+          << TheTriple.normalize() << "' with assembly variant "
+          << OutputAsmVariant << ".\n";
+      return 1;
+    }
+
     // Set the display preference for hex vs. decimal immediates.
     IP->setPrintImmHex(PrintImmHex);
 

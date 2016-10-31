@@ -14,12 +14,19 @@
 include "llvm/Target/Target.td"
 
 //===----------------------------------------------------------------------===//
-// SystemZ subtargets scheduling models.
+// SystemZ subtarget features
 //===----------------------------------------------------------------------===//
+
+include "SystemZFeatures.td"
+
+//===----------------------------------------------------------------------===//
+// SystemZ subtarget scheduling models
+//===----------------------------------------------------------------------===//
+
 include "SystemZSchedule.td"
 
 //===----------------------------------------------------------------------===//
-// SystemZ supported processors and features
+// SystemZ supported processors
 //===----------------------------------------------------------------------===//
 
 include "SystemZProcessors.td"

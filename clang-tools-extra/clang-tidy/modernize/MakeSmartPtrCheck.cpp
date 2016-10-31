@@ -18,6 +18,7 @@ namespace modernize {
 
 const char MakeSmartPtrCheck::PointerType[] = "pointerType";
 const char MakeSmartPtrCheck::ConstructorCall[] = "constructorCall";
+const char MakeSmartPtrCheck::ResetCall[] = "resetCall";
 const char MakeSmartPtrCheck::NewExpression[] = "newExpression";
 
 MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
@@ -31,8 +32,8 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
 
   // Calling make_smart_ptr from within a member function of a type with a
   // private or protected constructor would be ill-formed.
-  auto CanCallCtor = unless(has(ignoringImpCasts(cxxConstructExpr(
-      hasDeclaration(decl(unless(isPublic())))))));
+  auto CanCallCtor = unless(has(ignoringImpCasts(
+      cxxConstructExpr(hasDeclaration(decl(unless(isPublic())))))));
 
   Finder->addMatcher(
       cxxBindTemporaryExpr(has(ignoringParenImpCasts(
@@ -45,6 +46,14 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
                               .bind(NewExpression)))
               .bind(ConstructorCall)))),
       this);
+
+  Finder->addMatcher(
+      cxxMemberCallExpr(
+          thisPointerType(getSmartPointerTypeMatcher()),
+          callee(cxxMethodDecl(hasName("reset"))),
+          hasArgument(0, cxxNewExpr(CanCallCtor).bind(NewExpression)))
+          .bind(ResetCall),
+      this);
 }
 
 void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
@@ -55,12 +64,23 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
   SourceManager &SM = *Result.SourceManager;
   const auto *Construct =
       Result.Nodes.getNodeAs<CXXConstructExpr>(ConstructorCall);
+  const auto *Reset = Result.Nodes.getNodeAs<CXXMemberCallExpr>(ResetCall);
   const auto *Type = Result.Nodes.getNodeAs<QualType>(PointerType);
   const auto *New = Result.Nodes.getNodeAs<CXXNewExpr>(NewExpression);
 
   if (New->getNumPlacementArgs() != 0)
     return;
 
+  if (Construct)
+    checkConstruct(SM, Construct, Type, New);
+  else if (Reset)
+    checkReset(SM, Reset, New);
+}
+
+void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
+                                       const CXXConstructExpr *Construct,
+                                       const QualType *Type,
+                                       const CXXNewExpr *New) {
   SourceLocation ConstructCallStart = Construct->getExprLoc();
 
   bool Invalid = false;
@@ -105,6 +125,36 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
         ")");
   }
 
+  replaceNew(Diag, New);
+}
+
+void MakeSmartPtrCheck::checkReset(SourceManager &SM,
+                                   const CXXMemberCallExpr *Reset,
+                                   const CXXNewExpr *New) {
+  const auto *Expr = cast<MemberExpr>(Reset->getCallee());
+  SourceLocation OperatorLoc = Expr->getOperatorLoc();
+  SourceLocation ResetCallStart = Reset->getExprLoc();
+  SourceLocation ExprStart = Expr->getLocStart();
+  SourceLocation ExprEnd =
+      Lexer::getLocForEndOfToken(Expr->getLocEnd(), 0, SM, getLangOpts());
+
+  auto Diag = diag(ResetCallStart, "use %0 instead")
+              << makeSmartPtrFunctionName;
+
+  Diag << FixItHint::CreateReplacement(
+      CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
+      (llvm::Twine(" = ") + makeSmartPtrFunctionName + "<" +
+       New->getAllocatedType().getAsString(getLangOpts()) + ">")
+          .str());
+
+  if (Expr->isArrow())
+    Diag << FixItHint::CreateInsertion(ExprStart, "*");
+
+  replaceNew(Diag, New);
+}
+
+void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
+                                   const CXXNewExpr *New) {
   SourceLocation NewStart = New->getSourceRange().getBegin();
   SourceLocation NewEnd = New->getSourceRange().getEnd();
   switch (New->getInitializationStyle()) {

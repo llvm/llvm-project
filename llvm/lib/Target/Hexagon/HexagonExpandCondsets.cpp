@@ -614,13 +614,31 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
   bool ReadUndef = MD.isUndef();
   MachineBasicBlock::iterator At = MI;
 
+  // If this is a mux of the same register, just replace it with COPY.
+  // Ideally, this would happen earlier, so that register coalescing would
+  // see it.
+  MachineOperand &ST = MI.getOperand(2);
+  MachineOperand &SF = MI.getOperand(3);
+  if (ST.isReg() && SF.isReg()) {
+    RegisterRef RT(ST);
+    if (RT == RegisterRef(SF)) {
+      MI.setDesc(HII->get(TargetOpcode::COPY));
+      unsigned S = getRegState(ST);
+      while (MI.getNumOperands() > 1)
+        MI.RemoveOperand(MI.getNumOperands()-1);
+      MachineFunction &MF = *MI.getParent()->getParent();
+      MachineInstrBuilder(MF, MI).addReg(RT.Reg, S, RT.Sub);
+      return true;
+    }
+  }
+
   // First, create the two invididual conditional transfers, and add each
   // of them to the live intervals information. Do that first and then remove
   // the old instruction from live intervals.
   MachineInstr *TfrT =
-      genCondTfrFor(MI.getOperand(2), At, DR, DSR, MP, true, ReadUndef, false);
+      genCondTfrFor(ST, At, DR, DSR, MP, true, ReadUndef, false);
   MachineInstr *TfrF =
-      genCondTfrFor(MI.getOperand(3), At, DR, DSR, MP, false, ReadUndef, true);
+      genCondTfrFor(SF, At, DR, DSR, MP, false, ReadUndef, true);
   LIS->InsertMachineInstrInMaps(*TfrT);
   LIS->InsertMachineInstrInMaps(*TfrF);
 

@@ -546,7 +546,7 @@ static bool isUnsignedDIType(DwarfDebug *DD, const DIType *Ty) {
       return true;
     assert(T == dwarf::DW_TAG_typedef || T == dwarf::DW_TAG_const_type ||
            T == dwarf::DW_TAG_volatile_type ||
-           T == dwarf::DW_TAG_restrict_type);
+           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type);
     DITypeRef Deriv = DTy->getBaseType();
     assert(Deriv && "Expected valid base type");
     return isUnsignedDIType(DD, DD->resolve(Deriv));
@@ -705,6 +705,10 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
 
   // DW_TAG_restrict_type is not supported in DWARF2
   if (Ty->getTag() == dwarf::DW_TAG_restrict_type && DD->getDwarfVersion() <= 2)
+    return getOrCreateTypeDIE(resolve(cast<DIDerivedType>(Ty)->getBaseType()));
+
+  // DW_TAG_atomic_type is not supported in DWARF < 5
+  if (Ty->getTag() == dwarf::DW_TAG_atomic_type && DD->getDwarfVersion() < 5)
     return getOrCreateTypeDIE(resolve(cast<DIDerivedType>(Ty)->getBaseType()));
 
   // Construct the context before querying for the existence of the DIE in case

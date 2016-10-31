@@ -1,5 +1,6 @@
 # For z196 and above.
 # RUN: llvm-mc -triple s390x-linux-gnu -mcpu=z196 -show-encoding %s | FileCheck %s
+# RUN: llvm-mc -triple s390x-linux-gnu -mcpu=arch9 -show-encoding %s | FileCheck %s
 
 #CHECK: aghik	%r0, %r0, -32768        # encoding: [0xec,0x00,0x80,0x00,0x00,0xd9]
 #CHECK: aghik	%r0, %r0, -1            # encoding: [0xec,0x00,0xff,0xff,0x00,0xd9]

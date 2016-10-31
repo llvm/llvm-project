@@ -28,6 +28,7 @@
 #include <windows.h>
 
 // First, declare CRT sections we'll be using in this file
+#pragma section(".CRT$XIB", long, read)  // NOLINT
 #pragma section(".CRT$XID", long, read)  // NOLINT
 #pragma section(".CRT$XCAB", long, read)  // NOLINT
 #pragma section(".CRT$XTW", long, read)  // NOLINT
@@ -46,13 +47,23 @@
 // after initialization anyways.
 extern "C" {
 __declspec(dllimport) int __asan_should_detect_stack_use_after_return();
-int __asan_option_detect_stack_use_after_return =
-    __asan_should_detect_stack_use_after_return();
+int __asan_option_detect_stack_use_after_return;
 
 __declspec(dllimport) void* __asan_get_shadow_memory_dynamic_address();
-void* __asan_shadow_memory_dynamic_address =
-    __asan_get_shadow_memory_dynamic_address();
+void* __asan_shadow_memory_dynamic_address;
 }
+
+static int InitializeClonedVariables() {
+  __asan_option_detect_stack_use_after_return =
+    __asan_should_detect_stack_use_after_return();
+  __asan_shadow_memory_dynamic_address =
+    __asan_get_shadow_memory_dynamic_address();
+  return 0;
+}
+
+// Our cloned variables must be initialized before C/C++ constructors.
+__declspec(allocate(".CRT$XIB"))
+int (*__asan_initialize_cloned_variables)() = InitializeClonedVariables;
 
 ////////////////////////////////////////////////////////////////////////////////
 // For some reason, the MD CRT doesn't call the C/C++ terminators during on DLL

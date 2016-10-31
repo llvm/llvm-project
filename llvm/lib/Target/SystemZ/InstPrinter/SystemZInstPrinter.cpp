@@ -208,6 +208,17 @@ void SystemZInstPrinter::printBDLAddrOperand(const MCInst *MI, int OpNum,
   O << ')';
 }
 
+void SystemZInstPrinter::printBDRAddrOperand(const MCInst *MI, int OpNum,
+                                             raw_ostream &O) {
+  unsigned Base = MI->getOperand(OpNum).getReg();
+  uint64_t Disp = MI->getOperand(OpNum + 1).getImm();
+  unsigned Length = MI->getOperand(OpNum + 2).getReg();
+  O << Disp << "(%" << getRegisterName(Length);
+  if (Base)
+    O << ",%" << getRegisterName(Base);
+  O << ')';
+}
+
 void SystemZInstPrinter::printBDVAddrOperand(const MCInst *MI, int OpNum,
                                              raw_ostream &O) {
   printAddress(MI->getOperand(OpNum).getReg(),

@@ -7,11 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-def smrd_offset : NamedOperandU32<"SMRDOffset",
-                                  NamedMatchClass<"SMRDOffset">> {
+def smrd_offset_8 : NamedOperandU32<"SMRDOffset8",
+                                  NamedMatchClass<"SMRDOffset8">> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+def smrd_offset_20 : NamedOperandU32<"SMRDOffset20",
+                                  NamedMatchClass<"SMRDOffset20">> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
 //===----------------------------------------------------------------------===//
 // Scalar Memory classes
@@ -325,7 +329,7 @@ multiclass SM_Real_Loads_si<bits<5> op, string ps,
                             SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {
 
   def _IMM_si : SMRD_Real_si <op, immPs> {
-    let InOperandList = (ins immPs.BaseClass:$sbase, smrd_offset:$offset, GLC:$glc);
+    let InOperandList = (ins immPs.BaseClass:$sbase, smrd_offset_8:$offset, GLC:$glc);
   }
 
   // FIXME: The operand name $offset is inconsistent with $soff used
@@ -378,7 +382,7 @@ multiclass SM_Real_Loads_vi<bits<8> op, string ps,
                             SM_Load_Pseudo immPs = !cast<SM_Load_Pseudo>(ps#_IMM),
                             SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {
   def _IMM_vi : SMEM_Real_vi <op, immPs> {
-    let InOperandList = (ins immPs.BaseClass:$sbase, smrd_offset:$offset, GLC:$glc);
+    let InOperandList = (ins immPs.BaseClass:$sbase, smrd_offset_20:$offset, GLC:$glc);
   }
   def _SGPR_vi : SMEM_Real_vi <op, sgprPs> {
     let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$offset, GLC:$glc);
@@ -391,7 +395,7 @@ multiclass SM_Real_Stores_vi<bits<8> op, string ps,
   // FIXME: The operand name $offset is inconsistent with $soff used
   // in the pseudo
   def _IMM_vi : SMEM_Real_vi <op, immPs> {
-    let InOperandList = (ins immPs.SrcClass:$sdata, immPs.BaseClass:$sbase, smrd_offset:$offset, GLC:$glc);
+    let InOperandList = (ins immPs.SrcClass:$sdata, immPs.BaseClass:$sbase, smrd_offset_20:$offset, GLC:$glc);
   }
 
   def _SGPR_vi : SMEM_Real_vi <op, sgprPs> {

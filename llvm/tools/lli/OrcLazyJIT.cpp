@@ -151,11 +151,11 @@ int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
     return 1;
   }
 
-  typedef int (*MainFnPtr)(int, char*[]);
+  typedef int (*MainFnPtr)(int, const char*[]);
   std::vector<const char *> ArgV;
   for (auto &Arg : Args)
     ArgV.push_back(Arg.c_str());
   auto Main = fromTargetAddress<MainFnPtr>(MainSym.getAddress());
-  return Main(ArgV.size(), (char**)ArgV.data());
+  return Main(ArgV.size(), (const char**)ArgV.data());
 }
 

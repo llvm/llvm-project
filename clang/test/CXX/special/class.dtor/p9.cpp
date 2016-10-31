@@ -88,7 +88,7 @@ namespace test2 {
   }
 #else
   struct CBase { virtual ~CBase(); }; // expected-note {{overridden virtual function is here}}
-  struct C : CBase { // expected-error {{deleted function '~C' cannot override a non-deleted function}} expected-note {{requires an unambiguous, accessible 'operator delete'}}
+  struct C : CBase { // expected-error {{deleted function '~C' cannot override a non-deleted function}} expected-note 2{{requires an unambiguous, accessible 'operator delete'}}
     static void operator delete(void*, const int &);
   };
   void test() {

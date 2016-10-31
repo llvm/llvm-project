@@ -68,13 +68,17 @@ static bool IsQueueSerial(dispatch_queue_t q) {
   return width == 1;
 }
 
-static dispatch_queue_t GetTargetQueueFromSource(dispatch_source_t source) {
+static dispatch_queue_t GetTargetQueueFromQueue(dispatch_queue_t q) {
   CHECK_EQ(dispatch_queue_offsets.dqo_target_queue_size, 8);
-  dispatch_queue_t target_queue =
-      *(dispatch_queue_t *)(((uptr)source) +
-                            dispatch_queue_offsets.dqo_target_queue);
-  CHECK_NE(target_queue, 0);
-  return target_queue;
+  dispatch_queue_t tq = *(
+      dispatch_queue_t *)(((uptr)q) + dispatch_queue_offsets.dqo_target_queue);
+  return tq;
+}
+
+static dispatch_queue_t GetTargetQueueFromSource(dispatch_source_t source) {
+  dispatch_queue_t tq = GetTargetQueueFromQueue((dispatch_queue_t)source);
+  CHECK_NE(tq, 0);
+  return tq;
 }
 
 static tsan_block_context_t *AllocContext(ThreadState *thr, uptr pc,
@@ -92,27 +96,53 @@ static tsan_block_context_t *AllocContext(ThreadState *thr, uptr pc,
   return new_context;
 }
 
+#define GET_QUEUE_SYNC_VARS(context, q)                      \
+  bool is_queue_serial = q && IsQueueSerial(q);              \
+  uptr sync_ptr = (uptr)q ?: context->non_queue_sync_object; \
+  uptr serial_sync = (uptr)sync_ptr;                         \
+  uptr concurrent_sync = ((uptr)sync_ptr) + sizeof(uptr);    \
+  bool serial_task = context->is_barrier_block || is_queue_serial
+
+static void dispatch_sync_pre_execute(ThreadState *thr, uptr pc,
+                                      tsan_block_context_t *context) {
+  uptr submit_sync = (uptr)context;
+  Acquire(thr, pc, submit_sync);
+
+  dispatch_queue_t q = context->queue;
+  do {
+    GET_QUEUE_SYNC_VARS(context, q);
+    Acquire(thr, pc, serial_sync);
+    if (serial_task) Acquire(thr, pc, concurrent_sync);
+
+    if (q) q = GetTargetQueueFromQueue(q);
+  } while (q);
+}
+
+static void dispatch_sync_post_execute(ThreadState *thr, uptr pc,
+                                       tsan_block_context_t *context) {
+  uptr submit_sync = (uptr)context;
+  if (context->submitted_synchronously) Release(thr, pc, submit_sync);
+
+  dispatch_queue_t q = context->queue;
+  do {
+    GET_QUEUE_SYNC_VARS(context, q);
+    Release(thr, pc, serial_task ? serial_sync : concurrent_sync);
+
+    if (q) q = GetTargetQueueFromQueue(q);
+  } while (q);
+}
+
 static void dispatch_callback_wrap(void *param) {
   SCOPED_INTERCEPTOR_RAW(dispatch_callback_wrap);
   tsan_block_context_t *context = (tsan_block_context_t *)param;
-  bool is_queue_serial = context->queue && IsQueueSerial(context->queue);
-  uptr sync_ptr = (uptr)context->queue ?: context->non_queue_sync_object;
 
-  uptr serial_sync = (uptr)sync_ptr;
-  uptr concurrent_sync = ((uptr)sync_ptr) + sizeof(uptr);
-  uptr submit_sync = (uptr)context;
-  bool serial_task = context->is_barrier_block || is_queue_serial;
-
-  Acquire(thr, pc, submit_sync);
-  Acquire(thr, pc, serial_sync);
-  if (serial_task) Acquire(thr, pc, concurrent_sync);
+  dispatch_sync_pre_execute(thr, pc, context);
 
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
   context->orig_work(context->orig_context);
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
 
-  Release(thr, pc, serial_task ? serial_sync : concurrent_sync);
-  if (context->submitted_synchronously) Release(thr, pc, submit_sync);
+  dispatch_sync_post_execute(thr, pc, context);
 
   if (context->free_context_in_callback) user_free(thr, pc, context);
 }

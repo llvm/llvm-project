@@ -1969,6 +1969,9 @@
 // RUN: %clang -march=zEC12 -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ZEC12
+// RUN: %clang -march=arch10 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ZEC12
 //
 // CHECK_SYSTEMZ_ZEC12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // CHECK_SYSTEMZ_ZEC12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1

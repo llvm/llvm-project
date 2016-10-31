@@ -30,7 +30,7 @@ void DWARFTypeUnit::dump(raw_ostream &OS, bool SummarizeTypes) {
   DWARFFormValue NameVal;
   const char *Name = "";
   if (TD->getAttributeValue(this, llvm::dwarf::DW_AT_name, NameVal))
-    if (auto ON = NameVal.getAsCString(this))
+    if (auto ON = NameVal.getAsCString())
       Name = *ON;
 
   if (SummarizeTypes) {

@@ -498,36 +498,32 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
   }
 }
 
-/// Checks to see if the @p o ObjectFile is a Mach-O file and if it is and there
+/// Checks to see if the @p O ObjectFile is a Mach-O file and if it is and there
 /// is a list of architecture flags specified then check to make sure this
 /// Mach-O file is one of those architectures or all architectures was
 /// specificed.  If not then an error is generated and this routine returns
 /// false.  Else it returns true.
-static bool checkMachOAndArchFlags(ObjectFile *o, StringRef file) {
-  if (isa<MachOObjectFile>(o) && !ArchAll && ArchFlags.size() != 0) {
-    MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
-    bool ArchFound = false;
-    MachO::mach_header H;
-    MachO::mach_header_64 H_64;
-    Triple T;
-    if (MachO->is64Bit()) {
-      H_64 = MachO->MachOObjectFile::getHeader64();
-      T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
-    } else {
-      H = MachO->MachOObjectFile::getHeader();
-      T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
-    }
-    unsigned i;
-    for (i = 0; i < ArchFlags.size(); ++i) {
-      if (ArchFlags[i] == T.getArchName())
-        ArchFound = true;
-      break;
-    }
-    if (!ArchFound) {
-      errs() << ToolName << ": file: " << file
-             << " does not contain architecture: " << ArchFlags[i] << ".\n";
-      return false;
-    }
+static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
+  auto *MachO = dyn_cast<MachOObjectFile>(O);
+
+  if (!MachO || ArchAll || ArchFlags.empty())
+    return true;
+
+  MachO::mach_header H;
+  MachO::mach_header_64 H_64;
+  Triple T;
+  if (MachO->is64Bit()) {
+    H_64 = MachO->MachOObjectFile::getHeader64();
+    T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
+  } else {
+    H = MachO->MachOObjectFile::getHeader();
+    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
+  }
+  if (none_of(ArchFlags, [&](const std::string &Name) {
+        return Name == T.getArchName();
+      })) {
+    error(Filename + ": No architecture specified");
+    return false;
   }
   return true;
 }

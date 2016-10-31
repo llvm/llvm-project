@@ -32319,6 +32319,7 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'Y':
     case 'l':
       return C_RegisterClass;
+    case 'k': // AVX512 masking registers.
     case 'a':
     case 'b':
     case 'c':
@@ -32340,6 +32341,19 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Other;
     default:
       break;
+    }
+  }
+  else if (Constraint.size() == 2) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'Y':
+      switch (Constraint[1]) {
+      default:
+        break;
+      case 'k':
+        return C_Register;
+      }
     }
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -32385,15 +32399,27 @@ TargetLowering::ConstraintWeight
     if (type->isX86_MMXTy() && Subtarget.hasMMX())
       weight = CW_SpecificReg;
     break;
+  case 'Y':
+    // Other "Y<x>" (e.g. "Yk") constraints should be implemented below.
+    if (constraint[1] == 'k') {
+      // Support for 'Yk' (similarly to the 'k' variant below).
+      weight = CW_SpecificReg;
+      break;
+    }
+  // Else fall through (handle "Y" constraint).
+    LLVM_FALLTHROUGH;
   case 'v':
     if ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512())
       weight = CW_Register;
     LLVM_FALLTHROUGH;
   case 'x':
-  case 'Y':
     if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
         ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasFp256()))
       weight = CW_Register;
+    break;
+  case 'k':
+    // Enable conditional vector operations using %k<#> registers.
+    weight = CW_SpecificReg;
     break;
   case 'I':
     if (ConstantInt *C = dyn_cast<ConstantInt>(info.CallOperandVal)) {
@@ -32671,6 +32697,24 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // TODO: Slight differences here in allocation order and leaving
       // RIP in the class. Do they matter any more here than they do
       // in the normal allocation?
+    case 'k':
+      if (Subtarget.hasAVX512()) {
+        //  Only supported in AVX512 or later.
+        switch (VT.SimpleTy) {
+        default: break;
+        case MVT::i32:
+          return std::make_pair(0U, &X86::VK32RegClass);
+        case MVT::i16:
+          return std::make_pair(0U, &X86::VK16RegClass);
+        case MVT::i8:
+          return std::make_pair(0U, &X86::VK8RegClass);
+        case MVT::i1:
+          return std::make_pair(0U, &X86::VK1RegClass);
+        case MVT::i64:
+          return std::make_pair(0U, &X86::VK64RegClass);
+        }
+      }
+      break;
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i32 || VT == MVT::f32)
@@ -32769,6 +32813,29 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16i32:
       case MVT::v8i64:
         return std::make_pair(0U, &X86::VR512RegClass);
+      }
+      break;
+    }
+  } else if (Constraint.size() == 2 && Constraint[0] == 'Y') {
+    switch (Constraint[1]) {
+    default:
+      break;
+    case 'k':
+      // This register class doesn't allocate k0 for masked vector operation.
+      if (Subtarget.hasAVX512()) { // Only supported in AVX512.
+        switch (VT.SimpleTy) {
+        default: break;
+        case MVT::i32:
+          return std::make_pair(0U, &X86::VK32WMRegClass);
+        case MVT::i16:
+          return std::make_pair(0U, &X86::VK16WMRegClass);
+        case MVT::i8:
+          return std::make_pair(0U, &X86::VK8WMRegClass);
+        case MVT::i1:
+          return std::make_pair(0U, &X86::VK1WMRegClass);
+        case MVT::i64:
+          return std::make_pair(0U, &X86::VK64WMRegClass);
+        } 
       }
       break;
     }

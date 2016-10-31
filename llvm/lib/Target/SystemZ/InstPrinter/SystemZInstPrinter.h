@@ -48,6 +48,7 @@ private:
   void printBDAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDXAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDLAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printBDRAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDVAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU1ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU2ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);

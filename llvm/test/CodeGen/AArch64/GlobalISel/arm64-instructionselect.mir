@@ -2522,25 +2522,42 @@ regBankSelected: true
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr64all }
 # CHECK-NEXT:  - { id: 1, class: fpr64 }
-# CHECK-NEXT:  - { id: 2, class: gpr64all }
-# CHECK-NEXT:  - { id: 3, class: gpr64all }
+# CHECK-NEXT:  - { id: 2, class: gpr64 }
+# CHECK-NEXT:  - { id: 3, class: gpr64 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+# CHECK-NEXT:  - { id: 5, class: gpr32 }
+# CHECK-NEXT:  - { id: 6, class: gpr32 }
+# CHECK-NEXT:  - { id: 7, class: gpr32 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: fpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+  - { id: 7, class: gpr }
 # CHECK:  body:
 # CHECK:    %0 = COPY %x0
 # CHECK:    %1 = COPY %0
 # CHECK:    %2 = COPY %0
 # CHECK:    %3 = COPY %2
+# CHECK:    %4 = COPY %2.sub_32
+# CHECK:    %5 = COPY %2.sub_32
+# CHECK:    %6 = COPY %2.sub_32
+# CHECK:    %7 = COPY %2.sub_32
 body:             |
   bb.0:
     liveins: %x0
     %0(s64) = COPY %x0
     %1(<8 x s8>) = G_BITCAST %0(s64)
     %2(p0) = G_INTTOPTR %0
+
     %3(s64) = G_PTRTOINT %2
+    %4(s32) = G_PTRTOINT %2
+    %5(s16) = G_PTRTOINT %2
+    %6(s8) = G_PTRTOINT %2
+    %7(s1) = G_PTRTOINT %2
 ...
 
 ---

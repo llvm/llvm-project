@@ -26,7 +26,6 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -203,11 +202,8 @@ bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
     // longer than normal to receive a reply.  Wait at least 6 seconds for a
     // reply to this packet.
 
-    const uint32_t minimum_timeout = 6;
-    uint32_t old_timeout = GetPacketTimeoutInMicroSeconds() /
-                           lldb_private::TimeValue::MicroSecPerSec;
-    GDBRemoteCommunication::ScopedTimeout timeout(
-        *this, std::max(old_timeout, minimum_timeout));
+    ScopedTimeout timeout(
+        *this, std::max(GetPacketTimeout(), std::chrono::seconds(6)));
 
     StringExtractorGDBRemote response;
     if (SendPacketAndWaitForResponse("QStartNoAckMode", response, false) ==
@@ -319,7 +315,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_hostname.clear();
     m_gdb_server_name.clear();
     m_gdb_server_version = UINT32_MAX;
-    m_default_packet_timeout = 0;
+    m_default_packet_timeout = std::chrono::seconds(0);
     m_max_packet_size = 0;
     m_qSupported_response.clear();
     m_supported_async_json_packets_is_valid = false;
@@ -1202,7 +1198,9 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             if (m_watchpoints_trigger_after_instruction != eLazyBoolCalculate)
               ++num_keys_decoded;
           } else if (name.equals("default_packet_timeout")) {
-            if (!value.getAsInteger(0, m_default_packet_timeout)) {
+            uint32_t timeout_seconds;
+            if (!value.getAsInteger(0, timeout_seconds)) {
+              m_default_packet_timeout = std::chrono::seconds(timeout_seconds);
               SetPacketTimeout(m_default_packet_timeout);
               ++num_keys_decoded;
             }
@@ -1331,7 +1329,8 @@ GDBRemoteCommunicationClient::GetHostArchitecture() {
   return m_host_arch;
 }
 
-uint32_t GDBRemoteCommunicationClient::GetHostDefaultPacketTimeout() {
+std::chrono::seconds
+GDBRemoteCommunicationClient::GetHostDefaultPacketTimeout() {
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
   return m_default_packet_timeout;
@@ -2023,7 +2022,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
     StringExtractorGDBRemote response;
     // Increase timeout as the first qfProcessInfo packet takes a long time
     // on Android. The value of 1min was arrived at empirically.
-    GDBRemoteCommunication::ScopedTimeout timeout(*this, 60);
+    ScopedTimeout timeout(*this, std::chrono::seconds(60));
     if (SendPacketAndWaitForResponse(packet.GetString(), response, false) ==
         PacketResult::Success) {
       do {
@@ -2133,26 +2132,27 @@ static void MakeSpeedTestPacket(StreamString &packet, uint32_t send_size,
   }
 }
 
-template <typename T> T calculate_standard_deviation(const std::vector<T> &v) {
-  T sum = std::accumulate(std::begin(v), std::end(v), T(0));
-  T mean = sum / (T)v.size();
-  T accum = T(0);
-  std::for_each(std::begin(v), std::end(v), [&](const T d) {
-    T delta = d - mean;
+std::chrono::duration<float> calculate_standard_deviation(
+    const std::vector<std::chrono::duration<float>> &v) {
+  using Dur = std::chrono::duration<float>;
+  Dur sum = std::accumulate(std::begin(v), std::end(v), Dur());
+  Dur mean = sum / v.size();
+  float accum = 0;
+  for (auto d : v) {
+    float delta = (d - mean).count();
     accum += delta * delta;
-  });
+  };
 
-  T stdev = sqrt(accum / (v.size() - 1));
-  return stdev;
+  return Dur(sqrtf(accum / (v.size() - 1)));
 }
 
 void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
                                                    uint32_t max_send,
                                                    uint32_t max_recv, bool json,
                                                    Stream &strm) {
+  using namespace std::chrono;
+
   uint32_t i;
-  TimeValue start_time, end_time;
-  uint64_t total_time_nsec;
   if (SendSpeedTestPacket(0, 0)) {
     StreamString packet;
     if (json)
@@ -2166,7 +2166,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
 
     uint32_t result_idx = 0;
     uint32_t send_size;
-    std::vector<float> packet_times;
+    std::vector<duration<float>> packet_times;
 
     for (send_size = 0; send_size <= max_send;
          send_size ? send_size *= 2 : send_size = 4) {
@@ -2176,46 +2176,40 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
 
         packet_times.clear();
         // Test how long it takes to send 'num_packets' packets
-        start_time = TimeValue::Now();
+        const auto start_time = steady_clock::now();
         for (i = 0; i < num_packets; ++i) {
-          TimeValue packet_start_time = TimeValue::Now();
+          const auto packet_start_time = steady_clock::now();
           StringExtractorGDBRemote response;
           SendPacketAndWaitForResponse(packet.GetString(), response, false);
-          TimeValue packet_end_time = TimeValue::Now();
-          uint64_t packet_time_nsec =
-              packet_end_time.GetAsNanoSecondsSinceJan1_1970() -
-              packet_start_time.GetAsNanoSecondsSinceJan1_1970();
-          packet_times.push_back((float)packet_time_nsec);
+          const auto packet_end_time = steady_clock::now();
+          packet_times.push_back(packet_end_time - packet_start_time);
         }
-        end_time = TimeValue::Now();
-        total_time_nsec = end_time.GetAsNanoSecondsSinceJan1_1970() -
-                          start_time.GetAsNanoSecondsSinceJan1_1970();
+        const auto end_time = steady_clock::now();
+        const auto total_time = end_time - start_time;
 
         float packets_per_second =
-            (((float)num_packets) / (float)total_time_nsec) *
-            (float)TimeValue::NanoSecPerSec;
-        float total_ms =
-            (float)total_time_nsec / (float)TimeValue::NanoSecPerMilliSec;
-        float average_ms_per_packet = total_ms / num_packets;
-        const float standard_deviation =
-            calculate_standard_deviation<float>(packet_times);
+            ((float)num_packets) / duration<float>(total_time).count();
+        auto average_per_packet = total_time / num_packets;
+        const duration<float> standard_deviation =
+            calculate_standard_deviation(packet_times);
         if (json) {
           strm.Printf("%s\n     {\"send_size\" : %6" PRIu32
                       ", \"recv_size\" : %6" PRIu32
                       ", \"total_time_nsec\" : %12" PRIu64
                       ", \"standard_deviation_nsec\" : %9" PRIu64 " }",
                       result_idx > 0 ? "," : "", send_size, recv_size,
-                      total_time_nsec, (uint64_t)standard_deviation);
+                      duration_cast<nanoseconds>(total_time).count(),
+                      duration_cast<nanoseconds>(standard_deviation).count());
           ++result_idx;
         } else {
           strm.Printf(
-              "qSpeedTest(send=%-7u, recv=%-7u) in %" PRIu64 ".%9.9" PRIu64
+              "qSpeedTest(send=%-7u, recv=%-7u) in %.9f"
               " sec for %9.2f packets/sec (%10.6f ms per packet) with standard "
               "deviation of %10.6f ms\n",
-              send_size, recv_size, total_time_nsec / TimeValue::NanoSecPerSec,
-              total_time_nsec % TimeValue::NanoSecPerSec, packets_per_second,
-              average_ms_per_packet,
-              standard_deviation / (float)TimeValue::NanoSecPerMilliSec);
+              send_size, recv_size, duration<float>(total_time).count(),
+              packets_per_second,
+              duration<float, std::milli>(average_per_packet).count(),
+              duration<float, std::milli>(standard_deviation).count());
         }
         strm.Flush();
       }
@@ -2241,7 +2235,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
       // If we have a receive size, test how long it takes to receive 4MB of
       // data
       if (recv_size > 0) {
-        start_time = TimeValue::Now();
+        const auto start_time = steady_clock::now();
         uint32_t bytes_read = 0;
         uint32_t packet_count = 0;
         while (bytes_read < k_recv_amount) {
@@ -2250,35 +2244,31 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
           bytes_read += recv_size;
           ++packet_count;
         }
-        end_time = TimeValue::Now();
-        total_time_nsec = end_time.GetAsNanoSecondsSinceJan1_1970() -
-                          start_time.GetAsNanoSecondsSinceJan1_1970();
-        float mb_second = ((((float)k_recv_amount) / (float)total_time_nsec) *
-                           (float)TimeValue::NanoSecPerSec) /
+        const auto end_time = steady_clock::now();
+        const auto total_time = end_time - start_time;
+        float mb_second = ((float)k_recv_amount) /
+                          duration<float>(total_time).count() /
                           (1024.0 * 1024.0);
         float packets_per_second =
-            (((float)packet_count) / (float)total_time_nsec) *
-            (float)TimeValue::NanoSecPerSec;
-        float total_ms =
-            (float)total_time_nsec / (float)TimeValue::NanoSecPerMilliSec;
-        float average_ms_per_packet = total_ms / packet_count;
+            ((float)packet_count) / duration<float>(total_time).count();
+        const auto average_per_packet = total_time / packet_count;
 
         if (json) {
           strm.Printf("%s\n     {\"send_size\" : %6" PRIu32
                       ", \"recv_size\" : %6" PRIu32
                       ", \"total_time_nsec\" : %12" PRIu64 " }",
                       result_idx > 0 ? "," : "", send_size, recv_size,
-                      total_time_nsec);
+                      duration_cast<nanoseconds>(total_time).count());
           ++result_idx;
         } else {
           strm.Printf("qSpeedTest(send=%-7u, recv=%-7u) %6u packets needed to "
-                      "receive %2.1fMB in %" PRIu64 ".%9.9" PRIu64
+                      "receive %2.1fMB in %.9f"
                       " sec for %f MB/sec for %9.2f packets/sec (%10.6f ms per "
                       "packet)\n",
                       send_size, recv_size, packet_count, k_recv_amount_mb,
-                      total_time_nsec / TimeValue::NanoSecPerSec,
-                      total_time_nsec % TimeValue::NanoSecPerSec, mb_second,
-                      packets_per_second, average_ms_per_packet);
+                      duration<float>(total_time).count(), mb_second,
+                      packets_per_second,
+                      duration<float, std::milli>(average_per_packet).count());
         }
         strm.Flush();
       }
@@ -2335,7 +2325,7 @@ bool GDBRemoteCommunicationClient::LaunchGDBServer(
     }
   }
   // give the process a few seconds to startup
-  GDBRemoteCommunication::ScopedTimeout timeout(*this, 10);
+  ScopedTimeout timeout(*this, std::chrono::seconds(10));
 
   if (SendPacketAndWaitForResponse(stream.GetString(), response, false) ==
       PacketResult::Success) {

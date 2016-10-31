@@ -19,9 +19,11 @@ void putstest();
 
 #if PART == 1
 
+static const char *my_global = "test\n\00abc";
+
 int main()
 {
-  fputs("test\n", stderr);
+  fputs(my_global, stderr);
   putstest();
   fprintf(stderr, "Done.\n");
   return 0;
@@ -29,9 +31,11 @@ int main()
 
 #else // PART == 1
 
+static const char *my_other_global = "test\n\00abc";
+
 void putstest()
 {
-  fputs("test\n", stderr);
+  fputs(my_other_global, stderr);
 }
 
 #endif // PART == 1

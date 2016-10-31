@@ -1567,7 +1567,8 @@ void CodeGenSchedModels::checkCompleteness() {
       const CodeGenSchedClass &SC = getSchedClass(SCIdx);
       if (!SC.Writes.empty())
         continue;
-      if (SC.ItinClassDef != nullptr)
+      if (SC.ItinClassDef != nullptr &&
+          SC.ItinClassDef->getName() != "NoItinerary")
         continue;
 
       const RecVec &InstRWs = SC.InstRWs;

@@ -992,6 +992,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   }
 
   if (TI.hasInt128Type() && LangOpts.CPlusPlus && LangOpts.GNUMode) {
+    // For each extended integer type, g++ defines a macro mapping the
+    // index of the type (0 in this case) in some list of extended types
+    // to the type.
     Builder.defineMacro("__GLIBCXX_TYPE_INT_N_0", "__int128");
     Builder.defineMacro("__GLIBCXX_BITSIZE_INT_N_0", "128");
   }

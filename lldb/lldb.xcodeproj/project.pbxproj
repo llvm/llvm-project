@@ -835,6 +835,9 @@
 		9475C18E14E5F834001BFC6D /* SBTypeNameSpecifier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9475C18D14E5F834001BFC6D /* SBTypeNameSpecifier.cpp */; };
 		9475C18F14E5F858001BFC6D /* SBTypeNameSpecifier.h in Headers */ = {isa = PBXBuildFile; fileRef = 9475C18C14E5F826001BFC6D /* SBTypeNameSpecifier.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		947A1D641616476B0017C8D1 /* CommandObjectPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947A1D621616476A0017C8D1 /* CommandObjectPlugin.cpp */; };
+		947CF7711DC7B1EE00EF980B /* ProcessMinidump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947CF7701DC7B1EE00EF980B /* ProcessMinidump.cpp */; };
+		947CF7761DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947CF7741DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp */; };
+		947CF7771DC7B20D00EF980B /* ThreadMinidump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947CF7751DC7B20D00EF980B /* ThreadMinidump.cpp */; };
 		949ADF031406F648004833E1 /* ValueObjectConstResultImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */; };
 		949EEDA01BA74B6D008C63CF /* CoreMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949EED9E1BA74B64008C63CF /* CoreMedia.cpp */; };
 		949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949EEDA11BA76571008C63CF /* Cocoa.cpp */; };
@@ -2736,6 +2739,12 @@
 		9475C18D14E5F834001BFC6D /* SBTypeNameSpecifier.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBTypeNameSpecifier.cpp; path = source/API/SBTypeNameSpecifier.cpp; sourceTree = "<group>"; };
 		947A1D621616476A0017C8D1 /* CommandObjectPlugin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectPlugin.cpp; path = source/Commands/CommandObjectPlugin.cpp; sourceTree = "<group>"; };
 		947A1D631616476A0017C8D1 /* CommandObjectPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectPlugin.h; path = source/Commands/CommandObjectPlugin.h; sourceTree = "<group>"; };
+		947CF76F1DC7B1E300EF980B /* ProcessMinidump.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProcessMinidump.h; sourceTree = "<group>"; };
+		947CF7701DC7B1EE00EF980B /* ProcessMinidump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessMinidump.cpp; sourceTree = "<group>"; };
+		947CF7721DC7B20300EF980B /* RegisterContextMinidump_x86_32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RegisterContextMinidump_x86_32.h; sourceTree = "<group>"; };
+		947CF7731DC7B20300EF980B /* ThreadMinidump.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThreadMinidump.h; sourceTree = "<group>"; };
+		947CF7741DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_x86_32.cpp; sourceTree = "<group>"; };
+		947CF7751DC7B20D00EF980B /* ThreadMinidump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ThreadMinidump.cpp; sourceTree = "<group>"; };
 		9481FE6B1B5F2D9200DED357 /* Either.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Either.h; path = include/lldb/Utility/Either.h; sourceTree = "<group>"; };
 		949ADF001406F62E004833E1 /* ValueObjectConstResultImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ValueObjectConstResultImpl.h; path = include/lldb/Core/ValueObjectConstResultImpl.h; sourceTree = "<group>"; };
 		949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectConstResultImpl.cpp; path = source/Core/ValueObjectConstResultImpl.cpp; sourceTree = "<group>"; };
@@ -3551,6 +3560,12 @@
 				23E2E5381D9048FB006F38BB /* MinidumpParser.h */,
 				23E2E5391D9048FB006F38BB /* MinidumpTypes.cpp */,
 				23E2E53A1D9048FB006F38BB /* MinidumpTypes.h */,
+				947CF76F1DC7B1E300EF980B /* ProcessMinidump.h */,
+				947CF7701DC7B1EE00EF980B /* ProcessMinidump.cpp */,
+				947CF7721DC7B20300EF980B /* RegisterContextMinidump_x86_32.h */,
+				947CF7731DC7B20300EF980B /* ThreadMinidump.h */,
+				947CF7741DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp */,
+				947CF7751DC7B20D00EF980B /* ThreadMinidump.cpp */,
 			);
 			path = minidump;
 			sourceTree = "<group>";
@@ -7117,6 +7132,7 @@
 				4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */,
 				26BC179918C7F2B300D2196D /* JITLoader.cpp in Sources */,
 				4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */,
+				947CF7761DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp in Sources */,
 				2689002713353DDE00698AC0 /* CommandObjectTarget.cpp in Sources */,
 				2689002813353DDE00698AC0 /* CommandObjectThread.cpp in Sources */,
 				2689002913353DDE00698AC0 /* CommandObjectVersion.cpp in Sources */,
@@ -7338,6 +7354,7 @@
 				233B007D1960C9F90090E598 /* ProcessInfo.cpp in Sources */,
 				3FDFE52C19A2917A009756A7 /* HostInfoMacOSX.mm in Sources */,
 				26BC17B118C7F4CB00D2196D /* ThreadElfCore.cpp in Sources */,
+				947CF7771DC7B20D00EF980B /* ThreadMinidump.cpp in Sources */,
 				268900C913353E5F00698AC0 /* NameToDIE.cpp in Sources */,
 				268900CA13353E5F00698AC0 /* SymbolFileDWARF.cpp in Sources */,
 				268900CB13353E5F00698AC0 /* LogChannelDWARF.cpp in Sources */,
@@ -7539,6 +7556,7 @@
 				2642FBB013D003B400ED6808 /* ProcessKDP.cpp in Sources */,
 				23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */,
 				8C26C4261C3EA5F90031DF7C /* ThreadSanitizerRuntime.cpp in Sources */,
+				947CF7711DC7B1EE00EF980B /* ProcessMinidump.cpp in Sources */,
 				2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */,
 				263641191B34AEE200145B2F /* ABISysV_mips64.cpp in Sources */,
 				26957D9813D381C900670048 /* RegisterContextDarwin_arm.cpp in Sources */,

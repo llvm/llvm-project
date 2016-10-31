@@ -3907,7 +3907,7 @@ bool Sema::SemaBuiltinAssume(CallExpr *TheCall) {
   return false;
 }
 
-/// Handle __builtin_assume_aligned. This is declared
+/// Handle __builtin_alloca_with_align. This is declared
 /// as (size_t, size_t) where the second size_t must be a power of 2 greater
 /// than 8.
 bool Sema::SemaBuiltinAllocaWithAlign(CallExpr *TheCall) {
@@ -3916,6 +3916,12 @@ bool Sema::SemaBuiltinAllocaWithAlign(CallExpr *TheCall) {
 
   // We can't check the value of a dependent argument.
   if (!Arg->isTypeDependent() && !Arg->isValueDependent()) {
+    if (const auto *UE =
+            dyn_cast<UnaryExprOrTypeTraitExpr>(Arg->IgnoreParenImpCasts()))
+      if (UE->getKind() == UETT_AlignOf)
+        Diag(TheCall->getLocStart(), diag::warn_alloca_align_alignof)
+          << Arg->getSourceRange();
+
     llvm::APSInt Result = Arg->EvaluateKnownConstInt(Context);
 
     if (!Result.isPowerOf2())

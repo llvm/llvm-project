@@ -19,8 +19,8 @@
 using namespace lldb_private;
 using namespace minidump;
 
-llvm::MutableArrayRef<uint8_t> getDestRegister(uint8_t *context,
-                                               const RegisterInfo &reg) {
+static llvm::MutableArrayRef<uint8_t> getDestRegister(uint8_t *context,
+                                                      const RegisterInfo &reg) {
   auto bytes = reg.mutable_data(context);
 
   switch (reg.kinds[lldb::eRegisterKindLLDB]) {
@@ -41,13 +41,13 @@ llvm::MutableArrayRef<uint8_t> getDestRegister(uint8_t *context,
   }
 }
 
-void writeRegister(const void *reg_src, uint8_t *context,
-                   const RegisterInfo &reg) {
+static void writeRegister(const void *reg_src, uint8_t *context,
+                          const RegisterInfo &reg) {
   llvm::MutableArrayRef<uint8_t> reg_dest = getDestRegister(context, reg);
   memcpy(reg_dest.data(), reg_src, reg_dest.size());
 }
 
-lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContextToRegIface(
+lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
     llvm::ArrayRef<uint8_t> source_data,
     RegisterInfoInterface *target_reg_interface) {
 
