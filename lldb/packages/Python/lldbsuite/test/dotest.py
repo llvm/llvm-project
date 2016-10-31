@@ -728,7 +728,10 @@ def setupSysPath():
             configuration.skipCategories.append("lldb-mi")
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
+    if os.path.exists(os.path.join(lldbLibDir, "LLDB.framework")):
+        configuration.lldbFrameworkPath = lldbLibDir
     if configuration.lldbFrameworkPath:
+        lldbtest_config.lldbFrameworkPath = configuration.lldbFrameworkPath
         candidatePath = os.path.join(
             configuration.lldbFrameworkPath, 'Resources', 'Python')
         if os.path.isfile(os.path.join(candidatePath, 'lldb/__init__.py')):

@@ -830,6 +830,29 @@ class Base(unittest2.TestCase):
         # Initialize debug_info
         self.debug_info = None
 
+        lib_dir = os.environ["LLDB_LIB_DIR"]
+        self.dsym = None
+        self.framework_dir = None
+        self.darwinWithFramework = self.platformIsDarwin()
+        if sys.platform.startswith("darwin"):
+            # Handle the framework environment variable if it is set
+            if hasattr(lldbtest_config, 'lldbFrameworkPath'):
+                framework_path = lldbtest_config.lldbFrameworkPath
+                # Framework dir should be the directory containing the framework
+                self.framework_dir = framework_path[:framework_path.rfind('LLDB.framework')]
+            # If a framework dir was not specified assume the Xcode build
+            # directory layout where the framework is in LLDB_LIB_DIR.
+            else:
+                self.framework_dir = lib_dir
+            self.dsym = os.path.join(self.framework_dir, 'LLDB.framework', 'LLDB')
+            # If the framework binary doesn't exist, assume we didn't actually
+            # build a framework, and fallback to standard *nix behavior by
+            # setting framework_dir and dsym to None.
+            if not os.path.exists(self.dsym):
+                self.framework_dir = None
+                self.dsym = None
+                self.darwinWithFramework = False
+
     def setAsync(self, value):
         """ Sets async mode to True/False and ensures it is reset after the testcase completes."""
         old_async = self.dbg.GetAsync()
@@ -1276,6 +1299,9 @@ class Base(unittest2.TestCase):
         """Returns true if the OS triple for the selected platform is any valid apple OS"""
         return lldbplatformutil.platformIsDarwin()
 
+    def hasDarwinFramework(self):
+        return self.darwinWithFramework
+
     def getPlatform(self):
         """Returns the target platform the test suite is running on."""
         return lldbplatformutil.getPlatform()
@@ -1375,15 +1401,14 @@ class Base(unittest2.TestCase):
         stdlibflag = self.getstdlibFlag()
 
         lib_dir = os.environ["LLDB_LIB_DIR"]
-        if sys.platform.startswith("darwin"):
-            dsym = os.path.join(lib_dir, 'LLDB.framework', 'LLDB')
+        if self.hasDarwinFramework():
             d = {'CXX_SOURCES': sources,
                  'EXE': exe_name,
                  'CFLAGS_EXTRAS': "%s %s" % (stdflag, stdlibflag),
-                 'FRAMEWORK_INCLUDES': "-F%s" % lib_dir,
-                 'LD_EXTRAS': "%s -Wl,-rpath,%s" % (dsym, lib_dir),
+                 'FRAMEWORK_INCLUDES': "-F%s" % self.framework_dir,
+                 'LD_EXTRAS': "%s -Wl,-rpath,%s" % (self.dsym, self.framework_dir),
                  }
-        elif sys.platform.rstrip('0123456789') in ('freebsd', 'linux', 'netbsd') or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
+        elif sys.platform.rstrip('0123456789') in ('freebsd', 'linux', 'netbsd', 'darwin') or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
             d = {
                 'CXX_SOURCES': sources,
                 'EXE': exe_name,
@@ -1392,7 +1417,7 @@ class Base(unittest2.TestCase):
                                                  os.path.join(
                                                      os.environ["LLDB_SRC"],
                                                      "include")),
-                'LD_EXTRAS': "-L%s -llldb" % lib_dir}
+                'LD_EXTRAS': "-L%s/../lib -llldb -Wl,-rpath,%s/../lib" % (lib_dir, lib_dir)}
         elif sys.platform.startswith('win'):
             d = {
                 'CXX_SOURCES': sources,
@@ -1416,15 +1441,14 @@ class Base(unittest2.TestCase):
         stdflag = self.getstdFlag()
 
         lib_dir = os.environ["LLDB_LIB_DIR"]
-        if self.platformIsDarwin():
-            dsym = os.path.join(lib_dir, 'LLDB.framework', 'LLDB')
+        if self.hasDarwinFramework():
             d = {'DYLIB_CXX_SOURCES': sources,
                  'DYLIB_NAME': lib_name,
                  'CFLAGS_EXTRAS': "%s -stdlib=libc++" % stdflag,
-                 'FRAMEWORK_INCLUDES': "-F%s" % lib_dir,
-                 'LD_EXTRAS': "%s -Wl,-rpath,%s -dynamiclib" % (dsym, lib_dir),
+                 'FRAMEWORK_INCLUDES': "-F%s" % self.framework_dir,
+                 'LD_EXTRAS': "%s -Wl,-rpath,%s -dynamiclib" % (self.dsym, self.framework_dir),
                  }
-        elif self.getPlatform() in ('freebsd', 'linux', 'netbsd') or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
+        elif sys.platform.rstrip('0123456789') in ('freebsd', 'linux', 'netbsd', 'darwin') or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
             d = {
                 'DYLIB_CXX_SOURCES': sources,
                 'DYLIB_NAME': lib_name,
@@ -1432,7 +1456,7 @@ class Base(unittest2.TestCase):
                                                     os.path.join(
                                                         os.environ["LLDB_SRC"],
                                                         "include")),
-                'LD_EXTRAS': "-shared -L%s -llldb" % lib_dir}
+                'LD_EXTRAS': "-shared -L%s/../lib -llldb -Wl,-rpath,%s/../lib" % (lib_dir, lib_dir)}
         elif self.getPlatform() == 'windows':
             d = {
                 'DYLIB_CXX_SOURCES': sources,
