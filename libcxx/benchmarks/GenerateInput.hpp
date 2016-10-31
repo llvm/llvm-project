@@ -137,4 +137,6 @@ inline std::vector<const char*> getRandomCStringInputs(size_t N) {
         cinputs.push_back(str.c_str());
     return cinputs;
 }
+
+
 #endif // BENCHMARK_GENERATE_INPUT_HPP

@@ -9,7 +9,11 @@
 
 #include "Memory.h"
 
-llvm::BumpPtrAllocator lld::elf::BAlloc;
-llvm::StringSaver lld::elf::Saver{BAlloc};
+using namespace llvm;
 
-void lld::elf::freeArena() { lld::elf::BAlloc.Reset(); }
+namespace lld {
+BumpPtrAllocator elf::BAlloc;
+StringSaver elf::Saver{elf::BAlloc};
+
+void elf::freeArena() { elf::BAlloc.Reset(); }
+}
