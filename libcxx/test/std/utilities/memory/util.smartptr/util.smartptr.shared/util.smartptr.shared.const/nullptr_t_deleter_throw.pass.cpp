@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 // UNSUPPORTED: sanitizer-new-delete
 
 // <memory>

@@ -21,11 +21,12 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputSection.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"
-#include "Symbols.h"
 #include "SymbolTable.h"
+#include "Symbols.h"
 #include "Target.h"
 #include "Writer.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -46,9 +46,9 @@ LinkerScriptBase *elf::ScriptBase;
 ScriptConfiguration *elf::ScriptConfig;
 
 template <class ELFT> static void addRegular(SymbolAssignment *Cmd) {
-  Symbol *Sym = Symtab<ELFT>::X->addRegular(Cmd->Name, STV_DEFAULT, nullptr,
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+  Symbol *Sym = Symtab<ELFT>::X->addRegular(Cmd->Name, Visibility, nullptr,
                                             STB_GLOBAL, STT_NOTYPE, 0);
-  Sym->Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   Cmd->Sym = Sym->body();
 
   // If we have no SECTIONS then we don't have '.' and don't call
@@ -351,7 +351,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec)
-        addSection(Factory, S, getOutputSectionName(S->Name, Opt.Alloc));
+        addSection(Factory, S, getOutputSectionName(S->Name));
 }
 
 // Sets value of a section-defined symbol. Two kinds of
@@ -954,7 +954,6 @@ private:
   void readLocal();
 
   ScriptConfiguration &Opt = *ScriptConfig;
-  StringSaver Saver = {ScriptConfig->Alloc};
   bool IsUnderSysroot;
 };
 

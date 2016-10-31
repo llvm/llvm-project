@@ -174,6 +174,9 @@ Command-line parameters
 ``-fmodules``
   Enable the modules feature.
 
+``-fbuiltin-module-map``
+  Load the Clang builtins module map file. (Equivalent to ``-fmodule-map-file=<resource dir>/include/module.modulemap``)
+
 ``-fimplicit-module-maps``
   Enable implicit search for module map files named ``module.modulemap`` and similar. This option is implied by ``-fmodules``. If this is disabled with ``-fno-implicit-module-maps``, module map files will only be loaded if they are explicitly specified via ``-fmodule-map-file`` or transitively used by another module map file.
 

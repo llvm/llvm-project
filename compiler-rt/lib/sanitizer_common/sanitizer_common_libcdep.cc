@@ -76,6 +76,7 @@ void SetAllocatorReleaseToOSCallback(AllocatorReleaseToOSCallback Callback) {
   ReleseCallback = Callback;
 }
 
+#if SANITIZER_LINUX && !SANITIZER_GO
 void BackgroundThread(void *arg) {
   uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
   uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
@@ -135,6 +136,7 @@ void BackgroundThread(void *arg) {
     }
   }
 }
+#endif
 
 void WriteToSyslog(const char *msg) {
   InternalScopedString msg_copy(kErrorMessageBufferSize);

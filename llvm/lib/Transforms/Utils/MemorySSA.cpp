@@ -1097,7 +1097,7 @@ public:
   using MemorySSAWalker::getClobberingMemoryAccess;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) override;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                          MemoryLocation &) override;
+                                          const MemoryLocation &) override;
   void invalidateInfo(MemoryAccess *) override;
 
   /// Whether we call resetClobberWalker() after each time we *actually* walk to
@@ -2163,7 +2163,7 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
 }
 
 MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
-    MemoryAccess *StartingAccess, MemoryLocation &Loc) {
+    MemoryAccess *StartingAccess, const MemoryLocation &Loc) {
   if (isa<MemoryPhi>(StartingAccess))
     return StartingAccess;
 
@@ -2266,7 +2266,7 @@ DoNothingMemorySSAWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
 }
 
 MemoryAccess *DoNothingMemorySSAWalker::getClobberingMemoryAccess(
-    MemoryAccess *StartingAccess, MemoryLocation &) {
+    MemoryAccess *StartingAccess, const MemoryLocation &) {
   if (auto *Use = dyn_cast<MemoryUseOrDef>(StartingAccess))
     return Use->getDefiningAccess();
   return StartingAccess;

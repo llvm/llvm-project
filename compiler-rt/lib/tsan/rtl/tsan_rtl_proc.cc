@@ -23,7 +23,7 @@ Processor *ProcCreate() {
   internal_memset(mem, 0, sizeof(Processor));
   Processor *proc = new(mem) Processor;
   proc->thr = nullptr;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   AllocatorProcStart(proc);
 #endif
   if (common_flags()->detect_deadlocks)
@@ -33,7 +33,7 @@ Processor *ProcCreate() {
 
 void ProcDestroy(Processor *proc) {
   CHECK_EQ(proc->thr, nullptr);
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   AllocatorProcFinish(proc);
 #endif
   ctx->clock_alloc.FlushCache(&proc->clock_cache);

@@ -403,7 +403,11 @@ int main(int argc, char **argv, char * const *envp) {
         return 1;
       }
     }
-    return runOrcLazyJIT(std::move(Ms), argc, argv);
+    std::vector<std::string> Args;
+    Args.push_back(InputFile);
+    for (auto &Arg : InputArgv)
+      Args.push_back(Arg);
+    return runOrcLazyJIT(std::move(Ms), Args);
   }
 
   if (EnableCacheManager) {

@@ -6510,9 +6510,6 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     break;
 
   case AR_NotYetIntroduced:
-    assert(!S.getCurFunctionOrMethodDecl() &&
-           "Function-level partial availablity should not be diagnosed here!");
-
     diag = diag::warn_partial_availability;
     diag_message = diag::warn_partial_message;
     diag_fwdclass_message = diag::warn_partial_fwdclass_message;
@@ -6585,15 +6582,14 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
 
 static void handleDelayedAvailabilityCheck(Sema &S, DelayedDiagnostic &DD,
                                            Decl *Ctx) {
-  assert(DD.Kind == DelayedDiagnostic::Deprecation ||
-         DD.Kind == DelayedDiagnostic::Unavailable);
-  AvailabilityResult AR = DD.Kind == DelayedDiagnostic::Deprecation
-                              ? AR_Deprecated
-                              : AR_Unavailable;
+  assert(DD.Kind == DelayedDiagnostic::Availability &&
+         "Expected an availability diagnostic here");
+
   DD.Triggered = true;
   DoEmitAvailabilityWarning(
-      S, AR, Ctx, DD.getDeprecationDecl(), DD.getDeprecationMessage(), DD.Loc,
-      DD.getUnknownObjCClass(), DD.getObjCProperty(), false);
+      S, DD.getAvailabilityResult(), Ctx, DD.getAvailabilityDecl(),
+      DD.getAvailabilityMessage(), DD.Loc, DD.getUnknownObjCClass(),
+      DD.getObjCProperty(), false);
 }
 
 void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
@@ -6623,8 +6619,7 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
         continue;
 
       switch (diag.Kind) {
-      case DelayedDiagnostic::Deprecation:
-      case DelayedDiagnostic::Unavailable:
+      case DelayedDiagnostic::Availability:
         // Don't bother giving deprecation/unavailable diagnostics if
         // the decl is invalid.
         if (!decl->isInvalidDecl())
@@ -6659,8 +6654,7 @@ void Sema::EmitAvailabilityWarning(AvailabilityResult AR,
                                    const ObjCPropertyDecl  *ObjCProperty,
                                    bool ObjCPropertyAccess) {
   // Delay if we're currently parsing a declaration.
-  if (DelayedDiagnostics.shouldDelayDiagnostics() &&
-      AR != AR_NotYetIntroduced) {
+  if (DelayedDiagnostics.shouldDelayDiagnostics()) {
     DelayedDiagnostics.add(DelayedDiagnostic::makeAvailability(
         AR, Loc, D, UnknownObjCClass, ObjCProperty, Message,
         ObjCPropertyAccess));

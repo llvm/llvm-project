@@ -93,9 +93,9 @@ static bool isDereferenceableAndAlignedPointer(
 
     // Offset and Size may have different bit widths if we have visited an
     // addrspacecast, so we can't do arithmetic directly on the APInt values.
-    return isDereferenceableAndAlignedPointer(Base, Align,
-                                              Offset + Size.getSExtValue(), DL,
-                                              CtxI, DT, Visited);
+    return isDereferenceableAndAlignedPointer(
+        Base, Align, Offset + Size.sextOrTrunc(Offset.getBitWidth()),
+        DL, CtxI, DT, Visited);
   }
 
   // For gc.relocate, look through relocations

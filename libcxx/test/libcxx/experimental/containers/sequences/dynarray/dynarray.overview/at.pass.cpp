@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 // dynarray.overview
 
 // const_reference at(size_type n) const;

@@ -46,9 +46,9 @@
 ; These will be imported, check the linkage/renaming after promotion
 ; PROMOTE-DAG: define void @globalfunc()
 ; PROMOTE-DAG: define hidden void @internalfunc.llvm.0()
-; PROMOTE-DAG: define linkonce_odr void @linkonceODRfunc()
+; PROMOTE-DAG: define weak_odr void @linkonceODRfunc()
 ; PROMOTE-DAG: define weak_odr void @weakODRfunc()
-; PROMOTE-DAG: define linkonce void @linkoncefunc()
+; PROMOTE-DAG: define weak void @linkoncefunc()
 ; PROMOTE-DAG: define weak void @weakfunc()
 
 ; On the import side now, verify that aliases to a linkonce_odr are imported, but the weak/linkonce (we can't inline them)

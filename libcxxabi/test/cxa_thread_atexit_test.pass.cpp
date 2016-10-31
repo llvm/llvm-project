@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcppabi-no-threads
 // REQUIRES: linux
 
 #include <assert.h>

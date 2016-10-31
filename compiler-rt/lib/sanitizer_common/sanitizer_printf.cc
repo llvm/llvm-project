@@ -213,7 +213,7 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void OnPrint(const char *str) {
   (void)str;
 }
-#elif defined(SANITIZER_GO) && defined(TSAN_EXTERNAL_HOOKS)
+#elif SANITIZER_GO && defined(TSAN_EXTERNAL_HOOKS)
 void OnPrint(const char *str);
 #else
 void OnPrint(const char *str) {

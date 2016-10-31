@@ -1623,7 +1623,22 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
     llvm::Value *VFuncPtr =
         CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfn");
-    VFunc = CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+    auto *VFuncLoad =
+        CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+
+    // Add !invariant.load md to virtual function load to indicate that
+    // function didn't change inside vtable.
+    // It's safe to add it without -fstrict-vtable-pointers, but it would not
+    // help in devirtualization because it will only matter if we will have 2
+    // the same virtual function loads from the same vtable load, which won't
+    // happen without enabled devirtualization with -fstrict-vtable-pointers.
+    if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+        CGM.getCodeGenOpts().StrictVTablePointers)
+      VFuncLoad->setMetadata(
+          llvm::LLVMContext::MD_invariant_load,
+          llvm::MDNode::get(CGM.getLLVMContext(),
+                            llvm::ArrayRef<llvm::Metadata *>()));
+    VFunc = VFuncLoad;
   }
 
   CGCallee Callee(MethodDecl, VFunc);

@@ -3048,7 +3048,8 @@ const Attr *FunctionDecl::getUnusedResultAttr() const {
 /// an externally visible symbol, but "extern inline" will not create an 
 /// externally visible symbol.
 bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
-  assert(doesThisDeclarationHaveABody() && "Must have the function definition");
+  assert(doesThisDeclarationHaveABody() ||
+         willHaveBody() && "Must be a function definition");
   assert(isInlined() && "Function must be inline");
   ASTContext &Context = getASTContext();
   

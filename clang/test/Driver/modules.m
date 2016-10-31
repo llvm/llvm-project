@@ -51,6 +51,10 @@
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=foo.map"
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=bar.map"
 
+// RUN: %clang -fmodules -fbuiltin-module-map -### %s 2>&1 | FileCheck -check-prefix=CHECK-BUILTIN-MODULE-MAP %s
+// CHECK-BUILTIN-MODULE-MAP: "-fmodules"
+// CHECK-BUILTIN-MODULE-MAP: "-fmodule-map-file={{.*}}include{{/|\\\\}}module.modulemap"
+
 // RUN: %clang -fmodules -fmodule-file=foo.pcm -fmodule-file=bar.pcm -### %s 2>&1 | FileCheck -check-prefix=CHECK-MODULE-FILES %s
 // CHECK-MODULE-FILES: "-fmodules"
 // CHECK-MODULE-FILES: "-fmodule-file=foo.pcm"

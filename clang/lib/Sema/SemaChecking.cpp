@@ -791,6 +791,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaBuiltinPrefetch(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_alloca_with_align:
+    if (SemaBuiltinAllocaWithAlign(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume:
     if (SemaBuiltinAssume(TheCall))
@@ -1971,21 +1975,7 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
   default:
     return false;
-  case X86::BI__builtin_ia32_extractf64x4_mask:
-  case X86::BI__builtin_ia32_extracti64x4_mask:
-  case X86::BI__builtin_ia32_extractf32x8_mask:
-  case X86::BI__builtin_ia32_extracti32x8_mask:
-  case X86::BI__builtin_ia32_extractf64x2_256_mask:
-  case X86::BI__builtin_ia32_extracti64x2_256_mask:
-  case X86::BI__builtin_ia32_extractf32x4_256_mask:
-  case X86::BI__builtin_ia32_extracti32x4_256_mask:
-    i = 1; l = 0; u = 1;
-    break;
   case X86::BI_mm_prefetch:
-  case X86::BI__builtin_ia32_extractf32x4_mask:
-  case X86::BI__builtin_ia32_extracti32x4_mask:
-  case X86::BI__builtin_ia32_extractf64x2_512_mask:
-  case X86::BI__builtin_ia32_extracti64x2_512_mask:
     i = 1; l = 0; u = 3;
     break;
   case X86::BI__builtin_ia32_insertf32x8_mask:
@@ -2115,31 +2105,15 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_prorq128_mask:
   case X86::BI__builtin_ia32_prorq256_mask:
   case X86::BI__builtin_ia32_psllwi512_mask:
-  case X86::BI__builtin_ia32_psllwi128_mask:
-  case X86::BI__builtin_ia32_psllwi256_mask:
-  case X86::BI__builtin_ia32_psrldi128_mask:
-  case X86::BI__builtin_ia32_psrldi256_mask:
   case X86::BI__builtin_ia32_psrldi512_mask:
-  case X86::BI__builtin_ia32_psrlqi128_mask:
-  case X86::BI__builtin_ia32_psrlqi256_mask:
   case X86::BI__builtin_ia32_psrlqi512_mask:
   case X86::BI__builtin_ia32_psrawi512_mask:
-  case X86::BI__builtin_ia32_psrawi128_mask:
-  case X86::BI__builtin_ia32_psrawi256_mask:
   case X86::BI__builtin_ia32_psrlwi512_mask:
-  case X86::BI__builtin_ia32_psrlwi128_mask:
-  case X86::BI__builtin_ia32_psrlwi256_mask:
-  case X86::BI__builtin_ia32_psradi128_mask:
-  case X86::BI__builtin_ia32_psradi256_mask:
   case X86::BI__builtin_ia32_psradi512_mask:
   case X86::BI__builtin_ia32_psraqi128_mask:
   case X86::BI__builtin_ia32_psraqi256_mask:
   case X86::BI__builtin_ia32_psraqi512_mask:
-  case X86::BI__builtin_ia32_pslldi128_mask:
-  case X86::BI__builtin_ia32_pslldi256_mask:
   case X86::BI__builtin_ia32_pslldi512_mask:
-  case X86::BI__builtin_ia32_psllqi128_mask:
-  case X86::BI__builtin_ia32_psllqi256_mask:
   case X86::BI__builtin_ia32_psllqi512_mask:
   case X86::BI__builtin_ia32_fpclasspd128_mask:
   case X86::BI__builtin_ia32_fpclasspd256_mask:
@@ -3929,6 +3903,36 @@ bool Sema::SemaBuiltinAssume(CallExpr *TheCall) {
     Diag(Arg->getLocStart(), diag::warn_assume_side_effects)
       << Arg->getSourceRange()
       << cast<FunctionDecl>(TheCall->getCalleeDecl())->getIdentifier();
+
+  return false;
+}
+
+/// Handle __builtin_assume_aligned. This is declared
+/// as (size_t, size_t) where the second size_t must be a power of 2 greater
+/// than 8.
+bool Sema::SemaBuiltinAllocaWithAlign(CallExpr *TheCall) {
+  // The alignment must be a constant integer.
+  Expr *Arg = TheCall->getArg(1);
+
+  // We can't check the value of a dependent argument.
+  if (!Arg->isTypeDependent() && !Arg->isValueDependent()) {
+    llvm::APSInt Result = Arg->EvaluateKnownConstInt(Context);
+
+    if (!Result.isPowerOf2())
+      return Diag(TheCall->getLocStart(),
+                  diag::err_alignment_not_power_of_two)
+           << Arg->getSourceRange();
+
+    if (Result < Context.getCharWidth())
+      return Diag(TheCall->getLocStart(), diag::err_alignment_too_small)
+           << (unsigned)Context.getCharWidth()
+           << Arg->getSourceRange();
+
+    if (Result > INT32_MAX)
+      return Diag(TheCall->getLocStart(), diag::err_alignment_too_big)
+           << INT32_MAX
+           << Arg->getSourceRange();
+  }
 
   return false;
 }

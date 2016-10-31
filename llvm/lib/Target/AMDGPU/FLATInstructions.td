@@ -79,7 +79,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
 class FLAT_Load_Pseudo <string opName, RegisterClass regClass> : FLAT_Pseudo<
   opName,
   (outs regClass:$vdst),
-  (ins VReg_64:$addr, glc:$glc, slc:$slc, tfe:$tfe),
+  (ins VReg_64:$addr, GLC:$glc, slc:$slc, tfe:$tfe),
   " $vdst, $addr$glc$slc$tfe"> {
   let has_data = 0;
   let mayLoad = 1;
@@ -88,7 +88,7 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass> : FLAT_Pseudo<
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass> : FLAT_Pseudo<
   opName,
   (outs),
-  (ins VReg_64:$addr, vdataClass:$data, glc:$glc, slc:$slc, tfe:$tfe),
+  (ins VReg_64:$addr, vdataClass:$data, GLC:$glc, slc:$slc, tfe:$tfe),
   " $addr, $data$glc$slc$tfe"> {
   let mayLoad  = 0;
   let mayStore = 1;

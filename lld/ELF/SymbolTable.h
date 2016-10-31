@@ -127,7 +127,6 @@ private:
   // once symbol resolution is finished.
   llvm::DenseMap<SymName, SymIndex> Symtab;
   std::vector<Symbol *> SymVector;
-  llvm::BumpPtrAllocator Alloc;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This set

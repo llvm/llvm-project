@@ -21,12 +21,6 @@
 using namespace llvm;
 
 
-static bool hasOnlySGPRSpills(const SIMachineFunctionInfo *FuncInfo,
-                              const MachineFrameInfo &MFI) {
-  return FuncInfo->hasSpilledSGPRs() &&
-    (!FuncInfo->hasSpilledVGPRs() && !FuncInfo->hasNonSpillStackObjects());
-}
-
 static ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF,
                                          const SIRegisterInfo *TRI) {
   return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
@@ -75,7 +69,6 @@ void SIFrameLowering::emitFlatScratchInit(const SIInstrInfo *TII,
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned ScratchWaveOffsetReg = MFI->getScratchWaveOffsetReg();
 
-
   // Add wave offset in bytes to private base offset.
   // See comment in AMDKernelCodeT.h for enable_sgpr_flat_scratch_init.
   BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), FlatScrInitLo)
@@ -97,7 +90,8 @@ unsigned SIFrameLowering::getReservedPrivateSegmentBufferReg(
 
   // We need to insert initialization of the scratch resource descriptor.
   unsigned ScratchRsrcReg = MFI->getScratchRSrcReg();
-  assert(ScratchRsrcReg != AMDGPU::NoRegister);
+  if (ScratchRsrcReg == AMDGPU::NoRegister)
+    return AMDGPU::NoRegister;
 
   if (ST.hasSGPRInitBug() ||
       ScratchRsrcReg != TRI->reservedPrivateSegmentBufferReg(MF))
@@ -116,14 +110,17 @@ unsigned SIFrameLowering::getReservedPrivateSegmentBufferReg(
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  unsigned NumPreloaded = MFI->getNumPreloadedSGPRs() / 4;
+  unsigned NumPreloaded = (MFI->getNumPreloadedSGPRs() + 3) / 4;
+  ArrayRef<MCPhysReg> AllSGPR128s = getAllSGPR128(MF, TRI);
+  AllSGPR128s = AllSGPR128s.slice(std::min(static_cast<unsigned>(AllSGPR128s.size()), NumPreloaded));
+
   // Skip the last 2 elements because the last one is reserved for VCC, and
   // this is the 2nd to last element already.
-  for (MCPhysReg Reg : getAllSGPR128(MF, TRI).drop_back(2).slice(NumPreloaded)) {
+  for (MCPhysReg Reg : AllSGPR128s) {
     // Pick the first unallocated one. Make sure we don't clobber the other
     // reserved input we needed.
-    if (!MRI.isPhysRegUsed(Reg)) {
-      assert(MRI.isAllocatable(Reg));
+    if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg)) {
+      //assert(MRI.isAllocatable(Reg));
       MRI.replaceRegWith(ScratchRsrcReg, Reg);
       MFI->setScratchRSrcReg(Reg);
       return Reg;
@@ -146,7 +143,14 @@ unsigned SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
 
   unsigned ScratchRsrcReg = MFI->getScratchRSrcReg();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+
   unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
+
+  ArrayRef<MCPhysReg> AllSGPRs = getAllSGPRs(MF, TRI);
+  if (NumPreloaded > AllSGPRs.size())
+    return ScratchWaveOffsetReg;
+
+  AllSGPRs = AllSGPRs.slice(NumPreloaded);
 
   // We need to drop register from the end of the list that we cannot use
   // for the scratch wave offset.
@@ -161,7 +165,10 @@ unsigned SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
   //     are no other free SGPRs, then the value will stay in this register.
   // ----
   //  13
-  for (MCPhysReg Reg : getAllSGPRs(MF, TRI).drop_back(13).slice(NumPreloaded)) {
+  if (AllSGPRs.size() < 13)
+    return ScratchWaveOffsetReg;
+
+  for (MCPhysReg Reg : AllSGPRs.drop_back(13)) {
     // Pick the first unallocated SGPR. Be careful not to pick an alias of the
     // scratch descriptor, since we haven’t added its uses yet.
     if (!MRI.isPhysRegUsed(Reg)) {
@@ -186,9 +193,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (ST.debuggerEmitPrologue())
     emitDebuggerPrologue(MF, MBB);
 
-  if (!MF.getFrameInfo().hasStackObjects())
-    return;
-
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
 
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
@@ -198,8 +202,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   //
   // FIXME: We should be cleaning up these unused SGPR spill frame indices
   // somewhere.
-  if (hasOnlySGPRSpills(MFI, MF.getFrameInfo()))
-    return;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
@@ -209,16 +211,30 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     = getReservedPrivateSegmentBufferReg(ST, TII, TRI, MFI, MF);
   unsigned ScratchWaveOffsetReg
     = getReservedPrivateSegmentWaveByteOffsetReg(ST, TII, TRI, MFI, MF);
-  assert(ScratchRsrcReg != AMDGPU::NoRegister);
-  assert(ScratchWaveOffsetReg != AMDGPU::NoRegister);
+
+  if (ScratchRsrcReg == AMDGPU::NoRegister) {
+    assert(ScratchWaveOffsetReg == AMDGPU::NoRegister);
+    return;
+  }
+
   assert(!TRI->isSubRegister(ScratchRsrcReg, ScratchWaveOffsetReg));
 
-  if (MFI->hasFlatScratchInit())
+  // We need to do the replacement of the private segment buffer and wave offset
+  // register even if there are no stack objects. There could be stores to undef
+  // or a constant without an associated object.
+
+  // FIXME: We still have implicit uses on SGPR spill instructions in case they
+  // need to spill to vector memory. It's likely that will not happen, but at
+  // this point it appears we need the setup. This part of the prolog should be
+  // emitted after frame indices are eliminated.
+
+  if (MF.getFrameInfo().hasStackObjects() && MFI->hasFlatScratchInit())
     emitFlatScratchInit(TII, TRI, MF, MBB);
 
   // We need to insert initialization of the scratch resource descriptor.
   unsigned PreloadedScratchWaveOffsetReg = TRI->getPreloadedValue(
     MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
+
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
   if (ST.isAmdCodeObjectV2()) {
@@ -226,21 +242,20 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
   }
 
-  // If we reserved the original input registers, we don't need to copy to the
-  // reserved registers.
-  if (ScratchRsrcReg == PreloadedPrivateBufferReg) {
-    // We should always reserve these 5 registers at the same time.
-    assert(ScratchWaveOffsetReg == PreloadedScratchWaveOffsetReg &&
-           "scratch wave offset and private segment buffer inconsistent");
-    return;
-  }
+  bool OffsetRegUsed = !MRI.use_empty(ScratchWaveOffsetReg);
+  bool ResourceRegUsed = !MRI.use_empty(ScratchRsrcReg);
 
   // We added live-ins during argument lowering, but since they were not used
   // they were deleted. We're adding the uses now, so add them back.
-  MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
-  MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
+  if (OffsetRegUsed) {
+    assert(PreloadedScratchWaveOffsetReg != AMDGPU::NoRegister &&
+           "scratch wave offset input is required");
+    MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
+    MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
+  }
 
-  if (ST.isAmdCodeObjectV2()) {
+  if (ResourceRegUsed && PreloadedPrivateBufferReg != AMDGPU::NoRegister) {
+    assert(ST.isAmdCodeObjectV2());
     MRI.addLiveIn(PreloadedPrivateBufferReg);
     MBB.addLiveIn(PreloadedPrivateBufferReg);
   }
@@ -250,30 +265,46 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     if (&OtherBB == &MBB)
       continue;
 
-    OtherBB.addLiveIn(ScratchRsrcReg);
-    OtherBB.addLiveIn(ScratchWaveOffsetReg);
+    if (OffsetRegUsed)
+      OtherBB.addLiveIn(ScratchWaveOffsetReg);
+
+    if (ResourceRegUsed)
+      OtherBB.addLiveIn(ScratchRsrcReg);
   }
 
   DebugLoc DL;
   MachineBasicBlock::iterator I = MBB.begin();
 
-  if (PreloadedScratchWaveOffsetReg != ScratchWaveOffsetReg) {
-    // Make sure we emit the copy for the offset first. We may have chosen to
-    // copy the buffer resource into a register that aliases the input offset
-    // register.
+  // If we reserved the original input registers, we don't need to copy to the
+  // reserved registers.
+
+  bool CopyBuffer = ResourceRegUsed &&
+    PreloadedPrivateBufferReg != AMDGPU::NoRegister &&
+    ScratchRsrcReg != PreloadedPrivateBufferReg;
+
+  // This needs to be careful of the copying order to avoid overwriting one of
+  // the input registers before it's been copied to it's final
+  // destination. Usually the offset should be copied first.
+  bool CopyBufferFirst = TRI->isSubRegisterEq(PreloadedPrivateBufferReg,
+                                              ScratchWaveOffsetReg);
+  if (CopyBuffer && CopyBufferFirst) {
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchRsrcReg)
+      .addReg(PreloadedPrivateBufferReg, RegState::Kill);
+  }
+
+  if (OffsetRegUsed &&
+      PreloadedScratchWaveOffsetReg != ScratchWaveOffsetReg) {
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchWaveOffsetReg)
       .addReg(PreloadedScratchWaveOffsetReg, RegState::Kill);
   }
 
-  if (ST.isAmdCodeObjectV2()) {
-    // Insert copies from argument register.
-    assert(
-      !TRI->isSubRegisterEq(PreloadedPrivateBufferReg, ScratchRsrcReg) &&
-      !TRI->isSubRegisterEq(PreloadedPrivateBufferReg, ScratchWaveOffsetReg));
-
+  if (CopyBuffer && !CopyBufferFirst) {
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchRsrcReg)
       .addReg(PreloadedPrivateBufferReg, RegState::Kill);
-  } else {
+  }
+
+  if (ResourceRegUsed && PreloadedPrivateBufferReg == AMDGPU::NoRegister) {
+    assert(!ST.isAmdCodeObjectV2());
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
     unsigned Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);

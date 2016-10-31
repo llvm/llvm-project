@@ -67,7 +67,7 @@ def Z13_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
 def Z13_VecMulUnit  : ProcResource<2>;
 def Z13_VecStrUnit  : ProcResource<2>;
 def Z13_VecXsPmUnit : ProcResource<2>;
-def Z13_VBUnit      : ProcResource<1>;
+def Z13_VBUnit      : ProcResource<2>;
 
 // Subtarget specific definitions of scheduling resources.
 def : WriteRes<FXa,     [Z13_FXaUnit]>   { let Latency = 1; }

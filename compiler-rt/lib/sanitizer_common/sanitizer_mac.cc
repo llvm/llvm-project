@@ -373,7 +373,7 @@ void InitTlsSize() {
 
 void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
                           uptr *tls_addr, uptr *tls_size) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   uptr stack_top, stack_bottom;
   GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
   *stk_addr = stack_bottom;
@@ -471,12 +471,12 @@ void *internal_start_thread(void(*func)(void *arg), void *arg) {
 
 void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static BlockingMutex syslog_lock(LINKER_INITIALIZED);
 #endif
 
 void WriteOneLineToSyslog(const char *s) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   syslog_lock.CheckLocked();
   asl_log(nullptr, nullptr, ASL_LEVEL_ERR, "%s", s);
 #endif
@@ -489,7 +489,7 @@ void LogMessageOnPrintf(const char *str) {
 }
 
 void LogFullErrorReport(const char *buffer) {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   // Log with os_trace. This will make it into the crash log.
 #if SANITIZER_OS_TRACE
   if (GetMacosVersion() >= MACOS_VERSION_YOSEMITE) {
@@ -562,7 +562,7 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 # endif
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
 LowLevelAllocator allocator_for_env;
 

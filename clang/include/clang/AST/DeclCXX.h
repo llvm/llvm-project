@@ -2957,11 +2957,10 @@ class ConstructorUsingShadowDecl final : public UsingShadowDecl {
             dyn_cast<ConstructorUsingShadowDecl>(Target)),
         ConstructedBaseClassShadowDecl(NominatedBaseClassShadowDecl),
         IsVirtual(TargetInVirtualBase) {
-    // If we found a constructor for a non-virtual base class, but it chains to
-    // a constructor for a virtual base, we should directly call the virtual
-    // base constructor instead.
+    // If we found a constructor that chains to a constructor for a virtual
+    // base, we should directly call that virtual base constructor instead.
     // FIXME: This logic belongs in Sema.
-    if (!TargetInVirtualBase && NominatedBaseClassShadowDecl &&
+    if (NominatedBaseClassShadowDecl &&
         NominatedBaseClassShadowDecl->constructsVirtualBase()) {
       ConstructedBaseClassShadowDecl =
           NominatedBaseClassShadowDecl->ConstructedBaseClassShadowDecl;

@@ -63,7 +63,7 @@ typedef int int_10_11 AVAILABLE_10_11; // expected-note {{'int_10_11' has been e
 #ifdef OBJCPP
 // expected-note@+2 {{marked partial here}}
 #endif
-typedef int int_10_12 AVAILABLE_10_12; // expected-note 3 {{'int_10_12' has been explicitly marked partial here}}
+typedef int int_10_12 AVAILABLE_10_12; // expected-note 2 {{'int_10_12' has been explicitly marked partial here}}
 
 void use_typedef() {
   int_10_11 x; // expected-warning{{'int_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'int_10_11' in an @available check to silence this warning}}
@@ -127,8 +127,7 @@ void test_blocks() {
 
 void test_params(int_10_12 x); // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}} expected-note{{redeclare}}
 
-// FIXME: This should be fine!
-void test_params2(int_10_12 x) AVAILABLE_10_12; // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}} expected-note{{redeclare}}
+void test_params2(int_10_12 x) AVAILABLE_10_12; // no warn
 
 #ifdef OBJCPP
 

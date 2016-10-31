@@ -312,7 +312,7 @@ uint64_t
 DWARFDebugInfoEntryMinimal::getRangesBaseAttribute(const DWARFUnit *U,
                                                    uint64_t FailValue) const {
   uint64_t Result =
-      getAttributeValueAsSectionOffset(U, DW_AT_ranges_base, -1ULL);
+      getAttributeValueAsSectionOffset(U, DW_AT_rnglists_base, -1ULL);
   if (Result != -1ULL)
     return Result;
   return getAttributeValueAsSectionOffset(U, DW_AT_GNU_ranges_base, FailValue);

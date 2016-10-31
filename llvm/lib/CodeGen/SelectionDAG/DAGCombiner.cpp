@@ -3046,6 +3046,11 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1,
         unsigned Size = VT.getSizeInBits();
         const APInt &AndMask = CAnd->getAPIntValue();
         unsigned ShiftBits = CShift->getZExtValue();
+
+        // Bail out, this node will probably disappear anyway.
+        if (ShiftBits == 0)
+          return SDValue();
+
         unsigned MaskBits = AndMask.countTrailingOnes();
         EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), Size / 2);
 
@@ -3064,7 +3069,7 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1,
           // extended to handle extensions mixed in.
 
           SDValue SL(N0);
-          assert(ShiftBits != 0 && MaskBits <= Size);
+          assert(MaskBits <= Size);
 
           // Extracting the highest bit of the low half.
           EVT ShiftVT = TLI.getShiftAmountTy(HalfVT, DAG.getDataLayout());
@@ -3128,6 +3133,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
+
+  // x & x --> x
+  if (N0 == N1)
+    return N0;
 
   // fold vector ops
   if (VT.isVector()) {
@@ -3805,6 +3814,10 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
+
+  // x | x --> x
+  if (N0 == N1)
+    return N0;
 
   // fold vector ops
   if (VT.isVector()) {

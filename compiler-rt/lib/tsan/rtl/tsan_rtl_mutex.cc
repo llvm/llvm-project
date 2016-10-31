@@ -50,7 +50,7 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     uptr addr, u64 mid) {
   // In Go, these misuses are either impossible, or detected by std lib,
   // or false positives (e.g. unlock in a different thread).
-  if (kGoMode)
+  if (SANITIZER_GO)
     return;
   ThreadRegistryLock l(ctx->thread_registry);
   ScopedReport rep(typ);
@@ -76,7 +76,7 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr,
   s->is_rw = rw;
   s->is_recursive = recursive;
   s->is_linker_init = linker_init;
-  if (kCppMode && s->creation_stack_id == 0)
+  if (!SANITIZER_GO && s->creation_stack_id == 0)
     s->creation_stack_id = CurrentStackId(thr, pc);
   s->mtx.Unlock();
 }
@@ -195,7 +195,7 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, bool all) {
   TraceAddEvent(thr, thr->fast_state, EventTypeUnlock, s->GetId());
   int rec = 0;
   bool report_bad_unlock = false;
-  if (kCppMode && (s->recursion == 0 || s->owner_tid != thr->tid)) {
+  if (!SANITIZER_GO && (s->recursion == 0 || s->owner_tid != thr->tid)) {
     if (flags()->report_mutex_bugs && !s->is_broken) {
       s->is_broken = true;
       report_bad_unlock = true;
@@ -412,7 +412,7 @@ void ReleaseStore(ThreadState *thr, uptr pc, uptr addr) {
   s->mtx.Unlock();
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 static void UpdateSleepClockCallback(ThreadContextBase *tctx_base, void *arg) {
   ThreadState *thr = reinterpret_cast<ThreadState*>(arg);
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);

@@ -114,7 +114,7 @@ void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
   Report("ERROR: %s failed to "
          "%s 0x%zx (%zd) bytes of %s (error code: %d)\n",
          SanitizerToolName, mmap_type, size, size, mem_type, err);
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   DumpProcessMap();
 #endif
   UNREACHABLE("unable to mmap");
@@ -207,7 +207,7 @@ void ReportErrorSummary(const char *error_message) {
   __sanitizer_report_error_summary(buff.data());
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 void ReportErrorSummary(const char *error_type, const AddressInfo &info) {
   if (!common_flags()->print_summary)
     return;
@@ -489,7 +489,7 @@ int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const void *,
   return InstallMallocFreeHooks(malloc_hook, free_hook);
 }
 
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
+#if !SANITIZER_GO && !SANITIZER_SUPPORTS_WEAK_HOOKS
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void __sanitizer_print_memory_profile(int top_percent) {
   (void)top_percent;

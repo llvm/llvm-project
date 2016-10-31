@@ -60,6 +60,11 @@ class InstSI <dag outs, dag ins, string asm = "",
   // use it as unsigned.
   field bits<1> SOPKZext = 0;
 
+  // This is an s_store_dword* instruction that requires a cache flush
+  // on wave termination. It is necessary to distinguish from mayStore
+  // SMEM instructions like the cache flush ones.
+  field bits<1> ScalarStore = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = VM_CNT;
   let TSFlags{1} = EXP_CNT;
@@ -94,6 +99,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{26} = Gather4;
   let TSFlags{27} = DisableWQM;
   let TSFlags{28} = SOPKZext;
+  let TSFlags{29} = ScalarStore;
 
   let SchedRW = [Write32Bit];
 

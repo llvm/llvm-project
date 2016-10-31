@@ -636,7 +636,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
         // it could get allocated to something with a def during allocation.
-        if (!MRI->isConstantPhysReg(Reg, *MBB->getParent()))
+        if (!MRI->isConstantPhysReg(Reg))
           return nullptr;
       } else if (!MO.isDead()) {
         // A def that isn't dead. We can't move it.

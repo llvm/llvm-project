@@ -1059,8 +1059,19 @@ unsigned SIRegisterInfo::getMaxNumSGPRs(const MachineFunction &MF) const {
       F, "amdgpu-num-sgpr", MaxNumSGPRs);
 
     // Make sure requested value does not violate subtarget's specifications.
-    if (Requested && Requested <= getNumReservedSGPRs(ST))
+    if (Requested && (Requested <= getNumReservedSGPRs(ST)))
       Requested = 0;
+
+    // If more SGPRs are required to support the input user/system SGPRs,
+    // increase to accomodate them.
+    //
+    // FIXME: This really ends up using the requested number of SGPRs + number
+    // of reserved special registers in total. Theoretically you could re-use
+    // the last input registers for these special registers, but this would
+    // require a lot of complexity to deal with the weird aliasing.
+    unsigned NumInputSGPRs = MFI.getNumPreloadedSGPRs();
+    if (Requested && Requested < NumInputSGPRs)
+      Requested = NumInputSGPRs;
 
     // Make sure requested value is compatible with values implied by
     // default/requested minimum/maximum number of waves per execution unit.

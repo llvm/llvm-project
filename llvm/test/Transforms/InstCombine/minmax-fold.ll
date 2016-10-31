@@ -144,9 +144,8 @@ define <4 x i32> @bitcasts_fcmp_1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast <2 x i64> %a to <4 x float>
 ; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i64> %b to <4 x float>
 ; CHECK-NEXT:    [[T2:%.*]] = fcmp olt <4 x float> [[T1]], [[T0]]
-; CHECK-NEXT:    [[T3:%.*]] = bitcast <2 x i64> %a to <4 x i32>
-; CHECK-NEXT:    [[T4:%.*]] = bitcast <2 x i64> %b to <4 x i32>
-; CHECK-NEXT:    [[T5:%.*]] = select <4 x i1> [[T2]], <4 x i32> [[T3]], <4 x i32> [[T4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[T2]], <4 x float> [[T0]], <4 x float> [[T1]]
+; CHECK-NEXT:    [[T5:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[T5]]
 ;
   %t0 = bitcast <2 x i64> %a to <4 x float>
@@ -165,9 +164,8 @@ define <4 x i32> @bitcasts_fcmp_2(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast <2 x i64> %a to <4 x float>
 ; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i64> %b to <4 x float>
 ; CHECK-NEXT:    [[T2:%.*]] = fcmp olt <4 x float> [[T0]], [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = bitcast <2 x i64> %a to <4 x i32>
-; CHECK-NEXT:    [[T4:%.*]] = bitcast <2 x i64> %b to <4 x i32>
-; CHECK-NEXT:    [[T5:%.*]] = select <4 x i1> [[T2]], <4 x i32> [[T3]], <4 x i32> [[T4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[T2]], <4 x float> [[T0]], <4 x float> [[T1]]
+; CHECK-NEXT:    [[T5:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[T5]]
 ;
   %t0 = bitcast <2 x i64> %a to <4 x float>
@@ -186,9 +184,8 @@ define <4 x float> @bitcasts_icmp(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast <2 x i64> %a to <4 x i32>
 ; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i64> %b to <4 x i32>
 ; CHECK-NEXT:    [[T2:%.*]] = icmp slt <4 x i32> [[T1]], [[T0]]
-; CHECK-NEXT:    [[T3:%.*]] = bitcast <2 x i64> %a to <4 x float>
-; CHECK-NEXT:    [[T4:%.*]] = bitcast <2 x i64> %b to <4 x float>
-; CHECK-NEXT:    [[T5:%.*]] = select <4 x i1> [[T2]], <4 x float> [[T3]], <4 x float> [[T4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[T2]], <4 x i32> [[T0]], <4 x i32> [[T1]]
+; CHECK-NEXT:    [[T5:%.*]] = bitcast <4 x i32> [[TMP1]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[T5]]
 ;
   %t0 = bitcast <2 x i64> %a to <4 x i32>

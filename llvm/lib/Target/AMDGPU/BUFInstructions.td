@@ -243,15 +243,15 @@ class getMUBUFInsDA<list<RegisterClass> vdataList,
   RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
   dag InsNoData = !if(!empty(vaddrList),
     (ins                    SReg_128:$srsrc, SCSrc_b32:$soffset,
-         offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
+         offset:$offset, GLC:$glc, slc:$slc, tfe:$tfe),
     (ins vaddrClass:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-         offset:$offset, glc:$glc, slc:$slc, tfe:$tfe)
+         offset:$offset, GLC:$glc, slc:$slc, tfe:$tfe)
   );
   dag InsData = !if(!empty(vaddrList),
     (ins vdataClass:$vdata,                    SReg_128:$srsrc,
-         SCSrc_b32:$soffset, offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
+         SCSrc_b32:$soffset, offset:$offset, GLC:$glc, slc:$slc, tfe:$tfe),
     (ins vdataClass:$vdata, vaddrClass:$vaddr, SReg_128:$srsrc,
-         SCSrc_b32:$soffset, offset:$offset, glc:$glc, slc:$slc, tfe:$tfe)
+         SCSrc_b32:$soffset, offset:$offset, GLC:$glc, slc:$slc, tfe:$tfe)
   );
   dag ret = !if(!empty(vdataList), InsNoData, InsData);
 }

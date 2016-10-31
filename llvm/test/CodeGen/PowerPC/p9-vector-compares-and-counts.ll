@@ -145,3 +145,58 @@ declare <4 x i32> @llvm.cttz.v4i32(<4 x i32>, i1)
 
 ; Function Attrs: nounwind readnone
 declare <2 x i64> @llvm.cttz.v2i64(<2 x i64>, i1)
+
+; Function Attrs: nounwind readnone
+define i32 @testVCLZLSBB(<16 x i8> %a) {
+entry:
+  %0 = tail call i32 @llvm.ppc.altivec.vclzlsbb(<16 x i8> %a)
+  ret i32 %0
+; CHECK-LABEL: testVCLZLSBB
+; CHECK: vclzlsbb 3, 2
+}
+; Function Attrs: nounwind readnone
+declare i32 @llvm.ppc.altivec.vclzlsbb(<16 x i8>)
+
+; Function Attrs: nounwind readnone
+define i32 @testVCTZLSBB(<16 x i8> %a) {
+entry:
+  %0 = tail call i32 @llvm.ppc.altivec.vctzlsbb(<16 x i8> %a)
+  ret i32 %0
+; CHECK-LABEL: testVCTZLSBB
+; CHECK: vctzlsbb 3, 2
+}
+; Function Attrs: nounwind readnone
+declare i32 @llvm.ppc.altivec.vctzlsbb(<16 x i8>)
+
+; Function Attrs: nounwind readnone
+define <4 x i32> @testVPRTYBW(<4 x i32> %a) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.altivec.vprtybw(<4 x i32> %a)
+  ret <4 x i32> %0
+; CHECK-LABEL: testVPRTYBW
+; CHECK: vprtybw 2, 2
+}
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.altivec.vprtybw(<4 x i32>)
+
+; Function Attrs: nounwind readnone
+define <2 x i64> @testVPRTYBD(<2 x i64> %a) {
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vprtybd(<2 x i64> %a)
+  ret <2 x i64> %0
+; CHECK-LABEL: testVPRTYBD
+; CHECK: vprtybd 2, 2
+}
+; Function Attrs: nounwind readnone
+declare <2 x i64> @llvm.ppc.altivec.vprtybd(<2 x i64>)
+
+; Function Attrs: nounwind readnone
+define <1 x i128> @testVPRTYBQ(<1 x i128> %a) {
+entry:
+  %0 = tail call <1 x i128> @llvm.ppc.altivec.vprtybq(<1 x i128> %a)
+  ret <1 x i128> %0
+; CHECK-LABEL: testVPRTYBQ
+; CHECK: vprtybq 2, 2
+}
+; Function Attrs: nounwind readnone
+declare <1 x i128> @llvm.ppc.altivec.vprtybq(<1 x i128>)

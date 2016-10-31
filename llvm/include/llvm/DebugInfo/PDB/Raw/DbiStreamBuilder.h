@@ -70,6 +70,7 @@ private:
   uint32_t calculateModiSubstreamSize() const;
   uint32_t calculateFileInfoSubstreamSize() const;
   uint32_t calculateNamesBufferSize() const;
+  uint32_t calculateDbgStreamsSize() const;
 
   Error generateModiSubstream();
   Error generateFileInfoSubstream();
