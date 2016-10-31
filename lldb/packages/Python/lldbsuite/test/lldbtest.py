@@ -1854,6 +1854,33 @@ class TestBase(Base):
                 folder = os.path.dirname(folder)
                 continue
 
+    def generateSource(self, source):
+        template = source + '.template'
+        temp = os.path.join(os.getcwd(), template)
+        with open(temp, 'r') as f:
+            content = f.read()
+            
+        public_api_dir = os.path.join(
+            os.environ["LLDB_SRC"], "include", "lldb", "API")
+
+        # Look under the include/lldb/API directory and add #include statements
+        # for all the SB API headers.
+        public_headers = os.listdir(public_api_dir)
+        # For different platforms, the include statement can vary.
+        if self.hasDarwinFramework():
+            include_stmt = "'#include <%s>' % os.path.join('LLDB', header)"
+        else:
+            include_stmt = "'#include <%s>' % os.path.join(public_api_dir, header)"
+        list = [eval(include_stmt) for header in public_headers if (
+            header.startswith("SB") and header.endswith(".h"))]
+        includes = '\n'.join(list)
+        new_content = content.replace('%include_SB_APIs%', includes)
+        src = os.path.join(os.getcwd(), source)
+        with open(src, 'w') as f:
+            f.write(new_content)
+
+        self.addTearDownHook(lambda: os.remove(src))
+
     def setUp(self):
         #import traceback
         # traceback.print_stack()

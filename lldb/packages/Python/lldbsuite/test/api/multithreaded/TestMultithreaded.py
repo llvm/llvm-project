@@ -17,6 +17,15 @@ import unittest2
 @unittest2.skip("skipping due to frequent timeouts: rdar://28183131")
 class SBBreakpointCallbackCase(TestBase):
 
+    def setUp(self):
+        TestBase.setUp(self)
+        self.generateSource('driver.cpp')
+        self.generateSource('listener_test.cpp')
+        self.generateSource('test_breakpoint_callback.cpp')
+        self.generateSource('test_listener_event_description.cpp')
+        self.generateSource('test_listener_event_process_state.cpp')
+        self.generateSource('test_listener_resume.cpp')
+
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfRemote
