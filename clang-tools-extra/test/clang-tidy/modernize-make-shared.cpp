@@ -5,6 +5,7 @@ namespace std {
 template <typename type>
 class shared_ptr {
 public:
+  shared_ptr();
   shared_ptr(type *ptr);
   shared_ptr(const shared_ptr<type> &t) {}
   shared_ptr(shared_ptr<type> &&t) {}
@@ -14,6 +15,9 @@ public:
   type *release();
   void reset();
   void reset(type *pt);
+  shared_ptr &operator=(shared_ptr &&);
+  template <typename T>
+  shared_ptr &operator=(shared_ptr<T> &&);
 
 private:
   type *ptr;
@@ -60,10 +64,26 @@ void basic() {
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_shared instead [modernize-make-shared]
   // CHECK-FIXES: std::shared_ptr<int> P1 = std::make_shared<int>();
 
+  P1.reset(new int());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_shared instead [modernize-make-shared]
+  // CHECK-FIXES: P1 = std::make_shared<int>();
+
+  P1 = std::shared_ptr<int>(new int());
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use std::make_shared instead [modernize-make-shared]
+  // CHECK-FIXES: P1 = std::make_shared<int>();
+
   // Without parenthesis.
   std::shared_ptr<int> P2 = std::shared_ptr<int>(new int);
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_shared instead [modernize-make-shared]
   // CHECK-FIXES: std::shared_ptr<int> P2 = std::make_shared<int>();
+
+  P2.reset(new int);
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_shared instead [modernize-make-shared]
+  // CHECK-FIXES: P2 = std::make_shared<int>();
+
+  P2 = std::shared_ptr<int>(new int);
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use std::make_shared instead [modernize-make-shared]
+  // CHECK-FIXES: P2 = std::make_shared<int>();
 
   // With auto.
   auto P3 = std::shared_ptr<int>(new int());
@@ -76,6 +96,10 @@ void basic() {
     shared_ptr<int> Q = shared_ptr<int>(new int());
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use std::make_shared instead
     // CHECK-FIXES: shared_ptr<int> Q = std::make_shared<int>();
+
+    Q = shared_ptr<int>(new int());
+    // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_shared instead
+    // CHECK-FIXES: Q = std::make_shared<int>();
   }
 
   std::shared_ptr<int> R(new int());
@@ -85,9 +109,24 @@ void basic() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_shared instead
   // CHECK-FIXES: int T = g(std::make_shared<int>());
 
-  // Only replace if the type in the template is the same than the type returned
+  // Only replace if the type in the template is the same as the type returned
   // by the new operator.
   auto Pderived = std::shared_ptr<Base>(new Derived());
+
+  // OK to replace for reset and assign
+  Pderived.reset(new Derived());
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use std::make_shared instead
+  // CHECK-FIXES: Pderived = std::make_shared<Derived>();
+
+  Pderived = std::shared_ptr<Derived>(new Derived());
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use std::make_shared instead
+  // CHECK-FIXES: Pderived = std::make_shared<Derived>();
+
+  // FIXME: OK to replace if assigned to shared_ptr<Base>
+  Pderived = std::shared_ptr<Base>(new Derived());
+
+  // FIXME: OK to replace when auto is not used
+  std::shared_ptr<Base> PBase = std::shared_ptr<Base>(new Derived());
 
   // The pointer is returned by the function, nothing to do.
   std::shared_ptr<Base> RetPtr = getPointer();
@@ -95,9 +134,11 @@ void basic() {
   // This emulates std::move.
   std::shared_ptr<int> Move = static_cast<std::shared_ptr<int> &&>(P1);
 
-  // Placemenet arguments should not be removed.
+  // Placement arguments should not be removed.
   int *PInt = new int;
   std::shared_ptr<int> Placement = std::shared_ptr<int>(new (PInt) int{3});
+  Placement.reset(new (PInt) int{3});
+  Placement = std::shared_ptr<int>(new (PInt) int{3});
 }
 
 // Calling make_smart_ptr from within a member function of a type with a
@@ -113,6 +154,8 @@ public:
     // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_shared instead
     // CHECK-FIXES: auto callsPublic = std::make_shared<Private>();
     auto ptr = std::shared_ptr<Private>(new Private(42));
+    ptr.reset(new Private(42));
+    ptr = std::shared_ptr<Private>(new Private(42));
   }
 
   virtual ~Private();
@@ -129,6 +172,8 @@ public:
     // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_shared instead
     // CHECK-FIXES: auto callsPublic = std::make_shared<Protected>(1, 2);
     auto ptr = std::shared_ptr<Protected>(new Protected);
+    ptr.reset(new Protected);
+    ptr = std::shared_ptr<Protected>(new Protected);
   }
 };
 
@@ -139,16 +184,25 @@ void initialization(int T, Base b) {
   std::shared_ptr<DPair> PDir1 = std::shared_ptr<DPair>(new DPair(1, T));
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: use std::make_shared instead
   // CHECK-FIXES: std::shared_ptr<DPair> PDir1 = std::make_shared<DPair>(1, T);
+  PDir1.reset(new DPair(1, T));
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_shared instead
+  // CHECK-FIXES: PDir1 = std::make_shared<DPair>(1, T);
 
   // Direct initialization with braces.
   std::shared_ptr<DPair> PDir2 = std::shared_ptr<DPair>(new DPair{2, T});
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: use std::make_shared instead
   // CHECK-FIXES: std::shared_ptr<DPair> PDir2 = std::make_shared<DPair>(2, T);
+  PDir2.reset(new DPair{2, T});
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_shared instead
+  // CHECK-FIXES: PDir2 = std::make_shared<DPair>(2, T);
 
   // Aggregate initialization.
   std::shared_ptr<APair> PAggr = std::shared_ptr<APair>(new APair{T, 1});
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: use std::make_shared instead
   // CHECK-FIXES: std::shared_ptr<APair> PAggr = std::make_shared<APair>(APair{T, 1});
+  PAggr.reset(new APair{T, 1});
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_shared instead
+  // CHECK-FIXES: std::make_shared<APair>(APair{T, 1});
 
   // Test different kinds of initialization of the pointee, when the shared_ptr
   // is initialized with braces.
@@ -229,4 +283,24 @@ void nesting() {
   auto Nest = std::shared_ptr<std::shared_ptr<int>>(new std::shared_ptr<int>(new int));
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use std::make_shared instead
   // CHECK-FIXES: auto Nest = std::make_shared<std::shared_ptr<int>>(new int);
+  Nest.reset(new std::shared_ptr<int>(new int));
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use std::make_shared instead
+  // CHECK-FIXES: Nest = std::make_shared<std::shared_ptr<int>>(new int);
+  Nest->reset(new int);
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_shared instead
+  // CHECK-FIXES: *Nest = std::make_shared<int>();
+}
+
+void reset() {
+  std::shared_ptr<int> P;
+  P.reset();
+  P.reset(nullptr);
+  P.reset(new int());
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use std::make_shared instead
+  // CHECK-FIXES: P = std::make_shared<int>();
+
+  auto Q = &P;
+  Q->reset(new int());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_shared instead
+  // CHECK-FIXES: *Q = std::make_shared<int>();
 }

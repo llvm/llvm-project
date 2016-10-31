@@ -904,6 +904,12 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 #endif
 
+#if !defined(_LIBCPP_HAS_NO_OFF_T_FUNCTIONS)
+#if defined(_WIN32) || defined(_NEWLIB_VERSION)
+#define _LIBCPP_HAS_NO_OFF_T_FUNCTIONS
+#endif
+#endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG
