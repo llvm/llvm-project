@@ -39,10 +39,17 @@ protected:
 
   static const char PointerType[];
   static const char ConstructorCall[];
+  static const char ResetCall[];
   static const char NewExpression[];
 
 private:
   std::string makeSmartPtrFunctionName;
+
+  void checkConstruct(SourceManager &SM, const CXXConstructExpr *Construct,
+                      const QualType *Type, const CXXNewExpr *New);
+  void checkReset(SourceManager &SM, const CXXMemberCallExpr *Member,
+                  const CXXNewExpr *New);
+  void replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New);
 };
 
 } // namespace modernize

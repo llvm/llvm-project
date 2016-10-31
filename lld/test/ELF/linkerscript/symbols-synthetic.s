@@ -48,11 +48,11 @@
 # SIMPLE-NEXT: 0000000000001048         .text   00000000 _start
 # SIMPLE-NEXT: 0000000000000120         .foo    00000000 begin_foo
 # SIMPLE-NEXT: 0000000000000128         .foo    00000000 end_foo
-# SIMPLE-NEXT: 0000000000000008         .foo    00000000 size_foo_1
+# SIMPLE-NEXT: 0000000000000008         *ABS*   00000000 size_foo_1
 # SIMPLE-NEXT: 0000000000000008         *ABS*   00000000 size_foo_1_abs
 # SIMPLE-NEXT: 0000000000001000         .foo    00000000 begin_bar
 # SIMPLE-NEXT: 0000000000001004         .foo    00000000 end_bar
-# SIMPLE-NEXT: 0000000000000ee4         .foo    00000000 size_foo_2
+# SIMPLE-NEXT: 0000000000000ee4         *ABS*   00000000 size_foo_2
 # SIMPLE-NEXT: 0000000000000ee4         *ABS*   00000000 size_foo_3
 # SIMPLE-NEXT: 0000000000001004         .eh_frame_hdr     00000000 __eh_frame_hdr_start
 # SIMPLE-NEXT: 0000000000001010         *ABS*             00000000 __eh_frame_hdr_start2

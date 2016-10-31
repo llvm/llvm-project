@@ -5095,7 +5095,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
           FileSpec file_spec(path, true);
           // Remove any redundant parts of the path (like "../foo") since
           // LC_RPATH values often contain "..".
-          file_spec.NormalizePath();
+          file_spec = file_spec.GetNormalizedPath();
           if (file_spec.Exists() && files.AppendIfUnique(file_spec)) {
             count++;
             break;

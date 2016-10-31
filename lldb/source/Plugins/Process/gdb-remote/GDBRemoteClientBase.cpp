@@ -188,8 +188,11 @@ GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(
 
   const size_t max_response_retries = 3;
   for (size_t i = 0; i < max_response_retries; ++i) {
-    packet_result =
-        ReadPacket(response, GetPacketTimeoutInMicroSeconds(), true);
+    packet_result = ReadPacket(
+        response, std::chrono::duration_cast<std::chrono::microseconds>(
+                      GetPacketTimeout())
+                      .count(),
+        true);
     // Make sure we received a response
     if (packet_result != PacketResult::Success)
       return packet_result;

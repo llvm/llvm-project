@@ -20,12 +20,14 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/StructuredData.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
 using namespace lldb;
+using namespace llvm;
 
 namespace {
 
@@ -45,8 +47,7 @@ void Handle_QThreadSuffixSupported(MockServer &server, bool supported) {
     ASSERT_EQ(PacketResult::Success, server.SendUnimplementedResponse(nullptr));
 }
 
-void HandlePacket(MockServer &server, llvm::StringRef expected,
-                  llvm::StringRef response) {
+void HandlePacket(MockServer &server, StringRef expected, StringRef response) {
   StringExtractorGDBRemote request;
   ASSERT_EQ(PacketResult::Success, server.GetPacket(request));
   ASSERT_EQ(expected, request.GetStringRef());
@@ -259,4 +260,46 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
 
     ASSERT_FALSE(async_result.get().hasValue()) << "response was: " << response;
   }
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
+  TestClient client;
+  MockServer server;
+  Connect(client, server);
+  if (HasFailure())
+    return;
+
+  std::thread server_thread([&server] {
+    StringExtractorGDBRemote request;
+    PacketResult result = server.GetPacket(request);
+    if (result == PacketResult::ErrorDisconnected)
+      return;
+    ASSERT_EQ(PacketResult::Success, result);
+    StringRef ref = request.GetStringRef();
+    ASSERT_TRUE(ref.consume_front("qSpeedTest:response_size:"));
+    int size;
+    ASSERT_FALSE(ref.consumeInteger(10, size)) << "ref: " << ref;
+    std::string response(size, 'X');
+    ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
+  });
+
+  StreamString ss;
+  client.TestPacketSpeed(10, 32, 32, true, ss);
+  client.Disconnect();
+  server_thread.join();
+
+  auto object_sp = StructuredData::ParseJSON(ss.GetString());
+  ASSERT_TRUE(bool(object_sp));
+  auto dict_sp = object_sp->GetAsDictionary();
+  ASSERT_TRUE(bool(dict_sp));
+
+  object_sp = dict_sp->GetValueForKey("packet_speeds");
+  ASSERT_TRUE(bool(object_sp));
+  dict_sp = object_sp->GetAsDictionary();
+  ASSERT_TRUE(bool(dict_sp));
+
+  int num_packets;
+  ASSERT_TRUE(dict_sp->GetValueForKeyAsInteger("num_packets", num_packets))
+      << ss.GetString();
+  ASSERT_EQ(10, num_packets);
 }

@@ -620,22 +620,7 @@ public:
   /// Normalize a pathname by collapsing redundant separators and
   /// up-level references.
   //------------------------------------------------------------------
-  void NormalizePath();
-
-  //------------------------------------------------------------------
-  /// Run through the input string, replaying the effect of any ".." and produce
-  /// the resultant path.  The input path is not required to be in the host file
-  /// system
-  /// format, but it is required to be normalized to that system.
-  ///
-  /// @param[in] input
-  ///     The input path to analyze.
-  ///
-  /// @param[out] result
-  ///     The backup-resolved path will be written here.
-  //------------------------------------------------------------------
-  static void RemoveBackupDots(const ConstString &input_const_str,
-                               ConstString &result_const_str);
+  FileSpec GetNormalizedPath() const;
 
   //------------------------------------------------------------------
   /// Change the file specified with a new path.

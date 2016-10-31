@@ -439,7 +439,8 @@ static_assert(sizeof(MinidumpModule) == 108,
 // Exception stuff
 struct MinidumpException {
   enum {
-    MaxParams = 15,
+    ExceptonInfoMaxParams = 15,
+    DumpRequested = 0xFFFFFFFF,
   };
 
   llvm::support::ulittle32_t exception_code;
@@ -448,7 +449,7 @@ struct MinidumpException {
   llvm::support::ulittle64_t exception_address;
   llvm::support::ulittle32_t number_parameters;
   llvm::support::ulittle32_t unused_alignment;
-  llvm::support::ulittle64_t exception_information[MaxParams];
+  llvm::support::ulittle64_t exception_information[ExceptonInfoMaxParams];
 };
 static_assert(sizeof(MinidumpException) == 152,
               "sizeof MinidumpException is not correct!");

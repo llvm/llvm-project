@@ -445,7 +445,7 @@ Error PlatformRemoteGDBServer::LaunchProcess(ProcessLaunchInfo &launch_info) {
   {
     // Scope for the scoped timeout object
     process_gdb_remote::GDBRemoteCommunication::ScopedTimeout timeout(
-        m_gdb_client, 5);
+        m_gdb_client, std::chrono::seconds(5));
     arg_packet_err = m_gdb_client.SendArgumentsPacket(launch_info);
   }
 
