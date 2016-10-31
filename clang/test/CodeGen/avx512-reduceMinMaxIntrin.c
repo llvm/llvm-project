@@ -134,7 +134,7 @@ unsigned long test_mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __W){
 
 long long test_mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __W){
   // CHECK: %tmp = bitcast i8 %__M to <8 x i1>
-  // CHECK: %tmp1 = select <8 x i1> %tmp, <8 x double> %__W, <8 x double> <double 0x43EFFE0000000000, double 0x43EFFE0000000000, double 0x43EFFE0000000000, double 0x43EFFE0000000000, double 0x43EFFE0000000000, double 0x43EFFE0000000000, double 0x43EFFE0000000000, double 0x43EFFE0000000000>
+  // CHECK: %tmp1 = select <8 x i1> %tmp, <8 x double> %__W, <8 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000>
   // CHECK: %shuffle1.i = shufflevector <8 x double> %tmp1, <8 x double> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp2 = tail call <8 x double> @llvm.x86.avx512.mask.max.pd.512(<8 x double> %tmp1, <8 x double> %shuffle1.i, <8 x double> zeroinitializer, i8 -1, i32 4) #3
   // CHECK: %shuffle4.i = shufflevector <8 x double> %tmp2, <8 x double> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -187,7 +187,7 @@ long long test_mm512_mask_reduce_min_epu64(__mmask8 __M, __m512i __W){
 
 double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
   // CHECK: %tmp = bitcast i8 %__M to <8 x i1>
-  // CHECK: %tmp1 = select <8 x i1> %tmp, <8 x double> %__W, <8 x double> <double 0x43DFFC0000000000, double 0x43DFFC0000000000, double 0x43DFFC0000000000, double 0x43DFFC0000000000, double 0x43DFFC0000000000, double 0x43DFFC0000000000, double 0x43DFFC0000000000, double 0x43DFFC0000000000>
+  // CHECK: %tmp1 = select <8 x i1> %tmp, <8 x double> %__W, <8 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>
   // CHECK: %shuffle1.i = shufflevector <8 x double> %tmp1, <8 x double> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp2 = tail call <8 x double> @llvm.x86.avx512.mask.min.pd.512(<8 x double> %tmp1, <8 x double> %shuffle1.i, <8 x double> zeroinitializer, i8 -1, i32 4) #3
   // CHECK: %shuffle4.i = shufflevector <8 x double> %tmp2, <8 x double> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -359,7 +359,7 @@ unsigned int test_mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __W){
 
 float test_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __W){
   // CHECK: %tmp = bitcast i16 %__M to <16 x i1>
-  // CHECK: %tmp1 = select <16 x i1> %tmp, <16 x float> %__W, <16 x float> <float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000, float 0x41EFF00000000000>
+  // CHECK: %tmp1 = select <16 x i1> %tmp, <16 x float> %__W, <16 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
   // CHECK: %shuffle1.i = shufflevector <16 x float> %tmp1, <16 x float> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp2 = tail call <16 x float> @llvm.x86.avx512.mask.max.ps.512(<16 x float> %tmp1, <16 x float> %shuffle1.i, <16 x float> zeroinitializer, i16 -1, i32 4) #3
   // CHECK: %shuffle4.i = shufflevector <16 x float> %tmp2, <16 x float> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -421,7 +421,7 @@ unsigned int test_mm512_mask_reduce_min_epu32(__mmask16 __M, __m512i __W){
 
 float test_mm512_mask_reduce_min_ps(__mmask16 __M, __m512 __W){
   // CHECK: %tmp = bitcast i16 %__M to <16 x i1>
-  // CHECK: %tmp1 = select <16 x i1> %tmp, <16 x float> %__W, <16 x float> <float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000, float 0x41DFE00000000000>
+  // CHECK: %tmp1 = select <16 x i1> %tmp, <16 x float> %__W, <16 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
   // CHECK: %shuffle1.i = shufflevector <16 x float> %tmp1, <16 x float> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp2 = tail call <16 x float> @llvm.x86.avx512.mask.min.ps.512(<16 x float> %tmp1, <16 x float> %shuffle1.i, <16 x float> zeroinitializer, i16 -1, i32 4) #3
   // CHECK: %shuffle4.i = shufflevector <16 x float> %tmp2, <16 x float> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

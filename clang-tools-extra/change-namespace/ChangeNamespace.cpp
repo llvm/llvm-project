@@ -272,13 +272,15 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
           allOf(IsInMovedNs, unless(cxxRecordDecl(unless(isDefinition())))))));
 
   // Match TypeLocs on the declaration. Carefully match only the outermost
-  // TypeLoc that's directly linked to the old class and don't handle nested
-  // name specifier locs.
+  // TypeLoc and template specialization arguments (which are not outermost)
+  // that are directly linked to types matching `DeclMatcher`. Nested name
+  // specifier locs are handled separately below.
   Finder->addMatcher(
       typeLoc(IsInMovedNs,
               loc(qualType(hasDeclaration(DeclMatcher.bind("from_decl")))),
-              unless(anyOf(hasParent(typeLoc(
-                               loc(qualType(hasDeclaration(DeclMatcher))))),
+              unless(anyOf(hasParent(typeLoc(loc(qualType(
+                               allOf(hasDeclaration(DeclMatcher),
+                                     unless(templateSpecializationType())))))),
                            hasParent(nestedNameSpecifierLoc()))),
               hasAncestor(decl().bind("dc")))
           .bind("type"),
