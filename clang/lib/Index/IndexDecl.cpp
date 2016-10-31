@@ -75,8 +75,21 @@ public:
     }
   }
 
-  bool handleObjCMethod(const ObjCMethodDecl *D) {
-    if (!IndexCtx.handleDecl(D, (unsigned)SymbolRole::Dynamic))
+  bool handleObjCMethod(const ObjCMethodDecl *D,
+                        const ObjCPropertyDecl *AssociatedProp = nullptr) {
+    SmallVector<SymbolRelation, 4> Relations;
+    SmallVector<const ObjCMethodDecl*, 4> Overriden;
+
+    D->getOverriddenMethods(Overriden);
+    for(auto overridden: Overriden) {
+      Relations.emplace_back((unsigned) SymbolRole::RelationOverrideOf,
+                             overridden);
+    }
+    if (AssociatedProp)
+      Relations.emplace_back((unsigned)SymbolRole::RelationAccessorOf,
+                             AssociatedProp);
+
+    if (!IndexCtx.handleDecl(D, (unsigned)SymbolRole::Dynamic, Relations))
       return false;
     IndexCtx.indexTypeSourceInfo(D->getReturnTypeSourceInfo(), D);
     for (const auto *I : D->parameters())
@@ -269,9 +282,18 @@ public:
   }
 
   bool VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
-    if (!IndexCtx.handleDecl(D))
-      return false;
-    IndexCtx.indexDeclContext(D);
+    const ObjCInterfaceDecl *C = D->getClassInterface();
+    if (C)
+      TRY_TO(IndexCtx.handleReference(C, D->getLocation(), D, D,
+                                  SymbolRoleSet(), SymbolRelation{
+                                    (unsigned)SymbolRole::RelationExtendedBy, D
+                                  }));
+    SourceLocation CategoryLoc = D->getCategoryNameLoc();
+    if (!CategoryLoc.isValid())
+      CategoryLoc = D->getLocation();
+    TRY_TO(IndexCtx.handleDecl(D, CategoryLoc));
+    TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D));
+    TRY_TO(IndexCtx.indexDeclContext(D));
     return true;
   }
 
@@ -279,8 +301,14 @@ public:
     const ObjCCategoryDecl *Cat = D->getCategoryDecl();
     if (!Cat)
       return true;
-
-    if (!IndexCtx.handleDecl(D))
+    const ObjCInterfaceDecl *C = D->getClassInterface();
+    if (C)
+      TRY_TO(IndexCtx.handleReference(C, D->getLocation(), D, D,
+                                      SymbolRoleSet()));
+    SourceLocation CategoryLoc = D->getCategoryNameLoc();
+    if (!CategoryLoc.isValid())
+      CategoryLoc = D->getLocation();
+    if (!IndexCtx.handleDecl(D, CategoryLoc))
       return false;
     IndexCtx.indexDeclContext(D);
     return true;
@@ -299,10 +327,10 @@ public:
   bool VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     if (ObjCMethodDecl *MD = D->getGetterMethodDecl())
       if (MD->getLexicalDeclContext() == D->getLexicalDeclContext())
-        handleObjCMethod(MD);
+        handleObjCMethod(MD, D);
     if (ObjCMethodDecl *MD = D->getSetterMethodDecl())
       if (MD->getLexicalDeclContext() == D->getLexicalDeclContext())
-        handleObjCMethod(MD);
+        handleObjCMethod(MD, D);
     if (!IndexCtx.handleDecl(D))
       return false;
     IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), D);
