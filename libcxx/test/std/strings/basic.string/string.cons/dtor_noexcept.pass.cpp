@@ -27,6 +27,11 @@ struct some_alloc
     ~some_alloc() noexcept(false);
 };
 
+// Test that it's possible to take the address of basic_string's destructors
+// by creating globals which will register their destructors with cxa_atexit.
+std::string s;
+std::wstring ws;
+
 int main()
 {
     {

@@ -609,11 +609,7 @@ namespace std {
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
-# ifdef _LIBCPP_BUILDING_LIBRARY
-#   define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__((__visibility__("default"), __always_inline__))
-# else
-#   define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY _LIBCPP_INLINE_VISIBILITY
-# endif
+# define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__((__visibility__("default"), __always_inline__))
 #endif
 
 #ifndef _LIBCPP_PREFERRED_OVERLOAD

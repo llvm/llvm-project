@@ -344,3 +344,232 @@ entry:
   store <32 x i8> %0, <32 x i8>* %1, align 1
   ret void
 }
+
+define <4 x double> @test_mm512_mask_extractf64x4_pd(<4 x double> %__W, i8 %__U, <8 x double> %__A) {
+; SKX-LABEL: test_mm512_mask_extractf64x4_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf64x4 $1, %zmm1, %ymm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x double> %__A, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %1 = select <4 x i1> %extract, <4 x double> %shuffle, <4 x double> %__W
+  ret <4 x double> %1
+}
+
+define <4 x double> @test_mm512_maskz_extractf64x4_pd(i8 %__U, <8 x double> %__A) {
+; SKX-LABEL: test_mm512_maskz_extractf64x4_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf64x4 $1, %zmm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x double> %__A, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %1 = select <4 x i1> %extract, <4 x double> %shuffle, <4 x double> zeroinitializer
+  ret <4 x double> %1
+}
+
+define <4 x float> @test_mm512_mask_extractf32x4_ps(<4 x float> %__W, i8 %__U, <8 x double> %__A) {
+; SKX-LABEL: test_mm512_mask_extractf32x4_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf32x4 $1, %zmm1, %xmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <16 x float>
+  %shuffle = shufflevector <16 x float> %0, <16 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract, <4 x float> %shuffle, <4 x float> %__W
+  ret <4 x float> %2
+}
+
+define <4 x float> @test_mm512_maskz_extractf32x4_ps(i8 %__U, <8 x double> %__A) {
+; SKX-LABEL: test_mm512_maskz_extractf32x4_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf32x4 $1, %zmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <16 x float>
+  %shuffle = shufflevector <16 x float> %0, <16 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract, <4 x float> %shuffle, <4 x float> zeroinitializer
+  ret <4 x float> %2
+}
+
+define <2 x double> @test_mm256_mask_extractf64x2_pd(<2 x double> %__W, i8 %__U, <4 x double> %__A) {
+; SKX-LABEL: test_mm256_mask_extractf64x2_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf64x2 $1, %ymm1, %xmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <4 x double> %__A, <4 x double> undef, <2 x i32> <i32 2, i32 3>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %1 = select <2 x i1> %extract, <2 x double> %shuffle, <2 x double> %__W
+  ret <2 x double> %1
+}
+
+define <2 x double> @test_mm256_maskz_extractf64x2_pd(i8 %__U, <4 x double> %__A) {
+; SKX-LABEL: test_mm256_maskz_extractf64x2_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf64x2 $1, %ymm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <4 x double> %__A, <4 x double> undef, <2 x i32> <i32 2, i32 3>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %1 = select <2 x i1> %extract, <2 x double> %shuffle, <2 x double> zeroinitializer
+  ret <2 x double> %1
+}
+
+define <2 x i64> @test_mm256_mask_extracti64x2_epi64(<2 x i64> %__W, i8 %__U, <4 x i64> %__A) {
+; SKX-LABEL: test_mm256_mask_extracti64x2_epi64:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextracti64x2 $1, %ymm1, %xmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <4 x i64> %__A, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %1 = select <2 x i1> %extract, <2 x i64> %shuffle, <2 x i64> %__W
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @test_mm256_maskz_extracti64x2_epi64(i8 %__U, <4 x i64> %__A) {
+; SKX-LABEL: test_mm256_maskz_extracti64x2_epi64:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextracti64x2 $1, %ymm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <4 x i64> %__A, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %1 = select <2 x i1> %extract, <2 x i64> %shuffle, <2 x i64> zeroinitializer
+  ret <2 x i64> %1
+}
+
+define <4 x float> @test_mm256_mask_extractf32x4_ps(<4 x float> %__W, i8 %__U, <8 x float> %__A) {
+; SKX-LABEL: test_mm256_mask_extractf32x4_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf32x4 $1, %ymm1, %xmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %__A, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %1 = select <4 x i1> %extract, <4 x float> %shuffle, <4 x float> %__W
+  ret <4 x float> %1
+}
+
+define <4 x float> @test_mm256_maskz_extractf32x4_ps(i8 %__U, <8 x float> %__A) {
+; SKX-LABEL: test_mm256_maskz_extractf32x4_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf32x4 $1, %ymm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x float> %__A, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %1 = select <4 x i1> %extract, <4 x float> %shuffle, <4 x float> zeroinitializer
+  ret <4 x float> %1
+}
+
+define <2 x i64> @test_mm256_mask_extracti32x4_epi32(<2 x i64> %__W, i8 %__U, <4 x i64> %__A) {
+; SKX-LABEL: test_mm256_mask_extracti32x4_epi32:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextracti32x4 $1, %ymm1, %xmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__A to <8 x i32>
+  %shuffle = shufflevector <8 x i32> %0, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %1 = bitcast <2 x i64> %__W to <4 x i32>
+  %2 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = select <4 x i1> %extract, <4 x i32> %shuffle, <4 x i32> %1
+  %4 = bitcast <4 x i32> %3 to <2 x i64>
+  ret <2 x i64> %4
+}
+
+define <2 x i64> @test_mm256_maskz_extracti32x4_epi32(i8 %__U, <4 x i64> %__A) {
+; SKX-LABEL: test_mm256_maskz_extracti32x4_epi32:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextracti32x4 $1, %ymm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__A to <8 x i32>
+  %shuffle = shufflevector <8 x i32> %0, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract, <4 x i32> %shuffle, <4 x i32> zeroinitializer
+  %3 = bitcast <4 x i32> %2 to <2 x i64>
+  ret <2 x i64> %3
+}
+
+define <8 x float> @test_mm512_mask_extractf32x8_ps(<8 x float> %__W, i8 %__U, <16 x float> %__A) {
+; SKX-LABEL: test_mm512_mask_extractf32x8_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf32x8 $1, %zmm1, %ymm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <16 x float> %__A, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %1 = select <8 x i1> %0, <8 x float> %shuffle, <8 x float> %__W
+  ret <8 x float> %1
+}
+
+define <8 x float> @test_mm512_maskz_extractf32x8_ps(i8 %__U, <16 x float> %__A) {
+; SKX-LABEL: test_mm512_maskz_extractf32x8_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf32x8 $1, %zmm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <16 x float> %__A, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %1 = select <8 x i1> %0, <8 x float> %shuffle, <8 x float> zeroinitializer
+  ret <8 x float> %1
+}
+
+define <2 x double> @test_mm512_mask_extractf64x2_pd(<2 x double> %__W, i8 %__U, <8 x double> %__A) {
+; SKX-LABEL: test_mm512_mask_extractf64x2_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf64x2 $3, %zmm1, %xmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x double> %__A, <8 x double> undef, <2 x i32> <i32 6, i32 7>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %1 = select <2 x i1> %extract, <2 x double> %shuffle, <2 x double> %__W
+  ret <2 x double> %1
+}
+
+define <2 x double> @test_mm512_maskz_extractf64x2_pd(i8 %__U, <8 x double> %__A) {
+; SKX-LABEL: test_mm512_maskz_extractf64x2_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vextractf64x2 $3, %zmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %shuffle = shufflevector <8 x double> %__A, <8 x double> undef, <2 x i32> <i32 6, i32 7>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %0, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %1 = select <2 x i1> %extract, <2 x double> %shuffle, <2 x double> zeroinitializer
+  ret <2 x double> %1
+}

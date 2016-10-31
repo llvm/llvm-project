@@ -256,14 +256,21 @@ libc++ Feature Options
   Build the libc++ benchmark tests and the Google Benchmark library needed
   to support them.
 
-.. option:: LIBCXX_BUILD_BENCHMARK_NATIVE_STDLIB:BOOL
+.. option:: LIBCXX_BENCHMARK_NATIVE_STDLIB:STRING
 
-  **Default**:: ``OFF``
+  **Default**:: ``""``
+
+  **Values**:: ``libc++``, ``libstdc++``
 
   Build the libc++ benchmark tests and Google Benchmark library against the
-  native standard library on the platform. On linux this can be used to compare
-  libc++ to libstdc++ by building the benchmark tests against both standard
-  libraries.
+  specified standard library on the platform. On linux this can be used to
+  compare libc++ to libstdc++ by building the benchmark tests against both
+  standard libraries.
+
+.. option:: LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN:STRING
+
+  Use the specified GCC toolchain and standard library when building the native
+  stdlib benchmark tests.
 
 
 libc++ ABI Feature Options

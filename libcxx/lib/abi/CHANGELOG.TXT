@@ -16,6 +16,21 @@ New entries should be added directly below the "Version" header.
 Version 4.0
 -----------
 
+* rTBD - Remove std::string::append template methods which should be inline
+
+  These functions should never have had visible definitions in the dylib but
+  since they were previously not specified with 'inline' they accidentally
+  got emitted. This change is non-ABI breaking because every "linkage unit"
+  must contain its own definition.
+
+  x86_64-linux-gnu
+  ----------------
+  SYMBOL REMOVED: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendIPcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
+  SYMBOL REMOVED: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6appendIPwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  No changes
 
 * r285101 - Add -fvisibility-inlines-hidden when building libc++.
 
