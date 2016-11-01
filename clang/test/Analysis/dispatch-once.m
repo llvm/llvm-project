@@ -90,3 +90,20 @@ void test_ivar_struct_from_external_obj(Object *o) {
 void test_ivar_array_from_external_obj(Object *o) {
   dispatch_once(&o->once_array[1], ^{}); // expected-warning{{Call to 'dispatch_once' uses memory within the instance variable 'once_array' for the predicate value.}}
 }
+
+void test_block_var_from_block() {
+  __block dispatch_once_t once;
+  ^{
+    dispatch_once(&once, ^{}); // expected-warning{{Call to 'dispatch_once' uses the block variable 'once' for the predicate value.}}
+  };
+}
+
+void use_block_var(dispatch_once_t *once);
+
+void test_block_var_from_outside_block() {
+  __block dispatch_once_t once;
+  ^{
+    use_block_var(&once);
+  };
+  dispatch_once(&once, ^{}); // expected-warning{{Call to 'dispatch_once' uses the block variable 'once' for the predicate value.}}
+}

@@ -94,10 +94,15 @@ void MacOSXAPIChecker::CheckDispatchOnce(CheckerContext &C, const CallExpr *CE,
   bool SuggestStatic = false;
   os << "Call to '" << FName << "' uses";
   if (const VarRegion *VR = dyn_cast<VarRegion>(RB)) {
-    // We filtered out globals earlier, so it must be a local variable.
+    // We filtered out globals earlier, so it must be a local variable
+    // or a block variable which is under UnknownSpaceRegion.
     if (VR != R)
       os << " memory within";
-    os << " the local variable '" << VR->getDecl()->getName() << '\'';
+    if (VR->getDecl()->hasAttr<BlocksAttr>())
+      os << " the block variable '";
+    else
+      os << " the local variable '";
+    os << VR->getDecl()->getName() << '\'';
     SuggestStatic = true;
   } else if (const ObjCIvarRegion *IVR = getParentIvarRegion(R)) {
     if (IVR != R)
@@ -108,6 +113,9 @@ void MacOSXAPIChecker::CheckDispatchOnce(CheckerContext &C, const CallExpr *CE,
   } else if (isa<UnknownSpaceRegion>(RS)) {
     // Presence of an IVar superregion has priority over this branch, because
     // ObjC objects are on the heap even if the core doesn't realize this.
+    // Presence of a block variable base region has priority over this branch,
+    // because block variables are known to be either on stack or on heap
+    // (might actually move between the two, hence UnknownSpace).
     return;
   } else {
     os << " stack allocated memory";
