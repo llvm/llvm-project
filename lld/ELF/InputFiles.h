@@ -69,7 +69,7 @@ template <class ELFT> class DIHelper {
 public:
   DIHelper(InputFile *F);
   ~DIHelper();
-  std::string getLineInfo(uintX_t Offset);
+  std::string getLineInfo(InputSectionBase<ELFT> *S, uintX_t Offset);
 
 private:
   std::unique_ptr<llvm::DWARFDebugLine> DwarfLine;

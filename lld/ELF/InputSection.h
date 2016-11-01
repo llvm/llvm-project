@@ -88,6 +88,7 @@ protected:
 public:
   // These corresponds to the fields in Elf_Shdr.
   uintX_t Flags;
+  uintX_t Offset = 0;
   uintX_t Entsize;
   uint32_t Type;
   uint32_t Link;
@@ -251,6 +252,9 @@ public:
   // to. The writer sets a value.
   uint64_t OutSecOff = 0;
 
+  // Location of this section in the output buffer
+  uint8_t *OutputLoc = nullptr;
+
   // InputSection that is dependent on us (reverse dependency for GC)
   InputSectionBase<ELFT> *DependentSection = nullptr;
 
@@ -338,6 +342,56 @@ public:
   const llvm::object::Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;
 };
 
+template <class ELFT> class BuildIdSection : public InputSection<ELFT> {
+public:
+  virtual void writeBuildId(ArrayRef<uint8_t> Buf) = 0;
+  virtual ~BuildIdSection() = default;
+
+protected:
+  BuildIdSection(size_t HashSize);
+  std::vector<uint8_t> Buf;
+};
+
+template <class ELFT>
+class BuildIdFastHash final : public BuildIdSection<ELFT> {
+public:
+  BuildIdFastHash() : BuildIdSection<ELFT>(8) {}
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
+};
+
+template <class ELFT> class BuildIdMd5 final : public BuildIdSection<ELFT> {
+public:
+  BuildIdMd5() : BuildIdSection<ELFT>(16) {}
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
+};
+
+template <class ELFT> class BuildIdSha1 final : public BuildIdSection<ELFT> {
+public:
+  BuildIdSha1() : BuildIdSection<ELFT>(20) {}
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
+};
+
+template <class ELFT> class BuildIdUuid final : public BuildIdSection<ELFT> {
+public:
+  BuildIdUuid() : BuildIdSection<ELFT>(16) {}
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
+};
+
+template <class ELFT>
+class BuildIdHexstring final : public BuildIdSection<ELFT> {
+public:
+  BuildIdHexstring();
+  void writeBuildId(ArrayRef<uint8_t>) override;
+};
+
+// Linker generated sections which can be used as inputs.
+template <class ELFT> struct In {
+  static BuildIdSection<ELFT> *BuildId;
+  static std::vector<InputSection<ELFT> *> Sections;
+};
+
+template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
+template <class ELFT> std::vector<InputSection<ELFT> *> In<ELFT>::Sections;
 } // namespace elf
 } // namespace lld
 

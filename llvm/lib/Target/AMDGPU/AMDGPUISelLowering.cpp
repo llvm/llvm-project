@@ -359,6 +359,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT, VT, Expand);
     setOperationAction(ISD::FP_TO_UINT, VT, Expand);
     setOperationAction(ISD::MUL,  VT, Expand);
+    setOperationAction(ISD::MULHU, VT, Expand);
+    setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::OR,   VT, Expand);
     setOperationAction(ISD::SHL,  VT, Expand);
     setOperationAction(ISD::SRA,  VT, Expand);

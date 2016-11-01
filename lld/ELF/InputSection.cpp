@@ -19,6 +19,8 @@
 
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -75,7 +77,9 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          Kind SectionKind)
     : InputSectionBase(File, Hdr->sh_flags, Hdr->sh_type, Hdr->sh_entsize,
                        Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
-                       getSectionContents(File, Hdr), Name, SectionKind) {}
+                       getSectionContents(File, Hdr), Name, SectionKind) {
+  this->Offset = Hdr->sh_offset;
+}
 
 template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
   if (auto *D = dyn_cast<InputSection<ELFT>>(this))
@@ -478,6 +482,9 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   if (this->Type == SHT_NOBITS)
     return;
 
+  // Set output location.
+  this->OutputLoc = Buf + OutSecOff;
+
   // If -r is given, then an InputSection may be a relocation section.
   if (this->Type == SHT_RELA) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rela>());
@@ -846,6 +853,60 @@ InputSection<ELFT> InputSection<ELFT>::createCommonInputSection(
   return Ret;
 }
 
+template <class ELFT>
+BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
+    : InputSection<ELFT>(SHF_ALLOC, SHT_NOTE, 1, ArrayRef<uint8_t>(),
+                         ".note.gnu.build-id") {
+  Buf.resize(16 + HashSize);
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf.data(), 4);                   // Name size
+  write32<E>(Buf.data() + 4, HashSize);        // Content size
+  write32<E>(Buf.data() + 8, NT_GNU_BUILD_ID); // Type
+  memcpy(Buf.data() + 12, "GNU", 4);           // Name string
+  this->Data = ArrayRef<uint8_t>(Buf);
+}
+
+template <class ELFT>
+void BuildIdFastHash<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+  const endianness E = ELFT::TargetEndianness;
+
+  // 64-bit xxhash
+  uint64_t Hash = xxHash64(toStringRef(Buf));
+  write64<E>(this->OutputLoc + 16, Hash);
+}
+
+template <class ELFT>
+void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+  MD5 Hash;
+  Hash.update(Buf);
+  MD5::MD5Result Res;
+  Hash.final(Res);
+  memcpy(this->OutputLoc + 16, Res, 16);
+}
+
+template <class ELFT>
+void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+  SHA1 Hash;
+  Hash.update(Buf);
+  memcpy(this->OutputLoc + 16, Hash.final().data(), 20);
+}
+
+template <class ELFT>
+void BuildIdUuid<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+  if (getRandomBytes(this->OutputLoc + 16, 16))
+    error("entropy source failure");
+}
+
+template <class ELFT>
+BuildIdHexstring<ELFT>::BuildIdHexstring()
+    : BuildIdSection<ELFT>(Config->BuildIdVector.size()) {}
+
+template <class ELFT>
+void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+  memcpy(this->OutputLoc + 16, Config->BuildIdVector.data(),
+         Config->BuildIdVector.size());
+}
+
 template class elf::InputSectionBase<ELF32LE>;
 template class elf::InputSectionBase<ELF32BE>;
 template class elf::InputSectionBase<ELF64LE>;
@@ -880,3 +941,33 @@ template class elf::MipsAbiFlagsInputSection<ELF32LE>;
 template class elf::MipsAbiFlagsInputSection<ELF32BE>;
 template class elf::MipsAbiFlagsInputSection<ELF64LE>;
 template class elf::MipsAbiFlagsInputSection<ELF64BE>;
+
+template class elf::BuildIdSection<ELF32LE>;
+template class elf::BuildIdSection<ELF32BE>;
+template class elf::BuildIdSection<ELF64LE>;
+template class elf::BuildIdSection<ELF64BE>;
+
+template class elf::BuildIdFastHash<ELF32LE>;
+template class elf::BuildIdFastHash<ELF32BE>;
+template class elf::BuildIdFastHash<ELF64LE>;
+template class elf::BuildIdFastHash<ELF64BE>;
+
+template class elf::BuildIdMd5<ELF32LE>;
+template class elf::BuildIdMd5<ELF32BE>;
+template class elf::BuildIdMd5<ELF64LE>;
+template class elf::BuildIdMd5<ELF64BE>;
+
+template class elf::BuildIdSha1<ELF32LE>;
+template class elf::BuildIdSha1<ELF32BE>;
+template class elf::BuildIdSha1<ELF64LE>;
+template class elf::BuildIdSha1<ELF64BE>;
+
+template class elf::BuildIdUuid<ELF32LE>;
+template class elf::BuildIdUuid<ELF32BE>;
+template class elf::BuildIdUuid<ELF64LE>;
+template class elf::BuildIdUuid<ELF64BE>;
+
+template class elf::BuildIdHexstring<ELF32LE>;
+template class elf::BuildIdHexstring<ELF32BE>;
+template class elf::BuildIdHexstring<ELF64LE>;
+template class elf::BuildIdHexstring<ELF64BE>;

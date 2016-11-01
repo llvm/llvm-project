@@ -1342,8 +1342,10 @@ def VRLDNM : VX1_VT5_VA5_VB5<453, "vrldnm", []>;
 def VRLDMI : VX1_VT5_VA5_VB5<197, "vrldmi", []>;
 
 // Vector Shift Left/Right
-def VSLV : VX1_VT5_VA5_VB5<1860, "vslv", []>;
-def VSRV : VX1_VT5_VA5_VB5<1796, "vsrv", []>;
+def VSLV : VX1_VT5_VA5_VB5<1860, "vslv",
+                           [(set v16i8 : $vD, (int_ppc_altivec_vslv v16i8 : $vA, v16i8 : $vB))]>;
+def VSRV : VX1_VT5_VA5_VB5<1796, "vsrv",
+                           [(set v16i8 : $vD, (int_ppc_altivec_vsrv v16i8 : $vA, v16i8 : $vB))]>;
 
 // Vector Multiply-by-10 (& Write Carry) Unsigned Quadword
 def VMUL10UQ   : VXForm_BX<513, (outs vrrc:$vD), (ins vrrc:$vA),

@@ -4018,6 +4018,7 @@ X86TargetInfo::validateAsmConstraint(const char *&Name,
   case 'u': // Second from top of floating point stack.
   case 'q': // Any register accessible as [r]l: a, b, c, and d.
   case 'y': // Any MMX register.
+  case 'v': // Any {X,Y,Z}MM register (Arch & context dependent)
   case 'x': // Any SSE register.
   case 'k': // Any AVX512 mask register (same as Yk, additionaly allows k0
             // for intermideate k reg operations).
@@ -4062,6 +4063,7 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
   case 't':
   case 'u':
     return Size <= 128;
+  case 'v':
   case 'x':
     if (SSELevel >= AVX512F)
       // 512-bit zmm registers can be used if target supports AVX512F.

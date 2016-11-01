@@ -544,7 +544,7 @@ static std::string getLocation(SymbolBody &Sym, InputSectionBase<ELFT> &S,
   ObjectFile<ELFT> *File = S.getFile();
 
   // First check if we can get desired values from debugging information.
-  std::string LineInfo = File->getDIHelper()->getLineInfo(Offset);
+  std::string LineInfo = File->getDIHelper()->getLineInfo(&S, Offset);
   if (!LineInfo.empty())
     return LineInfo;
 
