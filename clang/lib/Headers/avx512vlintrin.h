@@ -8309,43 +8309,48 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
                                 (__v4si)_mm_setzero_si128()); })
 
 #define _mm256_insertf32x4(A, B, imm) __extension__ ({ \
-  (__m256)__builtin_ia32_insertf32x4_256_mask((__v8sf)(__m256)(A), \
-                                              (__v4sf)(__m128)(B), (int)(imm), \
-                                              (__v8sf)_mm256_setzero_ps(), \
-                                              (__mmask8)-1); })
+  (__m256)__builtin_shufflevector((__v8sf)(A), \
+                                  (__v8sf)_mm256_castps128_ps256((__m128)(B)), \
+                                  ((imm) & 0x1) ?  0 :  8, \
+                                  ((imm) & 0x1) ?  1 :  9, \
+                                  ((imm) & 0x1) ?  2 : 10, \
+                                  ((imm) & 0x1) ?  3 : 11, \
+                                  ((imm) & 0x1) ?  8 :  4, \
+                                  ((imm) & 0x1) ?  9 :  5, \
+                                  ((imm) & 0x1) ? 10 :  6, \
+                                  ((imm) & 0x1) ? 11 :  7); })
 
 #define _mm256_mask_insertf32x4(W, U, A, B, imm) __extension__ ({ \
-  (__m256)__builtin_ia32_insertf32x4_256_mask((__v8sf)(__m256)(A), \
-                                              (__v4sf)(__m128)(B), (int)(imm), \
-                                              (__v8sf)(__m256)(W), \
-                                              (__mmask8)(U)); })
+  (__m256)__builtin_ia32_selectps_256((__mmask8)(U), \
+                                  (__v8sf)_mm256_insertf32x4((A), (B), (imm)), \
+                                  (__v8sf)(W)); })
 
 #define _mm256_maskz_insertf32x4(U, A, B, imm) __extension__ ({ \
-  (__m256)__builtin_ia32_insertf32x4_256_mask((__v8sf)(__m256)(A), \
-                                              (__v4sf)(__m128)(B), (int)(imm), \
-                                              (__v8sf)_mm256_setzero_ps(), \
-                                              (__mmask8)(U)); })
+  (__m256)__builtin_ia32_selectps_256((__mmask8)(U), \
+                                  (__v8sf)_mm256_insertf32x4((A), (B), (imm)), \
+                                  (__v8sf)_mm256_setzero_ps()); })
 
 #define _mm256_inserti32x4(A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_inserti32x4_256_mask((__v8si)(__m256i)(A), \
-                                               (__v4si)(__m128i)(B), \
-                                               (int)(imm), \
-                                               (__v8si)_mm256_setzero_si256(), \
-                                               (__mmask8)-1); })
+  (__m256i)__builtin_shufflevector((__v8si)(A), \
+                                 (__v8si)_mm256_castsi128_si256((__m128i)(B)), \
+                                 ((imm) & 0x1) ?  0 :  8, \
+                                 ((imm) & 0x1) ?  1 :  9, \
+                                 ((imm) & 0x1) ?  2 : 10, \
+                                 ((imm) & 0x1) ?  3 : 11, \
+                                 ((imm) & 0x1) ?  8 :  4, \
+                                 ((imm) & 0x1) ?  9 :  5, \
+                                 ((imm) & 0x1) ? 10 :  6, \
+                                 ((imm) & 0x1) ? 11 :  7); })
 
 #define _mm256_mask_inserti32x4(W, U, A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_inserti32x4_256_mask((__v8si)(__m256i)(A), \
-                                               (__v4si)(__m128i)(B), \
-                                               (int)(imm), \
-                                               (__v8si)(__m256i)(W), \
-                                               (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
+                                  (__v8si)_mm256_inserti32x4((A), (B), (imm)), \
+                                  (__v8si)(W)); })
 
 #define _mm256_maskz_inserti32x4(U, A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_inserti32x4_256_mask((__v8si)(__m256i)(A), \
-                                               (__v4si)(__m128i)(B), \
-                                               (int)(imm), \
-                                               (__v8si)_mm256_setzero_si256(), \
-                                               (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
+                                  (__v8si)_mm256_inserti32x4((A), (B), (imm)), \
+                                  (__v8si)_mm256_setzero_si256()); })
 
 #define _mm_getmant_pd(A, B, C) __extension__({\
   (__m128d)__builtin_ia32_getmantpd128_mask((__v2df)(__m128d)(A), \

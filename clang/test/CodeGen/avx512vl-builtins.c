@@ -6595,37 +6595,41 @@ __m128i test_mm256_maskz_extracti32x4_epi32(__mmask8 __U, __m256i __A) {
 
 __m256 test_mm256_insertf32x4(__m256 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm256_insertf32x4
-  // CHECK: @llvm.x86.avx512.mask.insertf32x4
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_insertf32x4(__A, __B, 1); 
 }
 
 __m256 test_mm256_mask_insertf32x4(__m256 __W, __mmask8 __U, __m256 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm256_mask_insertf32x4
-  // CHECK: @llvm.x86.avx512.mask.insertf32x4
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_insertf32x4(__W, __U, __A, __B, 1); 
 }
 
 __m256 test_mm256_maskz_insertf32x4(__mmask8 __U, __m256 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm256_maskz_insertf32x4
-  // CHECK: @llvm.x86.avx512.mask.insertf32x4
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_insertf32x4(__U, __A, __B, 1); 
 }
 
 __m256i test_mm256_inserti32x4(__m256i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm256_inserti32x4
-  // CHECK: @llvm.x86.avx512.mask.inserti32x4
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_inserti32x4(__A, __B, 1); 
 }
 
 __m256i test_mm256_mask_inserti32x4(__m256i __W, __mmask8 __U, __m256i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm256_mask_inserti32x4
-  // CHECK: @llvm.x86.avx512.mask.inserti32x4
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_inserti32x4(__W, __U, __A, __B, 1); 
 }
 
 __m256i test_mm256_maskz_inserti32x4(__mmask8 __U, __m256i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm256_maskz_inserti32x4
-  // CHECK: @llvm.x86.avx512.mask.inserti32x4
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_inserti32x4(__U, __A, __B, 1); 
 }
 
