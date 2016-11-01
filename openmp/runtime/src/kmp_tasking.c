@@ -1480,13 +1480,13 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
             __kmp_itt_taskwait_starting( gtid, itt_sync_obj );
 #endif /* USE_ITT_BUILD */
 
+        bool must_wait = ! taskdata->td_flags.team_serial && ! taskdata->td_flags.final;
+
 #if OMP_45_ENABLED
-        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
-#else
-        if ( ! taskdata->td_flags.team_serial )
+        must_wait = must_wait || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks);
 #endif
+        if (must_wait)
         {
-            // GEH: if team serialized, avoid reading the volatile variable below.
             kmp_flag_32 flag(&(taskdata->td_incomplete_child_tasks), 0U);
             while ( TCR_4(taskdata -> td_incomplete_child_tasks) != 0 ) {
                 flag.execute_tasks(thread, gtid, FALSE, &thread_finished

@@ -7,11 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 #include "gtest/gtest.h"
+#include <fstream>
 #include <stdlib.h>
 #include <string>
 
@@ -503,6 +507,67 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
     if (*S)
       EXPECT_EQ("sc2", S->getName());
   }
+}
+
+TEST(CommandLineTest, ResponseFiles) {
+  llvm::SmallString<128> TestDir;
+  std::error_code EC =
+    llvm::sys::fs::createUniqueDirectory("unittest", TestDir);
+  EXPECT_TRUE(!EC);
+
+  // Create included response file of first level.
+  llvm::SmallString<128> IncludedFileName;
+  llvm::sys::path::append(IncludedFileName, TestDir, "resp1");
+  std::ofstream IncludedFile(IncludedFileName.c_str());
+  EXPECT_TRUE(IncludedFile.is_open());
+  IncludedFile << "-option_1 -option_2\n"
+                  "@incdir/resp2\n"
+                  "-option_3=abcd\n";
+  IncludedFile.close();
+
+  // Directory for included file.
+  llvm::SmallString<128> IncDir;
+  llvm::sys::path::append(IncDir, TestDir, "incdir");
+  EC = llvm::sys::fs::create_directory(IncDir);
+  EXPECT_TRUE(!EC);
+
+  // Create included response file of second level.
+  llvm::SmallString<128> IncludedFileName2;
+  llvm::sys::path::append(IncludedFileName2, IncDir, "resp2");
+  std::ofstream IncludedFile2(IncludedFileName2.c_str());
+  EXPECT_TRUE(IncludedFile2.is_open());
+  IncludedFile2 << "-option_21 -option_22\n";
+  IncludedFile2 << "-option_23=abcd\n";
+  IncludedFile2.close();
+
+  // Prepare 'file' with reference to response file.
+  SmallString<128> IncRef;
+  IncRef.append(1, '@');
+  IncRef.append(IncludedFileName.c_str());
+  llvm::SmallVector<const char *, 4> Argv =
+                          { "test/test", "-flag_1", IncRef.c_str(), "-flag_2" };
+
+  // Expand response files.
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver(A);
+  bool Res = llvm::cl::ExpandResponseFiles(
+                    Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true);
+  EXPECT_TRUE(Res);
+  EXPECT_EQ(Argv.size(), 9U);
+  EXPECT_STREQ(Argv[0], "test/test");
+  EXPECT_STREQ(Argv[1], "-flag_1");
+  EXPECT_STREQ(Argv[2], "-option_1");
+  EXPECT_STREQ(Argv[3], "-option_2");
+  EXPECT_STREQ(Argv[4], "-option_21");
+  EXPECT_STREQ(Argv[5], "-option_22");
+  EXPECT_STREQ(Argv[6], "-option_23=abcd");
+  EXPECT_STREQ(Argv[7], "-option_3=abcd");
+  EXPECT_STREQ(Argv[8], "-flag_2");
+
+  llvm::sys::fs::remove(IncludedFileName2);
+  llvm::sys::fs::remove(IncDir);
+  llvm::sys::fs::remove(IncludedFileName);
+  llvm::sys::fs::remove(TestDir);
 }
 
 }  // anonymous namespace

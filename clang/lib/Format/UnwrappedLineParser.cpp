@@ -1230,9 +1230,11 @@ void UnwrappedLineParser::tryToParseJSFunction() {
   // Consume "function".
   nextToken();
 
-  // Consume * (generator function).
-  if (FormatTok->is(tok::star))
+  // Consume * (generator function). Treat it like C++'s overloaded operators.
+  if (FormatTok->is(tok::star)) {
+    FormatTok->Type = TT_OverloadedOperator;
     nextToken();
+  }
 
   // Consume function name.
   if (FormatTok->is(tok::identifier))

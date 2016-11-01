@@ -803,3 +803,19 @@ vector unsigned __int128 test68(void) {
 // CHECK-NEXT: ret <1 x i128>
   return vec_parity_lsbb (vsi128a);
 }
+
+vector unsigned char test69(void) {
+// CHECK-BE: call <16 x i8> @llvm.ppc.altivec.vabsdub(<16 x i8> {{.+}}, <16 x i8> {{.+}})
+// CHECK: call <16 x i8> @llvm.ppc.altivec.vabsdub(<16 x i8> {{.+}}, <16 x i8> {{.+}})
+  return vec_absd(vuca, vucb);
+}
+vector unsigned short test70(void) {
+// CHECK-BE: call <8 x i16> @llvm.ppc.altivec.vabsduh(<8 x i16> {{.+}}, <8 x i16> {{.+}})
+// CHECK: call <8 x i16> @llvm.ppc.altivec.vabsduh(<8 x i16> {{.+}}, <8 x i16> {{.+}})
+  return vec_absd(vusa, vusb);
+}
+vector unsigned int test71(void) {
+// CHECK-BE: call <4 x i32> @llvm.ppc.altivec.vabsduw(<4 x i32> {{.+}}, <4 x i32> {{.+}})
+// CHECK: call <4 x i32> @llvm.ppc.altivec.vabsduw(<4 x i32> {{.+}}, <4 x i32> {{.+}})
+  return vec_absd(vuia, vuib);
+}
