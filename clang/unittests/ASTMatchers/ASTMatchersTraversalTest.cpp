@@ -241,6 +241,12 @@ TEST(HasDeclaration, HasDeclarationOfTemplateSpecializationType) {
                         hasDeclaration(namedDecl(hasName("A"))))))));
 }
 
+TEST(HasDeclaration, HasDeclarationOfCXXNewExpr) {
+  EXPECT_TRUE(
+      matches("int *A = new int();",
+              cxxNewExpr(hasDeclaration(functionDecl(parameterCountIs(1))))));
+}
+
 TEST(HasUnderlyingDecl, Matches) {
   EXPECT_TRUE(matches("namespace N { template <class T> void f(T t); }"
                       "template <class T> void g() { using N::f; f(T()); }",

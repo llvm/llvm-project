@@ -929,6 +929,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     if (F->getAlignment() < 2 && isa<CXXMethodDecl>(D))
       F->setAlignment(2);
   }
+
+  // In the cross-dso CFI mode, we want !type attributes on definitions only.
+  if (CodeGenOpts.SanitizeCfiCrossDso)
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      CreateFunctionTypeMetadata(FD, F);
 }
 
 void CodeGenModule::SetCommonAttributes(const Decl *D,
@@ -1011,10 +1016,6 @@ void CodeGenModule::CreateFunctionTypeMetadata(const FunctionDecl *FD,
 
   // Additionally, if building with cross-DSO support...
   if (CodeGenOpts.SanitizeCfiCrossDso) {
-    // Don't emit entries for function declarations. In cross-DSO mode these are
-    // handled with better precision at run time.
-    if (!FD->hasBody())
-      return;
     // Skip available_externally functions. They won't be codegen'ed in the
     // current module anyway.
     if (getContext().GetGVALinkageForFunction(FD) == GVA_AvailableExternally)
@@ -1087,7 +1088,10 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
     if (MD->isVirtual())
       F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-  CreateFunctionTypeMetadata(FD, F);
+  // Don't emit entries for function declarations in the cross-DSO mode. This
+  // is handled with better precision by the receiving DSO.
+  if (!CodeGenOpts.SanitizeCfiCrossDso)
+    CreateFunctionTypeMetadata(FD, F);
 }
 
 void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {

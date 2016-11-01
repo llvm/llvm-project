@@ -46,6 +46,7 @@ protected:
   bool UseARMMethodPtrABI;
   bool UseARMGuardVarABI;
   bool Use32BitVTableOffsetABI;
+  bool UseQualifiedFunctionTypeInfoABI;
 
   ItaniumMangleContext &getMangleContext() {
     return cast<ItaniumMangleContext>(CodeGen::CGCXXABI::getMangleContext());
@@ -57,7 +58,8 @@ public:
                 bool UseARMGuardVarABI = false) :
     CGCXXABI(CGM), UseARMMethodPtrABI(UseARMMethodPtrABI),
     UseARMGuardVarABI(UseARMGuardVarABI),
-    Use32BitVTableOffsetABI(false) { }
+    Use32BitVTableOffsetABI(false),
+    UseQualifiedFunctionTypeInfoABI(CGM.getCodeGenOpts().QualifiedFunctionTypeInfo) { }
 
   bool classifyReturnType(CGFunctionInfo &FI) const override;
 
@@ -2427,6 +2429,9 @@ class ItaniumRTTIBuilder {
   /// descriptor of the given type.
   llvm::Constant *GetAddrOfExternalRTTIDescriptor(QualType Ty);
 
+  /// Determine whether FnTy should be emitted as a qualified function type.
+  bool EmitAsQualifiedFunctionType(const FunctionType *FnTy);
+
   /// BuildVTablePointer - Build the vtable pointer for the given type.
   void BuildVTablePointer(const Type *Ty);
 
@@ -2438,6 +2443,10 @@ class ItaniumRTTIBuilder {
   /// classes with bases that do not satisfy the abi::__si_class_type_info
   /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
   void BuildVMIClassTypeInfo(const CXXRecordDecl *RD);
+
+  /// Build an abi::__qualified_function_type_info struct, used for function
+  /// types with various kinds of qualifiers.
+  void BuildQualifiedFunctionTypeInfo(const FunctionType *FnTy);
 
   /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct, used
   /// for pointer types.
@@ -2454,6 +2463,27 @@ class ItaniumRTTIBuilder {
 public:
   ItaniumRTTIBuilder(const ItaniumCXXABI &ABI)
       : CGM(ABI.CGM), VMContext(CGM.getModule().getContext()), CXXABI(ABI) {}
+
+  // Function type info flags.
+  enum {
+    /// Qualifiers for 'this' pointer of member function type.
+    //@{
+    QFTI_Const = 0x1,
+    QFTI_Volatile = 0x2,
+    QFTI_Restrict = 0x4,
+    QFTI_LValRef = 0x8,
+    QFTI_RValRef = 0x10,
+    //@}
+
+    /// Noexcept function qualifier (C++17 onwards).
+    QFTI_Noexcept = 0x20,
+
+    // Transaction-safe function qualifier (Transactional Memory TS).
+    //QFTI_TxSafe = 0x40,
+
+    /// Noreturn function type qualifier (GNU/Clang extension).
+    QFTI_Noreturn = 0x80
+  };
 
   // Pointer type info flags.
   enum {
@@ -2806,8 +2836,12 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
 
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    // abi::__function_type_info.
-    VTableName = "_ZTVN10__cxxabiv120__function_type_infoE";
+    if (EmitAsQualifiedFunctionType(cast<FunctionType>(Ty)))
+      // abi::__qualified_function_type_info.
+      VTableName = "_ZTVN10__cxxabiv130__qualified_function_type_infoE";
+    else
+      // abi::__function_type_info.
+      VTableName = "_ZTVN10__cxxabiv120__function_type_infoE";
     break;
 
   case Type::Enum:
@@ -3021,10 +3055,15 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     break;
 
   case Type::FunctionNoProto:
-  case Type::FunctionProto:
+  case Type::FunctionProto: {
+    auto *FnTy = cast<FunctionType>(Ty);
     // Itanium C++ ABI 2.9.5p5:
     // abi::__function_type_info adds no data members to std::type_info.
+    if (EmitAsQualifiedFunctionType(FnTy))
+      // abi::__qualified_type_info adds a base function type and qualifiers.
+      BuildQualifiedFunctionTypeInfo(FnTy);
     break;
+  }
 
   case Type::Enum:
     // Itanium C++ ABI 2.9.5p5:
@@ -3317,6 +3356,72 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
 
     Fields.push_back(llvm::ConstantInt::get(OffsetFlagsLTy, OffsetFlags));
   }
+}
+
+bool ItaniumRTTIBuilder::EmitAsQualifiedFunctionType(const FunctionType *FnTy) {
+  if (!CXXABI.UseQualifiedFunctionTypeInfoABI)
+    return false;
+
+  auto *FPT = dyn_cast<FunctionProtoType>(FnTy);
+  if (!FPT)
+    return false;
+  return FPT->getTypeQuals() || FPT->getRefQualifier() != RQ_None ||
+         FPT->isNothrow(CXXABI.getContext()) || FPT->getNoReturnAttr();
+}
+
+void ItaniumRTTIBuilder::BuildQualifiedFunctionTypeInfo(
+    const FunctionType *FnTy) {
+  unsigned int Qualifiers = 0;
+
+  auto ExtInfo = FnTy->getExtInfo();
+  if (ExtInfo.getNoReturn()) {
+    Qualifiers |= QFTI_Noreturn;
+    ExtInfo = ExtInfo.withNoReturn(false);
+  }
+
+  QualType BaseType;
+  if (auto *FPT = dyn_cast<FunctionProtoType>(FnTy)) {
+    auto EPI = FPT->getExtProtoInfo();
+    EPI.ExtInfo = ExtInfo;
+
+    if (EPI.TypeQuals & Qualifiers::Const)
+      Qualifiers |= QFTI_Const;
+    if (EPI.TypeQuals & Qualifiers::Volatile)
+      Qualifiers |= QFTI_Volatile;
+    if (EPI.TypeQuals & Qualifiers::Restrict)
+      Qualifiers |= QFTI_Restrict;
+    EPI.TypeQuals = 0;
+
+    if (EPI.RefQualifier == RQ_LValue)
+      Qualifiers |= QFTI_LValRef;
+    else if (EPI.RefQualifier == RQ_RValue)
+      Qualifiers |= QFTI_RValRef;
+    EPI.RefQualifier = RQ_None;
+
+    if (EPI.ExceptionSpec.Type == EST_BasicNoexcept)
+      Qualifiers |= QFTI_Noexcept;
+    else
+      assert(EPI.ExceptionSpec.Type == EST_None &&
+             "unexpected canonical non-dependent exception spec");
+    EPI.ExceptionSpec.Type = EST_None;
+
+    BaseType = CXXABI.getContext().getFunctionType(FPT->getReturnType(),
+                                                   FPT->getParamTypes(), EPI);
+  } else {
+    BaseType =
+        QualType(CXXABI.getContext().adjustFunctionType(FnTy, ExtInfo), 0);
+  }
+
+  assert(Qualifiers && "should not have created qualified type info");
+
+  // __base_type is a pointer to the std::type_info derivation for the
+  // unqualified version of the function type.
+  Fields.push_back(ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(BaseType));
+
+  // __qualifiers is a flag word describing the qualifiers of the function type.
+  llvm::Type *UnsignedIntLTy =
+    CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
+  Fields.push_back(llvm::ConstantInt::get(UnsignedIntLTy, Qualifiers));
 }
 
 /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct,

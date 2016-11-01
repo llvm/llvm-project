@@ -299,7 +299,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
     const std::unique_ptr<BaseCommand> &Base1 = *Iter;
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
       if (shouldDefine<ELFT>(Cmd))
-        addRegular<ELFT>(Cmd);
+        addSymbol<ELFT>(Cmd);
       continue;
     }
     if (auto *Cmd = dyn_cast<AssertCommand>(Base1.get())) {
@@ -621,7 +621,8 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
       if (Cmd->Name == ".") {
         Dot = Cmd->Expression(Dot);
       } else if (Cmd->Sym) {
-        cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(Dot);
+        assignSectionSymbol(Cmd, CurOutSec ? CurOutSec : (*OutputSections)[0],
+                            Dot);
       }
       continue;
     }
@@ -1186,7 +1187,7 @@ void ScriptParser::readSections() {
   expect("{");
   while (!Error && !consume("}")) {
     StringRef Tok = next();
-    BaseCommand *Cmd = readProvideOrAssignment(Tok, true);
+    BaseCommand *Cmd = readProvideOrAssignment(Tok, false);
     if (!Cmd) {
       if (Tok == "ASSERT")
         Cmd = new AssertCommand(readAssert());
@@ -1636,7 +1637,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "CONSTANT") {
     StringRef Name = readParenLiteral();
-    return {[=](uint64_t Dot) { return getConstant(Name); }, true};
+    return [=](uint64_t Dot) { return getConstant(Name); };
   }
   if (Tok == "DEFINED") {
     expect("(");
@@ -1679,23 +1680,20 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
-    return {
-        [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); },
-        true};
+    return [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
-    return {
-        [=](uint64_t Dot) { return ScriptBase->getOutputSectionAlign(Name); },
-        true};
+    return
+        [=](uint64_t Dot) { return ScriptBase->getOutputSectionAlign(Name); };
   }
   if (Tok == "SIZEOF_HEADERS")
-    return {[=](uint64_t Dot) { return ScriptBase->getHeaderSize(); }, true};
+    return [=](uint64_t Dot) { return ScriptBase->getHeaderSize(); };
 
   // Tok is a literal number.
   uint64_t V;
   if (readInteger(Tok, V))
-    return {[=](uint64_t Dot) { return V; }, true};
+    return [=](uint64_t Dot) { return V; };
 
   // Tok is a symbol name.
   if (Tok != "." && !isValidCIdentifier(Tok))

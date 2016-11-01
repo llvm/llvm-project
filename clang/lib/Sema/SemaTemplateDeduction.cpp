@@ -3687,6 +3687,15 @@ Sema::DeduceTemplateArguments(FunctionTemplateDecl *FunctionTemplate,
       DeduceReturnType(Specialization, Info.getLocation(), false))
     return TDK_MiscellaneousDeductionFailure;
 
+  // If the function has a dependent exception specification, resolve it now,
+  // so we can check that the exception specification matches.
+  auto *SpecializationFPT =
+      Specialization->getType()->castAs<FunctionProtoType>();
+  if (getLangOpts().CPlusPlus1z &&
+      isUnresolvedExceptionSpec(SpecializationFPT->getExceptionSpecType()) &&
+      !ResolveExceptionSpec(Info.getLocation(), SpecializationFPT))
+    return TDK_MiscellaneousDeductionFailure;
+
   // If the requested function type does not match the actual type of the
   // specialization with respect to arguments of compatible pointer to function
   // types, template argument deduction fails.

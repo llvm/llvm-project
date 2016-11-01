@@ -506,8 +506,8 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// EnterBlockInfoBlock - Start emitting the BLOCKINFO_BLOCK.
-  void EnterBlockInfoBlock(unsigned CodeWidth) {
-    EnterSubblock(bitc::BLOCKINFO_BLOCK_ID, CodeWidth);
+  void EnterBlockInfoBlock() {
+    EnterSubblock(bitc::BLOCKINFO_BLOCK_ID, 2);
     BlockInfoCurBID = ~0U;
   }
 private:

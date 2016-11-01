@@ -65,7 +65,7 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
     // and can be retrieved by DAG->getPressureDif(SU).
     TempTracker.getUpwardPressure(SU->getInstr(), Pressure, MaxPressure);
   }
- 
+
   int NewSGPRPressure = Pressure[SRI->getSGPRPressureSet()];
   int NewVGPRPressure = Pressure[SRI->getVGPRPressureSet()];
 
@@ -235,7 +235,7 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
     TopCand.Reason = NoCand;
     GenericScheduler::tryCandidate(Cand, TopCand, nullptr);
     if (TopCand.Reason != NoCand) {
-      Cand.setBest(TopCand); 
+      Cand.setBest(TopCand);
     } else {
       TopCand.Reason = TopReason;
     }

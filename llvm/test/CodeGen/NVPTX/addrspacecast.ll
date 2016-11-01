@@ -1,8 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -disable-nvptx-favor-non-generic \
-; RUN:   -nvptx-use-infer-addrspace=false | FileCheck %s -check-prefix=PTX32
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -disable-nvptx-favor-non-generic \
-; RUN:   -nvptx-use-infer-addrspace=false | FileCheck %s -check-prefix=PTX64
-
+; RUN: llc -O0 < %s -march=nvptx -mcpu=sm_20 | FileCheck %s -check-prefix=PTX32
+; RUN: llc -O0 < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefix=PTX64
 
 define i32 @conv1(i32 addrspace(1)* %ptr) {
 ; PTX32: conv1

@@ -436,7 +436,7 @@ static void AddRangeLocationAbbrev(llvm::BitCodeAbbrev *Abbrev) {
 }
 
 void SDiagsWriter::EmitBlockInfoBlock() {
-  State->Stream.EnterBlockInfoBlock(3);
+  State->Stream.EnterBlockInfoBlock();
 
   using namespace llvm;
   llvm::BitstreamWriter &Stream = State->Stream;

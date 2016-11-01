@@ -9,7 +9,7 @@ entry:
   ret i32 %div
 }
 
-; CHECK: cbnz r1, #0
-; CHECK: __brkdiv0
+; CHECK: cmp r1, #0
+; CHECK: beq #
 ; CHECK: bl
 

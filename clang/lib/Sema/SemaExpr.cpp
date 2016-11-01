@@ -5572,7 +5572,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     return ExprError();
   LiteralExpr = Result.get();
 
-  bool isFileScope = getCurFunctionOrMethodDecl() == nullptr;
+  bool isFileScope = !CurContext->isFunctionOrMethod();
   if (isFileScope &&
       !LiteralExpr->isTypeDependent() &&
       !LiteralExpr->isValueDependent() &&

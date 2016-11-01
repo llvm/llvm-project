@@ -142,7 +142,7 @@ std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName) {
   assert(!InitName.empty() && "Expected init function name");
-  assert(InitArgTypes.size() == InitArgTypes.size() &&
+  assert(InitArgs.size() == InitArgTypes.size() &&
          "Sanitizer's init function expects different number of arguments");
   Function *Ctor = Function::Create(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),

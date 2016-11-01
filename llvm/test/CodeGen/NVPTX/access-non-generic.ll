@@ -1,9 +1,6 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix PTX
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix PTX
-; RUN: llc < %s  -march=nvptx64 -mcpu=sm_20 -nvptx-use-infer-addrspace=true | FileCheck %s --check-prefix PTX
-; RUN: llc < %s  -march=nvptx64 -mcpu=sm_20 -nvptx-use-infer-addrspace=false | FileCheck %s --check-prefix PTX
-; RUN: opt < %s -S -nvptx-favor-non-generic -dce | FileCheck %s --check-prefix IR
-; RUN: opt < %s -S -nvptx-infer-addrspace | FileCheck %s --check-prefix IR --check-prefix IR-WITH-LOOP
+; RUN: opt < %s -S -nvptx-infer-addrspace | FileCheck %s --check-prefix IR
 
 @array = internal addrspace(3) global [10 x float] zeroinitializer, align 4
 @scalar = internal addrspace(3) global float 0.000000e+00, align 4
@@ -135,7 +132,7 @@ define void @rauw(float addrspace(1)* %input) {
 }
 
 define void @loop() {
-; IR-WITH-LOOP-LABEL: @loop(
+; IR-LABEL: @loop(
 entry:
   %p = addrspacecast [10 x float] addrspace(3)* @array to float*
   %end = getelementptr float, float* %p, i64 10
@@ -143,12 +140,12 @@ entry:
 
 loop:
   %i = phi float* [ %p, %entry ], [ %i2, %loop ]
-; IR-WITH-LOOP: phi float addrspace(3)* [ %p, %entry ], [ %i2, %loop ]
+; IR: phi float addrspace(3)* [ %p, %entry ], [ %i2, %loop ]
   %v = load float, float* %i
-; IR-WITH-LOOP: %v = load float, float addrspace(3)* %i
+; IR: %v = load float, float addrspace(3)* %i
   call void @use(float %v)
   %i2 = getelementptr float, float* %i, i64 1
-; IR-WITH-LOOP: %i2 = getelementptr float, float addrspace(3)* %i, i64 1
+; IR: %i2 = getelementptr float, float addrspace(3)* %i, i64 1
   %exit_cond = icmp eq float* %i2, %end
   br i1 %exit_cond, label %exit, label %loop
 
@@ -159,7 +156,7 @@ exit:
 @generic_end = external global float*
 
 define void @loop_with_generic_bound() {
-; IR-WITH-LOOP-LABEL: @loop_with_generic_bound(
+; IR-LABEL: @loop_with_generic_bound(
 entry:
   %p = addrspacecast [10 x float] addrspace(3)* @array to float*
   %end = load float*, float** @generic_end
@@ -167,15 +164,15 @@ entry:
 
 loop:
   %i = phi float* [ %p, %entry ], [ %i2, %loop ]
-; IR-WITH-LOOP: phi float addrspace(3)* [ %p, %entry ], [ %i2, %loop ]
+; IR: phi float addrspace(3)* [ %p, %entry ], [ %i2, %loop ]
   %v = load float, float* %i
-; IR-WITH-LOOP: %v = load float, float addrspace(3)* %i
+; IR: %v = load float, float addrspace(3)* %i
   call void @use(float %v)
   %i2 = getelementptr float, float* %i, i64 1
-; IR-WITH-LOOP: %i2 = getelementptr float, float addrspace(3)* %i, i64 1
+; IR: %i2 = getelementptr float, float addrspace(3)* %i, i64 1
   %exit_cond = icmp eq float* %i2, %end
-; IR-WITH-LOOP: addrspacecast float addrspace(3)* %i2 to float*
-; IR-WITH-LOOP: icmp eq float* %{{[0-9]+}}, %end
+; IR: addrspacecast float addrspace(3)* %i2 to float*
+; IR: icmp eq float* %{{[0-9]+}}, %end
   br i1 %exit_cond, label %exit, label %loop
 
 exit:

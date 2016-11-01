@@ -55,3 +55,11 @@ union PR21912Ty {
 union PR21912Ty *PR21912_2 = (union PR21912Ty[]){{.d = 2.0}, {.l = 3}};
 // CHECK-LABEL: define {{.*}}__cxx_global_var_init.3()
 // CHECK: store %union.PR21912Ty* getelementptr inbounds ([2 x %union.PR21912Ty], [2 x %union.PR21912Ty]* bitcast (<{ { double }, %union.PR21912Ty }>* @.compoundliteral.4 to [2 x %union.PR21912Ty]*), i32 0, i32 0), %union.PR21912Ty** @PR21912_2
+
+// This compound literal should have local scope.
+int computed_with_lambda = [] {
+  int *array = (int[]) { 1, 3, 5, 7 };
+  return array[0];
+}();
+// CHECK-LABEL: define internal i32 @{{.*}}clEv
+// CHECK:         alloca [4 x i32]
