@@ -18,8 +18,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/MD5.h"
-#include "llvm/Support/SHA1.h"
 
 namespace lld {
 namespace elf {
@@ -51,7 +49,6 @@ public:
   typedef typename ELFT::Shdr Elf_Shdr;
   enum Kind {
     Base,
-    BuildId,
     Dynamic,
     EHFrame,
     EHFrameHdr,
@@ -738,60 +735,12 @@ private:
   std::vector<FdeData> Fdes;
 };
 
-template <class ELFT> class BuildIdSection : public OutputSectionBase<ELFT> {
-  typedef OutputSectionBase<ELFT> Base;
-
-public:
-  void writeTo(uint8_t *Buf) override;
-  virtual void writeBuildId(ArrayRef<uint8_t> Buf) = 0;
-  typename Base::Kind getKind() const override { return Base::BuildId; }
-  static bool classof(const Base *B) { return B->getKind() == Base::BuildId; }
-
-protected:
-  BuildIdSection(size_t HashSize);
-  size_t HashSize;
-  uint8_t *HashBuf = nullptr;
-};
-
-template <class ELFT>
-class BuildIdFastHash final : public BuildIdSection<ELFT> {
-public:
-  BuildIdFastHash() : BuildIdSection<ELFT>(8) {}
-  void writeBuildId(ArrayRef<uint8_t> Buf) override;
-};
-
-template <class ELFT> class BuildIdMd5 final : public BuildIdSection<ELFT> {
-public:
-  BuildIdMd5() : BuildIdSection<ELFT>(16) {}
-  void writeBuildId(ArrayRef<uint8_t> Buf) override;
-};
-
-template <class ELFT> class BuildIdSha1 final : public BuildIdSection<ELFT> {
-public:
-  BuildIdSha1() : BuildIdSection<ELFT>(20) {}
-  void writeBuildId(ArrayRef<uint8_t> Buf) override;
-};
-
-template <class ELFT> class BuildIdUuid final : public BuildIdSection<ELFT> {
-public:
-  BuildIdUuid() : BuildIdSection<ELFT>(16) {}
-  void writeBuildId(ArrayRef<uint8_t> Buf) override;
-};
-
-template <class ELFT>
-class BuildIdHexstring final : public BuildIdSection<ELFT> {
-public:
-  BuildIdHexstring();
-  void writeBuildId(ArrayRef<uint8_t>) override;
-};
-
 // All output sections that are hadnled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them
 // until Writer is initialized.
 template <class ELFT> struct Out {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Phdr Elf_Phdr;
-  static BuildIdSection<ELFT> *BuildId;
   static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhOutputSection<ELFT> *EhFrame;
@@ -862,7 +811,6 @@ template <class ELFT> uint64_t getHeaderSize() {
   return Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
 }
 
-template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;

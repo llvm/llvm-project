@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // void resize(size_type n);
@@ -23,17 +22,26 @@ template <class S>
 void
 test(S s, typename S::size_type n, S expected)
 {
-    try
+    if (n <= s.max_size())
     {
         s.resize(n);
         LIBCPP_ASSERT(s.__invariants());
-        assert(n <= s.max_size());
         assert(s == expected);
     }
-    catch (std::length_error&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(n > s.max_size());
+        try
+        {
+            s.resize(n);
+            assert(false);
+        }
+        catch (std::length_error&)
+        {
+            assert(n > s.max_size());
+        }
     }
+#endif
 }
 
 int main()

@@ -23,6 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -34,15 +35,32 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
-std::vector<InputFile *> InputFile::Pool;
 
-template <class ELFT> DIHelper<ELFT>::DIHelper(elf::InputFile *F) {
+namespace {
+// In ELF object file all section addresses are zero. If we have multiple
+// .text sections (when using -ffunction-section or comdat group) then
+// LLVM DWARF parser will not be able to parse .debug_line correctly, unless
+// we assign each section some unique address. This callback method assigns
+// each section an address equal to its offset in ELF object file.
+class ObjectInfo : public LoadedObjectInfo {
+public:
+  uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const override {
+    return static_cast<const ELFSectionRef &>(Sec).getOffset();
+  }
+  std::unique_ptr<LoadedObjectInfo> clone() const override {
+    return std::unique_ptr<LoadedObjectInfo>();
+  }
+};
+}
+
+template <class ELFT> DIHelper<ELFT>::DIHelper(InputFile *F) {
   Expected<std::unique_ptr<object::ObjectFile>> Obj =
       object::ObjectFile::createObjectFile(F->MB);
   if (!Obj)
     return;
 
-  DWARFContextInMemory Dwarf(*Obj.get());
+  ObjectInfo ObjInfo;
+  DWARFContextInMemory Dwarf(*Obj.get(), &ObjInfo);
   DwarfLine.reset(new DWARFDebugLine(&Dwarf.getLineSection().Relocs));
   DataExtractor LineData(Dwarf.getLineSection().Data,
                          ELFT::TargetEndianness == support::little,
@@ -55,7 +73,9 @@ template <class ELFT> DIHelper<ELFT>::DIHelper(elf::InputFile *F) {
 
 template <class ELFT> DIHelper<ELFT>::~DIHelper() {}
 
-template <class ELFT> std::string DIHelper<ELFT>::getLineInfo(uintX_t Offset) {
+template <class ELFT>
+std::string DIHelper<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
+                                        uintX_t Offset) {
   if (!DwarfLine)
     return "";
 
@@ -65,19 +85,15 @@ template <class ELFT> std::string DIHelper<ELFT>::getLineInfo(uintX_t Offset) {
   const DWARFDebugLine::LineTable *LineTbl = DwarfLine->getLineTable(0);
   if (!LineTbl)
     return "";
-  LineTbl->getFileLineInfoForAddress(Offset, nullptr, Spec.FLIKind, LineInfo);
+
+  // Use fake address calcuated by adding section file offset and offset in
+  // section.
+  // See comments for ObjectInfo class
+  LineTbl->getFileLineInfoForAddress(S->Offset + Offset, nullptr, Spec.FLIKind,
+                                     LineInfo);
   return LineInfo.Line != 0
              ? LineInfo.FileName + " (" + std::to_string(LineInfo.Line) + ")"
              : "";
-}
-
-// Deletes all InputFile instances created so far.
-void InputFile::freePool() {
-  // Files are freed in reverse order so that files created
-  // from other files (e.g. object files extracted from archives)
-  // are freed in the proper order.
-  for (int I = Pool.size() - 1; I >= 0; --I)
-    delete Pool[I];
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
@@ -276,6 +292,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
   Sections.resize(Size);
   unsigned I = -1;
   const ELFFile<ELFT> &Obj = this->ELFObj;
+  StringRef SectionStringTable = check(Obj.getSectionStringTable());
   for (const Elf_Shdr &Sec : Obj.sections()) {
     ++I;
     if (Sections[I] == &InputSection<ELFT>::Discarded)
@@ -312,7 +329,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
     case SHT_NULL:
       break;
     default:
-      Sections[I] = createInputSection(Sec);
+      Sections[I] = createInputSection(Sec, SectionStringTable);
     }
   }
 }
@@ -357,8 +374,9 @@ elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 
 template <class ELFT>
 InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
-  StringRef Name = check(this->ELFObj.getSectionName(&Sec));
+elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
+                                          StringRef SectionStringTable) {
+  StringRef Name = check(this->ELFObj.getSectionName(&Sec, SectionStringTable));
 
   switch (Sec.sh_type) {
   case SHT_ARM_ATTRIBUTES:
@@ -389,8 +407,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
     if (Config->Relocatable)
-      return new (GAlloc<ELFT>::IAlloc.Allocate())
-          InputSection<ELFT>(this, &Sec, Name);
+      return make<InputSection<ELFT>>(this, &Sec, Name);
 
     // Find the relocation target section and associate this
     // section with it.
@@ -432,14 +449,11 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (Name == ".eh_frame" && !Config->Relocatable)
-    return new (GAlloc<ELFT>::EHAlloc.Allocate())
-        EhInputSection<ELFT>(this, &Sec, Name);
+    return make<EhInputSection<ELFT>>(this, &Sec, Name);
 
   if (shouldMerge(Sec))
-    return new (GAlloc<ELFT>::MAlloc.Allocate())
-        MergeInputSection<ELFT>(this, &Sec, Name);
-  return new (GAlloc<ELFT>::IAlloc.Allocate())
-      InputSection<ELFT>(this, &Sec, Name);
+    return make<MergeInputSection<ELFT>>(this, &Sec, Name);
+  return make<InputSection<ELFT>>(this, &Sec, Name);
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
@@ -808,13 +822,13 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF32LE>(MB);
+    Obj = make<T<ELF32LE>>(MB);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF32BE>(MB);
+    Obj = make<T<ELF32BE>>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF64LE>(MB);
+    Obj = make<T<ELF64LE>>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF64BE>(MB);
+    Obj = make<T<ELF64BE>>(MB);
   else
     fatal("invalid file class: " + MB.getBufferIdentifier());
 

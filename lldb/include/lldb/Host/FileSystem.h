@@ -10,14 +10,15 @@
 #ifndef liblldb_Host_FileSystem_h
 #define liblldb_Host_FileSystem_h
 
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/stat.h>
+#include "lldb/Core/Error.h"
+#include "lldb/Host/FileSpec.h"
+#include "llvm/Support/Chrono.h"
 
 #include "lldb/lldb-types.h"
 
-#include "lldb/Core/Error.h"
-#include "lldb/Host/FileSpec.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/stat.h>
 
 namespace lldb_private {
 class FileSystem {
@@ -65,6 +66,8 @@ public:
 
   /// Wraps ::stat in a platform-independent way.
   static int Stat(const char *path, struct stat *stats);
+
+  static llvm::sys::TimePoint<> GetModificationTime(const FileSpec &file_spec);
 };
 }
 

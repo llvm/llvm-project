@@ -943,7 +943,7 @@ private:
   unsigned readPhdrType();
   SortSectionPolicy readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
-  SymbolAssignment *readProvideOrAssignment(StringRef Tok, bool MakeAbsolute);
+  SymbolAssignment *readProvideOrAssignment(StringRef Tok);
   void readSort();
   Expr readAssert();
 
@@ -1024,7 +1024,7 @@ void ScriptParser::readLinkerScript() {
       readSections();
     } else if (Tok == "VERSION") {
       readVersion();
-    } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok, true)) {
+    } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok)) {
       Opt.Commands.emplace_back(Cmd);
     } else {
       setError("unknown directive: " + Tok);
@@ -1187,7 +1187,7 @@ void ScriptParser::readSections() {
   expect("{");
   while (!Error && !consume("}")) {
     StringRef Tok = next();
-    BaseCommand *Cmd = readProvideOrAssignment(Tok, false);
+    BaseCommand *Cmd = readProvideOrAssignment(Tok);
     if (!Cmd) {
       if (Tok == "ASSERT")
         Cmd = new AssertCommand(readAssert());
@@ -1368,7 +1368,7 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   while (!Error && !consume("}")) {
     StringRef Tok = next();
-    if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok, false))
+    if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok))
       Cmd->Commands.emplace_back(Assignment);
     else if (BytesDataCommand *Data = readBytesDataCommand(Tok))
       Cmd->Commands.emplace_back(Data);
@@ -1417,8 +1417,7 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {
   return Cmd;
 }
 
-SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok,
-                                                        bool MakeAbsolute) {
+SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
   SymbolAssignment *Cmd = nullptr;
   if (peek() == "=" || peek() == "+=") {
     Cmd = readAssignment(Tok);
@@ -1430,8 +1429,6 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok,
   } else if (Tok == "PROVIDE_HIDDEN") {
     Cmd = readProvideHidden(true, true);
   }
-  if (Cmd && MakeAbsolute)
-    Cmd->Expression.IsAbsolute = []() { return true; };
   return Cmd;
 }
 

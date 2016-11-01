@@ -8,10 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/MainLoopPosix.h"
-
-#include <vector>
-
 #include "lldb/Core/Error.h"
+#include <algorithm>
+#include <cassert>
+#include <cerrno>
+#include <csignal>
+#include <vector>
+#include <sys/select.h>
 
 using namespace lldb;
 using namespace lldb_private;

@@ -88,6 +88,7 @@ protected:
 public:
   // These corresponds to the fields in Elf_Shdr.
   uintX_t Flags;
+  uintX_t Offset = 0;
   uintX_t Entsize;
   uint32_t Type;
   uint32_t Link;

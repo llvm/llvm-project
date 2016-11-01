@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // const_reference at(size_type pos) const;
@@ -19,21 +18,41 @@
 
 #include "min_allocator.h"
 
+#include "test_macros.h"
+
 template <class S>
 void
 test(S s, typename S::size_type pos)
 {
-    try
+    const S& cs = s;
+    if (pos < s.size())
     {
-        const S& cs = s;
         assert(s.at(pos) == s[pos]);
         assert(cs.at(pos) == cs[pos]);
-        assert(pos < cs.size());
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos >= s.size());
+        try
+        {
+            s.at(pos);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos >= s.size());
+        }
+        try
+        {
+            cs.at(pos);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos >= s.size());
+        }
     }
+#endif
 }
 
 int main()

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // template <class T>
@@ -28,20 +27,29 @@ test(S s, typename S::size_type pos1, SV sv, typename S::size_type pos2,
      typename S::size_type n, S expected)
 {
     static_assert((!std::is_same<S, SV>::value), "");
-    typename S::size_type old_size = s.size();
+    const typename S::size_type old_size = s.size();
     S s0 = s;
-    try
+    if (pos1 <= old_size && pos2 <= sv.size())
     {
         s.insert(pos1, sv, pos2, n);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos1 <= old_size && pos2 <= sv.size());
         assert(s == expected);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos1 > old_size || pos2 > sv.size());
-        assert(s == s0);
+        try
+        {
+            s.insert(pos1, sv, pos2, n);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos1 > old_size || pos2 > sv.size());
+            assert(s == s0);
+        }
     }
+#endif
 }
 
 template <class S, class SV>
@@ -49,20 +57,29 @@ void
 test_npos(S s, typename S::size_type pos1, SV sv, typename S::size_type pos2, S expected)
 {
     static_assert((!std::is_same<S, SV>::value), "");
-    typename S::size_type old_size = s.size();
+    const typename S::size_type old_size = s.size();
     S s0 = s;
-    try
+    if (pos1 <= old_size && pos2 <= sv.size())
     {
         s.insert(pos1, sv, pos2);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos1 <= old_size && pos2 <= sv.size());
         assert(s == expected);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos1 > old_size || pos2 > sv.size());
-        assert(s == s0);
+        try
+        {
+            s.insert(pos1, sv, pos2);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos1 > old_size || pos2 > sv.size());
+            assert(s == s0);
+        }
     }
+#endif
 }
 
 

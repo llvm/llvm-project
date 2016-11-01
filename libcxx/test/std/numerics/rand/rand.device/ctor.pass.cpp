@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <random>
 
 // class random_device;
@@ -44,11 +43,13 @@ void check_random_device_valid(const std::string &token) {
 }
 
 void check_random_device_invalid(const std::string &token) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
   try {
     std::random_device r(token);
     LIBCPP_ASSERT(false);
   } catch (const std::system_error&) {
   }
+#endif
 }
 
 

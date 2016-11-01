@@ -9,7 +9,7 @@
 
 // RUN: llvm-readobj -s %t | FileCheck %s
 // CHECK:  Name: .abc
-// CHECK: Name: .foo (38)
+// CHECK: Name: .foo
 
         .cfi_startproc
         .cfi_lsda 0x1b,zed

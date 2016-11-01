@@ -30,6 +30,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -139,12 +140,7 @@ namespace lldb {
 #endif
 
 Module::Module(const ModuleSpec &module_spec)
-    : m_mutex(), m_mod_time(), m_arch(), m_uuid(), m_file(), m_platform_file(),
-      m_remote_install_file(), m_symfile_spec(), m_object_name(),
-      m_object_offset(), m_object_mod_time(), m_objfile_sp(), m_symfile_ap(),
-      m_type_system_map(), m_source_mappings(), m_sections_ap(),
-      m_did_load_objfile(false), m_did_load_symbol_vendor(false),
-      m_did_parse_uuid(false), m_file_has_changed(false),
+    : m_object_offset(0), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   // Scope for locker below...
   {
@@ -186,9 +182,10 @@ Module::Module(const ModuleSpec &module_spec)
     return;
 
   if (module_spec.GetFileSpec())
-    m_mod_time = module_spec.GetFileSpec().GetModificationTime();
+    m_mod_time = FileSystem::GetModificationTime(module_spec.GetFileSpec());
   else if (matching_module_spec.GetFileSpec())
-    m_mod_time = matching_module_spec.GetFileSpec().GetModificationTime();
+    m_mod_time =
+        FileSystem::GetModificationTime(matching_module_spec.GetFileSpec());
 
   // Copy the architecture from the actual spec if we got one back, else use the
   // one that was specified
@@ -233,12 +230,8 @@ Module::Module(const ModuleSpec &module_spec)
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
                const ConstString *object_name, lldb::offset_t object_offset,
                const TimeValue *object_mod_time_ptr)
-    : m_mutex(), m_mod_time(file_spec.GetModificationTime()), m_arch(arch),
-      m_uuid(), m_file(file_spec), m_platform_file(), m_remote_install_file(),
-      m_symfile_spec(), m_object_name(), m_object_offset(object_offset),
-      m_object_mod_time(), m_objfile_sp(), m_symfile_ap(), m_type_system_map(),
-      m_source_mappings(), m_sections_ap(), m_did_load_objfile(false),
-      m_did_load_symbol_vendor(false), m_did_parse_uuid(false),
+    : m_mod_time(FileSystem::GetModificationTime(file_spec)), m_arch(arch),
+      m_file(file_spec), m_object_offset(object_offset),
       m_file_has_changed(false), m_first_file_changed_log(false) {
   // Scope for locker below...
   {
@@ -264,12 +257,7 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
 }
 
 Module::Module()
-    : m_mutex(), m_mod_time(), m_arch(), m_uuid(), m_file(), m_platform_file(),
-      m_remote_install_file(), m_symfile_spec(), m_object_name(),
-      m_object_offset(0), m_object_mod_time(), m_objfile_sp(), m_symfile_ap(),
-      m_type_system_map(), m_source_mappings(), m_sections_ap(),
-      m_did_load_objfile(false), m_did_load_symbol_vendor(false),
-      m_did_parse_uuid(false), m_file_has_changed(false),
+    : m_object_offset(0), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   std::lock_guard<std::recursive_mutex> guard(
       GetAllocationModuleCollectionMutex());
@@ -1076,7 +1064,7 @@ void Module::SetFileSpecAndObjectName(const FileSpec &file,
   // Container objects whose paths do not specify a file directly can call
   // this function to correct the file and object names.
   m_file = file;
-  m_mod_time = file.GetModificationTime();
+  m_mod_time = FileSystem::GetModificationTime(file);
   m_object_name = object_name;
 }
 
@@ -1138,7 +1126,8 @@ void Module::ReportError(const char *format, ...) {
 
 bool Module::FileHasChanged() const {
   if (!m_file_has_changed)
-    m_file_has_changed = (m_file.GetModificationTime() != m_mod_time);
+    m_file_has_changed =
+        (FileSystem::GetModificationTime(m_file) != m_mod_time);
   return m_file_has_changed;
 }
 

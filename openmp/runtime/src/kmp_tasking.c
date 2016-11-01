@@ -1480,13 +1480,13 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
             __kmp_itt_taskwait_starting( gtid, itt_sync_obj );
 #endif /* USE_ITT_BUILD */
 
+        bool must_wait = ! taskdata->td_flags.team_serial && ! taskdata->td_flags.final;
+
 #if OMP_45_ENABLED
-        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
-#else
-        if ( ! taskdata->td_flags.team_serial )
+        must_wait = must_wait || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks);
 #endif
+        if (must_wait)
         {
-            // GEH: if team serialized, avoid reading the volatile variable below.
             kmp_flag_32 flag(&(taskdata->td_incomplete_child_tasks), 0U);
             while ( TCR_4(taskdata -> td_incomplete_child_tasks) != 0 ) {
                 flag.execute_tasks(thread, gtid, FALSE, &thread_finished
@@ -1801,8 +1801,8 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
             parent = parent->td_parent;  // check generation up to the level of the current task
             KMP_DEBUG_ASSERT(parent != NULL);
         }
-        if ( parent != current && (taskdata->td_flags.tiedness == TASK_TIED) ) { // untied is always allowed to be stolen
-            // If the tail task is not a child, then no other childs can appear in the deque (?).
+        if ( parent != current ) {
+            // If the tail task is not a descendant of the current task then do not steal it.
             __kmp_release_bootstrap_lock( & victim_td -> td.td_deque_lock );
             KA_TRACE(10, ("__kmp_steal_task(exit #2): T#%d could not steal from T#%d: task_team=%p "
                           "ntasks=%d head=%u tail=%u\n",

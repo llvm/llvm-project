@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // template <class T>
@@ -24,34 +23,52 @@ template <class S, class SV>
 void
 test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected)
 {
-    try
+    if (pos <= sv.size())
     {
         s.assign(sv, pos, n);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos <= sv.size());
         assert(s == expected);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > sv.size());
+        try
+        {
+            s.assign(sv, pos, n);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > sv.size());
+        }
     }
+#endif
 }
 
 template <class S, class SV>
 void
 test_npos(S s, SV sv, typename S::size_type pos, S expected)
 {
-    try
+    if (pos <= sv.size())
     {
         s.assign(sv, pos);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos <= sv.size());
         assert(s == expected);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > sv.size());
+        try
+        {
+            s.assign(sv, pos);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > sv.size());
+        }
     }
+#endif
 }
 
 int main()

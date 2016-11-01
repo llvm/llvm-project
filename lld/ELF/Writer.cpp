@@ -15,6 +15,7 @@
 #include "Relocations.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -50,6 +51,7 @@ private:
 
   void copyLocalSymbols();
   void addReservedSymbols();
+  void addInputSec(InputSectionBase<ELFT> *S);
   void createSections();
   void forEachRelSec(std::function<void(InputSectionBase<ELFT> &,
                                         const typename ELFT::Shdr &)> Fn);
@@ -209,7 +211,6 @@ template <class ELFT> void elf::writeResult() {
     VerDef.reset(new VersionDefinitionSection<ELFT>());
 
   Out<ELFT>::Bss = &Bss;
-  Out<ELFT>::BuildId = BuildId.get();
   Out<ELFT>::DynStrTab = DynStrTab.get();
   Out<ELFT>::DynSymTab = DynSymTab.get();
   Out<ELFT>::Dynamic = &Dynamic;
@@ -240,6 +241,10 @@ template <class ELFT> void elf::writeResult() {
   Out<ELFT>::PreinitArray = nullptr;
   Out<ELFT>::InitArray = nullptr;
   Out<ELFT>::FiniArray = nullptr;
+
+  // Initialize linker generated sections
+  In<ELFT>::BuildId = BuildId.get();
+  In<ELFT>::Sections = {BuildId.get()};
 
   Writer<ELFT>().run();
   Out<ELFT>::Pool.clear();
@@ -696,28 +701,29 @@ void Writer<ELFT>::forEachRelSec(
   }
 }
 
-template <class ELFT> void Writer<ELFT>::createSections() {
-  auto Add = [&](InputSectionBase<ELFT> *IS) {
-    if (isDiscarded(IS)) {
-      reportDiscarded(IS);
-      return;
-    }
-    OutputSectionBase<ELFT> *Sec;
-    bool IsNew;
-    StringRef OutsecName = getOutputSectionName(IS->Name);
-    std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
-    if (IsNew)
-      OutputSections.push_back(Sec);
-    Sec->addSection(IS);
-  };
+template <class ELFT>
+void Writer<ELFT>::addInputSec(InputSectionBase<ELFT> *IS) {
+  if (isDiscarded(IS)) {
+    reportDiscarded(IS);
+    return;
+  }
+  OutputSectionBase<ELFT> *Sec;
+  bool IsNew;
+  StringRef OutsecName = getOutputSectionName(IS->Name);
+  std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
+  if (IsNew)
+    OutputSections.push_back(Sec);
+  Sec->addSection(IS);
+}
 
+template <class ELFT> void Writer<ELFT>::createSections() {
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *IS : F->getSections())
-      Add(IS);
+      addInputSec(IS);
 
   for (BinaryFile *F : Symtab<ELFT>::X->getBinaryFiles())
     for (InputSectionData *ID : F->getSections())
-      Add(cast<InputSection<ELFT>>(ID));
+      addInputSec(cast<InputSection<ELFT>>(ID));
 
   sortInitFini(findSection(".init_array"));
   sortInitFini(findSection(".fini_array"));
@@ -847,6 +853,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // This function adds linker-created Out<ELFT>::* sections.
   addPredefinedSections();
 
+  // Adds linker generated input sections to
+  // corresponding output sections.
+  for (InputSection<ELFT> *S : In<ELFT>::Sections)
+    addInputSec(S);
+
   sortSections();
 
   unsigned I = 1;
@@ -854,6 +865,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Sec->SectionIndex = I++;
     Sec->setSHName(Out<ELFT>::ShStrTab->addString(Sec->getName()));
   }
+
+  // Finalize linker generated sections.
+  for (InputSection<ELFT> *S : In<ELFT>::Sections)
+    if (S && S->OutSec)
+      S->OutSec->assignOffsets();
 
   // Finalizers fix each section's size.
   // .dynsym is finalized early since that may fill up .gnu.hash.
@@ -898,12 +914,6 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     if (OS)
       OutputSections.push_back(OS);
   };
-
-  // A core file does not usually contain unmodified segments except
-  // the first page of the executable. Add the build ID section to beginning of
-  // the file so that the section is included in the first page.
-  if (Out<ELFT>::BuildId)
-    OutputSections.insert(OutputSections.begin(), Out<ELFT>::BuildId);
 
   // Add .interp at first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
@@ -1484,13 +1494,13 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!Out<ELFT>::BuildId)
+  if (!In<ELFT>::BuildId || !In<ELFT>::BuildId->OutSec)
     return;
 
   // Compute a hash of all sections of the output file.
   uint8_t *Start = Buffer->getBufferStart();
   uint8_t *End = Start + FileSize;
-  Out<ELFT>::BuildId->writeBuildId({Start, End});
+  In<ELFT>::BuildId->writeBuildId({Start, End});
 }
 
 template void elf::writeResult<ELF32LE>();

@@ -75,7 +75,9 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          Kind SectionKind)
     : InputSectionBase(File, Hdr->sh_flags, Hdr->sh_type, Hdr->sh_entsize,
                        Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
-                       getSectionContents(File, Hdr), Name, SectionKind) {}
+                       getSectionContents(File, Hdr), Name, SectionKind) {
+  this->Offset = Hdr->sh_offset;
+}
 
 template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
   if (auto *D = dyn_cast<InputSection<ELFT>>(this))
@@ -407,8 +409,10 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     }
 
     uintX_t AddrLoc = this->OutSec->getVA() + Offset;
-    uint64_t SymVA = SignExtend64<sizeof(uintX_t) * 8>(
-        getSymVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
+    uint64_t SymVA = 0;
+    if (!Sym.isTls() || Out<ELFT>::TlsPhdr)
+      SymVA = SignExtend64<sizeof(uintX_t) * 8>(
+          getSymVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }

@@ -180,14 +180,14 @@ bool ProcessMinidump::IsAlive() { return true; }
 bool ProcessMinidump::WarnBeforeDetach() const { return false; }
 
 size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                   lldb_private::Error &error) {
+                                   Error &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does
   // since we have it all cached in our dump file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
 size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                     lldb_private::Error &error) {
+                                     Error &error) {
 
   llvm::ArrayRef<uint8_t> mem = m_minidump_parser.GetMemory(addr, size);
   if (mem.empty()) {
@@ -211,8 +211,8 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
-Error ProcessMinidump::GetMemoryRegionInfo(
-    lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &range_info) {
+Error ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                           MemoryRegionInfo &range_info) {
   Error error;
   auto info = m_minidump_parser.GetMemoryRegionInfo(load_addr);
   if (!info) {
@@ -225,9 +225,8 @@ Error ProcessMinidump::GetMemoryRegionInfo(
 
 void ProcessMinidump::Clear() { Process::m_thread_list.Clear(); }
 
-bool ProcessMinidump::UpdateThreadList(
-    lldb_private::ThreadList &old_thread_list,
-    lldb_private::ThreadList &new_thread_list) {
+bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
+                                       ThreadList &new_thread_list) {
   uint32_t num_threads = 0;
   if (m_thread_list.size() > 0)
     num_threads = m_thread_list.size();
@@ -290,4 +289,17 @@ void ProcessMinidump::ReadModuleList() {
     module_sp->SetLoadAddress(GetTarget(), module->base_of_image, false,
                               load_addr_changed);
   }
+}
+
+bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
+  info.Clear();
+  info.SetProcessID(GetID());
+  info.SetArchitecture(GetArchitecture());
+  lldb::ModuleSP module_sp = GetTarget().GetExecutableModule();
+  if (module_sp) {
+    const bool add_exe_file_as_first_arg = false;
+    info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
+                           add_exe_file_as_first_arg);
+  }
+  return true;
 }
