@@ -121,7 +121,6 @@
 		237211D41D3FD10D008D2754 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
 		2374D7531D4BB2FF005C9575 /* GDBRemoteClientBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2374D74E1D4BB299005C9575 /* GDBRemoteClientBase.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
-		237E0CE31D908F4B00DD3F2B /* StringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660D9F611922A1300958FBD /* StringExtractor.cpp */; };
 		237E0CE41D908F5300DD3F2B /* StringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660D9F611922A1300958FBD /* StringExtractor.cpp */; };
 		238F2B9E1D2C82D0001FF92A /* StructuredDataPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 238F2B9D1D2C82D0001FF92A /* StructuredDataPlugin.cpp */; };
 		238F2BA11D2C835A001FF92A /* StructuredDataPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 238F2B9F1D2C835A001FF92A /* StructuredDataPlugin.h */; };
@@ -956,7 +955,6 @@
 		94D0858C1B9675B8000D24BD /* FormattersHelpers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94D0858B1B9675B8000D24BD /* FormattersHelpers.cpp */; };
 		94E829CA152D33C1006F96A3 /* lldb-server in Resources */ = {isa = PBXBuildFile; fileRef = 26DC6A101337FE6900FF7998 /* lldb-server */; };
 		94FA3DE01405D50400833217 /* ValueObjectConstResultChild.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DDF1405D50300833217 /* ValueObjectConstResultChild.cpp */; };
-		94FC9E671D95D74E00976A81 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		964381701C8D6B8200023D59 /* SBLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF20F76C1AF18FC700751A6E /* SBLanguageRuntime.cpp */; };
 		964463EC1A330C0500154ED8 /* CompactUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 964463EB1A330C0500154ED8 /* CompactUnwindInfo.cpp */; };
 		966C6B7918E6A56A0093F5EC /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 966C6B7818E6A56A0093F5EC /* libz.dylib */; };
@@ -1353,27 +1351,12 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				49DEF1221CD7BD90006A7C7D /* BlockPointer.h in Copy Files */,
-				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
-				23D0658E1D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h in Copy Files */,
 				23CB14FB1D66CCF100EDDDE1 /* CMakeLists.txt in Copy Files */,
 				23150FC01DB939F800EA5AB6 /* CMakeLists.txt in Copy Files */,
-				2374D7521D4BB299005C9575 /* GDBRemoteClientBase.h in Copy Files */,
-				23D0658C1D4A7BDA0008EDE6 /* RenderScriptRuntime.h in Copy Files */,
-				23D0658A1D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h in Copy Files */,
 				23CB14F21D66CC9000EDDDE1 /* CMakeLists.txt in Copy Files */,
-				230EC4591D63C3A7008DF59F /* CMakeLists.txt in Copy Files */,
-				49DEF1221CD7BD90006A7C7D /* BlockPointer.h in Copy Files */,
-				2374D7461D4BAA1D005C9575 /* CMakeLists.txt in Copy Files */,
-				4CC7C6531D5299140076FF94 /* DWARFASTParserOCaml.h in Copy Files */,
-				23DCBE9D1D63E14B0084C36B /* SBTypeEnumMember.i in Copy Files */,
-				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
 				23A452021DBFF67000E44395 /* CMakeLists.txt in Copy Files */,
 				23A4520D1DBFF77400E44395 /* CMakeLists.txt in Copy Files */,
-				23DCBE9B1D63E14B0084C36B /* SBLanguageRuntime.i in Copy Files */,
 				23CB14F71D66CCD600EDDDE1 /* CMakeLists.txt in Copy Files */,
-				23DCBE9E1D63E14B0084C36B /* SBUnixSignals.i in Copy Files */,
-				23D065881D4A7BDA0008EDE6 /* CMakeLists.txt in Copy Files */,
 				23CB14F41D66CC9B00EDDDE1 /* CMakeLists.txt in Copy Files */,
 			);
 			name = "Copy Files";
@@ -7479,35 +7462,6 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		239504D01BDD451400963CEA /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				AEC6FFA01BE970A2007882C1 /* GoParserTest.cpp in Sources */,
-				237E0CE31D908F4B00DD3F2B /* StringExtractor.cpp in Sources */,
-				23CB15001D66CD3900EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
-				239504E51BDD454B00963CEA /* UriParserTest.cpp in Sources */,
-				23CB14FF1D66CD2900EDDDE1 /* FileSpecTest.cpp in Sources */,
-				AF45E1FE1BF57C8D000563EB /* PythonTestSuite.cpp in Sources */,
-				3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */,
-				23CB14EF1D66CC1F00EDDDE1 /* DataExtractorTest.cpp in Sources */,
-				2370A3861D66C594000E7BE6 /* GDBRemoteClientBaseTest.cpp in Sources */,
-				239504DF1BDD453200963CEA /* SocketTest.cpp in Sources */,
-				239504E11BDD453E00963CEA /* TestArgs.cpp in Sources */,
-				2370A3871D66C594000E7BE6 /* GDBRemoteCommunicationClientTest.cpp in Sources */,
-				239504E21BDD454500963CEA /* PythonDataObjectsTests.cpp in Sources */,
-				239504E01BDD453200963CEA /* SymbolsTest.cpp in Sources */,
-				23CB150F1D66CF5D00EDDDE1 /* TestClangASTContext.cpp in Sources */,
-				239504E31BDD454B00963CEA /* StringExtractorTest.cpp in Sources */,
-				239504E41BDD454B00963CEA /* TaskPoolTest.cpp in Sources */,
-				23CB14EE1D66CC1400EDDDE1 /* BroadcasterTest.cpp in Sources */,
-				23CB14F01D66CC2300EDDDE1 /* ScalarTest.cpp in Sources */,
-				239504DE1BDD453200963CEA /* SocketAddressTest.cpp in Sources */,
-				2370A3881D66C594000E7BE6 /* GDBRemoteTestUtils.cpp in Sources */,
-				2326CF521BDD693B00A5CEAC /* EditlineTest.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		23CB15321D66DA9300EDDDE1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -8656,7 +8610,7 @@
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
-				OTHER_LDFLAGS = "-lz";
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -8788,7 +8742,7 @@
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
-				OTHER_LDFLAGS = "-lz";
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -8976,7 +8930,7 @@
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -10503,7 +10457,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = "-lz";
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -11515,10 +11469,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = (
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
-				);
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -12219,7 +12170,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -13155,7 +13106,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -13750,7 +13701,7 @@
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
