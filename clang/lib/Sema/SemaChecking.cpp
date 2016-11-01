@@ -1978,25 +1978,11 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI_mm_prefetch:
     i = 1; l = 0; u = 3;
     break;
-  case X86::BI__builtin_ia32_insertf32x8_mask:
-  case X86::BI__builtin_ia32_inserti32x8_mask:
-  case X86::BI__builtin_ia32_insertf64x4_mask:
-  case X86::BI__builtin_ia32_inserti64x4_mask:
-  case X86::BI__builtin_ia32_insertf64x2_256_mask:
-  case X86::BI__builtin_ia32_inserti64x2_256_mask:
-  case X86::BI__builtin_ia32_insertf32x4_256_mask:
-  case X86::BI__builtin_ia32_inserti32x4_256_mask:
-    i = 2; l = 0; u = 1;
-    break;
   case X86::BI__builtin_ia32_sha1rnds4:
   case X86::BI__builtin_ia32_shuf_f32x4_256_mask:
   case X86::BI__builtin_ia32_shuf_f64x2_256_mask:
   case X86::BI__builtin_ia32_shuf_i32x4_256_mask:
   case X86::BI__builtin_ia32_shuf_i64x2_256_mask:
-  case X86::BI__builtin_ia32_insertf64x2_512_mask:
-  case X86::BI__builtin_ia32_inserti64x2_512_mask:
-  case X86::BI__builtin_ia32_insertf32x4_mask:
-  case X86::BI__builtin_ia32_inserti32x4_mask:
     i = 2; l = 0; u = 3;
     break;
   case X86::BI__builtin_ia32_vpermil2pd:

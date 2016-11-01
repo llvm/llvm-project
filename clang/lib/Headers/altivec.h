@@ -163,6 +163,26 @@ vec_abss(vector signed int __a) {
       __a, __builtin_altivec_vsubsws((vector signed int)(0), __a));
 }
 
+/* vec_absd */
+#if defined(__POWER9_VECTOR__)
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_absd(vector unsigned char __a, vector unsigned char __b) {
+  return __builtin_altivec_vabsdub(__a, __b);
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_absd(vector unsigned short __a, vector unsigned short __b) {
+  return __builtin_altivec_vabsduh(__a, __b);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_absd(vector unsigned int __a,  vector unsigned int __b) {
+  return __builtin_altivec_vabsduw(__a, __b);
+}
+
+#endif /* End __POWER9_VECTOR__ */
+
 /* vec_add */
 
 static __inline__ vector signed char __ATTRS_o_ai

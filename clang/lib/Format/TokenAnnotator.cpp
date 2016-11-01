@@ -273,8 +273,9 @@ private:
           !CurrentToken->Next->HasUnescapedNewline &&
           !CurrentToken->Next->isTrailingComment())
         HasMultipleParametersOnALine = true;
-      if (CurrentToken->isOneOf(tok::kw_const, tok::kw_auto) ||
-          CurrentToken->isSimpleTypeSpecifier())
+      if ((CurrentToken->Previous->isOneOf(tok::kw_const, tok::kw_auto) ||
+           CurrentToken->Previous->isSimpleTypeSpecifier()) &&
+          !CurrentToken->is(tok::l_brace))
         Contexts.back().IsExpression = false;
       if (CurrentToken->isOneOf(tok::semi, tok::colon))
         MightBeObjCForRangeLoop = false;
@@ -859,7 +860,8 @@ private:
     if (!CurrentToken->isOneOf(TT_LambdaLSquare, TT_ForEachMacro,
                                TT_FunctionLBrace, TT_ImplicitStringLiteral,
                                TT_InlineASMBrace, TT_JsFatArrow, TT_LambdaArrow,
-                               TT_RegexLiteral, TT_TemplateString))
+                               TT_OverloadedOperator, TT_RegexLiteral,
+                               TT_TemplateString))
       CurrentToken->Type = TT_Unknown;
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
@@ -1249,7 +1251,7 @@ private:
 
     const FormatToken *NextToken = Tok.getNextNonComment();
     if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, Keywords.kw_final,
+        NextToken->isOneOf(tok::arrow, Keywords.kw_final, tok::equal,
                            Keywords.kw_override) ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment()))
       return TT_PointerOrReference;
@@ -1309,7 +1311,7 @@ private:
 
   TokenType determinePlusMinusCaretUsage(const FormatToken &Tok) {
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
-    if (!PrevToken || PrevToken->is(TT_CastRParen))
+    if (!PrevToken || PrevToken->isOneOf(TT_CastRParen, TT_UnaryOperator))
       return TT_UnaryOperator;
 
     // Use heuristics to recognize unary operators.
@@ -2159,6 +2161,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                      Keywords.kw_of, tok::kw_const) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))
       return true;
+    if (Left.isOneOf(tok::kw_for, Keywords.kw_as) && Left.Previous &&
+        Left.Previous->is(tok::period) && Right.is(tok::l_paren))
+      return false;
     if (Left.is(Keywords.kw_as) &&
         Right.isOneOf(tok::l_square, tok::l_brace, tok::l_paren))
       return true;

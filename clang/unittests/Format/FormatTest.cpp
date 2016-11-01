@@ -5637,6 +5637,9 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("SomeType MemberFunction(const Deleted &) && final {}");
   verifyFormat("SomeType MemberFunction(const Deleted &) && override {}");
   verifyFormat("SomeType MemberFunction(const Deleted &) const &;");
+  verifyFormat("template <typename T>\n"
+               "void F(T) && = delete;",
+               getGoogleStyle());
 
   FormatStyle AlignLeft = getLLVMStyle();
   AlignLeft.PointerAlignment = FormatStyle::PAS_Left;
@@ -5789,7 +5792,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   FormatStyle Left = getLLVMStyle();
   Left.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("x = *a(x) = *a(y);", Left);
-  verifyFormat("for (;; * = b) {\n}", Left);
+  verifyFormat("for (;; *a = b) {\n}", Left);
   verifyFormat("return *this += 1;", Left);
 
   verifyIndependentOfContext("a = *(x + y);");
@@ -5870,6 +5873,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(auto *a);");
   verifyIndependentOfContext("MACRO(const A *a);");
   verifyIndependentOfContext("MACRO('0' <= c && c <= '9');");
+  verifyFormat("void f() { f(float{1}, a * a); }");
   // FIXME: Is there a way to make this work?
   // verifyIndependentOfContext("MACRO(A *a);");
 
@@ -10954,6 +10958,7 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("int c = [&a, &a, a] { [=, a, b, &c] { return b++; }(); }();\n");
   verifyFormat("auto c = {[&a, &a, a] { [=, a, b, &c] { return b++; }(); }}\n");
   verifyFormat("auto c = {[&a, &a, a] { [=, a, b, &c] {}(); }}\n");
+  verifyFormat("int x = f(*+[] {});");
   verifyFormat("void f() {\n"
                "  other(x.begin(), x.end(), [&](int, int) { return 1; });\n"
                "}\n");
