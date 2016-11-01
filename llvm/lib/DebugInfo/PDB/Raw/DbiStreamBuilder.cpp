@@ -15,6 +15,8 @@
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/Object/COFF.h"
+#include "llvm/Support/COFF.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -44,6 +46,10 @@ void DbiStreamBuilder::setFlags(uint16_t F) { Flags = F; }
 
 void DbiStreamBuilder::setMachineType(PDB_Machine M) { MachineType = M; }
 
+void DbiStreamBuilder::setSectionMap(ArrayRef<SecMapEntry> SecMap) {
+  SectionMap = SecMap;
+}
+
 Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
                                      ArrayRef<uint8_t> Data) {
   if (DbgStreams[(int)Type].StreamNumber)
@@ -61,7 +67,8 @@ Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
 uint32_t DbiStreamBuilder::calculateSerializedLength() const {
   // For now we only support serializing the header.
   return sizeof(DbiStreamHeader) + calculateFileInfoSubstreamSize() +
-         calculateModiSubstreamSize() + calculateDbgStreamsSize();
+         calculateModiSubstreamSize() + calculateSectionMapStreamSize() +
+         calculateDbgStreamsSize();
 }
 
 Error DbiStreamBuilder::addModuleInfo(StringRef ObjFile, StringRef Module) {
@@ -97,6 +104,12 @@ uint32_t DbiStreamBuilder::calculateModiSubstreamSize() const {
     Size += M->Obj.size() + 1;
   }
   return Size;
+}
+
+uint32_t DbiStreamBuilder::calculateSectionMapStreamSize() const {
+  if (SectionMap.empty())
+    return 0;
+  return sizeof(SecMapHeader) + sizeof(SecMapEntry) * SectionMap.size();
 }
 
 uint32_t DbiStreamBuilder::calculateFileInfoSubstreamSize() const {
@@ -237,7 +250,7 @@ Error DbiStreamBuilder::finalize() {
   H->ModiSubstreamSize = ModInfoBuffer.getLength();
   H->OptionalDbgHdrSize = DbgStreams.size() * sizeof(uint16_t);
   H->SecContrSubstreamSize = 0;
-  H->SectionMapSize = 0;
+  H->SectionMapSize = calculateSectionMapStreamSize();
   H->TypeServerSize = 0;
   H->SymRecordStreamIndex = kInvalidStreamIndex;
   H->PublicSymbolStreamIndex = kInvalidStreamIndex;
@@ -253,6 +266,65 @@ Error DbiStreamBuilder::finalizeMsfLayout() {
   if (auto EC = Msf.setStreamSize(StreamDBI, Length))
     return EC;
   return Error::success();
+}
+
+static uint16_t toSecMapFlags(uint32_t Flags) {
+  uint16_t Ret = 0;
+  if (Flags & COFF::IMAGE_SCN_MEM_READ)
+    Ret |= static_cast<uint16_t>(OMFSegDescFlags::Read);
+  if (Flags & COFF::IMAGE_SCN_MEM_WRITE)
+    Ret |= static_cast<uint16_t>(OMFSegDescFlags::Write);
+  if (Flags & COFF::IMAGE_SCN_MEM_EXECUTE)
+    Ret |= static_cast<uint16_t>(OMFSegDescFlags::Execute);
+  if (Flags & COFF::IMAGE_SCN_MEM_EXECUTE)
+    Ret |= static_cast<uint16_t>(OMFSegDescFlags::Execute);
+  if (!(Flags & COFF::IMAGE_SCN_MEM_16BIT))
+    Ret |= static_cast<uint16_t>(OMFSegDescFlags::AddressIs32Bit);
+
+  // This seems always 1.
+  Ret |= static_cast<uint16_t>(OMFSegDescFlags::IsSelector);
+
+  return Ret;
+}
+
+// A utility function to create a Section Map for a given list of COFF sections.
+//
+// A Section Map seem to be a copy of a COFF section list in other format.
+// I don't know why a PDB file contains both a COFF section header and
+// a Section Map, but it seems it must be present in a PDB.
+std::vector<SecMapEntry> DbiStreamBuilder::createSectionMap(
+    ArrayRef<llvm::object::coff_section> SecHdrs) {
+  std::vector<SecMapEntry> Ret;
+  int Idx = 0;
+
+  auto Add = [&]() -> SecMapEntry & {
+    Ret.emplace_back();
+    auto &Entry = Ret.back();
+    memset(&Entry, 0, sizeof(Entry));
+
+    Entry.Frame = Idx + 1;
+
+    // We don't know the meaning of these fields yet.
+    Entry.SecName = UINT16_MAX;
+    Entry.ClassName = UINT16_MAX;
+
+    return Entry;
+  };
+
+  for (auto &Hdr : SecHdrs) {
+    auto &Entry = Add();
+    Entry.Flags = toSecMapFlags(Hdr.Characteristics);
+    Entry.SecByteLength = Hdr.VirtualSize;
+    ++Idx;
+  }
+
+  // The last entry is for absolute symbols.
+  auto &Entry = Add();
+  Entry.Flags = static_cast<uint16_t>(OMFSegDescFlags::AddressIs32Bit) |
+                static_cast<uint16_t>(OMFSegDescFlags::IsAbsoluteAddress);
+  Entry.SecByteLength = UINT32_MAX;
+
+  return Ret;
 }
 
 Expected<std::unique_ptr<DbiStream>>
@@ -290,8 +362,19 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
 
   if (auto EC = Writer.writeStreamRef(ModInfoBuffer))
     return EC;
+
+  if (!SectionMap.empty()) {
+    ulittle16_t Size = static_cast<ulittle16_t>(SectionMap.size());
+    SecMapHeader SMHeader = {Size, Size};
+    if (auto EC = Writer.writeObject(SMHeader))
+      return EC;
+    if (auto EC = Writer.writeArray(SectionMap))
+      return EC;
+  }
+
   if (auto EC = Writer.writeStreamRef(FileInfoBuffer))
     return EC;
+
   for (auto &Stream : DbgStreams)
     if (auto EC = Writer.writeInteger(Stream.StreamNumber))
       return EC;

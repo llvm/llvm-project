@@ -1692,9 +1692,9 @@ let Defs = [CC] in {
 
   let mayLoad = 1, mayStore = 1 in
     def MVCK : InstSSd<0xD9, (outs),
-                             (ins bdxaddr12only:$XBD1, bdaddr12only:$BD2,
+                             (ins bdraddr12only:$RBD1, bdaddr12only:$BD2,
                                   GR64:$R3),
-                       "mvck\t$XBD1, $BD2, $R3", []>;
+                       "mvck\t$RBD1, $BD2, $R3", []>;
 }
 
 let mayStore = 1 in
@@ -1789,9 +1789,9 @@ let isCodeGenOnly = 1 in {
                                       imm32zx16:$I2),
                                  ".insn sil,$enc,$BD1,$I2", []>;
   def InsnSS : DirectiveInsnSS<(outs),
-                               (ins imm64zx48:$enc, bdxaddr12only:$XBD1,
+                               (ins imm64zx48:$enc, bdraddr12only:$RBD1,
                                     bdaddr12only:$BD2, AnyReg:$R3),
-                               ".insn ss,$enc,$XBD1,$BD2,$R3", []>;
+                               ".insn ss,$enc,$RBD1,$BD2,$R3", []>;
   def InsnSSE : DirectiveInsnSSE<(outs),
                                  (ins imm64zx48:$enc,
                                       bdaddr12only:$BD1,bdaddr12only:$BD2),

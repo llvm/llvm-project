@@ -588,14 +588,14 @@ class InstSSd<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   field bits<48> Inst;
   field bits<48> SoftFail = 0;
 
-  bits<20> XBD1;
+  bits<20> RBD1;
   bits<16> BD2;
   bits<4> R3;
 
   let Inst{47-40} = op;
-  let Inst{39-36} = XBD1{19-16};
+  let Inst{39-36} = RBD1{19-16};
   let Inst{35-32} = R3;
-  let Inst{31-16} = XBD1{15-0};
+  let Inst{31-16} = RBD1{15-0};
   let Inst{15-0}  = BD2;
 }
 

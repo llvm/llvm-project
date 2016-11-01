@@ -1216,14 +1216,25 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     APInt LoMask = APInt::getLowBitsSet(BitWidth,
                                         BitWidth - NewMask.countLeadingZeros());
     if (SimplifyDemandedBits(Op.getOperand(0), LoMask, KnownZero2,
-                             KnownOne2, TLO, Depth+1))
+                             KnownOne2, TLO, Depth+1) ||
+        SimplifyDemandedBits(Op.getOperand(1), LoMask, KnownZero2,
+                             KnownOne2, TLO, Depth+1) ||
+        // See if the operation should be performed at a smaller bit width.
+        TLO.ShrinkDemandedOp(Op, BitWidth, NewMask, dl)) {
+      const SDNodeFlags *Flags = Op.getNode()->getFlags();
+      if (Flags->hasNoSignedWrap() || Flags->hasNoUnsignedWrap()) {
+        // Disable the nsw and nuw flags. We can no longer guarantee that we
+        // won't wrap after simplification.
+        SDNodeFlags NewFlags = *Flags;
+        NewFlags.setNoSignedWrap(false);
+        NewFlags.setNoUnsignedWrap(false);
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, Op.getValueType(),
+                                        Op.getOperand(0), Op.getOperand(1),
+                                        &NewFlags);
+        return TLO.CombineTo(Op, NewOp);
+      }
       return true;
-    if (SimplifyDemandedBits(Op.getOperand(1), LoMask, KnownZero2,
-                             KnownOne2, TLO, Depth+1))
-      return true;
-    // See if the operation should be performed at a smaller bit width.
-    if (TLO.ShrinkDemandedOp(Op, BitWidth, NewMask, dl))
-      return true;
+    }
     LLVM_FALLTHROUGH;
   }
   default:

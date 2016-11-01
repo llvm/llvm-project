@@ -27,6 +27,7 @@
 #include <cctype>
 #include <cstring>
 #include <limits>
+#include <list>
 
 using namespace llvm;
 using namespace object;
@@ -216,6 +217,42 @@ static void parseHeader(const MachOObjectFile *Obj, T &Header,
     Err = HeaderOrErr.takeError();
 }
 
+// This is used to check for overlapping of Mach-O elements.
+struct MachOElement {
+  uint64_t Offset;
+  uint64_t Size;
+  const char *Name;
+};
+
+static Error checkOverlappingElement(std::list<MachOElement> &Elements,
+                                     uint64_t Offset, uint64_t Size,
+                                     const char *Name) {
+  if (Size == 0)
+    return Error::success();
+
+  for (auto it=Elements.begin() ; it != Elements.end(); ++it) {
+    auto E = *it;
+    if ((Offset >= E.Offset && Offset < E.Offset + E.Size) ||
+        (Offset + Size > E.Offset && Offset + Size < E.Offset + E.Size) ||
+        (Offset <= E.Offset && Offset + Size >= E.Offset + E.Size))
+      return malformedError(Twine(Name) + " at offset " + Twine(Offset) +
+                            " with a size of " + Twine(Size) + ", overlaps " +
+                            E.Name + " at offset " + Twine(E.Offset) + " with "
+                            "a size of " + Twine(E.Size));
+    auto nt = it;
+    nt++;
+    if (nt != Elements.end()) {
+      auto N = *nt;
+      if (Offset + Size <= N.Offset) {
+        Elements.insert(nt, {Offset, Size, Name});
+        return Error::success();
+      }
+    }
+  }
+  Elements.push_back({Offset, Size, Name});
+  return Error::success();
+}
+
 // Parses LC_SEGMENT or LC_SEGMENT_64 load command, adds addresses of all
 // sections to \param Sections, and optionally sets
 // \param IsPageZeroSegment to true.
@@ -331,7 +368,8 @@ static Error parseSegmentLoadCommand(
 static Error checkSymtabCommand(const MachOObjectFile *Obj,
                                 const MachOObjectFile::LoadCommandInfo &Load,
                                 uint32_t LoadCommandIndex,
-                                const char **SymtabLoadCmd) {
+                                const char **SymtabLoadCmd,
+                                std::list<MachOElement> &Elements) {
   if (Load.C.cmdsize < sizeof(MachO::symtab_command))
     return malformedError("load command " + Twine(LoadCommandIndex) +
                           " LC_SYMTAB cmdsize too small");
@@ -347,21 +385,25 @@ static Error checkSymtabCommand(const MachOObjectFile *Obj,
     return malformedError("symoff field of LC_SYMTAB command " +
                           Twine(LoadCommandIndex) + " extends past the end "
                           "of the file");
-  uint64_t BigSize = Symtab.nsyms;
+  uint64_t SymtabSize = Symtab.nsyms;
   const char *struct_nlist_name;
   if (Obj->is64Bit()) {
-    BigSize *= sizeof(MachO::nlist_64);
+    SymtabSize *= sizeof(MachO::nlist_64);
     struct_nlist_name = "struct nlist_64";
   } else {
-    BigSize *= sizeof(MachO::nlist);
+    SymtabSize *= sizeof(MachO::nlist);
     struct_nlist_name = "struct nlist";
   }
+  uint64_t BigSize = SymtabSize;
   BigSize += Symtab.symoff;
   if (BigSize > FileSize)
     return malformedError("symoff field plus nsyms field times sizeof(" +
                           Twine(struct_nlist_name) + ") of LC_SYMTAB command " +
                           Twine(LoadCommandIndex) + " extends past the end "
                           "of the file");
+  if (Error Err = checkOverlappingElement(Elements, Symtab.symoff, SymtabSize,
+                                          "symbol table"))
+    return Err;
   if (Symtab.stroff > FileSize)
     return malformedError("stroff field of LC_SYMTAB command " +
                           Twine(LoadCommandIndex) + " extends past the end "
@@ -372,6 +414,9 @@ static Error checkSymtabCommand(const MachOObjectFile *Obj,
     return malformedError("stroff field plus strsize field of LC_SYMTAB "
                           "command " + Twine(LoadCommandIndex) + " extends "
                           "past the end of the file");
+  if (Error Err = checkOverlappingElement(Elements, Symtab.stroff,
+                                          Symtab.strsize, "string table"))
+    return Err;
   *SymtabLoadCmd = Load.Ptr;
   return Error::success();
 }
@@ -977,6 +1022,8 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                          "object file's mach header");
     return;
   }
+  std::list<MachOElement> Elements;
+  Elements.push_back({0, SizeOfHeaders, "Mach-O headers"});
 
   uint32_t LoadCommandCount = getHeader().ncmds;
   LoadCommandInfo Load;
@@ -1023,7 +1070,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
     }
     LoadCommands.push_back(Load);
     if (Load.C.cmd == MachO::LC_SYMTAB) {
-      if ((Err = checkSymtabCommand(this, Load, I, &SymtabLoadCmd)))
+      if ((Err = checkSymtabCommand(this, Load, I, &SymtabLoadCmd, Elements)))
         return;
     } else if (Load.C.cmd == MachO::LC_DYSYMTAB) {
       if ((Err = checkDysymtabCommand(this, Load, I, &DysymtabLoadCmd)))

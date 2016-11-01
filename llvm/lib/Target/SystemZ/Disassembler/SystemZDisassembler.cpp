@@ -321,6 +321,18 @@ static DecodeStatus decodeBDLAddr12Len8Operand(MCInst &Inst, uint64_t Field,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeBDRAddr12Operand(MCInst &Inst, uint64_t Field,
+                                           const unsigned *Regs) {
+  uint64_t Length = Field >> 16;
+  uint64_t Base = (Field >> 12) & 0xf;
+  uint64_t Disp = Field & 0xfff;
+  assert(Length < 16 && "Invalid BDRAddr12");
+  Inst.addOperand(MCOperand::createReg(Base == 0 ? 0 : Regs[Base]));
+  Inst.addOperand(MCOperand::createImm(Disp));
+  Inst.addOperand(MCOperand::createReg(Regs[Length]));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeBDVAddr12Operand(MCInst &Inst, uint64_t Field,
                                            const unsigned *Regs) {
   uint64_t Index = Field >> 16;
@@ -374,6 +386,13 @@ static DecodeStatus decodeBDLAddr64Disp12Len8Operand(MCInst &Inst,
                                                      uint64_t Address,
                                                      const void *Decoder) {
   return decodeBDLAddr12Len8Operand(Inst, Field, SystemZMC::GR64Regs);
+}
+
+static DecodeStatus decodeBDRAddr64Disp12Operand(MCInst &Inst,
+                                                 uint64_t Field,
+                                                 uint64_t Address,
+                                                 const void *Decoder) {
+  return decodeBDRAddr12Operand(Inst, Field, SystemZMC::GR64Regs);
 }
 
 static DecodeStatus decodeBDVAddr64Disp12Operand(MCInst &Inst, uint64_t Field,

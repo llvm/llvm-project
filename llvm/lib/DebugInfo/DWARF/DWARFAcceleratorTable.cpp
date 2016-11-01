@@ -120,7 +120,7 @@ void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
           for (auto &Atom : AtomForms) {
             OS << format("{Atom[%d]: ", i++);
             if (Atom.extractValue(AccelSection, &DataOffset, nullptr))
-              Atom.dump(OS, nullptr);
+              Atom.dump(OS);
             else
               OS << "Error extracting the value";
             OS << "} ";

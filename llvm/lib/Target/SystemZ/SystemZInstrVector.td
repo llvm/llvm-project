@@ -1079,11 +1079,13 @@ def : Pat<(v2i64 (z_replicate GR64:$scalar)),
 
 // Moving 32-bit values between GPRs and FPRs can be done using VLVGF
 // and VLGVF.
-def LEFR : UnaryAliasVRS<VR32, GR32>;
-def LFER : UnaryAliasVRS<GR64, VR32>;
-def : Pat<(f32 (bitconvert (i32 GR32:$src))), (LEFR GR32:$src)>;
-def : Pat<(i32 (bitconvert (f32 VR32:$src))),
-          (EXTRACT_SUBREG (LFER VR32:$src), subreg_l32)>;
+let Predicates = [FeatureVector] in {
+  def LEFR : UnaryAliasVRS<VR32, GR32>;
+  def LFER : UnaryAliasVRS<GR64, VR32>;
+  def : Pat<(f32 (bitconvert (i32 GR32:$src))), (LEFR GR32:$src)>;
+  def : Pat<(i32 (bitconvert (f32 VR32:$src))),
+            (EXTRACT_SUBREG (LFER VR32:$src), subreg_l32)>;
+}
 
 // Floating-point values are stored in element 0 of the corresponding
 // vector register.  Scalar to vector conversion is just a subreg and

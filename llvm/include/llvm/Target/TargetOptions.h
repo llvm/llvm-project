@@ -111,7 +111,7 @@ namespace llvm {
           EmulatedTLS(false), EnableIPRA(false),
           FloatABIType(FloatABI::Default),
           AllowFPOpFusion(FPOpFusion::Standard),
-          JTType(JumpTable::Single), ThreadModel(ThreadModel::POSIX),
+          ThreadModel(ThreadModel::POSIX),
           EABIVersion(EABI::Default), DebuggerTuning(DebuggerKind::Default),
           FPDenormalMode(FPDenormal::IEEE),
           ExceptionModel(ExceptionHandling::None) {}
@@ -251,10 +251,6 @@ namespace llvm {
     /// the value of this option.
     FPOpFusion::FPOpFusionMode AllowFPOpFusion;
 
-    /// JTType - This flag specifies the type of jump-instruction table to
-    /// create for functions that have the jumptable attribute.
-    JumpTable::JumpTableType JTType;
-
     /// ThreadModel - This flag specifies the type of threading model to assume
     /// for things like atomics
     ThreadModel::Model ThreadModel;
@@ -297,7 +293,6 @@ inline bool operator==(const TargetOptions &LHS,
     ARE_EQUAL(EmulatedTLS) &&
     ARE_EQUAL(FloatABIType) &&
     ARE_EQUAL(AllowFPOpFusion) &&
-    ARE_EQUAL(JTType) &&
     ARE_EQUAL(ThreadModel) &&
     ARE_EQUAL(EABIVersion) &&
     ARE_EQUAL(DebuggerTuning) &&

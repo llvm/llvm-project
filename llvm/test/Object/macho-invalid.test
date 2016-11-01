@@ -433,3 +433,9 @@ INVALID-FVMFILE-OBSOLETE: macho-invalid-fvmfile-obsolete': truncated or malforme
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-prepage-obsolete 2>&1 | FileCheck -check-prefix INVALID-PREPAGE-OBSOLETE %s
 INVALID-PREPAGE-OBSOLETE: macho-invalid-prepage-obsolete': truncated or malformed object (load command 0 for cmd value of: 10 is obsolete and not supported)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-overlap 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-OVERLAP %s
+INVALID-SYMTAB-OVERLAP: macho-invalid-symtab-overlap': truncated or malformed object (symbol table at offset 8 with a size of 12, overlaps Mach-O headers at offset 0 with a size of 52)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-strtab-overlap 2>&1 | FileCheck -check-prefix INVALID-STRTAB-OVERLAP %s
+INVALID-STRTAB-OVERLAP: macho-invalid-strtab-overlap': truncated or malformed object (string table at offset 60 with a size of 16, overlaps symbol table at offset 52 with a size of 12)

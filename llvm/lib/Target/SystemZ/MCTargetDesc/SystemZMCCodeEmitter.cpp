@@ -72,6 +72,9 @@ private:
   uint64_t getBDLAddr12Len8Encoding(const MCInst &MI, unsigned OpNum,
                                     SmallVectorImpl<MCFixup> &Fixups,
                                     const MCSubtargetInfo &STI) const;
+  uint64_t getBDRAddr12Encoding(const MCInst &MI, unsigned OpNum,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const;
   uint64_t getBDVAddr12Encoding(const MCInst &MI, unsigned OpNum,
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const;
@@ -195,6 +198,17 @@ getBDLAddr12Len8Encoding(const MCInst &MI, unsigned OpNum,
   uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
   uint64_t Len  = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI) - 1;
   assert(isUInt<4>(Base) && isUInt<12>(Disp) && isUInt<8>(Len));
+  return (Len << 16) | (Base << 12) | Disp;
+}
+
+uint64_t SystemZMCCodeEmitter::
+getBDRAddr12Encoding(const MCInst &MI, unsigned OpNum,
+                     SmallVectorImpl<MCFixup> &Fixups,
+                     const MCSubtargetInfo &STI) const {
+  uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
+  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Len  = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI);
+  assert(isUInt<4>(Base) && isUInt<12>(Disp) && isUInt<4>(Len));
   return (Len << 16) | (Base << 12) | Disp;
 }
 

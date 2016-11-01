@@ -1264,6 +1264,7 @@ tag is one of:
 * DW_TAG_packed_type
 * DW_TAG_volatile_type
 * DW_TAG_restrict_type
+* DW_TAG_atomic_type
 * DW_TAG_interface_type
 * DW_TAG_unspecified_type
 * DW_TAG_shared_type

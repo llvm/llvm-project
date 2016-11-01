@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -disable-nvptx-favor-non-generic | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 | FileCheck %s
 
 declare i32 @llvm.nvvm.shfl.down.i32(i32, i32, i32)
 declare float @llvm.nvvm.shfl.down.f32(float, i32, i32)

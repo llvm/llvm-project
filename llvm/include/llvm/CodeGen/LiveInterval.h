@@ -672,7 +672,7 @@ namespace llvm {
         P = P->Next;
         return *this;
       }
-      SingleLinkedListIterator<T> &operator++(int) {
+      SingleLinkedListIterator<T> operator++(int) {
         SingleLinkedListIterator res = *this;
         ++*this;
         return res;

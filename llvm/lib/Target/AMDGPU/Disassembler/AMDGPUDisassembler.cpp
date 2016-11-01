@@ -58,7 +58,7 @@ static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
 
   if (DAsm->tryAddingSymbolicOperand(Inst, Offset, Addr, true, 2, 2))
     return MCDisassembler::Success;
-  return addOperand(Inst, MCOperand::createImm(Imm)); 
+  return addOperand(Inst, MCOperand::createImm(Imm));
 }
 
 #define DECODE_OPERAND2(RegClass, DecName) \
@@ -447,7 +447,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
 //===----------------------------------------------------------------------===//
 // AMDGPUSymbolizer
 //===----------------------------------------------------------------------===//
-  
+
 // Try to find symbol name for specified label
 bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
                                 raw_ostream &/*cStream*/, int64_t Value,
@@ -482,7 +482,7 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
 static MCSymbolizer *createAMDGPUSymbolizer(const Triple &/*TT*/,
                               LLVMOpInfoCallback /*GetOpInfo*/,
                               LLVMSymbolLookupCallback /*SymbolLookUp*/,
-                              void *DisInfo, 
+                              void *DisInfo,
                               MCContext *Ctx,
                               std::unique_ptr<MCRelocationInfo> &&RelInfo) {
   return new AMDGPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);

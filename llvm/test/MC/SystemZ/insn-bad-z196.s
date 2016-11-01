@@ -1,6 +1,8 @@
 # For z196 only.
 # RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=z196 < %s 2> %t
 # RUN: FileCheck < %t %s
+# RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=arch9 < %s 2> %t
+# RUN: FileCheck < %t %s
 
 #CHECK: error: invalid operand
 #CHECK: aghik	%r0, %r1, -32769
@@ -244,7 +246,7 @@
 	cxlgbr	%f0, 16, %r0, 0
 	cxlgbr	%f2, 0, %r0, 0
 
-#CHECK: error: {{(instruction requires: transactional-execution)?}}
+#CHECK: error: instruction requires: transactional-execution
 #CHECK: etnd	%r7
 
 	etnd	%r7
@@ -551,17 +553,17 @@
 	locr	%r0,%r0,-1
 	locr	%r0,%r0,16
 
-#CHECK: error: {{(instruction requires: transactional-execution)?}}
+#CHECK: error: instruction requires: transactional-execution
 #CHECK: ntstg	%r0, 524287(%r1,%r15)
 
 	ntstg	%r0, 524287(%r1,%r15)
 
-#CHECK: error: {{(instruction requires: processor-assist)?}}
+#CHECK: error: instruction requires: processor-assist
 #CHECK: ppa	%r4, %r6, 7
 
 	ppa	%r4, %r6, 7
 
-#CHECK: error: {{(instruction requires: miscellaneous-extensions)?}}
+#CHECK: error: instruction requires: miscellaneous-extensions
 #CHECK: risbgn	%r1, %r2, 0, 0, 0
 
 	risbgn	%r1, %r2, 0, 0, 0
@@ -720,22 +722,22 @@
 	stocg	%r0,524288,1
 	stocg	%r0,0(%r1,%r2),1
 
-#CHECK: error: {{(instruction requires: transactional-execution)?}}
+#CHECK: error: instruction requires: transactional-execution
 #CHECK: tabort	4095(%r1)
 
 	tabort	4095(%r1)
 
-#CHECK: error: {{(instruction requires: transactional-execution)?}}
+#CHECK: error: instruction requires: transactional-execution
 #CHECK: tbegin	4095(%r1), 42
 
 	tbegin	4095(%r1), 42
 
-#CHECK: error: {{(instruction requires: transactional-execution)?}}
+#CHECK: error: instruction requires: transactional-execution
 #CHECK: tbeginc	4095(%r1), 42
 
 	tbeginc	4095(%r1), 42
 
-#CHECK: error: {{(instruction requires: transactional-execution)?}}
+#CHECK: error: instruction requires: transactional-execution
 #CHECK: tend
 
 	tend

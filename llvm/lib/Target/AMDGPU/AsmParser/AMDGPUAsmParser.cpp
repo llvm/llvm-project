@@ -216,11 +216,11 @@ public:
   bool isImmTy(ImmTy ImmT) const {
     return isImm() && Imm.Type == ImmT;
   }
-  
+
   bool isImmModifier() const {
     return isImm() && Imm.Type != ImmTyNone;
   }
-  
+
   bool isClampSI() const { return isImmTy(ImmTyClampSI); }
   bool isOModSI() const { return isImmTy(ImmTyOModSI); }
   bool isDMask() const { return isImmTy(ImmTyDMask); }
@@ -245,7 +245,7 @@ public:
   bool isSDWASrc0Sel() const { return isImmTy(ImmTySdwaSrc0Sel); }
   bool isSDWASrc1Sel() const { return isImmTy(ImmTySdwaSrc1Sel); }
   bool isSDWADstUnused() const { return isImmTy(ImmTySdwaDstUnused); }
-  
+
   bool isMod() const {
     return isClampSI() || isOModSI();
   }
@@ -297,7 +297,7 @@ public:
   bool isVCSrcB64() const {
     return isRegClass(AMDGPU::VS_64RegClassID) || isInlinableImm(MVT::i64);
   }
-  
+
   bool isVCSrcF32() const {
     return isRegClass(AMDGPU::VS_32RegClassID) || isInlinableImm(MVT::f32);
   }
@@ -341,7 +341,8 @@ public:
   bool isSWaitCnt() const;
   bool isHwreg() const;
   bool isSendMsg() const;
-  bool isSMRDOffset() const;
+  bool isSMRDOffset8() const;
+  bool isSMRDOffset20() const;
   bool isSMRDLiteralOffset() const;
   bool isDPPCtrl() const;
   bool isGPRIdxMode() const;
@@ -400,7 +401,7 @@ public:
   bool hasModifiers() const {
     return getModifiers().hasModifiers();
   }
-  
+
   bool hasFPModifiers() const {
     return getModifiers().hasFPModifiers();
   }
@@ -741,7 +742,8 @@ public:
   AMDGPUOperand::Ptr defaultDA() const;
   AMDGPUOperand::Ptr defaultR128() const;
   AMDGPUOperand::Ptr defaultLWE() const;
-  AMDGPUOperand::Ptr defaultSMRDOffset() const;
+  AMDGPUOperand::Ptr defaultSMRDOffset8() const;
+  AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
@@ -1343,7 +1345,7 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
     Parser.Lex();
     Mods.Sext = true;
   }
-  
+
   if (Mods.hasIntModifiers()) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     Op.setModifiers(Mods);
@@ -2533,11 +2535,12 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultLWE() const {
 // smrd
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isSMRDOffset() const {
-
-  // FIXME: Support 20-bit offsets on VI.  We need to to pass subtarget
-  // information here.
+bool AMDGPUOperand::isSMRDOffset8() const {
   return isImm() && isUInt<8>(getImm());
+}
+
+bool AMDGPUOperand::isSMRDOffset20() const {
+  return isImm() && isUInt<20>(getImm());
 }
 
 bool AMDGPUOperand::isSMRDLiteralOffset() const {
@@ -2546,7 +2549,11 @@ bool AMDGPUOperand::isSMRDLiteralOffset() const {
   return isImm() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset() const {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset8() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset20() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 
@@ -3006,7 +3013,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
   }
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
-  
+
   if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa) {
     // V_NOP_sdwa has no optional sdwa arguments
     switch (BasicInstType) {
@@ -3032,7 +3039,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
       llvm_unreachable("Invalid instruction type. Only VOP1, VOP2 and VOPC allowed");
     }
   }
-  
+
   // special case v_mac_f32:
   // it has src2 register operand that is tied to dst operand
   if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa) {

@@ -478,15 +478,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  if (!isPreISelGenericOpcode(I.getOpcode()))
-    return !I.isCopy() || selectCopy(I, TII, MRI, TRI, RBI);
+  unsigned Opcode = I.getOpcode();
+  if (!isPreISelGenericOpcode(I.getOpcode())) {
+    // Certain non-generic instructions also need some special handling.
+
+    if (Opcode ==  TargetOpcode::LOAD_STACK_GUARD)
+      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    else if (I.isCopy())
+      return selectCopy(I, TII, MRI, TRI, RBI);
+    else
+      return true;
+  }
+
 
   if (I.getNumOperands() != I.getNumExplicitOperands()) {
     DEBUG(dbgs() << "Generic instruction has unexpected implicit operands\n");
     return false;
   }
 
-  unsigned Opcode = I.getOpcode();
   LLT Ty =
       I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg()) : LLT{};
 
@@ -739,6 +748,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC: {
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     const LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
@@ -909,7 +919,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
 
   case TargetOpcode::G_INTTOPTR:
-  case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_BITCAST:
     return selectCopy(I, TII, MRI, TRI, RBI);
 

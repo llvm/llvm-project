@@ -1091,6 +1091,7 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
     return lowerTypeMemberPointer(cast<DIDerivedType>(Ty));
   case dwarf::DW_TAG_const_type:
   case dwarf::DW_TAG_volatile_type:
+  // TODO: add support for DW_TAG_atomic_type here
     return lowerTypeModifier(cast<DIDerivedType>(Ty));
   case dwarf::DW_TAG_subroutine_type:
     if (ClassTy) {
@@ -1399,7 +1400,7 @@ TypeIndex CodeViewDebug::lowerTypeModifier(const DIDerivedType *Ty) {
   bool IsModifier = true;
   const DIType *BaseTy = Ty;
   while (IsModifier && BaseTy) {
-    // FIXME: Need to add DWARF tag for __unaligned.
+    // FIXME: Need to add DWARF tags for __unaligned and _Atomic
     switch (BaseTy->getTag()) {
     case dwarf::DW_TAG_const_type:
       Mods |= ModifierOptions::Const;
