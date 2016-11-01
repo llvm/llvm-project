@@ -133,6 +133,7 @@ CODEGENOPT(DumpCoverageMapping , 1, 0) ///< Dump the generated coverage mapping
   /// If -fpcc-struct-return or -freg-struct-return is specified.
 ENUM_CODEGENOPT(StructReturnConvention, StructReturnConventionKind, 2, SRCK_Default)
 
+CODEGENOPT(QualifiedFunctionTypeInfo, 1, 0) ///< Use __qualified_function_type_info.
 CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
 CODEGENOPT(StructPathTBAA    , 1, 0) ///< Whether or not to use struct-path TBAA.
