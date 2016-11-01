@@ -19,6 +19,7 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
@@ -126,9 +127,17 @@ size_t SBWatchpoint::GetWatchSize() {
 void SBWatchpoint::SetEnabled(bool enabled) {
   lldb::WatchpointSP watchpoint_sp(GetSP());
   if (watchpoint_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        watchpoint_sp->GetTarget().GetAPIMutex());
-    watchpoint_sp->SetEnabled(enabled);
+    Target &target = watchpoint_sp->GetTarget();
+    std::lock_guard<std::recursive_mutex> guard(target.GetAPIMutex());
+    ProcessSP process_sp = target.GetProcessSP();
+    if (process_sp) {
+      if (enabled)
+        process_sp->EnableWatchpoint(watchpoint_sp.get(), false);
+      else
+        process_sp->DisableWatchpoint(watchpoint_sp.get(), false);
+    } else {
+      watchpoint_sp->SetEnabled(enabled);
+    }
   }
 }
 
