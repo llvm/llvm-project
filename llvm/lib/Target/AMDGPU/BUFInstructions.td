@@ -130,8 +130,7 @@ class MTBUF_Load_Pseudo <string opName, RegisterClass regClass> : MTBUF_Pseudo <
        i8imm:$dfmt, i8imm:$nfmt, VGPR_32:$vaddr, SReg_128:$srsrc,
        i1imm:$slc, i1imm:$tfe, SCSrc_b32:$soffset),
   " $dst, $offset, $offen, $idxen, $glc, $addr64, $dfmt,"#
-  " $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset"
-> {
+  " $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset"> {
   let mayLoad = 1;
   let mayStore = 0;
 }
@@ -142,8 +141,7 @@ class MTBUF_Store_Pseudo <string opName, RegisterClass regClass> : MTBUF_Pseudo 
        i1imm:$addr64, i8imm:$dfmt, i8imm:$nfmt, VGPR_32:$vaddr,
        SReg_128:$srsrc, i1imm:$slc, i1imm:$tfe, SCSrc_b32:$soffset),
   " $vdata, $offset, $offen, $idxen, $glc, $addr64, $dfmt,"#
-  " $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset"
-> {
+  " $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset"> {
   let mayLoad = 0;
   let mayStore = 1;
 }
@@ -277,7 +275,7 @@ class getMUBUFAsmOps<int addrKind> {
   string ret = Pfx # "$offset";
 }
 
- class MUBUF_SetupAddr<int addrKind> {
+class MUBUF_SetupAddr<int addrKind> {
   bits<1> offen  = !if(!eq(addrKind, BUFAddrKind.OffEn), 1,
                    !if(!eq(addrKind, BUFAddrKind.BothEn), 1 , 0));
 

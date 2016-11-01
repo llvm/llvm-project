@@ -43,13 +43,9 @@ struct Expr {
   uint64_t operator()(uint64_t Dot) const { return Val(Dot); }
   operator bool() const { return (bool)Val; }
 
-  template <typename T>
-  Expr(T Val, std::function<bool()> IsAbsolute)
+  Expr(std::function<uint64_t(uint64_t)> Val, std::function<bool()> IsAbsolute)
       : Val(Val), IsAbsolute(IsAbsolute) {}
-  template <typename T> Expr(T Val, bool IsAbsolute) : Val(Val) {
-    this->IsAbsolute = [=]() { return IsAbsolute; };
-  }
-  template <typename T> Expr(T V) : Expr(V, false) {}
+  template <typename T> Expr(T V) : Expr(V, []() { return true; }) {}
   Expr() : Expr(nullptr) {}
 };
 

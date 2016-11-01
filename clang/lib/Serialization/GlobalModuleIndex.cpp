@@ -460,7 +460,7 @@ static void emitRecordID(unsigned ID, const char *Name,
 void
 GlobalModuleIndexBuilder::emitBlockInfoBlock(llvm::BitstreamWriter &Stream) {
   SmallVector<uint64_t, 64> Record;
-  Stream.EnterSubblock(llvm::bitc::BLOCKINFO_BLOCK_ID, 3);
+  Stream.EnterBlockInfoBlock();
 
 #define BLOCK(X) emitBlockID(X ## _ID, #X, Stream, Record)
 #define RECORD(X) emitRecordID(X, #X, Stream, Record)

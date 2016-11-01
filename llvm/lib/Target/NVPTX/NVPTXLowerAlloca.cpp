@@ -20,8 +20,8 @@
 //   %Generic = addrspacecast i32 addrspace(5)* %A to i32*
 //   store i32 0, i32 addrspace(5)* %Generic ; emits st.local.u32
 //
-// And we will rely on NVPTXFavorNonGenericAddrSpace to combine the last
-// two instructions.
+// And we will rely on NVPTXInferAddressSpaces to combine the last two
+// instructions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -83,7 +83,7 @@ bool NVPTXLowerAlloca::runOnBasicBlock(BasicBlock &BB) {
             UI != UE; ) {
         // Check Load, Store, GEP, and BitCast Uses on alloca and make them
         // use the converted generic address, in order to expose non-generic
-        // addrspacecast to NVPTXFavorNonGenericAddrSpace. For other types
+        // addrspacecast to NVPTXInferAddressSpaces. For other types
         // of instructions this is unnecessary and may introduce redundant
         // address cast.
         const auto &AllocaUse = *UI++;

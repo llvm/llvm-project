@@ -195,7 +195,6 @@ namespace {
         unsigned DstSR, const MachineOperand &PredOp, bool PredSense,
         bool ReadUndef, bool ImpUse);
     bool split(MachineInstr &MI, std::set<unsigned> &UpdRegs);
-    bool splitInBlock(MachineBasicBlock &B, std::set<unsigned> &UpdRegs);
 
     bool isPredicable(MachineInstr *MI);
     MachineInstr *getReachingDefForPred(RegisterRef RD,
@@ -650,22 +649,6 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
   removeInstr(MI);
   return true;
 }
-
-
-/// Split all MUX instructions in the given block into pairs of conditional
-/// transfers.
-bool HexagonExpandCondsets::splitInBlock(MachineBasicBlock &B,
-      std::set<unsigned> &UpdRegs) {
-  bool Changed = false;
-  MachineBasicBlock::iterator I, E, NextI;
-  for (I = B.begin(), E = B.end(); I != E; I = NextI) {
-    NextI = std::next(I);
-    if (isCondset(*I))
-      Changed |= split(*I, UpdRegs);
-  }
-  return Changed;
-}
-
 
 bool HexagonExpandCondsets::isPredicable(MachineInstr *MI) {
   if (HII->isPredicated(*MI) || !HII->isPredicable(*MI))

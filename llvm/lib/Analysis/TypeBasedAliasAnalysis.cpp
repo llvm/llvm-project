@@ -159,10 +159,10 @@ public:
     return TBAANode(P);
   }
 
-  /// TypeIsImmutable - Test if this TBAANode represents a type for objects
-  /// which are not modified (by any means) in the context where this
+  /// Test if this TBAANode represents a type for objects which are
+  /// not modified (by any means) in the context where this
   /// AliasAnalysis is relevant.
-  bool TypeIsImmutable() const {
+  bool isTypeImmutable() const {
     if (Node->getNumOperands() < 3)
       return false;
     ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(2));
@@ -194,10 +194,10 @@ public:
   uint64_t getOffset() const {
     return mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue();
   }
-  /// TypeIsImmutable - Test if this TBAAStructTagNode represents a type for
-  /// objects which are not modified (by any means) in the context where this
+  /// Test if this TBAAStructTagNode represents a type for objects
+  /// which are not modified (by any means) in the context where this
   /// AliasAnalysis is relevant.
-  bool TypeIsImmutable() const {
+  bool isTypeImmutable() const {
     if (Node->getNumOperands() < 4)
       return false;
     ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(3));
@@ -311,8 +311,8 @@ bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
 
   // If this is an "immutable" type, we can assume the pointer is pointing
   // to constant memory.
-  if ((!isStructPathTBAA(M) && TBAANode(M).TypeIsImmutable()) ||
-      (isStructPathTBAA(M) && TBAAStructTagNode(M).TypeIsImmutable()))
+  if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
+      (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
     return true;
 
   return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
@@ -328,8 +328,8 @@ TypeBasedAAResult::getModRefBehavior(ImmutableCallSite CS) {
   // If this is an "immutable" type, we can assume the call doesn't write
   // to memory.
   if (const MDNode *M = CS.getInstruction()->getMetadata(LLVMContext::MD_tbaa))
-    if ((!isStructPathTBAA(M) && TBAANode(M).TypeIsImmutable()) ||
-        (isStructPathTBAA(M) && TBAAStructTagNode(M).TypeIsImmutable()))
+    if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
+        (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
       Min = FMRB_OnlyReadsMemory;
 
   return FunctionModRefBehavior(AAResultBase::getModRefBehavior(CS) & Min);

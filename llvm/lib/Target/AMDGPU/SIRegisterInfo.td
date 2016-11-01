@@ -365,17 +365,17 @@ class RegImmMatcher<string name> : AsmOperandClass {
 
 multiclass SIRegOperand <string rc, string MatchName, string opType> {
   let OperandNamespace = "AMDGPU" in {
-    
+
     def _b32 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
       let OperandType = opType#"_INT";
       let ParserMatchClass = RegImmMatcher<MatchName#"B32">;
     }
-  
+
     def _f32 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
       let OperandType = opType#"_FP";
       let ParserMatchClass = RegImmMatcher<MatchName#"F32">;
     }
-    
+
     def _b64 : RegisterOperand<!cast<RegisterClass>(rc#"_64")> {
       let OperandType = opType#"_INT";
       let ParserMatchClass = RegImmMatcher<MatchName#"B64">;
@@ -388,10 +388,10 @@ multiclass SIRegOperand <string rc, string MatchName, string opType> {
   }
 }
 
-multiclass RegImmOperand <string rc, string MatchName> 
+multiclass RegImmOperand <string rc, string MatchName>
   : SIRegOperand<rc, MatchName, "OPERAND_REG_IMM32">;
 
-multiclass RegInlineOperand <string rc, string MatchName> 
+multiclass RegInlineOperand <string rc, string MatchName>
   : SIRegOperand<rc, MatchName, "OPERAND_REG_INLINE_C">;
 
 //===----------------------------------------------------------------------===//

@@ -8593,12 +8593,20 @@ ARMTargetLowering::EmitLowered__dbzchk(MachineInstr &MI,
   ContBB->splice(ContBB->begin(), MBB,
                  std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   ContBB->transferSuccessorsAndUpdatePHIs(MBB);
-
-  BuildMI(*MBB, MI, DL, TII->get(ARM::tCBNZ))
-      .addReg(MI.getOperand(0).getReg())
-      .addMBB(ContBB);
   MBB->addSuccessor(ContBB);
-  BuildMI(*MBB, MI, DL, TII->get(ARM::t__brkdiv0));
+
+  MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
+  BuildMI(TrapBB, DL, TII->get(ARM::t__brkdiv0));
+  MF->push_back(TrapBB);
+  MBB->addSuccessor(TrapBB);
+
+  AddDefaultPred(BuildMI(*MBB, MI, DL, TII->get(ARM::tCMPi8))
+                     .addReg(MI.getOperand(0).getReg())
+                     .addImm(0));
+  BuildMI(*MBB, MI, DL, TII->get(ARM::t2Bcc))
+      .addMBB(TrapBB)
+      .addImm(ARMCC::EQ)
+      .addReg(ARM::CPSR);
 
   MI.eraseFromParent();
   return ContBB;

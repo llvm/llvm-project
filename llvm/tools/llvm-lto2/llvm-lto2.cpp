@@ -26,6 +26,11 @@ using namespace llvm;
 using namespace lto;
 using namespace object;
 
+static cl::opt<char>
+    OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                           "(default = '-O2')"),
+             cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+
 static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
                                             cl::desc("<input bitcode files>"));
 
@@ -144,6 +149,8 @@ int main(int argc, char **argv) {
   // Run a custom pipeline, if asked for.
   Conf.OptPipeline = OptPipeline;
   Conf.AAPipeline = AAPipeline;
+
+  Conf.OptLevel = OptLevel - '0';
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)

@@ -47,7 +47,7 @@
 //      ...
 //    }
 //
-//    Later, NVPTXFavorNonGenericAddrSpaces will optimize it to
+//    Later, NVPTXInferAddressSpaces will optimize it to
 //
 //    define void @foo(float* %input) {
 //      %input2 = addrspacecast float* %input to float addrspace(1)*
@@ -85,8 +85,8 @@
 //      ; use %b_generic
 //    }
 //
-// TODO: merge this pass with NVPTXFavorNonGenericAddrSpace so that other passes
-// don't cancel the addrspacecast pair this pass emits.
+// TODO: merge this pass with NVPTXInferAddressSpaces so that other passes don't
+// cancel the addrspacecast pair this pass emits.
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
@@ -116,7 +116,7 @@ class NVPTXLowerArgs : public FunctionPass {
   void handleByValParam(Argument *Arg);
   // Knowing Ptr must point to the global address space, this function
   // addrspacecasts Ptr to global and then back to generic. This allows
-  // NVPTXFavorNonGenericAddrSpace to fold the global-to-generic cast into
+  // NVPTXInferAddressSpaces to fold the global-to-generic cast into
   // loads/stores that appear later.
   void markPointerAsGlobal(Value *Ptr);
 

@@ -2450,16 +2450,18 @@ const internal::VariadicOperatorMatcherFunc<1, 1> unless = {
 /// - for CallExpr, the declaration of the callee
 /// - for MemberExpr, the declaration of the referenced member
 /// - for CXXConstructExpr, the declaration of the constructor
+/// - for CXXNewExpr, the declaration of the operator new
 ///
 /// Also usable as Matcher<T> for any T supporting the getDecl() member
 /// function. e.g. various subtypes of clang::Type and various expressions.
 ///
-/// Usable as: Matcher<CallExpr>, Matcher<CXXConstructExpr>,
-///   Matcher<DeclRefExpr>, Matcher<EnumType>, Matcher<InjectedClassNameType>,
-///   Matcher<LabelStmt>, Matcher<AddrLabelExpr>, Matcher<MemberExpr>,
-///   Matcher<QualType>, Matcher<RecordType>, Matcher<TagType>,
-///   Matcher<TemplateSpecializationType>, Matcher<TemplateTypeParmType>,
-///   Matcher<TypedefType>, Matcher<UnresolvedUsingType>
+/// Usable as: Matcher<AddrLabelExpr>, Matcher<CallExpr>,
+///   Matcher<CXXConstructExpr>, Matcher<CXXNewExpr>, Matcher<DeclRefExpr>,
+///   Matcher<EnumType>, Matcher<InjectedClassNameType>, Matcher<LabelStmt>,
+///   Matcher<MemberExpr>, Matcher<QualType>, Matcher<RecordType>,
+///   Matcher<TagType>, Matcher<TemplateSpecializationType>,
+///   Matcher<TemplateTypeParmType>, Matcher<TypedefType>,
+///   Matcher<UnresolvedUsingType>
 inline internal::PolymorphicMatcherWithParam1<
     internal::HasDeclarationMatcher, internal::Matcher<Decl>,
     void(internal::HasDeclarationSupportedTypes)>

@@ -100,7 +100,7 @@ class DS_1A_Off8_NORET<string opName> : DS_Pseudo<opName,
   let AsmMatchConverter = "cvtDSOffset01";
 }
 
-class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32> 
+class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, rc:$data0, rc:$data1, offset:$offset, gds:$gds),
@@ -133,7 +133,7 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32>
 }
 
 class DS_1A2D_RET<string opName,
-                  RegisterClass rc = VGPR_32, 
+                  RegisterClass rc = VGPR_32,
                   RegisterClass src = rc>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
@@ -146,7 +146,7 @@ class DS_1A2D_RET<string opName,
 class DS_1A_RET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
-  (ins VGPR_32:$addr, offset:$offset, gds:$gds), 
+  (ins VGPR_32:$addr, offset:$offset, gds:$gds),
   "$vdst, $addr$offset$gds"> {
 
   let has_data0 = 0;
@@ -207,14 +207,14 @@ class DS_1A_GDS <string opName> : DS_Pseudo<opName,
   (ins VGPR_32:$addr),
   "$addr gds"> {
 
-  let has_vdst    = 0; 
-  let has_data0   = 0; 
+  let has_vdst    = 0;
+  let has_data0   = 0;
   let has_data1   = 0;
   let has_offset  = 0;
   let has_offset0 = 0;
   let has_offset1 = 0;
 
-  let has_gds     = 0; 
+  let has_gds     = 0;
   let gdsValue    = 1;
 }
 
@@ -749,7 +749,7 @@ class DS_Real_vi <bits<8> op, DS_Pseudo ds> :
   let AssemblerPredicates = [isVI];
   let DecoderNamespace="VI";
 
-  // encoding 
+  // encoding
   let Inst{7-0}   = !if(ds.has_offset0, offset0, 0);
   let Inst{15-8}  = !if(ds.has_offset1, offset1, 0);
   let Inst{16}    = !if(ds.has_gds, gds, ds.gdsValue);
