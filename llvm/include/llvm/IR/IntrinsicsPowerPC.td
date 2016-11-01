@@ -622,6 +622,8 @@ def int_ppc_altivec_vsl   : PowerPC_Vec_WWW_Intrinsic<"vsl">;
 def int_ppc_altivec_vslo  : PowerPC_Vec_WWW_Intrinsic<"vslo">;
 
 def int_ppc_altivec_vslb  : PowerPC_Vec_BBB_Intrinsic<"vslb">;
+def int_ppc_altivec_vslv  : PowerPC_Vec_BBB_Intrinsic<"vslv">;
+def int_ppc_altivec_vsrv  : PowerPC_Vec_BBB_Intrinsic<"vsrv">;
 def int_ppc_altivec_vslh  : PowerPC_Vec_HHH_Intrinsic<"vslh">;
 def int_ppc_altivec_vslw  : PowerPC_Vec_WWW_Intrinsic<"vslw">;
 

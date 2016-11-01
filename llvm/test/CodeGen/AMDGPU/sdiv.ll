@@ -156,3 +156,16 @@ define void @v_sdiv_i25(i32 addrspace(1)* %out, i25 addrspace(1)* %in) {
 ;   store i64 %result, i64 addrspace(1)* %out, align 8
 ;   ret void
 ; }
+
+; FUNC-LABEL: @scalarize_mulhs_4xi32
+; SI: v_mul_hi_i32
+; SI: v_mul_hi_i32
+; SI: v_mul_hi_i32
+; SI: v_mul_hi_i32
+
+define void @scalarize_mulhs_4xi32(<4 x i32> addrspace(1)* nocapture readonly %in, <4 x i32> addrspace(1)* nocapture %out) {
+  %1 = load <4 x i32>, <4 x i32> addrspace(1)* %in, align 16
+  %2 = sdiv <4 x i32> %1, <i32 53668, i32 53668, i32 53668, i32 53668>
+  store <4 x i32> %2, <4 x i32> addrspace(1)* %out, align 16
+  ret void
+}

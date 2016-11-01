@@ -284,6 +284,11 @@ BUILTIN(__builtin_altivec_vpopcnth, "V8UsV8Us", "")
 BUILTIN(__builtin_altivec_vpopcntw, "V4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vpopcntd, "V2ULLiV2ULLi", "")
 
+// Absolute difference built-ins
+BUILTIN(__builtin_altivec_vabsdub, "V16UcV16UcV16Uc", "")
+BUILTIN(__builtin_altivec_vabsduh, "V8UsV8UsV8Us", "")
+BUILTIN(__builtin_altivec_vabsduw, "V4UiV4UiV4Ui", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")

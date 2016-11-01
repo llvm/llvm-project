@@ -23,6 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -36,13 +37,31 @@ using namespace lld::elf;
 
 std::vector<InputFile *> InputFile::Pool;
 
-template <class ELFT> DIHelper<ELFT>::DIHelper(elf::InputFile *F) {
+namespace {
+// In ELF object file all section addresses are zero. If we have multiple
+// .text sections (when using -ffunction-section or comdat group) then
+// LLVM DWARF parser will not be able to parse .debug_line correctly, unless
+// we assign each section some unique address. This callback method assigns
+// each section an address equal to its offset in ELF object file.
+class ObjectInfo : public LoadedObjectInfo {
+public:
+  uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const override {
+    return static_cast<const ELFSectionRef &>(Sec).getOffset();
+  }
+  std::unique_ptr<LoadedObjectInfo> clone() const override {
+    return std::unique_ptr<LoadedObjectInfo>();
+  }
+};
+}
+
+template <class ELFT> DIHelper<ELFT>::DIHelper(InputFile *F) {
   Expected<std::unique_ptr<object::ObjectFile>> Obj =
       object::ObjectFile::createObjectFile(F->MB);
   if (!Obj)
     return;
 
-  DWARFContextInMemory Dwarf(*Obj.get());
+  ObjectInfo ObjInfo;
+  DWARFContextInMemory Dwarf(*Obj.get(), &ObjInfo);
   DwarfLine.reset(new DWARFDebugLine(&Dwarf.getLineSection().Relocs));
   DataExtractor LineData(Dwarf.getLineSection().Data,
                          ELFT::TargetEndianness == support::little,
@@ -55,7 +74,9 @@ template <class ELFT> DIHelper<ELFT>::DIHelper(elf::InputFile *F) {
 
 template <class ELFT> DIHelper<ELFT>::~DIHelper() {}
 
-template <class ELFT> std::string DIHelper<ELFT>::getLineInfo(uintX_t Offset) {
+template <class ELFT>
+std::string DIHelper<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
+                                        uintX_t Offset) {
   if (!DwarfLine)
     return "";
 
@@ -65,7 +86,12 @@ template <class ELFT> std::string DIHelper<ELFT>::getLineInfo(uintX_t Offset) {
   const DWARFDebugLine::LineTable *LineTbl = DwarfLine->getLineTable(0);
   if (!LineTbl)
     return "";
-  LineTbl->getFileLineInfoForAddress(Offset, nullptr, Spec.FLIKind, LineInfo);
+
+  // Use fake address calcuated by adding section file offset and offset in
+  // section.
+  // See comments for ObjectInfo class
+  LineTbl->getFileLineInfoForAddress(S->Offset + Offset, nullptr, Spec.FLIKind,
+                                     LineInfo);
   return LineInfo.Line != 0
              ? LineInfo.FileName + " (" + std::to_string(LineInfo.Line) + ")"
              : "";
