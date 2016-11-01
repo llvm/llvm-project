@@ -484,7 +484,7 @@ handleErrors. Idiomatic use of ``handleErrors`` thus looks like:
         handleErrors(
           processFormattedFile(...),
           [](const BadFileFormat &BFF) {
-            report(“Unable to process “ + BFF.Path + “: bad format”);
+            report("Unable to process " + BFF.Path + ": bad format");
           },
           [](const FileNotFound &FNF) {
             report("File not found " + FNF.Path);
@@ -538,7 +538,7 @@ rather than an ``Error``). The infectious nature of error types means that an
 attempt to change one of these functions to return ``Error`` or ``Expected<T>``
 instead often results in an avalanche of changes to callers, callers of callers,
 and so on. (The first such attempt, returning an ``Error`` from
-MachOObjectFile’s constructor, was abandoned after the diff reached 3000 lines,
+MachOObjectFile's constructor, was abandoned after the diff reached 3000 lines,
 impacted half a dozen libraries, and was still growing).
 
 To solve this problem, the ``Error``/``std::error_code`` interoperability requirement was
@@ -611,15 +611,15 @@ turning them into non-failing calls:
     int X = ExitOnErr(mayFail2());
   }
 
-On failure, the error’s log message will be written to ``stderr``, optionally
-preceded by a string “banner” that can be set by calling the setBanner method. A
+On failure, the error's log message will be written to ``stderr``, optionally
+preceded by a string "banner" that can be set by calling the setBanner method. A
 mapping can also be supplied from ``Error`` values to exit codes using the
 ``setExitCodeMapper`` method:
 
 .. code-block:: c++
 
   int main(int argc, char *argv[]) {
-    ExitOnErr.setBanner(std::string(argv[0]) + “ error:”);
+    ExitOnErr.setBanner(std::string(argv[0]) + " error:");
     ExitOnErr.setExitCodeMapper(
       [](const Error &Err) {
         if (Err.isA<BadFileFormat>())
@@ -634,9 +634,9 @@ Fallible constructors
 """""""""""""""""""""
 
 Some classes require resource acquisition or other complex initialization that
-can fail during construction. Unfortunately constructors can’t return errors,
-and having clients test objects after they’re constructed to ensure that they’re
-valid is error prone as it’s all too easy to forget the test. To work around
+can fail during construction. Unfortunately constructors can't return errors,
+and having clients test objects after they're constructed to ensure that they're
+valid is error prone as it's all too easy to forget the test. To work around
 this, use the named constructor idiom and return an ``Expected<T>``:
 
 .. code-block:: c++
@@ -754,10 +754,10 @@ cleaner iteration idiom:
 
   Error Err;
   for (auto &Child : Ar->children(Err)) {
-    // Use Child - we only enter the loop when it’s valid
+    // Use Child - we only enter the loop when it's valid
     ...
   }
-  // Check Err after the loop to ensure it didn’t break due to an error.
+  // Check Err after the loop to ensure it didn't break due to an error.
   if (Err)
     return Err;
 

@@ -1803,10 +1803,12 @@ typedef void (*TokenizerCallback)(StringRef Source, StringSaver &Saver,
 /// \param [in,out] Argv Command line into which to expand response files.
 /// \param [in] MarkEOLs Mark end of lines and the end of the response file
 /// with nullptrs in the Argv vector.
+/// \param [in] RelativeNames true if names of nested response files must be
+/// resolved relative to including file.
 /// \return true if all @files were expanded successfully or there were none.
 bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                          SmallVectorImpl<const char *> &Argv,
-                         bool MarkEOLs = false);
+                         bool MarkEOLs = false, bool RelativeNames = false);
 
 /// \brief Mark all options not part of this category as cl::ReallyHidden.
 ///

@@ -167,4 +167,27 @@ entry:
 ; Function Attrs: nounwind readnone
 declare <2 x double> @llvm.ppc.vsx.xviexpdp(<2 x i64>, <2 x i64>)
 
+define <16 x i8> @testVSLV(<16 x i8> %a, <16 x i8> %b) {
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.altivec.vslv(<16 x i8> %a, <16 x i8> %b)
+  ret <16 x i8> %0
+; CHECK-LABEL: testVSLV
+; CHECK: vslv 2, 2, 3
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <16 x i8> @llvm.ppc.altivec.vslv(<16 x i8>, <16 x i8>)
+
+; Function Attrs: nounwind readnone
+define <16 x i8> @testVSRV(<16 x i8> %a, <16 x i8> %b) {
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.altivec.vsrv(<16 x i8> %a, <16 x i8> %b)
+  ret <16 x i8> %0
+; CHECK-LABEL: testVSRV
+; CHECK: vsrv 2, 2, 3
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <16 x i8> @llvm.ppc.altivec.vsrv(<16 x i8>, <16 x i8>)
+
 declare void @sink(...)
