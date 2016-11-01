@@ -244,7 +244,7 @@ public:
 
   const ArchSpec &GetHostArchitecture();
 
-  uint32_t GetHostDefaultPacketTimeout();
+  std::chrono::seconds GetHostDefaultPacketTimeout();
 
   const ArchSpec &GetProcessArchitecture();
 
@@ -556,7 +556,7 @@ protected:
                                  // qGDBServerVersion is not supported
   uint32_t m_gdb_server_version; // from reply to qGDBServerVersion, zero if
                                  // qGDBServerVersion is not supported
-  uint32_t m_default_packet_timeout;
+  std::chrono::seconds m_default_packet_timeout;
   uint64_t m_max_packet_size;        // as returned by qSupported
   std::string m_qSupported_response; // the complete response to qSupported
 

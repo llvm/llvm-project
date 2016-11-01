@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 // <exception>
 
 // exception_ptr current_exception();

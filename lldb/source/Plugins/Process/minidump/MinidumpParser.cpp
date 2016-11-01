@@ -9,6 +9,8 @@
 
 // Project includes
 #include "MinidumpParser.h"
+#include "NtStructures.h"
+#include "RegisterContextMinidump_x86_32.h"
 
 // Other libraries and framework includes
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -106,9 +108,40 @@ llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetThreadContext(const MinidumpThread &td) {
   if (td.thread_context.rva + td.thread_context.data_size > GetData().size())
-    return llvm::None;
+    return {};
 
   return GetData().slice(td.thread_context.rva, td.thread_context.data_size);
+}
+
+llvm::ArrayRef<uint8_t>
+MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
+  // On Windows, a 32-bit process can run on a 64-bit machine under
+  // WOW64. If the minidump was captured with a 64-bit debugger, then
+  // the CONTEXT we just grabbed from the mini_dump_thread is the one
+  // for the 64-bit "native" process rather than the 32-bit "guest"
+  // process we care about.  In this case, we can get the 32-bit CONTEXT
+  // from the TEB (Thread Environment Block) of the 64-bit process.
+  auto teb_mem = GetMemory(td.teb, sizeof(TEB64));
+  if (teb_mem.empty())
+    return {};
+
+  const TEB64 *wow64teb;
+  Error error = consumeObject(teb_mem, wow64teb);
+  if (error.Fail())
+    return {};
+
+  // Slot 1 of the thread-local storage in the 64-bit TEB points to a
+  // structure that includes the 32-bit CONTEXT (after a ULONG).
+  // See:  https://msdn.microsoft.com/en-us/library/ms681670.aspx
+  auto context =
+      GetMemory(wow64teb->tls_slots[1] + 4, sizeof(MinidumpContext_x86_32));
+  if (context.size() < sizeof(MinidumpContext_x86_32))
+    return {};
+
+  return context;
+  // NOTE:  We don't currently use the TEB for anything else.  If we
+  // need it in the future, the 32-bit TEB is located according to the address
+  // stored in the first slot of the 64-bit TEB (wow64teb.Reserved1[0]).
 }
 
 const MinidumpSystemInfo *MinidumpParser::GetSystemInfo() {
@@ -229,8 +262,7 @@ llvm::ArrayRef<MinidumpModule> MinidumpParser::GetModuleList() {
 
 std::vector<const MinidumpModule *> MinidumpParser::GetFilteredModuleList() {
   llvm::ArrayRef<MinidumpModule> modules = GetModuleList();
-  // mapping module_name to pair(load_address, pointer to module struct in
-  // memory)
+  // map module_name -> pair(load_address, pointer to module struct in memory)
   llvm::StringMap<std::pair<uint64_t, const MinidumpModule *>> lowest_addr;
 
   std::vector<const MinidumpModule *> filtered_modules;

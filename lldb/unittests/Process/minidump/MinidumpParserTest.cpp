@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 // Project includes
+#include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/minidump/MinidumpParser.h"
 #include "Plugins/Process/minidump/MinidumpTypes.h"
+#include "Plugins/Process/minidump/RegisterContextMinidump_x86_32.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
 // Other libraries and framework includes
@@ -61,7 +63,7 @@ public:
   std::unique_ptr<MinidumpParser> parser;
 };
 
-TEST_F(MinidumpParserTest, GetThreads) {
+TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
   SetUpData("linux-x86_64.dmp");
   llvm::ArrayRef<MinidumpThread> thread_list;
 
@@ -132,7 +134,7 @@ TEST_F(MinidumpParserTest, GetModuleList) {
     llvm::Optional<std::string> name =
         parser->GetMinidumpString(modules[i].module_name_rva);
     ASSERT_TRUE(name.hasValue());
-    ASSERT_EQ(module_names[i], name.getValue());
+    EXPECT_EQ(module_names[i], name.getValue());
   }
 }
 
@@ -273,60 +275,179 @@ TEST_F(MinidumpParserTest, GetPidWindows) {
   ASSERT_EQ(4440UL, pid.getValue());
 }
 
-// Register stuff
-// TODO probably split register stuff tests into different file?
-#define REG_VAL(x) *(reinterpret_cast<uint64_t *>(x))
+// wow64
+TEST_F(MinidumpParserTest, GetPidWow64) {
+  SetUpData("fizzbuzz_wow64.dmp");
+  llvm::Optional<lldb::pid_t> pid = parser->GetPid();
+  ASSERT_TRUE(pid.hasValue());
+  ASSERT_EQ(7836UL, pid.getValue());
+}
 
-TEST_F(MinidumpParserTest, ConvertRegisterContext) {
+TEST_F(MinidumpParserTest, GetModuleListWow64) {
+  SetUpData("fizzbuzz_wow64.dmp");
+  llvm::ArrayRef<MinidumpModule> modules = parser->GetModuleList();
+  ASSERT_EQ(16UL, modules.size());
+  std::string module_names[16] = {
+      R"(D:\src\llvm\llvm\tools\lldb\packages\Python\lldbsuite\test\functionalities\postmortem\wow64_minidump\fizzbuzz.exe)",
+      R"(C:\Windows\System32\ntdll.dll)",
+      R"(C:\Windows\System32\wow64.dll)",
+      R"(C:\Windows\System32\wow64win.dll)",
+      R"(C:\Windows\System32\wow64cpu.dll)",
+      R"(D:\src\llvm\llvm\tools\lldb\packages\Python\lldbsuite\test\functionalities\postmortem\wow64_minidump\fizzbuzz.exe)",
+      R"(C:\Windows\SysWOW64\ntdll.dll)",
+      R"(C:\Windows\SysWOW64\kernel32.dll)",
+      R"(C:\Windows\SysWOW64\KERNELBASE.dll)",
+      R"(C:\Windows\SysWOW64\advapi32.dll)",
+      R"(C:\Windows\SysWOW64\msvcrt.dll)",
+      R"(C:\Windows\SysWOW64\sechost.dll)",
+      R"(C:\Windows\SysWOW64\rpcrt4.dll)",
+      R"(C:\Windows\SysWOW64\sspicli.dll)",
+      R"(C:\Windows\SysWOW64\CRYPTBASE.dll)",
+      R"(C:\Windows\System32\api-ms-win-core-synch-l1-2-0.DLL)",
+  };
+
+  for (int i = 0; i < 16; ++i) {
+    llvm::Optional<std::string> name =
+        parser->GetMinidumpString(modules[i].module_name_rva);
+    ASSERT_TRUE(name.hasValue());
+    EXPECT_EQ(module_names[i], name.getValue());
+  }
+}
+
+// Register tests
+#define REG_VAL32(x) *(reinterpret_cast<uint32_t *>(x))
+#define REG_VAL64(x) *(reinterpret_cast<uint64_t *>(x))
+
+TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_32) {
+  SetUpData("linux-i386.dmp");
+  llvm::ArrayRef<MinidumpThread> thread_list = parser->GetThreads();
+  const MinidumpThread thread = thread_list[0];
+  llvm::ArrayRef<uint8_t> registers(parser->GetThreadContext(thread));
+
+  ArchSpec arch = parser->GetArchitecture();
+  RegisterInfoInterface *reg_interface = new RegisterContextLinux_i386(arch);
+  lldb::DataBufferSP buf =
+      ConvertMinidumpContext_x86_32(registers, reg_interface);
+  ASSERT_EQ(reg_interface->GetGPRSize(), buf->GetByteSize());
+
+  const RegisterInfo *reg_info = reg_interface->GetRegisterInfo();
+
+  std::map<uint64_t, uint32_t> reg_values;
+
+  reg_values[lldb_eax_i386] = 0x00000000;
+  reg_values[lldb_ebx_i386] = 0xf7778000;
+  reg_values[lldb_ecx_i386] = 0x00000001;
+  reg_values[lldb_edx_i386] = 0xff9dd4a3;
+  reg_values[lldb_edi_i386] = 0x080482a8;
+  reg_values[lldb_esi_i386] = 0xff9dd55c;
+  reg_values[lldb_ebp_i386] = 0xff9dd53c;
+  reg_values[lldb_esp_i386] = 0xff9dd52c;
+  reg_values[lldb_eip_i386] = 0x080482a0;
+  reg_values[lldb_eflags_i386] = 0x00010282;
+  reg_values[lldb_cs_i386] = 0x00000023;
+  reg_values[lldb_fs_i386] = 0x00000000;
+  reg_values[lldb_gs_i386] = 0x00000063;
+  reg_values[lldb_ss_i386] = 0x0000002b;
+  reg_values[lldb_ds_i386] = 0x0000002b;
+  reg_values[lldb_es_i386] = 0x0000002b;
+
+  for (uint32_t reg_index = 0; reg_index < reg_interface->GetRegisterCount();
+       ++reg_index) {
+    if (reg_values.find(reg_index) != reg_values.end()) {
+      EXPECT_EQ(reg_values[reg_index],
+                REG_VAL32(buf->GetBytes() + reg_info[reg_index].byte_offset));
+    }
+  }
+}
+
+TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_64) {
   SetUpData("linux-x86_64.dmp");
   llvm::ArrayRef<MinidumpThread> thread_list = parser->GetThreads();
   const MinidumpThread thread = thread_list[0];
-  llvm::ArrayRef<uint8_t> registers(parser->GetData().data() +
-                                        thread.thread_context.rva,
-                                    thread.thread_context.data_size);
+  llvm::ArrayRef<uint8_t> registers(parser->GetThreadContext(thread));
 
   ArchSpec arch = parser->GetArchitecture();
   RegisterInfoInterface *reg_interface = new RegisterContextLinux_x86_64(arch);
   lldb::DataBufferSP buf =
-      ConvertMinidumpContextToRegIface(registers, reg_interface);
+      ConvertMinidumpContext_x86_64(registers, reg_interface);
   ASSERT_EQ(reg_interface->GetGPRSize(), buf->GetByteSize());
 
   const RegisterInfo *reg_info = reg_interface->GetRegisterInfo();
 
   std::map<uint64_t, uint64_t> reg_values;
 
-  // clang-format off
-  reg_values[lldb_rax_x86_64]    =  0x0000000000000000;
-  reg_values[lldb_rbx_x86_64]    =  0x0000000000000000;
-  reg_values[lldb_rcx_x86_64]    =  0x0000000000000010;
-  reg_values[lldb_rdx_x86_64]    =  0x0000000000000000;
-  reg_values[lldb_rdi_x86_64]    =  0x00007ffceb349cf0;
-  reg_values[lldb_rsi_x86_64]    =  0x0000000000000000;
-  reg_values[lldb_rbp_x86_64]    =  0x00007ffceb34a210;
-  reg_values[lldb_rsp_x86_64]    =  0x00007ffceb34a210;
-  reg_values[lldb_r8_x86_64]     =  0x00007fe9bc1aa9c0;
-  reg_values[lldb_r9_x86_64]     =  0x0000000000000000;
-  reg_values[lldb_r10_x86_64]    =  0x00007fe9bc3f16a0;
-  reg_values[lldb_r11_x86_64]    =  0x0000000000000246;
-  reg_values[lldb_r12_x86_64]    =  0x0000000000401c92;
-  reg_values[lldb_r13_x86_64]    =  0x00007ffceb34a430;
-  reg_values[lldb_r14_x86_64]    =  0x0000000000000000;
-  reg_values[lldb_r15_x86_64]    =  0x0000000000000000;
-  reg_values[lldb_rip_x86_64]    =  0x0000000000401dc6;
-  reg_values[lldb_rflags_x86_64] =  0x0000000000010206;
-  reg_values[lldb_cs_x86_64]     =  0x0000000000000033;
-  reg_values[lldb_fs_x86_64]     =  0x0000000000000000;
-  reg_values[lldb_gs_x86_64]     =  0x0000000000000000;
-  reg_values[lldb_ss_x86_64]     =  0x0000000000000000;
-  reg_values[lldb_ds_x86_64]     =  0x0000000000000000;
-  reg_values[lldb_es_x86_64]     =  0x0000000000000000;
-  // clang-format on
+  reg_values[lldb_rax_x86_64] = 0x0000000000000000;
+  reg_values[lldb_rbx_x86_64] = 0x0000000000000000;
+  reg_values[lldb_rcx_x86_64] = 0x0000000000000010;
+  reg_values[lldb_rdx_x86_64] = 0x0000000000000000;
+  reg_values[lldb_rdi_x86_64] = 0x00007ffceb349cf0;
+  reg_values[lldb_rsi_x86_64] = 0x0000000000000000;
+  reg_values[lldb_rbp_x86_64] = 0x00007ffceb34a210;
+  reg_values[lldb_rsp_x86_64] = 0x00007ffceb34a210;
+  reg_values[lldb_r8_x86_64] = 0x00007fe9bc1aa9c0;
+  reg_values[lldb_r9_x86_64] = 0x0000000000000000;
+  reg_values[lldb_r10_x86_64] = 0x00007fe9bc3f16a0;
+  reg_values[lldb_r11_x86_64] = 0x0000000000000246;
+  reg_values[lldb_r12_x86_64] = 0x0000000000401c92;
+  reg_values[lldb_r13_x86_64] = 0x00007ffceb34a430;
+  reg_values[lldb_r14_x86_64] = 0x0000000000000000;
+  reg_values[lldb_r15_x86_64] = 0x0000000000000000;
+  reg_values[lldb_rip_x86_64] = 0x0000000000401dc6;
+  reg_values[lldb_rflags_x86_64] = 0x0000000000010206;
+  reg_values[lldb_cs_x86_64] = 0x0000000000000033;
+  reg_values[lldb_fs_x86_64] = 0x0000000000000000;
+  reg_values[lldb_gs_x86_64] = 0x0000000000000000;
+  reg_values[lldb_ss_x86_64] = 0x0000000000000000;
+  reg_values[lldb_ds_x86_64] = 0x0000000000000000;
+  reg_values[lldb_es_x86_64] = 0x0000000000000000;
 
   for (uint32_t reg_index = 0; reg_index < reg_interface->GetRegisterCount();
        ++reg_index) {
     if (reg_values.find(reg_index) != reg_values.end()) {
       EXPECT_EQ(reg_values[reg_index],
-                REG_VAL(buf->GetBytes() + reg_info[reg_index].byte_offset));
+                REG_VAL64(buf->GetBytes() + reg_info[reg_index].byte_offset));
+    }
+  }
+}
+
+TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_32_wow64) {
+  SetUpData("fizzbuzz_wow64.dmp");
+  llvm::ArrayRef<MinidumpThread> thread_list = parser->GetThreads();
+  const MinidumpThread thread = thread_list[0];
+  llvm::ArrayRef<uint8_t> registers(parser->GetThreadContextWow64(thread));
+
+  ArchSpec arch = parser->GetArchitecture();
+  RegisterInfoInterface *reg_interface = new RegisterContextLinux_i386(arch);
+  lldb::DataBufferSP buf =
+      ConvertMinidumpContext_x86_32(registers, reg_interface);
+  ASSERT_EQ(reg_interface->GetGPRSize(), buf->GetByteSize());
+
+  const RegisterInfo *reg_info = reg_interface->GetRegisterInfo();
+
+  std::map<uint64_t, uint32_t> reg_values;
+
+  reg_values[lldb_eax_i386] = 0x00000000;
+  reg_values[lldb_ebx_i386] = 0x0037f608;
+  reg_values[lldb_ecx_i386] = 0x00e61578;
+  reg_values[lldb_edx_i386] = 0x00000008;
+  reg_values[lldb_edi_i386] = 0x00000000;
+  reg_values[lldb_esi_i386] = 0x00000002;
+  reg_values[lldb_ebp_i386] = 0x0037f654;
+  reg_values[lldb_esp_i386] = 0x0037f5b8;
+  reg_values[lldb_eip_i386] = 0x77ce01fd;
+  reg_values[lldb_eflags_i386] = 0x00000246;
+  reg_values[lldb_cs_i386] = 0x00000023;
+  reg_values[lldb_fs_i386] = 0x00000053;
+  reg_values[lldb_gs_i386] = 0x0000002b;
+  reg_values[lldb_ss_i386] = 0x0000002b;
+  reg_values[lldb_ds_i386] = 0x0000002b;
+  reg_values[lldb_es_i386] = 0x0000002b;
+
+  for (uint32_t reg_index = 0; reg_index < reg_interface->GetRegisterCount();
+       ++reg_index) {
+    if (reg_values.find(reg_index) != reg_values.end()) {
+      EXPECT_EQ(reg_values[reg_index],
+                REG_VAL32(buf->GetBytes() + reg_info[reg_index].byte_offset));
     }
   }
 }

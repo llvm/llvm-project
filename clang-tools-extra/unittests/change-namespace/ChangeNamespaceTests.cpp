@@ -190,6 +190,47 @@ TEST_F(ChangeNamespaceTest, SimpleMoveWithTypeRefs) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, TypeLocInTemplateSpecialization) {
+  std::string Code = "namespace na {\n"
+                     "class A {};\n"
+                     "template <typename T>\n"
+                     "class B {};\n"
+                     "template <typename T1, typename T2>\n"
+                     "class Two {};\n"
+                     "namespace nc { class C {}; }\n"
+                     "} // na\n"
+                     "\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() {\n"
+                     "  B<A> b;\n"
+                     "  B<nc::C> b_c;\n"
+                     "  Two<A, nc::C> two;\n"
+                     "}\n"
+                     "} // nb\n"
+                     "} // na\n";
+  std::string Expected = "namespace na {\n"
+                         "class A {};\n"
+                         "template <typename T>\n"
+                         "class B {};\n"
+                         "template <typename T1, typename T2>\n"
+                         "class Two {};\n"
+                         "namespace nc { class C {}; }\n"
+                         "} // na\n"
+                         "\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "void f() {\n"
+                         "  na::B<na::A> b;\n"
+                         "  na::B<na::nc::C> b_c;\n"
+                         "  na::Two<na::A, na::nc::C> two;\n"
+                         "}\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 TEST_F(ChangeNamespaceTest, LeaveForwardDeclarationBehind) {
   std::string Code = "namespace na {\n"
                      "namespace nb {\n"

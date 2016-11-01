@@ -1,0 +1,293 @@
+//===-- ProcessMinidump.cpp -------------------------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// Project includes
+#include "ProcessMinidump.h"
+#include "ThreadMinidump.h"
+
+// Other libraries and framework includes
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
+#include "lldb/Core/State.h"
+#include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBAssert.h"
+
+// C includes
+// C++ includes
+
+using namespace lldb_private;
+using namespace minidump;
+
+ConstString ProcessMinidump::GetPluginNameStatic() {
+  static ConstString g_name("minidump");
+  return g_name;
+}
+
+const char *ProcessMinidump::GetPluginDescriptionStatic() {
+  return "Minidump plug-in.";
+}
+
+lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
+                                                lldb::ListenerSP listener_sp,
+                                                const FileSpec *crash_file) {
+  if (!crash_file)
+    return nullptr;
+
+  lldb::ProcessSP process_sp;
+  // Read enough data for the Minidump header
+  const size_t header_size = sizeof(MinidumpHeader);
+  lldb::DataBufferSP data_sp(crash_file->MemoryMapFileContents(0, header_size));
+  if (!data_sp)
+    return nullptr;
+
+  // first, only try to parse the header, beacuse we need to be fast
+  llvm::ArrayRef<uint8_t> header_data(data_sp->GetBytes(), header_size);
+  const MinidumpHeader *header = MinidumpHeader::Parse(header_data);
+
+  if (data_sp->GetByteSize() != header_size || header == nullptr)
+    return nullptr;
+
+  lldb::DataBufferSP all_data_sp(crash_file->MemoryMapFileContents());
+  auto minidump_parser = MinidumpParser::Create(all_data_sp);
+  // check if the parser object is valid
+  // skip if the Minidump file is Windows generated, because we are still
+  // work-in-progress
+  if (!minidump_parser ||
+      minidump_parser->GetArchitecture().GetTriple().getOS() ==
+          llvm::Triple::OSType::Win32)
+    return nullptr;
+
+  return std::make_shared<ProcessMinidump>(target_sp, listener_sp, *crash_file,
+                                           minidump_parser.getValue());
+}
+
+bool ProcessMinidump::CanDebug(lldb::TargetSP target_sp,
+                               bool plugin_specified_by_name) {
+  return true;
+}
+
+ProcessMinidump::ProcessMinidump(lldb::TargetSP target_sp,
+                                 lldb::ListenerSP listener_sp,
+                                 const FileSpec &core_file,
+                                 MinidumpParser minidump_parser)
+    : Process(target_sp, listener_sp), m_minidump_parser(minidump_parser),
+      m_core_file(core_file), m_is_wow64(false) {}
+
+ProcessMinidump::~ProcessMinidump() {
+  Clear();
+  // We need to call finalize on the process before destroying ourselves
+  // to make sure all of the broadcaster cleanup goes as planned. If we
+  // destruct this class, then Process::~Process() might have problems
+  // trying to fully destroy the broadcaster.
+  Finalize();
+}
+
+void ProcessMinidump::Initialize() {
+  static std::once_flag g_once_flag;
+
+  std::call_once(g_once_flag, []() {
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(),
+                                  ProcessMinidump::CreateInstance);
+  });
+}
+
+void ProcessMinidump::Terminate() {
+  PluginManager::UnregisterPlugin(ProcessMinidump::CreateInstance);
+}
+
+Error ProcessMinidump::DoLoadCore() {
+  Error error;
+
+  m_thread_list = m_minidump_parser.GetThreads();
+  m_active_exception = m_minidump_parser.GetExceptionStream();
+  ReadModuleList();
+  GetTarget().SetArchitecture(GetArchitecture());
+
+  llvm::Optional<lldb::pid_t> pid = m_minidump_parser.GetPid();
+  if (!pid) {
+    error.SetErrorString("failed to parse PID");
+    return error;
+  }
+  SetID(pid.getValue());
+
+  return error;
+}
+
+DynamicLoader *ProcessMinidump::GetDynamicLoader() {
+  if (m_dyld_ap.get() == nullptr)
+    m_dyld_ap.reset(DynamicLoader::FindPlugin(this, nullptr));
+  return m_dyld_ap.get();
+}
+
+ConstString ProcessMinidump::GetPluginName() { return GetPluginNameStatic(); }
+
+uint32_t ProcessMinidump::GetPluginVersion() { return 1; }
+
+Error ProcessMinidump::DoDestroy() { return Error(); }
+
+void ProcessMinidump::RefreshStateAfterStop() {
+  if (!m_active_exception)
+    return;
+
+  if (m_active_exception->exception_record.exception_code ==
+      MinidumpException::DumpRequested) {
+    return;
+  }
+
+  lldb::StopInfoSP stop_info;
+  lldb::ThreadSP stop_thread;
+
+  Process::m_thread_list.SetSelectedThreadByID(m_active_exception->thread_id);
+  stop_thread = Process::m_thread_list.GetSelectedThread();
+  ArchSpec arch = GetArchitecture();
+
+  if (arch.GetTriple().getOS() == llvm::Triple::Linux) {
+    stop_info = StopInfo::CreateStopReasonWithSignal(
+        *stop_thread, m_active_exception->exception_record.exception_code);
+  } else {
+    std::string desc;
+    llvm::raw_string_ostream desc_stream(desc);
+    desc_stream << "Exception "
+                << llvm::format_hex(
+                       m_active_exception->exception_record.exception_code, 8)
+                << " encountered at address "
+                << llvm::format_hex(
+                       m_active_exception->exception_record.exception_address,
+                       8);
+    stop_info = StopInfo::CreateStopReasonWithException(
+        *stop_thread, desc_stream.str().c_str());
+  }
+
+  stop_thread->SetStopInfo(stop_info);
+}
+
+bool ProcessMinidump::IsAlive() { return true; }
+
+bool ProcessMinidump::WarnBeforeDetach() const { return false; }
+
+size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+                                   lldb_private::Error &error) {
+  // Don't allow the caching that lldb_private::Process::ReadMemory does
+  // since we have it all cached in our dump file anyway.
+  return DoReadMemory(addr, buf, size, error);
+}
+
+size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+                                     lldb_private::Error &error) {
+
+  llvm::ArrayRef<uint8_t> mem = m_minidump_parser.GetMemory(addr, size);
+  if (mem.empty()) {
+    error.SetErrorString("could not parse memory info");
+    return 0;
+  }
+
+  std::memcpy(buf, mem.data(), mem.size());
+  return mem.size();
+}
+
+ArchSpec ProcessMinidump::GetArchitecture() {
+  if (!m_is_wow64) {
+    return m_minidump_parser.GetArchitecture();
+  }
+
+  llvm::Triple triple;
+  triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+  triple.setArch(llvm::Triple::ArchType::x86);
+  triple.setOS(llvm::Triple::OSType::Win32);
+  return ArchSpec(triple);
+}
+
+Error ProcessMinidump::GetMemoryRegionInfo(
+    lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &range_info) {
+  Error error;
+  auto info = m_minidump_parser.GetMemoryRegionInfo(load_addr);
+  if (!info) {
+    error.SetErrorString("No valid MemoryRegionInfo found!");
+    return error;
+  }
+  range_info = info.getValue();
+  return error;
+}
+
+void ProcessMinidump::Clear() { Process::m_thread_list.Clear(); }
+
+bool ProcessMinidump::UpdateThreadList(
+    lldb_private::ThreadList &old_thread_list,
+    lldb_private::ThreadList &new_thread_list) {
+  uint32_t num_threads = 0;
+  if (m_thread_list.size() > 0)
+    num_threads = m_thread_list.size();
+
+  for (lldb::tid_t tid = 0; tid < num_threads; ++tid) {
+    llvm::ArrayRef<uint8_t> context;
+    if (!m_is_wow64)
+      context = m_minidump_parser.GetThreadContext(m_thread_list[tid]);
+    else
+      context = m_minidump_parser.GetThreadContextWow64(m_thread_list[tid]);
+
+    lldb::ThreadSP thread_sp(
+        new ThreadMinidump(*this, m_thread_list[tid], context));
+    new_thread_list.AddThread(thread_sp);
+  }
+  return new_thread_list.GetSize(false) > 0;
+}
+
+void ProcessMinidump::ReadModuleList() {
+  std::vector<const MinidumpModule *> filtered_modules =
+      m_minidump_parser.GetFilteredModuleList();
+
+  for (auto module : filtered_modules) {
+    llvm::Optional<std::string> name =
+        m_minidump_parser.GetMinidumpString(module->module_name_rva);
+
+    if (!name)
+      continue;
+
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
+    if (log) {
+      log->Printf(
+          "ProcessMinidump::%s found module: name: %s %#010lx-%#010lx size: %u",
+          __FUNCTION__, name.getValue().c_str(),
+          uint64_t(module->base_of_image),
+          module->base_of_image + module->size_of_image,
+          uint32_t(module->size_of_image));
+    }
+
+    // check if the process is wow64 - a 32 bit windows process running on a
+    // 64 bit windows
+    if (llvm::StringRef(name.getValue()).endswith_lower("wow64.dll")) {
+      m_is_wow64 = true;
+    }
+
+    const auto file_spec = FileSpec(name.getValue(), true);
+    ModuleSpec module_spec = file_spec;
+    Error error;
+    lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
+    if (!module_sp || error.Fail()) {
+      continue;
+    }
+
+    if (log) {
+      log->Printf("ProcessMinidump::%s load module: name: %s", __FUNCTION__,
+                  name.getValue().c_str());
+    }
+
+    bool load_addr_changed = false;
+    module_sp->SetLoadAddress(GetTarget(), module->base_of_image, false,
+                              load_addr_changed);
+  }
+}

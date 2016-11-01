@@ -533,120 +533,73 @@ bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full,
 
   if (!full && (a.GetDirectory().IsEmpty() || b.GetDirectory().IsEmpty()))
     return ConstString::Equals(a.m_filename, b.m_filename, case_sensitive);
-  else if (remove_backups == false)
+
+  if (remove_backups == false)
     return a == b;
-  else {
-    if (!ConstString::Equals(a.m_filename, b.m_filename, case_sensitive))
-      return false;
-    if (ConstString::Equals(a.m_directory, b.m_directory, case_sensitive))
-      return true;
-    ConstString a_without_dots;
-    ConstString b_without_dots;
 
-    RemoveBackupDots(a.m_directory, a_without_dots);
-    RemoveBackupDots(b.m_directory, b_without_dots);
-    return ConstString::Equals(a_without_dots, b_without_dots, case_sensitive);
-  }
+  if (a == b)
+    return true;
+
+  return Equal(a.GetNormalizedPath(), b.GetNormalizedPath(), full, false);
 }
 
-void FileSpec::NormalizePath() {
-  ConstString normalized_directory;
-  FileSpec::RemoveBackupDots(m_directory, normalized_directory);
-  m_directory = normalized_directory;
-}
+FileSpec FileSpec::GetNormalizedPath() const {
+  // Fast path. Do nothing if the path is not interesting.
+  if (!m_directory.GetStringRef().contains(".") &&
+      (m_filename.GetStringRef() != ".." && m_filename.GetStringRef() != "."))
+    return *this;
 
-void FileSpec::RemoveBackupDots(const ConstString &input_const_str,
-                                ConstString &result_const_str) {
-  const char *input = input_const_str.GetCString();
-  result_const_str.Clear();
-  if (!input || input[0] == '\0')
-    return;
+  llvm::SmallString<64> path, result;
+  const bool normalize = false;
+  GetPath(path, normalize);
+  llvm::StringRef rest(path);
 
-  const char win_sep = '\\';
-  const char unix_sep = '/';
-  char found_sep;
-  const char *win_backup = "\\..";
-  const char *unix_backup = "/..";
-
-  bool is_win = false;
-
-  // Determine the platform for the path (win or unix):
-
-  if (input[0] == win_sep)
-    is_win = true;
-  else if (input[0] == unix_sep)
-    is_win = false;
-  else if (input[1] == ':')
-    is_win = true;
-  else if (strchr(input, unix_sep) != nullptr)
-    is_win = false;
-  else if (strchr(input, win_sep) != nullptr)
-    is_win = true;
-  else {
-    // No separators at all, no reason to do any work here.
-    result_const_str = input_const_str;
-    return;
-  }
-
-  llvm::StringRef backup_sep;
-  if (is_win) {
-    found_sep = win_sep;
-    backup_sep = win_backup;
+  // We will not go below root dir.
+  size_t root_dir_start = RootDirStart(path, m_syntax);
+  const bool absolute = root_dir_start != llvm::StringRef::npos;
+  if (absolute) {
+    result += rest.take_front(root_dir_start + 1);
+    rest = rest.drop_front(root_dir_start + 1);
   } else {
-    found_sep = unix_sep;
-    backup_sep = unix_backup;
+    if (m_syntax == ePathSyntaxWindows && path.size() > 2 && path[1] == ':') {
+      result += rest.take_front(2);
+      rest = rest.drop_front(2);
+    }
   }
 
-  llvm::StringRef input_ref(input);
-  llvm::StringRef curpos(input);
-
-  bool had_dots = false;
-  std::string result;
-
-  while (1) {
-    // Start of loop
-    llvm::StringRef before_sep;
-    std::pair<llvm::StringRef, llvm::StringRef> around_sep =
-        curpos.split(backup_sep);
-
-    before_sep = around_sep.first;
-    curpos = around_sep.second;
-
-    if (curpos.empty()) {
-      if (had_dots) {
-        while (before_sep.startswith("//"))
-          before_sep = before_sep.substr(1);
-        if (!before_sep.empty()) {
-          result.append(before_sep.data(), before_sep.size());
-        }
-      }
-      break;
+  bool anything_added = false;
+  llvm::SmallVector<llvm::StringRef, 0> components, processed;
+  rest.split(components, '/', -1, false);
+  processed.reserve(components.size());
+  for (auto component : components) {
+    if (component == ".")
+      continue; // Skip these.
+    if (component != "..") {
+      processed.push_back(component);
+      continue; // Regular file name.
     }
-    had_dots = true;
-
-    unsigned num_backups = 1;
-    while (curpos.startswith(backup_sep)) {
-      num_backups++;
-      curpos = curpos.slice(backup_sep.size(), curpos.size());
+    if (!processed.empty()) {
+      processed.pop_back();
+      continue; // Dots. Go one level up if we can.
     }
+    if (absolute)
+      continue; // We're at the top level. Cannot go higher than that. Skip.
 
-    size_t end_pos = before_sep.size();
-    while (num_backups-- > 0) {
-      end_pos = before_sep.rfind(found_sep, end_pos);
-      if (end_pos == llvm::StringRef::npos) {
-        result_const_str = input_const_str;
-        return;
-      }
-    }
-    result.append(before_sep.data(), end_pos);
+    result += component; // We're a relative path. We need to keep these.
+    result += '/';
+    anything_added = true;
   }
+  for (auto component : processed) {
+    result += component;
+    result += '/';
+    anything_added = true;
+  }
+  if (anything_added)
+    result.pop_back(); // Pop last '/'.
+  else if (result.empty())
+    result = ".";
 
-  if (had_dots)
-    result_const_str.SetCString(result.c_str());
-  else
-    result_const_str = input_const_str;
-
-  return;
+  return FileSpec(result, false, m_syntax);
 }
 
 //------------------------------------------------------------------

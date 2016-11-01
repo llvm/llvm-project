@@ -22,27 +22,37 @@ void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  // Match any static or thread_local variable declaration that is initialized
-  // with a constructor that can throw.
+  // Match any static or thread_local variable declaration that has an
+  // initializer that can throw.
   Finder->addMatcher(
       varDecl(anyOf(hasThreadStorageDuration(), hasStaticStorageDuration()),
               unless(hasAncestor(functionDecl())),
-              hasInitializer(ignoringImplicit(cxxConstructExpr(hasDeclaration(
-                  cxxConstructorDecl(unless(isNoThrow())).bind("ctor"))))))
+              anyOf(hasDescendant(cxxConstructExpr(hasDeclaration(
+                        cxxConstructorDecl(unless(isNoThrow())).bind("func")))),
+                    hasDescendant(cxxNewExpr(hasDeclaration(
+                        functionDecl(unless(isNoThrow())).bind("func")))),
+                    hasDescendant(callExpr(hasDeclaration(
+                        functionDecl(unless(isNoThrow())).bind("func"))))))
           .bind("var"),
       this);
 }
 
 void StaticObjectExceptionCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var");
-  const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
+  const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
   diag(VD->getLocation(),
-       "construction of %0 with %select{static|thread_local}1 storage "
+       "initialization of %0 with %select{static|thread_local}1 storage "
        "duration may throw an exception that cannot be caught")
       << VD << (VD->getStorageDuration() == SD_Static ? 0 : 1);
-  diag(Ctor->getLocation(), "possibly throwing constructor declared here",
-       DiagnosticIDs::Note);
+
+  SourceLocation FuncLocation = Func->getLocation();
+  if(FuncLocation.isValid()) {
+    diag(FuncLocation,
+         "possibly throwing %select{constructor|function}0 declared here",
+         DiagnosticIDs::Note)
+        << (isa<CXXConstructorDecl>(Func) ? 0 : 1);
+  }
 }
 
 } // namespace cert

@@ -24,7 +24,6 @@
 #include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Predicate.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/lldb-public.h"
 
@@ -83,12 +82,13 @@ public:
   // created ScopedTimeout object got out of scope
   class ScopedTimeout {
   public:
-    ScopedTimeout(GDBRemoteCommunication &gdb_comm, uint32_t timeout);
+    ScopedTimeout(GDBRemoteCommunication &gdb_comm,
+                  std::chrono::seconds timeout);
     ~ScopedTimeout();
 
   private:
     GDBRemoteCommunication &m_gdb_comm;
-    uint32_t m_saved_timeout;
+    std::chrono::seconds m_saved_timeout;
   };
 
   GDBRemoteCommunication(const char *comm_name, const char *listener_name);
@@ -112,19 +112,16 @@ public:
   // Set the global packet timeout.
   //
   // For clients, this is the timeout that gets used when sending
-  // packets and waiting for responses. For servers, this might not
-  // get used, and if it doesn't this should be moved to the
-  // GDBRemoteCommunicationClient.
+  // packets and waiting for responses. For servers, this is used when waiting
+  // for ACKs.
   //------------------------------------------------------------------
-  uint32_t SetPacketTimeout(uint32_t packet_timeout) {
-    const uint32_t old_packet_timeout = m_packet_timeout;
+  std::chrono::seconds SetPacketTimeout(std::chrono::seconds packet_timeout) {
+    const auto old_packet_timeout = m_packet_timeout;
     m_packet_timeout = packet_timeout;
     return old_packet_timeout;
   }
 
-  uint32_t GetPacketTimeoutInMicroSeconds() const {
-    return m_packet_timeout * TimeValue::MicroSecPerSec;
-  }
+  std::chrono::seconds GetPacketTimeout() const { return m_packet_timeout; }
 
   //------------------------------------------------------------------
   // Start a debugserver instance on the current host using the
@@ -215,7 +212,7 @@ protected:
     mutable bool m_dumped_to_log;
   };
 
-  uint32_t m_packet_timeout;
+  std::chrono::seconds m_packet_timeout;
   uint32_t m_echo_number;
   LazyBool m_supports_qEcho;
   History m_history;

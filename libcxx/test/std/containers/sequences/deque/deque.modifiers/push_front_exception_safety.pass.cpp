@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 // <deque>
 
 // void push_front(const value_type& x);

@@ -46,7 +46,6 @@
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -289,7 +288,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
   const uint64_t timeout_seconds =
       GetGlobalPluginProperties()->GetPacketTimeout();
   if (timeout_seconds > 0)
-    m_gdb_comm.SetPacketTimeout(timeout_seconds);
+    m_gdb_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 }
 
 //----------------------------------------------------------------------
@@ -424,9 +423,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   // Check if qHostInfo specified a specific packet timeout for this connection.
   // If so then lets update our setting so the user knows what the timeout is
   // and can see it.
-  const uint32_t host_packet_timeout = m_gdb_comm.GetHostDefaultPacketTimeout();
-  if (host_packet_timeout) {
-    GetGlobalPluginProperties()->SetPacketTimeout(host_packet_timeout);
+  const auto host_packet_timeout = m_gdb_comm.GetHostDefaultPacketTimeout();
+  if (host_packet_timeout > std::chrono::seconds(0)) {
+    GetGlobalPluginProperties()->SetPacketTimeout(host_packet_timeout.count());
   }
 
   // Register info search order:
@@ -899,7 +898,8 @@ Error ProcessGDBRemote::DoLaunch(Module *exe_module,
 
       {
         // Scope for the scoped timeout object
-        GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm, 10);
+        GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
+                                                      std::chrono::seconds(10));
 
         int arg_packet_err = m_gdb_comm.SendArgumentsPacket(launch_info);
         if (arg_packet_err == 0) {
@@ -2573,7 +2573,8 @@ Error ProcessGDBRemote::DoDestroy() {
     if (m_public_state.GetValue() != eStateAttaching) {
       StringExtractorGDBRemote response;
       bool send_async = true;
-      GDBRemoteCommunication::ScopedTimeout(m_gdb_comm, 3);
+      GDBRemoteCommunication::ScopedTimeout(m_gdb_comm,
+                                            std::chrono::seconds(3));
 
       if (m_gdb_comm.SendPacketAndWaitForResponse("k", response, send_async) ==
           GDBRemoteCommunication::PacketResult::Success) {
@@ -3894,7 +3895,8 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender(
 
   if (m_gdb_comm.GetLoadedDynamicLibrariesInfosSupported()) {
     // Scope for the scoped timeout object
-    GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm, 10);
+    GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
+                                                  std::chrono::seconds(10));
 
     StreamString packet;
     packet << "jGetLoadedDynamicLibrariesInfos:";
