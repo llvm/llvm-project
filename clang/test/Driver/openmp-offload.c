@@ -422,13 +422,13 @@
 // Create host object and bundle.
 // CHK-BUJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-BUJOBS-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
-// CHK-BUJOBS: clang-offload-bundler" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
+// CHK-BUJOBS: clang-offload-bundler{{.*}}" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
 // CHK-BUJOBS-SAME: [[RES:[^\\/]+\.o]]" "-inputs={{.*}}[[T1OBJ]],{{.*}}[[T2OBJ]],{{.*}}[[HOSTOBJ]]"
 // CHK-BUJOBS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-S" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-BUJOBS-ST-SAME: [[HOSTASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
 // CHK-BUJOBS-ST: clang{{.*}}" "-cc1as" "-triple" "powerpc64le--linux" "-filetype" "obj" {{.*}}"-o" "
 // CHK-BUJOBS-ST-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "{{.*}}[[HOSTASM]]"
-// CHK-BUJOBS-ST: clang-offload-bundler" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
+// CHK-BUJOBS-ST: clang-offload-bundler{{.*}}" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
 // CHK-BUJOBS-ST-SAME: [[RES:[^\\/]+\.o]]" "-inputs={{.*}}[[T1OBJ]],{{.*}}[[T2OBJ]],{{.*}}[[HOSTOBJ]]"
 
 /// ###########################################################################
@@ -446,14 +446,14 @@
 // RUN:   | FileCheck -check-prefix=CHK-UBJOBS2-ST %s
 
 // Unbundle and create host BC.
-// CHK-UBJOBS: clang-offload-bundler" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
+// CHK-UBJOBS: clang-offload-bundler{{.*}}" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
 // CHK-UBJOBS-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBJOBS-SAME: [[HOSTPP:[^\\/]+\.i]],
 // CHK-UBJOBS-SAME: [[T1PP:[^\\/]+\.i]],
 // CHK-UBJOBS-SAME: [[T2PP:[^\\/]+\.i]]" "-unbundle"
 // CHK-UBJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-emit-llvm-bc"  {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[HOSTBC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[HOSTPP]]" "-fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu"
-// CHK-UBJOBS-ST: clang-offload-bundler" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
+// CHK-UBJOBS-ST: clang-offload-bundler{{.*}}" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
 // CHK-UBJOBS-ST-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBJOBS-ST-SAME: [[HOSTPP:[^\\/,]+\.i]],
 // CHK-UBJOBS-ST-SAME: [[T1PP:[^\\/,]+\.i]],
@@ -504,7 +504,7 @@
 // CHK-UBJOBS-ST-SAME: [[LKS:[^\\/]+\.lk]]"
 
 // Unbundle object file.
-// CHK-UBJOBS2: clang-offload-bundler" "-type=o" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
+// CHK-UBJOBS2: clang-offload-bundler{{.*}}" "-type=o" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
 // CHK-UBJOBS2-SAME: [[INPUT:[^\\/]+\.o]]" "-outputs=
 // CHK-UBJOBS2-SAME: [[HOSTOBJ:[^\\/]+\.o]],
 // CHK-UBJOBS2-SAME: [[T1OBJ:[^\\/]+\.o]],
@@ -516,7 +516,7 @@
 // CHK-UBJOBS2: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-SAME: [[HOSTBIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[HOSTOBJ]]" {{.*}}"-T" "
 // CHK-UBJOBS2-SAME: [[LKS:[^\\/]+\.lk]]"
-// CHK-UBJOBS2-ST: clang-offload-bundler" "-type=o" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
+// CHK-UBJOBS2-ST: clang-offload-bundler{{.*}}" "-type=o" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
 // CHK-UBJOBS2-ST-SAME: [[INPUT:[^\\/]+\.o]]" "-outputs=
 // CHK-UBJOBS2-ST-SAME: [[HOSTOBJ:[^\\/,]+\.o]],
 // CHK-UBJOBS2-ST-SAME: [[T1OBJ:[^\\/,]+\.o]],
@@ -540,7 +540,7 @@
 // RUN:   | FileCheck -check-prefix=CHK-UBUJOBS-ST %s
 
 // Unbundle and create host BC.
-// CHK-UBUJOBS: clang-offload-bundler" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
+// CHK-UBUJOBS: clang-offload-bundler{{.*}}" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
 // CHK-UBUJOBS-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBUJOBS-SAME: [[HOSTPP:[^\\/]+\.i]],
 // CHK-UBUJOBS-SAME: [[T1PP:[^\\/]+\.i]],
@@ -548,7 +548,7 @@
 // CHK-UBUJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-emit-llvm-bc"  {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBUJOBS-SAME: [[HOSTBC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[HOSTPP]]" "-fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu"
 
-// CHK-UBUJOBS-ST: clang-offload-bundler" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
+// CHK-UBUJOBS-ST: clang-offload-bundler{{.*}}" "-type=i" "-targets=host-powerpc64le--linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
 // CHK-UBUJOBS-ST-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBUJOBS-ST-SAME: [[HOSTPP:[^\\/,]+\.i]],
 // CHK-UBUJOBS-ST-SAME: [[T1PP:[^\\/,]+\.i]],
@@ -579,11 +579,11 @@
 // Create binary.
 // CHK-UBUJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBUJOBS-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
-// CHK-UBUJOBS: clang-offload-bundler" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
+// CHK-UBUJOBS: clang-offload-bundler{{.*}}" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
 // CHK-UBUJOBS-SAME: [[RES:[^\\/]+\.o]]" "-inputs={{.*}}[[T1OBJ]],{{.*}}[[T2OBJ]],{{.*}}[[HOSTOBJ]]"
 // CHK-UBUJOBS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le--linux" "-S" {{.*}}"-fopenmp" {{.*}}"-o" "
 // CHK-UBUJOBS-ST-SAME: [[HOSTASM:[^\\/]+\.s]]" "-x" "ir" "{{.*}}[[HOSTBC]]"
 // CHK-UBUJOBS-ST: clang{{.*}}" "-cc1as" "-triple" "powerpc64le--linux" "-filetype" "obj" {{.*}}"-o" "
 // CHK-UBUJOBS-ST-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "{{.*}}[[HOSTASM]]"
-// CHK-UBUJOBS-ST: clang-offload-bundler" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
+// CHK-UBUJOBS-ST: clang-offload-bundler{{.*}}" "-type=o" "-targets=openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu,host-powerpc64le--linux" "-outputs=
 // CHK-UBUJOBS-ST-SAME: [[RES:[^\\/]+\.o]]" "-inputs={{.*}}[[T1OBJ]],{{.*}}[[T2OBJ]],{{.*}}[[HOSTOBJ]]"

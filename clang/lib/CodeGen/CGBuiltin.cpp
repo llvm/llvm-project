@@ -1142,7 +1142,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     const TargetInfo &TI = getContext().getTargetInfo();
     // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
     unsigned SuitableAlignmentInBytes =
-        TI.getSuitableAlign() / TI.getCharWidth();
+        CGM.getContext()
+            .toCharUnitsFromBits(TI.getSuitableAlign())
+            .getQuantity();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(SuitableAlignmentInBytes);
     return RValue::get(AI);
@@ -1150,11 +1152,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
 
   case Builtin::BI__builtin_alloca_with_align: {
     Value *Size = EmitScalarExpr(E->getArg(0));
-    Value *AlignmentValue = EmitScalarExpr(E->getArg(1));
-    auto *AlignmentCI = cast<ConstantInt>(AlignmentValue);
-    unsigned Alignment = AlignmentCI->getZExtValue();
-    const TargetInfo &TI = getContext().getTargetInfo();
-    unsigned AlignmentInBytes = Alignment / TI.getCharWidth();
+    Value *AlignmentInBitsValue = EmitScalarExpr(E->getArg(1));
+    auto *AlignmentInBitsCI = cast<ConstantInt>(AlignmentInBitsValue);
+    unsigned AlignmentInBits = AlignmentInBitsCI->getZExtValue();
+    unsigned AlignmentInBytes =
+        CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getQuantity();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(AlignmentInBytes);
     return RValue::get(AI);

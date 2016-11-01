@@ -17,7 +17,19 @@ template<typename A, typename B> void redecl3() throw(B);
 
 typedef int I;
 template<bool B> void redecl4(I) noexcept(B);
-template<bool B> void redecl4(I) noexcept(B);
+template<bool B> void redecl4(I) noexcept(B); // expected-note {{failed template argument deduction}}
+
+void (*init_with_exact_type_a)(int) noexcept = redecl4<true>;
+void (*init_with_mismatched_type_a)(int) = redecl4<true>;
+auto deduce_auto_from_noexcept_function_ptr_a = redecl4<true>;
+using DeducedType_a = decltype(deduce_auto_from_noexcept_function_ptr_a);
+using DeducedType_a = void (*)(int) noexcept;
+
+void (*init_with_exact_type_b)(int) = redecl4<false>;
+void (*init_with_mismatched_type_b)(int) noexcept = redecl4<false>; // expected-error {{does not match required type}}
+auto deduce_auto_from_noexcept_function_ptr_b = redecl4<false>;
+using DeducedType_b = decltype(deduce_auto_from_noexcept_function_ptr_b);
+using DeducedType_b = void (*)(int);
 
 namespace DependentDefaultCtorExceptionSpec {
   template<typename> struct T { static const bool value = true; };

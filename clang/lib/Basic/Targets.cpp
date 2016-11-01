@@ -3997,6 +3997,7 @@ X86TargetInfo::validateAsmConstraint(const char *&Name,
     case 't': // Any SSE register, when SSE2 is enabled.
     case 'i': // Any SSE register, when SSE2 and inter-unit moves enabled.
     case 'm': // Any MMX register, when inter-unit moves enabled.
+    case 'k': // AVX512 arch mask registers: k1-k7.
       Info.setAllowsRegister();
       return true;
     }
@@ -4018,6 +4019,8 @@ X86TargetInfo::validateAsmConstraint(const char *&Name,
   case 'q': // Any register accessible as [r]l: a, b, c, and d.
   case 'y': // Any MMX register.
   case 'x': // Any SSE register.
+  case 'k': // Any AVX512 mask register (same as Yk, additionaly allows k0
+            // for intermideate k reg operations).
   case 'Q': // Any register accessible as [r]h: a, b, c, and d.
   case 'R': // "Legacy" registers: ax, bx, cx, dx, di, si, sp, bp.
   case 'l': // "Index" registers: any general register that can be used as an
@@ -4051,6 +4054,8 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
                                         unsigned Size) const {
   switch (Constraint[0]) {
   default: break;
+  case 'k':
+  // Registers k0-k7 (AVX512) size limit is 64 bit.
   case 'y':
     return Size <= 64;
   case 'f':
@@ -4071,6 +4076,7 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
     default: break;
     case 'm':
       // 'Ym' is synonymous with 'y'.
+    case 'k':
       return Size <= 64;
     case 'i':
     case 't':
@@ -4102,6 +4108,20 @@ X86TargetInfo::convertConstraint(const char *&Constraint) const {
     return std::string("{st}");
   case 'u': // second from top of floating point stack.
     return std::string("{st(1)}"); // second from top of floating point stack.
+  case 'Y':
+    switch (Constraint[1]) {
+    default:
+      // Break from inner switch and fall through (copy single char),
+      // continue parsing after copying the current constraint into 
+      // the return string.
+      break;
+    case 'k':
+      // "^" hints llvm that this is a 2 letter constraint.
+      // "Constraint++" is used to promote the string iterator 
+      // to the next constraint.
+      return std::string("^") + std::string(Constraint++, 2);
+    } 
+    LLVM_FALLTHROUGH;
   default:
     return std::string(1, *Constraint);
   }
@@ -6941,9 +6961,13 @@ public:
     CPU = Name;
     bool CPUKnown = llvm::StringSwitch<bool>(Name)
       .Case("z10", true)
+      .Case("arch8", true)
       .Case("z196", true)
+      .Case("arch9", true)
       .Case("zEC12", true)
+      .Case("arch10", true)
       .Case("z13", true)
+      .Case("arch11", true)
       .Default(false);
 
     return CPUKnown;
@@ -6952,9 +6976,9 @@ public:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    if (CPU == "zEC12")
+    if (CPU == "zEC12" || CPU == "arch10")
       Features["transactional-execution"] = true;
-    if (CPU == "z13") {
+    if (CPU == "z13" || CPU == "arch11") {
       Features["transactional-execution"] = true;
       Features["vector"] = true;
     }
