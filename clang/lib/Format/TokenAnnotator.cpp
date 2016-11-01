@@ -1566,6 +1566,13 @@ void TokenAnnotator::setCommentLineLevels(
   }
 }
 
+static unsigned maxNestingDepth(const AnnotatedLine &Line) {
+  unsigned Result = 0;
+  for (const auto* Tok = Line.First; Tok != nullptr; Tok = Tok->Next)
+    Result = std::max(Result, Tok->NestingLevel);
+  return Result;
+}
+
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
   for (SmallVectorImpl<AnnotatedLine *>::iterator I = Line.Children.begin(),
                                                   E = Line.Children.end();
@@ -1574,6 +1581,14 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   }
   AnnotatingParser Parser(Style, Line, Keywords);
   Line.Type = Parser.parseLine();
+
+  // With very deep nesting, ExpressionParser uses lots of stack and the
+  // formatting algorithm is very slow. We're not going to do a good job here
+  // anyway - it's probably generated code being formatted by mistake.
+  // Just skip the whole line.
+  if (maxNestingDepth(Line) > 50)
+    Line.Type = LT_Invalid;
+
   if (Line.Type == LT_Invalid)
     return;
 
@@ -2133,6 +2148,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(tok::star) &&
         Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
       return false;
+    if (Right.isOneOf(tok::l_brace, tok::l_square) &&
+        Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
+      return true;
     // JS methods can use some keywords as names (e.g. `delete()`).
     if (Right.is(tok::l_paren) && Line.MustBeDeclaration &&
         Left.Tok.getIdentifierInfo())

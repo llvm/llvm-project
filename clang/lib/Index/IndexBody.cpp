@@ -300,6 +300,7 @@ public:
       IndexingContext &IndexCtx;
       const NamedDecl *Parent;
       const DeclContext *ParentDC;
+      bool Visited = false;
 
     public:
       SyntacticFormIndexer(IndexingContext &indexCtx,
@@ -307,6 +308,22 @@ public:
         : IndexCtx(indexCtx), Parent(Parent), ParentDC(DC) { }
 
       bool shouldWalkTypesOfTypeLocs() const { return false; }
+
+      bool TraverseInitListExpr(InitListExpr *S, DataRecursionQueue *Q = nullptr) {
+        // Don't visit nested InitListExprs, this visitor will be called again
+        // later on for the nested ones.
+        if (Visited)
+          return true;
+        Visited = true;
+        InitListExpr *SyntaxForm = S->isSemanticForm() ? S->getSyntacticForm() : S;
+        if (SyntaxForm) {
+          for (Stmt *SubStmt : SyntaxForm->children()) {
+            if (!TraverseStmt(SubStmt, Q))
+              return false;
+          }
+        }
+        return true;
+      }
 
       bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
         for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {

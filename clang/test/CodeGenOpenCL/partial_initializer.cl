@@ -24,7 +24,7 @@ int4 GV1 = (int4)((int2)(1,2),3,4);
 // CHECK: @GV2 = addrspace(1) global <4 x i32> <i32 1, i32 1, i32 1, i32 1>, align 16
 int4 GV2 = (int4)(1);
 
-// CHECK: @f.S = private unnamed_addr constant %struct.StrucTy { i32 1, i32 2, i32 0 }, align 4
+// CHECK: @f.S = private unnamed_addr addrspace(2) constant %struct.StrucTy { i32 1, i32 2, i32 0 }, align 4
 
 // CHECK-LABEL: define spir_func void @f()
 void f(void) {
@@ -46,7 +46,7 @@ void f(void) {
   float A[6][6]  = {1.0f, 2.0f};
 
   // CHECK: %[[v5:.*]] = bitcast %struct.StrucTy* %S to i8*
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %[[v5]], i8* bitcast (%struct.StrucTy* @f.S to i8*), i32 12, i32 4, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p2i8.i32(i8* %[[v5]], i8 addrspace(2)* bitcast (%struct.StrucTy addrspace(2)* @f.S to i8 addrspace(2)*), i32 12, i32 4, i1 false)
   StrucTy S = {1, 2};
 
   // CHECK: store <2 x i32> <i32 1, i32 2>, <2 x i32>* %[[compoundliteral1]], align 8

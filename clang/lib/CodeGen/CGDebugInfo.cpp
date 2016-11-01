@@ -2287,9 +2287,8 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const AtomicType *Ty, llvm::DIFile *U) {
-  // Ignore the atomic wrapping
-  // FIXME: What is the correct representation?
-  return getOrCreateType(Ty->getValueType(), U);
+  auto *FromTy = getOrCreateType(Ty->getValueType(), U);
+  return DBuilder.createQualifiedType(llvm::dwarf::DW_TAG_atomic_type, FromTy);
 }
 
 llvm::DIType* CGDebugInfo::CreateType(const PipeType *Ty,

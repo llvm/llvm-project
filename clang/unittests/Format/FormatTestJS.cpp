@@ -368,6 +368,8 @@ TEST_F(FormatTestJS, GeneratorFunctions) {
                "  let x = 1;\n"
                "  yield x;\n"
                "  yield* something();\n"
+               "  yield [1, 2];\n"
+               "  yield {a: 1};\n"
                "}");
   verifyFormat("function*\n"
                "    f() {\n"

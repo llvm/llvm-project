@@ -164,6 +164,8 @@ static bool isConfigurationValue(const Stmt *S,
   if (!S)
     return false;
 
+  S = S->IgnoreImplicit();
+
   if (const Expr *Ex = dyn_cast<Expr>(S))
     S = Ex->IgnoreCasts();
 
