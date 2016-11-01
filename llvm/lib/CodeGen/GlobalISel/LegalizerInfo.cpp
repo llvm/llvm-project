@@ -37,6 +37,8 @@ LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
   DefaultActions[TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS] = Legal;
 
   DefaultActions[TargetOpcode::G_ADD] = NarrowScalar;
+  DefaultActions[TargetOpcode::G_LOAD] = NarrowScalar;
+  DefaultActions[TargetOpcode::G_STORE] = NarrowScalar;
 
   DefaultActions[TargetOpcode::G_BRCOND] = WidenScalar;
 }

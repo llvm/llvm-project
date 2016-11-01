@@ -704,6 +704,11 @@ def int_ppc_altivec_crypto_vpmsumw :
 def int_ppc_altivec_crypto_vpmsumd :
             PowerPC_Vec_DDD_Intrinsic<"crypto_vpmsumd">;
 
+// Absolute Difference intrinsics
+def int_ppc_altivec_vabsdub : PowerPC_Vec_BBB_Intrinsic<"vabsdub">;
+def int_ppc_altivec_vabsduh : PowerPC_Vec_HHH_Intrinsic<"vabsduh">;
+def int_ppc_altivec_vabsduw : PowerPC_Vec_WWW_Intrinsic<"vabsduw">;
+
 //===----------------------------------------------------------------------===//
 // PowerPC VSX Intrinsic Definitions.
 

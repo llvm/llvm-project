@@ -59,6 +59,7 @@ protected:
 
   virtual uint32_t getSectionType(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionFlags(DataRefImpl Sec) const = 0;
+  virtual uint64_t getSectionOffset(DataRefImpl Sec) const = 0;
 
   virtual ErrorOr<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
 
@@ -89,6 +90,10 @@ public:
 
   uint64_t getFlags() const {
     return getObject()->getSectionFlags(getRawDataRefImpl());
+  }
+
+  uint64_t getOffset() const {
+    return getObject()->getSectionOffset(getRawDataRefImpl());
   }
 };
 
@@ -245,6 +250,7 @@ protected:
 
   uint32_t getSectionType(DataRefImpl Sec) const override;
   uint64_t getSectionFlags(DataRefImpl Sec) const override;
+  uint64_t getSectionOffset(DataRefImpl Sec) const override;
   StringRef getRelocationTypeName(uint32_t Type) const;
 
   /// \brief Get the relocation section that contains \a Rel.
@@ -378,6 +384,11 @@ uint64_t ELFObjectFile<ELFT>::getSectionFlags(DataRefImpl Sec) const {
 template <class ELFT>
 uint32_t ELFObjectFile<ELFT>::getSectionType(DataRefImpl Sec) const {
   return getSection(Sec)->sh_type;
+}
+
+template <class ELFT>
+uint64_t ELFObjectFile<ELFT>::getSectionOffset(DataRefImpl Sec) const {
+  return getSection(Sec)->sh_offset;
 }
 
 template <class ELFT>

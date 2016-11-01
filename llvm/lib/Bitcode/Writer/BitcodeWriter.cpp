@@ -3031,7 +3031,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
   // We only want to emit block info records for blocks that have multiple
   // instances: CONSTANTS_BLOCK, FUNCTION_BLOCK and VALUE_SYMTAB_BLOCK.
   // Other blocks can define their abbrevs inline.
-  Stream.EnterBlockInfoBlock(2);
+  Stream.EnterBlockInfoBlock();
 
   { // 8-bit fixed-width VST_CODE_ENTRY/VST_CODE_BBENTRY strings.
     BitCodeAbbrev *Abbv = new BitCodeAbbrev();

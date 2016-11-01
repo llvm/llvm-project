@@ -85,7 +85,7 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-unique.html>`_
   and `modernize-make-shared
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_
-  now handle calls to the smart pointer's reset method.
+  now handle calls to the smart pointer's ``reset()`` method.
 
 - The `modernize-use-auto
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-auto.html>`_ check

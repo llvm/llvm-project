@@ -249,20 +249,6 @@ cl::opt<bool> UniqueSectionNames("unique-section-names",
                                  cl::desc("Give unique names to every section"),
                                  cl::init(true));
 
-cl::opt<llvm::JumpTable::JumpTableType>
-JTableType("jump-table-type",
-          cl::desc("Choose the type of Jump-Instruction Table for jumptable."),
-          cl::init(JumpTable::Single),
-          cl::values(
-              clEnumValN(JumpTable::Single, "single",
-                         "Create a single table for all jumptable functions"),
-              clEnumValN(JumpTable::Arity, "arity",
-                         "Create one table per number of parameters."),
-              clEnumValN(JumpTable::Simplified, "simplified",
-                         "Create one table per simplified function type."),
-              clEnumValN(JumpTable::Full, "full",
-                         "Create one table per unique function type.")));
-
 cl::opt<llvm::EABI> EABIVersion(
     "meabi", cl::desc("Set EABI type (default depends on triple):"),
     cl::init(EABI::Default),
@@ -309,7 +295,6 @@ static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.ExceptionModel = ExceptionModel;
 
   Options.MCOptions = InitMCTargetOptionsFromFlags();
-  Options.JTType = JTableType;
 
   Options.ThreadModel = TMModel;
   Options.EABIVersion = EABIVersion;

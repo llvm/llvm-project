@@ -445,7 +445,7 @@ void MachODebugMapParser::loadMainBinarySymbols(
     }
     SymbolRef::Type Type = *TypeOrErr;
     // Skip undefined and STAB entries.
-    if ((Type & SymbolRef::ST_Debug) || (Type & SymbolRef::ST_Unknown))
+    if ((Type == SymbolRef::ST_Debug) || (Type == SymbolRef::ST_Unknown))
       continue;
     // The only symbols of interest are the global variables. These
     // are the only ones that need to be queried because the address

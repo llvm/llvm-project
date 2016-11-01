@@ -1,6 +1,8 @@
 # For z13 only.
 # RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=z13 < %s 2> %t
 # RUN: FileCheck < %t %s
+# RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=arch11 < %s 2> %t
+# RUN: FileCheck < %t %s
 
 #CHECK: error: invalid operand
 #CHECK: lcbb	%r0, 0, -1

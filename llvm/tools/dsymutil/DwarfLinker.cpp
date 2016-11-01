@@ -1487,7 +1487,7 @@ static const DWARFDebugInfoEntryMinimal *resolveDIEReference(
     const DWARFFormValue &RefValue, const DWARFUnit &Unit,
     const DWARFDebugInfoEntryMinimal &DIE, CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference(&Unit);
+  uint64_t RefOffset = *RefValue.getAsReference();
 
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
     if (const auto *RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset))
@@ -1838,12 +1838,6 @@ static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
   llvm_unreachable("Invalid Tag");
 }
 
-static unsigned getRefAddrSize(const DWARFUnit &U) {
-  if (U.getVersion() == 2)
-    return U.getAddressByteSize();
-  return 4;
-}
-
 void DwarfLinker::startDebugObject(DWARFContext &Dwarf, DebugMapObject &Obj) {
   Units.reserve(Dwarf.getNumCompileUnits());
   // Iterate over the debug map entries and put all the ones that are
@@ -2159,7 +2153,7 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
 
   uint64_t HighPc;
   if (HighPcValue.isFormClass(DWARFFormValue::FC_Address)) {
-    HighPc = *HighPcValue.getAsAddress(&OrigUnit);
+    HighPc = *HighPcValue.getAsAddress();
   } else {
     assert(HighPcValue.isFormClass(DWARFFormValue::FC_Constant));
     HighPc = LowPc + *HighPcValue.getAsUnsignedConstant();
@@ -2357,7 +2351,7 @@ unsigned DwarfLinker::DIECloner::cloneStringAttribute(DIE &Die,
                                                       const DWARFFormValue &Val,
                                                       const DWARFUnit &U) {
   // Switch everything to out of line strings.
-  const char *String = *Val.getAsCString(&U);
+  const char *String = *Val.getAsCString();
   unsigned Offset = Linker.StringPool.getStringOffset(String);
   Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr), dwarf::DW_FORM_strp,
                DIEInteger(Offset));
@@ -2369,7 +2363,7 @@ unsigned DwarfLinker::DIECloner::cloneDieReferenceAttribute(
     AttributeSpec AttrSpec, unsigned AttrSize, const DWARFFormValue &Val,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
-  uint32_t Ref = *Val.getAsReference(&U);
+  uint32_t Ref = *Val.getAsReference();
   DIE *NewRefDie = nullptr;
   CompileUnit *RefUnit = nullptr;
   DeclContext *Ctxt = nullptr;
@@ -2392,7 +2386,7 @@ unsigned DwarfLinker::DIECloner::cloneDieReferenceAttribute(
       DIEInteger Attr(Ctxt->getCanonicalDIEOffset());
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
                    dwarf::DW_FORM_ref_addr, Attr);
-      return getRefAddrSize(U);
+      return U.getRefAddrByteSize();
     }
   }
 
@@ -2427,7 +2421,7 @@ unsigned DwarfLinker::DIECloner::cloneDieReferenceAttribute(
           Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
                        dwarf::DW_FORM_ref_addr, DIEInteger(Attr)));
     }
-    return getRefAddrSize(U);
+    return U.getRefAddrByteSize();
   }
 
   Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
@@ -2481,7 +2475,7 @@ unsigned DwarfLinker::DIECloner::cloneBlockAttribute(DIE &Die,
 unsigned DwarfLinker::DIECloner::cloneAddressAttribute(
     DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     const CompileUnit &Unit, AttributesInfo &Info) {
-  uint64_t Addr = *Val.getAsAddress(&Unit.getOrigUnit());
+  uint64_t Addr = *Val.getAsAddress();
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc) {
     if (Die.getTag() == dwarf::DW_TAG_inlined_subroutine ||
         Die.getTag() == dwarf::DW_TAG_lexical_block)
@@ -2672,6 +2666,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_packed_type:
   case dwarf::DW_TAG_volatile_type:
   case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_atomic_type:
   case dwarf::DW_TAG_interface_type:
   case dwarf::DW_TAG_unspecified_type:
   case dwarf::DW_TAG_shared_type:

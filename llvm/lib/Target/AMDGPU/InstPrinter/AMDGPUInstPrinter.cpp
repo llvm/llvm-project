@@ -129,7 +129,13 @@ void AMDGPUInstPrinter::printOffset1(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printSMRDOffset(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printSMRDOffset8(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  printU32ImmOperand(MI, OpNo, STI, O);
+}
+
+void AMDGPUInstPrinter::printSMRDOffset20(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   printU32ImmOperand(MI, OpNo, STI, O);

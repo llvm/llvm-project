@@ -74,6 +74,27 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
   return ValReg;
 }
 
+int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
+  if (FrameIndices.find(&AI) != FrameIndices.end())
+    return FrameIndices[&AI];
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  unsigned ElementSize = DL->getTypeStoreSize(AI.getAllocatedType());
+  unsigned Size =
+      ElementSize * cast<ConstantInt>(AI.getArraySize())->getZExtValue();
+
+  // Always allocate at least one byte.
+  Size = std::max(Size, 1u);
+
+  unsigned Alignment = AI.getAlignment();
+  if (!Alignment)
+    Alignment = DL->getABITypeAlignment(AI.getAllocatedType());
+
+  int &FI = FrameIndices[&AI];
+  FI = MF.getFrameInfo().CreateStackObject(Size, Alignment, false, &AI);
+  return FI;
+}
+
 unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
   unsigned Alignment = 0;
   Type *ValTy = nullptr;
@@ -382,6 +403,26 @@ bool IRTranslator::translateMemcpy(const CallInst &CI) {
                         CallLowering::ArgInfo(0, CI.getType()), Args);
 }
 
+void IRTranslator::getStackGuard(unsigned DstReg) {
+  auto MIB = MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD);
+  MIB.addDef(DstReg);
+
+  auto &MF = MIRBuilder.getMF();
+  auto &TLI = *MF.getSubtarget().getTargetLowering();
+  Value *Global = TLI.getSDagStackGuard(*MF.getFunction()->getParent());
+  if (!Global)
+    return;
+
+  MachinePointerInfo MPInfo(Global);
+  MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(1);
+  auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
+               MachineMemOperand::MODereferenceable;
+  *MemRefs =
+      MF.getMachineMemOperand(MPInfo, Flags, DL->getPointerSizeInBits() / 8,
+                              DL->getPointerABIAlignment());
+  MIB.setMemRefs(MemRefs, MemRefs + 1);
+}
+
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
                                            Intrinsic::ID ID) {
   unsigned Op = 0;
@@ -400,6 +441,24 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
     const ConstantInt *Min = cast<ConstantInt>(CI.getArgOperand(1));
 
     MIRBuilder.buildConstant(getOrCreateVReg(CI), Min->isZero() ? -1ULL : 0);
+    return true;
+  }
+  case Intrinsic::stackguard:
+    getStackGuard(getOrCreateVReg(CI));
+    return true;
+  case Intrinsic::stackprotector: {
+    MachineFunction &MF = MIRBuilder.getMF();
+    LLT PtrTy{*CI.getArgOperand(0)->getType(), *DL};
+    unsigned GuardVal = MRI->createGenericVirtualRegister(PtrTy);
+    getStackGuard(GuardVal);
+
+    AllocaInst *Slot = cast<AllocaInst>(CI.getArgOperand(1));
+    MIRBuilder.buildStore(
+        GuardVal, getOrCreateVReg(*Slot),
+        *MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, getOrCreateFrameIndex(*Slot)),
+            MachineMemOperand::MOStore | MachineMemOperand::MOVolatile,
+            PtrTy.getSizeInBits() / 8, 8));
     return true;
   }
   }
@@ -468,20 +527,8 @@ bool IRTranslator::translateStaticAlloca(const AllocaInst &AI) {
     return false;
 
   assert(AI.isStaticAlloca() && "only handle static allocas now");
-  MachineFunction &MF = MIRBuilder.getMF();
-  unsigned ElementSize = DL->getTypeStoreSize(AI.getAllocatedType());
-  unsigned Size =
-      ElementSize * cast<ConstantInt>(AI.getArraySize())->getZExtValue();
-
-  // Always allocate at least one byte.
-  Size = std::max(Size, 1u);
-
-  unsigned Alignment = AI.getAlignment();
-  if (!Alignment)
-    Alignment = DL->getABITypeAlignment(AI.getAllocatedType());
-
   unsigned Res = getOrCreateVReg(AI);
-  int FI = MF.getFrameInfo().CreateStackObject(Size, Alignment, false, &AI);
+  int FI = getOrCreateFrameIndex(AI);
   MIRBuilder.buildFrameIndex(Res, FI);
   return true;
 }
@@ -566,6 +613,7 @@ void IRTranslator::finalizeFunction() {
   // Release the memory used by the different maps we
   // needed during the translation.
   ValToVReg.clear();
+  FrameIndices.clear();
   Constants.clear();
 }
 

@@ -104,7 +104,7 @@ private:
 
 public:
   AMDGPUSymbolizer(MCContext &Ctx, std::unique_ptr<MCRelocationInfo> &&RelInfo,
-                   void *disInfo) 
+                   void *disInfo)
                    : MCSymbolizer(Ctx, std::move(RelInfo)), DisInfo(disInfo) {}
 
   bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &cStream,

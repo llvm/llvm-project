@@ -12,7 +12,6 @@ set(NVPTXCodeGen_sources
   NVPTXAllocaHoisting.cpp
   NVPTXAsmPrinter.cpp
   NVPTXAssignValidGlobalNames.cpp
-  NVPTXFavorNonGenericAddrSpaces.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp
   NVPTXISelDAGToDAG.cpp

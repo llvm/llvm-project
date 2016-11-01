@@ -456,9 +456,9 @@ been activated:
 .. code-block:: c++
 
   handleErrors(
-    processFormattedFile(…),
+    processFormattedFile(...),
     [](const BadFileFormat &BFF) {
-      report(“Unable to process “ + BFF.Path + “: bad format”);
+      report("Unable to process " + BFF.Path + ": bad format");
     },
     [](const FileNotFound &FNF) {
       report("File not found " + FNF.Path);

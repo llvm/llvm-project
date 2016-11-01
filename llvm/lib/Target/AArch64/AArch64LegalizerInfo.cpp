@@ -169,7 +169,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   setAction({G_FRAME_INDEX, p0}, Legal);
   setAction({G_GLOBAL_VALUE, p0}, Legal);
 
-  setAction({G_PTRTOINT, 0, s64}, Legal);
+  for (auto Ty : {s1, s8, s16, s32, s64})
+    setAction({G_PTRTOINT, 0, Ty}, Legal);
+
   setAction({G_PTRTOINT, 1, p0}, Legal);
 
   setAction({G_INTTOPTR, 0, p0}, Legal);

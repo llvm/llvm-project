@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/PDB/Raw/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include <memory>
@@ -62,6 +63,14 @@ void coff::createPDB(StringRef Path, ArrayRef<uint8_t> SectionTable) {
   // Add an empty IPI stream.
   auto &IpiBuilder = Builder.getIpiBuilder();
   IpiBuilder.setVersionHeader(pdb::PdbTpiV80);
+
+  // Add Section Map stream.
+  ArrayRef<object::coff_section> Sections = {
+      (object::coff_section *)SectionTable.data(),
+      SectionTable.size() / sizeof(object::coff_section)};
+  std::vector<pdb::SecMapEntry> SectionMap =
+      pdb::DbiStreamBuilder::createSectionMap(Sections);
+  DbiBuilder.setSectionMap(SectionMap);
 
   // Add COFF section header stream.
   ExitOnErr(

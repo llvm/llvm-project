@@ -75,7 +75,7 @@ return:
 ; CHECK-MOD-DAG: BB#2
 
 ; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-CFG-ASM
+; RUN: llc -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-CFG-ASM
 
 ; unsigned c;
 ; extern unsigned long g(void);
@@ -119,21 +119,24 @@ attributes #0 = { optsize }
 ; CHECK-CFG-DAG: t2B <BB#3>
 
 ; CHECK-CFG-DAG: BB#2
-; CHECK-CFG-DAG: tCBNZ %vreg{{[0-9]}}, <BB#4>
-; CHECK-CFG-DAG: t__brkdiv0
+; CHECK-CFG-DAG: tCMPi8 %vreg{{[0-9]}}, 0
+; CHECK-CFG-DAG: t2Bcc <BB#5>
 
 ; CHECK-CFG-DAG: BB#4
 
 ; CHECK-CFG-DAG: BB#3
 ; CHECK-CFG-DAG: tBX_RET
 
-; CHECK-CFG-ASM-LABEL: h:
-; CHECK-CFG-ASM: cbnz r{{[0-9]}}, .LBB2_2
-; CHECK-CFG-ASM: __brkdiv0
-; CHECK-CFG-ASM-LABEL: .LBB2_2:
-; CHECK-CFG-ASM: bl __rt_udiv
+; CHECK-CFG-DAG: BB#5
+; CHECK-CFG-DAG: t__brkdiv0
 
-; RUN: llc -O0 -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
+; CHECK-CFG-ASM-LABEL: h:
+; CHECK-CFG-ASM: cbz r{{[0-9]}}, .LBB2_4
+; CHECK-CFG-ASM: bl __rt_udiv
+; CHECK-CFG-ASM-LABEL: .LBB2_4:
+; CHECK-CFG-ASM: __brkdiv0
+
+; RUN: llc -O1 -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
 
 ; long k(void);
 ; int l(void);
@@ -172,11 +175,11 @@ return:
 }
 
 ; CHECK-WIN__DBZCHK-LABEL: j:
-; CHECK-WIN__DBZCHK: cbnz r{{[0-7]}}, .LBB
-; CHECK-WIN__DBZCHK-NOT: cbnz r8, .LBB
-; CHECK-WIN__DBZCHK-NOT: cbnz r9, .LBB
-; CHECK-WIN__DBZCHK-NOT: cbnz r10, .LBB
-; CHECK-WIN__DBZCHK-NOT: cbnz r11, .LBB
-; CHECK-WIN__DBZCHK-NOT: cbnz ip, .LBB
-; CHECK-WIN__DBZCHK-NOT: cbnz lr, .LBB
+; CHECK-WIN__DBZCHK: cbz r{{[0-7]}}, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r8, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r9, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r10, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r11, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz ip, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz lr, .LBB
 

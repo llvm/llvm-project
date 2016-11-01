@@ -1051,9 +1051,9 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
 // architectures was specificed.  If not then an error is generated and this
 // routine returns false.  Else it returns true.
 static bool checkMachOAndArchFlags(SymbolicFile *O, std::string &Filename) {
-  MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(O);
+  auto *MachO = dyn_cast<MachOObjectFile>(O);
 
-  if (!MachO || ArchAll || ArchFlags.size() == 0)
+  if (!MachO || ArchAll || ArchFlags.empty())
     return true;
 
   MachO::mach_header H;

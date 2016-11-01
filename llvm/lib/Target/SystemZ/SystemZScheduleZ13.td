@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 def Z13Model : SchedMachineModel {
+
+    let UnsupportedFeatures = Arch11UnsupportedFeatures.List;
     
     let IssueWidth = 6;             // 2 * 3 instructions decoded per cycle.
     let MicroOpBufferSize = 60;     // Issue queues
@@ -67,7 +69,7 @@ def Z13_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
 def Z13_VecMulUnit  : ProcResource<2>;
 def Z13_VecStrUnit  : ProcResource<2>;
 def Z13_VecXsPmUnit : ProcResource<2>;
-def Z13_VBUnit      : ProcResource<1>;
+def Z13_VBUnit      : ProcResource<2>;
 
 // Subtarget specific definitions of scheduling resources.
 def : WriteRes<FXa,     [Z13_FXaUnit]>   { let Latency = 1; }
