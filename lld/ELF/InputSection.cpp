@@ -75,7 +75,9 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          Kind SectionKind)
     : InputSectionBase(File, Hdr->sh_flags, Hdr->sh_type, Hdr->sh_entsize,
                        Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
-                       getSectionContents(File, Hdr), Name, SectionKind) {}
+                       getSectionContents(File, Hdr), Name, SectionKind) {
+  this->Offset = Hdr->sh_offset;
+}
 
 template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
   if (auto *D = dyn_cast<InputSection<ELFT>>(this))
