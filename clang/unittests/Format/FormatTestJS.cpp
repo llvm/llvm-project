@@ -135,6 +135,8 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("x.in() = 1;");
   verifyFormat("x.let() = 1;");
   verifyFormat("x.var() = 1;");
+  verifyFormat("x.for() = 1;");
+  verifyFormat("x.as() = 1;");
   verifyFormat("x = {\n"
                "  a: 12,\n"
                "  interface: 1,\n"
@@ -383,6 +385,11 @@ TEST_F(FormatTestJS, GeneratorFunctions) {
                "    yield x;\n"
                "  }\n"
                "}");
+  verifyFormat("var x = {\n"
+               "  a: function*() {\n"
+               "    //\n"
+               "  }\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, AsyncFunctions) {

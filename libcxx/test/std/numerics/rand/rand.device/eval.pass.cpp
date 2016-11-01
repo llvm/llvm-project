@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <random>
 
 // class random_device;
@@ -26,6 +25,7 @@ int main()
         std::random_device::result_type e = r();
     }
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         std::random_device r("/dev/null");
@@ -35,4 +35,5 @@ int main()
     catch (const std::system_error&)
     {
     }
+#endif
 }
