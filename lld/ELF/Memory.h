@@ -49,7 +49,7 @@ template <class T> struct SpecificAlloc : public SpecificAllocBase {
 
 // Use this arean if your object have a destructor.
 // Your destructor will be invoked from freeArena().
-template <typename T, typename... U> static T *make(U &&... Args) {
+template <typename T, typename... U> inline T *make(U &&... Args) {
   static SpecificAlloc<T> Alloc;
   return new (Alloc.Alloc.Allocate()) T(std::forward<U>(Args)...);
 }

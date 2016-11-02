@@ -741,6 +741,8 @@ private:
 template <class ELFT> struct Out {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Phdr Elf_Phdr;
+
+  static uint8_t First;
   static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhOutputSection<ELFT> *EhFrame;
@@ -769,13 +771,9 @@ template <class ELFT> struct Out {
   static OutputSectionBase<ELFT> *DebugInfo;
   static OutputSectionBase<ELFT> *ElfHeader;
   static OutputSectionBase<ELFT> *ProgramHeaders;
-
   static OutputSectionBase<ELFT> *PreinitArray;
   static OutputSectionBase<ELFT> *InitArray;
   static OutputSectionBase<ELFT> *FiniArray;
-
-  // This pool owns dynamically-allocated output sections.
-  static std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> Pool;
 };
 
 template <bool Is64Bits> struct SectionKey {
@@ -811,6 +809,7 @@ template <class ELFT> uint64_t getHeaderSize() {
   return Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
 }
 
+template <class ELFT> uint8_t Out<ELFT>::First;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
@@ -842,10 +841,6 @@ template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::PreinitArray;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::InitArray;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::FiniArray;
-
-template <class ELFT>
-std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> Out<ELFT>::Pool;
-
 } // namespace elf
 } // namespace lld
 
