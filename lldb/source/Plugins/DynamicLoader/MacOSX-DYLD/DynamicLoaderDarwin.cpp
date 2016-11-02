@@ -1137,7 +1137,7 @@ bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
 
     // macOS 10.12 and newer
     if (os_type == llvm::Triple::MacOSX &&
-        (major >= 10 || (major == 10 && minor >= 12))) {
+        (major > 10 || (major == 10 && minor >= 12))) {
       use_new_spi_interface = true;
     }
 
