@@ -463,6 +463,26 @@ void UseAfterMoveFinder::getUsesAndReinits(
             });
 }
 
+bool isStandardSmartPointer(const ValueDecl *VD) {
+  const Type *TheType = VD->getType().getTypePtrOrNull();
+  if (!TheType)
+    return false;
+
+  const CXXRecordDecl *RecordDecl = TheType->getAsCXXRecordDecl();
+  if (!RecordDecl)
+    return false;
+
+  const IdentifierInfo *ID = RecordDecl->getIdentifier();
+  if (!ID)
+    return false;
+
+  StringRef Name = ID->getName();
+  if (Name != "unique_ptr" && Name != "shared_ptr" && Name != "weak_ptr")
+    return false;
+
+  return RecordDecl->getDeclContext()->isStdNamespace();
+}
+
 void UseAfterMoveFinder::getDeclRefs(
     const CFGBlock *Block, const Decl *MovedVariable,
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
@@ -472,17 +492,33 @@ void UseAfterMoveFinder::getDeclRefs(
     if (!S)
       continue;
 
-    SmallVector<BoundNodes, 1> Matches =
-        match(findAll(declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
-                                  unless(inDecltypeOrTemplateArg()))
-                          .bind("declref")),
-              *S->getStmt(), *Context);
+    auto addDeclRefs = [this, Block,
+                        DeclRefs](const ArrayRef<BoundNodes> Matches) {
+      for (const auto &Match : Matches) {
+        const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
+        const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
+        if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
+          // Ignore uses of a standard smart pointer that don't dereference the
+          // pointer.
+          if (Operator || !isStandardSmartPointer(DeclRef->getDecl())) {
+            DeclRefs->insert(DeclRef);
+          }
+        }
+      }
+    };
 
-    for (const auto &Match : Matches) {
-      const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
-      if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block)
-        DeclRefs->insert(DeclRef);
-    }
+    auto DeclRefMatcher = declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
+                                      unless(inDecltypeOrTemplateArg()))
+                              .bind("declref");
+
+    addDeclRefs(match(findAll(DeclRefMatcher), *S->getStmt(), *Context));
+    addDeclRefs(match(
+        findAll(cxxOperatorCallExpr(anyOf(hasOverloadedOperatorName("*"),
+                                          hasOverloadedOperatorName("->"),
+                                          hasOverloadedOperatorName("[]")),
+                                    hasArgument(0, DeclRefMatcher))
+                    .bind("operator")),
+        *S->getStmt(), *Context));
   }
 }
 
@@ -499,6 +535,9 @@ void UseAfterMoveFinder::getReinits(
                  "::std::map", "::std::multiset", "::std::multimap",
                  "::std::unordered_set", "::std::unordered_map",
                  "::std::unordered_multiset", "::std::unordered_multimap")));
+
+  auto StandardSmartPointerTypeMatcher = hasType(cxxRecordDecl(
+      hasAnyName("::std::unique_ptr", "::std::shared_ptr", "::std::weak_ptr")));
 
   // Matches different types of reinitialization.
   auto ReinitMatcher =
@@ -521,6 +560,10 @@ void UseAfterMoveFinder::getReinits(
                    // is called on any of the other containers, this will be
                    // flagged by a compile error anyway.
                    callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
+               // reset() on standard smart pointers.
+               cxxMemberCallExpr(
+                   on(allOf(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
+                   callee(cxxMethodDecl(hasName("reset")))),
                // Passing variable to a function as a non-const pointer.
                callExpr(forEachArgumentWithParam(
                    unaryOperator(hasOperatorName("&"),
@@ -587,15 +630,10 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
     return;
 
-  auto StandardSmartPointerTypeMatcher = hasType(
-      cxxRecordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr")));
-
   auto CallMoveMatcher =
       callExpr(
           callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
-          hasArgument(
-              0,
-              declRefExpr(unless(StandardSmartPointerTypeMatcher)).bind("arg")),
+          hasArgument(0, declRefExpr().bind("arg")),
           anyOf(hasAncestor(lambdaExpr().bind("containing-lambda")),
                 hasAncestor(functionDecl().bind("containing-func"))),
           unless(inDecltypeOrTemplateArg()))

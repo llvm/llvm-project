@@ -640,11 +640,15 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   std::vector<Entry> Entries;
 
 public:
-  explicit DynamicSection();
+  DynamicSection();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   typename Base::Kind getKind() const override { return Base::Dynamic; }
   static bool classof(const Base *B) { return B->getKind() == Base::Dynamic; }
+
+private:
+  void addEntries();
+  void Add(Entry E) { Entries.push_back(E); }
 };
 
 template <class ELFT>

@@ -44,7 +44,8 @@ uint32_t UnwindLLDB::DoGetFrameCount() {
 //#define DEBUG_FRAME_SPEED 1
 #if DEBUG_FRAME_SPEED
 #define FRAME_COUNT 10000
-    TimeValue time_value(TimeValue::Now());
+    using namespace std::chrono;
+    auto time_value = steady_clock::now();
 #endif
     if (!AddFirstFrame())
       return 0;
@@ -55,13 +56,11 @@ uint32_t UnwindLLDB::DoGetFrameCount() {
     while (AddOneMoreFrame(abi)) {
 #if DEBUG_FRAME_SPEED
       if ((m_frames.size() % FRAME_COUNT) == 0) {
-        TimeValue now(TimeValue::Now());
-        uint64_t delta_t = now - time_value;
-        printf("%u frames in %" PRIu64 ".%09llu ms (%g frames/sec)\n",
-               FRAME_COUNT, delta_t / TimeValue::NanoSecPerSec,
-               delta_t % TimeValue::NanoSecPerSec,
-               (float)FRAME_COUNT /
-                   ((float)delta_t / (float)TimeValue::NanoSecPerSec));
+        const auto now = steady_clock::now();
+        const auto delta_t = now - time_value;
+        printf("%u frames in %.9f ms (%g frames/sec)\n", FRAME_COUNT,
+               duration<double, std::milli>(delta_t).count(),
+               (float)FRAME_COUNT / duration<double>(delta_t).count());
         time_value = now;
       }
 #endif

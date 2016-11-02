@@ -24,6 +24,10 @@
 # RUN: ld.lld %t.o -Ttext=100000 -Tdata=110000 -Tbss=200000 -o %t5
 # RUN: llvm-objdump -section-headers %t5 | FileCheck %s
 
+## Check form without assignment:
+# RUN: ld.lld %t.o -Ttext 0x100000 -Tdata 0x110000 -Tbss 0x200000 -o %t4
+# RUN: llvm-objdump -section-headers %t4 | FileCheck %s
+
 ## Errors:
 # RUN: not ld.lld %t.o --section-start .text100000 -o %t2 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR1 %s
@@ -35,15 +39,15 @@
 
 # RUN: not ld.lld %t.o -Ttext=1w0000 -o %t6 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR3 %s
-# ERR3: invalid argument: -Ttext=1w0000
+# ERR3: invalid argument: -Ttext 1w0000
 
 # RUN: not ld.lld %t.o -Tbss=1w0000 -o %t6 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR4 %s
-# ERR4: invalid argument: -Tbss=1w0000
+# ERR4: invalid argument: -Tbss 1w0000
 
 # RUN: not ld.lld %t.o -Tdata=1w0000 -o %t6 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR5 %s
-# ERR5: invalid argument: -Tdata=1w0000
+# ERR5: invalid argument: -Tdata 1w0000
 
 .text
 .globl _start

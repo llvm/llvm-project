@@ -7,6 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Project includes
+#include "lldb/Core/Log.h"
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/Host.h"
+#include "lldb/Host/ThisThread.h"
+#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/NameMatches.h"
+
+// Other libraries and framework includes
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Chrono.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
+
 // C Includes
 // C++ Includes
 #include <cstdarg>
@@ -15,22 +31,6 @@
 #include <map>
 #include <mutex>
 #include <string>
-
-// Other libraries and framework includes
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
-
-// Project includes
-#include "lldb/Core/Log.h"
-#include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
-#include "lldb/Host/Host.h"
-#include "lldb/Host/ThisThread.h"
-#include "lldb/Host/TimeValue.h"
-#include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/NameMatches.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -81,8 +81,9 @@ void Log::VAPrintf(const char *format, va_list args) {
 
     // Timestamp if requested
     if (m_options.Test(LLDB_LOG_OPTION_PREPEND_TIMESTAMP)) {
-      TimeValue now = TimeValue::Now();
-      header.Printf("%9d.%9.9d ", now.seconds(), now.nanoseconds());
+      auto now = std::chrono::duration<double>(
+          std::chrono::system_clock::now().time_since_epoch());
+      header.Printf("%.9f ", now.count());
     }
 
     // Add the process and thread if requested

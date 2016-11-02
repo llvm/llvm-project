@@ -22,11 +22,11 @@
 // CHECK-NEXT:   Tag                Type                 Name/Value
 // CHECK-NEXT:   0x000000000000001D RUNPATH              foo:bar
 // CHECK-NEXT:   0x0000000000000001 NEEDED               SharedLibrary ({{.*}}2.so)
+// CHECK-NEXT:   0x0000000000000015 DEBUG                0x0
 // CHECK-NEXT:   0x0000000000000007 RELA                 [[RELADDR]]
 // CHECK-NEXT:   0x0000000000000008 RELASZ               [[RELSIZE]] (bytes)
 // CHECK-NEXT:   0x0000000000000009 RELAENT              [[RELENT]] (bytes)
-// CHECK:        0x0000000000000015 DEBUG                0x0
-// CHECK-NEXT:   0x0000000000000000 NULL                 0x0
+// CHECK:        0x0000000000000000 NULL                 0x0
 // CHECK-NEXT: ]
 
 .global _start

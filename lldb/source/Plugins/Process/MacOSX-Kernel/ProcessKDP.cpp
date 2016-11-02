@@ -162,7 +162,7 @@ ProcessKDP::ProcessKDP(TargetSP target_sp, ListenerSP listener_sp)
   const uint64_t timeout_seconds =
       GetGlobalPluginProperties()->GetPacketTimeout();
   if (timeout_seconds > 0)
-    m_comm.SetPacketTimeout(timeout_seconds);
+    m_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 }
 
 //----------------------------------------------------------------------

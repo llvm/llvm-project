@@ -20,12 +20,26 @@
 #include <stddef.h>
 
 #ifdef __APPLE__
-  #include <Availability.h>
-    #ifdef __arm__
-       #define LIBUNWIND_AVAIL __attribute__((unavailable))
-    #else
-      #define LIBUNWIND_AVAIL __OSX_AVAILABLE_STARTING(__MAC_10_6, __IPHONE_5_0)
+  #if __clang__
+    #if __has_include(<Availability.h>)
+      #include <Availability.h>
     #endif
+  #elif __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 1050
+    #include <Availability.h>
+  #endif
+
+  #ifdef __arm__
+     #define LIBUNWIND_AVAIL __attribute__((unavailable))
+  #elif defined(__OSX_AVAILABLE_STARTING)
+    #define LIBUNWIND_AVAIL __OSX_AVAILABLE_STARTING(__MAC_10_6, __IPHONE_5_0)
+  #else
+    #include <AvailabilityMacros.h>
+    #ifdef AVAILABLE_MAC_OS_X_VERSION_10_6_AND_LATER
+      #define LIBUNWIND_AVAIL AVAILABLE_MAC_OS_X_VERSION_10_6_AND_LATER
+    #else
+      #define LIBUNWIND_AVAIL __attribute__((unavailable))
+    #endif
+  #endif
 #else
   #define LIBUNWIND_AVAIL
 #endif

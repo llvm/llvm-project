@@ -362,7 +362,7 @@ private:
   //----------------------------------------------------------------------
   class ParserVars {
   public:
-    ParserVars(ClangExpressionDeclMap &decl_map) : m_decl_map(decl_map) {}
+    ParserVars() {}
 
     Target *GetTarget() {
       if (m_exe_ctx.GetTargetPtr())
@@ -387,7 +387,6 @@ private:
                                               ///that receives new top-level
                                               ///functions.
   private:
-    ClangExpressionDeclMap &m_decl_map;
     DISALLOW_COPY_AND_ASSIGN(ParserVars);
   };
 
@@ -398,7 +397,7 @@ private:
   //----------------------------------------------------------------------
   void EnableParserVars() {
     if (!m_parser_vars.get())
-      m_parser_vars.reset(new ParserVars(*this));
+      m_parser_vars = llvm::make_unique<ParserVars>();
   }
 
   //----------------------------------------------------------------------

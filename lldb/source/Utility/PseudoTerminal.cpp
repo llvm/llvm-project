@@ -50,11 +50,7 @@ PseudoTerminal::~PseudoTerminal() {
 //----------------------------------------------------------------------
 void PseudoTerminal::CloseMasterFileDescriptor() {
   if (m_master_fd >= 0) {
-// Don't call 'close' on m_master_fd for Windows as a dummy implementation of
-// posix_openpt above always gives it a 0 value.
-#ifndef _WIN32
     ::close(m_master_fd);
-#endif
     m_master_fd = invalid_fd;
   }
 }
@@ -81,13 +77,14 @@ void PseudoTerminal::CloseSlaveFileDescriptor() {
 // file descriptor after this object is out of scope or destroyed.
 //
 // RETURNS:
-//  Zero when successful, non-zero indicating an error occurred.
+//  True when successful, false indicating an error occurred.
 //----------------------------------------------------------------------
 bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
                                               size_t error_len) {
   if (error_str)
     error_str[0] = '\0';
 
+#if !defined(LLDB_DISABLE_POSIX)
   // Open the master side of a pseudo terminal
   m_master_fd = ::posix_openpt(oflag);
   if (m_master_fd < 0) {
@@ -113,6 +110,12 @@ bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
   }
 
   return true;
+#else
+  if (error_str)
+    ::snprintf(error_str, error_len, "%s",
+               "pseudo terminal not supported");
+  return false;
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -124,7 +127,7 @@ bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
 // ReleaseSlaveFileDescriptor() member function.
 //
 // RETURNS:
-//  Zero when successful, non-zero indicating an error occurred.
+//  True when successful, false indicating an error occurred.
 //----------------------------------------------------------------------
 bool PseudoTerminal::OpenSlave(int oflag, char *error_str, size_t error_len) {
   if (error_str)
