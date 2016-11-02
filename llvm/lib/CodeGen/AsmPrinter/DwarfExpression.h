@@ -67,6 +67,7 @@ public:
 
     return *Next;
   }
+  /// Determine whether there are any operations left in this expression.
   operator bool() const { return Start != End; }
 };
 
@@ -97,24 +98,21 @@ public:
   /// Emit an (double-)indirect dwarf register operation.
   void AddRegIndirect(int DwarfReg, int Offset, bool Deref = false);
 
-  /// Emit a dwarf register operation for describing
-  /// - a small value occupying only part of a register or
-  /// - a register representing only part of a value.
+  /// Emit DW_OP_piece operation.
   void AddOpPiece(unsigned SizeInBits, unsigned OffsetInBits = 0);
   /// Emit a shift-right dwarf expression.
   void AddShr(unsigned ShiftBy);
   /// Emit a DW_OP_stack_value, if supported.
   ///
-  /// The proper way to describe a constant value is
-  /// DW_OP_constu <const>, DW_OP_stack_value.
-  /// Unfortunately, DW_OP_stack_value was not available until DWARF-4,
-  /// so we will continue to generate DW_OP_constu <const> for DWARF-2
-  /// and DWARF-3. Technically, this is incorrect since DW_OP_const <const>
-  /// actually describes a value at a constant addess, not a constant value.
-  /// However, in the past there was no better way  to describe a constant
-  /// value, so the producers and consumers started to rely on heuristics
-  /// to disambiguate the value vs. location status of the expression.
-  /// See PR21176 for more details.
+  /// The proper way to describe a constant value is DW_OP_constu <const>,
+  /// DW_OP_stack_value.  Unfortunately, DW_OP_stack_value was not available
+  /// until DWARF 4, so we will continue to generate DW_OP_constu <const> for
+  /// DWARF 2 and DWARF 3. Technically, this is incorrect since DW_OP_const
+  /// <const> actually describes a value at a constant addess, not a constant
+  /// value.  However, in the past there was no better way to describe a
+  /// constant value, so the producers and consumers started to rely on
+  /// heuristics to disambiguate the value vs. location status of the
+  /// expression.  See PR21176 for more details.
   void AddStackValue();
 
   /// Emit an indirect dwarf register operation for the given machine register.
@@ -147,8 +145,9 @@ public:
   /// Emit an unsigned constant.
   void AddUnsignedConstant(const APInt &Value);
 
-  /// Emit a machine register location while consuming the prefix of a
-  /// DwarfExpression.
+  /// Emit a machine register location. As an optimization this may also consume
+  /// the prefix of a DwarfExpression if a more efficient representation for
+  /// combining the register location and the first operation exists.
   ///
   /// \param PieceOffsetInBits     If this is one piece out of a fragmented
   /// location, this is the offset of the piece inside the entire variable.
