@@ -292,6 +292,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
   Sections.resize(Size);
   unsigned I = -1;
   const ELFFile<ELFT> &Obj = this->ELFObj;
+  StringRef SectionStringTable = check(Obj.getSectionStringTable());
   for (const Elf_Shdr &Sec : Obj.sections()) {
     ++I;
     if (Sections[I] == &InputSection<ELFT>::Discarded)
@@ -328,7 +329,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
     case SHT_NULL:
       break;
     default:
-      Sections[I] = createInputSection(Sec);
+      Sections[I] = createInputSection(Sec, SectionStringTable);
     }
   }
 }
@@ -373,8 +374,9 @@ elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 
 template <class ELFT>
 InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
-  StringRef Name = check(this->ELFObj.getSectionName(&Sec));
+elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
+                                          StringRef SectionStringTable) {
+  StringRef Name = check(this->ELFObj.getSectionName(&Sec, SectionStringTable));
 
   switch (Sec.sh_type) {
   case SHT_ARM_ATTRIBUTES:
@@ -405,8 +407,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
     if (Config->Relocatable)
-      return new (alloc<InputSection<ELFT>>())
-          InputSection<ELFT>(this, &Sec, Name);
+      return make<InputSection<ELFT>>(this, &Sec, Name);
 
     // Find the relocation target section and associate this
     // section with it.
@@ -448,13 +449,11 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (Name == ".eh_frame" && !Config->Relocatable)
-    return new (alloc<EhInputSection<ELFT>>())
-        EhInputSection<ELFT>(this, &Sec, Name);
+    return make<EhInputSection<ELFT>>(this, &Sec, Name);
 
   if (shouldMerge(Sec))
-    return new (alloc<MergeInputSection<ELFT>>())
-        MergeInputSection<ELFT>(this, &Sec, Name);
-  return new (alloc<InputSection<ELFT>>()) InputSection<ELFT>(this, &Sec, Name);
+    return make<MergeInputSection<ELFT>>(this, &Sec, Name);
+  return make<InputSection<ELFT>>(this, &Sec, Name);
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
@@ -823,13 +822,13 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = new (alloc<T<ELF32LE>>()) T<ELF32LE>(MB);
+    Obj = make<T<ELF32LE>>(MB);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = new (alloc<T<ELF32BE>>()) T<ELF32BE>(MB);
+    Obj = make<T<ELF32BE>>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = new (alloc<T<ELF64LE>>()) T<ELF64LE>(MB);
+    Obj = make<T<ELF64LE>>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = new (alloc<T<ELF64BE>>()) T<ELF64BE>(MB);
+    Obj = make<T<ELF64BE>>(MB);
   else
     fatal("invalid file class: " + MB.getBufferIdentifier());
 

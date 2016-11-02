@@ -3802,7 +3802,8 @@ static ASTFileSignature readASTFileSignature(llvm::BitstreamReader &StreamFile);
 
 /// \brief Whether \p Stream starts with the AST/PCH file magic number 'CPCH'.
 static bool startsWithASTFileMagic(BitstreamCursor &Stream) {
-  return Stream.Read(8) == 'C' &&
+  return Stream.canSkipToPos(4) &&
+         Stream.Read(8) == 'C' &&
          Stream.Read(8) == 'P' &&
          Stream.Read(8) == 'C' &&
          Stream.Read(8) == 'H';

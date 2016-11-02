@@ -206,6 +206,18 @@ static bool isKImmOrKUImmOperand(const SIInstrInfo *TII,
   return false;
 }
 
+/// \returns true if the constant in \p Src should be replaced with a bitreverse
+/// of an inline immediate.
+static bool isReverseInlineImm(const SIInstrInfo *TII,
+                               const MachineOperand &Src,
+                               int32_t &ReverseImm) {
+  if (!isInt<32>(Src.getImm()) || TII->isInlineConstant(Src, 4))
+    return false;
+
+  ReverseImm = reverseBits<int32_t>(static_cast<int32_t>(Src.getImm()));
+  return ReverseImm >= -16 && ReverseImm <= 64;
+}
+
 /// Copy implicit register operands from specified instruction to this
 /// instruction that are not part of the instruction definition.
 static void copyExtraImplicitOps(MachineInstr &NewMI, MachineFunction &MF,
@@ -290,14 +302,11 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         MachineOperand &Src = MI.getOperand(1);
         if (Src.isImm() &&
             TargetRegisterInfo::isPhysicalRegister(MI.getOperand(0).getReg())) {
-          int64_t Imm = Src.getImm();
-          if (isInt<32>(Imm) && !TII->isInlineConstant(Src, 4)) {
-            int32_t ReverseImm = reverseBits<int32_t>(static_cast<int32_t>(Imm));
-            if (ReverseImm >= -16 && ReverseImm <= 64) {
-              MI.setDesc(TII->get(AMDGPU::V_BFREV_B32_e32));
-              Src.setImm(ReverseImm);
-              continue;
-            }
+          int32_t ReverseImm;
+          if (isReverseInlineImm(TII, Src, ReverseImm)) {
+            MI.setDesc(TII->get(AMDGPU::V_BFREV_B32_e32));
+            Src.setImm(ReverseImm);
+            continue;
           }
         }
       }
@@ -374,10 +383,19 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
       // Try to use S_MOVK_I32, which will save 4 bytes for small immediates.
       if (MI.getOpcode() == AMDGPU::S_MOV_B32) {
-        const MachineOperand &Src = MI.getOperand(1);
+        const MachineOperand &Dst = MI.getOperand(0);
+        MachineOperand &Src = MI.getOperand(1);
 
-        if (Src.isImm() && isKImmOperand(TII, Src))
-          MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
+        if (Src.isImm() &&
+            TargetRegisterInfo::isPhysicalRegister(Dst.getReg())) {
+          int32_t ReverseImm;
+          if (isKImmOperand(TII, Src))
+            MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
+          else if (isReverseInlineImm(TII, Src, ReverseImm)) {
+            MI.setDesc(TII->get(AMDGPU::S_BREV_B32));
+            Src.setImm(ReverseImm);
+          }
+        }
 
         continue;
       }

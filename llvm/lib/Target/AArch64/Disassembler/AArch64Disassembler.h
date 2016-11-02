@@ -18,7 +18,6 @@
 namespace llvm {
 
 class MCInst;
-class MemoryObject;
 class raw_ostream;
 
 class AArch64Disassembler : public MCDisassembler {

@@ -131,7 +131,7 @@ void LinkerDriver::addFile(StringRef Path) {
   MemoryBufferRef MBRef = *Buffer;
 
   if (InBinary) {
-    Files.push_back(new (alloc<BinaryFile>()) BinaryFile(MBRef));
+    Files.push_back(make<BinaryFile>(MBRef));
     return;
   }
 
@@ -145,7 +145,7 @@ void LinkerDriver::addFile(StringRef Path) {
         Files.push_back(createObjectFile(MB, Path));
       return;
     }
-    Files.push_back(new (alloc<ArchiveFile>()) ArchiveFile(MBRef));
+    Files.push_back(make<ArchiveFile>(MBRef));
     return;
   case file_magic::elf_shared_object:
     if (Config->Relocatable) {
@@ -156,7 +156,7 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   default:
     if (InLib)
-      Files.push_back(new (alloc<LazyObjectFile>()) LazyObjectFile(MBRef));
+      Files.push_back(make<LazyObjectFile>(MBRef));
     else
       Files.push_back(createObjectFile(MBRef));
   }

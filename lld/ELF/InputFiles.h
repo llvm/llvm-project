@@ -199,7 +199,8 @@ private:
   void initializeSymbols();
   void initializeReverseDependencies();
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Shdr &Sec);
-  InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec);
+  InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec,
+                                             StringRef SectionStringTable);
 
   bool shouldMerge(const Elf_Shdr &Sec);
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);

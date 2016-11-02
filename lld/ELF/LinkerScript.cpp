@@ -543,8 +543,7 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
       continue;
     }
 
-    auto *OutSec = new OutputSection<ELFT>(Cmd->Name, Type, Flags);
-    Out<ELFT>::Pool.emplace_back(OutSec);
+    auto *OutSec = make<OutputSection<ELFT>>(Cmd->Name, Type, Flags);
     OutputSections->push_back(OutSec);
   }
 }

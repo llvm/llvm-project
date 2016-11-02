@@ -1,3 +1,5 @@
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ENCODING %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev.bc 2>&1 | \
@@ -27,6 +29,7 @@ RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-INVOKE %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-invoke-non-function-explicit-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NON-FUNCTION-EXPLICIT-INVOKE %s
 
+INVALID-EMPTY: Invalid bitcode signature
 INVALID-ENCODING: Invalid encoding
 BAD-ABBREV: Abbreviation starts with an Array or a Blob
 UNEXPECTED-EOF: Unexpected end of file

@@ -83,7 +83,7 @@ define void @v_fneg_fabs_f32(float addrspace(1)* %out, float addrspace(1)* %in) 
 ; R600: -PV
 
 ; FIXME: In this case two uses of the constant should be folded
-; SI: s_mov_b32 [[SIGNBITK:s[0-9]+]], 0x80000000
+; SI: s_brev_b32 [[SIGNBITK:s[0-9]+]], 1{{$}}
 ; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
 ; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
 define void @fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) {
@@ -94,7 +94,7 @@ define void @fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) {
 }
 
 ; FUNC-LABEL: {{^}}fneg_fabs_v4f32:
-; SI: s_mov_b32 [[SIGNBITK:s[0-9]+]], 0x80000000
+; SI: s_brev_b32 [[SIGNBITK:s[0-9]+]], 1{{$}}
 ; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
 ; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
 ; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}

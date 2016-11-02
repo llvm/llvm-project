@@ -2949,6 +2949,15 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     // but do not necessarily update the type of New.
     if (CheckEquivalentExceptionSpec(Old, New))
       return true;
+    // If exceptions are disabled, we might not have resolved the exception spec
+    // of one or both declarations. Do so now in C++1z, so that we can properly
+    // compare the types.
+    if (getLangOpts().CPlusPlus1z) {
+      for (QualType T : {Old->getType(), New->getType()})
+        if (auto *FPT = T->getAs<FunctionProtoType>())
+          if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+            ResolveExceptionSpec(New->getLocation(), FPT);
+    }
     OldQType = Context.getCanonicalType(Old->getType());
     NewQType = Context.getCanonicalType(New->getType());
 

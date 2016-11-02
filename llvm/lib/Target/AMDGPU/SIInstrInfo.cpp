@@ -1943,6 +1943,28 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
+  if (MI.isInlineAsm()) {
+    // Verify register classes for inlineasm constraints.
+    for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
+         I != E; ++I) {
+      const TargetRegisterClass *RC = MI.getRegClassConstraint(I, this, &RI);
+      if (!RC)
+        continue;
+
+      const MachineOperand &Op = MI.getOperand(I);
+      if (!Op.isReg())
+        continue;
+
+      unsigned Reg = Op.getReg();
+      if (!TargetRegisterInfo::isVirtualRegister(Reg) && !RC->contains(Reg)) {
+        ErrInfo = "inlineasm operand has incorrect register class.";
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
     if (MI.getOperand(i).isFPImm()) {
