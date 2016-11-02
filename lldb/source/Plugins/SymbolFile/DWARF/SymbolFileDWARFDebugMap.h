@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "lldb/Core/RangeMap.h"
+#include "lldb/Host/TimeValue.h"
 #include "lldb/Symbol/SymbolFile.h"
 
 #include "UniqueDWARFASTType.h"

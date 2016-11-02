@@ -15,7 +15,7 @@
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; GCN-DAG: v_mov_b32_e32 [[CONSTREG:v[0-9]+]], 0x40a00000
+; GCN-DAG: s_mov_b32 [[CONSTREG:s[0-9]+]], 0x40a00000
 ; GCN-DAG: v_mov_b32_e32 v[[LOW_REG:[0-9]+]], [[CONSTREG]]
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOW_REG]]:
 define void @insertelement_v4f32_0(<4 x float> addrspace(1)* %out, <4 x float> %a) nounwind {

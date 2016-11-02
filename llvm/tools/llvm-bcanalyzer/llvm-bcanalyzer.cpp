@@ -436,10 +436,6 @@ static bool decodeMetadataStringsBlob(BitstreamReader &Reader, StringRef Indent,
   SimpleBitstreamCursor R(Reader);
   R.jumpToPointer(Lengths.begin());
 
-  // Ensure that Blob doesn't get invalidated, even if this is reading from a
-  // StreamingMemoryObject with corrupt data.
-  R.setArtificialByteLimit(R.getCurrentByteNo() + StringsOffset);
-
   StringRef Strings = Blob.drop_front(StringsOffset);
   do {
     if (R.AtEndOfStream())
@@ -735,7 +731,7 @@ static bool openBitcodeFile(StringRef Path,
       return ReportError("Invalid bitcode wrapper header");
   }
 
-  StreamFile = BitstreamReader(BufPtr, EndBufPtr);
+  StreamFile = BitstreamReader(ArrayRef<uint8_t>(BufPtr, EndBufPtr));
   Stream = BitstreamCursor(StreamFile);
   StreamFile.CollectBlockInfoNames();
 
@@ -814,7 +810,7 @@ static int AnalyzeBitcode() {
 
   if (Dump) outs() << "\n\n";
 
-  uint64_t BufferSizeBits = StreamFile.getBitcodeBytes().getExtent() * CHAR_BIT;
+  uint64_t BufferSizeBits = StreamFile.getBitcodeBytes().size() * CHAR_BIT;
   // Print a summary of the read file.
   outs() << "Summary of " << InputFilename << ":\n";
   outs() << "         Total size: ";

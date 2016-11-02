@@ -23,6 +23,7 @@
 #include "NamedParameterCheck.h"
 #include "NonConstParameterCheck.h"
 #include "RedundantControlFlowCheck.h"
+#include "RedundantDeclarationCheck.h"
 #include "RedundantMemberInitCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
@@ -68,6 +69,8 @@ public:
         "readability-non-const-parameter");
     CheckFactories.registerCheck<RedundantControlFlowCheck>(
         "readability-redundant-control-flow");
+    CheckFactories.registerCheck<RedundantDeclarationCheck>(
+        "readability-redundant-declaration");
     CheckFactories.registerCheck<RedundantSmartptrGetCheck>(
         "readability-redundant-smartptr-get");
     CheckFactories.registerCheck<RedundantStringCStrCheck>(

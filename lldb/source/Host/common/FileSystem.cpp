@@ -9,6 +9,7 @@
 
 #include "lldb/Host/FileSystem.h"
 
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 
 #include <algorithm>
@@ -89,4 +90,13 @@ bool FileSystem::CalculateMD5AsString(const FileSpec &file_spec,
   llvm::MD5::stringifyResult(md5_result, result_str);
   digest_str = result_str.c_str();
   return true;
+}
+
+llvm::sys::TimePoint<>
+FileSystem::GetModificationTime(const FileSpec &file_spec) {
+  llvm::sys::fs::file_status status;
+  std::error_code ec = llvm::sys::fs::status(file_spec.GetPath(), status);
+  if (ec)
+    return llvm::sys::TimePoint<>();
+  return status.getLastModificationTime();
 }

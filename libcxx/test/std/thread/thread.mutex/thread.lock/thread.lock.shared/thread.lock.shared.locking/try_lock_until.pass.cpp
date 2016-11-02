@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03, c++11
 
@@ -20,6 +19,8 @@
 
 #include <shared_mutex>
 #include <cassert>
+
+#include "test_macros.h"
 
 bool try_lock_until_called = false;
 
@@ -45,6 +46,7 @@ int main()
     assert(lk.try_lock_until(Clock::now()) == true);
     assert(try_lock_until_called == true);
     assert(lk.owns_lock() == true);
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         lk.try_lock_until(Clock::now());
@@ -54,11 +56,13 @@ int main()
     {
         assert(e.code().value() == EDEADLK);
     }
+#endif
     lk.unlock();
     assert(lk.try_lock_until(Clock::now()) == false);
     assert(try_lock_until_called == false);
     assert(lk.owns_lock() == false);
     lk.release();
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         lk.try_lock_until(Clock::now());
@@ -68,4 +72,5 @@ int main()
     {
         assert(e.code().value() == EPERM);
     }
+#endif
 }

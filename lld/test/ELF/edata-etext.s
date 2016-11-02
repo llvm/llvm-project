@@ -96,7 +96,7 @@
 # CHECK-NEXT:    Section: Absolute
 # CHECK-NEXT:  }
 # CHECK-NEXT:  Symbol {
-# CHECK-NEXT:    Name: _start (20)
+# CHECK-NEXT:    Name: _start
 # CHECK-NEXT:    Value: 0x11000
 # CHECK-NEXT:    Size: 0
 # CHECK-NEXT:    Binding: Global (0x1)

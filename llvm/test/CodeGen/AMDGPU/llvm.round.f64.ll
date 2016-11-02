@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}round_f64:
 ; SI: s_endpgm
@@ -20,7 +20,7 @@ define void @round_f64(double addrspace(1)* %out, double %x) #0 {
 
 ; SI-DAG: v_cmp_eq_u32
 
-; SI-DAG: s_mov_b32 [[BFIMASK:s[0-9]+]], 0x7fffffff
+; SI-DAG: s_brev_b32 [[BFIMASK:s[0-9]+]], -2{{$}}
 ; SI-DAG: v_cmp_gt_i32
 ; SI-DAG: v_bfi_b32 [[COPYSIGN:v[0-9]+]], [[BFIMASK]]
 

@@ -24,11 +24,35 @@
 
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
+#include <vector>
 
 namespace lld {
 namespace elf {
+
+// Use this arena if your object doesn't have a destructor.
 extern llvm::BumpPtrAllocator BAlloc;
 extern llvm::StringSaver Saver;
+
+// These two classes are hack to keep track of all
+// SpecificBumpPtrAllocator instances.
+struct SpecificAllocBase {
+  SpecificAllocBase();
+  virtual ~SpecificAllocBase() = default;
+  virtual void reset() = 0;
+  static std::vector<SpecificAllocBase *> Instances;
+};
+
+template <class T> struct SpecificAlloc : public SpecificAllocBase {
+  void reset() override { Alloc.DestroyAll(); }
+  llvm::SpecificBumpPtrAllocator<T> Alloc;
+};
+
+// Use this arean if your object have a destructor.
+// Your destructor will be invoked from freeArena().
+template <typename T, typename... U> inline T *make(U &&... Args) {
+  static SpecificAlloc<T> Alloc;
+  return new (Alloc.Alloc.Allocate()) T(std::forward<U>(Args)...);
+}
 
 void freeArena();
 }

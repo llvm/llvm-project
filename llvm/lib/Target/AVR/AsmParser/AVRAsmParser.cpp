@@ -496,7 +496,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands) {
   return true;
 }
 
-AVRAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   DEBUG(dbgs() << "parseMemriOperand()\n");
 

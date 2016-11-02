@@ -10,8 +10,9 @@
 #include "OutputSections.h"
 #include "Config.h"
 #include "EhFrame.h"
-#include "LinkerScript.h"
 #include "GdbIndex.h"
+#include "LinkerScript.h"
+#include "Memory.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -19,9 +20,7 @@
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SHA1.h"
-#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -1739,64 +1738,6 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
-    : OutputSectionBase<ELFT>(".note.gnu.build-id", SHT_NOTE, SHF_ALLOC),
-      HashSize(HashSize) {
-  // 16 bytes for the note section header.
-  this->Header.sh_size = 16 + HashSize;
-}
-
-template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
-  const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, 4);                   // Name size
-  write32<E>(Buf + 4, HashSize);        // Content size
-  write32<E>(Buf + 8, NT_GNU_BUILD_ID); // Type
-  memcpy(Buf + 12, "GNU", 4);           // Name string
-  HashBuf = Buf + 16;
-}
-
-template <class ELFT>
-void BuildIdFastHash<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
-  const endianness E = ELFT::TargetEndianness;
-
-  // 64-bit xxhash
-  uint64_t Hash = xxHash64(toStringRef(Buf));
-  write64<E>(this->HashBuf, Hash);
-}
-
-template <class ELFT>
-void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
-  MD5 Hash;
-  Hash.update(Buf);
-  MD5::MD5Result Res;
-  Hash.final(Res);
-  memcpy(this->HashBuf, Res, 16);
-}
-
-template <class ELFT>
-void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
-  SHA1 Hash;
-  Hash.update(Buf);
-  memcpy(this->HashBuf, Hash.final().data(), 20);
-}
-
-template <class ELFT>
-void BuildIdUuid<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
-  if (getRandomBytes(this->HashBuf, 16))
-    error("entropy source failure");
-}
-
-template <class ELFT>
-BuildIdHexstring<ELFT>::BuildIdHexstring()
-    : BuildIdSection<ELFT>(Config->BuildIdVector.size()) {}
-
-template <class ELFT>
-void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
-  memcpy(this->HashBuf, Config->BuildIdVector.data(),
-         Config->BuildIdVector.size());
-}
-
-template <class ELFT>
 MipsReginfoOutputSection<ELFT>::MipsReginfoOutputSection()
     : OutputSectionBase<ELFT>(".reginfo", SHT_MIPS_REGINFO, SHF_ALLOC) {
   this->Header.sh_addralign = 4;
@@ -1941,24 +1882,23 @@ OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
   uint32_t Type = C->Type;
   switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
-    Sec = new OutputSection<ELFT>(Key.Name, Type, Flags);
+    Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
     break;
   case InputSectionBase<ELFT>::EHFrame:
     return {Out<ELFT>::EhFrame, false};
   case InputSectionBase<ELFT>::Merge:
-    Sec = new MergeOutputSection<ELFT>(Key.Name, Type, Flags, Key.Alignment);
+    Sec = make<MergeOutputSection<ELFT>>(Key.Name, Type, Flags, Key.Alignment);
     break;
   case InputSectionBase<ELFT>::MipsReginfo:
-    Sec = new MipsReginfoOutputSection<ELFT>();
+    Sec = make<MipsReginfoOutputSection<ELFT>>();
     break;
   case InputSectionBase<ELFT>::MipsOptions:
-    Sec = new MipsOptionsOutputSection<ELFT>();
+    Sec = make<MipsOptionsOutputSection<ELFT>>();
     break;
   case InputSectionBase<ELFT>::MipsAbiFlags:
-    Sec = new MipsAbiFlagsOutputSection<ELFT>();
+    Sec = make<MipsAbiFlagsOutputSection<ELFT>>();
     break;
   }
-  Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};
 }
 
@@ -2100,36 +2040,6 @@ template class VersionDefinitionSection<ELF32LE>;
 template class VersionDefinitionSection<ELF32BE>;
 template class VersionDefinitionSection<ELF64LE>;
 template class VersionDefinitionSection<ELF64BE>;
-
-template class BuildIdSection<ELF32LE>;
-template class BuildIdSection<ELF32BE>;
-template class BuildIdSection<ELF64LE>;
-template class BuildIdSection<ELF64BE>;
-
-template class BuildIdFastHash<ELF32LE>;
-template class BuildIdFastHash<ELF32BE>;
-template class BuildIdFastHash<ELF64LE>;
-template class BuildIdFastHash<ELF64BE>;
-
-template class BuildIdMd5<ELF32LE>;
-template class BuildIdMd5<ELF32BE>;
-template class BuildIdMd5<ELF64LE>;
-template class BuildIdMd5<ELF64BE>;
-
-template class BuildIdSha1<ELF32LE>;
-template class BuildIdSha1<ELF32BE>;
-template class BuildIdSha1<ELF64LE>;
-template class BuildIdSha1<ELF64BE>;
-
-template class BuildIdUuid<ELF32LE>;
-template class BuildIdUuid<ELF32BE>;
-template class BuildIdUuid<ELF64LE>;
-template class BuildIdUuid<ELF64BE>;
-
-template class BuildIdHexstring<ELF32LE>;
-template class BuildIdHexstring<ELF32BE>;
-template class BuildIdHexstring<ELF64LE>;
-template class BuildIdHexstring<ELF64BE>;
 
 template class GdbIndexSection<ELF32LE>;
 template class GdbIndexSection<ELF32BE>;

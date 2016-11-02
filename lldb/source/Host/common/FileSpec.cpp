@@ -745,14 +745,6 @@ uint32_t FileSpec::GetPermissions() const {
   return file_permissions;
 }
 
-TimeValue FileSpec::GetModificationTime() const {
-  TimeValue mod_time;
-  struct stat file_stats;
-  if (GetFileStats(this, &file_stats))
-    mod_time.OffsetWithSeconds(file_stats.st_mtime);
-  return mod_time;
-}
-
 //------------------------------------------------------------------
 // Directory string get accessor.
 //------------------------------------------------------------------

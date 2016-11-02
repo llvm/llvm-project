@@ -1479,7 +1479,6 @@ void MachineBlockPlacement::buildLoopChains(MachineLoop &L) {
   // If we selected just the header for the loop top, look for a potentially
   // profitable exit block in the event that rotating the loop can eliminate
   // branches by placing an exit edge at the bottom.
-  PreferredLoopExit = nullptr;
   if (!RotateLoopWithProfile && LoopTop == L.getHeader())
     PreferredLoopExit = findBestLoopExit(L, LoopBlockSet);
 
@@ -1599,6 +1598,7 @@ void MachineBlockPlacement::buildCFGChains() {
   collectMustExecuteBBs();
 
   // Build any loop-based chains.
+  PreferredLoopExit = nullptr;
   for (MachineLoop *L : *MLI)
     buildLoopChains(*L);
 
@@ -1983,6 +1983,11 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
   MDT = &getAnalysis<MachineDominatorTree>();
+
+  // Initialize PreferredLoopExit to nullptr here since it may never be set if
+  // there are no MachineLoops.
+  PreferredLoopExit = nullptr;
+
   if (TailDupPlacement) {
     unsigned TailDupSize = TailDuplicatePlacementThreshold;
     if (MF.getFunction()->optForSize())

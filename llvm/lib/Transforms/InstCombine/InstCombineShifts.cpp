@@ -39,10 +39,19 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
     if (Instruction *Res = FoldShiftByConstant(Op0, CUI, I))
       return Res;
 
+  // (C1 shift (A add C2)) -> (C1 shift C2) shift A)
+  // iff A and C2 are both positive.
+  Value *A;
+  Constant *C;
+  if (match(Op0, m_Constant()) && match(Op1, m_Add(m_Value(A), m_Constant(C))))
+    if (isKnownNonNegative(A, DL) && isKnownNonNegative(C, DL))
+      return BinaryOperator::Create(
+          I.getOpcode(), Builder->CreateBinOp(I.getOpcode(), Op0, C), A);
+
   // X shift (A srem B) -> X shift (A and B-1) iff B is a power of 2.
   // Because shifts by negative values (which could occur if A were negative)
   // are undefined.
-  Value *A; const APInt *B;
+  const APInt *B;
   if (Op1->hasOneUse() && match(Op1, m_SRem(m_Value(A), m_Power2(B)))) {
     // FIXME: Should this get moved into SimplifyDemandedBits by saying we don't
     // demand the sign bit (and many others) here??

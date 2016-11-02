@@ -19,4 +19,4 @@ entry:
 }
 
 attributes #0 = { minsize norecurse nounwind optsize readnone "denormal-fp-math"="preserve-sign"}
-attributes #0 = { minsize norecurse nounwind optsize readnone "denormal-fp-math"="positive-zero"}
+attributes #1 = { minsize norecurse nounwind optsize readnone "denormal-fp-math"="positive-zero"}

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 
 // <mutex>
@@ -20,6 +19,8 @@
 #include <thread>
 #include <cstdlib>
 #include <cassert>
+
+#include "test_macros.h"
 
 std::mutex m;
 
@@ -38,6 +39,7 @@ void f()
     assert(lk.owns_lock() == true);
     ns d = t1 - t0 - ms(250);
     assert(d < ms(25));  // within 25ms
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         lk.lock();
@@ -47,8 +49,10 @@ void f()
     {
         assert(e.code().value() == EDEADLK);
     }
+#endif
     lk.unlock();
     lk.release();
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         lk.lock();
@@ -58,6 +62,7 @@ void f()
     {
         assert(e.code().value() == EPERM);
     }
+#endif
 }
 
 int main()

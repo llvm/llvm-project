@@ -2728,8 +2728,7 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the operand class switch to call the correct custom parser for
   // the found operand class.
-  OS << Target.getName() << ClassName << "::OperandMatchResultTy "
-     << Target.getName() << ClassName << "::\n"
+  OS << "OperandMatchResultTy " << Target.getName() << ClassName << "::\n"
      << "tryCustomParseOperand(OperandVector"
      << " &Operands,\n                      unsigned MCK) {\n\n"
      << "  switch(MCK) {\n";
@@ -2750,8 +2749,7 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   // Emit the static custom operand parser. This code is very similar with
   // the other matcher. Also use MatchResultTy here just in case we go for
   // a better error handling.
-  OS << Target.getName() << ClassName << "::OperandMatchResultTy "
-     << Target.getName() << ClassName << "::\n"
+  OS << "OperandMatchResultTy " << Target.getName() << ClassName << "::\n"
      << "MatchOperandParserImpl(OperandVector"
      << " &Operands,\n                       StringRef Mnemonic) {\n";
 
@@ -2905,11 +2903,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
      << "                                unsigned VariantID = 0);\n";
 
   if (!Info.OperandMatchInfo.empty()) {
-    OS << "\n  enum OperandMatchResultTy {\n";
-    OS << "    MatchOperand_Success,    // operand matched successfully\n";
-    OS << "    MatchOperand_NoMatch,    // operand did not match\n";
-    OS << "    MatchOperand_ParseFail   // operand matched but had errors\n";
-    OS << "  };\n";
     OS << "  OperandMatchResultTy MatchOperandParserImpl(\n";
     OS << "    OperandVector &Operands,\n";
     OS << "    StringRef Mnemonic);\n";

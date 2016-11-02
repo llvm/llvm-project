@@ -9,12 +9,9 @@
 
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/State.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -120,7 +117,8 @@ size_t OptionValueFileSpec::AutoComplete(CommandInterpreter &interpreter,
 const lldb::DataBufferSP &
 OptionValueFileSpec::GetFileContents(bool null_terminate) {
   if (m_current_value) {
-    const TimeValue file_mod_time = m_current_value.GetModificationTime();
+    const TimeValue file_mod_time =
+        FileSystem::GetModificationTime(m_current_value);
     if (m_data_sp && m_data_mod_time == file_mod_time)
       return m_data_sp;
     if (null_terminate)

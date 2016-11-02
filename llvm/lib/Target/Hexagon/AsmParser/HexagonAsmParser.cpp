@@ -276,55 +276,52 @@ public:
   }
 
   bool isf32Ext() const { return false; }
-  bool iss32Imm() const { return CheckImmRange(32, 0, true, true, false); }
+  bool iss32_0Imm() const { return CheckImmRange(32, 0, true, true, false); }
   bool iss23_2Imm() const { return CheckImmRange(23, 2, true, true, false); }
-  bool iss8Imm() const { return CheckImmRange(8, 0, true, false, false); }
-  bool iss8Imm64() const { return CheckImmRange(8, 0, true, true, false); }
-  bool iss7Imm() const { return CheckImmRange(7, 0, true, false, false); }
-  bool iss6Imm() const { return CheckImmRange(6, 0, true, false, false); }
-  bool iss4Imm() const { return CheckImmRange(4, 0, true, false, false); }
+  bool iss8_0Imm() const { return CheckImmRange(8, 0, true, false, false); }
+  bool iss8_0Imm64() const { return CheckImmRange(8, 0, true, true, false); }
+  bool iss7_0Imm() const { return CheckImmRange(7, 0, true, false, false); }
+  bool iss6_0Imm() const { return CheckImmRange(6, 0, true, false, false); }
   bool iss4_0Imm() const { return CheckImmRange(4, 0, true, false, false); }
   bool iss4_1Imm() const { return CheckImmRange(4, 1, true, false, false); }
   bool iss4_2Imm() const { return CheckImmRange(4, 2, true, false, false); }
   bool iss4_3Imm() const { return CheckImmRange(4, 3, true, false, false); }
   bool iss4_6Imm() const { return CheckImmRange(4, 0, true, false, false); }
   bool iss3_6Imm() const { return CheckImmRange(3, 0, true, false, false); }
-  bool iss3Imm() const { return CheckImmRange(3, 0, true, false, false); }
+  bool iss3_0Imm() const { return CheckImmRange(3, 0, true, false, false); }
 
-  bool isu64Imm() const { return CheckImmRange(64, 0, false, true, true); }
-  bool isu32Imm() const { return CheckImmRange(32, 0, false, true, false); }
+  bool isu64_0Imm() const { return CheckImmRange(64, 0, false, true, true); }
+  bool isu32_0Imm() const { return CheckImmRange(32, 0, false, true, false); }
   bool isu26_6Imm() const { return CheckImmRange(26, 6, false, true, false); }
-  bool isu16Imm() const { return CheckImmRange(16, 0, false, true, false); }
   bool isu16_0Imm() const { return CheckImmRange(16, 0, false, true, false); }
   bool isu16_1Imm() const { return CheckImmRange(16, 1, false, true, false); }
   bool isu16_2Imm() const { return CheckImmRange(16, 2, false, true, false); }
   bool isu16_3Imm() const { return CheckImmRange(16, 3, false, true, false); }
   bool isu11_3Imm() const { return CheckImmRange(11, 3, false, false, false); }
-  bool isu6_0Imm() const { return CheckImmRange(6, 0, false, false, false); }
   bool isu6_1Imm() const { return CheckImmRange(6, 1, false, false, false); }
   bool isu6_2Imm() const { return CheckImmRange(6, 2, false, false, false); }
   bool isu6_3Imm() const { return CheckImmRange(6, 3, false, false, false); }
-  bool isu10Imm() const { return CheckImmRange(10, 0, false, false, false); }
-  bool isu9Imm() const { return CheckImmRange(9, 0, false, false, false); }
-  bool isu8Imm() const { return CheckImmRange(8, 0, false, false, false); }
-  bool isu7Imm() const { return CheckImmRange(7, 0, false, false, false); }
-  bool isu6Imm() const { return CheckImmRange(6, 0, false, false, false); }
-  bool isu5Imm() const { return CheckImmRange(5, 0, false, false, false); }
-  bool isu4Imm() const { return CheckImmRange(4, 0, false, false, false); }
-  bool isu3Imm() const { return CheckImmRange(3, 0, false, false, false); }
-  bool isu2Imm() const { return CheckImmRange(2, 0, false, false, false); }
-  bool isu1Imm() const { return CheckImmRange(1, 0, false, false, false); }
+  bool isu10_0Imm() const { return CheckImmRange(10, 0, false, false, false); }
+  bool isu9_0Imm() const { return CheckImmRange(9, 0, false, false, false); }
+  bool isu8_0Imm() const { return CheckImmRange(8, 0, false, false, false); }
+  bool isu7_0Imm() const { return CheckImmRange(7, 0, false, false, false); }
+  bool isu6_0Imm() const { return CheckImmRange(6, 0, false, false, false); }
+  bool isu5_0Imm() const { return CheckImmRange(5, 0, false, false, false); }
+  bool isu4_0Imm() const { return CheckImmRange(4, 0, false, false, false); }
+  bool isu3_0Imm() const { return CheckImmRange(3, 0, false, false, false); }
+  bool isu2_0Imm() const { return CheckImmRange(2, 0, false, false, false); }
+  bool isu1_0Imm() const { return CheckImmRange(1, 0, false, false, false); }
 
-  bool ism6Imm() const { return CheckImmRange(6, 0, false, false, false); }
-  bool isn8Imm() const { return CheckImmRange(8, 0, false, false, false); }
+  bool ism6_0Imm() const { return CheckImmRange(6, 0, false, false, false); }
+  bool isn8_0Imm() const { return CheckImmRange(8, 0, false, false, false); }
 
-  bool iss16Ext() const { return CheckImmRange(16 + 26, 0, true, true, true); }
-  bool iss12Ext() const { return CheckImmRange(12 + 26, 0, true, true, true); }
-  bool iss10Ext() const { return CheckImmRange(10 + 26, 0, true, true, true); }
-  bool iss9Ext() const { return CheckImmRange(9 + 26, 0, true, true, true); }
-  bool iss8Ext() const { return CheckImmRange(8 + 26, 0, true, true, true); }
-  bool iss7Ext() const { return CheckImmRange(7 + 26, 0, true, true, true); }
-  bool iss6Ext() const { return CheckImmRange(6 + 26, 0, true, true, true); }
+  bool iss16_0Ext() const { return CheckImmRange(16 + 26, 0, true, true, true); }
+  bool iss12_0Ext() const { return CheckImmRange(12 + 26, 0, true, true, true); }
+  bool iss10_0Ext() const { return CheckImmRange(10 + 26, 0, true, true, true); }
+  bool iss9_0Ext() const { return CheckImmRange(9 + 26, 0, true, true, true); }
+  bool iss8_0Ext() const { return CheckImmRange(8 + 26, 0, true, true, true); }
+  bool iss7_0Ext() const { return CheckImmRange(7 + 26, 0, true, true, true); }
+  bool iss6_0Ext() const { return CheckImmRange(6 + 26, 0, true, true, true); }
   bool iss11_0Ext() const {
     return CheckImmRange(11 + 26, 0, true, true, true);
   }
@@ -338,16 +335,15 @@ public:
     return CheckImmRange(11 + 26, 3, true, true, true);
   }
 
-  bool isu6Ext() const { return CheckImmRange(6 + 26, 0, false, true, true); }
-  bool isu7Ext() const { return CheckImmRange(7 + 26, 0, false, true, true); }
-  bool isu8Ext() const { return CheckImmRange(8 + 26, 0, false, true, true); }
-  bool isu9Ext() const { return CheckImmRange(9 + 26, 0, false, true, true); }
-  bool isu10Ext() const { return CheckImmRange(10 + 26, 0, false, true, true); }
+  bool isu7_0Ext() const { return CheckImmRange(7 + 26, 0, false, true, true); }
+  bool isu8_0Ext() const { return CheckImmRange(8 + 26, 0, false, true, true); }
+  bool isu9_0Ext() const { return CheckImmRange(9 + 26, 0, false, true, true); }
+  bool isu10_0Ext() const { return CheckImmRange(10 + 26, 0, false, true, true); }
   bool isu6_0Ext() const { return CheckImmRange(6 + 26, 0, false, true, true); }
   bool isu6_1Ext() const { return CheckImmRange(6 + 26, 1, false, true, true); }
   bool isu6_2Ext() const { return CheckImmRange(6 + 26, 2, false, true, true); }
   bool isu6_3Ext() const { return CheckImmRange(6 + 26, 3, false, true, true); }
-  bool isu32MustExt() const { return isImm(); }
+  bool isu32_0MustExt() const { return isImm(); }
 
   void addRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
@@ -378,22 +374,19 @@ public:
     addImmOperands(Inst, N);
   }
 
-  void adds32ImmOperands(MCInst &Inst, unsigned N) const {
+  void adds32_0ImmOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
   void adds23_2ImmOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds8ImmOperands(MCInst &Inst, unsigned N) const {
+  void adds8_0ImmOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds8Imm64Operands(MCInst &Inst, unsigned N) const {
+  void adds8_0Imm64Operands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds6ImmOperands(MCInst &Inst, unsigned N) const {
-    addSignedImmOperands(Inst, N);
-  }
-  void adds4ImmOperands(MCInst &Inst, unsigned N) const {
+  void adds6_0ImmOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
   void adds4_0ImmOperands(MCInst &Inst, unsigned N) const {
@@ -408,20 +401,17 @@ public:
   void adds4_3ImmOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds3ImmOperands(MCInst &Inst, unsigned N) const {
+  void adds3_0ImmOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
 
-  void addu64ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu64_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu32ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu32_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
   void addu26_6ImmOperands(MCInst &Inst, unsigned N) const {
-    addImmOperands(Inst, N);
-  }
-  void addu16ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
   void addu16_0ImmOperands(MCInst &Inst, unsigned N) const {
@@ -439,19 +429,16 @@ public:
   void addu11_3ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu10ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu10_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu9ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu9_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu8ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu8_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu7ImmOperands(MCInst &Inst, unsigned N) const {
-    addImmOperands(Inst, N);
-  }
-  void addu6ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu7_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
   void addu6_0ImmOperands(MCInst &Inst, unsigned N) const {
@@ -466,45 +453,45 @@ public:
   void addu6_3ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu5ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu5_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu4ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu4_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu3ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu3_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu2ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu2_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu1ImmOperands(MCInst &Inst, unsigned N) const {
-    addImmOperands(Inst, N);
-  }
-
-  void addm6ImmOperands(MCInst &Inst, unsigned N) const {
-    addImmOperands(Inst, N);
-  }
-  void addn8ImmOperands(MCInst &Inst, unsigned N) const {
+  void addu1_0ImmOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
 
-  void adds16ExtOperands(MCInst &Inst, unsigned N) const {
+  void addm6_0ImmOperands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+  void addn8_0ImmOperands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
+  void adds16_0ExtOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds12ExtOperands(MCInst &Inst, unsigned N) const {
+  void adds12_0ExtOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds10ExtOperands(MCInst &Inst, unsigned N) const {
+  void adds10_0ExtOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds9ExtOperands(MCInst &Inst, unsigned N) const {
+  void adds9_0ExtOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds8ExtOperands(MCInst &Inst, unsigned N) const {
+  void adds8_0ExtOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
-  void adds6ExtOperands(MCInst &Inst, unsigned N) const {
+  void adds6_0ExtOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
   void adds11_0ExtOperands(MCInst &Inst, unsigned N) const {
@@ -520,19 +507,16 @@ public:
     addSignedImmOperands(Inst, N);
   }
 
-  void addu6ExtOperands(MCInst &Inst, unsigned N) const {
+  void addu7_0ExtOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu7ExtOperands(MCInst &Inst, unsigned N) const {
+  void addu8_0ExtOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu8ExtOperands(MCInst &Inst, unsigned N) const {
+  void addu9_0ExtOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu9ExtOperands(MCInst &Inst, unsigned N) const {
-    addImmOperands(Inst, N);
-  }
-  void addu10ExtOperands(MCInst &Inst, unsigned N) const {
+  void addu10_0ExtOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
   void addu6_0ExtOperands(MCInst &Inst, unsigned N) const {
@@ -547,7 +531,7 @@ public:
   void addu6_3ExtOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
-  void addu32MustExtOperands(MCInst &Inst, unsigned N) const {
+  void addu32_0MustExtOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
 

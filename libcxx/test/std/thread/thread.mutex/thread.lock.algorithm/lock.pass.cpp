@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 
 // This test hangs forever when built against libstdc++. In order to allow
@@ -22,6 +21,8 @@
 
 #include <mutex>
 #include <cassert>
+
+#include "test_macros.h"
 
 class L0
 {
@@ -78,12 +79,12 @@ public:
 
     void lock()
     {
-        throw 1;
+        TEST_THROW(1);
     }
 
     bool try_lock()
     {
-        throw 1;
+        TEST_THROW(1);
         return locked_;
     }
 
@@ -115,6 +116,7 @@ int main()
         assert(l0.locked());
         assert(l1.locked());
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         L0 l0;
         L2 l1;
@@ -185,6 +187,7 @@ int main()
             assert(!l1.locked());
         }
     }
+#endif
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     {
         L0 l0;
@@ -195,6 +198,7 @@ int main()
         assert(l1.locked());
         assert(l2.locked());
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         L2 l0;
         L2 l1;
@@ -211,6 +215,7 @@ int main()
             assert(!l2.locked());
         }
     }
+#endif
     {
         L0 l0;
         L0 l1;
@@ -238,6 +243,7 @@ int main()
         assert(l1.locked());
         assert(l2.locked());
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         L0 l0;
         L0 l1;
@@ -382,6 +388,7 @@ int main()
             assert(!l2.locked());
         }
     }
+#endif  // TEST_HAS_NO_EXCEPTIONS
     {
         L0 l0;
         L0 l1;
@@ -437,6 +444,7 @@ int main()
         assert(l2.locked());
         assert(l3.locked());
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         L0 l0;
         L0 l1;
@@ -509,5 +517,6 @@ int main()
             assert(!l3.locked());
         }
     }
+#endif  // TEST_HAS_NO_EXCEPTIONS
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 }

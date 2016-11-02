@@ -37,21 +37,6 @@ class InputFile;
 namespace lld {
 namespace elf {
 
-template <class ELFT> struct GAlloc {
-  static llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
-  static llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
-  static llvm::SpecificBumpPtrAllocator<EhInputSection<ELFT>> EHAlloc;
-};
-
-template <class ELFT>
-llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> GAlloc<ELFT>::IAlloc;
-
-template <class ELFT>
-llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> GAlloc<ELFT>::MAlloc;
-
-template <class ELFT>
-llvm::SpecificBumpPtrAllocator<EhInputSection<ELFT>> GAlloc<ELFT>::EHAlloc;
-
 using llvm::object::Archive;
 
 class InputFile;
@@ -78,8 +63,6 @@ private:
 // The root class of input files.
 class InputFile {
 public:
-  virtual ~InputFile() = default;
-
   enum Kind {
     ObjectKind,
     SharedKind,
@@ -111,19 +94,11 @@ public:
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint8_t OSABI = 0;
 
-  static void freePool();
-
 protected:
-  InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {
-    Pool.push_back(this);
-  }
+  InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
 
 private:
   const Kind FileKind;
-
-  // All InputFile instances are added to the pool
-  // and freed all at once on exit by freePool().
-  static std::vector<InputFile *> Pool;
 };
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
@@ -224,7 +199,8 @@ private:
   void initializeSymbols();
   void initializeReverseDependencies();
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Shdr &Sec);
-  InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec);
+  InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec,
+                                             StringRef SectionStringTable);
 
   bool shouldMerge(const Elf_Shdr &Sec);
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);

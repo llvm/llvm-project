@@ -19,7 +19,7 @@
 // Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/STLUtils.h"
-#include "lldb/Host/TimeValue.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -376,8 +376,6 @@ public:
   ///     \b false otherwise.
   //------------------------------------------------------------------
   bool IsAbsolute() const;
-
-  TimeValue GetModificationTime() const;
 
   //------------------------------------------------------------------
   /// Extract the full path to the file.

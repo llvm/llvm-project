@@ -184,7 +184,7 @@
 
 // CHECK:      DynamicSymbols [
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: @ (0)
+// CHECK-NEXT:     Name: @
 // CHECK-NEXT:     Value: 0x0
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
@@ -223,7 +223,7 @@
 
 // DONT_EXPORT:      DynamicSymbols [
 // DONT_EXPORT-NEXT:   Symbol {
-// DONT_EXPORT-NEXT:     Name: @ (0)
+// DONT_EXPORT-NEXT:     Name: @
 // DONT_EXPORT-NEXT:     Value: 0x0
 // DONT_EXPORT-NEXT:     Size: 0
 // DONT_EXPORT-NEXT:     Binding: Local (0x0)

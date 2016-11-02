@@ -862,7 +862,7 @@ defm : vL32b_ai_pats <v8i64,  v16i64>;
 
 let isPseudo = 1, isCodeGenOnly = 1, validSubTargets = HasV60SubT in
 class STrivv_template<RegisterClass RC>
-  : V6_STInst<(outs), (ins IntRegs:$addr, s32Imm:$off, RC:$src), "", []>;
+  : V6_STInst<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src), "", []>;
 
 def PS_vstorerw_ai: STrivv_template<VecDblRegs>,
       Requires<[HasV60T,UseHVXSgl]>;
@@ -899,7 +899,7 @@ defm : STrivv_pats <v16i64, v32i64>;
 
 let isPseudo = 1, isCodeGenOnly = 1, validSubTargets = HasV60SubT in
 class LDrivv_template<RegisterClass RC>
-  : V6_LDInst<(outs RC:$dst), (ins IntRegs:$addr, s32Imm:$off), "", []>;
+  : V6_LDInst<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off), "", []>;
 
 def PS_vloadrw_ai: LDrivv_template<VecDblRegs>,
       Requires<[HasV60T,UseHVXSgl]>;
@@ -935,11 +935,11 @@ defm : LDrivv_pats <v16i64, v32i64>;
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, mayStore = 1, hasSideEffects = 0 in {
   def PS_vstorerq_ai : STInst<(outs),
-              (ins IntRegs:$base, s32Imm:$offset, VecPredRegs:$src1),
+              (ins IntRegs:$base, s32_0Imm:$offset, VecPredRegs:$src1),
               ".error \"should not emit\"", []>,
               Requires<[HasV60T,UseHVXSgl]>;
   def PS_vstorerq_ai_128B : STInst<(outs),
-              (ins IntRegs:$base, s32Imm:$offset, VecPredRegs128B:$src1),
+              (ins IntRegs:$base, s32_0Imm:$offset, VecPredRegs128B:$src1),
               ".error \"should not emit\"", []>,
               Requires<[HasV60T,UseHVXDbl]>;
 }
@@ -948,11 +948,11 @@ let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
     opExtentAlign = 2, isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
   def PS_vloadrq_ai : LDInst<(outs VecPredRegs:$dst),
-              (ins IntRegs:$base, s32Imm:$offset),
+              (ins IntRegs:$base, s32_0Imm:$offset),
               ".error \"should not emit\"", []>,
               Requires<[HasV60T,UseHVXSgl]>;
   def PS_vloadrq_ai_128B : LDInst<(outs VecPredRegs128B:$dst),
-              (ins IntRegs:$base, s32Imm:$offset),
+              (ins IntRegs:$base, s32_0Imm:$offset),
               ".error \"should not emit\"", []>,
               Requires<[HasV60T,UseHVXDbl]>;
 }
@@ -1760,7 +1760,7 @@ let isAccumulator = 1, hasNewValue = 1, Itinerary = CVI_VX_DV_LONG,
     Type = TypeCVI_VX_DV in
 class T_HVX_vmpyacc2 <string asmString, RegisterClass RC>
   : CVI_VA_Resource1 <(outs RC:$dst),
-                      (ins RC:$_src_, RC:$src1, IntRegs:$src2, u1Imm:$src3),
+                      (ins RC:$_src_, RC:$src1, IntRegs:$src2, u1_0Imm:$src3),
     asmString, [], "$dst = $_src_" > ;
 
 
@@ -1784,7 +1784,7 @@ defm V6_vrmpyubi_acc :
 
 let Itinerary = CVI_VX_DV_LONG, Type = TypeCVI_VX_DV, hasNewValue = 1 in
 class T_HVX_vmpy2 <string asmString, RegisterClass RC>
-  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, IntRegs:$src2, u1Imm:$src3),
+  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, IntRegs:$src2, u1_0Imm:$src3),
     asmString>;
 
 
@@ -1936,7 +1936,7 @@ defm V6_vunpackoh : T_HVX_unpack <"$dst.w |= vunpacko($src1.h)">, V6_vunpackoh_e
 let Itinerary = CVI_VP_LONG, Type = TypeCVI_VP, hasNewValue = 1,
     hasSideEffects = 0 in
 class T_HVX_valign <string asmString, RegisterClass RC>
-  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, RC:$src2, u3Imm:$src3),
+  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, RC:$src2, u3_0Imm:$src3),
     asmString>;
 
 multiclass T_HVX_valign <string asmString> {
@@ -2073,9 +2073,9 @@ class T_HVX_rol <string asmString, RegisterClass RC, Operand ImmOp >
   : SInst2 <(outs RC:$dst), (ins  RC:$src1, ImmOp:$src2), asmString>;
 
 class T_HVX_rol_R <string asmString>
-  : T_HVX_rol <asmString, IntRegs, u5Imm>;
+  : T_HVX_rol <asmString, IntRegs, u5_0Imm>;
 class T_HVX_rol_P <string asmString>
-  : T_HVX_rol <asmString, DoubleRegs, u6Imm>;
+  : T_HVX_rol <asmString, DoubleRegs, u6_0Imm>;
 
 def S6_rol_i_p : T_HVX_rol_P <"$dst = rol($src1,#$src2)">, S6_rol_i_p_enc;
 let hasNewValue = 1, opNewValue = 0 in
@@ -2087,10 +2087,10 @@ class T_HVX_rol_acc <string asmString, RegisterClass RC, Operand ImmOp>
     asmString, [], "$dst = $_src_" >;
 
 class T_HVX_rol_acc_P <string asmString>
-  : T_HVX_rol_acc <asmString, DoubleRegs, u6Imm>;
+  : T_HVX_rol_acc <asmString, DoubleRegs, u6_0Imm>;
 
 class T_HVX_rol_acc_R <string asmString>
-  : T_HVX_rol_acc <asmString, IntRegs, u5Imm>;
+  : T_HVX_rol_acc <asmString, IntRegs, u5_0Imm>;
 
 def S6_rol_i_p_nac :
     T_HVX_rol_acc_P <"$dst -= rol($src1,#$src2)">, S6_rol_i_p_nac_enc;

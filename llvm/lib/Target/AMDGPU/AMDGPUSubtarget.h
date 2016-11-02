@@ -175,6 +175,10 @@ public:
     return MaxPrivateElementSize;
   }
 
+  bool has16BitInsts() const {
+    return Has16BitInsts;
+  }
+
   bool hasHWFP64() const {
     return FP64;
   }
@@ -511,10 +515,6 @@ public:
 
   bool hasSMemRealTime() const {
     return HasSMemRealTime;
-  }
-
-  bool has16BitInsts() const {
-    return Has16BitInsts;
   }
 
   bool hasMovrel() const {

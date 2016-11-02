@@ -10,10 +10,20 @@
 #include "Memory.h"
 
 using namespace llvm;
+using namespace lld;
+using namespace lld::elf;
 
 namespace lld {
 BumpPtrAllocator elf::BAlloc;
 StringSaver elf::Saver{elf::BAlloc};
 
-void elf::freeArena() { elf::BAlloc.Reset(); }
+SpecificAllocBase::SpecificAllocBase() { Instances.push_back(this); }
+
+std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
+
+void elf::freeArena() {
+  for (SpecificAllocBase *Alloc : SpecificAllocBase::Instances)
+    Alloc->reset();
+  BAlloc.Reset();
+}
 }

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // int compare(size_type pos, size_type n1, const charT *s, size_type n2) const;
@@ -17,6 +16,8 @@
 #include <cassert>
 
 #include "min_allocator.h"
+
+#include "test_macros.h"
 
 int sign(int x)
 {
@@ -32,15 +33,22 @@ void
 test(const S& s, typename S::size_type pos, typename S::size_type n1,
      const typename S::value_type* str, typename S::size_type n2, int x)
 {
-    try
-    {
+    if (pos <= s.size())
         assert(sign(s.compare(pos, n1, str, n2)) == sign(x));
-        assert(pos <= s.size());
-    }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > s.size());
+        try
+        {
+            s.compare(pos, n1, str, n2);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > s.size());
+        }
     }
+#endif
 }
 
 template <class S>

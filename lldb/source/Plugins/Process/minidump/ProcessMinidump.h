@@ -46,8 +46,7 @@ public:
   static const char *GetPluginDescriptionStatic();
 
   ProcessMinidump(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                  const lldb_private::FileSpec &core_file,
-                  MinidumpParser minidump_parser);
+                  const FileSpec &core_file, MinidumpParser minidump_parser);
 
   ~ProcessMinidump() override;
 
@@ -80,6 +79,8 @@ public:
 
   Error GetMemoryRegionInfo(lldb::addr_t load_addr,
                             MemoryRegionInfo &range_info) override;
+
+  bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
   MinidumpParser m_minidump_parser;
 

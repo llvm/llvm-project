@@ -1943,6 +1943,28 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
+  if (MI.isInlineAsm()) {
+    // Verify register classes for inlineasm constraints.
+    for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
+         I != E; ++I) {
+      const TargetRegisterClass *RC = MI.getRegClassConstraint(I, this, &RI);
+      if (!RC)
+        continue;
+
+      const MachineOperand &Op = MI.getOperand(I);
+      if (!Op.isReg())
+        continue;
+
+      unsigned Reg = Op.getReg();
+      if (!TargetRegisterInfo::isVirtualRegister(Reg) && !RC->contains(Reg)) {
+        ErrInfo = "inlineasm operand has incorrect register class.";
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
     if (MI.getOperand(i).isFPImm()) {
@@ -3501,12 +3523,20 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   // If we have a definitive size, we can use it. Otherwise we need to inspect
   // the operands to know the size.
-  if (DescSize != 0)
+  //
+  // FIXME: Instructions that have a base 32-bit encoding report their size as
+  // 4, even though they are really 8 bytes if they have a literal operand.
+  if (DescSize != 0 && DescSize != 4)
     return DescSize;
 
   // 4-byte instructions may have a 32-bit literal encoded after them. Check
   // operands that coud ever be literals.
   if (isVALU(MI) || isSALU(MI)) {
+    if (isFixedSize(MI)) {
+      assert(DescSize == 4);
+      return DescSize;
+    }
+
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     if (Src0Idx == -1)
       return 4; // No operands.
@@ -3523,6 +3553,9 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
     return 4;
   }
+
+  if (DescSize == 4)
+    return 4;
 
   switch (Opc) {
   case AMDGPU::SI_MASK_BRANCH:

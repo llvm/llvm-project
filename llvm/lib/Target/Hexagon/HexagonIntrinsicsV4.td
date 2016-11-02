@@ -167,15 +167,15 @@ def : T_PPR_pat <A4_vrminuw, int_hexagon_A4_vrminuw>;
 
 // Rotate and reduce bytes
 def : Pat <(int_hexagon_S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2,
-                                     u2ImmPred:$src3),
-           (S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2ImmPred:$src3)>;
+                                     u2_0ImmPred:$src3),
+           (S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2_0ImmPred:$src3)>;
 
 // Rotate and reduce bytes with accumulation
 // Rxx+=vrcrotate(Rss,Rt,#u2)
 def : Pat <(int_hexagon_S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2,
-                                         IntRegs:$src3, u2ImmPred:$src4),
+                                         IntRegs:$src3, u2_0ImmPred:$src4),
            (S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2,
-                             IntRegs:$src3, u2ImmPred:$src4)>;
+                             IntRegs:$src3, u2_0ImmPred:$src4)>;
 
 // Vector conditional negate
 def : T_PPR_pat<S2_vrcnegh, int_hexagon_S2_vrcnegh>;
@@ -223,17 +223,17 @@ def: T_RR_pat<A4_orn,  int_hexagon_A4_orn>;
 //*******************************************************************
 
 // Combine Words Into Doublewords.
-def: T_RI_pat<A4_combineri, int_hexagon_A4_combineri, s32ImmPred>;
-def: T_IR_pat<A4_combineir, int_hexagon_A4_combineir, s32ImmPred>;
+def: T_RI_pat<A4_combineri, int_hexagon_A4_combineri, s32_0ImmPred>;
+def: T_IR_pat<A4_combineir, int_hexagon_A4_combineir, s32_0ImmPred>;
 
 //*******************************************************************
 //           ALU32/PRED
 //*******************************************************************
 
 // Compare
-def : T_Q_RI_pat<C4_cmpneqi, int_hexagon_C4_cmpneqi, s32ImmPred>;
-def : T_Q_RI_pat<C4_cmpltei, int_hexagon_C4_cmpltei, s32ImmPred>;
-def : T_Q_RI_pat<C4_cmplteui, int_hexagon_C4_cmplteui, u32ImmPred>;
+def : T_Q_RI_pat<C4_cmpneqi, int_hexagon_C4_cmpneqi, s32_0ImmPred>;
+def : T_Q_RI_pat<C4_cmpltei, int_hexagon_C4_cmpltei, s32_0ImmPred>;
+def : T_Q_RI_pat<C4_cmplteui, int_hexagon_C4_cmplteui, u32_0ImmPred>;
 
 // Compare To General Register.
 def: T_Q_RR_pat<C4_cmpneq,  int_hexagon_C4_cmpneq>;

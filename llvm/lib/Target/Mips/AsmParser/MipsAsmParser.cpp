@@ -4512,14 +4512,14 @@ bool MipsAsmParser::parseMemOffset(const MCExpr *&Res, bool isParenExpr) {
   return getParser().parseExpression(Res);
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::parseMemOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   DEBUG(dbgs() << "parseMemOperand\n");
   const MCExpr *IdVal = nullptr;
   SMLoc S;
   bool isParenExpr = false;
-  MipsAsmParser::OperandMatchResultTy Res = MatchOperand_NoMatch;
+  OperandMatchResultTy Res = MatchOperand_NoMatch;
   // First operand is the offset.
   S = Parser.getTok().getLoc();
 
@@ -4676,7 +4676,7 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
   return false;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
                                                  StringRef Identifier,
                                                  SMLoc S) {
@@ -4739,7 +4739,7 @@ MipsAsmParser::matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
   return MatchOperand_NoMatch;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S) {
   MCAsmParser &Parser = getParser();
   auto Token = Parser.getLexer().peekTok(false);
@@ -4763,7 +4763,7 @@ MipsAsmParser::matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S) {
   return MatchOperand_NoMatch;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::parseAnyRegister(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   DEBUG(dbgs() << "parseAnyRegister\n");
@@ -4791,7 +4791,7 @@ MipsAsmParser::parseAnyRegister(OperandVector &Operands) {
   return ResTy;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::parseJumpTarget(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   DEBUG(dbgs() << "parseJumpTarget\n");
@@ -4814,7 +4814,7 @@ MipsAsmParser::parseJumpTarget(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::parseInvNum(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const MCExpr *IdVal;
@@ -4833,7 +4833,7 @@ MipsAsmParser::parseInvNum(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::parseRegisterList(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SmallVector<unsigned, 10> Regs;
@@ -4919,7 +4919,7 @@ MipsAsmParser::parseRegisterList(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::parseRegisterPair(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
 
@@ -4935,7 +4935,7 @@ MipsAsmParser::parseRegisterPair(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-MipsAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 MipsAsmParser::parseMovePRegPair(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 8> TmpOperands;

@@ -45,7 +45,8 @@ enum {
   Gather4 = 1 << 26,
   DisableWQM = 1 << 27,
   SOPK_ZEXT = 1 << 28,
-  SCALAR_STORE = 1 << 29
+  SCALAR_STORE = 1 << 29,
+  FIXED_SIZE = 1 << 30
 };
 }
 

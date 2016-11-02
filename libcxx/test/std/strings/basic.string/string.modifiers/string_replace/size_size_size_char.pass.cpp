@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // basic_string<charT,traits,Allocator>&
@@ -27,23 +26,32 @@ test(S s, typename S::size_type pos, typename S::size_type n1,
      typename S::size_type n2, typename S::value_type c,
      S expected)
 {
-    typename S::size_type old_size = s.size();
+    const typename S::size_type old_size = s.size();
     S s0 = s;
-    try
+    if (pos <= old_size)
     {
         s.replace(pos, n1, n2, c);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos <= old_size);
         assert(s == expected);
         typename S::size_type xlen = std::min(n1, old_size - pos);
         typename S::size_type rlen = n2;
         assert(s.size() == old_size - xlen + rlen);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > old_size);
-        assert(s == s0);
+        try
+        {
+            s.replace(pos, n1, n2, c);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > old_size);
+            assert(s == s0);
+        }
     }
+#endif
 }
 
 template <class S>
