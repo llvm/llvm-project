@@ -79,11 +79,15 @@ class StdLibraryFunctionsChecker : public Checker<check::PostCall, eval::Call> {
   /// impose a constraint that involves other argument or return value symbols.
   enum ValueRangeKindTy { OutOfRange, WithinRange, ComparesToArgument };
 
+  // The universal integral type to use in value range descriptions.
+  // Unsigned to make sure overflows are well-defined.
+  typedef uint64_t RangeIntTy;
+
   /// Normally, describes a single range constraint, eg. {{0, 1}, {3, 4}} is
   /// a non-negative integer, which less than 5 and not equal to 2. For
   /// `ComparesToArgument', holds information about how exactly to compare to
   /// the argument.
-  typedef std::vector<std::pair<uint64_t, uint64_t>> IntRangeVectorTy;
+  typedef std::vector<std::pair<RangeIntTy, RangeIntTy>> IntRangeVectorTy;
 
   /// A reference to an argument or return value by its number.
   /// ArgNo in CallExpr and CallEvent is defined as Unsigned, but
@@ -190,9 +194,16 @@ class StdLibraryFunctionsChecker : public Checker<check::PostCall, eval::Call> {
     bool matchesCall(const CallExpr *CE) const;
   };
 
+  // The same function (as in, function identifier) may have different
+  // summaries assigned to it, with different argument and return value types.
+  // We call these "variants" of the function. This can be useful for handling
+  // C++ function overloads, and also it can be used when the same function
+  // may have different definitions on different platforms.
+  typedef std::vector<FunctionSummaryTy> FunctionVariantsTy;
+
   // The map of all functions supported by the checker. It is initialized
   // lazily, and it doesn't change after initialization.
-  typedef llvm::StringMap<FunctionSummaryTy> FunctionSummaryMapTy;
+  typedef llvm::StringMap<FunctionVariantsTy> FunctionSummaryMapTy;
   mutable FunctionSummaryMapTy FunctionSummaryMap;
 
   // Auxiliary functions to support ArgNoTy within all structures
@@ -442,11 +453,12 @@ StdLibraryFunctionsChecker::findFunctionSummary(const FunctionDecl *FD,
   // Strict checking is important because we will be conducting
   // very integral-type-sensitive operations on arguments and
   // return values.
-  const FunctionSummaryTy &Spec = FSMI->second;
-  if (!Spec.matchesCall(CE))
-    return None;
+  const FunctionVariantsTy &SpecVariants = FSMI->second;
+  for (const FunctionSummaryTy &Spec : SpecVariants)
+    if (Spec.matchesCall(CE))
+      return Spec;
 
-  return Spec;
+  return None;
 }
 
 void StdLibraryFunctionsChecker::initFunctionSummaries(
@@ -458,17 +470,20 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
   // These types are useful for writing specifications quickly,
   // New specifications should probably introduce more types.
+  // Some types are hard to obtain from the AST, eg. "ssize_t".
+  // In such cases it should be possible to provide multiple variants
+  // of function summary for common cases (eg. ssize_t could be int or long
+  // or long long, so three summary variants would be enough).
+  // Of course, function variants are also useful for C++ overloads.
   QualType Irrelevant; // A placeholder, whenever we do not care about the type.
   QualType IntTy = ACtx.IntTy;
+  QualType LongTy = ACtx.LongTy;
+  QualType LongLongTy = ACtx.LongLongTy;
   QualType SizeTy = ACtx.getSizeType();
-  QualType SSizeTy = ACtx.getIntTypeForBitwidth(ACtx.getTypeSize(SizeTy), true);
 
-  // Don't worry about truncation here, it'd be cast back to SIZE_MAX when used.
-  int64_t SizeMax =
-      BVF.getMaxValue(SizeTy).getLimitedValue();
-  int64_t SSizeMax =
-    BVF.getMaxValue(SSizeTy).getLimitedValue();
-  (void)SizeMax;
+  RangeIntTy IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
+  RangeIntTy LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
+  RangeIntTy LongLongMax = BVF.getMaxValue(LongLongTy).getLimitedValue();
 
   // We are finally ready to define specifications for all supported functions.
   //
@@ -511,17 +526,22 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   //  }
   //}
 
+#define SUMMARY_WITH_VARIANTS(identifier) {#identifier, {
+#define END_SUMMARY_WITH_VARIANTS }},
+#define VARIANT(argument_types, return_type, invalidation_approach)            \
+  { argument_types, return_type, invalidation_approach, {
+#define END_VARIANT } },
 #define SUMMARY(identifier, argument_types, return_type,                       \
                 invalidation_approach)                                         \
-  {#identifier, {argument_types, return_type, invalidation_approach, {
-#define END_SUMMARY }}},
+  { #identifier, { { argument_types, return_type, invalidation_approach, {
+#define END_SUMMARY } } } },
 #define ARGUMENT_TYPES(...) { __VA_ARGS__ }
 #define RETURN_TYPE(x) x
 #define INVALIDATION_APPROACH(x) x
 #define CASE {
 #define END_CASE },
 #define ARGUMENT_CONDITION(argument_number, condition_kind)                    \
-  {argument_number, condition_kind, {
+  { argument_number, condition_kind, {
 #define END_ARGUMENT_CONDITION }},
 #define RETURN_VALUE_CONDITION(condition_kind)                                 \
   { Ret, condition_kind, {
@@ -871,28 +891,80 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     END_SUMMARY
 
     // read()-like functions that never return more than buffer size.
-    SUMMARY(read, ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
-            RETURN_TYPE(SSizeTy), INVALIDATION_APPROACH(NoEvalCall))
-      CASE
-        RETURN_VALUE_CONDITION(ComparesToArgument)
-          IS_LESS_THAN(ARG_NO(2))
-        END_RETURN_VALUE_CONDITION
-        RETURN_VALUE_CONDITION(WithinRange)
-          RANGE(-1, SSizeMax)
-        END_RETURN_VALUE_CONDITION
-      END_CASE
-    END_SUMMARY
-    SUMMARY(write, ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
-            RETURN_TYPE(SSizeTy), INVALIDATION_APPROACH(NoEvalCall))
-      CASE
-        RETURN_VALUE_CONDITION(ComparesToArgument)
-          IS_LESS_THAN(ARG_NO(2))
-        END_RETURN_VALUE_CONDITION
-        RETURN_VALUE_CONDITION(WithinRange)
-          RANGE(-1, SSizeMax)
-        END_RETURN_VALUE_CONDITION
-      END_CASE
-    END_SUMMARY
+    // We are not sure how ssize_t is defined on every platform, so we provide
+    // three variants that should cover common cases.
+    SUMMARY_WITH_VARIANTS(read)
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
+              RETURN_TYPE(IntTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(ComparesToArgument)
+            IS_LESS_THAN(ARG_NO(2))
+          END_RETURN_VALUE_CONDITION
+          RETURN_VALUE_CONDITION(WithinRange)
+            RANGE(-1, IntMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
+              RETURN_TYPE(LongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(ComparesToArgument)
+            IS_LESS_THAN(ARG_NO(2))
+          END_RETURN_VALUE_CONDITION
+          RETURN_VALUE_CONDITION(WithinRange)
+            RANGE(-1, LongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
+              RETURN_TYPE(LongLongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(ComparesToArgument)
+            IS_LESS_THAN(ARG_NO(2))
+          END_RETURN_VALUE_CONDITION
+          RETURN_VALUE_CONDITION(WithinRange)
+            RANGE(-1, LongLongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+    END_SUMMARY_WITH_VARIANTS
+    SUMMARY_WITH_VARIANTS(write)
+      // Again, due to elusive nature of ssize_t, we have duplicate
+      // our summaries to cover different variants.
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
+              RETURN_TYPE(IntTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(ComparesToArgument)
+            IS_LESS_THAN(ARG_NO(2))
+          END_RETURN_VALUE_CONDITION
+          RETURN_VALUE_CONDITION(WithinRange)
+            RANGE(-1, IntMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
+              RETURN_TYPE(LongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(ComparesToArgument)
+            IS_LESS_THAN(ARG_NO(2))
+          END_RETURN_VALUE_CONDITION
+          RETURN_VALUE_CONDITION(WithinRange)
+            RANGE(-1, LongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy),
+              RETURN_TYPE(LongLongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(ComparesToArgument)
+            IS_LESS_THAN(ARG_NO(2))
+          END_RETURN_VALUE_CONDITION
+          RETURN_VALUE_CONDITION(WithinRange)
+            RANGE(-1, LongLongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+    END_SUMMARY_WITH_VARIANTS
     SUMMARY(fread,
             ARGUMENT_TYPES(Irrelevant, Irrelevant, SizeTy, Irrelevant),
             RETURN_TYPE(SizeTy), INVALIDATION_APPROACH(NoEvalCall))
@@ -913,25 +985,64 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     END_SUMMARY
 
     // getline()-like functions either fail or read at least the delimiter.
-    SUMMARY(getline, ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant),
-            RETURN_TYPE(SSizeTy), INVALIDATION_APPROACH(NoEvalCall))
-      CASE
-        RETURN_VALUE_CONDITION(WithinRange)
-          SINGLE_VALUE(-1)
-          RANGE(1, SSizeMax)
-        END_RETURN_VALUE_CONDITION
-      END_CASE
-    END_SUMMARY
-    SUMMARY(getdelim,
-            ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant, Irrelevant),
-            RETURN_TYPE(SSizeTy), INVALIDATION_APPROACH(NoEvalCall))
-      CASE
-        RETURN_VALUE_CONDITION(WithinRange)
-          SINGLE_VALUE(-1)
-          RANGE(1, SSizeMax)
-        END_RETURN_VALUE_CONDITION
-      END_CASE
-    END_SUMMARY
+    SUMMARY_WITH_VARIANTS(getline)
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant),
+              RETURN_TYPE(IntTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(WithinRange)
+            SINGLE_VALUE(-1)
+            RANGE(1, IntMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant),
+              RETURN_TYPE(LongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(WithinRange)
+            SINGLE_VALUE(-1)
+            RANGE(1, LongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant),
+              RETURN_TYPE(LongLongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(WithinRange)
+            SINGLE_VALUE(-1)
+            RANGE(1, LongLongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+    END_SUMMARY_WITH_VARIANTS
+    SUMMARY_WITH_VARIANTS(getdelim)
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant, Irrelevant),
+            RETURN_TYPE(IntTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(WithinRange)
+            SINGLE_VALUE(-1)
+            RANGE(1, IntMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant, Irrelevant),
+            RETURN_TYPE(LongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(WithinRange)
+            SINGLE_VALUE(-1)
+            RANGE(1, LongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+      VARIANT(ARGUMENT_TYPES(Irrelevant, Irrelevant, Irrelevant, Irrelevant),
+            RETURN_TYPE(LongLongTy), INVALIDATION_APPROACH(NoEvalCall))
+        CASE
+          RETURN_VALUE_CONDITION(WithinRange)
+            SINGLE_VALUE(-1)
+            RANGE(1, LongLongMax)
+          END_RETURN_VALUE_CONDITION
+        END_CASE
+      END_VARIANT
+    END_SUMMARY_WITH_VARIANTS
   };
 }
 
