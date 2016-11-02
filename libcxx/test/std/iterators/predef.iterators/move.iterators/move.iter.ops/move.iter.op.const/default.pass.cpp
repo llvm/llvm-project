@@ -12,9 +12,12 @@
 // move_iterator
 
 // move_iterator();
+//
+//  constexpr in C++17
 
 #include <iterator>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It>
@@ -31,4 +34,10 @@ int main()
     test<bidirectional_iterator<char*> >();
     test<random_access_iterator<char*> >();
     test<char*>();
+
+#if TEST_STD_VER > 14
+    {
+    constexpr std::move_iterator<const char *> it;
+    }
+#endif
 }

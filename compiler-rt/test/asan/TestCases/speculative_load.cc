@@ -27,6 +27,10 @@ struct S {
     __asan_poison_memory_region(_data._s._ch, 23);
   }
 
+  ~S() {
+    __asan_unpoison_memory_region(_data._s._ch, 23);
+  }
+
   bool is_long() const {
     return _data._s._size & 1;
   }

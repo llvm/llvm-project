@@ -4,6 +4,8 @@
 #include <windows.h>
 #include <dbghelp.h>
 
+#pragma comment(lib, "dbghelp")
+
 int main() {
   // Make sure the RTL recovers from "no options enabled" dbghelp setup.
   SymSetOptions(0);

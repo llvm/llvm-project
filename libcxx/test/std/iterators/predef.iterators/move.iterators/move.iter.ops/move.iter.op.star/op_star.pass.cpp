@@ -12,12 +12,16 @@
 // move_iterator
 
 // reference operator*() const;
+//
+//  constexpr in C++17
 
 #include <iterator>
 #include <cassert>
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
 #endif
+
+#include "test_macros.h"
 
 class A
 {
@@ -58,4 +62,15 @@ int main()
     std::unique_ptr<int, do_nothing> p(&i);
     test(&p, std::unique_ptr<int, do_nothing>(&i));
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+#if TEST_STD_VER > 14
+    {
+    constexpr const char *p = "123456789";
+    typedef std::move_iterator<const char *> MI;
+    constexpr MI it1 = std::make_move_iterator(p);
+    constexpr MI it2 = std::make_move_iterator(p+1);
+    static_assert(*it1 == p[0], "");
+    static_assert(*it2 == p[1], "");
+    }
+#endif
 }
