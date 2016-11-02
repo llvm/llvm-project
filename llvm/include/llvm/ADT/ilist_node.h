@@ -80,6 +80,12 @@ private:
 public:
   self_iterator getIterator() { return self_iterator(*this); }
   const_self_iterator getIterator() const { return const_self_iterator(*this); }
+  reverse_self_iterator getReverseIterator() {
+    return reverse_self_iterator(*this);
+  }
+  const_reverse_self_iterator getReverseIterator() const {
+    return const_reverse_self_iterator(*this);
+  }
 
   // Under-approximation, but always available for assertions.
   using node_base_type::isKnownSentinel;
