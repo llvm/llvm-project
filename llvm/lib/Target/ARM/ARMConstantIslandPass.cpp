@@ -58,6 +58,11 @@ static cl::opt<unsigned>
 CPMaxIteration("arm-constant-island-max-iteration", cl::Hidden, cl::init(30),
           cl::desc("The max number of iteration for converge"));
 
+static cl::opt<bool> SynthesizeThumb1TBB(
+    "arm-synthesize-thumb-1-tbb", cl::Hidden, cl::init(true),
+    cl::desc("Use compressed jump tables in Thumb-1 by synthesizing an "
+             "equivalent to the TBB/TBH instructions"));
+
 namespace {
   /// ARMConstantIslands - Due to limited PC-relative displacements, ARM
   /// requires constant pool entries to be scattered among the instructions
@@ -189,6 +194,7 @@ namespace {
     bool isThumb;
     bool isThumb1;
     bool isThumb2;
+    bool isPositionIndependentOrROPI;
   public:
     static char ID;
     ARMConstantIslands() : MachineFunctionPass(ID) {}
@@ -319,6 +325,8 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
   STI = &static_cast<const ARMSubtarget &>(MF->getSubtarget());
   TII = STI->getInstrInfo();
+  isPositionIndependentOrROPI =
+      STI->getTargetLowering()->isPositionIndependent() || STI->isROPI();
   AFI = MF->getInfo<ARMFunctionInfo>();
 
   isThumb = AFI->isThumbFunction();
@@ -326,6 +334,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   isThumb2 = AFI->isThumb2Function();
 
   HasFarJump = false;
+  bool GenerateTBB = isThumb2 || (isThumb1 && SynthesizeThumb1TBB);
 
   // This pass invalidates liveness information when it splits basic blocks.
   MF->getRegInfo().invalidateLiveness();
@@ -337,7 +346,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   // Try to reorder and otherwise adjust the block layout to make good use
   // of the TB[BH] instructions.
   bool MadeChange = false;
-  if (isThumb2 && AdjustJumpTableBlocks) {
+  if (GenerateTBB && AdjustJumpTableBlocks) {
     scanFunctionJumpTables();
     MadeChange |= reorderThumb2JumpTables();
     // Data is out of date, so clear it. It'll be re-computed later.
@@ -414,7 +423,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     MadeChange |= optimizeThumb2Branches();
 
   // Optimize jump tables using TBB / TBH.
-  if (isThumb2)
+  if (GenerateTBB)
     MadeChange |= optimizeThumb2JumpTables();
 
   // After a while, this might be made debug-only, but it is not expensive.
@@ -540,9 +549,11 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
     case ARM::t2BR_JT:
       JTOpcode = ARM::JUMPTABLE_INSTS;
       break;
+    case ARM::tTBB_JT:
     case ARM::t2TBB_JT:
       JTOpcode = ARM::JUMPTABLE_TBB;
       break;
+    case ARM::tTBH_JT:
     case ARM::t2TBH_JT:
       JTOpcode = ARM::JUMPTABLE_TBH;
       break;
@@ -615,8 +626,9 @@ unsigned ARMConstantIslands::getCPELogAlign(const MachineInstr *CPEMI) {
   case ARM::CONSTPOOL_ENTRY:
     break;
   case ARM::JUMPTABLE_TBB:
-    return 0;
+    return isThumb1 ? 2 : 0;
   case ARM::JUMPTABLE_TBH:
+    return isThumb1 ? 2 : 1;
   case ARM::JUMPTABLE_INSTS:
     return 1;
   case ARM::JUMPTABLE_ADDRS:
@@ -638,7 +650,8 @@ unsigned ARMConstantIslands::getCPELogAlign(const MachineInstr *CPEMI) {
 void ARMConstantIslands::scanFunctionJumpTables() {
   for (MachineBasicBlock &MBB : *MF) {
     for (MachineInstr &I : MBB)
-      if (I.isBranch() && I.getOpcode() == ARM::t2BR_JT)
+      if (I.isBranch() &&
+          (I.getOpcode() == ARM::t2BR_JT || I.getOpcode() == ARM::tBR_JTr))
         T2JumpTables.push_back(&I);
   }
 }
@@ -679,6 +692,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
         default:
           continue;  // Ignore other JT branches
         case ARM::t2BR_JT:
+        case ARM::tBR_JTr:
           T2JumpTables.push_back(&I);
           continue;   // Does not get an entry in ImmBranches
         case ARM::Bcc:
@@ -1943,7 +1957,7 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
 
   if (RemovableAdd) {
     RemovableAdd->eraseFromParent();
-    DeadSize += 4;
+    DeadSize += isThumb2 ? 4 : 2;
   } else if (BaseReg == EntryReg) {
     // The add wasn't removable, but clobbered the base for the TBB. So we can't
     // preserve it.
@@ -2010,25 +2024,82 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
     if (!ByteOk && !HalfWordOk)
       continue;
 
+    CPUser &User = CPUsers[JumpTableUserIndices[JTI]];
     MachineBasicBlock *MBB = MI->getParent();
     if (!MI->getOperand(0).isKill()) // FIXME: needed now?
       continue;
-    unsigned IdxReg = MI->getOperand(1).getReg();
-    bool IdxRegKill = MI->getOperand(1).isKill();
 
-    CPUser &User = CPUsers[JumpTableUserIndices[JTI]];
     unsigned DeadSize = 0;
     bool CanDeleteLEA = false;
     bool BaseRegKill = false;
-    bool PreservedBaseReg =
+    
+    unsigned IdxReg = ~0U;
+    bool IdxRegKill = true;
+    if (isThumb2) {
+      IdxReg = MI->getOperand(1).getReg();
+      IdxRegKill = MI->getOperand(1).isKill();
+
+      bool PreservedBaseReg =
         preserveBaseRegister(MI, User.MI, DeadSize, CanDeleteLEA, BaseRegKill);
+      if (!jumpTableFollowsTB(MI, User.CPEMI) && !PreservedBaseReg)
+        continue;
+    } else {
+      // We're in thumb-1 mode, so we must have something like:
+      //   %idx = tLSLri %idx, 2
+      //   %base = tLEApcrelJT
+      //   %t = tLDRr %idx, %base
+      unsigned BaseReg = User.MI->getOperand(0).getReg();
 
-    if (!jumpTableFollowsTB(MI, User.CPEMI) && !PreservedBaseReg)
-      continue;
+      if (User.MI->getIterator() == User.MI->getParent()->begin())
+        continue;
+      MachineInstr *Shift = User.MI->getPrevNode();
+      if (Shift->getOpcode() != ARM::tLSLri ||
+          Shift->getOperand(3).getImm() != 2 ||
+          !Shift->getOperand(2).isKill())
+        continue;
+      IdxReg = Shift->getOperand(2).getReg();
+      unsigned ShiftedIdxReg = Shift->getOperand(0).getReg();
 
+      MachineInstr *Load = User.MI->getNextNode();
+      if (Load->getOpcode() != ARM::tLDRr)
+        continue;
+      if (Load->getOperand(1).getReg() != ShiftedIdxReg ||
+          Load->getOperand(2).getReg() != BaseReg ||
+          !Load->getOperand(1).isKill())
+        continue;
+
+      // If we're in PIC mode, there should be another ADD following.
+      if (isPositionIndependentOrROPI) {
+        MachineInstr *Add = Load->getNextNode();
+        if (Add->getOpcode() != ARM::tADDrr ||
+            Add->getOperand(2).getReg() != Load->getOperand(0).getReg() ||
+            Add->getOperand(3).getReg() != BaseReg ||
+            !Add->getOperand(2).isKill())
+          continue;
+        if (Add->getOperand(0).getReg() != MI->getOperand(0).getReg())
+          continue;
+
+        Add->eraseFromParent();
+        DeadSize += 2;
+      } else {
+        if (Load->getOperand(0).getReg() != MI->getOperand(0).getReg())
+          continue;
+      }
+      
+      
+      // Now safe to delete the load and lsl. The LEA will be removed later.
+      CanDeleteLEA = true;
+      Shift->eraseFromParent();
+      Load->eraseFromParent();
+      DeadSize += 4;
+    }
+    
     DEBUG(dbgs() << "Shrink JT: " << *MI);
     MachineInstr *CPEMI = User.CPEMI;
     unsigned Opc = ByteOk ? ARM::t2TBB_JT : ARM::t2TBH_JT;
+    if (!isThumb2)
+      Opc = ByteOk ? ARM::tTBB_JT : ARM::tTBH_JT;
+
     MachineBasicBlock::iterator MI_JT = MI;
     MachineInstr *NewJTMI =
         BuildMI(*MBB, MI_JT, MI->getDebugLoc(), TII->get(Opc))
@@ -2048,7 +2119,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
 
       if (CanDeleteLEA)  {
         User.MI->eraseFromParent();
-        DeadSize += 4;
+        DeadSize += isThumb2 ? 4 : 2;
 
         // The LEA was eliminated, the TBB instruction becomes the only new user
         // of the jump table.
@@ -2164,9 +2235,16 @@ adjustJTTargetBlockForward(MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
   // Add an unconditional branch from NewBB to BB.
   // There doesn't seem to be meaningful DebugInfo available; this doesn't
   // correspond directly to anything in the source.
-  assert (isThumb2 && "Adjusting for TB[BH] but not in Thumb2?");
-  BuildMI(NewBB, DebugLoc(), TII->get(ARM::t2B)).addMBB(BB)
-          .addImm(ARMCC::AL).addReg(0);
+  if (isThumb2)
+    BuildMI(NewBB, DebugLoc(), TII->get(ARM::t2B))
+        .addMBB(BB)
+        .addImm(ARMCC::AL)
+        .addReg(0);
+  else
+    BuildMI(NewBB, DebugLoc(), TII->get(ARM::tB))
+        .addMBB(BB)
+        .addImm(ARMCC::AL)
+        .addReg(0);
 
   // Update internal data structures to account for the newly inserted MBB.
   MF->RenumberBlocks(NewBB);

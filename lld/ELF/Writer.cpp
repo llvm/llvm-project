@@ -15,6 +15,7 @@
 #include "Relocations.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 
 #include "llvm/ADT/StringMap.h"

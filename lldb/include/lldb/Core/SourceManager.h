@@ -19,6 +19,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Host/TimeValue.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -33,7 +34,7 @@ public:
   public:
     File(const FileSpec &file_spec, Target *target);
     File(const FileSpec &file_spec, lldb::DebuggerSP debugger_sp);
-    ~File();
+    ~File() = default;
 
     void UpdateIfNeeded();
 
@@ -72,9 +73,10 @@ public:
                           // m_file_spec_orig)
     TimeValue m_mod_time; // Keep the modification time that this file data is
                           // valid for
-    uint32_t m_source_map_mod_id; // If the target uses path remappings, be sure
-                                  // to clear our notion of a source file if the
-                                  // path modification ID changes
+
+    // If the target uses path remappings, be sure to clear our notion of a
+    // source file if the path modification ID changes
+    uint32_t m_source_map_mod_id = 0;
     lldb::DataBufferSP m_data_sp;
     typedef std::vector<uint32_t> LineOffsets;
     LineOffsets m_offsets;

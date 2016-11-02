@@ -57,7 +57,7 @@ RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --ch
 INVALID-XINDEX-SIZE: Invalid data was encountered while parsing the file.
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
-INVALID-SH-NUM: e_shnum should be zero if a file has no section header table
+INVALID-SH-NUM: Invalid data was encountered while parsing the file.
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s

@@ -774,13 +774,13 @@ def: T_RR_pat<A2_combine_hl, int_hexagon_A2_combine_hl>;
 def: T_RR_pat<A2_combine_lh, int_hexagon_A2_combine_lh>;
 def: T_RR_pat<A2_combine_ll, int_hexagon_A2_combine_ll>;
 
-def: T_II_pat<A2_combineii, int_hexagon_A2_combineii, s32ImmPred, s8ImmPred>;
+def: T_II_pat<A2_combineii, int_hexagon_A2_combineii, s32_0ImmPred, s8_0ImmPred>;
 
 // Mux
 def : T_QRR_pat<C2_mux,   int_hexagon_C2_mux>;
-def : T_QRI_pat<C2_muxir, int_hexagon_C2_muxir, s32ImmPred>;
-def : T_QIR_pat<C2_muxri, int_hexagon_C2_muxri, s32ImmPred>;
-def : T_QII_pat<C2_muxii, int_hexagon_C2_muxii, s32ImmPred, s8ImmPred>;
+def : T_QRI_pat<C2_muxir, int_hexagon_C2_muxir, s32_0ImmPred>;
+def : T_QIR_pat<C2_muxri, int_hexagon_C2_muxri, s32_0ImmPred>;
+def : T_QII_pat<C2_muxii, int_hexagon_C2_muxii, s32_0ImmPred, s8_0ImmPred>;
 
 // Shift halfword
 def : T_R_pat<A2_aslh, int_hexagon_A2_aslh>;
@@ -801,17 +801,17 @@ def : T_Q_RR_pat<C2_cmpeq,  int_hexagon_C2_cmpeq>;
 def : T_Q_RR_pat<C2_cmpgt,  int_hexagon_C2_cmpgt>;
 def : T_Q_RR_pat<C2_cmpgtu, int_hexagon_C2_cmpgtu>;
 
-def : T_Q_RI_pat<C2_cmpeqi,  int_hexagon_C2_cmpeqi, s32ImmPred>;
-def : T_Q_RI_pat<C2_cmpgti,  int_hexagon_C2_cmpgti, s32ImmPred>;
-def : T_Q_RI_pat<C2_cmpgtui, int_hexagon_C2_cmpgtui, u32ImmPred>;
+def : T_Q_RI_pat<C2_cmpeqi,  int_hexagon_C2_cmpeqi, s32_0ImmPred>;
+def : T_Q_RI_pat<C2_cmpgti,  int_hexagon_C2_cmpgti, s32_0ImmPred>;
+def : T_Q_RI_pat<C2_cmpgtui, int_hexagon_C2_cmpgtui, u32_0ImmPred>;
 
-def : Pat <(int_hexagon_C2_cmpgei I32:$src1, s32ImmPred:$src2),
+def : Pat <(int_hexagon_C2_cmpgei I32:$src1, s32_0ImmPred:$src2),
            (C2_tfrpr (C2_cmpgti I32:$src1,
-                                (DEC_CONST_SIGNED s32ImmPred:$src2)))>;
+                                (DEC_CONST_SIGNED s32_0ImmPred:$src2)))>;
 
-def : Pat <(int_hexagon_C2_cmpgeui I32:$src1, u32ImmPred:$src2),
+def : Pat <(int_hexagon_C2_cmpgeui I32:$src1, u32_0ImmPred:$src2),
            (C2_tfrpr (C2_cmpgtui I32:$src1,
-                                 (DEC_CONST_UNSIGNED u32ImmPred:$src2)))>;
+                                 (DEC_CONST_UNSIGNED u32_0ImmPred:$src2)))>;
 
 def : Pat <(int_hexagon_C2_cmpgeui I32:$src, 0),
            (C2_tfrpr (C2_cmpeq I32:$src, I32:$src))>;
@@ -1104,14 +1104,14 @@ def : Pat<(i64 (int_hexagon_S2_insertp_rp I64:$src1, I64:$src2, I64:$src3)),
           (i64 (S2_insertp_rp I64:$src1, I64:$src2, I64:$src3))>;
 
 def : Pat<(int_hexagon_S2_insert I32:$src1, I32:$src2,
-                                 u5ImmPred:$src3, u5ImmPred:$src4),
+                                 u5_0ImmPred:$src3, u5_0ImmPred:$src4),
           (S2_insert I32:$src1, I32:$src2,
-                     u5ImmPred:$src3, u5ImmPred:$src4)>;
+                     u5_0ImmPred:$src3, u5_0ImmPred:$src4)>;
 
 def : Pat<(i64 (int_hexagon_S2_insertp I64:$src1, I64:$src2,
-                                       u6ImmPred:$src3, u6ImmPred:$src4)),
+                                       u6_0ImmPred:$src3, u6_0ImmPred:$src4)),
           (i64 (S2_insertp I64:$src1, I64:$src2,
-                           u6ImmPred:$src3, u6ImmPred:$src4))>;
+                           u6_0ImmPred:$src3, u6_0ImmPred:$src4))>;
 
 // Innterleave/deinterleave
 def : T_P_pat <S2_interleave, int_hexagon_S2_interleave>;
@@ -1239,9 +1239,9 @@ def : T_RI_pat <S2_asl_i_r_sat, int_hexagon_S2_asl_i_r_sat>;
 //===----------------------------------------------------------------------===//
 class S2op_tableidx_pat <Intrinsic IntID, InstHexagon OutputInst,
                          SDNodeXForm XformImm>
-  : Pat <(IntID I32:$src1, I32:$src2, u4ImmPred:$src3, u5ImmPred:$src4),
-         (OutputInst I32:$src1, I32:$src2, u4ImmPred:$src3,
-                     (XformImm u5ImmPred:$src4))>;
+  : Pat <(IntID I32:$src1, I32:$src2, u4_0ImmPred:$src3, u5_0ImmPred:$src4),
+         (OutputInst I32:$src1, I32:$src2, u4_0ImmPred:$src3,
+                     (XformImm u5_0ImmPred:$src4))>;
 
 
 // Table Index : Extract and insert bits.
@@ -1250,9 +1250,9 @@ class S2op_tableidx_pat <Intrinsic IntID, InstHexagon OutputInst,
 // needed for int_hexagon_S2_tableidxb_goodsyntax.
 
 def : Pat <(int_hexagon_S2_tableidxb_goodsyntax I32:$src1, I32:$src2,
-                                              u4ImmPred:$src3, u5ImmPred:$src4),
+                                              u4_0ImmPred:$src3, u5_0ImmPred:$src4),
            (S2_tableidxb I32:$src1, I32:$src2,
-                         u4ImmPred:$src3, u5ImmPred:$src4)>;
+                         u4_0ImmPred:$src3, u5_0ImmPred:$src4)>;
 
 def : S2op_tableidx_pat <int_hexagon_S2_tableidxh_goodsyntax, S2_tableidxh,
                          DEC_CONST_SIGNED>;

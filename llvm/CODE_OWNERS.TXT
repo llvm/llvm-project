@@ -17,6 +17,10 @@ E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
 D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
 
+N: Alex Bradbury
+E: asb@lowrisc.org
+D: RISC-V backend (lib/Target/RISCV/*)
+
 N: Chandler Carruth
 E: chandlerc@gmail.com
 E: chandlerc@google.com

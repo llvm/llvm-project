@@ -8799,6 +8799,7 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
     return nullptr;
 
   Target->setSupportedOpenCLOpts();
+  Target->setOpenCLExtensionOpts();
 
   if (!Target->validateTarget(Diags))
     return nullptr;

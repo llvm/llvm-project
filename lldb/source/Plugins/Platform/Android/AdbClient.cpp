@@ -22,6 +22,7 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
 
 #include <limits.h>
@@ -475,8 +476,11 @@ Error AdbClient::SyncService::internalPushFile(const FileSpec &local_file,
     if (error.Fail())
       return Error("Failed to send file chunk: %s", error.AsCString());
   }
-  error = SendSyncRequest(kDONE, local_file.GetModificationTime().seconds(),
-                          nullptr);
+  error = SendSyncRequest(
+      kDONE, std::chrono::duration_cast<std::chrono::seconds>(
+                 FileSystem::GetModificationTime(local_file).time_since_epoch())
+                 .count(),
+      nullptr);
   if (error.Fail())
     return error;
 

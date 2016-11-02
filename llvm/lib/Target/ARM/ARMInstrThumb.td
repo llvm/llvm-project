@@ -1315,6 +1315,18 @@ def tLEApcrelJT : tPseudoInst<(outs tGPR:$Rd),
                               (ins i32imm:$label, pred:$p),
                               2, IIC_iALUi, []>, Sched<[WriteALU]>;
 
+// Thumb-1 doesn't have the TBB or TBH instructions, but we can synthesize them
+// and make use of the same compressed jump table format as Thumb-2.
+let Size = 2 in {
+def tTBB_JT : tPseudoInst<(outs),
+        (ins tGPR:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0, IIC_Br, []>,
+        Sched<[WriteBr]>;
+
+def tTBH_JT : tPseudoInst<(outs),
+        (ins tGPR:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0, IIC_Br, []>,
+        Sched<[WriteBr]>;
+}
+
 //===----------------------------------------------------------------------===//
 // TLS Instructions
 //

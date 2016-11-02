@@ -906,35 +906,65 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
 }
 
 std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
-  class ObjCTypeScavenger : public Language::TypeScavenger {
+  class ObjCScavengerResult : public Language::TypeScavenger::Result {
+  public:
+    ObjCScavengerResult(CompilerType type)
+        : Language::TypeScavenger::Result(), m_compiler_type(type) {}
+
+    bool IsValid() override { return m_compiler_type.IsValid(); }
+
+    bool DumpToStream(Stream &stream, bool print_help_if_available) override {
+      if (IsValid()) {
+        m_compiler_type.DumpTypeDescription(&stream);
+        stream.EOL();
+        return true;
+      }
+      return false;
+    }
+
   private:
-    class ObjCScavengerResult : public Language::TypeScavenger::Result {
-    public:
-      ObjCScavengerResult(CompilerType type)
-          : Language::TypeScavenger::Result(), m_compiler_type(type) {}
+    CompilerType m_compiler_type;
+  };
 
-      bool IsValid() override { return m_compiler_type.IsValid(); }
+  class ObjCRuntimeScavenger : public Language::TypeScavenger {
+  protected:
+    bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
+                   ResultSet &results) override {
+      bool result = false;
 
-      bool DumpToStream(Stream &stream, bool print_help_if_available) override {
-        if (IsValid()) {
-          m_compiler_type.DumpTypeDescription(&stream);
-          stream.EOL();
-          return true;
+      Process *process = exe_scope->CalculateProcess().get();
+      if (process) {
+        const bool create_on_demand = false;
+        auto objc_runtime = process->GetObjCLanguageRuntime(create_on_demand);
+        if (objc_runtime) {
+          auto decl_vendor = objc_runtime->GetDeclVendor();
+          if (decl_vendor) {
+            std::vector<clang::NamedDecl *> decls;
+            ConstString name(key);
+            decl_vendor->FindDecls(name, true, UINT32_MAX, decls);
+            for (auto decl : decls) {
+              if (decl) {
+                if (CompilerType candidate =
+                        ClangASTContext::GetTypeForDecl(decl)) {
+                  result = true;
+                  std::unique_ptr<Language::TypeScavenger::Result> result(
+                      new ObjCScavengerResult(candidate));
+                  results.insert(std::move(result));
+                }
+              }
+            }
+          }
         }
-        return false;
       }
 
-      ~ObjCScavengerResult() override = default;
+      return result;
+    }
 
-    private:
-      CompilerType m_compiler_type;
-    };
+    friend class lldb_private::ObjCLanguage;
+  };
 
+  class ObjCModulesScavenger : public Language::TypeScavenger {
   protected:
-    ObjCTypeScavenger() = default;
-
-    ~ObjCTypeScavenger() override = default;
-
     bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
                    ResultSet &results) override {
       bool result = false;
@@ -959,40 +989,15 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
         }
       }
 
-      if (!result) {
-        Process *process = exe_scope->CalculateProcess().get();
-        if (process) {
-          const bool create_on_demand = false;
-          auto objc_runtime = process->GetObjCLanguageRuntime(create_on_demand);
-          if (objc_runtime) {
-            auto decl_vendor = objc_runtime->GetDeclVendor();
-            if (decl_vendor) {
-              std::vector<clang::NamedDecl *> decls;
-              ConstString name(key);
-              decl_vendor->FindDecls(name, true, UINT32_MAX, decls);
-              for (auto decl : decls) {
-                if (decl) {
-                  if (CompilerType candidate =
-                          ClangASTContext::GetTypeForDecl(decl)) {
-                    result = true;
-                    std::unique_ptr<Language::TypeScavenger::Result> result(
-                        new ObjCScavengerResult(candidate));
-                    results.insert(std::move(result));
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
       return result;
     }
 
     friend class lldb_private::ObjCLanguage;
   };
 
-  return std::unique_ptr<TypeScavenger>(new ObjCTypeScavenger());
+  return std::unique_ptr<TypeScavenger>(
+      new Language::EitherTypeScavenger<ObjCModulesScavenger,
+                                        ObjCRuntimeScavenger>());
 }
 
 bool ObjCLanguage::GetFormatterPrefixSuffix(ValueObject &valobj,

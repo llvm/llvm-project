@@ -21,6 +21,7 @@
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/FileSystem.h"
 
 //#define DEBUG_OSO_DMAP // DO NOT CHECKIN WITH THIS NOT COMMENTED OUT
 #if defined(DEBUG_OSO_DMAP)
@@ -424,7 +425,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       FileSpec oso_file(oso_path, false);
       ConstString oso_object;
       if (oso_file.Exists()) {
-        TimeValue oso_mod_time(oso_file.GetModificationTime());
+        TimeValue oso_mod_time(FileSystem::GetModificationTime(oso_file));
         if (oso_mod_time != comp_unit_info->oso_mod_time) {
           obj_file->GetModule()->ReportError(
               "debug map object file '%s' has changed (actual time is "

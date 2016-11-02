@@ -105,9 +105,9 @@ static unsigned getRegFromSubinstEncoding(unsigned encoded_reg);
 
 static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
                                        uint64_t Address, const void *Decoder);
-static DecodeStatus s16ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
+static DecodeStatus s16_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                   const void *Decoder);
-static DecodeStatus s12ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
+static DecodeStatus s12_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                   const void *Decoder);
 static DecodeStatus s11_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const void *Decoder);
@@ -117,9 +117,9 @@ static DecodeStatus s11_2ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const void *Decoder);
 static DecodeStatus s11_3ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const void *Decoder);
-static DecodeStatus s10ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
+static DecodeStatus s10_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                   const void *Decoder);
-static DecodeStatus s8ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
+static DecodeStatus s8_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                  const void *Decoder);
 static DecodeStatus s6_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                    const void *Decoder);
@@ -663,13 +663,13 @@ static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus s16ImmDecoder(MCInst &MI, unsigned tmp,
+static DecodeStatus s16_0ImmDecoder(MCInst &MI, unsigned tmp,
                                   uint64_t /*Address*/, const void *Decoder) {
   signedDecoder<16>(MI, tmp, Decoder);
   return MCDisassembler::Success;
 }
 
-static DecodeStatus s12ImmDecoder(MCInst &MI, unsigned tmp,
+static DecodeStatus s12_0ImmDecoder(MCInst &MI, unsigned tmp,
                                   uint64_t /*Address*/, const void *Decoder) {
   signedDecoder<12>(MI, tmp, Decoder);
   return MCDisassembler::Success;
@@ -699,13 +699,13 @@ static DecodeStatus s11_3ImmDecoder(MCInst &MI, unsigned tmp,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus s10ImmDecoder(MCInst &MI, unsigned tmp,
+static DecodeStatus s10_0ImmDecoder(MCInst &MI, unsigned tmp,
                                   uint64_t /*Address*/, const void *Decoder) {
   signedDecoder<10>(MI, tmp, Decoder);
   return MCDisassembler::Success;
 }
 
-static DecodeStatus s8ImmDecoder(MCInst &MI, unsigned tmp, uint64_t /*Address*/,
+static DecodeStatus s8_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t /*Address*/,
                                  const void *Decoder) {
   signedDecoder<8>(MI, tmp, Decoder);
   return MCDisassembler::Success;

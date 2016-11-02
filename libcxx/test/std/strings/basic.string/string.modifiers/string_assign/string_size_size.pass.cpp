@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // basic_string<charT,traits,Allocator>&
@@ -25,34 +24,52 @@ template <class S>
 void
 test(S s, S str, typename S::size_type pos, typename S::size_type n, S expected)
 {
-    try
+    if (pos <= str.size())
     {
         s.assign(str, pos, n);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos <= str.size());
         assert(s == expected);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > str.size());
+        try
+        {
+            s.assign(str, pos, n);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > str.size());
+        }
     }
+#endif
 }
 
 template <class S>
 void
 test_npos(S s, S str, typename S::size_type pos, S expected)
 {
-    try
+    if (pos <= str.size())
     {
         s.assign(str, pos);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos <= str.size());
         assert(s == expected);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > str.size());
+        try
+        {
+            s.assign(str, pos);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > str.size());
+        }
     }
+#endif
 }
 
 int main()

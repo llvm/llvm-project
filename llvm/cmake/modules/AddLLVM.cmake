@@ -415,6 +415,9 @@ function(llvm_add_library name)
   elseif(ARG_SHARED)
     add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
     add_library(${name} SHARED ${ALL_FILES})
+
+    llvm_setup_rpath(${name})
+
   else()
     add_library(${name} STATIC ${ALL_FILES})
   endif()
@@ -658,6 +661,8 @@ macro(add_llvm_executable name)
   else()
     add_executable(${name} ${ALL_FILES})
   endif()
+
+  llvm_setup_rpath(${name})
 
   if(DEFINED windows_resource_file)
     set_windows_version_resource_properties(${name} ${windows_resource_file})
@@ -1316,4 +1321,36 @@ function(llvm_externalize_debuginfo name)
   else()
     message(FATAL_ERROR "LLVM_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()
+endfunction()
+
+function(llvm_setup_rpath name)
+  if(LLVM_INSTALL_PREFIX AND NOT (LLVM_INSTALL_PREFIX STREQUAL CMAKE_INSTALL_PREFIX))
+    set(extra_libdir ${LLVM_LIBRARY_DIR})
+  elseif(LLVM_BUILD_LIBRARY_DIR)
+    set(extra_libdir ${LLVM_LIBRARY_DIR})
+  endif()
+
+  if (APPLE)
+    set(_install_name_dir INSTALL_NAME_DIR "@rpath")
+    set(_install_rpath "@loader_path/../lib" ${extra_libdir})
+  elseif(UNIX)
+    if(NOT DEFINED CMAKE_INSTALL_RPATH)
+      set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+      if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
+        set_property(TARGET ${name} APPEND_STRING PROPERTY
+                     LINK_FLAGS " -Wl,-z,origin ")
+      elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT LLVM_LINKER_IS_GOLD)
+        # $ORIGIN is not interpreted at link time by ld.bfd
+        set_property(TARGET ${name} APPEND_STRING PROPERTY
+                     LINK_FLAGS " -Wl,-rpath-link,${LLVM_LIBRARY_OUTPUT_INTDIR} ")
+      endif()
+    endif()
+  else()
+    return()
+  endif()
+
+  set_target_properties(${name} PROPERTIES
+                        BUILD_WITH_INSTALL_RPATH On
+                        INSTALL_RPATH "${_install_rpath}"
+                        ${_install_name_dir})
 endfunction()

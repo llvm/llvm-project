@@ -9,6 +9,15 @@ endif ()
 
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
+if(CLANG_BUILT_STANDALONE)
+  # Set HAVE_LIBZ according to recorded LLVM_ENABLE_ZLIB value. This
+  # value is forced to 0 if zlib was not found, so it is fine to use it
+  # instead of HAVE_LIBZ (not recorded).
+  if(LLVM_ENABLE_ZLIB)
+    set(HAVE_LIBZ 1)
+  endif()
+endif()
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg

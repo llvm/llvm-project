@@ -324,9 +324,10 @@ ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
   Header = reinterpret_cast<const Elf_Ehdr *>(base());
 
   if (Header->e_shoff == 0) {
-    if (Header->e_shnum != 0)
-      report_fatal_error(
-          "e_shnum should be zero if a file has no section header table");
+    if (Header->e_shnum != 0) {
+      // e_shnum should be zero if a file has no section header table
+      EC = object_error::parse_failed;
+    }
     return;
   }
 

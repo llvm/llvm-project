@@ -18,8 +18,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/MD5.h"
-#include "llvm/Support/SHA1.h"
 
 namespace lld {
 namespace elf {

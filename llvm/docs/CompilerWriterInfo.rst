@@ -83,6 +83,10 @@ AMDGPU
 * `AMD Compute Resources <http://developer.amd.com/tools/heterogeneous-computing/amd-accelerated-parallel-processing-app-sdk/documentation/>`_
 * `AMDGPU Compute Application Binary Interface <https://github.com/RadeonOpenCompute/ROCm-ComputeABI-Doc/blob/master/AMDGPU-ABI.md>`__
 
+RISC-V
+------
+* `RISC-V User-Level ISA Specification <https://riscv.org/specifications/>`_
+
 SPARC
 -----
 

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DynamicLoaderDarwin.h"
+
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/DataBufferHeap.h"
@@ -18,6 +20,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/State.h"
 #include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -29,8 +32,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
-
-#include "DynamicLoaderDarwin.h"
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
@@ -114,7 +115,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     // No UUID, we must rely upon the cached module modification
     // time and the modification time of the file on disk
     if (module_sp->GetModificationTime() !=
-        module_sp->GetFileSpec().GetModificationTime())
+        FileSystem::GetModificationTime(module_sp->GetFileSpec()))
       module_sp.reset();
   }
 

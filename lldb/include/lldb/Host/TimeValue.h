@@ -10,14 +10,13 @@
 #ifndef liblldb_TimeValue_h_
 #define liblldb_TimeValue_h_
 
-// C Includes
 #include "lldb/Host/PosixApi.h"
-#include <stdint.h>
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-private.h"
+
+#include <chrono>
+
+#include <stdint.h>
 
 namespace lldb_private {
 
@@ -35,6 +34,10 @@ public:
   TimeValue(const TimeValue &rhs);
   TimeValue(const struct timespec &ts);
   explicit TimeValue(uint32_t seconds, uint64_t nanos = 0);
+  TimeValue(std::chrono::time_point<std::chrono::system_clock,
+                                    std::chrono::nanoseconds>
+                point)
+      : m_nano_seconds(point.time_since_epoch().count()) {}
   ~TimeValue();
 
   //------------------------------------------------------------------

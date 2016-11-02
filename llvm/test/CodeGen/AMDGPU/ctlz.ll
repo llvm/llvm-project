@@ -98,10 +98,7 @@ define void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrsp
 
 ; FUNC-LABEL: {{^}}v_ctlz_i8:
 ; GCN: buffer_load_ubyte [[VAL:v[0-9]+]],
-; GCN-DAG: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
-; GCN-DAG: v_cmp_eq_u32_e32 vcc, 0, [[CTLZ]]
-; GCN-DAG: v_cndmask_b32_e64 [[CORRECTED_FFBH:v[0-9]+]], [[FFBH]], 32, vcc
-; GCN: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, 0xffffffe8, [[CORRECTED_FFBH]]
+; GCN-DAG: v_ffbh_u32_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_byte [[RESULT]],
 define void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
   %val = load i8, i8 addrspace(1)* %valptr
@@ -228,7 +225,6 @@ define void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addr
   ret void
 }
 
-; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; FUNC-LABEL: {{^}}v_ctlz_i8_sel_eq_neg1:
 ; GCN: {{buffer|flat}}_load_ubyte [[VAL:v[0-9]+]],
 ; GCN: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]

@@ -57,6 +57,72 @@ public:
                            ResultSet &results) = 0;
   };
 
+  class ImageListTypeScavenger : public TypeScavenger {
+    class Result : public Language::TypeScavenger::Result {
+    public:
+      Result(CompilerType type)
+          : Language::TypeScavenger::Result(), m_compiler_type(type) {}
+
+      bool IsValid() override { return m_compiler_type.IsValid(); }
+
+      bool DumpToStream(Stream &stream, bool print_help_if_available) override {
+        if (IsValid()) {
+          m_compiler_type.DumpTypeDescription(&stream);
+          stream.EOL();
+          return true;
+        }
+        return false;
+      }
+
+      ~Result() override = default;
+
+    private:
+      CompilerType m_compiler_type;
+    };
+
+  protected:
+    ImageListTypeScavenger() = default;
+
+    ~ImageListTypeScavenger() override = default;
+
+    // is this type something we should accept? it's usually going to be a
+    // filter by language + maybe some sugar tweaking
+    // returning an empty type means rejecting this candidate entirely;
+    // any other result will be accepted as a valid match
+    virtual CompilerType AdjustForInclusion(CompilerType &candidate) = 0;
+
+    bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
+                   ResultSet &results) override;
+  };
+
+  template <typename TypeScavenger1, typename TypeScavenger2>
+  class EitherTypeScavenger : public TypeScavenger {
+    bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
+                   ResultSet &results) override {
+      const bool append = false;
+      auto ts1 = TypeScavenger1();
+      if (ts1.Find(exe_scope, key, results, append))
+        return true;
+      auto ts2 = TypeScavenger2();
+      if (ts2.Find(exe_scope, key, results, append))
+        return true;
+      return false;
+    }
+  };
+
+  template <typename TypeScavenger1, typename TypeScavenger2>
+  class BothTypeScavenger : public TypeScavenger {
+    bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
+                   ResultSet &results) override {
+      const bool append = true;
+      auto ts1 = TypeScavenger1();
+      bool success = ts1.Find(exe_scope, key, results, append);
+      auto ts2 = TypeScavenger2();
+      success = ts2.Find(exe_scope, key, results, append) || success;
+      return success;
+    }
+  };
+
   enum class FunctionNameRepresentation {
     eName,
     eNameWithArgs,
