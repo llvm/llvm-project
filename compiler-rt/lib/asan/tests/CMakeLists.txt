@@ -222,6 +222,23 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
                  ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -ObjC ${ARGN})
   endif()
 
+  if (MSVC)
+    # With the MSVC CRT, the choice between static and dynamic CRT is made at
+    # compile time with a macro. Simulate the effect of passing /MD to clang-cl.
+    set(ASAN_INST_DYNAMIC_TEST_OBJECTS)
+    foreach(src ${ASAN_INST_TEST_SOURCES})
+      asan_compile(ASAN_INST_DYNAMIC_TEST_OBJECTS ${src} ${arch} ${kind}
+        ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -D_MT -D_DLL ${ARGN})
+    endforeach()
+    # Clang links the static CRT by default. Override that to use the dynamic
+    # CRT.
+    set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS
+      ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS}
+      -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames)
+  else()
+    set(ASAN_INST_DYNAMIC_TEST_OBJECTS ${ASAN_INST_TEST_OBJECTS})
+  endif()
+
   # Create the 'default' folder where ASAN tests are produced.
   if(CMAKE_CONFIGURATION_TYPES)
     foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
@@ -247,7 +264,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
 
     add_asan_test(AsanDynamicUnitTests "Asan-${arch}${kind}-Dynamic-Test"
                   ${arch} ${kind} SUBDIR "dynamic"
-                  OBJECTS ${ASAN_INST_TEST_OBJECTS}
+                  OBJECTS ${ASAN_INST_DYNAMIC_TEST_OBJECTS}
                   LINKFLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS})
   endif()
 

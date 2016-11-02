@@ -5,6 +5,9 @@
 // FIXME: merge this with the common free_hook_realloc test when we can run
 // common tests on Windows.
 
+// FIXME: Doesn't work with DLLs
+// XFAIL: win32-dynamic-asan
+
 #include <stdlib.h>
 #include <io.h>
 #include <sanitizer/allocator_interface.h>

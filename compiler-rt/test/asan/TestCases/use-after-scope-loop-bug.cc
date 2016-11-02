@@ -1,7 +1,7 @@
 // RUN: %clangxx_asan -O1 -fsanitize-address-use-after-scope %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
 
-int *p;
+volatile int *p;
 
 int main() {
   // Variable goes in and out of scope.

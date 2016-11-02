@@ -205,8 +205,6 @@ void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   // Read section and symbol tables.
   initializeSections(ComdatGroups);
   initializeSymbols();
-  if (Config->GcSections && Config->EMachine == EM_ARM)
-    initializeReverseDependencies();
 }
 
 // Sections with SHT_GROUP and comdat bits define comdat section groups.
@@ -288,12 +286,13 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSections(
     DenseSet<CachedHashStringRef> &ComdatGroups) {
-  uint64_t Size = this->ELFObj.getNumSections();
+  const ELFFile<ELFT> &Obj = this->ELFObj;
+  ArrayRef<Elf_Shdr> ObjSections = check(Obj.sections());
+  uint64_t Size = ObjSections.size();
   Sections.resize(Size);
   unsigned I = -1;
-  const ELFFile<ELFT> &Obj = this->ELFObj;
-  StringRef SectionStringTable = check(Obj.getSectionStringTable());
-  for (const Elf_Shdr &Sec : Obj.sections()) {
+  StringRef SectionStringTable = check(Obj.getSectionStringTable(ObjSections));
+  for (const Elf_Shdr &Sec : ObjSections) {
     ++I;
     if (Sections[I] == &InputSection<ELFT>::Discarded)
       continue;
@@ -331,24 +330,16 @@ void elf::ObjectFile<ELFT>::initializeSections(
     default:
       Sections[I] = createInputSection(Sec, SectionStringTable);
     }
-  }
-}
 
-// .ARM.exidx sections have a reverse dependency on the InputSection they
-// have a SHF_LINK_ORDER dependency, this is identified by the sh_link.
-template <class ELFT>
-void elf::ObjectFile<ELFT>::initializeReverseDependencies() {
-  unsigned I = -1;
-  for (const Elf_Shdr &Sec : this->ELFObj.sections()) {
-    ++I;
-    if ((Sections[I] == &InputSection<ELFT>::Discarded) ||
-        !(Sec.sh_flags & SHF_LINK_ORDER))
-      continue;
-    if (Sec.sh_link >= Sections.size())
-      fatal(getFilename(this) + ": invalid sh_link index: " +
-            Twine(Sec.sh_link));
-    auto *IS = cast<InputSection<ELFT>>(Sections[Sec.sh_link]);
-    IS->DependentSection = Sections[I];
+    // .ARM.exidx sections have a reverse dependency on the InputSection they
+    // have a SHF_LINK_ORDER dependency, this is identified by the sh_link.
+    if (Sec.sh_flags & SHF_LINK_ORDER) {
+      if (Sec.sh_link >= Sections.size())
+        fatal(getFilename(this) + ": invalid sh_link index: " +
+              Twine(Sec.sh_link));
+      auto *IS = cast<InputSection<ELFT>>(Sections[Sec.sh_link]);
+      IS->DependentSection = Sections[I];
+    }
   }
 }
 
@@ -588,7 +579,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   const Elf_Shdr *DynamicSec = nullptr;
 
   const ELFFile<ELFT> Obj = this->ELFObj;
-  for (const Elf_Shdr &Sec : Obj.sections()) {
+  for (const Elf_Shdr &Sec : check(Obj.sections())) {
     switch (Sec.sh_type) {
     default:
       continue;
@@ -609,6 +600,9 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
       break;
     }
   }
+
+  if (this->VersymSec && !this->Symtab)
+    error("SHT_GNU_versym should be associated with symbol table");
 
   this->initStringTable();
 
@@ -898,7 +892,7 @@ template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
   typedef typename ELFT::SymRange Elf_Sym_Range;
 
   const ELFFile<ELFT> Obj = createELFObj<ELFT>(this->MB);
-  for (const Elf_Shdr &Sec : Obj.sections()) {
+  for (const Elf_Shdr &Sec : check(Obj.sections())) {
     if (Sec.sh_type != SHT_SYMTAB)
       continue;
     Elf_Sym_Range Syms = Obj.symbols(&Sec);

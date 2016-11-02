@@ -24,7 +24,6 @@
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Target/Process.h"
 
 // Project includes
@@ -107,7 +106,8 @@ bool CommunicationKDP::SendRequestAndGetReply(
       const uint8_t request_sequence_id = (uint8_t)request_packet.GetData()[1];
       while (1) {
         if (WaitForPacketWithTimeoutMicroSecondsNoLock(
-                reply_packet, GetPacketTimeoutInMicroSeconds())) {
+                reply_packet,
+                std::chrono::microseconds(GetPacketTimeout()).count())) {
           offset = 0;
           const uint8_t reply_command = reply_packet.GetU8(&offset);
           const uint8_t reply_sequence_id = reply_packet.GetU8(&offset);
