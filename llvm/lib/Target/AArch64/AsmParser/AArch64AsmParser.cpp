@@ -2026,7 +2026,7 @@ int AArch64AsmParser::tryMatchVectorRegister(StringRef &Kind, bool expected) {
 }
 
 /// tryParseSysCROperand - Try to parse a system instruction CR operand name.
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseSysCROperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
@@ -2056,7 +2056,7 @@ AArch64AsmParser::tryParseSysCROperand(OperandVector &Operands) {
 }
 
 /// tryParsePrefetch - Try to parse a prefetch operand.
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
@@ -2105,7 +2105,7 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
 }
 
 /// tryParsePSBHint - Try to parse a PSB operand, mapped to Hint command
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
@@ -2129,7 +2129,7 @@ AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
 
 /// tryParseAdrpLabel - Parse and validate a source label for the ADRP
 /// instruction.
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
@@ -2180,7 +2180,7 @@ AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
 
 /// tryParseAdrLabel - Parse and validate a source label for the ADR
 /// instruction.
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
@@ -2200,7 +2200,7 @@ AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
 }
 
 /// tryParseFPImm - A floating point immediate expression operand.
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
@@ -2264,7 +2264,7 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
 }
 
 /// tryParseAddSubImm - Parse ADD/SUB shifted immediate operand
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseAddSubImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
@@ -2382,7 +2382,7 @@ bool AArch64AsmParser::parseCondCode(OperandVector &Operands,
 
 /// tryParseOptionalShift - Some operands take an optional shift argument. Parse
 /// them if present.
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -2722,7 +2722,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   return false;
 }
 
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -2776,7 +2776,7 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -3075,7 +3075,7 @@ bool AArch64AsmParser::parseVectorList(OperandVector &Operands) {
   return false;
 }
 
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -4635,7 +4635,7 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 }
 
 
-AArch64AsmParser::OperandMatchResultTy
+OperandMatchResultTy
 AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
 
   SMLoc S = getLoc();

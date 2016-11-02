@@ -500,7 +500,7 @@ public:
   /// access associated with it. If passed a basic block gets the memory phi
   /// node that exists for that block, if there is one. Otherwise, this will get
   /// a MemoryUseOrDef.
-  MemoryAccess *getMemoryAccess(const Value *) const;
+  MemoryUseOrDef *getMemoryAccess(const Instruction *) const;
   MemoryPhi *getMemoryAccess(const BasicBlock *BB) const;
 
   void dump() const;
@@ -563,12 +563,12 @@ public:
   /// must be non-null.
   /// Note: If a MemoryAccess already exists for I, this function will make it
   /// inaccessible and it *must* have removeMemoryAccess called on it.
-  MemoryAccess *createMemoryAccessBefore(Instruction *I,
-                                         MemoryAccess *Definition,
-                                         MemoryAccess *InsertPt);
-  MemoryAccess *createMemoryAccessAfter(Instruction *I,
-                                        MemoryAccess *Definition,
-                                        MemoryAccess *InsertPt);
+  MemoryUseOrDef *createMemoryAccessBefore(Instruction *I,
+                                           MemoryAccess *Definition,
+                                           MemoryUseOrDef *InsertPt);
+  MemoryUseOrDef *createMemoryAccessAfter(Instruction *I,
+                                          MemoryAccess *Definition,
+                                          MemoryAccess *InsertPt);
 
   /// \brief Remove a MemoryAccess from MemorySSA, including updating all
   /// definitions and uses.

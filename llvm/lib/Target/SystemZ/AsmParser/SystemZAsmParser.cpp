@@ -662,7 +662,7 @@ bool SystemZAsmParser::parseRegister(Register &Reg, RegisterGroup Group,
 }
 
 // Parse a register and add it to Operands.  The other arguments are as above.
-SystemZAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterGroup Group,
                                 const unsigned *Regs, RegisterKind Kind) {
   if (Parser.getTok().isNot(AsmToken::Percent))
@@ -679,7 +679,7 @@ SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterGroup Group,
 }
 
 // Parse any type of register (including integers) and add it to Operands.
-SystemZAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
   // Handle integer values.
   if (Parser.getTok().is(AsmToken::Integer)) {
@@ -792,7 +792,7 @@ SystemZAsmParser::parseAddressRegister(Register &Reg) {
 
 // Parse a memory operand and add it to Operands.  The other arguments
 // are as above.
-SystemZAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 SystemZAsmParser::parseAddress(OperandVector &Operands, MemoryKind MemKind,
                                const unsigned *Regs, RegisterKind RegKind) {
   SMLoc StartLoc = Parser.getTok().getLoc();
@@ -1183,7 +1183,7 @@ bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Unexpected match type");
 }
 
-SystemZAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 SystemZAsmParser::parseAccessReg(OperandVector &Operands) {
   if (Parser.getTok().isNot(AsmToken::Percent))
     return MatchOperand_NoMatch;
@@ -1198,7 +1198,7 @@ SystemZAsmParser::parseAccessReg(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-SystemZAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
                              int64_t MaxVal, bool AllowTLS) {
   MCContext &Ctx = getContext();

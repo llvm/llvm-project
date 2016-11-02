@@ -63,34 +63,34 @@ def : InstAlias<"memw($Rs) = $Rt.new",
       (S2_storerinew_io IntRegs:$Rs, 0, IntRegs:$Rt), 0>;
 
 def : InstAlias<"memb($Rs) = #$S8",
-      (S4_storeirb_io IntRegs:$Rs, 0, s8Ext:$S8), 0>;
+      (S4_storeirb_io IntRegs:$Rs, 0, s8_0Ext:$S8), 0>;
 
 def : InstAlias<"memh($Rs) = #$S8",
-      (S4_storeirh_io IntRegs:$Rs, 0, s8Ext:$S8), 0>;
+      (S4_storeirh_io IntRegs:$Rs, 0, s8_0Ext:$S8), 0>;
 
 def : InstAlias<"memw($Rs) = #$S8",
-      (S4_storeiri_io IntRegs:$Rs, 0, s8Ext:$S8), 0>;
+      (S4_storeiri_io IntRegs:$Rs, 0, s8_0Ext:$S8), 0>;
 
 def : InstAlias<"memd($Rs) = $Rtt",
       (S2_storerd_io IntRegs:$Rs, 0, DoubleRegs:$Rtt), 0>;
 
 def : InstAlias<"memb($Rs) = setbit(#$U5)",
-      (L4_ior_memopb_io IntRegs:$Rs, 0, u5Imm:$U5), 0>;
+      (L4_ior_memopb_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>;
 
 def : InstAlias<"memh($Rs) = setbit(#$U5)",
-      (L4_ior_memoph_io IntRegs:$Rs, 0, u5Imm:$U5), 0>;
+      (L4_ior_memoph_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>;
 
 def : InstAlias<"memw($Rs) = setbit(#$U5)",
-      (L4_ior_memopw_io IntRegs:$Rs, 0, u5Imm:$U5), 0>;
+      (L4_ior_memopw_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>;
 
 def : InstAlias<"memb($Rs) = clrbit(#$U5)",
-      (L4_iand_memopb_io IntRegs:$Rs, 0, u5Imm:$U5), 0>;
+      (L4_iand_memopb_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>;
 
 def : InstAlias<"memh($Rs) = clrbit(#$U5)",
-      (L4_iand_memoph_io IntRegs:$Rs, 0, u5Imm:$U5), 0>;
+      (L4_iand_memoph_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>;
 
 def : InstAlias<"memw($Rs) = clrbit(#$U5)",
-      (L4_iand_memopw_io IntRegs:$Rs, 0, u5Imm:$U5), 0>;
+      (L4_iand_memopw_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>;
 
 // Alias of: $Rd = memXX($Rs+#XX) to $Rd = memXX($Rs)
 def : InstAlias<"$Rd = memb($Rs)",
@@ -241,40 +241,40 @@ def : InstAlias<"if (!$Pt.new) memw($Rs) = $Rt.new",
       (S4_pstorerinewfnew_io PredRegs:$Pt, IntRegs:$Rs, 0, IntRegs:$Rt), 0>;
 
 def : InstAlias<"if ($Pt) memb($Rs) = #$S6",
-      (S4_storeirbt_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirbt_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if ($Pt) memh($Rs) = #$S6",
-      (S4_storeirht_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirht_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if ($Pt) memw($Rs) = #$S6",
-      (S4_storeirit_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirit_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if ($Pt.new) memb($Rs) = #$S6",
-      (S4_storeirbtnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirbtnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if ($Pt.new) memh($Rs) = #$S6",
-      (S4_storeirhtnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirhtnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if ($Pt.new) memw($Rs) = #$S6",
-      (S4_storeiritnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeiritnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if (!$Pt) memb($Rs) = #$S6",
-      (S4_storeirbf_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirbf_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if (!$Pt) memh($Rs) = #$S6",
-      (S4_storeirhf_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirhf_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if (!$Pt) memw($Rs) = #$S6",
-      (S4_storeirif_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirif_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if (!$Pt.new) memb($Rs) = #$S6",
-      (S4_storeirbfnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirbfnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if (!$Pt.new) memh($Rs) = #$S6",
-      (S4_storeirhfnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirhfnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 def : InstAlias<"if (!$Pt.new) memw($Rs) = #$S6",
-      (S4_storeirifnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6Ext:$S6), 0>;
+      (S4_storeirifnew_io PredRegs:$Pt, IntRegs:$Rs, 0, s6_0Ext:$S6), 0>;
 
 // Alias of: memXX($Rs + $u6_X) |= $Rt, also &=, +=, -=
 //       to: memXX($Rs) |= $Rt
@@ -295,11 +295,11 @@ def : InstAlias<"memb($Rs) -= $Rt",
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memb($Rs) += #$U5",
-      (L4_iadd_memopb_io IntRegs:$Rs, 0, u5Imm:$U5), 0>,
+      (L4_iadd_memopb_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>,
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memb($Rs) -= #$U5",
-      (L4_isub_memopb_io IntRegs:$Rs, 0, u5Imm:$U5), 0>,
+      (L4_isub_memopb_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>,
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memh($Rs) &= $Rt",
@@ -319,11 +319,11 @@ def : InstAlias<"memh($Rs) -= $Rt",
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memh($Rs) += #$U5",
-      (L4_iadd_memoph_io IntRegs:$Rs, 0, u5Imm:$U5), 0>,
+      (L4_iadd_memoph_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>,
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memh($Rs) -= #$U5",
-      (L4_isub_memoph_io IntRegs:$Rs, 0, u5Imm:$U5), 0>,
+      (L4_isub_memoph_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>,
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memw($Rs) &= $Rt",
@@ -343,11 +343,11 @@ def : InstAlias<"memw($Rs) -= $Rt",
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memw($Rs) += #$U5",
-      (L4_iadd_memopw_io IntRegs:$Rs, 0, u5Imm:$U5), 0>,
+      (L4_iadd_memopw_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>,
       Requires<[UseMEMOP]>;
 
 def : InstAlias<"memw($Rs) -= #$U5",
-      (L4_isub_memopw_io IntRegs:$Rs, 0, u5Imm:$U5), 0>,
+      (L4_isub_memopw_io IntRegs:$Rs, 0, u5_0Imm:$U5), 0>,
       Requires<[UseMEMOP]>;
 
 //

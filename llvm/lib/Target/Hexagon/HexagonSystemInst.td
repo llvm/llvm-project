@@ -118,7 +118,7 @@ def Y2_isync: JRInst <(outs), (ins),
 let hasSideEffects = 0, isSolo = 1 in
 class J2_MISC_TRAP_PAUSE<string mnemonic, bits<2> MajOp>
   : JRInst
-  <(outs), (ins u8Imm:$u8),
+  <(outs), (ins u8_0Imm:$u8),
    #mnemonic#"(#$u8)"> {
     bits<8> u8;
 

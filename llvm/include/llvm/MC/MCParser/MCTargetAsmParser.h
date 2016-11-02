@@ -82,6 +82,12 @@ struct ParseInstructionInfo {
     : AsmRewrites(rewrites) {}
 };
 
+enum OperandMatchResultTy {
+  MatchOperand_Success,  // operand matched successfully
+  MatchOperand_NoMatch,  // operand did not match
+  MatchOperand_ParseFail // operand matched but had errors
+};
+
 /// MCTargetAsmParser - Generic interface to target specific assembly parsers.
 class MCTargetAsmParser : public MCAsmParserExtension {
 public:

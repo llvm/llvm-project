@@ -1026,6 +1026,12 @@ def NoDuplicate : InheritableAttr {
   let Documentation = [NoDuplicateDocs];
 }
 
+def Convergent : InheritableAttr {
+  let Spellings = [GNU<"convergent">, CXX11<"clang", "convergent">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [ConvergentDocs];
+}
+
 def NoInline : InheritableAttr {
   let Spellings = [GCC<"noinline">, Declspec<"noinline">];
   let Subjects = SubjectList<[Function]>;

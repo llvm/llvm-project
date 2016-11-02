@@ -844,7 +844,7 @@ bool shouldBeSls(const LanaiOperand &Op) {
 }
 
 // Matches memory operand. Returns true if error encountered.
-LanaiAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
   // Try to match a memory operand.
   // The memory operands are of the form:
@@ -978,7 +978,7 @@ LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
 // Looks at a token type and creates the relevant operand from this
 // information, adding to operands.
 // If operand was parsed, returns false, else true.
-LanaiAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 LanaiAsmParser::parseOperand(OperandVector *Operands, StringRef Mnemonic) {
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.

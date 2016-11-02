@@ -358,7 +358,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     if (!F->hasInClassInitializer() &&
         utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
                                                             Context) &&
-        !isEmpty(Context, F->getType()))
+        !isEmpty(Context, F->getType()) && !F->isUnnamedBitfield())
       FieldsToInit.insert(F);
   });
   if (FieldsToInit.empty())
@@ -407,7 +407,9 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   SmallPtrSet<const FieldDecl *, 16> FieldsToFix;
   forEachField(ClassDecl, FieldsToInit, true, [&](const FieldDecl *F) {
     // Don't suggest fixes for enums because we don't know a good default.
-    if (!F->getType()->isEnumeralType())
+    // Don't suggest fixes for bitfields because in-class initialization is not
+    // possible.
+    if (!F->getType()->isEnumeralType() && !F->isBitField())
       FieldsToFix.insert(F);
   });
   if (FieldsToFix.empty())

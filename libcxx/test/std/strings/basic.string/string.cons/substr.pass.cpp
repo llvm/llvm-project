@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // basic_string(const basic_string<charT,traits,Allocator>& str,
@@ -35,21 +34,31 @@ test(S str, unsigned pos)
 {
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
-    try
+
+    if (pos <= str.size())
     {
         S s2(str, pos);
         LIBCPP_ASSERT(s2.__invariants());
-        assert(pos <= str.size());
         unsigned rlen = str.size() - pos;
         assert(s2.size() == rlen);
         assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
         assert(s2.get_allocator() == A());
         assert(s2.capacity() >= s2.size());
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > str.size());
+        try
+        {
+            S s2(str, pos);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > str.size());
+        }
     }
+#endif
 }
 
 template <class S>
@@ -58,21 +67,30 @@ test(S str, unsigned pos, unsigned n)
 {
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
-    try
+    if (pos <= str.size())
     {
         S s2(str, pos, n);
         LIBCPP_ASSERT(s2.__invariants());
-        assert(pos <= str.size());
         unsigned rlen = std::min<unsigned>(str.size() - pos, n);
         assert(s2.size() == rlen);
         assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
         assert(s2.get_allocator() == A());
         assert(s2.capacity() >= s2.size());
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > str.size());
+        try
+        {
+            S s2(str, pos, n);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > str.size());
+        }
     }
+#endif
 }
 
 template <class S>
@@ -81,24 +99,35 @@ test(S str, unsigned pos, unsigned n, const typename S::allocator_type& a)
 {
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
-    try
+
+    if (pos <= str.size())
     {
         S s2(str, pos, n, a);
         LIBCPP_ASSERT(s2.__invariants());
-        assert(pos <= str.size());
         unsigned rlen = std::min<unsigned>(str.size() - pos, n);
         assert(s2.size() == rlen);
         assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
         assert(s2.get_allocator() == a);
         assert(s2.capacity() >= s2.size());
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > str.size());
+        try
+        {
+            S s2(str, pos, n, a);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > str.size());
+        }
     }
+#endif
 }
 
 #if TEST_STD_VER >= 11
+#ifndef TEST_HAS_NO_EXCEPTIONS
 void test2583()
 {   // LWG #2583
     typedef std::basic_string<char, std::char_traits<char>, test_allocator<char> > StringA;
@@ -110,6 +139,7 @@ void test2583()
     catch (const std::out_of_range&) { return; }
     assert(false);
 }
+#endif
 #endif
 
 int main()
@@ -192,6 +222,8 @@ int main()
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()), 50, 100, A());
     }
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
     test2583();
+#endif
 #endif
 }

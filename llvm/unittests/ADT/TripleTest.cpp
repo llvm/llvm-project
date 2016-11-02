@@ -266,6 +266,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::AMDHSA, T.getOS());
   EXPECT_EQ(Triple::OpenCL, T.getEnvironment());
 
+  T = Triple("riscv32-unknown-unknown");
+  EXPECT_EQ(Triple::riscv32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-linux");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-freebsd");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::FreeBSD, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
@@ -559,6 +577,16 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+
+  T.setArch(Triple::riscv32);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_TRUE(T.isArch32Bit());
+  EXPECT_FALSE(T.isArch64Bit());
+
+  T.setArch(Triple::riscv64);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
 }
 
 TEST(TripleTest, BitWidthArchVariants) {
@@ -649,6 +677,14 @@ TEST(TripleTest, BitWidthArchVariants) {
   T.setArch(Triple::wasm64);
   EXPECT_EQ(Triple::wasm32, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::wasm64, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::riscv32);
+  EXPECT_EQ(Triple::riscv32, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::riscv64, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::riscv64);
+  EXPECT_EQ(Triple::riscv32, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::riscv64, T.get64BitArchVariant().getArch());
 }
 
 TEST(TripleTest, EndianArchVariants) {

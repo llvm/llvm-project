@@ -47,7 +47,7 @@
 
 # DSO:      DynamicSymbols [
 # DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name: @ (0)
+# DSO-NEXT:     Name: @
 # DSO-NEXT:     Value: 0x0
 # DSO-NEXT:     Size: 0
 # DSO-NEXT:     Binding: Local (0x0)
@@ -56,7 +56,7 @@
 # DSO-NEXT:     Section: Undefined (0x0)
 # DSO-NEXT:   }
 # DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name: bar@ (1)
+# DSO-NEXT:     Name: bar@
 # DSO-NEXT:     Value: 0x0
 # DSO-NEXT:     Size: 0
 # DSO-NEXT:     Binding: Global (0x1)
@@ -65,7 +65,7 @@
 # DSO-NEXT:     Section: Undefined (0x0)
 # DSO-NEXT:   }
 # DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name: foo1@ (5)
+# DSO-NEXT:     Name: foo1@
 # DSO-NEXT:     Value: 0x1000
 # DSO-NEXT:     Size: 0
 # DSO-NEXT:     Binding: Global (0x1)
@@ -74,7 +74,7 @@
 # DSO-NEXT:     Section: .text
 # DSO-NEXT:   }
 # DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name: foo3@ (10)
+# DSO-NEXT:     Name: foo3@
 # DSO-NEXT:     Value: 0x1007
 # DSO-NEXT:     Size: 0
 # DSO-NEXT:     Binding: Global (0x1)
@@ -86,7 +86,7 @@
 
 # DSO2:      DynamicSymbols [
 # DSO2-NEXT:   Symbol {
-# DSO2-NEXT:     Name: @ (0)
+# DSO2-NEXT:     Name: @
 # DSO2-NEXT:     Value: 0x0
 # DSO2-NEXT:     Size: 0
 # DSO2-NEXT:     Binding: Local (0x0)
@@ -95,7 +95,7 @@
 # DSO2-NEXT:     Section: Undefined (0x0)
 # DSO2-NEXT:   }
 # DSO2-NEXT:   Symbol {
-# DSO2-NEXT:     Name: bar@ (1)
+# DSO2-NEXT:     Name: bar@
 # DSO2-NEXT:     Value: 0x0
 # DSO2-NEXT:     Size: 0
 # DSO2-NEXT:     Binding: Global (0x1)
@@ -107,7 +107,7 @@
 
 # EXE:      DynamicSymbols [
 # EXE-NEXT:   Symbol {
-# EXE-NEXT:     Name: @ (0)
+# EXE-NEXT:     Name: @
 # EXE-NEXT:     Value: 0x0
 # EXE-NEXT:     Size: 0
 # EXE-NEXT:     Binding: Local (0x0)
@@ -116,7 +116,7 @@
 # EXE-NEXT:     Section: Undefined (0x0)
 # EXE-NEXT:   }
 # EXE-NEXT:   Symbol {
-# EXE-NEXT:     Name: bar@ (1)
+# EXE-NEXT:     Name: bar@
 # EXE-NEXT:     Value: 0x0
 # EXE-NEXT:     Size: 0
 # EXE-NEXT:     Binding: Global (0x1)
@@ -125,7 +125,7 @@
 # EXE-NEXT:     Section: Undefined (0x0)
 # EXE-NEXT:   }
 # EXE-NEXT:   Symbol {
-# EXE-NEXT:     Name: foo1@ (5)
+# EXE-NEXT:     Name: foo1@
 # EXE-NEXT:     Value: 0x11000
 # EXE-NEXT:     Size: 0
 # EXE-NEXT:     Binding: Global (0x1)

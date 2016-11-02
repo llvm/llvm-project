@@ -3501,12 +3501,20 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   // If we have a definitive size, we can use it. Otherwise we need to inspect
   // the operands to know the size.
-  if (DescSize != 0)
+  //
+  // FIXME: Instructions that have a base 32-bit encoding report their size as
+  // 4, even though they are really 8 bytes if they have a literal operand.
+  if (DescSize != 0 && DescSize != 4)
     return DescSize;
 
   // 4-byte instructions may have a 32-bit literal encoded after them. Check
   // operands that coud ever be literals.
   if (isVALU(MI) || isSALU(MI)) {
+    if (isFixedSize(MI)) {
+      assert(DescSize == 4);
+      return DescSize;
+    }
+
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     if (Src0Idx == -1)
       return 4; // No operands.
@@ -3523,6 +3531,9 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
     return 4;
   }
+
+  if (DescSize == 4)
+    return 4;
 
   switch (Opc) {
   case AMDGPU::SI_MASK_BRANCH:

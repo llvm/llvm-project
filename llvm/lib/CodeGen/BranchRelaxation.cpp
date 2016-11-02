@@ -404,6 +404,28 @@ bool BranchRelaxation::relaxBranchInstructions() {
   for (MachineFunction::iterator I = MF->begin(); I != MF->end(); ++I) {
     MachineBasicBlock &MBB = *I;
 
+    auto Last = MBB.rbegin();
+    if (Last == MBB.rend()) // Empty block.
+      continue;
+
+    // Expand the unconditional branch first if necessary. If there is a
+    // conditional branch, this will end up changing the branch destination of
+    // it to be over the newly inserted indirect branch block, which may avoid
+    // the need to try expanding the conditional branch first, saving an extra
+    // jump.
+    if (Last->isUnconditionalBranch()) {
+      // Unconditional branch destination might be unanalyzable, assume these
+      // are OK.
+      if (MachineBasicBlock *DestBB = TII->getBranchDestBlock(*Last)) {
+        if (!isBlockInRange(*Last, *DestBB)) {
+          fixupUnconditionalBranch(*Last);
+          ++NumUnconditionalRelaxed;
+          Changed = true;
+        }
+      }
+    }
+
+    // Loop over the conditional branches.
     MachineBasicBlock::iterator Next;
     for (MachineBasicBlock::iterator J = MBB.getFirstTerminator();
          J != MBB.end(); J = Next) {
@@ -436,21 +458,6 @@ bool BranchRelaxation::relaxBranchInstructions() {
           // This may have modified all of the terminators, so start over.
           Next = MBB.getFirstTerminator();
         }
-      }
-
-      if (MI.isUnconditionalBranch()) {
-        // Unconditional branch destination might be unanalyzable, assume these
-        // are OK.
-        if (MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI)) {
-          if (!isBlockInRange(MI, *DestBB)) {
-            fixupUnconditionalBranch(MI);
-            ++NumUnconditionalRelaxed;
-            Changed = true;
-          }
-        }
-
-        // Unconditional branch is the last terminator.
-        break;
       }
     }
   }

@@ -65,6 +65,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   // SMEM instructions like the cache flush ones.
   field bits<1> ScalarStore = 0;
 
+  // Whether the operands can be ignored when computing the
+  // instruction size.
+  field bits<1> FixedSize = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = VM_CNT;
   let TSFlags{1} = EXP_CNT;
@@ -100,6 +104,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{27} = DisableWQM;
   let TSFlags{28} = SOPKZext;
   let TSFlags{29} = ScalarStore;
+  let TSFlags{30} = FixedSize;
 
   let SchedRW = [Write32Bit];
 

@@ -6,7 +6,7 @@
 
 movl $_GLOBAL_OFFSET_TABLE_, %eax
 
-// CHECK:      Name: .got (38)
+// CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC

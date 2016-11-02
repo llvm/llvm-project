@@ -5857,6 +5857,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_NoDuplicate:
     handleSimpleAttribute<NoDuplicateAttr>(S, D, Attr);
     break;
+  case AttributeList::AT_Convergent:
+    handleSimpleAttribute<ConvergentAttr>(S, D, Attr);
+    break;
   case AttributeList::AT_NoInline:
     handleSimpleAttribute<NoInlineAttr>(S, D, Attr);
     break;

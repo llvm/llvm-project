@@ -17,6 +17,7 @@
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 #define __ovld __attribute__((overloadable))
+#define __conv __attribute__((convergent))
 
 // Optimizations
 #define __purefn __attribute__((pure))
@@ -13822,7 +13823,7 @@ typedef uint cl_mem_fence_flags;
  * image objects and then want to read the updated data.
  */
 
-void __ovld barrier(cl_mem_fence_flags flags);
+void __ovld __conv barrier(cl_mem_fence_flags flags);
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
@@ -13835,8 +13836,8 @@ typedef enum memory_scope
   memory_scope_sub_group
 } memory_scope;
 
-void __ovld work_group_barrier(cl_mem_fence_flags flags, memory_scope scope);
-void __ovld work_group_barrier(cl_mem_fence_flags flags);
+void __ovld __conv work_group_barrier(cl_mem_fence_flags flags, memory_scope scope);
+void __ovld __conv work_group_barrier(cl_mem_fence_flags flags);
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 // OpenCL v1.1 s6.11.9, v1.2 s6.12.9 - Explicit Memory Fence Functions
@@ -16568,101 +16569,101 @@ int __ovld get_image_num_samples(read_write image2d_array_msaa_depth_t image);
 // OpenCL v2.0 s6.13.15 - Work-group Functions
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-int __ovld work_group_all(int predicate);
-int __ovld work_group_any(int predicate);
+int __ovld __conv work_group_all(int predicate);
+int __ovld __conv work_group_any(int predicate);
 
 #ifdef cl_khr_fp16
-half __ovld work_group_broadcast(half a, size_t local_id);
-half __ovld work_group_broadcast(half a, size_t x, size_t y);
-half __ovld work_group_broadcast(half a, size_t x, size_t y, size_t z);
+half __ovld __conv work_group_broadcast(half a, size_t local_id);
+half __ovld __conv work_group_broadcast(half a, size_t x, size_t y);
+half __ovld __conv work_group_broadcast(half a, size_t x, size_t y, size_t z);
 #endif
-int __ovld work_group_broadcast(int a, size_t local_id);
-int __ovld work_group_broadcast(int a, size_t x, size_t y);
-int __ovld work_group_broadcast(int a, size_t x, size_t y, size_t z);
-uint __ovld work_group_broadcast(uint a, size_t local_id);
-uint __ovld work_group_broadcast(uint a, size_t x, size_t y);
-uint __ovld work_group_broadcast(uint a, size_t x, size_t y, size_t z);
-long __ovld work_group_broadcast(long a, size_t local_id);
-long __ovld work_group_broadcast(long a, size_t x, size_t y);
-long __ovld work_group_broadcast(long a, size_t x, size_t y, size_t z);
-ulong __ovld work_group_broadcast(ulong a, size_t local_id);
-ulong __ovld work_group_broadcast(ulong a, size_t x, size_t y);
-ulong __ovld work_group_broadcast(ulong a, size_t x, size_t y, size_t z);
-float __ovld work_group_broadcast(float a, size_t local_id);
-float __ovld work_group_broadcast(float a, size_t x, size_t y);
-float __ovld work_group_broadcast(float a, size_t x, size_t y, size_t z);
+int __ovld __conv work_group_broadcast(int a, size_t local_id);
+int __ovld __conv work_group_broadcast(int a, size_t x, size_t y);
+int __ovld __conv work_group_broadcast(int a, size_t x, size_t y, size_t z);
+uint __ovld __conv work_group_broadcast(uint a, size_t local_id);
+uint __ovld __conv work_group_broadcast(uint a, size_t x, size_t y);
+uint __ovld __conv work_group_broadcast(uint a, size_t x, size_t y, size_t z);
+long __ovld __conv work_group_broadcast(long a, size_t local_id);
+long __ovld __conv work_group_broadcast(long a, size_t x, size_t y);
+long __ovld __conv work_group_broadcast(long a, size_t x, size_t y, size_t z);
+ulong __ovld __conv work_group_broadcast(ulong a, size_t local_id);
+ulong __ovld __conv work_group_broadcast(ulong a, size_t x, size_t y);
+ulong __ovld __conv work_group_broadcast(ulong a, size_t x, size_t y, size_t z);
+float __ovld __conv work_group_broadcast(float a, size_t local_id);
+float __ovld __conv work_group_broadcast(float a, size_t x, size_t y);
+float __ovld __conv work_group_broadcast(float a, size_t x, size_t y, size_t z);
 #ifdef cl_khr_fp64
-double __ovld work_group_broadcast(double a, size_t local_id);
-double __ovld work_group_broadcast(double a, size_t x, size_t y);
-double __ovld work_group_broadcast(double a, size_t x, size_t y, size_t z);
+double __ovld __conv work_group_broadcast(double a, size_t local_id);
+double __ovld __conv work_group_broadcast(double a, size_t x, size_t y);
+double __ovld __conv work_group_broadcast(double a, size_t x, size_t y, size_t z);
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
-half __ovld work_group_reduce_add(half x);
-half __ovld work_group_reduce_min(half x);
-half __ovld work_group_reduce_max(half x);
-half __ovld work_group_scan_exclusive_add(half x);
-half __ovld work_group_scan_exclusive_min(half x);
-half __ovld work_group_scan_exclusive_max(half x);
-half __ovld work_group_scan_inclusive_add(half x);
-half __ovld work_group_scan_inclusive_min(half x);
-half __ovld work_group_scan_inclusive_max(half x);
+half __ovld __conv work_group_reduce_add(half x);
+half __ovld __conv work_group_reduce_min(half x);
+half __ovld __conv work_group_reduce_max(half x);
+half __ovld __conv work_group_scan_exclusive_add(half x);
+half __ovld __conv work_group_scan_exclusive_min(half x);
+half __ovld __conv work_group_scan_exclusive_max(half x);
+half __ovld __conv work_group_scan_inclusive_add(half x);
+half __ovld __conv work_group_scan_inclusive_min(half x);
+half __ovld __conv work_group_scan_inclusive_max(half x);
 #endif
-int __ovld work_group_reduce_add(int x);
-int __ovld work_group_reduce_min(int x);
-int __ovld work_group_reduce_max(int x);
-int __ovld work_group_scan_exclusive_add(int x);
-int __ovld work_group_scan_exclusive_min(int x);
-int __ovld work_group_scan_exclusive_max(int x);
-int __ovld work_group_scan_inclusive_add(int x);
-int __ovld work_group_scan_inclusive_min(int x);
-int __ovld work_group_scan_inclusive_max(int x);
-uint __ovld work_group_reduce_add(uint x);
-uint __ovld work_group_reduce_min(uint x);
-uint __ovld work_group_reduce_max(uint x);
-uint __ovld work_group_scan_exclusive_add(uint x);
-uint __ovld work_group_scan_exclusive_min(uint x);
-uint __ovld work_group_scan_exclusive_max(uint x);
-uint __ovld work_group_scan_inclusive_add(uint x);
-uint __ovld work_group_scan_inclusive_min(uint x);
-uint __ovld work_group_scan_inclusive_max(uint x);
-long __ovld work_group_reduce_add(long x);
-long __ovld work_group_reduce_min(long x);
-long __ovld work_group_reduce_max(long x);
-long __ovld work_group_scan_exclusive_add(long x);
-long __ovld work_group_scan_exclusive_min(long x);
-long __ovld work_group_scan_exclusive_max(long x);
-long __ovld work_group_scan_inclusive_add(long x);
-long __ovld work_group_scan_inclusive_min(long x);
-long __ovld work_group_scan_inclusive_max(long x);
-ulong __ovld work_group_reduce_add(ulong x);
-ulong __ovld work_group_reduce_min(ulong x);
-ulong __ovld work_group_reduce_max(ulong x);
-ulong __ovld work_group_scan_exclusive_add(ulong x);
-ulong __ovld work_group_scan_exclusive_min(ulong x);
-ulong __ovld work_group_scan_exclusive_max(ulong x);
-ulong __ovld work_group_scan_inclusive_add(ulong x);
-ulong __ovld work_group_scan_inclusive_min(ulong x);
-ulong __ovld work_group_scan_inclusive_max(ulong x);
-float __ovld work_group_reduce_add(float x);
-float __ovld work_group_reduce_min(float x);
-float __ovld work_group_reduce_max(float x);
-float __ovld work_group_scan_exclusive_add(float x);
-float __ovld work_group_scan_exclusive_min(float x);
-float __ovld work_group_scan_exclusive_max(float x);
-float __ovld work_group_scan_inclusive_add(float x);
-float __ovld work_group_scan_inclusive_min(float x);
-float __ovld work_group_scan_inclusive_max(float x);
+int __ovld __conv work_group_reduce_add(int x);
+int __ovld __conv work_group_reduce_min(int x);
+int __ovld __conv work_group_reduce_max(int x);
+int __ovld __conv work_group_scan_exclusive_add(int x);
+int __ovld __conv work_group_scan_exclusive_min(int x);
+int __ovld __conv work_group_scan_exclusive_max(int x);
+int __ovld __conv work_group_scan_inclusive_add(int x);
+int __ovld __conv work_group_scan_inclusive_min(int x);
+int __ovld __conv work_group_scan_inclusive_max(int x);
+uint __ovld __conv work_group_reduce_add(uint x);
+uint __ovld __conv work_group_reduce_min(uint x);
+uint __ovld __conv work_group_reduce_max(uint x);
+uint __ovld __conv work_group_scan_exclusive_add(uint x);
+uint __ovld __conv work_group_scan_exclusive_min(uint x);
+uint __ovld __conv work_group_scan_exclusive_max(uint x);
+uint __ovld __conv work_group_scan_inclusive_add(uint x);
+uint __ovld __conv work_group_scan_inclusive_min(uint x);
+uint __ovld __conv work_group_scan_inclusive_max(uint x);
+long __ovld __conv work_group_reduce_add(long x);
+long __ovld __conv work_group_reduce_min(long x);
+long __ovld __conv work_group_reduce_max(long x);
+long __ovld __conv work_group_scan_exclusive_add(long x);
+long __ovld __conv work_group_scan_exclusive_min(long x);
+long __ovld __conv work_group_scan_exclusive_max(long x);
+long __ovld __conv work_group_scan_inclusive_add(long x);
+long __ovld __conv work_group_scan_inclusive_min(long x);
+long __ovld __conv work_group_scan_inclusive_max(long x);
+ulong __ovld __conv work_group_reduce_add(ulong x);
+ulong __ovld __conv work_group_reduce_min(ulong x);
+ulong __ovld __conv work_group_reduce_max(ulong x);
+ulong __ovld __conv work_group_scan_exclusive_add(ulong x);
+ulong __ovld __conv work_group_scan_exclusive_min(ulong x);
+ulong __ovld __conv work_group_scan_exclusive_max(ulong x);
+ulong __ovld __conv work_group_scan_inclusive_add(ulong x);
+ulong __ovld __conv work_group_scan_inclusive_min(ulong x);
+ulong __ovld __conv work_group_scan_inclusive_max(ulong x);
+float __ovld __conv work_group_reduce_add(float x);
+float __ovld __conv work_group_reduce_min(float x);
+float __ovld __conv work_group_reduce_max(float x);
+float __ovld __conv work_group_scan_exclusive_add(float x);
+float __ovld __conv work_group_scan_exclusive_min(float x);
+float __ovld __conv work_group_scan_exclusive_max(float x);
+float __ovld __conv work_group_scan_inclusive_add(float x);
+float __ovld __conv work_group_scan_inclusive_min(float x);
+float __ovld __conv work_group_scan_inclusive_max(float x);
 #ifdef cl_khr_fp64
-double __ovld work_group_reduce_add(double x);
-double __ovld work_group_reduce_min(double x);
-double __ovld work_group_reduce_max(double x);
-double __ovld work_group_scan_exclusive_add(double x);
-double __ovld work_group_scan_exclusive_min(double x);
-double __ovld work_group_scan_exclusive_max(double x);
-double __ovld work_group_scan_inclusive_add(double x);
-double __ovld work_group_scan_inclusive_min(double x);
-double __ovld work_group_scan_inclusive_max(double x);
+double __ovld __conv work_group_reduce_add(double x);
+double __ovld __conv work_group_reduce_min(double x);
+double __ovld __conv work_group_reduce_max(double x);
+double __ovld __conv work_group_scan_exclusive_add(double x);
+double __ovld __conv work_group_scan_exclusive_min(double x);
+double __ovld __conv work_group_scan_exclusive_max(double x);
+double __ovld __conv work_group_scan_inclusive_add(double x);
+double __ovld __conv work_group_scan_inclusive_min(double x);
+double __ovld __conv work_group_scan_inclusive_max(double x);
 #endif //cl_khr_fp64
 
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
@@ -16762,92 +16763,92 @@ uint    __ovld get_enqueued_num_sub_groups(void);
 uint    __ovld get_sub_group_id(void);
 uint    __ovld get_sub_group_local_id(void);
 
-void    __ovld sub_group_barrier(cl_mem_fence_flags flags);
+void    __ovld __conv sub_group_barrier(cl_mem_fence_flags flags);
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-void    __ovld sub_group_barrier(cl_mem_fence_flags flags, memory_scope scope);
+void    __ovld __conv sub_group_barrier(cl_mem_fence_flags flags, memory_scope scope);
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
-int     __ovld sub_group_all(int predicate);
-int     __ovld sub_group_any(int predicate);
+int     __ovld __conv sub_group_all(int predicate);
+int     __ovld __conv sub_group_any(int predicate);
 
-int     __ovld sub_group_broadcast(int   x, uint sub_group_local_id);
-uint    __ovld sub_group_broadcast(uint  x, uint sub_group_local_id);
-long    __ovld sub_group_broadcast(long  x, uint sub_group_local_id);
-ulong   __ovld sub_group_broadcast(ulong x, uint sub_group_local_id);
-float   __ovld sub_group_broadcast(float x, uint sub_group_local_id);
+int     __ovld __conv sub_group_broadcast(int   x, uint sub_group_local_id);
+uint    __ovld __conv sub_group_broadcast(uint  x, uint sub_group_local_id);
+long    __ovld __conv sub_group_broadcast(long  x, uint sub_group_local_id);
+ulong   __ovld __conv sub_group_broadcast(ulong x, uint sub_group_local_id);
+float   __ovld __conv sub_group_broadcast(float x, uint sub_group_local_id);
 
-int     __ovld sub_group_reduce_add(int   x);
-uint    __ovld sub_group_reduce_add(uint  x);
-long    __ovld sub_group_reduce_add(long  x);
-ulong   __ovld sub_group_reduce_add(ulong x);
-float   __ovld sub_group_reduce_add(float x);
-int     __ovld sub_group_reduce_min(int   x);
-uint    __ovld sub_group_reduce_min(uint  x);
-long    __ovld sub_group_reduce_min(long  x);
-ulong   __ovld sub_group_reduce_min(ulong x);
-float   __ovld sub_group_reduce_min(float x);
-int     __ovld sub_group_reduce_max(int   x);
-uint    __ovld sub_group_reduce_max(uint  x);
-long    __ovld sub_group_reduce_max(long  x);
-ulong   __ovld sub_group_reduce_max(ulong x);
-float   __ovld sub_group_reduce_max(float x);
+int     __ovld __conv sub_group_reduce_add(int   x);
+uint    __ovld __conv sub_group_reduce_add(uint  x);
+long    __ovld __conv sub_group_reduce_add(long  x);
+ulong   __ovld __conv sub_group_reduce_add(ulong x);
+float   __ovld __conv sub_group_reduce_add(float x);
+int     __ovld __conv sub_group_reduce_min(int   x);
+uint    __ovld __conv sub_group_reduce_min(uint  x);
+long    __ovld __conv sub_group_reduce_min(long  x);
+ulong   __ovld __conv sub_group_reduce_min(ulong x);
+float   __ovld __conv sub_group_reduce_min(float x);
+int     __ovld __conv sub_group_reduce_max(int   x);
+uint    __ovld __conv sub_group_reduce_max(uint  x);
+long    __ovld __conv sub_group_reduce_max(long  x);
+ulong   __ovld __conv sub_group_reduce_max(ulong x);
+float   __ovld __conv sub_group_reduce_max(float x);
 
-int     __ovld sub_group_scan_exclusive_add(int   x);
-uint    __ovld sub_group_scan_exclusive_add(uint  x);
-long    __ovld sub_group_scan_exclusive_add(long  x);
-ulong   __ovld sub_group_scan_exclusive_add(ulong x);
-float   __ovld sub_group_scan_exclusive_add(float x);
-int     __ovld sub_group_scan_exclusive_min(int   x);
-uint    __ovld sub_group_scan_exclusive_min(uint  x);
-long    __ovld sub_group_scan_exclusive_min(long  x);
-ulong   __ovld sub_group_scan_exclusive_min(ulong x);
-float   __ovld sub_group_scan_exclusive_min(float x);
-int     __ovld sub_group_scan_exclusive_max(int   x);
-uint    __ovld sub_group_scan_exclusive_max(uint  x);
-long    __ovld sub_group_scan_exclusive_max(long  x);
-ulong   __ovld sub_group_scan_exclusive_max(ulong x);
-float   __ovld sub_group_scan_exclusive_max(float x);
+int     __ovld __conv sub_group_scan_exclusive_add(int   x);
+uint    __ovld __conv sub_group_scan_exclusive_add(uint  x);
+long    __ovld __conv sub_group_scan_exclusive_add(long  x);
+ulong   __ovld __conv sub_group_scan_exclusive_add(ulong x);
+float   __ovld __conv sub_group_scan_exclusive_add(float x);
+int     __ovld __conv sub_group_scan_exclusive_min(int   x);
+uint    __ovld __conv sub_group_scan_exclusive_min(uint  x);
+long    __ovld __conv sub_group_scan_exclusive_min(long  x);
+ulong   __ovld __conv sub_group_scan_exclusive_min(ulong x);
+float   __ovld __conv sub_group_scan_exclusive_min(float x);
+int     __ovld __conv sub_group_scan_exclusive_max(int   x);
+uint    __ovld __conv sub_group_scan_exclusive_max(uint  x);
+long    __ovld __conv sub_group_scan_exclusive_max(long  x);
+ulong   __ovld __conv sub_group_scan_exclusive_max(ulong x);
+float   __ovld __conv sub_group_scan_exclusive_max(float x);
 
-int     __ovld sub_group_scan_inclusive_add(int   x);
-uint    __ovld sub_group_scan_inclusive_add(uint  x);
-long    __ovld sub_group_scan_inclusive_add(long  x);
-ulong   __ovld sub_group_scan_inclusive_add(ulong x);
-float   __ovld sub_group_scan_inclusive_add(float x);
-int     __ovld sub_group_scan_inclusive_min(int   x);
-uint    __ovld sub_group_scan_inclusive_min(uint  x);
-long    __ovld sub_group_scan_inclusive_min(long  x);
-ulong   __ovld sub_group_scan_inclusive_min(ulong x);
-float   __ovld sub_group_scan_inclusive_min(float x);
-int     __ovld sub_group_scan_inclusive_max(int   x);
-uint    __ovld sub_group_scan_inclusive_max(uint  x);
-long    __ovld sub_group_scan_inclusive_max(long  x);
-ulong   __ovld sub_group_scan_inclusive_max(ulong x);
-float   __ovld sub_group_scan_inclusive_max(float x);
+int     __ovld __conv sub_group_scan_inclusive_add(int   x);
+uint    __ovld __conv sub_group_scan_inclusive_add(uint  x);
+long    __ovld __conv sub_group_scan_inclusive_add(long  x);
+ulong   __ovld __conv sub_group_scan_inclusive_add(ulong x);
+float   __ovld __conv sub_group_scan_inclusive_add(float x);
+int     __ovld __conv sub_group_scan_inclusive_min(int   x);
+uint    __ovld __conv sub_group_scan_inclusive_min(uint  x);
+long    __ovld __conv sub_group_scan_inclusive_min(long  x);
+ulong   __ovld __conv sub_group_scan_inclusive_min(ulong x);
+float   __ovld __conv sub_group_scan_inclusive_min(float x);
+int     __ovld __conv sub_group_scan_inclusive_max(int   x);
+uint    __ovld __conv sub_group_scan_inclusive_max(uint  x);
+long    __ovld __conv sub_group_scan_inclusive_max(long  x);
+ulong   __ovld __conv sub_group_scan_inclusive_max(ulong x);
+float   __ovld __conv sub_group_scan_inclusive_max(float x);
 
 #ifdef cl_khr_fp16
-half    __ovld sub_group_broadcast(half x, uint sub_group_local_id);
-half    __ovld sub_group_reduce_add(half x);
-half    __ovld sub_group_reduce_min(half x);
-half    __ovld sub_group_reduce_max(half x);
-half    __ovld sub_group_scan_exclusive_add(half x);
-half    __ovld sub_group_scan_exclusive_min(half x);
-half    __ovld sub_group_scan_exclusive_max(half x);
-half    __ovld sub_group_scan_inclusive_add(half x);
-half    __ovld sub_group_scan_inclusive_min(half x);
-half    __ovld sub_group_scan_inclusive_max(half x);
+half    __ovld __conv sub_group_broadcast(half x, uint sub_group_local_id);
+half    __ovld __conv sub_group_reduce_add(half x);
+half    __ovld __conv sub_group_reduce_min(half x);
+half    __ovld __conv sub_group_reduce_max(half x);
+half    __ovld __conv sub_group_scan_exclusive_add(half x);
+half    __ovld __conv sub_group_scan_exclusive_min(half x);
+half    __ovld __conv sub_group_scan_exclusive_max(half x);
+half    __ovld __conv sub_group_scan_inclusive_add(half x);
+half    __ovld __conv sub_group_scan_inclusive_min(half x);
+half    __ovld __conv sub_group_scan_inclusive_max(half x);
 #endif //cl_khr_fp16
 
 #ifdef cl_khr_fp64
-double  __ovld sub_group_broadcast(double x, uint sub_group_local_id);
-double  __ovld sub_group_reduce_add(double x);
-double  __ovld sub_group_reduce_min(double x);
-double  __ovld sub_group_reduce_max(double x);
-double  __ovld sub_group_scan_exclusive_add(double x);
-double  __ovld sub_group_scan_exclusive_min(double x);
-double  __ovld sub_group_scan_exclusive_max(double x);
-double  __ovld sub_group_scan_inclusive_add(double x);
-double  __ovld sub_group_scan_inclusive_min(double x);
-double  __ovld sub_group_scan_inclusive_max(double x);
+double  __ovld __conv sub_group_broadcast(double x, uint sub_group_local_id);
+double  __ovld __conv sub_group_reduce_add(double x);
+double  __ovld __conv sub_group_reduce_min(double x);
+double  __ovld __conv sub_group_reduce_max(double x);
+double  __ovld __conv sub_group_scan_exclusive_add(double x);
+double  __ovld __conv sub_group_scan_exclusive_min(double x);
+double  __ovld __conv sub_group_scan_exclusive_max(double x);
+double  __ovld __conv sub_group_scan_inclusive_add(double x);
+double  __ovld __conv sub_group_scan_inclusive_min(double x);
+double  __ovld __conv sub_group_scan_inclusive_max(double x);
 #endif //cl_khr_fp64
 
 #endif //cl_khr_subgroups cl_intel_subgroups

@@ -816,10 +816,14 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
   isl_ctx *Ctx = isl_id_get_ctx(Id);
   isl_id *BaseAddrId = SAI->getBasePtrId();
 
-  if (!isAffine()) {
-    if (isa<MemIntrinsic>(getAccessInstruction()))
-      buildMemIntrinsicAccessRelation();
+  if (getAccessInstruction() && isa<MemIntrinsic>(getAccessInstruction())) {
+    buildMemIntrinsicAccessRelation();
+    AccessRelation =
+        isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
+    return;
+  }
 
+  if (!isAffine()) {
     // We overapproximate non-affine accesses with a possible access to the
     // whole array. For read accesses it does not make a difference, if an
     // access must or may happen. However, for write accesses it is important to

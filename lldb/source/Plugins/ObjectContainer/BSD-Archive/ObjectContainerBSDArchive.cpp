@@ -34,6 +34,7 @@ typedef struct ar_hdr {
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/Timer.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
 
 using namespace lldb;
@@ -452,7 +453,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   data.SetData(data_sp, data_offset, data_sp->GetByteSize());
   if (file && data_sp && ObjectContainerBSDArchive::MagicBytesMatch(data)) {
     const size_t initial_count = specs.GetSize();
-    TimeValue file_mod_time = file.GetModificationTime();
+    TimeValue file_mod_time = FileSystem::GetModificationTime(file);
     Archive::shared_ptr archive_sp(Archive::FindCachedArchive(
         file, ArchSpec(), file_mod_time, file_offset));
     bool set_archive_arch = false;

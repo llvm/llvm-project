@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // template <typename T>
@@ -21,6 +20,8 @@
 #include <cassert>
 
 #include "min_allocator.h"
+
+#include "test_macros.h"
 
 int sign(int x)
 {
@@ -37,16 +38,22 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
      SV sv,      typename S::size_type pos2, typename S::size_type n2, int x)
 {
     static_assert((!std::is_same<S, SV>::value), "");
-    try
-    {
+    if (pos1 <= s.size() && pos2 <= sv.size())
         assert(sign(s.compare(pos1, n1, sv, pos2, n2)) == sign(x));
-        assert(pos1 <= s.size());
-        assert(pos2 <= sv.size());
-    }
-    catch (const std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos1 > s.size() || pos2 > sv.size());
+        try
+        {
+            s.compare(pos1, n1, sv, pos2, n2);
+            assert(false);
+        }
+        catch (const std::out_of_range&)
+        {
+            assert(pos1 > s.size() || pos2 > sv.size());
+        }
     }
+#endif
 }
 
 template <class S, class SV>
@@ -55,16 +62,22 @@ test_npos(const S& s, typename S::size_type pos1, typename S::size_type n1,
           SV sv,      typename S::size_type pos2, int x)
 {
     static_assert((!std::is_same<S, SV>::value), "");
-    try
-    {
+    if (pos1 <= s.size() && pos2 <= sv.size())
         assert(sign(s.compare(pos1, n1, sv, pos2)) == sign(x));
-        assert(pos1 <= s.size());
-        assert(pos2 <= sv.size());
-    }
-    catch (const std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos1 > s.size() || pos2 > sv.size());
+        try
+        {
+            s.compare(pos1, n1, sv, pos2);
+            assert(false);
+        }
+        catch (const std::out_of_range&)
+        {
+            assert(pos1 > s.size() || pos2 > sv.size());
+        }
     }
+#endif
 }
 
 template <class S, class SV>

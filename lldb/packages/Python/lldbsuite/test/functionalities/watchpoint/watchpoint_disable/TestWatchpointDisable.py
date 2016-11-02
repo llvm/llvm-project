@@ -21,13 +21,21 @@ class TestWatchpointSetEnable(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    @expectedFailureAll(bugnumber="llvm.org/pr30789, <rdar://problem/28944061>")
     def test_disable_works (self):
         """Set a watchpoint, disable it, and make sure it doesn't get hit."""
         self.build()
-        self.disable_works()
+        self.do_test(False)
 
-    def disable_works(self):
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    def test_disable_enable_works (self):
+        """Set a watchpoint, disable it, and make sure it doesn't get hit."""
+        self.build()
+        self.do_test(True)
+
+    def do_test(self, test_enable):
         """Set a watchpoint, disable it and make sure it doesn't get hit."""
 
         exe = 'a.out'
@@ -69,7 +77,12 @@ class TestWatchpointSetEnable(TestBase):
         
         stop_reason = thread.GetStopReason()
 
-        self.assertEqual(stop_reason, lldb.eStopReasonWatchpoint, "We didn't stop at our watchpoint.")
+        self.assertEqual(stop_reason, lldb.eStopReasonBreakpoint, "We didn't stop at our breakpoint.")
 
-        
+        if test_enable:
+            wp.SetEnabled(True)
+            self.assertTrue(wp.IsEnabled(), "The watchpoint thinks it is still disabled.")
+            process.Continue()
+            stop_reason = thread.GetStopReason()
+            self.assertEqual(stop_reason, lldb.eStopReasonWatchpoint, "We didn't stop at our watchpoint")
         

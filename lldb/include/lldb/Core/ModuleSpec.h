@@ -21,6 +21,7 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Host/TimeValue.h"
 #include "lldb/Target/PathMappingList.h"
 
 namespace lldb_private {

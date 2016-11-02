@@ -704,6 +704,7 @@ def S_SET_GPR_IDX_ON : SOPC <0x11,
   let Defs = [M0]; // No scc def
   let Uses = [M0]; // Other bits of m0 unmodified.
   let hasSideEffects = 1; // Sets mode.gpr_idx_en
+  let FixedSize = 1;
 }
 }
 

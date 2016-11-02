@@ -35,7 +35,6 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
-std::vector<InputFile *> InputFile::Pool;
 
 namespace {
 // In ELF object file all section addresses are zero. If we have multiple
@@ -95,15 +94,6 @@ std::string DIHelper<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
   return LineInfo.Line != 0
              ? LineInfo.FileName + " (" + std::to_string(LineInfo.Line) + ")"
              : "";
-}
-
-// Deletes all InputFile instances created so far.
-void InputFile::freePool() {
-  // Files are freed in reverse order so that files created
-  // from other files (e.g. object files extracted from archives)
-  // are freed in the proper order.
-  for (int I = Pool.size() - 1; I >= 0; --I)
-    delete Pool[I];
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
@@ -415,7 +405,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
     if (Config->Relocatable)
-      return new (GAlloc<ELFT>::IAlloc.Allocate())
+      return new (alloc<InputSection<ELFT>>())
           InputSection<ELFT>(this, &Sec, Name);
 
     // Find the relocation target section and associate this
@@ -458,14 +448,13 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (Name == ".eh_frame" && !Config->Relocatable)
-    return new (GAlloc<ELFT>::EHAlloc.Allocate())
+    return new (alloc<EhInputSection<ELFT>>())
         EhInputSection<ELFT>(this, &Sec, Name);
 
   if (shouldMerge(Sec))
-    return new (GAlloc<ELFT>::MAlloc.Allocate())
+    return new (alloc<MergeInputSection<ELFT>>())
         MergeInputSection<ELFT>(this, &Sec, Name);
-  return new (GAlloc<ELFT>::IAlloc.Allocate())
-      InputSection<ELFT>(this, &Sec, Name);
+  return new (alloc<InputSection<ELFT>>()) InputSection<ELFT>(this, &Sec, Name);
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
@@ -834,13 +823,13 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF32LE>(MB);
+    Obj = new (alloc<T<ELF32LE>>()) T<ELF32LE>(MB);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF32BE>(MB);
+    Obj = new (alloc<T<ELF32BE>>()) T<ELF32BE>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = new T<ELF64LE>(MB);
+    Obj = new (alloc<T<ELF64LE>>()) T<ELF64LE>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = new T<ELF64BE>(MB);
+    Obj = new (alloc<T<ELF64BE>>()) T<ELF64BE>(MB);
   else
     fatal("invalid file class: " + MB.getBufferIdentifier());
 

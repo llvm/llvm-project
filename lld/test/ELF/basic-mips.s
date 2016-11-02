@@ -87,7 +87,7 @@ __start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 3
-# CHECK-NEXT:     Name: .text (25)
+# CHECK-NEXT:     Name: .text
 # CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:     Flags [ (0x6)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -103,7 +103,7 @@ __start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 4
-# CHECK-NEXT:     Name: .got (31)
+# CHECK-NEXT:     Name: .got
 # CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:     Flags [ (0x10000003)
 # CHECK-NEXT:       SHF_ALLOC (0x2)

@@ -995,6 +995,13 @@ public:
   /// \brief Set supported OpenCL extensions and optional core features.
   virtual void setSupportedOpenCLOpts() {}
 
+  /// \brief Set supported OpenCL extensions as written on command line
+  virtual void setOpenCLExtensionOpts() {
+    for (const auto &Ext : getTargetOpts().OpenCLExtensionsAsWritten) {
+      getTargetOpts().SupportedOpenCLOptions.set(Ext);
+    }
+  }
+
   /// \brief Get supported OpenCL extensions and optional core features.
   OpenCLOptions &getSupportedOpenCLOpts() {
     return getTargetOpts().SupportedOpenCLOptions;

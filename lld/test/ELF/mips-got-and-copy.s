@@ -37,7 +37,7 @@
 # CHECK-NEXT:       Value: 0x40014
 # CHECK-NEXT:       Type: Object (0x1)
 # CHECK-NEXT:       Section: .bss (0xD)
-# CHECK-NEXT:       Name: data1@ (7)
+# CHECK-NEXT:       Name: data1@
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Number of TLS and multi-GOT entries: 0
