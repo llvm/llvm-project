@@ -25,6 +25,52 @@ class TargetRegisterInfo;
 class DwarfUnit;
 class DIELoc;
 
+/// Holds a DIExpression and keeps track of how many operands have been consumed
+/// so far.
+class DIExpressionCursor {
+  DIExpression::expr_op_iterator Start, End;
+public:
+  DIExpressionCursor(const DIExpression *Expr) {
+    if (!Expr) {
+      assert(Start == End);
+      return;
+    }
+    Start = Expr->expr_op_begin();
+    End = Expr->expr_op_end();
+  }
+
+  /// Consume one operation.
+  Optional<DIExpression::ExprOperand> take() {
+    if (Start == End)
+      return None;
+    return *(Start++);
+  }
+
+  /// Consume N operations.
+  void consume(unsigned N) { std::advance(Start, N); }
+
+  /// Return the current operation.
+  Optional<DIExpression::ExprOperand> peek() const {
+    if (Start == End)
+      return None;
+    return *(Start);
+  }
+
+  /// Return the next operation.
+  Optional<DIExpression::ExprOperand> peekNext() const {
+    if (Start == End)
+      return None;
+
+    auto Next = Start.getNext();
+    if (Next == End)
+      return None;
+
+    return *Next;
+  }
+  /// Determine whether there are any operations left in this expression.
+  operator bool() const { return Start != End; }
+};
+
 /// Base class containing the logic for constructing DWARF expressions
 /// independently of whether they are emitted into a DIE or into a .debug_loc
 /// entry.
@@ -52,24 +98,21 @@ public:
   /// Emit an (double-)indirect dwarf register operation.
   void AddRegIndirect(int DwarfReg, int Offset, bool Deref = false);
 
-  /// Emit a dwarf register operation for describing
-  /// - a small value occupying only part of a register or
-  /// - a register representing only part of a value.
+  /// Emit DW_OP_piece operation.
   void AddOpPiece(unsigned SizeInBits, unsigned OffsetInBits = 0);
   /// Emit a shift-right dwarf expression.
   void AddShr(unsigned ShiftBy);
   /// Emit a DW_OP_stack_value, if supported.
   ///
-  /// The proper way to describe a constant value is
-  /// DW_OP_constu <const>, DW_OP_stack_value.
-  /// Unfortunately, DW_OP_stack_value was not available until DWARF-4,
-  /// so we will continue to generate DW_OP_constu <const> for DWARF-2
-  /// and DWARF-3. Technically, this is incorrect since DW_OP_const <const>
-  /// actually describes a value at a constant addess, not a constant value.
-  /// However, in the past there was no better way  to describe a constant
-  /// value, so the producers and consumers started to rely on heuristics
-  /// to disambiguate the value vs. location status of the expression.
-  /// See PR21176 for more details.
+  /// The proper way to describe a constant value is DW_OP_constu <const>,
+  /// DW_OP_stack_value.  Unfortunately, DW_OP_stack_value was not available
+  /// until DWARF 4, so we will continue to generate DW_OP_constu <const> for
+  /// DWARF 2 and DWARF 3. Technically, this is incorrect since DW_OP_const
+  /// <const> actually describes a value at a constant addess, not a constant
+  /// value.  However, in the past there was no better way to describe a
+  /// constant value, so the producers and consumers started to rely on
+  /// heuristics to disambiguate the value vs. location status of the
+  /// expression.  See PR21176 for more details.
   void AddStackValue();
 
   /// Emit an indirect dwarf register operation for the given machine register.
@@ -77,7 +120,7 @@ public:
   bool AddMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
                              int Offset = 0);
 
-  /// \brief Emit a partial DWARF register operation.
+  /// Emit a partial DWARF register operation.
   /// \param MachineReg        the register
   /// \param PieceSizeInBits   size and
   /// \param PieceOffsetInBits offset of the piece in bits, if this is one
@@ -102,19 +145,20 @@ public:
   /// Emit an unsigned constant.
   void AddUnsignedConstant(const APInt &Value);
 
-  /// \brief Emit an entire expression on top of a machine register location.
+  /// Emit a machine register location. As an optimization this may also consume
+  /// the prefix of a DwarfExpression if a more efficient representation for
+  /// combining the register location and the first operation exists.
   ///
-  /// \param PieceOffsetInBits If this is one piece out of a fragmented
+  /// \param PieceOffsetInBits     If this is one piece out of a fragmented
   /// location, this is the offset of the piece inside the entire variable.
   /// \return false if no DWARF register exists for MachineReg.
   bool AddMachineRegExpression(const TargetRegisterInfo &TRI,
-                               const DIExpression *Expr, unsigned MachineReg,
+                               DIExpressionCursor &Expr, unsigned MachineReg,
                                unsigned PieceOffsetInBits = 0);
-  /// Emit a the operations remaining the DIExpressionIterator I.
-  /// \param PieceOffsetInBits If this is one piece out of a fragmented
+  /// Emit all remaining operations in the DIExpressionCursor.
+  /// \param PieceOffsetInBits     If this is one piece out of a fragmented
   /// location, this is the offset of the piece inside the entire variable.
-  void AddExpression(DIExpression::expr_op_iterator I,
-                     DIExpression::expr_op_iterator E,
+  void AddExpression(DIExpressionCursor &&Expr,
                      unsigned PieceOffsetInBits = 0);
 };
 

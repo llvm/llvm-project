@@ -1404,6 +1404,7 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                               ByteStreamer &Streamer,
                               const DebugLocEntry::Value &Value,
                               unsigned PieceOffsetInBits) {
+  DIExpressionCursor ExprCursor(Value.getExpression());
   DebugLocDwarfExpression DwarfExpr(AP.getDwarfDebug()->getDwarfVersion(),
                                     Streamer);
   // Regular entry.
@@ -1415,25 +1416,23 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.AddUnsignedConstant(Value.getInt());
   } else if (Value.isLocation()) {
     MachineLocation Loc = Value.getLoc();
-    const DIExpression *Expr = Value.getExpression();
-    if (!Expr || !Expr->getNumElements())
+    if (!ExprCursor)
       // Regular entry.
       AP.EmitDwarfRegOp(Streamer, Loc);
     else {
       // Complex address entry.
       const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
-      if (Loc.getOffset()) {
+      if (Loc.getOffset())
         DwarfExpr.AddMachineRegIndirect(TRI, Loc.getReg(), Loc.getOffset());
-        DwarfExpr.AddExpression(Expr->expr_op_begin(), Expr->expr_op_end(),
-                                PieceOffsetInBits);
-      } else
-        DwarfExpr.AddMachineRegExpression(TRI, Expr, Loc.getReg(),
+      else
+        DwarfExpr.AddMachineRegExpression(TRI, ExprCursor, Loc.getReg(),
                                           PieceOffsetInBits);
     }
   } else if (Value.isConstantFP()) {
     APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
     DwarfExpr.AddUnsignedConstant(RawBytes);
   }
+  DwarfExpr.AddExpression(std::move(ExprCursor), PieceOffsetInBits);
 }
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,
