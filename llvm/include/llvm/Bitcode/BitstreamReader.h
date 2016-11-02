@@ -232,7 +232,7 @@ public:
       BytesRead = Buf.size() - NextChar;
       CurWord = 0;
       for (unsigned B = 0; B != BytesRead; ++B)
-        CurWord |= NextCharPtr[B] << (B * 8);
+        CurWord |= uint64_t(NextCharPtr[B]) << (B * 8);
     }
     NextChar += BytesRead;
     BitsInCurWord = BytesRead * 8;

@@ -520,7 +520,7 @@ using bool_constant = integral_constant<bool, __b>;
 typedef _LIBCPP_BOOL_CONSTANT(true)  true_type;
 typedef _LIBCPP_BOOL_CONSTANT(false) false_type;
 
-#if !defined(_LIBCPP_HAS_NO_VARIADICS)
+#if !defined(_LIBCPP_CXX03_LANG)
 
 // __lazy_and
 
@@ -595,7 +595,7 @@ struct __or_<_B0, _B1, _B2, _Bn...>
 template<class _Tp> 
 struct __not_ : conditional<_Tp::value, false_type, true_type>::type {};
 
-#endif // !defined(_LIBCPP_HAS_NO_VARIADICS)
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 // is_const
 
