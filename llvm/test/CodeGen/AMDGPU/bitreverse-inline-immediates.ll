@@ -156,3 +156,66 @@ define void @materialize_rev_1.0_i64(i64 addrspace(1)* %out) {
   store i64 508, i64 addrspace(1)* %out
   ret void
 }
+
+; GCN-LABEL: {{^}}s_materialize_0_i32:
+; GCN: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+define void @s_materialize_0_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_1_i32:
+; GCN: s_mov_b32 s{{[0-9]+}}, 1{{$}}
+define void @s_materialize_1_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 1)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_neg1_i32:
+; GCN: s_mov_b32 s{{[0-9]+}}, -1{{$}}
+define void @s_materialize_neg1_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 -1)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_signbit_i32:
+; GCN: s_brev_b32 s{{[0-9]+}}, 1{{$}}
+define void @s_materialize_signbit_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 -2147483648)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_rev_64_i32:
+; GCN: s_brev_b32 s{{[0-9]+}}, 64{{$}}
+define void @s_materialize_rev_64_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 33554432)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_rev_65_i32:
+; GCN: s_mov_b32 s{{[0-9]+}}, 0x82000000{{$}}
+define void @s_materialize_rev_65_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 -2113929216)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_rev_neg16_i32:
+; GCN: s_brev_b32 s{{[0-9]+}}, -16{{$}}
+define void @s_materialize_rev_neg16_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 268435455)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_rev_neg17_i32:
+; GCN: s_mov_b32 s{{[0-9]+}}, 0xf7ffffff{{$}}
+define void @s_materialize_rev_neg17_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 -134217729)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_materialize_rev_1.0_i32:
+; GCN: s_movk_i32 s{{[0-9]+}}, 0x1fc{{$}}
+define void @s_materialize_rev_1.0_i32() {
+  call void asm sideeffect "; use $0", "s"(i32 508)
+  ret void
+}

@@ -44,19 +44,10 @@ public:
   void addFile(InputFile *File);
   void addCombinedLtoObject();
 
-  llvm::ArrayRef<Symbol *> getSymbols() const { return SymVector; }
-
-  const std::vector<ObjectFile<ELFT> *> &getObjectFiles() const {
-    return ObjectFiles;
-  }
-
-  const std::vector<BinaryFile *> &getBinaryFiles() const {
-    return BinaryFiles;
-  }
-
-  const std::vector<SharedFile<ELFT> *> &getSharedFiles() const {
-    return SharedFiles;
-  }
+  ArrayRef<Symbol *> getSymbols() const { return SymVector; }
+  ArrayRef<ObjectFile<ELFT> *> getObjectFiles() const { return ObjectFiles; }
+  ArrayRef<BinaryFile *> getBinaryFiles() const { return BinaryFiles; }
+  ArrayRef<SharedFile<ELFT> *> getSharedFiles() const { return SharedFiles; }
 
   DefinedRegular<ELFT> *addAbsolute(StringRef Name,
                                     uint8_t Visibility = llvm::ELF::STV_HIDDEN);

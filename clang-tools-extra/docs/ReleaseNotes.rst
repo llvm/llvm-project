@@ -129,6 +129,11 @@ Improvements to clang-tidy
   Flags member initializations that are unnecessary because the same default
   constructor would be called if they were not present.
 
+- New `readability-redundant-declaration
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-declaration.html>`_ check
+
+  Warns about duplicate variable declarations.
+
 Fixed bugs:
 
 - `modernize-make-unique

@@ -30,7 +30,7 @@ function:
 // CHECK: Dynamic Relocations {
 // CHECK-NEXT:  0x204C R_ARM_GLOB_DAT function 0x0
 
-// CHECK: Name: _GLOBAL_OFFSET_TABLE_ (16)
+// CHECK: Name: _GLOBAL_OFFSET_TABLE_
 // CHECK-NEXT:    Value: 0x0
 // CHECK-NEXT:    Size:
 // CHECK-NEXT:    Binding: Local

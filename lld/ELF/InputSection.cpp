@@ -409,8 +409,10 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     }
 
     uintX_t AddrLoc = this->OutSec->getVA() + Offset;
-    uint64_t SymVA = SignExtend64<sizeof(uintX_t) * 8>(
-        getSymVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
+    uint64_t SymVA = 0;
+    if (!Sym.isTls() || Out<ELFT>::TlsPhdr)
+      SymVA = SignExtend64<sizeof(uintX_t) * 8>(
+          getSymVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }

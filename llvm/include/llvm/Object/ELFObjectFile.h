@@ -865,6 +865,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF32-mips";
     case ELF::EM_PPC:
       return "ELF32-ppc";
+    case ELF::EM_RISCV:
+      return "ELF32-riscv";
     case ELF::EM_SPARC:
     case ELF::EM_SPARC32PLUS:
       return "ELF32-sparc";
@@ -885,6 +887,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return (IsLittleEndian ? "ELF64-aarch64-little" : "ELF64-aarch64-big");
     case ELF::EM_PPC64:
       return "ELF64-ppc64";
+    case ELF::EM_RISCV:
+      return "ELF64-riscv";
     case ELF::EM_S390:
       return "ELF64-s390";
     case ELF::EM_SPARCV9:
@@ -940,6 +944,15 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
     return Triple::ppc;
   case ELF::EM_PPC64:
     return IsLittleEndian ? Triple::ppc64le : Triple::ppc64;
+  case ELF::EM_RISCV:
+    switch (EF.getHeader()->e_ident[ELF::EI_CLASS]) {
+    case ELF::ELFCLASS32:
+      return Triple::riscv32;
+    case ELF::ELFCLASS64:
+      return Triple::riscv64;
+    default:
+      report_fatal_error("Invalid ELFCLASS!");
+    }
   case ELF::EM_S390:
     return Triple::systemz;
 

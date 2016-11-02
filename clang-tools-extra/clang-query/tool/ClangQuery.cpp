@@ -80,7 +80,7 @@ int main(int argc, const char **argv) {
     for (cl::list<std::string>::iterator I = Commands.begin(),
                                          E = Commands.end();
          I != E; ++I) {
-      QueryRef Q = QueryParser::parse(I->c_str(), QS);
+      QueryRef Q = QueryParser::parse(*I, QS);
       if (!Q->run(llvm::outs(), QS))
         return 1;
     }
@@ -97,7 +97,7 @@ int main(int argc, const char **argv) {
         std::string Line;
         std::getline(Input, Line);
 
-        QueryRef Q = QueryParser::parse(Line.c_str(), QS);
+        QueryRef Q = QueryParser::parse(Line, QS);
         if (!Q->run(llvm::outs(), QS))
           return 1;
       }

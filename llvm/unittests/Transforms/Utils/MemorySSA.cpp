@@ -276,8 +276,7 @@ TEST_F(MemorySSATest, TestTripleStore) {
   unsigned I = 0;
   for (StoreInst *V : {S1, S2, S3}) {
     // Everything should be clobbered by its defining access
-    MemoryAccess *DefiningAccess =
-        cast<MemoryUseOrDef>(MSSA.getMemoryAccess(V))->getDefiningAccess();
+    MemoryAccess *DefiningAccess = MSSA.getMemoryAccess(V)->getDefiningAccess();
     MemoryAccess *WalkerClobber = Walker->getClobberingMemoryAccess(V);
     EXPECT_EQ(DefiningAccess, WalkerClobber)
         << "Store " << I << " doesn't have the correct clobbering access";

@@ -42,7 +42,6 @@ RUN: not llvm-readobj --dyn-symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | File
 INVALID-DYNSYM-SIZE: Invalid entity size
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-INDEX %s
-RUN: not llvm-readobj -t %p/Inputs/invalid-section-index2.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 INVALID-SECTION-INDEX: Invalid section index
 
 RUN: not llvm-readobj -s %p/Inputs/invalid-section-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-SIZE %s
@@ -57,7 +56,7 @@ RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --ch
 INVALID-XINDEX-SIZE: Invalid data was encountered while parsing the file.
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
-INVALID-SH-NUM: e_shnum should be zero if a file has no section header table
+INVALID-SH-NUM: Invalid data was encountered while parsing the file.
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s

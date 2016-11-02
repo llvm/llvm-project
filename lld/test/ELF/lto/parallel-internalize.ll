@@ -17,7 +17,7 @@
 ; CHECK-NEXT:     Section: Undefined (0x0)
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
-; CHECK-NEXT:     Name: bar (5)
+; CHECK-NEXT:     Name: bar
 ; CHECK-NEXT:     Value: 0x11010
 ; CHECK-NEXT:     Size: 8
 ; CHECK-NEXT:     Binding: Local (0x0)
@@ -28,7 +28,7 @@
 ; CHECK-NEXT:     Section: .text (0x2)
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
-; CHECK-NEXT:     Name: foo (1)
+; CHECK-NEXT:     Name: foo
 ; CHECK-NEXT:     Value: 0x11000
 ; CHECK-NEXT:     Size: 8
 ; CHECK-NEXT:     Binding: Global (0x1)

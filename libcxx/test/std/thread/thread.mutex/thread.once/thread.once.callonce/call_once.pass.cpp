@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 
 // <mutex>
@@ -50,12 +49,13 @@ void init3()
     ++init3_called;
     std::this_thread::sleep_for(ms(250));
     if (init3_called == 1)
-        throw 1;
+        TEST_THROW(1);
     ++init3_completed;
 }
 
 void f3()
 {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         std::call_once(flg3, init3);
@@ -63,6 +63,7 @@ void f3()
     catch (...)
     {
     }
+#endif
 }
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
@@ -197,6 +198,7 @@ int main()
         t1.join();
         assert(init0_called == 1);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     // check basic exception safety
     {
         std::thread t0(f3);
@@ -206,6 +208,7 @@ int main()
         assert(init3_called == 2);
         assert(init3_completed == 1);
     }
+#endif
     // check deadlock avoidance
     {
         std::thread t0(f41);

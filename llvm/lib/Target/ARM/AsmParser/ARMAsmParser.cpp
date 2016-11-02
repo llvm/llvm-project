@@ -3449,7 +3449,7 @@ static int MatchCoprocessorOperandName(StringRef Name, char CoprocOp) {
 }
 
 /// parseITCondCode - Try to parse a condition code for an IT instruction.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseITCondCode(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -3487,7 +3487,7 @@ ARMAsmParser::parseITCondCode(OperandVector &Operands) {
 /// parseCoprocNumOperand - Try to parse an coprocessor number operand. The
 /// token must be an Identifier when called, and if it is a coprocessor
 /// number, the token is eaten and the operand is added to the operand list.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseCoprocNumOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -3510,7 +3510,7 @@ ARMAsmParser::parseCoprocNumOperand(OperandVector &Operands) {
 /// parseCoprocRegOperand - Try to parse an coprocessor register operand. The
 /// token must be an Identifier when called, and if it is a coprocessor
 /// number, the token is eaten and the operand is added to the operand list.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseCoprocRegOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -3529,7 +3529,7 @@ ARMAsmParser::parseCoprocRegOperand(OperandVector &Operands) {
 
 /// parseCoprocOptionOperand - Try to parse an coprocessor option operand.
 /// coproc_option : '{' imm0_255 '}'
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseCoprocOptionOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -3739,7 +3739,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands) {
 }
 
 // Helper function to parse the lane index for vector lists.
-ARMAsmParser::OperandMatchResultTy ARMAsmParser::
+OperandMatchResultTy ARMAsmParser::
 parseVectorLane(VectorLaneTy &LaneKind, unsigned &Index, SMLoc &EndLoc) {
   MCAsmParser &Parser = getParser();
   Index = 0; // Always return a defined index value.
@@ -3791,7 +3791,7 @@ parseVectorLane(VectorLaneTy &LaneKind, unsigned &Index, SMLoc &EndLoc) {
 }
 
 // parse a vector register list
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseVectorList(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   VectorLaneTy LaneKind;
@@ -4043,7 +4043,7 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
 }
 
 /// parseMemBarrierOptOperand - Try to parse DSB/DMB data barrier options.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -4115,7 +4115,7 @@ ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
 }
 
 /// parseInstSyncBarrierOptOperand - Try to parse ISB inst sync barrier options.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -4167,7 +4167,7 @@ ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
 
 
 /// parseProcIFlagsOperand - Try to parse iflags from CPS instruction.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -4202,7 +4202,7 @@ ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
 }
 
 /// parseMSRMaskOperand - Try to parse mask flags from MSR instruction.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -4355,7 +4355,7 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
 
 /// parseBankedRegOperand - Try to parse a banked register (e.g. "lr_irq") for
 /// use in the MRS/MSR instructions added to support virtualization.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -4410,7 +4410,7 @@ ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op, int Low,
                           int High) {
   MCAsmParser &Parser = getParser();
@@ -4459,7 +4459,7 @@ ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op, int Low,
   return MatchOperand_Success;
 }
 
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseSetEndImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -4489,7 +4489,7 @@ ARMAsmParser::parseSetEndImm(OperandVector &Operands) {
 ///     lsl #n  'n' in [0,31]
 ///     asr #n  'n' in [1,32]
 ///             n == 32 encoded as n == 0.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseShifterImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -4560,7 +4560,7 @@ ARMAsmParser::parseShifterImm(OperandVector &Operands) {
 /// parseRotImm - Parse the shifter immediate operand for SXTB/UXTB family
 /// of instructions. Legal values are:
 ///     ror #n  'n' in {0, 8, 16, 24}
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseRotImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -4607,7 +4607,7 @@ ARMAsmParser::parseRotImm(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseModImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   MCAsmLexer &Lexer = getLexer();
@@ -4724,7 +4724,7 @@ ARMAsmParser::parseModImm(OperandVector &Operands) {
   }
 }
 
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseBitfield(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -4793,7 +4793,7 @@ ARMAsmParser::parseBitfield(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parsePostIdxReg(OperandVector &Operands) {
   // Check for a post-index addressing register operand. Specifically:
   // postidx_reg := '+' register {, shift}
@@ -4843,7 +4843,7 @@ ARMAsmParser::parsePostIdxReg(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseAM3Offset(OperandVector &Operands) {
   // Check for a post-index addressing register operand. Specifically:
   // am3offset := '+' register
@@ -5245,7 +5245,7 @@ bool ARMAsmParser::parseMemRegOffsetShift(ARM_AM::ShiftOpc &St,
 }
 
 /// parseFPImm - A floating point immediate expression operand.
-ARMAsmParser::OperandMatchResultTy
+OperandMatchResultTy
 ARMAsmParser::parseFPImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   // Anything that can accept a floating point constant as an operand

@@ -52,9 +52,9 @@ let Predicates = [HasV5T] in {
     def A5_vaddhubs: T_S3op_1 <"vaddhub", IntRegs, 0b01, 0b001, 0, 1>;
 }
 
-def S2_asr_i_p_rnd : S_2OpInstImm<"asr", 0b110, 0b111, u6Imm,
+def S2_asr_i_p_rnd : S_2OpInstImm<"asr", 0b110, 0b111, u6_0Imm,
       [(set I64:$dst,
-            (sra (i64 (add (i64 (sra I64:$src1, u6ImmPred:$src2)), 1)),
+            (sra (i64 (add (i64 (sra I64:$src1, u6_0ImmPred:$src2)), 1)),
                  (i32 1)))], 1>,
       Requires<[HasV5T]> {
   bits<6> src2;
@@ -63,7 +63,7 @@ def S2_asr_i_p_rnd : S_2OpInstImm<"asr", 0b110, 0b111, u6Imm,
 
 let isAsmParserOnly = 1 in
 def S2_asr_i_p_rnd_goodsyntax
-  : MInst<(outs DoubleRegs:$dst), (ins DoubleRegs:$src1, u6Imm:$src2),
+  : MInst<(outs DoubleRegs:$dst), (ins DoubleRegs:$src1, u6_0Imm:$src2),
     "$dst = asrrnd($src1, #$src2)">;
 
 def C4_fastcorner9 : T_LOGICAL_2OP<"fastcorner9", 0b000, 0, 0>,
@@ -118,7 +118,7 @@ let AddedComplexity = 20 in {
 }
 
 let AddedComplexity  = 80 in {
-  def: Loada_pat<load, f32, u32ImmPred, PS_loadriabs>;
+  def: Loada_pat<load, f32, u32_0ImmPred, PS_loadriabs>;
   def: Loada_pat<load, f32, addrga, PS_loadriabs>;
   def: Loada_pat<load, f64, addrga, PS_loadrdabs>;
 }
@@ -828,7 +828,7 @@ def: Pat<(i32 (fp_to_sint F64:$src1)),
 let Defs = [USR_OVF], hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 class T_ASRHUB<bit isSat>
   : SInst <(outs IntRegs:$Rd),
-  (ins DoubleRegs:$Rss, u4Imm:$u4),
+  (ins DoubleRegs:$Rss, u4_0Imm:$u4),
   "$Rd = vasrhub($Rss, #$u4):"#!if(isSat, "sat", "raw"),
   [], "", S_2op_tc_2_SLOT23>,
   Requires<[HasV5T]> {
@@ -852,13 +852,13 @@ def S5_asrhub_sat : T_ASRHUB <1>;
 
 let isAsmParserOnly = 1 in
 def S5_asrhub_rnd_sat_goodsyntax
-  : SInst <(outs IntRegs:$Rd), (ins DoubleRegs:$Rss, u4Imm:$u4),
+  : SInst <(outs IntRegs:$Rd), (ins DoubleRegs:$Rss, u4_0Imm:$u4),
   "$Rd = vasrhub($Rss, #$u4):rnd:sat">, Requires<[HasV5T]>;
 
 // S5_vasrhrnd: Vector arithmetic shift right by immediate with round.
 let hasSideEffects = 0 in
 def S5_vasrhrnd : SInst <(outs DoubleRegs:$Rdd),
-                         (ins DoubleRegs:$Rss, u4Imm:$u4),
+                         (ins DoubleRegs:$Rss, u4_0Imm:$u4),
   "$Rdd = vasrh($Rss, #$u4):raw">,
   Requires<[HasV5T]> {
     bits<5> Rdd;
@@ -877,7 +877,7 @@ def S5_vasrhrnd : SInst <(outs DoubleRegs:$Rdd),
 
 let isAsmParserOnly = 1 in
 def S5_vasrhrnd_goodsyntax
-  : SInst <(outs DoubleRegs:$Rdd), (ins DoubleRegs:$Rss, u4Imm:$u4),
+  : SInst <(outs DoubleRegs:$Rdd), (ins DoubleRegs:$Rss, u4_0Imm:$u4),
   "$Rdd = vasrh($Rss,#$u4):rnd">, Requires<[HasV5T]>;
 
 // Floating point reciprocal square root approximation
@@ -913,7 +913,7 @@ let Uses = [USR], isFP = 1 in
 def F2_sfclass : T_TEST_BIT_IMM<"sfclass", 0b111>;
 
 let Uses = [USR], isFP = 1 in
-def F2_dfclass: ALU64Inst<(outs PredRegs:$Pd), (ins DoubleRegs:$Rss, u5Imm:$u5),
+def F2_dfclass: ALU64Inst<(outs PredRegs:$Pd), (ins DoubleRegs:$Rss, u5_0Imm:$u5),
   "$Pd = dfclass($Rss, #$u5)",
   [], "" , ALU64_tc_2early_SLOT23 > , Requires<[HasV5T]> {
     bits<2> Pd;
@@ -931,7 +931,7 @@ def F2_dfclass: ALU64Inst<(outs PredRegs:$Pd), (ins DoubleRegs:$Rss, u5Imm:$u5),
 
 // Instructions to create floating point constant
 class T_fimm <string mnemonic, RegisterClass RC, bits<4> RegType, bit isNeg>
-  : ALU64Inst<(outs RC:$dst), (ins u10Imm:$src),
+  : ALU64Inst<(outs RC:$dst), (ins u10_0Imm:$src),
   "$dst = "#mnemonic#"(#$src)"#!if(isNeg, ":neg", ":pos"),
   [], "", ALU64_tc_2_SLOT23>, Requires<[HasV5T]> {
     bits<5> dst;

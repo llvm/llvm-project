@@ -51,17 +51,17 @@ defm : bitconvert_64<v2i32, i64>;
 // As a result, special care is needed to guarantee correctness and
 // performance.
 class vshift_v4i16<SDNode Op, string Str, bits<3>MajOp, bits<3>MinOp>
-  : S_2OpInstImm<Str, MajOp, MinOp, u4Imm,
+  : S_2OpInstImm<Str, MajOp, MinOp, u4_0Imm,
       [(set (v4i16 DoubleRegs:$dst),
-            (Op (v4i16 DoubleRegs:$src1), u4ImmPred:$src2))]> {
+            (Op (v4i16 DoubleRegs:$src1), u4_0ImmPred:$src2))]> {
   bits<4> src2;
   let Inst{11-8} = src2;
 }
 
 class vshift_v2i32<SDNode Op, string Str, bits<3>MajOp, bits<3>MinOp>
-  : S_2OpInstImm<Str, MajOp, MinOp, u5Imm,
+  : S_2OpInstImm<Str, MajOp, MinOp, u5_0Imm,
       [(set (v2i32 DoubleRegs:$dst),
-            (Op (v2i32 DoubleRegs:$src1), u5ImmPred:$src2))]> {
+            (Op (v2i32 DoubleRegs:$src1), u5_0ImmPred:$src2))]> {
   bits<5> src2;
   let Inst{12-8} = src2;
 }
@@ -118,21 +118,21 @@ def: VArith_pat <A2_xorp,   xor, V8I8>;
 def: VArith_pat <A2_xorp,   xor, V4I16>;
 def: VArith_pat <A2_xorp,   xor, V2I32>;
 
-def: Pat<(v2i32 (sra V2I32:$b, (i64 (HexagonCOMBINE (i32 u5ImmPred:$c),
-                                                    (i32 u5ImmPred:$c))))),
+def: Pat<(v2i32 (sra V2I32:$b, (i64 (HexagonCOMBINE (i32 u5_0ImmPred:$c),
+                                                    (i32 u5_0ImmPred:$c))))),
          (S2_asr_i_vw V2I32:$b, imm:$c)>;
-def: Pat<(v2i32 (srl V2I32:$b, (i64 (HexagonCOMBINE (i32 u5ImmPred:$c),
-                                                    (i32 u5ImmPred:$c))))),
+def: Pat<(v2i32 (srl V2I32:$b, (i64 (HexagonCOMBINE (i32 u5_0ImmPred:$c),
+                                                    (i32 u5_0ImmPred:$c))))),
          (S2_lsr_i_vw V2I32:$b, imm:$c)>;
-def: Pat<(v2i32 (shl V2I32:$b, (i64 (HexagonCOMBINE (i32 u5ImmPred:$c),
-                                                    (i32 u5ImmPred:$c))))),
+def: Pat<(v2i32 (shl V2I32:$b, (i64 (HexagonCOMBINE (i32 u5_0ImmPred:$c),
+                                                    (i32 u5_0ImmPred:$c))))),
          (S2_asl_i_vw V2I32:$b, imm:$c)>;
 
-def: Pat<(v4i16 (sra V4I16:$b, (v4i16 (HexagonVSPLATH (i32 (u4ImmPred:$c)))))),
+def: Pat<(v4i16 (sra V4I16:$b, (v4i16 (HexagonVSPLATH (i32 (u4_0ImmPred:$c)))))),
          (S2_asr_i_vh V4I16:$b, imm:$c)>;
-def: Pat<(v4i16 (srl V4I16:$b, (v4i16 (HexagonVSPLATH (i32 (u4ImmPred:$c)))))),
+def: Pat<(v4i16 (srl V4I16:$b, (v4i16 (HexagonVSPLATH (i32 (u4_0ImmPred:$c)))))),
          (S2_lsr_i_vh V4I16:$b, imm:$c)>;
-def: Pat<(v4i16 (shl V4I16:$b, (v4i16 (HexagonVSPLATH (i32 (u4ImmPred:$c)))))),
+def: Pat<(v4i16 (shl V4I16:$b, (v4i16 (HexagonVSPLATH (i32 (u4_0ImmPred:$c)))))),
          (S2_asl_i_vh V4I16:$b, imm:$c)>;
 
 
@@ -148,17 +148,17 @@ def HexagonVSRLH: SDNode<"HexagonISD::VSRLH", SDTHexagon_v4i16_v4i16_i32>;
 def HexagonVSHLW: SDNode<"HexagonISD::VSHLW", SDTHexagon_v2i32_v2i32_i32>;
 def HexagonVSHLH: SDNode<"HexagonISD::VSHLH", SDTHexagon_v4i16_v4i16_i32>;
 
-def: Pat<(v2i32 (HexagonVSRAW V2I32:$Rs, u5ImmPred:$u5)),
+def: Pat<(v2i32 (HexagonVSRAW V2I32:$Rs, u5_0ImmPred:$u5)),
          (S2_asr_i_vw V2I32:$Rs, imm:$u5)>;
-def: Pat<(v4i16 (HexagonVSRAH V4I16:$Rs, u4ImmPred:$u4)),
+def: Pat<(v4i16 (HexagonVSRAH V4I16:$Rs, u4_0ImmPred:$u4)),
          (S2_asr_i_vh V4I16:$Rs, imm:$u4)>;
-def: Pat<(v2i32 (HexagonVSRLW V2I32:$Rs, u5ImmPred:$u5)),
+def: Pat<(v2i32 (HexagonVSRLW V2I32:$Rs, u5_0ImmPred:$u5)),
          (S2_lsr_i_vw V2I32:$Rs, imm:$u5)>;
-def: Pat<(v4i16 (HexagonVSRLH V4I16:$Rs, u4ImmPred:$u4)),
+def: Pat<(v4i16 (HexagonVSRLH V4I16:$Rs, u4_0ImmPred:$u4)),
          (S2_lsr_i_vh V4I16:$Rs, imm:$u4)>;
-def: Pat<(v2i32 (HexagonVSHLW V2I32:$Rs, u5ImmPred:$u5)),
+def: Pat<(v2i32 (HexagonVSHLW V2I32:$Rs, u5_0ImmPred:$u5)),
          (S2_asl_i_vw V2I32:$Rs, imm:$u5)>;
-def: Pat<(v4i16 (HexagonVSHLH V4I16:$Rs, u4ImmPred:$u4)),
+def: Pat<(v4i16 (HexagonVSHLH V4I16:$Rs, u4_0ImmPred:$u4)),
          (S2_asl_i_vh V4I16:$Rs, imm:$u4)>;
 
 // Vector shift words by register

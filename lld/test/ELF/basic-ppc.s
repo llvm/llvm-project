@@ -57,7 +57,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 1
-// CHECK-NEXT:     Name: .dynsym (1)
+// CHECK-NEXT:     Name: .dynsym
 // CHECK-NEXT:     Type: SHT_DYNSYM (0xB)
 // CHECK-NEXT:     Flags [ (0x2)
 // CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -75,7 +75,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 2
-// CHECK-NEXT:     Name: .hash (9)
+// CHECK-NEXT:     Name: .hash
 // CHECK-NEXT:     Type: SHT_HASH (0x5)
 // CHECK-NEXT:     Flags [ (0x2)
 // CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -93,7 +93,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 3
-// CHECK-NEXT:     Name: .dynstr (15)
+// CHECK-NEXT:     Name: .dynstr
 // CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 // CHECK-NEXT:     Flags [ (0x2)
 // CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -111,7 +111,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 4
-// CHECK-NEXT:     Name: .text (23)
+// CHECK-NEXT:     Name: .text
 // CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 // CHECK-NEXT:     Flags [ (0x6)
 // CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -130,7 +130,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 5
-// CHECK-NEXT:     Name: .dynamic (29)
+// CHECK-NEXT:     Name: .dynamic
 // CHECK-NEXT:     Type: SHT_DYNAMIC (0x6)
 // CHECK-NEXT:     Flags [ (0x3)
 // CHECK-NEXT:       SHF_ALLOC (0x2)
@@ -151,7 +151,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 6
-// CHECK-NEXT:     Name: .symtab (38)
+// CHECK-NEXT:     Name: .symtab
 // CHECK-NEXT:     Type: SHT_SYMTAB (0x2)
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
@@ -169,7 +169,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 7
-// CHECK-NEXT:     Name: .shstrtab (46)
+// CHECK-NEXT:     Name: .shstrtab
 // CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
@@ -189,7 +189,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 8
-// CHECK-NEXT:     Name: .strtab (56)
+// CHECK-NEXT:     Name: .strtab
 // CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]

@@ -15,7 +15,7 @@
 let isCodeGenOnly = 1, hasSideEffects = 0 in
 def SA1_combine1i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#1, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -63,7 +63,7 @@ def SL2_return_f: SUBInst <
 let isCodeGenOnly = 1, hasSideEffects = 0 in
 def SA1_combine3i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#3, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -132,7 +132,7 @@ def SL2_jumpr31_tnew: SUBInst <
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0, isExtendable = 1, isExtentSigned = 1, opExtentBits = 7, opExtendable = 2 in
 def SA1_addi: SUBInst <
   (outs IntRegs:$Rx),
-  (ins IntRegs:$_src_, s7Ext:$s7),
+  (ins IntRegs:$_src_, s7_0Ext:$s7),
   "$Rx = add($_src_, #$s7)" ,
   [] ,
   "$_src_ = $Rx"> {
@@ -180,7 +180,7 @@ def SL1_loadri_io: SUBInst <
 let Defs = [P0], isCodeGenOnly = 1, hasSideEffects = 0 in
 def SA1_cmpeqi: SUBInst <
   (outs ),
-  (ins IntRegs:$Rs, u2Imm:$u2),
+  (ins IntRegs:$Rs, u2_0Imm:$u2),
   "p0 = cmp.eq($Rs, #$u2)"> {
     bits<4> Rs;
     bits<2> u2;
@@ -362,7 +362,7 @@ def SA1_sxth: SUBInst <
 let isCodeGenOnly = 1, hasSideEffects = 0 in
 def SA1_combine0i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#0, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -378,7 +378,7 @@ def SA1_combine0i: SUBInst <
 let isCodeGenOnly = 1, hasSideEffects = 0 in
 def SA1_combine2i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#2, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -584,7 +584,7 @@ def SA1_dec: SUBInst <
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0, isExtendable = 1, isExtentSigned = 0, opExtentBits = 6, opExtendable = 1 in
 def SA1_seti: SUBInst <
   (outs IntRegs:$Rd),
-  (ins u6Ext:$u6),
+  (ins u6_0Ext:$u6),
   "$Rd = #$u6"> {
     bits<4> Rd;
     bits<6> u6;

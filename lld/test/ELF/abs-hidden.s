@@ -25,7 +25,7 @@
 //                                       0x2060 - (0x1000 + 8) = 1058
 // CHECK-NEXT: )
 
-// CHECK:      Name: .got (38)
+// CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC

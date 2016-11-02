@@ -1589,9 +1589,10 @@ MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
   BlockNumberingValid.erase(BB);
   return NewAccess;
 }
-MemoryAccess *MemorySSA::createMemoryAccessBefore(Instruction *I,
-                                                  MemoryAccess *Definition,
-                                                  MemoryAccess *InsertPt) {
+
+MemoryUseOrDef *MemorySSA::createMemoryAccessBefore(Instruction *I,
+                                                    MemoryAccess *Definition,
+                                                    MemoryUseOrDef *InsertPt) {
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
@@ -1601,9 +1602,9 @@ MemoryAccess *MemorySSA::createMemoryAccessBefore(Instruction *I,
   return NewAccess;
 }
 
-MemoryAccess *MemorySSA::createMemoryAccessAfter(Instruction *I,
-                                                 MemoryAccess *Definition,
-                                                 MemoryAccess *InsertPt) {
+MemoryUseOrDef *MemorySSA::createMemoryAccessAfter(Instruction *I,
+                                                   MemoryAccess *Definition,
+                                                   MemoryAccess *InsertPt) {
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
@@ -1888,21 +1889,19 @@ void MemorySSA::verifyDefUses(Function &F) const {
     }
 
     for (Instruction &I : B) {
-      if (MemoryAccess *MA = getMemoryAccess(&I)) {
-        assert(isa<MemoryUseOrDef>(MA) &&
-               "Found a phi node not attached to a bb");
-        verifyUseInDefs(cast<MemoryUseOrDef>(MA)->getDefiningAccess(), MA);
+      if (MemoryUseOrDef *MA = getMemoryAccess(&I)) {
+        verifyUseInDefs(MA->getDefiningAccess(), MA);
       }
     }
   }
 }
 
-MemoryAccess *MemorySSA::getMemoryAccess(const Value *I) const {
-  return ValueToMemoryAccess.lookup(I);
+MemoryUseOrDef *MemorySSA::getMemoryAccess(const Instruction *I) const {
+  return cast_or_null<MemoryUseOrDef>(ValueToMemoryAccess.lookup(I));
 }
 
 MemoryPhi *MemorySSA::getMemoryAccess(const BasicBlock *BB) const {
-  return cast_or_null<MemoryPhi>(getMemoryAccess((const Value *)BB));
+  return cast_or_null<MemoryPhi>(ValueToMemoryAccess.lookup(cast<Value>(BB)));
 }
 
 /// Perform a local numbering on blocks so that instruction ordering can be

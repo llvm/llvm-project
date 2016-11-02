@@ -61,14 +61,12 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataStream.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/StreamingMemoryObject.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -232,29 +230,19 @@ private:
 
 class BitcodeReaderBase {
 protected:
-  BitcodeReaderBase() = default;
   BitcodeReaderBase(MemoryBuffer *Buffer) : Buffer(Buffer) {}
 
   std::unique_ptr<MemoryBuffer> Buffer;
   std::unique_ptr<BitstreamReader> StreamFile;
   BitstreamCursor Stream;
 
-  std::error_code initStream(std::unique_ptr<DataStreamer> Streamer);
-  std::error_code initStreamFromBuffer();
-  std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
+  std::error_code initStream();
 
   virtual std::error_code error(const Twine &Message) = 0;
   virtual ~BitcodeReaderBase() = default;
 };
 
-std::error_code
-BitcodeReaderBase::initStream(std::unique_ptr<DataStreamer> Streamer) {
-  if (Streamer)
-    return initLazyStream(std::move(Streamer));
-  return initStreamFromBuffer();
-}
-
-std::error_code BitcodeReaderBase::initStreamFromBuffer() {
+std::error_code BitcodeReaderBase::initStream() {
   const unsigned char *BufPtr = (const unsigned char*)Buffer->getBufferStart();
   const unsigned char *BufEnd = BufPtr+Buffer->getBufferSize();
 
@@ -267,36 +255,9 @@ std::error_code BitcodeReaderBase::initStreamFromBuffer() {
     if (SkipBitcodeWrapperHeader(BufPtr, BufEnd, true))
       return error("Invalid bitcode wrapper header");
 
-  StreamFile.reset(new BitstreamReader(BufPtr, BufEnd));
+  StreamFile.reset(new BitstreamReader(ArrayRef<uint8_t>(BufPtr, BufEnd)));
   Stream.init(&*StreamFile);
 
-  return std::error_code();
-}
-
-std::error_code
-BitcodeReaderBase::initLazyStream(std::unique_ptr<DataStreamer> Streamer) {
-  // Check and strip off the bitcode wrapper; BitstreamReader expects never to
-  // see it.
-  auto OwnedBytes =
-      llvm::make_unique<StreamingMemoryObject>(std::move(Streamer));
-  StreamingMemoryObject &Bytes = *OwnedBytes;
-  StreamFile = llvm::make_unique<BitstreamReader>(std::move(OwnedBytes));
-  Stream.init(&*StreamFile);
-
-  unsigned char buf[16];
-  if (Bytes.readBytes(buf, 16, 0) != 16)
-    return error("Invalid bitcode signature");
-
-  if (!isBitcode(buf, buf + 16))
-    return error("Invalid bitcode signature");
-
-  if (isBitcodeWrapper(buf, buf + 4)) {
-    const unsigned char *bitcodeStart = buf;
-    const unsigned char *bitcodeEnd = buf + 16;
-    SkipBitcodeWrapperHeader(bitcodeStart, bitcodeEnd, false);
-    Bytes.dropLeadingBytes(bitcodeStart - buf);
-    Bytes.setKnownObjectSize(bitcodeEnd - bitcodeStart);
-  }
   return std::error_code();
 }
 
@@ -399,7 +360,6 @@ public:
   std::error_code error(const Twine &Message) override;
 
   BitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context);
-  BitcodeReader(LLVMContext &Context);
   ~BitcodeReader() override { freeState(); }
 
   std::error_code materializeForwardReferencedFunctions();
@@ -414,8 +374,7 @@ public:
 
   /// \brief Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
-  std::error_code parseBitcodeInto(std::unique_ptr<DataStreamer> Streamer,
-                                   Module *M,
+  std::error_code parseBitcodeInto(Module *M,
                                    bool ShouldLazyLoadMetadata = false);
 
   /// \brief Cheap mechanism to just extract module triple
@@ -638,8 +597,7 @@ public:
 
   /// \brief Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
-  std::error_code parseSummaryIndexInto(std::unique_ptr<DataStreamer> Streamer,
-                                        ModuleSummaryIndex *I);
+  std::error_code parseSummaryIndexInto(ModuleSummaryIndex *I);
 
 private:
   std::error_code parseModule();
@@ -705,9 +663,6 @@ std::error_code BitcodeReader::error(const Twine &Message) {
 BitcodeReader::BitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context)
     : BitcodeReaderBase(Buffer), Context(Context), ValueList(Context),
       MetadataList(Context) {}
-
-BitcodeReader::BitcodeReader(LLVMContext &Context)
-    : Context(Context), ValueList(Context), MetadataList(Context) {}
 
 std::error_code BitcodeReader::materializeForwardReferencedFunctions() {
   if (WillMaterializeAllForwardRefs)
@@ -2165,10 +2120,6 @@ std::error_code BitcodeReader::parseMetadataStrings(ArrayRef<uint64_t> Record,
   StringRef Lengths = Blob.slice(0, StringsOffset);
   SimpleBitstreamCursor R(*StreamFile);
   R.jumpToPointer(Lengths.begin());
-
-  // Ensure that Blob doesn't get invalidated, even if this is reading from
-  // a StreamingMemoryObject with corrupt data.
-  R.setArtificialByteLimit(R.getCurrentByteNo() + StringsOffset);
 
   StringRef Strings = Blob.drop_front(StringsOffset);
   do {
@@ -4210,7 +4161,8 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
 /// Helper to read the header common to all bitcode files.
 static bool hasValidBitcodeHeader(BitstreamCursor &Stream) {
   // Sniff for the signature.
-  if (Stream.Read(8) != 'B' ||
+  if (!Stream.canSkipToPos(4) ||
+      Stream.Read(8) != 'B' ||
       Stream.Read(8) != 'C' ||
       Stream.Read(4) != 0x0 ||
       Stream.Read(4) != 0xC ||
@@ -4220,12 +4172,11 @@ static bool hasValidBitcodeHeader(BitstreamCursor &Stream) {
   return true;
 }
 
-std::error_code
-BitcodeReader::parseBitcodeInto(std::unique_ptr<DataStreamer> Streamer,
-                                Module *M, bool ShouldLazyLoadMetadata) {
+std::error_code BitcodeReader::parseBitcodeInto(Module *M,
+                                                bool ShouldLazyLoadMetadata) {
   TheModule = M;
 
-  if (std::error_code EC = initStream(std::move(Streamer)))
+  if (std::error_code EC = initStream())
     return EC;
 
   // Sniff for the signature.
@@ -4299,7 +4250,7 @@ ErrorOr<std::string> BitcodeReader::parseModuleTriple() {
 }
 
 ErrorOr<std::string> BitcodeReader::parseTriple() {
-  if (std::error_code EC = initStream(nullptr))
+  if (std::error_code EC = initStream())
     return EC;
 
   // Sniff for the signature.
@@ -4334,7 +4285,7 @@ ErrorOr<std::string> BitcodeReader::parseTriple() {
 }
 
 ErrorOr<std::string> BitcodeReader::parseIdentificationBlock() {
-  if (std::error_code EC = initStream(nullptr))
+  if (std::error_code EC = initStream())
     return EC;
 
   // Sniff for the signature.
@@ -4384,7 +4335,7 @@ std::error_code BitcodeReader::parseGlobalObjectAttachment(
 }
 
 ErrorOr<bool> BitcodeReader::hasObjCCategory() {
-  if (std::error_code EC = initStream(nullptr))
+  if (std::error_code EC = initStream())
     return EC;
 
   // Sniff for the signature.
@@ -5972,7 +5923,8 @@ std::error_code ModuleSummaryIndexBitcodeReader::error(const Twine &Message) {
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
     bool CheckGlobalValSummaryPresenceOnly)
-    : BitcodeReaderBase(Buffer), DiagnosticHandler(std::move(DiagnosticHandler)),
+    : BitcodeReaderBase(Buffer),
+      DiagnosticHandler(std::move(DiagnosticHandler)),
       CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
 
 void ModuleSummaryIndexBitcodeReader::freeState() { Buffer = nullptr; }
@@ -6572,11 +6524,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
 }
 
 // Parse the function info index from the bitcode streamer into the given index.
-std::error_code ModuleSummaryIndexBitcodeReader::parseSummaryIndexInto(
-    std::unique_ptr<DataStreamer> Streamer, ModuleSummaryIndex *I) {
+std::error_code
+ModuleSummaryIndexBitcodeReader::parseSummaryIndexInto(ModuleSummaryIndex *I) {
   TheIndex = I;
 
-  if (std::error_code EC = initStream(std::move(Streamer)))
+  if (std::error_code EC = initStream())
     return EC;
 
   // Sniff for the signature.
@@ -6641,8 +6593,7 @@ const std::error_category &llvm::BitcodeErrorCategory() {
 //===----------------------------------------------------------------------===//
 
 static ErrorOr<std::unique_ptr<Module>>
-getBitcodeModuleImpl(std::unique_ptr<DataStreamer> Streamer, StringRef Name,
-                     BitcodeReader *R, LLVMContext &Context,
+getBitcodeModuleImpl(StringRef Name, BitcodeReader *R, LLVMContext &Context,
                      bool MaterializeAll, bool ShouldLazyLoadMetadata) {
   std::unique_ptr<Module> M = llvm::make_unique<Module>(Name, Context);
   M->setMaterializer(R);
@@ -6653,8 +6604,7 @@ getBitcodeModuleImpl(std::unique_ptr<DataStreamer> Streamer, StringRef Name,
   };
 
   // Delay parsing Metadata if ShouldLazyLoadMetadata is true.
-  if (std::error_code EC = R->parseBitcodeInto(std::move(Streamer), M.get(),
-                                               ShouldLazyLoadMetadata))
+  if (std::error_code EC = R->parseBitcodeInto(M.get(), ShouldLazyLoadMetadata))
     return cleanupOnError(EC);
 
   if (MaterializeAll) {
@@ -6684,7 +6634,7 @@ getLazyBitcodeModuleImpl(std::unique_ptr<MemoryBuffer> &&Buffer,
   BitcodeReader *R = new BitcodeReader(Buffer.get(), Context);
 
   ErrorOr<std::unique_ptr<Module>> Ret =
-      getBitcodeModuleImpl(nullptr, Buffer->getBufferIdentifier(), R, Context,
+      getBitcodeModuleImpl(Buffer->getBufferIdentifier(), R, Context,
                            MaterializeAll, ShouldLazyLoadMetadata);
   if (!Ret)
     return Ret;
@@ -6698,17 +6648,6 @@ llvm::getLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
                            LLVMContext &Context, bool ShouldLazyLoadMetadata) {
   return getLazyBitcodeModuleImpl(std::move(Buffer), Context, false,
                                   ShouldLazyLoadMetadata);
-}
-
-ErrorOr<std::unique_ptr<Module>>
-llvm::getStreamedBitcodeModule(StringRef Name,
-                               std::unique_ptr<DataStreamer> Streamer,
-                               LLVMContext &Context) {
-  std::unique_ptr<Module> M = llvm::make_unique<Module>(Name, Context);
-  BitcodeReader *R = new BitcodeReader(Context);
-
-  return getBitcodeModuleImpl(std::move(Streamer), Name, R, Context, false,
-                              false);
 }
 
 ErrorOr<std::unique_ptr<Module>> llvm::parseBitcodeFile(MemoryBufferRef Buffer,
@@ -6763,7 +6702,7 @@ ErrorOr<std::unique_ptr<ModuleSummaryIndex>> llvm::getModuleSummaryIndex(
     return EC;
   };
 
-  if (std::error_code EC = R.parseSummaryIndexInto(nullptr, Index.get()))
+  if (std::error_code EC = R.parseSummaryIndexInto(Index.get()))
     return cleanupOnError(EC);
 
   Buf.release(); // The ModuleSummaryIndexBitcodeReader owns it now.
@@ -6782,7 +6721,7 @@ bool llvm::hasGlobalValueSummary(
     return false;
   };
 
-  if (std::error_code EC = R.parseSummaryIndexInto(nullptr, nullptr))
+  if (std::error_code EC = R.parseSummaryIndexInto(nullptr))
     return cleanupOnError(EC);
 
   Buf.release(); // The ModuleSummaryIndexBitcodeReader owns it now.

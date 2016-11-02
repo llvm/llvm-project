@@ -73,7 +73,6 @@ private:
 
   const Elf_Ehdr *Header;
   const Elf_Shdr *SectionHeaderTable = nullptr;
-  StringRef DotShstrtab;                    // Section header string table.
 
 public:
   template<typename T>
@@ -154,7 +153,8 @@ public:
   }
 
   uint64_t getNumSections() const;
-  uintX_t getStringTableIndex() const;
+  ErrorOr<StringRef> getSectionStringTable() const;
+  uint32_t getSectionStringTableIndex() const;
   uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
                                        const Elf_Shdr *SymTab,
                                        ArrayRef<Elf_Word> ShndxTable) const;
@@ -175,6 +175,8 @@ public:
   }
 
   ErrorOr<StringRef> getSectionName(const Elf_Shdr *Section) const;
+  ErrorOr<StringRef> getSectionName(const Elf_Shdr *Section,
+                                    StringRef DotShstrtab) const;
   template <typename T>
   ErrorOr<ArrayRef<T>> getSectionContentsAsArray(const Elf_Shdr *Sec) const;
   ErrorOr<ArrayRef<uint8_t> > getSectionContents(const Elf_Shdr *Sec) const;
@@ -300,19 +302,25 @@ uint64_t ELFFile<ELFT>::getNumSections() const {
 }
 
 template <class ELFT>
-typename ELFFile<ELFT>::uintX_t ELFFile<ELFT>::getStringTableIndex() const {
-  if (Header->e_shnum == ELF::SHN_UNDEF) {
-    if (Header->e_shstrndx == ELF::SHN_HIRESERVE)
-      return SectionHeaderTable->sh_link;
-    if (Header->e_shstrndx >= getNumSections())
-      return 0;
-  }
+uint32_t ELFFile<ELFT>::getSectionStringTableIndex() const {
+  if (Header->e_shstrndx == ELF::SHN_XINDEX)
+    return SectionHeaderTable->sh_link;
   return Header->e_shstrndx;
 }
 
 template <class ELFT>
-ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
-    : Buf(Object) {
+ErrorOr<StringRef> ELFFile<ELFT>::getSectionStringTable() const {
+  uint32_t Index = getSectionStringTableIndex();
+  if (!Index) // no section string table.
+    return "";
+  ErrorOr<const Elf_Shdr *> StrTabSecOrErr = getSection(Index);
+  if (std::error_code EC = StrTabSecOrErr.getError())
+    return EC;
+  return getStringTable(*StrTabSecOrErr);
+}
+
+template <class ELFT>
+ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC) : Buf(Object) {
   const uint64_t FileSize = Buf.size();
 
   if (sizeof(Elf_Ehdr) > FileSize) {
@@ -324,9 +332,10 @@ ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
   Header = reinterpret_cast<const Elf_Ehdr *>(base());
 
   if (Header->e_shoff == 0) {
-    if (Header->e_shnum != 0)
-      report_fatal_error(
-          "e_shnum should be zero if a file has no section header table");
+    if (Header->e_shnum != 0) {
+      // e_shnum should be zero if a file has no section header table
+      EC = object_error::parse_failed;
+    }
     return;
   }
 
@@ -359,19 +368,6 @@ ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC)
     // Section table goes past end of file!
     EC = object_error::parse_failed;
     return;
-  }
-
-  // Get string table sections.
-  uintX_t StringTableIndex = getStringTableIndex();
-  if (StringTableIndex) {
-    ErrorOr<const Elf_Shdr *> StrTabSecOrErr = getSection(StringTableIndex);
-    if ((EC = StrTabSecOrErr.getError()))
-      return;
-
-    ErrorOr<StringRef> StringTableOrErr = getStringTable(*StrTabSecOrErr);
-    if ((EC = StringTableOrErr.getError()))
-      return;
-    DotShstrtab = *StringTableOrErr;
   }
 
   EC = std::error_code();
@@ -476,6 +472,15 @@ ELFFile<ELFT>::getStringTableForSymtab(const Elf_Shdr &Sec) const {
 template <class ELFT>
 ErrorOr<StringRef>
 ELFFile<ELFT>::getSectionName(const Elf_Shdr *Section) const {
+  ErrorOr<StringRef> Table = getSectionStringTable();
+  if (std::error_code EC = Table.getError())
+    return EC;
+  return getSectionName(Section, *Table);
+}
+
+template <class ELFT>
+ErrorOr<StringRef> ELFFile<ELFT>::getSectionName(const Elf_Shdr *Section,
+                                                 StringRef DotShstrtab) const {
   uint32_t Offset = Section->sh_name;
   if (Offset == 0)
     return StringRef();

@@ -6,9 +6,9 @@
 # RUN: llvm-readobj -V -dyn-symbols %t.so | FileCheck %s
 
 # CHECK: Symbol {
-# CHECK:   Name: _Z3aaaPf@ (1)
+# CHECK:   Name: _Z3aaaPf@
 # CHECK: Symbol {
-# CHECK:   Name: _Z3aaaPi@ (10)
+# CHECK:   Name: _Z3aaaPi@
 
 .text
 .globl _Z3aaaPi

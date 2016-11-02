@@ -491,7 +491,6 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   // SubReg carries the "Kill" flag when SubReg == SuperReg.
   unsigned SubKillState = getKillRegState((NumSubRegs == 1) && IsKill);
   for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
-    unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     unsigned SubReg = NumSubRegs == 1 ?
       SuperReg : getSubReg(SuperReg, getSubRegFromChannel(i));
 
@@ -522,6 +521,10 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
     } else {
       // Spill SGPR to a frame index.
       // FIXME we should use S_STORE_DWORD here for VI.
+
+      // TODO: Should VI try to spill to VGPR and then spill to SMEM?
+      unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
       MachineInstrBuilder Mov
         = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpReg)
         .addReg(SubReg, SubKillState);
@@ -582,7 +585,6 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   }
 
   for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
-    unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     unsigned SubReg = NumSubRegs == 1 ?
       SuperReg : getSubReg(SuperReg, getSubRegFromChannel(i));
 
@@ -600,6 +602,7 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
       // Restore SGPR from a stack slot.
       // FIXME: We should use S_LOAD_DWORD here for VI.
 
+      unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       unsigned Align = FrameInfo.getObjectAlignment(Index);
       unsigned Size = FrameInfo.getObjectSize(Index);
 

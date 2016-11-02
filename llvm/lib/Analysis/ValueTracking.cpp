@@ -3991,8 +3991,6 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     }
   }
 
-  // TODO: (X > 4) ? X : 5   -->  (X >= 5) ? X : 5  -->  MAX(X, 5)
-
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 

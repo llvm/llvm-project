@@ -89,6 +89,13 @@ StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type) {
       break;
     }
     break;
+  case ELF::EM_RISCV:
+    switch (Type) {
+#include "llvm/Support/ELFRelocs/RISCV.def"
+    default:
+      break;
+    }
+    break;
   case ELF::EM_S390:
     switch (Type) {
 #include "llvm/Support/ELFRelocs/SystemZ.def"

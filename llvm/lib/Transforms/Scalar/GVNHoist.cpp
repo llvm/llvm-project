@@ -538,7 +538,7 @@ private:
     BasicBlock *HoistBB = HoistPt->getParent();
     MemoryUseOrDef *UD;
     if (K != InsKind::Scalar)
-      UD = cast<MemoryUseOrDef>(MSSA->getMemoryAccess(HoistPt));
+      UD = MSSA->getMemoryAccess(HoistPt);
 
     for (++II; II != InstructionsToHoist.end(); ++II) {
       Instruction *Insn = *II;
@@ -582,8 +582,7 @@ private:
             // Also check that it is safe to move the load or store from HoistPt
             // to NewHoistPt, and from Insn to NewHoistPt.
             safeToHoistLdSt(NewHoistPt, HoistPt, UD, K, NBBsOnAllPaths) &&
-            safeToHoistLdSt(NewHoistPt, Insn,
-                            cast<MemoryUseOrDef>(MSSA->getMemoryAccess(Insn)),
+            safeToHoistLdSt(NewHoistPt, Insn, MSSA->getMemoryAccess(Insn),
                             K, NBBsOnAllPaths)) {
           // Extend HoistPt to NewHoistPt.
           HoistPt = NewHoistPt;
@@ -600,7 +599,7 @@ private:
       // Start over from BB.
       Start = II;
       if (K != InsKind::Scalar)
-        UD = cast<MemoryUseOrDef>(MSSA->getMemoryAccess(*Start));
+        UD = MSSA->getMemoryAccess(*Start);
       HoistPt = Insn;
       HoistBB = BB;
       NBBsOnAllPaths = MaxNumberOfBBSInPath;

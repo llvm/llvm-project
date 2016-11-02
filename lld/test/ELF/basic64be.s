@@ -67,7 +67,7 @@ _start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 1
-# CHECK-NEXT:     Name: .text (1)
+# CHECK-NEXT:     Name: .text
 # CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:     Flags [ (0x6)
 # CHECK-NEXT:       SHF_ALLOC (0x2)

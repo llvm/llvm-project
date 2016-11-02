@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // basic_string<charT,traits,Allocator>&
@@ -29,23 +28,32 @@ test(S s, typename S::size_type pos1, typename S::size_type n1,
      S str, typename S::size_type pos2, typename S::size_type n2,
      S expected)
 {
-    typename S::size_type old_size = s.size();
+    const typename S::size_type old_size = s.size();
     S s0 = s;
-    try
+    if (pos1 <= old_size && pos2 <= str.size())
     {
         s.replace(pos1, n1, str, pos2, n2);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos1 <= old_size && pos2 <= str.size());
         assert(s == expected);
         typename S::size_type xlen = std::min(n1, old_size - pos1);
         typename S::size_type rlen = std::min(n2, str.size() - pos2);
         assert(s.size() == old_size - xlen + rlen);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos1 > old_size || pos2 > str.size());
-        assert(s == s0);
+        try
+        {
+            s.replace(pos1, n1, str, pos2, n2);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos1 > old_size || pos2 > str.size());
+            assert(s == s0);
+        }
     }
+#endif
 }
 
 template <class S>
@@ -54,23 +62,32 @@ test_npos(S s, typename S::size_type pos1, typename S::size_type n1,
      S str, typename S::size_type pos2,
      S expected)
 {
-    typename S::size_type old_size = s.size();
+    const typename S::size_type old_size = s.size();
     S s0 = s;
-    try
+    if (pos1 <= old_size && pos2 <= str.size())
     {
         s.replace(pos1, n1, str, pos2);
         LIBCPP_ASSERT(s.__invariants());
-        assert(pos1 <= old_size && pos2 <= str.size());
         assert(s == expected);
         typename S::size_type xlen = std::min(n1, old_size - pos1);
         typename S::size_type rlen = std::min(S::npos, str.size() - pos2);
         assert(s.size() == old_size - xlen + rlen);
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos1 > old_size || pos2 > str.size());
-        assert(s == s0);
+        try
+        {
+            s.replace(pos1, n1, str, pos2);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos1 > old_size || pos2 > str.size());
+            assert(s == s0);
+        }
     }
+#endif
 }
 
 

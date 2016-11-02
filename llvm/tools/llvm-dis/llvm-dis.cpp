@@ -26,7 +26,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DataStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
@@ -139,34 +138,20 @@ static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
 }
 
 static Expected<std::unique_ptr<Module>> openInputFile(LLVMContext &Context) {
-  if (MaterializeMetadata) {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-        MemoryBuffer::getFileOrSTDIN(InputFilename);
-    if (!MBOrErr)
-      return errorCodeToError(MBOrErr.getError());
-    ErrorOr<std::unique_ptr<Module>> MOrErr =
-        getLazyBitcodeModule(std::move(*MBOrErr), Context,
-                             /*ShouldLazyLoadMetadata=*/true);
-    if (!MOrErr)
-      return errorCodeToError(MOrErr.getError());
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+      MemoryBuffer::getFileOrSTDIN(InputFilename);
+  if (!MBOrErr)
+    return errorCodeToError(MBOrErr.getError());
+  ErrorOr<std::unique_ptr<Module>> MOrErr =
+      getLazyBitcodeModule(std::move(*MBOrErr), Context,
+                           /*ShouldLazyLoadMetadata=*/true);
+  if (!MOrErr)
+    return errorCodeToError(MOrErr.getError());
+  if (MaterializeMetadata)
     (*MOrErr)->materializeMetadata();
-    return std::move(*MOrErr);
-  } else {
-    std::string ErrorMessage;
-    std::unique_ptr<DataStreamer> Streamer =
-        getDataFileStreamer(InputFilename, &ErrorMessage);
-    if (!Streamer)
-      return make_error<StringError>(ErrorMessage, inconvertibleErrorCode());
-    std::string DisplayFilename;
-    if (InputFilename == "-")
-      DisplayFilename = "<stdin>";
-    else
-      DisplayFilename = InputFilename;
-    ErrorOr<std::unique_ptr<Module>> MOrErr =
-        getStreamedBitcodeModule(DisplayFilename, std::move(Streamer), Context);
+  else
     (*MOrErr)->materializeAll();
-    return std::move(*MOrErr);
-  }
+  return std::move(*MOrErr);
 }
 
 int main(int argc, char **argv) {
