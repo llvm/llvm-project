@@ -53,6 +53,10 @@ set(LLDB_TEST_ARCH
 # change has made its way through bots to clean up their CMake caches.
 string(REPLACE "-C;${LLDB_TEST_COMPILER}" "" LLDB_TEST_USER_ARGS_New "${LLDB_TEST_USER_ARGS}")
 
+if(LLDB_TEST_CLANG)
+  set(LLDB_TEST_COMPILER $<TARGET_FILE:clang>)
+endif()
+
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   "${LLDB_TEST_USER_ARGS_New}"
