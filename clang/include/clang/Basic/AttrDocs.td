@@ -1283,6 +1283,18 @@ not require callee-cleanup.  See the documentation for `__fastcall`_ on MSDN.
   }];
 }
 
+def RegCallDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On x86 targets, this attribute changes the calling convention to
+`__regcall`_ convention. This convention aims to pass as many arguments
+as possible in registers. It also tries to utilize registers for the
+return value whenever it is possible.
+
+.. _`__regcall`: https://software.intel.com/en-us/node/693069
+  }];
+}
+
 def ThisCallDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{

@@ -438,7 +438,7 @@ static_assert(sizeof(MinidumpModule) == 108,
 
 // Exception stuff
 struct MinidumpException {
-  enum {
+  enum : unsigned {
     ExceptonInfoMaxParams = 15,
     DumpRequested = 0xFFFFFFFF,
   };

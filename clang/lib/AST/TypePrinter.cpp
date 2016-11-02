@@ -725,6 +725,9 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     case CC_X86_64SysV:
       OS << " __attribute__((sysv_abi))";
       break;
+    case CC_X86RegCall:
+      OS << " __attribute__((regcall))";
+      break;
     case CC_SpirFunction:
     case CC_OpenCLKernel:
       // Do nothing. These CCs are not available as attributes.
@@ -1339,6 +1342,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case AttributedType::attr_pascal: OS << "pascal"; break;
   case AttributedType::attr_ms_abi: OS << "ms_abi"; break;
   case AttributedType::attr_sysv_abi: OS << "sysv_abi"; break;
+  case AttributedType::attr_regcall: OS << "regcall"; break;
   case AttributedType::attr_pcs:
   case AttributedType::attr_pcs_vfp: {
     OS << "pcs(";

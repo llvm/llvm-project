@@ -237,6 +237,7 @@ namespace clang {
     CC_X86Pascal,   // __attribute__((pascal))
     CC_X86_64Win64, // __attribute__((ms_abi))
     CC_X86_64SysV,  // __attribute__((sysv_abi))
+    CC_X86RegCall, // __attribute__((regcall))
     CC_AAPCS,       // __attribute__((pcs("aapcs")))
     CC_AAPCS_VFP,   // __attribute__((pcs("aapcs-vfp")))
     CC_IntelOclBicc, // __attribute__((intel_ocl_bicc))
@@ -254,6 +255,7 @@ namespace clang {
     case CC_X86StdCall:
     case CC_X86FastCall:
     case CC_X86ThisCall:
+    case CC_X86RegCall:
     case CC_X86Pascal:
     case CC_X86VectorCall:
     case CC_SpirFunction:

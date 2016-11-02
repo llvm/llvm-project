@@ -3,7 +3,6 @@ add_lldb_library(lldbUtility
   ARM64_DWARF_Registers.cpp
   ConvertEnum.cpp
   JSON.cpp
-  KQueue.cpp
   LLDBAssert.cpp
   ModuleCache.cpp
   NameMatches.cpp

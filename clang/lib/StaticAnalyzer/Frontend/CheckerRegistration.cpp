@@ -106,7 +106,7 @@ getCheckerOptList(const AnalyzerOptions &opts) {
   SmallVector<CheckerOptInfo, 8> checkerOpts;
   for (unsigned i = 0, e = opts.CheckersControlList.size(); i != e; ++i) {
     const std::pair<std::string, bool> &opt = opts.CheckersControlList[i];
-    checkerOpts.push_back(CheckerOptInfo(opt.first.c_str(), opt.second));
+    checkerOpts.push_back(CheckerOptInfo(opt.first, opt.second));
   }
   return checkerOpts;
 }

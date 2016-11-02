@@ -2234,7 +2234,7 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
           if (!(Function.TypeQuals & TypeQual)) {
             std::string Name(FixItName);
             Name += " ";
-            Insertion = FixItHint::CreateInsertion(VS.getFirstLocation(), Name.c_str());
+            Insertion = FixItHint::CreateInsertion(VS.getFirstLocation(), Name);
             Function.TypeQuals |= TypeQual;
             *QualifierLoc = SpecLoc.getRawEncoding();
           }
