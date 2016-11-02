@@ -45,7 +45,7 @@ RUN: not llvm-readobj -t %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --
 INVALID-SECTION-INDEX: Invalid section index
 
 RUN: not llvm-readobj -s %p/Inputs/invalid-section-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-SIZE %s
-INVALID-SECTION-SIZE: Invalid section header entry size (e_shentsize) in ELF header
+INVALID-SECTION-SIZE: Invalid data was encountered while parsing the file
 
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-symbol-table-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s

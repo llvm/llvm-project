@@ -334,12 +334,12 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
         }
       } else {
         GlobalBaseReg =
-          RegInfo->createVirtualRegister(&PPC::GPRC_NOR0RegClass);
+          RegInfo->createVirtualRegister(&PPC::GPRC_and_GPRC_NOR0RegClass);
         BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MovePCtoLR));
         BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR), GlobalBaseReg);
       }
     } else {
-      GlobalBaseReg = RegInfo->createVirtualRegister(&PPC::G8RC_NOX0RegClass);
+      GlobalBaseReg = RegInfo->createVirtualRegister(&PPC::G8RC_and_G8RC_NOX0RegClass);
       BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MovePCtoLR8));
       BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR8), GlobalBaseReg);
     }

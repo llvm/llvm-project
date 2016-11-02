@@ -1047,7 +1047,7 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                                const Constant *&C) {
   auto Source = StringValue.str(); // The source has to be null terminated.
   SMDiagnostic Err;
-  C = parseConstantValue(Source.c_str(), Err, *MF.getFunction()->getParent(),
+  C = parseConstantValue(Source, Err, *MF.getFunction()->getParent(),
                          &PFS.IRSlots);
   if (!C)
     return error(Loc + Err.getColumnNo(), Err.getMessage());

@@ -282,7 +282,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}store_v3i32:
 ; GCN-DAG: buffer_store_dwordx2
-; GCN-DAG: buffer_store_dword
+; GCN-DAG: buffer_store_dword v
 
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}},
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XY}}, {{T[0-9]+\.[XYZW]}},
@@ -399,6 +399,5 @@ entry:
   store i32 2, i32 addrspace(1)* %arrayidx6, align 4
   ret void
 }
-
 
 attributes #0 = { nounwind }

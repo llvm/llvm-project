@@ -14,7 +14,7 @@ no_suffix:
 suffix:
 	bx lr
 
-// CHECK-EABI: error: unexpected token in directive
+// CHECK-EABI: error: unexpected token in '.thumb_func' directive
 // CHECK-EABI: 	.thumb_func suffix
 // CHECK-EABI:              ^
 

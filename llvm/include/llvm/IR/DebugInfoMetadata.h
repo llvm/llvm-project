@@ -1951,6 +1951,7 @@ public:
     const uint64_t *Op;
 
   public:
+    ExprOperand() : Op(nullptr) {};
     explicit ExprOperand(const uint64_t *Op) : Op(Op) {}
 
     const uint64_t *get() const { return Op; }
@@ -1977,6 +1978,7 @@ public:
     ExprOperand Op;
 
   public:
+    expr_op_iterator() = default;
     explicit expr_op_iterator(element_iterator I) : Op(I) {}
 
     element_iterator getBase() const { return Op.get(); }

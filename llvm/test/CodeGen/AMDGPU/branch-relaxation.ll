@@ -475,5 +475,59 @@ ret:
   ret void
 }
 
+; GCN-LABEL: {{^}}long_branch_hang:
+; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 6
+; GCN-NEXT: s_cbranch_scc1 [[LONG_BR_0:BB[0-9]+_[0-9]+]]
+
+; GCN: s_add_u32 vcc_lo, vcc_lo, [[LONG_BR_DEST0:BB[0-9]+_[0-9]+]]-(
+; GCN: s_setpc_b64
+
+; GCN-NEXT: [[LONG_BR_0]]:
+; GCN: s_setpc_b64
+
+; GCN-NEXT: [[LONG_BR_DEST0]]:
+; GCN-DAG: v_cmp_lt_i32
+; GCN-DAG: v_cmp_gt_i32
+; GCN: s_cbranch_vccnz
+
+; GCN: s_setpc_b64
+; GCN: s_setpc_b64
+
+; GCN: s_cmp_eq_u32
+; GCN-NEXT: s_cbranch_scc0
+; GCN: s_setpc_b64
+
+; GCN: s_endpgm
+define amdgpu_kernel void @long_branch_hang(i32 addrspace(1)* nocapture %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i64 %arg5) #0 {
+bb:
+  %tmp = icmp slt i32 %arg2, 9
+  %tmp6 = icmp eq i32 %arg1, 0
+  %tmp7 = icmp sgt i32 %arg4, 0
+  %tmp8 = icmp sgt i32 %arg4, 5
+  br i1 %tmp8, label %bb9, label %bb13
+
+bb9:                                              ; preds = %bb
+  %tmp10 = and i1 %tmp7, %tmp
+  %tmp11 = icmp slt i32 %arg3, %arg4
+  %tmp12 = or i1 %tmp11, %tmp7
+  br i1 %tmp12, label %bb19, label %bb14
+
+bb13:                                             ; preds = %bb
+  br i1 %tmp6, label %bb19, label %bb14
+
+bb14:                                             ; preds = %bb13, %bb9
+  %tmp15 = icmp slt i32 %arg3, %arg4
+  %tmp16 = or i1 %tmp15, %tmp
+  %tmp17 = and i1 %tmp6, %tmp16
+  %tmp18 = zext i1 %tmp17 to i32
+  br label %bb19
+
+bb19:                                             ; preds = %bb14, %bb13, %bb9
+  %tmp20 = phi i32 [ undef, %bb9 ], [ undef, %bb13 ], [ %tmp18, %bb14 ]
+  %tmp21 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %arg5
+  store i32 %tmp20, i32 addrspace(1)* %tmp21, align 4
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

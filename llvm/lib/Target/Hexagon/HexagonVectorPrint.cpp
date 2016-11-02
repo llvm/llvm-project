@@ -80,7 +80,7 @@ static void addAsmInstr(MachineBasicBlock *MBB, unsigned Reg,
                         MachineFunction &Fn) {
 
   std::string VDescStr = ".long 0x1dffe0" + getStringReg(Reg);
-  const char *cstr = Fn.createExternalSymbolName(VDescStr.c_str());
+  const char *cstr = Fn.createExternalSymbolName(VDescStr);
   unsigned ExtraInfo = InlineAsm::Extra_HasSideEffects;
   BuildMI(*MBB, I, DL, QII->get(TargetOpcode::INLINEASM))
     .addExternalSymbol(cstr)

@@ -1690,9 +1690,9 @@ TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
   ClassOptions CO =
       ClassOptions::ForwardReference | getCommonClassOptions(Ty);
   std::string FullName = getFullyQualifiedName(Ty);
-  TypeIndex FwdDeclTI = TypeTable.writeKnownType(ClassRecord(
-      Kind, 0, CO, HfaKind::None, WindowsRTClassKind::None, TypeIndex(),
-      TypeIndex(), TypeIndex(), 0, FullName, Ty->getIdentifier()));
+  TypeIndex FwdDeclTI = TypeTable.writeKnownType(
+      ClassRecord(Kind, 0, CO, TypeIndex(), TypeIndex(), TypeIndex(), 0,
+                  FullName, Ty->getIdentifier()));
   if (!Ty->isForwardDecl())
     DeferredCompleteTypes.push_back(Ty);
   return FwdDeclTI;
@@ -1716,9 +1716,9 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
 
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
 
-  TypeIndex ClassTI = TypeTable.writeKnownType(ClassRecord(
-      Kind, FieldCount, CO, HfaKind::None, WindowsRTClassKind::None, FieldTI,
-      TypeIndex(), VShapeTI, SizeInBytes, FullName, Ty->getIdentifier()));
+  TypeIndex ClassTI = TypeTable.writeKnownType(
+      ClassRecord(Kind, FieldCount, CO, FieldTI, TypeIndex(), VShapeTI,
+                  SizeInBytes, FullName, Ty->getIdentifier()));
 
   TypeTable.writeKnownType(UdtSourceLineRecord(
       ClassTI, TypeTable.writeKnownType(StringIdRecord(
@@ -1734,8 +1734,8 @@ TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
   ClassOptions CO =
       ClassOptions::ForwardReference | getCommonClassOptions(Ty);
   std::string FullName = getFullyQualifiedName(Ty);
-  TypeIndex FwdDeclTI = TypeTable.writeKnownType(UnionRecord(
-      0, CO, HfaKind::None, TypeIndex(), 0, FullName, Ty->getIdentifier()));
+  TypeIndex FwdDeclTI = TypeTable.writeKnownType(
+      UnionRecord(0, CO, TypeIndex(), 0, FullName, Ty->getIdentifier()));
   if (!Ty->isForwardDecl())
     DeferredCompleteTypes.push_back(Ty);
   return FwdDeclTI;
@@ -1755,9 +1755,8 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
   std::string FullName = getFullyQualifiedName(Ty);
 
-  TypeIndex UnionTI = TypeTable.writeKnownType(
-      UnionRecord(FieldCount, CO, HfaKind::None, FieldTI, SizeInBytes, FullName,
-                  Ty->getIdentifier()));
+  TypeIndex UnionTI = TypeTable.writeKnownType(UnionRecord(
+      FieldCount, CO, FieldTI, SizeInBytes, FullName, Ty->getIdentifier()));
 
   TypeTable.writeKnownType(UdtSourceLineRecord(
       UnionTI, TypeTable.writeKnownType(StringIdRecord(
@@ -1858,11 +1857,10 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
       if (Introduced)
         VFTableOffset = SP->getVirtualIndex() * getPointerSizeInBytes();
 
-      Methods.push_back(
-          OneMethodRecord(MethodType, translateMethodKindFlags(SP, Introduced),
-                          translateMethodOptionFlags(SP),
-                          translateAccessFlags(Ty->getTag(), SP->getFlags()),
-                          VFTableOffset, Name));
+      Methods.push_back(OneMethodRecord(
+          MethodType, translateAccessFlags(Ty->getTag(), SP->getFlags()),
+          translateMethodKindFlags(SP, Introduced),
+          translateMethodOptionFlags(SP), VFTableOffset, Name));
       MemberCount++;
     }
     assert(Methods.size() > 0 && "Empty methods map entry");
