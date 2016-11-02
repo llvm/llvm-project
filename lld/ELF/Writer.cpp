@@ -218,6 +218,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // Create singleton output sections.
   Out<ELFT>::Bss =
       make<OutputSection<ELFT>>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
+  Out<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   Out<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
   Out<ELFT>::Got = make<GotSection<ELFT>>();
@@ -237,7 +238,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Out<ELFT>::Interp = make<InterpSection<ELFT>>();
 
   if (!Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic) {
-    Out<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
     Out<ELFT>::DynSymTab =
         make<SymbolTableSection<ELFT>>(*Out<ELFT>::DynStrTab);
   }
@@ -837,11 +837,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
-  // of finalizing other sections. The dynamic string table is
-  // finalized once the .dynamic finalizer has added a few last
-  // strings. See DynamicSection::finalize()
+  // of finalizing other sections.
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::DynStrTab && Sec != Out<ELFT>::Dynamic)
+    if (Sec != Out<ELFT>::Dynamic)
       Sec->finalize();
 
   if (Out<ELFT>::DynSymTab)

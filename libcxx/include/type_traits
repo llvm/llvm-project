@@ -2894,26 +2894,64 @@ namespace __is_construct
 struct __nat {};
 }
 
-#if __has_feature(is_constructible)
+#if !defined(_LIBCPP_CXX03_LANG) && (!__has_feature(is_constructible) || \
+    defined(_LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE))
 
-template <class _Tp, class ..._Args>
-struct _LIBCPP_TYPE_VIS_ONLY is_constructible
-    : public integral_constant<bool, __is_constructible(_Tp, _Args...)>
-    {};
+template <class _Tp, class... _Args>
+struct __libcpp_is_constructible;
 
-#else
+template <class _To, class _From>
+struct __is_invalid_base_to_derived_cast {
+  static_assert(is_reference<_To>::value, "Wrong specialization");
+  using _RawFrom = __uncvref_t<_From>;
+  using _RawTo = __uncvref_t<_To>;
+  static const bool value = __lazy_and<
+        __lazy_not<is_same<_RawFrom, _RawTo>>,
+        is_base_of<_RawFrom, _RawTo>,
+        __lazy_not<__libcpp_is_constructible<_RawTo, _From>>
+  >::value;
+};
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+template <class _To, class _From>
+struct __is_invalid_lvalue_to_rvalue_cast : false_type {
+  static_assert(is_reference<_To>::value, "Wrong specialization");
+};
 
-//      main is_constructible test
-
+template <class _ToRef, class _FromRef>
+struct __is_invalid_lvalue_to_rvalue_cast<_ToRef&&, _FromRef&> {
+  using _RawFrom = __uncvref_t<_FromRef>;
+  using _RawTo = __uncvref_t<_ToRef>;
+  static const bool value = __lazy_and<
+      __lazy_not<is_function<_RawTo>>,
+      __lazy_or<
+        is_same<_RawFrom, _RawTo>,
+        is_base_of<_RawTo, _RawFrom>>
+    >::value;
+};
 
 struct __is_constructible_helper
 {
-    template <class _Tp>
-    static true_type __test_ref(_Tp);
-    template <class>
-    static false_type __test_ref(...);
+    template <class _To>
+    static void __eat(_To);
+
+    // This overload is needed to work around a Clang bug that disallows
+    // static_cast<T&&>(e) for non-reference-compatible types.
+    // Example: static_cast<int&&>(declval<double>());
+    // NOTE: The static_cast implementation below is required to support
+    //  classes with explicit conversion operators.
+    template <class _To, class _From,
+              class = decltype(__eat<_To>(_VSTD::declval<_From>()))>
+    static true_type __test_cast(int);
+
+    template <class _To, class _From,
+              class = decltype(static_cast<_To>(_VSTD::declval<_From>()))>
+    static integral_constant<bool,
+        !__is_invalid_base_to_derived_cast<_To, _From>::value &&
+        !__is_invalid_lvalue_to_rvalue_cast<_To, _From>::value
+    > __test_cast(long);
+
+    template <class, class>
+    static false_type __test_cast(...);
 
     template <class _Tp, class ..._Args,
         class = decltype(_Tp(_VSTD::declval<_Args>()...))>
@@ -2961,24 +2999,27 @@ struct __libcpp_is_constructible<_Tp, _A0>
 template <class _Tp, class _A0>
 struct __libcpp_is_constructible<_Tp&, _A0>
     : public decltype(__is_constructible_helper::
-    __test_ref<_Tp&>(_VSTD::declval<_A0>()))
+    __test_cast<_Tp&, _A0>(0))
 {};
 
 template <class _Tp, class _A0>
 struct __libcpp_is_constructible<_Tp&&, _A0>
     : public decltype(__is_constructible_helper::
-    __test_ref<_Tp&&>(_VSTD::declval<_A0>()))
+    __test_cast<_Tp&&, _A0>(0))
 {};
 
-//      is_constructible entry point
+#endif
 
+#if __has_feature(is_constructible)
+template <class _Tp, class ..._Args>
+struct _LIBCPP_TYPE_VIS_ONLY is_constructible
+    : public integral_constant<bool, __is_constructible(_Tp, _Args...)>
+    {};
+#elif !defined(_LIBCPP_CXX03_LANG)
 template <class _Tp, class... _Args>
 struct _LIBCPP_TYPE_VIS_ONLY is_constructible
     : public __libcpp_is_constructible<_Tp, _Args...>::type {};
-
-
-#else  // _LIBCPP_HAS_NO_VARIADICS
-
+#else
 // template <class T> struct is_constructible0;
 
 //      main is_constructible0 test
@@ -3151,8 +3192,8 @@ struct __is_constructible2_imp<false, _Ap[], _A0, _A1>
     : public false_type
     {};
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // __has_feature(is_constructible)
+#endif // __has_feature(is_constructible)
+
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
 template <class _Tp, class ..._Args> _LIBCPP_CONSTEXPR bool is_constructible_v

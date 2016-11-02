@@ -61,6 +61,7 @@ extern "C" {
 // basis. See xray_trampoline_*.S files for implementations.
 extern void __xray_FunctionEntry();
 extern void __xray_FunctionExit();
+extern void __xray_FunctionTailExit();
 }
 
 #endif
