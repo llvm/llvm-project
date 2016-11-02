@@ -87,9 +87,6 @@ public:
   Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Error
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
     m_current_value = m_default_value;
@@ -108,18 +105,15 @@ public:
   const Flags &GetOptions() const { return m_options; }
 
   const char *operator=(const char *value) {
-    SetCurrentValue(llvm::StringRef::withNullAsEmpty(value));
+    SetCurrentValue(value);
     return m_current_value.c_str();
   }
 
   const char *GetCurrentValue() const { return m_current_value.c_str(); }
-  llvm::StringRef GetCurrentValueAsRef() const { return m_current_value; }
 
   const char *GetDefaultValue() const { return m_default_value.c_str(); }
-  llvm::StringRef GetDefaultValueAsRef() const { return m_default_value; }
 
-  Error SetCurrentValue(const char *) = delete;
-  Error SetCurrentValue(llvm::StringRef value);
+  Error SetCurrentValue(const char *value);
 
   Error AppendToCurrentValue(const char *value);
 

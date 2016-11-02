@@ -25,13 +25,14 @@ public:
     virtual void HandleAsyncMisc(llvm::StringRef data) = 0;
     virtual void HandleStopReply() = 0;
 
-    // =========================================================================
-    /// Process asynchronously-received structured data.
+    //
+    /// Processes async structured data.
     ///
-    /// @param[in] data
-    ///   The complete data packet, expected to start with JSON-async.
-    // =========================================================================
-    virtual void HandleAsyncStructuredDataPacket(llvm::StringRef data) = 0;
+    /// @return
+    ///    true if the data was handled; otherwise, false.
+    //
+    virtual bool
+    HandleAsyncStructuredData(const StructuredData::ObjectSP &object_sp) = 0;
   };
 
   GDBRemoteClientBase(const char *comm_name, const char *listener_name);
@@ -43,6 +44,13 @@ public:
   lldb::StateType SendContinuePacketAndWaitForResponse(
       ContinueDelegate &delegate, const UnixSignals &signals,
       llvm::StringRef payload, StringExtractorGDBRemote &response);
+
+  PacketResult SendPacketAndWaitForResponse(const char *payload, size_t len,
+                                            StringExtractorGDBRemote &response,
+                                            bool send_async) {
+    return SendPacketAndWaitForResponse(llvm::StringRef(payload, len), response,
+                                        send_async);
+  }
 
   PacketResult SendPacketAndWaitForResponse(llvm::StringRef payload,
                                             StringExtractorGDBRemote &response,

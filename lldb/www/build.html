@@ -287,16 +287,9 @@
               ninja on your system. To build using ninja:
             </p>
             <code>
-              &gt; cmake ../llvm -G Ninja
+              &gt; cmake .. -G Ninja
               <br />&gt; ninja lldb
               <br />&gt; ninja check-lldb
-            </code>
-            <p>
-              If you want to debug the lldb that you're building -- that is, build it with debug info enabled -- pass
-              two additional arguments to cmake before running ninja:
-            </p>
-            <code>
-              &gt; cmake ../llvm -G Ninja -DLLDB_EXPORT_ALL_SYMBOLS=1 -DCMAKE_BUILD_TYPE=Debug
             </code>
             <h3>Using CMake + Unix Makefiles</h3>
             <p>If you do not have Ninja, you can still use CMake to generate Unix Makefiles that build LLDB:</p>

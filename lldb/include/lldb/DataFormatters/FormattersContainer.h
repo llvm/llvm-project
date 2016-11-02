@@ -259,7 +259,7 @@ protected:
     MapIterator pos, end = m_format_map.map().end();
     for (pos = m_format_map.map().begin(); pos != end; pos++) {
       lldb::RegularExpressionSP regex = pos->first;
-      if (type.GetStringRef() == regex->GetText()) {
+      if (::strcmp(type.AsCString(), regex->GetText()) == 0) {
         m_format_map.map().erase(pos);
         if (m_format_map.listener)
           m_format_map.listener->Changed();
@@ -295,17 +295,19 @@ protected:
     if (regex.get() == nullptr)
       return lldb::TypeNameSpecifierImplSP();
     return lldb::TypeNameSpecifierImplSP(
-        new TypeNameSpecifierImpl(regex->GetText().str().c_str(), true));
+        new TypeNameSpecifierImpl(regex->GetText(), true));
   }
 
   bool Get_Impl(ConstString key, MapValueType &value,
                 lldb::RegularExpressionSP *dummy) {
-    llvm::StringRef key_str = key.GetStringRef();
+    const char *key_cstr = key.AsCString();
+    if (!key_cstr)
+      return false;
     std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
     MapIterator pos, end = m_format_map.map().end();
     for (pos = m_format_map.map().begin(); pos != end; pos++) {
       lldb::RegularExpressionSP regex = pos->first;
-      if (regex->Execute(key_str)) {
+      if (regex->Execute(key_cstr)) {
         value = pos->second;
         return true;
       }
@@ -319,7 +321,7 @@ protected:
     MapIterator pos, end = m_format_map.map().end();
     for (pos = m_format_map.map().begin(); pos != end; pos++) {
       lldb::RegularExpressionSP regex = pos->first;
-      if (regex->GetText() == key.GetStringRef()) {
+      if (strcmp(regex->GetText(), key.AsCString()) == 0) {
         value = pos->second;
         return true;
       }

@@ -19,8 +19,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Utils.h"
 
-#include "llvm/ADT/ArrayRef.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -69,15 +67,19 @@ static OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "element-count", 'Z',
      OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,
      "Treat the result of the expression as if its type is an array of this "
-     "many values."}};
+     "many values."},
+    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}};
 
-llvm::ArrayRef<OptionDefinition>
-OptionGroupValueObjectDisplay::GetDefinitions() {
-  return llvm::makeArrayRef(g_option_table);
+uint32_t OptionGroupValueObjectDisplay::GetNumDefinitions() {
+  return llvm::array_lengthof(g_option_table);
+}
+
+const OptionDefinition *OptionGroupValueObjectDisplay::GetDefinitions() {
+  return g_option_table;
 }
 
 Error OptionGroupValueObjectDisplay::SetOptionValue(
-    uint32_t option_idx, llvm::StringRef option_arg,
+    uint32_t option_idx, const char *option_arg,
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = g_option_table[option_idx].short_option;
@@ -111,51 +113,43 @@ Error OptionGroupValueObjectDisplay::SetOptionValue(
     break;
 
   case 'D':
-    if (option_arg.getAsInteger(0, max_depth)) {
-      max_depth = UINT32_MAX;
-      error.SetErrorStringWithFormat("invalid max depth '%s'",
-                                     option_arg.str().c_str());
-    }
+    max_depth = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0, &success);
+    if (!success)
+      error.SetErrorStringWithFormat("invalid max depth '%s'", option_arg);
     break;
 
   case 'Z':
-    if (option_arg.getAsInteger(0, elem_count)) {
-      elem_count = UINT32_MAX;
-      error.SetErrorStringWithFormat("invalid element count '%s'",
-                                     option_arg.str().c_str());
-    }
+    elem_count = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0, &success);
+    if (!success)
+      error.SetErrorStringWithFormat("invalid element count '%s'", option_arg);
     break;
 
   case 'P':
-    if (option_arg.getAsInteger(0, ptr_depth)) {
-      ptr_depth = 0;
-      error.SetErrorStringWithFormat("invalid pointer depth '%s'",
-                                     option_arg.str().c_str());
-    }
+    ptr_depth = StringConvert::ToUInt32(option_arg, 0, 0, &success);
+    if (!success)
+      error.SetErrorStringWithFormat("invalid pointer depth '%s'", option_arg);
     break;
 
   case 'Y':
-    if (option_arg.empty())
+    if (option_arg) {
+      no_summary_depth = StringConvert::ToUInt32(option_arg, 0, 0, &success);
+      if (!success)
+        error.SetErrorStringWithFormat("invalid pointer depth '%s'",
+                                       option_arg);
+    } else
       no_summary_depth = 1;
-    else if (option_arg.getAsInteger(0, no_summary_depth)) {
-      no_summary_depth = 0;
-      error.SetErrorStringWithFormat("invalid pointer depth '%s'",
-                                     option_arg.str().c_str());
-    }
     break;
 
   case 'S':
     use_synth = Args::StringToBoolean(option_arg, true, &success);
     if (!success)
-      error.SetErrorStringWithFormat("invalid synthetic-type '%s'",
-                                     option_arg.str().c_str());
+      error.SetErrorStringWithFormat("invalid synthetic-type '%s'", option_arg);
     break;
 
   case 'V':
     run_validator = Args::StringToBoolean(option_arg, true, &success);
     if (!success)
-      error.SetErrorStringWithFormat("invalid validate '%s'",
-                                     option_arg.str().c_str());
+      error.SetErrorStringWithFormat("invalid validate '%s'", option_arg);
     break;
 
   default:

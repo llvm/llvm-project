@@ -57,9 +57,10 @@
 typedef unsigned short mode_t;
 
 // pyconfig.h typedefs this.  We require python headers to be included before
-// any LLDB headers, but there's no way to prevent python's pid_t definition
-// from leaking, so this is the best option.
-#ifndef NO_PID_T
+// any
+// LLDB headers, but there's no way to prevent python's pid_t definition from
+// leaking, so this is the best option.
+#ifndef Py_CONFIG_H
 typedef uint32_t pid_t;
 #endif
 
@@ -68,10 +69,7 @@ typedef uint32_t pid_t;
 #define STDERR_FILENO 2
 
 #define S_IFDIR _S_IFDIR
-
-#ifndef S_ISDIR
 #define S_ISDIR(mode) (((mode)&S_IFMT) == S_IFDIR)
-#endif
 
 #endif // _MSC_VER
 

@@ -92,9 +92,6 @@ public:
   virtual Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
-  Error
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   virtual bool Clear() = 0;
 
@@ -301,7 +298,7 @@ public:
 
   const char *GetStringValue(const char *fail_value = nullptr) const;
 
-  bool SetStringValue(llvm::StringRef new_value);
+  bool SetStringValue(const char *new_value);
 
   uint64_t GetUInt64Value(uint64_t fail_value = 0) const;
 

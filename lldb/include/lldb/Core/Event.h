@@ -59,8 +59,6 @@ public:
 
   EventDataBytes(const char *cstr);
 
-  EventDataBytes(llvm::StringRef str);
-
   EventDataBytes(const void *src, size_t src_len);
 
   ~EventDataBytes() override;

@@ -36,21 +36,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static OptionDefinition g_log_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "file",       'f', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFilename, "Set the destination file to log to." },
-  { LLDB_OPT_SET_1, false, "threadsafe", 't', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable thread safe logging to avoid interweaved log lines." },
-  { LLDB_OPT_SET_1, false, "verbose",    'v', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable verbose logging." },
-  { LLDB_OPT_SET_1, false, "debug",      'g', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable debug logging." },
-  { LLDB_OPT_SET_1, false, "sequence",   's', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with an increasing integer sequence id." },
-  { LLDB_OPT_SET_1, false, "timestamp",  'T', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with a timestamp." },
-  { LLDB_OPT_SET_1, false, "pid-tid",    'p', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with the process and thread ID that generates the log line." },
-  { LLDB_OPT_SET_1, false, "thread-name",'n', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with the thread name for the thread that generates the log line." },
-  { LLDB_OPT_SET_1, false, "stack",      'S', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Append a stack backtrace to each log line." },
-  { LLDB_OPT_SET_1, false, "append",     'a', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Append to the log file instead of overwriting." },
-    // clang-format on
-};
-
 class CommandObjectLogEnable : public CommandObjectParsed {
 public:
   //------------------------------------------------------------------
@@ -166,9 +151,11 @@ public:
       log_options = 0;
     }
 
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_log_options);
-    }
+    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+
+    // Options table: Required for subclasses of Options.
+
+    static OptionDefinition g_option_table[];
 
     // Instance variables to hold the values for command options.
 
@@ -182,28 +169,42 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
-      return false;
+    } else {
+      std::string channel(args.GetArgumentAtIndex(0));
+      args.Shift(); // Shift off the channel
+      char log_file[PATH_MAX];
+      if (m_options.log_file)
+        m_options.log_file.GetPath(log_file, sizeof(log_file));
+      else
+        log_file[0] = '\0';
+      bool success = m_interpreter.GetDebugger().EnableLog(
+          channel.c_str(), args.GetConstArgumentVector(), log_file,
+          m_options.log_options, result.GetErrorStream());
+      if (success)
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      else
+        result.SetStatus(eReturnStatusFailed);
     }
-
-    // Store into a std::string since we're about to shift the channel off.
-    std::string channel = args.GetArgumentAtIndex(0);
-    args.Shift(); // Shift off the channel
-    char log_file[PATH_MAX];
-    if (m_options.log_file)
-      m_options.log_file.GetPath(log_file, sizeof(log_file));
-    else
-      log_file[0] = '\0';
-    bool success = m_interpreter.GetDebugger().EnableLog(
-        channel.c_str(), args.GetConstArgumentVector(), log_file,
-        m_options.log_options, result.GetErrorStream());
-    if (success)
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    else
-      result.SetStatus(eReturnStatusFailed);
     return result.Succeeded();
   }
 
   CommandOptions m_options;
+};
+
+OptionDefinition CommandObjectLogEnable::CommandOptions::g_option_table[] = {
+    // clang-format off
+  {LLDB_OPT_SET_1, false, "file",       'f', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFilename, "Set the destination file to log to."},
+  {LLDB_OPT_SET_1, false, "threadsafe", 't', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable thread safe logging to avoid interweaved log lines."},
+  {LLDB_OPT_SET_1, false, "verbose",    'v', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable verbose logging."},
+  {LLDB_OPT_SET_1, false, "debug",      'g', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable debug logging."},
+  {LLDB_OPT_SET_1, false, "sequence",   's', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with an increasing integer sequence id."},
+  {LLDB_OPT_SET_1, false, "timestamp",  'T', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with a timestamp."},
+  {LLDB_OPT_SET_1, false, "pid-tid",    'p', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with the process and thread ID that generates the log line."},
+  {LLDB_OPT_SET_1, false, "thread-name",'n', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with the thread name for the thread that generates the log line."},
+  {LLDB_OPT_SET_1, false, "stack",      'S', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Append a stack backtrace to each log line."},
+  {LLDB_OPT_SET_1, false, "append",     'a', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Append to the log file instead of overwriting."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+    // clang-format on
 };
 
 class CommandObjectLogDisable : public CommandObjectParsed {
@@ -242,32 +243,33 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    if (args.empty()) {
+    const size_t argc = args.GetArgumentCount();
+    if (argc == 0) {
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
-      return false;
-    }
-
-    Log::Callbacks log_callbacks;
-
-    const std::string channel = args.GetArgumentAtIndex(0);
-    args.Shift(); // Shift off the channel
-    if (Log::GetLogChannelCallbacks(ConstString(channel), log_callbacks)) {
-      log_callbacks.disable(args.GetConstArgumentVector(),
-                            &result.GetErrorStream());
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    } else if (channel == "all") {
-      Log::DisableAllLogChannels(&result.GetErrorStream());
     } else {
-      LogChannelSP log_channel_sp(LogChannel::FindPlugin(channel.data()));
-      if (log_channel_sp) {
-        log_channel_sp->Disable(args.GetConstArgumentVector(),
-                                &result.GetErrorStream());
+      Log::Callbacks log_callbacks;
+
+      std::string channel(args.GetArgumentAtIndex(0));
+      args.Shift(); // Shift off the channel
+      if (Log::GetLogChannelCallbacks(ConstString(channel.c_str()),
+                                      log_callbacks)) {
+        log_callbacks.disable(args.GetConstArgumentVector(),
+                              &result.GetErrorStream());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      } else
-        result.AppendErrorWithFormat("Invalid log channel '%s'.\n",
-                                     channel.data());
+      } else if (channel == "all") {
+        Log::DisableAllLogChannels(&result.GetErrorStream());
+      } else {
+        LogChannelSP log_channel_sp(LogChannel::FindPlugin(channel.c_str()));
+        if (log_channel_sp) {
+          log_channel_sp->Disable(args.GetConstArgumentVector(),
+                                  &result.GetErrorStream());
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
+        } else
+          result.AppendErrorWithFormat("Invalid log channel '%s'.\n",
+                                       args.GetArgumentAtIndex(0));
+      }
     }
     return result.Succeeded();
   }
@@ -302,28 +304,30 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    if (args.empty()) {
+    const size_t argc = args.GetArgumentCount();
+    if (argc == 0) {
       Log::ListAllLogChannels(&result.GetOutputStream());
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      for (auto &entry : args.entries()) {
+      for (size_t i = 0; i < argc; ++i) {
         Log::Callbacks log_callbacks;
 
-        if (Log::GetLogChannelCallbacks(ConstString(entry.ref),
+        std::string channel(args.GetArgumentAtIndex(i));
+        if (Log::GetLogChannelCallbacks(ConstString(channel.c_str()),
                                         log_callbacks)) {
           log_callbacks.list_categories(&result.GetOutputStream());
           result.SetStatus(eReturnStatusSuccessFinishResult);
-        } else if (entry.ref == "all") {
+        } else if (channel == "all") {
           Log::ListAllLogChannels(&result.GetOutputStream());
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          LogChannelSP log_channel_sp(LogChannel::FindPlugin(entry.c_str()));
+          LogChannelSP log_channel_sp(LogChannel::FindPlugin(channel.c_str()));
           if (log_channel_sp) {
             log_channel_sp->ListCategories(&result.GetOutputStream());
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
           } else
             result.AppendErrorWithFormat("Invalid log channel '%s'.\n",
-                                         entry.c_str());
+                                         args.GetArgumentAtIndex(0));
         }
       }
     }
@@ -347,41 +351,44 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
+    const size_t argc = args.GetArgumentCount();
     result.SetStatus(eReturnStatusFailed);
 
-    if (args.GetArgumentCount() == 1) {
-      llvm::StringRef sub_command = args.GetArgumentAtIndex(0);
+    if (argc == 1) {
+      const char *sub_command = args.GetArgumentAtIndex(0);
 
-      if (sub_command.equals_lower("enable")) {
+      if (strcasecmp(sub_command, "enable") == 0) {
         Timer::SetDisplayDepth(UINT32_MAX);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      } else if (sub_command.equals_lower("disable")) {
+      } else if (strcasecmp(sub_command, "disable") == 0) {
         Timer::DumpCategoryTimes(&result.GetOutputStream());
         Timer::SetDisplayDepth(0);
         result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else if (sub_command.equals_lower("dump")) {
+      } else if (strcasecmp(sub_command, "dump") == 0) {
         Timer::DumpCategoryTimes(&result.GetOutputStream());
         result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else if (sub_command.equals_lower("reset")) {
+      } else if (strcasecmp(sub_command, "reset") == 0) {
         Timer::ResetCategoryTimes();
         result.SetStatus(eReturnStatusSuccessFinishResult);
       }
-    } else if (args.GetArgumentCount() == 2) {
-      llvm::StringRef sub_command = args.GetArgumentAtIndex(0);
-      llvm::StringRef param = args.GetArgumentAtIndex(1);
+    } else if (argc == 2) {
+      const char *sub_command = args.GetArgumentAtIndex(0);
 
-      if (sub_command.equals_lower("enable")) {
-        uint32_t depth;
-        if (param.consumeInteger(0, depth)) {
-          result.AppendError(
-              "Could not convert enable depth to an unsigned integer.");
-        } else {
+      if (strcasecmp(sub_command, "enable") == 0) {
+        bool success;
+        uint32_t depth =
+            StringConvert::ToUInt32(args.GetArgumentAtIndex(1), 0, 0, &success);
+        if (success) {
           Timer::SetDisplayDepth(depth);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        }
-      } else if (sub_command.equals_lower("increment")) {
+        } else
+          result.AppendError(
+              "Could not convert enable depth to an unsigned integer.");
+      }
+      if (strcasecmp(sub_command, "increment") == 0) {
         bool success;
-        bool increment = Args::StringToBoolean(param, false, &success);
+        bool increment =
+            Args::StringToBoolean(args.GetArgumentAtIndex(1), false, &success);
         if (success) {
           Timer::SetQuiet(!increment);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

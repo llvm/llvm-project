@@ -417,7 +417,6 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = m_getopt_table[option_idx].val;
-  auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
   switch (short_option) {
   case 's': // Stop at program entry point
@@ -486,7 +485,7 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
   {
     bool success;
     const bool disable_aslr_arg =
-        Args::StringToBoolean(option_strref, true, &success);
+        Args::StringToBoolean(option_arg, true, &success);
     if (success)
       disable_aslr = disable_aslr_arg ? eLazyBoolYes : eLazyBoolNo;
     else
@@ -499,8 +498,7 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
   case 'X': // shell expand args.
   {
     bool success;
-    const bool expand_args =
-        Args::StringToBoolean(option_strref, true, &success);
+    const bool expand_args = Args::StringToBoolean(option_arg, true, &success);
     if (success)
       launch_info.SetShellExpandArguments(expand_args);
     else
@@ -518,8 +516,7 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
     break;
 
   case 'v':
-    launch_info.GetEnvironmentEntries().AppendArgument(
-        llvm::StringRef::withNullAsEmpty(option_arg));
+    launch_info.GetEnvironmentEntries().AppendArgument(option_arg);
     break;
 
   default:
@@ -530,7 +527,7 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
   return error;
 }
 
-static OptionDefinition g_process_launch_options[] = {
+OptionDefinition ProcessLaunchCommandOptions::g_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "stop-at-entry", 's', OptionParser::eNoArgument,
      nullptr, nullptr, 0, eArgTypeNone,
      "Stop at the entry point of the program when launching a process."},
@@ -577,11 +574,7 @@ static OptionDefinition g_process_launch_options[] = {
     {LLDB_OPT_SET_4, false, "shell-expand-args", 'X',
      OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
      "Set whether to shell expand arguments to the process when launching."},
-};
-
-llvm::ArrayRef<OptionDefinition> ProcessLaunchCommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_process_launch_options);
-}
+    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}};
 
 bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
   if (m_name_match_type == eNameMatchIgnore || process_name == nullptr)

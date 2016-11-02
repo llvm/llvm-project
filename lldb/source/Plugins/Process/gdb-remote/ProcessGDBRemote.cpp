@@ -479,9 +479,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     const int packet_len =
         ::snprintf(packet, sizeof(packet), "qRegisterInfo%x", reg_num);
     assert(packet_len < (int)sizeof(packet));
-    UNUSED_IF_ASSERT_DISABLED(packet_len);
     StringExtractorGDBRemote response;
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(packet, packet_len, response,
+                                                false) ==
         GDBRemoteCommunication::PacketResult::Success) {
       response_type = response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
@@ -2575,7 +2575,8 @@ Error ProcessGDBRemote::DoDestroy() {
       bool send_async = true;
       GDBRemoteCommunication::ScopedTimeout(m_gdb_comm, 3);
 
-      if (m_gdb_comm.SendPacketAndWaitForResponse("k", response, send_async) ==
+      if (m_gdb_comm.SendPacketAndWaitForResponse("k", 1, response,
+                                                  send_async) ==
           GDBRemoteCommunication::PacketResult::Success) {
         char packet_cmd = response.GetChar(0);
 
@@ -2742,9 +2743,9 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                           binary_memory_read ? 'x' : 'm', (uint64_t)addr,
                           (uint64_t)size);
   assert(packet_len + 1 < (int)sizeof(packet));
-  UNUSED_IF_ASSERT_DISABLED(packet_len);
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, true) ==
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, packet_len, response,
+                                              true) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsNormalResponse()) {
       error.Clear();
@@ -2796,8 +2797,8 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
   packet.PutBytesAsRawHex8(buf, size, endian::InlHostByteOrder(),
                            endian::InlHostByteOrder());
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                              true) ==
+  if (m_gdb_comm.SendPacketAndWaitForResponse(
+          packet.GetData(), packet.GetSize(), response, true) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsOKResponse()) {
       error.Clear();
@@ -3842,8 +3843,8 @@ ProcessGDBRemote::GetExtendedInfoForThread(lldb::tid_t tid) {
 
     StringExtractorGDBRemote response;
     response.SetResponseValidatorToJSON();
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                                false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(
+            packet.GetData(), packet.GetSize(), response, false) ==
         GDBRemoteCommunication::PacketResult::Success) {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();
@@ -3913,8 +3914,8 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender(
 
     StringExtractorGDBRemote response;
     response.SetResponseValidatorToJSON();
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                                false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(
+            packet.GetData(), packet.GetSize(), response, false) ==
         GDBRemoteCommunication::PacketResult::Success) {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();
@@ -3946,8 +3947,8 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
 
     StringExtractorGDBRemote response;
     response.SetResponseValidatorToJSON();
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                                false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(
+            packet.GetData(), packet.GetSize(), response, false) ==
         GDBRemoteCommunication::PacketResult::Success) {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();
@@ -4161,7 +4162,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             alt_name.SetString(value);
           } else if (name == "encoding") {
             encoding_set = true;
-            reg_info.encoding = Args::StringToEncoding(value, eEncodingUint);
+            reg_info.encoding =
+                Args::StringToEncoding(value.data(), eEncodingUint);
           } else if (name == "format") {
             format_set = true;
             Format format = eFormatInvalid;
@@ -4200,7 +4202,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
                 StringConvert::ToUInt32(value.data(), LLDB_INVALID_REGNUM, 0);
           } else if (name == "generic") {
             reg_info.kinds[eRegisterKindGeneric] =
-                Args::StringToGenericRegister(value);
+                Args::StringToGenericRegister(value.data());
           } else if (name == "value_regnums") {
             SplitCommaSeparatedRegisterNumberString(value, value_regs, 0);
           } else if (name == "invalidate_regnums") {
@@ -4654,8 +4656,8 @@ Error ProcessGDBRemote::GetFileLoadAddress(const FileSpec &file,
   packet.PutCStringAsRawHex8(file_path.c_str());
 
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                              false) !=
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
+                                              response, false) !=
       GDBRemoteCommunication::PacketResult::Success)
     return Error("Sending qFileLoadAddress packet failed");
 
@@ -4810,49 +4812,9 @@ void ProcessGDBRemote::HandleStopReply() {
   BuildDynamicRegisterInfo(true);
 }
 
-static const char *const s_async_json_packet_prefix = "JSON-async:";
-
-static StructuredData::ObjectSP
-ParseStructuredDataPacket(llvm::StringRef packet) {
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-
-  if (!packet.consume_front(s_async_json_packet_prefix)) {
-    if (log) {
-      log->Printf(
-          "GDBRemoteCommmunicationClientBase::%s() received $J packet "
-          "but was not a StructuredData packet: packet starts with "
-          "%s",
-          __FUNCTION__,
-          packet.slice(0, strlen(s_async_json_packet_prefix)).str().c_str());
-    }
-    return StructuredData::ObjectSP();
-  }
-
-  // This is an asynchronous JSON packet, destined for a
-  // StructuredDataPlugin.
-  StructuredData::ObjectSP json_sp = StructuredData::ParseJSON(packet);
-  if (log) {
-    if (json_sp) {
-      StreamString json_str;
-      json_sp->Dump(json_str);
-      json_str.Flush();
-      log->Printf("ProcessGDBRemote::%s() "
-                  "received Async StructuredData packet: %s",
-                  __FUNCTION__, json_str.GetString().c_str());
-    } else {
-      log->Printf("ProcessGDBRemote::%s"
-                  "() received StructuredData packet:"
-                  " parse failure",
-                  __FUNCTION__);
-    }
-  }
-  return json_sp;
-}
-
-void ProcessGDBRemote::HandleAsyncStructuredDataPacket(llvm::StringRef data) {
-  auto structured_data_sp = ParseStructuredDataPacket(data);
-  if (structured_data_sp)
-    RouteAsyncStructuredData(structured_data_sp);
+bool ProcessGDBRemote::HandleAsyncStructuredData(
+    const StructuredData::ObjectSP &object_sp) {
+  return RouteAsyncStructuredData(object_sp);
 }
 
 class CommandObjectProcessGDBRemoteSpeedTest : public CommandObjectParsed {
@@ -5062,7 +5024,8 @@ public:
                          "and print the response."
                          "The argument passed to this command will be hex "
                          "encoded into a valid 'qRcmd' packet, sent and the "
-                         "response will be printed.") {}
+                         "response will be printed.",
+                         NULL) {}
 
   ~CommandObjectProcessGDBRemotePacketMonitor() {}
 
@@ -5080,14 +5043,15 @@ public:
       StreamString packet;
       packet.PutCString("qRcmd,");
       packet.PutBytesAsRawHex8(command, strlen(command));
+      const char *packet_cstr = packet.GetString().c_str();
 
       bool send_async = true;
       StringExtractorGDBRemote response;
       process->GetGDBRemote().SendPacketAndWaitForResponse(
-          packet.GetString(), response, send_async);
+          packet_cstr, response, send_async);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       Stream &output_strm = result.GetOutputStream();
-      output_strm.Printf("  packet: %s\n", packet.GetString().c_str());
+      output_strm.Printf("  packet: %s\n", packet_cstr);
       const std::string &response_str = response.GetStringRef();
 
       if (response_str.empty())

@@ -31,13 +31,14 @@ public:
 
   ~OptionGroupString() override;
 
-  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::ArrayRef<OptionDefinition>(&m_option_definition, 1);
+  uint32_t GetNumDefinitions() override { return 1; }
+
+  const OptionDefinition *GetDefinitions() override {
+    return &m_option_definition;
   }
 
-  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+  Error SetOptionValue(uint32_t option_idx, const char *option_value,
                        ExecutionContext *execution_context) override;
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 

@@ -99,8 +99,7 @@ public:
   //------------------------------------------------------------------
   RegularExpression();
 
-  explicit RegularExpression(llvm::StringRef string);
-  explicit RegularExpression(const char *) = delete;
+  explicit RegularExpression(const char *re);
 
   //------------------------------------------------------------------
   /// Destructor.
@@ -132,8 +131,7 @@ public:
   ///     \b true if the regular expression compiles successfully,
   ///     \b false otherwise.
   //------------------------------------------------------------------
-  bool Compile(llvm::StringRef string);
-  bool Compile(const char *) = delete;
+  bool Compile(const char *re);
 
   //------------------------------------------------------------------
   /// Executes a regular expression.
@@ -156,8 +154,7 @@ public:
   ///     \b true if \a string matches the compiled regular
   ///     expression, \b false otherwise.
   //------------------------------------------------------------------
-  bool Execute(llvm::StringRef string, Match *match = nullptr) const;
-  bool Execute(const char *, Match * = nullptr) = delete;
+  bool Execute(const char *string, Match *match = nullptr) const;
 
   size_t GetErrorAsCString(char *err_str, size_t err_str_max_len) const;
 
@@ -179,7 +176,7 @@ public:
   ///     The NULL terminated C string that was used to compile the
   ///     current regular expression
   //------------------------------------------------------------------
-  llvm::StringRef GetText() const;
+  const char *GetText() const;
 
   //------------------------------------------------------------------
   /// Test if valid.

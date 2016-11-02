@@ -82,7 +82,6 @@ public:
   bool IsValid() const;
   static bool IsValid(task_t task);
   static void *ExceptionThread(void *arg);
-  void TaskPortChanged(task_t task);
   task_t TaskPort() const { return m_task; }
   task_t TaskPortForProcessID(DNBError &err, bool force = false);
   static task_t TaskPortForProcessID(pid_t pid, DNBError &err,

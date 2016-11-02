@@ -100,15 +100,12 @@
 		23059A101958B319007B8189 /* SBUnixSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0F1958B319007B8189 /* SBUnixSignals.cpp */; };
 		23059A121958B3B2007B8189 /* SBUnixSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = 23059A111958B37B007B8189 /* SBUnixSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		230EC45B1D63C3BA008DF59F /* ThreadPlanCallOnFunctionExit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 230EC4581D63C3A7008DF59F /* ThreadPlanCallOnFunctionExit.cpp */; };
-		23150FC01DB939F800EA5AB6 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23150FBD1DB939F800EA5AB6 /* CMakeLists.txt */; };
-		23150FCF1DB93BD400EA5AB6 /* TestArm64InstEmulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FC61DB93B8C00EA5AB6 /* TestArm64InstEmulation.cpp */; };
-		23150FD01DB93BDB00EA5AB6 /* Testx86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FCC1DB93BC200EA5AB6 /* Testx86AssemblyInspectionEngine.cpp */; };
-		23150FD21DB93C1600EA5AB6 /* x86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FBE1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.cpp */; };
 		2326CF441BDD643700A5CEAC /* liblldb-core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2689FFCA13353D7A00698AC0 /* liblldb-core.a */; };
 		2326CF491BDD67D800A5CEAC /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF471BDD67C100A5CEAC /* libncurses.dylib */; };
 		2326CF4B1BDD681800A5CEAC /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF4A1BDD681800A5CEAC /* libz.dylib */; };
 		2326CF4D1BDD684B00A5CEAC /* libedit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF4C1BDD684B00A5CEAC /* libedit.dylib */; };
 		2326CF4F1BDD687800A5CEAC /* libpanel.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF4E1BDD687800A5CEAC /* libpanel.dylib */; };
+		2326CF521BDD693B00A5CEAC /* EditlineTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2326CF511BDD693B00A5CEAC /* EditlineTest.cpp */; };
 		232CB615191E00CD00EF39FC /* NativeBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60B191E00CC00EF39FC /* NativeBreakpoint.cpp */; };
 		232CB617191E00CD00EF39FC /* NativeBreakpointList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60D191E00CC00EF39FC /* NativeBreakpointList.cpp */; };
 		232CB619191E00CD00EF39FC /* NativeProcessProtocol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60F191E00CC00EF39FC /* NativeProcessProtocol.cpp */; };
@@ -118,9 +115,13 @@
 		233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */; };
 		236124A41986B4E2004EFC37 /* IOObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A21986B4E2004EFC37 /* IOObject.cpp */; };
 		236124A51986B4E2004EFC37 /* Socket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A31986B4E2004EFC37 /* Socket.cpp */; };
+		2370A3861D66C594000E7BE6 /* GDBRemoteClientBaseTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2370A37D1D66C587000E7BE6 /* GDBRemoteClientBaseTest.cpp */; };
+		2370A3871D66C594000E7BE6 /* GDBRemoteCommunicationClientTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2370A37E1D66C587000E7BE6 /* GDBRemoteCommunicationClientTest.cpp */; };
+		2370A3881D66C594000E7BE6 /* GDBRemoteTestUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2370A37F1D66C587000E7BE6 /* GDBRemoteTestUtils.cpp */; };
 		237211D41D3FD10D008D2754 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
 		2374D7531D4BB2FF005C9575 /* GDBRemoteClientBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2374D74E1D4BB299005C9575 /* GDBRemoteClientBase.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
+		237E0CE31D908F4B00DD3F2B /* StringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660D9F611922A1300958FBD /* StringExtractor.cpp */; };
 		237E0CE41D908F5300DD3F2B /* StringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660D9F611922A1300958FBD /* StringExtractor.cpp */; };
 		238F2B9E1D2C82D0001FF92A /* StructuredDataPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 238F2B9D1D2C82D0001FF92A /* StructuredDataPlugin.cpp */; };
 		238F2BA11D2C835A001FF92A /* StructuredDataPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 238F2B9F1D2C835A001FF92A /* StructuredDataPlugin.h */; };
@@ -128,23 +129,22 @@
 		238F2BA81D2C85FA001FF92A /* StructuredDataDarwinLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 238F2BA61D2C85FA001FF92A /* StructuredDataDarwinLog.cpp */; };
 		238F2BA91D2C85FA001FF92A /* StructuredDataDarwinLog.h in Headers */ = {isa = PBXBuildFile; fileRef = 238F2BA71D2C85FA001FF92A /* StructuredDataDarwinLog.h */; };
 		239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 239481851C59EBDD00DF7168 /* libncurses.dylib */; };
+		239504DE1BDD453200963CEA /* SocketAddressTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */; };
+		239504DF1BDD453200963CEA /* SocketTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93A1BDD332400BA9A93 /* SocketTest.cpp */; };
+		239504E01BDD453200963CEA /* SymbolsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */; };
+		239504E11BDD453E00963CEA /* TestArgs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93E1BDD33CE00BA9A93 /* TestArgs.cpp */; };
+		239504E21BDD454500963CEA /* PythonDataObjectsTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F94D1BDD360F00BA9A93 /* PythonDataObjectsTests.cpp */; };
+		239504E31BDD454B00963CEA /* StringExtractorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */; };
+		239504E41BDD454B00963CEA /* TaskPoolTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */; };
+		239504E51BDD454B00963CEA /* UriParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9461BDD346100BA9A93 /* UriParserTest.cpp */; };
 		239D380B1D70FBAC00D8E937 /* FileSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 239D38091D70FB9900D8E937 /* FileSpec.cpp */; };
-		23A452021DBFF67000E44395 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23A452001DBFF67000E44395 /* CMakeLists.txt */; };
-		23A452031DBFF67700E44395 /* BreakpointIDTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */; };
-		23A452081DBFF6A500E44395 /* ArchSpecTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452041DBFF69800E44395 /* ArchSpecTest.cpp */; };
-		23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452051DBFF69800E44395 /* StructuredDataTest.cpp */; };
-		23A4520D1DBFF77400E44395 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23A4520B1DBFF77400E44395 /* CMakeLists.txt */; };
-		23A4520F1DBFF77700E44395 /* MinidumpParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */; };
-		23A4521B1DBFF82100E44395 /* SymbolFilePDBTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15141D66CF8700EDDDE1 /* SymbolFilePDBTests.cpp */; };
-		23A4521C1DBFF84500E44395 /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15011D66CD8400EDDDE1 /* ModuleCacheTest.cpp */; };
-		23A4522E1DC00D5D00E44395 /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452211DC00D2F00E44395 /* MinidumpParser.cpp */; };
-		23A4522F1DC00D5D00E44395 /* MinidumpTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452231DC00D2F00E44395 /* MinidumpTypes.cpp */; };
-		23A452301DC00D5D00E44395 /* RegisterContextMinidump_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452251DC00D2F00E44395 /* RegisterContextMinidump_x86_64.cpp */; };
 		23CB14E41D66CA2200EDDDE1 /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 23CB14E31D66CA2200EDDDE1 /* libxml2.2.dylib */; };
-		23CB14F21D66CC9000EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F11D66CC9000EDDDE1 /* CMakeLists.txt */; };
-		23CB14F41D66CC9B00EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F31D66CC9B00EDDDE1 /* CMakeLists.txt */; };
-		23CB14F71D66CCD600EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F61D66CCD600EDDDE1 /* CMakeLists.txt */; };
-		23CB14FB1D66CCF100EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F91D66CCF100EDDDE1 /* CMakeLists.txt */; };
+		23CB14EE1D66CC1400EDDDE1 /* BroadcasterTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */; };
+		23CB14EF1D66CC1F00EDDDE1 /* DataExtractorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */; };
+		23CB14F01D66CC2300EDDDE1 /* ScalarTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */; };
+		23CB14FF1D66CD2900EDDDE1 /* FileSpecTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14FD1D66CD2400EDDDE1 /* FileSpecTest.cpp */; };
+		23CB15001D66CD3900EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14FA1D66CCF100EDDDE1 /* CPlusPlusLanguageTest.cpp */; };
+		23CB150F1D66CF5D00EDDDE1 /* TestClangASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB150C1D66CF5600EDDDE1 /* TestClangASTContext.cpp */; };
 		23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
 		23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14FA1D66CCF100EDDDE1 /* CPlusPlusLanguageTest.cpp */; };
 		23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9461BDD346100BA9A93 /* UriParserTest.cpp */; };
@@ -750,6 +750,7 @@
 		3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692E1ABB7A6D001DA9DF /* SystemInitializer.cpp */; };
 		3F8169321ABB7A6D001DA9DF /* SystemInitializerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692F1ABB7A6D001DA9DF /* SystemInitializerCommon.cpp */; };
 		3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8169301ABB7A6D001DA9DF /* SystemLifetimeManager.cpp */; };
+		3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FA093141BF65D3A0037DD08 /* PythonExceptionStateTests.cpp */; };
 		3FBA69E11B6067120008F44A /* ScriptInterpreterNone.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69DD1B6067020008F44A /* ScriptInterpreterNone.cpp */; };
 		3FBA69EC1B6067430008F44A /* PythonDataObjects.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69E31B60672A0008F44A /* PythonDataObjects.cpp */; };
 		3FBA69ED1B60674B0008F44A /* ScriptInterpreterPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FBA69E51B60672A0008F44A /* ScriptInterpreterPython.cpp */; };
@@ -777,6 +778,7 @@
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
+		49684D7C1BAB37F200E6D5D5 /* MIUtilParse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */; };
 		49724D991AD6ED390033C538 /* (null) in Sources */ = {isa = PBXBuildFile; };
 		49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		49753FBB1BEAB2BB00019E45 /* repl_swift in Copy Files */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -955,6 +957,7 @@
 		94D0858C1B9675B8000D24BD /* FormattersHelpers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94D0858B1B9675B8000D24BD /* FormattersHelpers.cpp */; };
 		94E829CA152D33C1006F96A3 /* lldb-server in Resources */ = {isa = PBXBuildFile; fileRef = 26DC6A101337FE6900FF7998 /* lldb-server */; };
 		94FA3DE01405D50400833217 /* ValueObjectConstResultChild.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DDF1405D50300833217 /* ValueObjectConstResultChild.cpp */; };
+		94FC9E671D95D74E00976A81 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		964381701C8D6B8200023D59 /* SBLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF20F76C1AF18FC700751A6E /* SBLanguageRuntime.cpp */; };
 		964463EC1A330C0500154ED8 /* CompactUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 964463EB1A330C0500154ED8 /* CompactUnwindInfo.cpp */; };
 		966C6B7918E6A56A0093F5EC /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 966C6B7818E6A56A0093F5EC /* libz.dylib */; };
@@ -988,6 +991,7 @@
 		AE7F56291B8FE418001377A8 /* GoASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEFFBA7C1AC4835D0087B932 /* GoASTContext.cpp */; };
 		AE8F624919EF3E1E00326B21 /* OperatingSystemGo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE8F624719EF3E1E00326B21 /* OperatingSystemGo.cpp */; };
 		AEB0E4591BD6E9F800B24093 /* LLVMUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEB0E4581BD6E9F800B24093 /* LLVMUserExpression.cpp */; };
+		AEC6FFA01BE970A2007882C1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
 		AEEA34051AC88A7400AB639D /* TypeSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEEA34041AC88A7400AB639D /* TypeSystem.cpp */; };
 		AF061F87182C97ED00B6A19C /* RegisterContextHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF061F85182C97ED00B6A19C /* RegisterContextHistory.cpp */; };
 		AF0639A91BEC2D2500EA1B29 /* PlatformDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0639921BEC2D2500EA1B29 /* PlatformDarwin.cpp */; };
@@ -1031,6 +1035,7 @@
 		AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */; };
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
 		AF3B27AA1AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF3B27A91AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp */; };
+		AF45E1FE1BF57C8D000563EB /* PythonTestSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45E1FC1BF57C8D000563EB /* PythonTestSuite.cpp */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
 		AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */; };
 		AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */; };
@@ -1112,12 +1117,12 @@
 			remoteGlobalIDString = 456F67721AD46CE9002850C2;
 			remoteInfo = "debugserver-mini";
 		};
-		23A451FB1DBFF5E400E44395 /* PBXContainerItemProxy */ = {
+		23AB8B6A1BDF513B008BF3B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 23CB152F1D66DA9300EDDDE1;
-			remoteInfo = "lldb-gtest-build";
+			remoteGlobalIDString = 2689FFC913353D7A00698AC0;
+			remoteInfo = "lldb-core";
 		};
 		23CB15311D66DA9300EDDDE1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -1283,6 +1288,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		239504D21BDD451400963CEA /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		49753FB21BEAB2BB00019E45 /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 8;
@@ -1351,13 +1365,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				23CB14FB1D66CCF100EDDDE1 /* CMakeLists.txt in Copy Files */,
-				23150FC01DB939F800EA5AB6 /* CMakeLists.txt in Copy Files */,
-				23CB14F21D66CC9000EDDDE1 /* CMakeLists.txt in Copy Files */,
-				23A452021DBFF67000E44395 /* CMakeLists.txt in Copy Files */,
-				23A4520D1DBFF77400E44395 /* CMakeLists.txt in Copy Files */,
-				23CB14F71D66CCD600EDDDE1 /* CMakeLists.txt in Copy Files */,
-				23CB14F41D66CC9B00EDDDE1 /* CMakeLists.txt in Copy Files */,
+				94FC9E671D95D74E00976A81 /* lldb.1 in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1387,13 +1395,6 @@
 		23059A111958B37B007B8189 /* SBUnixSignals.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBUnixSignals.h; path = include/lldb/API/SBUnixSignals.h; sourceTree = "<group>"; };
 		230EC4571D63C3A7008DF59F /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = source/Target/CMakeLists.txt; sourceTree = "<group>"; };
 		230EC4581D63C3A7008DF59F /* ThreadPlanCallOnFunctionExit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanCallOnFunctionExit.cpp; path = source/Target/ThreadPlanCallOnFunctionExit.cpp; sourceTree = "<group>"; };
-		23150FBD1DB939F800EA5AB6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		23150FBE1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = x86AssemblyInspectionEngine.cpp; sourceTree = "<group>"; };
-		23150FBF1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x86AssemblyInspectionEngine.h; sourceTree = "<group>"; };
-		23150FC51DB93B8C00EA5AB6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		23150FC61DB93B8C00EA5AB6 /* TestArm64InstEmulation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestArm64InstEmulation.cpp; sourceTree = "<group>"; };
-		23150FCB1DB93BC200EA5AB6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		23150FCC1DB93BC200EA5AB6 /* Testx86AssemblyInspectionEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Testx86AssemblyInspectionEngine.cpp; sourceTree = "<group>"; };
 		23173F8B192BA93F005C708F /* lldb-x86-register-enums.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "lldb-x86-register-enums.h"; path = "Utility/lldb-x86-register-enums.h"; sourceTree = "<group>"; };
 		2321F9381BDD332400BA9A93 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SocketAddressTest.cpp; sourceTree = "<group>"; };
@@ -1457,22 +1458,6 @@
 		239504D41BDD451400963CEA /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		239D38071D70E6C700D8E937 /* OCamlASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OCamlASTContext.h; path = include/lldb/Symbol/OCamlASTContext.h; sourceTree = "<group>"; };
 		239D38091D70FB9900D8E937 /* FileSpec.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileSpec.cpp; path = source/Host/common/FileSpec.cpp; sourceTree = "<group>"; };
-		23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BreakpointIDTest.cpp; sourceTree = "<group>"; };
-		23A452001DBFF67000E44395 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		23A452041DBFF69800E44395 /* ArchSpecTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ArchSpecTest.cpp; sourceTree = "<group>"; };
-		23A452051DBFF69800E44395 /* StructuredDataTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StructuredDataTest.cpp; sourceTree = "<group>"; };
-		23A4520B1DBFF77400E44395 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MinidumpParserTest.cpp; sourceTree = "<group>"; };
-		23A452111DBFF78E00E44395 /* fizzbuzz_no_heap.dmp */ = {isa = PBXFileReference; lastKnownFileType = file; path = fizzbuzz_no_heap.dmp; sourceTree = "<group>"; };
-		23A452121DBFF78E00E44395 /* linux-x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "linux-x86_64.cpp"; sourceTree = "<group>"; };
-		23A452131DBFF78E00E44395 /* linux-x86_64.dmp */ = {isa = PBXFileReference; lastKnownFileType = file; path = "linux-x86_64.dmp"; sourceTree = "<group>"; };
-		23A452201DC00D2F00E44395 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		23A452211DC00D2F00E44395 /* MinidumpParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MinidumpParser.cpp; sourceTree = "<group>"; };
-		23A452221DC00D2F00E44395 /* MinidumpParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MinidumpParser.h; sourceTree = "<group>"; };
-		23A452231DC00D2F00E44395 /* MinidumpTypes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MinidumpTypes.cpp; sourceTree = "<group>"; };
-		23A452241DC00D2F00E44395 /* MinidumpTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MinidumpTypes.h; sourceTree = "<group>"; };
-		23A452251DC00D2F00E44395 /* RegisterContextMinidump_x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_x86_64.cpp; sourceTree = "<group>"; };
-		23A452261DC00D2F00E44395 /* RegisterContextMinidump_x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterContextMinidump_x86_64.h; sourceTree = "<group>"; };
 		23AB052D199FF639003B8084 /* FreeBSDThread.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FreeBSDThread.cpp; sourceTree = "<group>"; };
 		23AB052E199FF639003B8084 /* FreeBSDThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FreeBSDThread.h; sourceTree = "<group>"; };
 		23AB052F199FF639003B8084 /* ProcessFreeBSD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessFreeBSD.cpp; sourceTree = "<group>"; };
@@ -1509,7 +1494,7 @@
 		23CB15211D66CFAC00EDDDE1 /* test-pdb.exe */ = {isa = PBXFileReference; lastKnownFileType = file; path = "test-pdb.exe"; sourceTree = "<group>"; };
 		23CB15221D66CFAC00EDDDE1 /* test-pdb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "test-pdb.h"; sourceTree = "<group>"; };
 		23CB15231D66CFAC00EDDDE1 /* test-pdb.pdb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "test-pdb.pdb"; sourceTree = "<group>"; };
-		23CB15561D66DA9300EDDDE1 /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		23CB15561D66DA9300EDDDE1 /* lldb-gtest-for-debugging */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "lldb-gtest-for-debugging"; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		23D065811D4A7BDA0008EDE6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		23D065821D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RenderScriptExpressionOpts.cpp; sourceTree = "<group>"; };
 		23D065831D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderScriptExpressionOpts.h; sourceTree = "<group>"; };
@@ -2643,6 +2628,8 @@
 		495BBACF119A0DE700418BEA /* PathMappingList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PathMappingList.h; path = include/lldb/Target/PathMappingList.h; sourceTree = "<group>"; };
 		495D98F31C18F52500B9774B /* SwiftForward.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftForward.h; path = include/lldb/Core/SwiftForward.h; sourceTree = "<group>"; };
 		4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangExternalASTSourceCommon.cpp; path = source/Symbol/ClangExternalASTSourceCommon.cpp; sourceTree = "<group>"; };
+		49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MIUtilParse.cpp; path = "tools/lldb-mi/MIUtilParse.cpp"; sourceTree = SOURCE_ROOT; };
+		49684D791BAB37E400E6D5D5 /* MIUtilParse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MIUtilParse.h; path = "tools/lldb-mi/MIUtilParse.h"; sourceTree = SOURCE_ROOT; };
 		496B01581406DE8900F830D5 /* IRInterpreter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRInterpreter.cpp; path = source/Expression/IRInterpreter.cpp; sourceTree = "<group>"; };
 		496B015A1406DEB100F830D5 /* IRInterpreter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IRInterpreter.h; path = include/lldb/Expression/IRInterpreter.h; sourceTree = "<group>"; };
 		497C86BD122823D800B54702 /* ClangUtilityFunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangUtilityFunction.cpp; path = ExpressionParser/Clang/ClangUtilityFunction.cpp; sourceTree = "<group>"; };
@@ -3468,7 +3455,7 @@
 				2690CD171A6DC0D000E717C8 /* lldb-mi */,
 				942829C01A89835300521B30 /* lldb-argdumper */,
 				239504D41BDD451400963CEA /* lldb-gtest */,
-				23CB15561D66DA9300EDDDE1 /* lldb-gtest */,
+				23CB15561D66DA9300EDDDE1 /* lldb-gtest-for-debugging */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -3483,37 +3470,9 @@
 			path = Kalimba;
 			sourceTree = "<group>";
 		};
-		23150FC31DB93B5700EA5AB6 /* UnwindAssembly */ = {
-			isa = PBXGroup;
-			children = (
-				23150FC41DB93B7500EA5AB6 /* InstEmulation */,
-				23150FCA1DB93BAA00EA5AB6 /* x86 */,
-			);
-			path = UnwindAssembly;
-			sourceTree = "<group>";
-		};
-		23150FC41DB93B7500EA5AB6 /* InstEmulation */ = {
-			isa = PBXGroup;
-			children = (
-				23150FC51DB93B8C00EA5AB6 /* CMakeLists.txt */,
-				23150FC61DB93B8C00EA5AB6 /* TestArm64InstEmulation.cpp */,
-			);
-			path = InstEmulation;
-			sourceTree = "<group>";
-		};
-		23150FCA1DB93BAA00EA5AB6 /* x86 */ = {
-			isa = PBXGroup;
-			children = (
-				23150FCB1DB93BC200EA5AB6 /* CMakeLists.txt */,
-				23150FCC1DB93BC200EA5AB6 /* Testx86AssemblyInspectionEngine.cpp */,
-			);
-			path = x86;
-			sourceTree = "<group>";
-		};
 		2321F9331BDD326500BA9A93 /* unittests */ = {
 			isa = PBXGroup;
 			children = (
-				23A451FE1DBFF65B00E44395 /* Breakpoint */,
 				239504C61BDD3FF300963CEA /* CMakeLists.txt */,
 				239504C21BDD3FD600963CEA /* gtest_common.h */,
 				23CB14E51D66CBEB00EDDDE1 /* Core */,
@@ -3526,7 +3485,6 @@
 				2321F93F1BDD33D800BA9A93 /* ScriptInterpreter */,
 				23CB15091D66CF2B00EDDDE1 /* Symbol */,
 				23CB150A1D66CF3200EDDDE1 /* SymbolFile */,
-				23150FC31DB93B5700EA5AB6 /* UnwindAssembly */,
 				2321F9421BDD343A00BA9A93 /* Utility */,
 			);
 			path = unittests;
@@ -3643,7 +3601,6 @@
 			children = (
 				2370A37A1D66C57B000E7BE6 /* CMakeLists.txt */,
 				2370A3791D66C569000E7BE6 /* gdb-remote */,
-				23A4520A1DBFF75200E44395 /* minidump */,
 			);
 			path = Process;
 			sourceTree = "<group>";
@@ -3675,49 +3632,6 @@
 				238F2BA61D2C85FA001FF92A /* StructuredDataDarwinLog.cpp */,
 			);
 			path = DarwinLog;
-			sourceTree = "<group>";
-		};
-		23A451FE1DBFF65B00E44395 /* Breakpoint */ = {
-			isa = PBXGroup;
-			children = (
-				23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */,
-				23A452001DBFF67000E44395 /* CMakeLists.txt */,
-			);
-			path = Breakpoint;
-			sourceTree = "<group>";
-		};
-		23A4520A1DBFF75200E44395 /* minidump */ = {
-			isa = PBXGroup;
-			children = (
-				23A4520B1DBFF77400E44395 /* CMakeLists.txt */,
-				23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */,
-				23A452101DBFF77C00E44395 /* Inputs */,
-			);
-			path = minidump;
-			sourceTree = "<group>";
-		};
-		23A452101DBFF77C00E44395 /* Inputs */ = {
-			isa = PBXGroup;
-			children = (
-				23A452111DBFF78E00E44395 /* fizzbuzz_no_heap.dmp */,
-				23A452121DBFF78E00E44395 /* linux-x86_64.cpp */,
-				23A452131DBFF78E00E44395 /* linux-x86_64.dmp */,
-			);
-			path = Inputs;
-			sourceTree = "<group>";
-		};
-		23A4521F1DC00D1900E44395 /* minidump */ = {
-			isa = PBXGroup;
-			children = (
-				23A452201DC00D2F00E44395 /* CMakeLists.txt */,
-				23A452211DC00D2F00E44395 /* MinidumpParser.cpp */,
-				23A452221DC00D2F00E44395 /* MinidumpParser.h */,
-				23A452231DC00D2F00E44395 /* MinidumpTypes.cpp */,
-				23A452241DC00D2F00E44395 /* MinidumpTypes.h */,
-				23A452251DC00D2F00E44395 /* RegisterContextMinidump_x86_64.cpp */,
-				23A452261DC00D2F00E44395 /* RegisterContextMinidump_x86_64.h */,
-			);
-			path = minidump;
 			sourceTree = "<group>";
 		};
 		23AB0526199FF5D3003B8084 /* FreeBSD */ = {
@@ -3757,12 +3671,10 @@
 		23CB14E51D66CBEB00EDDDE1 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				23A452041DBFF69800E44395 /* ArchSpecTest.cpp */,
 				23CB14E71D66CC0E00EDDDE1 /* CMakeLists.txt */,
 				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
 				23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */,
 				23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */,
-				23A452051DBFF69800E44395 /* StructuredDataTest.cpp */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -3969,7 +3881,6 @@
 				4CEE62F71145F1C70064CF93 /* GDB Remote */,
 				2642FBA713D003B400ED6808 /* MacOSX-Kernel */,
 				26A527BC14E24F5F00F3A14A /* mach-core */,
-				23A4521F1DC00D1900E44395 /* minidump */,
 				26BC17B318C7F4FA00D2196D /* POSIX */,
 				26B4666E11A2080F00CF6220 /* Utility */,
 			);
@@ -4686,6 +4597,8 @@
 				266941E91A6DC2AC0063BE93 /* MIUtilFileStd.h */,
 				266941EA1A6DC2AC0063BE93 /* MIUtilMapIdToVariant.cpp */,
 				266941EB1A6DC2AC0063BE93 /* MIUtilMapIdToVariant.h */,
+				49684D781BAB37E400E6D5D5 /* MIUtilParse.cpp */,
+				49684D791BAB37E400E6D5D5 /* MIUtilParse.h */,
 				266941EC1A6DC2AC0063BE93 /* MIUtilSingletonBase.h */,
 				266941ED1A6DC2AC0063BE93 /* MIUtilSingletonHelper.h */,
 				266941EE1A6DC2AC0063BE93 /* MIUtilString.cpp */,
@@ -4711,11 +4624,8 @@
 		2692BA17136611CD00F9E14D /* x86 */ = {
 			isa = PBXGroup;
 			children = (
-				23150FBD1DB939F800EA5AB6 /* CMakeLists.txt */,
 				263E949D13661AE400E7D1CE /* UnwindAssembly-x86.cpp */,
 				263E949E13661AE400E7D1CE /* UnwindAssembly-x86.h */,
-				23150FBE1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.cpp */,
-				23150FBF1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.h */,
 			);
 			path = x86;
 			sourceTree = "<group>";
@@ -6894,35 +6804,36 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 239504DD1BDD451400963CEA /* Build configuration list for PBXNativeTarget "lldb-gtest" */;
 			buildPhases = (
+				239504D01BDD451400963CEA /* Sources */,
 				239504D11BDD451400963CEA /* Frameworks */,
-				23A451FD1DBFF60400E44395 /* Run gtests */,
+				239504D21BDD451400963CEA /* CopyFiles */,
+				237E0CEB1D909B8C00DD3F2B /* Run gtests */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				23A451FC1DBFF5E400E44395 /* PBXTargetDependency */,
+				23AB8B6B1BDF513B008BF3B0 /* PBXTargetDependency */,
 			);
 			name = "lldb-gtest";
 			productName = "lldb-gtest";
 			productReference = 239504D41BDD451400963CEA /* lldb-gtest */;
 			productType = "com.apple.product-type.tool";
 		};
-		23CB152F1D66DA9300EDDDE1 /* lldb-gtest-build */ = {
+		23CB152F1D66DA9300EDDDE1 /* lldb-gtest-for-debugging */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 23CB15511D66DA9300EDDDE1 /* Build configuration list for PBXNativeTarget "lldb-gtest-build" */;
+			buildConfigurationList = 23CB15511D66DA9300EDDDE1 /* Build configuration list for PBXNativeTarget "lldb-gtest-for-debugging" */;
 			buildPhases = (
 				23CB15321D66DA9300EDDDE1 /* Sources */,
 				23CB15481D66DA9300EDDDE1 /* Frameworks */,
-				23A4521D1DBFF89800E44395 /* Copy Inputs content to run dir */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				23CB15301D66DA9300EDDDE1 /* PBXTargetDependency */,
 			);
-			name = "lldb-gtest-build";
+			name = "lldb-gtest-for-debugging";
 			productName = "lldb-gtest";
-			productReference = 23CB15561D66DA9300EDDDE1 /* lldb-gtest */;
+			productReference = 23CB15561D66DA9300EDDDE1 /* lldb-gtest-for-debugging */;
 			productType = "com.apple.product-type.tool";
 		};
 		26579F67126A25920007C5CB /* darwin-debug */ = {
@@ -7177,7 +7088,7 @@
 				26F5C26910F3D9A4009D5894 /* lldb-tool */,
 				26680206115FD0ED008E1FE4 /* LLDB */,
 				239504D31BDD451400963CEA /* lldb-gtest */,
-				23CB152F1D66DA9300EDDDE1 /* lldb-gtest-build */,
+				23CB152F1D66DA9300EDDDE1 /* lldb-gtest-for-debugging */,
 				2387551E1C24974600CCE8C3 /* lldb-python-test-suite */,
 				26579F67126A25920007C5CB /* darwin-debug */,
 				2689FFC913353D7A00698AC0 /* lldb-core */,
@@ -7238,7 +7149,7 @@
 			shellPath = "/bin/sh -x";
 			shellScript = "cd $SOURCE_ROOT\n\n# Ensure the build directory exists.\nmkdir -p $CONFIGURATION_BUILD_DIR\n\n# VCS_FILE_OLD is the existing version file.\n# VCS_FILE is the new version file we'll write.\n# We'll only replace the old one if the new one has\n# different content.  If the old file doesn't exist,\n# we'll copy the new one over.\nVCS_FILE_OLD=$CONFIGURATION_BUILD_DIR/lldb_revision.h\nVCS_FILE=$CONFIGURATION_BUILD_DIR/lldb_revision-new.h\n\n# Create it empty.\ntouch $VCS_FILE\n\n# Fill the contents of the file with the revision if we can detect it.\nLLDB_REVISION=$(python $SOURCE_ROOT/scripts/get_vcs_revision.py)\nif [ -n \"$LLDB_REVISION\" ]; then\n    echo \"#define LLDB_REVISION \\\"${LLDB_REVISION}\\\"\" >> $VCS_FILE\nfi\n\nif [ -f \"$VCS_FILE_OLD\" ]; then\n    # The old file exists.  Check if we have new content.  If not,\n    # don't perturb the old file --- that would just force us to\n    # rebuild the driver for no reason.\n    diff \"$VCS_FILE\" \"$VCS_FILE_OLD\" && rm \"$VCS_FILE\" && exit 0\n\n    # If we get here, it means the new revision file content is\n    # different from the old one.  We've got a new version stamp,\n    # use it below.\nfi\n\n# Replace the old VCS file with the new one.\nmv \"$VCS_FILE\" \"$VCS_FILE_OLD\"";
 		};
-		23A451FD1DBFF60400E44395 /* Run gtests */ = {
+		237E0CEB1D909B8C00DD3F2B /* Run gtests */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -7249,22 +7160,8 @@
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = "/bin/sh -x";
-			shellScript = "# Run the just-built gtest executable\n\n# Uncomment this to see the steps in action\n# set -x\n\n# We need to hide the lldb.py that goes into BUILT_PRODUCTS\n# because it will conflict with finding the lldb module later,\n# which causes the python exception tests to fail.\nif [ -f \"${BUILT_PRODUCTS_DIR}/lldb.py\" ]; then\nmv -f \"${BUILT_PRODUCTS_DIR}/lldb.py\" \"${BUILT_PRODUCTS_DIR}/park.lldb.py\"\nfi\n\n# Tell lldb-gtest where to find the lldb package\nexport PYTHONPATH=${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Python\n\n# Set the terminal to VT100 so that the editline internals don't\n# fail.\nexport TERM=vt100\n\n# We must redirect stdin to /dev/null: without this, xcodebuild\n# will wait forever for input when we run the TestExceptionStateChecking\n# test.\n${BUILT_PRODUCTS_DIR}/lldb-gtest --gtest_output=xml:${BUILD_DIR}/gtest-results.xml < /dev/null\nRETCODE=$?\n\nif [ -f \"${BUILT_PRODUCTS_DIR}/park.lldb.py\" ]; then\nmv -f \"${BUILT_PRODUCTS_DIR}/park.lldb.py\" \"${BUILT_PRODUCTS_DIR}/lldb.py\"\nfi\n\nexit ${RETCODE}";
-		};
-		23A4521D1DBFF89800E44395 /* Copy Inputs content to run dir */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "Copy Inputs content to run dir";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = "/bin/bash +x scripts/Xcode/prepare-gtest-run-dir.sh";
-			shellScript = "";
+			shellPath = "/bin/sh +x";
+			shellScript = "# Run the just-built gtest executable\n\n# We need to hide the lldb.py that goes into BUILT_PRODUCTS\n# because it will conflict with finding the lldb module later,\n# which causes the python exception tests to fail.\nif [ -f \"${BUILT_PRODUCTS_DIR}/lldb.py\" ]; then\n    mv -f \"${BUILT_PRODUCTS_DIR}/lldb.py\" \"${BUILT_PRODUCTS_DIR}/park.lldb.py\"\nfi\n\n# Tell lldb-gtest where to find the lldb package\nexport PYTHONPATH=${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Python\n\n# Set the terminal to VT100 so that the editline internals don't\n# fail.\nexport TERM=vt100\n\n# We must redirect stdin to /dev/null: without this, xcodebuild\n# will wait forever for input when we run the TestExceptionStateChecking\n# test.\n${BUILT_PRODUCTS_DIR}/lldb-gtest --gtest_output=xml:${BUILD_DIR}/gtest-results.xml < /dev/null\nRETCODE=$?\n\nif [ -f \"${BUILT_PRODUCTS_DIR}/park.lldb.py\" ]; then\n    mv -f \"${BUILT_PRODUCTS_DIR}/park.lldb.py\" \"${BUILT_PRODUCTS_DIR}/lldb.py\"\nfi\n\nexit ${RETCODE}";
 		};
 		261B5A7511C3FA6F00AABD0A /* Fixup Framework Headers */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -7462,34 +7359,55 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		239504D01BDD451400963CEA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AEC6FFA01BE970A2007882C1 /* GoParserTest.cpp in Sources */,
+				237E0CE31D908F4B00DD3F2B /* StringExtractor.cpp in Sources */,
+				23CB15001D66CD3900EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
+				239504E51BDD454B00963CEA /* UriParserTest.cpp in Sources */,
+				23CB14FF1D66CD2900EDDDE1 /* FileSpecTest.cpp in Sources */,
+				AF45E1FE1BF57C8D000563EB /* PythonTestSuite.cpp in Sources */,
+				3FA093151BF65D3A0037DD08 /* PythonExceptionStateTests.cpp in Sources */,
+				23CB14EF1D66CC1F00EDDDE1 /* DataExtractorTest.cpp in Sources */,
+				2370A3861D66C594000E7BE6 /* GDBRemoteClientBaseTest.cpp in Sources */,
+				239504DF1BDD453200963CEA /* SocketTest.cpp in Sources */,
+				239504E11BDD453E00963CEA /* TestArgs.cpp in Sources */,
+				2370A3871D66C594000E7BE6 /* GDBRemoteCommunicationClientTest.cpp in Sources */,
+				239504E21BDD454500963CEA /* PythonDataObjectsTests.cpp in Sources */,
+				239504E01BDD453200963CEA /* SymbolsTest.cpp in Sources */,
+				23CB150F1D66CF5D00EDDDE1 /* TestClangASTContext.cpp in Sources */,
+				239504E31BDD454B00963CEA /* StringExtractorTest.cpp in Sources */,
+				239504E41BDD454B00963CEA /* TaskPoolTest.cpp in Sources */,
+				23CB14EE1D66CC1400EDDDE1 /* BroadcasterTest.cpp in Sources */,
+				23CB14F01D66CC2300EDDDE1 /* ScalarTest.cpp in Sources */,
+				239504DE1BDD453200963CEA /* SocketAddressTest.cpp in Sources */,
+				2370A3881D66C594000E7BE6 /* GDBRemoteTestUtils.cpp in Sources */,
+				2326CF521BDD693B00A5CEAC /* EditlineTest.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		23CB15321D66DA9300EDDDE1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				23A4521C1DBFF84500E44395 /* ModuleCacheTest.cpp in Sources */,
 				23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */,
 				237E0CE41D908F5300DD3F2B /* StringExtractor.cpp in Sources */,
 				23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
-				23150FD01DB93BDB00EA5AB6 /* Testx86AssemblyInspectionEngine.cpp in Sources */,
 				23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */,
 				23CB15361D66DA9300EDDDE1 /* FileSpecTest.cpp in Sources */,
 				23CB15371D66DA9300EDDDE1 /* PythonTestSuite.cpp in Sources */,
-				23150FCF1DB93BD400EA5AB6 /* TestArm64InstEmulation.cpp in Sources */,
 				23CB15381D66DA9300EDDDE1 /* PythonExceptionStateTests.cpp in Sources */,
 				23CB15391D66DA9300EDDDE1 /* DataExtractorTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,
-				23A4520F1DBFF77700E44395 /* MinidumpParserTest.cpp in Sources */,
 				23CB153B1D66DA9300EDDDE1 /* SocketTest.cpp in Sources */,
 				23CB153C1D66DA9300EDDDE1 /* TestArgs.cpp in Sources */,
-				23A452081DBFF6A500E44395 /* ArchSpecTest.cpp in Sources */,
-				23A4521B1DBFF82100E44395 /* SymbolFilePDBTests.cpp in Sources */,
 				23CB153D1D66DA9300EDDDE1 /* GDBRemoteCommunicationClientTest.cpp in Sources */,
 				23CB153E1D66DA9300EDDDE1 /* PythonDataObjectsTests.cpp in Sources */,
 				23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */,
-				23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */,
 				23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */,
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
-				23A452031DBFF67700E44395 /* BreakpointIDTest.cpp in Sources */,
 				23CB15421D66DA9300EDDDE1 /* TaskPoolTest.cpp in Sources */,
 				23CB15431D66DA9300EDDDE1 /* BroadcasterTest.cpp in Sources */,
 				23CB15441D66DA9300EDDDE1 /* ScalarTest.cpp in Sources */,
@@ -7822,7 +7740,6 @@
 				2689008013353E2200698AC0 /* CommandInterpreter.cpp in Sources */,
 				AF77E0A41A033D360096C0EA /* RegisterContextPOSIX_powerpc.cpp in Sources */,
 				AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */,
-				23A4522F1DC00D5D00E44395 /* MinidumpTypes.cpp in Sources */,
 				9447DE431BD5963300E67212 /* DumpValueObjectOptions.cpp in Sources */,
 				2689008113353E2200698AC0 /* CommandObject.cpp in Sources */,
 				3F8160A61AB9F7DD001DA9DF /* Logging.cpp in Sources */,
@@ -7850,7 +7767,6 @@
 				23D065901D4A7BEE0008EDE6 /* RenderScriptRuntime.cpp in Sources */,
 				2689009713353E4200698AC0 /* ObjectContainerUniversalMachO.cpp in Sources */,
 				2689009813353E4200698AC0 /* ELFHeader.cpp in Sources */,
-				23A4522E1DC00D5D00E44395 /* MinidumpParser.cpp in Sources */,
 				2689009913353E4200698AC0 /* ObjectFileELF.cpp in Sources */,
 				2689009A13353E4200698AC0 /* ObjectFileMachO.cpp in Sources */,
 				2689009D13353E4200698AC0 /* GDBRemoteCommunication.cpp in Sources */,
@@ -8083,7 +7999,6 @@
 				26DB3E1C1379E7AD0080DC73 /* ABIMacOSX_i386.cpp in Sources */,
 				4C848E0818D2892900EC6DD0 /* SwiftASTContext.cpp in Sources */,
 				948B68F11CF9041D002D9401 /* FoundationValueTypes.cpp in Sources */,
-				23150FD21DB93C1600EA5AB6 /* x86AssemblyInspectionEngine.cpp in Sources */,
 				942F52251BC44E780004C182 /* NSException.cpp in Sources */,
 				26DB3E1F1379E7AD0080DC73 /* ABISysV_x86_64.cpp in Sources */,
 				232CB61D191E00CD00EF39FC /* SoftwareBreakpoint.cpp in Sources */,
@@ -8172,7 +8087,6 @@
 				26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */,
 				260CC64815D0440D002BF2E0 /* OptionValueArgs.cpp in Sources */,
 				260CC64915D0440D002BF2E0 /* OptionValueArray.cpp in Sources */,
-				23A452301DC00D5D00E44395 /* RegisterContextMinidump_x86_64.cpp in Sources */,
 				260CC64A15D0440D002BF2E0 /* OptionValueBoolean.cpp in Sources */,
 				260CC64B15D0440D002BF2E0 /* OptionValueProperties.cpp in Sources */,
 				3FDFED0C19B7C8E7009756A7 /* ThisThread.cpp in Sources */,
@@ -8299,6 +8213,7 @@
 				2669423B1A6DC2AC0063BE93 /* MICmnStreamStdout.cpp in Sources */,
 				266942271A6DC2AC0063BE93 /* MICmnLLDBDebugger.cpp in Sources */,
 				2669421C1A6DC2AC0063BE93 /* MICmdCmdTrace.cpp in Sources */,
+				49684D7C1BAB37F200E6D5D5 /* MIUtilParse.cpp in Sources */,
 				266942331A6DC2AC0063BE93 /* MICmnMIValueList.cpp in Sources */,
 				266942221A6DC2AC0063BE93 /* MICmdInvoker.cpp in Sources */,
 				2669420C1A6DC2AC0063BE93 /* MICmdBase.cpp in Sources */,
@@ -8367,10 +8282,10 @@
 			target = 2690CD161A6DC0D000E717C8 /* lldb-mi */;
 			targetProxy = 2330A1D01CBC019100076028 /* PBXContainerItemProxy */;
 		};
-		23A451FC1DBFF5E400E44395 /* PBXTargetDependency */ = {
+		23AB8B6B1BDF513B008BF3B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 23CB152F1D66DA9300EDDDE1 /* lldb-gtest-build */;
-			targetProxy = 23A451FB1DBFF5E400E44395 /* PBXContainerItemProxy */;
+			target = 2689FFC913353D7A00698AC0 /* lldb-core */;
+			targetProxy = 23AB8B6A1BDF513B008BF3B0 /* PBXContainerItemProxy */;
 		};
 		23CB15301D66DA9300EDDDE1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -8610,7 +8525,7 @@
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -8742,7 +8657,7 @@
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -8930,7 +8845,7 @@
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -9620,37 +9535,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = Debug;
@@ -9658,35 +9544,6 @@
 		239D37F91D70A4AD00D8E937 /* DebugClang */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = DebugClang;
@@ -9694,35 +9551,6 @@
 		239D37FA1D70A4AD00D8E937 /* DebugPresubmission */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = DebugPresubmission;
@@ -9730,33 +9558,6 @@
 		239D37FB1D70A4AD00D8E937 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = "CustomSwift-Debug";
@@ -9766,35 +9567,6 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = Release;
@@ -9802,33 +9574,6 @@
 		239D37FD1D70A4AD00D8E937 /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = "CustomSwift-Release";
@@ -9836,33 +9581,6 @@
 		239D37FE1D70A4AD00D8E937 /* CustomSwift-RelWithDebInfo */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = "CustomSwift-RelWithDebInfo";
@@ -9870,34 +9588,6 @@
 		239D37FF1D70A4AD00D8E937 /* BuildAndIntegration */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
 			name = BuildAndIntegration;
@@ -10457,7 +10147,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -11469,7 +11159,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -12170,7 +11860,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -13106,7 +12796,7 @@
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -13701,7 +13391,7 @@
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
-				OTHER_LDFLAGS = "$(LLDB_ZLIB_LDFLAGS)";
+				OTHER_LDFLAGS = "-lz";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -14432,7 +14122,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
 		};
-		23CB15511D66DA9300EDDDE1 /* Build configuration list for PBXNativeTarget "lldb-gtest-build" */ = {
+		23CB15511D66DA9300EDDDE1 /* Build configuration list for PBXNativeTarget "lldb-gtest-for-debugging" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				239D37F81D70A4AD00D8E937 /* Debug */,

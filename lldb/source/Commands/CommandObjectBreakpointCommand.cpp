@@ -24,37 +24,12 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
-#include "llvm/ADT/STLExtras.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
 //-------------------------------------------------------------------------
 // CommandObjectBreakpointCommandAdd
 //-------------------------------------------------------------------------
-
-// FIXME: "script-type" needs to have its contents determined dynamically, so
-// somebody can add a new scripting
-// language to lldb and have it pickable here without having to change this
-// enumeration by hand and rebuild lldb proper.
-
-static OptionEnumValueElement g_script_option_enumeration[4] = {
-    {eScriptLanguageNone, "command",
-     "Commands are in the lldb command interpreter language"},
-    {eScriptLanguagePython, "python", "Commands are in the Python language."},
-    {eSortOrderByName, "default-script",
-     "Commands are in the default scripting language."},
-    {0, nullptr, nullptr}};
-
-static OptionDefinition g_breakpoint_add_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1,   false, "one-liner",         'o', OptionParser::eRequiredArgument, nullptr, nullptr,                     0, eArgTypeOneLiner,       "Specify a one-line breakpoint command inline. Be sure to surround it with quotes." },
-  { LLDB_OPT_SET_ALL, false, "stop-on-error",     'e', OptionParser::eRequiredArgument, nullptr, nullptr,                     0, eArgTypeBoolean,        "Specify whether breakpoint command execution should terminate on error." },
-  { LLDB_OPT_SET_ALL, false, "script-type",       's', OptionParser::eRequiredArgument, nullptr, g_script_option_enumeration, 0, eArgTypeNone,           "Specify the language for the commands - if none is specified, the lldb command interpreter will be used." },
-  { LLDB_OPT_SET_2,   false, "python-function",   'F', OptionParser::eRequiredArgument, nullptr, nullptr,                     0, eArgTypePythonFunction, "Give the name of a Python function to run as command for this breakpoint. Be sure to give a module name if appropriate." },
-  { LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,       nullptr, nullptr,                     0, eArgTypeNone,           "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets." },
-    // clang-format on
-};
 
 class CommandObjectBreakpointCommandAdd : public CommandObjectParsed,
                                           public IOHandlerDelegateMultiline {
@@ -240,9 +215,14 @@ are no syntax errors may indicate that a function was declared but never called.
       if (!bp_options)
         continue;
 
-      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
-      cmd_data->user_source.SplitIntoLines(line.c_str(), line.size());
-      bp_options->SetCommandDataCallback(cmd_data);
+      std::unique_ptr<BreakpointOptions::CommandData> data_ap(
+          new BreakpointOptions::CommandData());
+      if (data_ap) {
+        data_ap->user_source.SplitIntoLines(line.c_str(), line.size());
+        BatonSP baton_sp(
+            new BreakpointOptions::CommandBaton(data_ap.release()));
+        bp_options->SetCallback(BreakpointOptionsCallbackFunction, baton_sp);
+      }
     }
   }
 
@@ -262,13 +242,64 @@ are no syntax errors may indicate that a function was declared but never called.
   SetBreakpointCommandCallback(std::vector<BreakpointOptions *> &bp_options_vec,
                                const char *oneliner) {
     for (auto bp_options : bp_options_vec) {
-      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
+      std::unique_ptr<BreakpointOptions::CommandData> data_ap(
+          new BreakpointOptions::CommandData());
 
-      cmd_data->user_source.AppendString(oneliner);
-      cmd_data->stop_on_error = m_options.m_stop_on_error;
+      // It's necessary to set both user_source and script_source to the
+      // oneliner.
+      // The former is used to generate callback description (as in breakpoint
+      // command list)
+      // while the latter is used for Python to interpret during the actual
+      // callback.
+      data_ap->user_source.AppendString(oneliner);
+      data_ap->script_source.assign(oneliner);
+      data_ap->stop_on_error = m_options.m_stop_on_error;
 
-      bp_options->SetCommandDataCallback(cmd_data);
+      BatonSP baton_sp(new BreakpointOptions::CommandBaton(data_ap.release()));
+      bp_options->SetCallback(BreakpointOptionsCallbackFunction, baton_sp);
     }
+  }
+
+  static bool BreakpointOptionsCallbackFunction(
+      void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
+      lldb::user_id_t break_loc_id) {
+    bool ret_value = true;
+    if (baton == nullptr)
+      return true;
+
+    BreakpointOptions::CommandData *data =
+        (BreakpointOptions::CommandData *)baton;
+    StringList &commands = data->user_source;
+
+    if (commands.GetSize() > 0) {
+      ExecutionContext exe_ctx(context->exe_ctx_ref);
+      Target *target = exe_ctx.GetTargetPtr();
+      if (target) {
+        CommandReturnObject result;
+        Debugger &debugger = target->GetDebugger();
+        // Rig up the results secondary output stream to the debugger's, so the
+        // output will come out synchronously
+        // if the debugger is set up that way.
+
+        StreamSP output_stream(debugger.GetAsyncOutputStream());
+        StreamSP error_stream(debugger.GetAsyncErrorStream());
+        result.SetImmediateOutputStream(output_stream);
+        result.SetImmediateErrorStream(error_stream);
+
+        CommandInterpreterRunOptions options;
+        options.SetStopOnContinue(true);
+        options.SetStopOnError(data->stop_on_error);
+        options.SetEchoCommands(true);
+        options.SetPrintResults(true);
+        options.SetAddToHistory(false);
+
+        debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
+                                                        options, result);
+        result.GetImmediateOutputStream()->Flush();
+        result.GetImmediateErrorStream()->Flush();
+      }
+    }
+    return ret_value;
   }
 
   class CommandOptions : public Options {
@@ -284,7 +315,6 @@ are no syntax errors may indicate that a function was declared but never called.
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'o':
@@ -294,8 +324,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 's':
         m_script_language = (lldb::ScriptLanguage)Args::StringToOptionEnum(
-            llvm::StringRef::withNullAsEmpty(option_arg),
-            g_breakpoint_add_options[option_idx].enum_values,
+            option_arg, g_option_table[option_idx].enum_values,
             eScriptLanguageNone, error);
 
         if (m_script_language == eScriptLanguagePython ||
@@ -308,7 +337,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 'e': {
         bool success = false;
-        m_stop_on_error = Args::StringToBoolean(option_strref, false, &success);
+        m_stop_on_error = Args::StringToBoolean(option_arg, false, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "invalid value for stop-on-error: \"%s\"", option_arg);
@@ -342,9 +371,11 @@ are no syntax errors may indicate that a function was declared but never called.
       m_use_dummy = false;
     }
 
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_add_options);
-    }
+    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+
+    // Options table: Required for subclasses of Options.
+
+    static OptionDefinition g_option_table[];
 
     // Instance variables to hold the values for command options.
 
@@ -469,15 +500,34 @@ private:
 const char *CommandObjectBreakpointCommandAdd::g_reader_instructions =
     "Enter your debugger command(s).  Type 'DONE' to end.\n";
 
+// FIXME: "script-type" needs to have its contents determined dynamically, so
+// somebody can add a new scripting
+// language to lldb and have it pickable here without having to change this
+// enumeration by hand and rebuild lldb proper.
+
+static OptionEnumValueElement g_script_option_enumeration[4] = {
+    {eScriptLanguageNone, "command",
+     "Commands are in the lldb command interpreter language"},
+    {eScriptLanguagePython, "python", "Commands are in the Python language."},
+    {eSortOrderByName, "default-script",
+     "Commands are in the default scripting language."},
+    {0, nullptr, nullptr}};
+
+OptionDefinition
+    CommandObjectBreakpointCommandAdd::CommandOptions::g_option_table[] = {
+        // clang-format off
+  {LLDB_OPT_SET_1,   false, "one-liner",         'o', OptionParser::eRequiredArgument, nullptr, nullptr,                     0, eArgTypeOneLiner,       "Specify a one-line breakpoint command inline. Be sure to surround it with quotes." },
+  {LLDB_OPT_SET_ALL, false, "stop-on-error",     'e', OptionParser::eRequiredArgument, nullptr, nullptr,                     0, eArgTypeBoolean,        "Specify whether breakpoint command execution should terminate on error." },
+  {LLDB_OPT_SET_ALL, false, "script-type",       's', OptionParser::eRequiredArgument, nullptr, g_script_option_enumeration, 0, eArgTypeNone,           "Specify the language for the commands - if none is specified, the lldb command interpreter will be used."},
+  {LLDB_OPT_SET_2,   false, "python-function",   'F', OptionParser::eRequiredArgument, nullptr, nullptr,                     0, eArgTypePythonFunction, "Give the name of a Python function to run as command for this breakpoint. Be sure to give a module name if appropriate."},
+  {LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,       nullptr, nullptr,                     0, eArgTypeNone,           "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+        // clang-format on
+};
+
 //-------------------------------------------------------------------------
 // CommandObjectBreakpointCommandDelete
 //-------------------------------------------------------------------------
-
-static OptionDefinition g_breakpoint_delete_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Delete commands from Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets." },
-    // clang-format on
-};
 
 class CommandObjectBreakpointCommandDelete : public CommandObjectParsed {
 public:
@@ -534,9 +584,11 @@ public:
       m_use_dummy = false;
     }
 
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_delete_options);
-    }
+    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+
+    // Options table: Required for subclasses of Options.
+
+    static OptionDefinition g_option_table[];
 
     // Instance variables to hold the values for command options.
     bool m_use_dummy;
@@ -562,7 +614,7 @@ protected:
       return false;
     }
 
-    if (command.empty()) {
+    if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No breakpoint specified from which to delete the commands");
       result.SetStatus(eReturnStatusFailed);
@@ -603,6 +655,14 @@ protected:
 
 private:
   CommandOptions m_options;
+};
+
+OptionDefinition
+    CommandObjectBreakpointCommandDelete::CommandOptions::g_option_table[] = {
+        // clang-format off
+  {LLDB_OPT_SET_1, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Delete commands from Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+        // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -653,7 +713,7 @@ protected:
       return false;
     }
 
-    if (command.empty()) {
+    if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No breakpoint specified for which to list the commands");
       result.SetStatus(eReturnStatusFailed);

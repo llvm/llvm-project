@@ -15,7 +15,7 @@ class ConcurrentDelayWatchBreak(ConcurrentEventsBase):
     @skipIfFreeBSD  # timing out on buildbot
     @skipIfRemoteDueToDeadlock
     # Atomic sequences are not supported yet for MIPS in LLDB.
-    @skipIf(triple='^mips')
+    @expectedFailureAll(triple='^mips')
     def test_delay_watch_break(self):
         """Test (1-second delay) watchpoint and a breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())

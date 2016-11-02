@@ -1,5 +1,3 @@
-include(${LLDB_PROJECT_ROOT}/cmake/LLDBDependencies.cmake)
-
 add_lldb_executable(lldb
   Driver.cpp
   Platform.cpp
@@ -20,15 +18,9 @@ if ( LLDB_CAN_USE_DEBUGSERVER )
 endif()
 
 target_link_libraries(lldb liblldb)
-if ((CMAKE_SYSTEM_NAME MATCHES "Windows") OR
-    (CMAKE_SYSTEM_NAME MATCHES "NetBSD" ))
-  # These targets do not have getopt support, so they rely on the one provided by
-  # liblldb. However, getopt is not a part of the liblldb interface, so we have
-  # to link against the constituent libraries manually. Note that this is
-  # extremely scary as it introduces ODR violations, and it should go away as
-  # soon as possible.
-  target_link_libraries(lldb ${LLDB_USED_LIBS})
-endif()
+# TODO: why isn't this done by add_lldb_executable?
+#target_link_libraries(lldb ${LLDB_USED_LIBS})
+#llvm_config(lldb ${LLVM_LINK_COMPONENTS})
 
 set_target_properties(lldb PROPERTIES VERSION ${LLDB_VERSION})
 

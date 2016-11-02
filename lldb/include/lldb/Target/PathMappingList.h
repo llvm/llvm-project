@@ -87,8 +87,7 @@ public:
   ///     /b true if \a path was successfully located and \a new_path
   ///     is filled in with a new source path, \b false otherwise.
   //------------------------------------------------------------------
-  bool RemapPath(llvm::StringRef path, std::string &new_path) const;
-  bool RemapPath(const char *, std::string &) const = delete;
+  bool RemapPath(const char *path, std::string &new_path) const;
 
   bool ReverseRemapPath(const ConstString &path, ConstString &new_path) const;
 

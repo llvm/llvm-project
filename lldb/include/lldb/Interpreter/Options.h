@@ -21,8 +21,6 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private.h"
 
-#include "llvm/ADT/ArrayRef.h"
-
 namespace lldb_private {
 
 static inline bool isprint8(int ch) {
@@ -160,9 +158,7 @@ public:
   // The following two pure virtual functions must be defined by every
   // class that inherits from this class.
 
-  virtual llvm::ArrayRef<OptionDefinition> GetDefinitions() {
-    return llvm::ArrayRef<OptionDefinition>();
-  }
+  virtual const OptionDefinition *GetDefinitions() { return nullptr; }
 
   // Call this prior to parsing any options. This call will call the
   // subclass OptionParsingStarting() and will avoid the need for all
@@ -192,7 +188,6 @@ public:
   /// @see Args::ParseOptions (Options&)
   /// @see man getopt_long_only
   //------------------------------------------------------------------
-  // TODO: Make this function take a StringRef.
   virtual Error SetOptionValue(uint32_t option_idx, const char *option_arg,
                                ExecutionContext *execution_context) = 0;
 
@@ -339,12 +334,12 @@ public:
 
   virtual ~OptionGroup() = default;
 
-  virtual llvm::ArrayRef<OptionDefinition> GetDefinitions() = 0;
+  virtual uint32_t GetNumDefinitions() = 0;
 
-  virtual Error SetOptionValue(uint32_t option_idx,
-                               llvm::StringRef option_value,
+  virtual const OptionDefinition *GetDefinitions() = 0;
+
+  virtual Error SetOptionValue(uint32_t option_idx, const char *option_value,
                                ExecutionContext *execution_context) = 0;
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   virtual void OptionParsingStarting(ExecutionContext *execution_context) = 0;
 
@@ -410,9 +405,9 @@ public:
 
   Error OptionParsingFinished(ExecutionContext *execution_context) override;
 
-  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+  const OptionDefinition *GetDefinitions() override {
     assert(m_did_finalize);
-    return m_option_defs;
+    return &m_option_defs[0];
   }
 
   const OptionGroup *GetGroupWithOption(char short_opt);

@@ -80,10 +80,15 @@ public:
   ///
   /// @see FileSpec::SetFile (const char *path, bool resolve)
   //------------------------------------------------------------------
-  explicit FileSpec(llvm::StringRef path, bool resolve_path,
+  explicit FileSpec(const char *path, bool resolve_path,
                     PathSyntax syntax = ePathSyntaxHostNative);
 
-  explicit FileSpec(llvm::StringRef path, bool resolve_path, ArchSpec arch);
+  explicit FileSpec(const char *path, bool resolve_path, ArchSpec arch);
+
+  explicit FileSpec(const std::string &path, bool resolve_path,
+                    PathSyntax syntax = ePathSyntaxHostNative);
+
+  explicit FileSpec(const std::string &path, bool resolve_path, ArchSpec arch);
 
   //------------------------------------------------------------------
   /// Copy constructor
@@ -651,10 +656,15 @@ public:
   ///     If \b true, then we will try to resolve links the path using
   ///     the static FileSpec::Resolve.
   //------------------------------------------------------------------
-  void SetFile(llvm::StringRef path, bool resolve_path,
+  void SetFile(const char *path, bool resolve_path,
                PathSyntax syntax = ePathSyntaxHostNative);
 
-  void SetFile(llvm::StringRef path, bool resolve_path, ArchSpec arch);
+  void SetFile(const char *path, bool resolve_path, ArchSpec arch);
+
+  void SetFile(const std::string &path, bool resolve_path,
+               PathSyntax syntax = ePathSyntaxHostNative);
+
+  void SetFile(const std::string &path, bool resolve_path, ArchSpec arch);
 
   bool IsResolved() const { return m_is_resolved; }
 
@@ -698,13 +708,20 @@ public:
   //------------------------------------------------------------------
   static void Resolve(llvm::SmallVectorImpl<char> &path);
 
-  FileSpec CopyByAppendingPathComponent(llvm::StringRef component) const;
+  FileSpec CopyByAppendingPathComponent(const char *new_path) const;
+
   FileSpec CopyByRemovingLastPathComponent() const;
 
-  void PrependPathComponent(llvm::StringRef component);
+  void PrependPathComponent(const char *new_path);
+
+  void PrependPathComponent(const std::string &new_path);
+
   void PrependPathComponent(const FileSpec &new_path);
 
-  void AppendPathComponent(llvm::StringRef component);
+  void AppendPathComponent(const char *new_path);
+
+  void AppendPathComponent(const std::string &new_path);
+
   void AppendPathComponent(const FileSpec &new_path);
 
   void RemoveLastPathComponent();
@@ -728,7 +745,7 @@ public:
   //------------------------------------------------------------------
   static void ResolveUsername(llvm::SmallVectorImpl<char> &path);
 
-  static size_t ResolvePartialUsername(llvm::StringRef partial_name,
+  static size_t ResolvePartialUsername(const char *partial_name,
                                        StringList &matches);
 
   enum EnumerateDirectoryResult {
@@ -745,7 +762,7 @@ public:
       void *baton, FileType file_type, const FileSpec &spec);
 
   static EnumerateDirectoryResult
-  EnumerateDirectory(llvm::StringRef dir_path, bool find_directories,
+  EnumerateDirectory(const char *dir_path, bool find_directories,
                      bool find_files, bool find_other,
                      EnumerateDirectoryCallbackType callback,
                      void *callback_baton);
@@ -755,7 +772,7 @@ public:
       DirectoryCallback;
 
   static EnumerateDirectoryResult
-  ForEachItemInDirectory(llvm::StringRef dir_path,
+  ForEachItemInDirectory(const char *dir_path,
                          DirectoryCallback const &callback);
 
 protected:

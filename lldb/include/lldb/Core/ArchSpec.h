@@ -257,9 +257,7 @@ public:
   //------------------------------------------------------------------
   explicit ArchSpec(const llvm::Triple &triple);
   explicit ArchSpec(const char *triple_cstr);
-  explicit ArchSpec(llvm::StringRef triple_str);
-  ArchSpec(const char *triple_cstr, Platform *platform);
-  ArchSpec(llvm::StringRef triple_str, Platform *platform);
+  explicit ArchSpec(const char *triple_cstr, Platform *platform);
   //------------------------------------------------------------------
   /// Constructor over architecture name.
   ///
@@ -308,13 +306,6 @@ public:
   ///         architecture.
   //------------------------------------------------------------------
   std::string GetClangTargetCPU();
-
-  //------------------------------------------------------------------
-  /// Return a string representing target application ABI.
-  ///
-  /// @return A string representing target application ABI.
-  //------------------------------------------------------------------
-  std::string GetTargetABI() const;
 
   //------------------------------------------------------------------
   /// Clears the object state.
@@ -514,10 +505,8 @@ public:
   //------------------------------------------------------------------
   bool SetTriple(const llvm::Triple &triple);
 
-  bool SetTriple(llvm::StringRef triple_str);
-  bool SetTriple(llvm::StringRef triple_str, Platform *platform);
-
   bool SetTriple(const char *triple_cstr);
+
   bool SetTriple(const char *triple_cstr, Platform *platform);
 
   //------------------------------------------------------------------
@@ -603,19 +592,17 @@ public:
 
   void SetFlags(uint32_t flags) { m_flags = flags; }
 
-  void SetFlags(std::string elf_abi);
-
 protected:
   bool IsEqualTo(const ArchSpec &rhs, bool exact_match) const;
 
   llvm::Triple m_triple;
-  Core m_core = kCore_invalid;
-  lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
+  Core m_core;
+  lldb::ByteOrder m_byte_order;
 
   // Additional arch flags which we cannot get from triple and core
   // For MIPS these are application specific extensions like
   // micromips, mips16 etc.
-  uint32_t m_flags = 0;
+  uint32_t m_flags;
 
   ConstString m_distribution_id;
 
@@ -637,8 +624,6 @@ protected:
 /// @return true if \a lhs is less than \a rhs
 //------------------------------------------------------------------
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
-
-bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 
 } // namespace lldb_private
 

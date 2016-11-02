@@ -47,19 +47,22 @@ static OptionDefinition g_option_table[] = {
      "The number of total items to display."},
 };
 
-llvm::ArrayRef<OptionDefinition> OptionGroupFormat::GetDefinitions() {
-  auto result = llvm::makeArrayRef(g_option_table);
+uint32_t OptionGroupFormat::GetNumDefinitions() {
   if (m_byte_size.GetDefaultValue() < UINT64_MAX) {
     if (m_count.GetDefaultValue() < UINT64_MAX)
-      return result;
+      return 4;
     else
-      return result.take_front(3);
+      return 3;
   }
-  return result.take_front(2);
+  return 2;
+}
+
+const OptionDefinition *OptionGroupFormat::GetDefinitions() {
+  return g_option_table;
 }
 
 Error OptionGroupFormat::SetOptionValue(uint32_t option_idx,
-                                        llvm::StringRef option_arg,
+                                        const char *option_arg,
                                         ExecutionContext *execution_context) {
   Error error;
   const int short_option = g_option_table[option_idx].short_option;
@@ -76,7 +79,7 @@ Error OptionGroupFormat::SetOptionValue(uint32_t option_idx,
       error = m_count.SetValueFromString(option_arg);
       if (m_count.GetCurrentValue() == 0)
         error.SetErrorStringWithFormat("invalid --count option value '%s'",
-                                       option_arg.str().c_str());
+                                       option_arg);
     }
     break;
 
@@ -87,33 +90,41 @@ Error OptionGroupFormat::SetOptionValue(uint32_t option_idx,
       error = m_byte_size.SetValueFromString(option_arg);
       if (m_byte_size.GetCurrentValue() == 0)
         error.SetErrorStringWithFormat("invalid --size option value '%s'",
-                                       option_arg.str().c_str());
+                                       option_arg);
     }
     break;
 
   case 'G': {
+    char *end = nullptr;
+    const char *gdb_format_cstr = option_arg;
     uint64_t count = 0;
-    llvm::StringRef gdb_format_str = option_arg;
-    gdb_format_str.consumeInteger(0, count);
+    if (::isdigit(gdb_format_cstr[0])) {
+      count = strtoull(gdb_format_cstr, &end, 0);
+
+      if (option_arg != end)
+        gdb_format_cstr =
+            end; // We have a valid count, advance the string position
+      else
+        count = 0;
+    }
 
     Format format = eFormatDefault;
     uint32_t byte_size = 0;
 
-    while (!gdb_format_str.empty() &&
-           ParserGDBFormatLetter(execution_context, gdb_format_str[0], format,
+    while (ParserGDBFormatLetter(execution_context, gdb_format_cstr[0], format,
                                  byte_size)) {
-      gdb_format_str = gdb_format_str.drop_front();
+      ++gdb_format_cstr;
     }
 
-    // We the first character of the "gdb_format_str" is not the
+    // We the first character of the "gdb_format_cstr" is not the
     // NULL terminator, we didn't consume the entire string and
     // something is wrong. Also, if none of the format, size or count
     // was specified correctly, then abort.
-    if (!gdb_format_str.empty() ||
+    if (gdb_format_cstr[0] ||
         (format == eFormatInvalid && byte_size == 0 && count == 0)) {
       // Nothing got set correctly
       error.SetErrorStringWithFormat("invalid gdb format string '%s'",
-                                     option_arg.str().c_str());
+                                     option_arg);
       return error;
     }
 

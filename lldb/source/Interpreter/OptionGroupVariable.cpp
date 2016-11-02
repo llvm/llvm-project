@@ -24,7 +24,7 @@ using namespace lldb_private;
 
 // if you add any options here, remember to update the counters in
 // OptionGroupVariable::GetNumDefinitions()
-static OptionDefinition g_variable_options[] = {
+static OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-args", 'a',
      OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
      "Omit function arguments."},
@@ -75,12 +75,12 @@ OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
 OptionGroupVariable::~OptionGroupVariable() {}
 
 Error OptionGroupVariable::SetOptionValue(uint32_t option_idx,
-                                          llvm::StringRef option_arg,
+                                          const char *option_arg,
                                           ExecutionContext *execution_context) {
   Error error;
   if (!include_frame_options)
     option_idx += 3;
-  const int short_option = g_variable_options[option_idx].short_option;
+  const int short_option = g_option_table[option_idx].short_option;
   switch (short_option) {
   case 'r':
     use_regex = true;
@@ -129,14 +129,22 @@ void OptionGroupVariable::OptionParsingStarting(
 
 #define NUM_FRAME_OPTS 3
 
-llvm::ArrayRef<OptionDefinition> OptionGroupVariable::GetDefinitions() {
-  auto result = llvm::makeArrayRef(g_variable_options);
+const OptionDefinition *OptionGroupVariable::GetDefinitions() {
   // Show the "--no-args", "--no-locals" and "--show-globals"
   // options if we are showing frame specific options
   if (include_frame_options)
-    return result;
+    return g_option_table;
 
   // Skip the "--no-args", "--no-locals" and "--show-globals"
   // options if we are not showing frame specific options (globals only)
-  return result.drop_front(NUM_FRAME_OPTS);
+  return &g_option_table[NUM_FRAME_OPTS];
+}
+
+uint32_t OptionGroupVariable::GetNumDefinitions() {
+  // Count the "--no-args", "--no-locals" and "--show-globals"
+  // options if we are showing frame specific options.
+  if (include_frame_options)
+    return llvm::array_lengthof(g_option_table);
+  else
+    return llvm::array_lengthof(g_option_table) - NUM_FRAME_OPTS;
 }

@@ -46,7 +46,7 @@ ProcessRunLock::ProcessRunLock() : m_running(false) {
   InitializeSRWLock(GetLock(m_rwlock));
 }
 
-ProcessRunLock::~ProcessRunLock() { delete static_cast<SRWLOCK *>(m_rwlock); }
+ProcessRunLock::~ProcessRunLock() { delete m_rwlock; }
 
 bool ProcessRunLock::ReadTryLock() {
   ::ReadLock(m_rwlock);

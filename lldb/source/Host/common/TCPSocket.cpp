@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(_MSC_VER)
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#endif
-
 #include "lldb/Host/common/TCPSocket.h"
 
 #include "lldb/Core/Log.h"

@@ -790,16 +790,17 @@ int CommandInterpreter::GetCommandNamesMatchingPartialString(
   return matches.GetSize();
 }
 
-CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
+CommandObjectSP CommandInterpreter::GetCommandSP(const char *cmd_cstr,
                                                  bool include_aliases,
                                                  bool exact,
-                                                 StringList *matches) const {
+                                                 StringList *matches) {
+  CommandObject::CommandMap::iterator pos;
   CommandObjectSP command_sp;
 
-  std::string cmd = cmd_str;
+  std::string cmd(cmd_cstr);
 
   if (HasCommands()) {
-    auto pos = m_command_dict.find(cmd);
+    pos = m_command_dict.find(cmd);
     if (pos != m_command_dict.end())
       command_sp = pos->second;
   }
@@ -811,7 +812,7 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
   }
 
   if (HasUserCommands()) {
-    auto pos = m_user_dict.find(cmd);
+    pos = m_user_dict.find(cmd);
     if (pos != m_user_dict.end())
       command_sp = pos->second;
   }
@@ -836,19 +837,19 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
 
     if (HasCommands()) {
       num_cmd_matches =
-          AddNamesMatchingPartialString(m_command_dict, cmd_str, *matches);
+          AddNamesMatchingPartialString(m_command_dict, cmd_cstr, *matches);
     }
 
     if (num_cmd_matches == 1) {
       cmd.assign(matches->GetStringAtIndex(0));
-      auto pos = m_command_dict.find(cmd);
+      pos = m_command_dict.find(cmd);
       if (pos != m_command_dict.end())
         real_match_sp = pos->second;
     }
 
     if (include_aliases && HasAliases()) {
       num_alias_matches =
-          AddNamesMatchingPartialString(m_alias_dict, cmd_str, *matches);
+          AddNamesMatchingPartialString(m_alias_dict, cmd_cstr, *matches);
     }
 
     if (num_alias_matches == 1) {
@@ -860,14 +861,14 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
 
     if (HasUserCommands()) {
       num_user_matches =
-          AddNamesMatchingPartialString(m_user_dict, cmd_str, *matches);
+          AddNamesMatchingPartialString(m_user_dict, cmd_cstr, *matches);
     }
 
     if (num_user_matches == 1) {
       cmd.assign(
           matches->GetStringAtIndex(num_cmd_matches + num_alias_matches));
 
-      auto pos = m_user_dict.find(cmd);
+      pos = m_user_dict.find(cmd);
       if (pos != m_user_dict.end())
         user_match_sp = pos->second;
     }
@@ -884,35 +885,33 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
         return user_match_sp;
     }
   } else if (matches && command_sp) {
-    matches->AppendString(cmd_str);
+    matches->AppendString(cmd_cstr);
   }
 
   return command_sp;
 }
 
-bool CommandInterpreter::AddCommand(llvm::StringRef name,
+bool CommandInterpreter::AddCommand(const char *name,
                                     const lldb::CommandObjectSP &cmd_sp,
                                     bool can_replace) {
   if (cmd_sp.get())
     assert((this == &cmd_sp->GetCommandInterpreter()) &&
            "tried to add a CommandObject from a different interpreter");
 
-  if (name.empty())
-    return false;
-
-  std::string name_sstr(name);
-  auto name_iter = m_command_dict.find(name_sstr);
-  if (name_iter != m_command_dict.end()) {
-    if (!can_replace || !name_iter->second->IsRemovable())
+  if (name && name[0]) {
+    std::string name_sstr(name);
+    bool found = (m_command_dict.find(name_sstr) != m_command_dict.end());
+    if (found && !can_replace)
       return false;
-    name_iter->second = cmd_sp;
-  } else {
+    if (found && m_command_dict[name_sstr]->IsRemovable() == false)
+      return false;
     m_command_dict[name_sstr] = cmd_sp;
+    return true;
   }
-  return true;
+  return false;
 }
 
-bool CommandInterpreter::AddUserCommand(llvm::StringRef name,
+bool CommandInterpreter::AddUserCommand(std::string name,
                                         const lldb::CommandObjectSP &cmd_sp,
                                         bool can_replace) {
   if (cmd_sp.get())
@@ -920,15 +919,17 @@ bool CommandInterpreter::AddUserCommand(llvm::StringRef name,
            "tried to add a CommandObject from a different interpreter");
 
   if (!name.empty()) {
+    const char *name_cstr = name.c_str();
+
     // do not allow replacement of internal commands
-    if (CommandExists(name)) {
+    if (CommandExists(name_cstr)) {
       if (can_replace == false)
         return false;
       if (m_command_dict[name]->IsRemovable() == false)
         return false;
     }
 
-    if (UserCommandExists(name)) {
+    if (UserCommandExists(name_cstr)) {
       if (can_replace == false)
         return false;
       if (m_user_dict[name]->IsRemovable() == false)
@@ -941,21 +942,21 @@ bool CommandInterpreter::AddUserCommand(llvm::StringRef name,
   return false;
 }
 
-CommandObjectSP CommandInterpreter::GetCommandSPExact(llvm::StringRef cmd_str,
-                                                      bool include_aliases) const {
-  Args cmd_words(cmd_str);  // Break up the command string into words, in case
+CommandObjectSP CommandInterpreter::GetCommandSPExact(const char *cmd_cstr,
+                                                      bool include_aliases) {
+  Args cmd_words(cmd_cstr); // Break up the command string into words, in case
                             // it's a multi-word command.
   CommandObjectSP ret_val;  // Possibly empty return value.
 
-  if (cmd_str.empty())
+  if (cmd_cstr == nullptr)
     return ret_val;
 
   if (cmd_words.GetArgumentCount() == 1)
-    return GetCommandSP(cmd_str, include_aliases, true, nullptr);
+    return GetCommandSP(cmd_cstr, include_aliases, true, nullptr);
   else {
     // We have a multi-word command (seemingly), so we need to do more work.
     // First, get the cmd_obj_sp for the first word in the command.
-    CommandObjectSP cmd_obj_sp = GetCommandSP(llvm::StringRef(cmd_words.GetArgumentAtIndex(0)),
+    CommandObjectSP cmd_obj_sp = GetCommandSP(cmd_words.GetArgumentAtIndex(0),
                                               include_aliases, true, nullptr);
     if (cmd_obj_sp.get() != nullptr) {
       // Loop through the rest of the words in the command (everything passed in
@@ -973,22 +974,28 @@ CommandObjectSP CommandInterpreter::GetCommandSPExact(llvm::StringRef cmd_str,
             return ret_val;
         } else
           // We have more words in the command name, but we don't have a
-          // multiword object. Fail and return empty 'ret_val'.
+          // multiword object. Fail and return
+          // empty 'ret_val'.
           return ret_val;
       }
       // We successfully looped through all the command words and got valid
-      // command objects for them.  Assign the last object retrieved to
-      // 'ret_val'.
+      // command objects for them.  Assign the
+      // last object retrieved to 'ret_val'.
       ret_val = cmd_obj_sp;
     }
   }
   return ret_val;
 }
 
-CommandObject *CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
-                                                    StringList *matches) const {
+CommandObject *CommandInterpreter::GetCommandObjectExact(const char *cmd_cstr,
+                                                         bool include_aliases) {
+  return GetCommandSPExact(cmd_cstr, include_aliases).get();
+}
+
+CommandObject *CommandInterpreter::GetCommandObject(const char *cmd_cstr,
+                                                    StringList *matches) {
   CommandObject *command_obj =
-      GetCommandSP(cmd_str, false, true, matches).get();
+      GetCommandSP(cmd_cstr, false, true, matches).get();
 
   // If we didn't find an exact match to the command string in the commands,
   // look in
@@ -997,14 +1004,14 @@ CommandObject *CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
   if (command_obj)
     return command_obj;
 
-  command_obj = GetCommandSP(cmd_str, true, true, matches).get();
+  command_obj = GetCommandSP(cmd_cstr, true, true, matches).get();
 
   if (command_obj)
     return command_obj;
 
   // If there wasn't an exact match then look for an inexact one in just the
   // commands
-  command_obj = GetCommandSP(cmd_str, false, false, nullptr).get();
+  command_obj = GetCommandSP(cmd_cstr, false, false, nullptr).get();
 
   // Finally, if there wasn't an inexact match among the commands, look for an
   // inexact
@@ -1016,15 +1023,15 @@ CommandObject *CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
     return command_obj;
   }
 
-  return GetCommandSP(cmd_str, true, false, matches).get();
+  return GetCommandSP(cmd_cstr, true, false, matches).get();
 }
 
-bool CommandInterpreter::CommandExists(llvm::StringRef cmd) const {
+bool CommandInterpreter::CommandExists(const char *cmd) {
   return m_command_dict.find(cmd) != m_command_dict.end();
 }
 
-bool CommandInterpreter::GetAliasFullName(llvm::StringRef cmd,
-                                          std::string &full_name) const {
+bool CommandInterpreter::GetAliasFullName(const char *cmd,
+                                          std::string &full_name) {
   bool exact_match = (m_alias_dict.find(cmd) != m_alias_dict.end());
   if (exact_match) {
     full_name.assign(cmd);
@@ -1052,18 +1059,18 @@ bool CommandInterpreter::GetAliasFullName(llvm::StringRef cmd,
   }
 }
 
-bool CommandInterpreter::AliasExists(llvm::StringRef cmd) const {
+bool CommandInterpreter::AliasExists(const char *cmd) {
   return m_alias_dict.find(cmd) != m_alias_dict.end();
 }
 
-bool CommandInterpreter::UserCommandExists(llvm::StringRef cmd) const {
+bool CommandInterpreter::UserCommandExists(const char *cmd) {
   return m_user_dict.find(cmd) != m_user_dict.end();
 }
 
 CommandAlias *
-CommandInterpreter::AddAlias(llvm::StringRef alias_name,
+CommandInterpreter::AddAlias(const char *alias_name,
                              lldb::CommandObjectSP &command_obj_sp,
-                             llvm::StringRef args_string) {
+                             const char *args_string) {
   if (command_obj_sp.get())
     assert((this == &command_obj_sp->GetCommandInterpreter()) &&
            "tried to add a CommandObject from a different interpreter");
@@ -1079,7 +1086,7 @@ CommandInterpreter::AddAlias(llvm::StringRef alias_name,
   return nullptr;
 }
 
-bool CommandInterpreter::RemoveAlias(llvm::StringRef alias_name) {
+bool CommandInterpreter::RemoveAlias(const char *alias_name) {
   auto pos = m_alias_dict.find(alias_name);
   if (pos != m_alias_dict.end()) {
     m_alias_dict.erase(pos);
@@ -1088,7 +1095,7 @@ bool CommandInterpreter::RemoveAlias(llvm::StringRef alias_name) {
   return false;
 }
 
-bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd) {
+bool CommandInterpreter::RemoveCommand(const char *cmd) {
   auto pos = m_command_dict.find(cmd);
   if (pos != m_command_dict.end()) {
     if (pos->second->IsRemovable()) {
@@ -1099,7 +1106,7 @@ bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd) {
   }
   return false;
 }
-bool CommandInterpreter::RemoveUser(llvm::StringRef alias_name) {
+bool CommandInterpreter::RemoveUser(const char *alias_name) {
   CommandObject::CommandMap::iterator pos = m_user_dict.find(alias_name);
   if (pos != m_user_dict.end()) {
     m_user_dict.erase(pos);
@@ -1168,8 +1175,8 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
       GetCommandPrefix());
 }
 
-CommandObject *CommandInterpreter::GetCommandObjectForCommand(
-    llvm::StringRef &command_string) {
+CommandObject *
+CommandInterpreter::GetCommandObjectForCommand(std::string &command_string) {
   // This function finds the final, lowest-level, alias-resolved command object
   // whose 'Execute' function will
   // eventually be invoked by the given command line.
@@ -1188,8 +1195,9 @@ CommandObject *CommandInterpreter::GetCommandObjectForCommand(
 
       if (cmd_obj == nullptr)
         // Since cmd_obj is NULL we are on our first time through this loop.
-        // Check to see if cmd_word is a valid command or alias.
-        cmd_obj = GetCommandObject(cmd_word);
+        // Check to see if cmd_word is a valid
+        // command or alias.
+        cmd_obj = GetCommandObject(cmd_word.c_str());
       else if (cmd_obj->IsMultiwordObject()) {
         // Our current object is a multi-word object; see if the cmd_word is a
         // valid sub-command for our object.
@@ -1204,8 +1212,10 @@ CommandObject *CommandInterpreter::GetCommandObjectForCommand(
         done = true;
 
       // If we didn't find a valid command object, or our command object is not
-      // a multi-word object, or we are at the end of the command_string, then
-      // we are done.  Otherwise, find the start of the next word.
+      // a multi-word object, or
+      // we are at the end of the command_string, then we are done.  Otherwise,
+      // find the start of the
+      // next word.
 
       if (!cmd_obj || !cmd_obj->IsMultiwordObject() ||
           end >= command_string.size())
@@ -1217,7 +1227,11 @@ CommandObject *CommandInterpreter::GetCommandObjectForCommand(
       done = true;
   }
 
-  command_string = command_string.substr(end);
+  if (end == command_string.size())
+    command_string.clear();
+  else
+    command_string = command_string.substr(end);
+
   return cmd_obj;
 }
 
@@ -1310,71 +1324,68 @@ static bool ExtractCommand(std::string &command_string, std::string &command,
 }
 
 CommandObject *CommandInterpreter::BuildAliasResult(
-    llvm::StringRef alias_name, std::string &raw_input_string,
+    const char *alias_name, std::string &raw_input_string,
     std::string &alias_result, CommandReturnObject &result) {
   CommandObject *alias_cmd_obj = nullptr;
   Args cmd_args(raw_input_string);
   alias_cmd_obj = GetCommandObject(alias_name);
   StreamString result_str;
 
-  if (!alias_cmd_obj || !alias_cmd_obj->IsAlias()) {
-    alias_result.clear();
-    return alias_cmd_obj;
-  }
-  std::pair<CommandObjectSP, OptionArgVectorSP> desugared =
-      ((CommandAlias *)alias_cmd_obj)->Desugar();
-  OptionArgVectorSP option_arg_vector_sp = desugared.second;
-  alias_cmd_obj = desugared.first.get();
-  std::string alias_name_str = alias_name;
-  if ((cmd_args.GetArgumentCount() == 0) ||
-      (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0))
-    cmd_args.Unshift(alias_name_str);
+  if (alias_cmd_obj && alias_cmd_obj->IsAlias()) {
+    std::pair<CommandObjectSP, OptionArgVectorSP> desugared =
+        ((CommandAlias *)alias_cmd_obj)->Desugar();
+    OptionArgVectorSP option_arg_vector_sp = desugared.second;
+    alias_cmd_obj = desugared.first.get();
+    std::string alias_name_str = alias_name;
+    if ((cmd_args.GetArgumentCount() == 0) ||
+        (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0))
+      cmd_args.Unshift(alias_name);
 
-  result_str.Printf("%s", alias_cmd_obj->GetCommandName().str().c_str());
+    result_str.Printf("%s", alias_cmd_obj->GetCommandName());
 
-  if (!option_arg_vector_sp.get()) {
+    if (option_arg_vector_sp.get()) {
+      OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
+
+      for (size_t i = 0; i < option_arg_vector->size(); ++i) {
+        OptionArgPair option_pair = (*option_arg_vector)[i];
+        OptionArgValue value_pair = option_pair.second;
+        int value_type = value_pair.first;
+        std::string option = option_pair.first;
+        std::string value = value_pair.second;
+        if (option.compare("<argument>") == 0)
+          result_str.Printf(" %s", value.c_str());
+        else {
+          result_str.Printf(" %s", option.c_str());
+          if (value_type != OptionParser::eNoArgument) {
+            if (value_type != OptionParser::eOptionalArgument)
+              result_str.Printf(" ");
+            int index = GetOptionArgumentPosition(value.c_str());
+            if (index == 0)
+              result_str.Printf("%s", value.c_str());
+            else if (static_cast<size_t>(index) >=
+                     cmd_args.GetArgumentCount()) {
+
+              result.AppendErrorWithFormat("Not enough arguments provided; you "
+                                           "need at least %d arguments to use "
+                                           "this alias.\n",
+                                           index);
+              result.SetStatus(eReturnStatusFailed);
+              return nullptr;
+            } else {
+              size_t strpos =
+                  raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
+              if (strpos != std::string::npos)
+                raw_input_string = raw_input_string.erase(
+                    strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
+              result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
+            }
+          }
+        }
+      }
+    }
+
     alias_result = result_str.GetData();
-    return alias_cmd_obj;
   }
-  OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
-
-  int value_type;
-  std::string option;
-  std::string value;
-  for (const auto &entry : *option_arg_vector) {
-    std::tie(option, value_type, value) = entry;
-    if (option == "<argument>") {
-      result_str.Printf(" %s", value.c_str());
-      continue;
-    }
-
-    result_str.Printf(" %s", option.c_str());
-    if (value_type == OptionParser::eNoArgument)
-      continue;
-
-    if (value_type != OptionParser::eOptionalArgument)
-      result_str.Printf(" ");
-    int index = GetOptionArgumentPosition(value.c_str());
-    if (index == 0)
-      result_str.Printf("%s", value.c_str());
-    else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
-
-      result.AppendErrorWithFormat("Not enough arguments provided; you "
-                                   "need at least %d arguments to use "
-                                   "this alias.\n",
-                                   index);
-      result.SetStatus(eReturnStatusFailed);
-      return nullptr;
-    } else {
-      size_t strpos = raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
-      if (strpos != std::string::npos)
-        raw_input_string = raw_input_string.erase(
-            strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
-      result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
-    }
-  }
-
-  alias_result = result_str.GetData();
   return alias_cmd_obj;
 }
 
@@ -1639,9 +1650,10 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // Although the user may have abbreviated the command, the command_string now
   // has the command expanded to the full name.  For example, if the input
   // was "br s -n main", command_string is now "breakpoint set -n main".
+
   if (log) {
-    llvm::StringRef command_name = cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
-    log->Printf("HandleCommand, cmd_obj : '%s'", command_name.str().c_str());
+    log->Printf("HandleCommand, cmd_obj : '%s'",
+                cmd_obj ? cmd_obj->GetCommandName() : "<not found>");
     log->Printf("HandleCommand, (revised) command_string: '%s'",
                 command_string.c_str());
     const bool wants_raw_input =
@@ -1668,7 +1680,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     }
 
     std::string remainder;
-    const std::size_t actual_cmd_name_len = cmd_obj->GetCommandName().size();
+    const std::size_t actual_cmd_name_len = strlen(cmd_obj->GetCommandName());
     if (actual_cmd_name_len < command_string.length())
       remainder = command_string.substr(actual_cmd_name_len);
 
@@ -1754,7 +1766,7 @@ int CommandInterpreter::HandleCompletionMatches(
         look_for_subcommand = true;
         num_command_matches = 0;
         matches.DeleteStringAtIndex(0);
-        parsed_line.AppendArgument(llvm::StringRef());
+        parsed_line.AppendArgument("");
         cursor_index++;
         cursor_char_position = 0;
       }
@@ -1836,8 +1848,7 @@ int CommandInterpreter::HandleCompletion(
         partial_parsed_line.GetArgumentAtIndex(cursor_index);
     if (cursor_char_position == 0 ||
         current_elem[cursor_char_position - 1] != ' ') {
-      parsed_line.InsertArgumentAtIndex(cursor_index + 1, llvm::StringRef(),
-                                        '\0');
+      parsed_line.InsertArgumentAtIndex(cursor_index + 1, "", '\0');
       cursor_index++;
       cursor_char_position = 0;
     }
@@ -1893,7 +1904,7 @@ int CommandInterpreter::HandleCompletion(
 
 CommandInterpreter::~CommandInterpreter() {}
 
-void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {
+void CommandInterpreter::UpdatePrompt(const char *new_prompt) {
   EventSP prompt_change_event_sp(
       new Event(eBroadcastBitResetPrompt, new EventDataBytes(new_prompt)));
   ;
@@ -1914,24 +1925,25 @@ bool CommandInterpreter::Confirm(const char *message, bool default_answer) {
   return confirm->GetResponse();
 }
 
-const CommandAlias *
-CommandInterpreter::GetAlias(llvm::StringRef alias_name) const {
+CommandAlias *CommandInterpreter::GetAlias(const char *alias_name) {
   OptionArgVectorSP ret_val;
 
-  auto pos = m_alias_dict.find(alias_name);
+  std::string alias(alias_name);
+
+  auto pos = m_alias_dict.find(alias);
   if (pos != m_alias_dict.end())
     return (CommandAlias *)pos->second.get();
 
   return nullptr;
 }
 
-bool CommandInterpreter::HasCommands() const { return (!m_command_dict.empty()); }
+bool CommandInterpreter::HasCommands() { return (!m_command_dict.empty()); }
 
-bool CommandInterpreter::HasAliases() const { return (!m_alias_dict.empty()); }
+bool CommandInterpreter::HasAliases() { return (!m_alias_dict.empty()); }
 
-bool CommandInterpreter::HasUserCommands() const { return (!m_user_dict.empty()); }
+bool CommandInterpreter::HasUserCommands() { return (!m_user_dict.empty()); }
 
-bool CommandInterpreter::HasAliasOptions() const { return HasAliases(); }
+bool CommandInterpreter::HasAliasOptions() { return HasAliases(); }
 
 void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
                                                const char *alias_name,
@@ -1946,7 +1958,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
   // Make sure that the alias name is the 0th element in cmd_args
   std::string alias_name_str = alias_name;
   if (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0)
-    cmd_args.Unshift(alias_name_str);
+    cmd_args.Unshift(alias_name);
 
   Args new_args(alias_cmd_obj->GetCommandName());
   if (new_args.GetArgumentCount() == 2)
@@ -1970,68 +1982,69 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
 
     used[0] = true;
 
-    int value_type;
-    std::string option;
-    std::string value;
-    for (const auto &option_entry : *option_arg_vector) {
-      std::tie(option, value_type, value) = option_entry;
-      if (option == "<argument>") {
-        if (!wants_raw_input || (value != "--")) {
-          // Since we inserted this above, make sure we don't insert it twice
-          new_args.AppendArgument(value);
-        }
-        continue;
-      }
-
-      if (value_type != OptionParser::eOptionalArgument)
-        new_args.AppendArgument(option);
-
-      if (value == "<no-argument>")
-        continue;
-
-      int index = GetOptionArgumentPosition(value.c_str());
-      if (index == 0) {
-        // value was NOT a positional argument; must be a real value
-        if (value_type != OptionParser::eOptionalArgument)
-          new_args.AppendArgument(value);
-        else {
-          char buffer[255];
-          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                     value.c_str());
-          new_args.AppendArgument(llvm::StringRef(buffer));
-        }
-
-      } else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
-        result.AppendErrorWithFormat("Not enough arguments provided; you "
-                                     "need at least %d arguments to use "
-                                     "this alias.\n",
-                                     index);
-        result.SetStatus(eReturnStatusFailed);
-        return;
+    for (size_t i = 0; i < option_arg_vector->size(); ++i) {
+      OptionArgPair option_pair = (*option_arg_vector)[i];
+      OptionArgValue value_pair = option_pair.second;
+      int value_type = value_pair.first;
+      std::string option = option_pair.first;
+      std::string value = value_pair.second;
+      if (option.compare("<argument>") == 0) {
+        if (!wants_raw_input || (value.compare("--") != 0)) // Since we inserted
+                                                            // this above, make
+                                                            // sure we don't
+                                                            // insert it twice
+          new_args.AppendArgument(value.c_str());
       } else {
-        // Find and remove cmd_args.GetArgumentAtIndex(i) from raw_input_string
-        size_t strpos =
-            raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
-        if (strpos != std::string::npos) {
-          raw_input_string = raw_input_string.erase(
-              strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
-        }
-
         if (value_type != OptionParser::eOptionalArgument)
-          new_args.AppendArgument(cmd_args.GetArgumentAtIndex(index));
-        else {
-          char buffer[255];
-          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                     cmd_args.GetArgumentAtIndex(index));
-          new_args.AppendArgument(buffer);
+          new_args.AppendArgument(option.c_str());
+        if (value.compare("<no-argument>") != 0) {
+          int index = GetOptionArgumentPosition(value.c_str());
+          if (index == 0) {
+            // value was NOT a positional argument; must be a real value
+            if (value_type != OptionParser::eOptionalArgument)
+              new_args.AppendArgument(value.c_str());
+            else {
+              char buffer[255];
+              ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
+                         value.c_str());
+              new_args.AppendArgument(buffer);
+            }
+
+          } else if (static_cast<size_t>(index) >=
+                     cmd_args.GetArgumentCount()) {
+            result.AppendErrorWithFormat("Not enough arguments provided; you "
+                                         "need at least %d arguments to use "
+                                         "this alias.\n",
+                                         index);
+            result.SetStatus(eReturnStatusFailed);
+            return;
+          } else {
+            // Find and remove cmd_args.GetArgumentAtIndex(i) from
+            // raw_input_string
+            size_t strpos =
+                raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
+            if (strpos != std::string::npos) {
+              raw_input_string = raw_input_string.erase(
+                  strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
+            }
+
+            if (value_type != OptionParser::eOptionalArgument)
+              new_args.AppendArgument(cmd_args.GetArgumentAtIndex(index));
+            else {
+              char buffer[255];
+              ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
+                         cmd_args.GetArgumentAtIndex(index));
+              new_args.AppendArgument(buffer);
+            }
+            used[index] = true;
+          }
         }
-        used[index] = true;
       }
     }
 
-    for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (!used[entry.Index] && !wants_raw_input)
-        new_args.AppendArgument(entry.Value.ref);
+    for (size_t j = 0; j < cmd_args.GetArgumentCount(); ++j) {
+      if (!used[j] && !wants_raw_input)
+        new_args.AppendArgument(cmd_args.GetArgumentAtIndex(j));
     }
 
     cmd_args.Clear();
@@ -2226,9 +2239,7 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
       continue;
 
     if (options.GetEchoCommands()) {
-      // TODO: Add Stream support.
-      result.AppendMessageWithFormat("%s %s\n",
-                                     m_debugger.GetPrompt().str().c_str(), cmd);
+      result.AppendMessageWithFormat("%s %s\n", m_debugger.GetPrompt(), cmd);
     }
 
     CommandReturnObject tmp_result;
@@ -2451,7 +2462,7 @@ void CommandInterpreter::HandleCommandsFromFile(
           flags,
           nullptr, // Pass in NULL for "editline_name" so no history is saved,
                    // or written
-          debugger.GetPrompt(), llvm::StringRef(),
+          debugger.GetPrompt(), NULL,
           false, // Not multi-line
           debugger.GetUseColor(), 0, *this));
       const bool old_async_execution = debugger.GetAsyncExecution();
@@ -2587,8 +2598,7 @@ void CommandInterpreter::OutputHelpText(Stream &strm, const char *word_text,
 
   for (uint32_t i = 0; i < len; i++) {
     if ((text[i] == ' ' && ::strchr((text + i + 1), ' ') &&
-         chars_left < static_cast<uint32_t>(::strchr((text + i + 1), ' ') -
-                                            (text + i))) ||
+         chars_left < ::strchr((text + i + 1), ' ') - (text + i)) ||
         text[i] == '\n') {
       chars_left = max_columns - indent_size;
       strm.EOL();
@@ -2815,9 +2825,9 @@ void CommandInterpreter::GetLLDBCommandsFromIOHandler(
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::CommandList,
                             "lldb", // Name of input reader for history
-                            llvm::StringRef::withNullAsEmpty(prompt), // Prompt
-                            llvm::StringRef(), // Continuation prompt
-                            true,              // Get multiple lines
+                            prompt, // Prompt
+                            NULL,   // Continuation prompt
+                            true,   // Get multiple lines
                             debugger.GetUseColor(),
                             0,          // Don't show line numbers
                             delegate)); // IOHandlerDelegate
@@ -2838,9 +2848,9 @@ void CommandInterpreter::GetPythonCommandsFromIOHandler(
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::PythonCode,
                             "lldb-python", // Name of input reader for history
-                            llvm::StringRef::withNullAsEmpty(prompt), // Prompt
-                            llvm::StringRef(), // Continuation prompt
-                            true,              // Get multiple lines
+                            prompt,        // Prompt
+                            NULL,          // Continuation prompt
+                            true,          // Get multiple lines
                             debugger.GetUseColor(),
                             0,          // Don't show line numbers
                             delegate)); // IOHandlerDelegate
@@ -2889,7 +2899,7 @@ CommandInterpreter::GetIOHandler(bool force_create,
         m_debugger, IOHandler::Type::CommandInterpreter,
         m_debugger.GetInputFile(), m_debugger.GetOutputFile(),
         m_debugger.GetErrorFile(), flags, "lldb", m_debugger.GetPrompt(),
-        llvm::StringRef(), // Continuation prompt
+        NULL,  // Continuation prompt
         false, // Don't enable multiple line input, just single line commands
         m_debugger.GetUseColor(),
         0, // Don't show line numbers
@@ -2939,7 +2949,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
     if (cmd_obj == nullptr) {
       std::string full_name;
       bool is_alias = GetAliasFullName(next_word.c_str(), full_name);
-      cmd_obj = GetCommandObject(next_word, &matches);
+      cmd_obj = GetCommandObject(next_word.c_str(), &matches);
       bool is_real_command =
           (is_alias == false) ||
           (cmd_obj != nullptr && cmd_obj->IsAlias() == false);
@@ -2951,15 +2961,14 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
         revised_command_line.Printf("%s", alias_result.c_str());
         if (cmd_obj) {
           wants_raw_input = cmd_obj->WantsRawCommandString();
-          actual_cmd_name_len = cmd_obj->GetCommandName().size();
+          actual_cmd_name_len = strlen(cmd_obj->GetCommandName());
         }
       } else {
         if (!cmd_obj)
-          cmd_obj = GetCommandObject(next_word, &matches);
+          cmd_obj = GetCommandObject(next_word.c_str(), &matches);
         if (cmd_obj) {
-          llvm::StringRef cmd_name = cmd_obj->GetCommandName();
-          actual_cmd_name_len += cmd_name.size();
-          revised_command_line.Printf("%s", cmd_name.str().c_str());
+          actual_cmd_name_len += strlen(cmd_obj->GetCommandName());
+          revised_command_line.Printf("%s", cmd_obj->GetCommandName());
           wants_raw_input = cmd_obj->WantsRawCommandString();
         } else {
           revised_command_line.Printf("%s", next_word.c_str());
@@ -2972,10 +2981,9 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
         if (sub_cmd_obj) {
           // The subcommand's name includes the parent command's name,
           // so restart rather than append to the revised_command_line.
-          llvm::StringRef sub_cmd_name = sub_cmd_obj->GetCommandName();
-          actual_cmd_name_len = sub_cmd_name.size() + 1;
+          actual_cmd_name_len = strlen(sub_cmd_obj->GetCommandName()) + 1;
           revised_command_line.Clear();
-          revised_command_line.Printf("%s", sub_cmd_name.str().c_str());
+          revised_command_line.Printf("%s", sub_cmd_obj->GetCommandName());
           cmd_obj = sub_cmd_obj;
           wants_raw_input = cmd_obj->WantsRawCommandString();
         } else {
@@ -3026,7 +3034,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
         result.AppendErrorWithFormat(
             "command '%s' did not recognize '%s%s%s' as valid (subcommand "
             "might be invalid).\n",
-            cmd_obj->GetCommandName().str().c_str(),
+            cmd_obj->GetCommandName(),
             next_word.empty() ? "" : next_word.c_str(),
             next_word.empty() ? " -- " : " ", suffix.c_str());
         result.SetStatus(eReturnStatusFailed);
@@ -3066,7 +3074,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
             } else {
               result.AppendErrorWithFormat(
                   "the '%s' command doesn't support the --gdb-format option\n",
-                  cmd_obj->GetCommandName().str().c_str());
+                  cmd_obj->GetCommandName());
               result.SetStatus(eReturnStatusFailed);
               return nullptr;
             }

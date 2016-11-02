@@ -129,7 +129,7 @@ void ObjectContainerUniversalMachO::Dump(Stream *s) const {
   s->Indent();
   const size_t num_archs = GetNumArchitectures();
   const size_t num_objects = GetNumObjects();
-  s->Printf("ObjectContainerUniversalMachO, num_archs = %zu, num_objects = %zu",
+  s->Printf("ObjectContainerUniversalMachO, num_archs = %lu, num_objects = %lu",
             num_archs, num_objects);
   uint32_t i;
   ArchSpec arch;

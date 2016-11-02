@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(_MSC_VER)
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#endif
-
 #include "lldb/Host/SocketAddress.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -45,7 +41,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
   case AF_INET: {
     {
       const char *formatted = inet_ntoa(*static_cast<const in_addr *>(src));
-      if (formatted && strlen(formatted) < static_cast<size_t>(size)) {
+      if (formatted && strlen(formatted) < size) {
         return ::strcpy(dst, formatted);
       }
     }

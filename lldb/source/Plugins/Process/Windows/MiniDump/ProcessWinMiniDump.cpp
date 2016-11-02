@@ -162,21 +162,25 @@ bool ProcessWinMiniDump::Impl::UpdateThreadList(ThreadList &old_thread_list,
 
         if (m_is_wow64) {
           // On Windows, a 32-bit process can run on a 64-bit machine under
-          // WOW64. If the minidump was captured with a 64-bit debugger, then
-          // the CONTEXT we just grabbed from the mini_dump_thread is the one
-          // for the 64-bit "native" process rather than the 32-bit "guest"
-          // process we care about.  In this case, we can get the 32-bit CONTEXT
-          // from the TEB (Thread Environment Block) of the 64-bit process.
+          // WOW64.
+          // If the minidump was captured with a 64-bit debugger, then the
+          // CONTEXT
+          // we just grabbed from the mini_dump_thread is the one for the 64-bit
+          // "native" process rather than the 32-bit "guest" process we care
+          // about.
+          // In this case, we can get the 32-bit CONTEXT from the TEB (Thread
+          // Environment Block) of the 64-bit process.
           Error error;
-          TEB64 wow64teb = {};
+          TEB64 wow64teb = {0};
           m_self->ReadMemory(mini_dump_thread.Teb, &wow64teb, sizeof(wow64teb),
                              error);
           if (error.Success()) {
             // Slot 1 of the thread-local storage in the 64-bit TEB points to a
-            // structure that includes the 32-bit CONTEXT (after a ULONG).
+            // structure
+            // that includes the 32-bit CONTEXT (after a ULONG).
             // See:  https://msdn.microsoft.com/en-us/library/ms681670.aspx
-            const lldb::addr_t addr = wow64teb.TlsSlots[1];
-            Range range = {};
+            const size_t addr = wow64teb.TlsSlots[1];
+            Range range = {0};
             if (FindMemoryRange(addr, &range)) {
               lldbassert(range.start <= addr);
               const size_t offset = addr - range.start + sizeof(ULONG);
@@ -230,7 +234,7 @@ size_t ProcessWinMiniDump::Impl::DoReadMemory(lldb::addr_t addr, void *buf,
   // ranges a mini dump typically has, so I'm not sure if searching for the
   // appropriate range linearly each time is stupid.  Perhaps we should build
   // an index for faster lookups.
-  Range range = {};
+  Range range = {0};
   if (!FindMemoryRange(addr, &range)) {
     return 0;
   }
@@ -271,7 +275,7 @@ Error ProcessWinMiniDump::Impl::GetMemoryRegionInfo(
 
   const MINIDUMP_MEMORY_INFO *next_entry = nullptr;
 
-  for (uint64_t i = 0; i < list->NumberOfEntries; ++i) {
+  for (int i = 0; i < list->NumberOfEntries; ++i) {
     const auto entry = reinterpret_cast<const MINIDUMP_MEMORY_INFO *>(
         reinterpret_cast<const char *>(list) + list->SizeOfHeader +
         i * list->SizeOfEntry);
@@ -501,17 +505,17 @@ std::string ProcessWinMiniDump::Impl::GetMiniDumpString(RVA rva) const {
   }
   auto md_string = reinterpret_cast<const MINIDUMP_STRING *>(
       static_cast<const char *>(m_base_addr) + rva);
-  auto source_start = reinterpret_cast<const llvm::UTF16 *>(md_string->Buffer);
+  auto source_start = reinterpret_cast<const UTF16 *>(md_string->Buffer);
   const auto source_length = ::wcslen(md_string->Buffer);
   const auto source_end = source_start + source_length;
   result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT *
                 source_length); // worst case length
-  auto result_start = reinterpret_cast<llvm::UTF8 *>(&result[0]);
+  auto result_start = reinterpret_cast<UTF8 *>(&result[0]);
   const auto result_end = result_start + result.size();
-  llvm::ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end,
-                           llvm::ConversionFlags::strictConversion);
+  ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end,
+                     strictConversion);
   const auto result_size =
-      std::distance(reinterpret_cast<llvm::UTF8 *>(&result[0]), result_start);
+      std::distance(reinterpret_cast<UTF8 *>(&result[0]), result_start);
   result.resize(result_size); // shrink to actual length
   return result;
 }

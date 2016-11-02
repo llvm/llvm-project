@@ -49,7 +49,7 @@ Error OptionValueLanguage::SetValueFromString(llvm::StringRef value,
                                                 languages_for_expressions);
 
     LanguageType new_type =
-        Language::GetLanguageTypeFromString(lang_name.GetStringRef());
+        Language::GetLanguageTypeFromString(lang_name.GetCString());
     if (new_type && languages_for_types.count(new_type)) {
       m_value_was_set = true;
       m_current_value = new_type;

@@ -60,8 +60,6 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
     ]
 
     @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(oslist=["macosx"],
-                                   bugnumber="llvm.org/pr30299")
     def test_filter_accept_message_full_match(self):
         """Test that fall-through reject, accept match whole message works."""
         self.do_test(
@@ -81,8 +79,6 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
             "should be")
 
     @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(oslist=["macosx"],
-                                   bugnumber="llvm.org/pr30299")
     def test_filter_no_accept_message_partial_match(self):
         """Test that fall-through reject, match message via partial content match doesn't accept."""
         self.do_test(
@@ -103,8 +99,6 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
             "should be")
 
     @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(oslist=["macosx"],
-                                   bugnumber="llvm.org/pr30299")
     def test_filter_reject_category_full_match(self):
         """Test that fall-through accept, reject match message works."""
         self.do_test(
@@ -124,8 +118,6 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
             "should be")
 
     @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(oslist=["macosx"],
-                                   bugnumber="llvm.org/pr30299")
     def test_filter_accept_category_second_rule(self):
         """Test that fall-through reject, accept match category on second rule works."""
         self.do_test(

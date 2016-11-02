@@ -1,5 +1,3 @@
-include(${LLDB_PROJECT_ROOT}/cmake/LLDBDependencies.cmake)
-
 set(LLDB_MI_SOURCES
   MICmdArgContext.cpp
   MICmdArgSet.cpp
@@ -67,6 +65,7 @@ set(LLDB_MI_SOURCES
   MIDriverBase.cpp
   MIDriverMain.cpp
   MIDriverMgr.cpp
+  MIUtilParse.cpp
   MIUtilDateTimeStd.cpp
   MIUtilDebug.cpp
   MIUtilFileStd.cpp

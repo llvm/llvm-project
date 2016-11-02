@@ -81,7 +81,6 @@ public:
 
 private:
   ValueObject *m_pair_ptr;
-  lldb::ValueObjectSP m_pair_sp;
 };
 
 SyntheticChildrenFrontEnd *

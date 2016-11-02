@@ -946,8 +946,7 @@ GDBRemoteCommunicationServerCommon::Handle_QEnvironment(
   packet.SetFilePos(::strlen("QEnvironment:"));
   const uint32_t bytes_left = packet.GetBytesLeft();
   if (bytes_left > 0) {
-    m_process_launch_info.GetEnvironmentEntries().AppendArgument(
-        llvm::StringRef::withNullAsEmpty(packet.Peek()));
+    m_process_launch_info.GetEnvironmentEntries().AppendArgument(packet.Peek());
     return SendOKResponse();
   }
   return SendErrorResponse(12);
@@ -961,7 +960,7 @@ GDBRemoteCommunicationServerCommon::Handle_QEnvironmentHexEncoded(
   if (bytes_left > 0) {
     std::string str;
     packet.GetHexByteString(str);
-    m_process_launch_info.GetEnvironmentEntries().AppendArgument(str);
+    m_process_launch_info.GetEnvironmentEntries().AppendArgument(str.c_str());
     return SendOKResponse();
   }
   return SendErrorResponse(12);
@@ -1033,7 +1032,8 @@ GDBRemoteCommunicationServerCommon::Handle_A(StringExtractorGDBRemote &packet) {
                 if (arg_idx == 0)
                   m_process_launch_info.GetExecutableFile().SetFile(arg.c_str(),
                                                                     false);
-                m_process_launch_info.GetArguments().AppendArgument(arg);
+                m_process_launch_info.GetArguments().AppendArgument(
+                    arg.c_str());
                 if (log)
                   log->Printf("LLGSPacketHandler::%s added arg %d: \"%s\"",
                               __FUNCTION__, actual_arg_index, arg.c_str());
@@ -1262,12 +1262,13 @@ void GDBRemoteCommunicationServerCommon::
       // Nothing.
       break;
     }
-    // In case of MIPS64, pointer size is depend on ELF ABI
-    // For N32 the pointer size is 4 and for N64 it is 8
-    std::string abi = proc_arch.GetTargetABI();
-    if (!abi.empty())
-      response.Printf("elf_abi:%s;", abi.c_str());
-    response.Printf("ptrsize:%d;", proc_arch.GetAddressByteSize());
+
+    if (proc_triple.isArch64Bit())
+      response.PutCString("ptrsize:8;");
+    else if (proc_triple.isArch32Bit())
+      response.PutCString("ptrsize:4;");
+    else if (proc_triple.isArch16Bit())
+      response.PutCString("ptrsize:2;");
   }
 }
 

@@ -62,12 +62,12 @@ Error SoftwareBreakpoint::CreateSoftwareBreakpoint(
 
   if (bp_opcode_size > MAX_TRAP_OPCODE_SIZE) {
     if (log)
-      log->Printf("SoftwareBreakpoint::%s cannot support %zu trapcode bytes, "
-                  "max size is %zu",
+      log->Printf("SoftwareBreakpoint::%s cannot support %lu trapcode bytes, "
+                  "max size is %lu",
                   __FUNCTION__, bp_opcode_size, MAX_TRAP_OPCODE_SIZE);
     return Error("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
-                 "returned too many trap opcode bytes: requires %zu but we "
-                 "only support a max of %zu",
+                 "returned too many trap opcode bytes: requires %lu but we "
+                 "only support a max of %lu",
                  bp_opcode_size, MAX_TRAP_OPCODE_SIZE);
   }
 
@@ -135,13 +135,13 @@ Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
   if (bytes_read != bp_opcode_size) {
     if (log)
       log->Printf("SoftwareBreakpoint::%s failed to read memory while "
-                  "attempting to set breakpoint: attempted to read %zu bytes "
-                  "but only read %zu",
-                  __FUNCTION__, bp_opcode_size, bytes_read);
+                  "attempting to set breakpoint: attempted to read %lu bytes "
+                  "but only read %" PRIu64,
+                  __FUNCTION__, bp_opcode_size, (uint64_t)bytes_read);
     return Error("SoftwareBreakpoint::%s failed to read memory while "
-                 "attempting to set breakpoint: attempted to read %zu bytes "
-                 "but only read %zu",
-                 __FUNCTION__, bp_opcode_size, bytes_read);
+                 "attempting to set breakpoint: attempted to read %lu bytes "
+                 "but only read %" PRIu64,
+                 __FUNCTION__, bp_opcode_size, (uint64_t)bytes_read);
   }
 
   // Log what we read.
@@ -171,8 +171,8 @@ Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
   if (bytes_written != bp_opcode_size) {
     error.SetErrorStringWithFormat(
         "SoftwareBreakpoint::%s failed write memory while attempting to set "
-        "breakpoint: attempted to write %zu bytes but only wrote %zu",
-        __FUNCTION__, bp_opcode_size, bytes_written);
+        "breakpoint: attempted to write %lu bytes but only wrote %" PRIu64,
+        __FUNCTION__, bp_opcode_size, (uint64_t)bytes_written);
     if (log)
       log->PutCString(error.AsCString());
     return error;
@@ -194,13 +194,13 @@ Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
   if (verify_bytes_read != bp_opcode_size) {
     if (log)
       log->Printf("SoftwareBreakpoint::%s failed to read memory while "
-                  "attempting to verify breakpoint: attempted to read %zu "
-                  "bytes but only read %zu",
-                  __FUNCTION__, bp_opcode_size, verify_bytes_read);
+                  "attempting to verify breakpoint: attempted to read %lu "
+                  "bytes but only read %" PRIu64,
+                  __FUNCTION__, bp_opcode_size, (uint64_t)verify_bytes_read);
     return Error("SoftwareBreakpoint::%s failed to read memory while "
-                 "attempting to verify breakpoint: attempted to read %zu bytes "
-                 "but only read %zu",
-                 __FUNCTION__, bp_opcode_size, verify_bytes_read);
+                 "attempting to verify breakpoint: attempted to read %lu bytes "
+                 "but only read %" PRIu64,
+                 __FUNCTION__, bp_opcode_size, (uint64_t)verify_bytes_read);
   }
 
   if (::memcmp(bp_opcode_bytes, verify_bp_opcode_bytes, bp_opcode_size) != 0) {
@@ -271,8 +271,8 @@ Error SoftwareBreakpoint::DoDisable() {
     if (error.Success() && bytes_read < m_opcode_size) {
       error.SetErrorStringWithFormat(
           "SoftwareBreakpointr::%s addr=0x%" PRIx64
-          ": tried to read %zu bytes but only read %zu",
-          __FUNCTION__, m_addr, m_opcode_size, bytes_read);
+          ": tried to read %lu bytes but only read %" PRIu64,
+          __FUNCTION__, m_addr, m_opcode_size, (uint64_t)bytes_read);
     }
     if (error.Success()) {
       bool verify = false;
@@ -287,8 +287,8 @@ Error SoftwareBreakpoint::DoDisable() {
         if (error.Success() && bytes_written < m_opcode_size) {
           error.SetErrorStringWithFormat(
               "SoftwareBreakpoint::%s addr=0x%" PRIx64
-              ": tried to write %zu bytes but only wrote %zu",
-              __FUNCTION__, m_addr, m_opcode_size, bytes_written);
+              ": tried to write %lu bytes but only wrote %" PRIu64,
+              __FUNCTION__, m_addr, m_opcode_size, (uint64_t)bytes_written);
         }
         if (error.Success()) {
           verify = true;
@@ -312,8 +312,8 @@ Error SoftwareBreakpoint::DoDisable() {
         if (error.Success() && verify_bytes_read < m_opcode_size) {
           error.SetErrorStringWithFormat(
               "SoftwareBreakpoint::%s addr=0x%" PRIx64
-              ": tried to read %zu verification bytes but only read %zu",
-              __FUNCTION__, m_addr, m_opcode_size, verify_bytes_read);
+              ": tried to read %lu verification bytes but only read %" PRIu64,
+              __FUNCTION__, m_addr, m_opcode_size, (uint64_t)verify_bytes_read);
         }
         if (error.Success()) {
           // compare the memory we just read with the original opcode

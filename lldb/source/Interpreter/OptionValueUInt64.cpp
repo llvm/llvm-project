@@ -20,10 +20,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-lldb::OptionValueSP OptionValueUInt64::Create(llvm::StringRef value_str,
+lldb::OptionValueSP OptionValueUInt64::Create(const char *value_cstr,
                                               Error &error) {
   lldb::OptionValueSP value_sp(new OptionValueUInt64());
-  error = value_sp->SetValueFromString(value_str);
+  error = value_sp->SetValueFromString(value_cstr);
   if (error.Fail())
     value_sp.reset();
   return value_sp;

@@ -1,4 +1,5 @@
-//===-- OptionValueBoolean.cpp ----------------------------------*- C++ -*-===//
+//===-- OptionValueBoolean.cpp ------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -47,7 +48,8 @@ Error OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
     bool success = false;
-    bool value = Args::StringToBoolean(value_str, false, &success);
+    bool value =
+        Args::StringToBoolean(value_str.str().c_str(), false, &success);
     if (success) {
       m_value_was_set = true;
       m_current_value = value;

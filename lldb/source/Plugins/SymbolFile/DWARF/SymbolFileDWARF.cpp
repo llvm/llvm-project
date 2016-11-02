@@ -769,7 +769,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
               }
 
               std::string remapped_file;
-              if (module_sp->RemapSourceFile(cu_file_spec.GetPath(),
+              if (module_sp->RemapSourceFile(cu_file_spec.GetCString(),
                                              remapped_file))
                 cu_file_spec.SetFile(remapped_file, false);
             }
@@ -2329,7 +2329,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
     GetObjectFile()->GetModule()->LogMessage(
         log, "SymbolFileDWARF::FindGlobalVariables (regex=\"%s\", append=%u, "
              "max_matches=%u, variables)",
-        regex.GetText().str().c_str(), append, max_matches);
+        regex.GetText(), append, max_matches);
   }
 
   DWARFDebugInfo *info = DebugInfo();
@@ -2383,7 +2383,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
           GetObjectFile()->GetModule()->ReportErrorIfModifyDetected(
               "the DWARF debug information has been modified (.apple_names "
               "accelerator table had bad die 0x%8.8x for regex '%s')\n",
-              die_ref.die_offset, regex.GetText().str().c_str());
+              die_ref.die_offset, regex.GetText());
         }
       }
     }
@@ -2526,7 +2526,7 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
                      name.AsCString());
 
   // eFunctionNameTypeAuto should be pre-resolved by a call to
-  // Module::LookupInfo::LookupInfo()
+  // Module::PrepareForFunctionNameLookup()
   assert((name_type_mask & eFunctionNameTypeAuto) == 0);
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
@@ -2804,7 +2804,7 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
                                         SymbolContextList &sc_list) {
   Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "SymbolFileDWARF::FindFunctions (regex = '%s')",
-                     regex.GetText().str().c_str());
+                     regex.GetText());
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
@@ -2812,7 +2812,7 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
     GetObjectFile()->GetModule()->LogMessage(
         log,
         "SymbolFileDWARF::FindFunctions (regex=\"%s\", append=%u, sc_list)",
-        regex.GetText().str().c_str(), append);
+        regex.GetText(), append);
   }
 
   // If we aren't appending the results to this list, then clear the list
@@ -4070,8 +4070,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             if (form_value.Form() == DW_FORM_sec_offset) {
               DWARFRangeList dwarf_scope_ranges;
               const DWARFDebugRanges *debug_ranges = DebugRanges();
-              debug_ranges->FindRanges(die.GetCU()->GetRangesBase(),
-                                       form_value.Unsigned(),
+              debug_ranges->FindRanges(form_value.Unsigned(),
                                        dwarf_scope_ranges);
 
               // All DW_AT_start_scope are relative to the base address of the

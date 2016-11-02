@@ -12,7 +12,6 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/lldb-private.h"
@@ -386,7 +385,11 @@ public:
                                      const DataExtractor &debug_loc_data,
                                      lldb::offset_t offset);
 
-  bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op);
+  bool IsRegister(StackFrame &frame, const RegisterInfo *&register_info);
+
+  bool IsDereferenceOfRegister(StackFrame &frame,
+                               const RegisterInfo *&register_info,
+                               int64_t &offset);
 
 protected:
   //------------------------------------------------------------------

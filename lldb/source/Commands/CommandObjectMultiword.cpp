@@ -143,7 +143,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
         }
       } else {
         result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
-                                     GetCommandName().str().c_str());
+                                     GetCommandName());
         result.SetStatus(eReturnStatusFailed);
       }
     }
@@ -210,7 +210,7 @@ int CommandObjectMultiword::HandleCompletion(Args &input, int &cursor_index,
           matches.DeleteStringAtIndex(0);
           input.Shift();
           cursor_char_position = 0;
-          input.AppendArgument(llvm::StringRef());
+          input.AppendArgument("");
           return cmd_obj->HandleCompletion(
               input, cursor_index, cursor_char_position, match_start_point,
               max_return_elements, word_complete, matches);

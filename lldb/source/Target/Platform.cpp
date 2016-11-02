@@ -1387,8 +1387,9 @@ static OptionDefinition g_caching_option_table[] = {
      "Path in which to store local copies of files."},
 };
 
-llvm::ArrayRef<OptionDefinition> OptionGroupPlatformRSync::GetDefinitions() {
-  return llvm::makeArrayRef(g_rsync_option_table);
+const lldb_private::OptionDefinition *
+OptionGroupPlatformRSync::GetDefinitions() {
+  return g_rsync_option_table;
 }
 
 void OptionGroupPlatformRSync::OptionParsingStarting(
@@ -1401,7 +1402,7 @@ void OptionGroupPlatformRSync::OptionParsingStarting(
 
 lldb_private::Error
 OptionGroupPlatformRSync::SetOptionValue(uint32_t option_idx,
-                                         llvm::StringRef option_arg,
+                                         const char *option_arg,
                                          ExecutionContext *execution_context) {
   Error error;
   char short_option = (char)GetDefinitions()[option_idx].short_option;
@@ -1430,13 +1431,17 @@ OptionGroupPlatformRSync::SetOptionValue(uint32_t option_idx,
   return error;
 }
 
+uint32_t OptionGroupPlatformRSync::GetNumDefinitions() {
+  return llvm::array_lengthof(g_rsync_option_table);
+}
+
 lldb::BreakpointSP
 Platform::SetThreadCreationBreakpoint(lldb_private::Target &target) {
   return lldb::BreakpointSP();
 }
 
-llvm::ArrayRef<OptionDefinition> OptionGroupPlatformSSH::GetDefinitions() {
-  return llvm::makeArrayRef(g_ssh_option_table);
+const lldb_private::OptionDefinition *OptionGroupPlatformSSH::GetDefinitions() {
+  return g_ssh_option_table;
 }
 
 void OptionGroupPlatformSSH::OptionParsingStarting(
@@ -1447,7 +1452,7 @@ void OptionGroupPlatformSSH::OptionParsingStarting(
 
 lldb_private::Error
 OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
-                                       llvm::StringRef option_arg,
+                                       const char *option_arg,
                                        ExecutionContext *execution_context) {
   Error error;
   char short_option = (char)GetDefinitions()[option_idx].short_option;
@@ -1468,8 +1473,13 @@ OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
   return error;
 }
 
-llvm::ArrayRef<OptionDefinition> OptionGroupPlatformCaching::GetDefinitions() {
-  return llvm::makeArrayRef(g_caching_option_table);
+uint32_t OptionGroupPlatformSSH::GetNumDefinitions() {
+  return llvm::array_lengthof(g_ssh_option_table);
+}
+
+const lldb_private::OptionDefinition *
+OptionGroupPlatformCaching::GetDefinitions() {
+  return g_caching_option_table;
 }
 
 void OptionGroupPlatformCaching::OptionParsingStarting(
@@ -1478,7 +1488,7 @@ void OptionGroupPlatformCaching::OptionParsingStarting(
 }
 
 lldb_private::Error OptionGroupPlatformCaching::SetOptionValue(
-    uint32_t option_idx, llvm::StringRef option_arg,
+    uint32_t option_idx, const char *option_arg,
     ExecutionContext *execution_context) {
   Error error;
   char short_option = (char)GetDefinitions()[option_idx].short_option;
@@ -1493,6 +1503,10 @@ lldb_private::Error OptionGroupPlatformCaching::SetOptionValue(
   }
 
   return error;
+}
+
+uint32_t OptionGroupPlatformCaching::GetNumDefinitions() {
+  return llvm::array_lengthof(g_caching_option_table);
 }
 
 size_t Platform::GetEnvironment(StringList &environment) {
@@ -1555,25 +1569,6 @@ Error Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
         got_module_spec = true;
       }
     }
-  }
-
-  if (module_spec.GetArchitecture().IsValid() == false) {
-    Error error;
-    // No valid architecture was specified, ask the platform for
-    // the architectures that we should be using (in the correct order)
-    // and see if we can find a match that way
-    ModuleSpec arch_module_spec(module_spec);
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, arch_module_spec.GetArchitecture());
-         ++idx) {
-      error = ModuleList::GetSharedModule(arch_module_spec, module_sp, nullptr,
-                                          nullptr, nullptr);
-      // Did we find an executable using one of the
-      if (error.Success() && module_sp)
-        break;
-    }
-    if (module_sp)
-      got_module_spec = true;
   }
 
   if (!got_module_spec) {

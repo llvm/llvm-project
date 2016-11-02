@@ -125,7 +125,7 @@ public:
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
   size_t PrintfAsRawHex8(const char *format, ...)
-      __attribute__((__format__(__printf__, 2, 3)));
+      __attribute__((format(printf, 2, 3)));
 
   //------------------------------------------------------------------
   /// Format a C string from a printf style format and variable
@@ -366,7 +366,7 @@ public:
   /// @param[in] cstr
   ///     The string to be output to the stream.
   //------------------------------------------------------------------
-  size_t PutCString(llvm::StringRef cstr);
+  size_t PutCString(const char *cstr);
 
   //------------------------------------------------------------------
   /// Output and End of Line character to the stream.
@@ -443,7 +443,6 @@ public:
   ///     output the indentation characters.
   //------------------------------------------------------------------
   size_t Indent(const char *s = nullptr);
-  size_t Indent(llvm::StringRef s);
 
   //------------------------------------------------------------------
   /// Decrement the current indentation level.

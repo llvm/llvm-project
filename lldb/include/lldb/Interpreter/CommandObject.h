@@ -35,11 +35,11 @@ namespace lldb_private {
 // added.
 
 template <typename ValueType>
-int AddNamesMatchingPartialString(const std::map<std::string, ValueType> &in_map,
-                                  llvm::StringRef cmd_str, StringList &matches) {
+int AddNamesMatchingPartialString(std::map<std::string, ValueType> &in_map,
+                                  const char *cmd_str, StringList &matches) {
   int number_added = 0;
 
-  const bool add_all = cmd_str.empty();
+  const bool add_all = ((cmd_str == nullptr) || (cmd_str[0] == 0));
 
   for (auto iter = in_map.begin(), end = in_map.end(); iter != end; iter++) {
     if (add_all || (iter->first.find(cmd_str, 0) == 0)) {
@@ -108,8 +108,8 @@ public:
 
   typedef std::map<std::string, lldb::CommandObjectSP> CommandMap;
 
-  CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
-    llvm::StringRef help = "", llvm::StringRef syntax = "",
+  CommandObject(CommandInterpreter &interpreter, const char *name,
+                const char *help = nullptr, const char *syntax = nullptr,
                 uint32_t flags = 0);
 
   virtual ~CommandObject();
@@ -128,7 +128,7 @@ public:
 
   virtual const char *GetSyntax();
 
-  llvm::StringRef GetCommandName() const;
+  const char *GetCommandName();
 
   virtual void SetHelp(const char *str);
 
@@ -481,8 +481,8 @@ protected:
 
 class CommandObjectRaw : public CommandObject {
 public:
-  CommandObjectRaw(CommandInterpreter &interpreter, llvm::StringRef name,
-    llvm::StringRef help = "", llvm::StringRef syntax = "",
+  CommandObjectRaw(CommandInterpreter &interpreter, const char *name,
+                   const char *help = nullptr, const char *syntax = nullptr,
                    uint32_t flags = 0)
       : CommandObject(interpreter, name, help, syntax, flags) {}
 

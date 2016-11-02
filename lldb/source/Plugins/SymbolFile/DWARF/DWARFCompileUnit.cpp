@@ -46,7 +46,7 @@ DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
       m_producer_version_minor(0), m_producer_version_update(0),
       m_language_type(eLanguageTypeUnknown), m_is_dwarf64(false),
       m_is_optimized(eLazyBoolCalculate), m_addr_base(0),
-      m_ranges_base(0), m_base_obj_offset(DW_INVALID_OFFSET) {}
+      m_base_obj_offset(DW_INVALID_OFFSET) {}
 
 DWARFCompileUnit::~DWARFCompileUnit() {}
 
@@ -307,9 +307,7 @@ void DWARFCompileUnit::AddCompileUnitDIE(DWARFDebugInfoEntry &die) {
 
   dw_addr_t addr_base = cu_die.GetAttributeValueAsUnsigned(
       m_dwarf2Data, this, DW_AT_GNU_addr_base, 0);
-  dw_addr_t ranges_base = cu_die.GetAttributeValueAsUnsigned(
-      m_dwarf2Data, this, DW_AT_GNU_ranges_base, 0);
-  dwo_cu->SetAddrBase(addr_base, ranges_base, m_offset);
+  dwo_cu->SetAddrBase(addr_base, m_offset);
 }
 
 dw_offset_t DWARFCompileUnit::GetAbbrevOffset() const {
@@ -1037,18 +1035,16 @@ void DWARFCompileUnit::ParseProducerInfo() {
     const char *producer_cstr = die->GetAttributeValueAsString(
         m_dwarf2Data, this, DW_AT_producer, NULL);
     if (producer_cstr) {
-      RegularExpression llvm_gcc_regex(
-          llvm::StringRef("^4\\.[012]\\.[01] \\(Based on Apple "
-                          "Inc\\. build [0-9]+\\) \\(LLVM build "
-                          "[\\.0-9]+\\)$"));
-      if (llvm_gcc_regex.Execute(llvm::StringRef(producer_cstr))) {
+      RegularExpression llvm_gcc_regex("^4\\.[012]\\.[01] \\(Based on Apple "
+                                       "Inc\\. build [0-9]+\\) \\(LLVM build "
+                                       "[\\.0-9]+\\)$");
+      if (llvm_gcc_regex.Execute(producer_cstr)) {
         m_producer = eProducerLLVMGCC;
       } else if (strstr(producer_cstr, "clang")) {
         static RegularExpression g_clang_version_regex(
-            llvm::StringRef("clang-([0-9]+)\\.([0-9]+)\\.([0-9]+)"));
+            "clang-([0-9]+)\\.([0-9]+)\\.([0-9]+)");
         RegularExpression::Match regex_match(3);
-        if (g_clang_version_regex.Execute(llvm::StringRef(producer_cstr),
-                                          &regex_match)) {
+        if (g_clang_version_regex.Execute(producer_cstr, &regex_match)) {
           std::string str;
           if (regex_match.GetMatchAtIndex(producer_cstr, 1, str))
             m_producer_version_major =
@@ -1162,10 +1158,8 @@ void DWARFCompileUnit::SetUserData(void *d) {
 }
 
 void DWARFCompileUnit::SetAddrBase(dw_addr_t addr_base,
-                                   dw_addr_t ranges_base,
                                    dw_offset_t base_obj_offset) {
   m_addr_base = addr_base;
-  m_ranges_base = ranges_base;
   m_base_obj_offset = base_obj_offset;
 }
 

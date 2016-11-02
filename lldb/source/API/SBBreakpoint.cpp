@@ -21,7 +21,6 @@
 #include "lldb/API/SBThread.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
-#include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Address.h"
@@ -39,8 +38,6 @@
 
 #include "lldb/lldb-enumerations.h"
 
-#include "llvm/ADT/STLExtras.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -49,13 +46,23 @@ struct CallbackData {
   void *callback_baton;
 };
 
-class SBBreakpointCallbackBaton : public TypedBaton<CallbackData> {
+class SBBreakpointCallbackBaton : public Baton {
 public:
   SBBreakpointCallbackBaton(SBBreakpoint::BreakpointHitCallback callback,
                             void *baton)
-      : TypedBaton(llvm::make_unique<CallbackData>()) {
-    getItem()->callback = callback;
-    getItem()->callback_baton = baton;
+      : Baton(new CallbackData) {
+    CallbackData *data = (CallbackData *)m_data;
+    data->callback = callback;
+    data->callback_baton = baton;
+  }
+
+  ~SBBreakpointCallbackBaton() override {
+    CallbackData *data = (CallbackData *)m_data;
+
+    if (data) {
+      delete data;
+      m_data = nullptr;
+    }
   }
 };
 
@@ -448,46 +455,15 @@ size_t SBBreakpoint::GetNumLocations() const {
   return num_locs;
 }
 
-void SBBreakpoint::SetCommandLineCommands(SBStringList &commands) {
-  if (!m_opaque_sp)
-    return;
-  if (commands.GetSize() == 0)
-    return;
-
-  std::lock_guard<std::recursive_mutex> guard(
-      m_opaque_sp->GetTarget().GetAPIMutex());
-  std::unique_ptr<BreakpointOptions::CommandData> cmd_data_up(
-      new BreakpointOptions::CommandData(*commands, eScriptLanguageNone));
-
-  m_opaque_sp->GetOptions()->SetCommandDataCallback(cmd_data_up);
-}
-
-bool SBBreakpoint::GetCommandLineCommands(SBStringList &commands) {
-  if (!m_opaque_sp)
-    return false;
-  StringList command_list;
-  bool has_commands =
-      m_opaque_sp->GetOptions()->GetCommandLineCallbacks(command_list);
-  if (has_commands)
-    commands.AppendList(command_list);
-  return has_commands;
-}
-
 bool SBBreakpoint::GetDescription(SBStream &s) {
-  return GetDescription(s, true);
-}
-
-bool SBBreakpoint::GetDescription(SBStream &s, bool include_locations) {
   if (m_opaque_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         m_opaque_sp->GetTarget().GetAPIMutex());
     s.Printf("SBBreakpoint: id = %i, ", m_opaque_sp->GetID());
     m_opaque_sp->GetResolverDescription(s.get());
     m_opaque_sp->GetFilterDescription(s.get());
-    if (include_locations) {
-      const size_t num_locations = m_opaque_sp->GetNumLocations();
-      s.Printf(", locations = %" PRIu64, (uint64_t)num_locations);
-    }
+    const size_t num_locations = m_opaque_sp->GetNumLocations();
+    s.Printf(", locations = %" PRIu64, (uint64_t)num_locations);
     return true;
   }
   s.Printf("No value");
@@ -709,148 +685,4 @@ SBBreakpoint::GetNumBreakpointLocationsFromEvent(const lldb::SBEvent &event) {
         (Breakpoint::BreakpointEventData::GetNumBreakpointLocationsFromEvent(
             event.GetSP()));
   return num_locations;
-}
-
-// This is simple collection of breakpoint id's and their target.
-class lldb::SBBreakpointListImpl {
-public:
-  SBBreakpointListImpl(SBTarget &target) : m_target_wp() {
-    if (target.IsValid())
-      m_target_wp = target.GetSP();
-  }
-
-  ~SBBreakpointListImpl() = default;
-
-  size_t GetSize() { return m_break_ids.size(); }
-
-  BreakpointSP GetBreakpointAtIndex(size_t idx) {
-    if (idx >= m_break_ids.size())
-      return BreakpointSP();
-    TargetSP target_sp = m_target_wp.lock();
-    if (!target_sp)
-      return BreakpointSP();
-    lldb::break_id_t bp_id = m_break_ids[idx];
-    return target_sp->GetBreakpointList().FindBreakpointByID(bp_id);
-  }
-
-  BreakpointSP FindBreakpointByID(lldb::break_id_t desired_id) {
-    TargetSP target_sp = m_target_wp.lock();
-    if (!target_sp)
-      return BreakpointSP();
-
-    for (lldb::break_id_t &break_id : m_break_ids) {
-      if (break_id == desired_id)
-        return target_sp->GetBreakpointList().FindBreakpointByID(break_id);
-    }
-    return BreakpointSP();
-  }
-
-  bool Append(Breakpoint &bkpt) {
-    TargetSP target_sp = m_target_wp.lock();
-    if (!target_sp)
-      return false;
-    if (bkpt.GetTargetSP() != target_sp)
-      return false;
-    m_break_ids.push_back(bkpt.GetID());
-    return true;
-  }
-
-  bool AppendIfUnique(Breakpoint &bkpt) {
-    TargetSP target_sp = m_target_wp.lock();
-    if (!target_sp)
-      return false;
-    if (bkpt.GetTargetSP() != target_sp)
-      return false;
-    lldb::break_id_t bp_id = bkpt.GetID();
-    if (find(m_break_ids.begin(), m_break_ids.end(), bp_id) ==
-        m_break_ids.end())
-      return false;
-
-    m_break_ids.push_back(bkpt.GetID());
-    return true;
-  }
-
-  bool AppendByID(lldb::break_id_t id) {
-    TargetSP target_sp = m_target_wp.lock();
-    if (!target_sp)
-      return false;
-    if (id == LLDB_INVALID_BREAK_ID)
-      return false;
-    m_break_ids.push_back(id);
-    return true;
-  }
-
-  void Clear() { m_break_ids.clear(); }
-
-  void CopyToBreakpointIDList(lldb_private::BreakpointIDList &bp_list) {
-    for (lldb::break_id_t id : m_break_ids) {
-      bp_list.AddBreakpointID(BreakpointID(id));
-    }
-  }
-
-  TargetSP GetTarget() { return m_target_wp.lock(); }
-
-private:
-  std::vector<lldb::break_id_t> m_break_ids;
-  TargetWP m_target_wp;
-};
-
-SBBreakpointList::SBBreakpointList(SBTarget &target)
-    : m_opaque_sp(new lldb::SBBreakpointListImpl(target)) {}
-
-SBBreakpointList::~SBBreakpointList() {}
-
-size_t SBBreakpointList::GetSize() const {
-  if (!m_opaque_sp)
-    return 0;
-  else
-    return m_opaque_sp->GetSize();
-}
-
-SBBreakpoint SBBreakpointList::GetBreakpointAtIndex(size_t idx) {
-  if (!m_opaque_sp)
-    return SBBreakpoint();
-
-  BreakpointSP bkpt_sp = m_opaque_sp->GetBreakpointAtIndex(idx);
-  return SBBreakpoint(bkpt_sp);
-}
-
-SBBreakpoint SBBreakpointList::FindBreakpointByID(lldb::break_id_t id) {
-  if (!m_opaque_sp)
-    return SBBreakpoint();
-  BreakpointSP bkpt_sp = m_opaque_sp->FindBreakpointByID(id);
-  return SBBreakpoint(bkpt_sp);
-}
-
-void SBBreakpointList::Append(const SBBreakpoint &sb_bkpt) {
-  if (!sb_bkpt.IsValid())
-    return;
-  if (!m_opaque_sp)
-    return;
-  m_opaque_sp->Append(*sb_bkpt.get());
-}
-
-void SBBreakpointList::AppendByID(lldb::break_id_t id) {
-  if (!m_opaque_sp)
-    return;
-  m_opaque_sp->AppendByID(id);
-}
-
-bool SBBreakpointList::AppendIfUnique(const SBBreakpoint &sb_bkpt) {
-  if (!sb_bkpt.IsValid())
-    return false;
-  if (!m_opaque_sp)
-    return false;
-  return m_opaque_sp->AppendIfUnique(*sb_bkpt.get());
-}
-
-void SBBreakpointList::Clear() {
-  if (m_opaque_sp)
-    m_opaque_sp->Clear();
-}
-
-void SBBreakpointList::CopyToBreakpointIDList(
-    lldb_private::BreakpointIDList &bp_id_list) {
-  if (m_opaque_sp)
-    m_opaque_sp->CopyToBreakpointIDList(bp_id_list);
 }

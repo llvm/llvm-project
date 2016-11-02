@@ -1,4 +1,5 @@
-//===-- MinidumpParser.cpp ---------------------------------------*- C++ -*-===//
+//===-- MinidumpParser.cpp ---------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -55,62 +56,64 @@ MinidumpParser::Create(const lldb::DataBufferSP &data_buf_sp) {
         directory->location;
   }
 
-  return MinidumpParser(data_buf_sp, header, std::move(directory_map));
+  MinidumpParser parser(data_buf_sp, header, directory_map);
+  return llvm::Optional<MinidumpParser>(parser);
 }
 
 MinidumpParser::MinidumpParser(
     const lldb::DataBufferSP &data_buf_sp, const MinidumpHeader *header,
-    llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &&directory_map)
+    const llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &directory_map)
     : m_data_sp(data_buf_sp), m_header(header), m_directory_map(directory_map) {
 }
 
-llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
-  return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes(),
-                                 m_data_sp->GetByteSize());
+lldb::offset_t MinidumpParser::GetByteSize() {
+  return m_data_sp->GetByteSize();
 }
 
-llvm::ArrayRef<uint8_t>
+llvm::Optional<llvm::ArrayRef<uint8_t>>
 MinidumpParser::GetStream(MinidumpStreamType stream_type) {
   auto iter = m_directory_map.find(static_cast<uint32_t>(stream_type));
   if (iter == m_directory_map.end())
-    return {};
+    return llvm::None;
 
   // check if there is enough data
   if (iter->second.rva + iter->second.data_size > m_data_sp->GetByteSize())
-    return {};
-
-  return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes() + iter->second.rva,
-                                 iter->second.data_size);
-}
-
-llvm::Optional<std::string> MinidumpParser::GetMinidumpString(uint32_t rva) {
-  auto arr_ref = m_data_sp->GetData();
-  if (rva > arr_ref.size())
-    return llvm::None;
-  arr_ref = arr_ref.drop_front(rva);
-  return parseMinidumpString(arr_ref);
-}
-
-llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::ThreadList);
-
-  if (data.size() == 0)
     return llvm::None;
 
-  return MinidumpThread::ParseThreadList(data);
+  llvm::ArrayRef<uint8_t> arr_ref(m_data_sp->GetBytes() + iter->second.rva,
+                                  iter->second.data_size);
+  return llvm::Optional<llvm::ArrayRef<uint8_t>>(arr_ref);
+}
+
+llvm::Optional<std::vector<const MinidumpThread *>>
+MinidumpParser::GetThreads() {
+  llvm::Optional<llvm::ArrayRef<uint8_t>> data =
+      GetStream(MinidumpStreamType::ThreadList);
+
+  if (!data)
+    return llvm::None;
+
+  return MinidumpThread::ParseThreadList(data.getValue());
 }
 
 const MinidumpSystemInfo *MinidumpParser::GetSystemInfo() {
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::SystemInfo);
+  llvm::Optional<llvm::ArrayRef<uint8_t>> data =
+      GetStream(MinidumpStreamType::SystemInfo);
 
-  if (data.size() == 0)
+  if (!data)
     return nullptr;
 
-  return MinidumpSystemInfo::Parse(data);
+  return MinidumpSystemInfo::Parse(data.getValue());
 }
 
 ArchSpec MinidumpParser::GetArchitecture() {
   ArchSpec arch_spec;
+  arch_spec.GetTriple().setOS(llvm::Triple::OSType::UnknownOS);
+  arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
+  arch_spec.GetTriple().setArch(llvm::Triple::ArchType::UnknownArch);
+
+  // TODO should we add the OS type here, or somewhere else ?
+
   const MinidumpSystemInfo *system_info = GetSystemInfo();
 
   if (!system_info)
@@ -119,108 +122,33 @@ ArchSpec MinidumpParser::GetArchitecture() {
   // TODO what to do about big endiand flavors of arm ?
   // TODO set the arm subarch stuff if the minidump has info about it
 
-  llvm::Triple triple;
-  triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
-
   const MinidumpCPUArchitecture arch =
       static_cast<const MinidumpCPUArchitecture>(
           static_cast<const uint32_t>(system_info->processor_arch));
-
   switch (arch) {
   case MinidumpCPUArchitecture::X86:
-    triple.setArch(llvm::Triple::ArchType::x86);
+    arch_spec.GetTriple().setArch(llvm::Triple::ArchType::x86);
     break;
   case MinidumpCPUArchitecture::AMD64:
-    triple.setArch(llvm::Triple::ArchType::x86_64);
+    arch_spec.GetTriple().setArch(llvm::Triple::ArchType::x86_64);
     break;
   case MinidumpCPUArchitecture::ARM:
-    triple.setArch(llvm::Triple::ArchType::arm);
+    arch_spec.GetTriple().setArch(llvm::Triple::ArchType::arm);
     break;
   case MinidumpCPUArchitecture::ARM64:
-    triple.setArch(llvm::Triple::ArchType::aarch64);
-    break;
-  default:
-    triple.setArch(llvm::Triple::ArchType::UnknownArch);
+    arch_spec.GetTriple().setArch(llvm::Triple::ArchType::aarch64);
     break;
   }
-
-  const MinidumpOSPlatform os = static_cast<const MinidumpOSPlatform>(
-      static_cast<const uint32_t>(system_info->platform_id));
-
-  // TODO add all of the OSes that Minidump/breakpad distinguishes?
-  switch (os) {
-  case MinidumpOSPlatform::Win32S:
-  case MinidumpOSPlatform::Win32Windows:
-  case MinidumpOSPlatform::Win32NT:
-  case MinidumpOSPlatform::Win32CE:
-    triple.setOS(llvm::Triple::OSType::Win32);
-    break;
-  case MinidumpOSPlatform::Linux:
-    triple.setOS(llvm::Triple::OSType::Linux);
-    break;
-  case MinidumpOSPlatform::MacOSX:
-    triple.setOS(llvm::Triple::OSType::MacOSX);
-    break;
-  case MinidumpOSPlatform::Android:
-    triple.setOS(llvm::Triple::OSType::Linux);
-    triple.setEnvironment(llvm::Triple::EnvironmentType::Android);
-    break;
-  default:
-    triple.setOS(llvm::Triple::OSType::UnknownOS);
-    break;
-  }
-
-  arch_spec.SetTriple(triple);
 
   return arch_spec;
 }
 
 const MinidumpMiscInfo *MinidumpParser::GetMiscInfo() {
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::MiscInfo);
+  llvm::Optional<llvm::ArrayRef<uint8_t>> data =
+      GetStream(MinidumpStreamType::MiscInfo);
 
-  if (data.size() == 0)
+  if (!data)
     return nullptr;
 
-  return MinidumpMiscInfo::Parse(data);
-}
-
-llvm::Optional<LinuxProcStatus> MinidumpParser::GetLinuxProcStatus() {
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::LinuxProcStatus);
-
-  if (data.size() == 0)
-    return llvm::None;
-
-  return LinuxProcStatus::Parse(data);
-}
-
-llvm::Optional<lldb::pid_t> MinidumpParser::GetPid() {
-  const MinidumpMiscInfo *misc_info = GetMiscInfo();
-  if (misc_info != nullptr) {
-    return misc_info->GetPid();
-  }
-
-  llvm::Optional<LinuxProcStatus> proc_status = GetLinuxProcStatus();
-  if (proc_status.hasValue()) {
-    return proc_status->GetPid();
-  }
-
-  return llvm::None;
-}
-
-llvm::ArrayRef<MinidumpModule> MinidumpParser::GetModuleList() {
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::ModuleList);
-
-  if (data.size() == 0)
-    return {};
-
-  return MinidumpModule::ParseModuleList(data);
-}
-
-const MinidumpExceptionStream *MinidumpParser::GetExceptionStream() {
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::Exception);
-
-  if (data.size() == 0)
-    return nullptr;
-
-  return MinidumpExceptionStream::Parse(data);
+  return MinidumpMiscInfo::Parse(data.getValue());
 }

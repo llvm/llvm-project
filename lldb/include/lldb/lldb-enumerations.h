@@ -187,8 +187,7 @@ enum DescriptionLevel {
 enum ScriptLanguage {
   eScriptLanguageNone,
   eScriptLanguagePython,
-  eScriptLanguageDefault = eScriptLanguagePython,
-  eScriptLanguageUnknown
+  eScriptLanguageDefault = eScriptLanguagePython
 };
 
 //----------------------------------------------------------------------
@@ -461,13 +460,6 @@ enum DynamicValueType {
   eNoDynamicValues = 0,
   eDynamicCanRunTarget = 1,
   eDynamicDontRunTarget = 2
-};
-
-enum StopShowColumn {
-  eStopShowColumnAnsiOrCaret = 0,
-  eStopShowColumnAnsi = 1,
-  eStopShowColumnCaret = 2,
-  eStopShowColumnNone = 3
 };
 
 enum AccessType {

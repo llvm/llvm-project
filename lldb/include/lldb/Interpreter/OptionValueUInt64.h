@@ -38,8 +38,7 @@ public:
   // string isn't a uint64_t value or any other error occurs, return an
   // empty lldb::OptionValueSP and fill error in with the correct stuff.
   //---------------------------------------------------------------------
-  static lldb::OptionValueSP Create(const char *, Error &) = delete;
-  static lldb::OptionValueSP Create(llvm::StringRef value_str, Error &error);
+  static lldb::OptionValueSP Create(const char *value_cstr, Error &error);
   //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
   //---------------------------------------------------------------------
@@ -52,9 +51,6 @@ public:
   Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Error
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
     m_current_value = m_default_value;

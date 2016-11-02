@@ -26,8 +26,10 @@ void OptionValueRegex::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
     if (m_regex.IsValid()) {
-      llvm::StringRef regex_text = m_regex.GetText();
-      strm.Printf("%s", regex_text.str().c_str());
+      const char *regex_text = m_regex.GetText();
+      if (regex_text && regex_text[0])
+        strm.Printf("%s", regex_text);
+    } else {
     }
   }
 }
@@ -51,7 +53,7 @@ Error OptionValueRegex::SetValueFromString(llvm::StringRef value,
 
   case eVarSetOperationReplace:
   case eVarSetOperationAssign:
-    if (m_regex.Compile(value)) {
+    if (m_regex.Compile(value.str().c_str())) {
       m_value_was_set = true;
       NotifyValueChanged();
     } else {
@@ -68,5 +70,5 @@ Error OptionValueRegex::SetValueFromString(llvm::StringRef value,
 }
 
 lldb::OptionValueSP OptionValueRegex::DeepCopy() const {
-  return OptionValueSP(new OptionValueRegex(m_regex.GetText().str().c_str()));
+  return OptionValueSP(new OptionValueRegex(m_regex.GetText()));
 }

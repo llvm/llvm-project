@@ -497,7 +497,7 @@ uint32_t EmulateInstructionARM64::GetFramePointerRegisterNumber() const {
   if (m_arch.GetTriple().isAndroid())
     return LLDB_INVALID_REGNUM; // Don't use frame pointer on android
 
-  return arm64_dwarf::fp;
+  return arm64_dwarf::sp;
 }
 
 bool EmulateInstructionARM64::UsingAArch32() {
@@ -693,13 +693,8 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
   if (arm64_dwarf::GetRegisterInfo(n, reg_info_Rn))
     context.SetRegisterPlusOffset(reg_info_Rn, imm);
 
-  if (n == GetFramePointerRegisterNumber() && d == arm64_dwarf::sp &&
-      !setflags) {
-    // 'mov sp, fp' - common epilogue instruction, CFA is now in terms
-    // of the stack pointer, instead of frame pointer.
-    context.type = EmulateInstruction::eContextRestoreStackPointer;
-  } else if ((n == arm64_dwarf::sp || n == GetFramePointerRegisterNumber()) &&
-             d == arm64_dwarf::sp && !setflags) {
+  if ((n == arm64_dwarf::sp || n == GetFramePointerRegisterNumber()) &&
+      d == arm64_dwarf::sp && !setflags) {
     context.type = EmulateInstruction::eContextAdjustStackPointer;
   } else if (d == GetFramePointerRegisterNumber() && n == arm64_dwarf::sp &&
              !setflags) {

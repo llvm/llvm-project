@@ -259,9 +259,11 @@ finish:
   IncrementFilePointer(return_info.GetBytes());
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log) {
-    log->Printf("%p ConnectionGenericFile::Read()  handle = %p, dst = %p, "
-                "dst_len = %zu) => %zu, error = %s",
-                this, m_file, dst, dst_len, return_info.GetBytes(),
+    log->Printf("%" PRIxPTR " ConnectionGenericFile::Read()  handle = %" PRIxPTR
+                ", dst = %" PRIxPTR ", dst_len = %" PRIu64 ") => %" PRIu64
+                ", error = %s",
+                this, m_file, dst, static_cast<uint64_t>(dst_len),
+                static_cast<uint64_t>(return_info.GetBytes()),
                 return_info.GetError().AsCString());
   }
 
@@ -308,9 +310,12 @@ finish:
   IncrementFilePointer(return_info.GetBytes());
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log) {
-    log->Printf("%p ConnectionGenericFile::Write()  handle = %p, src = %p, "
-                "src_len = %zu) => %zu, error = %s",
-                this, m_file, src, src_len, return_info.GetBytes(),
+    log->Printf("%" PRIxPTR
+                " ConnectionGenericFile::Write()  handle = %" PRIxPTR
+                ", src = %" PRIxPTR ", src_len = %" PRIu64 ") => %" PRIu64
+                ", error = %s",
+                this, m_file, src, static_cast<uint64_t>(src_len),
+                static_cast<uint64_t>(return_info.GetBytes()),
                 return_info.GetError().AsCString());
   }
   return return_info.GetBytes();

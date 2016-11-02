@@ -50,16 +50,11 @@
 #define ANSI_1_CTRL(ctrl1) "\033["##ctrl1 ANSI_ESC_END
 #define ANSI_2_CTRL(ctrl1, ctrl2) "\033["##ctrl1 ";"##ctrl2 ANSI_ESC_END
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-
-#include <string>
-
 namespace lldb_utility {
 
 namespace ansi {
 
-inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
+inline std::string FormatAnsiTerminalCodes(const char *format,
                                            bool do_color = true) {
   // Convert "${ansi.XXX}" tokens to ansi values or clear them if do_color is
   // false.
@@ -102,33 +97,30 @@ inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
 #undef _TO_STR
 #undef _TO_STR2
   };
-  auto codes = llvm::makeArrayRef(g_color_tokens);
-
   static const char tok_hdr[] = "${ansi.";
 
   std::string fmt;
-  while (!format.empty()) {
-    llvm::StringRef left, right;
-    std::tie(left, right) = format.split(tok_hdr);
-
-    fmt.append(left);
-
-    if (left == format && right.empty()) {
-      // The header was not found.  Just exit.
+  for (const char *p = format; *p; ++p) {
+    const char *tok_start = strstr(p, tok_hdr);
+    if (!tok_start) {
+      fmt.append(p, strlen(p));
       break;
     }
 
-    for (const auto &code : codes) {
-      if (!right.consume_front(code.name))
-        continue;
+    fmt.append(p, tok_start - p);
+    p = tok_start;
 
-      if (do_color)
-        fmt.append(code.value);
-      format = right;
-      break;
+    const char *tok_str = tok_start + sizeof(tok_hdr) - 1;
+    for (size_t i = 0; i < sizeof(g_color_tokens) / sizeof(g_color_tokens[0]);
+         ++i) {
+      if (!strncmp(tok_str, g_color_tokens[i].name,
+                   strlen(g_color_tokens[i].name))) {
+        if (do_color)
+          fmt.append(g_color_tokens[i].value);
+        p = tok_str + strlen(g_color_tokens[i].name) - 1;
+        break;
+      }
     }
-
-    format = format.drop_front();
   }
   return fmt;
 }

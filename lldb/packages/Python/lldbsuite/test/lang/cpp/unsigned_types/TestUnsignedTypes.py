@@ -24,6 +24,7 @@ class UnsignedTypesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
+    @expectedFailureAll(oslist=["windows"])
     def test(self):
         """Test that variables with unsigned types display correctly."""
         self.build()

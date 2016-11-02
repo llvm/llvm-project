@@ -103,10 +103,6 @@ parsable = False
 # our test cases.
 regexp = None
 
-# Sets of tests which are excluded at runtime
-skip_tests = None
-xfail_tests = None
-
 # By default, recorded session info for errored/failed test are dumped into its
 # own file under a session directory named after the timestamp of the test suite
 # run.  Use '-s session-dir-name' to specify a specific dir name.

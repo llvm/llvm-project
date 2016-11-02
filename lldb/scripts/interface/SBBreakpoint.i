@@ -200,10 +200,6 @@ public:
     SBError
     SetScriptCallbackBody (const char *script_body_text);
     
-    void SetCommandLineCommands(SBStringList &commands);
-
-    bool GetCommandLineCommands(SBStringList &commands);
-    
     bool
     AddName (const char *new_name);
 
@@ -224,9 +220,6 @@ public:
 
     bool
     GetDescription (lldb::SBStream &description);
-
-    bool 
-    GetDescription(lldb::SBStream &description, bool include_locations);
 
     bool
     operator == (const lldb::SBBreakpoint& rhs);
@@ -268,34 +261,6 @@ public:
     %}
 
     
-};
-
-class SBBreakpointListImpl;
-
-class LLDB_API SBBreakpointList
-{
-public:
-  SBBreakpointList(SBTarget &target);
-    
-  ~SBBreakpointList();
-
-  size_t GetSize() const;
-  
-  SBBreakpoint
-  GetBreakpointAtIndex(size_t idx);
-  
-  SBBreakpoint
-  FindBreakpointByID(lldb::break_id_t);
-
-  void Append(const SBBreakpoint &sb_bkpt);
-
-  bool AppendIfUnique(const SBBreakpoint &sb_bkpt);
-
-  void AppendByID (lldb::break_id_t id);
-
-  void Clear();
-private:
-  std::shared_ptr<SBBreakpointListImpl> m_opaque_sp;
 };
 
 } // namespace lldb

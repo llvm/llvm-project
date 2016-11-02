@@ -111,10 +111,6 @@ public:
     // Adjust the frame pointer for the current frame
     eContextSetFramePointer,
 
-    // Typically in an epilogue sequence.  Copy the frame pointer back
-    // into the stack pointer, use SP for CFA calculations again.
-    eContextRestoreStackPointer,
-
     // Add or subtract a value from a base address register (other than SP)
     eContextAdjustBaseRegister,
 

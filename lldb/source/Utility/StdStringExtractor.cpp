@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "StdStringExtractor.h"
+#include "lldb/Utility/StdStringExtractor.h"
 
 // C Includes
 #include <stdlib.h>

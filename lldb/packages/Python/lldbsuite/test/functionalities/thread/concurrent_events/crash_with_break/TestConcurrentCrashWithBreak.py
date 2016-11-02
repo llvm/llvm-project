@@ -14,7 +14,7 @@ class ConcurrentCrashWithBreak(ConcurrentEventsBase):
 
     @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
-    @skipIf(triple='^mips')
+    @expectedFailureAll(triple='^mips')
     def test_crash_with_break(self):
         """ Test a thread that crashes while another thread hits a breakpoint."""
         self.build(dictionary=self.getBuildFlags())

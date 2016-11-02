@@ -124,8 +124,8 @@ protected:
     return false;
   }
 
-  uint64_t GetGlobalConstantInteger(const llvm::pdb::IPDBSession &session,
-                                    llvm::StringRef var) const {
+  int GetGlobalConstantInteger(const llvm::pdb::IPDBSession &session,
+                               llvm::StringRef var) const {
     auto global = session.getGlobalScope();
     auto results =
         global->findChildren(llvm::pdb::PDB_SymType::Data, var,
@@ -154,7 +154,7 @@ protected:
   }
 };
 
-#if HAVE_DIA_SDK
+#if defined(HAVE_DIA_SDK)
 #define REQUIRES_DIA_SDK(TestName) TestName
 #else
 #define REQUIRES_DIA_SDK(TestName) DISABLED_##TestName
@@ -409,7 +409,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestSimpleClassTypes)) {
   EXPECT_EQ(ConstString("Class"), udt_type->GetName());
   CompilerType compiler_type = udt_type->GetForwardCompilerType();
   EXPECT_TRUE(ClangASTContext::IsClassType(compiler_type.GetOpaqueQualType()));
-  EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_Class"),
+  EXPECT_EQ(uint64_t(GetGlobalConstantInteger(session, "sizeof_Class")),
             udt_type->GetByteSize());
 }
 
@@ -432,7 +432,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNestedClassTypes)) {
   EXPECT_EQ(ConstString("Class::NestedClass"), udt_type->GetName());
   CompilerType compiler_type = udt_type->GetForwardCompilerType();
   EXPECT_TRUE(ClangASTContext::IsClassType(compiler_type.GetOpaqueQualType()));
-  EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_NestedClass"),
+  EXPECT_EQ(uint64_t(GetGlobalConstantInteger(session, "sizeof_NestedClass")),
             udt_type->GetByteSize());
 }
 

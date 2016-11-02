@@ -310,11 +310,10 @@ bool ThreadPlanStepInRange::MischiefManaged() {
 }
 
 void ThreadPlanStepInRange::SetAvoidRegexp(const char *name) {
-  auto name_ref = llvm::StringRef::withNullAsEmpty(name);
   if (!m_avoid_regexp_ap)
-    m_avoid_regexp_ap.reset(new RegularExpression(name_ref));
+    m_avoid_regexp_ap.reset(new RegularExpression(name));
 
-  m_avoid_regexp_ap->Compile(name_ref);
+  m_avoid_regexp_ap->Compile(name);
 }
 
 void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {
@@ -440,8 +439,7 @@ bool ThreadPlanStepInRange::FrameMatchesAvoidCriteria() {
             regex_match.GetMatchAtIndex(frame_function_name, 0, match);
             log->Printf("Stepping out of function \"%s\" because it matches "
                         "the avoid regexp \"%s\" - match substring: \"%s\".",
-                        frame_function_name,
-                        avoid_regexp_to_use->GetText().str().c_str(),
+                        frame_function_name, avoid_regexp_to_use->GetText(),
                         match.c_str());
           }
         }

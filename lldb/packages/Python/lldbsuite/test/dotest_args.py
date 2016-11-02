@@ -83,7 +83,7 @@ def create_parser():
         dest='swiftlibrary',
         help='The path to a folder that contains valid Swift library files')
     if sys.platform == 'darwin':
-        group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="macosx", help=textwrap.dedent(
+        group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', help=textwrap.dedent(
             '''Specify the name of the Apple SDK (macosx, macosx.internal, iphoneos, iphoneos.internal, or path to SDK) and use the appropriate tools from that SDK's toolchain.'''))
     # FIXME? This won't work for different extra flags according to each arch.
     group.add_argument(
@@ -104,9 +104,6 @@ def create_parser():
         '-p',
         metavar='pattern',
         help='Specify a regexp filename pattern for inclusion in the test suite')
-    group.add_argument('--excluded', metavar='exclusion-file', action='append', help=textwrap.dedent(
-        '''Specify a file for tests to exclude. File should contain lists of regular expressions for test files or methods,
-                                with each list under a matching header (xfail files, xfail methods, skip files, skip methods)'''))
     group.add_argument(
         '-G',
         '--category',

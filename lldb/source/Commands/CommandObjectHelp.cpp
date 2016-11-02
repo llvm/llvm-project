@@ -66,18 +66,14 @@ CommandObjectHelp::CommandObjectHelp(CommandInterpreter &interpreter)
 
 CommandObjectHelp::~CommandObjectHelp() = default;
 
-static OptionDefinition g_help_options[] = {
+OptionDefinition CommandObjectHelp::CommandOptions::g_option_table[] = {
     // clang-format off
   {LLDB_OPT_SET_ALL, false, "hide-aliases",         'a', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Hide aliases in the command list."},
   {LLDB_OPT_SET_ALL, false, "hide-user-commands",   'u', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Hide user-defined commands from the list."},
   {LLDB_OPT_SET_ALL, false, "show-hidden-commands", 'h', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Include commands prefixed with an underscore."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
     // clang-format on
 };
-
-llvm::ArrayRef<OptionDefinition>
-CommandObjectHelp::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_help_options);
-}
 
 bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   CommandObject::CommandMap::iterator pos;
@@ -114,25 +110,26 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
       bool all_okay = true;
       CommandObject *sub_cmd_obj = cmd_obj;
       // Loop down through sub_command dictionaries until we find the command
-      // object that corresponds to the help command entered.
+      // object that corresponds
+      // to the help command entered.
       std::string sub_command;
-      for (auto &entry : command.entries().drop_front()) {
-        sub_command = entry.ref;
+      for (size_t i = 1; i < argc && all_okay; ++i) {
+        sub_command = command.GetArgumentAtIndex(i);
         matches.Clear();
         if (sub_cmd_obj->IsAlias())
           sub_cmd_obj =
               ((CommandAlias *)sub_cmd_obj)->GetUnderlyingCommand().get();
         if (!sub_cmd_obj->IsMultiwordObject()) {
           all_okay = false;
-          break;
         } else {
           CommandObject *found_cmd;
           found_cmd =
               sub_cmd_obj->GetSubcommandObject(sub_command.c_str(), &matches);
-          if (found_cmd == nullptr || matches.GetSize() > 1) {
+          if (found_cmd == nullptr)
             all_okay = false;
-            break;
-          } else
+          else if (matches.GetSize() > 1)
+            all_okay = false;
+          else
             sub_cmd_obj = found_cmd;
         }
       }
@@ -165,7 +162,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
               m_interpreter.GetCommandPrefix(), sub_command.c_str());
           result.GetOutputStream().Printf(
               "\nThe closest match is '%s'. Help on it follows.\n\n",
-              sub_cmd_obj->GetCommandName().str().c_str());
+              sub_cmd_obj->GetCommandName());
         }
       }
 
@@ -173,7 +170,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
 
       if (is_alias_command) {
         StreamString sstr;
-        m_interpreter.GetAlias(alias_name)->GetAliasExpansion(sstr);
+        m_interpreter.GetAlias(alias_name.c_str())->GetAliasExpansion(sstr);
         result.GetOutputStream().Printf("\n'%s' is an abbreviation for %s\n",
                                         alias_name.c_str(), sstr.GetData());
       }

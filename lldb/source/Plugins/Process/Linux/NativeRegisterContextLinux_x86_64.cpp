@@ -218,23 +218,6 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 #define NT_PRXFPREG 0x46e62b7f
 #endif
 
-// ----------------------------------------------------------------------------
-// Required MPX define.
-// ----------------------------------------------------------------------------
-
-// Support MPX extensions also if compiled with compiler without MPX support.
-#ifndef bit_MPX
-#define bit_MPX 0x4000
-#endif
-
-// ----------------------------------------------------------------------------
-// XCR0 extended register sets masks.
-// ----------------------------------------------------------------------------
-#define mask_XSTATE_AVX (1ULL << 2)
-#define mask_XSTATE_BNDREGS (1ULL << 3)
-#define mask_XSTATE_BNDCFG (1ULL << 4)
-#define mask_XSTATE_MPX (mask_XSTATE_BNDREGS | mask_XSTATE_BNDCFG)
-
 NativeRegisterContextLinux *
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
@@ -266,7 +249,7 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64(
     uint32_t concrete_frame_idx)
     : NativeRegisterContextLinux(native_thread, concrete_frame_idx,
                                  CreateRegisterInfoInterface(target_arch)),
-      m_xstate_type(XStateType::Invalid), m_fpr(), m_iovec(), m_ymm_set(),
+      m_fpr_type(eFPRTypeNotValid), m_fpr(), m_iovec(), m_ymm_set(),
       m_mpx_set(), m_reg_info(), m_gpr_x86_64() {
   // Set up data about ranges of valid registers.
   switch (target_arch.GetMachine()) {
@@ -396,7 +379,7 @@ Error NativeRegisterContextLinux_x86_64::ReadRegister(
     return error;
   }
 
-  if (IsFPR(reg) || IsAVX(reg) || IsMPX(reg)) {
+  if (IsFPR(reg, GetFPRType())) {
     error = ReadFPR();
     if (error.Fail())
       return error;
@@ -445,7 +428,7 @@ Error NativeRegisterContextLinux_x86_64::ReadRegister(
             reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_ymm && reg <= m_reg_info.last_ymm) {
         // Concatenate ymm using the register halves in xmm.bytes and ymmh.bytes
-        if (CopyXSTATEtoYMM(reg, byte_order))
+        if (GetFPRType() == eFPRTypeXSAVE && CopyXSTATEtoYMM(reg, byte_order))
           reg_value.SetBytes(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes,
                              reg_info->byte_size, byte_order);
         else {
@@ -454,7 +437,7 @@ Error NativeRegisterContextLinux_x86_64::ReadRegister(
         }
       }
       if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr) {
-        if (CopyXSTATEtoMPX(reg))
+        if (GetFPRType() == eFPRTypeXSAVE && CopyXSTATEtoMPX(reg))
           reg_value.SetBytes(m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes,
                              reg_info->byte_size, byte_order);
         else {
@@ -463,7 +446,7 @@ Error NativeRegisterContextLinux_x86_64::ReadRegister(
         }
       }
       if (reg >= m_reg_info.first_mpxc && reg <= m_reg_info.last_mpxc) {
-        if (CopyXSTATEtoMPX(reg))
+        if (GetFPRType() == eFPRTypeXSAVE && CopyXSTATEtoMPX(reg))
           reg_value.SetBytes(m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes,
                              reg_info->byte_size, byte_order);
         else {
@@ -534,7 +517,7 @@ Error NativeRegisterContextLinux_x86_64::WriteRegister(
   if (IsGPR(reg_index))
     return WriteRegisterRaw(reg_index, reg_value);
 
-  if (IsFPR(reg_index) || IsAVX(reg_index) || IsMPX(reg_index)) {
+  if (IsFPR(reg_index, GetFPRType())) {
     if (reg_info->encoding == lldb::eEncodingVector) {
       if (reg_index >= m_reg_info.first_st && reg_index <= m_reg_info.last_st)
         ::memcpy(
@@ -553,6 +536,9 @@ Error NativeRegisterContextLinux_x86_64::WriteRegister(
 
       if (reg_index >= m_reg_info.first_ymm &&
           reg_index <= m_reg_info.last_ymm) {
+        if (GetFPRType() != eFPRTypeXSAVE)
+          return Error("target processor does not support AVX");
+
         // Store ymm register content, and split into the register halves in
         // xmm.bytes and ymmh.bytes
         ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes,
@@ -563,6 +549,9 @@ Error NativeRegisterContextLinux_x86_64::WriteRegister(
 
       if (reg_index >= m_reg_info.first_mpxr &&
           reg_index <= m_reg_info.last_mpxr) {
+        if (GetFPRType() != eFPRTypeXSAVE)
+          return Error("target processor does not support MPX");
+
         ::memcpy(m_mpx_set.mpxr[reg_index - m_reg_info.first_mpxr].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyMPXtoXSTATE(reg_index))
@@ -571,6 +560,9 @@ Error NativeRegisterContextLinux_x86_64::WriteRegister(
 
       if (reg_index >= m_reg_info.first_mpxc &&
           reg_index <= m_reg_info.last_mpxc) {
+        if (GetFPRType() != eFPRTypeXSAVE)
+          return Error("target processor does not support MPX");
+
         ::memcpy(m_mpx_set.mpxc[reg_index - m_reg_info.first_mpxc].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyMPXtoXSTATE(reg_index))
@@ -662,37 +654,31 @@ Error NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
 
   ::memcpy(dst, &m_gpr_x86_64, GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
-  if (m_xstate_type == XStateType::FXSAVE)
+  if (GetFPRType() == eFPRTypeFXSAVE)
     ::memcpy(dst, &m_fpr.xstate.fxsave, sizeof(m_fpr.xstate.fxsave));
-  else if (m_xstate_type == XStateType::XSAVE) {
+  else if (GetFPRType() == eFPRTypeXSAVE) {
     lldb::ByteOrder byte_order = GetByteOrder();
 
-    if (IsCPUFeatureAvailable(RegSet::avx)) {
-      // Assemble the YMM register content from the register halves.
-      for (uint32_t reg = m_reg_info.first_ymm; reg <= m_reg_info.last_ymm;
-           ++reg) {
-        if (!CopyXSTATEtoYMM(reg, byte_order)) {
-          error.SetErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
-              "CopyXSTATEtoYMM() failed for reg num "
-              "%" PRIu32,
-              __FUNCTION__, reg);
-          return error;
-        }
+    // Assemble the YMM register content from the register halves.
+    for (uint32_t reg = m_reg_info.first_ymm; reg <= m_reg_info.last_ymm;
+         ++reg) {
+      if (!CopyXSTATEtoYMM(reg, byte_order)) {
+        error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
+                                       "CopyXSTATEtoYMM() failed for reg num "
+                                       "%" PRIu32,
+                                       __FUNCTION__, reg);
+        return error;
       }
     }
 
-    if (IsCPUFeatureAvailable(RegSet::mpx)) {
-      for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc;
-           ++reg) {
-        if (!CopyXSTATEtoMPX(reg)) {
-          error.SetErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
-              "CopyXSTATEtoMPX() failed for reg num "
-              "%" PRIu32,
-              __FUNCTION__, reg);
-          return error;
-        }
+    for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc;
+         ++reg) {
+      if (!CopyXSTATEtoMPX(reg)) {
+        error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
+                                       "CopyXSTATEtoMPX() failed for reg num "
+                                       "%" PRIu32,
+                                       __FUNCTION__, reg);
+        return error;
       }
     }
     // Copy the extended register state including the assembled ymm registers.
@@ -754,44 +740,38 @@ Error NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
     return error;
 
   src += GetRegisterInfoInterface().GetGPRSize();
-  if (m_xstate_type == XStateType::FXSAVE)
+  if (GetFPRType() == eFPRTypeFXSAVE)
     ::memcpy(&m_fpr.xstate.fxsave, src, sizeof(m_fpr.xstate.fxsave));
-  else if (m_xstate_type == XStateType::XSAVE)
+  else if (GetFPRType() == eFPRTypeXSAVE)
     ::memcpy(&m_fpr.xstate.xsave, src, sizeof(m_fpr.xstate.xsave));
 
   error = WriteFPR();
   if (error.Fail())
     return error;
 
-  if (m_xstate_type == XStateType::XSAVE) {
+  if (GetFPRType() == eFPRTypeXSAVE) {
     lldb::ByteOrder byte_order = GetByteOrder();
 
-    if (IsCPUFeatureAvailable(RegSet::avx)) {
-      // Parse the YMM register content from the register halves.
-      for (uint32_t reg = m_reg_info.first_ymm; reg <= m_reg_info.last_ymm;
-           ++reg) {
-        if (!CopyYMMtoXSTATE(reg, byte_order)) {
-          error.SetErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
-              "CopyYMMtoXSTATE() failed for reg num "
-              "%" PRIu32,
-              __FUNCTION__, reg);
-          return error;
-        }
+    // Parse the YMM register content from the register halves.
+    for (uint32_t reg = m_reg_info.first_ymm; reg <= m_reg_info.last_ymm;
+         ++reg) {
+      if (!CopyYMMtoXSTATE(reg, byte_order)) {
+        error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
+                                       "CopyYMMtoXSTATE() failed for reg num "
+                                       "%" PRIu32,
+                                       __FUNCTION__, reg);
+        return error;
       }
     }
 
-    if (IsCPUFeatureAvailable(RegSet::mpx)) {
-      for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc;
-           ++reg) {
-        if (!CopyMPXtoXSTATE(reg)) {
-          error.SetErrorStringWithFormat(
-              "NativeRegisterContextLinux_x86_64::%s "
-              "CopyMPXtoXSTATE() failed for reg num "
-              "%" PRIu32,
-              __FUNCTION__, reg);
-          return error;
-        }
+    for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc;
+         ++reg) {
+      if (!CopyMPXtoXSTATE(reg)) {
+        error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
+                                         "CopyMPXtoXSTATE() failed for reg num "
+                                         "%" PRIu32,
+                                         __FUNCTION__, reg);
+        return error;
       }
     }
   }
@@ -799,44 +779,16 @@ Error NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
   return error;
 }
 
-bool NativeRegisterContextLinux_x86_64::IsCPUFeatureAvailable(
-    RegSet feature_code) const {
-  if (m_xstate_type == XStateType::Invalid) {
-    if (const_cast<NativeRegisterContextLinux_x86_64 *>(this)->ReadFPR().Fail())
-      return false;
-  }
-  switch (feature_code) {
-  case RegSet::gpr:
-  case RegSet::fpu:
-    return true;
-  case RegSet::avx: // Check if CPU has AVX and if there is kernel support, by
-                    // reading in the XCR0 area of XSAVE.
-    if ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_AVX) == mask_XSTATE_AVX)
-      return true;
-     break;
-  case RegSet::mpx: // Check if CPU has MPX and if there is kernel support, by
-                    // reading in the XCR0 area of XSAVE.
-    if ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_MPX) == mask_XSTATE_MPX)
-      return true;
-    break;
-  }
-  return false;
-}
-
 bool NativeRegisterContextLinux_x86_64::IsRegisterSetAvailable(
     uint32_t set_index) const {
+  // Note: Extended register sets are assumed to be at the end of g_reg_sets.
   uint32_t num_sets = k_num_register_sets - k_num_extended_register_sets;
 
-  switch (static_cast<RegSet>(set_index)) {
-  case RegSet::gpr:
-  case RegSet::fpu:
-    return (set_index < num_sets);
-  case RegSet::avx:
-    return IsCPUFeatureAvailable(RegSet::avx);
-  case RegSet::mpx:
-    return IsCPUFeatureAvailable(RegSet::mpx);
+  if (GetFPRType() == eFPRTypeXSAVE) {
+    // AVX is the first extended register set.
+    num_sets += 2;
   }
-  return false;
+  return (set_index < num_sets);
 }
 
 bool NativeRegisterContextLinux_x86_64::IsGPR(uint32_t reg_index) const {
@@ -844,27 +796,77 @@ bool NativeRegisterContextLinux_x86_64::IsGPR(uint32_t reg_index) const {
   return reg_index <= m_reg_info.last_gpr;
 }
 
+NativeRegisterContextLinux_x86_64::FPRType
+NativeRegisterContextLinux_x86_64::GetFPRType() const {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  if (m_fpr_type == eFPRTypeNotValid) {
+    // TODO: Use assembly to call cpuid on the inferior and query ebx or ecx.
+
+    // Try and see if AVX register retrieval works.
+    m_fpr_type = eFPRTypeXSAVE;
+    if (const_cast<NativeRegisterContextLinux_x86_64 *>(this)
+            ->ReadFPR()
+            .Fail()) {
+      // Fall back to general floating point with no AVX support.
+      m_fpr_type = eFPRTypeFXSAVE;
+
+      // Check if FXSAVE area can be read.
+      if (const_cast<NativeRegisterContextLinux_x86_64 *>(this)
+              ->ReadFPR()
+              .Fail()) {
+        if (log)
+          log->Printf("NativeRegisterContextLinux_x86_64::%s ptrace APIs "
+                      "failed to read XSAVE/FXSAVE area",
+                      __FUNCTION__);
+      }
+    }
+  }
+  return m_fpr_type;
+}
+
 bool NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index) const {
   return (m_reg_info.first_fpr <= reg_index &&
           reg_index <= m_reg_info.last_fpr);
 }
 
+bool NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index,
+                                              FPRType fpr_type) const {
+  bool generic_fpr = IsFPR(reg_index);
+
+  if (fpr_type == eFPRTypeXSAVE)
+    return generic_fpr || IsAVX(reg_index) || IsMPX(reg_index);
+  return generic_fpr;
+}
+
 Error NativeRegisterContextLinux_x86_64::WriteFPR() {
-  switch (m_xstate_type) {
-  case XStateType::FXSAVE:
+  const FPRType fpr_type = GetFPRType();
+  const lldb_private::ArchSpec &target_arch =
+      GetRegisterInfoInterface().GetTargetArchitecture();
+  switch (fpr_type) {
+  case FPRType::eFPRTypeFXSAVE:
+    // For 32-bit inferiors on x86_32/x86_64 architectures,
+    // FXSAVE area can be written using PTRACE_SETREGSET ptrace api
+    // For 64-bit inferiors on x86_64 architectures,
+    // FXSAVE area can be written using PTRACE_SETFPREGS ptrace api
+    switch (target_arch.GetMachine()) {
+    case llvm::Triple::x86:
       return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
                               NT_PRXFPREG);
-  case XStateType::XSAVE:
+    case llvm::Triple::x86_64:
+      return NativeRegisterContextLinux::WriteFPR();
+    default:
+      assert(false && "Unhandled target architecture.");
+      break;
+    }
+  case FPRType::eFPRTypeXSAVE:
     return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
                             NT_X86_XSTATE);
   default:
-    return Error("Unrecognized FPR type.");
+    return Error("Unrecognized FPR type");
   }
 }
 
 bool NativeRegisterContextLinux_x86_64::IsAVX(uint32_t reg_index) const {
-  if (!IsCPUFeatureAvailable(RegSet::avx))
-    return false;
   return (m_reg_info.first_ymm <= reg_index &&
           reg_index <= m_reg_info.last_ymm);
 }
@@ -924,10 +926,11 @@ bool NativeRegisterContextLinux_x86_64::CopyYMMtoXSTATE(
 }
 
 void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
-  switch (m_xstate_type) {
-  case XStateType::FXSAVE:
+  const FPRType fpr_type = GetFPRType();
+  switch (fpr_type) {
+  case FPRType::eFPRTypeFXSAVE:
     return &m_fpr.xstate.fxsave;
-  case XStateType::XSAVE:
+  case FPRType::eFPRTypeXSAVE:
     return &m_iovec;
   default:
     return nullptr;
@@ -935,10 +938,11 @@ void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
 }
 
 size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
-  switch (m_xstate_type) {
-  case XStateType::FXSAVE:
+  const FPRType fpr_type = GetFPRType();
+  switch (fpr_type) {
+  case FPRType::eFPRTypeFXSAVE:
     return sizeof(m_fpr.xstate.fxsave);
-  case XStateType::XSAVE:
+  case FPRType::eFPRTypeXSAVE:
     return sizeof(m_iovec);
   default:
     return 0;
@@ -946,30 +950,34 @@ size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
 }
 
 Error NativeRegisterContextLinux_x86_64::ReadFPR() {
-  Error error;
-
-  // Probe XSAVE and if it is not supported fall back to FXSAVE.
-  if (m_xstate_type != XStateType::FXSAVE) {
-    error =
-        ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
-    if (!error.Fail()) {
-      m_xstate_type = XStateType::XSAVE;
-      return error;
+  const FPRType fpr_type = GetFPRType();
+  const lldb_private::ArchSpec &target_arch =
+      GetRegisterInfoInterface().GetTargetArchitecture();
+  switch (fpr_type) {
+  case FPRType::eFPRTypeFXSAVE:
+    // For 32-bit inferiors on x86_32/x86_64 architectures,
+    // FXSAVE area can be read using PTRACE_GETREGSET ptrace api
+    // For 64-bit inferiors on x86_64 architectures,
+    // FXSAVE area can be read using PTRACE_GETFPREGS ptrace api
+    switch (target_arch.GetMachine()) {
+    case llvm::Triple::x86:
+      return ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_PRXFPREG);
+    case llvm::Triple::x86_64:
+      return NativeRegisterContextLinux::ReadFPR();
+    default:
+      assert(false && "Unhandled target architecture.");
+      break;
     }
+  case FPRType::eFPRTypeXSAVE:
+    return ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
+  default:
+    return Error("Unrecognized FPR type");
   }
-  error = ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_PRXFPREG);
-  if (!error.Fail()) {
-    m_xstate_type = XStateType::FXSAVE;
-    return error;
-  }
-  return Error("Unrecognized FPR type.");
 }
 
 bool NativeRegisterContextLinux_x86_64::IsMPX(uint32_t reg_index) const {
-  if (!IsCPUFeatureAvailable(RegSet::mpx))
-    return false;
-  return (m_reg_info.first_mpxr <= reg_index &&
-          reg_index <= m_reg_info.last_mpxc);
+    return (m_reg_info.first_mpxr <= reg_index &&
+            reg_index <= m_reg_info.last_mpxc);
 }
 
 bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoMPX(uint32_t reg) {

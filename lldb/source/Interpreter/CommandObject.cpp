@@ -40,14 +40,17 @@ using namespace lldb_private;
 // CommandObject
 //-------------------------------------------------------------------------
 
-CommandObject::CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
-  llvm::StringRef help, llvm::StringRef syntax, uint32_t flags)
-    : m_interpreter(interpreter), m_cmd_name(name),
+CommandObject::CommandObject(CommandInterpreter &interpreter, const char *name,
+                             const char *help, const char *syntax,
+                             uint32_t flags)
+    : m_interpreter(interpreter), m_cmd_name(name ? name : ""),
       m_cmd_help_short(), m_cmd_help_long(), m_cmd_syntax(), m_flags(flags),
       m_arguments(), m_deprecated_command_override_callback(nullptr),
       m_command_override_callback(nullptr), m_command_override_baton(nullptr) {
-  m_cmd_help_short = help;
-  m_cmd_syntax = syntax;
+  if (help && help[0])
+    m_cmd_help_short = help;
+  if (syntax && syntax[0])
+    m_cmd_syntax = syntax;
 }
 
 CommandObject::~CommandObject() {}
@@ -59,7 +62,7 @@ const char *CommandObject::GetHelpLong() { return m_cmd_help_long.c_str(); }
 const char *CommandObject::GetSyntax() {
   if (m_cmd_syntax.length() == 0) {
     StreamString syntax_str;
-    syntax_str.Printf("%s", GetCommandName().str().c_str());
+    syntax_str.Printf("%s", GetCommandName());
     if (!IsDashDashCommand() && GetOptions() != nullptr)
       syntax_str.Printf(" <cmd-options>");
     if (m_arguments.size() > 0) {
@@ -75,7 +78,7 @@ const char *CommandObject::GetSyntax() {
   return m_cmd_syntax.c_str();
 }
 
-llvm::StringRef CommandObject::GetCommandName() const { return m_cmd_name; }
+const char *CommandObject::GetCommandName() { return m_cmd_name.c_str(); }
 
 void CommandObject::SetCommandName(const char *name) { m_cmd_name = name; }
 
@@ -113,7 +116,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     // ParseOptions calls getopt_long_only, which always skips the zero'th item
     // in the array and starts at position 1,
     // so we need to push a dummy value into position zero.
-    args.Unshift(llvm::StringRef("dummy_string"));
+    args.Unshift("dummy_string");
     const bool require_validation = true;
     error = args.ParseOptions(*options, &exe_ctx,
                               GetCommandInterpreter().GetPlatform(true),
@@ -293,13 +296,14 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
     if (cur_options != nullptr) {
       // Re-insert the dummy command name string which will have been
       // stripped off:
-      input.Unshift(llvm::StringRef("dummy-string"));
+      input.Unshift("dummy-string");
       cursor_index++;
 
       // I stick an element on the end of the input, because if the last element
-      // is option that requires an argument, getopt_long_only will freak out.
+      // is
+      // option that requires an argument, getopt_long_only will freak out.
 
-      input.AppendArgument(llvm::StringRef("<FAKE-VALUE>"));
+      input.AppendArgument("<FAKE-VALUE>");
 
       input.ParseArgsForCompletion(*cur_options, opt_element_vector,
                                    cursor_index);
@@ -993,12 +997,11 @@ bool CommandObjectParsed::Execute(const char *args_string,
         InvokeOverrideCallback(full_args.GetConstArgumentVector(), result);
   }
   if (!handled) {
-    for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (!entry.Value.ref.empty() && entry.Value.ref.front() == '`') {
+    for (size_t i = 0; i < cmd_args.GetArgumentCount(); ++i) {
+      const char *tmp_str = cmd_args.GetArgumentAtIndex(i);
+      if (tmp_str[0] == '`') // back-quote
         cmd_args.ReplaceArgumentAtIndex(
-            entry.Index,
-            m_interpreter.ProcessEmbeddedScriptCommands(entry.Value.c_str()));
-      }
+            i, m_interpreter.ProcessEmbeddedScriptCommands(tmp_str));
     }
 
     if (CheckRequirements(result)) {

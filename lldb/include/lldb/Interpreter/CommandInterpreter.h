@@ -195,42 +195,45 @@ public:
 
   void SourceInitFile(bool in_cwd, CommandReturnObject &result);
 
-  bool AddCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
+  bool AddCommand(const char *name, const lldb::CommandObjectSP &cmd_sp,
                   bool can_replace);
 
-  bool AddUserCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
+  bool AddUserCommand(std::string name, const lldb::CommandObjectSP &cmd_sp,
                       bool can_replace);
 
-  lldb::CommandObjectSP GetCommandSPExact(llvm::StringRef cmd,
-                                          bool include_aliases) const;
+  lldb::CommandObjectSP GetCommandSPExact(const char *cmd,
+                                          bool include_aliases);
 
-  CommandObject *GetCommandObject(llvm::StringRef cmd,
-                                  StringList *matches = nullptr) const;
+  CommandObject *GetCommandObjectExact(const char *cmd_cstr,
+                                       bool include_aliases);
 
-  bool CommandExists(llvm::StringRef cmd) const;
+  CommandObject *GetCommandObject(const char *cmd,
+                                  StringList *matches = nullptr);
 
-  bool AliasExists(llvm::StringRef cmd) const;
+  bool CommandExists(const char *cmd);
 
-  bool UserCommandExists(llvm::StringRef cmd) const;
+  bool AliasExists(const char *cmd);
 
-  CommandAlias *AddAlias(llvm::StringRef alias_name,
+  bool UserCommandExists(const char *cmd);
+
+  CommandAlias *AddAlias(const char *alias_name,
                          lldb::CommandObjectSP &command_obj_sp,
-                         llvm::StringRef args_string = llvm::StringRef());
+                         const char *args_string = nullptr);
 
   // Remove a command if it is removable (python or regex command)
-  bool RemoveCommand(llvm::StringRef cmd);
+  bool RemoveCommand(const char *cmd);
 
-  bool RemoveAlias(llvm::StringRef alias_name);
+  bool RemoveAlias(const char *alias_name);
 
-  bool GetAliasFullName(llvm::StringRef cmd, std::string &full_name) const;
+  bool GetAliasFullName(const char *cmd, std::string &full_name);
 
-  bool RemoveUser(llvm::StringRef alias_name);
+  bool RemoveUser(const char *alias_name);
 
   void RemoveAllUser() { m_user_dict.clear(); }
 
-  const CommandAlias *GetAlias(llvm::StringRef alias_name) const;
+  CommandAlias *GetAlias(const char *alias_name);
 
-  CommandObject *BuildAliasResult(llvm::StringRef alias_name,
+  CommandObject *BuildAliasResult(const char *alias_name,
                                   std::string &raw_input_string,
                                   std::string &alias_result,
                                   CommandReturnObject &result);
@@ -287,7 +290,7 @@ public:
                               CommandInterpreterRunOptions &options,
                               CommandReturnObject &result);
 
-  CommandObject *GetCommandObjectForCommand(llvm::StringRef &command_line);
+  CommandObject *GetCommandObjectForCommand(std::string &command_line);
 
   // This handles command line completion.  You are given a pointer to the
   // command string buffer, to the current cursor,
@@ -369,8 +372,7 @@ public:
 
   const char *ProcessEmbeddedScriptCommands(const char *arg);
 
-  void UpdatePrompt(llvm::StringRef prompt);
-  void UpdatePrompt(const char *) = delete;
+  void UpdatePrompt(const char *);
 
   bool Confirm(const char *message, bool default_answer);
 
@@ -382,13 +384,13 @@ public:
 
   void SetScriptLanguage(lldb::ScriptLanguage lang);
 
-  bool HasCommands() const;
+  bool HasCommands();
 
-  bool HasAliases() const;
+  bool HasAliases();
 
-  bool HasUserCommands() const;
+  bool HasUserCommands();
 
-  bool HasAliasOptions() const;
+  bool HasAliasOptions();
 
   void BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
                              const char *alias_name, Args &cmd_args,
@@ -507,10 +509,10 @@ protected:
 
   void SetSynchronous(bool value);
 
-  lldb::CommandObjectSP GetCommandSP(llvm::StringRef cmd,
+  lldb::CommandObjectSP GetCommandSP(const char *cmd,
                                      bool include_aliases = true,
                                      bool exact = true,
-                                     StringList *matches = nullptr) const;
+                                     StringList *matches = nullptr);
 
 private:
   Error PreprocessCommand(std::string &command);

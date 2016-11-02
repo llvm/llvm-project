@@ -217,10 +217,14 @@ public:
     bool stop_on_error;
   };
 
-  class CommandBaton : public TypedBaton<CommandData> {
+  class CommandBaton : public Baton {
   public:
-    CommandBaton(std::unique_ptr<CommandData> Data)
-        : TypedBaton(std::move(Data)) {}
+    CommandBaton(CommandData *data) : Baton(data) {}
+
+    ~CommandBaton() override {
+      delete ((CommandData *)m_data);
+      m_data = nullptr;
+    }
 
     void GetDescription(Stream *s, lldb::DescriptionLevel level) const override;
   };

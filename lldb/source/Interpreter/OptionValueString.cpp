@@ -114,7 +114,7 @@ Error OptionValueString::SetValueFromString(llvm::StringRef value,
     if (m_options.Test(eOptionEncodeCharacterEscapeSequences)) {
       Args::EncodeEscapeSequences(value_str.c_str(), m_current_value);
     } else {
-      SetCurrentValue(value_str);
+      SetCurrentValue(value_str.c_str());
     }
     NotifyValueChanged();
     break;
@@ -126,13 +126,16 @@ lldb::OptionValueSP OptionValueString::DeepCopy() const {
   return OptionValueSP(new OptionValueString(*this));
 }
 
-Error OptionValueString::SetCurrentValue(llvm::StringRef value) {
+Error OptionValueString::SetCurrentValue(const char *value) {
   if (m_validator) {
-    Error error(m_validator(value.str().c_str(), m_validator_baton));
+    Error error(m_validator(value, m_validator_baton));
     if (error.Fail())
       return error;
   }
-  m_current_value.assign(value);
+  if (value && value[0])
+    m_current_value.assign(value);
+  else
+    m_current_value.clear();
   return Error();
 }
 

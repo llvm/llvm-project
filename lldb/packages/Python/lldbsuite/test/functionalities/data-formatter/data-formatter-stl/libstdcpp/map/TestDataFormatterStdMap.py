@@ -23,6 +23,9 @@ class StdMapDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
+    @expectedFailureAll(
+        compiler="icc",
+        bugnumber="llvm.org/pr15301 LLDB prints incorrect sizes of STL containers")
     @skipIfWindows  # libstdcpp not ported to Windows
     @skipIfFreeBSD
     def test_with_run_command(self):

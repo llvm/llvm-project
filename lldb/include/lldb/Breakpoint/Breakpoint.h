@@ -27,7 +27,6 @@
 #include "lldb/Core/Event.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/StringList.h"
-#include "lldb/Core/StructuredData.h"
 
 namespace lldb_private {
 
@@ -107,17 +106,6 @@ public:
   //------------------------------------------------------------------
   typedef enum { Exact, Regexp, Glob } MatchType;
 
-private:
-  enum class OptionNames : uint32_t { Names = 0, Hardware, LastOptionName };
-
-  static const char
-      *g_option_names[static_cast<uint32_t>(OptionNames::LastOptionName)];
-
-  static const char *GetKey(OptionNames enum_value) {
-    return g_option_names[static_cast<uint32_t>(enum_value)];
-  }
-
-public:
   class BreakpointEventData : public EventData {
   public:
     BreakpointEventData(lldb::BreakpointEventType sub_type,
@@ -176,17 +164,6 @@ public:
 
   typedef std::shared_ptr<BreakpointPrecondition> BreakpointPreconditionSP;
 
-  // Saving & restoring breakpoints:
-  static lldb::BreakpointSP CreateFromStructuredData(
-      Target &target, StructuredData::ObjectSP &data_object_sp, Error &error);
-
-  static bool
-  SerializedBreakpointMatchesNames(StructuredData::ObjectSP &bkpt_object_sp,
-                                   std::vector<std::string> &names);
-
-  virtual StructuredData::ObjectSP SerializeToStructuredData();
-
-  static const char *GetSerializationKey() { return "Breakpoint"; }
   //------------------------------------------------------------------
   /// Destructor.
   ///
@@ -740,8 +717,7 @@ private:
   // to skip certain breakpoint hits.  For instance, exception breakpoints
   // use this to limit the stop to certain exception classes, while leaving
   // the condition & callback free for user specification.
-  std::unique_ptr<BreakpointOptions>
-      m_options_up; // Settable breakpoint options
+  BreakpointOptions m_options; // Settable breakpoint options
   BreakpointLocationList
       m_locations; // The list of locations currently found for this breakpoint.
   std::string m_kind_description;

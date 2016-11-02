@@ -20,9 +20,8 @@
 #include "llvm/Support/Compiler.h"
 #if defined(LLVM_ON_WIN32)
 // If anyone #includes Host/PosixApi.h later, it will try to typedef pid_t.  We
-// need to ensure this doesn't happen.  At the same time, Python.h will also try
-// to redefine a bunch of stuff that PosixApi.h defines.  So define it all now
-// so that PosixApi.h doesn't redefine it.
+// need to ensure
+// this doesn't happen.
 #define NO_PID_T
 #endif
 #if defined(__linux__)

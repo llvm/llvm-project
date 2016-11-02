@@ -28,8 +28,12 @@ static OptionDefinition g_option_table[] = {
      "Specify the architecture for the target."},
 };
 
-llvm::ArrayRef<OptionDefinition> OptionGroupArchitecture::GetDefinitions() {
-  return llvm::makeArrayRef(g_option_table);
+uint32_t OptionGroupArchitecture::GetNumDefinitions() {
+  return llvm::array_lengthof(g_option_table);
+}
+
+const OptionDefinition *OptionGroupArchitecture::GetDefinitions() {
+  return g_option_table;
 }
 
 bool OptionGroupArchitecture::GetArchitecture(Platform *platform,
@@ -42,7 +46,7 @@ bool OptionGroupArchitecture::GetArchitecture(Platform *platform,
 }
 
 Error OptionGroupArchitecture::SetOptionValue(
-    uint32_t option_idx, llvm::StringRef option_arg,
+    uint32_t option_idx, const char *option_arg,
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = g_option_table[option_idx].short_option;

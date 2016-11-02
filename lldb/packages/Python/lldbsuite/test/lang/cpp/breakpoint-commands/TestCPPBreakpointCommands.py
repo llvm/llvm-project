@@ -17,6 +17,7 @@ class CPPBreakpointCommandsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(oslist=["windows"])
     def make_breakpoint(self, name, type, expected_num_locations):
         bkpt = self.target.BreakpointCreateByName(name,
                                                   type,

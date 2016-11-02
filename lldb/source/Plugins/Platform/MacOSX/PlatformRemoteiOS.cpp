@@ -34,11 +34,16 @@ PlatformRemoteiOS::SDKDirectoryInfo::SDKDirectoryInfo(
     const lldb_private::FileSpec &sdk_dir)
     : directory(sdk_dir), build(), version_major(0), version_minor(0),
       version_update(0), user_cached(false) {
-  llvm::StringRef dirname_str = sdk_dir.GetFilename().GetStringRef();
-  llvm::StringRef build_str;
-  std::tie(version_major, version_minor, version_update, build_str) =
-      ParseVersionBuildDir(dirname_str);
-  build.SetString(build_str);
+  const char *dirname_cstr = sdk_dir.GetFilename().GetCString();
+  const char *pos = Args::StringToVersion(dirname_cstr, version_major,
+                                          version_minor, version_update);
+
+  if (pos && pos[0] == ' ' && pos[1] == '(') {
+    const char *build_start = pos + 2;
+    const char *end_paren = strchr(build_start, ')');
+    if (end_paren && build_start < end_paren)
+      build.SetCStringWithLength(build_start, end_paren - build_start);
+  }
 }
 
 //------------------------------------------------------------------
@@ -739,10 +744,6 @@ Error PlatformRemoteiOS::GetSharedModule(
 
     size_t num_module_search_paths = module_search_paths_ptr->GetSize();
     for (size_t i = 0; i < num_module_search_paths; ++i) {
-      Log *log_verbose = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
-                                                    LIBLLDB_LOG_VERBOSE);
-      if (log_verbose)
-          log_verbose->Printf ("PlatformRemoteiOS::GetSharedModule searching for binary in search-path %s", module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
       // Create a new FileSpec with this module_search_paths_ptr
       // plus just the filename ("UIFoundation"), then the parent
       // dir plus filename ("UIFoundation.framework/UIFoundation")

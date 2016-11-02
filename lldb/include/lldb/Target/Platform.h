@@ -1089,12 +1089,14 @@ public:
   ~OptionGroupPlatformRSync() override = default;
 
   lldb_private::Error
-  SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+  SetOptionValue(uint32_t option_idx, const char *option_value,
                  ExecutionContext *execution_context) override;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
+  const lldb_private::OptionDefinition *GetDefinitions() override;
+
+  uint32_t GetNumDefinitions() override;
 
   // Options table: Required for subclasses of Options.
 
@@ -1118,12 +1120,14 @@ public:
   ~OptionGroupPlatformSSH() override = default;
 
   lldb_private::Error
-  SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+  SetOptionValue(uint32_t option_idx, const char *option_value,
                  ExecutionContext *execution_context) override;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
+  uint32_t GetNumDefinitions() override;
+
+  const lldb_private::OptionDefinition *GetDefinitions() override;
 
   // Options table: Required for subclasses of Options.
 
@@ -1145,12 +1149,14 @@ public:
   ~OptionGroupPlatformCaching() override = default;
 
   lldb_private::Error
-  SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+  SetOptionValue(uint32_t option_idx, const char *option_value,
                  ExecutionContext *execution_context) override;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
+  uint32_t GetNumDefinitions() override;
+
+  const lldb_private::OptionDefinition *GetDefinitions() override;
 
   // Options table: Required for subclasses of Options.
 

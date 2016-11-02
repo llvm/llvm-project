@@ -53,41 +53,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     DEPENDS ${LLDB_VERS_GENERATED_FILE})
 endif()
 
-foreach(file
-        "${LLDB_SOURCE_DIR}/.git/logs/HEAD" # Git
-        "${LLDB_SOURCE_DIR}/.svn/wc.db"     # SVN 1.7
-        "${LLDB_SOURCE_DIR}/.svn/entries"   # SVN 1.6
-        )
-  if(EXISTS "${file}")
-    set(lldb_vc "${file}")
-    break()
-  endif()
-endforeach()
-
-if(DEFINED lldb_vc)
-  set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/SVNVersion.inc")
-  set(get_svn_script "${LLVM_MAIN_SRC_DIR}/cmake/modules/GetSVN.cmake")
-
-  # Create custom target to generate the VC revision include.
-  add_custom_command(OUTPUT "${version_inc}"
-    DEPENDS "${lldb_vc}" "${get_svn_script}"
-    COMMAND
-    ${CMAKE_COMMAND} "-DFIRST_SOURCE_DIR=${LLDB_SOURCE_DIR}"
-                     "-DFIRST_NAME=LLDB"
-                     "-DHEADER_FILE=${version_inc}"
-                     -P "${get_svn_script}")
-
-  # Mark the generated header as being generated.
-  set_source_files_properties("${version_inc}"
-    PROPERTIES GENERATED TRUE
-               HEADER_FILE_ONLY TRUE)
-
-  # Tell Version.cpp that it needs to build with -DHAVE_SVN_VERSION_INC.
-  set_source_files_properties(lldb.cpp
-    PROPERTIES COMPILE_DEFINITIONS "HAVE_SVN_VERSION_INC")
-  list(APPEND lldbBase_SOURCES ${version_inc})
-endif()
-
 add_lldb_library(lldbBase
   ${lldbBase_SOURCES}
   )
@@ -112,3 +77,43 @@ add_subdirectory(Utility)
 # Build API last.  Since liblldb needs to link against every other target, it needs
 # those targets to have already been created.
 add_subdirectory(API)
+
+# Determine LLDB revision and repository. GetSourceVersion and GetRepositoryPath are shell-scripts, and as
+# such will not work on Windows.  The revision piece is now Python, so
+# that works (git/svn).
+if (PYTHON_EXECUTABLE)
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/get_vcs_revision.py
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE LLDB_REVISION)
+  if ( LLDB_REVISION )
+    string(REGEX REPLACE "(\r?\n)+$" "" LLDB_REVISION ${LLDB_REVISION})
+    set(LLDB_CPP_COMPILE_DEFINITIONS
+      "${LLDB_CPP_COMPILE_DEFINITIONS}"
+      "LLDB_REVISION=\"${LLDB_REVISION}\""
+      )
+  endif()
+endif()
+
+if ( NOT CMAKE_SYSTEM_NAME MATCHES "Windows" )
+  execute_process(COMMAND ${CMAKE_SOURCE_DIR}/utils/GetRepositoryPath ${LLDB_SOURCE_DIR}
+                  OUTPUT_VARIABLE LLDB_REPOSITORY)
+  if ( LLDB_REPOSITORY )
+    # Replace newline characters with spaces
+    string(REGEX REPLACE "(\r?\n)+" " " LLDB_REPOSITORY ${LLDB_REPOSITORY})
+
+    # Remove trailing spaces
+    string(REGEX REPLACE "(\ )+$" "" LLDB_REPOSITORY ${LLDB_REPOSITORY})
+
+    set(LLDB_CPP_COMPILE_DEFINITIONS
+      "${LLDB_CPP_COMPILE_DEFINITIONS}"
+      "LLDB_REPOSITORY=\"${LLDB_REPOSITORY}\""
+      )
+  endif()
+endif()
+
+set_property(
+  SOURCE lldb.cpp
+  PROPERTY COMPILE_DEFINITIONS ${LLDB_CPP_COMPILE_DEFINITIONS})
+# FIXME: implement svn/git revision and repository parsing solution on Windows. There is an SVN-only
+#        revision parsing solution in tools/clang/lib/Basic/CMakelists.txt.

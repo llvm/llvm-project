@@ -28,19 +28,6 @@ bool ClassDescriptorV2::Read_objc_class(
   return ret;
 }
 
-static lldb::addr_t GetClassDataMask(Process *process) {
-  switch (process->GetAddressByteSize()) {
-  case 4:
-    return 0xfffffffcUL;
-  case 8:
-    return 0x00007ffffffffff8UL;
-  default:
-    break;
-  }
-
-  return LLDB_INVALID_ADDRESS;
-}
-
 bool ClassDescriptorV2::objc_class_t::Read(Process *process,
                                            lldb::addr_t addr) {
   size_t ptr_size = process->GetAddressByteSize();
@@ -73,7 +60,7 @@ bool ClassDescriptorV2::objc_class_t::Read(Process *process,
       extractor.GetAddress_unchecked(&cursor); // uintptr_t data_NEVER_USE;
 
   m_flags = (uint8_t)(data_NEVER_USE & (lldb::addr_t)3);
-  m_data_ptr = data_NEVER_USE & GetClassDataMask(process);
+  m_data_ptr = data_NEVER_USE & ~(lldb::addr_t)3;
 
   return true;
 }

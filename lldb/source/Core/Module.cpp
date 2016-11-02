@@ -1434,7 +1434,7 @@ size_t Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
   Timer scoped_timer(
       LLVM_PRETTY_FUNCTION,
       "Module::FindSymbolsMatchingRegExAndType (regex = %s, type = %i)",
-      regex.GetText().str().c_str(), symbol_type);
+      regex.GetText(), symbol_type);
   const size_t initial_size = sc_list.GetSize();
   SymbolVendor *sym_vendor = GetSymbolVendor();
   if (sym_vendor) {
@@ -1673,8 +1673,7 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return m_source_mappings.FindFile(orig_spec, new_spec);
 }
 
-bool Module::RemapSourceFile(llvm::StringRef path,
-                             std::string &new_path) const {
+bool Module::RemapSourceFile(const char *path, std::string &new_path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   return m_source_mappings.RemapPath(path, new_path);
 }

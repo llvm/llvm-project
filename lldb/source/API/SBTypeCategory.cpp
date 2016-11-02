@@ -301,8 +301,7 @@ bool SBTypeCategory::AddTypeFormat(SBTypeNameSpecifier type_name,
 
   if (type_name.IsRegex())
     m_opaque_sp->GetRegexTypeFormatsContainer()->Add(
-        lldb::RegularExpressionSP(new RegularExpression(
-            llvm::StringRef::withNullAsEmpty(type_name.GetName()))),
+        lldb::RegularExpressionSP(new RegularExpression(type_name.GetName())),
         format.GetSP());
   else
     m_opaque_sp->GetTypeFormatsContainer()->Add(
@@ -374,8 +373,7 @@ bool SBTypeCategory::AddTypeSummary(SBTypeNameSpecifier type_name,
 
   if (type_name.IsRegex())
     m_opaque_sp->GetRegexTypeSummariesContainer()->Add(
-        lldb::RegularExpressionSP(new RegularExpression(
-            llvm::StringRef::withNullAsEmpty(type_name.GetName()))),
+        lldb::RegularExpressionSP(new RegularExpression(type_name.GetName())),
         summary.GetSP());
   else
     m_opaque_sp->GetTypeSummariesContainer()->Add(
@@ -413,8 +411,7 @@ bool SBTypeCategory::AddTypeFilter(SBTypeNameSpecifier type_name,
 
   if (type_name.IsRegex())
     m_opaque_sp->GetRegexTypeFiltersContainer()->Add(
-        lldb::RegularExpressionSP(new RegularExpression(
-            llvm::StringRef::withNullAsEmpty(type_name.GetName()))),
+        lldb::RegularExpressionSP(new RegularExpression(type_name.GetName())),
         filter.GetSP());
   else
     m_opaque_sp->GetTypeFiltersContainer()->Add(
@@ -486,8 +483,7 @@ bool SBTypeCategory::AddTypeSynthetic(SBTypeNameSpecifier type_name,
 
   if (type_name.IsRegex())
     m_opaque_sp->GetRegexTypeSyntheticsContainer()->Add(
-        lldb::RegularExpressionSP(new RegularExpression(
-            llvm::StringRef::withNullAsEmpty(type_name.GetName()))),
+        lldb::RegularExpressionSP(new RegularExpression(type_name.GetName())),
         synth.GetSP());
   else
     m_opaque_sp->GetTypeSyntheticsContainer()->Add(

@@ -14,7 +14,6 @@ from __future__ import absolute_import
 # System modules
 import argparse
 import os
-import re
 import sys
 import threading
 
@@ -26,9 +25,6 @@ from lldbsuite.test import configuration
 from ..event_builder import EventBuilder
 
 import lldbsuite
-
-
-FILE_LEVEL_KEY_RE = re.compile(r"^(.+\.py)[^.:]*$")
 
 
 class ResultsFormatter(object):
@@ -211,26 +207,6 @@ class ResultsFormatter(object):
             component_count += 1
         return key
 
-    @classmethod
-    def _is_file_level_issue(cls, key, event):
-        """Returns whether a given key represents a file-level event.
-
-        @param cls this class.  Unused, but following PEP8 for
-        preferring @classmethod over @staticmethod.
-
-        @param key the key for the issue being tested.
-
-        @param event the event for the issue being tested.
-
-        @return True when the given key (as made by _make_key())
-        represents an event that is at the test file level (i.e.
-        it isn't scoped to a test class or method).
-        """
-        if key is None:
-            return False
-        else:
-            return FILE_LEVEL_KEY_RE.match(key) is not None
-
     def _mark_test_as_expected_failure(self, test_result_event):
         key = self._make_key(test_result_event)
         if key is not None:
@@ -345,8 +321,8 @@ class ResultsFormatter(object):
                 # after this check below since this check may rewrite
                 # the event type
                 if event_type == EventBuilder.TYPE_JOB_RESULT:
-                    # Possibly convert the job status (timeout,
-                    # exceptional exit) # to an appropriate test_result event.
+                    # Possibly convert the job status (timeout, exceptional exit)
+                    # to an appropriate test_result event.
                     self._maybe_remap_job_result_event(test_event)
                     event_type = test_event.get("event", "")
 
@@ -359,10 +335,10 @@ class ResultsFormatter(object):
                 if event_type == "terminate":
                     self.terminate_called = True
                 elif event_type in EventBuilder.RESULT_TYPES:
-                    # Keep track of event counts per test/job result status
-                    # type. The only job (i.e. inferior process) results that
-                    # make it here are ones that cannot be remapped to the most
-                    # recently started test for the given worker index.
+                    # Keep track of event counts per test/job result status type.
+                    # The only job (i.e. inferior process) results that make it
+                    # here are ones that cannot be remapped to the most recently
+                    # started test for the given worker index.
                     status = test_event["status"]
                     self.result_status_counts[status] += 1
                     # Clear the most recently started test for the related
@@ -373,8 +349,8 @@ class ResultsFormatter(object):
 
                     if status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
                         # A test/job status value in any of those status values
-                        # causes a testrun failure. If such a test fails, check
-                        # whether it can be rerun. If it can be rerun, add it
+                        # causes a testrun failure.  If such a test fails, check
+                        # whether it can be rerun.  If it can be rerun, add it
                         # to the rerun job.
                         self._maybe_add_test_to_rerun_list(test_event)
 
@@ -385,13 +361,14 @@ class ResultsFormatter(object):
                             "failed to find test filename for "
                             "test event {}".format(test_event))
 
-                    # Save the most recent test event for the test key. This
-                    # allows a second test phase to overwrite the most recent
-                    # result for the test key (unique per method). We do final
-                    # reporting at the end, so we'll report based on final
-                    # results. We do this so that a re-run caused by, perhaps,
-                    # the need to run a low-load, single-worker test run can
-                    # have the final run's results to always be used.
+                    # Save the most recent test event for the test key.
+                    # This allows a second test phase to overwrite the most
+                    # recent result for the test key (unique per method).
+                    # We do final reporting at the end, so we'll report based
+                    # on final results.
+                    # We do this so that a re-run caused by, perhaps, the need
+                    # to run a low-load, single-worker test run can have the final
+                    # run's results to always be used.
                     if test_key in self.result_events:
                         # We are replacing the result of something that was
                         # already counted by the base class.  Remove the double
@@ -417,8 +394,7 @@ class ResultsFormatter(object):
 
                 elif event_type == EventBuilder.TYPE_MARK_TEST_RERUN_ELIGIBLE:
                     self._mark_test_for_rerun_eligibility(test_event)
-                elif (event_type ==
-                      EventBuilder.TYPE_MARK_TEST_EXPECTED_FAILURE):
+                elif event_type == EventBuilder.TYPE_MARK_TEST_EXPECTED_FAILURE:
                     self._mark_test_as_expected_failure(test_event)
 
     def set_expected_timeouts_by_basename(self, basenames):
@@ -740,50 +716,3 @@ class ResultsFormatter(object):
                 for key, event in events_by_key:
                     out_file.write("key:   {}\n".format(key))
                     out_file.write("event: {}\n".format(event))
-
-    def clear_file_level_issues(self, tests_for_rerun, out_file):
-        """Clear file-charged issues in any of the test rerun files.
-
-        @param tests_for_rerun the list of test-dir-relative paths that have
-        functions that require rerunning.  This is the test list
-        returned by the results_formatter at the end of the previous run.
-
-        @return the number of file-level issues that were cleared.
-        """
-        if tests_for_rerun is None:
-            return 0
-
-        cleared_file_level_issues = 0
-        # Find the unique set of files that are covered by the given tests
-        # that are to be rerun.  We derive the files that are eligible for
-        # having their markers cleared, because we support running in a mode
-        # where only flaky tests are eligible for rerun.  If the file-level
-        # issue occurred in a file that was not marked as flaky, then we
-        # shouldn't be clearing the event here.
-        basename_set = set()
-        for test_file_relpath in tests_for_rerun:
-            basename_set.add(os.path.basename(test_file_relpath))
-
-        # Find all the keys for file-level events that are considered
-        # test issues.
-        file_level_issues = [(key, event)
-                             for key, event in self.result_events.items()
-                             if ResultsFormatter._is_file_level_issue(
-                                     key, event)
-                             and event.get("status", "") in
-                             EventBuilder.TESTRUN_ERROR_STATUS_VALUES]
-
-        # Now remove any file-level error for the given test base name.
-        for key, event in file_level_issues:
-            # If the given file base name is in the rerun set, then we
-            # clear that entry from the result set.
-            if os.path.basename(key) in basename_set:
-                self.result_events.pop(key, None)
-                cleared_file_level_issues += 1
-                if out_file is not None:
-                    out_file.write(
-                        "clearing file-level issue for file {} "
-                        "(issue type: {})"
-                        .format(key, event.get("status", "<unset-status>")))
-
-        return cleared_file_level_issues

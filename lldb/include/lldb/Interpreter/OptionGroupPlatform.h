@@ -34,11 +34,12 @@ public:
 
   ~OptionGroupPlatform() override = default;
 
-  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
+  uint32_t GetNumDefinitions() override;
 
-  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+  const OptionDefinition *GetDefinitions() override;
+
+  Error SetOptionValue(uint32_t option_idx, const char *option_value,
                        ExecutionContext *execution_context) override;
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 

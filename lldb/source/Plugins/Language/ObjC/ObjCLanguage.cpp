@@ -83,44 +83,39 @@ void ObjCLanguage::MethodName::Clear() {
   m_category_is_valid = false;
 }
 
-bool ObjCLanguage::MethodName::SetName(llvm::StringRef name, bool strict) {
+bool ObjCLanguage::MethodName::SetName(const char *name, bool strict) {
   Clear();
-  if (name.empty())
-    return IsValid(strict);
+  if (name && name[0]) {
+    // If "strict" is true. then the method must be specified with a
+    // '+' or '-' at the beginning. If "strict" is false, then the '+'
+    // or '-' can be omitted
+    bool valid_prefix = false;
 
-  // If "strict" is true. then the method must be specified with a
-  // '+' or '-' at the beginning. If "strict" is false, then the '+'
-  // or '-' can be omitted
-  bool valid_prefix = false;
+    if (name[0] == '+' || name[0] == '-') {
+      valid_prefix = name[1] == '[';
+      if (name[0] == '+')
+        m_type = eTypeClassMethod;
+      else
+        m_type = eTypeInstanceMethod;
+    } else if (!strict) {
+      // "strict" is false, the name just needs to start with '['
+      valid_prefix = name[0] == '[';
+    }
 
-  if (name[0] == '+' || name[0] == '-') {
-    valid_prefix = name[1] == '[';
-    if (name[0] == '+')
-      m_type = eTypeClassMethod;
-    else
-      m_type = eTypeInstanceMethod;
-  } else if (!strict) {
-    // "strict" is false, the name just needs to start with '['
-    valid_prefix = name[0] == '[';
-  }
-
-  if (valid_prefix) {
-    int name_len = name.size();
-    // Objective C methods must have at least:
-    //      "-[" or "+[" prefix
-    //      One character for a class name
-    //      One character for the space between the class name
-    //      One character for the method name
-    //      "]" suffix
-    if (name_len >= (5 + (strict ? 1 : 0)) && name.back() == ']') {
-      m_full.SetString(name);
+    if (valid_prefix) {
+      int name_len = strlen(name);
+      // Objective C methods must have at least:
+      //      "-[" or "+[" prefix
+      //      One character for a class name
+      //      One character for the space between the class name
+      //      One character for the method name
+      //      "]" suffix
+      if (name_len >= (5 + (strict ? 1 : 0)) && name[name_len - 1] == ']') {
+        m_full.SetCStringWithLength(name, name_len);
+      }
     }
   }
   return IsValid(strict);
-}
-
-bool ObjCLanguage::MethodName::SetName(const char *name, bool strict) {
-  return SetName(llvm::StringRef(name), strict);
 }
 
 const ConstString &ObjCLanguage::MethodName::GetClassName() {

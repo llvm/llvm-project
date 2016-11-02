@@ -155,7 +155,7 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
       size_t obj_idx = m_objects.size();
       m_objects.push_back(obj);
       // Insert all of the C strings out of order for now...
-      m_object_name_to_index_map.Append(obj.ar_name.GetStringRef(), obj_idx);
+      m_object_name_to_index_map.Append(obj.ar_name.GetCString(), obj_idx);
       offset += obj.ar_file_size;
       obj.Clear();
     } while (data.ValidOffset(offset));
@@ -171,7 +171,7 @@ ObjectContainerBSDArchive::Archive::FindObject(
     const ConstString &object_name, const TimeValue &object_mod_time) {
   const ObjectNameToIndexMap::Entry *match =
       m_object_name_to_index_map.FindFirstValueForName(
-          object_name.GetStringRef());
+          object_name.GetCString());
   if (match) {
     if (object_mod_time.IsValid()) {
       const uint64_t object_date = object_mod_time.GetAsSecondsSinceJan1_1970();

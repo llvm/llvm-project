@@ -14,7 +14,6 @@
 
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -84,14 +83,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
-    return nullptr;
-  auto objfile_ap = llvm::make_unique<ObjectFilePECOFF>(
-      module_sp, data_sp, process_sp, header_addr);
-  if (objfile_ap.get() && objfile_ap->ParseHeader()) {
-    return objfile_ap.release();
-  }
-  return nullptr;
+  return NULL;
 }
 
 size_t ObjectFilePECOFF::GetModuleSpecifications(
@@ -162,18 +154,6 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    lldb::offset_t file_offset,
                                    lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
-      m_entry_point_address() {
-  ::memset(&m_dos_header, 0, sizeof(m_dos_header));
-  ::memset(&m_coff_header, 0, sizeof(m_coff_header));
-  ::memset(&m_coff_header_opt, 0, sizeof(m_coff_header_opt));
-}
-
-ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                                   DataBufferSP &header_data_sp,
-                                   const lldb::ProcessSP &process_sp,
-                                   addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
       m_entry_point_address() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
@@ -416,27 +396,6 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
   return success;
 }
 
-DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
-  if (m_file) {
-    DataBufferSP buffer_sp(m_file.ReadFileContents(offset, size));
-    return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
-  }
-  ProcessSP process_sp(m_process_wp.lock());
-  DataExtractor data;
-  if (process_sp) {
-    auto data_ap = llvm::make_unique<DataBufferHeap>(size, 0);
-    Error readmem_error;
-    size_t bytes_read =
-        process_sp->ReadMemory(m_image_base + offset, data_ap->GetBytes(),
-                               data_ap->GetByteSize(), readmem_error);
-    if (bytes_read == size) {
-      DataBufferSP buffer_sp(data_ap.release());
-      data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
-    }
-  }
-  return data;
-}
-
 //----------------------------------------------------------------------
 // ParseSectionHeaders
 //----------------------------------------------------------------------
@@ -446,9 +405,12 @@ bool ObjectFilePECOFF::ParseSectionHeaders(
   m_sect_headers.clear();
 
   if (nsects > 0) {
+    const uint32_t addr_byte_size = GetAddressByteSize();
     const size_t section_header_byte_size = nsects * sizeof(section_header_t);
-    DataExtractor section_header_data =
-        ReadImageData(section_header_data_offset, section_header_byte_size);
+    DataBufferSP section_header_data_sp(m_file.ReadFileContents(
+        section_header_data_offset, section_header_byte_size));
+    DataExtractor section_header_data(section_header_data_sp, GetByteOrder(),
+                                      addr_byte_size);
 
     lldb::offset_t offset = 0;
     if (section_header_data.ValidOffsetForDataOfSize(
@@ -508,65 +470,68 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
 
       const uint32_t num_syms = m_coff_header.nsyms;
 
-      if (m_file && num_syms > 0 && m_coff_header.symoff > 0) {
+      if (num_syms > 0 && m_coff_header.symoff > 0) {
         const uint32_t symbol_size = 18;
+        const uint32_t addr_byte_size = GetAddressByteSize();
         const size_t symbol_data_size = num_syms * symbol_size;
         // Include the 4-byte string table size at the end of the symbols
-        DataExtractor symtab_data =
-            ReadImageData(m_coff_header.symoff, symbol_data_size + 4);
+        DataBufferSP symtab_data_sp(m_file.ReadFileContents(
+            m_coff_header.symoff, symbol_data_size + 4));
+        DataExtractor symtab_data(symtab_data_sp, GetByteOrder(),
+                                  addr_byte_size);
         lldb::offset_t offset = symbol_data_size;
         const uint32_t strtab_size = symtab_data.GetU32(&offset);
-        if (strtab_size > 0) {
-          DataExtractor strtab_data = ReadImageData(
-              m_coff_header.symoff + symbol_data_size, strtab_size);
+        DataBufferSP strtab_data_sp(m_file.ReadFileContents(
+            m_coff_header.symoff + symbol_data_size, strtab_size));
+        DataExtractor strtab_data(strtab_data_sp, GetByteOrder(),
+                                  addr_byte_size);
 
-          // First 4 bytes should be zeroed after strtab_size has been read,
-          // because it is used as offset 0 to encode a NULL string.
-          uint32_t *strtab_data_start = (uint32_t *)strtab_data.GetDataStart();
-          strtab_data_start[0] = 0;
+        // First 4 bytes should be zeroed after strtab_size has been read,
+        // because it is used as offset 0 to encode a NULL string.
+        uint32_t *strtab_data_start = (uint32_t *)strtab_data_sp->GetBytes();
+        strtab_data_start[0] = 0;
 
-          offset = 0;
-          std::string symbol_name;
-          Symbol *symbols = m_symtab_ap->Resize(num_syms);
-          for (uint32_t i = 0; i < num_syms; ++i) {
-            coff_symbol_t symbol;
-            const uint32_t symbol_offset = offset;
-            const char *symbol_name_cstr = NULL;
-            // If the first 4 bytes of the symbol string are zero, then they
-            // are followed by a 4-byte string table offset. Else these
-            // 8 bytes contain the symbol name
-            if (symtab_data.GetU32(&offset) == 0) {
-              // Long string that doesn't fit into the symbol table name,
-              // so now we must read the 4 byte string table offset
-              uint32_t strtab_offset = symtab_data.GetU32(&offset);
-              symbol_name_cstr = strtab_data.PeekCStr(strtab_offset);
-              symbol_name.assign(symbol_name_cstr);
-            } else {
-              // Short string that fits into the symbol table name which is 8
-              // bytes
-              offset += sizeof(symbol.name) - 4; // Skip remaining
-              symbol_name_cstr = symtab_data.PeekCStr(symbol_offset);
-              if (symbol_name_cstr == NULL)
-                break;
-              symbol_name.assign(symbol_name_cstr, sizeof(symbol.name));
-            }
-            symbol.value = symtab_data.GetU32(&offset);
-            symbol.sect = symtab_data.GetU16(&offset);
-            symbol.type = symtab_data.GetU16(&offset);
-            symbol.storage = symtab_data.GetU8(&offset);
-            symbol.naux = symtab_data.GetU8(&offset);
-            symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
-            if ((int16_t)symbol.sect >= 1) {
-              Address symbol_addr(sect_list->GetSectionAtIndex(symbol.sect - 1),
-                                  symbol.value);
-              symbols[i].GetAddressRef() = symbol_addr;
-              symbols[i].SetType(MapSymbolType(symbol.type));
-            }
+        offset = 0;
+        std::string symbol_name;
+        Symbol *symbols = m_symtab_ap->Resize(num_syms);
+        for (uint32_t i = 0; i < num_syms; ++i) {
+          coff_symbol_t symbol;
+          const uint32_t symbol_offset = offset;
+          const char *symbol_name_cstr = NULL;
+          // If the first 4 bytes of the symbol string are zero, then they
+          // are followed by a 4-byte string table offset. Else these
+          // 8 bytes contain the symbol name
+          if (symtab_data.GetU32(&offset) == 0) {
+            // Long string that doesn't fit into the symbol table name,
+            // so now we must read the 4 byte string table offset
+            uint32_t strtab_offset = symtab_data.GetU32(&offset);
+            symbol_name_cstr = strtab_data.PeekCStr(strtab_offset);
+            symbol_name.assign(symbol_name_cstr);
+          } else {
+            // Short string that fits into the symbol table name which is 8
+            // bytes
+            offset += sizeof(symbol.name) - 4; // Skip remaining
+            symbol_name_cstr = symtab_data.PeekCStr(symbol_offset);
+            if (symbol_name_cstr == NULL)
+              break;
+            symbol_name.assign(symbol_name_cstr, sizeof(symbol.name));
+          }
+          symbol.value = symtab_data.GetU32(&offset);
+          symbol.sect = symtab_data.GetU16(&offset);
+          symbol.type = symtab_data.GetU16(&offset);
+          symbol.storage = symtab_data.GetU8(&offset);
+          symbol.naux = symtab_data.GetU8(&offset);
+          symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
+          if ((int16_t)symbol.sect >= 1) {
+            Address symbol_addr(sect_list->GetSectionAtIndex(symbol.sect - 1),
+                                symbol.value);
+            symbols[i].GetAddressRef() = symbol_addr;
+            symbols[i].SetType(MapSymbolType(symbol.type));
+          }
 
-            if (symbol.naux > 0) {
-              i += symbol.naux;
-              offset += symbol_size;
-            }
+          if (symbol.naux > 0) {
+            i += symbol.naux;
+            offset += symbol_size;
           }
         }
       }
@@ -578,15 +543,12 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
         export_directory_entry export_table;
         uint32_t data_start =
             m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr;
-
-        uint32_t address_rva = data_start;
-        if (m_file) {
-          Address address(m_coff_header_opt.image_base + data_start, sect_list);
-          address_rva =
-              address.GetSection()->GetFileOffset() + address.GetOffset();
-        }
-        DataExtractor symtab_data =
-            ReadImageData(address_rva, m_coff_header_opt.data_dirs[0].vmsize);
+        Address address(m_coff_header_opt.image_base + data_start, sect_list);
+        DataBufferSP symtab_data_sp(m_file.ReadFileContents(
+            address.GetSection()->GetFileOffset() + address.GetOffset(),
+            m_coff_header_opt.data_dirs[0].vmsize));
+        DataExtractor symtab_data(symtab_data_sp, GetByteOrder(),
+                                  GetAddressByteSize());
         lldb::offset_t offset = 0;
 
         // Read export_table header
@@ -985,21 +947,6 @@ void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
   }
 }
 
-bool ObjectFilePECOFF::IsWindowsSubsystem() {
-  switch (m_coff_header_opt.subsystem) {
-  case llvm::COFF::IMAGE_SUBSYSTEM_NATIVE:
-  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI:
-  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI:
-  case llvm::COFF::IMAGE_SUBSYSTEM_NATIVE_WINDOWS:
-  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI:
-  case llvm::COFF::IMAGE_SUBSYSTEM_XBOX:
-  case llvm::COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool ObjectFilePECOFF::GetArchitecture(ArchSpec &arch) {
   uint16_t machine = m_coff_header.machine;
   switch (machine) {
@@ -1010,9 +957,7 @@ bool ObjectFilePECOFF::GetArchitecture(ArchSpec &arch) {
   case llvm::COFF::IMAGE_FILE_MACHINE_ARM:
   case llvm::COFF::IMAGE_FILE_MACHINE_ARMNT:
   case llvm::COFF::IMAGE_FILE_MACHINE_THUMB:
-    arch.SetArchitecture(eArchTypeCOFF, machine, LLDB_INVALID_CPUTYPE,
-                         IsWindowsSubsystem() ? llvm::Triple::Win32
-                                              : llvm::Triple::UnknownOS);
+    arch.SetArchitecture(eArchTypeCOFF, machine, LLDB_INVALID_CPUTYPE);
     return true;
   default:
     break;

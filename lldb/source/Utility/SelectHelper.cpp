@@ -45,19 +45,13 @@ void SelectHelper::SetTimeout(const std::chrono::microseconds &timeout) {
   m_end_time = steady_clock::time_point(steady_clock::now() + timeout);
 }
 
-void SelectHelper::FDSetRead(lldb::socket_t fd) {
-  m_fd_map[fd].read_set = true;
-}
+void SelectHelper::FDSetRead(int fd) { m_fd_map[fd].read_set = true; }
 
-void SelectHelper::FDSetWrite(lldb::socket_t fd) {
-  m_fd_map[fd].write_set = true;
-}
+void SelectHelper::FDSetWrite(int fd) { m_fd_map[fd].write_set = true; }
 
-void SelectHelper::FDSetError(lldb::socket_t fd) {
-  m_fd_map[fd].error_set = true;
-}
+void SelectHelper::FDSetError(int fd) { m_fd_map[fd].error_set = true; }
 
-bool SelectHelper::FDIsSetRead(lldb::socket_t fd) const {
+bool SelectHelper::FDIsSetRead(int fd) const {
   auto pos = m_fd_map.find(fd);
   if (pos != m_fd_map.end())
     return pos->second.read_is_set;
@@ -65,7 +59,7 @@ bool SelectHelper::FDIsSetRead(lldb::socket_t fd) const {
     return false;
 }
 
-bool SelectHelper::FDIsSetWrite(lldb::socket_t fd) const {
+bool SelectHelper::FDIsSetWrite(int fd) const {
   auto pos = m_fd_map.find(fd);
   if (pos != m_fd_map.end())
     return pos->second.write_is_set;
@@ -73,20 +67,12 @@ bool SelectHelper::FDIsSetWrite(lldb::socket_t fd) const {
     return false;
 }
 
-bool SelectHelper::FDIsSetError(lldb::socket_t fd) const {
+bool SelectHelper::FDIsSetError(int fd) const {
   auto pos = m_fd_map.find(fd);
   if (pos != m_fd_map.end())
     return pos->second.error_is_set;
   else
     return false;
-}
-
-static void updateMaxFd(llvm::Optional<lldb::socket_t> &vold,
-                        lldb::socket_t vnew) {
-  if (!vold.hasValue())
-    vold = vnew;
-  else
-    vold = std::max(*vold, vnew);
 }
 
 lldb_private::Error SelectHelper::Select() {
@@ -99,13 +85,13 @@ lldb_private::Error SelectHelper::Select() {
     return lldb_private::Error("Too many file descriptors for select()");
 #endif
 
-  llvm::Optional<lldb::socket_t> max_read_fd;
-  llvm::Optional<lldb::socket_t> max_write_fd;
-  llvm::Optional<lldb::socket_t> max_error_fd;
-  llvm::Optional<lldb::socket_t> max_fd;
+  int max_read_fd = -1;
+  int max_write_fd = -1;
+  int max_error_fd = -1;
+  int max_fd = -1;
   for (auto &pair : m_fd_map) {
     pair.second.PrepareForSelect();
-    const lldb::socket_t fd = pair.first;
+    const int fd = pair.first;
 #if !defined(__APPLE__) && !defined(_MSC_VER)
     lldbassert(fd < FD_SETSIZE);
     if (fd >= FD_SETSIZE) {
@@ -113,21 +99,26 @@ lldb_private::Error SelectHelper::Select() {
       return error;
     }
 #endif
-    if (pair.second.read_set)
-      updateMaxFd(max_read_fd, fd);
-    if (pair.second.write_set)
-      updateMaxFd(max_write_fd, fd);
-    if (pair.second.error_set)
-      updateMaxFd(max_error_fd, fd);
-    updateMaxFd(max_fd, fd);
+    if (pair.second.read_set) {
+      max_read_fd = std::max<int>(fd, max_read_fd);
+      max_fd = std::max<int>(fd, max_fd);
+    }
+    if (pair.second.write_set) {
+      max_write_fd = std::max<int>(fd, max_write_fd);
+      max_fd = std::max<int>(fd, max_fd);
+    }
+    if (pair.second.error_set) {
+      max_error_fd = std::max<int>(fd, max_error_fd);
+      max_fd = std::max<int>(fd, max_fd);
+    }
   }
 
-  if (!max_fd.hasValue()) {
+  if (max_fd == -1) {
     error.SetErrorString("no valid file descriptors");
     return error;
   }
 
-  const unsigned nfds = static_cast<unsigned>(*max_fd) + 1;
+  const int nfds = max_fd + 1;
   fd_set *read_fdset_ptr = nullptr;
   fd_set *write_fdset_ptr = nullptr;
   fd_set *error_fdset_ptr = nullptr;
@@ -139,15 +130,15 @@ lldb_private::Error SelectHelper::Select() {
   llvm::SmallVector<fd_set, 1> write_fdset;
   llvm::SmallVector<fd_set, 1> error_fdset;
 
-  if (max_read_fd.hasValue()) {
+  if (max_read_fd >= 0) {
     read_fdset.resize((nfds / FD_SETSIZE) + 1);
     read_fdset_ptr = read_fdset.data();
   }
-  if (max_write_fd.hasValue()) {
+  if (max_write_fd >= 0) {
     write_fdset.resize((nfds / FD_SETSIZE) + 1);
     write_fdset_ptr = write_fdset.data();
   }
-  if (max_error_fd.hasValue()) {
+  if (max_error_fd >= 0) {
     error_fdset.resize((nfds / FD_SETSIZE) + 1);
     error_fdset_ptr = error_fdset.data();
   }
@@ -162,15 +153,15 @@ lldb_private::Error SelectHelper::Select() {
   fd_set write_fdset;
   fd_set error_fdset;
 
-  if (max_read_fd.hasValue()) {
+  if (max_read_fd >= 0) {
     FD_ZERO(&read_fdset);
     read_fdset_ptr = &read_fdset;
   }
-  if (max_write_fd.hasValue()) {
+  if (max_write_fd >= 0) {
     FD_ZERO(&write_fdset);
     write_fdset_ptr = &write_fdset;
   }
-  if (max_error_fd.hasValue()) {
+  if (max_error_fd >= 0) {
     FD_ZERO(&error_fdset);
     error_fdset_ptr = &error_fdset;
   }
@@ -179,7 +170,7 @@ lldb_private::Error SelectHelper::Select() {
   // Set the FD bits in the fdsets for read/write/error
   //----------------------------------------------------------------------
   for (auto &pair : m_fd_map) {
-    const lldb::socket_t fd = pair.first;
+    const int fd = pair.first;
 
     if (pair.second.read_set)
       FD_SET(fd, read_fdset_ptr);

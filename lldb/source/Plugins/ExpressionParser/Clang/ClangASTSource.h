@@ -331,6 +331,9 @@ protected:
   /// @param[in] current_id
   ///     The ID for the current FindExternalVisibleDecls invocation,
   ///     for logging purposes.
+  ///
+  /// @return
+  ///     True on success; false otherwise.
   //------------------------------------------------------------------
   void FindExternalVisibleDecls(NameSearchContext &context,
                                 lldb::ModuleSP module,

@@ -1308,7 +1308,6 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
     }
   }
   }
-  return std::make_pair(nullptr, 0);
 }
 
 std::pair<const Instruction::Operand *, int64_t>
@@ -1321,7 +1320,7 @@ GetBaseExplainingDereference(const Instruction::Operand &operand,
   }
   return std::make_pair(nullptr, 0);
 }
-}
+};
 
 lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   TargetSP target_sp = CalculateTarget();
@@ -1449,12 +1448,8 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
 
   Error error;
   ValueObjectSP pointee = base->Dereference(error);
-    
-  if (!pointee) {
-    return ValueObjectSP();
-  }
 
-  if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
+  if (offset >= pointee->GetByteSize()) {
     int64_t index = offset / pointee->GetByteSize();
     offset = offset % pointee->GetByteSize();
     const bool can_create = true;
@@ -1521,27 +1516,37 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
   // First, check the variable list to see if anything is at the specified
   // location.
-
-  using namespace OperandMatchers;
-
-  const RegisterInfo *reg_info =
-      frame.GetRegisterContext()->GetRegisterInfoByName(reg.AsCString());
-  if (!reg_info) {
-    return ValueObjectSP();
-  }
-
-  Instruction::Operand op =
-      offset ? Instruction::Operand::BuildDereference(
-                   Instruction::Operand::BuildSum(
-                       Instruction::Operand::BuildRegister(reg),
-                       Instruction::Operand::BuildImmediate(offset)))
-             : Instruction::Operand::BuildDereference(
-                   Instruction::Operand::BuildRegister(reg));
-
   for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi) {
     VariableSP var_sp = variables.GetVariableAtIndex(vi);
-    if (var_sp->LocationExpression().MatchesOperand(frame, op)) {
-      return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
+    DWARFExpression &dwarf_expression = var_sp->LocationExpression();
+
+    const RegisterInfo *expression_reg;
+    int64_t expression_offset;
+    ExecutionContext exe_ctx;
+
+    if (dwarf_expression.IsDereferenceOfRegister(frame, expression_reg,
+                                                 expression_offset)) {
+      if ((reg == ConstString(expression_reg->name) ||
+           reg == ConstString(expression_reg->alt_name)) &&
+          expression_offset == offset) {
+        return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
+      }
+    }
+  }
+
+  bool is_in_return_register = false;
+  ABISP abi_sp = frame.CalculateProcess()->GetABI();
+  RegisterInfo return_register_info;
+
+  if (abi_sp) {
+    const char *return_register_name;
+    const RegisterInfo *reg_info = nullptr;
+    if (abi_sp->GetPointerReturnRegister(return_register_name) &&
+        reg == ConstString(return_register_name) &&
+        (reg_info = frame.GetRegisterContext()->GetRegisterInfoByName(
+             return_register_name))) {
+      is_in_return_register = true;
+      return_register_info = *reg_info;
     }
   }
 
@@ -1551,44 +1556,17 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
     return ValueObjectSP();
   }
 
+  ValueObjectSP source_path;
+
   for (uint32_t ii = current_inst - 1; ii != (uint32_t)-1; --ii) {
     // This is not an exact algorithm, and it sacrifices accuracy for
-    // generality.  Recognizing "mov" and "ld" instructions –– and which are
-    // their source and destination operands -- is something the disassembler
-    // should do for us.
+    // generality.
+    // Recognizing "mov" and "ld" instructions –– and which are their source and
+    // destination operands -- is something the disassembler should do for us.
     InstructionSP instruction_sp =
         disassembler.GetInstructionList().GetInstructionAtIndex(ii);
 
-    if (instruction_sp->IsCall()) {
-      ABISP abi_sp = frame.CalculateProcess()->GetABI();
-      if (!abi_sp) {
-        continue;
-      }
-
-      const char *return_register_name;
-      if (!abi_sp->GetPointerReturnRegister(return_register_name)) {
-        continue;
-      }
-
-      const RegisterInfo *return_register_info =
-          frame.GetRegisterContext()->GetRegisterInfoByName(
-              return_register_name);
-      if (!return_register_info) {
-        continue;
-      }
-
-      int64_t offset = 0;
-
-      if (!MatchUnaryOp(MatchOpType(Instruction::Operand::Type::Dereference),
-                        MatchRegOp(*return_register_info))(op) &&
-          !MatchUnaryOp(
-              MatchOpType(Instruction::Operand::Type::Dereference),
-              MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
-                            MatchRegOp(*return_register_info),
-                            FetchImmOp(offset)))(op)) {
-        continue;
-      }
-
+    if (is_in_return_register && instruction_sp->IsCall()) {
       llvm::SmallVector<Instruction::Operand, 1> operands;
       if (!instruction_sp->ParseOperands(operands) || operands.size() != 1) {
         continue;
@@ -1615,7 +1593,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
         }
         CompilerType return_type = function_type.GetFunctionReturnType();
         RegisterValue return_value;
-        if (!frame.GetRegisterContext()->ReadRegister(return_register_info,
+        if (!frame.GetRegisterContext()->ReadRegister(&return_register_info,
                                                       return_value)) {
           break;
         }
@@ -1637,45 +1615,83 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
       continue;
     }
 
+    Instruction::Operand *register_operand = nullptr;
     Instruction::Operand *origin_operand = nullptr;
-    auto clobbered_reg_matcher = [reg_info](const Instruction::Operand &op) {
-      return MatchRegOp(*reg_info)(op) && op.m_clobbered;
-    };
-
-    if (clobbered_reg_matcher(operands[0])) {
+    if (operands[0].m_type == Instruction::Operand::Type::Register &&
+        operands[0].m_clobbered == true && operands[0].m_register == reg) {
+      register_operand = &operands[0];
       origin_operand = &operands[1];
-    }
-    else if (clobbered_reg_matcher(operands[1])) {
+    } else if (operands[1].m_type == Instruction::Operand::Type::Register &&
+               operands[1].m_clobbered == true &&
+               operands[1].m_register == reg) {
+      register_operand = &operands[1];
       origin_operand = &operands[0];
-    }
-    else {
+    } else {
       continue;
     }
 
     // We have an origin operand.  Can we track its value down?
-    ValueObjectSP source_path;
-    ConstString origin_register;
-    int64_t origin_offset = 0;
-
-    if (FetchRegOp(origin_register)(*origin_operand)) {
-      source_path = DoGuessValueAt(frame, origin_register, 0, disassembler,
-                                   variables, instruction_sp->GetAddress());
-    } else if (MatchUnaryOp(
-                   MatchOpType(Instruction::Operand::Type::Dereference),
-                   FetchRegOp(origin_register))(*origin_operand) ||
-               MatchUnaryOp(
-                   MatchOpType(Instruction::Operand::Type::Dereference),
-                   MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
-                                 FetchRegOp(origin_register),
-                                 FetchImmOp(origin_offset)))(*origin_operand)) {
+    switch (origin_operand->m_type) {
+    default:
+      break;
+    case Instruction::Operand::Type::Register:
       source_path =
-          DoGuessValueAt(frame, origin_register, origin_offset, disassembler,
+          DoGuessValueAt(frame, origin_operand->m_register, 0, disassembler,
                          variables, instruction_sp->GetAddress());
-      if (!source_path) {
-        continue;
+      break;
+    case Instruction::Operand::Type::Dereference: {
+      const Instruction::Operand &pointer = origin_operand->m_children[0];
+      switch (pointer.m_type) {
+      default:
+        break;
+      case Instruction::Operand::Type::Register:
+        source_path = DoGuessValueAt(frame, pointer.m_register, 0, disassembler,
+                                     variables, instruction_sp->GetAddress());
+        if (source_path) {
+          Error err;
+          source_path = source_path->Dereference(err);
+          if (!err.Success()) {
+            source_path.reset();
+          }
+        }
+        break;
+      case Instruction::Operand::Type::Sum: {
+        const Instruction::Operand *origin_register = nullptr;
+        const Instruction::Operand *origin_offset = nullptr;
+        if (pointer.m_children.size() != 2) {
+          break;
+        }
+        if (pointer.m_children[0].m_type ==
+                Instruction::Operand::Type::Register &&
+            pointer.m_children[1].m_type ==
+                Instruction::Operand::Type::Immediate) {
+          origin_register = &pointer.m_children[0];
+          origin_offset = &pointer.m_children[1];
+        } else if (pointer.m_children[1].m_type ==
+                       Instruction::Operand::Type::Register &&
+                   pointer.m_children[0].m_type ==
+                       Instruction::Operand::Type::Immediate) {
+          origin_register = &pointer.m_children[1];
+          origin_offset = &pointer.m_children[0];
+        }
+        if (!origin_register) {
+          break;
+        }
+        int64_t signed_origin_offset =
+            origin_offset->m_negative ? -((int64_t)origin_offset->m_immediate)
+                                      : origin_offset->m_immediate;
+        source_path = DoGuessValueAt(frame, origin_register->m_register,
+                                     signed_origin_offset, disassembler,
+                                     variables, instruction_sp->GetAddress());
+        if (!source_path) {
+          break;
+        }
+        source_path =
+            GetValueForDereferincingOffset(frame, source_path, offset);
+        break;
       }
-      source_path =
-          GetValueForDereferincingOffset(frame, source_path, offset);
+      }
+    }
     }
 
     if (source_path) {
@@ -1887,8 +1903,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
                   m_sc.line_entry.file, m_sc.line_entry.line,
-                  m_sc.line_entry.column, source_lines_before,
-                  source_lines_after, "->", &strm);
+                  source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.

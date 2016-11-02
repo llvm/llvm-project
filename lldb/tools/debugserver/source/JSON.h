@@ -10,7 +10,9 @@
 #ifndef utility_JSON_h_
 #define utility_JSON_h_
 
-#include "StdStringExtractor.h"
+// This cross-project usage is fine as StdStringExtractor.h is entirely
+// self-contained.
+#include "lldb/Utility/StdStringExtractor.h"
 
 // C includes
 #include <inttypes.h>

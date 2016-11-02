@@ -137,7 +137,7 @@ Error PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   if (error.Fail())
     return error;
 
-  args.ReplaceArgumentAtIndex(0, connect_url);
+  args.ReplaceArgumentAtIndex(0, connect_url.c_str());
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   if (log)

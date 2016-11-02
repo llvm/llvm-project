@@ -13,7 +13,3 @@ add_lldb_library(lldbPluginExpressionParserClang
   ClangUtilityFunction.cpp
   IRForTarget.cpp
   )
-
-if(NOT LLDB_BUILT_STANDALONE)
-  add_dependencies(lldbPluginExpressionParserClang intrinsics_gen)
-endif()

@@ -1,4 +1,5 @@
-//===-- BreakpointResolverFileRegex.cpp -------------------------*- C++-*-===//
+//===-- BreakpointResolverFileRegex.cpp --------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -29,76 +30,11 @@ using namespace lldb_private;
 BreakpointResolverFileRegex::BreakpointResolverFileRegex(
     Breakpoint *bkpt, RegularExpression &regex,
     const std::unordered_set<std::string> &func_names, bool exact_match)
-    : BreakpointResolver(bkpt, BreakpointResolver::FileRegexResolver),
+    : BreakpointResolver(bkpt, BreakpointResolver::FileLineResolver),
       m_regex(regex), m_exact_match(exact_match), m_function_names(func_names) {
 }
 
 BreakpointResolverFileRegex::~BreakpointResolverFileRegex() {}
-
-BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
-    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
-    Error &error) {
-  bool success;
-
-  std::string regex_string;
-  success = options_dict.GetValueForKeyAsString(
-      GetKey(OptionNames::RegexString), regex_string);
-  if (!success) {
-    error.SetErrorString("BRFR::CFSD: Couldn't find regex entry.");
-    return nullptr;
-  }
-  RegularExpression regex(regex_string);
-
-  bool exact_match;
-  success = options_dict.GetValueForKeyAsBoolean(
-      GetKey(OptionNames::ExactMatch), exact_match);
-  if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find exact match entry.");
-    return nullptr;
-  }
-
-  // The names array is optional:
-  std::unordered_set<std::string> names_set;
-  StructuredData::Array *names_array;
-  success = options_dict.GetValueForKeyAsArray(
-      GetKey(OptionNames::SymbolNameArray), names_array);
-  if (success && names_array) {
-    size_t num_names = names_array->GetSize();
-    for (size_t i = 0; i < num_names; i++) {
-      std::string name;
-      success = names_array->GetItemAtIndexAsString(i, name);
-      if (!success) {
-        error.SetErrorStringWithFormat(
-            "BRFR::CFSD: Malformed element %zu in the names array.", i);
-        return nullptr;
-      }
-      names_set.insert(name);
-    }
-  }
-
-  return new BreakpointResolverFileRegex(bkpt, regex, names_set, exact_match);
-}
-
-StructuredData::ObjectSP
-BreakpointResolverFileRegex::SerializeToStructuredData() {
-  StructuredData::DictionarySP options_dict_sp(
-      new StructuredData::Dictionary());
-
-  options_dict_sp->AddStringItem(GetKey(OptionNames::RegexString),
-                                 m_regex.GetText());
-  options_dict_sp->AddBooleanItem(GetKey(OptionNames::ExactMatch),
-                                  m_exact_match);
-  if (!m_function_names.empty()) {
-    StructuredData::ArraySP names_array_sp(new StructuredData::Array());
-    for (std::string name : m_function_names) {
-      StructuredData::StringSP item(new StructuredData::String(name));
-      names_array_sp->AddItem(item);
-    }
-    options_dict_sp->AddItem(GetKey(OptionNames::LineNumber), names_array_sp);
-  }
-
-  return WrapOptionsDict(options_dict_sp);
-}
 
 Searcher::CallbackReturn
 BreakpointResolverFileRegex::SearchCallback(SearchFilter &filter,
@@ -162,8 +98,8 @@ Searcher::Depth BreakpointResolverFileRegex::GetDepth() {
 }
 
 void BreakpointResolverFileRegex::GetDescription(Stream *s) {
-  s->Printf("source regex = \"%s\", exact_match = %d",
-            m_regex.GetText().str().c_str(), m_exact_match);
+  s->Printf("source regex = \"%s\", exact_match = %d", m_regex.GetText(),
+            m_exact_match);
 }
 
 void BreakpointResolverFileRegex::Dump(Stream *s) const {}

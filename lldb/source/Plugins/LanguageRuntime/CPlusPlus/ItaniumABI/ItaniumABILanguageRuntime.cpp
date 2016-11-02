@@ -363,30 +363,32 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool demangled_any = false;
     bool error_any = false;
-    for (auto &entry : command.entries()) {
-      if (entry.ref.empty())
-        continue;
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      auto arg = command.GetArgumentAtIndex(i);
+      if (arg && *arg) {
+        ConstString mangled_cs(arg);
 
-      // the actual Mangled class should be strict about this, but on the
-      // command line if you're copying mangled names out of 'nm' on Darwin,
-      // they will come out with an extra underscore - be willing to strip
-      // this on behalf of the user.   This is the moral equivalent of the -_/-n
-      // options to c++filt
-      auto name = entry.ref;
-      if (name.startswith("__Z"))
-        name = name.drop_front();
+        // the actual Mangled class should be strict about this, but on the
+        // command line
+        // if you're copying mangled names out of 'nm' on Darwin, they will come
+        // out with
+        // an extra underscore - be willing to strip this on behalf of the user
+        // This is the moral equivalent of the -_/-n options to c++filt
+        if (mangled_cs.GetStringRef().startswith("__Z"))
+          mangled_cs.SetCString(arg + 1);
 
-      Mangled mangled(name, true);
-      if (mangled.GuessLanguage() == lldb::eLanguageTypeC_plus_plus) {
-        ConstString demangled(
-            mangled.GetDisplayDemangledName(lldb::eLanguageTypeC_plus_plus));
-        demangled_any = true;
-        result.AppendMessageWithFormat("%s ---> %s\n", entry.ref.str().c_str(),
-                                       demangled.GetCString());
-      } else {
-        error_any = true;
-        result.AppendErrorWithFormat("%s is not a valid C++ mangled name\n",
-                                     entry.ref.str().c_str());
+        Mangled mangled(mangled_cs, true);
+        if (mangled.GuessLanguage() == lldb::eLanguageTypeC_plus_plus) {
+          ConstString demangled(
+              mangled.GetDisplayDemangledName(lldb::eLanguageTypeC_plus_plus));
+          demangled_any = true;
+          result.AppendMessageWithFormat("%s ---> %s\n", arg,
+                                         demangled.GetCString());
+        } else {
+          error_any = true;
+          result.AppendErrorWithFormat("%s is not a valid C++ mangled name\n",
+                                       arg);
+        }
       }
     }
 

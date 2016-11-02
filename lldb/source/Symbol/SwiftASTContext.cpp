@@ -2854,7 +2854,7 @@ public:
                                 swift::DiagnosticKind kind,
                                 llvm::StringRef text,
                                 const swift::DiagnosticInfo &info) {
-    llvm::StringRef bufferName = "<anonymous>";
+    const char *bufferName = "<anonymous>";
     unsigned bufferID = 0;
     std::pair<unsigned, unsigned> line_col = {0, 0};
 
@@ -2972,13 +2972,12 @@ public:
       const DiagnosticOrigin origin = eDiagnosticOriginSwift;
 
       if (first_line > 0 && bufferID != UINT32_MAX &&
-          diagnostic.bufferID == bufferID && !diagnostic.bufferName.empty()) {
+          diagnostic.bufferID == bufferID && diagnostic.bufferName != NULL) {
         // Make sure the error line is in range
         if (diagnostic.line >= first_line && diagnostic.line <= last_line) {
           // Need to remap the error/warning to a different line
           StreamString match;
-          match.Printf("%s:%u:", diagnostic.bufferName.str().c_str(),
-                       diagnostic.line);
+          match.Printf("%s:%u:", diagnostic.bufferName, diagnostic.line);
           const size_t match_len = match.GetString().size();
           size_t match_pos = diagnostic.description.find(match.GetString());
           if (match_pos != std::string::npos) {
@@ -2989,8 +2988,7 @@ public:
               if (match_pos > start_pos)
                 fixed_description.GetString().append(diagnostic.description,
                                                      start_pos, match_pos);
-              fixed_description.Printf("%s:%u:",
-                                       diagnostic.bufferName.str().c_str(),
+              fixed_description.Printf("%s:%u:", diagnostic.bufferName,
                                        diagnostic.line - first_line +
                                            line_offset + 1);
               start_pos = match_pos + match_len;
@@ -3057,7 +3055,7 @@ private:
   // PrintDiagnostic.
   struct RawDiagnostic {
     RawDiagnostic(std::string in_desc, swift::DiagnosticKind in_kind,
-                  llvm::StringRef in_bufferName, unsigned in_bufferID,
+                  const char *in_bufferName, unsigned in_bufferID,
                   uint32_t in_line, uint32_t in_column,
                   llvm::ArrayRef<swift::Diagnostic::FixIt> in_fixits)
         : description(in_desc), kind(in_kind), bufferName(in_bufferName),
@@ -3068,7 +3066,7 @@ private:
     }
     std::string description;
     swift::DiagnosticKind kind;
-    const llvm::StringRef bufferName;
+    const char *bufferName;
     unsigned bufferID;
     uint32_t line;
     uint32_t column;
@@ -5648,8 +5646,8 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
     return false;
 
   if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    if (llvm::dyn_cast<swift::ArchetypeType>(
-        (swift::TypeBase *)compiler_type.GetOpaqueQualType())) {
+    if (swift::ArchetypeType *archetype = llvm::dyn_cast<swift::ArchetypeType>(
+            (swift::TypeBase *)compiler_type.GetOpaqueQualType())) {
       // Hack: Just assume if we have an archetype as the type of 'self',
       // it's going to be a protocol 'Self' type.
       return true;

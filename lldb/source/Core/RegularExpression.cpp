@@ -40,10 +40,10 @@ RegularExpression::RegularExpression() : m_re(), m_comp_err(1), m_preg() {
 // Constructor that compiles "re" using "flags" and stores the
 // resulting compiled regular expression into this object.
 //----------------------------------------------------------------------
-RegularExpression::RegularExpression(llvm::StringRef str)
+RegularExpression::RegularExpression(const char *re)
     : m_re(), m_comp_err(1), m_preg() {
   memset(&m_preg, 0, sizeof(m_preg));
-  Compile(str);
+  Compile(re);
 }
 
 RegularExpression::RegularExpression(const RegularExpression &rhs) {
@@ -78,12 +78,12 @@ RegularExpression::~RegularExpression() { Free(); }
 //  True if the regular expression compiles successfully, false
 //  otherwise.
 //----------------------------------------------------------------------
-bool RegularExpression::Compile(llvm::StringRef str) {
+bool RegularExpression::Compile(const char *re) {
   Free();
 
-  if (!str.empty()) {
-    m_re = str;
-    m_comp_err = ::regcomp(&m_preg, m_re.c_str(), DEFAULT_COMPILE_FLAGS);
+  if (re && re[0]) {
+    m_re = re;
+    m_comp_err = ::regcomp(&m_preg, re, DEFAULT_COMPILE_FLAGS);
   } else {
     // No valid regular expression
     m_comp_err = 1;
@@ -100,16 +100,13 @@ bool RegularExpression::Compile(llvm::StringRef str) {
 // values that are present in "match_ptr". The regular expression
 // will be executed using the "execute_flags".
 //---------------------------------------------------------------------
-bool RegularExpression::Execute(llvm::StringRef str, Match *match) const {
+bool RegularExpression::Execute(const char *s, Match *match) const {
   int err = 1;
-  if (m_comp_err == 0) {
-    // Argument to regexec must be null-terminated.
-    std::string reg_str = str;
+  if (s != nullptr && m_comp_err == 0) {
     if (match) {
-      err = ::regexec(&m_preg, reg_str.c_str(), match->GetSize(),
-                      match->GetData(), 0);
+      err = ::regexec(&m_preg, s, match->GetSize(), match->GetData(), 0);
     } else {
-      err = ::regexec(&m_preg, reg_str.c_str(), 0, nullptr, 0);
+      err = ::regexec(&m_preg, s, 0, nullptr, 0);
     }
   }
 
@@ -179,7 +176,9 @@ bool RegularExpression::IsValid() const { return m_comp_err == 0; }
 // Returns the text that was used to compile the current regular
 // expression.
 //----------------------------------------------------------------------
-llvm::StringRef RegularExpression::GetText() const { return m_re; }
+const char *RegularExpression::GetText() const {
+  return (m_re.empty() ? nullptr : m_re.c_str());
+}
 
 //----------------------------------------------------------------------
 // Free any contained compiled regular expressions.

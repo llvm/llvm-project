@@ -26,7 +26,7 @@
 
 #include "llvm/Support/Mutex.h"
 
-#include "Plugins/Process/Windows/Common/ProcessWindows.h"
+#include "plugins/Process/Windows/Common/ProcessWindows.h"
 
 class ProcessMonitor;
 

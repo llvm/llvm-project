@@ -582,10 +582,9 @@ bool ObjectFile::SplitArchivePathWithObject(const char *path_with_object,
                                             FileSpec &archive_file,
                                             ConstString &archive_object,
                                             bool must_exist) {
-  RegularExpression g_object_regex(llvm::StringRef("(.*)\\(([^\\)]+)\\)$"));
+  RegularExpression g_object_regex("(.*)\\(([^\\)]+)\\)$");
   RegularExpression::Match regex_match(2);
-  if (g_object_regex.Execute(llvm::StringRef::withNullAsEmpty(path_with_object),
-                             &regex_match)) {
+  if (g_object_regex.Execute(path_with_object, &regex_match)) {
     std::string path;
     std::string obj;
     if (regex_match.GetMatchAtIndex(path_with_object, 1, path) &&

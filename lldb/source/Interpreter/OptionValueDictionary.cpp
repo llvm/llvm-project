@@ -85,7 +85,7 @@ size_t OptionValueDictionary::GetArgs(Args &args) const {
     StreamString strm;
     strm.Printf("%s=", pos->first.GetCString());
     pos->second->DumpValue(nullptr, strm, eDumpOptionValue | eDumpOptionRaw);
-    args.AppendArgument(strm.GetString());
+    args.AppendArgument(strm.GetString().c_str());
   }
   return args.GetArgumentCount();
 }
@@ -308,8 +308,7 @@ Error OptionValueDictionary::SetSubValue(const ExecutionContext *exe_ctx,
   const bool will_modify = true;
   lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
   if (value_sp)
-    error = value_sp->SetValueFromString(
-        llvm::StringRef::withNullAsEmpty(value), op);
+    error = value_sp->SetValueFromString(value, op);
   else {
     if (error.AsCString() == nullptr)
       error.SetErrorStringWithFormat("invalid value path '%s'", name);
@@ -324,6 +323,33 @@ OptionValueDictionary::GetValueForKey(const ConstString &key) const {
   if (pos != m_values.end())
     value_sp = pos->second;
   return value_sp;
+}
+
+const char *
+OptionValueDictionary::GetStringValueForKey(const ConstString &key) {
+  collection::const_iterator pos = m_values.find(key);
+  if (pos != m_values.end()) {
+    OptionValueString *string_value = pos->second->GetAsString();
+    if (string_value)
+      return string_value->GetCurrentValue();
+  }
+  return nullptr;
+}
+
+bool OptionValueDictionary::SetStringValueForKey(const ConstString &key,
+                                                 const char *value,
+                                                 bool can_replace) {
+  collection::const_iterator pos = m_values.find(key);
+  if (pos != m_values.end()) {
+    if (!can_replace)
+      return false;
+    if (pos->second->GetType() == OptionValue::eTypeString) {
+      pos->second->SetValueFromString(value);
+      return true;
+    }
+  }
+  m_values[key] = OptionValueSP(new OptionValueString(value));
+  return true;
 }
 
 bool OptionValueDictionary::SetValueForKey(const ConstString &key,

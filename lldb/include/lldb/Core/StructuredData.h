@@ -390,18 +390,6 @@ public:
       return value_sp;
     }
 
-    bool GetValueForKeyAsBoolean(llvm::StringRef key, bool &result) const {
-      bool success = false;
-      ObjectSP value_sp = GetValueForKey(key);
-      if (value_sp.get()) {
-        Boolean *result_ptr = value_sp->GetAsBoolean();
-        if (result_ptr) {
-          result = result_ptr->GetValue();
-          success = true;
-        }
-      }
-      return success;
-    }
     template <class IntType>
     bool GetValueForKeyAsInteger(llvm::StringRef key, IntType &result) const {
       ObjectSP value_sp = GetValueForKey(key);
@@ -551,8 +539,6 @@ public:
   };
 
   static ObjectSP ParseJSON(std::string json_text);
-
-  static ObjectSP ParseJSONFromFile(const FileSpec &file, Error &error);
 };
 
 } // namespace lldb_private

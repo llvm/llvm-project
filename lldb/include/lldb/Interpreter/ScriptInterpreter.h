@@ -16,7 +16,6 @@
 // Project includes
 #include "lldb/lldb-private.h"
 
-#include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/PluginInterface.h"
@@ -271,15 +270,6 @@ public:
     return error;
   }
 
-  /// This one is for deserialization:
-  virtual Error SetBreakpointCommandCallback(
-      BreakpointOptions *bp_options,
-      std::unique_ptr<BreakpointOptions::CommandData> &data_up) {
-    Error error;
-    error.SetErrorString("unimplemented");
-    return error;
-  }
-
   void SetBreakpointCommandCallbackFunction(
       std::vector<BreakpointOptions *> &bp_options_vec,
       const char *function_name);
@@ -438,11 +428,7 @@ public:
 
   static std::string LanguageToString(lldb::ScriptLanguage language);
 
-  static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
-
   virtual void ResetOutputFileHandle(FILE *new_fh) {} // By default, do nothing.
-
-  lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
 protected:
   CommandInterpreter &m_interpreter;

@@ -15,8 +15,7 @@ using namespace lldb_private;
 
 lldb::LanguageType
 SBLanguageRuntime::GetLanguageTypeFromString(const char *string) {
-  return Language::GetLanguageTypeFromString(
-      llvm::StringRef::withNullAsEmpty(string));
+  return Language::GetLanguageTypeFromString(string);
 }
 
 const char *

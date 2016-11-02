@@ -25,83 +25,82 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ExceptionSearchFilter::ExceptionSearchFilter(const lldb::TargetSP &target_sp,
-                                             lldb::LanguageType language,
-                                             bool update_module_list)
-    : SearchFilter(target_sp, FilterTy::Exception), m_language(language),
-      m_language_runtime(nullptr), m_filter_sp() {
-  if (update_module_list)
-    UpdateModuleListIfNeeded();
-}
+namespace {
 
-bool ExceptionSearchFilter::ModulePasses(const lldb::ModuleSP &module_sp) {
-  UpdateModuleListIfNeeded();
-  if (m_filter_sp)
-    return m_filter_sp->ModulePasses(module_sp);
-  return false;
-}
-
-bool ExceptionSearchFilter::ModulePasses(const FileSpec &spec) {
-  UpdateModuleListIfNeeded();
-  if (m_filter_sp)
-    return m_filter_sp->ModulePasses(spec);
-  return false;
-}
-
-void ExceptionSearchFilter::Search(Searcher &searcher) {
-  UpdateModuleListIfNeeded();
-  if (m_filter_sp)
-    m_filter_sp->Search(searcher);
-}
-
-void ExceptionSearchFilter::GetDescription(Stream *s) {
-  UpdateModuleListIfNeeded();
-  if (m_filter_sp)
-    m_filter_sp->GetDescription(s);
-}
-
-void ExceptionSearchFilter::UpdateModuleListIfNeeded() {
-  ProcessSP process_sp(m_target_sp->GetProcessSP());
-  if (process_sp) {
-    bool refreash_filter = !m_filter_sp;
-    if (m_language_runtime == nullptr) {
-      m_language_runtime = process_sp->GetLanguageRuntime(m_language);
-      refreash_filter = true;
-    } else {
-      LanguageRuntime *language_runtime =
-          process_sp->GetLanguageRuntime(m_language);
-      if (m_language_runtime != language_runtime) {
-        m_language_runtime = language_runtime;
-        refreash_filter = true;
-      }
-    }
-
-    if (refreash_filter && m_language_runtime) {
-      m_filter_sp = m_language_runtime->CreateExceptionSearchFilter();
-    }
-  } else {
-    m_filter_sp.reset();
-    m_language_runtime = nullptr;
+class ExceptionSearchFilter : public SearchFilter {
+public:
+  ExceptionSearchFilter(const lldb::TargetSP &target_sp,
+                        lldb::LanguageType language,
+                        bool update_module_list = true)
+      : SearchFilter(target_sp), m_language(language),
+        m_language_runtime(nullptr), m_filter_sp() {
+    if (update_module_list)
+      UpdateModuleListIfNeeded();
   }
-}
 
-SearchFilterSP
-ExceptionSearchFilter::DoCopyForBreakpoint(Breakpoint &breakpoint) {
-  return SearchFilterSP(
-      new ExceptionSearchFilter(TargetSP(), m_language, false));
-}
+  ~ExceptionSearchFilter() override = default;
 
-SearchFilter *ExceptionSearchFilter::CreateFromStructuredData(
-    Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
-  SearchFilter *result = nullptr;
-  return result;
-}
+  bool ModulePasses(const lldb::ModuleSP &module_sp) override {
+    UpdateModuleListIfNeeded();
+    if (m_filter_sp)
+      return m_filter_sp->ModulePasses(module_sp);
+    return false;
+  }
 
-StructuredData::ObjectSP ExceptionSearchFilter::SerializeToStructuredData() {
-  StructuredData::ObjectSP result_sp;
+  bool ModulePasses(const FileSpec &spec) override {
+    UpdateModuleListIfNeeded();
+    if (m_filter_sp)
+      return m_filter_sp->ModulePasses(spec);
+    return false;
+  }
 
-  return result_sp;
-}
+  void Search(Searcher &searcher) override {
+    UpdateModuleListIfNeeded();
+    if (m_filter_sp)
+      m_filter_sp->Search(searcher);
+  }
+
+  void GetDescription(Stream *s) override {
+    UpdateModuleListIfNeeded();
+    if (m_filter_sp)
+      m_filter_sp->GetDescription(s);
+  }
+
+protected:
+  LanguageType m_language;
+  LanguageRuntime *m_language_runtime;
+  SearchFilterSP m_filter_sp;
+
+  SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override {
+    return SearchFilterSP(
+        new ExceptionSearchFilter(TargetSP(), m_language, false));
+  }
+
+  void UpdateModuleListIfNeeded() {
+    ProcessSP process_sp(m_target_sp->GetProcessSP());
+    if (process_sp) {
+      bool refreash_filter = !m_filter_sp;
+      if (m_language_runtime == nullptr) {
+        m_language_runtime = process_sp->GetLanguageRuntime(m_language);
+        refreash_filter = true;
+      } else {
+        LanguageRuntime *language_runtime =
+            process_sp->GetLanguageRuntime(m_language);
+        if (m_language_runtime != language_runtime) {
+          m_language_runtime = language_runtime;
+          refreash_filter = true;
+        }
+      }
+
+      if (refreash_filter && m_language_runtime) {
+        m_filter_sp = m_language_runtime->CreateExceptionSearchFilter();
+      }
+    } else {
+      m_filter_sp.reset();
+      m_language_runtime = nullptr;
+    }
+  }
+};
 
 // The Target is the one that knows how to create breakpoints, so this function
 // is meant to be used either by the target or internally in
@@ -205,6 +204,7 @@ protected:
   bool m_catch_bp;
   bool m_throw_bp;
 };
+} // End ANON namespace
 
 LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
                                              lldb::LanguageType language) {
@@ -295,10 +295,12 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
           command_callback(parent->GetCommandInterpreter());
       if (command) {
         // the CommandObject vended by a Language plugin cannot be created once
-        // and cached because we may create multiple debuggers and need one
-        // instance of the command each - the implementing function is meant to
-        // create a new instance of the command each time it is invoked.
-        parent->LoadSubCommand(command->GetCommandName().str().c_str(), command);
+        // and cached because
+        // we may create multiple debuggers and need one instance of the command
+        // each - the implementing function
+        // is meant to create a new instance of the command each time it is
+        // invoked
+        parent->LoadSubCommand(command->GetCommandName(), command);
       }
     }
   }

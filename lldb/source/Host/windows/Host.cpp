@@ -159,7 +159,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   if (!snapshot.IsValid())
     return 0;
 
-  PROCESSENTRY32W pe = {};
+  PROCESSENTRY32W pe = {0};
   pe.dwSize = sizeof(PROCESSENTRY32W);
   if (Process32FirstW(snapshot.get(), &pe)) {
     do {
@@ -273,7 +273,7 @@ Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       if (!str_sp)
         continue;
 
-      launch_info.GetArguments().AppendArgument(str_sp->GetValue());
+      launch_info.GetArguments().AppendArgument(str_sp->GetValue().c_str());
     }
   }
 

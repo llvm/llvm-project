@@ -26,7 +26,8 @@ BreakpointID::BreakpointID(break_id_t bp_id, break_id_t loc_id)
 
 BreakpointID::~BreakpointID() = default;
 
-static llvm::StringRef g_range_specifiers[] = {"-", "to", "To", "TO"};
+const char *BreakpointID::g_range_specifiers[] = {"-", "to", "To", "TO",
+                                                  nullptr};
 
 // Tells whether or not STR is valid to use between two strings representing
 // breakpoint IDs, to
@@ -34,21 +35,25 @@ static llvm::StringRef g_range_specifiers[] = {"-", "to", "To", "TO"};
 // function so that we can
 // easily change or add to the format for specifying ID ranges at a later date.
 
-bool BreakpointID::IsRangeIdentifier(llvm::StringRef str) {
-  for (auto spec : g_range_specifiers) {
-    if (spec == str)
+bool BreakpointID::IsRangeIdentifier(const char *str) {
+  int specifier_count = 0;
+  for (int i = 0; g_range_specifiers[i] != nullptr; ++i)
+    ++specifier_count;
+
+  for (int i = 0; i < specifier_count; ++i) {
+    if (strcmp(g_range_specifiers[i], str) == 0)
       return true;
   }
 
   return false;
 }
 
-bool BreakpointID::IsValidIDExpression(llvm::StringRef str) {
-  return BreakpointID::ParseCanonicalReference(str).hasValue();
-}
+bool BreakpointID::IsValidIDExpression(const char *str) {
+  break_id_t bp_id;
+  break_id_t loc_id;
+  BreakpointID::ParseCanonicalReference(str, &bp_id, &loc_id);
 
-llvm::ArrayRef<llvm::StringRef> BreakpointID::GetRangeSpecifiers() {
-  return llvm::makeArrayRef(g_range_specifiers);
+  return (bp_id != LLDB_INVALID_BREAK_ID);
 }
 
 void BreakpointID::GetDescription(Stream *s, lldb::DescriptionLevel level) {
@@ -73,46 +78,43 @@ void BreakpointID::GetCanonicalReference(Stream *s, break_id_t bp_id,
     s->Printf("%i.%i", bp_id, loc_id);
 }
 
-llvm::Optional<BreakpointID>
-BreakpointID::ParseCanonicalReference(llvm::StringRef input) {
-  break_id_t bp_id;
-  break_id_t loc_id = LLDB_INVALID_BREAK_ID;
+bool BreakpointID::ParseCanonicalReference(const char *input,
+                                           break_id_t *break_id_ptr,
+                                           break_id_t *break_loc_id_ptr) {
+  *break_id_ptr = LLDB_INVALID_BREAK_ID;
+  *break_loc_id_ptr = LLDB_INVALID_BREAK_ID;
 
-  if (input.empty())
-    return llvm::None;
+  if (input == nullptr || *input == '\0')
+    return false;
 
-  // If it doesn't start with an integer, it's not valid.
-  if (input.consumeInteger(0, bp_id))
-    return llvm::None;
+  const char *format = "%i%n.%i%n";
+  int chars_consumed_1 = 0;
+  int chars_consumed_2 = 0;
+  int n_items_parsed = ::sscanf(
+      input, format,
+      break_id_ptr,       // %i   parse the breakpoint ID
+      &chars_consumed_1,  // %n   gets the number of characters parsed so far
+      break_loc_id_ptr,   // %i   parse the breakpoint location ID
+      &chars_consumed_2); // %n   gets the number of characters parsed so far
 
-  // period is optional, but if it exists, it must be followed by a number.
-  if (input.consume_front(".")) {
-    if (input.consumeInteger(0, loc_id))
-      return llvm::None;
-  }
+  if ((n_items_parsed == 1 && input[chars_consumed_1] == '\0') ||
+      (n_items_parsed == 2 && input[chars_consumed_2] == '\0'))
+    return true;
 
-  // And at the end, the entire string must have been consumed.
-  if (!input.empty())
-    return llvm::None;
-
-  return BreakpointID(bp_id, loc_id);
+  // Badly formatted canonical reference.
+  *break_id_ptr = LLDB_INVALID_BREAK_ID;
+  *break_loc_id_ptr = LLDB_INVALID_BREAK_ID;
+  return false;
 }
 
-bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Error &error) {
+bool BreakpointID::StringIsBreakpointName(const char *name, Error &error) {
   error.Clear();
-  if (str.empty())
-    return false;
 
-  // First character must be a letter or _
-  if (!isalpha(str[0]) && str[0] != '_')
+  if (name && (name[0] >= 'A' && name[0] <= 'z')) {
+    if (strcspn(name, ".- ") != strlen(name)) {
+      error.SetErrorStringWithFormat("invalid breakpoint name: \"%s\"", name);
+    }
+    return true;
+  } else
     return false;
-
-  // Cannot contain ., -, or space.
-  if (str.find_first_of(".- ") != llvm::StringRef::npos) {
-    error.SetErrorStringWithFormat("invalid breakpoint name: \"%s\"",
-                                   str.str().c_str());
-    return false;
-  }
-
-  return true;
 }

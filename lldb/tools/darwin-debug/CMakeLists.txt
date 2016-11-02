@@ -1,4 +1,4 @@
-add_lldb_executable(lldb-launcher INCLUDE_IN_FRAMEWORK
+add_lldb_executable(lldb-launcher
   darwin-debug.cpp
   )
 
