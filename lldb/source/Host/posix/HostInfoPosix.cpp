@@ -14,7 +14,11 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Host/posix/HostInfoPosix.h"
 
+#include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <grp.h>
@@ -124,41 +128,40 @@ uint32_t HostInfoPosix::GetEffectiveGroupID() { return getegid(); }
 
 FileSpec HostInfoPosix::GetDefaultShell() { return FileSpec("/bin/sh", false); }
 
-bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
+bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
+                                                 llvm::StringRef dir) {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
   FileSpec lldb_file_spec;
   if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
     return false;
 
-  char raw_path[PATH_MAX];
-  lldb_file_spec.GetPath(raw_path, sizeof(raw_path));
+  std::string raw_path = lldb_file_spec.GetPath();
+  // drop library directory
+  llvm::StringRef parent_path = llvm::sys::path::parent_path(raw_path);
 
   // Most Posix systems (e.g. Linux/*BSD) will attempt to replace a */lib with
-  // */bin as the base
-  // directory for helper exe programs.  This will fail if the /lib and /bin
-  // directories are
-  // rooted in entirely different trees.
+  // */bin as the base directory for helper exe programs.  This will fail if the
+  // /lib and /bin directories are rooted in entirely different trees.
   if (log)
-    log->Printf("HostInfoPosix::ComputeSupportExeDirectory() attempting to "
-                "derive the bin path (ePathTypeSupportExecutableDir) from "
-                "this path: %s",
-                raw_path);
-  char *lib_pos = ::strstr(raw_path, "/lib");
-  if (lib_pos != nullptr) {
+    log->Printf("HostInfoPosix::ComputePathRelativeToLibrary() attempting to "
+                "derive the %s path from this path: %s",
+                dir.data(), raw_path.c_str());
+
+  if (!parent_path.empty()) {
     // Now write in bin in place of lib.
-    ::snprintf(lib_pos, PATH_MAX - (lib_pos - raw_path), "/bin");
+    raw_path = (parent_path + dir).str();
 
     if (log)
       log->Printf("Host::%s() derived the bin path as: %s", __FUNCTION__,
-                  raw_path);
+                  raw_path.c_str());
   } else {
     if (log)
       log->Printf("Host::%s() failed to find /lib/liblldb within the shared "
                   "lib path, bailing on bin path construction",
                   __FUNCTION__);
   }
-  file_spec.GetDirectory().SetCString(raw_path);
+  file_spec.GetDirectory().SetString(raw_path);
   return (bool)file_spec.GetDirectory();
 }
 
@@ -173,6 +176,23 @@ bool HostInfoPosix::ComputeSupportFileDirectory(FileSpec &file_spec) {
   file_spec = temp_file_spec;
 
   return true;
+}
+
+bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
+  return ComputePathRelativeToLibrary(file_spec, "/bin");
+}
+
+bool HostInfoPosix::ComputeClangDirectory(FileSpec &file_spec) {
+  bool returnVal = ComputePathRelativeToLibrary(
+      file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/clang/" +
+                  CLANG_VERSION_STRING)
+                     .str());
+  if (file_spec.Exists())
+    return returnVal;
+  return ComputePathRelativeToLibrary(
+      file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/lldb/clang/" +
+                  CLANG_VERSION_STRING)
+                     .str());
 }
 
 bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
@@ -219,18 +239,6 @@ bool HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec) {
 #else
   return false;
 #endif
-}
-
-bool HostInfoPosix::ComputeClangDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-
-  lldb_file_spec.AppendPathComponent("lldb");
-  lldb_file_spec.AppendPathComponent("clang");
-
-  file_spec = lldb_file_spec;
-  return true;
 }
 
 bool HostInfoPosix::ComputeSwiftDirectory(FileSpec &file_spec) {
