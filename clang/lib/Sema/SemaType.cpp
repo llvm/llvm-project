@@ -106,6 +106,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const AttributeList &attr,
     case AttributeList::AT_FastCall: \
     case AttributeList::AT_StdCall: \
     case AttributeList::AT_ThisCall: \
+    case AttributeList::AT_RegCall: \
     case AttributeList::AT_Pascal: \
     case AttributeList::AT_SwiftCall: \
     case AttributeList::AT_VectorCall: \
@@ -4740,6 +4741,8 @@ static AttributeList::Kind getAttrListKind(AttributedType::Kind kind) {
     return AttributeList::AT_StdCall;
   case AttributedType::attr_thiscall:
     return AttributeList::AT_ThisCall;
+  case AttributedType::attr_regcall:
+    return AttributeList::AT_RegCall;
   case AttributedType::attr_pascal:
     return AttributeList::AT_Pascal;
   case AttributedType::attr_swiftcall:
@@ -6103,6 +6106,8 @@ static AttributedType::Kind getCCTypeAttrKind(AttributeList &Attr) {
     return AttributedType::attr_stdcall;
   case AttributeList::AT_ThisCall:
     return AttributedType::attr_thiscall;
+  case AttributeList::AT_RegCall:
+    return AttributedType::attr_regcall;
   case AttributeList::AT_Pascal:
     return AttributedType::attr_pascal;
   case AttributeList::AT_SwiftCall:

@@ -3889,6 +3889,10 @@ static void handleCallConvAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                SysVABIAttr(Attr.getRange(), S.Context,
                            Attr.getAttributeSpellingListIndex()));
     return;
+  case AttributeList::AT_RegCall:
+    D->addAttr(::new (S.Context) RegCallAttr(
+        Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+    return;
   case AttributeList::AT_Pcs: {
     PcsAttr::PCSType PCS;
     switch (CC) {
@@ -3950,6 +3954,7 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
   case AttributeList::AT_Pascal: CC = CC_X86Pascal; break;
   case AttributeList::AT_SwiftCall: CC = CC_Swift; break;
   case AttributeList::AT_VectorCall: CC = CC_X86VectorCall; break;
+  case AttributeList::AT_RegCall: CC = CC_X86RegCall; break;
   case AttributeList::AT_MSABI:
     CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_C :
                                                              CC_X86_64Win64;
@@ -6379,6 +6384,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_FastCall:
   case AttributeList::AT_ThisCall:
   case AttributeList::AT_Pascal:
+  case AttributeList::AT_RegCall:
   case AttributeList::AT_SwiftCall:
   case AttributeList::AT_VectorCall:
   case AttributeList::AT_MSABI:

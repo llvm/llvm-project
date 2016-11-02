@@ -905,6 +905,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_Swift:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_X86RegCall:
     return 0;
   }
   return 0;

@@ -10,11 +10,11 @@ namespace N {
   template<typename T> class C;
 }
 
-extern "C" {
+extern "C" { // expected-note {{extern "C" language linkage specification begins here}}
   template<typename T> class D; // expected-error{{templates must have C++ linkage}}
 }
 
-extern "C" {
+extern "C" { // expected-note 2 {{extern "C" language linkage specification begins here}}
   class PR17968 {
     template<typename T> class D; // expected-error{{templates must have C++ linkage}}
     template<typename T> void f(); // expected-error{{templates must have C++ linkage}}
@@ -148,7 +148,7 @@ namespace redecl {
 }
 
 extern "C" template <typename T> // expected-error{{templates must have C++ linkage}}
-void DontCrashOnThis() {
+void DontCrashOnThis() { // expected-note@-1 {{extern "C" language linkage specification begins here}}
   T &pT = T();
   pT;
 }

@@ -497,17 +497,6 @@ template <class ELFT> void RelocationSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-InterpSection<ELFT>::InterpSection()
-    : OutputSectionBase<ELFT>(".interp", SHT_PROGBITS, SHF_ALLOC) {
-  this->Header.sh_size = Config->DynamicLinker.size() + 1;
-}
-
-template <class ELFT> void InterpSection<ELFT>::writeTo(uint8_t *Buf) {
-  StringRef S = Config->DynamicLinker;
-  memcpy(Buf, S.data(), S.size());
-}
-
-template <class ELFT>
 HashTableSection<ELFT>::HashTableSection()
     : OutputSectionBase<ELFT>(".hash", SHT_HASH, SHF_ALLOC) {
   this->Header.sh_entsize = sizeof(Elf_Word);
@@ -1968,11 +1957,6 @@ template class RelocationSection<ELF32LE>;
 template class RelocationSection<ELF32BE>;
 template class RelocationSection<ELF64LE>;
 template class RelocationSection<ELF64BE>;
-
-template class InterpSection<ELF32LE>;
-template class InterpSection<ELF32BE>;
-template class InterpSection<ELF64LE>;
-template class InterpSection<ELF64BE>;
 
 template class GnuHashTableSection<ELF32LE>;
 template class GnuHashTableSection<ELF32BE>;

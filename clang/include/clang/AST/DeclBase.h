@@ -1334,6 +1334,9 @@ public:
   /// linkage specification context that specifies C linkage.
   bool isExternCContext() const;
 
+  /// \brief Retrieve the nearest enclosing C linkage specification context.
+  const LinkageSpecDecl *getExternCContext() const;
+
   /// \brief Determines whether this context or some of its ancestors is a
   /// linkage specification context that specifies C++ linkage.
   bool isExternCXXContext() const;

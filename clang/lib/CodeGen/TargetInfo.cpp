@@ -1229,7 +1229,8 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
 
   const Type *Base = nullptr;
   uint64_t NumElts = 0;
-  if (State.CC == llvm::CallingConv::X86_VectorCall &&
+  if ((State.CC == llvm::CallingConv::X86_VectorCall ||
+       State.CC == llvm::CallingConv::X86_RegCall) &&
       isHomogeneousAggregate(RetTy, Base, NumElts)) {
     // The LLVM struct type for such an aggregate should lower properly.
     return ABIArgInfo::getDirect();
@@ -1443,7 +1444,8 @@ bool X86_32ABIInfo::shouldAggregateUseDirect(QualType Ty, CCState &State,
     return true;
 
   if (State.CC == llvm::CallingConv::X86_FastCall ||
-      State.CC == llvm::CallingConv::X86_VectorCall) {
+      State.CC == llvm::CallingConv::X86_VectorCall ||
+      State.CC == llvm::CallingConv::X86_RegCall) {
     if (getContext().getTypeSize(Ty) <= 32 && State.FreeRegs)
       NeedsPadding = true;
 
@@ -1461,7 +1463,8 @@ bool X86_32ABIInfo::shouldPrimitiveUseInReg(QualType Ty, CCState &State) const {
     return false;
 
   if (State.CC == llvm::CallingConv::X86_FastCall ||
-      State.CC == llvm::CallingConv::X86_VectorCall) {
+      State.CC == llvm::CallingConv::X86_VectorCall ||
+      State.CC == llvm::CallingConv::X86_RegCall) {
     if (getContext().getTypeSize(Ty) > 32)
       return false;
 
@@ -1494,7 +1497,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   // to other targets.
   const Type *Base = nullptr;
   uint64_t NumElts = 0;
-  if (State.CC == llvm::CallingConv::X86_VectorCall &&
+  if ((State.CC == llvm::CallingConv::X86_VectorCall ||
+       State.CC == llvm::CallingConv::X86_RegCall) &&
       isHomogeneousAggregate(Ty, Base, NumElts)) {
     if (State.FreeSSERegs >= NumElts) {
       State.FreeSSERegs -= NumElts;
@@ -1540,7 +1544,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
         (!IsMCUABI || State.FreeRegs == 0) && canExpandIndirectArgument(Ty))
       return ABIArgInfo::getExpandWithPadding(
           State.CC == llvm::CallingConv::X86_FastCall ||
-              State.CC == llvm::CallingConv::X86_VectorCall,
+              State.CC == llvm::CallingConv::X86_VectorCall ||
+              State.CC == llvm::CallingConv::X86_RegCall,
           PaddingType);
 
     return getIndirectResult(Ty, true, State);
@@ -1591,7 +1596,10 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     State.FreeSSERegs = 6;
   } else if (FI.getHasRegParm())
     State.FreeRegs = FI.getRegParm();
-  else
+  else if (State.CC == llvm::CallingConv::X86_RegCall) {
+    State.FreeRegs = 5;
+    State.FreeSSERegs = 8;
+  } else
     State.FreeRegs = DefaultNumRegisterParameters;
 
   if (!getCXXABI().classifyReturnType(FI)) {
@@ -1932,11 +1940,15 @@ class X86_64ABIInfo : public SwiftABIInfo {
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
-  ABIArgInfo classifyArgumentType(QualType Ty,
-                                  unsigned freeIntRegs,
-                                  unsigned &neededInt,
-                                  unsigned &neededSSE,
+  ABIArgInfo classifyArgumentType(QualType Ty, unsigned freeIntRegs,
+                                  unsigned &neededInt, unsigned &neededSSE,
                                   bool isNamedArg) const;
+
+  ABIArgInfo classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
+                                       unsigned &NeededSSE) const;
+
+  ABIArgInfo classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
+                                           unsigned &NeededSSE) const;
 
   bool IsIllegalVectorType(QualType Ty) const;
 
@@ -3283,22 +3295,94 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(
   return ABIArgInfo::getDirect(ResType);
 }
 
+ABIArgInfo
+X86_64ABIInfo::classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
+                                             unsigned &NeededSSE) const {
+  auto RT = Ty->getAs<RecordType>();
+  assert(RT && "classifyRegCallStructType only valid with struct types");
+
+  if (RT->getDecl()->hasFlexibleArrayMember())
+    return getIndirectReturnResult(Ty);
+
+  // Sum up bases
+  if (auto CXXRD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+    if (CXXRD->isDynamicClass()) {
+      NeededInt = NeededSSE = 0;
+      return getIndirectReturnResult(Ty);
+    }
+
+    for (const auto &I : CXXRD->bases())
+      if (classifyRegCallStructTypeImpl(I.getType(), NeededInt, NeededSSE)
+              .isIndirect()) {
+        NeededInt = NeededSSE = 0;
+        return getIndirectReturnResult(Ty);
+      }
+  }
+
+  // Sum up members
+  for (const auto *FD : RT->getDecl()->fields()) {
+    if (FD->getType()->isRecordType() && !FD->getType()->isUnionType()) {
+      if (classifyRegCallStructTypeImpl(FD->getType(), NeededInt, NeededSSE)
+              .isIndirect()) {
+        NeededInt = NeededSSE = 0;
+        return getIndirectReturnResult(Ty);
+      }
+    } else {
+      unsigned LocalNeededInt, LocalNeededSSE;
+      if (classifyArgumentType(FD->getType(), UINT_MAX, LocalNeededInt,
+                               LocalNeededSSE, true)
+              .isIndirect()) {
+        NeededInt = NeededSSE = 0;
+        return getIndirectReturnResult(Ty);
+      }
+      NeededInt += LocalNeededInt;
+      NeededSSE += LocalNeededSSE;
+    }
+  }
+
+  return ABIArgInfo::getDirect();
+}
+
+ABIArgInfo X86_64ABIInfo::classifyRegCallStructType(QualType Ty,
+                                                    unsigned &NeededInt,
+                                                    unsigned &NeededSSE) const {
+
+  NeededInt = 0;
+  NeededSSE = 0;
+
+  return classifyRegCallStructTypeImpl(Ty, NeededInt, NeededSSE);
+}
+
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
-  if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+  bool IsRegCall = FI.getCallingConvention() == llvm::CallingConv::X86_RegCall;
 
   // Keep track of the number of assigned registers.
-  unsigned freeIntRegs = 6, freeSSERegs = 8;
+  unsigned FreeIntRegs = IsRegCall ? 11 : 6;
+  unsigned FreeSSERegs = IsRegCall ? 16 : 8;
+  unsigned NeededInt, NeededSSE;
+
+  if (IsRegCall && FI.getReturnType()->getTypePtr()->isRecordType() &&
+      !FI.getReturnType()->getTypePtr()->isUnionType()) {
+    FI.getReturnInfo() =
+        classifyRegCallStructType(FI.getReturnType(), NeededInt, NeededSSE);
+    if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
+      FreeIntRegs -= NeededInt;
+      FreeSSERegs -= NeededSSE;
+    } else {
+      FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
+    }
+  } else if (!getCXXABI().classifyReturnType(FI))
+    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
   if (FI.getReturnInfo().isIndirect())
-    --freeIntRegs;
+    --FreeIntRegs;
 
   // The chain argument effectively gives us another free register.
   if (FI.isChainCall())
-    ++freeIntRegs;
+    ++FreeIntRegs;
 
   unsigned NumRequiredArgs = FI.getNumRequiredArgs();
   // AMD64-ABI 3.2.3p3: Once arguments are classified, the registers
@@ -3308,19 +3392,21 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
        it != ie; ++it, ++ArgNo) {
     bool IsNamedArg = ArgNo < NumRequiredArgs;
 
-    unsigned neededInt, neededSSE;
-    it->info = classifyArgumentType(it->type, freeIntRegs, neededInt,
-                                    neededSSE, IsNamedArg);
+    if (IsRegCall && it->type->isStructureOrClassType())
+      it->info = classifyRegCallStructType(it->type, NeededInt, NeededSSE);
+    else
+      it->info = classifyArgumentType(it->type, FreeIntRegs, NeededInt,
+                                      NeededSSE, IsNamedArg);
 
     // AMD64-ABI 3.2.3p3: If there are no registers available for any
     // eightbyte of an argument, the whole argument is passed on the
     // stack. If registers have already been assigned for some
     // eightbytes of such an argument, the assignments get reverted.
-    if (freeIntRegs >= neededInt && freeSSERegs >= neededSSE) {
-      freeIntRegs -= neededInt;
-      freeSSERegs -= neededSSE;
+    if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
+      FreeIntRegs -= NeededInt;
+      FreeSSERegs -= NeededSSE;
     } else {
-      it->info = getIndirectResult(it->type, freeIntRegs);
+      it->info = getIndirectResult(it->type, FreeIntRegs);
     }
   }
 }
@@ -3643,14 +3729,27 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   bool IsVectorCall =
       FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall;
+  bool IsRegCall = FI.getCallingConvention() == llvm::CallingConv::X86_RegCall;
 
-  // We can use up to 4 SSE return registers with vectorcall.
-  unsigned FreeSSERegs = IsVectorCall ? 4 : 0;
+  unsigned FreeSSERegs = 0;
+  if (IsVectorCall) {
+    // We can use up to 4 SSE return registers with vectorcall.
+    FreeSSERegs = 4;
+  } else if (IsRegCall) {
+    // RegCall gives us 16 SSE registers.
+    FreeSSERegs = 16;
+  }
+
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true);
 
-  // We can use up to 6 SSE register parameters with vectorcall.
-  FreeSSERegs = IsVectorCall ? 6 : 0;
+  if (IsVectorCall) {
+    // We can use up to 6 SSE register parameters with vectorcall.
+    FreeSSERegs = 6;
+  } else if (IsRegCall) {
+    FreeSSERegs = 16;
+  }
+
   for (auto &I : FI.arguments())
     I.info = classify(I.type, FreeSSERegs, false);
 }
@@ -7457,7 +7556,7 @@ class FieldEncoding {
   std::string Enc;
 public:
   FieldEncoding(bool b, SmallStringEnc &e) : HasName(b), Enc(e.c_str()) {}
-  StringRef str() {return Enc.c_str();}
+  StringRef str() { return Enc; }
   bool operator<(const FieldEncoding &rhs) const {
     if (HasName != rhs.HasName) return HasName;
     return Enc < rhs.Enc;
@@ -7623,7 +7722,7 @@ StringRef TypeStringCache::lookupStr(const IdentifierInfo *ID) {
     E.State = IncompleteUsed;
     ++IncompleteUsedCount;
   }
-  return E.Str.c_str();
+  return E.Str;
 }
 
 /// The XCore ABI includes a type information section that communicates symbol

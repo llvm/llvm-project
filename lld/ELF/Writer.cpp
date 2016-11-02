@@ -235,7 +235,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   Out<ELFT>::ProgramHeaders->updateAlignment(sizeof(uintX_t));
 
   if (needsInterpSection<ELFT>())
-    Out<ELFT>::Interp = make<InterpSection<ELFT>>();
+    In<ELFT>::Interp = make<InterpSection<ELFT>>();
 
   if (!Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic) {
     Out<ELFT>::DynSymTab =
@@ -284,7 +284,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::BuildId = make<BuildIdUuid<ELFT>>();
   else if (Config->BuildId == BuildIdKind::Hexstring)
     In<ELFT>::BuildId = make<BuildIdHexstring<ELFT>>();
-  In<ELFT>::Sections = {In<ELFT>::BuildId};
+
+  In<ELFT>::Sections = {In<ELFT>::BuildId, In<ELFT>::Interp};
 }
 
 template <class ELFT>
@@ -408,6 +409,13 @@ template <class ELFT> bool elf::isRelroSection(OutputSectionBase<ELFT> *Sec) {
 template <class ELFT>
 static bool compareSectionsNonScript(OutputSectionBase<ELFT> *A,
                                      OutputSectionBase<ELFT> *B) {
+  // Put .interp first because some loaders want to see that section
+  // on the first page of the executable file when loaded into memory.
+  bool AIsInterp = A->getName() == ".interp";
+  bool BIsInterp = B->getName() == ".interp";
+  if (AIsInterp != BIsInterp)
+    return AIsInterp;
+
   typedef typename ELFT::uint uintX_t;
   uintX_t AFlags = A->getFlags();
   uintX_t BFlags = B->getFlags();
@@ -872,11 +880,6 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
       OutputSections.push_back(OS);
   };
 
-  // Add .interp at first because some loaders want to see that section
-  // on the first page of the executable file when loaded into memory.
-  if (Out<ELFT>::Interp)
-    OutputSections.insert(OutputSections.begin(), Out<ELFT>::Interp);
-
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
   if (Out<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
@@ -999,9 +1002,9 @@ template <class ELFT> std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   Hdr.add(Out<ELFT>::ProgramHeaders);
 
   // PT_INTERP must be the second entry if exists.
-  if (Out<ELFT>::Interp) {
-    Phdr &Hdr = *AddHdr(PT_INTERP, Out<ELFT>::Interp->getPhdrFlags());
-    Hdr.add(Out<ELFT>::Interp);
+  if (OutputSectionBase<ELFT> *Sec = findSection(".interp")) {
+    Phdr &Hdr = *AddHdr(PT_INTERP, Sec->getPhdrFlags());
+    Hdr.add(Sec);
   }
 
   // Add the first PT_LOAD segment for regular output sections.

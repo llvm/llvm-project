@@ -493,6 +493,7 @@ private:
   void mangleUnscopedTemplateName(TemplateName,
                                   const AbiTagList *AdditionalAbiTags);
   void mangleSourceName(const IdentifierInfo *II);
+  void mangleRegCallName(const IdentifierInfo *II);
   void mangleSourceNameWithAbiTags(
       const NamedDecl *ND, const AbiTagList *AdditionalAbiTags = nullptr);
   void mangleLocalName(const Decl *D,
@@ -1241,7 +1242,15 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
           getEffectiveDeclContext(ND)->isFileContext())
         Out << 'L';
 
-      mangleSourceName(II);
+      auto *FD = dyn_cast<FunctionDecl>(ND);
+      bool IsRegCall = FD &&
+                       FD->getType()->castAs<FunctionType>()->getCallConv() ==
+                           clang::CC_X86RegCall;
+      if (IsRegCall)
+        mangleRegCallName(II);
+      else
+        mangleSourceName(II);
+
       writeAbiTags(ND, AdditionalAbiTags);
       break;
     }
@@ -1413,6 +1422,14 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
   case DeclarationName::CXXUsingDirective:
     llvm_unreachable("Can't mangle a using directive name!");
   }
+}
+
+void CXXNameMangler::mangleRegCallName(const IdentifierInfo *II) {
+  // <source-name> ::= <positive length number> __regcall3__ <identifier>
+  // <number> ::= [n] <non-negative decimal integer>
+  // <identifier> ::= <unqualified source code identifier>
+  Out << II->getLength() + sizeof("__regcall3__") - 1 << "__regcall3__"
+      << II->getName();
 }
 
 void CXXNameMangler::mangleSourceName(const IdentifierInfo *II) {
@@ -2497,6 +2514,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_X86Pascal:
   case CC_X86_64Win64:
   case CC_X86_64SysV:
+  case CC_X86RegCall:
   case CC_AAPCS:
   case CC_AAPCS_VFP:
   case CC_IntelOclBicc:

@@ -3022,7 +3022,7 @@ enum CXCallingConv {
   CXCallingConv_X86Pascal = 5,
   CXCallingConv_AAPCS = 6,
   CXCallingConv_AAPCS_VFP = 7,
-  /* Value 8 was PnaclCall, but it was never used, so it could safely be re-used. */
+  CXCallingConv_X86RegCall = 8,
   CXCallingConv_IntelOclBicc = 9,
   CXCallingConv_X86_64Win64 = 10,
   CXCallingConv_X86_64SysV = 11,
