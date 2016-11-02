@@ -15,6 +15,8 @@
 #ifndef LLVM_CLANG_BASIC_OPENCLOPTIONS_H
 #define LLVM_CLANG_BASIC_OPENCLOPTIONS_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace clang {
 
 /// \brief OpenCL supported extensions and optional core features
@@ -28,9 +30,39 @@ public:
 #include "clang/Basic/OpenCLExtensions.def"
   }
 
-  // Enable all options.
-  void setAll() {
-#define OPENCLEXT(nm)   nm = 1;
+  // Enable or disable all options.
+  void setAll(bool Enable = true) {
+#define OPENCLEXT(nm)   nm = Enable;
+#include "clang/Basic/OpenCLExtensions.def"
+  }
+
+  /// \brief Enable or disable support for OpenCL extensions
+  /// \param Ext name of the extension optionally prefixed with
+  ///        '+' or '-'
+  /// \param Enable used when \p Ext is not prefixed by '+' or '-'
+  void set(llvm::StringRef Ext, bool Enable = true) {
+    assert(!Ext.empty() && "Extension is empty.");
+
+    switch (Ext[0]) {
+    case '+':
+      Enable = true;
+      Ext = Ext.drop_front();
+      break;
+    case '-':
+      Enable = false;
+      Ext = Ext.drop_front();
+      break;
+    }
+
+    if (Ext.equals("all")) {
+      setAll(Enable);
+      return;
+    }
+
+#define OPENCLEXT(nm)       \
+    if (Ext.equals(#nm)) {  \
+      nm = Enable;          \
+    }
 #include "clang/Basic/OpenCLExtensions.def"
   }
 

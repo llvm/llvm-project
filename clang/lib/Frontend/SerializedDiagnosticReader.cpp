@@ -24,10 +24,7 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
   if (!Buffer)
     return SDError::CouldNotLoad;
 
-  llvm::BitstreamReader StreamFile;
-  StreamFile.init((const unsigned char *)(*Buffer)->getBufferStart(),
-                  (const unsigned char *)(*Buffer)->getBufferEnd());
-
+  llvm::BitstreamReader StreamFile(**Buffer);
   llvm::BitstreamCursor Stream(StreamFile);
 
   // Sniff for the signature.

@@ -756,7 +756,6 @@ signed int test62(void) {
 // CHECK-LE-NEXT: ret i32
   return vec_cnttz_lsbb (vuca);
 }
-
 vector unsigned int test63(void) {
 // CHECK-BE: @llvm.ppc.altivec.vprtybw(<4 x i32>
 // CHECK-BE-NEXT: ret <4 x i32>
@@ -764,7 +763,6 @@ vector unsigned int test63(void) {
 // CHECK-NEXT: ret <4 x i32>
   return vec_parity_lsbb (vuia);
 }
-
 vector unsigned int test64(void) {
 // CHECK-BE: @llvm.ppc.altivec.vprtybw(<4 x i32>
 // CHECK-BE-NEXT: ret <4 x i32>
@@ -772,7 +770,6 @@ vector unsigned int test64(void) {
 // CHECK-NEXT: ret <4 x i32>
   return vec_parity_lsbb (vsia);
 }
-
 vector unsigned long long test65(void) {
 // CHECK-BE: @llvm.ppc.altivec.vprtybd(<2 x i64>
 // CHECK-BE-NEXT: ret <2 x i64>
@@ -780,7 +777,6 @@ vector unsigned long long test65(void) {
 // CHECK-NEXT: ret <2 x i64>
   return vec_parity_lsbb (vula);
 }
-
 vector unsigned long long test66(void) {
 // CHECK-BE: @llvm.ppc.altivec.vprtybd(<2 x i64>
 // CHECK-BE-NEXT: ret <2 x i64>
@@ -795,7 +791,6 @@ vector unsigned __int128 test67(void) {
 // CHECK-NEXT: ret <1 x i128>
   return vec_parity_lsbb (vui128a);
 }
-
 vector unsigned __int128 test68(void) {
 // CHECK-BE: @llvm.ppc.altivec.vprtybq(<1 x i128>
 // CHECK-BE-NEXT: ret <1 x i128>
@@ -803,7 +798,6 @@ vector unsigned __int128 test68(void) {
 // CHECK-NEXT: ret <1 x i128>
   return vec_parity_lsbb (vsi128a);
 }
-
 vector unsigned char test69(void) {
 // CHECK-BE: call <16 x i8> @llvm.ppc.altivec.vabsdub(<16 x i8> {{.+}}, <16 x i8> {{.+}})
 // CHECK: call <16 x i8> @llvm.ppc.altivec.vabsdub(<16 x i8> {{.+}}, <16 x i8> {{.+}})
@@ -819,3 +813,18 @@ vector unsigned int test71(void) {
 // CHECK: call <4 x i32> @llvm.ppc.altivec.vabsduw(<4 x i32> {{.+}}, <4 x i32> {{.+}})
   return vec_absd(vuia, vuib);
 }
+vector unsigned char test72(void) {
+// CHECK-BE: @llvm.ppc.altivec.vslv(<16 x i8>
+// CHECK-BE-NEXT: ret <16 x i8>
+// CHECK: @llvm.ppc.altivec.vslv(<16 x i8>
+// CHECK-NEXT: ret <16 x i8>
+  return vec_slv (vuca, vucb);
+}
+vector unsigned char test73(void) {
+// CHECK-BE: @llvm.ppc.altivec.vsrv(<16 x i8>
+// CHECK-BE-NEXT: ret <16 x i8>
+// CHECK: @llvm.ppc.altivec.vsrv(<16 x i8>
+// CHECK-NEXT: ret <16 x i8>
+  return vec_srv (vuca, vucb);
+}
+
